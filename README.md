@@ -22,11 +22,39 @@ ima2 serve
 On first run, you'll be prompted to choose an auth method:
 
 ```
-  1) API Key  — paste your OpenAI API key (paid)
-  2) OAuth    — login with ChatGPT account (free)
+  ima2-gen — GPT Image 2 Generator
+
+  Choose authentication method:
+
+    1) API Key  — paste your OpenAI API key (paid)
+    2) OAuth    — login with ChatGPT account (free)
 ```
 
 The web UI opens at `http://localhost:3333`.
+
+## CLI Commands
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `ima2 serve` | — | Start the web server (auto-setup on first run) |
+| `ima2 setup` | `login` | Reconfigure authentication method |
+| `ima2 status` | — | Show current config & auth status |
+| `ima2 doctor` | — | Diagnose environment & dependencies |
+| `ima2 open` | — | Open web UI in browser |
+| `ima2 reset` | — | Clear saved configuration |
+| `ima2 --version` | `-v` | Show version |
+| `ima2 --help` | `-h` | Show help |
+
+```bash
+# Check current setup
+ima2 status
+
+# Verify environment
+ima2 doctor
+
+# Open web UI
+ima2 open
+```
 
 ## Features
 
@@ -44,14 +72,6 @@ The web UI opens at `http://localhost:3333`.
 | **History** | Persisted across page refreshes via localStorage |
 | **Download / Copy** | Save to file or copy to clipboard |
 | **Billing Dashboard** | Shows API credit balance or monthly cost |
-
-## CLI Commands
-
-```bash
-ima2 serve     # Start the web server (auto-setup on first run)
-ima2 setup     # Reconfigure authentication method
-ima2 reset     # Clear saved configuration
-```
 
 ## Architecture
 
@@ -97,6 +117,27 @@ cp .env.example .env
 
 OAuth mode is **free** — uses your existing ChatGPT Plus/Pro subscription.
 
+## Development
+
+```bash
+git clone https://github.com/lidge-jun/ima2-gen.git
+cd ima2-gen
+npm install
+npm run dev    # starts server with --watch for auto-reload
+npm test       # run tests
+```
+
+## Roadmap
+
+See `devlog/` for detailed improvement plans:
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **Phase 0** | README + CLI enhancement | In Progress |
+| **Phase 1** | Code quality & modularization | Planned |
+| **Phase 2** | Validation, logging, retry | Planned |
+| **Phase 3** | Caching, rate limiting, monitoring | Planned |
+
 ## Tech Stack
 
 - **Runtime**: Node.js (>=18)
@@ -104,6 +145,7 @@ OAuth mode is **free** — uses your existing ChatGPT Plus/Pro subscription.
 - **API Client**: OpenAI SDK v5
 - **OAuth**: openai-oauth (ChatGPT session proxy)
 - **Frontend**: Vanilla HTML/CSS/JS (Outfit + Geist Mono fonts)
+- **Testing**: Node.js built-in test runner
 
 ## Dependencies
 
@@ -114,14 +156,19 @@ OAuth mode is **free** — uses your existing ChatGPT Plus/Pro subscription.
 | `openai-oauth` | ChatGPT OAuth proxy for free image generation |
 | `dotenv` | Environment variable loading |
 
-## Development
+## Troubleshooting
 
-```bash
-git clone https://github.com/lidge-jun/ima2-gen.git
-cd ima2-gen
-npm install
-npm run dev    # starts server with --watch for auto-reload
-```
+**`ima2 doctor` fails on node_modules**
+→ Run `npm install`
+
+**OAuth login not working**
+→ Run `npx @openai/codex login` manually, then `ima2 serve`
+
+**Port already in use**
+→ Set `PORT=3334` in `.env` or run `PORT=3334 ima2 serve`
+
+**Images not generating**
+→ Check `ima2 status` to verify config. Ensure API key starts with `sk-`.
 
 ## Release
 

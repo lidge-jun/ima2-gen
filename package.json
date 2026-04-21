@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node bin/ima2.js serve",
     "dev": "node --watch server.js",
+    "test": "node --test tests/**/*.test.js",
     "setup": "node bin/ima2.js setup",
     "prepublishOnly": "npm run lint:pkg",
     "lint:pkg": "node -e \"const p=require('./package.json'); if(!p.name||!p.version||!p.bin) throw new Error('missing fields')\"",

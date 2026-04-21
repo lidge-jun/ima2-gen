@@ -4,11 +4,18 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn, execSync } from "child_process";
+import { networkInterfaces } from "os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const CONFIG_DIR = join(ROOT, ".ima2");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+
+// Load package.json for version
+let pkg = { version: "?", name: "ima2-gen" };
+try {
+  pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
+} catch {}
 
 function loadConfig() {
   if (existsSync(CONFIG_FILE)) {
@@ -102,9 +109,150 @@ async function serve() {
   process.on("SIGTERM", () => child.kill("SIGTERM"));
 }
 
+async function showStatus() {
+  const config = loadConfig();
+  console.log(`\n  ${pkg.name} v${pkg.version}\n`);
+  console.log(`  Config file: ${CONFIG_FILE}`);
+  console.log(`  Exists: ${existsSync(CONFIG_FILE) ? "yes" : "no"}\n`);
+
+  if (config.provider) {
+    console.log(`  Provider: ${config.provider}`);
+    if (config.provider === "api") {
+      const key = config.apiKey || "";
+      console.log(`  API Key: ${key ? key.slice(0, 8) + "..." + key.slice(-4) : "not set"}`);
+    }
+    console.log("");
+  } else {
+    console.log("  Status: not configured");
+    console.log("  Run 'ima2 setup' to configure.\n");
+  }
+
+  // Check OAuth auth files
+  const hasCodexAuth = existsSync(join(process.env.HOME, ".codex", "auth.json"));
+  const hasChatgptAuth = existsSync(join(process.env.HOME, ".chatgpt-local", "auth.json"));
+  console.log(`  OAuth sessions:`);
+  console.log(`    ~/.codex/auth.json          ${hasCodexAuth ? "✓" : "✗"}`);
+  console.log(`    ~/.chatgpt-local/auth.json  ${hasChatgptAuth ? "✓" : "✗"}`);
+  console.log("");
+}
+
+async function doctor() {
+  console.log(`\n  ${pkg.name} v${pkg.version} — Doctor\n`);
+
+  let ok = 0;
+  let fail = 0;
+
+  // Node version
+  const nodeVersion = process.version;
+  const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
+  if (nodeMajor >= 18) {
+    console.log(`  ✓ Node.js ${nodeVersion} (>= 18)`);
+    ok++;
+  } else {
+    console.log(`  ✗ Node.js ${nodeVersion} (requires >= 18)`);
+    fail++;
+  }
+
+  // package.json exists
+  if (existsSync(join(ROOT, "package.json"))) {
+    console.log("  ✓ package.json found");
+    ok++;
+  } else {
+    console.log("  ✗ package.json missing");
+    fail++;
+  }
+
+  // node_modules
+  if (existsSync(join(ROOT, "node_modules"))) {
+    console.log("  ✓ node_modules installed");
+    ok++;
+  } else {
+    console.log("  ✗ node_modules missing — run 'npm install'");
+    fail++;
+  }
+
+  // .env
+  if (existsSync(join(ROOT, ".env"))) {
+    console.log("  ✓ .env file exists");
+    ok++;
+  } else {
+    console.log("  ⚠ .env file not found (optional — copy from .env.example)");
+  }
+
+  // Config
+  const config = loadConfig();
+  if (config.provider) {
+    console.log(`  ✓ Configured: ${config.provider}`);
+    ok++;
+  } else {
+    console.log("  ⚠ Not configured — run 'ima2 setup'");
+  }
+
+  // Port availability (simple check)
+  const port = process.env.PORT || 3333;
+  console.log(`  ℹ Default port: ${port}`);
+
+  console.log(`\n  ${ok} passed, ${fail} failed\n`);
+  process.exit(fail > 0 ? 1 : 0);
+}
+
+function openBrowser() {
+  const port = process.env.PORT || 3333;
+  const url = `http://localhost:${port}`;
+
+  const platform = process.platform;
+  let cmd;
+  if (platform === "darwin") cmd = "open";
+  else if (platform === "win32") cmd = "start";
+  else cmd = "xdg-open";
+
+  try {
+    execSync(`${cmd} ${url}`, { stdio: "ignore" });
+    console.log(`\n  Opening ${url} ...\n`);
+  } catch {
+    console.log(`\n  Could not open browser. Visit: ${url}\n`);
+  }
+}
+
+function showHelp() {
+  console.log(`
+  ${pkg.name} v${pkg.version} — GPT Image 2 Generator
+
+  Usage: ima2 <command> [options]
+
+  Commands:
+    serve          Start the image generation server
+    setup, login   Configure API key or OAuth (interactive)
+    status         Show current configuration status
+    doctor         Diagnose environment and setup
+    open           Open web UI in browser
+    reset          Reset configuration
+
+  Options:
+    -v, --version  Show version
+    -h, --help     Show help
+
+  Examples:
+    ima2 serve              Start server (auto-setup on first run)
+    ima2 status             Check current config
+    ima2 doctor             Verify environment
+    ima2 open               Open http://localhost:3333
+`);
+}
+
 // ── CLI ──
 const args = process.argv.slice(2);
 const command = args[0];
+
+if (args.includes("-v") || args.includes("--version")) {
+  console.log(pkg.version);
+  process.exit(0);
+}
+
+if (args.includes("-h") || args.includes("--help") || !command) {
+  showHelp();
+  process.exit(command ? 0 : 1);
+}
 
 switch (command) {
   case "serve":
@@ -114,21 +262,25 @@ switch (command) {
   case "login":
     setup().then(() => console.log("  Done. Run 'ima2 serve' to start."));
     break;
+  case "status":
+    showStatus();
+    break;
+  case "doctor":
+    doctor();
+    break;
+  case "open":
+    openBrowser();
+    break;
   case "reset":
     if (existsSync(CONFIG_FILE)) {
       writeFileSync(CONFIG_FILE, "{}");
       console.log("  Config reset. Run 'ima2 serve' to reconfigure.");
+    } else {
+      console.log("  No config to reset.");
     }
     break;
   default:
-    console.log(`
-  ima2-gen — GPT Image 2 Generator
-
-  Usage:
-    ima2 serve     Start the image generation server
-    ima2 setup     Configure API key or OAuth (interactive)
-    ima2 reset     Reset configuration
-
-  First run of 'ima2 serve' will prompt for setup automatically.
-`);
+    console.log(`  Unknown command: "${command}"`);
+    console.log("  Run 'ima2 --help' for usage.\n");
+    process.exit(1);
 }
