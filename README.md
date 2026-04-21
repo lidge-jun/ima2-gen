@@ -4,6 +4,8 @@
 
 Minimal CLI + web UI for OpenAI `gpt-image-2` image generation.
 
+![ima2-gen screenshot](assets/screenshot.png)
+
 ## Install & Run
 
 ```bash

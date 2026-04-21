@@ -25,6 +25,7 @@
   "files": [
     "bin/",
     "public/",
+    "assets/",
     "server.js",
     ".env.example",
     "README.md"
