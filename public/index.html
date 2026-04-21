@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Gen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface-2: #1c1c1c;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --text-dim: #888;
+      --accent: #f0f0f0;
+      --accent-bright: #fff;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --radius: 10px;
+      --font: 'Outfit', sans-serif;
+      --mono: 'Geist Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      min-height: 100dvh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .billing-bar {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .billing-bar .label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .billing-bar .value { font-size: 16px; font-weight: 600; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── Form controls ── */
+    .prompt-area {
+      width: 100%;
+      min-height: 100px;
+      max-height: 200px;
+      resize: vertical;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .prompt-area:focus { border-color: #444; }
+    .prompt-area::placeholder { color: #555; }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .option-btn {
+      flex: 1;
+      padding: 9px 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .option-btn:hover { border-color: #444; color: var(--text); }
+    .option-btn.active {
+      border-color: var(--accent);
+      color: var(--accent-bright);
+      background: var(--surface-2);
+    }
+
+    .cost-estimate {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .cost-estimate .price { color: var(--green); font-weight: 500; }
+
+    .generate-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent-bright);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: -0.3px;
+    }
+
+    .generate-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .generate-btn:active { transform: translateY(0); }
+    .generate-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .generate-btn.loading {
+      background: var(--surface-2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .format-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    select.format-select {
+      flex: 1;
+      padding: 9px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+    }
+
+    /* ── Canvas area ── */
+    .canvas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      position: relative;
+      overflow: auto;
+    }
+
+    .canvas-empty {
+      text-align: center;
+      color: #333;
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -2px;
+      user-select: none;
+    }
+
+    .canvas-empty span { display: block; font-size: 14px; font-weight: 400; color: #333; letter-spacing: 0; margin-top: 12px; }
+
+    .result-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .result-container.visible { display: flex; }
+
+    .result-img {
+      max-width: 100%;
+      max-height: calc(100dvh - 160px);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      object-fit: contain;
+    }
+
+    .result-meta {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      gap: 20px;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover { border-color: #444; background: var(--surface-2); }
+
+    /* ── Progress ── */
+    .progress-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--border);
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .progress-bar.active { opacity: 1; }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -40%;
+      width: 40%; height: 100%;
+      background: var(--accent-bright);
+      animation: progress-slide 1.2s ease-in-out infinite;
+    }
+
+    @keyframes progress-slide {
+      0% { left: -40%; }
+      100% { left: 100%; }
+    }
+
+    .history-strip {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 0;
+      margin-top: auto;
+    }
+
+    .history-strip::-webkit-scrollbar { height: 4px; }
+    .history-strip::-webkit-scrollbar-track { background: transparent; }
+    .history-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .history-thumb {
+      width: 48px; height: 48px;
+      flex-shrink: 0;
+      border-radius: 6px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      opacity: 0.6;
+      transition: all 0.15s;
+    }
+
+    .history-thumb:hover { opacity: 1; }
+    .history-thumb.active { border-color: var(--accent); opacity: 1; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .toast.visible { transform: translateY(0); opacity: 1; }
+    .toast.error { border-color: var(--red); color: var(--red); }
+
+    /* ── Responsive ── */
+    @media (max-width: 800px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--border); max-height: 50dvh; }
+      .canvas { min-height: 50dvh; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-dot"></div>
+        Image Gen
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-left:auto">gpt-image-2</span>
+      </div>
+
+      <div class="billing-bar" id="billingBar">
+        <div class="label">API Status</div>
+        <div class="value" id="billingValue" style="color:var(--text-dim)">checking...</div>
+      </div>
+
+      <div class="section-title">Prompt</div>
+      <textarea class="prompt-area" id="prompt" placeholder="Describe the image you want to generate..."></textarea>
+
+      <div class="option-group">
+        <div class="section-title">Quality</div>
+        <div class="option-row" id="qualityGroup">
+          <button class="option-btn active" data-value="low">Low<br><span style="font-size:10px;color:var(--text-dim)">fast</span></button>
+          <button class="option-btn" data-value="medium">Medium<br><span style="font-size:10px;color:var(--text-dim)">balanced</span></button>
+          <button class="option-btn" data-value="high">High<br><span style="font-size:10px;color:var(--text-dim)">best</span></button>
+        </div>
+      </div>
+
+      <div class="option-group">
+        <div class="section-title">Size</div>
+        <div class="option-row" id="sizeGroup1">
+          <button class="option-btn active" data-value="1024x1024">1024x1024<br><span style="font-size:10px;color:var(--text-dim)">square</span></button>
+          <button class="option-btn" data-value="1536x1024">1536x1024<br><span style="font-size:10px;color:var(--text-dim)">landscape</span></button>
+          <button class="option-btn" data-value="1024x1536">1024x1536<br><span style="font-size:10px;color:var(--text-dim)">portrait</span></button>
+        </div>
+        <div class="option-row" id="sizeGroup2">
+          <button class="option-btn" data-value="2048x2048">2048x2048<br><span style="font-size:10px;color:var(--text-dim)">2K sq</span></button>
+          <button class="option-btn" data-value="2048x1152">2048x1152<br><span style="font-size:10px;color:var(--text-dim)">2K land</span></button>
+          <button class="option-btn" data-value="auto">auto<br><span style="font-size:10px;color:var(--text-dim)">model picks</span></button>
+        </div>
+        <div class="option-row" id="sizeGroup3">
+          <button class="option-btn" data-value="3840x2160">3840x2160<br><span style="font-size:10px;color:var(--text-dim)">4K land</span></button>
+          <button class="option-btn" data-value="2160x3840">2160x3840<br><span style="font-size:10px;color:var(--text-dim)">4K port</span></button>
+        </div>
+      </div>
+
+      <div class="option-group">
+        <div class="section-title">Format</div>
+        <div class="option-row">
+          <button class="option-btn active format-btn" data-value="png">PNG</button>
+          <button class="option-btn format-btn" data-value="jpeg">JPEG</button>
+          <button class="option-btn format-btn" data-value="webp">WebP</button>
+        </div>
+      </div>
+
+      <div class="option-group">
+        <div class="section-title">Moderation</div>
+        <div class="option-row" id="moderationGroup">
+          <button class="option-btn active" data-value="low" style="color:var(--amber)">Low<br><span style="font-size:10px;color:var(--text-dim)">less restrictive</span></button>
+          <button class="option-btn" data-value="auto">Auto<br><span style="font-size:10px;color:var(--text-dim)">standard</span></button>
+        </div>
+      </div>
+
+      <div class="cost-estimate">
+        <span>Est. cost</span>
+        <span class="price" id="costEstimate">~$0.006</span>
+      </div>
+
+      <button class="generate-btn" id="generateBtn">Generate</button>
+
+      <div class="history-strip" id="historyStrip"></div>
+    </aside>
+
+    <main class="canvas">
+      <div class="progress-bar" id="progressBar"></div>
+      <div class="canvas-empty" id="emptyState">
+        GPT-IMAGE-2
+        <span>Enter a prompt and hit generate</span>
+      </div>
+      <div class="result-container" id="resultContainer">
+        <img class="result-img" id="resultImg">
+        <div class="result-meta" id="resultMeta"></div>
+        <div class="result-actions">
+          <button class="action-btn" id="downloadBtn">Download</button>
+          <button class="action-btn" id="copyBtn">Copy to clipboard</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+
+    let state = {
+      quality: "low",
+      size: "1024x1024",
+      format: "png",
+      moderation: "low",
+      generating: false,
+      history: [],
+      currentImage: null,
+    };
+
+    // ── Cost matrix (gpt-image-2) ──
+    const COST_MAP = {
+      "low":    { "1024x1024": 0.006, "1024x1536": 0.005, "1536x1024": 0.005, "2048x2048": 0.012, "2048x1152": 0.009, "3840x2160": 0.023, "2160x3840": 0.023, "auto": 0.006 },
+      "medium": { "1024x1024": 0.053, "1024x1536": 0.041, "1536x1024": 0.041, "2048x2048": 0.106, "2048x1152": 0.080, "3840x2160": 0.200, "2160x3840": 0.200, "auto": 0.053 },
+      "high":   { "1024x1024": 0.211, "1024x1536": 0.165, "1536x1024": 0.165, "2048x2048": 0.422, "2048x1152": 0.320, "3840x2160": 0.800, "2160x3840": 0.800, "auto": 0.211 },
+    };
+
+    function updateCost() {
+      const cost = COST_MAP[state.quality]?.[state.size] ?? 0;
+      $("#costEstimate").textContent = `~$${cost.toFixed(3)}`;
+    }
+
+    // ── Option buttons ──
+    function setupOptionGroup(container, key) {
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".option-btn");
+        if (!btn) return;
+        container.querySelectorAll(".option-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state[key] = btn.dataset.value;
+        updateCost();
+      });
+    }
+
+    // Size buttons span multiple rows
+    const allSizeBtns = $$("#sizeGroup1 .option-btn, #sizeGroup2 .option-btn, #sizeGroup3 .option-btn");
+    allSizeBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        allSizeBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.size = btn.dataset.value;
+        updateCost();
+      });
+    });
+
+    setupOptionGroup($("#qualityGroup"), "quality");
+    setupOptionGroup($("#moderationGroup"), "moderation");
+
+    $$(".format-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        $$(".format-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.format = btn.dataset.value;
+      });
+    });
+
+    // ── Generate ──
+    $("#generateBtn").addEventListener("click", generate);
+    $("#prompt").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) generate();
+    });
+
+    async function generate() {
+      const prompt = $("#prompt").value.trim();
+      if (!prompt || state.generating) return;
+
+      state.generating = true;
+      const btn = $("#generateBtn");
+      btn.disabled = true;
+      btn.classList.add("loading");
+      btn.textContent = "Generating...";
+      $("#progressBar").classList.add("active");
+      $("#emptyState").style.display = "none";
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            quality: state.quality,
+            size: state.size,
+            format: state.format,
+            moderation: state.moderation,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Generation failed");
+
+        state.currentImage = data;
+        showResult(data);
+        addToHistory(data);
+        toast(`Generated in ${data.elapsed}s`);
+      } catch (err) {
+        toast(err.message, true);
+        $("#emptyState").style.display = "";
+      } finally {
+        state.generating = false;
+        btn.disabled = false;
+        btn.classList.remove("loading");
+        btn.textContent = "Generate";
+        $("#progressBar").classList.remove("active");
+      }
+    }
+
+    function showResult(data) {
+      const container = $("#resultContainer");
+      const img = $("#resultImg");
+      img.src = data.image;
+      container.classList.add("visible");
+
+      const meta = [];
+      meta.push(`${data.elapsed}s`);
+      if (data.usage) {
+        meta.push(`${data.usage.total_tokens || "?"} tokens`);
+      }
+      meta.push(state.quality);
+      meta.push(state.size);
+      $("#resultMeta").textContent = meta.join("  ·  ");
+    }
+
+    function addToHistory(data) {
+      state.history.unshift(data);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const strip = $("#historyStrip");
+      strip.innerHTML = "";
+      state.history.forEach((item, i) => {
+        const thumb = document.createElement("img");
+        thumb.className = "history-thumb" + (i === 0 ? " active" : "");
+        thumb.src = item.image;
+        thumb.addEventListener("click", () => {
+          state.currentImage = item;
+          showResult(item);
+          strip.querySelectorAll(".history-thumb").forEach((t) => t.classList.remove("active"));
+          thumb.classList.add("active");
+        });
+        strip.appendChild(thumb);
+      });
+    }
+
+    // ── Download & Copy ──
+    $("#downloadBtn").addEventListener("click", () => {
+      if (!state.currentImage) return;
+      const a = document.createElement("a");
+      a.href = state.currentImage.image;
+      a.download = state.currentImage.filename || "generated.png";
+      a.click();
+    });
+
+    $("#copyBtn").addEventListener("click", async () => {
+      if (!state.currentImage) return;
+      try {
+        const res = await fetch(state.currentImage.image);
+        const blob = await res.blob();
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        toast("Copied to clipboard");
+      } catch {
+        toast("Copy failed", true);
+      }
+    });
+
+    // ── Toast ──
+    function toast(msg, isError = false) {
+      const el = $("#toast");
+      el.textContent = msg;
+      el.className = "toast visible" + (isError ? " error" : "");
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove("visible"), 3000);
+    }
+
+    // ── Billing ──
+    async function loadBilling() {
+      try {
+        const res = await fetch("/api/billing");
+        const data = await res.json();
+        const el = $("#billingValue");
+
+        if (data.credits) {
+          const total = data.credits.total_granted || 0;
+          const used = data.credits.total_used || 0;
+          const remaining = (total - used).toFixed(2);
+          el.textContent = `$${remaining} remaining`;
+          el.style.color = remaining > 5 ? "var(--green)" : remaining > 1 ? "var(--amber)" : "var(--red)";
+          return;
+        }
+
+        if (data.costs?.data?.length) {
+          const totalCost = data.costs.data.reduce((sum, bucket) => {
+            return sum + bucket.results.reduce((s, r) => s + (r.amount?.value || 0), 0);
+          }, 0);
+          el.textContent = `$${(totalCost / 100).toFixed(2)} this month`;
+          el.style.color = "var(--accent)";
+          return;
+        }
+
+        if (data.apiKeyValid) {
+          el.textContent = "API key valid";
+          el.style.color = "var(--green)";
+        } else {
+          el.textContent = "Could not fetch billing";
+          el.style.color = "var(--text-dim)";
+        }
+      } catch {
+        $("#billingValue").textContent = "offline";
+        $("#billingValue").style.color = "var(--red)";
+      }
+    }
+
+    loadBilling();
+    updateCost();
+  </script>
+</body>
+</html>
