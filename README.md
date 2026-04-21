@@ -1,82 +1,135 @@
 # ima2-gen
 
 [![npm version](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Minimal CLI + web UI for OpenAI `gpt-image-2` image generation.
+Minimal CLI + web UI for OpenAI **GPT Image 2** (`gpt-image-2`) image generation. Supports both **API Key** (paid) and **OAuth** (free, via ChatGPT account) authentication.
 
 ![ima2-gen screenshot](assets/screenshot.png)
 
-## Install & Run
+## Quick Start
 
 ```bash
+# Run instantly with npx (no install needed)
 npx ima2-gen serve
-```
 
-Or install globally:
-
-```bash
+# Or install globally
 npm install -g ima2-gen
 ima2 serve
 ```
 
-First run prompts you to choose:
+On first run, you'll be prompted to choose an auth method:
 
 ```
   1) API Key  — paste your OpenAI API key (paid)
   2) OAuth    — login with ChatGPT account (free)
 ```
 
-Then opens `http://localhost:3333`.
-
-## CLI
-
-```bash
-ima2 serve    # start server (auto-setup on first run)
-ima2 setup    # reconfigure auth
-ima2 reset    # clear saved config
-```
+The web UI opens at `http://localhost:3333`.
 
 ## Features
 
-- **Dual provider** — OAuth (free, ChatGPT account) or API Key (paid)
-- **Text-to-Image** — generate images from text prompts
-- **Image-to-Image** — edit/inpaint with drag-and-drop
-- **Quality** — low / medium / high
-- **Size** — presets (1024 ~ 4K) + custom (any 16px-aligned ratio)
-- **Format** — PNG / JPEG / WebP
-- **Moderation** — auto (standard) / low (less restrictive)
-- **Prompt display** — shown under image, click to copy
-- **History** — persisted across page refreshes (localStorage)
-- **Download / Copy** — save or clipboard
+| Feature | Description |
+|---------|-------------|
+| **Dual Auth** | OAuth (free via ChatGPT Plus/Pro) or API Key (paid, usage-based) |
+| **Text-to-Image** | Generate images from text prompts with quality boosters |
+| **Image-to-Image** | Edit/inpaint existing images with drag-and-drop upload |
+| **Parallel Generation** | Generate up to 8 images simultaneously |
+| **Quality Presets** | Low (fast) / Medium (balanced) / High (best) |
+| **Size Options** | Standard presets (1024–4K) + custom size (any 16px-aligned ratio) |
+| **Format** | PNG, JPEG, WebP output |
+| **Moderation** | Auto (standard) or Low (less restrictive) |
+| **Prompt Display** | Shows prompt under generated image, click to copy |
+| **History** | Persisted across page refreshes via localStorage |
+| **Download / Copy** | Save to file or copy to clipboard |
+| **Billing Dashboard** | Shows API credit balance or monthly cost |
+
+## CLI Commands
+
+```bash
+ima2 serve     # Start the web server (auto-setup on first run)
+ima2 setup     # Reconfigure authentication method
+ima2 reset     # Clear saved configuration
+```
 
 ## Architecture
 
 ```
 ima2 serve
-  ├── Express (:3333)          ← web UI + API
-  └── openai-oauth (:10531)    ← embedded OAuth proxy
+  ├── Express server (:3333)
+  │   ├── GET  /api/providers      — available auth methods
+  │   ├── GET  /api/oauth/status   — OAuth proxy health check
+  │   ├── POST /api/generate       — text-to-image (supports parallel via n)
+  │   ├── POST /api/edit           — image-to-image inpainting
+  │   ├── GET  /api/billing        — API credit / cost info
+  │   └── Static files (public/)   — web UI
+  │
+  └── openai-oauth proxy (:10531)  — embedded OAuth proxy for ChatGPT auth
 ```
 
-## Config
+## Configuration
 
-Stored in `.ima2/config.json` (auto-created, gitignored).
+Config is stored in `.ima2/config.json` (auto-created, gitignored).
 
-Optional `.env`:
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | — | OpenAI API key (skips OAuth) |
+| `PORT` | `3333` | Web server port |
+| `OAUTH_PORT` | `10531` | OAuth proxy port |
+
+Create a `.env` file to set these:
+
+```bash
+cp .env.example .env
+# Edit .env with your values
 ```
-OPENAI_API_KEY=sk-proj-...
-PORT=3333
-OAUTH_PORT=10531
+
+## API Pricing (API Key Mode)
+
+| Quality | 1024×1024 | 1024×1536 | 1536×1024 | 2048×2048 | 3840×2160 |
+|---------|-----------|-----------|-----------|-----------|-----------|
+| Low     | $0.006    | $0.005    | $0.005    | $0.012    | $0.023    |
+| Medium  | $0.053    | $0.041    | $0.041    | $0.106    | $0.200    |
+| High    | $0.211    | $0.165    | $0.165    | $0.422    | $0.800    |
+
+OAuth mode is **free** — uses your existing ChatGPT Plus/Pro subscription.
+
+## Tech Stack
+
+- **Runtime**: Node.js (>=18)
+- **Server**: Express 5
+- **API Client**: OpenAI SDK v5
+- **OAuth**: openai-oauth (ChatGPT session proxy)
+- **Frontend**: Vanilla HTML/CSS/JS (Outfit + Geist Mono fonts)
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `express` | HTTP server + static file serving |
+| `openai` | Official OpenAI API client |
+| `openai-oauth` | ChatGPT OAuth proxy for free image generation |
+| `dotenv` | Environment variable loading |
+
+## Development
+
+```bash
+git clone https://github.com/lidge-jun/ima2-gen.git
+cd ima2-gen
+npm install
+npm run dev    # starts server with --watch for auto-reload
 ```
 
-## Pricing (API Key mode)
+## Release
 
-| Quality | 1024x1024 | 1024x1536 | 1536x1024 |
-|---------|-----------|-----------|-----------|
-| Low     | $0.006    | $0.005    | $0.005    |
-| Medium  | $0.053    | $0.041    | $0.041    |
-| High    | $0.211    | $0.165    | $0.165    |
-
-OAuth mode is free (uses your ChatGPT Plus/Pro subscription).
+```bash
+npm run release:patch   # 1.0.2 → 1.0.3
+npm run release:minor   # 1.0.x → 1.1.0
+npm run release:major   # 1.x.x → 2.0.0
+```
 
 ## License
 
