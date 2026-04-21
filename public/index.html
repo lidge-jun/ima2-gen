@@ -187,6 +187,19 @@
       color: var(--text-dim);
       border: 1px solid var(--border);
     }
+    .generate-btn.loading::before {
+      content: "";
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--text-dim);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .format-row {
       display: flex;
@@ -518,6 +531,8 @@
       <div class="section-title">Prompt</div>
       <textarea class="prompt-area" id="prompt" placeholder="Describe the image you want to generate..."></textarea>
 
+      <button class="generate-btn" id="generateBtn">Generate</button>
+
       <div class="option-group">
         <div class="section-title">Quality</div>
         <div class="option-row" id="qualityGroup">
@@ -569,12 +584,19 @@
         </div>
       </div>
 
+      <div class="option-group">
+        <div class="section-title">Count</div>
+        <div class="option-row" id="countGroup">
+          <button class="option-btn active" data-value="1">1</button>
+          <button class="option-btn" data-value="2">2</button>
+          <button class="option-btn" data-value="4">4</button>
+        </div>
+      </div>
+
       <div class="cost-estimate">
         <span>Est. cost</span>
         <span class="price" id="costEstimate">~$0.006</span>
       </div>
-
-      <button class="generate-btn" id="generateBtn">Generate</button>
 
       <div class="history-strip" id="historyStrip"></div>
     </aside>
@@ -608,6 +630,7 @@
       size: "1024x1024",
       format: "png",
       moderation: "low",
+      count: 1,
       generating: false,
       history: [],
       currentImage: null,
@@ -779,6 +802,7 @@
 
     setupOptionGroup($("#qualityGroup"), "quality");
     setupOptionGroup($("#moderationGroup"), "moderation");
+    setupOptionGroup($("#countGroup"), "count");
 
     $$(".format-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -794,20 +818,22 @@
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) generate();
     });
 
+    let activeGenerations = 0;
+
     async function generate() {
       const prompt = $("#prompt").value.trim();
-      if (!prompt || state.generating) return;
+      if (!prompt) return;
 
-      state.generating = true;
+      activeGenerations++;
       const btn = $("#generateBtn");
-      btn.disabled = true;
       btn.classList.add("loading");
-      btn.textContent = "Generating...";
+      btn.textContent = `Generating (${activeGenerations})...`;
       $("#progressBar").classList.add("active");
 
       try {
         const isEdit = state.mode === "i2i" && state.sourceImageB64;
         const endpoint = isEdit ? "/api/edit" : "/api/generate";
+        const count = parseInt(state.count) || 1;
         const payload = {
           prompt,
           quality: state.quality,
@@ -815,6 +841,7 @@
           format: state.format,
           moderation: state.moderation,
           provider: state.provider,
+          n: isEdit ? 1 : count,
         };
         if (isEdit) payload.image = state.sourceImageB64;
 
@@ -827,19 +854,33 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Generation failed");
 
-        data.prompt = prompt;
-        state.currentImage = data;
-        showResult(data);
-        addToHistory(data);
-        toast(`Generated in ${data.elapsed}s`);
+        if (data.images && data.images.length > 1) {
+          for (const img of data.images) {
+            const item = { image: img.image, filename: img.filename, prompt, elapsed: data.elapsed, provider: data.provider, usage: data.usage };
+            state.currentImage = item;
+            showResult(item);
+            addToHistory(item);
+          }
+          toast(`${data.images.length} images in ${data.elapsed}s`);
+        } else {
+          data.prompt = prompt;
+          state.currentImage = data;
+          showResult(data);
+          addToHistory(data);
+          toast(`Generated in ${data.elapsed}s`);
+        }
       } catch (err) {
         toast(err.message, true);
       } finally {
-        state.generating = false;
-        btn.disabled = false;
-        btn.classList.remove("loading");
-        btn.textContent = "Generate";
-        $("#progressBar").classList.remove("active");
+        activeGenerations--;
+        if (activeGenerations <= 0) {
+          activeGenerations = 0;
+          btn.classList.remove("loading");
+          btn.textContent = state.mode === "i2i" ? "Edit Image" : "Generate";
+          $("#progressBar").classList.remove("active");
+        } else {
+          btn.textContent = `Generating (${activeGenerations})...`;
+        }
       }
     }
 
@@ -868,18 +909,44 @@
       renderHistory();
     }
 
-    function saveHistory() {
+    function compressImage(dataUrl, maxW = 256) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxW / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = img.width * scale;
+          c.height = img.height * scale;
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL("image/jpeg", 0.6));
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    }
+
+    async function saveHistory() {
       try {
-        const slim = state.history.slice(0, 50).map((h) => ({
-          image: h.image,
-          prompt: h.prompt,
-          elapsed: h.elapsed,
-          filename: h.filename,
-          provider: h.provider,
-          usage: h.usage,
-        }));
+        const slim = [];
+        for (const h of state.history.slice(0, 50)) {
+          const thumb = h.thumb || await compressImage(h.image);
+          slim.push({
+            image: h.image,
+            thumb,
+            prompt: h.prompt,
+            elapsed: h.elapsed,
+            filename: h.filename,
+            provider: h.provider,
+            usage: h.usage,
+          });
+        }
         localStorage.setItem("ima2_history", JSON.stringify(slim));
-      } catch {}
+      } catch (e) {
+        if (e.name === "QuotaExceededError") {
+          state.history = state.history.slice(0, Math.max(state.history.length - 5, 5));
+          saveHistory();
+        }
+      }
     }
 
     function loadHistory() {
@@ -902,7 +969,7 @@
       state.history.forEach((item, i) => {
         const thumb = document.createElement("img");
         thumb.className = "history-thumb" + (i === 0 ? " active" : "");
-        thumb.src = item.image;
+        thumb.src = item.thumb || item.image;
         thumb.addEventListener("click", () => {
           state.currentImage = item;
           showResult(item);
