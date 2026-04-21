@@ -47,11 +47,32 @@ async function generateViaOAuth(prompt, quality, size) {
     }),
   });
 
+  console.log("[oauth] response status:", res.status, "content-type:", res.headers.get("content-type"));
+
   if (!res.ok) {
     const text = await res.text();
+    console.error("[oauth] error response:", text.slice(0, 500));
     let msg;
     try { msg = JSON.parse(text).error?.message; } catch {}
     throw new Error(msg || `OAuth proxy returned ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  const isSSE = contentType.includes("text/event-stream");
+
+  // If not SSE, try to parse as JSON (non-stream response)
+  if (!isSSE) {
+    console.log("[oauth] non-SSE response, parsing as JSON");
+    const json = await res.json();
+    // Check output for image data
+    for (const item of json.output || []) {
+      if (item.type === "image_generation_call" && item.result) {
+        return { b64: item.result, usage: json.usage };
+      }
+    }
+    console.log("[oauth] no image in JSON output, output count:", (json.output || []).length);
+    console.log("[oauth] tool_usage:", JSON.stringify(json.tool_usage?.image_gen || {}));
+    throw new Error("No image data in response (non-stream mode)");
   }
 
   // Read SSE stream line by line
@@ -60,6 +81,7 @@ async function generateViaOAuth(prompt, quality, size) {
   let buffer = "";
   let imageB64 = null;
   let usage = null;
+  let eventCount = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -67,7 +89,7 @@ async function generateViaOAuth(prompt, quality, size) {
     buffer += decoder.decode(value, { stream: true });
 
     const lines = buffer.split("\n");
-    buffer = lines.pop(); // keep incomplete line
+    buffer = lines.pop();
 
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue;
@@ -75,13 +97,16 @@ async function generateViaOAuth(prompt, quality, size) {
       if (payload === "[DONE]") continue;
       try {
         const data = JSON.parse(payload);
+        eventCount++;
         if (data.type === "response.output_item.done" && data.item?.type === "image_generation_call" && data.item.result) {
           imageB64 = data.item.result;
+          console.log("[oauth] got image data, b64 length:", imageB64.length);
         }
         if (data.type === "response.completed") {
           usage = data.response?.usage || null;
         }
         if (data.type === "error") {
+          console.error("[oauth] stream error:", JSON.stringify(data));
           throw new Error(data.error?.message || JSON.stringify(data));
         }
       } catch (e) {
@@ -90,8 +115,9 @@ async function generateViaOAuth(prompt, quality, size) {
     }
   }
 
+  console.log("[oauth] stream done, events:", eventCount, "hasImage:", !!imageB64);
   if (imageB64) return { b64: imageB64, usage };
-  throw new Error("No image data received from OAuth proxy");
+  throw new Error("No image data received from OAuth proxy (parsed " + eventCount + " events)");
 }
 
 // ── Provider info ──
