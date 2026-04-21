@@ -581,10 +581,7 @@
 
     <main class="canvas">
       <div class="progress-bar" id="progressBar"></div>
-      <div class="canvas-empty" id="emptyState">
-        GPT-IMAGE-2
-        <span>Enter a prompt and hit generate</span>
-      </div>
+      <div class="canvas-empty" id="emptyState" style="display:none"></div>
       <div class="result-container" id="resultContainer">
         <img class="result-img" id="resultImg">
         <div class="result-prompt" id="resultPrompt"></div>
@@ -807,7 +804,6 @@
       btn.classList.add("loading");
       btn.textContent = "Generating...";
       $("#progressBar").classList.add("active");
-      $("#emptyState").style.display = "none";
 
       try {
         const isEdit = state.mode === "i2i" && state.sourceImageB64;
@@ -838,7 +834,6 @@
         toast(`Generated in ${data.elapsed}s`);
       } catch (err) {
         toast(err.message, true);
-        $("#emptyState").style.display = "";
       } finally {
         state.generating = false;
         btn.disabled = false;
