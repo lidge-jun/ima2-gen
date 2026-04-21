@@ -41,8 +41,12 @@ async function generateViaOAuth(prompt, quality, size) {
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify({
       model: "gpt-5.4",
-      input: [{ role: "user", content: prompt }],
+      input: [
+        { role: "developer", content: "You are an image generator. Always use the image_generation tool to create the image. Never respond with text only." },
+        { role: "user", content: `Generate an image: ${prompt}` },
+      ],
       tools: [{ type: "image_generation", quality, size }],
+      tool_choice: "required",
       stream: true,
     }),
   });
@@ -241,32 +245,120 @@ app.post("/api/generate", async (req, res) => {
   }
 });
 
+// ── OAuth edit: send image as input to Responses API ──
+async function editViaOAuth(prompt, imageB64, quality, size) {
+  const res = await fetch(`${OAUTH_URL}/v1/responses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({
+      model: "gpt-5.4",
+      input: [
+        { role: "developer", content: "You are an image editor. Always use the image_generation tool to edit the provided image. Never respond with text only." },
+        {
+          role: "user",
+          content: [
+            { type: "input_image", image_url: `data:image/png;base64,${imageB64}` },
+            { type: "input_text", text: `Edit this image: ${prompt}` },
+          ],
+        },
+      ],
+      tools: [{ type: "image_generation", quality, size }],
+      tool_choice: "required",
+      stream: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    let msg;
+    try { msg = JSON.parse(text).error?.message; } catch {}
+    throw new Error(msg || `OAuth edit returned ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let resultB64 = null;
+  let usage = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary;
+    while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+
+      let eventData = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("data: ")) eventData += line.slice(6);
+      }
+      if (!eventData || eventData === "[DONE]") continue;
+
+      try {
+        const data = JSON.parse(eventData);
+        if (data.type === "response.output_item.done" && data.item?.type === "image_generation_call" && data.item.result) {
+          resultB64 = data.item.result;
+          console.log("[oauth-edit] got image, b64 length:", resultB64.length);
+        }
+        if (data.type === "response.completed") usage = data.response?.usage || null;
+        if (data.type === "error") throw new Error(data.error?.message || JSON.stringify(data));
+      } catch (e) {
+        if (e.message && !e.message.startsWith("Unexpected")) throw e;
+      }
+    }
+  }
+
+  if (resultB64) return { b64: resultB64, usage };
+  throw new Error("No image data received from OAuth edit");
+}
+
 // ── Edit image (inpainting) ──
 app.post("/api/edit", async (req, res) => {
   try {
-    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "low" } =
+    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "low", provider = "auto" } =
       req.body;
 
     if (!prompt || !imageB64)
       return res.status(400).json({ error: "Prompt and image are required" });
-    if (!openai)
-      return res.status(400).json({ error: "Image editing requires an API key" });
 
+    const useOAuth = provider === "oauth" || (provider === "auto" && !HAS_API_KEY);
+    console.log(`[edit] provider=${useOAuth ? "oauth" : "api"} quality=${quality} size=${size}`);
     const startTime = Date.now();
 
-    const imageFile = new File([Buffer.from(imageB64, "base64")], "image.png", { type: "image/png" });
-    const params = { model: "gpt-image-2", prompt, image: imageFile, quality, size, moderation };
-    if (maskB64) {
-      params.mask = new File([Buffer.from(maskB64, "base64")], "mask.png", { type: "image/png" });
+    let resultB64, usage;
+
+    if (useOAuth) {
+      const result = await editViaOAuth(prompt, imageB64, quality, size);
+      resultB64 = result.b64;
+      usage = result.usage;
+    } else if (openai) {
+      const imageFile = new File([Buffer.from(imageB64, "base64")], "image.png", { type: "image/png" });
+      const params = { model: "gpt-image-2", prompt, image: imageFile, quality, size, moderation };
+      if (maskB64) {
+        params.mask = new File([Buffer.from(maskB64, "base64")], "mask.png", { type: "image/png" });
+      }
+      const response = await openai.images.edit(params);
+      resultB64 = response.data[0].b64_json;
+      usage = response.usage;
+    } else {
+      return res.status(400).json({ error: "No API key configured and OAuth not selected" });
     }
 
-    const response = await openai.images.edit(params);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
+    await mkdir(join(__dirname, "generated"), { recursive: true });
+    const filename = `${Date.now()}.png`;
+    await writeFile(join(__dirname, "generated", filename), Buffer.from(resultB64, "base64"));
+
     res.json({
-      image: `data:image/png;base64,${response.data[0].b64_json}`,
+      image: `data:image/png;base64,${resultB64}`,
       elapsed,
-      usage: response.usage,
+      filename,
+      usage,
+      provider: useOAuth ? "oauth" : "api",
     });
   } catch (err) {
     console.error("Edit error:", err.message);
