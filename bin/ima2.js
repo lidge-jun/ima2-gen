@@ -5,6 +5,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn, execSync } from "child_process";
 import { networkInterfaces, homedir } from "os";
+import { openUrl, resolveBin } from "./lib/platform.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -66,7 +67,7 @@ async function setup() {
     if (!hasAuth) {
       console.log("  Running 'codex login' — follow the browser prompt.\n");
       try {
-        execSync("npx @openai/codex login", { stdio: "inherit" });
+        execSync(`${resolveBin("npx")} @openai/codex login`, { stdio: "inherit" });
       } catch {
         console.log("\n  Login failed or cancelled. You can retry with 'ima2 serve'.\n");
         rl.close();
@@ -98,7 +99,7 @@ async function serve() {
     if (hasUiSrc) {
       console.log("\n  ui/dist missing — running 'npm run build' first...\n");
       try {
-        execSync("npm run build", { stdio: "inherit", cwd: ROOT });
+        execSync(`${resolveBin("npm")} run build`, { stdio: "inherit", cwd: ROOT });
       } catch {
         console.log("\n  Build failed. Try: cd ui && npm install && npm run build\n");
         process.exit(1);
@@ -219,17 +220,10 @@ async function doctor() {
 function openBrowser() {
   const port = process.env.PORT || 3333;
   const url = `http://localhost:${port}`;
-
-  const platform = process.platform;
-  let cmd;
-  if (platform === "darwin") cmd = "open";
-  else if (platform === "win32") cmd = "start";
-  else cmd = "xdg-open";
-
-  try {
-    execSync(`${cmd} ${url}`, { stdio: "ignore" });
+  const res = openUrl(url);
+  if (res.ok) {
     console.log(`\n  Opening ${url} ...\n`);
-  } catch {
+  } else {
     console.log(`\n  Could not open browser. Visit: ${url}\n`);
   }
 }

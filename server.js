@@ -4,6 +4,7 @@ import { writeFile, mkdir, readFile, readdir, stat } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
+import { spawnBin, onShutdown } from "./bin/lib/platform.js";
 import { existsSync, writeFileSync, unlinkSync, mkdirSync, readFileSync as fsReadFileSync } from "fs";
 import { homedir } from "os";
 import { newNodeId, saveNode, loadNodeB64, loadNodeMeta, loadAssetB64 } from "./lib/nodeStore.js";
@@ -918,7 +919,7 @@ app.get("/api/billing", async (_req, res) => {
 // ── Start OAuth proxy as child process ──
 function startOAuthProxy() {
   console.log(`Starting openai-oauth on port ${OAUTH_PORT}...`);
-  const child = spawn("npx", ["openai-oauth", "--port", String(OAUTH_PORT)], {
+  const child = spawnBin("npx", ["openai-oauth", "--port", String(OAUTH_PORT)], {
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env },
   });
@@ -971,15 +972,9 @@ function __unadvertise() {
   } catch {}
 }
 
-process.on("SIGINT", () => {
+onShutdown(() => {
   __unadvertise();
-  oauthChild.kill();
-  process.exit();
-});
-process.on("SIGTERM", () => {
-  __unadvertise();
-  oauthChild.kill();
-  process.exit();
+  try { oauthChild.kill(); } catch {}
 });
 process.on("exit", __unadvertise);
 

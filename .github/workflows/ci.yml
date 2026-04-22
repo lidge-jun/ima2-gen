@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['18', '20']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install root deps
+        run: npm ci
+      - name: Install ui deps
+        run: npm --prefix ui ci
+      - name: Build ui
+        run: npm --prefix ui run build
+      - name: Run tests
+        run: npm test
+      - name: Lint package.json
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
+        run: npm run lint:pkg

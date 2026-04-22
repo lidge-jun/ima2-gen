@@ -1,8 +1,7 @@
 import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
-import { execSync } from "node:child_process";
+import { openUrl } from "../lib/platform.js";
 import { out, die, color, json, exitCodeForError } from "../lib/output.js";
-import { join } from "node:path";
 
 const SPEC = {
   flags: {
@@ -42,16 +41,8 @@ export default async function showCmd(argv) {
 
   if (args.reveal) {
     const url = item.url ? `${server.base}${item.url}` : null;
-    try {
-      if (process.platform === "darwin") {
-        execSync(`open "${server.base}${item.url || ""}"`);
-      } else if (process.platform === "win32") {
-        execSync(`start "" "${url}"`);
-      } else {
-        execSync(`xdg-open "${url}"`);
-      }
-    } catch {
-      out(color.yellow("(could not reveal)"));
-    }
+    if (!url) { out(color.yellow("(no url)")); return; }
+    const res = openUrl(url);
+    if (!res.ok) out(color.yellow("(could not reveal)"));
   }
 }
