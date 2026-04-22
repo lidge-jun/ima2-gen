@@ -220,6 +220,7 @@ type AppState = {
   addRootNode: () => ClientNodeId;
   addChildNode: (parentClientId: ClientNodeId) => ClientNodeId;
   addSiblingNode: (sourceClientId: ClientNodeId) => ClientNodeId;
+  duplicateBranchRoot: (sourceClientId: ClientNodeId) => ClientNodeId;
   addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
   connectNodes: (sourceClientId: ClientNodeId, targetClientId: ClientNodeId) => void;
   updateNodePrompt: (clientId: ClientNodeId, prompt: string) => void;
@@ -783,6 +784,33 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     });
     get().scheduleGraphSave();
+  },
+
+  duplicateBranchRoot: (sourceClientId) => {
+    const source = get().graphNodes.find((n) => n.id === sourceClientId);
+    if (!source) return sourceClientId;
+    const clientId = newClientNodeId();
+    const rootSiblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
+    const node: GraphNode = {
+      id: clientId,
+      type: "imageNode",
+      position: { x: source.position.x + 420, y: source.position.y + 40 },
+      data: {
+        clientId,
+        serverNodeId: null,
+        parentServerNodeId: null,
+        prompt: source.data.prompt,
+        imageUrl: null,
+        status: "empty",
+        pendingRequestId: null,
+        pendingPhase: null,
+      },
+    };
+    // no parent edge — becomes a new branch root at root layer
+    void rootSiblings;
+    set({ graphNodes: [...get().graphNodes, node] });
+    get().scheduleGraphSave();
+    return clientId;
   },
 
   async generateNode(clientId) {

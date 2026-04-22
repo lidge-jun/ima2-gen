@@ -3,6 +3,7 @@ import { useAppStore } from "../store/useAppStore";
 export function ResultActions() {
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
+  const setPrompt = useAppStore((s) => s.setPrompt);
 
   if (!currentImage) return null;
 
@@ -30,6 +31,22 @@ export function ResultActions() {
     showToast("Prompt copied");
   };
 
+  const newFromHere = () => {
+    if (!currentImage.prompt) {
+      showToast("No prompt to seed from", true);
+      return;
+    }
+    setPrompt(currentImage.prompt);
+    const promptEl = document.querySelector<HTMLTextAreaElement>(
+      'textarea[name="prompt"], textarea#prompt, .sidebar textarea',
+    );
+    if (promptEl) {
+      promptEl.focus();
+      promptEl.setSelectionRange(promptEl.value.length, promptEl.value.length);
+    }
+    showToast("Seeded from this image — edit and generate");
+  };
+
   return (
     <div className="result-actions">
       <button type="button" className="action-btn" onClick={download}>
@@ -40,6 +57,14 @@ export function ResultActions() {
       </button>
       <button type="button" className="action-btn" onClick={copyPrompt}>
         Copy prompt
+      </button>
+      <button
+        type="button"
+        className="action-btn action-btn--primary"
+        onClick={newFromHere}
+        title="Seed prompt from this image and continue"
+      >
+        New from here
       </button>
     </div>
   );

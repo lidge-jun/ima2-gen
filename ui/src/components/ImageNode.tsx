@@ -7,6 +7,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const updateNodePrompt = useAppStore((s) => s.updateNodePrompt);
   const generateNode = useAppStore((s) => s.generateNode);
   const addChildNode = useAppStore((s) => s.addChildNode);
+  const duplicateBranchRoot = useAppStore((s) => s.duplicateBranchRoot);
   const deleteNode = useAppStore((s) => s.deleteNode);
 
   const onPromptChange = useCallback(
@@ -22,6 +23,10 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
     if (d.status !== "ready") return;
     addChildNode(id);
   }, [id, d.status, addChildNode]);
+
+  const onDuplicateBranch = useCallback(() => {
+    duplicateBranchRoot(id);
+  }, [id, duplicateBranchRoot]);
 
   const onDelete = useCallback(() => deleteNode(id), [id, deleteNode]);
 
@@ -70,7 +75,16 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
             {d.status === "ready" ? "Regenerate" : "Generate"}
           </button>
           {d.status === "ready" ? (
-            <button type="button" onClick={onBranch}>+ Child</button>
+            <>
+              <button type="button" onClick={onBranch}>+ Child</button>
+              <button
+                type="button"
+                onClick={onDuplicateBranch}
+                title="Duplicate as new branch root"
+              >
+                ⎘ Branch
+              </button>
+            </>
           ) : null}
           <button type="button" onClick={onDelete} className="image-node__del" title="Delete">✕</button>
         </div>
