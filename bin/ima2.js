@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { spawn, execSync } from "child_process";
 import { networkInterfaces, homedir } from "os";
 import { openUrl, resolveBin } from "./lib/platform.js";
+import { detectCodexAuth } from "../lib/codexDetect.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -67,12 +68,16 @@ async function setup() {
     saveConfig(config);
     console.log("\n  Starting OAuth login...\n");
 
-    // Check if codex auth exists
-    const hasAuth =
-      existsSync(join(HOME, ".codex", "auth.json")) ||
-      existsSync(join(HOME, ".chatgpt-local", "auth.json"));
+    // Check if codex auth exists (file OR keyring via `codex login status`)
+    const auth = detectCodexAuth();
+    const hasAuth = auth.authed;
 
     if (!hasAuth) {
+      if (auth.platform === "win32") {
+        console.log(
+          "  Windows note: OpenAI Codex has no documented native installer. Use WSL2 for best results.\n",
+        );
+      }
       console.log("  Running 'codex login' — follow the browser prompt.\n");
       try {
         execSync(`${resolveBin("npx")} @openai/codex login`, { stdio: "inherit" });
@@ -82,7 +87,8 @@ async function setup() {
         process.exit(1);
       }
     } else {
-      console.log("  Existing OAuth session found.\n");
+      const how = auth.probe === "authed" ? "codex CLI" : "auth file";
+      console.log(`  Existing OAuth session found (${how}).\n`);
     }
 
     saveConfig(config);
@@ -156,12 +162,22 @@ async function showStatus() {
     console.log("  Run 'ima2 setup' to configure.\n");
   }
 
-  // Check OAuth auth files
-  const hasCodexAuth = existsSync(join(HOME, ".codex", "auth.json"));
-  const hasChatgptAuth = existsSync(join(HOME, ".chatgpt-local", "auth.json"));
+  // Check OAuth auth files + codex CLI probe
+  const auth = detectCodexAuth();
   console.log(`  OAuth sessions:`);
-  console.log(`    ~/.codex/auth.json          ${hasCodexAuth ? "✓" : "✗"}`);
-  console.log(`    ~/.chatgpt-local/auth.json  ${hasChatgptAuth ? "✓" : "✗"}`);
+  console.log(`    ${auth.files.codex}          ${auth.fileHits.codex ? "✓" : "✗"}`);
+  console.log(`    ${auth.files.chatgpt}  ${auth.fileHits.chatgpt ? "✓" : "✗"}`);
+  if (auth.fileHits.xdgCodex) {
+    console.log(`    ${auth.files.xdgCodex}  ✓`);
+  }
+  const probeLabel =
+    auth.probe === "authed" ? "✓ authed"
+    : auth.probe === "unauthed" ? "✗ not logged in"
+    : "– codex CLI not found";
+  console.log(`    codex login status           ${probeLabel}`);
+  if (auth.platform === "win32") {
+    console.log("    (Windows: no native codex installer — use WSL2)");
+  }
   console.log("");
 }
 
