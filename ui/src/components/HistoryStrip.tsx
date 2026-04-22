@@ -23,11 +23,13 @@ export function HistoryStrip() {
         </svg>
       </button>
       {history.map((item, i) => {
-        const active = currentImage?.image === item.image;
+        const active = item.filename
+          ? currentImage?.filename === item.filename
+          : currentImage?.image === item.image;
         return (
           <img
-            key={`${i}-${item.filename ?? i}`}
-            src={item.thumb || item.image}
+            key={item.filename ?? `${i}-${item.image}`}
+            src={item.thumb || item.url || item.image}
             alt=""
             className={`history-thumb${active ? " active" : ""}`}
             onClick={() => selectHistory(item)}

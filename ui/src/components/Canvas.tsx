@@ -22,7 +22,12 @@ export function Canvas() {
       <div className={`progress-bar${activeGenerations > 0 ? " active" : ""}`} />
       {currentImage ? (
         <div className="result-container visible">
-          <img className="result-img" src={currentImage.url ?? currentImage.image} alt="result" />
+          <img
+            className="result-img"
+            key={currentImage.filename ?? currentImage.url ?? currentImage.image}
+            src={currentImage.url ?? currentImage.image}
+            alt="result"
+          />
           {currentImage.prompt ? (
             <div className="result-prompt" onClick={copyPrompt}>
               {currentImage.prompt}

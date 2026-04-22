@@ -385,6 +385,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const { items } = await getHistory(HISTORY_LIMIT);
         const arr: GenerateItem[] = items.map((it) => ({
           image: it.url,
+          url: it.url,
           filename: it.filename,
           thumb: it.url,
           prompt: it.prompt ?? undefined,
