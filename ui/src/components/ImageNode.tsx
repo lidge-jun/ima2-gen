@@ -2,7 +2,7 @@ import { memo, useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
 
-function ImageNodeImpl({ id, data }: NodeProps<GraphNode>) {
+function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const d = data as ImageNodeData;
   const updateNodePrompt = useAppStore((s) => s.updateNodePrompt);
   const generateNode = useAppStore((s) => s.generateNode);
@@ -33,8 +33,10 @@ function ImageNodeImpl({ id, data }: NodeProps<GraphNode>) {
   }[d.status];
 
   return (
-    <div className={`image-node image-node--${d.status}`}>
-      {d.parentServerNodeId ? <Handle type="target" position={Position.Left} /> : null}
+    <div className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}>
+      {d.parentServerNodeId ? (
+        <Handle type="target" position={Position.Left} className="image-node__handle" />
+      ) : null}
       <div className="image-node__preview">
         {d.imageUrl ? (
           <img src={d.imageUrl} alt="node" />
@@ -45,26 +47,27 @@ function ImageNodeImpl({ id, data }: NodeProps<GraphNode>) {
         )}
       </div>
       <textarea
-        className="image-node__prompt"
+        className="image-node__prompt nodrag"
         value={d.prompt}
         onChange={onPromptChange}
+        onKeyDown={(e) => e.stopPropagation()}
         placeholder={d.parentServerNodeId ? "Edit prompt…" : "Prompt…"}
         rows={2}
         disabled={d.status === "pending"}
       />
       <div className="image-node__footer">
         <span className="image-node__status">{statusLabel}</span>
-        <div className="image-node__actions">
+        <div className="image-node__actions nodrag">
           <button type="button" onClick={onGenerate} disabled={d.status === "pending"}>
             {d.status === "ready" ? "Regenerate" : "Generate"}
           </button>
           {d.status === "ready" ? (
             <button type="button" onClick={onBranch}>+ Child</button>
           ) : null}
-          <button type="button" onClick={onDelete} className="image-node__del">✕</button>
+          <button type="button" onClick={onDelete} className="image-node__del" title="Delete">✕</button>
         </div>
       </div>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position={Position.Right} className="image-node__handle image-node__handle--source" />
     </div>
   );
 }

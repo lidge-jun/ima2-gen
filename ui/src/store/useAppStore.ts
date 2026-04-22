@@ -84,9 +84,12 @@ type AppState = {
   setGraphEdges: (e: GraphEdge[]) => void;
   addRootNode: () => ClientNodeId;
   addChildNode: (parentClientId: ClientNodeId) => ClientNodeId;
+  addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
+  connectNodes: (sourceClientId: ClientNodeId, targetClientId: ClientNodeId) => void;
   updateNodePrompt: (clientId: ClientNodeId, prompt: string) => void;
   generateNode: (clientId: ClientNodeId) => Promise<void>;
   deleteNode: (clientId: ClientNodeId) => void;
+  deleteNodes: (clientIds: ClientNodeId[]) => void;
 
   setMode: (mode: Mode) => void;
   setProvider: (p: Provider) => void;
@@ -272,6 +275,65 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       graphNodes: get().graphNodes.filter((n) => n.id !== clientId),
       graphEdges: get().graphEdges.filter((e) => e.source !== clientId && e.target !== clientId),
+    });
+  },
+
+  deleteNodes: (clientIds) => {
+    const set_ = new Set(clientIds);
+    set({
+      graphNodes: get().graphNodes.filter((n) => !set_.has(n.id)),
+      graphEdges: get().graphEdges.filter((e) => !set_.has(e.source) && !set_.has(e.target)),
+    });
+  },
+
+  addChildNodeAt: (parentClientId, position) => {
+    const parent = get().graphNodes.find((n) => n.id === parentClientId);
+    if (!parent) return parentClientId;
+    const clientId = newClientNodeId();
+    const node: GraphNode = {
+      id: clientId,
+      type: "imageNode",
+      position,
+      data: {
+        clientId,
+        serverNodeId: null,
+        parentServerNodeId: parent.data.serverNodeId,
+        prompt: "",
+        imageUrl: null,
+        status: "empty",
+      },
+    };
+    const edge: GraphEdge = {
+      id: `${parentClientId}->${clientId}`,
+      source: parentClientId,
+      target: clientId,
+    };
+    set({
+      graphNodes: [...get().graphNodes, node],
+      graphEdges: [...get().graphEdges, edge],
+    });
+    return clientId;
+  },
+
+  connectNodes: (sourceClientId, targetClientId) => {
+    if (sourceClientId === targetClientId) return;
+    const existing = get().graphEdges.find(
+      (e) => e.source === sourceClientId && e.target === targetClientId,
+    );
+    if (existing) return;
+    // update target's parentServerNodeId to source's serverNodeId
+    const source = get().graphNodes.find((n) => n.id === sourceClientId);
+    if (!source) return;
+    set({
+      graphNodes: get().graphNodes.map((n) =>
+        n.id === targetClientId
+          ? { ...n, data: { ...n.data, parentServerNodeId: source.data.serverNodeId } }
+          : n,
+      ),
+      graphEdges: [
+        ...get().graphEdges,
+        { id: `${sourceClientId}->${targetClientId}`, source: sourceClientId, target: targetClientId },
+      ],
     });
   },
 

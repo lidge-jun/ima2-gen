@@ -817,3 +817,75 @@ body {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* ── Node mode 0.05 polish ── */
+.image-node--selected {
+  border-color: var(--accent-bright, #fff) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.image-node__handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: var(--text-dim, #888) !important;
+  border: 2px solid var(--surface-2, #1c1c1c) !important;
+}
+.image-node__handle--source {
+  background: var(--accent-bright, #fff) !important;
+}
+.image-node:hover .image-node__handle {
+  background: var(--accent-bright, #fff) !important;
+}
+
+.node-canvas__hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--text-dim, #888);
+  background: rgba(10, 10, 10, 0.7);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #2a2a2a);
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+/* xyflow Controls dark theme override */
+.react-flow__controls {
+  background: var(--surface-2, #1c1c1c) !important;
+  border: 1px solid var(--border, #2a2a2a) !important;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border, #2a2a2a) !important;
+  color: var(--text, #e8e8e8) !important;
+  fill: var(--text, #e8e8e8) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--surface, #141414) !important;
+}
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
+
+/* Edges */
+.react-flow__edge-path {
+  stroke: var(--text-dim, #888) !important;
+  stroke-width: 1.5 !important;
+}
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--accent-bright, #fff) !important;
+  stroke-width: 2 !important;
+}
+
+/* Connection line while dragging */
+.react-flow__connectionline {
+  stroke: var(--accent-bright, #fff) !important;
+  stroke-width: 2 !important;
+  stroke-dasharray: 4 4;
+}
