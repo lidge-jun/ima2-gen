@@ -4,10 +4,11 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn, execSync } from "child_process";
-import { networkInterfaces } from "os";
+import { networkInterfaces, homedir } from "os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
+const HOME = homedir();
 const CONFIG_DIR = join(ROOT, ".ima2");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
@@ -59,8 +60,8 @@ async function setup() {
 
     // Check if codex auth exists
     const hasAuth =
-      existsSync(join(process.env.HOME, ".codex", "auth.json")) ||
-      existsSync(join(process.env.HOME, ".chatgpt-local", "auth.json"));
+      existsSync(join(HOME, ".codex", "auth.json")) ||
+      existsSync(join(HOME, ".chatgpt-local", "auth.json"));
 
     if (!hasAuth) {
       console.log("  Running 'codex login' — follow the browser prompt.\n");
@@ -88,6 +89,25 @@ async function serve() {
 
   if (!config.provider) {
     config = await setup();
+  }
+
+  // Ensure ui/dist exists — if missing, auto-build (dev) or error (installed pkg)
+  const distIndex = join(ROOT, "ui", "dist", "index.html");
+  if (!existsSync(distIndex)) {
+    const hasUiSrc = existsSync(join(ROOT, "ui", "package.json"));
+    if (hasUiSrc) {
+      console.log("\n  ui/dist missing — running 'npm run build' first...\n");
+      try {
+        execSync("npm run build", { stdio: "inherit", cwd: ROOT });
+      } catch {
+        console.log("\n  Build failed. Try: cd ui && npm install && npm run build\n");
+        process.exit(1);
+      }
+    } else {
+      console.log("\n  ui/dist not found and ui/ source is missing.");
+      console.log("  This installation appears broken. Reinstall: npm i -g ima2-gen\n");
+      process.exit(1);
+    }
   }
 
   const env = { ...process.env };
@@ -128,8 +148,8 @@ async function showStatus() {
   }
 
   // Check OAuth auth files
-  const hasCodexAuth = existsSync(join(process.env.HOME, ".codex", "auth.json"));
-  const hasChatgptAuth = existsSync(join(process.env.HOME, ".chatgpt-local", "auth.json"));
+  const hasCodexAuth = existsSync(join(HOME, ".codex", "auth.json"));
+  const hasChatgptAuth = existsSync(join(HOME, ".chatgpt-local", "auth.json"));
   console.log(`  OAuth sessions:`);
   console.log(`    ~/.codex/auth.json          ${hasCodexAuth ? "✓" : "✗"}`);
   console.log(`    ~/.chatgpt-local/auth.json  ${hasChatgptAuth ? "✓" : "✗"}`);

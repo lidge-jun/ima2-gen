@@ -32,7 +32,7 @@ if (HAS_API_KEY) {
 }
 
 app.use(express.json({ limit: "50mb" }));
-app.use(express.static(join(__dirname, "public")));
+app.use(express.static(join(__dirname, "ui", "dist")));
 
 // ── OAuth proxy: generate via Responses API (stream mode) ──
 async function generateViaOAuth(prompt, quality, size) {

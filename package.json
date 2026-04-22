@@ -9,9 +9,13 @@
   "scripts": {
     "start": "node bin/ima2.js serve",
     "dev": "node --watch server.js",
+    "ui:install": "cd ui && npm install",
+    "ui:dev": "cd ui && npm run dev",
+    "ui:build": "cd ui && npm run build",
+    "build": "npm run ui:build",
     "test": "node --test tests/**/*.test.js",
     "setup": "node bin/ima2.js setup",
-    "prepublishOnly": "npm run lint:pkg",
+    "prepublishOnly": "npm run build && npm run lint:pkg",
     "lint:pkg": "node -e \"const p=require('./package.json'); if(!p.name||!p.version||!p.bin) throw new Error('missing fields')\"",
     "release:patch": "npm version patch && npm publish && git push origin main --tags",
     "release:minor": "npm version minor && npm publish && git push origin main --tags",
@@ -31,7 +35,7 @@
   },
   "files": [
     "bin/",
-    "public/",
+    "ui/dist/",
     "assets/",
     "server.js",
     ".env.example",
