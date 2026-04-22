@@ -206,6 +206,7 @@ type AppState = {
   setGraphEdges: (e: GraphEdge[]) => void;
   addRootNode: () => ClientNodeId;
   addChildNode: (parentClientId: ClientNodeId) => ClientNodeId;
+  addSiblingNode: (sourceClientId: ClientNodeId) => ClientNodeId;
   addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
   connectNodes: (sourceClientId: ClientNodeId, targetClientId: ClientNodeId) => void;
   updateNodePrompt: (clientId: ClientNodeId, prompt: string) => void;
@@ -635,6 +636,65 @@ export const useAppStore = create<AppState>((set, get) => ({
     return clientId;
   },
 
+  addSiblingNode: (sourceClientId) => {
+    const source = get().graphNodes.find((n) => n.id === sourceClientId);
+    if (!source) return sourceClientId;
+
+    const incomingEdge = get().graphEdges.find((e) => e.target === sourceClientId);
+    if (!incomingEdge) {
+      const clientId = newClientNodeId();
+      const depth = 0;
+      const siblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
+      const node: GraphNode = {
+        id: clientId,
+        type: "imageNode",
+        position: initialPos(depth, siblings),
+        data: {
+          clientId,
+          serverNodeId: null,
+          parentServerNodeId: null,
+          prompt: source.data.prompt,
+          imageUrl: null,
+          status: "empty",
+        },
+      };
+      set({ graphNodes: [...get().graphNodes, node] });
+      get().scheduleGraphSave();
+      return clientId;
+    }
+
+    const parentClientId = incomingEdge.source;
+    const parent = get().graphNodes.find((n) => n.id === parentClientId);
+    if (!parent) return sourceClientId;
+
+    const clientId = newClientNodeId();
+    const siblings = get().graphEdges.filter((e) => e.source === parentClientId).length;
+    const node: GraphNode = {
+      id: clientId,
+      type: "imageNode",
+      position: { x: parent.position.x + 360, y: parent.position.y + siblings * 320 },
+      data: {
+        clientId,
+        serverNodeId: null,
+        parentServerNodeId: source.data.parentServerNodeId,
+        prompt: source.data.prompt,
+        imageUrl: null,
+        status: "empty",
+      },
+    };
+    const edge: GraphEdge = {
+      id: `${parentClientId}->${clientId}`,
+      source: parentClientId,
+      target: clientId,
+    };
+    set({
+      graphNodes: [...get().graphNodes, node],
+      graphEdges: [...get().graphEdges, edge],
+    });
+    get().scheduleGraphSave();
+    return clientId;
+  },
+
   updateNodePrompt: (clientId, prompt) => {
     set({
       graphNodes: get().graphNodes.map((n) =>
@@ -645,7 +705,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   async generateNode(clientId) {
-    const node = get().graphNodes.find((n) => n.id === clientId);
+    const requestedNode = get().graphNodes.find((n) => n.id === clientId);
+    const targetClientId =
+      requestedNode?.data.status === "ready" ? get().addSiblingNode(clientId) : clientId;
+    const node = get().graphNodes.find((n) => n.id === targetClientId);
     if (!node) return;
     const { prompt, parentServerNodeId } = node.data;
     if (!prompt.trim()) {
@@ -656,7 +719,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const size = s.getResolvedSize();
 
     // mark pending
-    const flightId = `fn_${clientId}`;
+    const flightId = `fn_${targetClientId}`;
     const startedAt = Date.now();
     const nextInFlight: PersistedInFlight[] = [
       ...s.inFlight,
@@ -665,7 +728,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     saveInFlight(nextInFlight);
     set({
       graphNodes: get().graphNodes.map((n) =>
-        n.id === clientId ? { ...n, data: { ...n.data, status: "pending", error: undefined } } : n,
+        n.id === targetClientId
+          ? { ...n, data: { ...n.data, status: "pending", error: undefined } }
+          : n,
       ),
       activeGenerations: s.activeGenerations + 1,
       inFlight: nextInFlight,
@@ -686,7 +751,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       set({
         graphNodes: get().graphNodes.map((n) =>
-          n.id === clientId
+          n.id === targetClientId
             ? {
                 ...n,
                 data: {
@@ -706,7 +771,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const msg = err instanceof Error ? err.message : "Node generation failed";
       set({
         graphNodes: get().graphNodes.map((n) =>
-          n.id === clientId ? { ...n, data: { ...n.data, status: "error", error: msg } } : n,
+          n.id === targetClientId
+            ? { ...n, data: { ...n.data, status: "error", error: msg } }
+            : n,
         ),
       });
       get().showToast(msg, true);
