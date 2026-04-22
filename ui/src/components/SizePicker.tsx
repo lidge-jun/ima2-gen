@@ -65,8 +65,8 @@ export function SizePicker() {
             <input
               type="number"
               className="custom-size-input"
-              min={256}
-              max={3840}
+              min={1024}
+              max={3824}
               step={16}
               value={customW}
               onChange={(e) =>
@@ -87,8 +87,8 @@ export function SizePicker() {
             <input
               type="number"
               className="custom-size-input"
-              min={256}
-              max={3840}
+              min={1024}
+              max={3824}
               step={16}
               value={customH}
               onChange={(e) =>
@@ -98,7 +98,7 @@ export function SizePicker() {
             />
           </div>
           <div className="size-hint">
-            Both must be multiples of 16, max 3840, ratio ≤ 3:1
+            Min 1024 per side, max 3824, multiples of 16, ratio ≤ 3:1
           </div>
         </>
       ) : null}
