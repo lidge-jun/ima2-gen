@@ -45,7 +45,7 @@ describe("ima2 CLI", () => {
   it("should show help with --help", async () => {
     const { stdout, code } = await runCLI(["--help"]);
     assert.strictEqual(code, 0, "--help should exit 0");
-    assert.ok(stdout.includes("Commands:"), "help should list commands");
+    assert.ok(stdout.includes("commands:"), "help should list commands");
     assert.ok(stdout.includes("version"), "help should mention version");
   });
 

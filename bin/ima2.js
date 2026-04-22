@@ -240,7 +240,7 @@ function showHelp() {
 
   Usage: ima2 <command> [options]
 
-  Commands:
+  Server commands:
     serve          Start the image generation server
     setup, login   Configure API key or OAuth (interactive)
     status         Show current configuration status
@@ -248,15 +248,24 @@ function showHelp() {
     open           Open web UI in browser
     reset          Reset configuration
 
+  Client commands (require a running 'ima2 serve'):
+    gen <prompt>   Generate image(s) from prompt  (ima2 gen --help)
+    edit <file>    Edit an existing image         (ima2 edit --help)
+    ls             List recent history            (ima2 ls --help)
+    show <name>    Show one history item          (ima2 show --help)
+    ps             List active jobs               (ima2 ps --help)
+    ping           Ping running server / check health
+
   Options:
     -v, --version  Show version
     -h, --help     Show help
 
   Examples:
-    ima2 serve              Start server (auto-setup on first run)
-    ima2 status             Check current config
-    ima2 doctor             Verify environment
-    ima2 open               Open http://localhost:3333
+    ima2 serve                       Start server
+    ima2 gen "a shiba in space"      Generate from CLI
+    ima2 gen "merge" --ref a.png --ref b.png -q high -o out.png
+    ima2 ls -n 10                    Last 10 generations
+    ima2 ping                        Health check
 `);
 }
 
@@ -269,7 +278,8 @@ if (args.includes("-v") || args.includes("--version")) {
   process.exit(0);
 }
 
-if (args.includes("-h") || args.includes("--help") || !command) {
+if ((!command || args.includes("-h") || args.includes("--help"))
+    && !["gen", "edit", "ls", "show", "ps", "ping"].includes(command)) {
   showHelp();
   process.exit(command ? 0 : 1);
 }
@@ -299,6 +309,18 @@ switch (command) {
       console.log("  No config to reset.");
     }
     break;
+  case "gen":
+  case "edit":
+  case "ls":
+  case "show":
+  case "ps":
+  case "ping": {
+    const { setCliVersion } = await import("./lib/client.js");
+    setCliVersion(pkg.version);
+    const mod = await import(`./commands/${command}.js`);
+    await mod.default(args.slice(1));
+    break;
+  }
   default:
     console.log(`  Unknown command: "${command}"`);
     console.log("  Run 'ima2 --help' for usage.\n");

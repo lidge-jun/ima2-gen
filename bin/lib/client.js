@@ -25,8 +25,15 @@ async function probe(base, timeoutMs = 600) {
 }
 
 export async function resolveServer({ serverFlag } = {}) {
+  if (serverFlag) {
+    const base = serverFlag.replace(/\/$/, "");
+    const health = await probe(base);
+    if (health) return { base, health };
+    const err = new Error(`server unreachable at ${base}`);
+    err.code = "SERVER_UNREACHABLE";
+    throw err;
+  }
   const candidates = [];
-  if (serverFlag) candidates.push(serverFlag.replace(/\/$/, ""));
   if (process.env.IMA2_SERVER) candidates.push(process.env.IMA2_SERVER.replace(/\/$/, ""));
   const adv = readAdvertise();
   if (adv?.port) candidates.push(`http://localhost:${adv.port}`);
