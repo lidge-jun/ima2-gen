@@ -714,6 +714,8 @@ app.post("/api/node/generate", async (req, res) => {
     const meta = {
       nodeId,
       parentNodeId,
+      sessionId,
+      clientNodeId,
       prompt,
       options: { quality, size, format },
       createdAt: Date.now(),

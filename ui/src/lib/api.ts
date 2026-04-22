@@ -110,6 +110,8 @@ export type NodeGenerateRequest = {
   provider?: "oauth";
   references?: string[];
   requestId?: string;
+  sessionId?: string | null;
+  clientNodeId?: string | null;
 };
 
 export type NodeGenerateResponse = {

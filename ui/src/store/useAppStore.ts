@@ -829,6 +829,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         size,
         format: s.format,
         requestId: flightId,
+        sessionId: s.activeSessionId,
+        clientNodeId: targetClientId,
         ...(s.referenceImages.length && !parentServerNodeId
           ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
           : {}),
