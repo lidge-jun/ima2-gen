@@ -74,6 +74,24 @@ function saveInFlight(list: PersistedInFlight[]): void {
   } catch {}
 }
 
+function loadSelectedFilename(): string | null {
+  try {
+    const raw = localStorage.getItem("ima2.selectedFilename");
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSelectedFilename(filename: string | null): void {
+  try {
+    if (filename) localStorage.setItem("ima2.selectedFilename", filename);
+    else localStorage.removeItem("ima2.selectedFilename");
+  } catch {}
+}
+
+const HISTORY_LIMIT = 200;
+
 export type ImageNodeStatus = "empty" | "pending" | "ready" | "error";
 
 export type ImageNodeData = {
@@ -257,7 +275,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         return;
       }
       try {
-        const { items } = await getHistory(50);
+        const { items } = await getHistory(HISTORY_LIMIT);
         const arr: GenerateItem[] = items.map((it) => ({
           image: it.url,
           filename: it.filename,
@@ -273,12 +291,16 @@ export const useAppStore = create<AppState>((set, get) => ({
           (a) => !existing.some((e) => e.filename === a.filename),
         );
         if (fresh.length > 0) {
-          set((s) => ({
-            history: [...fresh, ...s.history].slice(0, 200),
-            // Auto-focus first fresh item when canvas is empty (e.g. after
-            // reload-during-generate).
-            currentImage: s.currentImage ?? fresh[0],
-          }));
+          set((s) => {
+            const nextCurrent = s.currentImage ?? fresh[0];
+            if (!s.currentImage && fresh[0]?.filename) {
+              saveSelectedFilename(fresh[0].filename);
+            }
+            return {
+              history: [...fresh, ...s.history].slice(0, HISTORY_LIMIT),
+              currentImage: nextCurrent,
+            };
+          });
         }
         // Prune strategy: TTL-based only. Do not attempt to correlate
         // history items with inFlight entries — backend ordering may differ
@@ -663,7 +685,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCount: (count) => set({ count }),
   setPrompt: (prompt) => set({ prompt }),
 
-  selectHistory: (item) => set({ currentImage: item }),
+  selectHistory: (item) => {
+    saveSelectedFilename(item.filename ?? null);
+    set({ currentImage: item });
+  },
 
   getResolvedSize: () => {
     const { sizePreset, customW, customH } = get();
@@ -766,7 +791,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   hydrateHistory() {
     void (async () => {
       try {
-        const res = await getHistory(50);
+        const res = await getHistory(HISTORY_LIMIT);
         const history: GenerateItem[] = res.items.map((it) => ({
           image: it.url,
           url: it.url,
@@ -780,7 +805,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           createdAt: it.createdAt,
         }));
         if (history.length > 0) {
-          set({ history, currentImage: history[0] });
+          const selected = loadSelectedFilename();
+          const matched = selected
+            ? history.find((it) => it.filename === selected)
+            : null;
+          set({ history, currentImage: matched ?? history[0] });
+          if (!matched) saveSelectedFilename(history[0]?.filename ?? null);
         }
       } catch (err) {
         console.warn("[history] load failed:", err);
@@ -898,6 +928,7 @@ async function addHistory(
     url,
     createdAt: item.createdAt || Date.now(),
   };
-  const history = [withThumb, ...get().history].slice(0, 50);
+  const history = [withThumb, ...get().history].slice(0, HISTORY_LIMIT);
+  saveSelectedFilename(withThumb.filename ?? null);
   set({ history, currentImage: withThumb });
 }

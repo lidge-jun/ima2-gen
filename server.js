@@ -760,11 +760,13 @@ app.put("/api/sessions/:id/graph", (req, res) => {
 
 // ── Billing info ──
 app.get("/api/billing", async (_req, res) => {
-  if (!HAS_API_KEY) return res.json({ oauth: true });
+  if (!HAS_API_KEY) {
+    return res.json({ oauth: true, apiKeyValid: false, apiKeySource: "none" });
+  }
 
   try {
     const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-    const [subRes, usageRes] = await Promise.allSettled([
+    const [subRes, usageRes, modelsRes] = await Promise.allSettled([
       fetch(
         "https://api.openai.com/v1/organization/costs?start_time=" +
           Math.floor(new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() / 1000) +
@@ -772,17 +774,17 @@ app.get("/api/billing", async (_req, res) => {
         { headers },
       ),
       fetch("https://api.openai.com/dashboard/billing/credit_grants", { headers }),
+      fetch("https://api.openai.com/v1/models", { headers }),
     ]);
 
-    const billing = {};
+    const billing = { apiKeySource: "env" };
     if (subRes.status === "fulfilled" && subRes.value.ok) billing.costs = await subRes.value.json();
     if (usageRes.status === "fulfilled" && usageRes.value.ok) billing.credits = await usageRes.value.json();
-    if (!billing.costs && !billing.credits) {
-      billing.apiKeyValid = (await fetch("https://api.openai.com/v1/models", { headers })).ok;
-    }
+    billing.apiKeyValid =
+      modelsRes.status === "fulfilled" && modelsRes.value.ok === true;
     res.json(billing);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message, apiKeyValid: false });
   }
 });
 

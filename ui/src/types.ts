@@ -83,4 +83,5 @@ export type BillingResponse = {
   costs?: { data?: Array<{ results: Array<{ amount?: { value?: number } }> }> };
   oauth?: boolean;
   apiKeyValid?: boolean;
+  apiKeySource?: "none" | "env" | "config";
 };
