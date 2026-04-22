@@ -7,10 +7,16 @@ import type {
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  const data = (await res.json().catch(() => ({}))) as T & {
+    error?: string | { code?: string; message?: string };
+  };
   if (!res.ok) {
+    const raw = (data as { error?: string | { code?: string; message?: string } })
+      .error;
     const message =
-      (data as { error?: string }).error ?? `Request failed: ${res.status}`;
+      typeof raw === "string"
+        ? raw
+        : raw?.message ?? `Request failed: ${res.status}`;
     throw new Error(message);
   }
   return data;

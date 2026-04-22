@@ -135,7 +135,11 @@ body {
   outline: none;
   transition: border-color 0.2s;
 }
-.prompt-area:focus {
+.prompt-area:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+.prompt-area:focus:not(:focus-visible) {
   border-color: #444;
 }
 .prompt-area::placeholder {
@@ -641,7 +645,11 @@ body {
   outline: none;
   transition: border-color 0.12s ease;
 }
-.gallery__search:focus {
+.gallery__search:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+.gallery__search:focus:not(:focus-visible) {
   border-color: var(--accent);
 }
 .gallery__close {
@@ -780,118 +788,6 @@ body {
 .toast.error {
   border-color: var(--red);
   color: var(--red);
-}
-
-/* ── Mode tabs ── */
-.mode-tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--bg);
-  border-radius: 8px;
-  padding: 3px;
-}
-.mode-tab {
-  flex: 1;
-  padding: 8px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--text-dim);
-  font-family: var(--mono);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: center;
-}
-.mode-tab:hover {
-  color: var(--text);
-}
-.mode-tab.active {
-  background: var(--surface-2);
-  color: var(--accent-bright);
-}
-
-/* ── Upload zone ── */
-.upload-zone {
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-}
-.upload-zone.visible {
-  display: flex;
-}
-
-.drop-area {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  position: relative;
-  overflow: hidden;
-}
-.drop-area:hover,
-.drop-area.dragover {
-  border-color: #555;
-  color: var(--text);
-  background: var(--surface-2);
-}
-.drop-area.has-image {
-  padding: 0;
-  border-style: solid;
-  border-color: var(--border);
-}
-.drop-area img {
-  width: 100%;
-  max-height: 180px;
-  object-fit: contain;
-  border-radius: calc(var(--radius) - 2px);
-}
-.drop-area .remove-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.drop-area:hover .remove-btn {
-  opacity: 1;
-}
-
-.use-result-btn {
-  padding: 7px 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-dim);
-  font-family: var(--mono);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: center;
-}
-.use-result-btn:hover {
-  border-color: #444;
-  color: var(--text);
-}
-.use-result-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 .custom-size-input {

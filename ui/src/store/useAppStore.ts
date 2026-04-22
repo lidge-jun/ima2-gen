@@ -108,7 +108,7 @@ type AppState = {
   addReferenceDataUrl: (dataUrl: string) => void;
   removeReference: (index: number) => void;
   clearReferences: () => void;
-  useCurrentAsReference: () => void;
+  useCurrentAsReference: () => Promise<void>;
   activeGenerations: number;
   inFlight: PersistedInFlight[];
   startInFlightPolling: () => void;
@@ -209,7 +209,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
   clearReferences: () => set({ referenceImages: [] }),
-  useCurrentAsReference: () => {
+  useCurrentAsReference: async () => {
     const cur = get().currentImage;
     if (!cur) {
       get().showToast("No current image to use", true);
@@ -219,7 +219,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().showToast("Reference slots are full (max 5)", true);
       return;
     }
-    set((s) => ({ referenceImages: [...s.referenceImages, cur.image] }));
+    let dataUrl = cur.image;
+    if (!dataUrl.startsWith("data:")) {
+      try {
+        const resp = await fetch(dataUrl);
+        const blob = await resp.blob();
+        dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            typeof reader.result === "string"
+              ? resolve(reader.result)
+              : reject(new Error("read failed"));
+          reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        get().showToast("Could not fetch current image", true);
+        return;
+      }
+    }
+    set((s) => ({ referenceImages: [...s.referenceImages, dataUrl] }));
     get().showToast("Added current image as reference");
   },
   activeGenerations: loadInFlight().length,
@@ -254,7 +273,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           (a) => !existing.some((e) => e.filename === a.filename),
         );
         if (fresh.length > 0) {
-          set((s) => ({ history: [...fresh, ...s.history].slice(0, 200) }));
+          set((s) => ({
+            history: [...fresh, ...s.history].slice(0, 200),
+            // Auto-focus first fresh item when canvas is empty (e.g. after
+            // reload-during-generate).
+            currentImage: s.currentImage ?? fresh[0],
+          }));
         }
         // Prune strategy: TTL-based only. Do not attempt to correlate
         // history items with inFlight entries — backend ordering may differ
