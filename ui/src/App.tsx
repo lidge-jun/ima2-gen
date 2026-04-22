@@ -6,6 +6,7 @@ import { RightPanel } from "./components/RightPanel";
 import { Toast } from "./components/Toast";
 import { GalleryModal } from "./components/GalleryModal";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
+import { IS_DEV_UI } from "./lib/devMode";
 
 export default function App() {
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
@@ -14,7 +15,7 @@ export default function App() {
   const reconcileInflight = useAppStore((s) => s.reconcileInflight);
   const syncFromStorage = useAppStore((s) => s.syncFromStorage);
   const uiModeRaw = useAppStore((s) => s.uiMode);
-  const uiMode = import.meta.env.DEV ? uiModeRaw : "classic";
+  const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
 
   useEffect(() => {
     hydrateHistory();

@@ -8,7 +8,8 @@
   },
   "scripts": {
     "start": "node bin/ima2.js serve",
-    "dev": "node --watch server.js",
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "node --watch server.js",
     "ui:install": "cd ui && npm install",
     "ui:dev": "cd ui && npm run dev",
     "ui:build": "cd ui && npm run build",

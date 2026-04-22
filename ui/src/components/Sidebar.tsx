@@ -6,10 +6,11 @@ import { InFlightList } from "./InFlightList";
 import { HistoryStrip } from "./HistoryStrip";
 import { SessionPicker } from "./SessionPicker";
 import { useAppStore } from "../store/useAppStore";
+import { IS_DEV_UI } from "../lib/devMode";
 
 export function Sidebar() {
   const uiModeRaw = useAppStore((s) => s.uiMode);
-  const uiMode = import.meta.env.DEV ? uiModeRaw : "classic";
+  const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
   return (
     <aside className="sidebar">
       <div className="sidebar__scroll">
