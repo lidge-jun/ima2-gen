@@ -4,3 +4,6 @@ node_modules/
 generated/
 .DS_Store
 devlog/
+ui/dist/
+ui/tsconfig.app.tsbuildinfo
+ui/tsconfig.node.tsbuildinfo
