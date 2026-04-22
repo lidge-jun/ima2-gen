@@ -23,6 +23,7 @@ import {
   deleteSession as apiDeleteSession,
   saveSessionGraph,
   type SessionSummary,
+  type SessionFull,
 } from "../lib/api";
 import { compressImage } from "../lib/image";
 import { snap16 } from "../lib/size";
@@ -120,6 +121,50 @@ export type ImageNodeData = {
 export type GraphNode = FlowNode<ImageNodeData>;
 export type GraphEdge = FlowEdge;
 
+function mapSessionToGraph(session: SessionFull): {
+  graphNodes: GraphNode[];
+  graphEdges: GraphEdge[];
+  graphVersion: number;
+} {
+  const graphNodes: GraphNode[] = session.nodes.map((n) => {
+    const d = (n.data ?? {}) as Partial<ImageNodeData>;
+    const explicitImageUrl =
+      typeof d.imageUrl === "string" && d.imageUrl.length > 0 ? d.imageUrl : null;
+    const fallbackImageUrl =
+      typeof d.serverNodeId === "string" && d.serverNodeId.length > 0
+        ? `/generated/${d.serverNodeId}.png`
+        : null;
+    const imageUrl = explicitImageUrl ?? fallbackImageUrl;
+    const data: ImageNodeData = {
+      clientId: n.id as ClientNodeId,
+      serverNodeId: (d.serverNodeId ?? null) as string | null,
+      parentServerNodeId: (d.parentServerNodeId ?? null) as string | null,
+      prompt: typeof d.prompt === "string" ? d.prompt : "",
+      imageUrl,
+      status: (d.status ?? (imageUrl ? "ready" : "empty")) as ImageNodeStatus,
+      error: d.error as string | undefined,
+      elapsed: d.elapsed as number | undefined,
+      webSearchCalls: d.webSearchCalls as number | undefined,
+    };
+    return {
+      id: n.id,
+      type: "imageNode",
+      position: { x: n.x, y: n.y },
+      data,
+    };
+  });
+  const graphEdges: GraphEdge[] = session.edges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+  }));
+  return {
+    graphNodes,
+    graphEdges,
+    graphVersion: session.graphVersion,
+  };
+}
+
 type ToastState = { message: string; error: boolean; id: number } | null;
 
 type AppState = {
@@ -171,6 +216,7 @@ type AppState = {
   // Sessions (0.06)
   sessions: SessionSummary[];
   activeSessionId: string | null;
+  activeSessionGraphVersion: number | null;
   sessionLoading: boolean;
   loadSessions: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
@@ -436,6 +482,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   sessions: [],
   activeSessionId: null,
+  activeSessionGraphVersion: null,
   sessionLoading: false,
 
   async loadSessions() {
@@ -458,33 +505,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().flushGraphSave();
     try {
       const { session } = await apiGetSession(id);
-      const graphNodes: GraphNode[] = session.nodes.map((n) => {
-        const d = (n.data ?? {}) as Partial<ImageNodeData>;
-        const data: ImageNodeData = {
-          clientId: n.id as ClientNodeId,
-          serverNodeId: (d.serverNodeId ?? null) as string | null,
-          parentServerNodeId: (d.parentServerNodeId ?? null) as string | null,
-          prompt: typeof d.prompt === "string" ? d.prompt : "",
-          imageUrl: (d.imageUrl ?? null) as string | null,
-          status: (d.status ?? (d.imageUrl ? "ready" : "empty")) as ImageNodeStatus,
-          error: d.error as string | undefined,
-          elapsed: d.elapsed as number | undefined,
-          webSearchCalls: d.webSearchCalls as number | undefined,
-        };
-        return {
-          id: n.id,
-          type: "imageNode",
-          position: { x: n.x, y: n.y },
-          data,
-        };
-      });
-      const graphEdges: GraphEdge[] = session.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-      }));
+      const { graphNodes, graphEdges, graphVersion } = mapSessionToGraph(session);
       set({
         activeSessionId: id,
+        activeSessionGraphVersion: graphVersion,
         graphNodes,
         graphEdges,
         sessionLoading: false,
@@ -502,6 +526,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         sessions: [session as SessionSummary, ...get().sessions],
         activeSessionId: session.id,
+        activeSessionGraphVersion: session.graphVersion,
         graphNodes: [],
         graphEdges: [],
       });
@@ -532,7 +557,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       const remaining = get().sessions.filter((s) => s.id !== id);
       set({ sessions: remaining });
       if (get().activeSessionId === id) {
-        set({ activeSessionId: null, graphNodes: [], graphEdges: [] });
+        set({
+          activeSessionId: null,
+          activeSessionGraphVersion: null,
+          graphNodes: [],
+          graphEdges: [],
+        });
         if (remaining.length > 0) {
           await get().switchSession(remaining[0].id);
         } else {
@@ -545,11 +575,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   scheduleGraphSave() {
-    scheduleGraphSaveImpl(get);
+    scheduleGraphSaveImpl(get, set);
   },
 
   async flushGraphSave() {
-    await flushGraphSaveImpl(get);
+    await flushGraphSaveImpl(get, set);
   },
 
   addRootNode: () => {
@@ -913,9 +943,30 @@ const SAVE_DEBOUNCE_MS = 800;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let saveGraphPromise: Promise<void> | null = null;
 
-function doSave(get: () => AppState): Promise<void> {
+async function reloadSessionAfterConflict(
+  get: () => AppState,
+  set: (patch: Partial<AppState>) => void,
+): Promise<void> {
   const id = get().activeSessionId;
+  if (!id) return;
+  const { session } = await apiGetSession(id);
+  const { graphNodes, graphEdges, graphVersion } = mapSessionToGraph(session);
+  set({
+    graphNodes,
+    graphEdges,
+    activeSessionGraphVersion: graphVersion,
+  });
+  get().showToast("Session changed in another tab — reloaded latest graph", true);
+}
+
+function doSave(
+  get: () => AppState,
+  set: (patch: Partial<AppState>) => void,
+): Promise<void> {
+  const id = get().activeSessionId;
+  const graphVersion = get().activeSessionGraphVersion;
   if (!id) return Promise.resolve();
+  if (graphVersion == null) return Promise.resolve();
   const { graphNodes, graphEdges } = get();
   const nodes = graphNodes.map((n) => ({
     id: n.id,
@@ -929,31 +980,43 @@ function doSave(get: () => AppState): Promise<void> {
     target: e.target,
     data: {},
   }));
-  return saveSessionGraph(id, nodes, edges)
-    .then(() => undefined)
-    .catch((err) => {
+  return saveSessionGraph(id, graphVersion, nodes, edges)
+    .then((res) => {
+      set({ activeSessionGraphVersion: res.graphVersion });
+    })
+    .catch(async (err) => {
+      if ((err as { status?: number }).status === 409) {
+        await reloadSessionAfterConflict(get, set);
+        return;
+      }
       console.warn("[sessions] save failed:", err);
     });
 }
 
-function scheduleGraphSaveImpl(get: () => AppState) {
+function scheduleGraphSaveImpl(
+  get: () => AppState,
+  set: (patch: Partial<AppState>) => void,
+) {
   const s = get();
   if (!s.activeSessionId) return;
   if (s.sessionLoading) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    saveGraphPromise = doSave(get).finally(() => {
+    saveGraphPromise = doSave(get, set).finally(() => {
       saveGraphPromise = null;
     });
   }, SAVE_DEBOUNCE_MS);
 }
 
-async function flushGraphSaveImpl(get: () => AppState) {
+async function flushGraphSaveImpl(
+  get: () => AppState,
+  set: (patch: Partial<AppState>) => void,
+) {
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
-    await doSave(get);
+    await doSave(get, set);
   } else if (saveGraphPromise) {
     await saveGraphPromise;
   }
@@ -964,6 +1027,7 @@ async function flushGraphSaveImpl(get: () => AppState) {
 export function flushGraphSaveBeacon(get: () => AppState): void {
   const s = get();
   if (!s.activeSessionId) return;
+  if (s.activeSessionGraphVersion == null) return;
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
@@ -983,17 +1047,12 @@ export function flushGraphSaveBeacon(get: () => AppState): void {
   const url = `/api/sessions/${encodeURIComponent(s.activeSessionId)}/graph`;
   const body = JSON.stringify({ nodes, edges });
   try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon(url, blob);
-      return;
-    }
-  } catch {}
-  // Fallback: fire-and-forget fetch with keepalive
-  try {
     void fetch(url, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "If-Match": String(s.activeSessionGraphVersion),
+      },
       body,
       keepalive: true,
     });

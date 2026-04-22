@@ -792,9 +792,18 @@ app.delete("/api/sessions/:id", (req, res) => {
 app.put("/api/sessions/:id/graph", (req, res) => {
   try {
     const { nodes, edges } = req.body || {};
+    const rawIfMatch = req.get("If-Match");
     if (!Array.isArray(nodes) || !Array.isArray(edges)) {
       return res.status(400).json({
         error: { code: "INVALID_GRAPH", message: "nodes and edges arrays required" },
+      });
+    }
+    if (!rawIfMatch) {
+      return res.status(428).json({
+        error: {
+          code: "GRAPH_VERSION_REQUIRED",
+          message: "If-Match header required",
+        },
       });
     }
     if (nodes.length > 500 || edges.length > 1000) {
@@ -805,11 +814,33 @@ app.put("/api/sessions/:id/graph", (req, res) => {
         },
       });
     }
-    saveGraph(req.params.id, { nodes, edges });
-    res.json({ ok: true, nodes: nodes.length, edges: edges.length });
+    const expectedVersion = Number(String(rawIfMatch).replace(/"/g, ""));
+    if (!Number.isFinite(expectedVersion)) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_GRAPH_VERSION",
+          message: "If-Match must be a finite integer",
+        },
+      });
+    }
+    const result = saveGraph(req.params.id, {
+      nodes,
+      edges,
+      expectedVersion,
+    });
+    res.json({
+      ok: true,
+      nodes: nodes.length,
+      edges: edges.length,
+      graphVersion: result.graphVersion,
+    });
   } catch (err) {
     const code = err.code || "DB_ERROR";
-    res.status(err.status || 500).json({ error: { code, message: err.message } });
+    const payload = { error: { code, message: err.message } };
+    if (typeof err.currentVersion === "number") {
+      payload.currentVersion = err.currentVersion;
+    }
+    res.status(err.status || 500).json(payload);
   }
 });
 

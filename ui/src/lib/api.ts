@@ -9,6 +9,7 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   const data = (await res.json().catch(() => ({}))) as T & {
     error?: string | { code?: string; message?: string };
+    currentVersion?: number;
   };
   if (!res.ok) {
     const raw = (data as { error?: string | { code?: string; message?: string } })
@@ -17,7 +18,17 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
       typeof raw === "string"
         ? raw
         : raw?.message ?? `Request failed: ${res.status}`;
-    throw new Error(message);
+    const err = new Error(message) as Error & {
+      status?: number;
+      code?: string;
+      currentVersion?: number;
+    };
+    err.status = res.status;
+    if (typeof raw !== "string" && raw?.code) err.code = raw.code;
+    if (typeof data.currentVersion === "number") {
+      err.currentVersion = data.currentVersion;
+    }
+    throw err;
   }
   return data;
 }
@@ -135,6 +146,7 @@ export type SessionSummary = {
   title: string;
   createdAt: number;
   updatedAt: number;
+  graphVersion: number;
   nodeCount: number;
 };
 
@@ -155,6 +167,7 @@ export type SessionFull = {
   title: string;
   createdAt: number;
   updatedAt: number;
+  graphVersion: number;
   nodes: SessionGraphNode[];
   edges: SessionGraphEdge[];
 };
@@ -184,12 +197,16 @@ export function deleteSession(id: string): Promise<{ ok: boolean }> {
 }
 export function saveSessionGraph(
   id: string,
+  graphVersion: number,
   nodes: SessionGraphNode[],
   edges: SessionGraphEdge[],
-): Promise<{ ok: boolean; nodes: number; edges: number }> {
+): Promise<{ ok: boolean; nodes: number; edges: number; graphVersion: number }> {
   return jsonFetch(`/api/sessions/${encodeURIComponent(id)}/graph`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "If-Match": String(graphVersion),
+    },
     body: JSON.stringify({ nodes, edges }),
   });
 }
