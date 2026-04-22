@@ -62,6 +62,7 @@ app.use("/generated", express.static(join(__dirname, "generated"), {
 // ── Reference validation ──
 const MAX_REF_B64_BYTES = 7 * 1024 * 1024; // ~5.2MB binary after base64 decode
 const BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
+const VALID_MODERATION = new Set(["auto", "low"]);
 function validateAndNormalizeRefs(references) {
   if (!Array.isArray(references)) return { error: "references must be an array" };
   if (references.length > 5) return { error: "references may not exceed 5 items" };
@@ -82,6 +83,13 @@ function validateAndNormalizeRefs(references) {
   return { refs: out };
 }
 
+function validateModeration(moderation) {
+  if (typeof moderation !== "string" || !VALID_MODERATION.has(moderation)) {
+    return { error: "moderation must be one of: auto, low" };
+  }
+  return { moderation };
+}
+
 // ── OAuth proxy: generate via Responses API (stream mode) ──
 // Research mode is ALWAYS ON for OAuth — web_search is included in tools, GPT
 // decides per-prompt whether to actually invoke it. Simple prompts skip web_search
@@ -89,10 +97,10 @@ function validateAndNormalizeRefs(references) {
 const RESEARCH_SUFFIX =
   "\n\n필요하면 먼저 웹에서 이 주제의 정확한 레퍼런스(얼굴/제품/장소/최신 정보)를 검색한 뒤 그걸 토대로 이미지를 생성해. 단순한 주제는 곧바로 생성해도 돼.";
 
-async function generateViaOAuth(prompt, quality, size, references = [], requestId = null) {
+async function generateViaOAuth(prompt, quality, size, moderation = "auto", references = [], requestId = null) {
   const tools = [
     { type: "web_search" },
-    { type: "image_generation", quality, size },
+    { type: "image_generation", quality, size, moderation },
   ];
 
   const textPrompt = `Generate an image: ${prompt}${RESEARCH_SUFFIX}`;
@@ -220,7 +228,7 @@ async function generateViaOAuth(prompt, quality, size, references = [], requestI
       body: JSON.stringify({
         model: "gpt-5.4",
         input: [{ role: "user", content: prompt }],
-        tools: [{ type: "image_generation", quality, size }],
+        tools: [{ type: "image_generation", quality, size, moderation }],
         stream: false,
       }),
     });
@@ -452,10 +460,12 @@ app.post("/api/generate", async (req, res) => {
       typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
     const clientNodeId =
       typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
-    const { prompt, quality = "low", size = "1024x1024", format = "png", moderation = "low", provider = "auto", n = 1, references = [] } =
+    const { prompt, quality = "low", size = "1024x1024", format = "png", moderation = "auto", provider = "auto", n = 1, references = [] } =
       req.body;
 
     if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+    const moderationCheck = validateModeration(moderation);
+    if (moderationCheck.error) return res.status(400).json({ error: moderationCheck.error });
     const count = Math.min(Math.max(parseInt(n) || 1, 1), 8);
     startJob({
       requestId,
@@ -484,7 +494,7 @@ app.post("/api/generate", async (req, res) => {
     }
     const useOAuth = true;
     const __client = req.get("x-ima2-client") || "ui";
-    console.log(`[generate][${__client}] provider=oauth quality=${quality} size=${size} n=${count} refs=${refB64s.length}`);
+    console.log(`[generate][${__client}] provider=oauth quality=${quality} size=${size} moderation=${moderation} n=${count} refs=${refB64s.length}`);
     const startTime = Date.now();
 
     const mimeMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
@@ -496,7 +506,7 @@ app.post("/api/generate", async (req, res) => {
       let lastErr;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const r = await generateViaOAuth(prompt, quality, size, refB64s, requestId);
+          const r = await generateViaOAuth(prompt, quality, size, moderation, refB64s, requestId);
           if (r.b64) return r;
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
@@ -527,6 +537,7 @@ app.post("/api/generate", async (req, res) => {
           quality,
           size,
           format,
+          moderation,
           provider: "oauth",
           createdAt: Date.now(),
           usage: r.value.usage || null,
@@ -562,6 +573,7 @@ app.post("/api/generate", async (req, res) => {
       webSearchCalls: totalWebSearchCalls,
       quality,
       size,
+      moderation,
     };
 
     if (count === 1) {
@@ -578,7 +590,7 @@ app.post("/api/generate", async (req, res) => {
 });
 
 // ── OAuth edit: send image as input to Responses API ──
-async function editViaOAuth(prompt, imageB64, quality, size) {
+async function editViaOAuth(prompt, imageB64, quality, size, moderation = "auto") {
   const res = await fetch(`${OAUTH_URL}/v1/responses`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
@@ -594,7 +606,7 @@ async function editViaOAuth(prompt, imageB64, quality, size) {
           ],
         },
       ],
-      tools: [{ type: "image_generation", quality, size }],
+      tools: [{ type: "image_generation", quality, size, moderation }],
       tool_choice: "required",
       stream: true,
     }),
@@ -650,19 +662,21 @@ async function editViaOAuth(prompt, imageB64, quality, size) {
 // ── Edit image (inpainting) ──
 app.post("/api/edit", async (req, res) => {
   try {
-    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", provider = "oauth" } =
+    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "auto", provider = "oauth" } =
       req.body;
 
     if (!prompt || !imageB64)
       return res.status(400).json({ error: "Prompt and image are required" });
+    const moderationCheck = validateModeration(moderation);
+    if (moderationCheck.error) return res.status(400).json({ error: moderationCheck.error });
 
     if (provider === "api") {
       return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
     }
-    console.log(`[edit][${req.get("x-ima2-client") || "ui"}] provider=oauth quality=${quality} size=${size}`);
+    console.log(`[edit][${req.get("x-ima2-client") || "ui"}] provider=oauth quality=${quality} size=${size} moderation=${moderation}`);
     const startTime = Date.now();
 
-    const { b64: resultB64, usage } = await editViaOAuth(prompt, imageB64, quality, size);
+    const { b64: resultB64, usage } = await editViaOAuth(prompt, imageB64, quality, size, moderation);
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
@@ -673,6 +687,7 @@ app.post("/api/edit", async (req, res) => {
       prompt,
       quality,
       size,
+      moderation,
       format: "png",
       provider: "oauth",
       kind: "edit",
@@ -688,6 +703,7 @@ app.post("/api/edit", async (req, res) => {
       filename,
       usage,
       provider: "oauth",
+      moderation,
     });
   } catch (err) {
     console.error("Edit error:", err.message);
@@ -720,6 +736,7 @@ app.post("/api/node/generate", async (req, res) => {
       quality = "low",
       size = "1024x1024",
       format = "png",
+      moderation = "auto",
       references = [],
       externalSrc = null,
     } = body;
@@ -750,6 +767,13 @@ app.post("/api/node/generate", async (req, res) => {
         parentNodeId,
       });
     }
+    const moderationCheck = validateModeration(moderation);
+    if (moderationCheck.error) {
+      return res.status(400).json({
+        error: { code: "INVALID_MODERATION", message: moderationCheck.error },
+        parentNodeId,
+      });
+    }
     const refB64s = refCheck.refs;
 
     const startTime = Date.now();
@@ -769,8 +793,8 @@ app.post("/api/node/generate", async (req, res) => {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         const r = parentB64
-          ? await editViaOAuth(prompt, parentB64, quality, size)
-          : await generateViaOAuth(prompt, quality, size, refB64s, requestId);
+          ? await editViaOAuth(prompt, parentB64, quality, size, moderation)
+          : await generateViaOAuth(prompt, quality, size, moderation, refB64s, requestId);
         if (r.b64) {
           b64 = r.b64;
           usage = r.usage;
@@ -801,7 +825,7 @@ app.post("/api/node/generate", async (req, res) => {
       sessionId,
       clientNodeId,
       prompt,
-      options: { quality, size, format },
+      options: { quality, size, format, moderation },
       createdAt: Date.now(),
       createdAtIso: new Date().toISOString(),
       elapsed,
@@ -810,7 +834,7 @@ app.post("/api/node/generate", async (req, res) => {
       provider: "oauth",
       kind: parentB64 ? "edit" : "generate",
       // Fields consumed by /api/history flat scan (so node images appear in history too)
-      quality, size, format,
+      quality, size, format, moderation,
     };
     await mkdir(join(__dirname, "generated"), { recursive: true });
     const { filename } = await saveNode(__dirname, { nodeId, b64, meta, ext: format });
@@ -826,6 +850,7 @@ app.post("/api/node/generate", async (req, res) => {
       usage,
       webSearchCalls,
       provider: "oauth",
+      moderation,
     });
   } catch (err) {
     console.error("[node/generate] error:", err.message);

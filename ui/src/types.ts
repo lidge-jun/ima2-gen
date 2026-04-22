@@ -30,6 +30,7 @@ export type GenerateItem = {
   provider?: string;
   quality?: string;
   size?: string;
+  moderation?: string;
   usage?: { total_tokens?: number } & Record<string, unknown>;
   thumb?: string;
   createdAt?: number;
@@ -43,6 +44,7 @@ export type GenerateSingleResponse = {
   provider: string;
   quality?: string;
   size?: string;
+  moderation?: string;
 };
 
 export type GenerateMultiResponse = {
@@ -53,6 +55,7 @@ export type GenerateMultiResponse = {
   provider: string;
   quality?: string;
   size?: string;
+  moderation?: string;
 };
 
 export type GenerateResponse = GenerateSingleResponse | GenerateMultiResponse;
