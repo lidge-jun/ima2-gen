@@ -34,6 +34,7 @@ The web UI opens at `http://localhost:3333`.
 
 ## CLI Commands
 
+### Server commands
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `ima2 serve` | — | Start the web server (auto-setup on first run) |
@@ -45,16 +46,31 @@ The web UI opens at `http://localhost:3333`.
 | `ima2 --version` | `-v` | Show version |
 | `ima2 --help` | `-h` | Show help |
 
+### Client commands (require a running `ima2 serve`)
+| Command | Description |
+|---------|-------------|
+| `ima2 gen <prompt>` | Generate image(s) from the CLI |
+| `ima2 edit <file>` | Edit an existing image (requires `--prompt`) |
+| `ima2 ls` | List recent history (table or `--json`) |
+| `ima2 show <name>` | Reveal one history item (path / `--reveal`) |
+| `ima2 ps` | List active jobs (`--kind`, `--session`) |
+| `ima2 ping` | Health-check the running server |
+
+The running server advertises itself at `~/.ima2/server.json`. Client commands auto-discover it; override with `--server <url>` or `IMA2_SERVER` env.
+
 ```bash
-# Check current setup
-ima2 status
+# start the server (one terminal)
+ima2 serve
 
-# Verify environment
-ima2 doctor
-
-# Open web UI
-ima2 open
+# in another terminal:
+ima2 ping
+ima2 gen "a shiba in space" -q high -o shiba.png
+ima2 gen "merge these" --ref a.png --ref b.png -n 4 -d out/
+ima2 ls -n 10
+ima2 ps
 ```
+
+Exit codes: `0` ok · `2` bad args · `3` server unreachable · `4` APIKEY_DISABLED · `5` 4xx · `6` 5xx · `7` safety refusal · `8` timeout.
 
 ## Features
 

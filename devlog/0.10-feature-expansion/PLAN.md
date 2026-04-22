@@ -756,3 +756,56 @@ Rationale: F1 card-news was the heaviest and the most blocker-laden (RR-B1, RR-B
 5. Gallery groupBy preset loads < 1.5s with 200 items
 6. No regression of 0.09 Node mode or 0.08 inflight tracking
 
+
+---
+
+## LOCKED SPEC v3 addendum — 0.09.1 CLI integration landed (260422)
+
+**Status**: 0.09.1 SHIPPED (commits `959d28d`, `3875f74`, Commit-2 CLI lib, `873d4c9`, Commit-4 ls/show/ps/ping). 51/51 tests green + manual smoke passed.
+
+**What landed** (read from PRD `devlog/0.09.1-cli-integration/PRD.md`):
+- `GET /api/health` (version, provider, uptime, activeJobs, pid, startedAt)
+- `~/.ima2/server.json` advertise/unadvertise (PID-checked, watch-safe)
+- `X-ima2-client` header tagging on `/api/generate` + `/api/edit` logs
+- New verbs: `ima2 gen / edit / ls / show / ps / ping` + `bin/lib/{args,client,files,output}.js`
+
+### CLI mirror verbs required for 0.10 (new obligations)
+
+Every 0.10 server route gets a CLI verb. Non-negotiable — keeps CLI and UI in lockstep.
+
+| 0.10 feature | Server route | CLI verb | Notes |
+|--------------|--------------|----------|-------|
+| F3 preset CRUD | `GET/POST/PUT/DELETE /api/presets` | `ima2 preset ls / save / apply / rm` | `apply <id>` prints the preset body; `save` captures last gen + current flags |
+| F3 gallery groupBy | `GET /api/history?groupBy=preset\|date\|compareRun` | `ima2 ls --group-by preset\|date\|run` | Table renders a group header row |
+| F2 compare run | `POST /api/compare/run` | `ima2 compare --base-prompt ... --variant "label:overrides" (repeatable)` | Prints runId + tile status stream |
+| F2 winner | `PATCH /api/compare/:runId/winner` | `ima2 compare winner <runId> <itemId>` | |
+| F2 inflight corr | `/api/inflight` meta `runId` | `ima2 ps --run <runId>` | Filter by runId (mirrors existing `--kind`, `--session`) |
+| F4 export | `POST /api/export` | `ima2 export <name...> [--out bundle.zip] [--manifest only]` | Writes zip locally; honors `--json` |
+
+### Implementation budget for 0.10 CLI mirror
+
+Each of the 5 CLI verbs = 1 file in `bin/commands/<verb>.js`, ~60–120 LOC, reusing `bin/lib/*`. Total: ~500 LOC + per-verb tests.
+
+Rule: **no 0.10 phase is "ready to ship" unless its CLI verb lands in the same commit batch**. PRD §15.3-style per-commit discipline applies.
+
+### Updated commit plan (0.10)
+
+1. F3 server (presets table + routes)
+2. F3 CLI — `ima2 preset ls/save/apply/rm`
+3. F3 client (PresetPicker + GalleryModal groupBy) + `ima2 ls --group-by`
+4. F2 server (`/api/compare/run` + worker + sidecar fields + `/api/inflight` meta)
+5. F2 CLI — `ima2 compare` + `ima2 compare winner` + `ima2 ps --run`
+6. F2 client (CompareDrawer + CompareBoard + keyboard map)
+7. F4 server (`/api/export` zip stream + manifest.json)
+8. F4 CLI — `ima2 export`
+9. F4 client (multi-select + Export N)
+10. Docs: README CLI section update + PRD close-out
+
+### Success criteria delta (supersedes #1–#6)
+
+All six existing criteria remain. Add:
+
+7. `ima2 preset save "my-look" && ima2 preset apply my-look && ima2 gen "hi"` end-to-end works headless
+8. `ima2 compare --base-prompt "shiba" --variant "hi:quality=high" --variant "wide:size=1536x1024"` prints runId, resolves all tiles, marks winner
+9. `ima2 export $(ima2 ls -n 6 --json | jq -r '.items[].filename') --out bundle.zip` produces valid zip with manifest.json
+
