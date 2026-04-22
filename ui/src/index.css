@@ -152,6 +152,13 @@ body {
   gap: 4px;
 }
 
+.option-help {
+  margin: 2px 0 8px;
+  color: var(--text-muted, #888);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .option-row {
   display: flex;
   gap: 4px;

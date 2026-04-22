@@ -51,7 +51,7 @@ Both indicators shown live in the left panel (green dot = ready, red dot = disab
 | **Quality** | Low (fast) · Medium (balanced) · High (best) |
 | **Size** | `1024²` `1536×1024` `1024×1536` `1360×1024` `1024×1360` `1824×1024` `1024×1824` `2048²` `2048×1152` `1152×2048` `3824×2160` `2160×3824` · `auto` · custom |
 | **Format** | PNG · JPEG · WebP |
-| **Moderation** | Low (less restrictive) · Auto (standard) |
+| **Moderation** | Auto (standard filter) · Low (relaxed filter) |
 | **Count** | 1 · 2 · 4 parallel |
 
 All sizes respect gpt-image-2 constraints: every side is a multiple of 16, long:short ratio ≤ 3:1, 655,360–8,294,400 total pixels.

@@ -19,13 +19,13 @@ const FORMAT_ITEMS = [
 ];
 
 const MOD_ITEMS = [
+  { value: "auto" as const, label: "Auto", sub: "standard filter" },
   {
     value: "low" as const,
     label: "Low",
-    sub: "less restrictive",
+    sub: "relaxed filter",
     color: "var(--amber)",
   },
-  { value: "auto" as const, label: "Auto", sub: "standard" },
 ];
 
 const COUNT_ITEMS: { value: string; label: string }[] = [
@@ -111,6 +111,10 @@ export function RightPanel() {
             value={moderation}
             onChange={setModeration}
           />
+          <p className="option-help">
+            Auto uses the standard safety filter. Low relaxes it slightly and may allow more
+            borderline prompts.
+          </p>
           <OptionGroup<string>
             title="Count"
             items={COUNT_ITEMS}

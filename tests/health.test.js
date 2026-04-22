@@ -1,6 +1,7 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { existsSync, readFileSync, unlinkSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -9,6 +10,7 @@ import { tmpdir } from "node:os";
 // verify advertisement file lifecycle, kill, verify cleanup.
 
 const PORT = String(3500 + Math.floor(Math.random() * 400));
+const OAUTH_PORT = String(10532 + Math.floor(Math.random() * 400));
 const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-test-home-"));
 
 const HEALTH_TIMEOUT = process.platform === "win32" ? 30000 : 8000;
@@ -28,12 +30,40 @@ async function waitForHealth(base, timeoutMs = HEALTH_TIMEOUT) {
 describe("Server: /api/health + advertisement", () => {
   let child;
   let childStderr = "";
+  let oauthServer;
+  let lastOAuthPayload = null;
 
   before(async () => {
+    oauthServer = createServer((req, res) => {
+      if (req.method === "POST" && req.url === "/v1/responses") {
+        let body = "";
+        req.on("data", (chunk) => {
+          body += chunk;
+        });
+        req.on("end", () => {
+          lastOAuthPayload = JSON.parse(body);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            output: [{ type: "image_generation_call", result: "aGVsbG8=" }],
+            usage: { total_tokens: 1 },
+          }));
+        });
+        return;
+      }
+      if (req.method === "GET" && req.url === "/v1/models") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ data: [{ id: "gpt-5.4" }] }));
+        return;
+      }
+      res.writeHead(404).end();
+    });
+    await new Promise((resolve) => oauthServer.listen(Number(OAUTH_PORT), "127.0.0.1", resolve));
+
     child = spawn("node", ["server.js"], {
       env: {
         ...process.env,
         PORT,
+        OAUTH_PORT,
         HOME: FAKE_HOME,
         USERPROFILE: FAKE_HOME,
         IMA2_NO_OAUTH_PROXY: "1",
@@ -58,6 +88,9 @@ describe("Server: /api/health + advertisement", () => {
     if (child && !child.killed) {
       child.kill("SIGTERM");
       await new Promise((r) => child.on("exit", r));
+    }
+    if (oauthServer) {
+      await new Promise((resolve) => oauthServer.close(resolve));
     }
     try { rmSync(FAKE_HOME, { recursive: true, force: true }); } catch {}
   });
@@ -94,6 +127,26 @@ describe("Server: /api/health + advertisement", () => {
     });
     // no prompt → 400 (header should NOT cause different rejection)
     assert.strictEqual(r.status, 400);
+  });
+
+  it("/api/generate forwards moderation to the image tool", async () => {
+    lastOAuthPayload = null;
+    const r = await fetch(`http://localhost:${PORT}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: "test moderation forwarding",
+        quality: "medium",
+        size: "1024x1024",
+        moderation: "auto",
+      }),
+    });
+    assert.strictEqual(r.status, 200);
+    const body = await r.json();
+    assert.strictEqual(body.moderation, "auto");
+    assert.ok(lastOAuthPayload, "proxy request should be captured");
+    assert.strictEqual(lastOAuthPayload.tools[1].type, "image_generation");
+    assert.strictEqual(lastOAuthPayload.tools[1].moderation, "auto");
   });
 
   // Windows: child.kill(anything) = forceful termination per Node docs
