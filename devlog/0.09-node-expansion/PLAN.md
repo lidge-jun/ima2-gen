@@ -228,3 +228,42 @@ Status: **READY-with-fixes-required** (5 BLOCKERs must be resolved in D0 before 
 - **Must fix before D1**: OP-B1, OP-B2, OP-B3, OP-B4, OP-B5.
 - **Should fix during implementation**: all SHOULD-FIX items above.
 - **Can defer to 0.11**: prior-art incorporation, advanced GC.
+
+---
+
+## REVIEW — Research employee (added 260422)
+
+### BLOCKERs (UX prior-art)
+- **[RS-B1] Crash-state UX still underspecified.** Running / server-done-but-lost-preview / disappeared-from-inflight states feel too similar under current plan. ComfyUI precedent: server-owned job IDs + queue/history/websocket status, not a single degraded "pending".
+  - **Resolution**: add explicit `reconciling`, `stale`, `asset-missing` visual states (badge + CTA). Add to D2 acceptance criteria.
+- **[RS-B2] Multi-tab concurrency not first-class in D1-D8.** Appended Opus review caught optimistic concurrency (OP-B5), but selection/graphVersion/last-write-wins not in acceptance criteria.
+  - **Resolution**: make `graphVersion` conflict handling + tab-local selection part of D1 acceptance.
+- **[RS-B3] Branch/regenerate semantics missing.** Plan defines import + delete but not whether Regenerate replaces in-place vs creates sibling/child. Destructive in-place breaks descendant lineage.
+  - **Resolution**: spec Regenerate = sibling node with `parentNodeId` = same parent as source; never in-place destructive. Add to D6.
+
+### SHOULD-FIX
+- [RS-S1] Undo/redo, duplicate, copy/paste, queue/cancel shortcuts should be 0.09 must-haves (ComfyUI/nodes.io/FigJam baseline)
+- [RS-S2] Selection persistence = tab-local convenience, NOT part of canonical graph payload
+- [RS-S3] Orphan cleanup too deferred — need manual orphan review or "delete session keeps assets" messaging
+- [RS-S4] Imported/history-root nodes need durable visual badge + source action (provenance affordance)
+
+### NITS
+- "graph canonical / history catalog" split matches established patterns — keep
+- Add intermediate `reconciling…` label between active and `stale`
+- Cascade-delete dialog must preview descendant count
+
+### Prior-art references
+- ComfyUI workflow architecture: https://docs.comfy.org/development/core-concepts/workflow
+- ComfyUI server comms (best precedent for inflight recovery): https://docs.comfy.org/development/comfyui-server/comms_routes
+- ComfyUI shortcuts (undo/redo/queue as baseline): https://docs.comfy.org/interface/shortcuts
+- ComfyUI APP mode: https://docs.comfy.org/interface/app-mode
+- nodes.io copy/paste + undo/redo: https://nodes.io/story/
+- nodes.io template reuse pattern: https://nodes.io/docs/manual/
+- Flowise workspaces/migration: https://docs.flowiseai.com/using-flowise/workspaces
+- Flowise explicit branching: https://docs.flowiseai.com/integrations/utilities/if-else
+- Figma version history + offline conflict: https://help.figma.com/hc/en-us/articles/360038006754
+- FigJam connectors / topology: https://help.figma.com/hc/en-us/articles/1500004414542
+
+### Final approval gate for 0.09
+**Must fix before D1 coding**: OP-B1, OP-B2, OP-B3, OP-B4, OP-B5, RS-B1, RS-B2, RS-B3 (8 blockers total).
+**Scope additions required for "daily-usable"**: undo/redo + duplicate + copy/paste (RS-S1).
