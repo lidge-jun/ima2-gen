@@ -96,16 +96,19 @@ describe("Server: /api/health + advertisement", () => {
     assert.strictEqual(r.status, 400);
   });
 
-  it("cleans up advertisement file on shutdown signal", async () => {
+  // Windows: child.kill(anything) = forceful termination per Node docs
+  // (https://nodejs.org/api/child_process.html#subprocesskillsignal) — no
+  // handler fires, so __unadvertise cannot run from an externally-signalled
+  // kill. Production path (user Ctrl+C in their own terminal) does fire
+  // SIGINT and runs cleanup; that's covered manually.
+  const testShutdown = process.platform === "win32" ? it.skip : it;
+  testShutdown("cleans up advertisement file on shutdown signal", async () => {
     const advertisePath = join(FAKE_HOME, ".ima2", "server.json");
     assert.ok(existsSync(advertisePath), "precondition: file exists");
-    // Windows never observes SIGTERM handlers for externally-delivered signals,
-    // so use SIGINT there (both platforms wire it up).
-    const signal = process.platform === "win32" ? "SIGINT" : "SIGTERM";
-    child.kill(signal);
+    child.kill("SIGTERM");
     await new Promise((r) => child.on("exit", r));
     // small grace for unlink
     await new Promise((r) => setTimeout(r, 100));
-    assert.ok(!existsSync(advertisePath), `file should be removed after ${signal}`);
+    assert.ok(!existsSync(advertisePath), "file should be removed after SIGTERM");
   });
 });
