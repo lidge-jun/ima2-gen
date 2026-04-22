@@ -23,7 +23,7 @@ jobs:
       - name: Install root deps
         run: npm ci
       - name: Install ui deps
-        run: npm --prefix ui ci
+        run: npm --prefix ui install --no-audit --no-fund
       - name: Build ui
         run: npm --prefix ui run build
       - name: Run tests
