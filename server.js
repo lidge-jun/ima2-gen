@@ -7,6 +7,7 @@ import { spawn } from "child_process";
 import { spawnBin, onShutdown } from "./bin/lib/platform.js";
 import { existsSync, writeFileSync, unlinkSync, mkdirSync, readFileSync as fsReadFileSync } from "fs";
 import { homedir } from "os";
+import { randomBytes } from "crypto";
 import { newNodeId, saveNode, loadNodeB64, loadNodeMeta, loadAssetB64 } from "./lib/nodeStore.js";
 import { startJob, finishJob, listJobs, setJobPhase } from "./lib/inflight.js";
 import {
@@ -433,7 +434,8 @@ app.post("/api/generate", async (req, res) => {
     let totalWebSearchCalls = 0;
     for (const r of results) {
       if (r.status === "fulfilled" && r.value.b64) {
-        const filename = `${Date.now()}_${images.length}.${format}`;
+        const rand = randomBytes(4).toString("hex");
+        const filename = `${Date.now()}_${rand}_${images.length}.${format}`;
         await writeFile(join(__dirname, "generated", filename), Buffer.from(r.value.b64, "base64"));
         // Sidecar metadata for /api/history reconstruction
         const meta = {
@@ -581,7 +583,7 @@ app.post("/api/edit", async (req, res) => {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
     await mkdir(join(__dirname, "generated"), { recursive: true });
-    const filename = `${Date.now()}.png`;
+    const filename = `${Date.now()}_${randomBytes(4).toString("hex")}.png`;
     await writeFile(join(__dirname, "generated", filename), Buffer.from(resultB64, "base64"));
     const meta = {
       prompt,
