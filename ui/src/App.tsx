@@ -8,11 +8,26 @@ import { useAppStore } from "./store/useAppStore";
 
 export default function App() {
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
+  const loadSessions = useAppStore((s) => s.loadSessions);
+  const flushGraphSave = useAppStore((s) => s.flushGraphSave);
   const uiMode = useAppStore((s) => s.uiMode);
 
   useEffect(() => {
     hydrateHistory();
-  }, [hydrateHistory]);
+    loadSessions();
+  }, [hydrateHistory, loadSessions]);
+
+  useEffect(() => {
+    const onHide = () => {
+      void flushGraphSave();
+    };
+    window.addEventListener("beforeunload", onHide);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("beforeunload", onHide);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [flushGraphSave]);
 
   return (
     <>

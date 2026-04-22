@@ -889,3 +889,111 @@ body {
   stroke-width: 2 !important;
   stroke-dasharray: 4 4;
 }
+
+/* Session Picker (0.06) */
+.session-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0 6px;
+}
+.session-picker-row {
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+}
+.session-current {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface, #141414);
+  color: var(--text, #e8e8e8);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: var(--radius, 6px);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.session-current:hover { border-color: #3a3a3a; }
+.session-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-caret { color: var(--text-dim, #888); margin-left: 6px; }
+.session-btn {
+  background: var(--surface, #141414);
+  color: var(--text, #e8e8e8);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: var(--radius, 6px);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 28px;
+}
+.session-btn:hover:not(:disabled) { border-color: #3a3a3a; }
+.session-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.session-list {
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+  background: var(--surface, #141414);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: var(--radius, 6px);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.session-list li {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: 4px;
+}
+.session-list li:hover { background: rgba(255,255,255,0.03); }
+.session-list li.is-active { background: rgba(255,255,255,0.06); }
+.session-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  color: var(--text, #e8e8e8);
+  border: 0;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.session-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-item-count {
+  color: var(--text-dim, #888);
+  font-size: 10px;
+  margin-left: 8px;
+  font-family: var(--mono, monospace);
+}
+.session-del {
+  background: transparent;
+  color: var(--text-dim, #888);
+  border: 0;
+  padding: 0 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.session-del:hover { color: #ff6666; }
+.session-empty {
+  color: var(--text-dim, #888);
+  font-size: 12px;
+  padding: 8px;
+  text-align: center;
+}

@@ -12,7 +12,19 @@ import type {
   UIMode,
 } from "../types";
 import { isMultiResponse } from "../types";
-import { postEdit, postGenerate, getHistory, postNodeGenerate } from "../lib/api";
+import {
+  postEdit,
+  postGenerate,
+  getHistory,
+  postNodeGenerate,
+  listSessions as apiListSessions,
+  createSession as apiCreateSession,
+  getSession as apiGetSession,
+  renameSession as apiRenameSession,
+  deleteSession as apiDeleteSession,
+  saveSessionGraph,
+  type SessionSummary,
+} from "../lib/api";
 import { compressImage, dataUrlToBase64, readFileAsDataURL } from "../lib/image";
 import { snap16 } from "../lib/size";
 import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
@@ -91,6 +103,18 @@ type AppState = {
   deleteNode: (clientId: ClientNodeId) => void;
   deleteNodes: (clientIds: ClientNodeId[]) => void;
 
+  // Sessions (0.06)
+  sessions: SessionSummary[];
+  activeSessionId: string | null;
+  sessionLoading: boolean;
+  loadSessions: () => Promise<void>;
+  switchSession: (id: string) => Promise<void>;
+  createAndSwitchSession: (title?: string) => Promise<void>;
+  renameCurrentSession: (title: string) => Promise<void>;
+  deleteSessionById: (id: string) => Promise<void>;
+  scheduleGraphSave: () => void;
+  flushGraphSave: () => Promise<void>;
+
   setMode: (mode: Mode) => void;
   setProvider: (p: Provider) => void;
   setQuality: (q: Quality) => void;
@@ -146,8 +170,132 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   graphNodes: [],
   graphEdges: [],
-  setGraphNodes: (graphNodes) => set({ graphNodes }),
-  setGraphEdges: (graphEdges) => set({ graphEdges }),
+  setGraphNodes: (graphNodes) => {
+    set({ graphNodes });
+    get().scheduleGraphSave();
+  },
+  setGraphEdges: (graphEdges) => {
+    set({ graphEdges });
+    get().scheduleGraphSave();
+  },
+
+  sessions: [],
+  activeSessionId: null,
+  sessionLoading: false,
+
+  async loadSessions() {
+    try {
+      const { sessions } = await apiListSessions();
+      set({ sessions });
+      const current = get().activeSessionId;
+      if (!current && sessions.length > 0) {
+        await get().switchSession(sessions[0].id);
+      } else if (!current && sessions.length === 0) {
+        await get().createAndSwitchSession("My first graph");
+      }
+    } catch (err) {
+      console.warn("[sessions] load failed:", err);
+    }
+  },
+
+  async switchSession(id) {
+    await get().flushGraphSave();
+    set({ sessionLoading: true });
+    try {
+      const { session } = await apiGetSession(id);
+      const graphNodes: GraphNode[] = session.nodes.map((n) => {
+        const d = (n.data ?? {}) as Partial<ImageNodeData>;
+        const data: ImageNodeData = {
+          clientId: n.id as ClientNodeId,
+          serverNodeId: (d.serverNodeId ?? null) as string | null,
+          parentServerNodeId: (d.parentServerNodeId ?? null) as string | null,
+          prompt: typeof d.prompt === "string" ? d.prompt : "",
+          imageUrl: (d.imageUrl ?? null) as string | null,
+          status: (d.status ?? (d.imageUrl ? "ready" : "empty")) as ImageNodeStatus,
+          error: d.error as string | undefined,
+          elapsed: d.elapsed as number | undefined,
+          webSearchCalls: d.webSearchCalls as number | undefined,
+        };
+        return {
+          id: n.id,
+          type: "imageNode",
+          position: { x: n.x, y: n.y },
+          data,
+        };
+      });
+      const graphEdges: GraphEdge[] = session.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      }));
+      set({
+        activeSessionId: id,
+        graphNodes,
+        graphEdges,
+        sessionLoading: false,
+      });
+    } catch (err) {
+      console.warn("[sessions] switch failed:", err);
+      set({ sessionLoading: false });
+      get().showToast("Session load failed", true);
+    }
+  },
+
+  async createAndSwitchSession(title = "Untitled") {
+    try {
+      const { session } = await apiCreateSession(title);
+      set({
+        sessions: [session as SessionSummary, ...get().sessions],
+        activeSessionId: session.id,
+        graphNodes: [],
+        graphEdges: [],
+      });
+    } catch (err) {
+      console.warn("[sessions] create failed:", err);
+      get().showToast("Create session failed", true);
+    }
+  },
+
+  async renameCurrentSession(title) {
+    const id = get().activeSessionId;
+    if (!id) return;
+    try {
+      await apiRenameSession(id, title);
+      set({
+        sessions: get().sessions.map((s) =>
+          s.id === id ? { ...s, title, updatedAt: Date.now() } : s,
+        ),
+      });
+    } catch (err) {
+      get().showToast("Rename failed", true);
+    }
+  },
+
+  async deleteSessionById(id) {
+    try {
+      await apiDeleteSession(id);
+      const remaining = get().sessions.filter((s) => s.id !== id);
+      set({ sessions: remaining });
+      if (get().activeSessionId === id) {
+        set({ activeSessionId: null, graphNodes: [], graphEdges: [] });
+        if (remaining.length > 0) {
+          await get().switchSession(remaining[0].id);
+        } else {
+          await get().createAndSwitchSession("My first graph");
+        }
+      }
+    } catch (err) {
+      get().showToast("Delete failed", true);
+    }
+  },
+
+  scheduleGraphSave() {
+    scheduleGraphSaveImpl(get);
+  },
+
+  async flushGraphSave() {
+    await flushGraphSaveImpl(get);
+  },
 
   addRootNode: () => {
     const clientId = newClientNodeId();
@@ -167,6 +315,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
     };
     set({ graphNodes: [...get().graphNodes, node] });
+    get().scheduleGraphSave();
     return clientId;
   },
 
@@ -197,6 +346,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       graphNodes: [...get().graphNodes, node],
       graphEdges: [...get().graphEdges, edge],
     });
+    get().scheduleGraphSave();
     return clientId;
   },
 
@@ -206,6 +356,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         n.id === clientId ? { ...n, data: { ...n.data, prompt } } : n,
       ),
     });
+    get().scheduleGraphSave();
   },
 
   async generateNode(clientId) {
@@ -268,6 +419,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         activeGenerations: Math.max(0, get().activeGenerations - 1),
         inFlight: get().inFlight.filter((f) => f.id !== flightId),
       });
+      get().scheduleGraphSave();
     }
   },
 
@@ -276,6 +428,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       graphNodes: get().graphNodes.filter((n) => n.id !== clientId),
       graphEdges: get().graphEdges.filter((e) => e.source !== clientId && e.target !== clientId),
     });
+    get().scheduleGraphSave();
   },
 
   deleteNodes: (clientIds) => {
@@ -284,6 +437,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       graphNodes: get().graphNodes.filter((n) => !set_.has(n.id)),
       graphEdges: get().graphEdges.filter((e) => !set_.has(e.source) && !set_.has(e.target)),
     });
+    get().scheduleGraphSave();
   },
 
   addChildNodeAt: (parentClientId, position) => {
@@ -312,6 +466,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       graphNodes: [...get().graphNodes, node],
       graphEdges: [...get().graphEdges, edge],
     });
+    get().scheduleGraphSave();
     return clientId;
   },
 
@@ -321,7 +476,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       (e) => e.source === sourceClientId && e.target === targetClientId,
     );
     if (existing) return;
-    // update target's parentServerNodeId to source's serverNodeId
     const source = get().graphNodes.find((n) => n.id === sourceClientId);
     if (!source) return;
     set({
@@ -335,6 +489,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         { id: `${sourceClientId}->${targetClientId}`, source: sourceClientId, target: targetClientId },
       ],
     });
+    get().scheduleGraphSave();
   },
 
   setMode: (mode) => set({ mode }),
@@ -488,6 +643,55 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ toast: { message, error, id: Date.now() + Math.random() } });
   },
 }));
+
+// ── Graph autosave (module-level debounce) ──
+const SAVE_DEBOUNCE_MS = 800;
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let saveInFlight: Promise<void> | null = null;
+
+function doSave(get: () => AppState): Promise<void> {
+  const id = get().activeSessionId;
+  if (!id) return Promise.resolve();
+  const { graphNodes, graphEdges } = get();
+  const nodes = graphNodes.map((n) => ({
+    id: n.id,
+    x: n.position.x,
+    y: n.position.y,
+    data: n.data as unknown as Record<string, unknown>,
+  }));
+  const edges = graphEdges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    data: {},
+  }));
+  return saveSessionGraph(id, nodes, edges)
+    .then(() => undefined)
+    .catch((err) => {
+      console.warn("[sessions] save failed:", err);
+    });
+}
+
+function scheduleGraphSaveImpl(get: () => AppState) {
+  if (!get().activeSessionId) return;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    saveInFlight = doSave(get).finally(() => {
+      saveInFlight = null;
+    });
+  }, SAVE_DEBOUNCE_MS);
+}
+
+async function flushGraphSaveImpl(get: () => AppState) {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    await doSave(get);
+  } else if (saveInFlight) {
+    await saveInFlight;
+  }
+}
 
 async function addHistory(
   item: GenerateItem,

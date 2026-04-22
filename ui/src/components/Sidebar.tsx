@@ -7,6 +7,7 @@ import { PromptInput } from "./PromptInput";
 import { GenerateButton } from "./GenerateButton";
 import { InFlightList } from "./InFlightList";
 import { HistoryStrip } from "./HistoryStrip";
+import { SessionPicker } from "./SessionPicker";
 import { useAppStore } from "../store/useAppStore";
 
 export function Sidebar() {
@@ -31,6 +32,7 @@ export function Sidebar() {
         </>
       ) : (
         <>
+          <SessionPicker />
           <div className="sidebar__node-hint">
             Node mode: click a node to edit its prompt, then Generate. Settings on the right panel
             (quality/size) apply to all new generations.
