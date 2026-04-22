@@ -15,6 +15,7 @@ import {
   postGenerate,
   getHistory,
   getInflight,
+  cancelInflight,
   postNodeGenerate,
   listSessions as apiListSessions,
   createSession as apiCreateSession,
@@ -198,6 +199,7 @@ type AppState = {
   inFlight: PersistedInFlight[];
   startInFlightPolling: () => void;
   reconcileInflight: () => Promise<void>;
+  reconcileGraphPending: () => Promise<void>;
   syncFromStorage: () => void;
   currentImage: GenerateItem | null;
   history: GenerateItem[];
@@ -356,17 +358,27 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
         const byId = new Map(jobs.map((j) => [j.requestId, j.phase] as const));
         let changed = false;
-        const nextInflight = get().inFlight.map((f) => {
+        const now0 = Date.now();
+        const GRACE_MS = 5000;
+        const nextInflight: typeof cur = [];
+        for (const f of get().inFlight) {
+          // If server no longer knows this job and enough time has passed,
+          // drop it locally so the spinner does not linger after completion.
+          if (!byId.has(f.id) && now0 - f.startedAt > GRACE_MS) {
+            changed = true;
+            continue;
+          }
           const p = byId.get(f.id);
           if (p && p !== f.phase) {
             changed = true;
-            return { ...f, phase: p };
+            nextInflight.push({ ...f, phase: p });
+          } else {
+            nextInflight.push(f);
           }
-          return f;
-        });
+        }
         if (changed) {
           saveInFlight(nextInflight);
-          set({ inFlight: nextInflight });
+          set({ inFlight: nextInflight, activeGenerations: nextInflight.length });
         }
       } catch {}
       try {
@@ -525,11 +537,54 @@ export const useAppStore = create<AppState>((set, get) => ({
         graphEdges,
         sessionLoading: false,
       });
+      void get().reconcileGraphPending();
     } catch (err) {
       console.warn("[sessions] switch failed:", err);
       set({ sessionLoading: false });
       get().showToast("Session load failed", true);
     }
+  },
+
+  async reconcileGraphPending() {
+    const sid = get().activeSessionId;
+    if (!sid) return;
+    const pendingNodes = get().graphNodes.filter(
+      (n) => n.data?.pendingRequestId && (n.data.status === "pending" || n.data.status === "reconciling"),
+    );
+    if (pendingNodes.length === 0) return;
+    let jobs: Array<{ requestId: string; phase?: string }> = [];
+    try {
+      const res = await getInflight({ kind: "node", sessionId: sid });
+      jobs = res.jobs;
+    } catch {
+      return;
+    }
+    const byId = new Map(jobs.map((j) => [j.requestId, j.phase] as const));
+    const next = get().graphNodes.map((n) => {
+      const reqId = n.data?.pendingRequestId;
+      if (!reqId) return n;
+      if (n.data.status !== "pending" && n.data.status !== "reconciling") return n;
+      if (byId.has(reqId)) {
+        const phase = byId.get(reqId) ?? null;
+        return {
+          ...n,
+          data: { ...n.data, status: "reconciling" as const, pendingPhase: phase },
+        };
+      }
+      // Not in-flight anymore — image may have landed, or job was lost
+      const hasAsset = !!n.data.imageUrl || !!n.data.serverNodeId;
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          pendingRequestId: null,
+          pendingPhase: null,
+          status: hasAsset ? ("ready" as const) : ("stale" as const),
+          error: hasAsset ? undefined : "Generation did not complete. Retry from this node.",
+        },
+      };
+    });
+    set({ graphNodes: next });
   },
 
   async createAndSwitchSession(title = "Untitled") {
@@ -828,6 +883,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteNode: (clientId) => {
+    const doomed = get().graphNodes.find((n) => n.id === clientId);
+    const reqId = doomed?.data?.pendingRequestId;
+    if (reqId) void cancelInflight(reqId);
     set({
       graphNodes: get().graphNodes.filter((n) => n.id !== clientId),
       graphEdges: get().graphEdges.filter((e) => e.source !== clientId && e.target !== clientId),
@@ -837,6 +895,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteNodes: (clientIds) => {
     const set_ = new Set(clientIds);
+    for (const n of get().graphNodes) {
+      if (set_.has(n.id) && n.data?.pendingRequestId) {
+        void cancelInflight(n.data.pendingRequestId);
+      }
+    }
     set({
       graphNodes: get().graphNodes.filter((n) => !set_.has(n.id)),
       graphEdges: get().graphEdges.filter((e) => !set_.has(e.source) && !set_.has(e.target)),

@@ -54,6 +54,12 @@ export function getInflight(params?: {
   return jsonFetch(`/api/inflight${suffix}`);
 }
 
+export async function cancelInflight(requestId: string): Promise<void> {
+  await fetch(`/api/inflight/${encodeURIComponent(requestId)}`, {
+    method: "DELETE",
+  }).catch(() => {});
+}
+
 export function getOAuthStatus(): Promise<OAuthStatus> {
   return jsonFetch<OAuthStatus>("/api/oauth/status");
 }
