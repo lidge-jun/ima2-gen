@@ -628,3 +628,131 @@ Scope: prior-art scan for Batch Compare (F2), Card-news (F1), style-consistent s
 - Canva Instagram carousel: https://www.canva.com/create/instagram-carousel/
 - Buffer carousel scheduling: https://buffer.com/library/instagram-carousel/
 
+
+---
+
+## LOCKED SPEC v2 (added 260422)
+
+Supersedes §3 drafts where they conflict. Incorporates all REVIEW BLOCKERs (BE-B1~B5, OP-B1~B3) and DEEP RESEARCH findings (REC-R1~R10, RR-B1~B5).
+
+### Phase ordering (frozen)
+
+| Phase | Scope | Ships with |
+|-------|-------|-----------|
+| **F3** | Prompt presets + history `groupBy` | First — unlocks F1/F2 organization |
+| **F2** | Batch compare grid (via `/api/compare/run`) | After F3 |
+| **F4** | Export bundle (manifest.json + zip) | After F2 |
+| **F1** | Card-news mode (file-id fan-out) | **Moved to 0.11** — spec depth + Instagram carousel scope |
+| **F5** | Style kit | 0.12+ (no seed, ref-driven only) |
+
+Rationale: F1 card-news was the heaviest and the most blocker-laden (RR-B1, RR-B2, RR-B3). Shipping F3+F2+F4 as "0.10" gives a tight batch-compare + export loop that is daily-usable NOW, and gives F1 one full cycle to land style-consistency correctly.
+
+### F3 — Presets + grouped gallery (0.10 MVP)
+
+**Server**
+- New SQLite table `prompt_presets` (id TEXT PK, name TEXT, prompt TEXT, refs JSON, quality TEXT, size TEXT, created_at INT, updated_at INT)
+- Routes:
+  - `GET  /api/presets` → `{ presets: [] }`
+  - `POST /api/presets` body `{name, prompt, refs?, quality?, size?}` → `{preset}`
+  - `PUT  /api/presets/:id` → `{preset}`
+  - `DELETE /api/presets/:id` → `{ok:true}`
+- Sidecar JSON for `/generated/<file>.png` gains optional `presetId` field; `/api/history` returns it.
+
+**Client**
+- `PresetPicker` in right panel: list + "Save current as preset" + edit/delete
+- `GalleryModal` gains `groupBy: "none" | "preset" | "date" | "compareRun"` selector (REC-R7). Default: `preset` if presets exist, else `date`.
+- Preset selection fills PromptComposer; refs are hydrated as Reference uploads.
+
+**Acceptance**
+- User can save current prompt+refs+size+quality as preset in 2 clicks
+- Gallery group-by preset shows collapsible strips, count badge per group
+- 200+ item gallery load time < 1.5s (virtualized if needed later)
+
+### F2 — Batch compare (0.10)
+
+**Resolution of BE-B1/OP-B2/BE-B3**: dedicated route, not `/api/generate` reuse.
+
+**Server**
+- `POST /api/compare/run` body:
+  ```json
+  {
+    "base": {"prompt":"...", "refs":[], "quality":"low", "size":"1024x1024"},
+    "variants": [
+      {"key":"v1","label":"base"},
+      {"key":"v2","label":"high quality","overrides":{"quality":"high"}},
+      {"key":"v3","label":"wider","overrides":{"size":"1536x1024"}}
+    ],
+    "globalCap": 4
+  }
+  ```
+- Response: `{ runId, items: [{ itemId, key, label, requestId, status:"queued" }] }`
+- Worker kicks up to `globalCap` concurrent `/api/generate` calls internally; as each completes, sidecar JSON gets `compareRunId` + `compareItemId` + `compareLabel` + `role:"candidate"|"winner"|null`.
+- `PATCH /api/compare/:runId/winner` body `{itemId}` → updates exactly one item to `role:"winner"`, clears previous winner in run.
+- `/api/inflight` meta gains `runId` + `compareItemId` so UI correlates.
+
+**Client**
+- `CompareDrawer` (right panel slide-in): editor for variants (add/remove up to 6, label input, override knobs)
+- `CompareBoard` (modal, full-screen): 2/3/4/6 grid renders `runId`'s items; spinner per tile using existing phase tracking; "Winner" radio per run.
+- Keyboard (REC-R10): `1-6` focus tile, `Space` mark winner, `V` variation-from-tile (pre-fills drawer), `P` save-as-preset, `Enter` promote-to-current, `Esc` close.
+- "Favorite" is separate from "Winner" — sidecar `favorite:bool`, toggle via ❤ icon, survives across runs (REC-R1).
+
+**Acceptance**
+- 4-variant run completes in parallel (observed via phase tracking in 4 tiles simultaneously)
+- Winner is persisted in sidecar + history list
+- Variation-from-tile pre-fills drawer correctly
+- Refresh during a run: reconcile shows remaining tiles as reconciling
+
+### F4 — Export bundle (0.10)
+
+**Server**
+- `POST /api/export` body `{filenames:[], includeManifest:true, socialMeta?:{...}}` → streams a zip
+- `manifest.json` shape:
+  ```json
+  {
+    "version":"0.10",
+    "exportedAt": 1761234567,
+    "items":[{"filename":"...","prompt":"...","size":"...","quality":"...","presetId":null,"compareRunId":null,"role":null}],
+    "socialMeta":{"platform":"instagram","carousel":{"slideCount":10}}
+  }
+  ```
+
+**Client**
+- Gallery multi-select + "Export (N)" button → triggers browser download
+
+**Acceptance**
+- Zip contains images + manifest.json + .txt prompts
+- 10-image export < 5s
+
+### F1 → 0.11 (moved, spec locked here)
+
+**Style consistency = file-id fan-out** (not `previous_response_id`, not seed):
+- `POST /v1/files` with `purpose:"user_data"` once, store `styleFileId`
+- Each card call: `input: [{role:"user", content:[{type:"input_image", file_id: styleFileId}, ...promptParts]}]`
+- `input_fidelity: "low"` default; `"high"` cuts queue cap to 2 concurrent (RR-B3)
+- Cap card count at 10 (Instagram carousel ceiling — RR-B4)
+
+### 결정 필요 — final decisions (superseding §8)
+
+| # | Question | Decision |
+|---|----------|----------|
+| 8.1 | Card count UI | Fixed presets: 4 / 6 / 10 (Instagram-aligned) |
+| 8.2 | Winner semantics | 1 Winner per compareRun (promoted to history "current"); Favorite is separate boolean on any image |
+| 8.3 | Compare grid count | User-selectable 2/3/4/6 (keyboard maps 1-6) |
+| 8.4 | Preset sharing | Per-user only; no export in 0.10 |
+| 8.5 | Delete policy for preset referenced by images | Keep images, null the `presetId` field |
+
+### Breaking-change budget (final)
+
+- `/api/history` response gains optional `presetId`, `compareRunId`, `compareItemId`, `compareLabel`, `role`, `favorite` — all optional, backwards-compatible
+- `/api/inflight` job meta gains optional `runId`, `compareItemId` — additive
+- No renames. No removed fields.
+
+### Success criteria (0.10 close)
+
+1. Save any current prompt as a preset; re-apply in one click
+2. Run a 4-variant compare, mark winner, see it as "current" in history
+3. Refresh mid-compare: 2 tiles reconciling, 2 ready — all correct
+4. Export 6 selected images as zip with manifest.json
+5. Gallery groupBy preset loads < 1.5s with 200 items
+6. No regression of 0.09 Node mode or 0.08 inflight tracking
+
