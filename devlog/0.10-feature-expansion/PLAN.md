@@ -527,3 +527,104 @@ Per Opus review, these auto-decide (plan already hints the right answer):
 - **Can start now (parallel to 0.09)**: F3 Prompt presets + history (after S1/S2 mitigations)
 - **Blocked on 0.09 D2/D4**: F2 Batch A/B compare, F1 Card-news
 - **Deferred to 0.11**: F4 Export bundle, F5 Style kit
+
+---
+
+## DEEP RESEARCH (added 260422 sub-agent)
+
+Scope: prior-art scan for Batch Compare (F2), Card-news (F1), style-consistent series, and gallery-at-scale. Sources are primary docs where reachable; secondary where paywalled/403. Facts below are tied to URLs; anything version-sensitive was web-searched, not recalled.
+
+### R1. Batch compare UX — what the market does
+
+**Midjourney (web app, 2025)**. Canonical 4-up grid as first-class output. Each tile has `U1–U4` (upscale = promote/commit) and `V1–V4` (variation = remix-from-that-one). "Winner" is implicit in upscale; variations branch off the winner. Keyboard: digits 1–4 select tile, Enter confirms. No explicit "mark winner" — upscale IS the commit. Hover reveals metadata. Docs root: https://docs.midjourney.com/ (style reference article 32162917505165 returns 403 via fetch; canonical `/--sref` URL on Bing index).
+
+**Ideogram (web)**. 2×2 grid per prompt run. Each tile has **Remix** (keep composition, change prompt), **Magic Prompt** (rewrite), **Variation** (re-roll same prompt/seed family), plus **Download**/favorite. No single "winner" primitive; pin/favorite is the persistence model. Batch CSV (power users) lets you run N prompts → one results page. Docs root (note: `/style-reference` path 404, Ideogram moved docs; use https://docs.ideogram.ai/ root).
+
+**Playground / Leonardo / Krea**. Playground uses star rating + pin + favorite as **separate** layers (rating ≠ pin ≠ favorite). Leonardo grid-batch lets you multi-select tiles with shift-click and export zip — this is the closest prior-art to F4 contact-sheet export. Krea deliberately avoids grid comparison in favor of live-canvas single-image iteration; interesting anti-pattern. Refs: https://www.softude.com/blog/krea-ai-vs-leonardo-ai-best-image-generator/ , https://stringlabscreative.com/krea-ai-vs-leonardo-ai/ .
+
+**Common patterns worth copying**:
+- Keyboard-first selection (1–4 / arrows / space) is table-stakes; F2 plan already hints at this — promote from "nice to have" to P1.
+- "Winner" as **one** bit per run, separate from "favorite" (N-many across all history). The plan currently conflates; see REC-R1.
+- Variation/Remix-from-tile as a **compose-time** action, not just a post-hoc one. Midjourney's V-buttons land straight back in the composer with seed pinned.
+- Batch run as a persisted, named thing (Midjourney "Job", Ideogram "Generation") — matches Opus OP-B1 conclusion (server-persist compare_run).
+
+### R2. Card-news / multi-panel prior art
+
+**Canva Instagram Carousel**. Workflow is: (a) Brand Kit (saved colors/fonts/logos) applied globally, (b) design first slide, (c) **Duplicate slide** + edit content — duplicate is the primary consistency mechanism, not style transfer, (d) multi-page grid view to check flow, (e) export "All pages" → numbered PNGs. Instagram native ceiling is 10 slides per carousel post — our PLAN cap of 4–10 is aligned. Ref: Canva carousel workflow docs + https://www.canva.com/create/instagram-carousel/ .
+
+**Buffer**. Confirms Instagram carousel ceiling of 10 images, business account required for direct publish, supports **scheduled first-comment** (hashtags/CTA) — interesting for F4 export manifest: manifest could carry `firstComment` field for downstream automation. Ref: https://buffer.com/library/instagram-carousel/ .
+
+**ChatGPT DALL-E / gpt-image "style-locked series"**. The consumer product pattern (ChatGPT app) relies on same-conversation context, i.e. Responses API `previous_response_id` chaining. Works well for 2–4 sequential panels but degrades on parallel regeneration of card #5 after card #8 is set — the conversation linearity breaks. Important for F1: parallel card regen CANNOT use `previous_response_id` chains.
+
+**Midjourney `--sref` / `--cref`**. `--sref <url1,url2>` = style-only reference (palette/texture/rendering), up to ~5 URLs; `--cref` = character-content reference. Optional `--sw 0..1000` weight. Community use: lock one `--sref URL` across all cards in a series + vary prompt per card = the card-news pattern from Midjourney side. Midjourney ALSO exposes `--seed <int>` for deterministic re-roll. Ref index: https://docs.midjourney.com/ (article 32162917505165).
+
+### R3. Style-consistent series with gpt-image-2 (technical)
+
+**Two mechanisms, mutually exclusive for our purposes**:
+
+1. **Responses API multi-turn** — `previous_response_id` carries conversational context; `tools=[{type:"image_generation", action:"auto|generate|edit"}]`. Good for *sequential* refinement (cat → realistic cat). **Bad for F1** because card-news users jump around (regenerate card 3 after card 7). Source: https://developers.openai.com/api/docs/guides/image-generation (fetched).
+
+2. **Image API `reference_image_ids` / file-id fan-out** — upload a "style anchor" (first approved card, or user-uploaded moodboard) via Files API (`purpose:"vision"`), get `file_id`, then pass that same `file_id` as input-image to every per-card `/images/edits` or Responses-tool call. Stateless, parallelizable, correct for F1. OpenAI docs note "when multiple reference images are used with gpt-image-1/1-mini, the first image is prioritized for preserving fine textures/faces" — keep anchor as slot 0.
+
+3. **`input_fidelity: "high"`** — preserves distinctive features (faces, logos, text). Doubles image-input token weight per OpenAI cookbook `generate_images_with_high_input_fidelity`. For card-news, use only on cards that include recurring subject/logo; leave default for background/texture cards.
+
+4. **No public seed** — gpt-image-2 does NOT expose a user-settable seed parameter (unlike Midjourney/SD). Determinism across regens is **not** a tool we have. PLAN must not promise seed-based consistency.
+
+### R4. Gallery / session organization at scale
+
+**Notion gallery database view** — property-driven: cover image prop + filter/sort/group + "hide non-essential props" for clean tile. The power pattern is **grouped gallery** (group-by Status / Client / Month) — each group = collapsible horizontal strip. Maps directly onto our GalleryModal + session picker: group-by `presetId` or `compareRunId` or `cardSetId`.
+
+**Figma library frames** — design-system pattern: one Frame = one "asset class", drag-to-copy onto new pages. In our world: pinned Presets act like Figma library components. Don't invent a new primitive.
+
+**ComfyUI gallery** — via custom nodes (`Gallery`, `Show Gallery`) + external-browser fallback (`Save Image` → OS file manager). ComfyUI does NOT have native bulk-compare; the community pattern is save-and-inspect, same anti-pattern Krea exhibits. Confirms: a native in-product grid IS differentiating.
+
+---
+
+### Recommendations (feed into phase IDs)
+
+- **REC-R1 → F2**: Separate "Winner" (1 per run, used by "Promote to current" + manifest) from "Favorite" (N across all images, persistence layer = sidecar JSON `favorite:true`). Plan currently conflates via `★ Winner`; collapse `결정 필요 §8.2` to mark-only AND add a separate `favorite` field that is NOT tied to runs. Feeds BE-B3 inflight shape: add `itemId` + `role:"winner"|"favorite"|null`.
+
+- **REC-R2 → F2**: Adopt Midjourney-style `V1–V4` action "Variation-from-tile" at Board level: each CompareItem gets a `🔁 Variation` button that pipes its prompt+params back into CompareDrawer with 1 variant slot pre-filled. Implementation cost ≈ 0 (reuse Drawer state); UX leverage high. Add to F2 MVP.
+
+- **REC-R3 → F2/Backend**: New route `POST /api/compare/run` (not reusing `/api/generate`). Body: `{mode, base, variants:[{key,label,overrides}], globalCap}`. Response: `{runId, items:[{itemId, label, requestId, status}]}`, then items resolve async via `/api/inflight?runId=...`. Directly resolves BE-B1 (label preservation) + OP-B2 (group concept) + BE-B3 (inflight extension w/ runId). Retire the "client-side grouping, no new route" bullet in §3/F2.
+
+- **REC-R4 → F1 (0.11)**: Card-news style lock via **file-id fan-out**, NOT `previous_response_id`. Spec:
+  1. On "lock style", server uploads current-cover PNG via Files API (`purpose:"vision"`), stores `file_id` on `CardSet.styleAnchorFileId`.
+  2. Every per-card `/api/cardnews/:id/cards/:cid/generate` passes this file_id as slot-0 reference image.
+  3. On cover regen, invalidate + re-upload.
+  This is parallel-safe (Opus's concern in OP-B2 about parallel regen) and model-stateless. Rule out `previous_response_id` chains in the PLAN explicitly.
+
+- **REC-R5 → F1/F3**: Expose `input_fidelity: "high"|"low"` as a per-preset/per-card flag (default `low`). Bubble into cost warning ONLY on the IPM-burn path; no dollar copy needed (OAuth).
+
+- **REC-R6 → F1/F3**: **Do NOT** plan for seed-based determinism anywhere. Remove any implicit assumption; the only consistency tool is reference images. (PLAN §3/F5 hints at "consistency묶음" — clarify it's ref-driven, not seed-driven.)
+
+- **REC-R7 → F2/F3/GalleryModal**: Adopt Notion "grouped gallery" pattern — GalleryModal should support `groupBy: preset | compareRun | cardSet | none` with collapsible strips. Cheap win: reuses existing thumbnails, just a client-side group-by on `/api/history` sidecar metadata. Feed into F3 MVP (since presets are the first groupable dimension).
+
+- **REC-R8 → F1/Backend (0.11)**: Adopt Canva's "Duplicate slide" as the PRIMARY card-creation action, not "Add blank card". `POST /api/cardnews/:id/cards/:cid/duplicate` clones prompt+params+(optional) image reference. Matches user mental model from Canva/Figma; cheap to implement.
+
+- **REC-R9 → F4 (0.11) manifest**: Include `socialMeta: { platform:"instagram", carousel:{slideCount, firstComment?} }` in manifest.json so the bundle is directly consumable by Buffer-class schedulers. Zero server cost, future-proof.
+
+- **REC-R10 → F2 keyboard model**: Lock the shortcut matrix to Midjourney-adjacent muscle memory: `1–4` select tile, `Space` mark winner, `V` variation-from-tile, `P` save-as-preset, `Enter` promote-to-current, `Esc` close. Document in F2 spec.
+
+### Blockers the Backend/Opus reviews missed
+
+- **[RR-B1] `previous_response_id` cannot back card-news.** Opus OP-B2 worried about `runId` grouping for compare but didn't flag the analogous issue in F1: parallel/out-of-order card regen breaks conversational chaining. Without REC-R4 (file-id fan-out) F1 will ship with inconsistent style the moment a user regenerates card 3 after card 7. Add to F1 "Risks" and §7.3.
+
+- **[RR-B2] No seed = no deterministic re-roll.** Any PLAN text implying "pin seed" / "lock seed" is factually impossible on gpt-image-2 (confirmed by developers.openai.com/api/docs/guides/image-generation — no `seed` param). §3/F5 "Style kit" language should be audited. Not a 0.10 blocker but a 0.12 spec-truth blocker.
+
+- **[RR-B3] `input_fidelity: "high"` is a hidden IPM amplifier.** §5.1 pricing table lists image-output cost only. `high` fidelity roughly 2× image-input tokens per OpenAI cookbook. For a 10-card set with ref image + high fidelity the IPM burn is ~2× naive estimate. Not a dollar problem (OAuth) but a rate-limit problem for F1's `Math.min(cardCount, 4)` queue sizing — cap may need to drop to 2 on `high`.
+
+- **[RR-B4] Instagram-carousel 10-slide ceiling is undocumented in PLAN.** Card count "4–10" in §3/F1 happens to match, but the "why 10" isn't stated. Documenting the Instagram limit defends the cap against scope creep ("why not 20?") and feeds REC-R9 manifest `socialMeta.carousel.slideCount`.
+
+- **[RR-B5] GalleryModal will drown without group-by.** Current `/api/history` returns flat list; once F3 + F2 land, a heavy user has ~200 tiles/week. BE-B4 (sets leaking into history) is one symptom; missing `groupBy` is the upstream UX failure. REC-R7 is the fix; land it in 0.10 with F3, don't defer.
+
+### Source anchor list (verified this session)
+
+- OpenAI Image Generation guide (fetched OK): https://developers.openai.com/api/docs/guides/image-generation
+- OpenAI Cookbook — high input fidelity (indexed): https://developers.openai.com/cookbook/examples/generate_images_with_high_input_fidelity
+- Midjourney docs root (article fetch 403, index usable): https://docs.midjourney.com/
+- Ideogram docs root (specific paths moved, 404): https://docs.ideogram.ai/
+- Krea vs Leonardo batch behavior: https://www.softude.com/blog/krea-ai-vs-leonardo-ai-best-image-generator/ , https://stringlabscreative.com/krea-ai-vs-leonardo-ai/
+- Canva Instagram carousel: https://www.canva.com/create/instagram-carousel/
+- Buffer carousel scheduling: https://buffer.com/library/instagram-carousel/
+
