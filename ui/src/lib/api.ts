@@ -22,7 +22,7 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
-export function getInflight(): Promise<{ jobs: Array<{ requestId: string; kind: string; prompt: string; startedAt: number; meta?: Record<string, unknown> }> }> {
+export function getInflight(): Promise<{ jobs: Array<{ requestId: string; kind: string; prompt: string; startedAt: number; phase?: string; phaseAt?: number; meta?: Record<string, unknown> }> }> {
   return jsonFetch("/api/inflight");
 }
 

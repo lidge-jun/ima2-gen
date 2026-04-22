@@ -47,7 +47,7 @@ function loadUIMode(): UIMode {
   return "classic";
 }
 
-type PersistedInFlight = { id: string; prompt: string; startedAt: number };
+type PersistedInFlight = { id: string; prompt: string; startedAt: number; phase?: string };
 const INFLIGHT_TTL_MS = 180_000;
 
 function loadInFlight(): PersistedInFlight[] {
@@ -287,6 +287,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
         return;
       }
+      // Merge server-side phase info so the spinner label reflects real progress
+      try {
+        const { jobs } = await getInflight();
+        const byId = new Map(jobs.map((j) => [j.requestId, j.phase] as const));
+        let changed = false;
+        const nextInflight = get().inFlight.map((f) => {
+          const p = byId.get(f.id);
+          if (p && p !== f.phase) {
+            changed = true;
+            return { ...f, phase: p };
+          }
+          return f;
+        });
+        if (changed) {
+          saveInFlight(nextInflight);
+          set({ inFlight: nextInflight });
+        }
+      } catch {}
       try {
         const { items } = await getHistory(HISTORY_LIMIT);
         const arr: GenerateItem[] = items.map((it) => ({
@@ -329,7 +347,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       } catch {}
     };
-    w.__ima2InflightTimer = window.setInterval(tick, 4000) as unknown as number;
+    w.__ima2InflightTimer = window.setInterval(tick, 1500) as unknown as number;
   },
   reconcileInflight: async () => {
     try {

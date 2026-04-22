@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import { existsSync } from "fs";
 import { newNodeId, saveNode, loadNodeB64, loadNodeMeta } from "./lib/nodeStore.js";
-import { startJob, finishJob, listJobs } from "./lib/inflight.js";
+import { startJob, finishJob, listJobs, setJobPhase } from "./lib/inflight.js";
 import {
   createSession,
   listSessions,
@@ -79,7 +79,7 @@ function validateAndNormalizeRefs(references) {
 const RESEARCH_SUFFIX =
   "\n\n필요하면 먼저 웹에서 이 주제의 정확한 레퍼런스(얼굴/제품/장소/최신 정보)를 검색한 뒤 그걸 토대로 이미지를 생성해. 단순한 주제는 곧바로 생성해도 돼.";
 
-async function generateViaOAuth(prompt, quality, size, references = []) {
+async function generateViaOAuth(prompt, quality, size, references = [], requestId = null) {
   const tools = [
     { type: "web_search" },
     { type: "image_generation", quality, size },
@@ -112,6 +112,7 @@ async function generateViaOAuth(prompt, quality, size, references = []) {
   });
 
   console.log("[oauth] response status:", res.status, "content-type:", res.headers.get("content-type"));
+  if (requestId) setJobPhase(requestId, "streaming");
 
   if (!res.ok) {
     const text = await res.text();
@@ -177,6 +178,7 @@ async function generateViaOAuth(prompt, quality, size, references = []) {
           if (data.item.result) {
             imageB64 = data.item.result;
             console.log("[oauth] got image, b64 length:", imageB64.length);
+            if (requestId) setJobPhase(requestId, "decoding");
           }
         }
         if (data.type === "response.output_item.done" && data.item?.type === "web_search_call") {
@@ -348,7 +350,7 @@ app.post("/api/generate", async (req, res) => {
       let lastErr;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const r = await generateViaOAuth(prompt, quality, size, refB64s);
+          const r = await generateViaOAuth(prompt, quality, size, refB64s, requestId);
           if (r.b64) return r;
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
@@ -596,7 +598,7 @@ app.post("/api/node/generate", async (req, res) => {
       try {
         const r = parentB64
           ? await editViaOAuth(prompt, parentB64, quality, size)
-          : await generateViaOAuth(prompt, quality, size, refB64s);
+          : await generateViaOAuth(prompt, quality, size, refB64s, requestId);
         if (r.b64) {
           b64 = r.b64;
           usage = r.usage;
