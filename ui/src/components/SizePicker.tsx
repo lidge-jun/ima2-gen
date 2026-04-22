@@ -5,6 +5,8 @@ import {
   SIZE_PRESETS_ROW1,
   SIZE_PRESETS_ROW2,
   SIZE_PRESETS_ROW3,
+  SIZE_PRESETS_ROW4,
+  SIZE_PRESETS_ROW5,
 } from "../lib/size";
 
 function toItems(row: ReadonlyArray<{ value: string; label: string; sub: string }>) {
@@ -42,6 +44,18 @@ export function SizePicker() {
       <OptionGroup<SizePreset>
         title=""
         items={toItems(SIZE_PRESETS_ROW3)}
+        value={sizePreset}
+        onChange={setSizePreset}
+      />
+      <OptionGroup<SizePreset>
+        title=""
+        items={toItems(SIZE_PRESETS_ROW4)}
+        value={sizePreset}
+        onChange={setSizePreset}
+      />
+      <OptionGroup<SizePreset>
+        title=""
+        items={toItems(SIZE_PRESETS_ROW5)}
         value={sizePreset}
         onChange={setSizePreset}
       />

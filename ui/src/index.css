@@ -137,26 +137,30 @@ body {
 .option-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .option-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .option-btn {
   flex: 1;
-  padding: 9px 6px;
+  min-width: 0;
+  padding: 6px 4px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--text-dim);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.3;
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .option-btn:hover {
   border-color: #444;
@@ -256,11 +260,11 @@ body {
   width: 20px;
 }
 .right-panel-body {
-  padding: 20px 16px;
+  padding: 16px 12px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   flex: 1;
 }
 .right-panel.collapsed .right-panel-body {
@@ -625,6 +629,7 @@ body {
 .option-sub {
   font-size: 10px;
   color: var(--text-dim);
+  line-height: 1.1;
 }
 
 /* ── Responsive ── */
