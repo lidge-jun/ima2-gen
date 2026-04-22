@@ -1,11 +1,13 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import { spawn } from "child_process";
-import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
+import { writeFileSync, mkdirSync, rmSync, existsSync, mkdtempSync } from "fs";
 import { join } from "path";
+import { tmpdir } from "os";
 
 const TEST_DIR = join(process.cwd(), "tests", "tmp");
 const TEST_CONFIG = join(TEST_DIR, "config.json");
+const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-bin-home-"));
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,7 +17,12 @@ function runCLI(args = []) {
   return new Promise((resolve) => {
     const child = spawn("node", ["bin/ima2.js", ...args], {
       cwd: process.cwd(),
-      env: { ...process.env },
+      env: {
+        ...process.env,
+        HOME: FAKE_HOME,
+        USERPROFILE: FAKE_HOME,
+        IMA2_CONFIG_DIR: TEST_DIR,
+      },
     });
     let stdout = "";
     let stderr = "";
@@ -32,6 +39,7 @@ describe("ima2 CLI", () => {
 
   after(() => {
     if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+    if (existsSync(FAKE_HOME)) rmSync(FAKE_HOME, { recursive: true, force: true });
   });
 
   it("should show help when no command given", async () => {
@@ -87,11 +95,19 @@ describe("ima2 CLI", () => {
 
     const child = spawn("node", ["bin/ima2.js", "reset"], {
       cwd: process.cwd(),
-      env: { ...process.env, IMA2_CONFIG_DIR: TEST_DIR },
+      env: {
+        ...process.env,
+        HOME: FAKE_HOME,
+        USERPROFILE: FAKE_HOME,
+        IMA2_CONFIG_DIR: TEST_DIR,
+      },
     });
     await new Promise((resolve) => child.on("close", resolve));
 
-    // Note: reset uses hardcoded CONFIG_FILE path, so this tests the command runs without error
+    // reset now honors IMA2_CONFIG_DIR → file content is `{}`
+    const { readFileSync } = await import("fs");
+    const content = readFileSync(TEST_CONFIG, "utf-8");
+    assert.strictEqual(content.trim(), "{}", "reset should empty config file");
   });
 
   it("should reject invalid command", async () => {

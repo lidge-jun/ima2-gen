@@ -10,8 +10,12 @@ import { openUrl, resolveBin } from "./lib/platform.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const HOME = homedir();
-const CONFIG_DIR = join(ROOT, ".ima2");
+// Config lives in $IMA2_CONFIG_DIR (tests) or ~/.ima2 to match server.js and
+// ~/.ima2/server.json advertise path. Legacy installs that stored config at
+// <packageRoot>/.ima2/config.json will be migrated on first write.
+const CONFIG_DIR = process.env.IMA2_CONFIG_DIR || join(HOME, ".ima2");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+const LEGACY_CONFIG_FILE = join(ROOT, ".ima2", "config.json");
 
 // Load package.json for version
 let pkg = { version: "?", name: "ima2-gen" };
@@ -22,6 +26,10 @@ try {
 function loadConfig() {
   if (existsSync(CONFIG_FILE)) {
     return JSON.parse(readFileSync(CONFIG_FILE, "utf-8"));
+  }
+  // One-time read from legacy location so users who set up on <1.0.4 don't lose auth.
+  if (existsSync(LEGACY_CONFIG_FILE)) {
+    try { return JSON.parse(readFileSync(LEGACY_CONFIG_FILE, "utf-8")); } catch {}
   }
   return {};
 }

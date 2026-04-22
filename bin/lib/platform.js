@@ -1,11 +1,28 @@
-// Cross-platform helpers (Windows / macOS / Linux).
+// Cross-platform helpers (Windows / macOS / Linux / WSL).
 // Keep this file tiny & dependency-free. Node 18+ only.
 
 import { spawn, execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 export const isWin = process.platform === "win32";
 export const isMac = process.platform === "darwin";
 export const isLinux = !isWin && !isMac;
+
+let _wslCached = null;
+export function isWsl() {
+  if (_wslCached !== null) return _wslCached;
+  if (!isLinux) return (_wslCached = false);
+  try {
+    _wslCached = readFileSync("/proc/version", "utf-8").toLowerCase().includes("microsoft");
+  } catch {
+    _wslCached = false;
+  }
+  return _wslCached;
+}
+
+export function hasDesktopSession() {
+  return Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+}
 
 /**
  * Resolve an executable name that differs between Windows and Unix.
@@ -18,28 +35,29 @@ export function resolveBin(name) {
 
 /**
  * spawn() wrapper that works for npm/npx/any PATH-resolved exe on Windows.
- * Uses `.cmd` suffix on Windows instead of shell:true to keep stdio/env pristine
- * and avoid quoting pitfalls.
  */
 export function spawnBin(name, args, opts = {}) {
-  return spawn(resolveBin(name), args, opts);
+  return spawn(resolveBin(name), args, { windowsHide: true, ...opts });
 }
 
 /**
  * Open a URL in the user's default browser.
- * - macOS:  `open <url>`
- * - Windows: `cmd /c start "" "<url>"`  (start is a cmd builtin)
- * - Linux:   `xdg-open <url>`  (may be missing on headless servers)
  * Returns { ok: boolean, error?: string }.
+ * Handles WSL (via powershell.exe) and refuses on headless Linux without DISPLAY.
  */
 export function openUrl(url) {
   try {
     if (isMac) {
       execSync(`open ${JSON.stringify(url)}`, { stdio: "ignore" });
     } else if (isWin) {
-      // Empty quoted title prevents start from interpreting the URL as a window title.
       execSync(`cmd /c start "" ${JSON.stringify(url)}`, { stdio: "ignore" });
+    } else if (isWsl()) {
+      // WSL: hand off to Windows via powershell
+      execSync(`powershell.exe -NoProfile -Command Start-Process ${JSON.stringify(url)}`, { stdio: "ignore" });
     } else {
+      if (!hasDesktopSession()) {
+        return { ok: false, error: "no desktop session (DISPLAY/WAYLAND_DISPLAY unset)" };
+      }
       execSync(`xdg-open ${JSON.stringify(url)}`, { stdio: "ignore" });
     }
     return { ok: true };
@@ -49,12 +67,15 @@ export function openUrl(url) {
 }
 
 /**
- * Register graceful shutdown handlers. Windows does NOT raise SIGTERM from
- * the OS (only from inside Node), but SIGINT and SIGBREAK do work for
- * Ctrl+C and Ctrl+Break respectively.
+ * Register graceful shutdown handlers.
+ * Windows does NOT raise SIGTERM from the OS — SIGINT (Ctrl+C) and SIGBREAK
+ * (Ctrl+Break) are the observable signals. We still register SIGTERM so that
+ * Node-internal `child.kill("SIGTERM")` calls work in tests.
  */
 export function onShutdown(handler) {
-  const signals = isWin ? ["SIGINT", "SIGBREAK"] : ["SIGINT", "SIGTERM", "SIGHUP"];
+  const signals = isWin
+    ? ["SIGINT", "SIGTERM", "SIGBREAK"]
+    : ["SIGINT", "SIGTERM", "SIGHUP"];
   for (const sig of signals) {
     try {
       process.on(sig, () => {
@@ -65,3 +86,4 @@ export function onShutdown(handler) {
     }
   }
 }
+

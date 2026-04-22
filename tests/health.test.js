@@ -81,13 +81,16 @@ describe("Server: /api/health + advertisement", () => {
     assert.strictEqual(r.status, 400);
   });
 
-  it("cleans up advertisement file on SIGTERM", async () => {
+  it("cleans up advertisement file on shutdown signal", async () => {
     const advertisePath = join(FAKE_HOME, ".ima2", "server.json");
     assert.ok(existsSync(advertisePath), "precondition: file exists");
-    child.kill("SIGTERM");
+    // Windows never observes SIGTERM handlers for externally-delivered signals,
+    // so use SIGINT there (both platforms wire it up).
+    const signal = process.platform === "win32" ? "SIGINT" : "SIGTERM";
+    child.kill(signal);
     await new Promise((r) => child.on("exit", r));
     // small grace for unlink
     await new Promise((r) => setTimeout(r, 100));
-    assert.ok(!existsSync(advertisePath), "file should be removed after SIGTERM");
+    assert.ok(!existsSync(advertisePath), `file should be removed after ${signal}`);
   });
 });

@@ -22,14 +22,20 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// Load API key from env or .ima2/config.json
+// Load API key from env or ${IMA2_CONFIG_DIR || ~/.ima2}/config.json
+// (with legacy fallback to <packageRoot>/.ima2/config.json for existing installs)
 let apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
-  const cfgPath = join(__dirname, ".ima2", "config.json");
-  if (existsSync(cfgPath)) {
+  const configDir = process.env.IMA2_CONFIG_DIR || join(homedir(), ".ima2");
+  const candidates = [
+    join(configDir, "config.json"),
+    join(__dirname, ".ima2", "config.json"),
+  ];
+  for (const cfgPath of candidates) {
+    if (!existsSync(cfgPath)) continue;
     try {
       const cfg = JSON.parse(await readFile(cfgPath, "utf-8"));
-      if (cfg.apiKey) apiKey = cfg.apiKey;
+      if (cfg.apiKey) { apiKey = cfg.apiKey; break; }
     } catch {}
   }
 }
