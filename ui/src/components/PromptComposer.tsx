@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 
 const MAX_REFS = 5;
@@ -38,12 +38,57 @@ export function PromptComposer() {
     setDragOver(false);
   };
 
+  // Extract image files from a ClipboardEvent (Cmd/Ctrl+V).
+  // Covers both inline bitmaps (Screenshot, "copy image") and files copied
+  // from Finder/Explorer. Falls back silently if the clipboard only has text.
+  const extractClipboardImages = (items: DataTransferItemList | null): File[] => {
+    if (!items) return [];
+    const files: File[] = [];
+    for (const it of Array.from(items)) {
+      if (it.kind !== "file") continue;
+      if (!it.type.startsWith("image/")) continue;
+      const f = it.getAsFile();
+      if (f) files.push(f);
+    }
+    return files;
+  };
+
+  const onPaste = (e: ClipboardEvent<HTMLDivElement>) => {
+    if (!canAddMore) return;
+    const files = extractClipboardImages(e.clipboardData?.items ?? null);
+    if (files.length === 0) return;
+    // Image paste detected → prevent the default (which would dump a base64
+    // blob into the textarea) and attach instead.
+    e.preventDefault();
+    const room = MAX_REFS - refs.length;
+    void addReferences(files.slice(0, room));
+  };
+
+  // Global paste fallback: when the composer isn't focused but the user hits
+  // Cmd/Ctrl+V anywhere, still attach. Skip if they're typing in another input.
+  useEffect(() => {
+    const handler = (e: globalThis.ClipboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || t?.isContentEditable) return;
+      const files = extractClipboardImages(e.clipboardData?.items ?? null);
+      if (files.length === 0) return;
+      if (refs.length >= MAX_REFS) return;
+      e.preventDefault();
+      const room = MAX_REFS - refs.length;
+      void addReferences(files.slice(0, room));
+    };
+    window.addEventListener("paste", handler);
+    return () => window.removeEventListener("paste", handler);
+  }, [refs.length, addReferences]);
+
   return (
     <div
       className={`composer${dragOver ? " composer--drag" : ""}`}
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
+      onPaste={onPaste}
     >
       <div className="composer__header">
         <span className="section-title composer__label">Prompt</span>
@@ -78,7 +123,7 @@ export function PromptComposer() {
         placeholder={
           refs.length > 0
             ? "Describe what to do with the attached image(s)…"
-            : "Describe the image, or drag & drop images to attach as context…"
+            : "Describe the image, drag & drop, or paste (⌘/Ctrl+V) to attach…"
         }
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
