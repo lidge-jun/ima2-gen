@@ -29,13 +29,13 @@ export function BillingBar() {
     text = `$${(totalCost / 100).toFixed(2)} this month`;
     color = "var(--accent)";
   } else if (data.oauth) {
-    text = "OAuth mode (no API key)";
-    color = "var(--accent)";
-  } else if (data.apiKeyValid) {
-    text = "API key valid";
+    text = "OAuth · free via codex";
     color = "var(--green)";
+  } else if (data.apiKeyValid) {
+    text = "API key disabled (OAuth only)";
+    color = "var(--text-dim)";
   } else {
-    text = "Could not fetch billing";
+    text = "OAuth mode";
     color = "var(--text-dim)";
   }
 
