@@ -32,13 +32,13 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
 
   const isBusy = d.status === "pending" || d.status === "reconciling";
   const statusLabel = {
-    empty: "empty",
-    pending: "generating…",
-    reconciling: `reconciling…${d.pendingPhase ? ` · ${d.pendingPhase}` : ""}`,
-    ready: `ready · ${d.elapsed ?? "?"}s${d.webSearchCalls ? ` · ws×${d.webSearchCalls}` : ""}`,
-    stale: `stale${d.error ? `: ${d.error}` : ""}`,
-    "asset-missing": `asset missing${d.error ? `: ${d.error}` : ""}`,
-    error: `error: ${d.error ?? "unknown"}`,
+    empty: "비어 있음",
+    pending: "생성 중",
+    reconciling: `동기화 중${d.pendingPhase ? ` · ${d.pendingPhase}` : ""}`,
+    ready: `완료 · ${d.elapsed ?? "?"}s${d.webSearchCalls ? ` · 검색 ${d.webSearchCalls}` : ""}`,
+    stale: `오래된 상태${d.error ? `: ${d.error}` : ""}`,
+    "asset-missing": `에셋 누락${d.error ? `: ${d.error}` : ""}`,
+    error: `오류: ${d.error ?? "알 수 없음"}`,
   }[d.status];
 
   return (
@@ -48,15 +48,15 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
       ) : null}
       <div className="image-node__preview">
         {d.imageUrl && d.status !== "asset-missing" ? (
-          <img src={d.imageUrl} alt="node" />
+          <img src={d.imageUrl} alt="노드 이미지" />
         ) : isBusy ? (
-          <div className="image-node__skeleton">⏳</div>
+          <div className="image-node__skeleton" />
         ) : d.status === "asset-missing" ? (
-          <div className="image-node__placeholder">missing asset</div>
+          <div className="image-node__placeholder">에셋 없음</div>
         ) : d.status === "stale" ? (
-          <div className="image-node__placeholder">stale</div>
+          <div className="image-node__placeholder">상태 오래됨</div>
         ) : (
-          <div className="image-node__placeholder">no image</div>
+          <div className="image-node__placeholder">이미지 없음</div>
         )}
       </div>
       <textarea
@@ -64,7 +64,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         value={d.prompt}
         onChange={onPromptChange}
         onKeyDown={(e) => e.stopPropagation()}
-        placeholder={d.parentServerNodeId ? "Edit prompt…" : "Prompt…"}
+        placeholder={d.parentServerNodeId ? "수정 프롬프트..." : "프롬프트..."}
         rows={2}
         disabled={isBusy}
       />
@@ -72,21 +72,21 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         <span className="image-node__status">{statusLabel}</span>
         <div className="image-node__actions nodrag">
           <button type="button" onClick={onGenerate} disabled={isBusy}>
-            {d.status === "ready" ? "Regenerate" : "Generate"}
+            {d.status === "ready" ? "다시 생성" : "생성"}
           </button>
           {d.status === "ready" ? (
             <>
-              <button type="button" onClick={onBranch}>+ Child</button>
+              <button type="button" onClick={onBranch}>자식 추가</button>
               <button
                 type="button"
                 onClick={onDuplicateBranch}
-                title="Duplicate as new branch root"
+                title="새 브랜치 루트로 복제"
               >
-                ⎘ Branch
+                브랜치 복제
               </button>
             </>
           ) : null}
-          <button type="button" onClick={onDelete} className="image-node__del" title="Delete">✕</button>
+          <button type="button" onClick={onDelete} className="image-node__del" title="삭제">×</button>
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="image-node__handle image-node__handle--source" />

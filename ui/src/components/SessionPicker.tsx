@@ -13,12 +13,12 @@ export function SessionPicker() {
   const active = sessions.find((s) => s.id === activeId);
 
   const handleRename = () => {
-    const next = window.prompt("Session title", active?.title ?? "Untitled");
+    const next = window.prompt("세션 이름", active?.title ?? "새 세션");
     if (next && next.trim()) renameSession(next.trim());
   };
 
   const handleDelete = (id: string, title: string) => {
-    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    if (!window.confirm(`"${title}" 세션을 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
     void deleteSession(id);
   };
 
@@ -29,16 +29,16 @@ export function SessionPicker() {
           type="button"
           className="session-current"
           onClick={() => setOpen((v) => !v)}
-          title="Switch session"
+          title="세션 전환"
         >
-          <span className="session-title">{active?.title ?? "Loading…"}</span>
-          <span className="session-caret">{open ? "▾" : "▸"}</span>
+          <span className="session-title">{active?.title ?? "불러오는 중..."}</span>
+          <span className="session-caret">{open ? "▴" : "▾"}</span>
         </button>
         <button
           type="button"
           className="session-btn"
-          onClick={() => void createSession("Untitled")}
-          title="New session"
+          onClick={() => void createSession("새 세션")}
+          title="새 세션"
         >
           +
         </button>
@@ -46,7 +46,7 @@ export function SessionPicker() {
           type="button"
           className="session-btn"
           onClick={handleRename}
-          title="Rename"
+          title="이름 변경"
           disabled={!active}
         >
           ✎
@@ -71,14 +71,14 @@ export function SessionPicker() {
                 type="button"
                 className="session-del"
                 onClick={() => handleDelete(s.id, s.title)}
-                title="Delete"
+                title="삭제"
               >
                 ×
               </button>
             </li>
           ))}
           {sessions.length === 0 && (
-            <li className="session-empty">No sessions yet</li>
+            <li className="session-empty">아직 세션이 없습니다</li>
           )}
         </ul>
       )}

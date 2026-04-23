@@ -73,10 +73,10 @@ function NodeCanvasInner() {
 
   return (
     <main className="node-canvas" ref={wrapperRef}>
-      {sessionLoading && <div className="node-canvas__loading">Loading session…</div>}
+      {sessionLoading && <div className="node-canvas__loading">세션 불러오는 중...</div>}
       {nodes.length === 0 ? (
         <button type="button" className="node-canvas__plus" onClick={() => addRootNode()}>
-          + Add first node
+          + 첫 노드 추가
         </button>
       ) : (
         <>
@@ -108,12 +108,12 @@ function NodeCanvasInner() {
             type="button"
             className="node-canvas__add-root"
             onClick={() => addRootNode()}
-            title="Add root node"
+            title="루트 노드 추가"
           >
             +
           </button>
           <div className="node-canvas__hint">
-            Drag from ▶ to empty space to branch · Delete/⌫ to remove
+            핸들을 빈 공간으로 드래그하면 새 브랜치가 생깁니다. Delete 또는 Backspace로 삭제할 수 있습니다.
           </div>
         </>
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import type { GenerateItem } from "../types";
 import { deleteHistoryItem, restoreHistoryItem, getHistoryGrouped } from "../lib/api";
@@ -10,19 +10,27 @@ type TrashPending = {
   expiresAt: number;
 };
 
+type SessionGroup = {
+  sessionId: string;
+  label: string;
+  items: GenerateItem[];
+};
+
 function dateBucket(createdAt: number | undefined): string {
-  if (!createdAt) return "Older";
+  if (!createdAt) return "이전";
   const d = new Date(createdAt);
-  if (Number.isNaN(d.getTime())) return "Older";
+  if (Number.isNaN(d.getTime())) return "이전";
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return "This week";
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  if (diffDays === 0) return "오늘";
+  if (diffDays === 1) return "어제";
+  if (diffDays < 7) return "이번 주";
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
-
-type SessionGroup = { sessionId: string; label: string; lastUsedAt: number; items: GenerateItem[] };
 
 export function GalleryModal() {
   const open = useAppStore((s) => s.galleryOpen);
@@ -76,13 +84,12 @@ export function GalleryModal() {
           page.sessions.map((s) => ({
             sessionId: s.sessionId,
             label: s.sessionId.slice(0, 8),
-            lastUsedAt: s.lastUsedAt,
             items: s.items.map(toItem),
           })),
         );
         setLoose(page.loose.map(toItem));
       } catch {
-        // fallback: just use store history
+        // Fallback: use current history only.
       }
     })();
     return () => {
@@ -110,7 +117,6 @@ export function GalleryModal() {
     return Array.from(map.entries());
   }, [filtered]);
 
-  // undo countdown tick
   useEffect(() => {
     if (!pending) return;
     const id = setInterval(() => {
@@ -123,7 +129,7 @@ export function GalleryModal() {
     return () => clearInterval(id);
   }, [pending]);
 
-  async function handleDelete(item: GenerateItem, e: React.MouseEvent) {
+  async function handleDelete(item: GenerateItem, e: MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
     if (!item.filename) return;
     try {
@@ -154,7 +160,7 @@ export function GalleryModal() {
 
   if (!open) return null;
 
-  const Tile = (item: GenerateItem, keyPrefix: string, idx: number) => {
+  const renderTile = (item: GenerateItem, keyPrefix: string, idx: number) => {
     const active = currentImage?.image === item.image;
     return (
       <div
@@ -170,12 +176,7 @@ export function GalleryModal() {
           }}
           title={item.prompt ?? ""}
         >
-          <img
-            src={item.thumb || item.image}
-            alt={item.prompt ?? ""}
-            loading="lazy"
-            decoding="async"
-          />
+          <img src={item.thumb || item.image} alt={item.prompt ?? "생성 이미지"} loading="lazy" decoding="async" />
           {item.prompt && (
             <div className="gallery__caption">
               <span className="gallery__caption-text">{item.prompt}</span>
@@ -187,10 +188,10 @@ export function GalleryModal() {
             type="button"
             className="gallery__delete"
             onClick={(e) => handleDelete(item, e)}
-            title="Delete (10s undo)"
-            aria-label="Delete image"
+            title="삭제 (10초 내 복구 가능)"
+            aria-label="이미지 삭제"
           >
-            ✕
+            ×
           </button>
         )}
       </div>
@@ -208,17 +209,17 @@ export function GalleryModal() {
         className="gallery"
         role="dialog"
         aria-modal="true"
-        aria-label="Image gallery"
+        aria-label="이미지 갤러리"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="gallery__header">
           <div className="gallery__title-row">
-            <div className="gallery__title">Gallery</div>
+            <div className="gallery__title">갤러리</div>
             <div className="gallery__meta">
-              {totalVisible}
-              {query ? ` / ${history.length}` : ""} images
+              총 {totalVisible}장
+              {query ? ` / 전체 ${history.length}장` : ""}
             </div>
-            <div className="gallery__group-toggle" role="tablist" aria-label="Group by">
+            <div className="gallery__group-toggle" role="tablist" aria-label="정렬 기준">
               <button
                 type="button"
                 role="tab"
@@ -226,7 +227,7 @@ export function GalleryModal() {
                 className={groupBy === "date" ? "active" : ""}
                 onClick={() => setGroupBy("date")}
               >
-                Date
+                날짜
               </button>
               <button
                 type="button"
@@ -235,14 +236,14 @@ export function GalleryModal() {
                 className={groupBy === "session" ? "active" : ""}
                 onClick={() => setGroupBy("session")}
               >
-                Session
+                세션
               </button>
             </div>
           </div>
           <input
             type="text"
             className="gallery__search"
-            placeholder="Search prompt or filename…"
+            placeholder={showSessions ? "세션 보기에서는 검색이 비활성화됩니다" : "프롬프트나 파일명을 검색"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -252,10 +253,10 @@ export function GalleryModal() {
             type="button"
             className="gallery__close"
             onClick={close}
-            aria-label="Close gallery"
-            title="Close (Esc)"
+            aria-label="갤러리 닫기"
+            title="닫기 (Esc)"
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -265,34 +266,34 @@ export function GalleryModal() {
               {sessionGroups.map((g) => (
                 <section key={g.sessionId} className="gallery__group">
                   <header className="gallery__group-header">
-                    <span className="gallery__group-label">📦 {g.label}</span>
+                    <span className="gallery__group-label">세션 {g.label}</span>
                     <span className="gallery__group-count">{g.items.length}</span>
                   </header>
                   <div className="gallery__grid">
-                    {g.items.map((item, i) => Tile(item, g.sessionId, i))}
+                    {g.items.map((item, i) => renderTile(item, g.sessionId, i))}
                   </div>
                 </section>
               ))}
               {loose.length > 0 && (
                 <section className="gallery__group">
                   <header className="gallery__group-header">
-                    <span className="gallery__group-label">Loose images</span>
+                    <span className="gallery__group-label">독립 이미지</span>
                     <span className="gallery__group-count">{loose.length}</span>
                   </header>
                   <div className="gallery__grid">
-                    {loose.map((item, i) => Tile(item, "loose", i))}
+                    {loose.map((item, i) => renderTile(item, "loose", i))}
                   </div>
                 </section>
               )}
               {sessionGroups.length === 0 && loose.length === 0 && (
-                <div className="gallery__empty">No sessions yet.</div>
+                <div className="gallery__empty">아직 저장된 세션이 없습니다.</div>
               )}
             </>
           ) : filtered.length === 0 ? (
             <div className="gallery__empty">
               {history.length === 0
-                ? "No images yet. Generate something!"
-                : "No matches for that query."}
+                ? "아직 생성된 이미지가 없습니다. 먼저 하나 만들어보세요."
+                : "검색 결과가 없습니다."}
             </div>
           ) : (
             dateGroups.map(([label, items]) => (
@@ -302,7 +303,7 @@ export function GalleryModal() {
                   <span className="gallery__group-count">{items.length}</span>
                 </header>
                 <div className="gallery__grid">
-                  {items.map((item, i) => Tile(item, label, i))}
+                  {items.map((item, i) => renderTile(item, label, i))}
                 </div>
               </section>
             ))
@@ -311,12 +312,12 @@ export function GalleryModal() {
 
         {pending && (
           <div className="gallery__undo">
-            <span>Deleted {pending.filename}</span>
+            <span>삭제됨: {pending.filename}</span>
             <button type="button" onClick={handleUndo}>
-              Undo
+              되돌리기
             </button>
             <span className="gallery__undo-timer">
-              {Math.max(0, Math.ceil((pending.expiresAt - Date.now()) / 1000))}s
+              {Math.max(0, Math.ceil((pending.expiresAt - Date.now()) / 1000))}초
             </span>
           </div>
         )}
@@ -324,4 +325,3 @@ export function GalleryModal() {
     </div>
   );
 }
-

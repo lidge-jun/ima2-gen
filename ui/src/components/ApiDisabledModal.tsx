@@ -25,17 +25,17 @@ export function ApiDisabledModal({ open, providerLabel, reason, hint, onClose }:
         className="modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`${providerLabel} unavailable`}
+        aria-label={`${providerLabel} 사용 불가`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal__title">{providerLabel} unavailable</div>
+        <div className="modal__title">{providerLabel} 사용 불가</div>
         <div className="modal__body">
           <p>{reason}</p>
           {hint ? <p className="modal__hint">{hint}</p> : null}
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__btn" onClick={onClose}>
-            OK
+            확인
           </button>
         </div>
       </div>

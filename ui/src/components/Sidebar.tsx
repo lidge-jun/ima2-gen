@@ -16,7 +16,7 @@ export function Sidebar() {
       <div className="sidebar__scroll">
         <div className="logo">
           <div className="logo-dot" />
-          Image Gen
+          이미지 생성기
           <span className="logo-badge">gpt-image-2</span>
         </div>
         <UIModeSwitch />
@@ -31,8 +31,8 @@ export function Sidebar() {
           <>
             <SessionPicker />
             <div className="sidebar__node-hint">
-              Node mode: click a node to edit its prompt, then Generate. Settings on the right panel
-              (quality/size) apply to all new generations.
+              노드 모드에서는 노드를 눌러 프롬프트를 수정한 뒤 생성하세요. 오른쪽 패널의 설정
+              (품질/크기)은 새로 만드는 모든 결과에 적용됩니다.
             </div>
             <InFlightList />
           </>
