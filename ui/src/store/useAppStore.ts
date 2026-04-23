@@ -81,7 +81,7 @@ function saveInFlight(list: PersistedInFlight[]): void {
       w.__ima2QuotaWarned = true;
       console.warn("[ima2] localStorage write failed:", err);
       try {
-        useAppStore.getState().showToast("Local storage full — recent state may not persist", true);
+        useAppStore.getState().showToast("로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.", true);
       } catch {}
     }
   }
@@ -287,7 +287,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const valid = dataUrls.filter((x): x is string => !!x);
     set((s) => ({ referenceImages: [...s.referenceImages, ...valid].slice(0, 5) }));
     if (files.length > allowed) {
-      get().showToast("Maximum 5 references; extras ignored", true);
+      get().showToast("참조 이미지는 최대 5장까지 추가할 수 있습니다. 초과한 이미지는 제외되었습니다.", true);
     }
   },
   addReferenceDataUrl: (dataUrl) => {
@@ -306,11 +306,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   useCurrentAsReference: async () => {
     const cur = get().currentImage;
     if (!cur) {
-      get().showToast("No current image to use", true);
+      get().showToast("참조로 사용할 현재 이미지가 없습니다.", true);
       return;
     }
     if (get().referenceImages.length >= 5) {
-      get().showToast("Reference slots are full (max 5)", true);
+      get().showToast("참조 이미지 슬롯이 가득 찼습니다. 최대 5장까지 가능합니다.", true);
       return;
     }
     let dataUrl = cur.image;
@@ -328,12 +328,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           reader.readAsDataURL(blob);
         });
       } catch {
-        get().showToast("Could not fetch current image", true);
+        get().showToast("현재 이미지를 불러오지 못했습니다.", true);
         return;
       }
     }
     set((s) => ({ referenceImages: [...s.referenceImages, dataUrl] }));
-    get().showToast("Added current image as reference");
+    get().showToast("현재 이미지를 참조에 추가했습니다.");
   },
   activeGenerations: loadInFlight().length,
   inFlight: loadInFlight(),
@@ -525,7 +525,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!current && sessions.length > 0) {
         await get().switchSession(sessions[0].id);
       } else if (!current && sessions.length === 0) {
-        await get().createAndSwitchSession("My first graph");
+        await get().createAndSwitchSession("첫 번째 그래프");
       }
     } catch (err) {
       console.warn("[sessions] load failed:", err);
@@ -549,7 +549,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.warn("[sessions] switch failed:", err);
       set({ sessionLoading: false });
-      get().showToast("Session load failed", true);
+      get().showToast("세션을 불러오지 못했습니다.", true);
     }
   },
 
@@ -588,14 +588,14 @@ export const useAppStore = create<AppState>((set, get) => ({
           pendingRequestId: null,
           pendingPhase: null,
           status: hasAsset ? ("ready" as const) : ("stale" as const),
-          error: hasAsset ? undefined : "Generation did not complete. Retry from this node.",
+          error: hasAsset ? undefined : "생성이 정상적으로 끝나지 않았습니다. 이 노드에서 다시 시도하세요.",
         },
       };
     });
     set({ graphNodes: next });
   },
 
-  async createAndSwitchSession(title = "Untitled") {
+  async createAndSwitchSession(title = "제목 없는 세션") {
     try {
       const { session } = await apiCreateSession(title);
       set({
@@ -607,7 +607,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.warn("[sessions] create failed:", err);
-      get().showToast("Create session failed", true);
+      get().showToast("세션을 만들지 못했습니다.", true);
     }
   },
 
@@ -622,7 +622,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ),
       });
     } catch (err) {
-      get().showToast("Rename failed", true);
+      get().showToast("세션 이름을 바꾸지 못했습니다.", true);
     }
   },
 
@@ -641,11 +641,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (remaining.length > 0) {
           await get().switchSession(remaining[0].id);
         } else {
-          await get().createAndSwitchSession("My first graph");
+          await get().createAndSwitchSession("첫 번째 그래프");
         }
       }
     } catch (err) {
-      get().showToast("Delete failed", true);
+      get().showToast("세션을 삭제하지 못했습니다.", true);
     }
   },
 
@@ -821,7 +821,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!node) return;
     const { prompt, parentServerNodeId } = node.data;
     if (!prompt.trim()) {
-      get().showToast("Prompt required", true);
+      get().showToast("프롬프트를 입력하세요.", true);
       return;
     }
     const s = get();
@@ -889,9 +889,9 @@ export const useAppStore = create<AppState>((set, get) => ({
             : n,
         ),
       });
-      get().showToast(`Node ${res.nodeId.slice(0, 8)}… in ${res.elapsed}s`);
+      get().showToast(`노드 ${res.nodeId.slice(0, 8)} 생성 완료 (${res.elapsed}초)`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Node generation failed";
+      const msg = err instanceof Error ? err.message : "노드 생성에 실패했습니다.";
       set({
         graphNodes: get().graphNodes.map((n) =>
           n.id === targetClientId
@@ -1091,7 +1091,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           };
           await addHistory(item, set, get);
         }
-        get().showToast(`${res.images.length} images in ${res.elapsed}s`);
+        get().showToast(`${res.images.length}장을 ${res.elapsed}초 만에 생성했습니다.`);
       } else {
         let item: GenerateItem;
         if (isMultiResponse(res)) {
@@ -1119,10 +1119,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           };
         }
         await addHistory(item, set, get);
-        get().showToast(`Generated in ${res.elapsed}s`);
+        get().showToast(`${res.elapsed}초 만에 생성했습니다.`);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Generation failed";
+      const msg = err instanceof Error ? err.message : "생성에 실패했습니다.";
       get().showToast(msg, true);
     } finally {
       const remaining = get().inFlight.filter((f) => f.id !== flightId);
@@ -1187,7 +1187,7 @@ async function reloadSessionAfterConflict(
     graphEdges,
     activeSessionGraphVersion: graphVersion,
   });
-  get().showToast("Session changed in another tab — reloaded latest graph", true);
+  get().showToast("다른 탭에서 세션이 변경되어 최신 그래프를 다시 불러왔습니다.", true);
 }
 
 function doSave(

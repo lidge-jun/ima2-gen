@@ -8,7 +8,7 @@ export function UIModeSwitch() {
   if (!IS_DEV_UI) return null;
 
   return (
-    <div className="ui-mode-switch" role="tablist" aria-label="UI Mode">
+    <div className="ui-mode-switch" role="tablist" aria-label="UI 모드">
       <button
         type="button"
         role="tab"
@@ -16,7 +16,7 @@ export function UIModeSwitch() {
         className={`ui-mode-switch__tab${uiMode === "classic" ? " active" : ""}`}
         onClick={() => setUIMode("classic")}
       >
-        Classic
+        기본
       </button>
       <button
         type="button"
@@ -25,7 +25,7 @@ export function UIModeSwitch() {
         className={`ui-mode-switch__tab${uiMode === "node" ? " active" : ""}`}
         onClick={() => setUIMode("node")}
       >
-        Node
+        노드
       </button>
     </div>
   );

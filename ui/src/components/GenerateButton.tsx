@@ -5,7 +5,7 @@ export function GenerateButton() {
   const generate = useAppStore((s) => s.generate);
 
   const loading = activeGenerations > 0;
-  const label = loading ? `Generate (${activeGenerations})` : "Generate";
+  const label = loading ? `생성 중 (${activeGenerations})` : "생성";
 
   return (
     <button

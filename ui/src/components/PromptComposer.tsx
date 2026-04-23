@@ -38,9 +38,6 @@ export function PromptComposer() {
     setDragOver(false);
   };
 
-  // Extract image files from a ClipboardEvent (Cmd/Ctrl+V).
-  // Covers both inline bitmaps (Screenshot, "copy image") and files copied
-  // from Finder/Explorer. Falls back silently if the clipboard only has text.
   const extractClipboardImages = (items: DataTransferItemList | null): File[] => {
     if (!items) return [];
     const files: File[] = [];
@@ -57,15 +54,11 @@ export function PromptComposer() {
     if (!canAddMore) return;
     const files = extractClipboardImages(e.clipboardData?.items ?? null);
     if (files.length === 0) return;
-    // Image paste detected → prevent the default (which would dump a base64
-    // blob into the textarea) and attach instead.
     e.preventDefault();
     const room = MAX_REFS - refs.length;
     void addReferences(files.slice(0, room));
   };
 
-  // Global paste fallback: when the composer isn't focused but the user hits
-  // Cmd/Ctrl+V anywhere, still attach. Skip if they're typing in another input.
   useEffect(() => {
     const handler = (e: globalThis.ClipboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -91,10 +84,10 @@ export function PromptComposer() {
       onPaste={onPaste}
     >
       <div className="composer__header">
-        <span className="section-title composer__label">Prompt</span>
+        <span className="section-title composer__label">프롬프트</span>
         {refs.length > 0 && (
           <span className="composer__count">
-            {refs.length}/{MAX_REFS} refs
+            참조 {refs.length}/{MAX_REFS}
           </span>
         )}
       </div>
@@ -102,15 +95,15 @@ export function PromptComposer() {
       {refs.length > 0 && (
         <div className="composer__chips">
           {refs.map((src, i) => (
-            <div key={i} className="composer__chip" title={`Reference ${i + 1}`}>
-              <img src={src} alt={`reference ${i + 1}`} />
+            <div key={i} className="composer__chip" title={`참조 이미지 ${i + 1}`}>
+              <img src={src} alt={`참조 이미지 ${i + 1}`} />
               <button
                 type="button"
                 className="composer__chip-remove"
                 onClick={() => removeReference(i)}
-                aria-label={`Remove reference ${i + 1}`}
+                aria-label={`참조 이미지 ${i + 1} 제거`}
               >
-                ✕
+                ×
               </button>
             </div>
           ))}
@@ -122,8 +115,8 @@ export function PromptComposer() {
         value={prompt}
         placeholder={
           refs.length > 0
-            ? "Describe what to do with the attached image(s)…"
-            : "Describe the image, drag & drop, or paste (⌘/Ctrl+V) to attach…"
+            ? "첨부한 이미지로 무엇을 만들지 설명해 주세요..."
+            : "원하는 이미지를 설명하고, 드래그 앤 드롭이나 붙여넣기로 참조 이미지를 추가할 수 있어요..."
         }
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
@@ -140,33 +133,33 @@ export function PromptComposer() {
           className="composer__tool"
           onClick={() => canAddMore && fileInput.current?.click()}
           disabled={!canAddMore}
-          title="Attach reference image"
-          aria-label="Attach reference image"
+          title="참조 이미지 첨부"
+          aria-label="참조 이미지 첨부"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
           </svg>
-          <span>Attach</span>
+          <span>첨부</span>
         </button>
         <button
           type="button"
           className="composer__tool"
           onClick={() => void useCurrentAsReference()}
           disabled={!currentImage || !canAddMore}
-          title="Use current result as reference"
+          title="현재 결과를 참조로 사용"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="23 4 23 10 17 10" />
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
-          <span>Use current</span>
+          <span>현재 결과 사용</span>
         </button>
-        <span className="composer__hint">⌘/Ctrl + Enter to generate</span>
+        <span className="composer__hint">Ctrl + Enter로 생성</span>
       </div>
 
       {dragOver && (
         <div className="composer__dropzone" aria-hidden="true">
-          Drop to attach as reference (max {MAX_REFS})
+          놓아서 참조 이미지로 추가 ({MAX_REFS}장까지)
         </div>
       )}
 

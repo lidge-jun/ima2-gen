@@ -2,13 +2,13 @@ import { useAppStore } from "../store/useAppStore";
 
 function truncate(s: string, max = 28) {
   const t = s.trim().replace(/\s+/g, " ");
-  return t.length > max ? t.slice(0, max) + "…" : t;
+  return t.length > max ? `${t.slice(0, max)}...` : t;
 }
 
 const PHASE_LABEL: Record<string, string> = {
-  queued: "queued",
-  streaming: "streaming",
-  decoding: "finalizing",
+  queued: "대기 중",
+  streaming: "생성 중",
+  decoding: "마무리 중",
 };
 
 export function InFlightList() {
@@ -18,7 +18,7 @@ export function InFlightList() {
   return (
     <ul className="in-flight-list">
       {inFlight.map((f) => {
-        const phaseLabel = f.phase ? PHASE_LABEL[f.phase] ?? f.phase : "queued";
+        const phaseLabel = f.phase ? PHASE_LABEL[f.phase] ?? f.phase : "대기 중";
         return (
           <li key={f.id} className="in-flight-item" data-phase={f.phase ?? "queued"}>
             <span className="in-flight-prompt">{truncate(f.prompt)}</span>

@@ -9,12 +9,12 @@ export function CostEstimate() {
 
   const free = provider === "oauth";
   const cost = estimateCost(quality, size);
-  const label = free ? "free" : `~$${cost.toFixed(3)}`;
+  const label = free ? "무료" : `약 $${cost.toFixed(3)}`;
   const color = free ? "var(--green)" : undefined;
 
   return (
     <div className="cost-estimate">
-      <span>Est. cost</span>
+      <span>예상 비용</span>
       <span className="price" style={color ? { color } : undefined}>
         {label}
       </span>
