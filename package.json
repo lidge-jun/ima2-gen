@@ -1,6 +1,6 @@
 {
   "name": "ima2-gen",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "GPT Image 2 generator with OAuth & API key support",
   "type": "module",
   "bin": {
