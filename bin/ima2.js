@@ -7,15 +7,16 @@ import { spawn, execSync } from "child_process";
 import { networkInterfaces, homedir } from "os";
 import { openUrl, resolveBin } from "./lib/platform.js";
 import { detectCodexAuth } from "../lib/codexDetect.js";
+import { config as runtimeConfig } from "../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const HOME = homedir();
-// Config lives in $IMA2_CONFIG_DIR (tests) or ~/.ima2 to match server.js and
-// ~/.ima2/server.json advertise path. Legacy installs that stored config at
-// <packageRoot>/.ima2/config.json will be migrated on first write.
-const CONFIG_DIR = process.env.IMA2_CONFIG_DIR || join(HOME, ".ima2");
-const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+// Config lives under runtimeConfig.storage.configDir (honors IMA2_CONFIG_DIR).
+// Legacy installs that stored config at <packageRoot>/.ima2/config.json will be
+// migrated on first write.
+const CONFIG_DIR = runtimeConfig.storage.configDir;
+const CONFIG_FILE = runtimeConfig.storage.configFile;
 const LEGACY_CONFIG_FILE = join(ROOT, ".ima2", "config.json");
 
 // Load package.json for version
@@ -234,7 +235,7 @@ async function doctor() {
   }
 
   // Port availability (simple check)
-  const port = process.env.PORT || 3333;
+  const port = runtimeConfig.server.port;
   console.log(`  ℹ Default port: ${port}`);
 
   console.log(`\n  ${ok} passed, ${fail} failed\n`);
@@ -242,7 +243,7 @@ async function doctor() {
 }
 
 function openBrowser() {
-  const port = process.env.PORT || 3333;
+  const port = runtimeConfig.server.port;
   const url = `http://localhost:${port}`;
   const res = openUrl(url);
   if (res.ok) {

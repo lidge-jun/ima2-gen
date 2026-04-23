@@ -5,11 +5,12 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createServer } from "node:net";
+import { config } from "../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
-const PORT = Number(process.env.PORT || 3333);
-const OAUTH_PORT = Number(process.env.OAUTH_PORT || 10531);
+const PORT = config.server.port;
+const OAUTH_PORT = config.oauth.proxyPort;
 
 function checkPortAvailable(port, label) {
   return new Promise((resolve, reject) => {

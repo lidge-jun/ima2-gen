@@ -28,12 +28,12 @@ import { extractStyleSheet, renderStyleSheetPrefix } from "./lib/styleSheet.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// Load API key from env or ${CONFIG_DIR}/config.json (with legacy fallback).
-import * as CFG from "./config.js";
+// Load API key from env or ${configDir}/config.json (with legacy fallback).
+import { config } from "./config.js";
 let apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
   const candidates = [
-    CFG.CONFIG_FILE,
+    config.storage.configFile,
     join(__dirname, ".ima2", "config.json"),
   ];
   for (const cfgPath of candidates) {
@@ -45,8 +45,8 @@ if (!apiKey) {
   }
 }
 
-const OAUTH_PORT = CFG.OAUTH_PORT;
-const OAUTH_URL = CFG.OAUTH_URL;
+const OAUTH_PORT = config.oauth.proxyPort;
+const OAUTH_URL = `http://127.0.0.1:${OAUTH_PORT}`;
 const HAS_API_KEY = !!apiKey;
 
 let openai = null;
@@ -55,20 +55,21 @@ if (HAS_API_KEY) {
   openai = new OpenAI({ apiKey });
 }
 
-app.use(express.json({ limit: CFG.BODY_LIMIT }));
+app.use(express.json({ limit: config.server.bodyLimit }));
 app.use(express.static(join(__dirname, "ui", "dist")));
 app.use("/generated", express.static(join(__dirname, "generated"), {
-  maxAge: "1y",
+  maxAge: config.storage.staticMaxAge,
   immutable: true,
 }));
 
 // ── Reference validation ──
-const MAX_REF_B64_BYTES = CFG.MAX_REF_B64_BYTES;
+const MAX_REF_B64_BYTES = config.limits.maxRefB64Bytes;
+const MAX_REF_COUNT = config.limits.maxRefCount;
 const BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
-const VALID_MODERATION = new Set(["auto", "low"]);
+const VALID_MODERATION = config.oauth.validModeration;
 function validateAndNormalizeRefs(references) {
   if (!Array.isArray(references)) return { error: "references must be an array" };
-  if (references.length > 5) return { error: "references may not exceed 5 items" };
+  if (references.length > MAX_REF_COUNT) return { error: `references may not exceed ${MAX_REF_COUNT} items` };
   const out = [];
   for (let i = 0; i < references.length; i++) {
     const r = references[i];
@@ -97,8 +98,7 @@ function validateModeration(moderation) {
 // Research mode is ALWAYS ON for OAuth — web_search is included in tools, GPT
 // decides per-prompt whether to actually invoke it. Simple prompts skip web_search
 // automatically; complex/factual prompts use it.
-const RESEARCH_SUFFIX =
-  "\n\nIf the subject matter requires factual accuracy (faces, products, places, recent events), search the web for accurate visual references first, then generate.";
+const RESEARCH_SUFFIX = config.oauth.researchSuffix;
 
 async function generateViaOAuth(prompt, quality, size, moderation = "low", references = [], requestId = null) {
   const tools = [
@@ -309,7 +309,10 @@ app.get("/api/history", async (req, res) => {
     const dir = join(__dirname, "generated");
     await mkdir(dir, { recursive: true });
     const limitRaw = parseInt(req.query.limit);
-    const limit = Math.min(Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 50, 500);
+    const limit = Math.min(
+      Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : config.limits.historyDefaultPageSize,
+      config.limits.historyMaxPageCap,
+    );
     const beforeTs = parseInt(req.query.before);
     const beforeFn = typeof req.query.beforeFilename === "string" ? req.query.beforeFilename : null;
     const sinceTs = parseInt(req.query.since);
@@ -425,7 +428,7 @@ app.post("/api/history/:filename/restore", async (req, res) => {
 // ── OAuth status ──
 app.get("/api/oauth/status", async (_req, res) => {
   try {
-    const r = await fetch(`${OAUTH_URL}/v1/models`, { signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${OAUTH_URL}/v1/models`, { signal: AbortSignal.timeout(config.oauth.statusTimeoutMs) });
     if (r.ok) {
       const data = await r.json();
       res.json({ status: "ready", models: data.data?.map((m) => m.id) || [] });
@@ -505,8 +508,8 @@ app.post("/api/generate", async (req, res) => {
       },
     });
 
-    if (!Array.isArray(references) || references.length > 5) {
-      return res.status(400).json({ error: "references must be an array of up to 5 base64 strings" });
+    if (!Array.isArray(references) || references.length > config.limits.maxRefCount) {
+      return res.status(400).json({ error: `references must be an array of up to ${config.limits.maxRefCount} base64 strings` });
     }
     const refCheck = validateAndNormalizeRefs(references);
     if (refCheck.error) return res.status(400).json({ error: refCheck.error });
@@ -551,7 +554,7 @@ app.post("/api/generate", async (req, res) => {
     let totalWebSearchCalls = 0;
     for (const r of results) {
       if (r.status === "fulfilled" && r.value.b64) {
-        const rand = randomBytes(4).toString("hex");
+        const rand = randomBytes(config.ids.generatedHexBytes).toString("hex");
         const filename = `${Date.now()}_${rand}_${images.length}.${format}`;
         await writeFile(join(__dirname, "generated", filename), Buffer.from(r.value.b64, "base64"));
         // Sidecar metadata for /api/history reconstruction
@@ -724,7 +727,7 @@ app.post("/api/edit", async (req, res) => {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
     await mkdir(join(__dirname, "generated"), { recursive: true });
-    const filename = `${Date.now()}_${randomBytes(4).toString("hex")}.png`;
+    const filename = `${Date.now()}_${randomBytes(config.ids.generatedHexBytes).toString("hex")}.png`;
     await writeFile(join(__dirname, "generated", filename), Buffer.from(resultB64, "base64"));
     const meta = {
       prompt,
@@ -799,9 +802,9 @@ app.post("/api/node/generate", async (req, res) => {
         parentNodeId,
       });
     }
-    if (!Array.isArray(references) || references.length > 5) {
+    if (!Array.isArray(references) || references.length > config.limits.maxRefCount) {
       return res.status(400).json({
-        error: { code: "INVALID_REFS", message: "references must be an array of up to 5 base64 strings" },
+        error: { code: "INVALID_REFS", message: `references must be an array of up to ${config.limits.maxRefCount} base64 strings` },
         parentNodeId,
       });
     }
@@ -1225,20 +1228,20 @@ function startOAuthProxy() {
   });
 
   child.on("exit", (code) => {
-    console.log(`[oauth] exited with code ${code}, restarting in 5s...`);
-    setTimeout(startOAuthProxy, 5000);
+    console.log(`[oauth] exited with code ${code}, restarting in ${Math.round(config.oauth.restartDelayMs / 1000)}s...`);
+    setTimeout(startOAuthProxy, config.oauth.restartDelayMs);
   });
 
   return child;
 }
 
 // ── Boot ──
-const PORT = CFG.PORT;
+const PORT = config.server.port;
 // Tests (and some CI contexts) can opt out of the OAuth proxy subprocess.
-const oauthChild = CFG.NO_OAUTH_PROXY ? null : startOAuthProxy();
+const oauthChild = !config.oauth.autoStart ? null : startOAuthProxy();
 
-// CLI discovery: advertise running server under ~/.ima2/server.json
-const __advertisePath = join(homedir(), ".ima2", "server.json");
+// CLI discovery: advertise running server under ${configDir}/server.json
+const __advertisePath = config.storage.advertiseFile;
 function __advertise() {
   try {
     mkdirSync(dirname(__advertisePath), { recursive: true });
