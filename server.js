@@ -18,8 +18,12 @@ import {
   deleteSession,
   saveGraph,
   ensureDefaultSession,
+  getStyleSheet,
+  setStyleSheet,
+  setStyleSheetEnabled,
 } from "./lib/sessionStore.js";
 import { trashAsset, restoreAsset } from "./lib/assetLifecycle.js";
+import { extractStyleSheet, renderStyleSheetPrefix } from "./lib/styleSheet.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -949,6 +953,99 @@ app.delete("/api/sessions/:id", (req, res) => {
     res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
   }
 });
+
+// ── Style sheet (0.10) ─────────────────────────────────────────────────
+app.get("/api/sessions/:id/style-sheet", (req, res) => {
+  try {
+    const data = getStyleSheet(req.params.id);
+    if (!data) {
+      return res.status(404).json({
+        error: { code: "SESSION_NOT_FOUND", message: "Session not found" },
+      });
+    }
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
+  }
+});
+
+app.put("/api/sessions/:id/style-sheet", (req, res) => {
+  try {
+    const { styleSheet, enabled } = req.body || {};
+    if (styleSheet !== null && (typeof styleSheet !== "object" || Array.isArray(styleSheet))) {
+      return res.status(400).json({
+        error: { code: "INVALID_SHEET", message: "styleSheet must be an object or null" },
+      });
+    }
+    const ok = setStyleSheet(req.params.id, styleSheet);
+    if (!ok) {
+      return res.status(404).json({
+        error: { code: "SESSION_NOT_FOUND", message: "Session not found" },
+      });
+    }
+    if (typeof enabled === "boolean") {
+      setStyleSheetEnabled(req.params.id, enabled);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
+  }
+});
+
+app.patch("/api/sessions/:id/style-sheet/enabled", (req, res) => {
+  try {
+    const { enabled } = req.body || {};
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({
+        error: { code: "INVALID_ENABLED", message: "enabled must be boolean" },
+      });
+    }
+    const ok = setStyleSheetEnabled(req.params.id, enabled);
+    if (!ok) {
+      return res.status(404).json({
+        error: { code: "SESSION_NOT_FOUND", message: "Session not found" },
+      });
+    }
+    res.json({ ok: true, enabled });
+  } catch (err) {
+    res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
+  }
+});
+
+app.post("/api/sessions/:id/style-sheet/extract", async (req, res) => {
+  try {
+    if (!openai) {
+      return res.status(400).json({
+        error: {
+          code: "STYLE_SHEET_NO_KEY",
+          message: "Style-sheet extraction requires an OpenAI API key. Connect one via setup.",
+        },
+      });
+    }
+    const { prompt, referenceDataUrl } = req.body || {};
+    if (typeof prompt !== "string" || !prompt.trim()) {
+      return res.status(400).json({
+        error: { code: "STYLE_SHEET_BAD_INPUT", message: "prompt required" },
+      });
+    }
+    const sheet = await extractStyleSheet(openai, {
+      prompt: prompt.slice(0, 4000),
+      referenceDataUrl: typeof referenceDataUrl === "string" ? referenceDataUrl : undefined,
+    });
+    const persisted = setStyleSheet(req.params.id, sheet);
+    if (!persisted) {
+      return res.status(404).json({
+        error: { code: "SESSION_NOT_FOUND", message: "Session not found" },
+      });
+    }
+    res.json({ styleSheet: sheet });
+  } catch (err) {
+    const code = err.code || "STYLE_SHEET_ERROR";
+    const status = code === "STYLE_SHEET_NO_KEY" ? 400 : 500;
+    res.status(status).json({ error: { code, message: err.message } });
+  }
+});
+
 
 app.put("/api/sessions/:id/graph", (req, res) => {
   try {
