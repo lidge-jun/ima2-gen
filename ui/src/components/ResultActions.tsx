@@ -33,12 +33,19 @@ export function ResultActions() {
     showToast(t("toast.promptCopied"));
   };
 
-  const newFromHere = () => {
+  const newFromHere = async () => {
     if (!currentImage.prompt) {
       showToast(t("toast.noPromptToFork"), true);
       return;
     }
     setPrompt(currentImage.prompt);
+    // 0.09.5: auto-attach the current image as a reference so continuations
+    // preserve style/composition, not just prompt text.
+    try {
+      await useAppStore.getState().useCurrentAsReference();
+    } catch {
+      // non-fatal — fall back to prompt-only fork
+    }
     const promptEl = document.querySelector<HTMLTextAreaElement>(
       'textarea[name="prompt"], textarea#prompt, .sidebar textarea',
     );
