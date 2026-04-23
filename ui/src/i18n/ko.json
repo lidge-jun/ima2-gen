@@ -8,6 +8,10 @@
   "toast": {
     "localStorageFull": "로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.",
     "refLimitExceeded": "참조 이미지는 최대 5장까지 추가할 수 있습니다. 초과한 이미지는 제외되었습니다.",
+    "refTooLarge": "이미지가 너무 큽니다. JPEG/PNG로 미리 변환하거나 해상도를 낮춰 다시 시도해 주세요.",
+    "refNotBase64": "이미지 파일이 손상되었거나 지원하지 않는 형식입니다.",
+    "refEmpty": "빈 이미지 파일입니다. 다른 파일을 선택해 주세요.",
+    "refHeicUnsupported": "HEIC/HEIF는 지원하지 않습니다. JPEG 또는 PNG로 변환 후 다시 시도해 주세요.",
     "noCurrentImageForRef": "참조로 사용할 현재 이미지가 없습니다.",
     "refSlotFull": "참조 이미지 슬롯이 가득 찼습니다. 최대 5장까지 가능합니다.",
     "currentImageLoadFailed": "현재 이미지를 불러오지 못했습니다.",

@@ -32,6 +32,7 @@ import {
   type StyleSheet,
 } from "../lib/api";
 import { compressImage } from "../lib/image";
+import { compressToBase64, isHeic, hasAlphaChannel } from "../lib/compress";
 import { snap16 } from "../lib/size";
 import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
 import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
@@ -313,20 +314,29 @@ export const useAppStore = create<AppState>((set, get) => ({
   addReferences: async (files) => {
     const allowed = 5 - get().referenceImages.length;
     const toAdd = files.slice(0, Math.max(0, allowed));
-    const dataUrls = await Promise.all(
-      toAdd.map(
-        (f) =>
-          new Promise<string | null>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () =>
-              resolve(typeof reader.result === "string" ? reader.result : null);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(f);
-          }),
-      ),
+    const heicSkipped = toAdd.filter(isHeic);
+    const usable = toAdd.filter((f) => !isHeic(f));
+    const results = await Promise.all(
+      usable.map(async (f) => {
+        try {
+          return await compressToBase64(f, {
+            preserveTransparency: hasAlphaChannel(f),
+          });
+        } catch (err) {
+          console.warn("[addReferences] compress failed", err);
+          return null;
+        }
+      }),
     );
-    const valid = dataUrls.filter((x): x is string => !!x);
+    const valid = results.filter((x): x is string => !!x);
     set((s) => ({ referenceImages: [...s.referenceImages, ...valid].slice(0, 5) }));
+    if (heicSkipped.length > 0) {
+      get().showToast(t("toast.refHeicUnsupported"), true);
+    }
+    const failedCount = usable.length - valid.length;
+    if (failedCount > 0) {
+      get().showToast(t("toast.refTooLarge"), true);
+    }
     if (files.length > allowed) {
       get().showToast(t("toast.refLimitExceeded"), true);
     }

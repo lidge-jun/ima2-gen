@@ -8,6 +8,10 @@
   "toast": {
     "localStorageFull": "Local storage is full — recent state may not persist.",
     "refLimitExceeded": "References are capped at 5. Extra images were dropped.",
+    "refTooLarge": "Image is too large. Convert to JPEG/PNG or lower the resolution and try again.",
+    "refNotBase64": "Image file is corrupted or uses an unsupported encoding.",
+    "refEmpty": "Empty image file. Please pick a different file.",
+    "refHeicUnsupported": "HEIC/HEIF is not supported. Convert to JPEG or PNG and try again.",
     "noCurrentImageForRef": "No current image to use as reference.",
     "refSlotFull": "Reference slots are full (max 5).",
     "currentImageLoadFailed": "Failed to load current image.",
