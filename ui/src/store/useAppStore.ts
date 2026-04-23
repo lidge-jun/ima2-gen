@@ -881,6 +881,33 @@ export const useAppStore = create<AppState>((set, get) => ({
     void rootSiblings;
     set({ graphNodes: [...get().graphNodes, node] });
     get().scheduleGraphSave();
+
+    // 0.09.5: pre-seed the source image as a global reference so the first
+    // generateNode() on the new root carries style/composition. Fire-and-forget
+    // — failures degrade to prompt-only continuation.
+    if (source.data.imageUrl) {
+      const sourceUrl = source.data.imageUrl;
+      (async () => {
+        try {
+          const resp = await fetch(sourceUrl);
+          const blob = await resp.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              typeof reader.result === "string"
+                ? resolve(reader.result)
+                : reject(new Error("read failed"));
+            reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+            reader.readAsDataURL(blob);
+          });
+          if (get().referenceImages.length < 5) {
+            set((s) => ({ referenceImages: [...s.referenceImages, dataUrl] }));
+          }
+        } catch {
+          // non-fatal
+        }
+      })();
+    }
     return clientId;
   },
 
