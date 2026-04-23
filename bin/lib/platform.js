@@ -37,6 +37,14 @@ export function resolveBin(name) {
  * spawn() wrapper that works for npm/npx/any PATH-resolved exe on Windows.
  */
 export function spawnBin(name, args, opts = {}) {
+  if (isWin) {
+    // Node 24 on Windows can throw EINVAL when spawning PATH-resolved .cmd
+    // shims directly with piped stdio. Routing through cmd.exe avoids that.
+    return spawn("cmd.exe", ["/d", "/s", "/c", `${name} ${args.join(" ")}`], {
+      windowsHide: true,
+      ...opts,
+    });
+  }
   return spawn(resolveBin(name), args, { windowsHide: true, ...opts });
 }
 
