@@ -1,0 +1,234 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close"
+  },
+  "toast": {
+    "localStorageFull": "Local storage is full — recent state may not persist.",
+    "refLimitExceeded": "References are capped at 5. Extra images were dropped.",
+    "noCurrentImageForRef": "No current image to use as reference.",
+    "refSlotFull": "Reference slots are full (max 5).",
+    "currentImageLoadFailed": "Failed to load current image.",
+    "addedCurrentAsRef": "Added current image as a reference.",
+    "sessionLoadFailed": "Failed to load session.",
+    "sessionCreateFailed": "Failed to create session.",
+    "sessionRenameFailed": "Failed to rename session.",
+    "sessionDeleteFailed": "Failed to delete session.",
+    "promptRequired": "Enter a prompt.",
+    "nodeCreated": "Node {id} created ({elapsed}s)",
+    "nodeCreateFailed": "Node generation failed.",
+    "generatedBatch": "Generated {count} images in {elapsed}s.",
+    "generatedSingle": "Generated in {elapsed}s.",
+    "generateFailed": "Generation failed.",
+    "sessionReloadedElsewhere": "Session was changed in another tab — reloaded the latest graph.",
+    "promptCopied": "Prompt copied",
+    "imageCopied": "Copied to clipboard",
+    "copyFailed": "Copy failed",
+    "noPromptToFork": "No prompt to fork",
+    "forkStarted": "Prompt imported. Edit and generate again."
+  },
+  "inflight": {
+    "queued": "Queued",
+    "streaming": "Generating",
+    "decoding": "Finalizing"
+  },
+  "size": {
+    "title": "Size",
+    "width": "Width",
+    "height": "Height",
+    "hint": "Each side 1024–3824, multiple of 16, ratio up to 3:1",
+    "autoLabel": "Auto",
+    "autoSub": "Model pick",
+    "customLabel": "Custom",
+    "customSub": "Free form"
+  },
+  "quality": {
+    "title": "Quality",
+    "lowLabel": "Low",
+    "lowSub": "Fast",
+    "mediumLabel": "Medium",
+    "mediumSub": "Balanced",
+    "highLabel": "High",
+    "highSub": "Best"
+  },
+  "moderation": {
+    "title": "Moderation",
+    "autoLabel": "Auto",
+    "autoSub": "Standard filter",
+    "lowLabel": "Low",
+    "lowSub": "Relaxed filter",
+    "explain": "Auto uses the standard safety filter. Low relaxes limits so borderline prompts may pass through."
+  },
+  "format": {
+    "title": "Format"
+  },
+  "count": {
+    "title": "Count"
+  },
+  "generate": {
+    "button": "Generate",
+    "buttonLoading": "Generating ({n})"
+  },
+  "billing": {
+    "label": "API Status",
+    "checking": "Checking...",
+    "offline": "Offline",
+    "remaining": "${remaining} remaining",
+    "thisMonth": "${amount} this month",
+    "oauthFree": "OAuth · free via codex",
+    "apiDisabled": "API key disabled (OAuth only)",
+    "oauthMode": "OAuth mode"
+  },
+  "history": {
+    "openGalleryAria": "Open gallery",
+    "openGalleryTitle": "Open full gallery"
+  },
+  "panel": {
+    "closeSettings": "Close settings",
+    "detailSettings": "Settings",
+    "toggleShow": "Show settings",
+    "toggleHide": "Hide settings",
+    "open": "Open",
+    "close": "Close"
+  },
+  "prompt": {
+    "label": "Prompt",
+    "refCount": "Refs {count}/{max}",
+    "refChipTitle": "Reference {n}",
+    "refChipAlt": "Reference {n}",
+    "refRemoveAria": "Remove reference {n}",
+    "placeholder": "Describe the image you want. Drag & drop or paste to attach reference images...",
+    "placeholderWithRefs": "Describe what to do with the attached images...",
+    "attach": "Attach",
+    "attachTitle": "Attach reference images",
+    "useCurrent": "Use current",
+    "useCurrentTitle": "Use current result as a reference",
+    "hint": "Ctrl + Enter to generate",
+    "dropHere": "Drop to attach as reference (up to {max})"
+  },
+  "canvas": {
+    "resultAlt": "result",
+    "tokens": "{n} tokens"
+  },
+  "gallery": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This week",
+    "earlier": "Earlier",
+    "imageAltFallback": "Generated image",
+    "deleteTitle": "Delete (10s undo)",
+    "deleteAria": "Delete image",
+    "ariaLabel": "Image gallery",
+    "title": "Gallery",
+    "total": "{n} total",
+    "totalFiltered": " / {n} total",
+    "sortByAria": "Sort by",
+    "sortByDate": "Date",
+    "sortBySession": "Session",
+    "searchPlaceholder": "Search prompts or filenames",
+    "searchDisabledPlaceholder": "Search is disabled in session view",
+    "closeAria": "Close gallery",
+    "closeTitle": "Close (Esc)",
+    "sessionLabel": "Session {name}",
+    "standalone": "Standalone images",
+    "emptySessions": "No sessions saved yet.",
+    "emptyAll": "No images yet. Create one first.",
+    "noResults": "No results.",
+    "deleted": "Deleted: {filename}",
+    "undo": "Undo",
+    "secondsSuffix": "{n}s"
+  },
+  "node": {
+    "empty": "Empty",
+    "pending": "Generating",
+    "reconciling": "Syncing",
+    "reconcilingPhase": "Syncing · {phase}",
+    "ready": "Done · {elapsed}s",
+    "readyWithSearch": "Done · {elapsed}s · searched {searches}",
+    "stale": "Stale",
+    "staleWithError": "Stale: {error}",
+    "assetMissing": "Asset missing",
+    "assetMissingWithError": "Asset missing: {error}",
+    "error": "Error: {error}",
+    "errorUnknown": "unknown",
+    "nodeImageAlt": "Node image",
+    "noAsset": "No asset",
+    "stateStale": "State stale",
+    "noImage": "No image",
+    "editPromptPlaceholder": "Edit prompt...",
+    "promptPlaceholder": "Prompt...",
+    "regenerate": "Regenerate",
+    "generate": "Generate",
+    "addChild": "Add child",
+    "duplicateBranch": "Duplicate branch",
+    "duplicateBranchTitle": "Duplicate as a new branch root",
+    "deleteTitle": "Delete"
+  },
+  "provider": {
+    "authTitle": "Authentication",
+    "apiLabel": "API Key",
+    "oauthNotReady": "OAuth proxy is not ready yet.",
+    "codexLoginRequired": "Codex login required.",
+    "codexLoginHint": "Run `codex login` in your terminal, then refresh this page.",
+    "oauthStarting": "OAuth proxy is starting. Try again in a few seconds.",
+    "serverUnreachable": "Cannot reach the server. Make sure the backend is running.",
+    "apiInvalid": "API key is missing or invalid. Check OPENAI_API_KEY in the server's .env.",
+    "availableTitle": "{name} available",
+    "availableAria": "{name}: available",
+    "unavailableAria": "{name}: unavailable",
+    "availableSr": "(available)",
+    "unavailableSr": "(unavailable)"
+  },
+  "cost": {
+    "free": "free",
+    "approx": "~${amount}",
+    "label": "Est. cost"
+  },
+  "result": {
+    "download": "Download",
+    "copyImage": "Copy image",
+    "copyPrompt": "Copy prompt",
+    "continueHere": "Continue here",
+    "continueHereTitle": "Import this image's prompt and keep working"
+  },
+  "session": {
+    "switchTitle": "Switch session",
+    "loading": "Loading...",
+    "newSession": "New session",
+    "newSessionTitle": "New session",
+    "renameTitle": "Rename",
+    "renamePrompt": "Session name",
+    "deleteTitle": "Delete",
+    "deleteConfirm": "Delete session \"{title}\"? This cannot be undone.",
+    "empty": "No sessions yet",
+    "firstGraph": "My first graph",
+    "untitled": "Untitled session",
+    "assetAbortedError": "Generation did not finish cleanly. Retry from this node."
+  },
+  "uiMode": {
+    "ariaLabel": "UI mode",
+    "classic": "Classic",
+    "node": "Node"
+  },
+  "sidebar": {
+    "appName": "Image Generator",
+    "nodeModeHint": "In node mode, click a node to edit its prompt and generate. Settings on the right panel (quality/size) apply to every new result."
+  },
+  "nodeCanvas": {
+    "loading": "Loading session...",
+    "addFirst": "+ Add first node",
+    "addRootTitle": "Add root node",
+    "hint": "Drag a handle into empty space to branch. Press Delete or Backspace to remove."
+  },
+  "apiDisabled": {
+    "title": "{provider} unavailable",
+    "ariaLabel": "{provider} unavailable"
+  },
+  "language": {
+    "label": "Language",
+    "ko": "한국어",
+    "en": "English"
+  }
+}

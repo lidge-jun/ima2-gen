@@ -1,0 +1,234 @@
+{
+  "common": {
+    "ok": "확인",
+    "cancel": "취소",
+    "delete": "삭제",
+    "close": "닫기"
+  },
+  "toast": {
+    "localStorageFull": "로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.",
+    "refLimitExceeded": "참조 이미지는 최대 5장까지 추가할 수 있습니다. 초과한 이미지는 제외되었습니다.",
+    "noCurrentImageForRef": "참조로 사용할 현재 이미지가 없습니다.",
+    "refSlotFull": "참조 이미지 슬롯이 가득 찼습니다. 최대 5장까지 가능합니다.",
+    "currentImageLoadFailed": "현재 이미지를 불러오지 못했습니다.",
+    "addedCurrentAsRef": "현재 이미지를 참조에 추가했습니다.",
+    "sessionLoadFailed": "세션을 불러오지 못했습니다.",
+    "sessionCreateFailed": "세션을 만들지 못했습니다.",
+    "sessionRenameFailed": "세션 이름을 바꾸지 못했습니다.",
+    "sessionDeleteFailed": "세션을 삭제하지 못했습니다.",
+    "promptRequired": "프롬프트를 입력하세요.",
+    "nodeCreated": "노드 {id} 생성 완료 ({elapsed}초)",
+    "nodeCreateFailed": "노드 생성에 실패했습니다.",
+    "generatedBatch": "{count}장을 {elapsed}초 만에 생성했습니다.",
+    "generatedSingle": "{elapsed}초 만에 생성했습니다.",
+    "generateFailed": "생성에 실패했습니다.",
+    "sessionReloadedElsewhere": "다른 탭에서 세션이 변경되어 최신 그래프를 다시 불러왔습니다.",
+    "promptCopied": "프롬프트를 복사했습니다",
+    "imageCopied": "클립보드에 복사했습니다",
+    "copyFailed": "복사에 실패했습니다",
+    "noPromptToFork": "가져올 프롬프트가 없습니다",
+    "forkStarted": "이 이미지의 프롬프트를 가져왔습니다. 수정 후 다시 생성하세요"
+  },
+  "inflight": {
+    "queued": "대기 중",
+    "streaming": "생성 중",
+    "decoding": "마무리 중"
+  },
+  "size": {
+    "title": "크기",
+    "width": "가로",
+    "height": "세로",
+    "hint": "한 변 최소 1024, 최대 3824, 16의 배수, 비율은 최대 3:1",
+    "autoLabel": "자동",
+    "autoSub": "모델 추천",
+    "customLabel": "직접 입력",
+    "customSub": "자유 설정"
+  },
+  "quality": {
+    "title": "품질",
+    "lowLabel": "낮음",
+    "lowSub": "빠름",
+    "mediumLabel": "중간",
+    "mediumSub": "균형",
+    "highLabel": "높음",
+    "highSub": "최상"
+  },
+  "moderation": {
+    "title": "모더레이션",
+    "autoLabel": "자동",
+    "autoSub": "표준 필터",
+    "lowLabel": "낮음",
+    "lowSub": "완화 필터",
+    "explain": "자동은 표준 안전 필터를 사용합니다. 낮음은 제한을 조금 완화해 경계선 프롬프트가 더 통과할 수 있습니다."
+  },
+  "format": {
+    "title": "포맷"
+  },
+  "count": {
+    "title": "개수"
+  },
+  "generate": {
+    "button": "생성",
+    "buttonLoading": "생성 중 ({n})"
+  },
+  "billing": {
+    "label": "API 상태",
+    "checking": "확인 중...",
+    "offline": "오프라인",
+    "remaining": "${remaining} 남음",
+    "thisMonth": "이번 달 ${amount}",
+    "oauthFree": "OAuth 무료 사용 가능",
+    "apiDisabled": "API 키 비활성화됨 (OAuth 전용)",
+    "oauthMode": "OAuth 모드"
+  },
+  "history": {
+    "openGalleryAria": "갤러리 열기",
+    "openGalleryTitle": "전체 갤러리 열기"
+  },
+  "panel": {
+    "closeSettings": "설정 닫기",
+    "detailSettings": "세부 설정",
+    "toggleShow": "세부 설정 보기",
+    "toggleHide": "세부 설정 숨기기",
+    "open": "열기",
+    "close": "닫기"
+  },
+  "prompt": {
+    "label": "프롬프트",
+    "refCount": "참조 {count}/{max}",
+    "refChipTitle": "참조 이미지 {n}",
+    "refChipAlt": "참조 이미지 {n}",
+    "refRemoveAria": "참조 이미지 {n} 제거",
+    "placeholder": "원하는 이미지를 설명하고, 드래그 앤 드롭이나 붙여넣기로 참조 이미지를 추가할 수 있어요...",
+    "placeholderWithRefs": "첨부한 이미지로 무엇을 만들지 설명해 주세요...",
+    "attach": "첨부",
+    "attachTitle": "참조 이미지 첨부",
+    "useCurrent": "현재 결과 사용",
+    "useCurrentTitle": "현재 결과를 참조로 사용",
+    "hint": "Ctrl + Enter로 생성",
+    "dropHere": "놓아서 참조 이미지로 추가 ({max}장까지)"
+  },
+  "canvas": {
+    "resultAlt": "생성 결과",
+    "tokens": "{n} 토큰"
+  },
+  "gallery": {
+    "today": "오늘",
+    "yesterday": "어제",
+    "thisWeek": "이번 주",
+    "earlier": "이전",
+    "imageAltFallback": "생성 이미지",
+    "deleteTitle": "삭제 (10초 내 복구 가능)",
+    "deleteAria": "이미지 삭제",
+    "ariaLabel": "이미지 갤러리",
+    "title": "갤러리",
+    "total": "총 {n}장",
+    "totalFiltered": " / 전체 {n}장",
+    "sortByAria": "정렬 기준",
+    "sortByDate": "날짜",
+    "sortBySession": "세션",
+    "searchPlaceholder": "프롬프트나 파일명을 검색",
+    "searchDisabledPlaceholder": "세션 보기에서는 검색이 비활성화됩니다",
+    "closeAria": "갤러리 닫기",
+    "closeTitle": "닫기 (Esc)",
+    "sessionLabel": "세션 {name}",
+    "standalone": "독립 이미지",
+    "emptySessions": "아직 저장된 세션이 없습니다.",
+    "emptyAll": "아직 생성된 이미지가 없습니다. 먼저 하나 만들어보세요.",
+    "noResults": "검색 결과가 없습니다.",
+    "deleted": "삭제됨: {filename}",
+    "undo": "되돌리기",
+    "secondsSuffix": "{n}초"
+  },
+  "node": {
+    "empty": "비어 있음",
+    "pending": "생성 중",
+    "reconciling": "동기화 중",
+    "reconcilingPhase": "동기화 중 · {phase}",
+    "ready": "완료 · {elapsed}s",
+    "readyWithSearch": "완료 · {elapsed}s · 검색 {searches}",
+    "stale": "오래된 상태",
+    "staleWithError": "오래된 상태: {error}",
+    "assetMissing": "에셋 누락",
+    "assetMissingWithError": "에셋 누락: {error}",
+    "error": "오류: {error}",
+    "errorUnknown": "알 수 없음",
+    "nodeImageAlt": "노드 이미지",
+    "noAsset": "에셋 없음",
+    "stateStale": "상태 오래됨",
+    "noImage": "이미지 없음",
+    "editPromptPlaceholder": "수정 프롬프트...",
+    "promptPlaceholder": "프롬프트...",
+    "regenerate": "다시 생성",
+    "generate": "생성",
+    "addChild": "자식 추가",
+    "duplicateBranch": "브랜치 복제",
+    "duplicateBranchTitle": "새 브랜치 루트로 복제",
+    "deleteTitle": "삭제"
+  },
+  "provider": {
+    "authTitle": "인증 방식",
+    "apiLabel": "API 키",
+    "oauthNotReady": "OAuth 프록시가 아직 준비되지 않았습니다.",
+    "codexLoginRequired": "Codex 로그인이 필요합니다.",
+    "codexLoginHint": "터미널에서 `codex login`을 실행한 뒤 이 페이지를 새로고침하세요.",
+    "oauthStarting": "OAuth 프록시가 시작 중입니다. 몇 초 후 다시 시도하세요.",
+    "serverUnreachable": "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.",
+    "apiInvalid": "API 키가 없거나 유효하지 않습니다. 서버의 .env 파일에서 OPENAI_API_KEY를 확인하세요.",
+    "availableTitle": "{name} 사용 가능",
+    "availableAria": "{name}: 사용 가능",
+    "unavailableAria": "{name}: 사용 불가",
+    "availableSr": "(사용 가능)",
+    "unavailableSr": "(사용 불가)"
+  },
+  "cost": {
+    "free": "무료",
+    "approx": "약 ${amount}",
+    "label": "예상 비용"
+  },
+  "result": {
+    "download": "다운로드",
+    "copyImage": "이미지 복사",
+    "copyPrompt": "프롬프트 복사",
+    "continueHere": "여기서 이어서",
+    "continueHereTitle": "이 이미지의 프롬프트를 가져와 이어서 작업"
+  },
+  "session": {
+    "switchTitle": "세션 전환",
+    "loading": "불러오는 중...",
+    "newSession": "새 세션",
+    "newSessionTitle": "새 세션",
+    "renameTitle": "이름 변경",
+    "renamePrompt": "세션 이름",
+    "deleteTitle": "삭제",
+    "deleteConfirm": "\"{title}\" 세션을 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
+    "empty": "아직 세션이 없습니다",
+    "firstGraph": "첫 번째 그래프",
+    "untitled": "제목 없는 세션",
+    "assetAbortedError": "생성이 정상적으로 끝나지 않았습니다. 이 노드에서 다시 시도하세요."
+  },
+  "uiMode": {
+    "ariaLabel": "UI 모드",
+    "classic": "기본",
+    "node": "노드"
+  },
+  "sidebar": {
+    "appName": "이미지 생성기",
+    "nodeModeHint": "노드 모드에서는 노드를 눌러 프롬프트를 수정한 뒤 생성하세요. 오른쪽 패널의 설정 (품질/크기)은 새로 만드는 모든 결과에 적용됩니다."
+  },
+  "nodeCanvas": {
+    "loading": "세션 불러오는 중...",
+    "addFirst": "+ 첫 노드 추가",
+    "addRootTitle": "루트 노드 추가",
+    "hint": "핸들을 빈 공간으로 드래그하면 새 브랜치가 생깁니다. Delete 또는 Backspace로 삭제할 수 있습니다."
+  },
+  "apiDisabled": {
+    "title": "{provider} 사용 불가",
+    "ariaLabel": "{provider} 사용 불가"
+  },
+  "language": {
+    "label": "언어",
+    "ko": "한국어",
+    "en": "English"
+  }
+}
