@@ -34,6 +34,10 @@ export type GenerateItem = {
   usage?: { total_tokens?: number } & Record<string, unknown>;
   thumb?: string;
   createdAt?: number;
+  sessionId?: string | null;
+  nodeId?: string | null;
+  clientNodeId?: string | null;
+  kind?: "classic" | "edit" | "generate" | null;
 };
 
 export type GenerateSingleResponse = {

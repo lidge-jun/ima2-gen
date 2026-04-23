@@ -1,8 +1,10 @@
 import { memo, useCallback } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
+import { useI18n } from "../i18n";
 
 function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
+  const { t } = useI18n();
   const d = data as ImageNodeData;
   const updateNodePrompt = useAppStore((s) => s.updateNodePrompt);
   const generateNode = useAppStore((s) => s.generateNode);
@@ -31,15 +33,39 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const onDelete = useCallback(() => deleteNode(id), [id, deleteNode]);
 
   const isBusy = d.status === "pending" || d.status === "reconciling";
-  const statusLabel = {
-    empty: "비어 있음",
-    pending: "생성 중",
-    reconciling: `동기화 중${d.pendingPhase ? ` · ${d.pendingPhase}` : ""}`,
-    ready: `완료 · ${d.elapsed ?? "?"}s${d.webSearchCalls ? ` · 검색 ${d.webSearchCalls}` : ""}`,
-    stale: `오래된 상태${d.error ? `: ${d.error}` : ""}`,
-    "asset-missing": `에셋 누락${d.error ? `: ${d.error}` : ""}`,
-    error: `오류: ${d.error ?? "알 수 없음"}`,
-  }[d.status];
+
+  const computeStatusLabel = (): string => {
+    switch (d.status) {
+      case "empty":
+        return t("node.empty");
+      case "pending":
+        return t("node.pending");
+      case "reconciling":
+        return d.pendingPhase
+          ? t("node.reconcilingPhase", { phase: d.pendingPhase })
+          : t("node.reconciling");
+      case "ready":
+        return d.webSearchCalls
+          ? t("node.readyWithSearch", {
+              elapsed: d.elapsed ?? "?",
+              searches: d.webSearchCalls,
+            })
+          : t("node.ready", { elapsed: d.elapsed ?? "?" });
+      case "stale":
+        return d.error
+          ? t("node.staleWithError", { error: d.error })
+          : t("node.stale");
+      case "asset-missing":
+        return d.error
+          ? t("node.assetMissingWithError", { error: d.error })
+          : t("node.assetMissing");
+      case "error":
+        return t("node.error", { error: d.error ?? t("node.errorUnknown") });
+      default:
+        return "";
+    }
+  };
+  const statusLabel = computeStatusLabel();
 
   return (
     <div className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}>
@@ -48,15 +74,15 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
       ) : null}
       <div className="image-node__preview">
         {d.imageUrl && d.status !== "asset-missing" ? (
-          <img src={d.imageUrl} alt="노드 이미지" />
+          <img src={d.imageUrl} alt={t("node.nodeImageAlt")} />
         ) : isBusy ? (
           <div className="image-node__skeleton" />
         ) : d.status === "asset-missing" ? (
-          <div className="image-node__placeholder">에셋 없음</div>
+          <div className="image-node__placeholder">{t("node.noAsset")}</div>
         ) : d.status === "stale" ? (
-          <div className="image-node__placeholder">상태 오래됨</div>
+          <div className="image-node__placeholder">{t("node.stateStale")}</div>
         ) : (
-          <div className="image-node__placeholder">이미지 없음</div>
+          <div className="image-node__placeholder">{t("node.noImage")}</div>
         )}
       </div>
       <textarea
@@ -64,7 +90,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         value={d.prompt}
         onChange={onPromptChange}
         onKeyDown={(e) => e.stopPropagation()}
-        placeholder={d.parentServerNodeId ? "수정 프롬프트..." : "프롬프트..."}
+        placeholder={d.parentServerNodeId ? t("node.editPromptPlaceholder") : t("node.promptPlaceholder")}
         rows={2}
         disabled={isBusy}
       />
@@ -72,21 +98,21 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         <span className="image-node__status">{statusLabel}</span>
         <div className="image-node__actions nodrag">
           <button type="button" onClick={onGenerate} disabled={isBusy}>
-            {d.status === "ready" ? "다시 생성" : "생성"}
+            {d.status === "ready" ? t("node.regenerate") : t("node.generate")}
           </button>
           {d.status === "ready" ? (
             <>
-              <button type="button" onClick={onBranch}>자식 추가</button>
+              <button type="button" onClick={onBranch}>{t("node.addChild")}</button>
               <button
                 type="button"
                 onClick={onDuplicateBranch}
-                title="새 브랜치 루트로 복제"
+                title={t("node.duplicateBranchTitle")}
               >
-                브랜치 복제
+                {t("node.duplicateBranch")}
               </button>
             </>
           ) : null}
-          <button type="button" onClick={onDelete} className="image-node__del" title="삭제">×</button>
+          <button type="button" onClick={onDelete} className="image-node__del" title={t("node.deleteTitle")}>×</button>
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="image-node__handle image-node__handle--source" />

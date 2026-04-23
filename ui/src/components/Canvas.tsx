@@ -1,5 +1,6 @@
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
+import { useI18n } from "../i18n";
 
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
@@ -7,11 +8,12 @@ export function Canvas() {
   const quality = useAppStore((s) => s.quality);
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
   const showToast = useAppStore((s) => s.showToast);
+  const { t } = useI18n();
 
   const copyPrompt = () => {
     if (!currentImage?.prompt) return;
     void navigator.clipboard.writeText(currentImage.prompt);
-    showToast("프롬프트를 복사했습니다");
+    showToast(t("toast.promptCopied"));
   };
 
   const displayQuality = currentImage?.quality ?? quality;
@@ -26,7 +28,7 @@ export function Canvas() {
             className="result-img"
             key={currentImage.filename ?? currentImage.url ?? currentImage.image}
             src={currentImage.url ?? currentImage.image}
-            alt="생성 결과"
+            alt={t("canvas.resultAlt")}
           />
           {currentImage.prompt ? (
             <div className="result-prompt" onClick={copyPrompt}>
@@ -37,7 +39,7 @@ export function Canvas() {
             {[
               currentImage.elapsed != null ? `${currentImage.elapsed}s` : null,
               currentImage.usage
-                ? `${currentImage.usage.total_tokens ?? "?"} 토큰`
+                ? t("canvas.tokens", { n: currentImage.usage.total_tokens ?? "?" })
                 : null,
               displayQuality,
               displaySize,

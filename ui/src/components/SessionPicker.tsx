@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { useI18n } from "../i18n";
 
 export function SessionPicker() {
+  const { t } = useI18n();
   const sessions = useAppStore((s) => s.sessions);
   const activeId = useAppStore((s) => s.activeSessionId);
   const switchSession = useAppStore((s) => s.switchSession);
@@ -13,12 +15,12 @@ export function SessionPicker() {
   const active = sessions.find((s) => s.id === activeId);
 
   const handleRename = () => {
-    const next = window.prompt("세션 이름", active?.title ?? "새 세션");
+    const next = window.prompt(t("session.renamePrompt"), active?.title ?? t("session.newSession"));
     if (next && next.trim()) renameSession(next.trim());
   };
 
   const handleDelete = (id: string, title: string) => {
-    if (!window.confirm(`"${title}" 세션을 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(t("session.deleteConfirm", { title }))) return;
     void deleteSession(id);
   };
 
@@ -29,16 +31,16 @@ export function SessionPicker() {
           type="button"
           className="session-current"
           onClick={() => setOpen((v) => !v)}
-          title="세션 전환"
+          title={t("session.switchTitle")}
         >
-          <span className="session-title">{active?.title ?? "불러오는 중..."}</span>
+          <span className="session-title">{active?.title ?? t("session.loading")}</span>
           <span className="session-caret">{open ? "▴" : "▾"}</span>
         </button>
         <button
           type="button"
           className="session-btn"
-          onClick={() => void createSession("새 세션")}
-          title="새 세션"
+          onClick={() => void createSession(t("session.newSession"))}
+          title={t("session.newSessionTitle")}
         >
           +
         </button>
@@ -46,7 +48,7 @@ export function SessionPicker() {
           type="button"
           className="session-btn"
           onClick={handleRename}
-          title="이름 변경"
+          title={t("session.renameTitle")}
           disabled={!active}
         >
           ✎
@@ -71,14 +73,14 @@ export function SessionPicker() {
                 type="button"
                 className="session-del"
                 onClick={() => handleDelete(s.id, s.title)}
-                title="삭제"
+                title={t("session.deleteTitle")}
               >
                 ×
               </button>
             </li>
           ))}
           {sessions.length === 0 && (
-            <li className="session-empty">아직 세션이 없습니다</li>
+            <li className="session-empty">{t("session.empty")}</li>
           )}
         </ul>
       )}

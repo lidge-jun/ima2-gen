@@ -5,19 +5,25 @@ import { GenerateButton } from "./GenerateButton";
 import { InFlightList } from "./InFlightList";
 import { HistoryStrip } from "./HistoryStrip";
 import { SessionPicker } from "./SessionPicker";
+import { LanguageToggle } from "./LanguageToggle";
 import { useAppStore } from "../store/useAppStore";
 import { IS_DEV_UI } from "../lib/devMode";
+import { useI18n } from "../i18n";
 
 export function Sidebar() {
+  const { t } = useI18n();
   const uiModeRaw = useAppStore((s) => s.uiMode);
   const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
   return (
     <aside className="sidebar">
       <div className="sidebar__scroll">
         <div className="logo">
-          <div className="logo-dot" />
-          이미지 생성기
-          <span className="logo-badge">gpt-image-2</span>
+          <div className="logo-mark" aria-hidden="true" />
+          <div className="logo-copy">
+            <div className="logo-title">ima2-gen</div>
+            <div className="logo-subtitle">gpt-image-2 studio</div>
+          </div>
+          <LanguageToggle />
         </div>
         <UIModeSwitch />
         {uiMode === "classic" ? (
@@ -31,8 +37,7 @@ export function Sidebar() {
           <>
             <SessionPicker />
             <div className="sidebar__node-hint">
-              노드 모드에서는 노드를 눌러 프롬프트를 수정한 뒤 생성하세요. 오른쪽 패널의 설정
-              (품질/크기)은 새로 만드는 모든 결과에 적용됩니다.
+              {t("sidebar.nodeModeHint")}
             </div>
             <InFlightList />
           </>

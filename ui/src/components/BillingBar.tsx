@@ -1,21 +1,23 @@
 import { useBilling } from "../hooks/useBilling";
+import { useI18n } from "../i18n";
 
 export function BillingBar() {
   const { data, error } = useBilling();
+  const { t } = useI18n();
 
-  let text = "확인 중...";
+  let text = t("billing.checking");
   let color = "var(--text-dim)";
 
   if (error || !data) {
     if (error) {
-      text = "오프라인";
+      text = t("billing.offline");
       color = "var(--red)";
     }
   } else if (data.credits) {
     const total = data.credits.total_granted ?? 0;
     const used = data.credits.total_used ?? 0;
     const remaining = total - used;
-    text = `$${remaining.toFixed(2)} 남음`;
+    text = t("billing.remaining", { remaining: remaining.toFixed(2) });
     color =
       remaining > 5
         ? "var(--green)"
@@ -26,22 +28,22 @@ export function BillingBar() {
     const totalCost = data.costs.data.reduce((sum, bucket) => {
       return sum + bucket.results.reduce((s, r) => s + (r.amount?.value ?? 0), 0);
     }, 0);
-    text = `이번 달 $${(totalCost / 100).toFixed(2)}`;
+    text = t("billing.thisMonth", { amount: (totalCost / 100).toFixed(2) });
     color = "var(--accent)";
   } else if (data.oauth) {
-    text = "OAuth 무료 사용 가능";
+    text = t("billing.oauthFree");
     color = "var(--green)";
   } else if (data.apiKeyValid) {
-    text = "API 키 비활성화됨 (OAuth 전용)";
+    text = t("billing.apiDisabled");
     color = "var(--text-dim)";
   } else {
-    text = "OAuth 모드";
+    text = t("billing.oauthMode");
     color = "var(--text-dim)";
   }
 
   return (
     <div className="billing-bar">
-      <div className="label">API 상태</div>
+      <div className="label">{t("billing.label")}</div>
       <div className="value" style={{ color }}>
         {text}
       </div>

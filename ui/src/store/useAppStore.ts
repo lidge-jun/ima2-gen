@@ -30,6 +30,7 @@ import { compressImage } from "../lib/image";
 import { snap16 } from "../lib/size";
 import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
 import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
+import { t, loadLocale, saveLocale, type Locale } from "../i18n";
 
 function loadRightPanelOpen(): boolean {
   try {
@@ -49,7 +50,15 @@ function loadUIMode(): UIMode {
   return "classic";
 }
 
-type PersistedInFlight = { id: string; prompt: string; startedAt: number; phase?: string };
+type PersistedInFlight = {
+  id: string;
+  prompt: string;
+  startedAt: number;
+  phase?: string;
+  sessionId?: string | null;
+  clientNodeId?: string | null;
+  kind?: "classic" | "node";
+};
 const INFLIGHT_TTL_MS = 180_000;
 
 function loadInFlight(): PersistedInFlight[] {
@@ -65,7 +74,15 @@ function loadInFlight(): PersistedInFlight[] {
           x && typeof x.id === "string" && typeof x.prompt === "string" &&
           typeof x.startedAt === "number" && now - x.startedAt < INFLIGHT_TTL_MS,
       )
-      .map((x) => ({ id: x.id, prompt: x.prompt, startedAt: x.startedAt }));
+      .map((x) => ({
+        id: x.id,
+        prompt: x.prompt,
+        startedAt: x.startedAt,
+        phase: typeof x.phase === "string" ? x.phase : undefined,
+        sessionId: typeof x.sessionId === "string" ? x.sessionId : null,
+        clientNodeId: typeof x.clientNodeId === "string" ? x.clientNodeId : null,
+        kind: x.kind === "classic" || x.kind === "node" ? x.kind : undefined,
+      }));
   } catch {
     return [];
   }
@@ -81,7 +98,7 @@ function saveInFlight(list: PersistedInFlight[]): void {
       w.__ima2QuotaWarned = true;
       console.warn("[ima2] localStorage write failed:", err);
       try {
-        useAppStore.getState().showToast("로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.", true);
+        useAppStore.getState().showToast(t("toast.localStorageFull"), true);
       } catch {}
     }
   }
@@ -105,6 +122,10 @@ function saveSelectedFilename(filename: string | null): void {
 
 const HISTORY_LIMIT = 500;
 
+function narrowGenerateKind(k?: string | null): GenerateItem["kind"] {
+  return k === "classic" || k === "edit" || k === "generate" ? k : null;
+}
+
 export type ImageNodeStatus =
   | "empty"
   | "pending"
@@ -123,6 +144,7 @@ export type ImageNodeData = {
   status: ImageNodeStatus;
   pendingRequestId: string | null;
   pendingPhase?: string | null;
+  pendingStartedAt?: number | null;
   error?: string;
   elapsed?: number;
   webSearchCalls?: number;
@@ -154,6 +176,8 @@ function mapSessionToGraph(session: SessionFull): {
       status: (d.status ?? (imageUrl ? "ready" : "empty")) as ImageNodeStatus,
       pendingRequestId: (d.pendingRequestId ?? null) as string | null,
       pendingPhase: (d.pendingPhase ?? null) as string | null,
+      pendingStartedAt:
+        typeof d.pendingStartedAt === "number" ? d.pendingStartedAt : null,
       error: d.error as string | undefined,
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
@@ -212,6 +236,9 @@ type AppState = {
 
   uiMode: UIMode;
   setUIMode: (m: UIMode) => void;
+
+  locale: Locale;
+  setLocale: (l: Locale) => void;
 
   graphNodes: GraphNode[];
   graphEdges: GraphEdge[];
@@ -287,7 +314,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const valid = dataUrls.filter((x): x is string => !!x);
     set((s) => ({ referenceImages: [...s.referenceImages, ...valid].slice(0, 5) }));
     if (files.length > allowed) {
-      get().showToast("참조 이미지는 최대 5장까지 추가할 수 있습니다. 초과한 이미지는 제외되었습니다.", true);
+      get().showToast(t("toast.refLimitExceeded"), true);
     }
   },
   addReferenceDataUrl: (dataUrl) => {
@@ -306,11 +333,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   useCurrentAsReference: async () => {
     const cur = get().currentImage;
     if (!cur) {
-      get().showToast("참조로 사용할 현재 이미지가 없습니다.", true);
+      get().showToast(t("toast.noCurrentImageForRef"), true);
       return;
     }
     if (get().referenceImages.length >= 5) {
-      get().showToast("참조 이미지 슬롯이 가득 찼습니다. 최대 5장까지 가능합니다.", true);
+      get().showToast(t("toast.refSlotFull"), true);
       return;
     }
     let dataUrl = cur.image;
@@ -328,12 +355,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           reader.readAsDataURL(blob);
         });
       } catch {
-        get().showToast("현재 이미지를 불러오지 못했습니다.", true);
+        get().showToast(t("toast.currentImageLoadFailed"), true);
         return;
       }
     }
     set((s) => ({ referenceImages: [...s.referenceImages, dataUrl] }));
-    get().showToast("현재 이미지를 참조에 추가했습니다.");
+    get().showToast(t("toast.addedCurrentAsRef"));
   },
   activeGenerations: loadInFlight().length,
   inFlight: loadInFlight(),
@@ -352,7 +379,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       // Merge server-side phase info so the spinner label reflects real progress
       try {
-        const inflightKind = get().uiMode === "node" ? "node" : "classic";
+        const inflightKind: "classic" | "node" = get().uiMode === "node" ? "node" : "classic";
         const inflightSessionId =
           inflightKind === "node" ? get().activeSessionId ?? undefined : undefined;
         const { jobs } = await getInflight({
@@ -365,6 +392,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         const GRACE_MS = 5000;
         const nextInflight: typeof cur = [];
         for (const f of get().inFlight) {
+          // Out-of-scope entries (different kind/session) must not be dropped
+          // based on this tick's byId — the server wasn't asked about them.
+          const fKind = f.kind ?? "classic";
+          const matchesScope =
+            fKind === inflightKind &&
+            (inflightKind !== "node" ||
+              (f.sessionId ?? null) === (inflightSessionId ?? null));
+          if (!matchesScope) {
+            nextInflight.push(f);
+            continue;
+          }
           // If server no longer knows this job and enough time has passed,
           // drop it locally so the spinner does not linger after completion.
           if (!byId.has(f.id) && now0 - f.startedAt > GRACE_MS) {
@@ -400,6 +438,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           quality: it.quality ?? undefined,
           format: it.format as Format | undefined,
           createdAt: it.createdAt,
+          sessionId: it.sessionId ?? null,
+          nodeId: it.nodeId ?? null,
+          clientNodeId: it.clientNodeId ?? null,
+          kind: narrowGenerateKind(it.kind),
         }));
         const existing = get().history;
         const fresh = arr.filter(
@@ -501,6 +543,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ uiMode: m });
   },
 
+  locale: loadLocale(),
+  setLocale: (l) => {
+    saveLocale(l);
+    set({ locale: l });
+  },
+
   graphNodes: [],
   graphEdges: [],
   setGraphNodes: (graphNodes) => {
@@ -525,7 +573,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!current && sessions.length > 0) {
         await get().switchSession(sessions[0].id);
       } else if (!current && sessions.length === 0) {
-        await get().createAndSwitchSession("첫 번째 그래프");
+        await get().createAndSwitchSession(t("session.firstGraph"));
       }
     } catch (err) {
       console.warn("[sessions] load failed:", err);
@@ -545,11 +593,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         graphEdges,
         sessionLoading: false,
       });
-      void get().reconcileGraphPending();
+      // Serialize reconcile and recovery so the two async writers don't race.
+      // reconcileGraphPending already calls recoverGraphNodesFromHistory at the
+      // end, but we await it explicitly here so any subsequent tick sees the
+      // recovered state.
+      await get().reconcileGraphPending().catch(() => {});
     } catch (err) {
       console.warn("[sessions] switch failed:", err);
       set({ sessionLoading: false });
-      get().showToast("세션을 불러오지 못했습니다.", true);
+      get().showToast(t("toast.sessionLoadFailed"), true);
     }
   },
 
@@ -559,43 +611,62 @@ export const useAppStore = create<AppState>((set, get) => ({
     const pendingNodes = get().graphNodes.filter(
       (n) => n.data?.pendingRequestId && (n.data.status === "pending" || n.data.status === "reconciling"),
     );
-    if (pendingNodes.length === 0) return;
-    let jobs: Array<{ requestId: string; phase?: string }> = [];
-    try {
-      const res = await getInflight({ kind: "node", sessionId: sid });
-      jobs = res.jobs;
-    } catch {
-      return;
-    }
-    const byId = new Map(jobs.map((j) => [j.requestId, j.phase] as const));
-    const next = get().graphNodes.map((n) => {
-      const reqId = n.data?.pendingRequestId;
-      if (!reqId) return n;
-      if (n.data.status !== "pending" && n.data.status !== "reconciling") return n;
-      if (byId.has(reqId)) {
-        const phase = byId.get(reqId) ?? null;
+    if (pendingNodes.length > 0) {
+      let jobs: Array<{ requestId: string; phase?: string }> = [];
+      try {
+        const res = await getInflight({ kind: "node", sessionId: sid });
+        jobs = res.jobs;
+      } catch {
+        // If inflight cannot be queried, skip pending transition but still
+        // attempt orphan recovery below.
+        jobs = [];
+      }
+      const byId = new Map(jobs.map((j) => [j.requestId, j.phase] as const));
+      const now = Date.now();
+      const GRACE_MS = 10_000;
+      const next = get().graphNodes.map((n) => {
+        const reqId = n.data?.pendingRequestId;
+        if (!reqId) return n;
+        if (n.data.status !== "pending" && n.data.status !== "reconciling") return n;
+        if (byId.has(reqId)) {
+          const phase = byId.get(reqId) ?? null;
+          return {
+            ...n,
+            data: { ...n.data, status: "reconciling" as const, pendingPhase: phase },
+          };
+        }
+        // Not in-flight anymore. Apply B grace window if we know when it started —
+        // the server may have just finished and the response is still en route.
+        const startedAt = n.data.pendingStartedAt ?? 0;
+        if (startedAt && now - startedAt < GRACE_MS) {
+          return {
+            ...n,
+            data: { ...n.data, status: "reconciling" as const },
+          };
+        }
+        // Image may have landed, or job was lost.
+        const hasAsset = !!n.data.imageUrl || !!n.data.serverNodeId;
         return {
           ...n,
-          data: { ...n.data, status: "reconciling" as const, pendingPhase: phase },
+          data: {
+            ...n.data,
+            pendingRequestId: null,
+            pendingPhase: null,
+            pendingStartedAt: null,
+            status: hasAsset ? ("ready" as const) : ("stale" as const),
+            error: hasAsset ? undefined : t("session.assetAbortedError"),
+          },
         };
-      }
-      // Not in-flight anymore — image may have landed, or job was lost
-      const hasAsset = !!n.data.imageUrl || !!n.data.serverNodeId;
-      return {
-        ...n,
-        data: {
-          ...n.data,
-          pendingRequestId: null,
-          pendingPhase: null,
-          status: hasAsset ? ("ready" as const) : ("stale" as const),
-          error: hasAsset ? undefined : "생성이 정상적으로 끝나지 않았습니다. 이 노드에서 다시 시도하세요.",
-        },
-      };
-    });
-    set({ graphNodes: next });
+      });
+      set({ graphNodes: next });
+    }
+    // Always attempt orphan recovery: covers A-sanitized empty nodes and
+    // cross-session completions that never landed in this graph.
+    await recoverGraphNodesFromHistory(get, set).catch(() => {});
   },
 
-  async createAndSwitchSession(title = "제목 없는 세션") {
+  async createAndSwitchSession(title?: string) {
+    if (title == null) title = t("session.untitled");
     try {
       const { session } = await apiCreateSession(title);
       set({
@@ -607,7 +678,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.warn("[sessions] create failed:", err);
-      get().showToast("세션을 만들지 못했습니다.", true);
+      get().showToast(t("toast.sessionCreateFailed"), true);
     }
   },
 
@@ -622,7 +693,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ),
       });
     } catch (err) {
-      get().showToast("세션 이름을 바꾸지 못했습니다.", true);
+      get().showToast(t("toast.sessionRenameFailed"), true);
     }
   },
 
@@ -641,11 +712,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (remaining.length > 0) {
           await get().switchSession(remaining[0].id);
         } else {
-          await get().createAndSwitchSession("첫 번째 그래프");
+          await get().createAndSwitchSession(t("session.firstGraph"));
         }
       }
     } catch (err) {
-      get().showToast("세션을 삭제하지 못했습니다.", true);
+      get().showToast(t("toast.sessionDeleteFailed"), true);
     }
   },
 
@@ -821,18 +892,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!node) return;
     const { prompt, parentServerNodeId } = node.data;
     if (!prompt.trim()) {
-      get().showToast("프롬프트를 입력하세요.", true);
+      get().showToast(t("toast.promptRequired"), true);
       return;
     }
     const s = get();
     const size = s.getResolvedSize();
 
-    // mark pending
-    const flightId = `fn_${targetClientId}`;
+    // Capture request session so a later session switch does not corrupt graph B.
+    const requestSessionId = s.activeSessionId;
+    // mark pending — request-unique flightId so retries on the same node don't collide.
     const startedAt = Date.now();
+    const randSuffix = Math.random().toString(36).slice(2, 6);
+    const flightId = `fn_${targetClientId}_${startedAt}_${randSuffix}`;
     const nextInFlight: PersistedInFlight[] = [
       ...s.inFlight,
-      { id: flightId, prompt, startedAt },
+      {
+        id: flightId,
+        prompt,
+        startedAt,
+        kind: "node",
+        sessionId: requestSessionId,
+        clientNodeId: targetClientId,
+      },
     ];
     saveInFlight(nextInFlight);
     set({
@@ -845,6 +926,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 status: "pending",
                 pendingRequestId: flightId,
                 pendingPhase: "queued",
+                pendingStartedAt: startedAt,
                 error: undefined,
               },
             }
@@ -855,6 +937,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     get().startInFlightPolling();
 
+    let graphMutated = true; // pending set above already mutated the graph if same-session
+
     try {
       const res = await postNodeGenerate({
         parentNodeId: parentServerNodeId,
@@ -864,59 +948,76 @@ export const useAppStore = create<AppState>((set, get) => ({
         format: s.format,
         moderation: s.moderation,
         requestId: flightId,
-        sessionId: s.activeSessionId,
+        sessionId: requestSessionId,
         clientNodeId: targetClientId,
         ...(s.referenceImages.length && !parentServerNodeId
           ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
           : {}),
       });
-      set({
-        graphNodes: get().graphNodes.map((n) =>
-          n.id === targetClientId
-            ? {
-                ...n,
-                data: {
-                  ...n.data,
-                  serverNodeId: res.nodeId,
-                  imageUrl: res.url,
-                  status: "ready",
-                  pendingRequestId: null,
-                  pendingPhase: null,
-                  elapsed: res.elapsed,
-                  webSearchCalls: res.webSearchCalls,
-                },
-              }
-            : n,
-        ),
-      });
-      get().showToast(`노드 ${res.nodeId.slice(0, 8)} 생성 완료 (${res.elapsed}초)`);
+      if (get().activeSessionId === requestSessionId) {
+        set({
+          graphNodes: get().graphNodes.map((n) =>
+            n.id === targetClientId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    serverNodeId: res.nodeId,
+                    imageUrl: res.url,
+                    status: "ready",
+                    pendingRequestId: null,
+                    pendingPhase: null,
+                    pendingStartedAt: null,
+                    elapsed: res.elapsed,
+                    webSearchCalls: res.webSearchCalls,
+                  },
+                }
+              : n,
+          ),
+        });
+        graphMutated = true;
+        get().showToast(t("toast.nodeCreated", { id: res.nodeId.slice(0, 8), elapsed: res.elapsed }));
+      }
+      // cross-session: result will be restored via recoverGraphNodesFromHistory
+      // when the user returns to the originating session.
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "노드 생성에 실패했습니다.";
-      set({
-        graphNodes: get().graphNodes.map((n) =>
-          n.id === targetClientId
-            ? {
-                ...n,
-                data: {
-                  ...n.data,
-                  status: "error",
-                  pendingRequestId: null,
-                  pendingPhase: null,
-                  error: msg,
-                },
-              }
-            : n,
-        ),
-      });
-      get().showToast(msg, true);
+      const msg = err instanceof Error ? err.message : t("toast.nodeCreateFailed");
+      if (get().activeSessionId === requestSessionId) {
+        set({
+          graphNodes: get().graphNodes.map((n) =>
+            n.id === targetClientId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    status: "error",
+                    pendingRequestId: null,
+                    pendingPhase: null,
+                    pendingStartedAt: null,
+                    error: msg,
+                  },
+                }
+              : n,
+          ),
+        });
+        graphMutated = true;
+        get().showToast(msg, true);
+      }
+      // cross-session: silent — user is on a different graph
     } finally {
+      // Global state cleanup must always run regardless of active session,
+      // otherwise the spinner/counter leaks.
       const remaining = get().inFlight.filter((f) => f.id !== flightId);
       saveInFlight(remaining);
       set({
         activeGenerations: Math.max(0, get().activeGenerations - 1),
         inFlight: remaining,
       });
-      get().scheduleGraphSave();
+      // Persist the graph only if we actually mutated it AND we are still on
+      // the originating session.
+      if (get().activeSessionId === requestSessionId && graphMutated) {
+        get().scheduleGraphSave();
+      }
     }
   },
 
@@ -1091,7 +1192,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           };
           await addHistory(item, set, get);
         }
-        get().showToast(`${res.images.length}장을 ${res.elapsed}초 만에 생성했습니다.`);
+        get().showToast(t("toast.generatedBatch", { count: res.images.length, elapsed: res.elapsed }));
       } else {
         let item: GenerateItem;
         if (isMultiResponse(res)) {
@@ -1119,10 +1220,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           };
         }
         await addHistory(item, set, get);
-        get().showToast(`${res.elapsed}초 만에 생성했습니다.`);
+        get().showToast(t("toast.generatedSingle", { elapsed: res.elapsed }));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "생성에 실패했습니다.";
+      const msg = err instanceof Error ? err.message : t("toast.generateFailed");
       get().showToast(msg, true);
     } finally {
       const remaining = get().inFlight.filter((f) => f.id !== flightId);
@@ -1149,6 +1250,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           usage: (it.usage as GenerateItem["usage"]) ?? undefined,
           thumb: it.url,
           createdAt: it.createdAt,
+          sessionId: it.sessionId ?? null,
+          nodeId: it.nodeId ?? null,
+          clientNodeId: it.clientNodeId ?? null,
+          kind: narrowGenerateKind(it.kind),
         }));
         if (history.length > 0) {
           const selected = loadSelectedFilename();
@@ -1174,6 +1279,87 @@ const SAVE_DEBOUNCE_MS = 800;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let saveGraphPromise: Promise<void> | null = null;
 
+// Sanitize a node's data for PUT /api/sessions/:id/graph payload.
+// pending / reconciling states are *transient* — persisting them to disk
+// makes reloaded graphs look like aborted work and trips reconcileGraphPending.
+// This function is payload-only: the in-memory `graphNodes` is NOT touched.
+function sanitizeForSave(d: ImageNodeData): Record<string, unknown> {
+  const shouldSanitize = d.status === "pending" || d.status === "reconciling";
+  if (!shouldSanitize) return d as unknown as Record<string, unknown>;
+  return {
+    ...(d as unknown as Record<string, unknown>),
+    status: "empty",
+    pendingRequestId: null,
+    pendingPhase: null,
+    pendingStartedAt: null,
+    error: undefined,
+  };
+}
+
+// Recover nodes whose asset lives on disk (via /api/history) but whose
+// client-side state was lost (A sanitize, reload, HMR, conflict reload).
+// Candidate = node with neither imageUrl nor serverNodeId. The matching key
+// is (sessionId, clientNodeId); when pendingStartedAt is known we require
+// createdAt >= pendingStartedAt to avoid picking an older retry's asset.
+async function recoverGraphNodesFromHistory(
+  get: () => AppState,
+  set: (patch: Partial<AppState>) => void,
+): Promise<void> {
+  const sid = get().activeSessionId;
+  if (!sid) return;
+  const candidates = get().graphNodes.filter(
+    (n) => !n.data.imageUrl && !n.data.serverNodeId,
+  );
+  if (candidates.length === 0) return;
+
+  let items: Array<{
+    url: string;
+    createdAt: number;
+    sessionId?: string | null;
+    nodeId?: string | null;
+    clientNodeId?: string | null;
+  }> = [];
+  try {
+    const res = await getHistory({ sessionId: sid, limit: HISTORY_LIMIT });
+    items = res.items;
+  } catch {
+    // History fetch failure is non-fatal — leave nodes as they are.
+    return;
+  }
+
+  let changed = false;
+  const next = get().graphNodes.map((n) => {
+    if (n.data.imageUrl || n.data.serverNodeId) return n;
+    const startedAt = n.data.pendingStartedAt ?? 0;
+    const recovered = items.find(
+      (h) =>
+        (h.sessionId ?? null) === sid &&
+        (h.clientNodeId ?? null) === n.id &&
+        (!startedAt || (h.createdAt ?? 0) >= startedAt),
+    );
+    if (!recovered) return n;
+    changed = true;
+    return {
+      ...n,
+      data: {
+        ...n.data,
+        status: "ready" as const,
+        imageUrl: recovered.url, // canonical — jpeg/webp all covered
+        serverNodeId: recovered.nodeId ?? n.data.serverNodeId,
+        pendingRequestId: null,
+        pendingPhase: null,
+        pendingStartedAt: null,
+        error: undefined,
+      },
+    };
+  });
+
+  if (!changed) return;
+  set({ graphNodes: next });
+  // Persist the recovered imageUrl so future reloads don't need to re-recover.
+  scheduleGraphSaveImpl(get, set);
+}
+
 async function reloadSessionAfterConflict(
   get: () => AppState,
   set: (patch: Partial<AppState>) => void,
@@ -1187,7 +1373,10 @@ async function reloadSessionAfterConflict(
     graphEdges,
     activeSessionGraphVersion: graphVersion,
   });
-  get().showToast("다른 탭에서 세션이 변경되어 최신 그래프를 다시 불러왔습니다.", true);
+  get().showToast(t("toast.sessionReloadedElsewhere"), true);
+  // After a server-driven reload, try to restore any nodes that lost their
+  // client-side asset pointer (A sanitize leaves them as empty).
+  await recoverGraphNodesFromHistory(get, set).catch(() => {});
 }
 
 function doSave(
@@ -1203,7 +1392,7 @@ function doSave(
     id: n.id,
     x: n.position.x,
     y: n.position.y,
-    data: n.data as unknown as Record<string, unknown>,
+    data: sanitizeForSave(n.data),
   }));
   const edges = graphEdges.map((e) => ({
     id: e.id,
@@ -1267,7 +1456,7 @@ export function flushGraphSaveBeacon(get: () => AppState): void {
     id: n.id,
     x: n.position.x,
     y: n.position.y,
-    data: n.data as unknown as Record<string, unknown>,
+    data: sanitizeForSave(n.data),
   }));
   const edges = s.graphEdges.map((e) => ({
     id: e.id,

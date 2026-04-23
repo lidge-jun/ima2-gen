@@ -5,27 +5,12 @@ import { OptionGroup } from "./OptionGroup";
 import { SizePicker } from "./SizePicker";
 import { CostEstimate } from "./CostEstimate";
 import type { Count, Format, Moderation, Quality } from "../types";
-
-const QUALITY_ITEMS = [
-  { value: "low" as const, label: "낮음", sub: "빠름" },
-  { value: "medium" as const, label: "중간", sub: "균형" },
-  { value: "high" as const, label: "높음", sub: "최상" },
-];
+import { useI18n } from "../i18n";
 
 const FORMAT_ITEMS = [
   { value: "png" as const, label: "PNG" },
   { value: "jpeg" as const, label: "JPEG" },
   { value: "webp" as const, label: "WebP" },
-];
-
-const MOD_ITEMS = [
-  { value: "auto" as const, label: "자동", sub: "표준 필터" },
-  {
-    value: "low" as const,
-    label: "낮음",
-    sub: "완화 필터",
-    color: "var(--amber)",
-  },
 ];
 
 const COUNT_ITEMS: { value: string; label: string }[] = [
@@ -37,6 +22,7 @@ const COUNT_ITEMS: { value: string; label: string }[] = [
 export function RightPanel() {
   const open = useAppStore((s) => s.rightPanelOpen);
   const toggle = useAppStore((s) => s.toggleRightPanel);
+  const { t } = useI18n();
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.matchMedia("(max-width: 800px)").matches : false,
   );
@@ -60,19 +46,35 @@ export function RightPanel() {
   const count = useAppStore((s) => s.count);
   const setCount = useAppStore((s) => s.setCount);
 
+  const QUALITY_ITEMS = [
+    { value: "low" as const, label: t("quality.lowLabel"), sub: t("quality.lowSub") },
+    { value: "medium" as const, label: t("quality.mediumLabel"), sub: t("quality.mediumSub") },
+    { value: "high" as const, label: t("quality.highLabel"), sub: t("quality.highSub") },
+  ];
+
+  const MOD_ITEMS = [
+    { value: "auto" as const, label: t("moderation.autoLabel"), sub: t("moderation.autoSub") },
+    {
+      value: "low" as const,
+      label: t("moderation.lowLabel"),
+      sub: t("moderation.lowSub"),
+      color: "var(--amber)",
+    },
+  ];
+
   return (
     <>
       {isMobile && open ? (
         <div
           className="right-panel-backdrop"
           role="button"
-          aria-label="설정 닫기"
+          aria-label={t("panel.closeSettings")}
           onClick={toggle}
         />
       ) : null}
       <aside
         className={`right-panel${open ? "" : " collapsed"}${isMobile && drawerOpen ? " drawer-open" : ""}`}
-        aria-label="세부 설정"
+        aria-label={t("panel.detailSettings")}
       >
         <button
           type="button"
@@ -80,9 +82,9 @@ export function RightPanel() {
           aria-expanded={open}
           aria-controls="right-panel-body"
           onClick={toggle}
-          title={open ? "세부 설정 숨기기" : "세부 설정 보기"}
+          title={open ? t("panel.toggleHide") : t("panel.toggleShow")}
         >
-          {isMobile ? (open ? "닫기" : "열기") : open ? ">" : "<"}
+          {isMobile ? (open ? t("panel.close") : t("panel.open")) : open ? ">" : "<"}
         </button>
         <div
           id="right-panel-body"
@@ -90,31 +92,31 @@ export function RightPanel() {
           hidden={!open}
         >
           <BillingBar />
-          <div className="section-title">세부 설정</div>
+          <div className="section-title">{t("panel.detailSettings")}</div>
           <OptionGroup<Quality>
-            title="품질"
+            title={t("quality.title")}
             items={QUALITY_ITEMS}
             value={quality}
             onChange={setQuality}
           />
           <SizePicker />
           <OptionGroup<Format>
-            title="포맷"
+            title={t("format.title")}
             items={FORMAT_ITEMS}
             value={format}
             onChange={setFormat}
           />
           <OptionGroup<Moderation>
-            title="모더레이션"
+            title={t("moderation.title")}
             items={MOD_ITEMS}
             value={moderation}
             onChange={setModeration}
           />
           <p className="option-help">
-            자동은 표준 안전 필터를 사용합니다. 낮음은 제한을 조금 완화해 경계선 프롬프트가 더 통과할 수 있습니다.
+            {t("moderation.explain")}
           </p>
           <OptionGroup<string>
-            title="개수"
+            title={t("count.title")}
             items={COUNT_ITEMS}
             value={String(count)}
             onChange={(v) => setCount(Number(v) as Count)}

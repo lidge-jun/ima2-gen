@@ -6,8 +6,9 @@ import {
   SIZE_PRESETS_ROW2,
   SIZE_PRESETS_ROW3,
   SIZE_PRESETS_ROW4,
-  SIZE_PRESETS_ROW5,
+  getSizePresetsRow5,
 } from "../lib/size";
+import { useI18n } from "../i18n";
 
 function toItems(row: ReadonlyArray<{ value: string; label: string; sub: string }>) {
   return row.map((it) => ({
@@ -23,17 +24,18 @@ export function SizePicker() {
   const customW = useAppStore((s) => s.customW);
   const customH = useAppStore((s) => s.customH);
   const setCustomSize = useAppStore((s) => s.setCustomSize);
+  const { t } = useI18n();
 
   const isCustom = sizePreset === "custom";
 
   return (
     <div className="option-group">
-      <div className="section-title">크기</div>
+      <div className="section-title">{t("size.title")}</div>
       <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW1)} value={sizePreset} onChange={setSizePreset} />
       <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW2)} value={sizePreset} onChange={setSizePreset} />
       <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW3)} value={sizePreset} onChange={setSizePreset} />
       <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW4)} value={sizePreset} onChange={setSizePreset} />
-      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW5)} value={sizePreset} onChange={setSizePreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(getSizePresetsRow5())} value={sizePreset} onChange={setSizePreset} />
       {isCustom ? (
         <>
           <div className="option-row">
@@ -45,7 +47,7 @@ export function SizePicker() {
               step={16}
               value={customW}
               onChange={(e) => setCustomSize(parseInt(e.target.value) || 1024, customH)}
-              placeholder="가로"
+              placeholder={t("size.width")}
             />
             <span
               style={{
@@ -65,11 +67,11 @@ export function SizePicker() {
               step={16}
               value={customH}
               onChange={(e) => setCustomSize(customW, parseInt(e.target.value) || 1024)}
-              placeholder="세로"
+              placeholder={t("size.height")}
             />
           </div>
           <div className="size-hint">
-            한 변 최소 1024, 최대 3824, 16의 배수, 비율은 최대 3:1
+            {t("size.hint")}
           </div>
         </>
       ) : null}

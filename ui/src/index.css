@@ -17,6 +17,8 @@
   --text-dim: #888;
   --accent: #f0f0f0;
   --accent-bright: #fff;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --accent-ink: #0a0a0a;
   --green: #22c55e;
   --amber: #f59e0b;
   --red: #ef4444;
@@ -61,30 +63,99 @@ body {
 }
 
 .logo {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.5px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  min-width: 0;
 }
 
-.logo-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--green);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
+.logo-copy {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+.logo-title {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.logo-subtitle {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lang-toggle {
+  display: inline-flex;
+  margin-left: auto;
+  gap: 2px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.lang-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-dim, #888);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, box-shadow 120ms;
+}
+
+.lang-toggle__btn:hover {
+  color: var(--accent-bright);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lang-toggle__btn.is-active {
+  color: var(--accent-bright);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.lang-toggle__label {
+  font-family: var(--mono);
+}
+
+.logo-mark {
+  width: 12px;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  flex: 0 0 auto;
+  position: relative;
+  opacity: 0.9;
+}
+
+.logo-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent-bright);
+  transform: translate(-50%, -50%);
+  opacity: 0.72;
 }
 
 .billing-bar {
@@ -188,7 +259,7 @@ body {
 .option-btn.active {
   border-color: var(--accent);
   color: var(--accent-bright);
-  background: var(--surface-2);
+  background: var(--accent-soft);
 }
 
 .cost-estimate {
@@ -208,7 +279,7 @@ body {
   width: 100%;
   padding: 14px;
   background: var(--accent-bright);
-  color: var(--bg);
+  color: var(--accent-ink);
   border: none;
   border-radius: var(--radius);
   font-family: var(--font);
@@ -217,13 +288,15 @@ body {
   cursor: pointer;
   transition: all 0.15s;
   letter-spacing: -0.3px;
+  box-shadow: 0 10px 28px rgba(255, 255, 255, 0.08);
 }
 .generate-btn:hover {
-  opacity: 0.9;
+  background: #fff;
   transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(255, 255, 255, 0.12);
 }
 .generate-btn:active {
-  transform: translateY(0);
+  transform: translateY(1px);
 }
 .generate-btn:disabled {
   opacity: 0.3;
@@ -234,6 +307,7 @@ body {
   background: var(--surface-2);
   color: var(--text-dim);
   border: 1px solid var(--border);
+  box-shadow: none;
 }
 .generate-btn.loading::before {
   content: none;
@@ -857,7 +931,7 @@ body {
 }
 .gallery__group-toggle button.active {
   background: var(--accent);
-  color: #000;
+  color: var(--accent-ink);
 }
 .gallery__undo {
   position: absolute;
@@ -877,7 +951,7 @@ body {
 }
 .gallery__undo button {
   background: var(--accent);
-  color: #000;
+  color: var(--accent-ink);
   border: none;
   border-radius: 4px;
   padding: 4px 10px;
@@ -934,13 +1008,6 @@ body {
   font-family: var(--mono);
   font-size: 10px;
   color: var(--text-dim);
-}
-
-.logo-badge {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-left: auto;
 }
 
 .oauth-status {
@@ -1046,7 +1113,7 @@ body {
 }
 .modal__btn {
   background: var(--accent);
-  color: #000;
+  color: var(--accent-ink);
   border: none;
   border-radius: 6px;
   padding: 8px 16px;
@@ -1150,7 +1217,7 @@ body {
 }
 .ui-mode-switch__tab.active {
   background: var(--accent-bright, #fff);
-  color: var(--bg, #0a0a0a);
+  color: var(--accent-ink, #171006);
   font-weight: 600;
 }
 

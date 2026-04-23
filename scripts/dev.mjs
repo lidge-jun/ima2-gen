@@ -4,9 +4,29 @@
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { createServer } from "node:net";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
+const PORT = Number(process.env.PORT || 3333);
+const OAUTH_PORT = Number(process.env.OAUTH_PORT || 10531);
+
+function checkPortAvailable(port, label) {
+  return new Promise((resolve, reject) => {
+    const probe = createServer()
+      .once("error", (err) => {
+        if (err?.code === "EADDRINUSE") {
+          reject(new Error(`${label} port ${port} is already in use.`));
+          return;
+        }
+        reject(err);
+      })
+      .once("listening", () => {
+        probe.close(() => resolve());
+      })
+      .listen(port);
+  });
+}
 
 function run(cmd, args, env = {}) {
   return spawnSync(cmd, args, {
@@ -15,6 +35,15 @@ function run(cmd, args, env = {}) {
     env: { ...process.env, ...env },
     shell: process.platform === "win32",
   });
+}
+
+try {
+  await checkPortAvailable(PORT, "Server");
+  await checkPortAvailable(OAUTH_PORT, "OAuth proxy");
+} catch (err) {
+  console.error(`[dev] ${err.message}`);
+  console.error("[dev] Stop the existing ima2/image_gen dev process first, then run npm run dev again.");
+  process.exit(1);
 }
 
 console.log("[dev] building UI with VITE_IMA2_DEV=1 …");

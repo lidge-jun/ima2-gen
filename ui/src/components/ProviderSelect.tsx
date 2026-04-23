@@ -4,6 +4,7 @@ import { useOAuthStatus } from "../hooks/useOAuthStatus";
 import { useBilling } from "../hooks/useBilling";
 import { ApiDisabledModal } from "./ApiDisabledModal";
 import type { Provider } from "../types";
+import { useI18n } from "../i18n";
 
 type ProviderAvailability = {
   ok: boolean;
@@ -12,19 +13,20 @@ type ProviderAvailability = {
 };
 
 function useProviderAvailability(): Record<Provider, ProviderAvailability> {
+  const { t } = useI18n();
   const oauth = useOAuthStatus();
   const { data } = useBilling();
 
   const oauthReady = oauth?.status === "ready";
-  let oauthReason = "OAuth 프록시가 아직 준비되지 않았습니다.";
+  let oauthReason = t("provider.oauthNotReady");
   let oauthHint: string | undefined;
   if (oauth?.status === "auth_required") {
-    oauthReason = "Codex 로그인이 필요합니다.";
-    oauthHint = "터미널에서 `codex login`을 실행한 뒤 이 페이지를 새로고침하세요.";
+    oauthReason = t("provider.codexLoginRequired");
+    oauthHint = t("provider.codexLoginHint");
   } else if (oauth?.status === "starting") {
-    oauthReason = "OAuth 프록시가 시작 중입니다. 몇 초 후 다시 시도하세요.";
+    oauthReason = t("provider.oauthStarting");
   } else if (!oauth) {
-    oauthReason = "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.";
+    oauthReason = t("provider.serverUnreachable");
   }
 
   const apiOk = data?.apiKeyValid === true;
@@ -33,23 +35,22 @@ function useProviderAvailability(): Record<Provider, ProviderAvailability> {
     oauth: { ok: oauthReady, reason: oauthReason, hint: oauthHint },
     api: {
       ok: apiOk,
-      reason: apiOk
-        ? ""
-        : "API 키가 없거나 유효하지 않습니다. 서버의 .env 파일에서 OPENAI_API_KEY를 확인하세요.",
+      reason: apiOk ? "" : t("provider.apiInvalid"),
     },
   };
 }
 
-const PROVIDERS: { value: Provider; label: string }[] = [
-  { value: "oauth", label: "OAuth" },
-  { value: "api", label: "API 키" },
-];
-
 export function ProviderSelect() {
+  const { t } = useI18n();
   const provider = useAppStore((s) => s.provider);
   const setProvider = useAppStore((s) => s.setProvider);
   const availability = useProviderAvailability();
   const [blocked, setBlocked] = useState<Provider | null>(null);
+
+  const PROVIDERS: { value: Provider; label: string }[] = [
+    { value: "oauth", label: "OAuth" },
+    { value: "api", label: t("provider.apiLabel") },
+  ];
 
   const handleClick = (p: Provider) => {
     if (availability[p].ok) {
@@ -65,7 +66,7 @@ export function ProviderSelect() {
 
   return (
     <>
-      <div className="section-title">인증 방식</div>
+      <div className="section-title">{t("provider.authTitle")}</div>
       <div className="provider-row">
         {PROVIDERS.map((p) => {
           const selected = provider === p.value;
@@ -76,8 +77,8 @@ export function ProviderSelect() {
               type="button"
               className={`provider-pill${selected ? " selected" : ""}`}
               onClick={() => handleClick(p.value)}
-              title={ok ? `${p.label} 사용 가능` : availability[p.value].reason}
-              aria-label={`${p.label}: ${ok ? "사용 가능" : "사용 불가"}`}
+              title={ok ? t("provider.availableTitle", { name: p.label }) : availability[p.value].reason}
+              aria-label={ok ? t("provider.availableAria", { name: p.label }) : t("provider.unavailableAria", { name: p.label })}
               aria-pressed={selected}
             >
               <span
@@ -85,7 +86,7 @@ export function ProviderSelect() {
                 aria-hidden="true"
               />
               <span>{p.label}</span>
-              <span className="sr-only">{ok ? "(사용 가능)" : "(사용 불가)"}</span>
+              <span className="sr-only">{ok ? t("provider.availableSr") : t("provider.unavailableSr")}</span>
             </button>
           );
         })}

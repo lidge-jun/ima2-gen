@@ -1102,7 +1102,7 @@ onShutdown(() => {
 });
 process.on("exit", __unadvertise);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Image Gen running at http://localhost:${PORT}`);
   console.log(`Provider policy: OAuth only (API key hard-disabled). OAuth proxy port ${OAUTH_PORT}.`);
   __advertise();
@@ -1112,4 +1112,13 @@ app.listen(PORT, () => {
   } catch (err) {
     console.error("[db] bootstrap failed:", err.message);
   }
+});
+
+server.on("error", (err) => {
+  if (err?.code === "EADDRINUSE") {
+    console.error(`[server] Port ${PORT} is already in use. Stop the existing image_gen server before starting another dev server.`);
+    process.exit(1);
+  }
+  console.error("[server] Failed to start:", err?.message || err);
+  process.exit(1);
 });

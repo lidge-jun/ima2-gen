@@ -16,8 +16,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useAppStore, type GraphNode, type GraphEdge } from "../store/useAppStore";
 import { ImageNode } from "./ImageNode";
+import { useI18n } from "../i18n";
 
 function NodeCanvasInner() {
+  const { t } = useI18n();
   const nodes = useAppStore((s) => s.graphNodes);
   const edges = useAppStore((s) => s.graphEdges);
   const setGraphNodes = useAppStore((s) => s.setGraphNodes);
@@ -73,10 +75,10 @@ function NodeCanvasInner() {
 
   return (
     <main className="node-canvas" ref={wrapperRef}>
-      {sessionLoading && <div className="node-canvas__loading">세션 불러오는 중...</div>}
+      {sessionLoading && <div className="node-canvas__loading">{t("nodeCanvas.loading")}</div>}
       {nodes.length === 0 ? (
         <button type="button" className="node-canvas__plus" onClick={() => addRootNode()}>
-          + 첫 노드 추가
+          {t("nodeCanvas.addFirst")}
         </button>
       ) : (
         <>
@@ -108,12 +110,12 @@ function NodeCanvasInner() {
             type="button"
             className="node-canvas__add-root"
             onClick={() => addRootNode()}
-            title="루트 노드 추가"
+            title={t("nodeCanvas.addRootTitle")}
           >
             +
           </button>
           <div className="node-canvas__hint">
-            핸들을 빈 공간으로 드래그하면 새 브랜치가 생깁니다. Delete 또는 Backspace로 삭제할 수 있습니다.
+            {t("nodeCanvas.hint")}
           </div>
         </>
       )}

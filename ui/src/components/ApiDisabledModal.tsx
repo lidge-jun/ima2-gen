@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useI18n } from "../i18n";
 
 type Props = {
   open: boolean;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function ApiDisabledModal({ open, providerLabel, reason, hint, onClose }: Props) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -19,23 +21,24 @@ export function ApiDisabledModal({ open, providerLabel, reason, hint, onClose }:
   }, [open, onClose]);
 
   if (!open) return null;
+  const title = t("apiDisabled.title", { provider: providerLabel });
   return (
     <div className="modal-backdrop" onClick={onClose} role="presentation">
       <div
         className="modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`${providerLabel} 사용 불가`}
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal__title">{providerLabel} 사용 불가</div>
+        <div className="modal__title">{title}</div>
         <div className="modal__body">
           <p>{reason}</p>
           {hint ? <p className="modal__hint">{hint}</p> : null}
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__btn" onClick={onClose}>
-            확인
+            {t("common.ok")}
           </button>
         </div>
       </div>

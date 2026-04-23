@@ -1,6 +1,8 @@
 import { useAppStore } from "../store/useAppStore";
+import { useI18n } from "../i18n";
 
 export function ResultActions() {
+  const { t } = useI18n();
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
@@ -19,21 +21,21 @@ export function ResultActions() {
       const res = await fetch(currentImage.image);
       const blob = await res.blob();
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-      showToast("클립보드에 복사했습니다");
+      showToast(t("toast.imageCopied"));
     } catch {
-      showToast("복사에 실패했습니다", true);
+      showToast(t("toast.copyFailed"), true);
     }
   };
 
   const copyPrompt = () => {
     if (!currentImage.prompt) return;
     void navigator.clipboard.writeText(currentImage.prompt);
-    showToast("프롬프트를 복사했습니다");
+    showToast(t("toast.promptCopied"));
   };
 
   const newFromHere = () => {
     if (!currentImage.prompt) {
-      showToast("가져올 프롬프트가 없습니다", true);
+      showToast(t("toast.noPromptToFork"), true);
       return;
     }
     setPrompt(currentImage.prompt);
@@ -44,27 +46,27 @@ export function ResultActions() {
       promptEl.focus();
       promptEl.setSelectionRange(promptEl.value.length, promptEl.value.length);
     }
-    showToast("이 이미지의 프롬프트를 가져왔습니다. 수정 후 다시 생성하세요");
+    showToast(t("toast.forkStarted"));
   };
 
   return (
     <div className="result-actions">
       <button type="button" className="action-btn" onClick={download}>
-        다운로드
+        {t("result.download")}
       </button>
       <button type="button" className="action-btn" onClick={copyImage}>
-        이미지 복사
+        {t("result.copyImage")}
       </button>
       <button type="button" className="action-btn" onClick={copyPrompt}>
-        프롬프트 복사
+        {t("result.copyPrompt")}
       </button>
       <button
         type="button"
         className="action-btn action-btn--primary"
         onClick={newFromHere}
-        title="이 이미지의 프롬프트를 가져와 이어서 작업"
+        title={t("result.continueHereTitle")}
       >
-        여기서 이어서
+        {t("result.continueHere")}
       </button>
     </div>
   );

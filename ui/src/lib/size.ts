@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 export function snap16(n: number): number {
   return Math.round(n / 16) * 16;
 }
@@ -32,7 +34,13 @@ export const SIZE_PRESETS_ROW4 = [
   { value: "2160x3824", label: "2160×3824", sub: "4K 9:16" },
 ] as const;
 
-export const SIZE_PRESETS_ROW5 = [
-  { value: "auto", label: "자동", sub: "모델 추천" },
-  { value: "custom", label: "직접 입력", sub: "자유 설정" },
-] as const;
+export function getSizePresetsRow5(): ReadonlyArray<{
+  value: "auto" | "custom";
+  label: string;
+  sub: string;
+}> {
+  return [
+    { value: "auto", label: t("size.autoLabel"), sub: t("size.autoSub") },
+    { value: "custom", label: t("size.customLabel"), sub: t("size.customSub") },
+  ];
+}

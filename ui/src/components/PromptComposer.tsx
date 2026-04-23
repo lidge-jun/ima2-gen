@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { useI18n } from "../i18n";
 
 const MAX_REFS = 5;
 
@@ -7,6 +8,7 @@ export function PromptComposer() {
   const prompt = useAppStore((s) => s.prompt);
   const setPrompt = useAppStore((s) => s.setPrompt);
   const generate = useAppStore((s) => s.generate);
+  const { t } = useI18n();
 
   const refs = useAppStore((s) => s.referenceImages);
   const addReferences = useAppStore((s) => s.addReferences);
@@ -84,10 +86,10 @@ export function PromptComposer() {
       onPaste={onPaste}
     >
       <div className="composer__header">
-        <span className="section-title composer__label">프롬프트</span>
+        <span className="section-title composer__label">{t("prompt.label")}</span>
         {refs.length > 0 && (
           <span className="composer__count">
-            참조 {refs.length}/{MAX_REFS}
+            {t("prompt.refCount", { count: refs.length, max: MAX_REFS })}
           </span>
         )}
       </div>
@@ -95,13 +97,13 @@ export function PromptComposer() {
       {refs.length > 0 && (
         <div className="composer__chips">
           {refs.map((src, i) => (
-            <div key={i} className="composer__chip" title={`참조 이미지 ${i + 1}`}>
-              <img src={src} alt={`참조 이미지 ${i + 1}`} />
+            <div key={i} className="composer__chip" title={t("prompt.refChipTitle", { n: i + 1 })}>
+              <img src={src} alt={t("prompt.refChipAlt", { n: i + 1 })} />
               <button
                 type="button"
                 className="composer__chip-remove"
                 onClick={() => removeReference(i)}
-                aria-label={`참조 이미지 ${i + 1} 제거`}
+                aria-label={t("prompt.refRemoveAria", { n: i + 1 })}
               >
                 ×
               </button>
@@ -115,8 +117,8 @@ export function PromptComposer() {
         value={prompt}
         placeholder={
           refs.length > 0
-            ? "첨부한 이미지로 무엇을 만들지 설명해 주세요..."
-            : "원하는 이미지를 설명하고, 드래그 앤 드롭이나 붙여넣기로 참조 이미지를 추가할 수 있어요..."
+            ? t("prompt.placeholderWithRefs")
+            : t("prompt.placeholder")
         }
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
@@ -133,33 +135,33 @@ export function PromptComposer() {
           className="composer__tool"
           onClick={() => canAddMore && fileInput.current?.click()}
           disabled={!canAddMore}
-          title="참조 이미지 첨부"
-          aria-label="참조 이미지 첨부"
+          title={t("prompt.attachTitle")}
+          aria-label={t("prompt.attachTitle")}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
           </svg>
-          <span>첨부</span>
+          <span>{t("prompt.attach")}</span>
         </button>
         <button
           type="button"
           className="composer__tool"
           onClick={() => void useCurrentAsReference()}
           disabled={!currentImage || !canAddMore}
-          title="현재 결과를 참조로 사용"
+          title={t("prompt.useCurrentTitle")}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="23 4 23 10 17 10" />
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
-          <span>현재 결과 사용</span>
+          <span>{t("prompt.useCurrent")}</span>
         </button>
-        <span className="composer__hint">Ctrl + Enter로 생성</span>
+        <span className="composer__hint">{t("prompt.hint")}</span>
       </div>
 
       {dragOver && (
         <div className="composer__dropzone" aria-hidden="true">
-          놓아서 참조 이미지로 추가 ({MAX_REFS}장까지)
+          {t("prompt.dropHere", { max: MAX_REFS })}
         </div>
       )}
 
