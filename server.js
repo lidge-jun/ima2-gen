@@ -1111,7 +1111,12 @@ app.post("/api/sessions/:id/style-sheet/extract", async (req, res) => {
     res.json({ styleSheet: sheet });
   } catch (err) {
     const code = err.code || "STYLE_SHEET_ERROR";
-    const status = code === "STYLE_SHEET_NO_KEY" ? 400 : 500;
+    const status =
+      code === "STYLE_SHEET_NO_KEY" || code === "STYLE_SHEET_BAD_INPUT"
+        ? 400
+        : code === "STYLE_SHEET_EMPTY" || code === "STYLE_SHEET_PARSE" || code === "STYLE_SHEET_SHAPE"
+          ? 422
+          : 500;
     res.status(status).json({ error: { code, message: err.message } });
   }
 });
