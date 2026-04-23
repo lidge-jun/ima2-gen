@@ -590,6 +590,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     try {
       const res = await getSessionStyleSheet(sid);
+      if (get().activeSessionId !== sid) return;
       set({ styleSheet: res.styleSheet, styleSheetEnabled: !!res.enabled });
     } catch (err) {
       console.warn("[styleSheet] load failed:", err);
@@ -601,11 +602,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!sid) return;
     try {
       await saveSessionStyleSheet(sid, sheet, enabled);
+      if (get().activeSessionId !== sid) return;
       set({
         styleSheet: sheet,
         ...(typeof enabled === "boolean" ? { styleSheetEnabled: enabled } : {}),
       });
-      get().showToast(t("toast.saved"));
+      get().showToast(t("styleSheet.saved"));
     } catch (err) {
       console.warn("[styleSheet] save failed:", err);
       get().showToast((err as Error).message, true);
@@ -618,6 +620,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = !get().styleSheetEnabled;
     try {
       await setSessionStyleSheetEnabled(sid, next);
+      if (get().activeSessionId !== sid) return;
       set({ styleSheetEnabled: next });
     } catch (err) {
       console.warn("[styleSheet] toggle failed:", err);
@@ -637,12 +640,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ styleSheetExtracting: true });
     try {
       const { styleSheet } = await extractSessionStyleSheet(sid, prompt, ref);
+      if (get().activeSessionId !== sid) {
+        set({ styleSheetExtracting: false });
+        return;
+      }
       set({ styleSheet, styleSheetEnabled: true, styleSheetExtracting: false });
       get().showToast(t("styleSheet.extracted"));
     } catch (err) {
       set({ styleSheetExtracting: false });
       console.warn("[styleSheet] extract failed:", err);
-      get().showToast((err as Error).message, true);
+      const code = (err as { code?: string }).code;
+      const msg =
+        code === "STYLE_SHEET_NO_KEY"
+          ? t("styleSheet.errNoKey")
+          : code === "STYLE_SHEET_EMPTY" || code === "STYLE_SHEET_PARSE" || code === "STYLE_SHEET_SHAPE"
+            ? t("styleSheet.errBadOutput")
+            : (err as Error).message;
+      get().showToast(msg, true);
     }
   },
 
