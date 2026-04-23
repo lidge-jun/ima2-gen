@@ -10,7 +10,7 @@ aliases: [ima2 devlog map, image_gen roadmap, devlog map]
 
 This map matters because plans from multiple eras coexist. `_plan/README.md` and `_plan/unified-roadmap.md` now point to the same active direction. Completed `0.01`, `0.03`, `0.04`, `0.06`, `0.07`, and `0.09` implementation records have moved under `_fin/260423_*`. Structure docs should follow the current code and active roadmap rather than stale plan folders.
 
-For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. The current active folder is `_plan/0.09.4-node-generation-stale`. Completed work belongs in `_fin/`. Old phase docs are under `_plan/_legacy` and should not be treated as the active backlog.
+For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. The current active folder is `_plan/0.09.4-node-generation-stale` (implementation done, awaiting user smoke). Two follow-up tracks sit immediately after: `_plan/0.09.5-node-streaming` (partial_image SSE relay + sidecar `requestId`) and `_plan/0.09.6-inflight-reliability` (SQLite-backed inflight + cross-tab merge). Completed work belongs in `_fin/`. Old phase docs are under `_plan/_legacy` and should not be treated as the active backlog.
 
 ---
 
