@@ -7,16 +7,12 @@ describe("coerceStyleSheet", () => {
     assert.strictEqual(coerceStyleSheet(null), null);
     assert.strictEqual(coerceStyleSheet("x"), null);
     assert.strictEqual(coerceStyleSheet(42), null);
+    assert.strictEqual(coerceStyleSheet([]), null);
   });
 
-  it("fills missing fields with defaults", () => {
-    const s = coerceStyleSheet({});
-    assert.deepStrictEqual(s.palette, []);
-    assert.strictEqual(s.composition, "");
-    assert.strictEqual(s.mood, "");
-    assert.strictEqual(s.medium, "");
-    assert.strictEqual(s.subject_details, "");
-    assert.deepStrictEqual(s.negative, []);
+  it("returns null when no field has content", () => {
+    assert.strictEqual(coerceStyleSheet({}), null);
+    assert.strictEqual(coerceStyleSheet({ palette: [], negative: [], mood: "   " }), null);
   });
 
   it("trims strings and caps at 400 chars", () => {
