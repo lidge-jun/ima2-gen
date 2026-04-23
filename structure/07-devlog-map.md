@@ -21,7 +21,8 @@ graph TD
     DEV["devlog"] --> PLAN["_plan<br/>active and legacy plans"]
     DEV --> FIN["_fin<br/>completed work"]
     DEV --> SPIKES["_spikes<br/>exploration notes"]
-    PLAN --> ACTIVE["0.09.4<br/>active hotfix"]
+    PLAN --> ACTIVE["0.09.4<br/>node stale hotfix<br/>(awaiting smoke)"]
+    PLAN --> FOLLOW["0.09.5 + 0.09.6<br/>follow-up tracks"]
     PLAN --> ROAD["README + unified-roadmap<br/>current direction"]
     PLAN --> LEGACY["_legacy<br/>old phase plans"]
 ```
@@ -31,8 +32,10 @@ graph TD
 | Document | Status | How to use it |
 |---|---|---|
 | `devlog/_plan/README.md` | current | Active lane, completed moves, and next-work rules |
-| `devlog/_plan/unified-roadmap.md` | current | `0.09.4 -> 0.10 -> 0.12` flow |
-| `devlog/_plan/0.09.4-node-generation-stale/PRD.md` | active | Current hotfix spec; keep it in place while work is ongoing |
+| `devlog/_plan/unified-roadmap.md` | current | `0.09.4 -> 0.09.5 + 0.09.6 -> 0.10 -> 0.12` flow |
+| `devlog/_plan/0.09.4-node-generation-stale/PRD.md` | implemented, awaiting smoke | Node stale hotfix. Move to `_fin/` after the user completes UI build + reload smoke. |
+| `devlog/_plan/0.09.5-node-streaming/PRD.md` | queued | Node partial_image SSE relay + sidecar `requestId`. First of two 0.09.4 follow-ups. |
+| `devlog/_plan/0.09.6-inflight-reliability/PRD.md` | queued | `lib/inflight.js` SQLite persistence + cross-tab `reconcileInflight` merge. |
 | `devlog/_plan/0.10-feature-expansion/PLAN.md` | next feature | Preset, compare, card-news, export direction |
 | `devlog/_plan/0.12-research-mode/README.md` | partial | Research-mode productization after backend support |
 | `devlog/_plan/backend-node-mode.md` | reference | Original backend endpoint and cleanup planning |
@@ -52,8 +55,10 @@ graph TD
 
 | Cycle | Name | Current interpretation |
 |---|---|---|
-| 0.09.4 | Node stale fix | Active hotfix |
-| 0.10 | Feature expansion | Preset and compare MVP next |
+| 0.09.4 | Node stale fix | Implemented + verified; awaiting user smoke before moving to `_fin` |
+| 0.09.5 | Node streaming + sidecar requestId | Queued; first 0.09.4 follow-up (server side) |
+| 0.09.6 | Inflight reliability | Queued; second 0.09.4 follow-up (persistence + cross-tab) |
+| 0.10 | Feature expansion | Preset and compare MVP after 0.09.5/0.09.6 close |
 | 0.11 | Export and card-news base | Future lane after 0.10 |
 | 0.12 | Research mode | Backend support exists; frontend productization remains |
 
@@ -81,6 +86,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-23: Documented the first devlog reference map.
 - 2026-04-23: Updated the active lane after moving completed work into `_fin`.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-23: 0.09.4 implementation verified. Added `0.09.5-node-streaming` and `0.09.6-inflight-reliability` as queued follow-up tracks.
 
 Previous document: `[[06-infra-operations]]`
 
