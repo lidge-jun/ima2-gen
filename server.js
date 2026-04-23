@@ -471,10 +471,29 @@ app.post("/api/generate", async (req, res) => {
     const moderationCheck = validateModeration(moderation);
     if (moderationCheck.error) return res.status(400).json({ error: moderationCheck.error });
     const count = Math.min(Math.max(parseInt(n) || 1, 1), 8);
+
+    // 0.10: auto-prepend session style sheet when enabled.
+    let effectivePrompt = prompt;
+    let styleSheetApplied = null;
+    if (sessionId) {
+      try {
+        const data = getStyleSheet(sessionId);
+        if (data && data.enabled && data.styleSheet) {
+          const prefix = renderStyleSheetPrefix(data.styleSheet);
+          if (prefix) {
+            effectivePrompt = `${prefix} ${prompt}`.slice(0, 4000);
+            styleSheetApplied = data.styleSheet;
+          }
+        }
+      } catch {
+        // non-fatal — fall back to user prompt as-is
+      }
+    }
+
     startJob({
       requestId,
       kind: "classic",
-      prompt,
+      prompt: effectivePrompt,
       meta: {
         kind: "classic",
         sessionId,
@@ -483,6 +502,7 @@ app.post("/api/generate", async (req, res) => {
         quality,
         size,
         n: count,
+        styleSheetApplied: !!styleSheetApplied,
       },
     });
 
@@ -510,7 +530,7 @@ app.post("/api/generate", async (req, res) => {
       let lastErr;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const r = await generateViaOAuth(prompt, quality, size, moderation, refB64s, requestId);
+          const r = await generateViaOAuth(effectivePrompt, quality, size, moderation, refB64s, requestId);
           if (r.b64) return r;
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
@@ -538,6 +558,8 @@ app.post("/api/generate", async (req, res) => {
         // Sidecar metadata for /api/history reconstruction
         const meta = {
           prompt,
+          effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
+          styleSheetApplied: styleSheetApplied || undefined,
           quality,
           size,
           format,
