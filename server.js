@@ -97,7 +97,7 @@ function validateModeration(moderation) {
 const RESEARCH_SUFFIX =
   "\n\n필요하면 먼저 웹에서 이 주제의 정확한 레퍼런스(얼굴/제품/장소/최신 정보)를 검색한 뒤 그걸 토대로 이미지를 생성해. 단순한 주제는 곧바로 생성해도 돼.";
 
-async function generateViaOAuth(prompt, quality, size, moderation = "auto", references = [], requestId = null) {
+async function generateViaOAuth(prompt, quality, size, moderation = "low", references = [], requestId = null) {
   const tools = [
     { type: "web_search" },
     { type: "image_generation", quality, size, moderation },
@@ -460,7 +460,7 @@ app.post("/api/generate", async (req, res) => {
       typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
     const clientNodeId =
       typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
-    const { prompt, quality = "low", size = "1024x1024", format = "png", moderation = "auto", provider = "auto", n = 1, references = [] } =
+    const { prompt, quality = "low", size = "1024x1024", format = "png", moderation = "low", provider = "auto", n = 1, references = [] } =
       req.body;
 
     if (!prompt) return res.status(400).json({ error: "Prompt is required" });
@@ -590,7 +590,7 @@ app.post("/api/generate", async (req, res) => {
 });
 
 // ── OAuth edit: send image as input to Responses API ──
-async function editViaOAuth(prompt, imageB64, quality, size, moderation = "auto") {
+async function editViaOAuth(prompt, imageB64, quality, size, moderation = "low") {
   const res = await fetch(`${OAUTH_URL}/v1/responses`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
@@ -662,7 +662,7 @@ async function editViaOAuth(prompt, imageB64, quality, size, moderation = "auto"
 // ── Edit image (inpainting) ──
 app.post("/api/edit", async (req, res) => {
   try {
-    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "auto", provider = "oauth" } =
+    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "low", provider = "oauth" } =
       req.body;
 
     if (!prompt || !imageB64)
@@ -736,7 +736,7 @@ app.post("/api/node/generate", async (req, res) => {
       quality = "low",
       size = "1024x1024",
       format = "png",
-      moderation = "auto",
+      moderation = "low",
       references = [],
       externalSrc = null,
     } = body;

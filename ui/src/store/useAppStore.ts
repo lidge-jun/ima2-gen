@@ -265,7 +265,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   customW: 1920,
   customH: 1088,
   format: "png",
-  moderation: "auto",
+  moderation: "low",
   count: 1,
   prompt: "",
   referenceImages: [],
