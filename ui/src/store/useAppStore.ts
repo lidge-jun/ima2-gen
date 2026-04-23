@@ -23,8 +23,13 @@ import {
   renameSession as apiRenameSession,
   deleteSession as apiDeleteSession,
   saveSessionGraph,
+  getSessionStyleSheet,
+  saveSessionStyleSheet,
+  setSessionStyleSheetEnabled,
+  extractSessionStyleSheet,
   type SessionSummary,
   type SessionFull,
+  type StyleSheet,
 } from "../lib/api";
 import { compressImage } from "../lib/image";
 import { snap16 } from "../lib/size";
@@ -267,6 +272,15 @@ type AppState = {
   deleteSessionById: (id: string) => Promise<void>;
   scheduleGraphSave: () => void;
   flushGraphSave: () => Promise<void>;
+
+  // Style sheet (0.10)
+  styleSheet: StyleSheet | null;
+  styleSheetEnabled: boolean;
+  styleSheetExtracting: boolean;
+  loadStyleSheet: () => Promise<void>;
+  saveStyleSheet: (sheet: StyleSheet | null, enabled?: boolean) => Promise<void>;
+  toggleStyleSheetEnabled: () => Promise<void>;
+  extractStyleSheet: () => Promise<void>;
 
   setProvider: (p: Provider) => void;
   setQuality: (q: Quality) => void;
@@ -564,6 +578,73 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeSessionId: null,
   activeSessionGraphVersion: null,
   sessionLoading: false,
+  styleSheet: null,
+  styleSheetEnabled: false,
+  styleSheetExtracting: false,
+
+  async loadStyleSheet() {
+    const sid = get().activeSessionId;
+    if (!sid) {
+      set({ styleSheet: null, styleSheetEnabled: false });
+      return;
+    }
+    try {
+      const res = await getSessionStyleSheet(sid);
+      set({ styleSheet: res.styleSheet, styleSheetEnabled: !!res.enabled });
+    } catch (err) {
+      console.warn("[styleSheet] load failed:", err);
+    }
+  },
+
+  async saveStyleSheet(sheet, enabled) {
+    const sid = get().activeSessionId;
+    if (!sid) return;
+    try {
+      await saveSessionStyleSheet(sid, sheet, enabled);
+      set({
+        styleSheet: sheet,
+        ...(typeof enabled === "boolean" ? { styleSheetEnabled: enabled } : {}),
+      });
+      get().showToast(t("toast.saved"));
+    } catch (err) {
+      console.warn("[styleSheet] save failed:", err);
+      get().showToast((err as Error).message, true);
+    }
+  },
+
+  async toggleStyleSheetEnabled() {
+    const sid = get().activeSessionId;
+    if (!sid) return;
+    const next = !get().styleSheetEnabled;
+    try {
+      await setSessionStyleSheetEnabled(sid, next);
+      set({ styleSheetEnabled: next });
+    } catch (err) {
+      console.warn("[styleSheet] toggle failed:", err);
+      get().showToast((err as Error).message, true);
+    }
+  },
+
+  async extractStyleSheet() {
+    const sid = get().activeSessionId;
+    if (!sid) return;
+    const prompt = get().prompt.trim();
+    if (!prompt) {
+      get().showToast("Enter a prompt first", true);
+      return;
+    }
+    const ref = get().referenceImages[0];
+    set({ styleSheetExtracting: true });
+    try {
+      const { styleSheet } = await extractSessionStyleSheet(sid, prompt, ref);
+      set({ styleSheet, styleSheetEnabled: true, styleSheetExtracting: false });
+      get().showToast("Style sheet extracted");
+    } catch (err) {
+      set({ styleSheetExtracting: false });
+      console.warn("[styleSheet] extract failed:", err);
+      get().showToast((err as Error).message, true);
+    }
+  },
 
   async loadSessions() {
     try {
@@ -598,6 +679,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       // end, but we await it explicitly here so any subsequent tick sees the
       // recovered state.
       await get().reconcileGraphPending().catch(() => {});
+      // Fetch style sheet for the newly active session (non-blocking on failure).
+      get().loadStyleSheet().catch(() => {});
     } catch (err) {
       console.warn("[sessions] switch failed:", err);
       set({ sessionLoading: false });
