@@ -690,6 +690,7 @@ app.post("/api/edit", async (req, res) => {
   try {
     const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "low", provider = "oauth" } =
       req.body;
+    const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
 
     if (!prompt || !imageB64)
       return res.status(400).json({ error: "Prompt and image are required" });
@@ -699,10 +700,27 @@ app.post("/api/edit", async (req, res) => {
     if (provider === "api") {
       return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
     }
-    console.log(`[edit][${req.get("x-ima2-client") || "ui"}] provider=oauth quality=${quality} size=${size} moderation=${moderation}`);
+
+    // 0.10: auto-prepend session style sheet when enabled.
+    let effectivePrompt = prompt;
+    let styleSheetApplied = null;
+    if (sessionId) {
+      try {
+        const data = getStyleSheet(sessionId);
+        if (data && data.enabled && data.styleSheet) {
+          const prefix = renderStyleSheetPrefix(data.styleSheet);
+          if (prefix) {
+            effectivePrompt = `${prefix} ${prompt}`.slice(0, 4000);
+            styleSheetApplied = data.styleSheet;
+          }
+        }
+      } catch {}
+    }
+
+    console.log(`[edit][${req.get("x-ima2-client") || "ui"}] provider=oauth quality=${quality} size=${size} moderation=${moderation}${styleSheetApplied ? " +styleSheet" : ""}`);
     const startTime = Date.now();
 
-    const { b64: resultB64, usage } = await editViaOAuth(prompt, imageB64, quality, size, moderation);
+    const { b64: resultB64, usage } = await editViaOAuth(effectivePrompt, imageB64, quality, size, moderation);
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
@@ -711,6 +729,8 @@ app.post("/api/edit", async (req, res) => {
     await writeFile(join(__dirname, "generated", filename), Buffer.from(resultB64, "base64"));
     const meta = {
       prompt,
+      effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
+      styleSheetApplied: styleSheetApplied || undefined,
       quality,
       size,
       moderation,
@@ -802,6 +822,22 @@ app.post("/api/node/generate", async (req, res) => {
     }
     const refB64s = refCheck.refs;
 
+    // 0.10: auto-prepend session style sheet when enabled.
+    let effectivePrompt = prompt;
+    let styleSheetApplied = null;
+    if (sessionId) {
+      try {
+        const data = getStyleSheet(sessionId);
+        if (data && data.enabled && data.styleSheet) {
+          const prefix = renderStyleSheetPrefix(data.styleSheet);
+          if (prefix) {
+            effectivePrompt = `${prefix} ${prompt}`.slice(0, 4000);
+            styleSheetApplied = data.styleSheet;
+          }
+        }
+      } catch {}
+    }
+
     const startTime = Date.now();
     let parentB64 = null;
     if (parentNodeId) {
@@ -819,8 +855,8 @@ app.post("/api/node/generate", async (req, res) => {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         const r = parentB64
-          ? await editViaOAuth(prompt, parentB64, quality, size, moderation)
-          : await generateViaOAuth(prompt, quality, size, moderation, refB64s, requestId);
+          ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation)
+          : await generateViaOAuth(effectivePrompt, quality, size, moderation, refB64s, requestId);
         if (r.b64) {
           b64 = r.b64;
           usage = r.usage;
@@ -851,6 +887,8 @@ app.post("/api/node/generate", async (req, res) => {
       sessionId,
       clientNodeId,
       prompt,
+      effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
+      styleSheetApplied: styleSheetApplied || undefined,
       options: { quality, size, format, moderation },
       createdAt: Date.now(),
       createdAtIso: new Date().toISOString(),
