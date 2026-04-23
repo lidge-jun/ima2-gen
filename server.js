@@ -1093,6 +1093,11 @@ app.post("/api/sessions/:id/style-sheet/extract", async (req, res) => {
         error: { code: "STYLE_SHEET_BAD_INPUT", message: "prompt required" },
       });
     }
+    if (!getSession(req.params.id)) {
+      return res.status(404).json({
+        error: { code: "SESSION_NOT_FOUND", message: "Session not found" },
+      });
+    }
     const sheet = await extractStyleSheet(openai, {
       prompt: prompt.slice(0, 4000),
       referenceDataUrl: typeof referenceDataUrl === "string" ? referenceDataUrl : undefined,
