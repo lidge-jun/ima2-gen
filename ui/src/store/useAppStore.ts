@@ -630,7 +630,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!sid) return;
     const prompt = get().prompt.trim();
     if (!prompt) {
-      get().showToast("Enter a prompt first", true);
+      get().showToast(t("styleSheet.noPrompt"), true);
       return;
     }
     const ref = get().referenceImages[0];
@@ -638,7 +638,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const { styleSheet } = await extractSessionStyleSheet(sid, prompt, ref);
       set({ styleSheet, styleSheetEnabled: true, styleSheetExtracting: false });
-      get().showToast("Style sheet extracted");
+      get().showToast(t("styleSheet.extracted"));
     } catch (err) {
       set({ styleSheetExtracting: false });
       console.warn("[styleSheet] extract failed:", err);

@@ -230,5 +230,25 @@
     "label": "Language",
     "ko": "한국어",
     "en": "English"
+  },
+  "styleSheet": {
+    "toggle": "🎨 Style consistency",
+    "extract": "Extract from prompt",
+    "extracting": "Extracting…",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "emptyHint": "No style sheet yet. Extract from the current prompt to lock in a look.",
+    "noPrompt": "Enter a prompt first",
+    "extracted": "Style sheet extracted",
+    "editorTitle": "Edit style sheet",
+    "fields": {
+      "medium": "Medium",
+      "composition": "Composition",
+      "mood": "Mood",
+      "subject": "Subject details",
+      "palette": "Palette (comma-separated hex or names)",
+      "negative": "Negative (comma-separated)"
+    }
   }
 }

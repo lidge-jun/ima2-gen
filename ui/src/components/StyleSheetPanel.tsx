@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import type { StyleSheet } from "../lib/api";
+import { useI18n } from "../i18n";
 
 const EMPTY_SHEET: StyleSheet = {
   palette: [],
@@ -12,6 +13,7 @@ const EMPTY_SHEET: StyleSheet = {
 };
 
 export function StyleSheetPanel() {
+  const { t } = useI18n();
   const sheet = useAppStore((s) => s.styleSheet);
   const enabled = useAppStore((s) => s.styleSheetEnabled);
   const extracting = useAppStore((s) => s.styleSheetExtracting);
@@ -50,13 +52,13 @@ export function StyleSheetPanel() {
             disabled={!hasSheet}
             onChange={() => void toggleEnabled()}
           />
-          <span>🎨 Style consistency</span>
-        </label>
+          <span>{t("styleSheet.toggle")}</span>
+          </label>
       </div>
 
       {hasSheet ? (
         <div className="style-sheet-panel__summary">
-          {sheet!.medium && <div><b>Medium:</b> {sheet!.medium}</div>}
+          {sheet!.medium && <div><b>{t("styleSheet.fields.medium")}:</b> {sheet!.medium}</div>}
           {sheet!.palette.length > 0 && (
             <div className="style-sheet-panel__chips">
               {sheet!.palette.slice(0, 6).map((c, i) => (
@@ -64,11 +66,11 @@ export function StyleSheetPanel() {
               ))}
             </div>
           )}
-          {sheet!.mood && <div className="style-sheet-panel__muted">Mood: {sheet!.mood}</div>}
+          {sheet!.mood && <div className="style-sheet-panel__muted">{t("styleSheet.fields.mood")}: {sheet!.mood}</div>}
         </div>
       ) : (
         <div className="style-sheet-panel__muted">
-          No style sheet yet. Extract from the current prompt to lock in a look.
+          {t("styleSheet.emptyHint")}
         </div>
       )}
 
@@ -79,7 +81,7 @@ export function StyleSheetPanel() {
           onClick={() => void extract()}
           disabled={extracting}
         >
-          {extracting ? "Extracting…" : "Extract from prompt"}
+          {extracting ? t("styleSheet.extracting") : t("styleSheet.extract")}
         </button>
         <button
           type="button"
@@ -87,7 +89,7 @@ export function StyleSheetPanel() {
           onClick={openEditor}
           disabled={extracting}
         >
-          Edit
+          {t("styleSheet.edit")}
         </button>
       </div>
 
@@ -111,14 +113,15 @@ type EditorProps = {
 };
 
 function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
+  const { t } = useI18n();
   const update = (patch: Partial<StyleSheet>) => onChange({ ...value, ...patch });
 
   return (
     <div className="style-sheet-editor__backdrop" onClick={onCancel}>
       <div className="style-sheet-editor" onClick={(e) => e.stopPropagation()}>
-        <h3>Edit style sheet</h3>
+        <h3>{t("styleSheet.editorTitle")}</h3>
         <label>
-          Medium
+          {t("styleSheet.fields.medium")}
           <input
             value={value.medium}
             onChange={(e) => update({ medium: e.target.value })}
@@ -126,7 +129,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
           />
         </label>
         <label>
-          Composition
+          {t("styleSheet.fields.composition")}
           <textarea
             rows={2}
             value={value.composition}
@@ -135,7 +138,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
           />
         </label>
         <label>
-          Mood
+          {t("styleSheet.fields.mood")}
           <input
             value={value.mood}
             onChange={(e) => update({ mood: e.target.value })}
@@ -143,7 +146,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
           />
         </label>
         <label>
-          Subject details
+          {t("styleSheet.fields.subject")}
           <textarea
             rows={2}
             value={value.subject_details}
@@ -152,7 +155,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
           />
         </label>
         <label>
-          Palette (comma-separated hex or names)
+          {t("styleSheet.fields.palette")}
           <input
             value={value.palette.join(", ")}
             onChange={(e) =>
@@ -168,7 +171,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
           />
         </label>
         <label>
-          Negative (comma-separated)
+          {t("styleSheet.fields.negative")}
           <input
             value={value.negative.join(", ")}
             onChange={(e) =>
@@ -185,10 +188,10 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
         </label>
         <div className="style-sheet-editor__actions">
           <button type="button" className="btn btn--ghost" onClick={onCancel}>
-            Cancel
+            {t("styleSheet.cancel")}
           </button>
           <button type="button" className="btn btn--primary" onClick={onSave}>
-            Save
+            {t("styleSheet.save")}
           </button>
         </div>
       </div>

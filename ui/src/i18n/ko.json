@@ -230,5 +230,25 @@
     "label": "언어",
     "ko": "한국어",
     "en": "English"
+  },
+  "styleSheet": {
+    "toggle": "🎨 스타일 일관성",
+    "extract": "프롬프트에서 추출",
+    "extracting": "추출 중…",
+    "edit": "편집",
+    "save": "저장",
+    "cancel": "취소",
+    "emptyHint": "아직 스타일 시트가 없어요. 현재 프롬프트에서 추출해서 룩을 고정하세요.",
+    "noPrompt": "먼저 프롬프트를 입력하세요",
+    "extracted": "스타일 시트가 추출됐어요",
+    "editorTitle": "스타일 시트 편집",
+    "fields": {
+      "medium": "매체",
+      "composition": "구도",
+      "mood": "분위기",
+      "subject": "피사체 디테일",
+      "palette": "팔레트 (쉼표로 구분된 hex 또는 이름)",
+      "negative": "네거티브 (쉼표로 구분)"
+    }
   }
 }
