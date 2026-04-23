@@ -490,7 +490,10 @@ app.post("/api/generate", async (req, res) => {
     });
 
     if (!Array.isArray(references) || references.length > config.limits.maxRefCount) {
-      return res.status(400).json({ error: `references must be an array of up to ${config.limits.maxRefCount} base64 strings` });
+      const { code, error } = !Array.isArray(references)
+        ? { code: "REF_NOT_ARRAY", error: "references must be an array" }
+        : { code: "REF_TOO_MANY", error: `references exceed max count of ${config.limits.maxRefCount}` };
+      return res.status(400).json({ error, code });
     }
     const refCheck = validateAndNormalizeRefs(references);
     if (refCheck.error) return res.status(400).json({ error: refCheck.error, code: refCheck.code });
@@ -784,8 +787,13 @@ app.post("/api/node/generate", async (req, res) => {
       });
     }
     if (!Array.isArray(references) || references.length > config.limits.maxRefCount) {
+      const code = !Array.isArray(references) ? "REF_NOT_ARRAY" : "REF_TOO_MANY";
+      const message = !Array.isArray(references)
+        ? "references must be an array"
+        : `references exceed max count of ${config.limits.maxRefCount}`;
       return res.status(400).json({
-        error: { code: "INVALID_REFS", message: `references must be an array of up to ${config.limits.maxRefCount} base64 strings` },
+        error: { code, message },
+        code,
         parentNodeId,
       });
     }

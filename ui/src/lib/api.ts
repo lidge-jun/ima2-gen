@@ -12,8 +12,9 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
     currentVersion?: number;
   };
   if (!res.ok) {
-    const raw = (data as { error?: string | { code?: string; message?: string } })
+    const raw = (data as { error?: string | { code?: string; message?: string }; code?: string })
       .error;
+    const topCode = (data as { code?: string }).code;
     const message =
       typeof raw === "string"
         ? raw
@@ -25,6 +26,7 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
     };
     err.status = res.status;
     if (typeof raw !== "string" && raw?.code) err.code = raw.code;
+    else if (topCode) err.code = topCode;
     if (typeof data.currentVersion === "number") {
       err.currentVersion = data.currentVersion;
     }

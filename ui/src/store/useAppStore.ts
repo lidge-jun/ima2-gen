@@ -1357,7 +1357,23 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().showToast(t("toast.generatedSingle", { elapsed: res.elapsed }));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : t("toast.generateFailed");
+      const e = err as Error & { code?: string };
+      const code = e?.code;
+      const refToastKey =
+        code === "REF_TOO_LARGE"
+          ? "toast.refTooLarge"
+          : code === "REF_NOT_BASE64"
+            ? "toast.refNotBase64"
+            : code === "REF_EMPTY"
+              ? "toast.refEmpty"
+              : code === "REF_TOO_MANY"
+                ? "toast.refLimitExceeded"
+                : null;
+      const msg = refToastKey
+        ? t(refToastKey)
+        : err instanceof Error
+          ? err.message
+          : t("toast.generateFailed");
       get().showToast(msg, true);
     } finally {
       const remaining = get().inFlight.filter((f) => f.id !== flightId);
