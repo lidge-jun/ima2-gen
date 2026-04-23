@@ -289,3 +289,52 @@ export function saveSessionGraph(
     body: JSON.stringify({ nodes, edges }),
   });
 }
+
+// ── Style sheet (0.10) ────────────────────────────────────────────────────
+export type StyleSheet = {
+  palette: string[];
+  composition: string;
+  mood: string;
+  medium: string;
+  subject_details: string;
+  negative: string[];
+};
+export type StyleSheetResponse = {
+  styleSheet: StyleSheet | null;
+  enabled: boolean;
+};
+export function getSessionStyleSheet(id: string): Promise<StyleSheetResponse> {
+  return jsonFetch(`/api/sessions/${encodeURIComponent(id)}/style-sheet`);
+}
+export function saveSessionStyleSheet(
+  id: string,
+  styleSheet: StyleSheet | null,
+  enabled?: boolean,
+): Promise<{ ok: boolean }> {
+  return jsonFetch(`/api/sessions/${encodeURIComponent(id)}/style-sheet`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ styleSheet, enabled }),
+  });
+}
+export function setSessionStyleSheetEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<{ ok: boolean; enabled: boolean }> {
+  return jsonFetch(`/api/sessions/${encodeURIComponent(id)}/style-sheet/enabled`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+}
+export function extractSessionStyleSheet(
+  id: string,
+  prompt: string,
+  referenceDataUrl?: string,
+): Promise<{ styleSheet: StyleSheet }> {
+  return jsonFetch(`/api/sessions/${encodeURIComponent(id)}/style-sheet/extract`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, referenceDataUrl }),
+  });
+}
