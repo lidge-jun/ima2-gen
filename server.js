@@ -1037,6 +1037,11 @@ app.put("/api/sessions/:id/style-sheet", (req, res) => {
         error: { code: "INVALID_SHEET", message: "styleSheet must be an object or null" },
       });
     }
+    if (enabled !== undefined && typeof enabled !== "boolean") {
+      return res.status(400).json({
+        error: { code: "INVALID_ENABLED", message: "enabled must be boolean when provided" },
+      });
+    }
     const ok = setStyleSheet(req.params.id, styleSheet);
     if (!ok) {
       return res.status(404).json({
