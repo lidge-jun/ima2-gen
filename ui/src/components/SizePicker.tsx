@@ -28,37 +28,12 @@ export function SizePicker() {
 
   return (
     <div className="option-group">
-      <div className="section-title">Size</div>
-      <OptionGroup<SizePreset>
-        title=""
-        items={toItems(SIZE_PRESETS_ROW1)}
-        value={sizePreset}
-        onChange={setSizePreset}
-      />
-      <OptionGroup<SizePreset>
-        title=""
-        items={toItems(SIZE_PRESETS_ROW2)}
-        value={sizePreset}
-        onChange={setSizePreset}
-      />
-      <OptionGroup<SizePreset>
-        title=""
-        items={toItems(SIZE_PRESETS_ROW3)}
-        value={sizePreset}
-        onChange={setSizePreset}
-      />
-      <OptionGroup<SizePreset>
-        title=""
-        items={toItems(SIZE_PRESETS_ROW4)}
-        value={sizePreset}
-        onChange={setSizePreset}
-      />
-      <OptionGroup<SizePreset>
-        title=""
-        items={toItems(SIZE_PRESETS_ROW5)}
-        value={sizePreset}
-        onChange={setSizePreset}
-      />
+      <div className="section-title">크기</div>
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW1)} value={sizePreset} onChange={setSizePreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW2)} value={sizePreset} onChange={setSizePreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW3)} value={sizePreset} onChange={setSizePreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW4)} value={sizePreset} onChange={setSizePreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW5)} value={sizePreset} onChange={setSizePreset} />
       {isCustom ? (
         <>
           <div className="option-row">
@@ -69,10 +44,8 @@ export function SizePicker() {
               max={3824}
               step={16}
               value={customW}
-              onChange={(e) =>
-                setCustomSize(parseInt(e.target.value) || 1024, customH)
-              }
-              placeholder="W"
+              onChange={(e) => setCustomSize(parseInt(e.target.value) || 1024, customH)}
+              placeholder="가로"
             />
             <span
               style={{
@@ -91,14 +64,12 @@ export function SizePicker() {
               max={3824}
               step={16}
               value={customH}
-              onChange={(e) =>
-                setCustomSize(customW, parseInt(e.target.value) || 1024)
-              }
-              placeholder="H"
+              onChange={(e) => setCustomSize(customW, parseInt(e.target.value) || 1024)}
+              placeholder="세로"
             />
           </div>
           <div className="size-hint">
-            Min 1024 per side, max 3824, multiples of 16, ratio ≤ 3:1
+            한 변 최소 1024, 최대 3824, 16의 배수, 비율은 최대 3:1
           </div>
         </>
       ) : null}

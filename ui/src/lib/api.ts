@@ -91,6 +91,7 @@ export type HistoryItem = {
   prompt: string | null;
   quality: string | null;
   size: string | null;
+  moderation?: string | null;
   format: string;
   provider: string;
   usage: Record<string, unknown> | null;
@@ -175,6 +176,7 @@ export type NodeGenerateRequest = {
   quality: string;
   size: string;
   format: string;
+  moderation: "low" | "auto";
   provider?: "oauth";
   references?: string[];
   requestId?: string;
@@ -192,6 +194,7 @@ export type NodeGenerateResponse = {
   usage?: { total_tokens?: number } & Record<string, unknown>;
   webSearchCalls: number;
   provider: "oauth";
+  moderation?: string;
 };
 
 export type NodeErrorResponse = {

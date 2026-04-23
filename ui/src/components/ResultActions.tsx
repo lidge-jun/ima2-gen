@@ -19,21 +19,21 @@ export function ResultActions() {
       const res = await fetch(currentImage.image);
       const blob = await res.blob();
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-      showToast("Copied to clipboard");
+      showToast("클립보드에 복사했습니다");
     } catch {
-      showToast("Copy failed", true);
+      showToast("복사에 실패했습니다", true);
     }
   };
 
   const copyPrompt = () => {
     if (!currentImage.prompt) return;
     void navigator.clipboard.writeText(currentImage.prompt);
-    showToast("Prompt copied");
+    showToast("프롬프트를 복사했습니다");
   };
 
   const newFromHere = () => {
     if (!currentImage.prompt) {
-      showToast("No prompt to seed from", true);
+      showToast("가져올 프롬프트가 없습니다", true);
       return;
     }
     setPrompt(currentImage.prompt);
@@ -44,27 +44,27 @@ export function ResultActions() {
       promptEl.focus();
       promptEl.setSelectionRange(promptEl.value.length, promptEl.value.length);
     }
-    showToast("Seeded from this image — edit and generate");
+    showToast("이 이미지의 프롬프트를 가져왔습니다. 수정 후 다시 생성하세요");
   };
 
   return (
     <div className="result-actions">
       <button type="button" className="action-btn" onClick={download}>
-        Download
+        다운로드
       </button>
       <button type="button" className="action-btn" onClick={copyImage}>
-        Copy to clipboard
+        이미지 복사
       </button>
       <button type="button" className="action-btn" onClick={copyPrompt}>
-        Copy prompt
+        프롬프트 복사
       </button>
       <button
         type="button"
         className="action-btn action-btn--primary"
         onClick={newFromHere}
-        title="Seed prompt from this image and continue"
+        title="이 이미지의 프롬프트를 가져와 이어서 작업"
       >
-        New from here
+        여기서 이어서
       </button>
     </div>
   );

@@ -7,9 +7,9 @@ import { CostEstimate } from "./CostEstimate";
 import type { Count, Format, Moderation, Quality } from "../types";
 
 const QUALITY_ITEMS = [
-  { value: "low" as const, label: "Low", sub: "fast" },
-  { value: "medium" as const, label: "Medium", sub: "balanced" },
-  { value: "high" as const, label: "High", sub: "best" },
+  { value: "low" as const, label: "낮음", sub: "빠름" },
+  { value: "medium" as const, label: "중간", sub: "균형" },
+  { value: "high" as const, label: "높음", sub: "최상" },
 ];
 
 const FORMAT_ITEMS = [
@@ -19,13 +19,13 @@ const FORMAT_ITEMS = [
 ];
 
 const MOD_ITEMS = [
+  { value: "auto" as const, label: "자동", sub: "표준 필터" },
   {
     value: "low" as const,
-    label: "Low",
-    sub: "less restrictive",
+    label: "낮음",
+    sub: "완화 필터",
     color: "var(--amber)",
   },
-  { value: "auto" as const, label: "Auto", sub: "standard" },
 ];
 
 const COUNT_ITEMS: { value: string; label: string }[] = [
@@ -49,7 +49,6 @@ export function RightPanel() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  // On mobile the collapsed state = drawer closed; the toggle opens it.
   const drawerOpen = isMobile ? open : true;
 
   const quality = useAppStore((s) => s.quality);
@@ -67,13 +66,13 @@ export function RightPanel() {
         <div
           className="right-panel-backdrop"
           role="button"
-          aria-label="Close settings"
+          aria-label="설정 닫기"
           onClick={toggle}
         />
       ) : null}
       <aside
         className={`right-panel${open ? "" : " collapsed"}${isMobile && drawerOpen ? " drawer-open" : ""}`}
-        aria-label="Detail settings"
+        aria-label="세부 설정"
       >
         <button
           type="button"
@@ -81,9 +80,9 @@ export function RightPanel() {
           aria-expanded={open}
           aria-controls="right-panel-body"
           onClick={toggle}
-          title={open ? "Hide details" : "Show details"}
+          title={open ? "세부 설정 숨기기" : "세부 설정 보기"}
         >
-          {isMobile ? (open ? "✕" : "☰") : open ? "▶" : "◀"}
+          {isMobile ? (open ? "닫기" : "열기") : open ? ">" : "<"}
         </button>
         <div
           id="right-panel-body"
@@ -91,28 +90,31 @@ export function RightPanel() {
           hidden={!open}
         >
           <BillingBar />
-          <div className="section-title">Details</div>
+          <div className="section-title">세부 설정</div>
           <OptionGroup<Quality>
-            title="Quality"
+            title="품질"
             items={QUALITY_ITEMS}
             value={quality}
             onChange={setQuality}
           />
           <SizePicker />
           <OptionGroup<Format>
-            title="Format"
+            title="포맷"
             items={FORMAT_ITEMS}
             value={format}
             onChange={setFormat}
           />
           <OptionGroup<Moderation>
-            title="Moderation"
+            title="모더레이션"
             items={MOD_ITEMS}
             value={moderation}
             onChange={setModeration}
           />
+          <p className="option-help">
+            자동은 표준 안전 필터를 사용합니다. 낮음은 제한을 조금 완화해 경계선 프롬프트가 더 통과할 수 있습니다.
+          </p>
           <OptionGroup<string>
-            title="Count"
+            title="개수"
             items={COUNT_ITEMS}
             value={String(count)}
             onChange={(v) => setCount(Number(v) as Count)}

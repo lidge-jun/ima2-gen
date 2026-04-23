@@ -11,7 +11,7 @@ export function Canvas() {
   const copyPrompt = () => {
     if (!currentImage?.prompt) return;
     void navigator.clipboard.writeText(currentImage.prompt);
-    showToast("Prompt copied");
+    showToast("프롬프트를 복사했습니다");
   };
 
   const displayQuality = currentImage?.quality ?? quality;
@@ -26,7 +26,7 @@ export function Canvas() {
             className="result-img"
             key={currentImage.filename ?? currentImage.url ?? currentImage.image}
             src={currentImage.url ?? currentImage.image}
-            alt="result"
+            alt="생성 결과"
           />
           {currentImage.prompt ? (
             <div className="result-prompt" onClick={copyPrompt}>
@@ -37,14 +37,14 @@ export function Canvas() {
             {[
               currentImage.elapsed != null ? `${currentImage.elapsed}s` : null,
               currentImage.usage
-                ? `${currentImage.usage.total_tokens ?? "?"} tokens`
+                ? `${currentImage.usage.total_tokens ?? "?"} 토큰`
                 : null,
               displayQuality,
               displaySize,
               currentImage.provider ?? null,
             ]
               .filter((v): v is string => Boolean(v))
-              .join("  ·  ")}
+              .join(" · ")}
           </div>
           <ResultActions />
         </div>

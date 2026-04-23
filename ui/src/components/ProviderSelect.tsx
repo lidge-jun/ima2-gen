@@ -16,15 +16,15 @@ function useProviderAvailability(): Record<Provider, ProviderAvailability> {
   const { data } = useBilling();
 
   const oauthReady = oauth?.status === "ready";
-  let oauthReason = "OAuth proxy not ready yet.";
+  let oauthReason = "OAuth 프록시가 아직 준비되지 않았습니다.";
   let oauthHint: string | undefined;
   if (oauth?.status === "auth_required") {
-    oauthReason = "Codex login required.";
-    oauthHint = "Run `codex login` in a terminal, then reload this page.";
+    oauthReason = "Codex 로그인이 필요합니다.";
+    oauthHint = "터미널에서 `codex login`을 실행한 뒤 이 페이지를 새로고침하세요.";
   } else if (oauth?.status === "starting") {
-    oauthReason = "OAuth proxy is starting. Wait a few seconds and try again.";
+    oauthReason = "OAuth 프록시가 시작 중입니다. 몇 초 후 다시 시도하세요.";
   } else if (!oauth) {
-    oauthReason = "Cannot reach the server. Check that the backend is running.";
+    oauthReason = "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.";
   }
 
   const apiOk = data?.apiKeyValid === true;
@@ -35,14 +35,14 @@ function useProviderAvailability(): Record<Provider, ProviderAvailability> {
       ok: apiOk,
       reason: apiOk
         ? ""
-        : "API key is not configured or invalid. Set OPENAI_API_KEY in the server .env file.",
+        : "API 키가 없거나 유효하지 않습니다. 서버의 .env 파일에서 OPENAI_API_KEY를 확인하세요.",
     },
   };
 }
 
 const PROVIDERS: { value: Provider; label: string }[] = [
   { value: "oauth", label: "OAuth" },
-  { value: "api", label: "API Key" },
+  { value: "api", label: "API 키" },
 ];
 
 export function ProviderSelect() {
@@ -65,7 +65,7 @@ export function ProviderSelect() {
 
   return (
     <>
-      <div className="section-title">Provider</div>
+      <div className="section-title">인증 방식</div>
       <div className="provider-row">
         {PROVIDERS.map((p) => {
           const selected = provider === p.value;
@@ -76,8 +76,8 @@ export function ProviderSelect() {
               type="button"
               className={`provider-pill${selected ? " selected" : ""}`}
               onClick={() => handleClick(p.value)}
-              title={ok ? `${p.label} ready` : availability[p.value].reason}
-              aria-label={`${p.label}: ${ok ? "ready" : "unavailable"}`}
+              title={ok ? `${p.label} 사용 가능` : availability[p.value].reason}
+              aria-label={`${p.label}: ${ok ? "사용 가능" : "사용 불가"}`}
               aria-pressed={selected}
             >
               <span
@@ -85,7 +85,7 @@ export function ProviderSelect() {
                 aria-hidden="true"
               />
               <span>{p.label}</span>
-              <span className="sr-only">{ok ? "(ready)" : "(unavailable)"}</span>
+              <span className="sr-only">{ok ? "(사용 가능)" : "(사용 불가)"}</span>
             </button>
           );
         })}
