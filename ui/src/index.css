@@ -1578,3 +1578,119 @@ body {
   font-family: var(--mono, monospace);
   pointer-events: auto;
 }
+
+/* ── Style sheet panel (0.10) ─────────────────────────────────────────── */
+.style-sheet-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.style-sheet-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.style-sheet-panel__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.style-sheet-panel__toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+}
+.style-sheet-panel__summary {
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.style-sheet-panel__summary b {
+  color: var(--text);
+  font-weight: 500;
+}
+.style-sheet-panel__chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.style-sheet-panel__chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.style-sheet-panel__muted {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.style-sheet-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* editor modal */
+.style-sheet-editor__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.style-sheet-editor {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.style-sheet-editor h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+.style-sheet-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.style-sheet-editor input,
+.style-sheet-editor textarea {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  resize: vertical;
+}
+.style-sheet-editor__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
