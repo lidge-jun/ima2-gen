@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import type { StyleSheet } from "../lib/api";
 import { useI18n } from "../i18n";
@@ -24,6 +24,8 @@ export function StyleSheetPanel() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [draft, setDraft] = useState<StyleSheet>(sheet ?? EMPTY_SHEET);
+  const [saving, setSaving] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   if (!activeSessionId) return null;
 
@@ -33,8 +35,24 @@ export function StyleSheetPanel() {
   };
 
   const handleSave = async () => {
-    await save(draft, enabled);
-    setEditorOpen(false);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await save(draft, enabled);
+      setEditorOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async () => {
+    if (toggling) return;
+    setToggling(true);
+    try {
+      await toggleEnabled();
+    } finally {
+      setToggling(false);
+    }
   };
 
   const hasSheet = !!sheet && (
@@ -49,8 +67,8 @@ export function StyleSheetPanel() {
           <input
             type="checkbox"
             checked={enabled}
-            disabled={!hasSheet}
-            onChange={() => void toggleEnabled()}
+            disabled={!hasSheet || toggling}
+            onChange={() => void handleToggle()}
           />
           <span>{t("styleSheet.toggle")}</span>
           </label>
@@ -99,6 +117,7 @@ export function StyleSheetPanel() {
           onChange={setDraft}
           onCancel={() => setEditorOpen(false)}
           onSave={handleSave}
+          saving={saving}
         />
       )}
     </div>
@@ -110,22 +129,37 @@ type EditorProps = {
   onChange: (next: StyleSheet) => void;
   onCancel: () => void;
   onSave: () => void;
+  saving: boolean;
 };
 
-function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
+function StyleSheetEditor({ value, onChange, onCancel, onSave, saving }: EditorProps) {
   const { t } = useI18n();
   const update = (patch: Partial<StyleSheet>) => onChange({ ...value, ...patch });
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel, saving]);
+
   return (
-    <div className="style-sheet-editor__backdrop" onClick={onCancel}>
-      <div className="style-sheet-editor" onClick={(e) => e.stopPropagation()}>
+    <div className="style-sheet-editor__backdrop" onClick={saving ? undefined : onCancel}>
+      <div
+        className="style-sheet-editor"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("styleSheet.editorTitle")}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3>{t("styleSheet.editorTitle")}</h3>
         <label>
           {t("styleSheet.fields.medium")}
           <input
             value={value.medium}
             onChange={(e) => update({ medium: e.target.value })}
-            placeholder="photo / oil painting / anime / 3D render"
+            placeholder={t("styleSheet.placeholderMedium")}
           />
         </label>
         <label>
@@ -134,7 +168,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
             rows={2}
             value={value.composition}
             onChange={(e) => update({ composition: e.target.value })}
-            placeholder="centered portrait, rule of thirds, shallow depth of field…"
+            placeholder={t("styleSheet.placeholderComposition")}
           />
         </label>
         <label>
@@ -142,7 +176,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
           <input
             value={value.mood}
             onChange={(e) => update({ mood: e.target.value })}
-            placeholder="serene, moody, cinematic…"
+            placeholder={t("styleSheet.placeholderMood")}
           />
         </label>
         <label>
@@ -151,7 +185,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
             rows={2}
             value={value.subject_details}
             onChange={(e) => update({ subject_details: e.target.value })}
-            placeholder="identifying features that must persist across generations"
+            placeholder={t("styleSheet.placeholderSubject")}
           />
         </label>
         <label>
@@ -167,7 +201,7 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
                   .slice(0, 6),
               })
             }
-            placeholder="#0a0a0a, #f97316, warm beige"
+            placeholder={t("styleSheet.placeholderPalette")}
           />
         </label>
         <label>
@@ -183,15 +217,15 @@ function StyleSheetEditor({ value, onChange, onCancel, onSave }: EditorProps) {
                   .slice(0, 4),
               })
             }
-            placeholder="blurry, extra fingers, watermark"
+            placeholder={t("styleSheet.placeholderNegative")}
           />
         </label>
         <div className="style-sheet-editor__actions">
-          <button type="button" className="btn btn--ghost" onClick={onCancel}>
+          <button type="button" className="btn btn--ghost" onClick={onCancel} disabled={saving}>
             {t("styleSheet.cancel")}
           </button>
-          <button type="button" className="btn btn--primary" onClick={onSave}>
-            {t("styleSheet.save")}
+          <button type="button" className="btn btn--primary" onClick={onSave} disabled={saving}>
+            {saving ? t("styleSheet.extracting") : t("styleSheet.save")}
           </button>
         </div>
       </div>
