@@ -72,10 +72,20 @@ export const config = {
     maxRefB64Bytes: pickInt(env.IMA2_MAX_REF_B64_BYTES, fileCfg.limits?.maxRefB64Bytes, 7 * 1024 * 1024),
     maxRefCount: pickInt(env.IMA2_MAX_REF_COUNT, fileCfg.limits?.maxRefCount, 5),
     maxParallel: pickInt(env.IMA2_MAX_PARALLEL, fileCfg.limits?.maxParallel, 8),
-    historyDefaultPageSize: pickInt(env.IMA2_HISTORY_PAGE_SIZE, fileCfg.limits?.historyDefaultPageSize, 50),
-    historyMaxPageCap: pickInt(env.IMA2_HISTORY_MAX_PAGE, fileCfg.limits?.historyMaxPageCap, 500),
     graphMaxNodes: pickInt(env.IMA2_GRAPH_MAX_NODES, fileCfg.limits?.graphMaxNodes, 500),
     graphMaxEdges: pickInt(env.IMA2_GRAPH_MAX_EDGES, fileCfg.limits?.graphMaxEdges, 1000),
+  },
+  history: {
+    defaultPageSize: pickInt(
+      env.IMA2_HISTORY_PAGE_SIZE,
+      fileCfg.history?.defaultPageSize ?? fileCfg.limits?.historyDefaultPageSize,
+      50,
+    ),
+    maxPageCap: pickInt(
+      env.IMA2_HISTORY_MAX_PAGE,
+      fileCfg.history?.maxPageCap ?? fileCfg.limits?.historyMaxPageCap,
+      500,
+    ),
   },
   oauth: {
     // Accept both IMA2_OAUTH_PROXY_PORT and legacy OAUTH_PORT.
@@ -98,9 +108,10 @@ export const config = {
   storage: {
     configDir,
     packageRoot,
-    // Legacy layout: generated/ sits next to server.js in the installed package.
     generatedDir: pickStr(env.IMA2_GENERATED_DIR, fileCfg.storage?.generatedDir, join(packageRoot, "generated")),
     trashDir: pickStr(env.IMA2_TRASH_DIR, fileCfg.storage?.trashDir, join(packageRoot, "generated", ".trash")),
+    generatedDirName: pickStr(env.IMA2_GENERATED_DIRNAME, fileCfg.storage?.generatedDirName, "generated"),
+    trashDirName: pickStr(env.IMA2_TRASH_DIRNAME, fileCfg.storage?.trashDirName, ".trash"),
     dbPath: pickStr(env.IMA2_DB_PATH, fileCfg.storage?.dbPath, join(configDir, "sessions.db")),
     configFile: join(configDir, "config.json"),
     advertiseFile: pickStr(env.IMA2_ADVERTISE_FILE, fileCfg.storage?.advertiseFile, join(configDir, "server.json")),

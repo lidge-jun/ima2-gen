@@ -21,6 +21,7 @@ function loadConfig(env = {}) {
       process.stdout.write(JSON.stringify({
         server: c.server,
         limits: c.limits,
+        history: c.history,
         oauth: { ...c.oauth, validModeration: [...c.oauth.validModeration] },
         storage: c.storage,
         ids: c.ids,
@@ -54,8 +55,8 @@ test("config exposes default shape", () => {
   assert.equal(c.oauth.proxyPort, 10531);
   assert.equal(c.oauth.autoStart, true);
   assert.equal(c.limits.maxRefCount, 5);
-  assert.equal(c.limits.historyDefaultPageSize, 50);
-  assert.equal(c.limits.historyMaxPageCap, 500);
+  assert.equal(c.history.defaultPageSize, 50);
+  assert.equal(c.history.maxPageCap, 500);
   assert.equal(c.ids.generatedHexBytes, 4);
   assert.equal(c.ids.nodeHexBytes, 5);
   assert.equal(c.inflight.ttlMs, 600000);

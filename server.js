@@ -57,7 +57,7 @@ if (HAS_API_KEY) {
 
 app.use(express.json({ limit: config.server.bodyLimit }));
 app.use(express.static(join(__dirname, "ui", "dist")));
-app.use("/generated", express.static(join(__dirname, "generated"), {
+app.use("/generated", express.static(config.storage.generatedDir, {
   maxAge: config.storage.staticMaxAge,
   immutable: true,
 }));
@@ -291,7 +291,7 @@ async function listImages(baseDir) {
   async function walk(dir, depth) {
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
     for (const e of entries) {
-      if (e.name === ".trash") continue;
+      if (e.name === config.storage.trashDirName) continue;
       const full = join(dir, e.name);
       if (e.isDirectory() && depth > 0) {
         await walk(full, depth - 1);
@@ -306,12 +306,12 @@ async function listImages(baseDir) {
 
 app.get("/api/history", async (req, res) => {
   try {
-    const dir = join(__dirname, "generated");
+    const dir = config.storage.generatedDir;
     await mkdir(dir, { recursive: true });
     const limitRaw = parseInt(req.query.limit);
     const limit = Math.min(
-      Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : config.limits.historyDefaultPageSize,
-      config.limits.historyMaxPageCap,
+      Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : config.history.defaultPageSize,
+      config.history.maxPageCap,
     );
     const beforeTs = parseInt(req.query.before);
     const beforeFn = typeof req.query.beforeFilename === "string" ? req.query.beforeFilename : null;
@@ -525,7 +525,7 @@ app.post("/api/generate", async (req, res) => {
 
     const mimeMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
     const mime = mimeMap[format] || "image/png";
-    await mkdir(join(__dirname, "generated"), { recursive: true });
+    await mkdir(config.storage.generatedDir, { recursive: true });
 
     const generateOne = async () => {
       const MAX_RETRIES = 1;
@@ -556,7 +556,7 @@ app.post("/api/generate", async (req, res) => {
       if (r.status === "fulfilled" && r.value.b64) {
         const rand = randomBytes(config.ids.generatedHexBytes).toString("hex");
         const filename = `${Date.now()}_${rand}_${images.length}.${format}`;
-        await writeFile(join(__dirname, "generated", filename), Buffer.from(r.value.b64, "base64"));
+        await writeFile(join(config.storage.generatedDir, filename), Buffer.from(r.value.b64, "base64"));
         // Sidecar metadata for /api/history reconstruction
         const meta = {
           prompt,
@@ -571,7 +571,7 @@ app.post("/api/generate", async (req, res) => {
           usage: r.value.usage || null,
           webSearchCalls: r.value.webSearchCalls || 0,
         };
-        await writeFile(join(__dirname, "generated", filename + ".json"), JSON.stringify(meta)).catch(() => {});
+        await writeFile(join(config.storage.generatedDir, filename + ".json"), JSON.stringify(meta)).catch(() => {});
         images.push({
           image: `data:${mime};base64,${r.value.b64}`,
           filename,
@@ -726,9 +726,9 @@ app.post("/api/edit", async (req, res) => {
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    await mkdir(join(__dirname, "generated"), { recursive: true });
+    await mkdir(config.storage.generatedDir, { recursive: true });
     const filename = `${Date.now()}_${randomBytes(config.ids.generatedHexBytes).toString("hex")}.png`;
-    await writeFile(join(__dirname, "generated", filename), Buffer.from(resultB64, "base64"));
+    await writeFile(join(config.storage.generatedDir, filename), Buffer.from(resultB64, "base64"));
     const meta = {
       prompt,
       effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
@@ -743,7 +743,7 @@ app.post("/api/edit", async (req, res) => {
       usage: usage || null,
       webSearchCalls: 0,
     };
-    await writeFile(join(__dirname, "generated", filename + ".json"), JSON.stringify(meta)).catch(() => {});
+    await writeFile(join(config.storage.generatedDir, filename + ".json"), JSON.stringify(meta)).catch(() => {});
 
     res.json({
       image: `data:image/png;base64,${resultB64}`,
@@ -902,7 +902,7 @@ app.post("/api/node/generate", async (req, res) => {
       // Fields consumed by /api/history flat scan (so node images appear in history too)
       quality, size, format, moderation,
     };
-    await mkdir(join(__dirname, "generated"), { recursive: true });
+    await mkdir(config.storage.generatedDir, { recursive: true });
     const { filename } = await saveNode(__dirname, { nodeId, b64, meta, ext: format });
 
     res.json({
