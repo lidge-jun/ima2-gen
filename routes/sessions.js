@@ -266,13 +266,7 @@ export function registerSessionRoutes(app, ctx) {
       const code = err.code || "DB_ERROR";
       const payload = { error: { code, message: err.message } };
       if (typeof err.currentVersion === "number") payload.currentVersion = err.currentVersion;
-      if (code === "GRAPH_VERSION_CONFLICT") {
-        logEvent("session", "graph_conflict", {
-          sessionId: req.params.id,
-          code,
-          currentVersion: err.currentVersion,
-        });
-      } else {
+      if (code !== "GRAPH_VERSION_CONFLICT") {
         logError("session", "graph_error", err, { sessionId: req.params.id, code });
       }
       res.status(err.status || 500).json(payload);

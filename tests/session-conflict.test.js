@@ -23,12 +23,16 @@ assert.ok(
   "new browsers must not auto-attach to the most recent shared session",
 );
 assert.ok(
-  routeSrc.includes('code === "GRAPH_VERSION_CONFLICT"'),
+  routeSrc.includes('code !== "GRAPH_VERSION_CONFLICT"'),
   "graph version conflicts should have an explicit handling branch",
 );
 assert.ok(
-  routeSrc.includes('logEvent("session", "graph_conflict"'),
-  "graph version conflicts should be logged as concurrency events",
+  routeSrc.includes('code !== "GRAPH_VERSION_CONFLICT"'),
+  "graph version conflicts should be treated as expected concurrency responses",
+);
+assert.ok(
+  !routeSrc.includes('logEvent("session", "graph_conflict"'),
+  "graph version conflicts should not spam the terminal",
 );
 
 console.log("session-conflict: ok");
