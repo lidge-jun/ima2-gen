@@ -147,6 +147,22 @@ function saveSelectedFilename(filename: string | null): void {
   } catch {}
 }
 
+function loadActiveSessionId(): string | null {
+  try {
+    const raw = localStorage.getItem("ima2.activeSessionId");
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveSessionId(id: string | null): void {
+  try {
+    if (id) localStorage.setItem("ima2.activeSessionId", id);
+    else localStorage.removeItem("ima2.activeSessionId");
+  } catch {}
+}
+
 const HISTORY_LIMIT = 500;
 const MAX_REFERENCE_IMAGES = 5;
 
@@ -759,10 +775,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { sessions } = await apiListSessions();
       set({ sessions });
       const current = get().activeSessionId;
-      if (!current && sessions.length > 0) {
-        await get().switchSession(sessions[0].id);
-      } else if (!current && sessions.length === 0) {
-        await get().createAndSwitchSession(t("session.firstGraph"));
+      if (!current) {
+        const savedId = loadActiveSessionId();
+        const savedExists = savedId ? sessions.some((s) => s.id === savedId) : false;
+        if (savedId && savedExists) {
+          await get().switchSession(savedId);
+        } else {
+          await get().createAndSwitchSession(t("session.firstGraph"));
+        }
       }
     } catch (err) {
       console.warn("[sessions] load failed:", err);
@@ -782,6 +802,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         graphEdges,
         sessionLoading: false,
       });
+      saveActiveSessionId(id);
       // Serialize reconcile and recovery so the two async writers don't race.
       // reconcileGraphPending already calls recoverGraphNodesFromHistory at the
       // end, but we await it explicitly here so any subsequent tick sees the
@@ -867,6 +888,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         graphNodes: [],
         graphEdges: [],
       });
+      saveActiveSessionId(session.id);
     } catch (err) {
       console.warn("[sessions] create failed:", err);
       get().showToast(t("toast.sessionCreateFailed"), true);
@@ -900,6 +922,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           graphNodes: [],
           graphEdges: [],
         });
+        saveActiveSessionId(null);
         if (remaining.length > 0) {
           await get().switchSession(remaining[0].id);
         } else {
