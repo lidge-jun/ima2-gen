@@ -5,16 +5,18 @@ export type OptionItem<V extends string> = {
   label: ReactNode;
   sub?: ReactNode;
   color?: string;
+  disabled?: boolean;
 };
 
 type Props<V extends string> = {
   title?: string;
+  help?: ReactNode;
   items: ReadonlyArray<OptionItem<V>>;
   value: V;
   onChange: (v: V) => void;
 };
 
-export function OptionGroup<V extends string>({ title, items, value, onChange }: Props<V>) {
+export function OptionGroup<V extends string>({ title, help, items, value, onChange }: Props<V>) {
   return (
     <div className="option-group">
       {title ? <div className="section-title">{title}</div> : null}
@@ -24,6 +26,7 @@ export function OptionGroup<V extends string>({ title, items, value, onChange }:
             key={it.value}
             className={`option-btn${it.value === value ? " active" : ""}`}
             style={it.color ? { color: it.color } : undefined}
+            disabled={it.disabled}
             onClick={() => onChange(it.value)}
             type="button"
           >
@@ -37,6 +40,7 @@ export function OptionGroup<V extends string>({ title, items, value, onChange }:
           </button>
         ))}
       </div>
+      {help ? <p className="option-help">{help}</p> : null}
     </div>
   );
 }

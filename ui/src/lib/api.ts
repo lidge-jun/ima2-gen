@@ -91,6 +91,9 @@ export type HistoryItem = {
   url: string;
   createdAt: number;
   prompt: string | null;
+  userPrompt?: string | null;
+  revisedPrompt?: string | null;
+  promptMode?: "auto" | "direct" | null;
   quality: string | null;
   size: string | null;
   moderation?: string | null;
@@ -180,6 +183,7 @@ export type NodeGenerateRequest = {
   format: string;
   moderation: "low" | "auto";
   provider?: "oauth";
+  mode?: "auto" | "direct";
   references?: string[];
   requestId?: string;
   sessionId?: string | null;
@@ -197,6 +201,8 @@ export type NodeGenerateResponse = {
   webSearchCalls: number;
   provider: "oauth";
   moderation?: string;
+  revisedPrompt?: string | null;
+  promptMode?: "auto" | "direct";
 };
 
 export type NodeErrorResponse = {

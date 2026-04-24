@@ -26,6 +26,9 @@ export type GenerateItem = {
   url?: string;
   filename?: string;
   prompt?: string;
+  userPrompt?: string | null;
+  revisedPrompt?: string | null;
+  promptMode?: "auto" | "direct" | null;
   elapsed?: number;
   provider?: string;
   quality?: string;
@@ -49,6 +52,8 @@ export type GenerateSingleResponse = {
   quality?: string;
   size?: string;
   moderation?: string;
+  revisedPrompt?: string | null;
+  promptMode?: "auto" | "direct";
 };
 
 export type GenerateMultiResponse = {
@@ -60,6 +65,8 @@ export type GenerateMultiResponse = {
   quality?: string;
   size?: string;
   moderation?: string;
+  revisedPrompt?: string | null;
+  promptMode?: "auto" | "direct";
 };
 
 export type GenerateResponse = GenerateSingleResponse | GenerateMultiResponse;
