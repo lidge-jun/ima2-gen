@@ -6,236 +6,164 @@
 
 > **其他语言**: [English](../README.md) · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-`ima2-gen` 是一个本地 CLI + Web 工作室，通过 ChatGPT/Codex OAuth 路径调用 OpenAI 图像生成。它包含 React UI、无头 CLI、持久历史、参考图上传、生产可用的节点分支模式，以及安全的请求日志。
+`ima2-gen` 是一个本地图像生成工作室，让你像使用小型桌面应用一样使用 ChatGPT/Codex OAuth 图像生成流程。
 
-当前图像生成是 **OAuth only**。API key 仍可用于 billing/status 检查和 style-sheet 提取等辅助开发路径，但图像生成端点会明确拒绝 `provider: "api"` 并返回 `APIKEY_DISABLED`，除非你有意在代码中重新打开该策略。
+用 `npx` 启动，登录 Codex OAuth，输入 prompt，然后通过历史记录、参考图、style sheet 和节点分支持续迭代。默认图像生成路径不需要 OpenAI API key。
 
-![ima2-gen 截图](../assets/screenshot.png)
-
----
+![显示 prompt 输入区、生成图片、模型标签和结果元数据的 ima2-gen classic 界面](../assets/screenshots/classic-generate-light.png)
 
 ## 快速开始
 
 ```bash
 npx ima2-gen serve
+```
 
-# 或全局安装
+然后打开 `http://localhost:3333`。
+
+如果还没有登录 Codex：
+
+```bash
+npx @openai/codex login
+npx ima2-gen serve
+```
+
+也可以全局安装：
+
+```bash
 npm install -g ima2-gen
 ima2 serve
 ```
 
-首次运行会进入设置:
+## 能做什么
 
-```text
-1) API Key  — 保存 OpenAI API key，用于支持的辅助路径
-2) OAuth    — 使用 ChatGPT/Codex 账号登录，用于图像生成
-```
+- **Classic mode**：快速生成、编辑，并把当前图片继续作为参考图使用。
+- **Node mode**：从一张满意的图出发，向多个方向分支探索。
+- **Local gallery**：把生成结果保存在本机，并按 session 查看历史。
+- **Reference images**：支持拖放、粘贴和文件选择；大图会在上传前自动压缩。
+- **Style sheets**：保存一套视觉方向，并复用到 classic/node prompt。
+- **Observable jobs**：用 request ID 追踪进行中和最近完成的任务。
 
-当前版本请使用 OAuth 生成图像。如果 Codex 尚未登录:
+## 图像生成只走 OAuth
 
-```bash
-npx @openai/codex login
-ima2 serve
-```
+当前图像生成通过本地 Codex/ChatGPT OAuth 路径执行。
 
-默认 Web UI 地址为 `http://localhost:3333`。
+即使 env/config 里有 API key，它也只可能用于 billing 检查或 style-sheet 提取等辅助功能。生成接口收到 `provider: "api"` 时会返回 `APIKEY_DISABLED`。
 
----
+如果设置页显示 **Configured but disabled**，意思是检测到了 API key，但图像生成仍然使用 OAuth。
 
-## 当前功能
+![显示 OAuth active 与 API key disabled 状态的设置页](../assets/screenshots/settings-oauth-generation.png)
 
-### OAuth 图像生成
+## 模型建议
 
-- `/api/generate` 文生图
-- `/api/edit` 图像编辑 / 图生图
-- 根生成请求最多 5 张参考图
-- Quality: `low`, `medium`, `high`
-- Moderation: `low`, `auto`
-- PNG/JPEG/WebP 输出
-- UI 并行数量: 1、2、4；CLI/server 上限为 8
-- 符合 `gpt-image-2` 约束的尺寸预设
+如果想要稳定、均衡的结果，建议先从 **`gpt-5.4`** 开始。
 
-### UI 工作流
+- `gpt-5.4` — 推荐的均衡选择。
+- `gpt-5.4-mini` — 当前应用默认值，适合快速草稿。
+- `gpt-5.5` — 在支持的环境中是质量最强的选择。但它可能消耗更多额度，也可能需要更新 Codex CLI，或依赖账号/后端路径是否开放对应的图像 capability。
 
-- prompt 输入区支持拖放与 Cmd/Ctrl+V 粘贴图片
-- 将当前图片复用为下一次生成参考
-- 底部画廊条与完整画廊弹窗
-- 生成物删除/恢复
-- 通过标题栏齿轮打开设置工作区
-- 账号/主题设置已从拥挤的侧边栏移出
-- 右侧边栏只保留生成细节选项
-- 刷新后自动恢复并同步进行中任务
+Quality 支持 `low`, `medium`, `high`；moderation 支持 `auto`, `low`。
 
-### 节点模式
+## 工作流
 
-节点模式已在打包后的 Web UI 中可用，可通过 composer 旁边的模式切换打开。
+### Classic mode
 
-- SQLite 图会话
-- 分支式子节点生成
-- Duplicate branch / New from here 流程
-- 根节点级本地参考图，支持 drag/drop、paste 和 file picker
-- 节点 sidecar 与 history 响应记录 reference 使用数量
-- session style sheet 可自动给 classic/node prompt 添加 house style 前缀
-- 画廊按 session title 分组，避免显示裸 server id
+适合快速做出一张图并继续调整。
 
-### 可观测性
+1. 写 prompt。
+2. 需要时添加参考图。
+3. 选择模型、quality、size、format、moderation。
+4. 生成后复制、下载，或继续从当前结果迭代。
 
-- generate/edit/node/OAuth/session/history/inflight 生命周期结构化日志
-- 使用 `requestId` 关联请求
-- 默认 `/api/inflight` 只返回 active jobs
-- `/api/inflight?includeTerminal=1` 才返回最近完成/失败/取消的 terminal jobs
-- 日志不会包含 raw prompt、effective/revised prompt、token、auth header、cookie、request body、reference data URL、generated base64、raw upstream body
+### Node mode
 
----
+适合把想法分叉后对比。
+
+![显示连接节点、生成卡片和节点元数据的 Node mode 界面](../assets/screenshots/node-graph-branching.png)
+
+每个节点都有自己的 prompt 和结果。根节点可以附加本地参考图；子节点会使用父图作为来源。完成的任务会通过 request ID 重新匹配，因此刷新或 graph version conflict 后也能恢复结果。
+
+### Settings 和 Style sheets
+
+Settings workspace 会把账号、模型、主题和语言设置从生成面板中分离出来。
+
+![显示账号区域和生成模型设置的 Settings workspace](../assets/screenshots/settings-workspace.png)
+
+Style sheet 用来保存可复用的视觉方向。
+
+![包含 medium、composition、mood、subject、palette、negative 字段的 style sheet editor](../assets/screenshots/style-sheet-editor.png)
 
 ## CLI 命令
 
-### 服务器命令
+### Server
 
-| 命令 | 别名 | 说明 |
-|---|---|---|
-| `ima2 serve` | — | 启动本地 Web 服务器 |
-| `ima2 setup` | `login` | 重新配置保存的认证 |
-| `ima2 status` | — | 显示配置与 OAuth 会话状态 |
-| `ima2 doctor` | — | 诊断 Node/package/config/auth 状态 |
-| `ima2 open` | — | 打开 Web UI |
-| `ima2 reset` | — | 删除保存的配置 |
-| `ima2 --version` | `-v` | 输出版本 |
-| `ima2 --help` | `-h` | 输出帮助 |
-
-### 客户端命令
-
-需要正在运行的 `ima2 serve`。
-
-| 命令 | 说明 |
+| Command | Description |
 |---|---|
-| `ima2 gen <prompt>` | 从 CLI 生成图像 |
-| `ima2 edit <file> --prompt <text>` | 编辑已有图像 |
-| `ima2 ls` | 列出历史，表格或 `--json` |
-| `ima2 show <name>` | 显示或 reveal 生成物 |
-| `ima2 ps` | 列出进行中 jobs |
-| `ima2 ping` | 健康检查运行中的服务器 |
+| `ima2 serve` | 启动本地 Web server |
+| `ima2 setup` | 重新配置认证 |
+| `ima2 status` | 查看 config 和 OAuth 状态 |
+| `ima2 doctor` | 诊断 Node、package、config、auth |
+| `ima2 open` | 打开 Web UI |
+| `ima2 reset` | 删除已保存的 config |
 
-服务器会在 `~/.ima2/server.json` 广播端口。CLI 自动发现，也可通过 `--server <url>` 或 `IMA2_SERVER=http://localhost:3333` 覆盖。
+### Client
 
-### 退出码
+这些命令需要先运行 `ima2 serve`。
 
-`0` 成功 · `2` 参数错误 · `3` 服务器不可达 · `4` `APIKEY_DISABLED` · `5` 4xx · `6` 5xx · `7` 安全拒绝 · `8` 超时。
+| Command | Description |
+|---|---|
+| `ima2 gen <prompt>` | 从 CLI 生成图片 |
+| `ima2 edit <file> --prompt <text>` | 编辑已有图片 |
+| `ima2 ls` | 查看本地历史 |
+| `ima2 show <name>` | 打开生成文件 |
+| `ima2 ps` | 查看进行中的任务 |
+| `ima2 ping` | 检查 server 是否可用 |
 
----
-
-## API 端点
-
-```text
-GET    /api/health
-GET    /api/providers
-GET    /api/oauth/status
-GET    /api/billing
-GET    /api/inflight
-GET    /api/inflight?includeTerminal=1
-POST   /api/generate
-POST   /api/edit
-GET    /api/history
-GET    /api/history?groupBy=session
-DELETE /api/history/:filename
-POST   /api/history/:filename/restore
-GET    /api/sessions
-POST   /api/sessions
-GET    /api/sessions/:id
-PATCH  /api/sessions/:id
-DELETE /api/sessions/:id
-PUT    /api/sessions/:id/graph
-GET    /api/node/:nodeId
-POST   /api/node/generate
-```
-
-### OAuth 生成请求
-
-```bash
-curl -X POST http://localhost:3333/api/generate \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "prompt": "a shiba in space",
-    "quality": "medium",
-    "size": "1024x1024",
-    "moderation": "low",
-    "provider": "oauth"
-  }'
-```
-
-### API key 设置与启用说明
-
-当前行为:
-
-- 支持的生成路径是 `provider: "oauth"`。
-- `provider: "api"` 在 `routes/generate.js`、`routes/edit.js`、`routes/nodes.js` 中返回 `403` / `APIKEY_DISABLED`。
-- `OPENAI_API_KEY` 或 `~/.ima2/config.json` 中的 API key 可用于 billing probe、style-sheet extraction 等非生成辅助路径。
-
-为辅助路径配置 API key:
-
-```bash
-export OPENAI_API_KEY="sk-..."
-ima2 serve
-```
-
-或写入 `~/.ima2/config.json`:
-
-```json
-{
-  "provider": "api",
-  "apiKey": "sk-..."
-}
-```
-
-如果开发者想重新打开 API-key 图像生成，需要审查并修改:
-
-- `routes/generate.js`
-- `routes/edit.js`
-- `routes/nodes.js`
-
-不要只删除 guard。需要补齐 OpenAI SDK 生成/编辑实现、OAuth/API 双路径测试、billing/error 测试，并同步更新 README。
-
----
+Server 端口会写入 `~/.ima2/server.json`。也可以用 `--server <url>` 或 `IMA2_SERVER=http://localhost:3333` 覆盖。
 
 ## 配置
 
-优先级:
+优先级：
 
 ```text
-环境变量 > ~/.ima2/config.json > 默认值
+environment variables > ~/.ima2/config.json > built-in defaults
 ```
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Description |
 |---|---:|---|
-| `IMA2_PORT` / `PORT` | `3333` | Web 服务器端口 |
-| `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth 代理端口 |
-| `IMA2_SERVER` | — | CLI 目标服务器覆盖 |
-| `IMA2_CONFIG_DIR` | `~/.ima2` | 配置与 SQLite 位置 |
-| `IMA2_GENERATED_DIR` | `generated/` | 生成图片目录 |
-| `IMA2_NO_OAUTH_PROXY` | — | 设为 `1` 禁止自动启动 OAuth proxy |
-| `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | opt-in terminal inflight job 保留时间 |
-| `VITE_IMA2_NODE_MODE` | enabled | UI 构建时设为 `0` 可隐藏节点模式 |
-| `OPENAI_API_KEY` | — | 支持的辅助路径 API key |
+| `IMA2_PORT` / `PORT` | `3333` | Web server port |
+| `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth proxy port |
+| `IMA2_SERVER` | — | CLI target override |
+| `IMA2_CONFIG_DIR` | `~/.ima2` | Config 和 SQLite 位置 |
+| `IMA2_GENERATED_DIR` | `~/.ima2/generated` | 生成图片目录 |
+| `IMA2_NO_OAUTH_PROXY` | — | 设为 `1` 时关闭 OAuth proxy 自动启动 |
+| `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | 调试用 recent job 保留时间 |
+| `OPENAI_API_KEY` | — | 辅助功能用 API key，不用于图像生成 |
 
----
+## API 文档
 
-## 架构
+接口列表已移到 [API Reference](API.md)。
 
-```text
-ima2 serve
-  ├── Express server (:3333)
-  │   ├── routes/ 路由模块
-  │   ├── lib/oauthProxy.js OAuth 图像调用
-  │   ├── generated/ 图片 + sidecar JSON
-  │   ├── better-sqlite3 会话 DB
-  │   └── ui/dist React app
-  ├── openai-oauth proxy (:10531)
-  └── ~/.ima2/server.json 供 CLI 自动发现
-```
+## 常见问题
 
----
+**`ima2 ping` 提示 server unreachable**
+先启动 `ima2 serve`，再检查 `~/.ima2/server.json`。也可以运行 `ima2 ping --server http://localhost:3333`。
 
-## 开发
+**OAuth 登录失败**
+运行 `npx @openai/codex login`，用 `ima2 status` 确认状态，然后重启 `ima2 serve`。
+
+**生成图片时返回 `APIKEY_DISABLED`**
+当前 build 需要使用 OAuth 生成。API-key image generation 是有意关闭的。
+
+**大参考图上传失败**
+JPEG/PNG 会在上传前自动压缩。如果仍然失败，请转成更低分辨率的 JPEG/PNG。HEIC/HEIF 不支持浏览器路径。
+
+**只有 `gpt-5.5` 失败**
+请先更新 Codex CLI 后再试。如果仍然失败，说明当前账号或后端路径下 `gpt-5.5` 的图像 capability 或额度策略可能还不同；稳定替代方案是使用 `gpt-5.4`。
+
+**端口突然变成 `3457`**
+shell 可能继承了其他本地工具的 `PORT=3457`。运行 `unset PORT`，或使用 `IMA2_PORT=3333 ima2 serve`。
+
+## Development
 
 ```bash
 git clone https://github.com/lidge-jun/ima2-gen.git
@@ -246,44 +174,6 @@ npm test
 npm run build
 ```
 
-`npm run dev` 会构建 UI，并以 `--watch` 启动 `server.js`。节点模式现在是 dev 与打包构建中的普通产品界面。只有需要 classic-only bundle 时才设置 `VITE_IMA2_NODE_MODE=0`。
-
-当前测试覆盖 CLI、config、history delete/restore/pagination、reference validation、OAuth parameter normalization、prompt fidelity、inflight tracking、safe logging、route health checks。
-
----
-
-## 故障排查
-
-**`ima2 ping` 无法连接服务器**
-启动 `ima2 serve` 并查看 `~/.ima2/server.json`。也可用 `ima2 ping --server http://localhost:3333` 指定。
-
-**OAuth 登录失败**
-运行 `npx @openai/codex login`，确认 `ima2 status`，然后重启 `ima2 serve`。
-
-**生成图片时出现 `APIKEY_DISABLED`**
-你正在用 API key provider 生成。当前版本请使用 OAuth。
-
-**已配置 API key，但生成仍走 OAuth**
-这是预期行为。API key 当前用于辅助 status/extraction 路径，不用于图像生成。
-
-**端口意外变成 `3457`**
-shell 可能继承了其他工具的 `PORT=3457`。运行 `unset PORT` 或 `IMA2_PORT=3333 ima2 serve`。
-
----
-
-## 最近变更
-
-- 打包构建中启用节点模式
-- 节点级参考图与 branch duplication
-- 节点 reference 使用量 `refsCount` 元数据
-- npm 包包含 modular `routes/` 服务端文件
-- 账号/主题设置工作区
-- Prompt fidelity 与 revised prompt capture
-- OAuth quality `low`, `medium`, `high` 保留
-- 安全结构化日志与 terminal inflight debug snapshot
-- 基于 session title 的画廊分组
-- Windows spawn 相关 CLI 修复
-
-## 许可证
+## License
 
 MIT

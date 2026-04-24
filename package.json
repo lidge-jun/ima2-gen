@@ -1,7 +1,7 @@
 {
   "name": "ima2-gen",
   "version": "1.0.10",
-  "description": "GPT Image 2 generator with OAuth & API key support",
+  "description": "Local OAuth image generation studio with classic and node workflows",
   "type": "module",
   "bin": {
     "ima2": "./bin/ima2.js"
@@ -39,6 +39,7 @@
     "lib/",
     "routes/",
     "ui/dist/",
+    "docs/",
     "assets/",
     "server.js",
     "config.js",
