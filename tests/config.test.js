@@ -101,8 +101,9 @@ test("legacy env alias: OAUTH_PORT falls back", () => {
 });
 
 test("storage paths honor IMA2_CONFIG_DIR", () => {
-  const c = loadConfig({ IMA2_CONFIG_DIR: "/tmp/ima2-custom-xyz" });
-  assert.equal(c.storage.configDir, "/tmp/ima2-custom-xyz");
-  assert.equal(c.storage.configFile, "/tmp/ima2-custom-xyz/config.json");
+  const configDir = "/tmp/ima2-custom-xyz";
+  const c = loadConfig({ IMA2_CONFIG_DIR: configDir });
+  assert.equal(c.storage.configDir, configDir);
+  assert.equal(c.storage.configFile, join(configDir, "config.json"));
   assert.ok(c.storage.dbPath.endsWith("sessions.db"));
 });
