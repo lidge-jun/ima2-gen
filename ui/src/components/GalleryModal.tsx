@@ -97,15 +97,34 @@ export function GalleryModal() {
     };
   }, [open, groupBy]);
 
+  const normalizedQuery = useMemo(
+    () => query.trim().toLowerCase().normalize("NFC"),
+    [query],
+  );
+
+  const matchesQuery = useMemo(() => {
+    if (!normalizedQuery) return () => true;
+    return (h: GenerateItem) =>
+      (h.prompt ?? "").toLowerCase().normalize("NFC").includes(normalizedQuery) ||
+      (h.filename ?? "").toLowerCase().normalize("NFC").includes(normalizedQuery);
+  }, [normalizedQuery]);
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase().normalize("NFC");
-    if (!q) return history;
-    return history.filter(
-      (h) =>
-        (h.prompt ?? "").toLowerCase().normalize("NFC").includes(q) ||
-        (h.filename ?? "").toLowerCase().normalize("NFC").includes(q),
-    );
-  }, [history, query]);
+    if (!normalizedQuery) return history;
+    return history.filter(matchesQuery);
+  }, [history, normalizedQuery, matchesQuery]);
+
+  const filteredSessionGroups = useMemo(() => {
+    if (!normalizedQuery) return sessionGroups;
+    return sessionGroups
+      .map((g) => ({ ...g, items: g.items.filter(matchesQuery) }))
+      .filter((g) => g.items.length > 0);
+  }, [sessionGroups, normalizedQuery, matchesQuery]);
+
+  const filteredLoose = useMemo(() => {
+    if (!normalizedQuery) return loose;
+    return loose.filter(matchesQuery);
+  }, [loose, normalizedQuery, matchesQuery]);
 
   const dateGroups = useMemo(() => {
     const map = new Map<string, GenerateItem[]>();
@@ -200,7 +219,8 @@ export function GalleryModal() {
 
   const showSessions = groupBy === "session";
   const totalVisible = showSessions
-    ? sessionGroups.reduce((a, g) => a + g.items.length, 0) + loose.length
+    ? filteredSessionGroups.reduce((a, g) => a + g.items.length, 0) +
+      filteredLoose.length
     : filtered.length;
 
   return (
@@ -243,11 +263,10 @@ export function GalleryModal() {
           <input
             type="text"
             className="gallery__search"
-            placeholder={showSessions ? "세션 보기에서는 검색이 비활성화됩니다" : "프롬프트나 파일명을 검색"}
+            placeholder="프롬프트나 파일명을 검색 (Esc로 닫기)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
-            disabled={showSessions}
           />
           <button
             type="button"
@@ -263,7 +282,7 @@ export function GalleryModal() {
         <div className="gallery__scroll">
           {showSessions ? (
             <>
-              {sessionGroups.map((g) => (
+              {filteredSessionGroups.map((g) => (
                 <section key={g.sessionId} className="gallery__group">
                   <header className="gallery__group-header">
                     <span className="gallery__group-label">세션 {g.label}</span>
@@ -274,19 +293,23 @@ export function GalleryModal() {
                   </div>
                 </section>
               ))}
-              {loose.length > 0 && (
+              {filteredLoose.length > 0 && (
                 <section className="gallery__group">
                   <header className="gallery__group-header">
                     <span className="gallery__group-label">독립 이미지</span>
-                    <span className="gallery__group-count">{loose.length}</span>
+                    <span className="gallery__group-count">{filteredLoose.length}</span>
                   </header>
                   <div className="gallery__grid">
-                    {loose.map((item, i) => renderTile(item, "loose", i))}
+                    {filteredLoose.map((item, i) => renderTile(item, "loose", i))}
                   </div>
                 </section>
               )}
-              {sessionGroups.length === 0 && loose.length === 0 && (
-                <div className="gallery__empty">아직 저장된 세션이 없습니다.</div>
+              {filteredSessionGroups.length === 0 && filteredLoose.length === 0 && (
+                <div className="gallery__empty">
+                  {normalizedQuery
+                    ? "검색 결과가 없습니다."
+                    : "아직 저장된 세션이 없습니다."}
+                </div>
               )}
             </>
           ) : filtered.length === 0 ? (

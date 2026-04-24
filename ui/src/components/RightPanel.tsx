@@ -80,9 +80,15 @@ export function RightPanel() {
           aria-expanded={open}
           aria-controls="right-panel-body"
           onClick={toggle}
-          title={open ? "세부 설정 숨기기" : "세부 설정 보기"}
+          title={open ? "설정 숨기기" : "설정 보기"}
         >
-          {isMobile ? (open ? "닫기" : "열기") : open ? ">" : "<"}
+          {isMobile ? (
+            <span>{open ? "닫기" : "설정"}</span>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points={open ? "9 18 15 12 9 6" : "15 18 9 12 15 6"} />
+            </svg>
+          )}
         </button>
         <div
           id="right-panel-body"
@@ -90,7 +96,6 @@ export function RightPanel() {
           hidden={!open}
         >
           <BillingBar />
-          <div className="section-title">세부 설정</div>
           <OptionGroup<Quality>
             title="품질"
             items={QUALITY_ITEMS}

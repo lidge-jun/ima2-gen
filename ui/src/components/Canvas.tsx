@@ -7,6 +7,7 @@ export function Canvas() {
   const quality = useAppStore((s) => s.quality);
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
   const showToast = useAppStore((s) => s.showToast);
+  const setPrompt = useAppStore((s) => s.setPrompt);
 
   const copyPrompt = () => {
     if (!currentImage?.prompt) return;
@@ -17,11 +18,82 @@ export function Canvas() {
   const displayQuality = currentImage?.quality ?? quality;
   const displaySize = currentImage?.size ?? getResolvedSize();
 
+  const isGenerating = activeGenerations > 0;
+  const showSkeleton = !currentImage && isGenerating;
+  const showEmpty = !currentImage && !isGenerating;
+
+  const tryExamplePrompt = (text: string) => {
+    setPrompt(text);
+    const el = document.querySelector<HTMLTextAreaElement>(
+      ".composer__textarea",
+    );
+    if (el) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+  };
+
   return (
     <main className="canvas">
-      <div className={`progress-bar${activeGenerations > 0 ? " active" : ""}`} />
-      {currentImage ? (
+      <div className={`progress-bar${isGenerating ? " active" : ""}`} />
+
+      {showEmpty ? (
+        <div className="canvas-empty">
+          <div className="canvas-empty__icon" aria-hidden="true">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </div>
+          <div className="canvas-empty__title">무엇을 만들어볼까요?</div>
+          <div className="canvas-empty__hint">
+            왼쪽에 프롬프트를 입력하고{" "}
+            <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 로 생성하세요.
+          </div>
+          <div className="canvas-empty__examples">
+            {[
+              "비 내리는 도쿄 골목, 네온 반사, 시네마틱 사진",
+              "미니멀한 한국 전통 수묵화, 소나무와 학",
+              "우주복을 입은 시바견, 달 표면, 사실적 렌더링",
+            ].map((p) => (
+              <button
+                key={p}
+                type="button"
+                className="canvas-empty__example"
+                onClick={() => tryExamplePrompt(p)}
+                title="이 예시를 프롬프트로 사용"
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <div className="canvas-empty__shortcuts">
+            팁: 이미지를 드래그&amp;드롭하거나 붙여넣기(<kbd>Ctrl</kbd>+<kbd>V</kbd>)로 참조 추가 ·{" "}
+            <kbd>?</kbd> 로 단축키 전체 보기
+          </div>
+        </div>
+      ) : showSkeleton ? (
+        <div className="canvas-skeleton" role="status" aria-live="polite">
+          <div className="canvas-skeleton__frame">
+            <div className="canvas-skeleton__shimmer" aria-hidden="true" />
+          </div>
+          <div className="canvas-skeleton__label">
+            {activeGenerations > 1
+              ? `${activeGenerations}개 이미지를 생성하고 있어요…`
+              : "이미지를 생성하고 있어요…"}
+          </div>
+          <div className="canvas-skeleton__sub">
+            품질에 따라 10–60초 정도 걸릴 수 있습니다.
+          </div>
+        </div>
+      ) : currentImage ? (
         <div className="result-container visible">
+          {isGenerating ? (
+            <div className="result-pending-badge" aria-live="polite">
+              추가 생성 중 {activeGenerations}개…
+            </div>
+          ) : null}
           <img
             className="result-img"
             key={currentImage.filename ?? currentImage.url ?? currentImage.image}
@@ -29,7 +101,7 @@ export function Canvas() {
             alt="생성 결과"
           />
           {currentImage.prompt ? (
-            <div className="result-prompt" onClick={copyPrompt}>
+            <div className="result-prompt" onClick={copyPrompt} title="클릭하여 프롬프트 복사">
               {currentImage.prompt}
             </div>
           ) : null}

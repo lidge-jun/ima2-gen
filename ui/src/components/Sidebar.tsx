@@ -17,7 +17,7 @@ export function Sidebar() {
         <div className="logo">
           <div className="logo-dot" />
           이미지 생성기
-          <span className="logo-badge">gpt-image-2</span>
+          <span className="logo-badge">GPT 이미지</span>
         </div>
         <UIModeSwitch />
         {uiMode === "classic" ? (

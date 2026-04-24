@@ -6,7 +6,9 @@
 
 > **Read in other languages**: [한국어](docs/README.ko.md) · [日本語](docs/README.ja.md) · [简体中文](docs/README.zh-CN.md)
 
-Minimal CLI + web UI for OpenAI **GPT Image 2** (`gpt-image-2`) image generation. OAuth (free via ChatGPT Plus/Pro) or API key. Parallel generation, multi-image references, CLI automation, persistent history.
+Minimal CLI + web UI for OpenAI image generation. OAuth (free via ChatGPT Plus/Pro) or API key. Parallel generation, multi-image references, CLI automation, persistent history.
+
+Current OAuth mode uses the Responses API with `gpt-5.4` plus the hosted `image_generation` tool. OpenAI's docs indicate that GPT Image models such as `gpt-image-2` can be used behind that tool, but `gpt-image-2` is not a valid `model` value for the Responses API, and the local OAuth proxy used by this app does not expose `/v1/images/generations` for direct model pinning.
 
 ![ima2-gen screenshot](assets/screenshot.png)
 
@@ -54,7 +56,7 @@ Both indicators shown live in the left panel (green dot = ready, red dot = disab
 | **Moderation** | Auto (standard filter) · Low (relaxed filter) |
 | **Count** | 1 · 2 · 4 parallel |
 
-All sizes respect gpt-image-2 constraints: every side is a multiple of 16, long:short ratio ≤ 3:1, 655,360–8,294,400 total pixels.
+All preset sizes follow the current GPT Image sizing constraints: every side is a multiple of 16, long:short ratio ≤ 3:1, 655,360–8,294,400 total pixels.
 
 ### Workflow
 - **Multi-reference** — attach up to 5 reference images, drag & drop anywhere on the left panel

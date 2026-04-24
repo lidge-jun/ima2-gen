@@ -5,6 +5,7 @@ import { NodeCanvas } from "./components/NodeCanvas";
 import { RightPanel } from "./components/RightPanel";
 import { Toast } from "./components/Toast";
 import { GalleryModal } from "./components/GalleryModal";
+import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
 import { IS_DEV_UI } from "./lib/devMode";
 
@@ -56,6 +57,7 @@ export default function App() {
       </div>
       <Toast />
       <GalleryModal />
+      <ShortcutsHelp />
     </>
   );
 }
