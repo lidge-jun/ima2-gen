@@ -4,6 +4,7 @@ export function ResultActions() {
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const vary = useAppStore((s) => s.varyCurrentResult);
 
   if (!currentImage) return null;
 
@@ -49,6 +50,14 @@ export function ResultActions() {
 
   return (
     <div className="result-actions">
+      <button
+        type="button"
+        className="action-btn action-btn--primary"
+        onClick={() => void vary()}
+        title="같은 프롬프트로 한 장 더 생성"
+      >
+        변형
+      </button>
       <button type="button" className="action-btn" onClick={download}>
         다운로드
       </button>
@@ -60,7 +69,7 @@ export function ResultActions() {
       </button>
       <button
         type="button"
-        className="action-btn action-btn--primary"
+        className="action-btn"
         onClick={newFromHere}
         title="이 이미지의 프롬프트를 가져와 이어서 작업"
       >

@@ -252,7 +252,8 @@ type AppState = {
   selectHistory: (item: GenerateItem) => void;
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
-  generate: () => Promise<void>;
+  generate: (overrides?: { overridePrompt?: string; overrideCount?: Count }) => Promise<void>;
+  varyCurrentResult: () => Promise<void>;
   hydrateHistory: () => void;
   showToast: (message: string, error?: boolean) => void;
   getResolvedSize: () => string;
@@ -1040,10 +1041,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     return sizePreset === "custom" ? `${customW}x${customH}` : sizePreset;
   },
 
-  async generate() {
+  async generate(overrides) {
     const s = get();
-    const prompt = s.prompt.trim();
+    const prompt = (overrides?.overridePrompt ?? s.prompt).trim();
     if (!prompt) return;
+    const count = overrides?.overrideCount ?? s.count;
 
     const size = s.getResolvedSize();
 
@@ -1068,7 +1070,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         format: s.format,
         moderation: s.moderation,
         provider: s.provider,
-        n: s.count,
+        n: count,
         requestId: flightId,
         ...(s.referenceImages.length
           ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
@@ -1132,6 +1134,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         inFlight: remaining,
       });
     }
+  },
+
+  varyCurrentResult: async () => {
+    const s = get();
+    const promptFromResult = s.currentImage?.prompt;
+    if (!promptFromResult) {
+      s.showToast("복제할 결과가 없습니다", true);
+      return;
+    }
+    await s.generate({ overridePrompt: promptFromResult, overrideCount: 1 });
   },
 
   hydrateHistory() {
