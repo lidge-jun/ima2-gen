@@ -156,9 +156,9 @@ export function registerNodeRoutes(app, ctx) {
       const startTime = Date.now();
       let parentB64 = null;
       if (parentNodeId) {
-        parentB64 = await loadNodeB64(ctx.rootDir, `${parentNodeId}.png`);
+        parentB64 = await loadNodeB64(ctx.rootDir, `${parentNodeId}.png`, ctx.config.storage.generatedDir);
       } else if (typeof externalSrc === "string" && externalSrc.length > 0) {
-        parentB64 = await loadAssetB64(ctx.rootDir, externalSrc);
+        parentB64 = await loadAssetB64(ctx.rootDir, externalSrc, ctx.config.storage.generatedDir);
       }
       logEvent("node", "request", {
         requestId,
@@ -270,7 +270,13 @@ export function registerNodeRoutes(app, ctx) {
         moderation,
       };
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
-      const { filename } = await saveNode(ctx.rootDir, { nodeId, b64, meta, ext: format });
+      const { filename } = await saveNode(ctx.rootDir, {
+        nodeId,
+        b64,
+        meta,
+        ext: format,
+        generatedDir: ctx.config.storage.generatedDir,
+      });
       finishMeta = { nodeId, filename, imageChars: b64.length };
       finishHttpStatus = 200;
       logEvent("node", "saved", {
@@ -325,7 +331,7 @@ export function registerNodeRoutes(app, ctx) {
   app.get("/api/node/:nodeId", async (req, res) => {
     try {
       const { nodeId } = req.params;
-      const meta = await loadNodeMeta(ctx.rootDir, nodeId);
+      const meta = await loadNodeMeta(ctx.rootDir, nodeId, "png", ctx.config.storage.generatedDir);
       if (!meta) {
         return res.status(404).json({ error: { code: "NODE_NOT_FOUND", message: "Node metadata missing" } });
       }
