@@ -1713,6 +1713,8 @@ body {
 }
 
 .image-node {
+  position: relative;
+  isolation: isolate;
   width: 260px;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1724,7 +1726,36 @@ body {
   font-size: 12px;
   color: var(--text);
 }
-.image-node--pending { border-color: var(--amber); }
+.image-node--pending,
+.image-node--reconciling {
+  border-color: color-mix(in srgb, var(--amber) 70%, var(--accent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--amber) 16%, transparent),
+    0 0 26px color-mix(in srgb, var(--amber) 20%, transparent);
+}
+.image-node--pending::before,
+.image-node--reconciling::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  border-radius: 14px;
+  padding: 2px;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      color-mix(in srgb, var(--amber) 92%, white) 70deg,
+      color-mix(in srgb, var(--accent) 88%, white) 145deg,
+      transparent 220deg,
+      transparent 360deg
+    );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: source-out;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: image-node-border-spin 1.45s linear infinite;
+  pointer-events: none;
+}
 .image-node--ready { border-color: var(--blue); }
 .image-node--error { border-color: var(--red); }
 .image-node__preview {
@@ -1742,6 +1773,9 @@ body {
   height: 100%;
   object-fit: cover;
 }
+.image-node__partial {
+  filter: saturate(1.04) contrast(1.03);
+}
 .image-node__placeholder, .image-node__skeleton {
   color: var(--text-faint);
   font-size: 20px;
@@ -1756,6 +1790,17 @@ body {
   font-size: 12px;
   font-family: inherit;
   resize: vertical;
+}
+
+@keyframes image-node-border-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-node--pending::before,
+  .image-node--reconciling::before {
+    animation: none;
+  }
 }
 .image-node__prompt:focus,
 .image-node__prompt:focus-visible {

@@ -162,6 +162,7 @@
     "error": "오류: {error}",
     "errorUnknown": "알 수 없음",
     "nodeImageAlt": "노드 이미지",
+    "partialImageAlt": "노드 중간 이미지 미리보기",
     "noAsset": "에셋 없음",
     "stateStale": "상태 오래됨",
     "noImage": "이미지 없음",

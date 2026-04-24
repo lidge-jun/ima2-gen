@@ -43,6 +43,7 @@ export type GenerateItem = {
   sessionId?: string | null;
   nodeId?: string | null;
   clientNodeId?: string | null;
+  requestId?: string | null;
   kind?: "classic" | "edit" | "generate" | null;
   refsCount?: number;
 };

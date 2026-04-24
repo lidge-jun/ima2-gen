@@ -126,6 +126,12 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
       <div className="image-node__preview">
         {d.imageUrl && d.status !== "asset-missing" ? (
           <img src={d.imageUrl} alt={t("node.nodeImageAlt")} />
+        ) : isBusy && d.partialImageUrl ? (
+          <img
+            className="image-node__partial"
+            src={d.partialImageUrl}
+            alt={t("node.partialImageAlt")}
+          />
         ) : isBusy ? (
           <div className="image-node__skeleton" />
         ) : d.status === "asset-missing" ? (

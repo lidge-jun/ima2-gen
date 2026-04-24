@@ -19,7 +19,7 @@ import {
   getHistory,
   getInflight,
   cancelInflight,
-  postNodeGenerate,
+  postNodeGenerateStream,
   listSessions as apiListSessions,
   createSession as apiCreateSession,
   getSession as apiGetSession,
@@ -191,8 +191,10 @@ export type ImageNodeData = {
   imageUrl: string | null;
   status: ImageNodeStatus;
   pendingRequestId: string | null;
+  recoveryRequestId?: string | null;
   pendingPhase?: string | null;
   pendingStartedAt?: number | null;
+  partialImageUrl?: string | null;
   error?: string;
   elapsed?: number;
   webSearchCalls?: number;
@@ -224,9 +226,11 @@ function mapSessionToGraph(session: SessionFull): {
       imageUrl,
       status: (d.status ?? (imageUrl ? "ready" : "empty")) as ImageNodeStatus,
       pendingRequestId: (d.pendingRequestId ?? null) as string | null,
+      recoveryRequestId: (d.recoveryRequestId ?? null) as string | null,
       pendingPhase: (d.pendingPhase ?? null) as string | null,
       pendingStartedAt:
         typeof d.pendingStartedAt === "number" ? d.pendingStartedAt : null,
+      partialImageUrl: null,
       error: d.error as string | undefined,
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
@@ -535,6 +539,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           sessionId: it.sessionId ?? null,
           nodeId: it.nodeId ?? null,
           clientNodeId: it.clientNodeId ?? null,
+          requestId: it.requestId ?? null,
           kind: narrowGenerateKind(it.kind),
           refsCount: it.refsCount ?? 0,
         }));
@@ -865,6 +870,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             pendingRequestId: null,
             pendingPhase: null,
             pendingStartedAt: null,
+            partialImageUrl: null,
             status: hasAsset ? ("ready" as const) : ("stale" as const),
             error: hasAsset ? undefined : t("session.assetAbortedError"),
           },
@@ -1294,8 +1300,10 @@ export const useAppStore = create<AppState>((set, get) => ({
                 ...n.data,
                 status: "pending",
                 pendingRequestId: flightId,
+                recoveryRequestId: flightId,
                 pendingPhase: "queued",
                 pendingStartedAt: startedAt,
+                partialImageUrl: null,
                 error: undefined,
               },
             }
@@ -1309,7 +1317,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     let graphMutated = true; // pending set above already mutated the graph if same-session
 
     try {
-      const res = await postNodeGenerate({
+      const res = await postNodeGenerateStream({
         parentNodeId: parentServerNodeId,
         prompt,
         quality: s.quality,
@@ -1322,6 +1330,42 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...(nodeRefs.length && !parentServerNodeId
           ? { references: nodeRefs.map(stripDataUrlPrefix) }
           : {}),
+      }, {
+        onPartial: (partial) => {
+          if (get().activeSessionId !== requestSessionId) return;
+          set({
+            graphNodes: get().graphNodes.map((n) =>
+              n.id === targetClientId
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      status: "pending",
+                      partialImageUrl: partial.image,
+                      pendingPhase: "partial",
+                    },
+                  }
+                : n,
+            ),
+          });
+        },
+        onPhase: (phase) => {
+          if (get().activeSessionId !== requestSessionId) return;
+          if (!phase.phase) return;
+          set({
+            graphNodes: get().graphNodes.map((n) =>
+              n.id === targetClientId
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      pendingPhase: phase.phase ?? n.data.pendingPhase,
+                    },
+                  }
+                : n,
+            ),
+          });
+        },
       });
       if (get().activeSessionId === requestSessionId) {
         set({
@@ -1329,6 +1373,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             if (n.id !== targetClientId) return n;
             const nextData = { ...n.data };
             delete nextData.referenceImages;
+            delete nextData.partialImageUrl;
             return {
               ...n,
               data: {
@@ -1337,6 +1382,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 imageUrl: res.url,
                 status: "ready",
                 pendingRequestId: null,
+                recoveryRequestId: null,
                 pendingPhase: null,
                 pendingStartedAt: null,
                 elapsed: res.elapsed,
@@ -1364,6 +1410,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                     pendingRequestId: null,
                     pendingPhase: null,
                     pendingStartedAt: null,
+                    partialImageUrl: null,
                     error: msg,
                   },
                 }
@@ -1624,7 +1671,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           sessionId: it.sessionId ?? null,
           nodeId: it.nodeId ?? null,
           clientNodeId: it.clientNodeId ?? null,
+          requestId: it.requestId ?? null,
           kind: narrowGenerateKind(it.kind),
+          refsCount: it.refsCount ?? 0,
         }));
         if (history.length > 0) {
           const selected = loadSelectedFilename();
@@ -1663,12 +1712,14 @@ let saveGraphPromise: Promise<void> | null = null;
 function sanitizeForSave(d: ImageNodeData): Record<string, unknown> {
   const safe = { ...(d as unknown as Record<string, unknown>) };
   delete safe.referenceImages;
+  delete safe.partialImageUrl;
   const shouldSanitize = d.status === "pending" || d.status === "reconciling";
   if (!shouldSanitize) return safe;
   return {
     ...safe,
     status: "empty",
     pendingRequestId: null,
+    recoveryRequestId: d.pendingRequestId ?? d.recoveryRequestId ?? null,
     pendingPhase: null,
     pendingStartedAt: null,
     error: undefined,
@@ -1697,6 +1748,7 @@ async function recoverGraphNodesFromHistory(
     sessionId?: string | null;
     nodeId?: string | null;
     clientNodeId?: string | null;
+    requestId?: string | null;
   }> = [];
   try {
     const res = await getHistory({ sessionId: sid, limit: HISTORY_LIMIT });
@@ -1710,7 +1762,15 @@ async function recoverGraphNodesFromHistory(
   const next = get().graphNodes.map((n) => {
     if (n.data.imageUrl || n.data.serverNodeId) return n;
     const startedAt = n.data.pendingStartedAt ?? 0;
-    const recovered = items.find(
+    const requestKey = n.data.pendingRequestId ?? n.data.recoveryRequestId ?? null;
+    const byRequest = requestKey
+      ? items.find(
+          (h) =>
+            (h.sessionId ?? null) === sid &&
+            (h.requestId ?? null) === requestKey,
+        )
+      : null;
+    const recovered = byRequest ?? items.find(
       (h) =>
         (h.sessionId ?? null) === sid &&
         (h.clientNodeId ?? null) === n.id &&
@@ -1726,8 +1786,10 @@ async function recoverGraphNodesFromHistory(
         imageUrl: recovered.url, // canonical — jpeg/webp all covered
         serverNodeId: recovered.nodeId ?? n.data.serverNodeId,
         pendingRequestId: null,
+        recoveryRequestId: null,
         pendingPhase: null,
         pendingStartedAt: null,
+        partialImageUrl: null,
         error: undefined,
       },
     };

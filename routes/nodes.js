@@ -22,9 +22,40 @@ function validateModeration(ctx, moderation) {
   return { moderation };
 }
 
+function wantsSse(req) {
+  const accept = typeof req.headers.accept === "string" ? req.headers.accept : "";
+  return accept.includes("text/event-stream");
+}
+
+function writeSse(res, event, data) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function writeNodeError(res, status, code, message, parentNodeId) {
+  if (res.headersSent) {
+    writeSse(res, "error", {
+      error: { code, message },
+      parentNodeId,
+      status,
+    });
+    res.end();
+    return;
+  }
+  res.status(status).json({
+    error: { code, message },
+    parentNodeId,
+  });
+}
+
+function dataUrlFromB64(format, b64) {
+  return `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`;
+}
+
 export function registerNodeRoutes(app, ctx) {
   app.post("/api/node/generate", async (req, res) => {
     const body = req.body || {};
+    const streamResponse = wantsSse(req);
     const parentNodeId = body.parentNodeId ?? null;
     const requestId = typeof body.requestId === "string" ? body.requestId : null;
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : null;
@@ -144,6 +175,15 @@ export function registerNodeRoutes(app, ctx) {
         styleSheetApplied: !!styleSheetApplied,
       });
 
+      if (streamResponse) {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        });
+        writeSse(res, "phase", { requestId, phase: "streaming" });
+      }
+
       let b64, usage, webSearchCalls = 0, revisedPrompt = null;
       const MAX_RETRIES = 1;
       let lastErr;
@@ -151,7 +191,27 @@ export function registerNodeRoutes(app, ctx) {
         try {
           const r = parentB64
             ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId)
-            : await generateViaOAuth(effectivePrompt, quality, size, moderation, refCheck.refs, requestId, normalizedPromptMode, ctx);
+            : await generateViaOAuth(
+                effectivePrompt,
+                quality,
+                size,
+                moderation,
+                refCheck.refs,
+                requestId,
+                normalizedPromptMode,
+                ctx,
+                {
+                  partialImages: streamResponse ? 2 : 0,
+                  onPartialImage: streamResponse
+                    ? (partial) =>
+                        writeSse(res, "partial", {
+                          requestId,
+                          image: dataUrlFromB64(format, partial.b64),
+                          index: partial.index,
+                        })
+                    : null,
+                },
+              );
           if (r.b64) {
             b64 = r.b64;
             usage = r.usage;
@@ -172,10 +232,13 @@ export function registerNodeRoutes(app, ctx) {
         finishStatus = "error";
         finishHttpStatus = 422;
         finishErrorCode = "SAFETY_REFUSAL";
-        return res.status(422).json({
-          error: { code: "SAFETY_REFUSAL", message: lastErr?.message || "Empty response after retry" },
+        return writeNodeError(
+          res,
+          422,
+          "SAFETY_REFUSAL",
+          lastErr?.message || "Empty response after retry",
           parentNodeId,
-        });
+        );
       }
 
       const nodeId = newNodeId();
@@ -199,6 +262,7 @@ export function registerNodeRoutes(app, ctx) {
         webSearchCalls,
         provider: "oauth",
         kind: parentB64 ? "edit" : "generate",
+        requestId,
         refsCount: refCheck.refs.length,
         quality,
         size,
@@ -217,11 +281,11 @@ export function registerNodeRoutes(app, ctx) {
         elapsedMs: Date.now() - startTime,
       });
 
-      res.json({
+      const payload = {
         nodeId,
         parentNodeId,
         requestId,
-        image: `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`,
+        image: dataUrlFromB64(format, b64),
         filename,
         url: `/generated/${filename}`,
         elapsed,
@@ -233,17 +297,21 @@ export function registerNodeRoutes(app, ctx) {
         warnings: qualityWarnings,
         revisedPrompt,
         promptMode: normalizedPromptMode,
-      });
+      };
+
+      if (streamResponse) {
+        writeSse(res, "done", payload);
+        res.end();
+      } else {
+        res.json(payload);
+      }
     } catch (err) {
       const code = err.code || classifyUpstreamError(err.message) || "NODE_GEN_FAILED";
       finishStatus = "error";
       finishHttpStatus = err.status || 500;
       finishErrorCode = code;
       logError("node", "error", err, { requestId, code, parentNodeId, sessionId, clientNodeId });
-      res.status(err.status || 500).json({
-        error: { code, message: err.message },
-        parentNodeId,
-      });
+      writeNodeError(res, err.status || 500, code, err.message, parentNodeId);
     } finally {
       finishJob(requestId, {
         status: finishStatus,

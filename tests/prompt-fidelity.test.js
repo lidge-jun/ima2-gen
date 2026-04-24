@@ -19,10 +19,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverPath = join(__dirname, "..", "server.js");
 const historyListPath = join(__dirname, "..", "lib", "historyList.js");
 const nodeRoutePath = join(__dirname, "..", "routes", "nodes.js");
+const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
 
 const src = await readFile(serverPath, "utf8");
 const historySrc = await readFile(historyListPath, "utf8");
 const nodeSrc = await readFile(nodeRoutePath, "utf8");
+const apiSrc = await readFile(apiPath, "utf8");
 
 // Ensure both suffix constants and the builder exist
 assert.ok(src.includes("buildApp"), "buildApp export missing after server split");
@@ -30,9 +32,13 @@ assert.ok(historySrc.includes("revisedPrompt"), "history revisedPrompt field mis
 assert.ok(historySrc.includes("promptMode"), "history promptMode field missing");
 assert.ok(historySrc.includes("userPrompt"), "history userPrompt field missing");
 assert.ok(historySrc.includes("refsCount"), "history refsCount field missing");
+assert.ok(historySrc.includes("requestId"), "history requestId field missing");
 assert.ok(nodeSrc.includes("normalizedPromptMode"), "node prompt mode propagation missing");
 assert.ok(nodeSrc.includes("userPrompt"), "node userPrompt meta field missing");
 assert.ok(nodeSrc.includes("refsCount"), "node refsCount meta field missing");
+assert.ok(nodeSrc.includes("partialImages: streamResponse ? 2 : 0"), "node partial_images opt-in missing");
+assert.ok(apiSrc.includes("postNodeGenerateStream"), "node SSE client missing");
+assert.ok(apiSrc.includes('Accept: "text/event-stream"'), "node SSE Accept header missing");
 
 assert.equal(PROMPT_FIDELITY_SUFFIX, AUTO_PROMPT_FIDELITY_SUFFIX);
 assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("only append English clarifiers at the end when helpful"));

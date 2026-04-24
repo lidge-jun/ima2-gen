@@ -162,6 +162,7 @@
     "error": "Error: {error}",
     "errorUnknown": "unknown",
     "nodeImageAlt": "Node image",
+    "partialImageAlt": "Partial node image preview",
     "noAsset": "No asset",
     "stateStale": "State stale",
     "noImage": "No image",

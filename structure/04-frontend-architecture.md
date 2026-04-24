@@ -70,6 +70,7 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | `restoreHistoryItem` | `POST /api/history/:filename/restore` | Undo/restore |
 | `getInflight` | `GET /api/inflight` | Pending reconciliation |
 | `postNodeGenerate` | `POST /api/node/generate` | Node-mode generation |
+| `postNodeGenerateStream` | `POST /api/node/generate` with `Accept: text/event-stream` | Node-mode partial preview streaming |
 | Session helpers | `/api/sessions/*` | Graph session list/load/save |
 | `getOAuthStatus` | `GET /api/oauth/status` | Provider readiness |
 | `getBilling` | `GET /api/billing` | Billing bar and API status |
@@ -79,9 +80,11 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | Mode | Condition | Main component | State flow |
 |---|---|---|---|
 | Classic | Default UI | `Canvas.tsx` | Sends prompt to `/api/generate`, then updates current image/history |
-| Node | Product feature enabled | `NodeCanvas.tsx` | Calls `/api/node/generate` per node and saves the graph to the session |
+| Node | Product feature enabled | `NodeCanvas.tsx` | Calls `/api/node/generate` per node, renders partial previews when streamed, and saves the graph to the session |
 
 Node mode uses `@xyflow/react`. Empty canvas creates a root node. Dragging an edge from an existing node can create a child node. Session loading displays a canvas overlay.
+
+Node generation uses SSE first through `postNodeGenerateStream()`. Partial images are stored only in transient `ImageNodeData.partialImageUrl`; they are deleted from the graph save payload. The final `done` payload replaces the preview with the canonical saved file URL. If the server returns JSON instead of SSE, the client falls back to the final-only behavior.
 
 ## Style And Layout
 
@@ -104,6 +107,7 @@ Node mode uses `@xyflow/react`. Empty canvas creates a root node. Dragging an ed
 
 - 2026-04-23: Documented the active React UI architecture.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-24: Documented node SSE partial preview rendering and JSON fallback.
 
 Previous document: `[[03-server-api]]`
 

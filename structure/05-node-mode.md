@@ -26,12 +26,14 @@ sequenceDiagram
     participant DB as SQLite session
 
     UI->>Store: add root or child node
-    Store->>API: POST /api/node/generate
+    Store->>API: POST /api/node/generate with requestId
     API->>Files: load parent image if needed
     API->>OAuth: generate or edit image
+    OAuth-->>API: partial image events for root generation
+    API-->>Store: SSE partial preview events
     OAuth-->>API: image result
     API->>Files: save node image and metadata
-    API-->>Store: nodeId filename url
+    API-->>Store: SSE done or JSON nodeId filename url
     Store->>API: PUT /api/sessions/:id/graph
     API->>DB: save graph version
 ```
@@ -77,6 +79,16 @@ sequenceDiagram
 
 `PUT /api/sessions/:id/graph` uses version-based saving. The client sends the current `graphVersion` in the `If-Match` header. The server returns the new `graphVersion` on success.
 
+## Streaming And Recovery
+
+Root node generation requests use `postNodeGenerateStream()` and ask the server for `Accept: text/event-stream`. The server relays upstream partial images as `partial` events before the canonical `done` event. Child/edit nodes currently use the same route but remain final-only, because combining parent-edit semantics with extra progressive previews needs separate provider validation.
+
+`ImageNode` renders `data.partialImageUrl` while a node is `pending` or `reconciling`. This value is transient UI state only. `sanitizeForSave()` strips it before session graph persistence so base64 previews never inflate SQLite payloads.
+
+Each node request writes `requestId` into the node sidecar and `/api/history`. Recovery uses `pendingRequestId ?? recoveryRequestId` first, then falls back to `(sessionId, clientNodeId, createdAt)`. This avoids accidentally attaching an older retry result after reload or HMR.
+
+Pending and reconciling cards use a transform-only rotating border glow. Reduced-motion users keep the static glow without rotation.
+
 ## Parent And External Source Inputs
 
 | Input | Server behavior | Used when |
@@ -111,7 +123,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 | Generation endpoint | `/api/generate` | `/api/node/generate` |
 | Storage | Sidecar JSON and flat history | Node metadata and session graph |
 | Restore path | `/api/history`, localStorage selected item | `/api/sessions/:id`, graphVersion |
-| Pending display | In-flight list | Per-node status |
+| Pending display | In-flight list | Per-node status, streamed partial preview, animated border glow |
 
 ## Change Checklist
 
@@ -124,6 +136,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 ## Change Log
 
 - 2026-04-24: Documented node-local reference inputs, parked classic references, and the child/edit reference guard.
+- 2026-04-24: Documented partial-image SSE streaming, requestId recovery, and pending-node glow.
 - 2026-04-23: Documented the implemented node canvas, node API, and session persistence structure.
 - 2026-04-23: Translated this document from Korean to English.
 

@@ -84,6 +84,10 @@ The inflight registry tracks both classic and node jobs. The default response is
 
 When `parentNodeId` is present, the server reads the stored parent image and uses the edit path. Without a parent node, it generates a new image and may pass root-node `references` to OAuth generation. `refsCount` is stored as numeric metadata only; reference image base64 is not written to sidecars. `externalSrc` is a controlled fallback for promoting an existing history asset into a node workflow.
 
+`/api/node/generate` also supports an SSE response when the client sends `Accept: text/event-stream`. In that mode validation still happens before headers are opened. After the stream opens, the server may emit `phase`, `partial`, `done`, and `error` events. Root generation opts into OAuth `partial_images: 2`; child/edit generation stays final-only for now. Clients must treat partial events as progressive previews only and use the `done` payload as the canonical saved node.
+
+Node sidecars include `requestId` as recovery metadata. `/api/history` exposes the same field so a reloaded graph can match completed assets by request id before falling back to `(sessionId, clientNodeId, createdAt)`.
+
 ## Session DB API
 
 | Method | Path | Body or header | Response |
@@ -128,7 +132,7 @@ Logs must never include raw prompts, effective prompts, revised prompts, OAuth/A
 
 - 2026-04-23: Documented the current `server.js` endpoint surface and response shapes.
 - 2026-04-23: Translated this document from Korean to English.
-- 2026-04-24: Added observability, terminal inflight, and gallery session-title response notes.
+- 2026-04-24: Added node SSE partial streaming, requestId sidecar/history recovery, observability, terminal inflight, and gallery session-title response notes.
 
 Previous document: `[[02-command-reference]]`
 
