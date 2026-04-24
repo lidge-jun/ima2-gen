@@ -1,12 +1,12 @@
 # ima2-gen
 
 [![npm version](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Read in other languages**: [한국어](docs/README.ko.md) · [日本語](docs/README.ja.md) · [简体中文](docs/README.zh-CN.md)
 
-Minimal CLI + web UI for OpenAI **GPT Image 2** (`gpt-image-2`) image generation. OAuth (free via ChatGPT Plus/Pro) or API key. Parallel generation, multi-image references, CLI automation, persistent history.
+A minimal CLI and web UI for OpenAI's **GPT Image 2** (`gpt-image-2`) image generation. Supports OAuth (free via ChatGPT Plus/Pro) or API key authentication. Features include parallel generation, multi-image references, CLI automation, and persistent history.
 
 ![ima2-gen screenshot](assets/screenshot.png)
 
@@ -37,13 +37,13 @@ Web UI opens at `http://localhost:3333`.
 
 ## Features
 
-Everything in the screenshot above, shipping today:
+All features shown in the screenshot are available today:
 
 ### Authentication
 - **OAuth** — log in with your ChatGPT Plus/Pro account, $0 per image
 - **API Key** — paste your `sk-...` key, pay per call
 
-Both indicators shown live in the left panel (green dot = ready, red dot = disabled). API key path is hard-disabled by default; OAuth is the primary route.
+Authentication status is indicated live in the left panel (green dot = ready, red dot = disabled). By default, the API key method is disabled, making OAuth the primary route.
 
 ### Generation controls
 | Control | Options |
@@ -54,18 +54,18 @@ Both indicators shown live in the left panel (green dot = ready, red dot = disab
 | **Moderation** | Low (relaxed filter, default) · Auto (standard filter) |
 | **Count** | 1 · 2 · 4 parallel |
 
-All sizes respect gpt-image-2 constraints: every side is a multiple of 16, long:short ratio ≤ 3:1, 655,360–8,294,400 total pixels.
+All sizes adhere to `gpt-image-2` constraints: every side must be a multiple of 16, the long-to-short ratio must be ≤ 3:1, and the total pixel count must be between 655,360 and 8,294,400.
 
 ### Workflow
-- **Multi-reference** — attach up to 5 reference images, drag & drop anywhere on the left panel
-- **Prompt-with-context** — mixes text + reference images in one request
-- **Use current** — one-click re-use of the selected image as a new reference
-- **Download** · **Copy to clipboard** · **Copy prompt** directly from the canvas
-- **Sticky gallery strip** at the bottom, fixed-position so it never scrolls away
-- **Gallery modal (+)** — grid view of everything in history
-- **Session persistence** — refresh mid-generation and your pending jobs reconcile automatically
+- **Multi-reference**: Attach up to 5 reference images by dragging and dropping them anywhere on the left panel.
+- **Prompt with context**: Combine text and reference images in a single request.
+- **Use current**: Re-use the selected image as a new reference with a single click.
+- **Canvas actions**: Download, copy to clipboard, or copy the prompt directly from the canvas.
+- **Sticky gallery strip**: A fixed-position gallery strip at the bottom that never scrolls out of view.
+- **Gallery modal (+)**: A comprehensive grid view of your entire generation history.
+- **Session persistence**: Safely refresh the page mid-generation; your pending jobs will automatically reconcile.
 
-### CLI (headless automation)
+### CLI (Headless Automation)
 ```bash
 ima2 gen "a shiba in space" -q high -o shiba.png
 ima2 gen "merge these" --ref a.png --ref b.png -n 4 -d out/
@@ -74,7 +74,7 @@ ima2 ps
 ima2 ping
 ```
 
-Full command matrix below ↓
+See the full command matrix below.
 
 ---
 
@@ -92,7 +92,7 @@ Full command matrix below ↓
 | `ima2 --version` | `-v` | Show version |
 | `ima2 --help` | `-h` | Show help |
 
-### Client commands (require a running `ima2 serve`)
+### Client Commands (requires a running `ima2 serve`)
 | Command | Description |
 |---------|-------------|
 | `ima2 gen <prompt>` | Generate image(s) from the CLI |
@@ -102,45 +102,45 @@ Full command matrix below ↓
 | `ima2 ps` | List active jobs (`--kind`, `--session`) |
 | `ima2 ping` | Health-check the running server |
 
-The running server advertises itself at `~/.ima2/server.json`. Client commands auto-discover it; override with `--server <url>` or `IMA2_SERVER=...`.
+The running server advertises its port via `~/.ima2/server.json`. Client commands will automatically discover it; you can override this by using `--server <url>` or setting `IMA2_SERVER=...`.
 
 ### Exit codes
-`0` ok · `2` bad args · `3` server unreachable · `4` APIKEY_DISABLED · `5` 4xx · `6` 5xx · `7` safety refusal · `8` timeout.
+`0` OK · `2` Bad arguments · `3` Server unreachable · `4` APIKEY_DISABLED · `5` 4xx error · `6` 5xx error · `7` Safety refusal · `8` Timeout.
 
 ---
 
 ## Roadmap
 
-Public roadmap — subject to change. Version numbers reflect the actual ship cycle, not time estimates.
+Public roadmap (subject to change). Version numbers reflect the actual release cycle, not time estimates.
 
 ### ✅ Shipped
 - **0.06** Session DB — SQLite-backed history with sidecar JSON
 - **0.07** Multi-reference — up to 5 attachments, i2i merged into unified flow
-- **0.08** Inflight tracking — refresh-safe pending state, phase tracking
-- **0.09** Node mode (dev-only) — graph-based canvas for branching generations
-- **0.09.1** CLI integration — `gen / edit / ls / show / ps / ping` + `/api/health` + port advertisement
+- **0.08** In-flight tracking — Refresh-safe pending state and phase tracking
+- **0.09** Node mode (dev-only) — Graph-based canvas for branching generations
+- **0.09.1** CLI integration — `gen` / `edit` / `ls` / `show` / `ps` / `ping` + `/api/health` + port advertisement
 
-### 🚧 0.10 — Compare & Reuse (current cycle)
-- **F3 Prompt presets** — save/apply `{prompt, refs, quality, size}` bundles
-- **F3 Gallery groupBy** — `preset / date / compareRun` grouping
-- **F2 Batch A/B compare** — spawn 2–6 parallel variants from one prompt, keyboard-driven judging (`1-6`, `Space`=winner, `V`=variation, `P`=save preset)
-- **F4 Export bundle** — zip selected images with `manifest.json` + per-image prompt `.txt`
-- Every server verb ships with its CLI mirror (`ima2 preset / compare / export`)
+### 🚧 0.10 — Compare & Reuse (Current Cycle)
+- **F3 Prompt presets** — Save and apply `{prompt, refs, quality, size}` bundles
+- **F3 Gallery groupBy** — Group by `preset`, `date`, or `compareRun`
+- **F2 Batch A/B compare** — Spawn 2–6 parallel variants from a single prompt with keyboard-driven judging (`1-6`, `Space` = winner, `V` = variation, `P` = save preset)
+- **F4 Export bundle** — Zip selected images along with a `manifest.json` and a `.txt` prompt file per image
+- Every server action ships with its CLI counterpart (`ima2 preset / compare / export`)
 
-### 🔭 0.11 — Card-news mode
-- Instagram carousel generation (4 / 6 / 10 cards)
-- Style consistency via `file_id` fan-out (not `previous_response_id`, not seed)
-- Parallel card regeneration without breaking the style chain
+### 🔭 0.11 — Card-News Mode
+- Instagram carousel generation (4, 6, or 10 cards)
+- Maintain style consistency via `file_id` fan-out (instead of `previous_response_id` or seeds)
+- Support parallel card regeneration without breaking the style chain
 
-### 🔭 0.12 — Style kit
-- Codified house-style presets with style-reference uploads
+### 🔭 0.12 — Style Kit
+- Codified house-style presets using style-reference uploads
 - Optional `input_fidelity: "high"` for identity-critical edits
 
 ### 🗂 Backlog
-- Web UI dark/light toggle
-- Keyboard shortcuts cheat-sheet overlay
-- Collaborative sessions (shared SQLite over WebSocket)
-- Plugin system for custom post-processing
+- Dark/light mode toggle for the Web UI
+- Overlay cheat-sheet for keyboard shortcuts
+- Collaborative sessions (shared SQLite via WebSocket)
+- Plugin system for custom post-processing tasks
 
 ---
 
@@ -164,13 +164,13 @@ ima2 serve
   └── ~/.ima2/server.json          — port advertisement for CLI auto-discovery
 ```
 
-**Node mode** is dev-only (`npm run dev`) and gated from npm publishes until the session DB + multi-user story lands.
+**Node mode** is dev-only (`npm run dev`) and will remain excluded from npm releases until the session DB and multi-user features are finalized.
 
 ---
 
 ## Configuration
 
-Config lives in `.ima2/config.json` (auto-created, gitignored).
+Configuration is stored in `~/.ima2/config.json` (auto-created and gitignored).
 
 ### Environment Variables
 | Variable | Default | Description |
@@ -186,7 +186,7 @@ cp .env.example .env
 
 ---
 
-## API Pricing (API Key mode only)
+## API Pricing (API Key Mode Only)
 
 | Quality | 1024×1024 | 1024×1536 | 1536×1024 | 2048×2048 | 3840×2160 |
 |---------|-----------|-----------|-----------|-----------|-----------|
@@ -194,7 +194,7 @@ cp .env.example .env
 | Medium  | $0.053    | $0.041    | $0.041    | $0.106    | $0.200    |
 | High    | $0.211    | $0.165    | $0.165    | $0.422    | $0.800    |
 
-**OAuth mode is free** — billed against your existing ChatGPT Plus/Pro plan.
+**OAuth mode is free** — usage is billed against your existing ChatGPT Plus/Pro subscription.
 
 ---
 
@@ -205,16 +205,16 @@ git clone https://github.com/lidge-jun/ima2-gen.git
 cd ima2-gen
 npm install
 npm run dev    # server with --watch + Node mode enabled
-npm test       # 51+ tests (health, CLI lib, commands, server)
+npm test       # 92+ tests covering health checks, CLI library, commands, and the server
 ```
 
-Frontend stack:
-- Vanilla HTML/CSS/JS (no framework in the published build)
-- Vite + React for the Node-mode canvas (dev-only, gated)
-- Fonts: Outfit + Geist Mono
+Frontend Stack:
+- Vite + React for the web UI and Node-mode canvas
+- Zustand for UI/session state
+- Fonts: Outfit and Geist Mono
 
 ## Tech Stack
-- **Runtime**: Node.js ≥18
+- **Runtime**: Node.js ≥20
 - **Server**: Express 5, SQLite (better-sqlite3)
 - **API**: OpenAI SDK v5
 - **OAuth**: `openai-oauth` proxy
@@ -224,20 +224,20 @@ Frontend stack:
 
 ## Troubleshooting
 
-**Port already in use / "why is it on 3457?"**
-→ The default is `3333`. If `PORT` is set in your shell (e.g. inherited from another server like `cli-jaw`), ima2 uses that instead. Unset it or run `PORT=3333 ima2 serve`.
+**Port already in use / "Why is it on 3457?"**
+→ The default port is `3333`. If the `PORT` environment variable is set in your shell (e.g., inherited from another server like `cli-jaw`), `ima2` will use it instead. You can unset it or run `PORT=3333 ima2 serve`.
 
 **`ima2 ping` says server unreachable**
-→ Is `ima2 serve` running? Check `~/.ima2/server.json`. Override with `ima2 ping --server http://localhost:3333`.
+→ Ensure that `ima2 serve` is running. Check `~/.ima2/server.json` or override the target URL using `ima2 ping --server http://localhost:3333`.
 
 **OAuth login not working**
-→ Run `npx @openai/codex login` manually, then `ima2 serve`.
+→ Manually run `npx @openai/codex login`, and then start the server with `ima2 serve`.
 
-**`ima2 doctor` fails on node_modules**
-→ `npm install`.
+**`ima2 doctor` fails on `node_modules`**
+→ Run `npm install`.
 
 **Images not generating**
-→ `ima2 status` to verify config. API key must start with `sk-`.
+→ Run `ima2 status` to verify your configuration. If you are using an API key, it must start with `sk-`.
 
 ---
 
