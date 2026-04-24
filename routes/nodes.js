@@ -70,6 +70,15 @@ export function registerNodeRoutes(app, ctx) {
           parentNodeId,
         });
       }
+      if ((parentNodeId || externalSrc) && refCheck.refs.length > 0) {
+        return res.status(400).json({
+          error: {
+            code: "NODE_REFS_UNSUPPORTED_FOR_EDIT",
+            message: "Extra references are only supported for root node generation.",
+          },
+          parentNodeId,
+        });
+      }
       const moderationCheck = validateModeration(ctx, moderation);
       if (moderationCheck.error) {
         return res.status(400).json({
@@ -100,6 +109,9 @@ export function registerNodeRoutes(app, ctx) {
       } else if (typeof externalSrc === "string" && externalSrc.length > 0) {
         parentB64 = await loadAssetB64(ctx.rootDir, externalSrc);
       }
+      console.log(
+        `[node/generate] kind=${parentB64 ? "edit" : "generate"} session=${sessionId || "-"} parent=${parentNodeId || "-"} client=${clientNodeId || "-"} quality=${quality} size=${size} moderation=${moderation} refs=${refCheck.refs.length}`,
+      );
 
       let b64, usage, webSearchCalls = 0, revisedPrompt = null;
       const MAX_RETRIES = 1;
@@ -107,7 +119,7 @@ export function registerNodeRoutes(app, ctx) {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
           const r = parentB64
-            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx)
+            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId)
             : await generateViaOAuth(effectivePrompt, quality, size, moderation, refCheck.refs, requestId, normalizedPromptMode, ctx);
           if (r.b64) {
             b64 = r.b64;

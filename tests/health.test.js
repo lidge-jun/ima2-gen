@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 const PORT = String(3500 + Math.floor(Math.random() * 400));
 const OAUTH_PORT = String(10532 + Math.floor(Math.random() * 400));
 const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-test-home-"));
+const FAKE_GENERATED_DIR = mkdtempSync(join(tmpdir(), "ima2-test-generated-"));
 
 const HEALTH_TIMEOUT = process.platform === "win32" ? 30000 : 8000;
 
@@ -66,6 +67,7 @@ describe("Server: /api/health + advertisement", () => {
         OAUTH_PORT,
         HOME: FAKE_HOME,
         USERPROFILE: FAKE_HOME,
+        IMA2_GENERATED_DIR: FAKE_GENERATED_DIR,
         IMA2_NO_OAUTH_PROXY: "1",
       },
       cwd: process.cwd(),
@@ -93,6 +95,7 @@ describe("Server: /api/health + advertisement", () => {
       await new Promise((resolve) => oauthServer.close(resolve));
     }
     try { rmSync(FAKE_HOME, { recursive: true, force: true }); } catch {}
+    try { rmSync(FAKE_GENERATED_DIR, { recursive: true, force: true }); } catch {}
   });
 
   it("GET /api/health returns expected shape", async () => {

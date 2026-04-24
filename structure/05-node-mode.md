@@ -10,7 +10,7 @@ Node mode extends `ima2-gen` from a single-image generator into a graph-based im
 
 This mode matters because it is the likely center of future workflows. Classic UI revolves around one prompt and a list of image results. Node mode can represent lineage, retries, comparisons, research mode, and card-news flows as a graph. That connects API contracts, store state, session DB, and asset lifecycle.
 
-To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, and error state of each node. `server.js` owns `/api/node/generate` and `/api/sessions/*`, which produce node images and persist graph state.
+To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.js` owns `/api/node/generate`, while `routes/sessions.js` and `lib/sessionStore.js` persist graph state.
 
 ---
 
@@ -20,7 +20,7 @@ To understand node mode, start with three files. `NodeCanvas.tsx` owns graph int
 sequenceDiagram
     participant UI as NodeCanvas
     participant Store as useAppStore
-    participant API as server.js
+    participant API as routes/nodes.js
     participant OAuth as openai-oauth
     participant Files as generated
     participant DB as SQLite session
@@ -46,7 +46,8 @@ sequenceDiagram
 | `ui/src/store/useAppStore.ts` | `graphNodes`, `graphEdges`, `graphVersion`, session actions |
 | `ui/src/lib/graph.ts` | Client node IDs and initial-position helpers |
 | `ui/src/lib/api.ts` | Node generation and session API client |
-| `server.js` | `/api/node/generate`, `/api/node/:nodeId`, `/api/sessions/*` |
+| `routes/nodes.js` | `/api/node/generate`, `/api/node/:nodeId` |
+| `routes/sessions.js` | `/api/sessions/*` |
 | `lib/nodeStore.js` | Node image and metadata storage |
 | `lib/sessionStore.js` | SQLite sessions, nodes, edges, graphVersion |
 | `lib/assetLifecycle.js` | Keeps node state coherent when assets are deleted |
@@ -84,6 +85,22 @@ sequenceDiagram
 | `parentNodeId` absent | Generate a new image from prompt and references | Generating a root node |
 | `externalSrc` present | Read an existing asset from `generated/` | Promoting a history image into the graph |
 
+## Reference Image Scope
+
+Node mode separates visible node-local references from classic composer references.
+
+| Reference state | Scope | Persistence | Behavior |
+|---|---|---|---|
+| Node-local `data.referenceImages` | One root node composer | Draft only, stripped from session save | Sent to `/api/node/generate` only for root nodes |
+| Classic `referenceImages` | Classic composer | In-memory classic draft | Parked/inactive in node mode and never sent by `generateNode()` |
+| Session style sheet | Active session | Stored through style sheet APIs | May influence prompts as a style prefix, but is not a reference chip |
+
+Child/edit nodes already have a parent image source. Extra references are blocked in the UI and rejected by `/api/node/generate` with `NODE_REFS_UNSUPPORTED_FOR_EDIT` so user attachments are not silently ignored.
+
+`duplicateBranchRoot()` seeds the source image into the duplicated root node's local draft references. It must not push into the classic global reference list.
+
+`sanitizeForSave()` removes node-local draft references before `PUT /api/sessions/:id/graph` to avoid base64 bloat and oversized node data replacement.
+
 ## Difference From Classic Mode
 
 | Topic | Classic | Node mode |
@@ -104,6 +121,7 @@ sequenceDiagram
 
 ## Change Log
 
+- 2026-04-24: Documented node-local reference inputs, parked classic references, and the child/edit reference guard.
 - 2026-04-23: Documented the implemented node canvas, node API, and session persistence structure.
 - 2026-04-23: Translated this document from Korean to English.
 

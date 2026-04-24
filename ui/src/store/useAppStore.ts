@@ -148,9 +148,14 @@ function saveSelectedFilename(filename: string | null): void {
 }
 
 const HISTORY_LIMIT = 500;
+const MAX_REFERENCE_IMAGES = 5;
 
 function narrowGenerateKind(k?: string | null): GenerateItem["kind"] {
   return k === "classic" || k === "edit" || k === "generate" ? k : null;
+}
+
+function stripDataUrlPrefix(dataUrl: string): string {
+  return dataUrl.replace(/^data:[^;]+;base64,/, "");
 }
 
 export type ImageNodeStatus =
@@ -175,6 +180,7 @@ export type ImageNodeData = {
   error?: string;
   elapsed?: number;
   webSearchCalls?: number;
+  referenceImages?: string[];
 };
 
 export type GraphNode = FlowNode<ImageNodeData>;
@@ -292,6 +298,10 @@ type AppState = {
   addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
   connectNodes: (sourceClientId: ClientNodeId, targetClientId: ClientNodeId) => void;
   updateNodePrompt: (clientId: ClientNodeId, prompt: string) => void;
+  addNodeReferences: (clientId: ClientNodeId, files: File[]) => Promise<void>;
+  addNodeReferenceDataUrl: (clientId: ClientNodeId, dataUrl: string) => void;
+  removeNodeReference: (clientId: ClientNodeId, index: number) => void;
+  clearNodeReferences: (clientId: ClientNodeId) => void;
   generateNode: (clientId: ClientNodeId) => Promise<void>;
   deleteNode: (clientId: ClientNodeId) => void;
   deleteNodes: (clientIds: ClientNodeId[]) => void;
@@ -352,7 +362,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   prompt: "",
   referenceImages: [],
   addReferences: async (files) => {
-    const allowed = 5 - get().referenceImages.length;
+    const allowed = MAX_REFERENCE_IMAGES - get().referenceImages.length;
     const toAdd = files.slice(0, Math.max(0, allowed));
     const heicSkipped = toAdd.filter(isHeic);
     const usable = toAdd.filter((f) => !isHeic(f));
@@ -369,7 +379,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }),
     );
     const valid = results.filter((x): x is string => !!x);
-    set((s) => ({ referenceImages: [...s.referenceImages, ...valid].slice(0, 5) }));
+    set((s) => ({
+      referenceImages: [...s.referenceImages, ...valid].slice(0, MAX_REFERENCE_IMAGES),
+    }));
     if (heicSkipped.length > 0) {
       get().showToast(t("toast.refHeicUnsupported"), true);
     }
@@ -383,7 +395,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   addReferenceDataUrl: (dataUrl) => {
     set((s) =>
-      s.referenceImages.length >= 5
+      s.referenceImages.length >= MAX_REFERENCE_IMAGES
         ? s
         : { referenceImages: [...s.referenceImages, dataUrl] },
     );
@@ -400,7 +412,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().showToast(t("toast.noCurrentImageForRef"), true);
       return;
     }
-    if (get().referenceImages.length >= 5) {
+    if (get().referenceImages.length >= MAX_REFERENCE_IMAGES) {
       get().showToast(t("toast.refSlotFull"), true);
       return;
     }
@@ -423,7 +435,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         return;
       }
     }
-    set((s) => ({ referenceImages: [...s.referenceImages, dataUrl] }));
+    set((s) => ({
+      referenceImages: [...s.referenceImages, dataUrl].slice(0, MAX_REFERENCE_IMAGES),
+    }));
     get().showToast(t("toast.addedCurrentAsRef"));
   },
   activeGenerations: loadInFlight().length,
@@ -1033,6 +1047,120 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().scheduleGraphSave();
   },
 
+  addNodeReferences: async (clientId, files) => {
+    const node = get().graphNodes.find((n) => n.id === clientId);
+    if (!node) return;
+    if (node.data.parentServerNodeId) {
+      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
+      return;
+    }
+    const currentRefs = node.data.referenceImages ?? [];
+    const allowed = MAX_REFERENCE_IMAGES - currentRefs.length;
+    if (allowed <= 0) {
+      get().showToast(t("toast.refLimitExceeded"), true);
+      return;
+    }
+    const toAdd = files.slice(0, Math.max(0, allowed));
+    const heicSkipped = toAdd.filter(isHeic);
+    const usable = toAdd.filter((f) => !isHeic(f));
+    const results = await Promise.all(
+      usable.map(async (f) => {
+        try {
+          return await compressToBase64(f, {
+            preserveTransparency: hasAlphaChannel(f),
+          });
+        } catch (err) {
+          console.warn("[addNodeReferences] compress failed", err);
+          return null;
+        }
+      }),
+    );
+    const valid = results.filter((x): x is string => !!x);
+    if (valid.length > 0) {
+      set({
+        graphNodes: get().graphNodes.map((n) =>
+          n.id === clientId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  referenceImages: [
+                    ...(n.data.referenceImages ?? []),
+                    ...valid,
+                  ].slice(0, MAX_REFERENCE_IMAGES),
+                },
+              }
+            : n,
+        ),
+      });
+    }
+    if (heicSkipped.length > 0) {
+      get().showToast(t("toast.refHeicUnsupported"), true);
+    }
+    const failedCount = usable.length - valid.length;
+    if (failedCount > 0) {
+      get().showToast(t("toast.refTooLarge"), true);
+    }
+    if (files.length > allowed) {
+      get().showToast(t("toast.refLimitExceeded"), true);
+    }
+  },
+
+  addNodeReferenceDataUrl: (clientId, dataUrl) => {
+    const node = get().graphNodes.find((n) => n.id === clientId);
+    if (!node) return;
+    if (node.data.parentServerNodeId) {
+      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
+      return;
+    }
+    set({
+      graphNodes: get().graphNodes.map((n) => {
+        if (n.id !== clientId) return n;
+        const refs = n.data.referenceImages ?? [];
+        if (refs.length >= MAX_REFERENCE_IMAGES) return n;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            referenceImages: [...refs, dataUrl],
+          },
+        };
+      }),
+    });
+  },
+
+  removeNodeReference: (clientId, index) => {
+    set({
+      graphNodes: get().graphNodes.map((n) =>
+        n.id === clientId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                referenceImages: (n.data.referenceImages ?? []).filter((_, i) => i !== index),
+              },
+            }
+          : n,
+      ),
+    });
+  },
+
+  clearNodeReferences: (clientId) => {
+    set({
+      graphNodes: get().graphNodes.map((n) =>
+        n.id === clientId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                referenceImages: undefined,
+              },
+            }
+          : n,
+      ),
+    });
+  },
+
   duplicateBranchRoot: (sourceClientId) => {
     const source = get().graphNodes.find((n) => n.id === sourceClientId);
     if (!source) return sourceClientId;
@@ -1058,9 +1186,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ graphNodes: [...get().graphNodes, node] });
     get().scheduleGraphSave();
 
-    // 0.09.5: pre-seed the source image as a global reference so the first
-    // generateNode() on the new root carries style/composition. Fire-and-forget
-    // — failures degrade to prompt-only continuation.
+    // Pre-seed the source image as a node-local draft reference. Keeping this
+    // local prevents hidden classic references from influencing node mode.
     if (source.data.imageUrl) {
       const sourceUrl = source.data.imageUrl;
       (async () => {
@@ -1076,9 +1203,19 @@ export const useAppStore = create<AppState>((set, get) => ({
             reader.onerror = () => reject(reader.error ?? new Error("read failed"));
             reader.readAsDataURL(blob);
           });
-          if (get().referenceImages.length < 5) {
-            set((s) => ({ referenceImages: [...s.referenceImages, dataUrl] }));
-          }
+          set({
+            graphNodes: get().graphNodes.map((n) =>
+              n.id === clientId
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      referenceImages: [dataUrl],
+                    },
+                  }
+                : n,
+            ),
+          });
         } catch {
           // non-fatal
         }
@@ -1096,6 +1233,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { prompt, parentServerNodeId } = node.data;
     if (!prompt.trim()) {
       get().showToast(t("toast.promptRequired"), true);
+      return;
+    }
+    const nodeRefs = node.data.referenceImages ?? [];
+    if (parentServerNodeId && nodeRefs.length > 0) {
+      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
       return;
     }
     const s = get();
@@ -1153,30 +1295,31 @@ export const useAppStore = create<AppState>((set, get) => ({
         requestId: flightId,
         sessionId: requestSessionId,
         clientNodeId: targetClientId,
-        ...(s.referenceImages.length && !parentServerNodeId
-          ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
+        ...(nodeRefs.length && !parentServerNodeId
+          ? { references: nodeRefs.map(stripDataUrlPrefix) }
           : {}),
       });
       if (get().activeSessionId === requestSessionId) {
         set({
-          graphNodes: get().graphNodes.map((n) =>
-            n.id === targetClientId
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    serverNodeId: res.nodeId,
-                    imageUrl: res.url,
-                    status: "ready",
-                    pendingRequestId: null,
-                    pendingPhase: null,
-                    pendingStartedAt: null,
-                    elapsed: res.elapsed,
-                    webSearchCalls: res.webSearchCalls,
-                  },
-                }
-              : n,
-          ),
+          graphNodes: get().graphNodes.map((n) => {
+            if (n.id !== targetClientId) return n;
+            const nextData = { ...n.data };
+            delete nextData.referenceImages;
+            return {
+              ...n,
+              data: {
+                ...nextData,
+                serverNodeId: res.nodeId,
+                imageUrl: res.url,
+                status: "ready",
+                pendingRequestId: null,
+                pendingPhase: null,
+                pendingStartedAt: null,
+                elapsed: res.elapsed,
+                webSearchCalls: res.webSearchCalls,
+              },
+            };
+          }),
         });
         graphMutated = true;
         get().showToast(t("toast.nodeCreated", { id: res.nodeId.slice(0, 8), elapsed: res.elapsed }));
@@ -1377,7 +1520,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         requestId: flightId,
         mode: s.promptMode,
         ...(s.referenceImages.length
-          ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
+          ? { references: s.referenceImages.map(stripDataUrlPrefix) }
           : {}),
       };
 
@@ -1494,10 +1637,12 @@ let saveGraphPromise: Promise<void> | null = null;
 // makes reloaded graphs look like aborted work and trips reconcileGraphPending.
 // This function is payload-only: the in-memory `graphNodes` is NOT touched.
 function sanitizeForSave(d: ImageNodeData): Record<string, unknown> {
+  const safe = { ...(d as unknown as Record<string, unknown>) };
+  delete safe.referenceImages;
   const shouldSanitize = d.status === "pending" || d.status === "reconciling";
-  if (!shouldSanitize) return d as unknown as Record<string, unknown>;
+  if (!shouldSanitize) return safe;
   return {
-    ...(d as unknown as Record<string, unknown>),
+    ...safe,
     status: "empty",
     pendingRequestId: null,
     pendingPhase: null,

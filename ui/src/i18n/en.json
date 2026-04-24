@@ -172,7 +172,17 @@
     "addChild": "Add child",
     "duplicateBranch": "Duplicate branch",
     "duplicateBranchTitle": "Duplicate as a new branch root",
-    "deleteTitle": "Delete"
+    "deleteTitle": "Delete",
+    "attachRef": "Attach",
+    "attachRefTitle": "Attach node reference images",
+    "refAlt": "Node reference {n}",
+    "removeRef": "Remove reference {n}",
+    "dropRefs": "Drop images here",
+    "nodeRefsUnsupportedForEdit": "Extra references are only supported on root nodes for now.",
+    "classicRefsParkedTitle": "Classic references are parked",
+    "classicRefsParkedBody": "These images belong to the classic composer and are inactive in node mode.",
+    "clearParkedRefs": "Clear parked references",
+    "styleSheetActive": "Session style sheet active"
   },
   "provider": {
     "authTitle": "Authentication",

@@ -172,7 +172,17 @@
     "addChild": "자식 추가",
     "duplicateBranch": "브랜치 복제",
     "duplicateBranchTitle": "새 브랜치 루트로 복제",
-    "deleteTitle": "삭제"
+    "deleteTitle": "삭제",
+    "attachRef": "첨부",
+    "attachRefTitle": "노드 참조 이미지 첨부",
+    "refAlt": "노드 참조 이미지 {n}",
+    "removeRef": "참조 이미지 {n} 제거",
+    "dropRefs": "이미지를 여기에 놓기",
+    "nodeRefsUnsupportedForEdit": "추가 참조 이미지는 현재 루트 노드에서만 지원합니다.",
+    "classicRefsParkedTitle": "클래식 참조 이미지가 보관 중입니다",
+    "classicRefsParkedBody": "이 이미지는 클래식 작성창용이라 노드 모드 생성에는 사용되지 않습니다.",
+    "clearParkedRefs": "보관된 참조 비우기",
+    "styleSheetActive": "세션 스타일 시트 적용 중"
   },
   "provider": {
     "authTitle": "인증 방식",

@@ -13,6 +13,9 @@ import { useI18n } from "../i18n";
 export function Sidebar() {
   const { t } = useI18n();
   const uiModeRaw = useAppStore((s) => s.uiMode);
+  const referenceImages = useAppStore((s) => s.referenceImages);
+  const clearReferences = useAppStore((s) => s.clearReferences);
+  const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
   const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
   return (
     <aside className="sidebar">
@@ -36,6 +39,20 @@ export function Sidebar() {
           <>
             <SessionPicker />
             <NodeStyleButton />
+            {referenceImages.length > 0 ? (
+              <div className="node-mode-ref-warning" role="status">
+                <strong>{t("node.classicRefsParkedTitle")}</strong>
+                <span>{t("node.classicRefsParkedBody")}</span>
+                <button type="button" onClick={clearReferences}>
+                  {t("node.clearParkedRefs")}
+                </button>
+              </div>
+            ) : null}
+            {styleSheetEnabled ? (
+              <div className="node-mode-style-badge" role="status">
+                {t("node.styleSheetActive")}
+              </div>
+            ) : null}
             <div className="sidebar__node-hint">
               {t("sidebar.nodeModeHint")}
             </div>
