@@ -1,6 +1,6 @@
 export type UIMode = "classic" | "node";
 export type Provider = "oauth" | "api";
-export type Quality = "low" | "medium" | "high" | "auto";
+export type Quality = "low" | "medium" | "high";
 export type Format = "png" | "jpeg" | "webp";
 export type Moderation = "low" | "auto";
 export type Count = 1 | 2 | 4;

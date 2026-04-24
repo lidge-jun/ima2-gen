@@ -47,7 +47,6 @@ export function RightPanel() {
   const setCount = useAppStore((s) => s.setCount);
 
   const QUALITY_ITEMS = [
-    { value: "auto" as const, label: t("quality.autoLabel"), sub: t("quality.autoSub") },
     { value: "low" as const, label: t("quality.lowLabel"), sub: t("quality.lowSub") },
     { value: "medium" as const, label: t("quality.mediumLabel"), sub: t("quality.mediumSub") },
     { value: "high" as const, label: t("quality.highLabel"), sub: t("quality.highSub") },

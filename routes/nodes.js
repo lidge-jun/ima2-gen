@@ -38,7 +38,7 @@ export function registerNodeRoutes(app, ctx) {
     try {
       const {
         prompt,
-        quality: rawQuality = "auto",
+        quality: rawQuality = "medium",
         size = "1024x1024",
         format = "png",
         moderation = "low",
@@ -203,4 +203,3 @@ export function registerNodeRoutes(app, ctx) {
     }
   });
 }
-

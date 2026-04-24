@@ -50,8 +50,6 @@
   },
   "quality": {
     "title": "품질",
-    "autoLabel": "자동",
-    "autoSub": "OAuth 권장",
     "lowLabel": "낮음",
     "lowSub": "빠름",
     "mediumLabel": "중간",

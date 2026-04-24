@@ -50,8 +50,6 @@
   },
   "quality": {
     "title": "Quality",
-    "autoLabel": "Auto",
-    "autoSub": "OAuth recommended",
     "lowLabel": "Low",
     "lowSub": "Fast",
     "mediumLabel": "Medium",

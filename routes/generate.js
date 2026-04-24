@@ -24,7 +24,7 @@ export function registerGenerateRoutes(app, ctx) {
       const clientNodeId = typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
       const {
         prompt,
-        quality: rawQuality = "auto",
+        quality: rawQuality = "medium",
         size = "1024x1024",
         format = "png",
         moderation = "low",
@@ -194,4 +194,3 @@ export function registerGenerateRoutes(app, ctx) {
     }
   });
 }
-

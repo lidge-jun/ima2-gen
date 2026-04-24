@@ -41,15 +41,15 @@ describe("Server Utils", () => {
   });
 
   it("should validate quality values", () => {
-    const valid = ["low", "medium", "high", "auto"];
-    const invalid = ["ultra", "best", "", null, undefined];
+    const valid = ["low", "medium", "high"];
+    const invalid = ["auto", "ultra", "best", "", null, undefined];
 
     for (const q of valid) {
-      assert.ok(["low", "medium", "high", "auto"].includes(q), `${q} is valid`);
+      assert.ok(["low", "medium", "high"].includes(q), `${q} is valid`);
     }
 
     for (const q of invalid) {
-      assert.ok(!q || !["low", "medium", "high", "auto"].includes(q), `${q} is invalid`);
+      assert.ok(!q || !["low", "medium", "high"].includes(q), `${q} is invalid`);
     }
   });
 

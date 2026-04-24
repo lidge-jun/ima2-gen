@@ -309,7 +309,7 @@ type AppState = {
 
 export const useAppStore = create<AppState>((set, get) => ({
   provider: "oauth",
-  quality: "auto",
+  quality: "medium",
   sizePreset: "1024x1024",
   customW: 1920,
   customH: 1088,

@@ -20,7 +20,7 @@ export function registerEditRoutes(app, ctx) {
       const {
         prompt,
         image: imageB64,
-        quality: rawQuality = "auto",
+        quality: rawQuality = "medium",
         size = "1024x1024",
         moderation = "low",
         provider = "oauth",
@@ -105,4 +105,3 @@ export function registerEditRoutes(app, ctx) {
     }
   });
 }
-

@@ -23,7 +23,7 @@ const HELP = `
 
   Options:
     -p, --prompt <text>        Edit instruction (required)
-    -q, --quality <low|medium|high|auto>
+    -q, --quality <low|medium|high>
     -s, --size <WxH>
     -o, --out <file>
         --json

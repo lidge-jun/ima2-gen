@@ -27,7 +27,7 @@ const HELP = `
   Generate image(s) via the running ima2 server.
 
   Options:
-    -q, --quality <low|medium|high|auto>    Default: low
+    -q, --quality <low|medium|high>         Default: low
     -s, --size <WxH | auto>                 Default: 1024x1024
     -n, --count <1..8>                      Default: 1
         --ref <file>                        Attach reference image (repeatable, max 5)

@@ -5,28 +5,57 @@ import { strict as assert } from "node:assert";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import {
+  AUTO_PROMPT_FIDELITY_SUFFIX,
+  DIRECT_PROMPT_FIDELITY_SUFFIX,
+  EDIT_DEVELOPER_PROMPT,
+  GENERATE_DEVELOPER_PROMPT,
+  PROMPT_FIDELITY_SUFFIX,
+  buildEditTextPrompt,
+  buildUserTextPrompt,
+} from "../lib/oauthProxy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverPath = join(__dirname, "..", "server.js");
-const oauthProxyPath = join(__dirname, "..", "lib", "oauthProxy.js");
 const historyListPath = join(__dirname, "..", "lib", "historyList.js");
 const nodeRoutePath = join(__dirname, "..", "routes", "nodes.js");
 
 const src = await readFile(serverPath, "utf8");
-const oauthSrc = await readFile(oauthProxyPath, "utf8");
 const historySrc = await readFile(historyListPath, "utf8");
 const nodeSrc = await readFile(nodeRoutePath, "utf8");
 
 // Ensure both suffix constants and the builder exist
 assert.ok(src.includes("buildApp"), "buildApp export missing after server split");
-assert.ok(oauthSrc.includes("PROMPT_FIDELITY_SUFFIX"), "PROMPT_FIDELITY_SUFFIX missing");
-assert.ok(oauthSrc.includes("buildUserTextPrompt"), "buildUserTextPrompt missing");
-assert.ok(oauthSrc.includes("Generate an image with this exact prompt"), "direct mode wrapper text missing");
-assert.ok(oauthSrc.includes("revised_prompt"), "revised_prompt capture missing");
 assert.ok(historySrc.includes("revisedPrompt"), "history revisedPrompt field missing");
 assert.ok(historySrc.includes("promptMode"), "history promptMode field missing");
 assert.ok(historySrc.includes("userPrompt"), "history userPrompt field missing");
 assert.ok(nodeSrc.includes("normalizedPromptMode"), "node prompt mode propagation missing");
 assert.ok(nodeSrc.includes("userPrompt"), "node userPrompt meta field missing");
+
+assert.equal(PROMPT_FIDELITY_SUFFIX, AUTO_PROMPT_FIDELITY_SUFFIX);
+assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("only append English clarifiers at the end when helpful"));
+assert.ok(!DIRECT_PROMPT_FIDELITY_SUFFIX.includes("append English clarifiers"));
+assert.ok(DIRECT_PROMPT_FIDELITY_SUFFIX.includes("Do not translate, summarize, restyle, add clarifiers"));
+
+const generateDirect = buildUserTextPrompt("고양이 수채화", "direct");
+const generateAuto = buildUserTextPrompt("고양이 수채화", "auto");
+assert.ok(generateDirect.includes("Generate an image with this exact prompt, no modifications"));
+assert.ok(!generateDirect.includes("append English clarifiers"));
+assert.ok(generateAuto.includes("Generate an image: 고양이 수채화"));
+assert.ok(generateAuto.includes("If the subject matter requires factual accuracy"));
+assert.notEqual(generateDirect, generateAuto);
+
+const editDirect = buildEditTextPrompt("배경만 바꿔", "direct");
+const editAuto = buildEditTextPrompt("배경만 바꿔", "auto");
+assert.ok(editDirect.includes("Edit this image with this exact prompt, no modifications"));
+assert.ok(!editDirect.includes("append English clarifiers"));
+assert.ok(editAuto.includes("Edit this image: 배경만 바꿔"));
+assert.notEqual(editDirect, editAuto);
+
+for (const prompt of [GENERATE_DEVELOPER_PROMPT, EDIT_DEVELOPER_PROMPT]) {
+  assert.ok(prompt.includes("absolute quality"), "developer prompt should use neutral quality language");
+  assert.ok(!prompt.includes("8k UHD"), "developer prompt should not force 8k/photo boilerplate");
+  assert.ok(!prompt.includes("default to photorealistic"), "developer prompt should not force photorealism");
+}
 
 console.log("prompt-fidelity: ok");

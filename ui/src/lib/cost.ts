@@ -1,9 +1,8 @@
 import type { Quality } from "../types";
 
 // Rough cost-per-image for gpt-image-2 sizes (preset-based estimate).
-// auto/custom fall back to the nearest keyed size or 1024².
+// Size auto/custom fall back to the nearest keyed size or 1024².
 export const COST_MAP: Record<Quality, Record<string, number>> = {
-  auto: {}, // populated below (mirrors "medium")
   low: {
     "1024x1024": 0.006,
     "1024x1536": 0.005,
@@ -50,9 +49,6 @@ export const COST_MAP: Record<Quality, Record<string, number>> = {
     auto: 0.211,
   },
 };
-
-// Quality "auto" on OAuth routes to an unknown server-chosen tier — estimate as medium.
-COST_MAP.auto = COST_MAP.medium;
 
 export function estimateCost(quality: Quality, size: string): number {
   return COST_MAP[quality]?.[size] ?? 0;

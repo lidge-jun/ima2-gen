@@ -144,8 +144,11 @@ describe("Server: /api/health + advertisement", () => {
     assert.strictEqual(r.status, 200);
     const body = await r.json();
     assert.strictEqual(body.moderation, "auto");
+    assert.strictEqual(body.quality, "medium");
+    assert.deepStrictEqual(body.warnings, []);
     assert.ok(lastOAuthPayload, "proxy request should be captured");
     assert.strictEqual(lastOAuthPayload.tools[1].type, "image_generation");
+    assert.strictEqual(lastOAuthPayload.tools[1].quality, "medium");
     assert.strictEqual(lastOAuthPayload.tools[1].moderation, "auto");
   });
 
