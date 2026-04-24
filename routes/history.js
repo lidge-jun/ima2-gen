@@ -1,5 +1,7 @@
 import { listHistoryRows } from "../lib/historyList.js";
 import { trashAsset, restoreAsset } from "../lib/assetLifecycle.js";
+import { getSessionTitleMap } from "../lib/sessionStore.js";
+import { logError, logEvent } from "../lib/logger.js";
 
 export function registerHistoryRoutes(app, ctx) {
   app.get("/api/history", async (req, res) => {
@@ -53,13 +55,25 @@ export function registerHistoryRoutes(app, ctx) {
             loose.push(row);
           }
         }
-        const sessions = Array.from(groups.values()).sort((a, b) => b.lastUsedAt - a.lastUsedAt);
+        const titleMap = getSessionTitleMap(Array.from(groups.keys()));
+        const sessions = Array.from(groups.values())
+          .map((group) => ({
+            ...group,
+            title: titleMap.get(group.sessionId) || null,
+            label: titleMap.get(group.sessionId) || group.sessionId.slice(0, 8),
+          }))
+          .sort((a, b) => b.lastUsedAt - a.lastUsedAt);
+        logEvent("history", "grouped", {
+          sessions: sessions.length,
+          loose: loose.length,
+          total: rows.length,
+        });
         return res.json({ sessions, loose, total: rows.length, nextCursor });
       }
 
       res.json({ items: page, total: rows.length, nextCursor });
     } catch (err) {
-      console.error("[history] error:", err.message);
+      logError("history", "error", err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -86,4 +100,3 @@ export function registerHistoryRoutes(app, ctx) {
     }
   });
 }
-

@@ -80,8 +80,17 @@ README may still mention a different Node baseline. The operational baseline is 
 | `OAUTH_PORT` | OAuth proxy port, default `10531` |
 | `IMA2_SERVER` | CLI target server URL override |
 | `IMA2_CONFIG_DIR` | Used by tests to isolate config directory |
+| `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `600000` |
+| `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
+| `IMA2_LOG_LEVEL` | Reserved log-level setting; current app emits safe structured logs |
 
 Generation and edit endpoints currently hard-block `provider: "api"`. Even with an API key, image generation is OAuth-centered.
+
+## Observability
+
+The server emits safe structured log lines for route lifecycle, OAuth responses, stream image receipt, inflight phase changes, session graph saves, and gallery history grouping. Correlate a UI request with `requestId` first, then follow the same id through `[generate.request]`, `[oauth.response]`, `[inflight.phase]`, `[oauth.image]`, `[generate.saved]`, and `[inflight.finish]`.
+
+Logs intentionally use counts rather than sensitive values: `promptChars`, `refs`, `imageChars`, `durationMs`, and `errorCode`. Do not add raw prompts, style-sheet bodies, data URLs, generated base64, tokens, cookies, or raw upstream response bodies to logs.
 
 ## Development And Verification
 
@@ -113,6 +122,7 @@ Generation and edit endpoints currently hard-block `provider: "api"`. Even with 
 
 - 2026-04-23: Documented package, scripts, config, runtime data, and test/build operations.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-24: Added inflight terminal TTL and safe logging operations notes.
 
 Previous document: `[[05-node-mode]]`
 

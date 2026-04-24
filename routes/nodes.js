@@ -13,6 +13,7 @@ import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
+import { logEvent, logError } from "../lib/logger.js";
 
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
@@ -28,6 +29,10 @@ export function registerNodeRoutes(app, ctx) {
     const requestId = typeof body.requestId === "string" ? body.requestId : null;
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : null;
     const clientNodeId = typeof body.clientNodeId === "string" ? body.clientNodeId : null;
+    let finishMeta = {};
+    let finishStatus = "completed";
+    let finishHttpStatus;
+    let finishErrorCode;
     startJob({
       requestId,
       kind: "node",
@@ -51,12 +56,18 @@ export function registerNodeRoutes(app, ctx) {
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
       if (provider === "api") {
+        finishStatus = "error";
+        finishHttpStatus = 403;
+        finishErrorCode = "APIKEY_DISABLED";
         return res.status(403).json({
           error: { code: "APIKEY_DISABLED", message: "API key provider is disabled. Use OAuth." },
           parentNodeId,
         });
       }
       if (!prompt || typeof prompt !== "string") {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "INVALID_PROMPT";
         return res.status(400).json({
           error: { code: "INVALID_PROMPT", message: "Prompt is required" },
           parentNodeId,
@@ -64,6 +75,9 @@ export function registerNodeRoutes(app, ctx) {
       }
       const refCheck = validateAndNormalizeRefs(references);
       if (refCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = refCheck.code;
         return res.status(400).json({
           error: { code: refCheck.code, message: refCheck.error },
           code: refCheck.code,
@@ -71,6 +85,9 @@ export function registerNodeRoutes(app, ctx) {
         });
       }
       if ((parentNodeId || externalSrc) && refCheck.refs.length > 0) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "NODE_REFS_UNSUPPORTED_FOR_EDIT";
         return res.status(400).json({
           error: {
             code: "NODE_REFS_UNSUPPORTED_FOR_EDIT",
@@ -81,6 +98,9 @@ export function registerNodeRoutes(app, ctx) {
       }
       const moderationCheck = validateModeration(ctx, moderation);
       if (moderationCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "INVALID_MODERATION";
         return res.status(400).json({
           error: { code: "INVALID_MODERATION", message: moderationCheck.error },
           parentNodeId,
@@ -109,9 +129,20 @@ export function registerNodeRoutes(app, ctx) {
       } else if (typeof externalSrc === "string" && externalSrc.length > 0) {
         parentB64 = await loadAssetB64(ctx.rootDir, externalSrc);
       }
-      console.log(
-        `[node/generate] kind=${parentB64 ? "edit" : "generate"} session=${sessionId || "-"} parent=${parentNodeId || "-"} client=${clientNodeId || "-"} quality=${quality} size=${size} moderation=${moderation} refs=${refCheck.refs.length}`,
-      );
+      logEvent("node", "request", {
+        requestId,
+        operation: parentB64 ? "edit" : "generate",
+        sessionId,
+        parentNodeId,
+        clientNodeId,
+        quality,
+        size,
+        moderation,
+        refs: refCheck.refs.length,
+        promptChars: prompt.length,
+        promptMode: normalizedPromptMode,
+        styleSheetApplied: !!styleSheetApplied,
+      });
 
       let b64, usage, webSearchCalls = 0, revisedPrompt = null;
       const MAX_RETRIES = 1;
@@ -132,10 +163,15 @@ export function registerNodeRoutes(app, ctx) {
         } catch (e) {
           lastErr = e;
         }
-        if (attempt < MAX_RETRIES) console.log(`[node] retry ${attempt + 1}: ${lastErr?.message}`);
+        if (attempt < MAX_RETRIES) {
+          logEvent("node", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
+        }
       }
 
       if (!b64) {
+        finishStatus = "error";
+        finishHttpStatus = 422;
+        finishErrorCode = "SAFETY_REFUSAL";
         return res.status(422).json({
           error: { code: "SAFETY_REFUSAL", message: lastErr?.message || "Empty response after retry" },
           parentNodeId,
@@ -170,6 +206,15 @@ export function registerNodeRoutes(app, ctx) {
       };
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
       const { filename } = await saveNode(ctx.rootDir, { nodeId, b64, meta, ext: format });
+      finishMeta = { nodeId, filename, imageChars: b64.length };
+      finishHttpStatus = 200;
+      logEvent("node", "saved", {
+        requestId,
+        nodeId,
+        filename,
+        imageChars: b64.length,
+        elapsedMs: Date.now() - startTime,
+      });
 
       res.json({
         nodeId,
@@ -188,14 +233,22 @@ export function registerNodeRoutes(app, ctx) {
         promptMode: normalizedPromptMode,
       });
     } catch (err) {
-      console.error("[node/generate] error:", err.message);
       const code = err.code || classifyUpstreamError(err.message) || "NODE_GEN_FAILED";
+      finishStatus = "error";
+      finishHttpStatus = err.status || 500;
+      finishErrorCode = code;
+      logError("node", "error", err, { requestId, code, parentNodeId, sessionId, clientNodeId });
       res.status(err.status || 500).json({
         error: { code, message: err.message },
         parentNodeId,
       });
     } finally {
-      finishJob(requestId);
+      finishJob(requestId, {
+        status: finishStatus,
+        httpStatus: finishHttpStatus,
+        errorCode: finishErrorCode,
+        meta: finishMeta,
+      });
     }
   });
 

@@ -124,6 +124,7 @@ export const config = {
   inflight: {
     ttlMs: pickInt(env.IMA2_INFLIGHT_TTL_MS, fileCfg.inflight?.ttlMs, 10 * 60 * 1000),
     reapMs: pickInt(env.IMA2_INFLIGHT_REAP_MS, fileCfg.inflight?.reapMs, 60 * 1000),
+    terminalTtlMs: pickInt(env.IMA2_INFLIGHT_TERMINAL_TTL_MS, fileCfg.inflight?.terminalTtlMs, 30 * 1000),
   },
   trash: {
     ttlMs: pickInt(env.IMA2_TRASH_TTL_MS, fileCfg.trash?.ttlMs, 10_000),
@@ -159,6 +160,7 @@ export const MAX_REFS = config.limits.maxRefCount;
 export const MAX_N = config.limits.maxParallel;
 export const INFLIGHT_TTL_MS = config.inflight.ttlMs;
 export const INFLIGHT_REAP_MS = config.inflight.reapMs;
+export const INFLIGHT_TERMINAL_TTL_MS = config.inflight.terminalTtlMs;
 export const STYLE_SHEET_MAX_PREFIX = config.styleSheet.maxPrefix;
 export const LOG_LEVEL = config.log.level;
 export const NO_OAUTH_PROXY = !config.oauth.autoStart;

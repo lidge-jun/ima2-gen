@@ -33,6 +33,7 @@ describe("History: delete tombstone + pagination", () => {
   let child;
   const base = `http://localhost:${PORT}`;
   const createdFiles = [];
+  let titledSessionId = null;
 
   before(async () => {
     mkdirSync(GEN_DIR, { recursive: true });
@@ -59,6 +60,21 @@ describe("History: delete tombstone + pagination", () => {
       stdio: ["ignore", "pipe", "pipe"],
     });
     await waitForHealth(base);
+
+    const sessionRes = await fetch(`${base}/api/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Exam Graph" }),
+    });
+    assert.strictEqual(sessionRes.status, 201);
+    titledSessionId = (await sessionRes.json()).session.id;
+    writeFileSync(join(GEN_DIR, createdFiles[1] + ".json"), JSON.stringify({
+      createdAt: Date.now() + 100,
+      prompt: "session titled image",
+      provider: "oauth",
+      format: "png",
+      sessionId: titledSessionId,
+    }));
   });
 
   after(async () => {
@@ -69,6 +85,7 @@ describe("History: delete tombstone + pagination", () => {
     rmSync(FAKE_HOME, { recursive: true, force: true });
     for (const fn of createdFiles) {
       try { rmSync(join(GEN_DIR, fn), { force: true }); } catch {}
+      try { rmSync(join(GEN_DIR, fn + ".json"), { force: true }); } catch {}
     }
     const trash = join(GEN_DIR, ".trash");
     if (existsSync(trash)) {
@@ -136,5 +153,9 @@ describe("History: delete tombstone + pagination", () => {
     const body = await res.json();
     assert.ok(Array.isArray(body.sessions), "sessions array");
     assert.ok(Array.isArray(body.loose), "loose array");
+    const titled = body.sessions.find((s) => s.sessionId === titledSessionId);
+    assert.ok(titled, "seeded session group present");
+    assert.strictEqual(titled.title, "Exam Graph");
+    assert.strictEqual(titled.label, "Exam Graph");
   });
 });

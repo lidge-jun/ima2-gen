@@ -61,6 +61,7 @@ test("config exposes default shape", () => {
   assert.equal(c.ids.generatedHexBytes, 4);
   assert.equal(c.ids.nodeHexBytes, 5);
   assert.equal(c.inflight.ttlMs, 600000);
+  assert.equal(c.inflight.terminalTtlMs, 30000);
   assert.deepEqual(c.oauth.validModeration.sort(), ["auto", "low"]);
 });
 

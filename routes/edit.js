@@ -6,6 +6,8 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
+import { startJob, finishJob } from "../lib/inflight.js";
+import { logEvent, logError } from "../lib/logger.js";
 
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
@@ -16,6 +18,11 @@ function validateModeration(ctx, moderation) {
 
 export function registerEditRoutes(app, ctx) {
   app.post("/api/edit", async (req, res) => {
+    const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : null;
+    let finishStatus = "completed";
+    let finishHttpStatus;
+    let finishErrorCode;
+    let finishMeta = {};
     try {
       const {
         prompt,
@@ -30,10 +37,36 @@ export function registerEditRoutes(app, ctx) {
       const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
-      if (!prompt || !imageB64) return res.status(400).json({ error: "Prompt and image are required" });
+      startJob({
+        requestId,
+        kind: "classic",
+        prompt,
+        meta: {
+          kind: "edit",
+          sessionId,
+          quality,
+          size,
+          styleSheetApplied: false,
+        },
+      });
+
+      if (!prompt || !imageB64) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "INVALID_EDIT_INPUT";
+        return res.status(400).json({ error: "Prompt and image are required" });
+      }
       const moderationCheck = validateModeration(ctx, moderation);
-      if (moderationCheck.error) return res.status(400).json({ error: moderationCheck.error });
+      if (moderationCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "INVALID_MODERATION";
+        return res.status(400).json({ error: moderationCheck.error });
+      }
       if (provider === "api") {
+        finishStatus = "error";
+        finishHttpStatus = 403;
+        finishErrorCode = "APIKEY_DISABLED";
         return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
       }
 
@@ -52,7 +85,19 @@ export function registerEditRoutes(app, ctx) {
         } catch {}
       }
 
-      console.log(`[edit][${req.get("x-ima2-client") || "ui"}] provider=oauth quality=${quality} size=${size} moderation=${moderation}${styleSheetApplied ? " +styleSheet" : ""}`);
+      logEvent("edit", "request", {
+        requestId,
+        client: req.get("x-ima2-client") || "ui",
+        provider: "oauth",
+        quality,
+        size,
+        moderation,
+        sessionId,
+        promptChars: typeof prompt === "string" ? prompt.length : 0,
+        promptMode: normalizedPromptMode,
+        styleSheetApplied: !!styleSheetApplied,
+        inputImageChars: typeof imageB64 === "string" ? imageB64.length : 0,
+      });
       const startTime = Date.now();
       const { b64: resultB64, usage, revisedPrompt } = await editViaOAuth(
         effectivePrompt,
@@ -62,6 +107,7 @@ export function registerEditRoutes(app, ctx) {
         moderation,
         normalizedPromptMode,
         ctx,
+        requestId,
       );
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -86,6 +132,14 @@ export function registerEditRoutes(app, ctx) {
         webSearchCalls: 0,
       };
       await writeFile(join(ctx.config.storage.generatedDir, filename + ".json"), JSON.stringify(meta)).catch(() => {});
+      finishHttpStatus = 200;
+      finishMeta = { filename, imageChars: resultB64.length };
+      logEvent("edit", "saved", {
+        requestId,
+        filename,
+        imageChars: resultB64.length,
+        elapsedMs: Date.now() - startTime,
+      });
 
       res.json({
         image: `data:image/png;base64,${resultB64}`,
@@ -99,9 +153,19 @@ export function registerEditRoutes(app, ctx) {
         promptMode: normalizedPromptMode,
       });
     } catch (err) {
-      console.error("Edit error:", err.message);
       const fallbackCode = err.code || classifyUpstreamError(err.message);
+      finishStatus = "error";
+      finishHttpStatus = err.status || 500;
+      finishErrorCode = fallbackCode || "EDIT_FAILED";
+      logError("edit", "error", err, { requestId, code: finishErrorCode });
       res.status(err.status || 500).json({ error: err.message, code: fallbackCode });
+    } finally {
+      finishJob(requestId, {
+        status: finishStatus,
+        httpStatus: finishHttpStatus,
+        errorCode: finishErrorCode,
+        meta: finishMeta,
+      });
     }
   });
 }

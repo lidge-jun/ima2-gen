@@ -8,6 +8,7 @@ import { generateViaOAuth } from "../lib/oauthProxy.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
+import { logEvent, logError } from "../lib/logger.js";
 
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
@@ -19,6 +20,10 @@ function validateModeration(ctx, moderation) {
 export function registerGenerateRoutes(app, ctx) {
   app.post("/api/generate", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : null;
+    let finishStatus = "completed";
+    let finishHttpStatus;
+    let finishErrorCode;
+    let finishMeta = {};
     try {
       const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
       const clientNodeId = typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
@@ -73,13 +78,35 @@ export function registerGenerateRoutes(app, ctx) {
       });
 
       const refCheck = validateAndNormalizeRefs(references);
-      if (refCheck.error) return res.status(400).json({ error: refCheck.error, code: refCheck.code });
+      if (refCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = refCheck.code;
+        return res.status(400).json({ error: refCheck.error, code: refCheck.code });
+      }
 
       if (provider === "api") {
+        finishStatus = "error";
+        finishHttpStatus = 403;
+        finishErrorCode = "APIKEY_DISABLED";
         return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
       }
       const client = req.get("x-ima2-client") || "ui";
-      console.log(`[generate][${client}] provider=oauth quality=${quality} size=${size} moderation=${moderation} n=${count} refs=${refCheck.refs.length}`);
+      logEvent("generate", "request", {
+        requestId,
+        client,
+        provider: "oauth",
+        quality,
+        size,
+        moderation,
+        n: count,
+        refs: refCheck.refs.length,
+        sessionId,
+        clientNodeId,
+        promptChars: typeof prompt === "string" ? prompt.length : 0,
+        promptMode: normalizedPromptMode,
+        styleSheetApplied: !!styleSheetApplied,
+      });
       const startTime = Date.now();
 
       const mimeMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
@@ -106,7 +133,9 @@ export function registerGenerateRoutes(app, ctx) {
           } catch (e) {
             lastErr = e;
           }
-          if (attempt < MAX_RETRIES) console.log(`[retry] attempt ${attempt + 1}/${MAX_RETRIES} after: ${lastErr.message}`);
+          if (attempt < MAX_RETRIES) {
+            logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
+          }
         }
         const err = new Error("Content generation refused after retries");
         err.code = "SAFETY_REFUSAL";
@@ -154,15 +183,21 @@ export function registerGenerateRoutes(app, ctx) {
           }
           if (typeof r.value.webSearchCalls === "number") totalWebSearchCalls += r.value.webSearchCalls;
         } else if (r.status === "rejected") {
-          console.error("[generate] one of parallel jobs failed:", r.reason?.message);
+          logError("generate", "parallel_failed", r.reason, { requestId });
         }
       }
 
       if (images.length === 0) {
         const firstErr = results.find((r) => r.status === "rejected")?.reason;
         if (firstErr?.code === "SAFETY_REFUSAL") {
+          finishStatus = "error";
+          finishHttpStatus = 422;
+          finishErrorCode = "SAFETY_REFUSAL";
           return res.status(422).json({ error: firstErr.message, code: "SAFETY_REFUSAL" });
         }
+        finishStatus = "error";
+        finishHttpStatus = 500;
+        finishErrorCode = "GENERATE_ALL_FAILED";
         return res.status(500).json({ error: "All generation attempts failed" });
       }
 
@@ -181,16 +216,39 @@ export function registerGenerateRoutes(app, ctx) {
       };
 
       if (count === 1) {
+        finishHttpStatus = 200;
+        finishMeta = { filenames: [images[0].filename], imageCount: 1 };
+        logEvent("generate", "saved", {
+          requestId,
+          imageCount: 1,
+          elapsedMs: Date.now() - startTime,
+          filename: images[0].filename,
+        });
         res.json({ image: images[0].image, elapsed, filename: images[0].filename, requestId, ...extra });
       } else {
+        finishHttpStatus = 200;
+        finishMeta = { filenames: images.map((image) => image.filename), imageCount: images.length };
+        logEvent("generate", "saved", {
+          requestId,
+          imageCount: images.length,
+          elapsedMs: Date.now() - startTime,
+        });
         res.json({ images, elapsed, count: images.length, requestId, ...extra });
       }
     } catch (err) {
-      console.error("Generate error:", err.message);
       const fallbackCode = err.code || classifyUpstreamError(err.message);
+      finishStatus = "error";
+      finishHttpStatus = err.status || 500;
+      finishErrorCode = fallbackCode || "GENERATE_FAILED";
+      logError("generate", "error", err, { requestId, code: finishErrorCode });
       res.status(err.status || 500).json({ error: err.message, code: fallbackCode, requestId });
     } finally {
-      finishJob(requestId);
+      finishJob(requestId, {
+        status: finishStatus,
+        httpStatus: finishHttpStatus,
+        errorCode: finishErrorCode,
+        meta: finishMeta,
+      });
     }
   });
 }

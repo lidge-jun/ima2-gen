@@ -13,7 +13,9 @@ type TrashPending = {
 
 type SessionGroup = {
   sessionId: string;
-  label: string;
+  title: string | null;
+  label: string | null;
+  displayLabel: string;
   items: GenerateItem[];
 };
 
@@ -96,7 +98,9 @@ export function GalleryModal() {
         setSessionGroups(
           page.sessions.map((s) => ({
             sessionId: s.sessionId,
-            label: s.sessionId.slice(0, 8),
+            title: s.title ?? null,
+            label: s.label ?? null,
+            displayLabel: s.title || s.label || s.sessionId.slice(0, 8),
             items: s.items.map(toItem),
           })),
         );
@@ -286,7 +290,9 @@ export function GalleryModal() {
               {sessionGroups.map((g) => (
                 <section key={g.sessionId} className="gallery__group">
                   <header className="gallery__group-header">
-                    <span className="gallery__group-label">{t("gallery.sessionLabel", { name: g.label })}</span>
+                    <span className="gallery__group-label" title={g.sessionId}>
+                      {g.title ? g.displayLabel : t("gallery.sessionLabel", { name: g.displayLabel })}
+                    </span>
                     <span className="gallery__group-count">{g.items.length}</span>
                   </header>
                   <div className="gallery__grid">

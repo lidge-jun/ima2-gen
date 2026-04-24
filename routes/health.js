@@ -1,4 +1,4 @@
-import { listJobs, finishJob } from "../lib/inflight.js";
+import { listJobs, listTerminalJobs, finishJob } from "../lib/inflight.js";
 
 export function registerHealthRoutes(app, ctx) {
   app.get("/api/providers", (_req, res) => {
@@ -47,7 +47,14 @@ export function registerHealthRoutes(app, ctx) {
       typeof req.query.sessionId === "string" && req.query.sessionId.length > 0
         ? req.query.sessionId
         : undefined;
-    res.json({ jobs: listJobs({ kind, sessionId }) });
+    const includeTerminal =
+      req.query.includeTerminal === "1" || req.query.includeTerminal === "true";
+    const jobs = listJobs({ kind, sessionId });
+    if (!includeTerminal) return res.json({ jobs });
+    return res.json({
+      jobs,
+      terminalJobs: listTerminalJobs({ kind, sessionId }),
+    });
   });
 
   app.delete("/api/inflight/:requestId", (req, res) => {

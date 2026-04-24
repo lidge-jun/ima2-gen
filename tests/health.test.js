@@ -155,6 +155,39 @@ describe("Server: /api/health + advertisement", () => {
     assert.strictEqual(lastOAuthPayload.tools[1].moderation, "auto");
   });
 
+  it("/api/inflight keeps terminal jobs opt-in and active jobs clean", async () => {
+    const requestId = `req_test_${Date.now()}`;
+    const r = await fetch(`http://localhost:${PORT}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestId,
+        prompt: "terminal inflight check",
+        quality: "medium",
+        size: "1024x1024",
+        moderation: "low",
+      }),
+    });
+    assert.strictEqual(r.status, 200);
+
+    const activeRes = await fetch(`http://localhost:${PORT}/api/inflight`);
+    assert.strictEqual(activeRes.status, 200);
+    const activeBody = await activeRes.json();
+    assert.ok(Array.isArray(activeBody.jobs));
+    assert.equal(activeBody.terminalJobs, undefined);
+    assert.equal(activeBody.jobs.some((j) => j.requestId === requestId), false);
+
+    const terminalRes = await fetch(`http://localhost:${PORT}/api/inflight?includeTerminal=1`);
+    assert.strictEqual(terminalRes.status, 200);
+    const terminalBody = await terminalRes.json();
+    assert.ok(Array.isArray(terminalBody.terminalJobs));
+    const terminal = terminalBody.terminalJobs.find((j) => j.requestId === requestId);
+    assert.ok(terminal, "terminal job should be visible when requested");
+    assert.equal(terminal.status, "completed");
+    assert.equal(terminal.httpStatus, 200);
+    assert.equal(terminal.prompt, undefined);
+  });
+
   // Windows: child.kill(anything) = forceful termination per Node docs
   // (https://nodejs.org/api/child_process.html#subprocesskillsignal) — no
   // handler fires, so __unadvertise cannot run from an externally-signalled

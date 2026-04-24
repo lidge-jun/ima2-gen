@@ -46,11 +46,12 @@ graph TD
 | `bin/lib/args.js` | 73 | Dependency-free argv parser |
 | `bin/lib/files.js` | 39 | Data URI file conversion and output naming |
 | `bin/lib/output.js` | 48 | Terminal output, JSON, exit-code mapping |
-| `lib/sessionStore.js` | 182 | SQLite session and graph persistence |
+| `lib/sessionStore.js` | 231 | SQLite session and graph persistence; lightweight session-title lookup |
 | `lib/assetLifecycle.js` | 120 | Soft delete, restore, node asset-missing marking |
 | `lib/db.js` | 92 | SQLite bootstrap and migrations |
 | `lib/nodeStore.js` | 66 | Node image and metadata load/save |
-| `lib/inflight.js` | 57 | Active job registry |
+| `lib/inflight.js` | 121 | Active job registry and short-lived terminal job snapshots |
+| `lib/logger.js` | 116 | Safe structured logging and redaction helpers |
 | `lib/codexDetect.js` | 69 | Codex OAuth session detection helper |
 
 ## UI File Map
@@ -61,7 +62,7 @@ graph TD
 | Entry | `ui/src/main.tsx` | 10 | React mount |
 | Types | `ui/src/types.ts` | 91 | Provider, quality, size, response types |
 | Store | `ui/src/store/useAppStore.ts` | 1320 | Zustand state, history, in-flight jobs, graph, session actions |
-| API client | `ui/src/lib/api.ts` | 291 | Browser-side REST client |
+| API client | `ui/src/lib/api.ts` | 365 | Browser-side REST client |
 | Style | `ui/src/index.css` | 1580 | App layout, canvas, components, node-mode styling |
 | Components | `ui/src/components/*.tsx` | 1703 | Sidebar, canvas, modal, node cards, panels, controls |
 | Hooks | `ui/src/hooks/*.ts` | 57 | Billing and OAuth status polling |
@@ -71,7 +72,7 @@ graph TD
 
 | Component | Lines | Role |
 |---|---:|---|
-| `GalleryModal.tsx` | 338 | History gallery modal |
+| `GalleryModal.tsx` | 353 | History gallery modal |
 | `PromptComposer.tsx` | 182 | Prompt input and reference handling |
 | `NodeCanvas.tsx` | 132 | React Flow graph canvas |
 | `RightPanel.tsx` | 129 | Quality, size, format, moderation, count controls |
@@ -84,8 +85,11 @@ graph TD
 
 | Test | Lines | Contract covered |
 |---|---:|---|
-| `tests/health.test.js` | 167 | `/api/health` and server advertisement |
-| `tests/history-tombstone.test.js` | 140 | History soft delete, restore, pagination, grouping |
+| `tests/health.test.js` | 206 | `/api/health`, advertisement, generate provider payload, terminal inflight |
+| `tests/history-tombstone.test.js` | 161 | History soft delete, restore, pagination, session-title grouping |
+| `tests/inflight.test.js` | 54 | Active/terminal inflight registry behavior |
+| `tests/logging.test.js` | 51 | Safe log redaction and structured format |
+| `tests/oauth-proxy-error-safety.test.js` | 36 | OAuth upstream error body log-safety regression |
 | `tests/cli-commands.test.js` | 130 | Live CLI command behavior |
 | `tests/bin.test.js` | 117 | CLI entry behavior |
 | `tests/cli-lib.test.js` | 111 | Client, args, files, output helpers |
@@ -112,6 +116,7 @@ graph TD
 
 - 2026-04-23: Created the first working-tree file and responsibility map.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-24: Added safe logger, terminal inflight, gallery title grouping, and related tests.
 
 Previous document: `[[00-structure-hub]]`
 

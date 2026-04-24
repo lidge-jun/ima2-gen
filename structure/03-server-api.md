@@ -48,7 +48,7 @@ The live generation/edit provider is OAuth. Sending `provider: "api"` returns `4
 |---|---|---|---|
 | `POST` | `/api/generate` | `{ prompt, quality?, size?, format?, moderation?, provider?, n?, references?, sessionId?, clientNodeId?, requestId? }` | For `n=1`: `{ image, elapsed, filename, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
 | `POST` | `/api/generate` | same body | For `n>1`: `{ images, elapsed, count, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
-| `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, provider? }` | `{ image, elapsed, filename, usage, provider, moderation }` |
+| `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, provider?, sessionId?, requestId? }` | `{ image, elapsed, filename, usage, provider, moderation }` |
 
 `/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to 8. Result files are written to `generated/`, and sidecar JSON stores prompt, quality, size, format, moderation, provider, usage, and web search counts.
 
@@ -63,14 +63,17 @@ The live generation/edit provider is OAuth. Sending `provider: "api"` returns `4
 
 History is reconstructed from image files and sidecar JSON under `generated/`. Delete is a soft-delete into `.trash/`, not an immediate permanent removal. Restore uses the returned `trashId`.
 
+When `groupBy=session` is used, session groups include `title` and `label` when the session still exists in SQLite. The gallery should prefer the title and only fall back to the short server session id.
+
 ## Inflight Jobs
 
 | Method | Path | Query | Response |
 |---|---|---|---|
 | `GET` | `/api/inflight` | `kind`, `sessionId` | `{ jobs }` |
+| `GET` | `/api/inflight` | `kind`, `sessionId`, `includeTerminal=1` | `{ jobs, terminalJobs }` |
 | `DELETE` | `/api/inflight/:requestId` | none | `204 No Content` |
 
-The inflight registry tracks both classic and node jobs. The UI uses it to reconcile pending state after refresh.
+The inflight registry tracks both classic and node jobs. The default response is active-only so the UI never renders completed jobs as still running. `includeTerminal=1` is an opt-in debug surface that keeps recent completed/error/canceled jobs briefly for request tracing.
 
 ## Node Mode API
 
@@ -107,6 +110,12 @@ Graph saving uses optimistic concurrency. Missing `If-Match` returns `428`. Vers
 | Graph too large | 413 | `GRAPH_TOO_LARGE` |
 | Missing node metadata | 404 | `NODE_NOT_FOUND` |
 
+## Observability Contract
+
+Server logs use compact structured lines such as `[node.request] requestId="..." quality="medium"`. Generation, edit, node, OAuth stream, inflight, history, and session graph saves should carry the same `requestId` where available.
+
+Logs must never include raw prompts, effective prompts, revised prompts, OAuth/API tokens, authorization headers, cookies, raw request bodies, reference data URLs, generated base64, or raw upstream response bodies. Use counts and sizes instead: `promptChars`, `refs`, `imageChars`, `durationMs`, `httpStatus`, and `errorCode`.
+
 ## Sync Checklist
 
 - [ ] If an endpoint is added, update this doc and `ui/src/lib/api.ts`.
@@ -119,6 +128,7 @@ Graph saving uses optimistic concurrency. Missing `If-Match` returns `428`. Vers
 
 - 2026-04-23: Documented the current `server.js` endpoint surface and response shapes.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-24: Added observability, terminal inflight, and gallery session-title response notes.
 
 Previous document: `[[02-command-reference]]`
 
