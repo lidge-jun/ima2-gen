@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { spawn, execSync } from "child_process";
 import { networkInterfaces, homedir } from "os";
 import { openUrl, resolveBin } from "./lib/platform.js";
+import { maybePromptGithubStar } from "./lib/star-prompt.js";
 import { detectCodexAuth } from "../lib/codexDetect.js";
 import { config as runtimeConfig } from "../config.js";
 
@@ -101,6 +102,12 @@ async function setup() {
 }
 
 async function serve() {
+  try {
+    await maybePromptGithubStar();
+  } catch (err) {
+    console.error(`[ima2] Star prompt skipped: ${err?.message || err}`);
+  }
+
   let config = loadConfig();
 
   if (!config.provider) {
