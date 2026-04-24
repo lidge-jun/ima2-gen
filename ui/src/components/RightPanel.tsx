@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
-import { BillingBar } from "./BillingBar";
 import { OptionGroup } from "./OptionGroup";
 import { SizePicker } from "./SizePicker";
 import { CostEstimate } from "./CostEstimate";
@@ -91,7 +90,6 @@ export function RightPanel() {
           className="right-panel-body"
           hidden={!open}
         >
-          <BillingBar />
           <div className="section-title">{t("panel.detailSettings")}</div>
           <OptionGroup<Quality>
             title={t("quality.title")}
