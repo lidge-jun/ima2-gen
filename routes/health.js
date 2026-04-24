@@ -70,7 +70,7 @@ export function registerHealthRoutes(app, ctx) {
         fetch("https://api.openai.com/v1/models", { headers }),
       ]);
 
-      const billing = { apiKeySource: "env" };
+      const billing = { apiKeySource: ctx.apiKeySource ?? "env" };
       if (subRes.status === "fulfilled" && subRes.value.ok) billing.costs = await subRes.value.json();
       if (usageRes.status === "fulfilled" && usageRes.value.ok) billing.credits = await usageRes.value.json();
       billing.apiKeyValid = modelsRes.status === "fulfilled" && modelsRes.value.ok === true;
@@ -80,4 +80,3 @@ export function registerHealthRoutes(app, ctx) {
     }
   });
 }
-

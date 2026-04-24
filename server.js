@@ -19,7 +19,9 @@ import { config } from "./config.js";
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 async function loadApiKey() {
-  if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY;
+  if (process.env.OPENAI_API_KEY) {
+    return { apiKey: process.env.OPENAI_API_KEY, apiKeySource: "env" };
+  }
   const candidates = [
     config.storage.configFile,
     join(rootDir, ".ima2", "config.json"),
@@ -28,10 +30,10 @@ async function loadApiKey() {
     if (!existsSync(cfgPath)) continue;
     try {
       const cfg = JSON.parse(await readFile(cfgPath, "utf-8"));
-      if (cfg.apiKey) return cfg.apiKey;
+      if (cfg.apiKey) return { apiKey: cfg.apiKey, apiKeySource: "config" };
     } catch {}
   }
-  return null;
+  return { apiKey: null, apiKeySource: "none" };
 }
 
 async function createOpenAI(apiKey) {
@@ -86,7 +88,14 @@ function unadvertise(ctx) {
 }
 
 export async function createRuntimeContext(overrides = {}) {
-  const apiKey = overrides.apiKey ?? await loadApiKey();
+  const loadedKey =
+    overrides.apiKey !== undefined
+      ? {
+          apiKey: overrides.apiKey,
+          apiKeySource: overrides.apiKeySource ?? (overrides.apiKey ? "env" : "none"),
+        }
+      : await loadApiKey();
+  const apiKey = loadedKey.apiKey;
   const openai = overrides.openai ?? await createOpenAI(apiKey);
   const oauthPort = config.oauth.proxyPort;
   return {
@@ -96,6 +105,7 @@ export async function createRuntimeContext(overrides = {}) {
     oauthUrl: `http://127.0.0.1:${oauthPort}`,
     hasApiKey: !!apiKey,
     apiKey,
+    apiKeySource: loadedKey.apiKeySource,
     openai,
     startedAt: overrides.startedAt ?? Date.now(),
     packageVersion: overrides.packageVersion ?? readPackageVersion(),
@@ -148,4 +158,3 @@ export async function startServer(overrides = {}) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await startServer();
 }
-
