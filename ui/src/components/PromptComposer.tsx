@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { StyleChips } from "./StyleChips";
 
 const MAX_REFS = 5;
 
@@ -91,6 +92,8 @@ export function PromptComposer() {
           </span>
         )}
       </div>
+
+      <StyleChips />
 
       {refs.length > 0 && (
         <div className="composer__chips">
