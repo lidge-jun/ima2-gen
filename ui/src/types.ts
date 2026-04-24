@@ -79,6 +79,7 @@ export type GenerateRequest = {
   image?: string;
   references?: string[];
   requestId?: string;
+  mode?: "auto" | "direct";
 };
 
 export type OAuthStatus = {

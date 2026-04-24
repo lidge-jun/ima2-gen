@@ -22,6 +22,8 @@ export function PromptComposer() {
   const [styleOpen, setStyleOpen] = useState(false);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
   const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
+  const promptMode = useAppStore((s) => s.promptMode);
+  const setPromptMode = useAppStore((s) => s.setPromptMode);
 
   const canAddMore = refs.length < MAX_REFS;
 
@@ -179,6 +181,17 @@ export function PromptComposer() {
             <span>{t("prompt.style")}</span>
           </button>
         )}
+        <button
+          type="button"
+          className={`composer__tool${promptMode === "direct" ? " composer__tool--on" : ""}`}
+          onClick={() => setPromptMode(promptMode === "direct" ? "auto" : "direct")}
+          title={t("prompt.directModeTitle")}
+          aria-label={t("prompt.directModeTitle")}
+          aria-pressed={promptMode === "direct"}
+        >
+          <span aria-hidden="true" style={{ fontWeight: 700, fontSize: 11 }}>1:1</span>
+          <span>{t("prompt.directMode")}</span>
+        </button>
         <span className="composer__hint">{t("prompt.hint")}</span>
       </div>
 

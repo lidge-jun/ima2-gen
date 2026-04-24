@@ -113,6 +113,8 @@
     "useCurrentTitle": "Use current result as a reference",
     "style": "Style",
     "styleTitle": "Open style consistency settings",
+    "directMode": "Direct",
+    "directModeTitle": "Pass prompt through verbatim (Direct mode)",
     "hint": "Ctrl + Enter to generate",
     "dropHere": "Drop to attach as reference (up to {max})"
   },

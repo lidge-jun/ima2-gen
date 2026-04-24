@@ -83,13 +83,26 @@ function validateModeration(moderation) {
 // automatically; complex/factual prompts use it.
 const RESEARCH_SUFFIX = config.oauth.researchSuffix;
 
-async function generateViaOAuth(prompt, quality, size, moderation = "low", references = [], requestId = null) {
+// 0.09.10 — Prompt fidelity. In "direct" mode we ask the agent to pass the user
+// prompt through verbatim. Official docs note mainline models may still revise
+// prompts; we record the revised_prompt so the UI can show the diff.
+const PROMPT_FIDELITY_SUFFIX =
+  "\n\nWhen you call the image_generation tool, keep the prompt argument as close to the user's original text as possible. Do not translate, summarize, restyle, or rephrase unless strictly necessary. If the user wrote in Korean, keep the Korean text and only append English clarifiers at the end when helpful. Do not inject additional style descriptors when the user already specified a style.";
+
+function buildUserTextPrompt(userPrompt, mode) {
+  if (mode === "direct") {
+    return `Generate an image with this exact prompt, no modifications: ${userPrompt}${PROMPT_FIDELITY_SUFFIX}`;
+  }
+  return `Generate an image: ${userPrompt}${RESEARCH_SUFFIX}${PROMPT_FIDELITY_SUFFIX}`;
+}
+
+async function generateViaOAuth(prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto") {
   const tools = [
     { type: "web_search" },
     { type: "image_generation", quality, size, moderation },
   ];
 
-  const textPrompt = `Generate an image: ${prompt}${RESEARCH_SUFFIX}`;
+  const textPrompt = buildUserTextPrompt(prompt, mode);
   const userContent = references.length
     ? [
         ...references.map((b64) => ({
@@ -136,7 +149,8 @@ async function generateViaOAuth(prompt, quality, size, moderation = "low", refer
     // Check output for image data
     for (const item of json.output || []) {
       if (item.type === "image_generation_call" && item.result) {
-        return { b64: item.result, usage: json.usage };
+        const nsRevised = typeof item.revised_prompt === "string" ? item.revised_prompt : null;
+        return { b64: item.result, usage: json.usage, revisedPrompt: nsRevised };
       }
     }
     console.log("[oauth] no image in JSON output, output count:", (json.output || []).length);
@@ -152,6 +166,7 @@ async function generateViaOAuth(prompt, quality, size, moderation = "low", refer
   let usage = null;
   let webSearchCalls = 0;
   let eventCount = 0;
+  let revisedPrompt = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -183,6 +198,9 @@ async function generateViaOAuth(prompt, quality, size, moderation = "low", refer
             imageB64 = data.item.result;
             console.log("[oauth] got image, b64 length:", imageB64.length);
             if (requestId) setJobPhase(requestId, "decoding");
+          }
+          if (typeof data.item.revised_prompt === "string" && data.item.revised_prompt.length) {
+            revisedPrompt = data.item.revised_prompt;
           }
         }
         if (data.type === "response.output_item.done" && data.item?.type === "web_search_call") {
@@ -224,7 +242,8 @@ async function generateViaOAuth(prompt, quality, size, moderation = "low", refer
       for (const item of json.output || []) {
         if (item.type === "image_generation_call" && item.result) {
           console.log("[oauth] got image from retry, b64 length:", item.result.length);
-          return { b64: item.result, usage: json.usage, webSearchCalls };
+          const retryRevised = typeof item.revised_prompt === "string" ? item.revised_prompt : null;
+          return { b64: item.result, usage: json.usage, webSearchCalls, revisedPrompt: retryRevised };
         }
       }
     }
@@ -232,8 +251,10 @@ async function generateViaOAuth(prompt, quality, size, moderation = "low", refer
     throw new Error("No image data received from OAuth proxy (parsed " + eventCount + " events)");
   }
 
-  return { b64: imageB64, usage, webSearchCalls };
+  return { b64: imageB64, usage, webSearchCalls, revisedPrompt };
 }
+
+
 
 // ── Provider info ──
 app.get("/api/providers", (_req, res) => {
@@ -449,9 +470,10 @@ app.post("/api/generate", async (req, res) => {
       typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
     const clientNodeId =
       typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
-    const { prompt, quality: rawQuality = "auto", size = "1024x1024", format = "png", moderation = "low", provider = "auto", n = 1, references = [] } =
+    const { prompt, quality: rawQuality = "auto", size = "1024x1024", format = "png", moderation = "low", provider = "auto", n = 1, references = [], mode: promptMode = "auto" } =
       req.body;
     const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
+    const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
     if (!prompt) return res.status(400).json({ error: "Prompt is required" });
     const moderationCheck = validateModeration(moderation);
@@ -513,7 +535,7 @@ app.post("/api/generate", async (req, res) => {
       let lastErr;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const r = await generateViaOAuth(effectivePrompt, quality, size, moderation, refB64s, requestId);
+          const r = await generateViaOAuth(effectivePrompt, quality, size, moderation, refB64s, requestId, normalizedPromptMode);
           if (r.b64) return r;
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
@@ -541,6 +563,9 @@ app.post("/api/generate", async (req, res) => {
         // Sidecar metadata for /api/history reconstruction
         const meta = {
           prompt,
+          userPrompt: prompt,
+          revisedPrompt: r.value.revisedPrompt || null,
+          promptMode: normalizedPromptMode,
           effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
           styleSheetApplied: styleSheetApplied || undefined,
           quality,
@@ -556,6 +581,7 @@ app.post("/api/generate", async (req, res) => {
         images.push({
           image: `data:${mime};base64,${r.value.b64}`,
           filename,
+          revisedPrompt: r.value.revisedPrompt || null,
         });
         if (r.value.usage) {
           if (!totalUsage) totalUsage = { ...r.value.usage };
@@ -576,6 +602,7 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const firstRevised = images[0]?.revisedPrompt || null;
     const extra = {
       usage: totalUsage,
       provider: "oauth",
@@ -584,6 +611,8 @@ app.post("/api/generate", async (req, res) => {
       size,
       moderation,
       warnings: qualityWarnings,
+      revisedPrompt: firstRevised,
+      promptMode: normalizedPromptMode,
     };
 
     if (count === 1) {

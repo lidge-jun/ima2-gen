@@ -220,6 +220,7 @@ type AppState = {
   format: Format;
   moderation: Moderation;
   count: Count;
+  promptMode: "auto" | "direct";
   prompt: string;
   referenceImages: string[];
   addReferences: (files: File[]) => Promise<void>;
@@ -292,6 +293,7 @@ type AppState = {
   setFormat: (f: Format) => void;
   setModeration: (m: Moderation) => void;
   setCount: (c: Count) => void;
+  setPromptMode: (m: "auto" | "direct") => void;
   setPrompt: (p: string) => void;
   selectHistory: (item: GenerateItem) => void;
   removeFromHistory: (filename: string) => void;
@@ -314,6 +316,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   format: "png",
   moderation: "low",
   count: 1,
+  promptMode: "auto",
   prompt: "",
   referenceImages: [],
   addReferences: async (files) => {
@@ -1247,6 +1250,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFormat: (format) => set({ format }),
   setModeration: (moderation) => set({ moderation }),
   setCount: (count) => set({ count }),
+  setPromptMode: (promptMode) => set({ promptMode }),
   setPrompt: (prompt) => set({ prompt }),
 
   selectHistory: (item) => {
@@ -1311,6 +1315,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         provider: s.provider,
         n: s.count,
         requestId: flightId,
+        mode: s.promptMode,
         ...(s.referenceImages.length
           ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
           : {}),
