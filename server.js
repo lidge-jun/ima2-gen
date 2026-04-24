@@ -65,6 +65,7 @@ app.use("/generated", express.static(config.storage.generatedDir, {
 // ── Reference validation ──
 import { validateAndNormalizeRefs } from "./lib/refs.js";
 import { classifyUpstreamError } from "./lib/errorClassify.js";
+import { normalizeOAuthParams } from "./lib/oauthNormalize.js";
 const MAX_REF_B64_BYTES = config.limits.maxRefB64Bytes;
 const MAX_REF_COUNT = config.limits.maxRefCount;
 const VALID_MODERATION = config.oauth.validModeration;
@@ -448,8 +449,9 @@ app.post("/api/generate", async (req, res) => {
       typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
     const clientNodeId =
       typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
-    const { prompt, quality = "low", size = "1024x1024", format = "png", moderation = "low", provider = "auto", n = 1, references = [] } =
+    const { prompt, quality: rawQuality = "auto", size = "1024x1024", format = "png", moderation = "low", provider = "auto", n = 1, references = [] } =
       req.body;
+    const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
 
     if (!prompt) return res.status(400).json({ error: "Prompt is required" });
     const moderationCheck = validateModeration(moderation);
@@ -581,6 +583,7 @@ app.post("/api/generate", async (req, res) => {
       quality,
       size,
       moderation,
+      warnings: qualityWarnings,
     };
 
     if (count === 1) {
@@ -670,8 +673,9 @@ async function editViaOAuth(prompt, imageB64, quality, size, moderation = "low")
 // ── Edit image (inpainting) ──
 app.post("/api/edit", async (req, res) => {
   try {
-    const { prompt, image: imageB64, mask: maskB64, quality = "low", size = "1024x1024", moderation = "low", provider = "oauth" } =
+    const { prompt, image: imageB64, mask: maskB64, quality: rawQuality = "auto", size = "1024x1024", moderation = "low", provider = "oauth" } =
       req.body;
+    const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
     const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
 
     if (!prompt || !imageB64)
@@ -732,6 +736,7 @@ app.post("/api/edit", async (req, res) => {
       usage,
       provider: "oauth",
       moderation,
+      warnings: qualityWarnings,
     });
   } catch (err) {
     console.error("Edit error:", err.message);
@@ -762,7 +767,7 @@ app.post("/api/node/generate", async (req, res) => {
   try {
     const {
       prompt,
-      quality = "low",
+      quality: rawQuality = "auto",
       size = "1024x1024",
       format = "png",
       moderation = "low",
@@ -770,6 +775,7 @@ app.post("/api/node/generate", async (req, res) => {
       externalSrc = null,
     } = body;
     const { provider = "oauth" } = body;
+    const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
 
     if (provider === "api") {
       return res.status(403).json({
@@ -893,6 +899,7 @@ app.post("/api/node/generate", async (req, res) => {
       webSearchCalls,
       provider: "oauth",
       moderation,
+      warnings: qualityWarnings,
     });
   } catch (err) {
     console.error("[node/generate] error:", err.message);
