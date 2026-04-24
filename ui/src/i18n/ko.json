@@ -109,6 +109,8 @@
     "attachTitle": "참조 이미지 첨부",
     "useCurrent": "현재 결과 사용",
     "useCurrentTitle": "현재 결과를 참조로 사용",
+    "style": "스타일",
+    "styleTitle": "스타일 일관성 설정 열기",
     "hint": "Ctrl + Enter로 생성",
     "dropHere": "놓아서 참조 이미지로 추가 ({max}장까지)"
   },
@@ -236,7 +238,7 @@
     "en": "English"
   },
   "styleSheet": {
-    "toggle": "🎨 스타일 일관성",
+    "toggle": "스타일 일관성 적용",
     "extract": "프롬프트에서 추출",
     "extracting": "추출 중…",
     "edit": "편집",

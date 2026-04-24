@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { StyleSheetDialog } from "./StyleSheetDialog";
 
 const MAX_REFS = 5;
 
@@ -18,6 +19,9 @@ export function PromptComposer() {
 
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
+  const activeSessionId = useAppStore((s) => s.activeSessionId);
+  const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
 
   const canAddMore = refs.length < MAX_REFS;
 
@@ -156,6 +160,25 @@ export function PromptComposer() {
           </svg>
           <span>{t("prompt.useCurrent")}</span>
         </button>
+        {activeSessionId && (
+          <button
+            type="button"
+            className={`composer__tool${styleSheetEnabled ? " composer__tool--on" : ""}`}
+            onClick={() => setStyleOpen(true)}
+            title={t("prompt.styleTitle")}
+            aria-label={t("prompt.styleTitle")}
+            aria-pressed={styleSheetEnabled}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="8" cy="10" r="1" fill="currentColor" />
+              <circle cx="12" cy="8" r="1" fill="currentColor" />
+              <circle cx="16" cy="10" r="1" fill="currentColor" />
+              <path d="M14 14c2 0 3 1 3 3 0 1-1 2-2 2-2 0-3-2-5-2" />
+            </svg>
+            <span>{t("prompt.style")}</span>
+          </button>
+        )}
         <span className="composer__hint">{t("prompt.hint")}</span>
       </div>
 
@@ -177,6 +200,7 @@ export function PromptComposer() {
           e.target.value = "";
         }}
       />
+      <StyleSheetDialog open={styleOpen} onClose={() => setStyleOpen(false)} />
     </div>
   );
 }

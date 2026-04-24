@@ -109,6 +109,8 @@
     "attachTitle": "Attach reference images",
     "useCurrent": "Use current",
     "useCurrentTitle": "Use current result as a reference",
+    "style": "Style",
+    "styleTitle": "Open style consistency settings",
     "hint": "Ctrl + Enter to generate",
     "dropHere": "Drop to attach as reference (up to {max})"
   },
@@ -236,7 +238,7 @@
     "en": "English"
   },
   "styleSheet": {
-    "toggle": "🎨 Style consistency",
+    "toggle": "Apply style consistency",
     "extract": "Extract from prompt",
     "extracting": "Extracting…",
     "edit": "Edit",
