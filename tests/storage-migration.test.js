@@ -126,21 +126,38 @@ test("target and target-parent candidates are skipped to prevent recursive moves
   });
 });
 
-test("candidate discovery includes npm prefix, appdata, npm-global, and nvm paths", async () => {
+test("candidate discovery includes npm prefix, appdata, npm-global, and version manager paths", async () => {
   await withTempDirs(async ({ rootDir, targetDir }) => {
     const ctx = makeCtx(rootDir, targetDir);
     const npmPrefix = join(rootDir, "prefix");
     const appData = join(rootDir, "AppData", "Roaming");
+    const home = join(rootDir, "home");
     const candidates = getLegacyGeneratedCandidates(ctx, {
       npm_config_prefix: npmPrefix,
       APPDATA: appData,
+      IMA2_TEST_HOME: home,
     });
 
     assert.ok(candidates.includes(resolve(join(rootDir, "generated"))));
     assert.ok(candidates.includes(resolve(join(npmPrefix, "lib", "node_modules", "ima2-gen", "generated"))));
     assert.ok(candidates.includes(resolve(join(npmPrefix, "node_modules", "ima2-gen", "generated"))));
     assert.ok(candidates.includes(resolve(join(appData, "npm", "node_modules", "ima2-gen", "generated"))));
-    assert.ok(candidates.some((p) => p.includes(`${join(".npm-global", "lib", "node_modules", "ima2-gen", "generated")}`)));
-    assert.ok(candidates.some((p) => p.includes(`${join(".nvm", "versions", "node", process.version, "lib", "node_modules", "ima2-gen", "generated")}`)));
+    assert.ok(candidates.includes(resolve(join(home, ".npm-global", "lib", "node_modules", "ima2-gen", "generated"))));
+    assert.ok(candidates.includes(resolve(join(home, ".nvm", "versions", "node", process.version, "lib", "node_modules", "ima2-gen", "generated"))));
+    assert.ok(candidates.includes(resolve(join(home, ".volta", "tools", "image", "packages", "ima2-gen", "lib", "node_modules", "ima2-gen", "generated"))));
+    assert.ok(candidates.includes(resolve(join(home, ".fnm", "node-versions", process.version, "installation", "lib", "node_modules", "ima2-gen", "generated"))));
+  });
+});
+
+test("candidate discovery covers Homebrew global installs when node resolves to Cellar", async () => {
+  await withTempDirs(async ({ rootDir, targetDir }) => {
+    const ctx = makeCtx(rootDir, targetDir);
+    const candidates = getLegacyGeneratedCandidates(ctx, {
+      IMA2_TEST_EXEC_PATH: "/opt/homebrew/Cellar/node/25.2.1/bin/node",
+      IMA2_TEST_ARGV1: "/opt/homebrew/bin/ima2",
+    });
+
+    assert.ok(candidates.includes(resolve("/opt/homebrew/lib/node_modules/ima2-gen/generated")));
+    assert.ok(candidates.includes(resolve("/opt/homebrew/node_modules/ima2-gen/generated")));
   });
 });
