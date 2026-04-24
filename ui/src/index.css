@@ -2142,16 +2142,31 @@ body {
   box-shadow: 0 0 0 2px var(--hairline), 0 8px 24px var(--shadow-strong);
 }
 .image-node__handle {
+  position: absolute;
   width: 10px !important;
   height: 10px !important;
   background: var(--text-dim) !important;
   border: 2px solid var(--surface-2) !important;
+  transition: background 0.12s ease, box-shadow 0.12s ease, height 0.12s ease, width 0.12s ease;
+}
+.image-node__handle::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 999px;
 }
 .image-node__handle--source {
   background: var(--accent-bright) !important;
 }
-.image-node:hover .image-node__handle {
+.image-node:hover .image-node__handle,
+.image-node__handle:hover,
+.image-node__handle:focus-visible,
+.image-node__handle.connectingfrom,
+.image-node__handle.connectingto {
+  width: 14px !important;
+  height: 14px !important;
   background: var(--accent-bright) !important;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-bright) 18%, transparent);
 }
 
 .node-canvas__hint {
