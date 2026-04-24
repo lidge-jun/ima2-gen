@@ -37,7 +37,11 @@ import {
 } from "../lib/api";
 import { compressImage } from "../lib/image";
 import { compressToBase64, isHeic, hasAlphaChannel } from "../lib/compress";
-import { snap16 } from "../lib/size";
+import {
+  normalizeCustomSizePairDetailed,
+  parseRequestedCustomSide,
+  type CustomSizeAdjustmentReason,
+} from "../lib/size";
 import {
   DEFAULT_IMAGE_MODEL,
   IMAGE_MODEL_STORAGE_KEY,
@@ -278,6 +282,17 @@ function mapSessionToGraph(session: SessionFull): {
 
 type ToastState = { message: string; error: boolean; id: number } | null;
 
+type CustomSizeConfirmState = {
+  requestedW: number;
+  requestedH: number;
+  adjustedW: number;
+  adjustedH: number;
+  reasons: CustomSizeAdjustmentReason[];
+  continuation:
+    | { kind: "classic" }
+    | { kind: "node"; clientId: ClientNodeId };
+} | null;
+
 type AppState = {
   provider: Provider;
   quality: Quality;
@@ -305,6 +320,7 @@ type AppState = {
   currentImage: GenerateItem | null;
   history: GenerateItem[];
   toast: ToastState;
+  customSizeConfirm: CustomSizeConfirmState;
   rightPanelOpen: boolean;
   toggleRightPanel: () => void;
   galleryOpen: boolean;
@@ -346,6 +362,7 @@ type AppState = {
   removeNodeReference: (clientId: ClientNodeId, index: number) => void;
   clearNodeReferences: (clientId: ClientNodeId) => void;
   generateNode: (clientId: ClientNodeId) => Promise<void>;
+  runGenerateNode: (clientId: ClientNodeId, sizeOverride?: string) => Promise<void>;
   deleteNode: (clientId: ClientNodeId) => void;
   deleteNodes: (clientIds: ClientNodeId[]) => void;
 
@@ -385,6 +402,9 @@ type AppState = {
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
   generate: () => Promise<void>;
+  runGenerate: (sizeOverride?: string) => Promise<void>;
+  confirmCustomSizeAdjustment: () => Promise<void>;
+  cancelCustomSizeAdjustment: () => void;
   hydrateHistory: () => void;
   showToast: (message: string, error?: boolean) => void;
   errorCard: { code: ImaErrorCode; fallbackMessage?: string; id: number } | null;
@@ -392,6 +412,32 @@ type AppState = {
   dismissErrorCard: () => void;
   getResolvedSize: () => string;
 };
+
+function formatSize(w: number, h: number): string {
+  return `${w}x${h}`;
+}
+
+function getCustomSizeConfirmation(
+  state: AppState,
+  continuation: NonNullable<CustomSizeConfirmState>["continuation"],
+): CustomSizeConfirmState {
+  if (state.sizePreset !== "custom") return null;
+  const result = normalizeCustomSizePairDetailed(
+    state.customW,
+    state.customH,
+    state.customW,
+    state.customH,
+  );
+  if (!result.adjusted) return null;
+  return {
+    requestedW: result.requestedW,
+    requestedH: result.requestedH,
+    adjustedW: result.w,
+    adjustedH: result.h,
+    reasons: result.reasons,
+    continuation,
+  };
+}
 
 export const useAppStore = create<AppState>((set, get) => ({
   provider: "oauth",
@@ -650,6 +696,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentImage: null,
   history: [],
   toast: null,
+  customSizeConfirm: null,
   errorCard: null,
   rightPanelOpen: loadRightPanelOpen(),
   toggleRightPanel: () =>
@@ -1283,6 +1330,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   async generateNode(clientId) {
+    const node = get().graphNodes.find((n) => n.id === clientId);
+    if (!node) return;
+    const { prompt, parentServerNodeId } = node.data;
+    if (!prompt.trim()) {
+      get().showToast(t("toast.promptRequired"), true);
+      return;
+    }
+    const nodeRefs = node.data.referenceImages ?? [];
+    if (parentServerNodeId && nodeRefs.length > 0) {
+      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
+      return;
+    }
+    const pending = getCustomSizeConfirmation(get(), { kind: "node", clientId });
+    if (pending) {
+      set({ customSizeConfirm: pending });
+      return;
+    }
+    await get().runGenerateNode(clientId);
+  },
+
+  async runGenerateNode(clientId, sizeOverride) {
     const requestedNode = get().graphNodes.find((n) => n.id === clientId);
     const targetClientId =
       requestedNode?.data.status === "ready" ? get().addSiblingNode(clientId) : clientId;
@@ -1299,7 +1367,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     const s = get();
-    const size = s.getResolvedSize();
+    const size = sizeOverride ?? s.getResolvedSize();
 
     // Capture request session so a later session switch does not corrupt graph B.
     const requestSessionId = s.activeSessionId;
@@ -1550,7 +1618,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setProvider: (provider) => set({ provider }),
   setQuality: (quality) => set({ quality }),
   setSizePreset: (sizePreset) => set({ sizePreset }),
-  setCustomSize: (w, h) => set({ customW: snap16(w), customH: snap16(h) }),
+  setCustomSize: (w, h) =>
+    set((state) => ({
+      customW: parseRequestedCustomSide(w, state.customW),
+      customH: parseRequestedCustomSide(h, state.customH),
+    })),
   setFormat: (format) => set({ format }),
   setModeration: (moderation) => set({ moderation }),
   setImageModel: (imageModel) => {
@@ -1597,8 +1669,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get();
     const prompt = s.prompt.trim();
     if (!prompt) return;
+    const pending = getCustomSizeConfirmation(s, { kind: "classic" });
+    if (pending) {
+      set({ customSizeConfirm: pending });
+      return;
+    }
+    await get().runGenerate();
+  },
 
-    const size = s.getResolvedSize();
+  async runGenerate(sizeOverride) {
+    const s = get();
+    const prompt = s.prompt.trim();
+    if (!prompt) return;
+
+    const size = sizeOverride ?? s.getResolvedSize();
 
     const flightId = `f_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const startedAt = Date.now();
@@ -1690,6 +1774,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     }
   },
+
+  async confirmCustomSizeAdjustment() {
+    const pending = get().customSizeConfirm;
+    if (!pending) return;
+    const adjustedSize = formatSize(pending.adjustedW, pending.adjustedH);
+    set({
+      customW: pending.adjustedW,
+      customH: pending.adjustedH,
+      customSizeConfirm: null,
+    });
+    if (pending.continuation.kind === "classic") {
+      await get().runGenerate(adjustedSize);
+      return;
+    }
+    await get().runGenerateNode(pending.continuation.clientId, adjustedSize);
+  },
+
+  cancelCustomSizeAdjustment: () => set({ customSizeConfirm: null }),
 
   hydrateHistory() {
     void (async () => {

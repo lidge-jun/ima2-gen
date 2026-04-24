@@ -1,3 +1,4 @@
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { OptionGroup, type OptionItem } from "./OptionGroup";
 import type { SizePreset } from "../types";
@@ -7,6 +8,7 @@ import {
   SIZE_PRESETS_ROW3,
   SIZE_PRESETS_ROW4,
   getSizePresetsRow5,
+  parseRequestedCustomSide,
 } from "../lib/size";
 import { useI18n } from "../i18n";
 
@@ -25,8 +27,30 @@ export function SizePicker() {
   const customH = useAppStore((s) => s.customH);
   const setCustomSize = useAppStore((s) => s.setCustomSize);
   const { t } = useI18n();
+  const [draftW, setDraftW] = useState(String(customW));
+  const [draftH, setDraftH] = useState(String(customH));
 
   const isCustom = sizePreset === "custom";
+
+  useEffect(() => {
+    setDraftW(String(customW));
+    setDraftH(String(customH));
+  }, [customW, customH]);
+
+  function commitCustomSize() {
+    const nextW = parseRequestedCustomSide(draftW, customW);
+    const nextH = parseRequestedCustomSide(draftH, customH);
+    setCustomSize(nextW, nextH);
+    setDraftW(String(nextW));
+    setDraftH(String(nextH));
+  }
+
+  function commitOnEnter(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitCustomSize();
+    }
+  }
 
   return (
     <div className="option-group">
@@ -40,13 +64,14 @@ export function SizePicker() {
         <>
           <div className="option-row">
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="custom-size-input"
-              min={1024}
-              max={3824}
-              step={16}
-              value={customW}
-              onChange={(e) => setCustomSize(parseInt(e.target.value) || 1024, customH)}
+              value={draftW}
+              onChange={(e) => setDraftW(e.target.value.replace(/\D/g, ""))}
+              onBlur={commitCustomSize}
+              onKeyDown={commitOnEnter}
               placeholder={t("size.width")}
             />
             <span
@@ -60,13 +85,14 @@ export function SizePicker() {
               x
             </span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="custom-size-input"
-              min={1024}
-              max={3824}
-              step={16}
-              value={customH}
-              onChange={(e) => setCustomSize(customW, parseInt(e.target.value) || 1024)}
+              value={draftH}
+              onChange={(e) => setDraftH(e.target.value.replace(/\D/g, ""))}
+              onBlur={commitCustomSize}
+              onKeyDown={commitOnEnter}
               placeholder={t("size.height")}
             />
           </div>

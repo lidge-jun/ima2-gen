@@ -48,6 +48,19 @@
     "customLabel": "직접 입력",
     "customSub": "자유 설정"
   },
+  "sizeConfirm": {
+    "title": "크기 조정이 필요합니다",
+    "body": "입력한 크기가 이미지 생성 제한을 벗어나 자동 조정이 필요합니다.",
+    "requested": "요청한 크기",
+    "adjusted": "조정될 크기",
+    "approve": "승인 후 생성",
+    "cancel": "취소",
+    "reasonRatio": "비율 제한 3:1을 초과했습니다.",
+    "reasonPixels": "최대 픽셀 수 제한을 초과했습니다.",
+    "reasonMin": "최소 크기보다 작습니다.",
+    "reasonMax": "최대 크기보다 큽니다.",
+    "reasonSnap": "16px 단위에 맞춰야 합니다."
+  },
   "quality": {
     "title": "품질",
     "lowLabel": "낮음",

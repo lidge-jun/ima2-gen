@@ -7,6 +7,7 @@ import { SettingsWorkspace } from "./components/SettingsWorkspace";
 import { Toast } from "./components/Toast";
 import { ErrorCard } from "./components/ErrorCard";
 import { GalleryModal } from "./components/GalleryModal";
+import { CustomSizeConfirmModal } from "./components/CustomSizeConfirmModal";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
 import { ENABLE_NODE_MODE } from "./lib/devMode";
 
@@ -84,6 +85,7 @@ export default function App() {
         )}
         <RightPanel />
       </div>
+      <CustomSizeConfirmModal />
       <Toast />
       <ErrorCard />
       <GalleryModal />

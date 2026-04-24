@@ -48,6 +48,19 @@
     "customLabel": "Custom",
     "customSub": "Free form"
   },
+  "sizeConfirm": {
+    "title": "Size adjustment required",
+    "body": "The requested size is outside the image generation limits.",
+    "requested": "Requested size",
+    "adjusted": "Adjusted size",
+    "approve": "Approve and generate",
+    "cancel": "Cancel",
+    "reasonRatio": "The ratio exceeds the 3:1 limit.",
+    "reasonPixels": "The maximum pixel limit is exceeded.",
+    "reasonMin": "The size is below the minimum.",
+    "reasonMax": "The size is above the maximum.",
+    "reasonSnap": "The size must align to 16px increments."
+  },
   "quality": {
     "title": "Quality",
     "lowLabel": "Low",
