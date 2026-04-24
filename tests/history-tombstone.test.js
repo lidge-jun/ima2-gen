@@ -54,6 +54,8 @@ describe("History: delete tombstone + pagination", () => {
         PORT,
         HOME: FAKE_HOME,
         USERPROFILE: FAKE_HOME,
+        IMA2_GENERATED_DIR: GEN_DIR,
+        IMA2_TRASH_DIR: join(GEN_DIR, ".trash"),
         IMA2_NO_OAUTH_PROXY: "1",
       },
       cwd: process.cwd(),

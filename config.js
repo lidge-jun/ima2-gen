@@ -108,8 +108,8 @@ export const config = {
   storage: {
     configDir,
     packageRoot,
-    generatedDir: pickStr(env.IMA2_GENERATED_DIR, fileCfg.storage?.generatedDir, join(packageRoot, "generated")),
-    trashDir: pickStr(env.IMA2_TRASH_DIR, fileCfg.storage?.trashDir, join(packageRoot, "generated", ".trash")),
+    generatedDir: pickStr(env.IMA2_GENERATED_DIR, fileCfg.storage?.generatedDir, join(configDir, "generated")),
+    trashDir: pickStr(env.IMA2_TRASH_DIR, fileCfg.storage?.trashDir, join(configDir, "generated", ".trash")),
     generatedDirName: pickStr(env.IMA2_GENERATED_DIRNAME, fileCfg.storage?.generatedDirName, "generated"),
     trashDirName: pickStr(env.IMA2_TRASH_DIRNAME, fileCfg.storage?.trashDirName, ".trash"),
     dbPath: pickStr(env.IMA2_DB_PATH, fileCfg.storage?.dbPath, join(configDir, "sessions.db")),

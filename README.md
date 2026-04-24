@@ -214,7 +214,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth proxy port |
 | `IMA2_SERVER` | — | CLI target override |
 | `IMA2_CONFIG_DIR` | `~/.ima2` | Config and SQLite location |
-| `IMA2_GENERATED_DIR` | `generated/` | Generated image directory |
+| `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable auto-starting the OAuth proxy |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Retention for opt-in terminal in-flight debug jobs |
 | `VITE_IMA2_NODE_MODE` | enabled | Set `0` at UI build time to hide node mode |

@@ -13,6 +13,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { onShutdown } from "./bin/lib/platform.js";
 import { ensureDefaultSession } from "./lib/sessionStore.js";
 import { startOAuthProxy } from "./lib/oauthLauncher.js";
+import { migrateGeneratedStorage } from "./lib/storageMigration.js";
 import { configureRoutes } from "./routes/index.js";
 import { config } from "./config.js";
 
@@ -114,6 +115,7 @@ export async function createRuntimeContext(overrides = {}) {
 
 export async function startServer(overrides = {}) {
   const ctx = await createRuntimeContext(overrides);
+  await migrateGeneratedStorage(ctx);
   const app = buildApp(ctx);
   const oauthChild =
     overrides.oauthChild !== undefined

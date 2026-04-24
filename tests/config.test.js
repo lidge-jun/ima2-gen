@@ -107,4 +107,6 @@ test("storage paths honor IMA2_CONFIG_DIR", () => {
   assert.equal(c.storage.configDir, configDir);
   assert.equal(c.storage.configFile, join(configDir, "config.json"));
   assert.ok(c.storage.dbPath.endsWith("sessions.db"));
+  assert.equal(c.storage.generatedDir, join(configDir, "generated"));
+  assert.equal(c.storage.trashDir, join(configDir, "generated", ".trash"));
 });
