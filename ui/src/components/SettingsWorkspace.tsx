@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { AccountSettings } from "./AccountSettings";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
@@ -13,11 +14,69 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   "future",
 ];
 
+type SettingsSectionBlockProps = {
+  id: SettingsSection;
+  setRef: (id: SettingsSection, element: HTMLElement | null) => void;
+  children: ReactNode;
+};
+
+function SettingsSectionBlock({ id, setRef, children }: SettingsSectionBlockProps) {
+  const { t } = useI18n();
+
+  return (
+    <section
+      id={id}
+      ref={(element) => setRef(id, element)}
+      className="settings-section"
+      aria-labelledby={`settings-section-${id}`}
+    >
+      <header className="settings-section__header">
+        <div>
+          <h3 id={`settings-section-${id}`}>
+            {t(`settings.sections.${id}.title`)}
+          </h3>
+          <p>{t(`settings.sections.${id}.hint`)}</p>
+        </div>
+      </header>
+      <div className="settings-section__body">{children}</div>
+    </section>
+  );
+}
+
 export function SettingsWorkspace() {
   const { t } = useI18n();
   const active = useAppStore((s) => s.activeSettingsSection);
   const setActive = useAppStore((s) => s.setActiveSettingsSection);
   const closeSettings = useAppStore((s) => s.closeSettings);
+  const workspaceRef = useRef<HTMLElement | null>(null);
+  const unlockTimerRef = useRef<number | null>(null);
+  const isProgrammaticScroll = useRef(false);
+  const sectionRefs = useRef<Record<SettingsSection, HTMLElement | null>>({
+    account: null,
+    appearance: null,
+    language: null,
+    future: null,
+  });
+
+  const setSectionRef = (id: SettingsSection, element: HTMLElement | null) => {
+    sectionRefs.current[id] = element;
+  };
+
+  const scrollToSection = (section: SettingsSection) => {
+    setActive(section);
+    isProgrammaticScroll.current = true;
+    sectionRefs.current[section]?.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
+    if (unlockTimerRef.current !== null) {
+      window.clearTimeout(unlockTimerRef.current);
+    }
+    unlockTimerRef.current = window.setTimeout(() => {
+      isProgrammaticScroll.current = false;
+      unlockTimerRef.current = null;
+    }, 120);
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -27,8 +86,41 @@ export function SettingsWorkspace() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeSettings]);
 
+  useEffect(() => {
+    const root = workspaceRef.current;
+    if (!root || typeof IntersectionObserver !== "function") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isProgrammaticScroll.current) return;
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const id = visible?.target.id as SettingsSection | undefined;
+        if (id && SETTINGS_SECTIONS.includes(id)) setActive(id);
+      },
+      { root, threshold: [0.35, 0.6] },
+    );
+    for (const section of SETTINGS_SECTIONS) {
+      const element = sectionRefs.current[section];
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+  }, [setActive]);
+
+  useEffect(() => {
+    return () => {
+      if (unlockTimerRef.current !== null) {
+        window.clearTimeout(unlockTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <main className="settings-workspace" aria-labelledby="settings-title">
+    <main
+      ref={workspaceRef}
+      className="settings-workspace"
+      aria-labelledby="settings-title"
+    >
       <div className="settings-shell">
         <header className="settings-header">
           <div>
@@ -54,7 +146,10 @@ export function SettingsWorkspace() {
                 key={section}
                 type="button"
                 className={`settings-nav__item${active === section ? " is-active" : ""}`}
-                onClick={() => setActive(section)}
+                onClick={() => scrollToSection(section)}
+                aria-label={t("settings.jumpTo", {
+                  section: t(`settings.sections.${section}.title`),
+                })}
               >
                 <span>{t(`settings.sections.${section}.title`)}</span>
                 <small>{t(`settings.sections.${section}.hint`)}</small>
@@ -62,34 +157,41 @@ export function SettingsWorkspace() {
             ))}
           </nav>
 
-          <section className="settings-content" aria-live="polite">
-            {active === "account" ? <AccountSettings /> : null}
-            {active === "appearance" ? (
-              <div className="settings-stack">
-                <article className="settings-card">
-                  <h3>{t("settings.appearance.themeTitle")}</h3>
+          <section className="settings-content" aria-label={t("settings.contentAria")}>
+            <SettingsSectionBlock id="account" setRef={setSectionRef}>
+              <AccountSettings />
+            </SettingsSectionBlock>
+
+            <SettingsSectionBlock id="appearance" setRef={setSectionRef}>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.appearance.themeTitle")}</h4>
                   <p>{t("settings.appearance.themeBody")}</p>
+                </div>
+                <div className="settings-row__control">
                   <ThemeToggle />
-                </article>
-              </div>
-            ) : null}
-            {active === "language" ? (
-              <div className="settings-stack">
-                <article className="settings-card">
-                  <h3>{t("settings.language.title")}</h3>
+                </div>
+              </article>
+            </SettingsSectionBlock>
+
+            <SettingsSectionBlock id="language" setRef={setSectionRef}>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.language.title")}</h4>
                   <p>{t("settings.language.body")}</p>
+                </div>
+                <div className="settings-row__control">
                   <LanguageToggle />
-                </article>
-              </div>
-            ) : null}
-            {active === "future" ? (
-              <div className="settings-stack">
-                <article className="settings-card settings-card--muted">
-                  <h3>{t("settings.future.title")}</h3>
-                  <p>{t("settings.future.body")}</p>
-                </article>
-              </div>
-            ) : null}
+                </div>
+              </article>
+            </SettingsSectionBlock>
+
+            <SettingsSectionBlock id="future" setRef={setSectionRef}>
+              <article className="settings-note">
+                <h4>{t("settings.future.title")}</h4>
+                <p>{t("settings.future.body")}</p>
+              </article>
+            </SettingsSectionBlock>
           </section>
         </div>
       </div>

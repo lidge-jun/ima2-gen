@@ -25,11 +25,11 @@ export function AccountSettings() {
       : t("settings.account.apiSourceEnv");
 
   return (
-    <div className="settings-stack">
-      <article className="settings-card settings-card--hero">
-        <div>
+    <>
+      <article className="settings-row">
+        <div className="settings-row__copy">
           <p className="settings-eyebrow">{t("settings.account.primaryEyebrow")}</p>
-          <h3>{t("settings.account.oauthTitle")}</h3>
+          <h4>{t("settings.account.oauthTitle")}</h4>
           <p>{t("settings.account.oauthBody")}</p>
         </div>
         <div className={`settings-status${oauthReady ? " is-ok" : ""}`}>
@@ -39,10 +39,10 @@ export function AccountSettings() {
       </article>
 
       {showApiKeyCard ? (
-        <article className="settings-card">
-          <div>
+        <article className="settings-row">
+          <div className="settings-row__copy">
             <p className="settings-eyebrow">{apiSource}</p>
-            <h3>{t("settings.account.apiTitle")}</h3>
+            <h4>{t("settings.account.apiTitle")}</h4>
             <p>{t("settings.account.apiBody")}</p>
           </div>
           <div className="settings-status is-muted">
@@ -51,6 +51,6 @@ export function AccountSettings() {
           </div>
         </article>
       ) : null}
-    </div>
+    </>
   );
 }

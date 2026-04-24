@@ -230,6 +230,8 @@
     "closeAria": "Close settings",
     "closeTitle": "Return to canvas",
     "navAria": "Settings sections",
+    "contentAria": "Settings content",
+    "jumpTo": "Jump to {section}",
     "eyebrow": "Workspace settings",
     "title": "Settings",
     "subtitle": "Account, display, and future workspace controls live here so the generator stays focused.",
@@ -271,8 +273,8 @@
       "body": "Switch the UI language without changing generated content."
     },
     "future": {
-      "title": "More settings soon",
-      "body": "Provider controls, OAuth repair tools, and workspace preferences can be added here without crowding the sidebar."
+      "title": "Reserved for later",
+      "body": "Future provider repair and workspace controls will appear here when they become useful."
     }
   },
   "nodeCanvas": {
