@@ -75,6 +75,9 @@ export function HistoryStrip() {
               loading="lazy"
               decoding="async"
             />
+            {item.favorite ? (
+              <span className="history-thumb__fav" aria-label="즐겨찾기">★</span>
+            ) : null}
           </button>
         );
       })}

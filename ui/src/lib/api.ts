@@ -101,6 +101,7 @@ export type HistoryItem = {
   parentNodeId?: string | null;
   clientNodeId?: string | null;
   kind?: string | null;
+  favorite?: boolean;
 };
 
 export type HistoryCursor = { before: number; beforeFilename: string };
@@ -168,6 +169,22 @@ export function restoreHistoryItem(filename: string, trashId: string): Promise<{
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ trashId }),
   });
+}
+
+export async function setFavorite(filename: string, value: boolean): Promise<{ filename: string; favorite: boolean }> {
+  const res = await fetch(
+    `/api/history/${encodeURIComponent(filename)}/favorite`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(body || `setFavorite failed: ${res.status}`);
+  }
+  return res.json();
 }
 
 export type NodeGenerateRequest = {

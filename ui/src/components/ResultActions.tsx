@@ -5,6 +5,8 @@ export function ResultActions() {
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
   const vary = useAppStore((s) => s.varyCurrentResult);
+  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
+  const isFav = Boolean(currentImage?.favorite);
 
   if (!currentImage) return null;
 
@@ -66,6 +68,15 @@ export function ResultActions() {
       </button>
       <button type="button" className="action-btn" onClick={copyPrompt}>
         프롬프트 복사
+      </button>
+      <button
+        type="button"
+        className={`action-btn action-btn--icon${isFav ? " action-btn--active" : ""}`}
+        onClick={() => void toggleFavorite()}
+        title={isFav ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+        aria-pressed={isFav}
+      >
+        {isFav ? "★" : "☆"}
       </button>
       <button
         type="button"

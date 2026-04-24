@@ -17,6 +17,7 @@ import {
   getInflight,
   cancelInflight,
   postNodeGenerate,
+  setFavorite,
   listSessions as apiListSessions,
   createSession as apiCreateSession,
   getSession as apiGetSession,
@@ -254,6 +255,7 @@ type AppState = {
   selectHistory: (item: GenerateItem) => void;
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
+  toggleFavorite: (filename?: string) => Promise<void>;
   generate: (overrides?: { overridePrompt?: string; overrideCount?: Count }) => Promise<void>;
   varyCurrentResult: () => Promise<void>;
   hydrateHistory: () => void;
@@ -1050,6 +1052,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ history: [withDefaults, ...s.history].slice(0, HISTORY_LIMIT) });
   },
 
+  toggleFavorite: async (filename?: string) => {
+    const s = get();
+    const target = filename ?? s.currentImage?.filename;
+    if (!target) return;
+    const currentItem =
+      s.history.find((h) => h.filename === target) ??
+      (s.currentImage?.filename === target ? s.currentImage : null);
+    const next = !currentItem?.favorite;
+
+    const patchItem = <T extends { filename?: string; favorite?: boolean }>(it: T): T =>
+      it.filename === target ? { ...it, favorite: next } : it;
+    set({
+      history: s.history.map(patchItem),
+      currentImage: s.currentImage ? patchItem(s.currentImage) : s.currentImage,
+    });
+
+    try {
+      await setFavorite(target, next);
+    } catch (err) {
+      const revert = <T extends { filename?: string; favorite?: boolean }>(it: T): T =>
+        it.filename === target ? { ...it, favorite: !next } : it;
+      set({
+        history: get().history.map(revert),
+        currentImage: get().currentImage ? revert(get().currentImage!) : get().currentImage,
+      });
+      s.showToast("즐겨찾기 저장 실패", true);
+      console.error(err);
+    }
+  },
+
   getResolvedSize: () => {
     const { sizePreset, customW, customH } = get();
     return sizePreset === "custom" ? `${customW}x${customH}` : sizePreset;
@@ -1175,6 +1207,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           usage: (it.usage as GenerateItem["usage"]) ?? undefined,
           thumb: it.url,
           createdAt: it.createdAt,
+          favorite: it.favorite === true,
         }));
         if (history.length > 0) {
           const selected = loadSelectedFilename();

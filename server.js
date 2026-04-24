@@ -20,6 +20,7 @@ import {
   ensureDefaultSession,
 } from "./lib/sessionStore.js";
 import { trashAsset, restoreAsset } from "./lib/assetLifecycle.js";
+import { setFavoriteFlag } from "./lib/favorite.js";
 import { runResponses } from "./lib/oauthStream.js";
 import {
   validatePrompt,
@@ -265,6 +266,7 @@ app.get("/api/history", async (req, res) => {
         parentNodeId: meta?.parentNodeId || null,
         clientNodeId: meta?.clientNodeId || null,
         kind: meta?.kind || null,
+        favorite: meta?.favorite === true,
       };
     }));
 
@@ -342,6 +344,18 @@ app.post("/api/history/:filename/restore", async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.post("/api/history/:filename/favorite", async (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.filename);
+    const value = Boolean(req.body?.value);
+    const generatedDir = join(__dirname, "generated");
+    const result = await setFavoriteFlag(generatedDir, filename, value);
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
   }
 });
 

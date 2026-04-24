@@ -43,6 +43,7 @@ export function GalleryModal() {
 
   const [query, setQuery] = useState("");
   const [groupBy, setGroupBy] = useState<"date" | "session">("date");
+  const [favOnly, setFavOnly] = useState(false);
   const [sessionGroups, setSessionGroups] = useState<SessionGroup[]>([]);
   const [loose, setLoose] = useState<GenerateItem[]>([]);
   const [pending, setPending] = useState<TrashPending | null>(null);
@@ -59,6 +60,7 @@ export function GalleryModal() {
   useEffect(() => {
     if (!open) {
       setQuery("");
+      setFavOnly(false);
       setPending(null);
     }
   }, [open]);
@@ -79,6 +81,7 @@ export function GalleryModal() {
           quality: h.quality ?? undefined,
           provider: h.provider,
           createdAt: h.createdAt,
+          favorite: h.favorite === true,
         });
         setSessionGroups(
           page.sessions.map((s) => ({
@@ -103,28 +106,34 @@ export function GalleryModal() {
   );
 
   const matchesQuery = useMemo(() => {
-    if (!normalizedQuery) return () => true;
-    return (h: GenerateItem) =>
-      (h.prompt ?? "").toLowerCase().normalize("NFC").includes(normalizedQuery) ||
-      (h.filename ?? "").toLowerCase().normalize("NFC").includes(normalizedQuery);
-  }, [normalizedQuery]);
+    const q = normalizedQuery;
+    const textPred = q
+      ? (h: GenerateItem) =>
+          (h.prompt ?? "").toLowerCase().normalize("NFC").includes(q) ||
+          (h.filename ?? "").toLowerCase().normalize("NFC").includes(q)
+      : () => true;
+    if (!favOnly) return textPred;
+    return (h: GenerateItem) => h.favorite === true && textPred(h);
+  }, [normalizedQuery, favOnly]);
+
+  const hasFilter = Boolean(normalizedQuery) || favOnly;
 
   const filtered = useMemo(() => {
-    if (!normalizedQuery) return history;
+    if (!hasFilter) return history;
     return history.filter(matchesQuery);
-  }, [history, normalizedQuery, matchesQuery]);
+  }, [history, hasFilter, matchesQuery]);
 
   const filteredSessionGroups = useMemo(() => {
-    if (!normalizedQuery) return sessionGroups;
+    if (!hasFilter) return sessionGroups;
     return sessionGroups
       .map((g) => ({ ...g, items: g.items.filter(matchesQuery) }))
       .filter((g) => g.items.length > 0);
-  }, [sessionGroups, normalizedQuery, matchesQuery]);
+  }, [sessionGroups, hasFilter, matchesQuery]);
 
   const filteredLoose = useMemo(() => {
-    if (!normalizedQuery) return loose;
+    if (!hasFilter) return loose;
     return loose.filter(matchesQuery);
-  }, [loose, normalizedQuery, matchesQuery]);
+  }, [loose, hasFilter, matchesQuery]);
 
   const dateGroups = useMemo(() => {
     const map = new Map<string, GenerateItem[]>();
@@ -237,7 +246,7 @@ export function GalleryModal() {
             <div className="gallery__title">갤러리</div>
             <div className="gallery__meta">
               총 {totalVisible}장
-              {query ? ` / 전체 ${history.length}장` : ""}
+              {hasFilter ? ` / 전체 ${history.length}장` : ""}
             </div>
             <div className="gallery__group-toggle" role="tablist" aria-label="정렬 기준">
               <button
@@ -268,6 +277,15 @@ export function GalleryModal() {
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
+          <button
+            type="button"
+            className={`gallery-filter-chip${favOnly ? " active" : ""}`}
+            onClick={() => setFavOnly((v) => !v)}
+            title="즐겨찾기만 보기"
+            aria-pressed={favOnly}
+          >
+            ★ 즐겨찾기
+          </button>
           <button
             type="button"
             className="gallery__close"
@@ -306,7 +324,7 @@ export function GalleryModal() {
               )}
               {filteredSessionGroups.length === 0 && filteredLoose.length === 0 && (
                 <div className="gallery__empty">
-                  {normalizedQuery
+                  {hasFilter
                     ? "검색 결과가 없습니다."
                     : "아직 저장된 세션이 없습니다."}
                 </div>
@@ -316,7 +334,9 @@ export function GalleryModal() {
             <div className="gallery__empty">
               {history.length === 0
                 ? "아직 생성된 이미지가 없습니다. 먼저 하나 만들어보세요."
-                : "검색 결과가 없습니다."}
+                : hasFilter
+                  ? "검색 결과가 없습니다."
+                  : "아직 생성된 이미지가 없습니다."}
             </div>
           ) : (
             dateGroups.map(([label, items]) => (

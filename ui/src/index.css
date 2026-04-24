@@ -2127,3 +2127,34 @@ body {
   padding: 2px 0;
   border: none;
 }
+
+.action-btn--icon {
+  padding: 6px 10px;
+  font-size: 16px;
+  line-height: 1;
+}
+.action-btn--active { color: var(--amber); }
+
+.history-thumb__fav {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: var(--amber);
+  font-size: 11px;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.gallery-filter-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.gallery-filter-chip.active {
+  color: var(--amber);
+  border-color: var(--amber);
+}

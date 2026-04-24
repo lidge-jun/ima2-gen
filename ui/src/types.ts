@@ -34,6 +34,7 @@ export type GenerateItem = {
   usage?: { total_tokens?: number } & Record<string, unknown>;
   thumb?: string;
   createdAt?: number;
+  favorite?: boolean;
 };
 
 export type GenerateSingleResponse = {
