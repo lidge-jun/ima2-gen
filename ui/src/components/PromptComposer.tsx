@@ -129,6 +129,11 @@ export function PromptComposer() {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             void generate();
+            return;
+          }
+          if ((e.key === "e" || e.key === "E") && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            if (prompt.trim()) setEnhanceOpen(true);
           }
         }}
       />

@@ -8,6 +8,9 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["Ctrl", "K"], label: "프롬프트 입력창 포커스" },
   { keys: ["Ctrl", "G"], label: "갤러리 열기/닫기" },
   { keys: ["Ctrl", "V"], label: "클립보드 이미지를 참조로 추가" },
+  { keys: ["Ctrl", "E"], label: "프롬프트 다듬기" },
+  { keys: ["V"], label: "현재 결과를 한 장 더 생성(변형)" },
+  { keys: ["F"], label: "현재 결과 즐겨찾기 토글" },
   { keys: ["?"], label: "이 도움말 열기/닫기" },
   { keys: ["Esc"], label: "열린 모달 닫기" },
 ];
@@ -72,6 +75,20 @@ export function ShortcutsHelp() {
         e.preventDefault();
         if (galleryOpen) closeGallery();
         else openGallery();
+        return;
+      }
+
+      // bare V — vary current result (outside inputs, no modifier)
+      if (!meta && !e.shiftKey && (e.key === "v" || e.key === "V") && !isTyping) {
+        e.preventDefault();
+        void useAppStore.getState().varyCurrentResult();
+        return;
+      }
+
+      // bare F — toggle favorite on current result (outside inputs)
+      if (!meta && !e.shiftKey && (e.key === "f" || e.key === "F") && !isTyping) {
+        e.preventDefault();
+        void useAppStore.getState().toggleFavorite();
         return;
       }
     };
