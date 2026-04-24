@@ -90,9 +90,41 @@ export function SizePicker() {
           );
         })}
       </div>
-      <div className="size-picker__options" role="tabpanel">
+      <div
+        className={`size-picker__options${active === "auto" ? " size-picker__options--cards" : ""}`}
+        role="tabpanel"
+      >
         {activeGroup.items.map((it) => {
           const selected = sizePreset === it.value;
+          if (active === "auto") {
+            return (
+              <button
+                key={it.value}
+                type="button"
+                className={`size-picker__card${selected ? " active" : ""}`}
+                onClick={() => setSizePreset(it.value as SizePreset)}
+                title={`${it.label} (${it.sub})`}
+              >
+                <div className="size-picker__card-icon" aria-hidden="true">
+                  {it.value === "auto" ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a10 10 0 1 0 10 10" />
+                      <path d="M12 6v6l4 2" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M9 3v18M3 9h18" />
+                    </svg>
+                  )}
+                </div>
+                <div className="size-picker__card-text">
+                  <div className="size-picker__card-label">{it.label}</div>
+                  <div className="size-picker__card-sub">{it.sub}</div>
+                </div>
+              </button>
+            );
+          }
           return (
             <button
               key={it.value}

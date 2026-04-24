@@ -37,8 +37,8 @@ export const SIZE_GROUP_PORTRAIT: ReadonlyArray<SizePresetItem> = [
 ];
 
 export const SIZE_GROUP_AUTO: ReadonlyArray<SizePresetItem> = [
-  { value: "auto", label: "자동", sub: "모델 추천" },
-  { value: "custom", label: "직접 입력", sub: "자유 설정" },
+  { value: "auto", label: "자동", sub: "모델이 결정" },
+  { value: "custom", label: "직접 입력", sub: "커스텀 크기" },
 ];
 
 export type SizeCategory = "square" | "landscape" | "portrait" | "auto";
@@ -52,7 +52,7 @@ export const SIZE_CATEGORIES: ReadonlyArray<{
   { id: "square", label: "정사각", icon: "square", items: SIZE_GROUP_SQUARE },
   { id: "landscape", label: "가로", icon: "landscape", items: SIZE_GROUP_LANDSCAPE },
   { id: "portrait", label: "세로", icon: "portrait", items: SIZE_GROUP_PORTRAIT },
-  { id: "auto", label: "자유", icon: "custom", items: SIZE_GROUP_AUTO },
+  { id: "auto", label: "고급", icon: "custom", items: SIZE_GROUP_AUTO },
 ];
 
 export function categoryForPreset(value: string): SizeCategory {

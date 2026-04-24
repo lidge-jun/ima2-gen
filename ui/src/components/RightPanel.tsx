@@ -4,35 +4,47 @@ import { BillingBar } from "./BillingBar";
 import { OptionGroup } from "./OptionGroup";
 import { SizePicker } from "./SizePicker";
 import { CostEstimate } from "./CostEstimate";
-import type { Count, Format, Moderation, Quality } from "../types";
+import type { Count, Format, Quality } from "../types";
 
 const QUALITY_ITEMS = [
-  { value: "low" as const, label: "낮음", sub: "빠름" },
-  { value: "medium" as const, label: "중간", sub: "균형" },
-  { value: "high" as const, label: "높음", sub: "최상" },
+  { value: "low" as const, label: "낮음", sub: "~10–20초" },
+  { value: "medium" as const, label: "중간", sub: "~20–40초" },
+  { value: "high" as const, label: "높음", sub: "~40–80초" },
 ];
 
 const FORMAT_ITEMS = [
-  { value: "png" as const, label: "PNG" },
-  { value: "jpeg" as const, label: "JPEG" },
-  { value: "webp" as const, label: "WebP" },
+  { value: "png" as const, label: "PNG", sub: "투명 지원" },
+  { value: "jpeg" as const, label: "JPEG", sub: "작은 용량" },
+  { value: "webp" as const, label: "WebP", sub: "균형" },
 ];
 
 const MOD_ITEMS = [
-  { value: "auto" as const, label: "자동", sub: "표준 필터" },
+  { value: "auto" as const, label: "표준", sub: "기본값" },
   {
     value: "low" as const,
-    label: "낮음",
-    sub: "완화 필터",
+    label: "완화",
+    sub: "경계선 허용",
     color: "var(--amber)",
   },
 ];
 
-const COUNT_ITEMS: { value: string; label: string }[] = [
-  { value: "1", label: "1" },
-  { value: "2", label: "2" },
-  { value: "4", label: "4" },
+const COUNT_ITEMS: { value: string; label: string; sub?: string }[] = [
+  { value: "1", label: "1", sub: "기본" },
+  { value: "2", label: "2", sub: "×2 비용" },
+  { value: "4", label: "4", sub: "×4 비용" },
 ];
+
+function ModerationHelp() {
+  return (
+    <span
+      className="option-help-icon"
+      title="표준은 기본 안전 필터를, 완화는 경계선 프롬프트를 조금 더 허용합니다. 유해 콘텐츠 필터는 두 모드 모두에서 유지됩니다."
+      aria-label="모더레이션 안내"
+    >
+      ?
+    </span>
+  );
+}
 
 export function RightPanel() {
   const open = useAppStore((s) => s.rightPanelOpen);
@@ -109,15 +121,31 @@ export function RightPanel() {
             value={format}
             onChange={setFormat}
           />
-          <OptionGroup<Moderation>
-            title="모더레이션"
-            items={MOD_ITEMS}
-            value={moderation}
-            onChange={setModeration}
-          />
-          <p className="option-help">
-            자동은 표준 안전 필터를 사용합니다. 낮음은 제한을 조금 완화해 경계선 프롬프트가 더 통과할 수 있습니다.
-          </p>
+          <div className="option-group">
+            <div className="section-title option-title-with-help">
+              모더레이션
+              <ModerationHelp />
+            </div>
+            <div className="option-row">
+              {MOD_ITEMS.map((it) => (
+                <button
+                  key={it.value}
+                  className={`option-btn${it.value === moderation ? " active" : ""}`}
+                  style={it.color ? { color: it.color } : undefined}
+                  onClick={() => setModeration(it.value)}
+                  type="button"
+                >
+                  {it.label}
+                  {it.sub ? (
+                    <>
+                      <br />
+                      <span className="option-sub">{it.sub}</span>
+                    </>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
           <OptionGroup<string>
             title="개수"
             items={COUNT_ITEMS}

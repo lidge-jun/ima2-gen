@@ -159,6 +159,26 @@ body {
   line-height: 1.45;
 }
 
+.option-title-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.option-help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-dim);
+  cursor: help;
+  user-select: none;
+}
+.option-help-icon:hover { color: var(--text); border-color: var(--text-dim); }
+
 .option-row {
   display: flex;
   gap: 4px;
@@ -1323,6 +1343,30 @@ body {
 .size-picker__option.active .size-picker__option-sub {
   color: var(--text);
 }
+.size-picker__options--cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.size-picker__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  text-align: left;
+}
+.size-picker__card:hover { border-color: var(--text-dim); }
+.size-picker__card.active { border-color: var(--accent); background: var(--surface); }
+.size-picker__card-icon { color: var(--text-dim); display: flex; }
+.size-picker__card-text { display: flex; flex-direction: column; gap: 2px; }
+.size-picker__card-label { font-size: 13px; font-weight: 500; }
+.size-picker__card-sub { font-size: 11px; color: var(--text-dim); }
 
 .logo-badge {
   font-family: var(--mono);
