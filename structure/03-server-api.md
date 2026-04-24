@@ -103,6 +103,10 @@ Node sidecars include `requestId` as recovery metadata. `/api/history` exposes t
 
 Graph saving uses optimistic concurrency. Missing `If-Match` returns `428`. Version mismatch returns an error payload with the current version.
 
+`GRAPH_VERSION_CONFLICT` only means the client saved against a stale `If-Match` graph version. It is not proof that another browser tab edited the graph; a delayed debounce, recovered node save, or session switch flush can also surface the same response. The UI should therefore use source-neutral language such as "graph version changed" unless a separate tab identity protocol proves otherwise.
+
+Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-Graph-Save-Reason`, and `X-Ima2-Tab-Id`. The server logs these values for `graph_save` and `graph_conflict` events but must not treat them as authorization or correctness inputs.
+
 ## Error States
 
 | Case | Status | Code or message |
@@ -138,6 +142,7 @@ Logs must never include raw prompts, effective prompts, revised prompts, OAuth/A
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Added node SSE partial streaming, requestId sidecar/history recovery, observability, terminal inflight, and gallery session-title response notes.
 - 2026-04-24: Added explicit image model selection contract for classic, edit, and node generation.
+- 2026-04-24: Clarified source-neutral `GRAPH_VERSION_CONFLICT` semantics and graph save metadata headers.
 
 Previous document: `[[02-command-reference]]`
 

@@ -89,6 +89,14 @@ Each node request writes `requestId` into the node sidecar and `/api/history`. R
 
 Pending and reconciling cards use a transform-only rotating border glow. Reduced-motion users keep the static glow without rotation.
 
+## Conflict Reload Recovery
+
+Session graph saves use `If-Match` graph versions. When the server returns `GRAPH_VERSION_CONFLICT`, the client reloads the latest graph and shows neutral copy: the graph version changed. The response does not prove another tab caused the change.
+
+After the reload, node mode immediately runs history recovery. The matcher uses `pendingRequestId ?? recoveryRequestId` first, then falls back to `(sessionId, clientNodeId, createdAt)` so a completed node asset can be reattached even if the graph snapshot stored only the sanitized pending state.
+
+Recovered nodes become `ready` with `imageUrl` from history. Draft-only fields such as node-local `referenceImages` and transient `partialImageUrl` stay stripped from session graph saves; `refsCount` remains numeric metadata in sidecars/history.
+
 ## Parent And External Source Inputs
 
 | Input | Server behavior | Used when |
@@ -137,6 +145,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 
 - 2026-04-24: Documented node-local reference inputs, parked classic references, and the child/edit reference guard.
 - 2026-04-24: Documented partial-image SSE streaming, requestId recovery, and pending-node glow.
+- 2026-04-24: Added conflict reload recovery notes for neutral graph-version copy and requestId-first node repair.
 - 2026-04-23: Documented the implemented node canvas, node API, and session persistence structure.
 - 2026-04-23: Translated this document from Korean to English.
 
