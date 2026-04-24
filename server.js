@@ -64,6 +64,7 @@ app.use("/generated", express.static(config.storage.generatedDir, {
 
 // ── Reference validation ──
 import { validateAndNormalizeRefs } from "./lib/refs.js";
+import { classifyUpstreamError } from "./lib/errorClassify.js";
 const MAX_REF_B64_BYTES = config.limits.maxRefB64Bytes;
 const MAX_REF_COUNT = config.limits.maxRefCount;
 const VALID_MODERATION = config.oauth.validModeration;
@@ -589,7 +590,8 @@ app.post("/api/generate", async (req, res) => {
     }
   } catch (err) {
     console.error("Generate error:", err.message);
-    res.status(err.status || 500).json({ error: err.message, code: err.code, requestId });
+    const fallbackCode = err.code || classifyUpstreamError(err.message);
+    res.status(err.status || 500).json({ error: err.message, code: fallbackCode, requestId });
   } finally {
     finishJob(requestId);
   }
@@ -733,7 +735,8 @@ app.post("/api/edit", async (req, res) => {
     });
   } catch (err) {
     console.error("Edit error:", err.message);
-    res.status(err.status || 500).json({ error: err.message });
+    const fallbackCode = err.code || classifyUpstreamError(err.message);
+    res.status(err.status || 500).json({ error: err.message, code: fallbackCode });
   }
 });
 
@@ -893,8 +896,9 @@ app.post("/api/node/generate", async (req, res) => {
     });
   } catch (err) {
     console.error("[node/generate] error:", err.message);
+    const code = err.code || classifyUpstreamError(err.message) || "NODE_GEN_FAILED";
     res.status(err.status || 500).json({
-      error: { code: err.code || "NODE_GEN_FAILED", message: err.message },
+      error: { code, message: err.message },
       parentNodeId,
     });
   } finally {

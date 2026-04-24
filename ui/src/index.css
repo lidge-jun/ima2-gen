@@ -1694,3 +1694,68 @@ body {
   gap: 8px;
   margin-top: 8px;
 }
+
+/* 0.09.8 — ErrorCard (persistent, centered, actionable) */
+.error-card-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 220;
+  padding: 24px;
+}
+.error-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red, #ef4444);
+  border-radius: var(--radius);
+  max-width: 440px;
+  width: 100%;
+  padding: 20px 22px;
+  display: flex;
+  gap: 16px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+.error-card__icon {
+  color: var(--red, #ef4444);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.error-card__content { flex: 1; min-width: 0; }
+.error-card__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.error-card__body {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.error-card__details {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.error-card__details pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.error-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

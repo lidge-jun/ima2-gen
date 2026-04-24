@@ -265,5 +265,48 @@
       "palette": "Palette (comma-separated hex or names)",
       "negative": "Negative (comma-separated)"
     }
+  },
+  "errorCard": {
+    "close": "Close",
+    "details": "Show raw error details",
+    "unknown": {
+      "title": "An unexpected error occurred",
+      "body": "Please try again shortly. If it persists, copy the raw error message below and report it."
+    },
+    "moderationRefused": {
+      "title": "Prompt blocked by moderation",
+      "body": "Soften the wording or rephrase. Sensitive/violent content in reference images can also trigger this.",
+      "cta": "Edit prompt"
+    },
+    "upstream5xx": {
+      "title": "OpenAI is currently busy",
+      "body": "Retrying usually resolves this. Check status.openai.com if it persists.",
+      "cta": "Retry"
+    },
+    "authChatgptExpired": {
+      "title": "Codex ChatGPT session expired",
+      "body": "Run `npx @openai/codex login` in your terminal, then reload this app.",
+      "cta": "Reload"
+    },
+    "authApiKeyInvalid": {
+      "title": "API key authentication failed",
+      "body": "The key is invalid, revoked, out of quota, or tied to the wrong org. This app runs in OAuth mode, so switch to ChatGPT login.",
+      "cta": "OK"
+    },
+    "networkFailed": {
+      "title": "Network connection failed",
+      "body": "Could not reach OpenAI or the local OAuth proxy. Check VPN/firewall and status.openai.com.",
+      "cta": "Reload"
+    },
+    "oauthUnavailable": {
+      "title": "OAuth proxy unavailable",
+      "body": "The local OAuth proxy is not running. Restart `ima2 serve` and try again.",
+      "cta": "Reload"
+    },
+    "apikeyDisabled": {
+      "title": "API-key mode is disabled",
+      "body": "This app is OAuth-only (ChatGPT login). Switch the provider to OAuth.",
+      "cta": "OK"
+    }
   }
 }

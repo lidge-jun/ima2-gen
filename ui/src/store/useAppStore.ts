@@ -37,6 +37,8 @@ import { snap16 } from "../lib/size";
 import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
 import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
 import { t, loadLocale, saveLocale, type Locale } from "../i18n";
+import type { ImaErrorCode } from "../lib/errorCodes";
+import { handleError } from "../lib/errorHandler";
 
 function loadRightPanelOpen(): boolean {
   try {
@@ -297,6 +299,9 @@ type AppState = {
   generate: () => Promise<void>;
   hydrateHistory: () => void;
   showToast: (message: string, error?: boolean) => void;
+  errorCard: { code: ImaErrorCode; fallbackMessage?: string; id: number } | null;
+  showErrorCard: (code: ImaErrorCode, params?: { fallbackMessage?: string }) => void;
+  dismissErrorCard: () => void;
   getResolvedSize: () => string;
 };
 
@@ -548,6 +553,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentImage: null,
   history: [],
   toast: null,
+  errorCard: null,
   rightPanelOpen: loadRightPanelOpen(),
   toggleRightPanel: () =>
     set((s) => {
@@ -1135,7 +1141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           ),
         });
         graphMutated = true;
-        get().showToast(msg, true);
+        handleError(err, get());
       }
       // cross-session: silent — user is on a different graph
     } finally {
@@ -1357,24 +1363,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().showToast(t("toast.generatedSingle", { elapsed: res.elapsed }));
       }
     } catch (err) {
-      const e = err as Error & { code?: string };
-      const code = e?.code;
-      const refToastKey =
-        code === "REF_TOO_LARGE"
-          ? "toast.refTooLarge"
-          : code === "REF_NOT_BASE64"
-            ? "toast.refNotBase64"
-            : code === "REF_EMPTY"
-              ? "toast.refEmpty"
-              : code === "REF_TOO_MANY"
-                ? "toast.refLimitExceeded"
-                : null;
-      const msg = refToastKey
-        ? t(refToastKey)
-        : err instanceof Error
-          ? err.message
-          : t("toast.generateFailed");
-      get().showToast(msg, true);
+      handleError(err, get());
     } finally {
       const remaining = get().inFlight.filter((f) => f.id !== flightId);
       saveInFlight(remaining);
@@ -1421,6 +1410,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   showToast(message, error = false) {
     set({ toast: { message, error, id: Date.now() + Math.random() } });
+  },
+  showErrorCard(code, params) {
+    set({ errorCard: { code, fallbackMessage: params?.fallbackMessage, id: Date.now() + Math.random() } });
+  },
+  dismissErrorCard() {
+    set({ errorCard: null });
   },
 }));
 

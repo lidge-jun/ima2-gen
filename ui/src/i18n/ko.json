@@ -265,5 +265,48 @@
       "palette": "팔레트 (쉼표로 구분된 hex 또는 이름)",
       "negative": "네거티브 (쉼표로 구분)"
     }
+  },
+  "errorCard": {
+    "close": "닫기",
+    "details": "자세한 원본 오류 보기",
+    "unknown": {
+      "title": "알 수 없는 오류가 발생했어요",
+      "body": "잠시 후 다시 시도해 주세요. 문제가 계속되면 원본 오류 메시지를 복사해 제보해 주세요."
+    },
+    "moderationRefused": {
+      "title": "프롬프트가 모더레이션에 걸렸어요",
+      "body": "표현 수위를 낮추거나 다른 문구로 바꿔 보세요. 레퍼런스 이미지의 선정적/폭력적 요소도 영향을 줄 수 있어요.",
+      "cta": "프롬프트 수정"
+    },
+    "upstream5xx": {
+      "title": "OpenAI 서버가 혼잡합니다",
+      "body": "잠시 후 다시 시도하면 대부분 해결돼요. 상태 페이지(status.openai.com)도 확인해 보세요.",
+      "cta": "다시 시도"
+    },
+    "authChatgptExpired": {
+      "title": "Codex ChatGPT 로그인이 만료됐어요",
+      "body": "터미널에서 `npx @openai/codex login`을 다시 실행한 뒤 앱을 새로고침해 주세요.",
+      "cta": "새로고침"
+    },
+    "authApiKeyInvalid": {
+      "title": "API 키 인증 실패",
+      "body": "키가 잘못됐거나 한도/조직 권한 문제예요. 본 앱은 API-Key 모드가 비활성화되어 있어 OAuth(ChatGPT 로그인)로 전환하는 편이 좋아요.",
+      "cta": "확인"
+    },
+    "networkFailed": {
+      "title": "네트워크 연결 실패",
+      "body": "OpenAI/로컬 OAuth 프록시에 연결하지 못했어요. VPN/방화벽이나 `status.openai.com`을 확인해 주세요.",
+      "cta": "새로고침"
+    },
+    "oauthUnavailable": {
+      "title": "OAuth 프록시를 사용할 수 없어요",
+      "body": "로컬 OAuth 프록시가 실행 중이 아니에요. `ima2 serve`를 재시작한 뒤 다시 시도해 주세요.",
+      "cta": "새로고침"
+    },
+    "apikeyDisabled": {
+      "title": "API-Key 모드가 비활성화되어 있어요",
+      "body": "본 앱은 OAuth(ChatGPT 로그인) 전용으로 동작합니다. 공급자를 OAuth로 전환해 주세요.",
+      "cta": "확인"
+    }
   }
 }
