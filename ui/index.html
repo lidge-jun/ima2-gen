@@ -15,6 +15,22 @@
       href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem("ima2:theme");
+          const preferred = window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+          const resolved = stored === "light" || stored === "dark" ? stored : preferred;
+          document.documentElement.dataset.theme = resolved;
+          document.documentElement.style.colorScheme = resolved;
+        } catch {
+          document.documentElement.dataset.theme = "dark";
+          document.documentElement.style.colorScheme = "dark";
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

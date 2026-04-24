@@ -224,6 +224,57 @@
     "appName": "이미지 생성기",
     "nodeModeHint": "노드 모드에서는 노드를 눌러 프롬프트를 수정한 뒤 생성하세요. 오른쪽 패널의 설정 (품질/크기)은 새로 만드는 모든 결과에 적용됩니다."
   },
+  "settings": {
+    "openAria": "설정 열기",
+    "openTitle": "설정",
+    "closeAria": "설정 닫기",
+    "closeTitle": "캔버스로 돌아가기",
+    "navAria": "설정 섹션",
+    "eyebrow": "작업공간 설정",
+    "title": "설정",
+    "subtitle": "계정, 화면, 앞으로 늘어날 작업공간 옵션을 이곳에 모아 생성 흐름은 가볍게 유지합니다.",
+    "sections": {
+      "account": {
+        "title": "계정",
+        "hint": "OAuth 상태"
+      },
+      "appearance": {
+        "title": "화면",
+        "hint": "라이트/다크"
+      },
+      "language": {
+        "title": "언어",
+        "hint": "UI 문구"
+      },
+      "future": {
+        "title": "예정",
+        "hint": "확장 공간"
+      }
+    },
+    "account": {
+      "primaryEyebrow": "현재 공급자",
+      "oauthTitle": "OAuth 사용 중",
+      "oauthBody": "현재 생성은 Codex OAuth 세션으로 실행됩니다. 이 빌드에서는 API-Key 생성 모드가 비활성화되어 있습니다.",
+      "apiSourceEnv": "OPENAI_API_KEY 감지됨",
+      "apiSourceConfig": "config.json API 키 감지됨",
+      "apiTitle": "Configured but disabled",
+      "apiBody": "env/config에서 API 키를 찾았지만, 지금 ima2-gen은 OAuth 전용으로 동작합니다. 이 상태 표시를 숨기고 싶을 때만 키를 제거하세요.",
+      "apiDisabled": "비활성화",
+      "apiUnknown": "상태 불명"
+    },
+    "appearance": {
+      "themeTitle": "테마",
+      "themeBody": "이 기기에서 작업공간을 어떤 톤으로 볼지 선택합니다."
+    },
+    "language": {
+      "title": "언어",
+      "body": "생성 프롬프트와 무관하게 인터페이스 언어만 바꿉니다."
+    },
+    "future": {
+      "title": "설정은 여기에 더 붙입니다",
+      "body": "공급자 제어, OAuth 복구 도구, 작업공간 옵션을 사이드바를 복잡하게 만들지 않고 이 화면에 추가할 수 있습니다."
+    }
+  },
   "nodeCanvas": {
     "loading": "세션 불러오는 중...",
     "addFirst": "+ 첫 노드 추가",
@@ -238,6 +289,12 @@
     "label": "언어",
     "ko": "한국어",
     "en": "English"
+  },
+  "theme": {
+    "label": "테마",
+    "system": "시스템",
+    "dark": "다크",
+    "light": "라이트"
   },
   "styleSheet": {
     "toggle": "스타일 일관성 적용",

@@ -224,6 +224,57 @@
     "appName": "Image Generator",
     "nodeModeHint": "In node mode, click a node to edit its prompt and generate. Settings on the right panel (quality/size) apply to every new result."
   },
+  "settings": {
+    "openAria": "Open settings",
+    "openTitle": "Settings",
+    "closeAria": "Close settings",
+    "closeTitle": "Return to canvas",
+    "navAria": "Settings sections",
+    "eyebrow": "Workspace settings",
+    "title": "Settings",
+    "subtitle": "Account, display, and future workspace controls live here so the generator stays focused.",
+    "sections": {
+      "account": {
+        "title": "Account",
+        "hint": "OAuth status"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "hint": "Light and dark"
+      },
+      "language": {
+        "title": "Language",
+        "hint": "Interface copy"
+      },
+      "future": {
+        "title": "Future",
+        "hint": "Reserved"
+      }
+    },
+    "account": {
+      "primaryEyebrow": "Active provider",
+      "oauthTitle": "OAuth is active",
+      "oauthBody": "Generation currently runs through your Codex OAuth session. API-key generation remains disabled in this build.",
+      "apiSourceEnv": "OPENAI_API_KEY detected",
+      "apiSourceConfig": "config.json API key detected",
+      "apiTitle": "Configured but disabled",
+      "apiBody": "ima2-gen found an API key in env/config, but the app is OAuth-only right now. Remove the key only if you do not want this status shown.",
+      "apiDisabled": "Disabled",
+      "apiUnknown": "Status unknown"
+    },
+    "appearance": {
+      "themeTitle": "Theme",
+      "themeBody": "Choose how the workspace should look on this device."
+    },
+    "language": {
+      "title": "Language",
+      "body": "Switch the UI language without changing generated content."
+    },
+    "future": {
+      "title": "More settings soon",
+      "body": "Provider controls, OAuth repair tools, and workspace preferences can be added here without crowding the sidebar."
+    }
+  },
   "nodeCanvas": {
     "loading": "Loading session...",
     "addFirst": "+ Add first node",
@@ -238,6 +289,12 @@
     "label": "Language",
     "ko": "한국어",
     "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "dark": "Dark",
+    "light": "Light"
   },
   "styleSheet": {
     "toggle": "Apply style consistency",

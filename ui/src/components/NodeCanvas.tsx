@@ -29,6 +29,7 @@ function NodeCanvasInner() {
   const connectNodes = useAppStore((s) => s.connectNodes);
   const deleteNodes = useAppStore((s) => s.deleteNodes);
   const sessionLoading = useAppStore((s) => s.sessionLoading);
+  const resolvedTheme = useAppStore((s) => s.resolvedTheme);
 
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -95,15 +96,20 @@ function NodeCanvasInner() {
             deleteKeyCode={["Delete", "Backspace"]}
             proOptions={{ hideAttribution: true }}
           >
-            <Background gap={24} color="#2a2a2a" />
+            <Background gap={24} color={resolvedTheme === "light" ? "#d9dee6" : "#2a2a2a"} />
             <Controls className="node-canvas__controls" />
             <MiniMap
               pannable
               zoomable
-              maskColor="rgba(10, 10, 10, 0.7)"
-              nodeColor="#4a9eff"
-              nodeStrokeColor="#1a1a1a"
-              style={{ background: "#141414", border: "1px solid #2a2a2a" }}
+              maskColor={
+                resolvedTheme === "light" ? "rgba(246, 247, 251, 0.72)" : "rgba(10, 10, 10, 0.7)"
+              }
+              nodeColor={resolvedTheme === "light" ? "#1f2430" : "#f0f0f0"}
+              nodeStrokeColor={resolvedTheme === "light" ? "#ffffff" : "#1a1a1a"}
+              style={{
+                background: resolvedTheme === "light" ? "#ffffff" : "#141414",
+                border: `1px solid ${resolvedTheme === "light" ? "#d9dee6" : "#2a2a2a"}`,
+              }}
             />
           </ReactFlow>
           <button

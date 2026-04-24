@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Canvas } from "./components/Canvas";
 import { NodeCanvas } from "./components/NodeCanvas";
 import { RightPanel } from "./components/RightPanel";
+import { SettingsWorkspace } from "./components/SettingsWorkspace";
 import { Toast } from "./components/Toast";
 import { ErrorCard } from "./components/ErrorCard";
 import { GalleryModal } from "./components/GalleryModal";
@@ -15,6 +16,11 @@ export default function App() {
   const startInFlightPolling = useAppStore((s) => s.startInFlightPolling);
   const reconcileInflight = useAppStore((s) => s.reconcileInflight);
   const syncFromStorage = useAppStore((s) => s.syncFromStorage);
+  const theme = useAppStore((s) => s.theme);
+  const resolvedTheme = useAppStore((s) => s.resolvedTheme);
+  const settingsOpen = useAppStore((s) => s.settingsOpen);
+  const syncThemeFromStorage = useAppStore((s) => s.syncThemeFromStorage);
+  const refreshResolvedTheme = useAppStore((s) => s.refreshResolvedTheme);
   const uiModeRaw = useAppStore((s) => s.uiMode);
   const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
 
@@ -30,11 +36,25 @@ export default function App() {
       if (!e.key) return;
       if (e.key === "ima2.inFlight" || e.key === "ima2.selectedFilename") {
         syncFromStorage();
+      } else if (e.key === "ima2:theme") {
+        syncThemeFromStorage();
       }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [syncFromStorage]);
+  }, [syncFromStorage, syncThemeFromStorage]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.style.colorScheme = resolvedTheme;
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    if (theme !== "system") return;
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    media.addEventListener("change", refreshResolvedTheme);
+    return () => media.removeEventListener("change", refreshResolvedTheme);
+  }, [refreshResolvedTheme, theme]);
 
   useEffect(() => {
     const onHide = () => {
@@ -50,9 +70,18 @@ export default function App() {
 
   return (
     <>
-      <div className="app">
+      <div
+        className={`app${settingsOpen ? " app--settings-open" : ""}`}
+        data-theme={resolvedTheme}
+      >
         <Sidebar />
-        {uiMode === "classic" ? <Canvas /> : <NodeCanvas />}
+        {settingsOpen ? (
+          <SettingsWorkspace />
+        ) : uiMode === "classic" ? (
+          <Canvas />
+        ) : (
+          <NodeCanvas />
+        )}
         <RightPanel />
       </div>
       <Toast />

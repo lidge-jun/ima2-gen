@@ -21,6 +21,7 @@ graph TD
     MAIN["main.tsx"] --> APP["App.tsx"]
     APP --> STORE["useAppStore"]
     APP --> SIDEBAR["Sidebar"]
+    APP --> SETTINGS["SettingsWorkspace"]
     APP --> CLASSIC["Canvas"]
     APP --> NODE["NodeCanvas"]
     APP --> RIGHT["RightPanel"]
@@ -29,18 +30,20 @@ graph TD
     API --> SERVER["server.js /api"]
 ```
 
-`App.tsx` hydrates history, loads sessions, reconciles inflight jobs, and starts polling on mount. If UI mode is `classic`, it renders `Canvas`. If dev UI is enabled and UI mode is `node`, it renders `NodeCanvas`. Before unload or visibility changes, it flushes the graph save beacon.
+`App.tsx` hydrates history, loads sessions, reconciles inflight jobs, starts polling on mount, and syncs theme preference. If settings are open, it renders `SettingsWorkspace` in the center slot. Otherwise, if UI mode is `classic`, it renders `Canvas`; if dev UI is enabled and UI mode is `node`, it renders `NodeCanvas`. Before unload or visibility changes, it flushes the graph save beacon.
+
+Settings are a workspace replacement, not a modal overlay. `SettingsButton` lives next to the `ima2-gen` title in the sidebar. `SettingsWorkspace` closes with `X` or Escape and returns to the previous canvas path without mutating generation state.
 
 ## Major Areas
 
 | Area | Main files | Responsibility |
 |---|---|---|
-| App shell | `ui/src/App.tsx` | Initialization, storage sync, beforeunload save, canvas switch |
-| Left panel | `Sidebar.tsx`, `PromptComposer.tsx`, `ProviderSelect.tsx` | Prompt, references, provider, generate entry |
-| Center canvas | `Canvas.tsx`, `NodeCanvas.tsx`, `ImageNode.tsx` | Classic image display or graph canvas |
+| App shell | `ui/src/App.tsx` | Initialization, storage sync, beforeunload save, canvas/settings switch |
+| Left panel | `Sidebar.tsx`, `PromptComposer.tsx`, `SettingsButton.tsx` | Focused generation entry plus settings access |
+| Center workspace | `Canvas.tsx`, `NodeCanvas.tsx`, `SettingsWorkspace.tsx`, `ImageNode.tsx` | Classic image display, graph canvas, or settings workspace |
 | Right panel | `RightPanel.tsx`, `SizePicker.tsx`, `CostEstimate.tsx` | Quality, size, format, moderation, count |
 | History | `HistoryStrip.tsx`, `GalleryModal.tsx`, `ResultActions.tsx` | Saved image browsing and actions |
-| Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx` | Pending jobs, notifications, billing/provider status |
+| Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx`, `AccountSettings.tsx` | Pending jobs, notifications, billing/provider status |
 | i18n | `ui/src/i18n/index.ts`, `ko.json`, `en.json` | Locale load/save and translation lookup |
 
 ## State Model
@@ -52,7 +55,8 @@ graph TD
 | Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery |
 | Inflight | `useAppStore.ts` plus `/api/inflight` | localStorage-backed pending jobs and polling |
 | Node graph | `useAppStore.ts` plus sessions API | Nodes, edges, graphVersion, session actions |
-| UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale |
+| Settings workspace | `useAppStore.ts` | `settingsOpen` and active settings section |
+| UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale, theme |
 
 ## API Client
 

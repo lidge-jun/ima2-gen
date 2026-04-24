@@ -7,7 +7,10 @@ import type {
   Moderation,
   Provider,
   Quality,
+  ResolvedTheme,
+  SettingsSection,
   SizePreset,
+  ThemePreference,
   UIMode,
 } from "../types";
 import { isMultiResponse } from "../types";
@@ -56,6 +59,22 @@ function loadUIMode(): UIMode {
     if (raw === "node" || raw === "classic") return raw;
   } catch {}
   return "classic";
+}
+
+function loadThemePreference(): ThemePreference {
+  try {
+    const raw = localStorage.getItem("ima2:theme");
+    if (raw === "system" || raw === "dark" || raw === "light") return raw;
+  } catch {}
+  return "system";
+}
+
+function resolveThemePreference(theme: ThemePreference): ResolvedTheme {
+  if (theme === "dark" || theme === "light") return theme;
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return "dark";
+  }
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 type PersistedInFlight = {
@@ -243,8 +262,21 @@ type AppState = {
   openGallery: () => void;
   closeGallery: () => void;
 
+  settingsOpen: boolean;
+  activeSettingsSection: SettingsSection;
+  openSettings: (section?: SettingsSection) => void;
+  closeSettings: () => void;
+  toggleSettings: () => void;
+  setActiveSettingsSection: (section: SettingsSection) => void;
+
   uiMode: UIMode;
   setUIMode: (m: UIMode) => void;
+
+  theme: ThemePreference;
+  resolvedTheme: ResolvedTheme;
+  setTheme: (theme: ThemePreference) => void;
+  syncThemeFromStorage: () => void;
+  refreshResolvedTheme: () => void;
 
   locale: Locale;
   setLocale: (l: Locale) => void;
@@ -570,10 +602,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   openGallery: () => set({ galleryOpen: true }),
   closeGallery: () => set({ galleryOpen: false }),
 
+  settingsOpen: false,
+  activeSettingsSection: "account",
+  openSettings: (section = "account") =>
+    set({ settingsOpen: true, activeSettingsSection: section }),
+  closeSettings: () => set({ settingsOpen: false }),
+  toggleSettings: () =>
+    set((s) => ({
+      settingsOpen: !s.settingsOpen,
+      activeSettingsSection: s.settingsOpen ? s.activeSettingsSection : "account",
+    })),
+  setActiveSettingsSection: (section) => set({ activeSettingsSection: section }),
+
   uiMode: loadUIMode(),
   setUIMode: (m) => {
     try { localStorage.setItem("ima2.uiMode", m); } catch {}
     set({ uiMode: m });
+  },
+
+  theme: loadThemePreference(),
+  resolvedTheme: resolveThemePreference(loadThemePreference()),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem("ima2:theme", theme);
+    } catch {}
+    set({ theme, resolvedTheme: resolveThemePreference(theme) });
+  },
+  syncThemeFromStorage: () => {
+    const theme = loadThemePreference();
+    set({ theme, resolvedTheme: resolveThemePreference(theme) });
+  },
+  refreshResolvedTheme: () => {
+    set((s) => ({ resolvedTheme: resolveThemePreference(s.theme) }));
   },
 
   locale: loadLocale(),
