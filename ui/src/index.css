@@ -2042,20 +2042,41 @@ body {
   font-size: 10px;
 }
 .image-node__footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
   gap: 6px;
 }
-.image-node__status { font-size: 10px; color: var(--text-muted); flex: 1; }
-.image-node__actions { display: flex; gap: 4px; }
+.image-node__status {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.image-node__actions {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) 30px;
+  gap: 6px;
+}
 .image-node__actions button {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--surface-3);
   color: var(--text);
   border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 0 8px;
+  border-radius: 6px;
   font-size: 11px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
 .image-node__actions button:disabled { opacity: 0.5; cursor: not-allowed; }

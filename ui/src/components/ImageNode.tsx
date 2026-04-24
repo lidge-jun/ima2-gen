@@ -218,14 +218,20 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         />
       </div>
       <div className="image-node__footer">
-        <span className="image-node__status">{statusLabel}</span>
+        <span className="image-node__status" title={statusLabel}>{statusLabel}</span>
         <div className="image-node__actions nodrag">
           <button type="button" onClick={onGenerate} disabled={isBusy}>
             {d.status === "ready" ? t("node.regenerate") : t("node.generate")}
           </button>
           {d.status === "ready" ? (
             <>
-              <button type="button" onClick={onBranch}>{t("node.addChild")}</button>
+              <button
+                type="button"
+                onClick={onBranch}
+                title={t("node.addChildTitle")}
+              >
+                {t("node.addChild")}
+              </button>
               <button
                 type="button"
                 onClick={onDuplicateBranch}
