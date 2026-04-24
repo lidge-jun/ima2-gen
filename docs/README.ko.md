@@ -6,7 +6,7 @@
 
 > **다른 언어로 읽기**: [English](../README.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
 
-`ima2-gen`은 ChatGPT/Codex OAuth 경로로 OpenAI 이미지 생성을 실행하는 로컬 CLI + 웹 스튜디오입니다. React UI, 헤드리스 CLI, 영구 히스토리, 레퍼런스 업로드, 개발용 노드 모드 분기 생성, 안전한 요청 로그를 제공합니다.
+`ima2-gen`은 ChatGPT/Codex OAuth 경로로 OpenAI 이미지 생성을 실행하는 로컬 CLI + 웹 스튜디오입니다. React UI, 헤드리스 CLI, 영구 히스토리, 레퍼런스 업로드, 배포판 노드 모드 분기 생성, 안전한 요청 로그를 제공합니다.
 
 현재 이미지 생성은 **OAuth 전용**입니다. API 키는 billing/status 확인이나 style-sheet 추출 같은 보조 개발 경로에는 사용할 수 있지만, 이미지 생성 엔드포인트는 코드에서 `provider: "api"`를 `APIKEY_DISABLED`로 명시적으로 거부합니다.
 
@@ -68,12 +68,13 @@ ima2 serve
 
 ### 노드 모드
 
-노드 모드는 `npm run dev`에서 활성화되는 개발용 화면입니다.
+노드 모드는 패키지된 웹 UI에서도 사용할 수 있으며, composer 옆 mode switch에서 열 수 있습니다.
 
 - SQLite 기반 그래프 세션
 - 자식 노드 분기 생성
 - Duplicate branch / New from here 흐름
-- 노드별 로컬 레퍼런스 첨부
+- 루트 노드별 로컬 레퍼런스 첨부: drag/drop, paste, file picker 지원
+- 노드 sidecar와 history 응답에 reference 사용 개수 기록
 - 세션 style sheet로 classic/node 프롬프트 앞에 하우스 스타일 자동 삽입
 - 갤러리 그룹에서 raw session id 대신 세션 제목 우선 표시
 
@@ -213,6 +214,7 @@ ima2 serve
 | `IMA2_GENERATED_DIR` | `generated/` | 생성 이미지 저장 위치 |
 | `IMA2_NO_OAUTH_PROXY` | — | `1`이면 OAuth proxy 자동 시작 비활성화 |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | opt-in terminal inflight job 보존 시간 |
+| `VITE_IMA2_NODE_MODE` | enabled | UI 빌드 시 `0`으로 설정하면 노드 모드 숨김 |
 | `OPENAI_API_KEY` | — | 지원되는 보조 경로용 API 키 |
 
 ---
@@ -244,7 +246,7 @@ npm test
 npm run build
 ```
 
-`npm run dev`는 `VITE_IMA2_DEV=1`로 UI를 빌드하고 `server.js`를 `--watch`로 실행합니다. 노드 모드는 이 dev build에서 표시됩니다.
+`npm run dev`는 UI를 빌드하고 `server.js`를 `--watch`로 실행합니다. 노드 모드는 이제 dev와 패키지 빌드 모두에서 일반 제품 화면입니다. classic-only 번들이 필요할 때만 `VITE_IMA2_NODE_MODE=0`을 사용하세요.
 
 현재 테스트는 CLI, config, history delete/restore/pagination, reference validation, OAuth parameter normalization, prompt fidelity, inflight tracking, safe logging, route health checks를 포함합니다.
 
@@ -271,7 +273,10 @@ npm run build
 
 ## 최근 변경 요약
 
+- 패키지 빌드에서 노드 모드 활성화
 - 노드별 레퍼런스와 branch duplication
+- 노드 reference 사용량 `refsCount` 메타데이터
+- npm 패키지에 modular `routes/` 서버 파일 포함
 - 계정/테마 설정 워크스페이스
 - Prompt fidelity와 revised prompt capture
 - OAuth quality `low`, `medium`, `high` 유지

@@ -121,6 +121,7 @@ export type HistoryItem = {
   parentNodeId?: string | null;
   clientNodeId?: string | null;
   kind?: string | null;
+  refsCount?: number;
 };
 
 export type HistoryCursor = { before: number; beforeFilename: string };
@@ -218,6 +219,7 @@ export type NodeGenerateResponse = {
   webSearchCalls: number;
   provider: "oauth";
   moderation?: string;
+  refsCount?: number;
   revisedPrompt?: string | null;
   promptMode?: "auto" | "direct";
 };

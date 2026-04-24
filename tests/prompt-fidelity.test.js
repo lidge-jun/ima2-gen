@@ -29,8 +29,10 @@ assert.ok(src.includes("buildApp"), "buildApp export missing after server split"
 assert.ok(historySrc.includes("revisedPrompt"), "history revisedPrompt field missing");
 assert.ok(historySrc.includes("promptMode"), "history promptMode field missing");
 assert.ok(historySrc.includes("userPrompt"), "history userPrompt field missing");
+assert.ok(historySrc.includes("refsCount"), "history refsCount field missing");
 assert.ok(nodeSrc.includes("normalizedPromptMode"), "node prompt mode propagation missing");
 assert.ok(nodeSrc.includes("userPrompt"), "node userPrompt meta field missing");
+assert.ok(nodeSrc.includes("refsCount"), "node refsCount meta field missing");
 
 assert.equal(PROMPT_FIDELITY_SUFFIX, AUTO_PROMPT_FIDELITY_SUFFIX);
 assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("only append English clarifiers at the end when helpful"));

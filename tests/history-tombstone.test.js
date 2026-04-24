@@ -74,6 +74,7 @@ describe("History: delete tombstone + pagination", () => {
       provider: "oauth",
       format: "png",
       sessionId: titledSessionId,
+      refsCount: 2,
     }));
   });
 
@@ -157,5 +158,6 @@ describe("History: delete tombstone + pagination", () => {
     assert.ok(titled, "seeded session group present");
     assert.strictEqual(titled.title, "Exam Graph");
     assert.strictEqual(titled.label, "Exam Graph");
+    assert.strictEqual(titled.items[0].refsCount, 2);
   });
 });

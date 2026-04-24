@@ -6,7 +6,7 @@
 
 > **他の言語で読む**: [English](../README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
-`ima2-gen` は ChatGPT/Codex OAuth 経路で OpenAI 画像生成を実行するローカル CLI + Web Studio です。React UI、ヘッドレス CLI、永続履歴、参照画像アップロード、開発用ノード分岐モード、安全なリクエストログを備えています。
+`ima2-gen` は ChatGPT/Codex OAuth 経路で OpenAI 画像生成を実行するローカル CLI + Web Studio です。React UI、ヘッドレス CLI、永続履歴、参照画像アップロード、製品版ノード分岐モード、安全なリクエストログを備えています。
 
 現在の画像生成は **OAuth only** です。API key は billing/status 確認や style-sheet 抽出などの補助的な開発経路には使えますが、画像生成エンドポイントは `provider: "api"` を `APIKEY_DISABLED` として明示的に拒否します。API key 生成を使うにはコード上の provider policy を意図的に変更する必要があります。
 
@@ -68,12 +68,13 @@ ima2 serve
 
 ### ノードモード
 
-ノードモードは `npm run dev` で有効になる開発用画面です。
+ノードモードはパッケージ済み Web UI でも利用でき、composer 横の mode switch から開けます。
 
 - SQLite ベースのグラフセッション
 - 子ノード分岐生成
 - Duplicate branch / New from here フロー
-- ノード単位のローカル参照画像
+- ルートノード単位のローカル参照画像。drag/drop、paste、file picker をサポート
+- ノード sidecar と history response に reference 使用枚数を記録
 - session style sheet による classic/node prompt への house style 自動付与
 - ギャラリーは raw session id ではなく session title を優先表示
 
@@ -213,6 +214,7 @@ guard を削除するだけでは不十分です。OpenAI SDK ベースの生成
 | `IMA2_GENERATED_DIR` | `generated/` | 生成画像ディレクトリ |
 | `IMA2_NO_OAUTH_PROXY` | — | `1` で OAuth proxy 自動起動を無効化 |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | opt-in terminal inflight job 保持時間 |
+| `VITE_IMA2_NODE_MODE` | enabled | UI ビルド時に `0` を設定するとノードモードを非表示 |
 | `OPENAI_API_KEY` | — | サポート済み補助経路用 API key |
 
 ---
@@ -244,7 +246,7 @@ npm test
 npm run build
 ```
 
-`npm run dev` は `VITE_IMA2_DEV=1` で UI をビルドし、`server.js` を `--watch` で起動します。ノードモードはこの dev build で表示されます。
+`npm run dev` は UI をビルドし、`server.js` を `--watch` で起動します。ノードモードは dev とパッケージビルドの両方で通常の製品画面です。classic-only bundle が必要な場合だけ `VITE_IMA2_NODE_MODE=0` を使ってください。
 
 現在のテストは CLI、config、history delete/restore/pagination、reference validation、OAuth parameter normalization、prompt fidelity、inflight tracking、safe logging、route health checks を含みます。
 
@@ -271,7 +273,10 @@ API key provider で生成しようとしています。現在のリリースで
 
 ## 最近の変更
 
+- パッケージビルドでノードモードを有効化
 - ノード単位の参照画像と branch duplication
+- ノード reference 使用量 `refsCount` metadata
+- npm package に modular `routes/` server files を含める
 - アカウント/テーマ設定ワークスペース
 - Prompt fidelity と revised prompt capture
 - OAuth quality `low`, `medium`, `high` の保持

@@ -8,7 +8,7 @@ import { Toast } from "./components/Toast";
 import { ErrorCard } from "./components/ErrorCard";
 import { GalleryModal } from "./components/GalleryModal";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
-import { IS_DEV_UI } from "./lib/devMode";
+import { ENABLE_NODE_MODE } from "./lib/devMode";
 
 export default function App() {
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
@@ -22,7 +22,7 @@ export default function App() {
   const syncThemeFromStorage = useAppStore((s) => s.syncThemeFromStorage);
   const refreshResolvedTheme = useAppStore((s) => s.refreshResolvedTheme);
   const uiModeRaw = useAppStore((s) => s.uiMode);
-  const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
+  const uiMode = ENABLE_NODE_MODE ? uiModeRaw : "classic";
 
   useEffect(() => {
     hydrateHistory();

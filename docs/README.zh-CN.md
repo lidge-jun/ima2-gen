@@ -6,7 +6,7 @@
 
 > **其他语言**: [English](../README.md) · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-`ima2-gen` 是一个本地 CLI + Web 工作室，通过 ChatGPT/Codex OAuth 路径调用 OpenAI 图像生成。它包含 React UI、无头 CLI、持久历史、参考图上传、开发用节点分支模式，以及安全的请求日志。
+`ima2-gen` 是一个本地 CLI + Web 工作室，通过 ChatGPT/Codex OAuth 路径调用 OpenAI 图像生成。它包含 React UI、无头 CLI、持久历史、参考图上传、生产可用的节点分支模式，以及安全的请求日志。
 
 当前图像生成是 **OAuth only**。API key 仍可用于 billing/status 检查和 style-sheet 提取等辅助开发路径，但图像生成端点会明确拒绝 `provider: "api"` 并返回 `APIKEY_DISABLED`，除非你有意在代码中重新打开该策略。
 
@@ -68,12 +68,13 @@ ima2 serve
 
 ### 节点模式
 
-节点模式是 `npm run dev` 中启用的开发界面。
+节点模式已在打包后的 Web UI 中可用，可通过 composer 旁边的模式切换打开。
 
 - SQLite 图会话
 - 分支式子节点生成
 - Duplicate branch / New from here 流程
-- 节点级本地参考图
+- 根节点级本地参考图，支持 drag/drop、paste 和 file picker
+- 节点 sidecar 与 history 响应记录 reference 使用数量
 - session style sheet 可自动给 classic/node prompt 添加 house style 前缀
 - 画廊按 session title 分组，避免显示裸 server id
 
@@ -213,6 +214,7 @@ ima2 serve
 | `IMA2_GENERATED_DIR` | `generated/` | 生成图片目录 |
 | `IMA2_NO_OAUTH_PROXY` | — | 设为 `1` 禁止自动启动 OAuth proxy |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | opt-in terminal inflight job 保留时间 |
+| `VITE_IMA2_NODE_MODE` | enabled | UI 构建时设为 `0` 可隐藏节点模式 |
 | `OPENAI_API_KEY` | — | 支持的辅助路径 API key |
 
 ---
@@ -244,7 +246,7 @@ npm test
 npm run build
 ```
 
-`npm run dev` 会用 `VITE_IMA2_DEV=1` 构建 UI，并以 `--watch` 启动 `server.js`。节点模式只在该 dev build 中显示。
+`npm run dev` 会构建 UI，并以 `--watch` 启动 `server.js`。节点模式现在是 dev 与打包构建中的普通产品界面。只有需要 classic-only bundle 时才设置 `VITE_IMA2_NODE_MODE=0`。
 
 当前测试覆盖 CLI、config、history delete/restore/pagination、reference validation、OAuth parameter normalization、prompt fidelity、inflight tracking、safe logging、route health checks。
 
@@ -271,7 +273,10 @@ shell 可能继承了其他工具的 `PORT=3457`。运行 `unset PORT` 或 `IMA2
 
 ## 最近变更
 
+- 打包构建中启用节点模式
 - 节点级参考图与 branch duplication
+- 节点 reference 使用量 `refsCount` 元数据
+- npm 包包含 modular `routes/` 服务端文件
 - 账号/主题设置工作区
 - Prompt fidelity 与 revised prompt capture
 - OAuth quality `low`, `medium`, `high` 保留

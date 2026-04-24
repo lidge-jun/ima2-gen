@@ -520,6 +520,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           nodeId: it.nodeId ?? null,
           clientNodeId: it.clientNodeId ?? null,
           kind: narrowGenerateKind(it.kind),
+          refsCount: it.refsCount ?? 0,
         }));
         const existing = get().history;
         const fresh = arr.filter(

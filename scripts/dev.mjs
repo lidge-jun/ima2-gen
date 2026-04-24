@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Dev runner: build UI with VITE_IMA2_DEV=1, then launch server in watch mode.
-// Node mode (and any other dev-only UI gates) read this flag.
+// Dev runner: build UI with dev diagnostics enabled, then launch the watched server.
+// Node mode is a product feature now; VITE_IMA2_DEV remains for future dev-only UI gates.
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -47,7 +47,7 @@ try {
   process.exit(1);
 }
 
-console.log("[dev] building UI with VITE_IMA2_DEV=1 …");
+console.log("[dev] building UI with dev diagnostics …");
 const build = run("npm", ["run", "ui:build"], { VITE_IMA2_DEV: "1" });
 if (build.status !== 0) process.exit(build.status ?? 1);
 

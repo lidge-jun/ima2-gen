@@ -7,7 +7,7 @@ import { SessionPicker } from "./SessionPicker";
 import { NodeStyleButton } from "./NodeStyleButton";
 import { SettingsButton } from "./SettingsButton";
 import { useAppStore } from "../store/useAppStore";
-import { IS_DEV_UI } from "../lib/devMode";
+import { ENABLE_NODE_MODE } from "../lib/devMode";
 import { useI18n } from "../i18n";
 
 export function Sidebar() {
@@ -16,7 +16,7 @@ export function Sidebar() {
   const referenceImages = useAppStore((s) => s.referenceImages);
   const clearReferences = useAppStore((s) => s.clearReferences);
   const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
-  const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
+  const uiMode = ENABLE_NODE_MODE ? uiModeRaw : "classic";
   return (
     <aside className="sidebar">
       <div className="sidebar__scroll">

@@ -8,7 +8,7 @@ aliases: [ima2 operations, ima2 infra, image_gen operations]
 
 `ima2-gen` operates as an npm package, local Node server, OAuth proxy, SQLite-backed graph store, image file store, and React build artifact. Users see one CLI, but internally the server, UI bundle, local config, and runtime data move together.
 
-This document matters because development mode and packaged mode take different paths. Developers run `npm run dev`, which builds the UI with a dev flag and launches the watched server. Users run `ima2 serve`, which checks for `ui/dist` and starts the server. CLI clients read `~/.ima2/server.json` to find the running server. Config and generated data are split between the repo and the user's home directory.
+This document matters because development mode and packaged mode take different paths. Developers run `npm run dev`, which builds the UI and launches the watched server. Users run `ima2 serve`, which checks for `ui/dist` and starts the server. Node mode is enabled in both paths by default. CLI clients read `~/.ima2/server.json` to find the running server. Config and generated data are split between the repo and the user's home directory.
 
 For operations work, choose the layer first. Auth and provider changes touch config and the OAuth proxy. Release work touches `package.json`, `files`, and `prepublishOnly`. Test work touches `scripts/run-tests.mjs` and `tests/*.test.js`. UI build work touches `ui/package.json` and `ui/dist`.
 
@@ -47,7 +47,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | Script | Runs | Purpose |
 |---|---|---|
 | `npm start` | `node bin/ima2.js serve` | Start the server like a user would |
-| `npm run dev` | `node scripts/dev.mjs` | Build UI with dev flag, then run watched server |
+| `npm run dev` | `node scripts/dev.mjs` | Build UI, then run watched server |
 | `npm run dev:server` | `node --watch server.js` | Watch only the server |
 | `npm run ui:install` | `cd ui && npm install` | Install UI dependencies |
 | `npm run ui:dev` | `cd ui && npm run dev` | Vite dev server |
@@ -82,6 +82,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_CONFIG_DIR` | Used by tests to isolate config directory |
 | `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `600000` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
+| `VITE_IMA2_NODE_MODE` | UI build-time gate; set `0` only for a classic-only bundle |
 | `IMA2_LOG_LEVEL` | Reserved log-level setting; current app emits safe structured logs |
 
 Generation and edit endpoints currently hard-block `provider: "api"`. Even with an API key, image generation is OAuth-centered.

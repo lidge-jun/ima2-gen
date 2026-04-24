@@ -68,7 +68,7 @@ sequenceDiagram
 
 | Endpoint | Role | Key fields |
 |---|---|---|
-| `POST /api/node/generate` | Generate/edit one node | `parentNodeId`, `prompt`, `quality`, `size`, `format`, `moderation`, `references`, `sessionId`, `clientNodeId`, `requestId` |
+| `POST /api/node/generate` | Generate/edit one node | `parentNodeId`, `prompt`, `quality`, `size`, `format`, `moderation`, `references`, `sessionId`, `clientNodeId`, `requestId`; response includes `refsCount` |
 | `GET /api/node/:nodeId` | Fetch node metadata | `nodeId`, `meta`, `url` |
 | `GET /api/sessions` | List sessions | `sessions` |
 | `POST /api/sessions` | Create a session | `title` |
@@ -101,6 +101,8 @@ Child/edit nodes already have a parent image source. Extra references are blocke
 
 `sanitizeForSave()` removes node-local draft references before `PUT /api/sessions/:id/graph` to avoid base64 bloat and oversized node data replacement.
 
+Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric count only. They never store the reference image base64 after generation succeeds.
+
 ## Difference From Classic Mode
 
 | Topic | Classic | Node mode |
@@ -117,7 +119,7 @@ Child/edit nodes already have a parent image source. Extra references are blocke
 - [ ] If `/api/node/generate` response changes, update `ui/src/lib/api.ts` and this doc.
 - [ ] If graph save policy changes, check `If-Match` version behavior and tests.
 - [ ] If asset delete/restore changes, review `asset-missing` state and history docs.
-- [ ] If node mode becomes part of npm-published UI, update build/package rules in `[[06-infra-operations]]`.
+- [x] Node mode is part of the npm-published UI by default; update build/package rules in `[[06-infra-operations]]` if this gate changes.
 
 ## Change Log
 

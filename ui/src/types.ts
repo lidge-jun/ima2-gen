@@ -44,6 +44,7 @@ export type GenerateItem = {
   nodeId?: string | null;
   clientNodeId?: string | null;
   kind?: "classic" | "edit" | "generate" | null;
+  refsCount?: number;
 };
 
 export type GenerateSingleResponse = {

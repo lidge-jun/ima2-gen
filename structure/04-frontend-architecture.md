@@ -30,7 +30,7 @@ graph TD
     API --> SERVER["server.js /api"]
 ```
 
-`App.tsx` hydrates history, loads sessions, reconciles inflight jobs, starts polling on mount, and syncs theme preference. If settings are open, it renders `SettingsWorkspace` in the center slot. Otherwise, if UI mode is `classic`, it renders `Canvas`; if dev UI is enabled and UI mode is `node`, it renders `NodeCanvas`. Before unload or visibility changes, it flushes the graph save beacon.
+`App.tsx` hydrates history, loads sessions, reconciles inflight jobs, starts polling on mount, and syncs theme preference. If settings are open, it renders `SettingsWorkspace` in the center slot. Otherwise, if UI mode is `classic`, it renders `Canvas`; if node mode is enabled and UI mode is `node`, it renders `NodeCanvas`. Node mode is enabled in packaged builds by default and can be hidden only by building with `VITE_IMA2_NODE_MODE=0`. Before unload or visibility changes, it flushes the graph save beacon.
 
 Settings are a workspace replacement, not a modal overlay. `SettingsButton` lives next to the `ima2-gen` title in the sidebar. `SettingsWorkspace` renders as a scrollable settings document: the left rail is a sticky section index, and selecting an item jumps the center document to that section instead of replacing the content panel. `SettingsWorkspace` closes with `X` or Escape and returns to the previous canvas path without mutating generation state.
 
@@ -79,7 +79,7 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | Mode | Condition | Main component | State flow |
 |---|---|---|---|
 | Classic | Default UI | `Canvas.tsx` | Sends prompt to `/api/generate`, then updates current image/history |
-| Node | Dev UI gate enabled | `NodeCanvas.tsx` | Calls `/api/node/generate` per node and saves the graph to the session |
+| Node | Product feature enabled | `NodeCanvas.tsx` | Calls `/api/node/generate` per node and saves the graph to the session |
 
 Node mode uses `@xyflow/react`. Empty canvas creates a root node. Dragging an edge from an existing node can create a child node. Session loading displays a canvas overlay.
 

@@ -79,10 +79,10 @@ The inflight registry tracks both classic and node jobs. The default response is
 
 | Method | Path | Body or query | Response |
 |---|---|---|---|
-| `POST` | `/api/node/generate` | `{ parentNodeId?, prompt, quality?, size?, format?, moderation?, references?, externalSrc?, sessionId?, clientNodeId?, requestId?, provider? }` | `{ nodeId, parentNodeId, requestId, image, filename, url, elapsed, usage, webSearchCalls, provider, moderation }` |
+| `POST` | `/api/node/generate` | `{ parentNodeId?, prompt, quality?, size?, format?, moderation?, references?, externalSrc?, sessionId?, clientNodeId?, requestId?, provider? }` | `{ nodeId, parentNodeId, requestId, image, filename, url, elapsed, usage, webSearchCalls, provider, moderation, refsCount }` |
 | `GET` | `/api/node/:nodeId` | none | `{ nodeId, meta, url }` |
 
-When `parentNodeId` is present, the server reads the stored parent image and uses the edit path. Without a parent node, it generates a new image. `externalSrc` is a controlled fallback for promoting an existing history asset into a node workflow.
+When `parentNodeId` is present, the server reads the stored parent image and uses the edit path. Without a parent node, it generates a new image and may pass root-node `references` to OAuth generation. `refsCount` is stored as numeric metadata only; reference image base64 is not written to sidecars. `externalSrc` is a controlled fallback for promoting an existing history asset into a node workflow.
 
 ## Session DB API
 

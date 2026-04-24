@@ -6,7 +6,7 @@
 
 > **Read in other languages**: [한국어](docs/README.ko.md) · [日本語](docs/README.ja.md) · [简体中文](docs/README.zh-CN.md)
 
-`ima2-gen` is a local CLI + web studio for OpenAI image generation through the ChatGPT/Codex OAuth route. It includes a React UI, headless CLI commands, persistent history, reference uploads, node-mode branching for development, and safe request observability.
+`ima2-gen` is a local CLI + web studio for OpenAI image generation through the ChatGPT/Codex OAuth route. It includes a React UI, headless CLI commands, persistent history, reference uploads, production node-mode branching, and safe request observability.
 
 Generation is currently **OAuth-only**. API keys can still be configured for auxiliary developer paths such as billing/status checks and style-sheet extraction, but image generation endpoints reject `provider: "api"` with `APIKEY_DISABLED` unless the provider policy is intentionally changed in code.
 
@@ -69,12 +69,13 @@ The web UI opens at `http://localhost:3333` by default.
 
 ### Node Mode
 
-Node mode is a development surface enabled by `npm run dev`.
+Node mode is available in the packaged web UI and can be opened from the mode switch next to the composer.
 
 - SQLite-backed graph sessions
 - Branching child generations
 - Duplicate branch / new-from-here flows
-- Node-local reference attachments
+- Node-local reference attachments for root nodes with drag/drop, paste, and file picker support
+- Reference count metadata in node sidecars and history responses
 - Session style sheets that can prepend a house style to node/classic prompts
 - Gallery grouping by session title instead of raw server IDs
 
@@ -216,6 +217,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_GENERATED_DIR` | `generated/` | Generated image directory |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable auto-starting the OAuth proxy |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Retention for opt-in terminal in-flight debug jobs |
+| `VITE_IMA2_NODE_MODE` | enabled | Set `0` at UI build time to hide node mode |
 | `OPENAI_API_KEY` | — | API key for supported auxiliary paths |
 
 ---
@@ -249,7 +251,7 @@ npm test
 npm run build
 ```
 
-`npm run dev` builds the UI with `VITE_IMA2_DEV=1` and starts `server.js` with `--watch`. Node mode is visible in this dev build.
+`npm run dev` builds the UI and starts `server.js` with `--watch`. Node mode is now a normal product surface in both dev and packaged builds. Set `VITE_IMA2_NODE_MODE=0` only when you intentionally need a classic-only bundle.
 
 Test coverage currently includes CLI behavior, config loading, history pagination/delete/restore, reference validation, OAuth parameter normalization, prompt fidelity, in-flight tracking, safe logging, and route health checks.
 
@@ -276,7 +278,10 @@ Your shell may have inherited `PORT=3457` from another local tool. Run `unset PO
 
 ## Recent Changelog Highlights
 
+- Node mode enabled in packaged builds
 - Node-local references and branch duplication for node mode
+- `refsCount` metadata for node reference usage
+- npm package includes modular `routes/` server files
 - Settings workspace with account/theme controls
 - Prompt fidelity and revised prompt capture
 - OAuth quality handling for `low`, `medium`, `high`
