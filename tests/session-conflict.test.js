@@ -5,10 +5,18 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const storePath = join(__dirname, "..", "ui", "src", "store", "useAppStore.ts");
+const appPath = join(__dirname, "..", "ui", "src", "App.tsx");
+const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
 const sessionRoutesPath = join(__dirname, "..", "routes", "sessions.js");
+const enPath = join(__dirname, "..", "ui", "src", "i18n", "en.json");
+const koPath = join(__dirname, "..", "ui", "src", "i18n", "ko.json");
 
 const storeSrc = await readFile(storePath, "utf8");
+const appSrc = await readFile(appPath, "utf8");
+const apiSrc = await readFile(apiPath, "utf8");
 const routeSrc = await readFile(sessionRoutesPath, "utf8");
+const en = JSON.parse(await readFile(enPath, "utf8"));
+const ko = JSON.parse(await readFile(koPath, "utf8"));
 
 assert.ok(
   storeSrc.includes('localStorage.getItem("ima2.activeSessionId")'),
@@ -23,16 +31,50 @@ assert.ok(
   "new browsers must not auto-attach to the most recent shared session",
 );
 assert.ok(
-  routeSrc.includes('code !== "GRAPH_VERSION_CONFLICT"'),
+  routeSrc.includes('code === "GRAPH_VERSION_CONFLICT"'),
   "graph version conflicts should have an explicit handling branch",
 );
 assert.ok(
-  routeSrc.includes('code !== "GRAPH_VERSION_CONFLICT"'),
-  "graph version conflicts should be treated as expected concurrency responses",
+  routeSrc.includes('logEvent("session", "graph_conflict"'),
+  "graph version conflicts should be logged as structured concurrency events",
 );
 assert.ok(
-  !routeSrc.includes('logEvent("session", "graph_conflict"'),
-  "graph version conflicts should not spam the terminal",
+  apiSrc.includes("GraphSaveMeta") &&
+    apiSrc.includes("X-Ima2-Graph-Save-Id") &&
+    apiSrc.includes("X-Ima2-Graph-Save-Reason") &&
+    apiSrc.includes("X-Ima2-Tab-Id"),
+  "graph saves should carry save metadata headers",
+);
+assert.ok(
+  !appSrc.includes('document.addEventListener("visibilitychange", onHide)'),
+  "visibilitychange should not send graph save beacons",
+);
+assert.ok(
+  storeSrc.includes("isSavingGraph") &&
+    storeSrc.includes("needsGraphSave") &&
+    storeSrc.includes("runGraphSaveQueue") &&
+    !storeSrc.includes("saveGraphPromise"),
+  "graph autosave should use a drainable single-flight queue",
+);
+assert.ok(
+  storeSrc.includes('if (get().activeSessionId !== id) return "skipped"'),
+  "graph save completion should not apply an old session graphVersion to a new active session",
+);
+assert.ok(
+  en.toast.sessionReloadedElsewhere.includes("Graph version changed"),
+  "English conflict toast should use neutral graph-version wording",
+);
+assert.ok(
+  !en.toast.sessionReloadedElsewhere.includes("another tab"),
+  "English conflict toast should not claim another tab caused the reload",
+);
+assert.ok(
+  ko.toast.sessionReloadedElsewhere.includes("그래프 버전"),
+  "Korean conflict toast should use neutral graph-version wording",
+);
+assert.ok(
+  !ko.toast.sessionReloadedElsewhere.includes("다른 탭"),
+  "Korean conflict toast should not claim another tab caused the reload",
 );
 
 console.log("session-conflict: ok");

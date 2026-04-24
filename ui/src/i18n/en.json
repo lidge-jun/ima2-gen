@@ -26,7 +26,7 @@
     "generatedBatch": "Generated {count} images in {elapsed}s.",
     "generatedSingle": "Generated in {elapsed}s.",
     "generateFailed": "Generation failed.",
-    "sessionReloadedElsewhere": "Session was changed in another tab — reloaded the latest graph.",
+    "sessionReloadedElsewhere": "Graph version changed, so the latest graph was reloaded.",
     "promptCopied": "Prompt copied",
     "imageCopied": "Copied to clipboard",
     "copyFailed": "Copy failed",

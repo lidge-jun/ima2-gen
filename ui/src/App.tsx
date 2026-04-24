@@ -62,10 +62,8 @@ export default function App() {
       flushGraphSaveBeacon(useAppStore.getState);
     };
     window.addEventListener("beforeunload", onHide);
-    document.addEventListener("visibilitychange", onHide);
     return () => {
       window.removeEventListener("beforeunload", onHide);
-      document.removeEventListener("visibilitychange", onHide);
     };
   }, []);
 

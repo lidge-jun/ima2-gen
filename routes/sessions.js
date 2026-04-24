@@ -254,9 +254,15 @@ export function registerSessionRoutes(app, ctx) {
           error: { code: "INVALID_GRAPH_VERSION", message: "If-Match must be a finite integer" },
         });
       }
+      const saveId = req.get("X-Ima2-Graph-Save-Id") || null;
+      const saveReason = req.get("X-Ima2-Graph-Save-Reason") || null;
+      const tabId = req.get("X-Ima2-Tab-Id") || null;
       const result = saveGraph(req.params.id, { nodes, edges, expectedVersion });
       logEvent("session", "graph_save", {
         sessionId: req.params.id,
+        saveId,
+        saveReason,
+        tabId,
         nodes: nodes.length,
         edges: edges.length,
         graphVersion: result.graphVersion,
@@ -266,7 +272,18 @@ export function registerSessionRoutes(app, ctx) {
       const code = err.code || "DB_ERROR";
       const payload = { error: { code, message: err.message } };
       if (typeof err.currentVersion === "number") payload.currentVersion = err.currentVersion;
-      if (code !== "GRAPH_VERSION_CONFLICT") {
+      if (code === "GRAPH_VERSION_CONFLICT") {
+        logEvent("session", "graph_conflict", {
+          sessionId: req.params.id,
+          saveId: req.get("X-Ima2-Graph-Save-Id") || null,
+          saveReason: req.get("X-Ima2-Graph-Save-Reason") || null,
+          tabId: req.get("X-Ima2-Tab-Id") || null,
+          expectedVersion: Number(String(req.get("If-Match") || "").replace(/"/g, "")),
+          currentVersion: err.currentVersion ?? null,
+          nodes: Array.isArray(req.body?.nodes) ? req.body.nodes.length : null,
+          edges: Array.isArray(req.body?.edges) ? req.body.edges.length : null,
+        });
+      } else {
         logError("session", "graph_error", err, { sessionId: req.params.id, code });
       }
       res.status(err.status || 500).json(payload);

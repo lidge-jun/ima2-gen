@@ -26,7 +26,7 @@
     "generatedBatch": "{count}장을 {elapsed}초 만에 생성했습니다.",
     "generatedSingle": "{elapsed}초 만에 생성했습니다.",
     "generateFailed": "생성에 실패했습니다.",
-    "sessionReloadedElsewhere": "다른 탭에서 세션이 변경되어 최신 그래프를 다시 불러왔습니다.",
+    "sessionReloadedElsewhere": "그래프 버전이 달라져 최신 그래프를 다시 불러왔습니다.",
     "promptCopied": "프롬프트를 복사했습니다",
     "imageCopied": "클립보드에 복사했습니다",
     "copyFailed": "복사에 실패했습니다",
