@@ -4,18 +4,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const CONFIG_JS = join(ROOT, "config.js");
+const CONFIG_URL = pathToFileURL(CONFIG_JS).href;
 
 // Run a small node inline program with a custom env and capture JSON output so
 // we can assert independent of whatever env the test host has set.
 function loadConfig(env = {}) {
   const script = `
-    import("${CONFIG_JS.replace(/\\/g, "/")}").then((m) => {
+    import("${CONFIG_URL}").then((m) => {
       const c = m.config;
       // Serialize Set separately.
       process.stdout.write(JSON.stringify({
