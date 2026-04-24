@@ -6,7 +6,9 @@
 
 > **Read in other languages**: [한국어](docs/README.ko.md) · [日本語](docs/README.ja.md) · [简体中文](docs/README.zh-CN.md)
 
-A minimal CLI and web UI for OpenAI's **GPT Image 2** (`gpt-image-2`) image generation. Supports OAuth (free via ChatGPT Plus/Pro) or API key authentication. Features include parallel generation, multi-image references, CLI automation, and persistent history.
+`ima2-gen` is a local CLI + web studio for OpenAI image generation through the ChatGPT/Codex OAuth route. It includes a React UI, headless CLI commands, persistent history, reference uploads, node-mode branching for development, and safe request observability.
+
+Generation is currently **OAuth-only**. API keys can still be configured for auxiliary developer paths such as billing/status checks and style-sheet extraction, but image generation endpoints reject `provider: "api"` with `APIKEY_DISABLED` unless the provider policy is intentionally changed in code.
 
 ![ima2-gen screenshot](assets/screenshot.png)
 
@@ -15,7 +17,7 @@ A minimal CLI and web UI for OpenAI's **GPT Image 2** (`gpt-image-2`) image gene
 ## Quick Start
 
 ```bash
-# Run instantly with npx (no install)
+# Run instantly with npx
 npx ima2-gen serve
 
 # Or install globally
@@ -23,178 +25,216 @@ npm install -g ima2-gen
 ima2 serve
 ```
 
-First run prompts you to pick an auth method:
+The first run opens setup:
 
-```
-  Choose authentication method:
-    1) API Key  — paste your OpenAI API key (paid)
-    2) OAuth    — login with ChatGPT account (free)
+```text
+1) API Key  — save an OpenAI API key for supported auxiliary paths
+2) OAuth    — log in with a ChatGPT/Codex account for image generation
 ```
 
-Web UI opens at `http://localhost:3333`.
+For the current release, choose OAuth for generation. If Codex is not logged in yet, run:
+
+```bash
+npx @openai/codex login
+ima2 serve
+```
+
+The web UI opens at `http://localhost:3333` by default.
 
 ---
 
-## Features
+## What Works Now
 
-All features shown in the screenshot are available today:
+### OAuth Generation
 
-### Authentication
-- **OAuth** — log in with your ChatGPT Plus/Pro account, $0 per image
-- **API Key** — paste your `sk-...` key, pay per call
+- Text-to-image through `/api/generate`
+- Image edit / image-to-image through `/api/edit`
+- Up to 5 reference images per root generation
+- Quality controls: `low`, `medium`, `high`
+- Moderation controls: `low`, `auto`
+- PNG/JPEG/WebP output
+- Parallel count: 1, 2, or 4 from the UI; CLI/server cap is 8
+- Size presets aligned to `gpt-image-2` constraints
 
-Authentication status is indicated live in the left panel (green dot = ready, red dot = disabled). By default, the API key method is disabled, making OAuth the primary route.
+### UI Workflow
 
-### Generation controls
-| Control | Options |
-|---------|---------|
-| **Quality** | Low (fast) · Medium (balanced) · High (best) |
-| **Size** | `1024²` `1536×1024` `1024×1536` `1360×1024` `1024×1360` `1824×1024` `1024×1824` `2048²` `2048×1152` `1152×2048` `3824×2160` `2160×3824` · `auto` · custom |
-| **Format** | PNG · JPEG · WebP |
-| **Moderation** | Low (relaxed filter, default) · Auto (standard filter) |
-| **Count** | 1 · 2 · 4 parallel |
+- Prompt composer with drag/drop and Cmd/Ctrl+V image paste
+- Current-image reuse from the canvas
+- Gallery strip and full gallery modal
+- Delete/restore for generated assets
+- Settings workspace opened from the header gear
+- Theme and account/status settings moved out of the crowded sidebar
+- Right sidebar now contains only generation details
+- In-flight jobs survive refresh and reconcile back into the UI
 
-All sizes adhere to `gpt-image-2` constraints: every side must be a multiple of 16, the long-to-short ratio must be ≤ 3:1, and the total pixel count must be between 655,360 and 8,294,400.
+### Node Mode
 
-### Workflow
-- **Multi-reference**: Attach up to 5 reference images by dragging and dropping them anywhere on the left panel.
-- **Prompt with context**: Combine text and reference images in a single request.
-- **Use current**: Re-use the selected image as a new reference with a single click.
-- **Canvas actions**: Download, copy to clipboard, or copy the prompt directly from the canvas.
-- **Sticky gallery strip**: A fixed-position gallery strip at the bottom that never scrolls out of view.
-- **Gallery modal (+)**: A comprehensive grid view of your entire generation history.
-- **Session persistence**: Safely refresh the page mid-generation; your pending jobs will automatically reconcile.
+Node mode is a development surface enabled by `npm run dev`.
 
-### CLI (Headless Automation)
-```bash
-ima2 gen "a shiba in space" -q high -o shiba.png
-ima2 gen "merge these" --ref a.png --ref b.png -n 4 -d out/
-ima2 ls -n 10
-ima2 ps
-ima2 ping
-```
+- SQLite-backed graph sessions
+- Branching child generations
+- Duplicate branch / new-from-here flows
+- Node-local reference attachments
+- Session style sheets that can prepend a house style to node/classic prompts
+- Gallery grouping by session title instead of raw server IDs
 
-See the full command matrix below.
+### Observability
+
+- Safe structured logs for generation, edit, node, OAuth, session, history, and in-flight lifecycle
+- Correlation by `requestId`
+- Active-only `/api/inflight` by default
+- Optional recent terminal jobs via `/api/inflight?includeTerminal=1`
+- Logs avoid raw prompts, effective prompts, revised prompts, tokens, auth headers, cookies, request bodies, reference data URLs, generated base64, and raw upstream response bodies
 
 ---
 
 ## CLI Commands
 
-### Server commands
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `ima2 serve` | — | Start the web server (auto-setup on first run) |
-| `ima2 setup` | `login` | Reconfigure authentication method |
-| `ima2 status` | — | Show current config & auth status |
-| `ima2 doctor` | — | Diagnose environment & dependencies |
-| `ima2 open` | — | Open web UI in browser |
-| `ima2 reset` | — | Clear saved configuration |
-| `ima2 --version` | `-v` | Show version |
-| `ima2 --help` | `-h` | Show help |
+### Server Commands
 
-### Client Commands (requires a running `ima2 serve`)
+| Command | Alias | Description |
+|---|---|---|
+| `ima2 serve` | — | Start the local web server |
+| `ima2 setup` | `login` | Reconfigure saved auth |
+| `ima2 status` | — | Show config and OAuth session status |
+| `ima2 doctor` | — | Diagnose Node, package, config, and auth state |
+| `ima2 open` | — | Open the web UI |
+| `ima2 reset` | — | Remove saved config |
+| `ima2 --version` | `-v` | Print package version |
+| `ima2 --help` | `-h` | Print help |
+
+### Client Commands
+
+These require a running `ima2 serve`.
+
 | Command | Description |
-|---------|-------------|
+|---|---|
 | `ima2 gen <prompt>` | Generate image(s) from the CLI |
-| `ima2 edit <file>` | Edit an existing image (requires `--prompt`) |
-| `ima2 ls` | List recent history (table or `--json`) |
-| `ima2 show <name>` | Reveal one history item (`--reveal`) |
-| `ima2 ps` | List active jobs (`--kind`, `--session`) |
+| `ima2 edit <file> --prompt <text>` | Edit an existing image |
+| `ima2 ls` | List history, table or `--json` |
+| `ima2 show <name>` | Show/reveal a generated asset |
+| `ima2 ps` | List active in-flight jobs |
 | `ima2 ping` | Health-check the running server |
 
-The running server advertises its port via `~/.ima2/server.json`. Client commands will automatically discover it; you can override this by using `--server <url>` or setting `IMA2_SERVER=...`.
+The server advertises its port at `~/.ima2/server.json`. Client commands auto-discover it. Override with `--server <url>` or `IMA2_SERVER=http://localhost:3333`.
 
-### Exit codes
-`0` OK · `2` Bad arguments · `3` Server unreachable · `4` APIKEY_DISABLED · `5` 4xx error · `6` 5xx error · `7` Safety refusal · `8` Timeout.
+### Exit Codes
 
----
-
-## Roadmap
-
-Public roadmap (subject to change). Version numbers reflect the actual release cycle, not time estimates.
-
-### ✅ Shipped
-- **0.06** Session DB — SQLite-backed history with sidecar JSON
-- **0.07** Multi-reference — up to 5 attachments, i2i merged into unified flow
-- **0.08** In-flight tracking — Refresh-safe pending state and phase tracking
-- **0.09** Node mode (dev-only) — Graph-based canvas for branching generations
-- **0.09.1** CLI integration — `gen` / `edit` / `ls` / `show` / `ps` / `ping` + `/api/health` + port advertisement
-
-### 🚧 0.10 — Compare & Reuse (Current Cycle)
-- **F3 Prompt presets** — Save and apply `{prompt, refs, quality, size}` bundles
-- **F3 Gallery groupBy** — Group by `preset`, `date`, or `compareRun`
-- **F2 Batch A/B compare** — Spawn 2–6 parallel variants from a single prompt with keyboard-driven judging (`1-6`, `Space` = winner, `V` = variation, `P` = save preset)
-- **F4 Export bundle** — Zip selected images along with a `manifest.json` and a `.txt` prompt file per image
-- Every server action ships with its CLI counterpart (`ima2 preset / compare / export`)
-
-### 🔭 0.11 — Card-News Mode
-- Instagram carousel generation (4, 6, or 10 cards)
-- Maintain style consistency via `file_id` fan-out (instead of `previous_response_id` or seeds)
-- Support parallel card regeneration without breaking the style chain
-
-### 🔭 0.12 — Style Kit
-- Codified house-style presets using style-reference uploads
-- Optional `input_fidelity: "high"` for identity-critical edits
-
-### 🗂 Backlog
-- Dark/light mode toggle for the Web UI
-- Overlay cheat-sheet for keyboard shortcuts
-- Collaborative sessions (shared SQLite via WebSocket)
-- Plugin system for custom post-processing tasks
+`0` OK · `2` bad arguments · `3` server unreachable · `4` `APIKEY_DISABLED` · `5` 4xx · `6` 5xx · `7` safety refusal · `8` timeout.
 
 ---
 
-## Architecture
+## API Endpoints
 
+```text
+GET    /api/health
+GET    /api/providers
+GET    /api/oauth/status
+GET    /api/billing
+GET    /api/inflight
+GET    /api/inflight?includeTerminal=1
+POST   /api/generate
+POST   /api/edit
+GET    /api/history
+GET    /api/history?groupBy=session
+DELETE /api/history/:filename
+POST   /api/history/:filename/restore
+GET    /api/sessions
+POST   /api/sessions
+GET    /api/sessions/:id
+PATCH  /api/sessions/:id
+DELETE /api/sessions/:id
+PUT    /api/sessions/:id/graph
+GET    /api/node/:nodeId
+POST   /api/node/generate
 ```
+
+### OAuth Generation Request
+
+```bash
+curl -X POST http://localhost:3333/api/generate \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prompt": "a shiba in space",
+    "quality": "medium",
+    "size": "1024x1024",
+    "moderation": "low",
+    "provider": "oauth"
+  }'
+```
+
+### API-Key Configuration And Activation Notes
+
+Current behavior:
+
+- `provider: "oauth"` is the supported generation path.
+- `provider: "api"` returns `403` / `APIKEY_DISABLED` in `routes/generate.js`, `routes/edit.js`, and `routes/nodes.js`.
+- `OPENAI_API_KEY` or `~/.ima2/config.json` can still be used for non-generation helpers such as billing probes and style-sheet extraction.
+
+Configure an API key for those auxiliary paths:
+
+```bash
+export OPENAI_API_KEY="sk-..."
 ima2 serve
-  ├── Express server (:3333)
-  │   ├── GET  /api/health         — version, uptime, activeJobs, pid
-  │   ├── GET  /api/providers      — available auth methods
-  │   ├── GET  /api/oauth/status   — OAuth proxy health check
-  │   ├── POST /api/generate       — text+ref → image (parallel via n)
-  │   ├── POST /api/edit           — ref-heavy edit path
-  │   ├── GET  /api/history        — paginated sidecar listing
-  │   ├── GET  /api/inflight       — in-progress jobs (kind/session filters)
-  │   ├── GET  /api/sessions/*     — node-graph sessions (dev-only)
-  │   ├── GET  /api/billing        — API credit / cost info
-  │   └── Static files (public/)   — web UI
-  │
-  ├── openai-oauth proxy (:10531)  — embedded OAuth relay
-  └── ~/.ima2/server.json          — port advertisement for CLI auto-discovery
 ```
 
-**Node mode** is dev-only (`npm run dev`) and will remain excluded from npm releases until the session DB and multi-user features are finalized.
+or:
+
+```json
+{
+  "provider": "api",
+  "apiKey": "sk-..."
+}
+```
+
+saved at `~/.ima2/config.json`.
+
+To intentionally reopen API-key image generation as a developer, audit and change the explicit `provider === "api"` guards in:
+
+- `routes/generate.js`
+- `routes/edit.js`
+- `routes/nodes.js`
+
+Then wire the OpenAI SDK generation/edit implementation, update tests for both OAuth and API-key paths, and update this README. Do not simply remove the guards without adding the API implementation and billing/error tests.
 
 ---
 
 ## Configuration
 
-Configuration is stored in `~/.ima2/config.json` (auto-created and gitignored).
+Config priority is:
 
-### Environment Variables
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_API_KEY` | — | OpenAI API key (skips OAuth) |
-| `PORT` | `3333` | Web server port |
-| `OAUTH_PORT` | `10531` | OAuth proxy port |
-| `IMA2_SERVER` | — | Client: override target server URL |
-
-```bash
-cp .env.example .env
+```text
+environment variables > ~/.ima2/config.json > built-in defaults
 ```
+
+| Variable | Default | Description |
+|---|---:|---|
+| `IMA2_PORT` / `PORT` | `3333` | Web server port |
+| `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth proxy port |
+| `IMA2_SERVER` | — | CLI target override |
+| `IMA2_CONFIG_DIR` | `~/.ima2` | Config and SQLite location |
+| `IMA2_GENERATED_DIR` | `generated/` | Generated image directory |
+| `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable auto-starting the OAuth proxy |
+| `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Retention for opt-in terminal in-flight debug jobs |
+| `OPENAI_API_KEY` | — | API key for supported auxiliary paths |
 
 ---
 
-## API Pricing (API Key Mode Only)
+## Architecture
 
-| Quality | 1024×1024 | 1024×1536 | 1536×1024 | 2048×2048 | 3840×2160 |
-|---------|-----------|-----------|-----------|-----------|-----------|
-| Low     | $0.006    | $0.005    | $0.005    | $0.012    | $0.023    |
-| Medium  | $0.053    | $0.041    | $0.041    | $0.106    | $0.200    |
-| High    | $0.211    | $0.165    | $0.165    | $0.422    | $0.800    |
+```text
+ima2 serve
+  ├── Express server (:3333)
+  │   ├── route modules in routes/
+  │   ├── OAuth image calls via lib/oauthProxy.js
+  │   ├── generated/ image + sidecar JSON storage
+  │   ├── SQLite sessions via better-sqlite3
+  │   └── ui/dist React app
+  ├── openai-oauth proxy (:10531)
+  └── ~/.ima2/server.json for CLI discovery
+```
 
-**OAuth mode is free** — usage is billed against your existing ChatGPT Plus/Pro subscription.
+The server uses ES modules, centralized config in `config.js`, and route helpers under `lib/`.
 
 ---
 
@@ -204,50 +244,45 @@ cp .env.example .env
 git clone https://github.com/lidge-jun/ima2-gen.git
 cd ima2-gen
 npm install
-npm run dev    # server with --watch + Node mode enabled
-npm test       # 92+ tests covering health checks, CLI library, commands, and the server
+npm run dev
+npm test
+npm run build
 ```
 
-Frontend Stack:
-- Vite + React for the web UI and Node-mode canvas
-- Zustand for UI/session state
-- Fonts: Outfit and Geist Mono
+`npm run dev` builds the UI with `VITE_IMA2_DEV=1` and starts `server.js` with `--watch`. Node mode is visible in this dev build.
 
-## Tech Stack
-- **Runtime**: Node.js ≥20
-- **Server**: Express 5, SQLite (better-sqlite3)
-- **API**: OpenAI SDK v5
-- **OAuth**: `openai-oauth` proxy
-- **Tests**: Node built-in test runner
+Test coverage currently includes CLI behavior, config loading, history pagination/delete/restore, reference validation, OAuth parameter normalization, prompt fidelity, in-flight tracking, safe logging, and route health checks.
 
 ---
 
 ## Troubleshooting
 
-**Port already in use / "Why is it on 3457?"**
-→ The default port is `3333`. If the `PORT` environment variable is set in your shell (e.g., inherited from another server like `cli-jaw`), `ima2` will use it instead. You can unset it or run `PORT=3333 ima2 serve`.
+**`ima2 ping` says the server is unreachable**
+Start `ima2 serve`, then check `~/.ima2/server.json`. You can override discovery with `ima2 ping --server http://localhost:3333`.
 
-**`ima2 ping` says server unreachable**
-→ Ensure that `ima2 serve` is running. Check `~/.ima2/server.json` or override the target URL using `ima2 ping --server http://localhost:3333`.
+**OAuth login does not work**
+Run `npx @openai/codex login`, confirm `ima2 status`, then restart `ima2 serve`.
 
-**OAuth login not working**
-→ Manually run `npx @openai/codex login`, and then start the server with `ima2 serve`.
+**Images fail with `APIKEY_DISABLED`**
+You are trying to generate with `provider: "api"`. Use OAuth for generation in the current release.
 
-**`ima2 doctor` fails on `node_modules`**
-→ Run `npm install`.
+**An API key is configured but generation still uses OAuth**
+That is expected. API keys are currently recognized for auxiliary status/extraction paths, not for image generation.
 
-**Images not generating**
-→ Run `ima2 status` to verify your configuration. If you are using an API key, it must start with `sk-`.
+**Port is unexpectedly `3457`**
+Your shell may have inherited `PORT=3457` from another local tool. Run `unset PORT` or start with `IMA2_PORT=3333 ima2 serve`.
 
 ---
 
-## Release
+## Recent Changelog Highlights
 
-```bash
-npm run release:patch   # 1.0.2 → 1.0.3
-npm run release:minor   # 1.0.x → 1.1.0
-npm run release:major   # 1.x.x → 2.0.0
-```
+- Node-local references and branch duplication for node mode
+- Settings workspace with account/theme controls
+- Prompt fidelity and revised prompt capture
+- OAuth quality handling for `low`, `medium`, `high`
+- Safer structured request logs and terminal in-flight debug snapshots
+- Session-title gallery grouping
+- Cross-platform CLI fixes for Windows process spawning
 
 ## License
 

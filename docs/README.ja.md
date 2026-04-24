@@ -1,12 +1,14 @@
 # ima2-gen
 
 [![npm version](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
 > **他の言語で読む**: [English](../README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
-OpenAI **GPT Image 2** (`gpt-image-2`) 画像生成のためのミニマルな CLI + Web UI。OAuth（ChatGPT Plus/Pro 経由で無料）または API キーに対応。並列生成、複数参照画像、CLI 自動化、履歴の永続化をサポート。
+`ima2-gen` は ChatGPT/Codex OAuth 経路で OpenAI 画像生成を実行するローカル CLI + Web Studio です。React UI、ヘッドレス CLI、永続履歴、参照画像アップロード、開発用ノード分岐モード、安全なリクエストログを備えています。
+
+現在の画像生成は **OAuth only** です。API key は billing/status 確認や style-sheet 抽出などの補助的な開発経路には使えますが、画像生成エンドポイントは `provider: "api"` を `APIKEY_DISABLED` として明示的に拒否します。API key 生成を使うにはコード上の provider policy を意図的に変更する必要があります。
 
 ![ima2-gen スクリーンショット](../assets/screenshot.png)
 
@@ -15,179 +17,219 @@ OpenAI **GPT Image 2** (`gpt-image-2`) 画像生成のためのミニマルな C
 ## クイックスタート
 
 ```bash
-# インストール不要で即実行
 npx ima2-gen serve
 
-# もしくはグローバルインストール
+# またはグローバルインストール
 npm install -g ima2-gen
 ima2 serve
 ```
 
-初回起動時に認証方式を選択します:
+初回起動時に設定が開きます:
 
-```
-  認証方式を選択してください:
-    1) API Key  — OpenAI API キーを貼り付け（有料）
-    2) OAuth    — ChatGPT アカウントでログイン（無料）
+```text
+1) API Key  — サポート済み補助経路用に OpenAI API key を保存
+2) OAuth    — 画像生成用に ChatGPT/Codex アカウントでログイン
 ```
 
-Web UI は `http://localhost:3333` で開きます。
+現在のリリースでは画像生成に OAuth を使ってください。Codex に未ログインの場合:
+
+```bash
+npx @openai/codex login
+ima2 serve
+```
+
+既定の Web UI は `http://localhost:3333` です。
 
 ---
 
-## 機能
+## 現在の機能
 
-スクリーンショットに写っている機能はすべて現行版で動作します。
+### OAuth 画像生成
 
-### 認証
-- **OAuth** — ChatGPT Plus/Pro アカウントでログイン、1 枚あたり $0
-- **API Key** — `sk-...` キーを貼り付け、呼び出しごとに課金
+- `/api/generate` テキストから画像生成
+- `/api/edit` 画像編集 / 画像から画像生成
+- ルート生成リクエストあたり最大 5 枚の参照画像
+- Quality: `low`, `medium`, `high`
+- Moderation: `low`, `auto`
+- PNG/JPEG/WebP 出力
+- UI の並列数: 1、2、4。CLI/server の上限は 8
+- `gpt-image-2` 制約に合わせたサイズプリセット
 
-左パネルに状態がリアルタイム表示（緑=準備完了、赤=無効）。API キーはデフォルトで無効化、OAuth がメイン経路。
+### UI ワークフロー
 
-### 生成コントロール
-| 項目 | 選択肢 |
-|------|--------|
-| **Quality** | Low（高速）· Medium（バランス）· High（最高） |
-| **Size** | `1024²` `1536×1024` `1024×1536` `1360×1024` `1024×1360` `1824×1024` `1024×1824` `2048²` `2048×1152` `1152×2048` `3824×2160` `2160×3824` · `auto` · カスタム |
-| **Format** | PNG · JPEG · WebP |
-| **Moderation** | Low（緩め）· Auto（標準） |
-| **Count** | 1 · 2 · 4 並列 |
+- プロンプト入力でドラッグ&ドロップと Cmd/Ctrl+V 画像貼り付け
+- 現在の画像を次の生成の参照として再利用
+- 下部ギャラリーストリップとフルギャラリーモーダル
+- 生成物の削除/復元
+- ヘッダーの歯車から開く設定ワークスペース
+- アカウント/テーマ設定を混雑したサイドバーから分離
+- 右サイドバーは生成詳細オプションのみ表示
+- リロード後も進行中ジョブを自動 reconcile
 
-すべてのサイズは gpt-image-2 の制約に準拠: 各辺が 16 の倍数、長短比 ≤ 3:1、総ピクセル 655,360–8,294,400。
+### ノードモード
 
-### ワークフロー
-- **マルチリファレンス** — 最大 5 枚の参照画像を添付、左パネルのどこへでもドラッグ&ドロップ
-- **プロンプト+コンテキスト** — テキストと参照画像を 1 リクエストで統合
-- **Use current** — 選択中の画像をワンクリックで新しい参照として再利用
-- キャンバスから直接 **Download** · **Copy to clipboard** · **Copy prompt**
-- 下部の **固定ギャラリーストリップ** — 絶対にスクロールしない固定位置
-- **ギャラリーモーダル (+)** — 履歴全体をグリッドで表示
-- **セッション永続化** — 生成中にリロードしても保留中のジョブは自動復元
+ノードモードは `npm run dev` で有効になる開発用画面です。
 
-### CLI (ヘッドレス自動化)
-```bash
-ima2 gen "a shiba in space" -q high -o shiba.png
-ima2 gen "merge these" --ref a.png --ref b.png -n 4 -d out/
-ima2 ls -n 10
-ima2 ps
-ima2 ping
-```
+- SQLite ベースのグラフセッション
+- 子ノード分岐生成
+- Duplicate branch / New from here フロー
+- ノード単位のローカル参照画像
+- session style sheet による classic/node prompt への house style 自動付与
+- ギャラリーは raw session id ではなく session title を優先表示
 
-全コマンド一覧は下記 ↓
+### オブザーバビリティ
+
+- generate/edit/node/OAuth/session/history/inflight のライフサイクル構造化ログ
+- `requestId` による追跡
+- 既定の `/api/inflight` は active-only
+- `/api/inflight?includeTerminal=1` のみ最近の完了/失敗/キャンセル job を返す
+- raw prompt、effective/revised prompt、token、auth header、cookie、request body、reference data URL、generated base64、raw upstream body はログに出しません
 
 ---
 
 ## CLI コマンド
 
 ### サーバーコマンド
+
 | コマンド | エイリアス | 説明 |
-|---------|---------|------|
-| `ima2 serve` | — | Web サーバー起動（初回は自動セットアップ） |
-| `ima2 setup` | `login` | 認証方式の再設定 |
-| `ima2 status` | — | 現在の設定と認証状態 |
-| `ima2 doctor` | — | 環境と依存関係の診断 |
-| `ima2 open` | — | ブラウザで Web UI を開く |
-| `ima2 reset` | — | 保存された設定をクリア |
+|---|---|---|
+| `ima2 serve` | — | ローカル Web サーバーを起動 |
+| `ima2 setup` | `login` | 保存済み認証を再設定 |
+| `ima2 status` | — | 設定と OAuth セッション状態を表示 |
+| `ima2 doctor` | — | Node/package/config/auth 状態を診断 |
+| `ima2 open` | — | Web UI を開く |
+| `ima2 reset` | — | 保存済み設定を削除 |
 | `ima2 --version` | `-v` | バージョン表示 |
 | `ima2 --help` | `-h` | ヘルプ表示 |
 
-### クライアントコマンド (`ima2 serve` が必要)
-| コマンド | 説明 |
-|---------|------|
-| `ima2 gen <prompt>` | CLI から画像を生成 |
-| `ima2 edit <file>` | 既存画像を編集（`--prompt` 必須） |
-| `ima2 ls` | 最近の履歴（テーブルまたは `--json`） |
-| `ima2 show <name>` | 履歴アイテムを表示（`--reveal`） |
-| `ima2 ps` | 進行中ジョブ一覧（`--kind`, `--session`） |
-| `ima2 ping` | 稼働中サーバーのヘルスチェック |
+### クライアントコマンド
 
-稼働中のサーバーは `~/.ima2/server.json` で自己広告します。クライアントは自動検出、`--server <url>` または `IMA2_SERVER=...` で上書き可能。
+`ima2 serve` が実行中である必要があります。
+
+| コマンド | 説明 |
+|---|---|
+| `ima2 gen <prompt>` | CLI から画像生成 |
+| `ima2 edit <file> --prompt <text>` | 既存画像を編集 |
+| `ima2 ls` | 履歴一覧、table または `--json` |
+| `ima2 show <name>` | 生成物を表示/reveal |
+| `ima2 ps` | 進行中 jobs を一覧 |
+| `ima2 ping` | 実行中サーバーの health check |
+
+サーバーは `~/.ima2/server.json` にポートを広告します。CLI は自動検出し、`--server <url>` または `IMA2_SERVER=http://localhost:3333` で上書きできます。
 
 ### 終了コード
-`0` 成功 · `2` 不正な引数 · `3` サーバー到達不能 · `4` APIKEY_DISABLED · `5` 4xx · `6` 5xx · `7` 安全拒否 · `8` タイムアウト。
+
+`0` 成功 · `2` 不正な引数 · `3` サーバー到達不能 · `4` `APIKEY_DISABLED` · `5` 4xx · `6` 5xx · `7` safety refusal · `8` timeout。
 
 ---
 
-## ロードマップ
+## API エンドポイント
 
-公開ロードマップ — 変更されることがあります。バージョン番号は実際のリリースサイクルを反映。
+```text
+GET    /api/health
+GET    /api/providers
+GET    /api/oauth/status
+GET    /api/billing
+GET    /api/inflight
+GET    /api/inflight?includeTerminal=1
+POST   /api/generate
+POST   /api/edit
+GET    /api/history
+GET    /api/history?groupBy=session
+DELETE /api/history/:filename
+POST   /api/history/:filename/restore
+GET    /api/sessions
+POST   /api/sessions
+GET    /api/sessions/:id
+PATCH  /api/sessions/:id
+DELETE /api/sessions/:id
+PUT    /api/sessions/:id/graph
+GET    /api/node/:nodeId
+POST   /api/node/generate
+```
 
-### ✅ リリース済み
-- **0.06** セッション DB — SQLite ベースの履歴 + サイドカー JSON
-- **0.07** マルチリファレンス — 最大 5 枚、i2i を統一フローに統合
-- **0.08** Inflight 追跡 — リロード耐性のある pending 状態、フェーズ追跡
-- **0.09** ノードモード（開発用） — 分岐生成用のグラフベースキャンバス
-- **0.09.1** CLI 統合 — `gen / edit / ls / show / ps / ping` + `/api/health` + ポート広告
+### OAuth 生成リクエスト
 
-### 🚧 0.10 — Compare & Reuse（現行サイクル）
-- **F3 プロンプトプリセット** — `{prompt, refs, quality, size}` バンドル保存/適用
-- **F3 ギャラリー groupBy** — `preset / date / compareRun` グルーピング
-- **F2 バッチ A/B 比較** — 1 プロンプトから 2〜6 並列バリアント、キーボード判定（`1-6`, `Space`=勝者, `V`=変形, `P`=プリセット保存）
-- **F4 Export バンドル** — 選択画像を zip 化（`manifest.json` + 画像別プロンプト `.txt`）
-- 全サーバー動詞に CLI ミラーを同梱（`ima2 preset / compare / export`）
+```bash
+curl -X POST http://localhost:3333/api/generate \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prompt": "a shiba in space",
+    "quality": "medium",
+    "size": "1024x1024",
+    "moderation": "low",
+    "provider": "oauth"
+  }'
+```
 
-### 🔭 0.11 — カードニュースモード
-- Instagram カルーセル生成（4 / 6 / 10 枚）
-- `file_id` ファンアウトによるスタイル一貫性（`previous_response_id`・seed 不使用）
-- スタイルチェーンを壊さない並列カード再生成
+### API key 設定と有効化メモ
 
-### 🔭 0.12 — スタイルキット
-- スタイル参照アップロードによるハウススタイルプリセット
-- アイデンティティ重視編集向けのオプション `input_fidelity: "high"`
+現在の挙動:
 
-### 🗂 バックログ
-- Web UI ダーク/ライト切替
-- キーボードショートカットのチートシートオーバーレイ
-- 共同セッション（WebSocket 経由の SQLite 共有）
-- カスタム後処理用プラグインシステム
+- サポート済み生成経路は `provider: "oauth"` です。
+- `provider: "api"` は `routes/generate.js`、`routes/edit.js`、`routes/nodes.js` で `403` / `APIKEY_DISABLED` を返します。
+- `OPENAI_API_KEY` または `~/.ima2/config.json` の API key は billing probe、style-sheet extraction など非生成の補助経路に利用できます。
+
+補助経路用 API key の設定:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+ima2 serve
+```
+
+または `~/.ima2/config.json`:
+
+```json
+{
+  "provider": "api",
+  "apiKey": "sk-..."
+}
+```
+
+開発者が API-key 画像生成を意図的に再度有効化する場合は、以下の `provider === "api"` guard を監査して変更してください。
+
+- `routes/generate.js`
+- `routes/edit.js`
+- `routes/nodes.js`
+
+guard を削除するだけでは不十分です。OpenAI SDK ベースの生成/編集実装、OAuth/API 両経路テスト、billing/error テスト、README 更新を同時に行ってください。
+
+---
+
+## 設定
+
+優先順位:
+
+```text
+環境変数 > ~/.ima2/config.json > 既定値
+```
+
+| 変数 | 既定値 | 説明 |
+|---|---:|---|
+| `IMA2_PORT` / `PORT` | `3333` | Web サーバーポート |
+| `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth プロキシポート |
+| `IMA2_SERVER` | — | CLI 対象サーバー上書き |
+| `IMA2_CONFIG_DIR` | `~/.ima2` | 設定と SQLite の場所 |
+| `IMA2_GENERATED_DIR` | `generated/` | 生成画像ディレクトリ |
+| `IMA2_NO_OAUTH_PROXY` | — | `1` で OAuth proxy 自動起動を無効化 |
+| `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | opt-in terminal inflight job 保持時間 |
+| `OPENAI_API_KEY` | — | サポート済み補助経路用 API key |
 
 ---
 
 ## アーキテクチャ
 
-```
+```text
 ima2 serve
-  ├── Express サーバー (:3333)
-  │   ├── GET  /api/health         — version, uptime, activeJobs, pid
-  │   ├── GET  /api/providers      — 利用可能な認証方式
-  │   ├── GET  /api/oauth/status   — OAuth プロキシのヘルスチェック
-  │   ├── POST /api/generate       — text+ref → image（n 並列）
-  │   ├── POST /api/edit           — 参照中心の編集パス
-  │   ├── GET  /api/history        — ページング済みサイドカー一覧
-  │   ├── GET  /api/inflight       — 進行中ジョブ（kind/session フィルタ）
-  │   ├── GET  /api/sessions/*     — ノードグラフセッション（開発用）
-  │   ├── GET  /api/billing        — API クレジット / コスト
-  │   └── 静的ファイル (public/)   — Web UI
-  │
-  ├── openai-oauth プロキシ (:10531) — 埋込 OAuth リレー
-  └── ~/.ima2/server.json          — CLI 自動検出用ポート広告
+  ├── Express server (:3333)
+  │   ├── routes/ route modules
+  │   ├── lib/oauthProxy.js OAuth image calls
+  │   ├── generated/ image + sidecar JSON
+  │   ├── better-sqlite3 session DB
+  │   └── ui/dist React app
+  ├── openai-oauth proxy (:10531)
+  └── ~/.ima2/server.json for CLI discovery
 ```
-
-**ノードモード**は開発用のみ (`npm run dev`)。セッション DB + マルチユーザー対応が完了するまで npm 公開版では無効化。
-
----
-
-## 環境変数
-
-| 変数 | デフォルト | 説明 |
-|------|-----------|------|
-| `OPENAI_API_KEY` | — | OpenAI API キー（OAuth をスキップ） |
-| `PORT` | `3333` | Web サーバーポート |
-| `OAUTH_PORT` | `10531` | OAuth プロキシポート |
-| `IMA2_SERVER` | — | クライアント: 対象サーバー URL の上書き |
-
----
-
-## API 料金（API キーモードのみ）
-
-| Quality | 1024×1024 | 1024×1536 | 1536×1024 | 2048×2048 | 3840×2160 |
-|---------|-----------|-----------|-----------|-----------|-----------|
-| Low     | $0.006    | $0.005    | $0.005    | $0.012    | $0.023    |
-| Medium  | $0.053    | $0.041    | $0.041    | $0.106    | $0.200    |
-| High    | $0.211    | $0.165    | $0.165    | $0.422    | $0.800    |
-
-**OAuth モードは無料** — 既存の ChatGPT Plus/Pro 契約から課金されます。
 
 ---
 
@@ -197,27 +239,45 @@ ima2 serve
 git clone https://github.com/lidge-jun/ima2-gen.git
 cd ima2-gen
 npm install
-npm run dev    # --watch + ノードモード有効
-npm test       # 51+ テスト
+npm run dev
+npm test
+npm run build
 ```
+
+`npm run dev` は `VITE_IMA2_DEV=1` で UI をビルドし、`server.js` を `--watch` で起動します。ノードモードはこの dev build で表示されます。
+
+現在のテストは CLI、config、history delete/restore/pagination、reference validation、OAuth parameter normalization、prompt fidelity、inflight tracking、safe logging、route health checks を含みます。
 
 ---
 
 ## トラブルシューティング
 
-**ポートが使用中 / 「なぜ 3457?」**
-→ デフォルトは `3333`。シェルで `PORT` が設定されていると（例: `cli-jaw` などの別サーバーから継承）その値を使います。解除するか `PORT=3333 ima2 serve` で実行。
+**`ima2 ping` がサーバーに接続できない**
+`ima2 serve` を起動し、`~/.ima2/server.json` を確認してください。`ima2 ping --server http://localhost:3333` で直接指定できます。
 
-**`ima2 ping` がサーバー到達不能**
-→ `ima2 serve` は起動中? `~/.ima2/server.json` を確認。`ima2 ping --server http://localhost:3333` で上書き可。
+**OAuth ログインできない**
+`npx @openai/codex login` を実行し、`ima2 status` を確認してから `ima2 serve` を再起動してください。
 
-**OAuth ログイン不可**
-→ `npx @openai/codex login` を手動実行後 `ima2 serve`。
+**画像生成が `APIKEY_DISABLED` で失敗する**
+API key provider で生成しようとしています。現在のリリースでは OAuth を使ってください。
 
-**画像が生成されない**
-→ `ima2 status` で設定確認。API キーは `sk-` で始まる必要があります。
+**API key を設定したのに生成は OAuth のまま**
+これは想定どおりです。API key は現在、補助 status/extraction 経路用であり、画像生成用ではありません。
+
+**ポートが突然 `3457` になる**
+他のローカルツールから `PORT=3457` を継承している可能性があります。`unset PORT` または `IMA2_PORT=3333 ima2 serve` を使ってください。
 
 ---
+
+## 最近の変更
+
+- ノード単位の参照画像と branch duplication
+- アカウント/テーマ設定ワークスペース
+- Prompt fidelity と revised prompt capture
+- OAuth quality `low`, `medium`, `high` の保持
+- 安全な構造化ログと terminal inflight debug snapshot
+- session title ベースのギャラリーグルーピング
+- Windows spawn 関連 CLI 修正
 
 ## ライセンス
 
