@@ -10,6 +10,7 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
+import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
@@ -81,9 +82,21 @@ export function registerNodeRoutes(app, ctx) {
         references = [],
         externalSrc = null,
         mode: promptMode = "auto",
+        model: rawModel,
       } = body;
       const { provider = "oauth" } = body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
+      const modelCheck = normalizeImageModel(ctx, rawModel);
+      if (modelCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = modelCheck.status;
+        finishErrorCode = modelCheck.code;
+        return res.status(modelCheck.status).json({
+          error: { code: modelCheck.code, message: modelCheck.error },
+          parentNodeId,
+        });
+      }
+      const imageModel = modelCheck.model;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
       if (provider === "api") {
@@ -167,6 +180,7 @@ export function registerNodeRoutes(app, ctx) {
         parentNodeId,
         clientNodeId,
         quality,
+        model: imageModel,
         size,
         moderation,
         refs: refCheck.refs.length,
@@ -190,7 +204,7 @@ export function registerNodeRoutes(app, ctx) {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
           const r = parentB64
-            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId)
+            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel })
             : await generateViaOAuth(
                 effectivePrompt,
                 quality,
@@ -201,6 +215,7 @@ export function registerNodeRoutes(app, ctx) {
                 normalizedPromptMode,
                 ctx,
                 {
+                  model: imageModel,
                   partialImages: streamResponse ? 2 : 0,
                   onPartialImage: streamResponse
                     ? (partial) =>
@@ -255,6 +270,7 @@ export function registerNodeRoutes(app, ctx) {
         effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
         styleSheetApplied: styleSheetApplied || undefined,
         options: { quality, size, format, moderation },
+        model: imageModel,
         createdAt: Date.now(),
         createdAtIso: new Date().toISOString(),
         elapsed,
@@ -298,6 +314,7 @@ export function registerNodeRoutes(app, ctx) {
         usage,
         webSearchCalls,
         provider: "oauth",
+        model: imageModel,
         moderation,
         refsCount: refCheck.refs.length,
         warnings: qualityWarnings,

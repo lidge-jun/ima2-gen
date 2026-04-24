@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { AccountSettings } from "./AccountSettings";
+import { ImageModelSelect } from "./ImageModelSelect";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAppStore } from "../store/useAppStore";
@@ -9,6 +10,7 @@ import type { SettingsSection } from "../types";
 
 const SETTINGS_SECTIONS: SettingsSection[] = [
   "account",
+  "generation",
   "appearance",
   "language",
   "future",
@@ -53,6 +55,7 @@ export function SettingsWorkspace() {
   const isProgrammaticScroll = useRef(false);
   const sectionRefs = useRef<Record<SettingsSection, HTMLElement | null>>({
     account: null,
+    generation: null,
     appearance: null,
     language: null,
     future: null,
@@ -160,6 +163,21 @@ export function SettingsWorkspace() {
           <section className="settings-content" aria-label={t("settings.contentAria")}>
             <SettingsSectionBlock id="account" setRef={setSectionRef}>
               <AccountSettings />
+            </SettingsSectionBlock>
+
+            <SettingsSectionBlock id="generation" setRef={setSectionRef}>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.imageModel.title")}</h4>
+                  <p>{t("settings.imageModel.body")}</p>
+                  <p className="settings-row__microcopy">
+                    {t("settings.imageModel.unsupportedHelp")}
+                  </p>
+                </div>
+                <div className="settings-row__control">
+                  <ImageModelSelect variant="settings" />
+                </div>
+              </article>
             </SettingsSectionBlock>
 
             <SettingsSectionBlock id="appearance" setRef={setSectionRef}>

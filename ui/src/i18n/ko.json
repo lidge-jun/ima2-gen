@@ -233,6 +233,8 @@
   },
   "sidebar": {
     "appName": "이미지 생성기",
+    "imageModelLabel": "모델",
+    "imageModelAria": "이미지 모델 선택",
     "nodeModeHint": "노드 모드에서는 노드를 눌러 프롬프트를 수정한 뒤 생성하세요. 오른쪽 패널의 설정 (품질/크기)은 새로 만드는 모든 결과에 적용됩니다."
   },
   "settings": {
@@ -250,6 +252,10 @@
       "account": {
         "title": "계정",
         "hint": "OAuth 상태"
+      },
+      "generation": {
+        "title": "생성",
+        "hint": "모델 기본값"
       },
       "appearance": {
         "title": "화면",
@@ -274,6 +280,15 @@
       "apiBody": "env/config에서 API 키를 찾았지만, 지금 ima2-gen은 OAuth 전용으로 동작합니다. 이 상태 표시를 숨기고 싶을 때만 키를 제거하세요.",
       "apiDisabled": "비활성화",
       "apiUnknown": "상태 불명"
+    },
+    "imageModel": {
+      "title": "이미지 모델",
+      "body": "앞으로 생성 요청에 사용할 OAuth 이미지 모델을 선택합니다.",
+      "gpt54Mini": "GPT-5.4 Mini",
+      "gpt54": "GPT-5.4",
+      "gpt55": "GPT-5.5",
+      "gpt53CodexSpark": "GPT-5.3 Codex Spark — 이미지 생성 미지원",
+      "unsupportedHelp": "기본값은 GPT-5.4 Mini입니다. GPT-5.3 Codex Spark는 OAuth 모델 상태에 보일 수 있지만 image_generation 도구를 지원하지 않습니다."
     },
     "appearance": {
       "themeTitle": "테마",

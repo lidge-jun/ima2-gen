@@ -46,11 +46,13 @@ The live generation/edit provider is OAuth. Sending `provider: "api"` returns `4
 
 | Method | Path | Body | Success response |
 |---|---|---|---|
-| `POST` | `/api/generate` | `{ prompt, quality?, size?, format?, moderation?, provider?, n?, references?, sessionId?, clientNodeId?, requestId? }` | For `n=1`: `{ image, elapsed, filename, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
+| `POST` | `/api/generate` | `{ prompt, quality?, size?, format?, moderation?, model?, provider?, n?, references?, sessionId?, clientNodeId?, requestId? }` | For `n=1`: `{ image, elapsed, filename, requestId, usage, provider, webSearchCalls, quality, size, moderation, model }` |
 | `POST` | `/api/generate` | same body | For `n>1`: `{ images, elapsed, count, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
-| `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, provider?, sessionId?, requestId? }` | `{ image, elapsed, filename, usage, provider, moderation }` |
+| `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, model?, provider?, sessionId?, requestId? }` | `{ image, elapsed, filename, usage, provider, moderation, model }` |
 
-`/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to 8. Result files are written to `generated/`, and sidecar JSON stores prompt, quality, size, format, moderation, provider, usage, and web search counts.
+`/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to 8. Result files are written to `generated/`, and sidecar JSON stores prompt, quality, size, format, moderation, model, provider, usage, and web search counts.
+
+Image generation model selection is explicit. If omitted, the server defaults to `gpt-5.4-mini`. Supported image models are `gpt-5.4-mini`, `gpt-5.4`, and `gpt-5.5`. `gpt-5.3-codex-spark` can appear in OAuth model status, but it does not support the `image_generation` tool, so generation endpoints reject it with `IMAGE_MODEL_UNSUPPORTED` before calling OAuth.
 
 ## History And Asset Lifecycle
 
@@ -79,7 +81,7 @@ The inflight registry tracks both classic and node jobs. The default response is
 
 | Method | Path | Body or query | Response |
 |---|---|---|---|
-| `POST` | `/api/node/generate` | `{ parentNodeId?, prompt, quality?, size?, format?, moderation?, references?, externalSrc?, sessionId?, clientNodeId?, requestId?, provider? }` | `{ nodeId, parentNodeId, requestId, image, filename, url, elapsed, usage, webSearchCalls, provider, moderation, refsCount }` |
+| `POST` | `/api/node/generate` | `{ parentNodeId?, prompt, quality?, size?, format?, moderation?, model?, references?, externalSrc?, sessionId?, clientNodeId?, requestId?, provider? }` | `{ nodeId, parentNodeId, requestId, image, filename, url, elapsed, usage, webSearchCalls, provider, moderation, model, refsCount }` |
 | `GET` | `/api/node/:nodeId` | none | `{ nodeId, meta, url }` |
 
 When `parentNodeId` is present, the server reads the stored parent image and uses the edit path. Without a parent node, it generates a new image and may pass root-node `references` to OAuth generation. `refsCount` is stored as numeric metadata only; reference image base64 is not written to sidecars. `externalSrc` is a controlled fallback for promoting an existing history asset into a node workflow.
@@ -108,6 +110,8 @@ Graph saving uses optimistic concurrency. Missing `If-Match` returns `428`. Vers
 | Missing prompt | 400 | `Prompt is required` |
 | Invalid or too many references | 400 | `INVALID_REFS` or string error |
 | Invalid moderation | 400 | `INVALID_MODERATION` or string error |
+| Invalid image model | 400 | `INVALID_IMAGE_MODEL` |
+| Unsupported OAuth model for image generation | 400 | `IMAGE_MODEL_UNSUPPORTED` |
 | API-key provider requested | 403 | `APIKEY_DISABLED` |
 | Safety refusal | 422 | `SAFETY_REFUSAL` |
 | Missing graph version header | 428 | `GRAPH_VERSION_REQUIRED` |
@@ -133,6 +137,7 @@ Logs must never include raw prompts, effective prompts, revised prompts, OAuth/A
 - 2026-04-23: Documented the current `server.js` endpoint surface and response shapes.
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Added node SSE partial streaming, requestId sidecar/history recovery, observability, terminal inflight, and gallery session-title response notes.
+- 2026-04-24: Added explicit image model selection contract for classic, edit, and node generation.
 
 Previous document: `[[02-command-reference]]`
 

@@ -32,7 +32,7 @@ graph TD
 
 `App.tsx` hydrates history, loads sessions, reconciles inflight jobs, starts polling on mount, and syncs theme preference. If settings are open, it renders `SettingsWorkspace` in the center slot. Otherwise, if UI mode is `classic`, it renders `Canvas`; if node mode is enabled and UI mode is `node`, it renders `NodeCanvas`. Node mode is enabled in packaged builds by default and can be hidden only by building with `VITE_IMA2_NODE_MODE=0`. Before unload or visibility changes, it flushes the graph save beacon.
 
-Settings are a workspace replacement, not a modal overlay. `SettingsButton` lives next to the `ima2-gen` title in the sidebar. `SettingsWorkspace` renders as a scrollable settings document: the left rail is a sticky section index, and selecting an item jumps the center document to that section instead of replacing the content panel. `SettingsWorkspace` closes with `X` or Escape and returns to the previous canvas path without mutating generation state.
+Settings are a workspace replacement, not a modal overlay. `SettingsButton` lives next to the `ima2-gen` title in the sidebar. The compact image model selector also lives in this header as a fast switcher, while Settings shows the same choice with full model names. `SettingsWorkspace` keeps the outer shell fixed so the header and `X` close button do not scroll away; only the section index and content pane scroll. Selecting an item jumps the center document to that section instead of replacing the content panel. `SettingsWorkspace` closes with `X` or Escape and returns to the previous canvas path without mutating generation state.
 
 ## Major Areas
 
@@ -50,13 +50,17 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 
 | State group | Location | Description |
 |---|---|---|
-| Generation options | `useAppStore.ts` | Provider, quality, size, format, moderation, count |
+| Generation options | `useAppStore.ts` | Provider, quality, size, format, moderation, image model, count |
 | Prompt/reference | `useAppStore.ts` | Prompt, reference images, add/remove/clear helpers |
 | Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery |
 | Inflight | `useAppStore.ts` plus `/api/inflight` | localStorage-backed pending jobs and polling |
 | Node graph | `useAppStore.ts` plus sessions API | Nodes, edges, graphVersion, session actions |
 | Settings workspace | `useAppStore.ts` | `settingsOpen` and active settings section |
 | UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale, theme |
+
+The image model preference is stored in `localStorage` as `ima2.imageModel`. Sidebar compact labels (`5.4m`, `5.4`, `5.5`) and Settings full labels (`GPT-5.4 Mini`, `GPT-5.4`, `GPT-5.5`) both read/write the same store field, so the next classic or node request sends the selected `model` instead of falling back to the default. The sidebar selector is intentionally tiny: the closed state shows only the compact label, opens a custom menu on click, and closes on outside click or Escape.
+
+Visible metadata should carry the selected model too. Current result metadata, hydrated history items, and ready node status labels use the server-returned or sidecar-restored `model` so UI debugging matches backend logs. The visible metadata uses compact aliases to preserve elapsed time: model aliases are `5.4m`/`5.4`/`5.5`, and quality aliases are `l`/`m`/`h`.
 
 ## API Client
 
@@ -108,6 +112,7 @@ Node generation uses SSE first through `postNodeGenerateStream()`. Partial image
 - 2026-04-23: Documented the active React UI architecture.
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Documented node SSE partial preview rendering and JSON fallback.
+- 2026-04-24: Documented shared sidebar/settings image model selection.
 
 Previous document: `[[03-server-api]]`
 

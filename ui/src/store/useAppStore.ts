@@ -4,6 +4,7 @@ import type {
   Format,
   GenerateItem,
   GenerateResponse,
+  ImageModel,
   Moderation,
   Provider,
   Quality,
@@ -37,6 +38,11 @@ import {
 import { compressImage } from "../lib/image";
 import { compressToBase64, isHeic, hasAlphaChannel } from "../lib/compress";
 import { snap16 } from "../lib/size";
+import {
+  DEFAULT_IMAGE_MODEL,
+  IMAGE_MODEL_STORAGE_KEY,
+  isImageModel,
+} from "../lib/imageModels";
 import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
 import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
 import { t, loadLocale, saveLocale, type Locale } from "../i18n";
@@ -67,6 +73,20 @@ function loadThemePreference(): ThemePreference {
     if (raw === "system" || raw === "dark" || raw === "light") return raw;
   } catch {}
   return "system";
+}
+
+function loadImageModel(): ImageModel {
+  try {
+    const raw = localStorage.getItem(IMAGE_MODEL_STORAGE_KEY);
+    if (isImageModel(raw)) return raw;
+  } catch {}
+  return DEFAULT_IMAGE_MODEL;
+}
+
+function saveImageModel(model: ImageModel): void {
+  try {
+    localStorage.setItem(IMAGE_MODEL_STORAGE_KEY, model);
+  } catch {}
 }
 
 function resolveThemePreference(theme: ThemePreference): ResolvedTheme {
@@ -198,6 +218,7 @@ export type ImageNodeData = {
   error?: string;
   elapsed?: number;
   webSearchCalls?: number;
+  model?: string | null;
   referenceImages?: string[];
 };
 
@@ -234,6 +255,7 @@ function mapSessionToGraph(session: SessionFull): {
       error: d.error as string | undefined,
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
+      model: (d.model ?? null) as string | null,
     };
     return {
       id: n.id,
@@ -264,6 +286,7 @@ type AppState = {
   customH: number;
   format: Format;
   moderation: Moderation;
+  imageModel: ImageModel;
   count: Count;
   promptMode: "auto" | "direct";
   prompt: string;
@@ -354,6 +377,7 @@ type AppState = {
   setCustomSize: (w: number, h: number) => void;
   setFormat: (f: Format) => void;
   setModeration: (m: Moderation) => void;
+  setImageModel: (m: ImageModel) => void;
   setCount: (c: Count) => void;
   setPromptMode: (m: "auto" | "direct") => void;
   setPrompt: (p: string) => void;
@@ -611,9 +635,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Triggered by `storage` events (another tab changed localStorage).
     const nextInflight = loadInFlight();
     const nextSelected = loadSelectedFilename();
+    const nextImageModel = loadImageModel();
     set((s) => ({
       inFlight: nextInflight,
       activeGenerations: nextInflight.length,
+      imageModel: nextImageModel,
       currentImage:
         nextSelected && s.currentImage?.filename !== nextSelected
           ? s.history.find((h) => h.filename === nextSelected) ?? s.currentImage
@@ -637,6 +663,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   galleryOpen: false,
   openGallery: () => set({ galleryOpen: true }),
   closeGallery: () => set({ galleryOpen: false }),
+
+  imageModel: loadImageModel(),
 
   settingsOpen: false,
   activeSettingsSection: "account",
@@ -1324,6 +1352,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         size,
         format: s.format,
         moderation: s.moderation,
+        model: s.imageModel,
         requestId: flightId,
         sessionId: requestSessionId,
         clientNodeId: targetClientId,
@@ -1387,6 +1416,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 pendingStartedAt: null,
                 elapsed: res.elapsed,
                 webSearchCalls: res.webSearchCalls,
+                model: res.model ?? null,
               },
             };
           }),
@@ -1523,6 +1553,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCustomSize: (w, h) => set({ customW: snap16(w), customH: snap16(h) }),
   setFormat: (format) => set({ format }),
   setModeration: (moderation) => set({ moderation }),
+  setImageModel: (imageModel) => {
+    saveImageModel(imageModel);
+    set({ imageModel });
+  },
   setCount: (count) => set({ count }),
   setPromptMode: (promptMode) => set({ promptMode }),
   setPrompt: (prompt) => set({ prompt }),
@@ -1588,6 +1622,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         moderation: s.moderation,
         provider: s.provider,
         n: s.count,
+        model: s.imageModel,
         requestId: flightId,
         mode: s.promptMode,
         ...(s.referenceImages.length
@@ -1608,6 +1643,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             usage: res.usage,
             quality: res.quality ?? s.quality,
             size: res.size ?? size,
+            model: res.model ?? s.imageModel,
           };
           await addHistory(item, set, get);
         }
@@ -1625,6 +1661,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             usage: res.usage,
             quality: res.quality ?? s.quality,
             size: res.size ?? size,
+            model: res.model ?? s.imageModel,
           };
         } else {
           item = {
@@ -1636,6 +1673,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             usage: res.usage,
             quality: res.quality ?? s.quality,
             size: res.size ?? size,
+            model: res.model ?? s.imageModel,
           };
         }
         await addHistory(item, set, get);
@@ -1665,6 +1703,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           provider: it.provider,
           quality: it.quality || undefined,
           size: it.size || undefined,
+          model: it.model ?? undefined,
           usage: (it.usage as GenerateItem["usage"]) ?? undefined,
           thumb: it.url,
           createdAt: it.createdAt,

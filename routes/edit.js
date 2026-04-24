@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { editViaOAuth } from "../lib/oauthProxy.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
+import { normalizeImageModel } from "../lib/imageModels.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { startJob, finishJob } from "../lib/inflight.js";
@@ -32,8 +33,17 @@ export function registerEditRoutes(app, ctx) {
         moderation = "low",
         provider = "oauth",
         mode: promptMode = "auto",
+        model: rawModel,
       } = req.body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
+      const modelCheck = normalizeImageModel(ctx, rawModel);
+      if (modelCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = modelCheck.status;
+        finishErrorCode = modelCheck.code;
+        return res.status(modelCheck.status).json({ error: modelCheck.error, code: modelCheck.code });
+      }
+      const imageModel = modelCheck.model;
       const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
@@ -45,6 +55,7 @@ export function registerEditRoutes(app, ctx) {
           kind: "edit",
           sessionId,
           quality,
+          model: imageModel,
           size,
           styleSheetApplied: false,
         },
@@ -90,6 +101,7 @@ export function registerEditRoutes(app, ctx) {
         client: req.get("x-ima2-client") || "ui",
         provider: "oauth",
         quality,
+        model: imageModel,
         size,
         moderation,
         sessionId,
@@ -108,6 +120,7 @@ export function registerEditRoutes(app, ctx) {
         normalizedPromptMode,
         ctx,
         requestId,
+        { model: imageModel },
       );
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -124,6 +137,7 @@ export function registerEditRoutes(app, ctx) {
         quality,
         size,
         moderation,
+        model: imageModel,
         format: "png",
         provider: "oauth",
         kind: "edit",
@@ -147,6 +161,7 @@ export function registerEditRoutes(app, ctx) {
         filename,
         usage,
         provider: "oauth",
+        model: imageModel,
         moderation,
         warnings: qualityWarnings,
         revisedPrompt: revisedPrompt || null,

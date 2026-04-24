@@ -233,6 +233,8 @@
   },
   "sidebar": {
     "appName": "Image Generator",
+    "imageModelLabel": "Model",
+    "imageModelAria": "Choose image model",
     "nodeModeHint": "In node mode, click a node to edit its prompt and generate. Settings on the right panel (quality/size) apply to every new result."
   },
   "settings": {
@@ -250,6 +252,10 @@
       "account": {
         "title": "Account",
         "hint": "OAuth status"
+      },
+      "generation": {
+        "title": "Generation",
+        "hint": "Model defaults"
       },
       "appearance": {
         "title": "Appearance",
@@ -274,6 +280,15 @@
       "apiBody": "ima2-gen found an API key in env/config, but the app is OAuth-only right now. Remove the key only if you do not want this status shown.",
       "apiDisabled": "Disabled",
       "apiUnknown": "Status unknown"
+    },
+    "imageModel": {
+      "title": "Image model",
+      "body": "Choose the OAuth model used for future image generations.",
+      "gpt54Mini": "GPT-5.4 Mini",
+      "gpt54": "GPT-5.4",
+      "gpt55": "GPT-5.5",
+      "gpt53CodexSpark": "GPT-5.3 Codex Spark — unsupported for images",
+      "unsupportedHelp": "Default is GPT-5.4 Mini. GPT-5.3 Codex Spark may appear in OAuth model status, but it does not support the image_generation tool."
     },
     "appearance": {
       "themeTitle": "Theme",

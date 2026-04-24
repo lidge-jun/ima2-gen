@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
+import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth } from "../lib/oauthProxy.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
@@ -37,8 +38,17 @@ export function registerGenerateRoutes(app, ctx) {
         n = 1,
         references = [],
         mode: promptMode = "auto",
+        model: rawModel,
       } = req.body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
+      const modelCheck = normalizeImageModel(ctx, rawModel);
+      if (modelCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = modelCheck.status;
+        finishErrorCode = modelCheck.code;
+        return res.status(modelCheck.status).json({ error: modelCheck.error, code: modelCheck.code });
+      }
+      const imageModel = modelCheck.model;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
       if (!prompt) return res.status(400).json({ error: "Prompt is required" });
@@ -71,6 +81,7 @@ export function registerGenerateRoutes(app, ctx) {
           parentNodeId: null,
           clientNodeId,
           quality,
+          model: imageModel,
           size,
           n: count,
           styleSheetApplied: !!styleSheetApplied,
@@ -97,6 +108,7 @@ export function registerGenerateRoutes(app, ctx) {
         client,
         provider: "oauth",
         quality,
+        model: imageModel,
         size,
         moderation,
         n: count,
@@ -127,6 +139,7 @@ export function registerGenerateRoutes(app, ctx) {
               requestId,
               normalizedPromptMode,
               ctx,
+              { model: imageModel },
             );
             if (r.b64) return r;
             lastErr = new Error("Empty response (safety refusal)");
@@ -164,6 +177,7 @@ export function registerGenerateRoutes(app, ctx) {
             size,
             format,
             moderation,
+            model: imageModel,
             provider: "oauth",
             createdAt: Date.now(),
             usage: r.value.usage || null,
@@ -210,6 +224,7 @@ export function registerGenerateRoutes(app, ctx) {
         quality,
         size,
         moderation,
+        model: imageModel,
         warnings: qualityWarnings,
         revisedPrompt: firstRevised,
         promptMode: normalizedPromptMode,

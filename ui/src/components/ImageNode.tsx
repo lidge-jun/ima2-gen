@@ -2,6 +2,7 @@ import { memo, useCallback, useRef, useState, type ClipboardEvent, type DragEven
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { getImageModelShortLabel } from "../lib/imageModels";
 
 const MAX_NODE_REFS = 5;
 
@@ -96,12 +97,15 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           ? t("node.reconcilingPhase", { phase: d.pendingPhase })
           : t("node.reconciling");
       case "ready":
-        return d.webSearchCalls
-          ? t("node.readyWithSearch", {
+        return [
+          d.webSearchCalls
+            ? t("node.readyWithSearch", {
               elapsed: d.elapsed ?? "?",
               searches: d.webSearchCalls,
             })
-          : t("node.ready", { elapsed: d.elapsed ?? "?" });
+            : t("node.ready", { elapsed: d.elapsed ?? "?" }),
+          getImageModelShortLabel(d.model),
+        ].filter(Boolean).join(" · ");
       case "stale":
         return d.error
           ? t("node.staleWithError", { error: d.error })

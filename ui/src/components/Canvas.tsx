@@ -1,6 +1,21 @@
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
 import { useI18n } from "../i18n";
+import { getImageModelShortLabel } from "../lib/imageModels";
+
+function formatQualityAlias(quality: string | null | undefined): string | null {
+  if (quality === "low") return "l";
+  if (quality === "medium") return "m";
+  if (quality === "high") return "h";
+  return quality ?? null;
+}
+
+function formatSizeAlias(size: string | null | undefined): string | null {
+  if (!size) return null;
+  const square = size.match(/^(\d+)x\1$/);
+  if (square) return `${square[1]}²`;
+  return size.replace("x", "×");
+}
 
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
@@ -16,8 +31,9 @@ export function Canvas() {
     showToast(t("toast.promptCopied"));
   };
 
-  const displayQuality = currentImage?.quality ?? quality;
-  const displaySize = currentImage?.size ?? getResolvedSize();
+  const displayQuality = formatQualityAlias(currentImage?.quality ?? quality);
+  const displaySize = formatSizeAlias(currentImage?.size ?? getResolvedSize());
+  const displayModel = getImageModelShortLabel(currentImage?.model);
 
   return (
     <main className="canvas">
@@ -43,6 +59,7 @@ export function Canvas() {
                 : null,
               displayQuality,
               displaySize,
+              displayModel,
               currentImage.provider ?? null,
             ]
               .filter((v): v is string => Boolean(v))

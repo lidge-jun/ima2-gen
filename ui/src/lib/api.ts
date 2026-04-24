@@ -2,6 +2,7 @@ import type {
   BillingResponse,
   GenerateRequest,
   GenerateResponse,
+  ImageModel,
   OAuthStatus,
 } from "../types";
 
@@ -112,6 +113,7 @@ export type HistoryItem = {
   quality: string | null;
   size: string | null;
   moderation?: string | null;
+  model?: string | null;
   format: string;
   provider: string;
   usage: Record<string, unknown> | null;
@@ -201,6 +203,7 @@ export type NodeGenerateRequest = {
   size: string;
   format: string;
   moderation: "low" | "auto";
+  model?: ImageModel;
   provider?: "oauth";
   mode?: "auto" | "direct";
   references?: string[];
@@ -221,6 +224,7 @@ export type NodeGenerateResponse = {
   webSearchCalls: number;
   provider: "oauth";
   moderation?: string;
+  model?: string | null;
   refsCount?: number;
   revisedPrompt?: string | null;
   promptMode?: "auto" | "direct";

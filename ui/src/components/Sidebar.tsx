@@ -6,6 +6,7 @@ import { HistoryStrip } from "./HistoryStrip";
 import { SessionPicker } from "./SessionPicker";
 import { NodeStyleButton } from "./NodeStyleButton";
 import { SettingsButton } from "./SettingsButton";
+import { ImageModelSelect } from "./ImageModelSelect";
 import { useAppStore } from "../store/useAppStore";
 import { ENABLE_NODE_MODE } from "../lib/devMode";
 import { useI18n } from "../i18n";
@@ -26,7 +27,10 @@ export function Sidebar() {
             <div className="logo-title">ima2-gen</div>
             <div className="logo-subtitle">gpt-image-2 studio</div>
           </div>
-          <SettingsButton />
+          <div className="logo-actions">
+            <ImageModelSelect variant="sidebar" />
+            <SettingsButton />
+          </div>
         </div>
         <UIModeSwitch />
         {uiMode === "classic" ? (

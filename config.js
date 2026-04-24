@@ -133,6 +133,11 @@ export const config = {
     maxPrefix: pickInt(env.IMA2_STYLE_SHEET_MAX_PREFIX, fileCfg.styleSheet?.maxPrefix, 4000),
     model: pickStr(env.IMA2_STYLE_MODEL, fileCfg.styleSheet?.model, "gpt-5.4-mini"),
   },
+  imageModels: {
+    default: pickStr(env.IMA2_IMAGE_MODEL_DEFAULT, fileCfg.imageModels?.default, "gpt-5.4-mini"),
+    valid: new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]),
+    unsupported: new Set(["gpt-5.3-codex-spark"]),
+  },
   log: {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, "info"),
     pretty: env.NODE_ENV !== "production",

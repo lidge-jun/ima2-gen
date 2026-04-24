@@ -87,6 +87,7 @@ export function GalleryModal() {
             prompt: h.prompt ?? undefined,
             size: h.size ?? undefined,
             quality: h.quality ?? undefined,
+            model: h.model ?? undefined,
             provider: h.provider,
             createdAt: h.createdAt,
             sessionId: h.sessionId ?? null,

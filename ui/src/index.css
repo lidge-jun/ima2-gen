@@ -129,6 +129,14 @@ body {
   flex: 1 1 auto;
 }
 
+.logo-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
 .logo-title {
   color: var(--text);
   font-size: 18px;
@@ -255,7 +263,6 @@ body {
 .settings-button {
   width: 32px;
   height: 32px;
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -461,7 +468,7 @@ body {
 
 .settings-workspace {
   height: 100dvh;
-  overflow: auto;
+  overflow: hidden;
   padding: 24px;
   background:
     radial-gradient(circle at 14% 12%, var(--accent-soft), transparent 34%),
@@ -469,15 +476,19 @@ body {
 }
 
 .settings-shell {
-  min-height: calc(100dvh - 48px);
+  height: calc(100dvh - 48px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-radius: 22px;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   box-shadow: 0 24px 80px var(--shadow-soft);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .settings-header {
+  flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
   gap: 24px;
@@ -531,15 +542,16 @@ body {
 }
 
 .settings-layout {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: 168px minmax(0, 1fr);
   gap: 0;
 }
 
 .settings-nav {
-  position: sticky;
-  top: 18px;
-  align-self: start;
+  min-height: 0;
+  overflow-y: auto;
   padding: 18px;
   border-right: 1px solid var(--border);
 }
@@ -580,8 +592,10 @@ body {
 }
 
 .settings-content {
-  min-height: 480px;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
+  align-content: start;
   gap: 28px;
   padding: 22px 28px 36px;
 }
@@ -688,6 +702,95 @@ body {
 
 .settings-status.is-muted span {
   background: var(--text-faint);
+}
+
+.image-model-select--sidebar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.image-model-select__trigger {
+  min-width: 34px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  color: var(--text-dim);
+  background: transparent;
+  font: inherit;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.image-model-select__trigger:hover,
+.image-model-select__trigger:focus-visible {
+  color: var(--accent-bright);
+}
+
+.image-model-select--settings select {
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.image-model-select__menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 40;
+  min-width: 150px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.32);
+}
+
+.image-model-select__item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--text-dim);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.image-model-select__item:hover,
+.image-model-select__item.is-active {
+  color: var(--text);
+  background: var(--control-hover);
+}
+
+.image-model-select__item small {
+  color: var(--text-faint);
+  font-family: var(--font);
+  font-size: 11px;
+}
+
+.image-model-select--settings select {
+  min-width: 190px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.settings-row__microcopy {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-faint);
 }
 
 /* ── Right Panel (collapsible) ── */
@@ -804,8 +907,10 @@ body {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--text-dim);
-  display: flex;
-  gap: 20px;
+  max-width: min(100%, 720px);
+  text-align: center;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .result-actions {
@@ -1515,12 +1620,13 @@ body {
     height: auto;
   }
   .settings-workspace {
-    height: auto;
-    min-height: 55dvh;
+    height: 100dvh;
+    min-height: 0;
     padding: 12px;
   }
   .settings-shell {
-    min-height: 55dvh;
+    height: calc(100dvh - 24px);
+    min-height: 0;
     border-radius: 16px;
   }
   .settings-header {
@@ -1530,12 +1636,12 @@ body {
     grid-template-columns: 1fr;
   }
   .settings-nav {
-    position: sticky;
-    top: 0;
     z-index: 10;
     display: flex;
     gap: 8px;
     overflow-x: auto;
+    overflow-y: hidden;
+    flex: 0 0 auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
     background: color-mix(in srgb, var(--surface) 94%, transparent);

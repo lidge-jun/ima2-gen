@@ -1,11 +1,13 @@
 export type UIMode = "classic" | "node";
-export type SettingsSection = "account" | "appearance" | "language" | "future";
+export type SettingsSection = "account" | "generation" | "appearance" | "language" | "future";
 export type ThemePreference = "system" | "dark" | "light";
 export type ResolvedTheme = "dark" | "light";
 export type Provider = "oauth" | "api";
 export type Quality = "low" | "medium" | "high";
 export type Format = "png" | "jpeg" | "webp";
 export type Moderation = "low" | "auto";
+export type ImageModel = "gpt-5.5" | "gpt-5.4" | "gpt-5.4-mini";
+export type UnsupportedImageModel = "gpt-5.3-codex-spark";
 export type Count = 1 | 2 | 4;
 
 export type SizePreset =
@@ -37,6 +39,7 @@ export type GenerateItem = {
   quality?: string;
   size?: string;
   moderation?: string;
+  model?: string | null;
   usage?: { total_tokens?: number } & Record<string, unknown>;
   thumb?: string;
   createdAt?: number;
@@ -57,6 +60,7 @@ export type GenerateSingleResponse = {
   quality?: string;
   size?: string;
   moderation?: string;
+  model?: string | null;
   revisedPrompt?: string | null;
   promptMode?: "auto" | "direct";
 };
@@ -70,6 +74,7 @@ export type GenerateMultiResponse = {
   quality?: string;
   size?: string;
   moderation?: string;
+  model?: string | null;
   revisedPrompt?: string | null;
   promptMode?: "auto" | "direct";
 };
@@ -88,6 +93,7 @@ export type GenerateRequest = {
   moderation: Moderation;
   provider: Provider;
   n: number;
+  model?: ImageModel;
   image?: string;
   references?: string[];
   requestId?: string;
