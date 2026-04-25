@@ -33,11 +33,11 @@ graph TD
 | Item | Current value |
 |---|---|
 | package name | `ima2-gen` |
-| version | `1.0.5` |
+| version | `1.1.0` |
 | type | `module` |
 | bin | `ima2` -> `./bin/ima2.js` |
 | package engine | `node >=20` |
-| publish files | `bin/`, `lib/`, `ui/dist/`, `assets/`, `server.js`, `.env.example`, `README.md` |
+| publish files | `bin/`, `lib/`, `routes/`, `ui/dist/`, `docs/`, `assets/`, `server.js`, `config.js`, `.env.example`, `README.md` |
 | major dependencies | `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `ulid` |
 
 README may still mention a different Node baseline. The operational baseline is the current `engines.node` field in `package.json`.
@@ -56,6 +56,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `npm test` | `node scripts/run-tests.mjs` | Run `tests/*.test.js` with `node:test` |
 | `npm run setup` | `node bin/ima2.js setup` | Configure provider |
 | `npm run lint:pkg` | package metadata check | Validate package fields and publish file list |
+| `npm run test:package-install` | temp tarball install smoke | Installs packed package and checks `ima2 doctor`, `/api/health`, and `/api/storage/status` |
 
 `release:*` scripts include npm publish and git push. Agents must not run them unless the user explicitly asks.
 
@@ -91,7 +92,9 @@ Generation and edit endpoints currently hard-block `provider: "api"`. Even with 
 
 ## Observability
 
-The server emits safe structured log lines for route lifecycle, OAuth responses, stream image receipt, inflight phase changes, session graph saves, and gallery history grouping. Correlate a UI request with `requestId` first, then follow the same id through `[generate.request]`, `[oauth.response]`, `[inflight.phase]`, `[oauth.image]`, `[generate.saved]`, and `[inflight.finish]`.
+The server emits safe structured log lines for route lifecycle, OAuth responses, stream image receipt, inflight phase changes, session graph saves, and gallery history grouping. `IMA2_LOG_LEVEL` supports `debug`, `info`, `warn`, `error`, and `silent`; invalid values fall back to `info`.
+
+Every `/api/*` request gets a sanitized `X-Request-Id` header. Static UI files and `/generated/*` images are deliberately outside the request logger so gallery image serving does not create log noise or surprise headers. Correlate a UI request with `requestId` first, then follow the same id through `[http.request]`, `[generate.request]`, `[oauth.response]`, `[inflight.phase]`, `[oauth.image]`, `[generate.saved]`, `[http.response]`, and `[inflight.finish]`.
 
 Logs intentionally use counts rather than sensitive values: `promptChars`, `refs`, `imageChars`, `durationMs`, and `errorCode`. Do not add raw prompts, style-sheet bodies, data URLs, generated base64, tokens, cookies, or raw upstream response bodies to logs.
 
@@ -131,6 +134,8 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Added inflight terminal TTL and safe logging operations notes.
 - 2026-04-25: Added npm package smoke guidance for release-critical file inclusion.
+- 2026-04-25: Updated package metadata for version 1.1.0, `routes/`/`docs/` publish contract, and install-smoke script.
+- 2026-04-25: Updated logging operations for dependency-free levels, request IDs, and API-only middleware.
 
 Previous document: `[[05-node-mode]]`
 

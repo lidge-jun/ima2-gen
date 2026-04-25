@@ -6,11 +6,11 @@ aliases: [ima2 unified roadmap, ima2 통합 로드맵, image_gen roadmap]
 
 # ima2-gen 통합 로드맵
 
-현재 로드맵은 Node mode productization 이후 reliability를 닫고 기능 확장으로 넘어가는 한 줄 흐름이다. 이미 구현된 큰 덩어리는 `_fin`에 있다. `_plan`에 남은 항목은 inflight persistence, integration test/FAQ/ops hardening, feature expansion, research mode 제품화뿐이다.
+현재 로드맵은 Node mode productization과 0.09 안정화 closeout 이후 기능 확장으로 넘어가는 한 줄 흐름이다. 이미 구현된 큰 덩어리는 `_fin`에 있다. `_plan`에 남은 항목은 observability ops, CLI/backend parity, feature expansion, research mode 제품화, 그리고 card-news WIP뿐이다.
 
 `0.09.5-node-streaming`은 완료되어 `_fin/260424_0.09.5-node-streaming`으로 이동했다. Node mode 생성 중 partial image 표시, sidecar/history `requestId`, reload recovery matching, animated node border glow가 구현됐다.
 
-가장 먼저 닫아야 할 것은 `0.09.6-inflight-reliability`이다. 이 작업은 inflight 레지스트리를 SQLite로 영속화하고 cross-tab merge의 metadata 손실을 막는 안정화 트랙이다. `0.09.15`는 packaged tarball/install smoke와 route packaging regression을 CI에 올리는 테스트 트랙이다.
+`0.09.6-inflight-reliability`, `0.09.15` package smoke, `0.09.16` FAQ는 완료되어 archive로 이동했다. 0.10 전에는 `0.09.17` structured logging과 `0.09.18` metrics observability를 처리하면 운영/지원 대응력이 좋아진다. 추가로 프런트/서버 기능이 늘어난 만큼 `0.09.20-cli-backend-parity`에서 낡은 CLI surface를 갱신할지 계획한다. `0.09.19` security hardening과 기존 `0.09.20` containerization은 원격 접속 유저와 배포 전략 영향이 커서 `0.99_future`로 미룬다. `0.20-card-news`는 dev-only WIP라 npm 배포 기본 blocker로 보지 않는다.
 
 그 다음은 `0.10-feature-expansion`이다. 이 단계는 이미지 생성기를 재사용 가능한 작업대처럼 만드는 방향이다. prompt preset, batch compare, export bundle, card-news가 여기에 묶인다. 단, `0.10`의 첫 구현은 preset과 compare MVP로 제한한다. card-news는 export bundle이 잡힌 뒤에 이어간다.
 
@@ -23,10 +23,12 @@ aliases: [ima2 unified roadmap, ima2 통합 로드맵, image_gen roadmap]
 ```mermaid
 graph LR
     FIN["Completed archive<br/>0.01..0.09.14"] --> STREAM["0.09.5<br/>Completed streaming"]
-    STREAM --> RELIABLE["0.09.6<br/>Inflight reliability"]
-    RELIABLE --> TESTS["0.09.15<br/>Packaged integration tests"]
-    RELIABLE --> FEATURE
-    TESTS --> FEATURE
+    STREAM --> CLOSE["0.09 closeout<br/>reliability docs package smoke"]
+    CLOSE --> LOGS["0.09.17<br/>logging"]
+    LOGS --> METRICS["0.09.18<br/>metrics"]
+    METRICS --> CLI["0.09.20<br/>cli parity"]
+    CLI --> BUILD["build green<br/>commit target only"]
+    BUILD --> FEATURE
     FEATURE["0.10<br/>Preset and compare workbench"]
     FEATURE --> EXPORT["0.11<br/>Export bundle and card-news base"]
     FEATURE --> RESEARCH["0.12<br/>Research mode FE productization"]
@@ -37,9 +39,15 @@ graph LR
 | Cycle | 상태 | 지금 의미 | 다음 조건 |
 |---|---|---|---|
 | 0.09.5 | done | Node partial_image streaming + sidecar requestId + animated node border glow. | `_fin/260424_0.09.5-node-streaming`에 archive. |
-| 0.09.6 | queued | Inflight registry SQLite 영속화 + `reconcileInflight` metadata 보존. | 다음 PABCD 대상. |
-| 0.09.15 | queued | Packaged integration tests. | 0.09.6 전후 어느 때나 가능. |
-| 0.10 | queued | preset + compare MVP | 0.09.6 또는 0.09.15 이후 시작. |
+| 0.09.6 | done | Inflight registry SQLite 영속화 + stale purge. | `_fin/260425_0.09.6-inflight-reliability`. |
+| 0.09.15 | done | Packaged integration tests. | `_fin/260425_0.09.15-integration-tests`. |
+| 0.09.16 | done | Community FAQ/docs. | `_fin/260425_0.09.16-docs-faq`. |
+| 0.09.17 | queued | Structured logging. | Active ops before 0.10 is reasonable. |
+| 0.09.18 | queued | Metrics observability. | Active ops after logging is reasonable. |
+| 0.09.20 | rough plan | CLI/backend parity. | Update CLI surface after 17/18 or before 0.10 if desired. |
+| 0.09.19 | deferred | Security hardening. | Moved to `0.99_future` to avoid breaking remote users. |
+| 0.99 future | deferred | Security/containerization. | Keep remote-user and packaging-heavy work out of the 0.10 critical path. |
+| 0.10 | queued | preset + compare MVP | Start after current build is green. |
 | 0.11 | future | export bundle + card-news 기반 | 0.10의 preset/compare 데이터 모델을 재사용한다. |
 | 0.12 | partial | research mode FE productization | backend always-on research 상태를 UI에서 명확히 드러낸다. |
 
@@ -74,13 +82,12 @@ graph LR
 - [x] sidecar meta와 `/api/history` 응답에 `requestId` 필드 추가.
 - [x] R helper의 matching 우선순위를 `requestId` → `(sessionId, clientNodeId, createdAt)` 순서로 승격.
 
-## 0.09.6 scope
+## 0.09.6 closeout
 
-- [ ] `lib/inflight.js`를 better-sqlite3 기반으로 영속화 (서버 재시작 생존).
-- [ ] 서버 부팅 시 10분 초과 stale job purge.
-- [ ] `/api/inflight` 응답의 `kind/meta` 필드를 타입 보강.
-- [ ] `reconcileInflight`의 server-only merge에서 `kind/sessionId/clientNodeId`를 복원.
-- [ ] 프로세스 재시작 + cross-tab 시나리오 테스트 2건 추가.
+- [x] `lib/inflight.js`를 better-sqlite3 기반으로 영속화.
+- [x] 서버 부팅 시 stale job purge.
+- [x] `/api/inflight` 응답의 active-only 기본값과 terminal debug snapshot 유지.
+- [x] DB close/reopen, TTL purge, schema migration 테스트 추가.
 
 ## 0.10 scope
 
@@ -113,3 +120,6 @@ graph LR
 - 2026-04-23: 0.09.4 구현/정적 감사 완료. 0.09.5(스트리밍+sidecar requestId)와 0.09.6(inflight 영속화)를 follow-up 트랙으로 추가.
 - 2026-04-24: 0.09.11~0.09.14 완료/대체 항목을 archive로 이동하고, 0.09.5를 다음 PABCD 대상으로 승격.
 - 2026-04-24: 0.09.5 node streaming 완료. `_fin/260424_0.09.5-node-streaming`으로 archive하고 0.09.6을 다음 PABCD 대상으로 승격.
+- 2026-04-25: 0.09.6/15/16 및 stale/model/style/error/custom-size closeout을 `_fin`으로 정리하고 0.10 전 build-green 조건을 명시.
+- 2026-04-25: card-news는 dev-only WIP로 재분류하고, 0.09.19/security와 0.09.20/containerization은 `0.99_future`로 연기.
+- 2026-04-25: 새 `0.09.20-cli-backend-parity` rough plan을 추가해 프런트/서버 기능 대비 낡은 CLI surface 갱신을 별도 track으로 분리.

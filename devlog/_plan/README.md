@@ -6,11 +6,11 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 
 # ima2-gen 현재 계획 허브
 
-`_plan`은 지금부터 "앞으로 할 일"만 담는다. 이미 구현되어 코드로 확인된 항목은 `_fin`으로 보냈다. 오래된 phase 문서는 완료가 아니라 과거 방향성이므로 `_plan/_legacy`에 묶었다. 현재 작업의 중심은 `0.09.6`(inflight reliability)이며, 그 다음 검증 트랙은 `0.09.15`(integration tests)이다.
+`_plan`은 지금부터 "앞으로 할 일"만 담는다. 이미 구현되어 코드로 확인된 항목은 `_fin`으로 보냈다. 오래된 phase 문서는 완료가 아니라 과거 방향성이므로 `_plan/_legacy`에 묶었다. 현재 0.09 안정화 트랙의 핵심 구현은 대부분 닫혔고, 남은 것은 운영 관측성(`0.09.17`~`0.09.18`), CLI/backend parity(`0.09.20`), 0.10 기능 확장, research mode 제품화, card-news dev-only WIP이다. 보안/컨테이너화는 원격 하드유저 영향과 배포 전략을 더 봐야 해서 `0.99_future`로 미뤘다.
 
 이 정리가 중요한 이유는 로드맵 번호가 여러 번 바뀌었기 때문이다. React 마이그레이션, Node mode foundation, session DB, CLI 통합, cross-platform, gallery 안정화, server decomposition, config centralization, settings workspace, node image input, observability logging, node reference attachment, packaged node-mode productization, node streaming은 이미 코드에 반영되어 있다. `_plan`에는 이제 inflight persistence, integration tests, FAQ, metrics/security/containerization, feature expansion, research mode만 남긴다.
 
-작업을 시작할 때는 이 문서를 먼저 본다. 다음 feature track은 `0.09.6-inflight-reliability/PRD.md`이다. `0.09.15-integration-tests`는 packaged tarball/install smoke와 route packaging regression을 묶는 검증 트랙이다. `0.10-feature-expansion`은 preset/compare/export 방향이며, `0.12-research-mode`는 백엔드 경로는 있으나 프론트 토글과 제품화가 남은 별도 트랙이다.
+작업을 시작할 때는 이 문서를 먼저 본다. 다음 안정화 track은 `0.09.17-structured-logging`과 `0.09.18-metrics-observability`이다. 그 다음 CLI parity track은 `0.09.20-cli-backend-parity`이고, feature track은 `0.10-feature-expansion`이다. `0.20-card-news`는 dev-only/WIP이므로 배포 blocker가 아니라, 해당 변경을 커밋/푸시할 때만 build 포함 여부를 따로 확인한다. `0.12-research-mode`는 백엔드 경로는 있으나 프론트 토글과 제품화가 남은 별도 트랙이다.
 
 ---
 
@@ -18,12 +18,13 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 
 | 순서 | 경로 | 상태 | 역할 |
 |---:|---|---|---|
-| 1 | `0.09.6-inflight-reliability/` | queued | `lib/inflight.js` SQLite 영속화 + `reconcileInflight`의 cross-tab metadata 보존. |
-| 2 | `0.09.15-integration-tests/` | queued | packaged tarball/install smoke, node-mode production gate, route packaging regression. |
-| 3 | `0.09.16-docs-faq/` | queued | 커뮤니티 FAQ 정리. |
-| 4 | `0.09.17`~`0.09.20` | queued | logging/metrics/security/containerization 운영 트랙. |
-| 5 | `0.10-feature-expansion/` | queued | preset, compare, card-news, export bundle. |
-| 6 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
+| 1 | `0.09.17-structured-logging/` | queued | request 추적/지원 대응을 위한 구조화 로그 트랙. |
+| 2 | `0.09.18-metrics-observability/` | queued | self-host/운영 진단을 위한 metrics 트랙. |
+| 3 | `0.09.20-cli-backend-parity/` | rough plan | 프런트/서버 기능 대비 낡은 CLI surface 갱신. |
+| 4 | `0.10-feature-expansion/` | queued | preset, compare, card-news, export bundle. |
+| 5 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
+| 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
+| 7 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 
 ## 완료로 이동한 항목
 
@@ -42,16 +43,23 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | `_plan/smoke-ws-v2` | `_fin/260423_smoke-ws-v2` | web_search smoke 결과가 완료된 실험 증거이다. |
 | `_plan/audit-0.02-0.03.md` | `_fin/260423_audit-0.02-0.03.md` | 0.02/0.03 UX 탐색 흡수 판단이 끝난 감사 기록이다. |
 | `_plan/0.09.5-node-streaming` | `_fin/260424_0.09.5-node-streaming` | Node SSE partial preview, sidecar/history `requestId`, requestId recovery, animated pending/reconciling border glow, regression tests가 구현되었다. |
+| `_plan/0.09.4-node-generation-stale` | `_fin/260425_0.09.4-node-generation-stale` | 구현/감사/자동 smoke 기록이 있고 이후 0.09.6 inflight persistence로 남은 신뢰성 축을 닫았다. |
+| `_plan/0.09.4.1-image-model-dropdown` | `_fin/260425_0.09.4.1-image-model-dropdown` | model allowlist, UI selector, metadata, tests가 현재 코드/구조 문서에 반영되어 있다. |
+| `_plan/0.09.7.1-style-button-relocation` | `_fin/260425_0.09.7.1-style-button-relocation` | style button이 `PromptComposer`/`NodeStyleButton`으로 이동했고 sidebar inline panel 제거 방향이 코드에 반영되어 있다. |
+| `_plan/0.09.8-error-message-ux` | `_fin/260425_0.09.8-error-message-ux` | `errorClassify`, `errorCodes`, `errorHandler`, `ErrorCard`, i18n, classifier test가 존재한다. |
+| `_plan/0.21-custom-size-input` | `_fin/260425_0.21-custom-size-input` | keyboard-safe custom input, generation-time confirm modal, contract tests가 존재한다. |
+| `_plan/00_prompt` | `_fin/260425_00_prompt-quality-prompt-reference` | prompt 원문/diff 기록은 완료된 reference로 보관하고 active plan에서 제외한다. |
 
 ## 다음 작업 원칙
 
-- [ ] `0.09.4-node-generation-stale` 폴더는 smoke 확인 전까지 이름, 위치, 기존 문서를 건드리지 않는다. (구현 자체는 완료)
-- [ ] `0.09.4` smoke가 끝나면 완료 보고서를 `_fin/2604XX_0.09.4-node-generation-stale`로 이동한다.
-- [ ] `0.09.6`은 SQLite 영속화가 핵심이다. `lib/db.js`/`sessionStore.js` 패턴을 재사용하고 기존 API 시그니처(`startJob/finishJob` 등)를 유지한다.
-- [ ] `0.09.6`이 닫힐 때까지 `0.10-feature-expansion` 구현을 시작하지 않는다.
-- [ ] `0.10`은 Classic 우선의 preset/compare 워크벤치로 시작하고, card-news는 export bundle 이후로 둔다.
+- [ ] 완료된 안정화 폴더는 `_plan`에 다시 끌어오지 않는다. 증거 확인은 `_fin/260425_*` archive를 본다.
+- [ ] `0.09.17`과 `0.09.18`은 0.10 전 관측성 품질을 높이는 active ops로 본다.
+- [ ] `0.09.20-cli-backend-parity`는 프런트가 가진 안정 기능을 CLI에서 얼마나 따라갈지 별도 PABCD로 확정한다.
+- [ ] 보안 하드닝과 컨테이너화는 `0.99_future`에서 보관한다. 원격 접속/배포 전략 확정 전에는 실행하지 않는다.
+- [ ] `0.10`은 Classic 우선의 preset/compare 워크벤치로 시작한다.
 - [ ] `0.12`는 backend always-on research 상태를 인정하고, 남은 일은 FE 토글/표시/사용자 경고로 좁힌다.
 - [ ] 오래된 `_legacy/phase-*` 문서는 active backlog로 끌어오지 않는다. 필요한 아이디어만 `0.10`이나 별도 새 plan으로 재작성한다.
+- [ ] 0.10 진입 전에는 `npm test`, package smoke, 그리고 실제 커밋 대상 기준의 `npm run ui:build`를 확인한다.
 
 ## 변경 기록
 
@@ -59,3 +67,6 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-23: 0.09.4 구현+감사 완료 표시. 0.09.5, 0.09.6 queued 트랙으로 추가 및 의존 순서 명시.
 - 2026-04-24: 0.09.11~0.09.14 완료/대체 항목을 `_fin/260424_*`로 이동. Active lane을 0.09.5 streaming부터 다시 정렬.
 - 2026-04-24: 0.09.5 node streaming을 `_fin/260424_0.09.5-node-streaming`으로 이동. Active lane을 0.09.6 inflight reliability부터 다시 정렬.
+- 2026-04-25: 0.09.4, 0.09.4.1, 0.09.6, 0.09.7.1, 0.09.8, 0.09.15, 0.09.16, 0.09.21, 0.09.23, 0.09.24를 완료/closeout archive로 정리하고 0.10 전 남은 운영 선택지를 재분류.
+- 2026-04-25: `0.09.17`/`0.09.18`은 active ops로 남기고, `0.09.19`/`0.09.20`은 `0.99_future`로 연기.
+- 2026-04-25: 새 active `0.09.20-cli-backend-parity` rough plan을 추가. 기존 containerization `0.09.20`은 `0.99_future`에 유지.

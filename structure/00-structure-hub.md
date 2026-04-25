@@ -8,7 +8,7 @@ aliases: [ima2 structure hub, ima2 architecture, image_gen structure]
 
 `ima2-gen` is a combined image-generation CLI and web UI. Users start the local server with `ima2 serve`, then generate or edit images through either the browser UI or CLI commands. This folder documents that runtime path as a small architecture reference set.
 
-This hub matters because the codebase has several active centers of gravity. `server.js` owns the API, OAuth proxy, history, node mode, and session storage. `bin/` owns the CLI automation surface. `ui/src/` owns the React UI and graph-based node mode. Without a structure guide, even a small API change can make it unclear whether CLI, UI, tests, or devlog docs also need to move.
+This hub matters because the codebase has several active centers of gravity. `server.js` now bootstraps the app and delegates most API surfaces to `routes/*`. `lib/*` owns storage, OAuth, logging, sessions, inflight state, and migration helpers. `bin/` owns the CLI automation surface. `ui/src/` owns the React UI and graph-based node mode. Without a structure guide, even a small API change can make it unclear whether CLI, UI, tests, or devlog docs also need to move.
 
 Start here when onboarding. Read the system overview, then open `[[01-file-function-map]]` for concrete file locations. Use `[[02-command-reference]]` for CLI work, `[[03-server-api]]` for server changes, `[[04-frontend-architecture]]` and `[[05-node-mode]]` for UI work, `[[06-infra-operations]]` for build/auth/runtime operations, and `[[07-devlog-map]]` for roadmap and archive interpretation.
 
@@ -20,17 +20,18 @@ This documentation is based on local code and local devlog files, not external w
 
 ```mermaid
 graph LR
-    CLI["bin/ima2.js<br/>CLI dispatcher"] --> API["server.js<br/>Express API"]
+    CLI["bin/ima2.js<br/>CLI dispatcher"] --> API["server.js<br/>Express bootstrap"]
     CMDS["bin/commands/*<br/>client commands"] --> API
     WEB["ui/dist<br/>served app"] --> API
     SRC["ui/src<br/>React source"] --> WEB
+    API --> ROUTES["routes/*<br/>API modules"]
     API --> OAUTH["openai-oauth<br/>local proxy"]
-    API --> GEN["generated/<br/>images and sidecars"]
+    API --> GEN["~/.ima2/generated<br/>images and sidecars"]
     API --> DB["better-sqlite3<br/>sessions and graph"]
     API --> LIB["lib/*<br/>asset node inflight db"]
 ```
 
-The runtime path is intentionally direct. CLI commands and the browser call `/api/*` endpoints in `server.js`. The server sends image requests through the local OAuth proxy, saves image files under `generated/`, and persists graph sessions through SQLite. Node mode wraps the same image-generation capability in a graph workflow.
+The runtime path is intentionally direct. CLI commands and the browser call `/api/*` endpoints registered by `server.js` and implemented in `routes/*`. The server sends image requests through the local OAuth proxy, saves image files under the configured generated directory, usually `~/.ima2/generated`, and persists graph sessions through SQLite. Node mode wraps the same image-generation capability in a graph workflow.
 
 ## Reading Order
 
@@ -75,7 +76,7 @@ The runtime path is intentionally direct. CLI commands and the browser call `/ap
 - [x] Create the structure docs folder and record its purpose in `AGENTS.md`.
 - [x] Mirror the `cli-jaw/devlog/structure` hub pattern as a smaller set.
 - [x] Document the current CLI, API, UI, node-mode, infra, and devlog surfaces.
-- [ ] If `server.js` is split, update `01`, `03`, and `06` immediately.
+- [x] `server.js` is split into route modules; keep `01`, `03`, and `06` synchronized with route ownership.
 - [ ] If a CLI command is added, update `02`, `03`, and `06` together.
 - [ ] If React component or store shape changes, update `04` and `05` together.
 
@@ -83,6 +84,7 @@ The runtime path is intentionally direct. CLI commands and the browser call `/ap
 
 - 2026-04-23: Created the initial `image_gen/structure` hub and eight-document reference set.
 - 2026-04-23: Translated the structure docs from Korean to English.
+- 2026-04-25: Updated the hub after route decomposition, home-directory storage migration, and 0.09 closeout audit.
 
 Previous document: none
 
