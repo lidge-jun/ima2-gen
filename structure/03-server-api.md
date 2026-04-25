@@ -87,12 +87,14 @@ The inflight registry tracks both classic and node jobs. The default response is
 
 | Method | Path | Body or query | Response |
 |---|---|---|---|
-| `POST` | `/api/node/generate` | `{ parentNodeId?, prompt, quality?, size?, format?, moderation?, model?, references?, externalSrc?, sessionId?, clientNodeId?, requestId?, provider? }` | `{ nodeId, parentNodeId, requestId, image, filename, url, elapsed, usage, webSearchCalls, provider, moderation, model, refsCount }` |
+| `POST` | `/api/node/generate` | `{ parentNodeId?, prompt, quality?, size?, format?, moderation?, model?, references?, externalSrc?, contextMode?, searchMode?, sessionId?, clientNodeId?, requestId?, provider? }` | `{ nodeId, parentNodeId, requestId, image, filename, url, elapsed, usage, webSearchCalls, provider, moderation, model, refsCount, contextMode, searchMode }` |
 | `GET` | `/api/node/:nodeId` | none | `{ nodeId, meta, url }` |
 
-When `parentNodeId` is present, the server reads the stored parent image and uses the edit path. Without a parent node, it generates a new image and may pass root-node `references` to OAuth generation. `refsCount` is stored as numeric metadata only; reference image base64 is not written to sidecars. `externalSrc` is a controlled fallback for promoting an existing history asset into a node workflow.
+When `parentNodeId` is present, the server reads the stored parent image and uses the edit path. Node-local `references` are allowed on both root and child/edit nodes. For child/edit nodes, the parent image is sent first, then reference images, then the text prompt. `refsCount` is stored as numeric metadata only; reference image base64 is not written to sidecars. `externalSrc` is a controlled fallback for promoting an existing history asset into a node workflow.
 
-`/api/node/generate` also supports an SSE response when the client sends `Accept: text/event-stream`. In that mode validation still happens before headers are opened. After the stream opens, the server may emit `phase`, `partial`, `done`, and `error` events. Root generation opts into OAuth `partial_images: 2`; child/edit generation stays final-only for now. Clients must treat partial events as progressive previews only and use the `done` payload as the canonical saved node.
+Node context is explicit. `contextMode` defaults to `parent-plus-refs`, meaning immediate parent image plus explicit node-local references. `parent-only` drops explicit references. `ancestry` is reserved but currently rejected with `CONTEXT_MODE_UNSUPPORTED` so clients cannot accidentally assume full-chain context. Edit web search is explicit too: `searchMode` defaults to `off`; `on` enables the edit research prompt and OAuth web-search tool. Root generation can still use search through the normal generation path.
+
+`/api/node/generate` also supports an SSE response when the client sends `Accept: text/event-stream`. In that mode validation still happens before headers are opened. After the stream opens, the server may emit `phase`, `partial`, `done`, and `error` events. Root generation opts into OAuth `partial_images: 2`; child/edit generation stays final-only for now. If an upstream stream error happens after headers are committed, the outer HTTP status may remain `200`; clients must read the SSE `error` event and node state. Clients must treat partial events as progressive previews only and use the `done` payload as the canonical saved node.
 
 Node sidecars include `requestId` as recovery metadata. `/api/history` exposes the same field so a reloaded graph can match completed assets by request id before falling back to `(sessionId, clientNodeId, createdAt)`.
 
@@ -116,6 +118,8 @@ Card News is a dev-gated MVP surface. It is intended for `npm run dev` product-f
 
 `/api/cardnews/draft` is text-only. It first tries Responses Structured Outputs when enabled. If the local OAuth-compatible endpoint rejects that format, it falls back to chat-completions JSON mode, then validates and repairs the JSON locally. It returns `PLANNER_*` errors unless deterministic fallback is explicitly enabled in config. It never calls image-generation tools.
 
+Card News cards separate summary copy from rendered image text. `headline` and `body` are UI/gallery/search copy. Readable image text must be represented in `cards[].textFields[]`; only fields with `renderMode: "in-image"` are assembled into the image prompt. `role` remains a structural label and must not be rendered as visible text. Legacy plans without `textFields` hydrate as `textFields: []`.
+
 Card News generation is template-guided parallel i2i. The template PNG is a style/reference input; output size is supplied separately by the UI. One card failure does not reject the whole set. Failed cards are returned with `status: "error"` and a sidecar; successful cards write `card-XX.png` plus `card-XX.json`. The set writes `manifest.json` with `kind: "card-news-set"`.
 
 History reconstruction recognizes both `card-news-card` sidecars and `card-news-set` manifests. Gallery clients can show individual card rows or open a set through `GET /api/cardnews/sets/:setId`.
@@ -133,6 +137,8 @@ History reconstruction recognizes both `card-news-card` sidecars and `card-news-
 
 Graph saving uses optimistic concurrency. Missing `If-Match` returns `428`. Version mismatch returns an error payload with the current version.
 
+Graph edges are the source of truth for node parentage. On save, the server filters dangling edges, derives each node's `data.parentServerNodeId` from the single incoming edge source node's current `data.serverNodeId`, and rejects multiple incoming parent edges with `409 GRAPH_PARENT_CONFLICT`. This keeps visual graph state and backend generation parent state aligned after reload.
+
 `GRAPH_VERSION_CONFLICT` only means the client saved against a stale `If-Match` graph version. It is not proof that another browser tab edited the graph; a delayed debounce, recovered node save, or session switch flush can also surface the same response. The UI should therefore use source-neutral language such as "graph version changed" unless a separate tab identity protocol proves otherwise.
 
 Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-Graph-Save-Reason`, and `X-Ima2-Tab-Id`. The server logs these values for `graph_save` and `graph_conflict` events but must not treat them as authorization or correctness inputs.
@@ -146,6 +152,8 @@ Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-G
 | Invalid moderation | 400 | `INVALID_MODERATION` or string error |
 | Invalid image model | 400 | `INVALID_IMAGE_MODEL` |
 | Unsupported OAuth model for image generation | 400 | `IMAGE_MODEL_UNSUPPORTED` |
+| Unsupported node context mode | 400 | `CONTEXT_MODE_UNSUPPORTED` |
+| Multiple incoming parent edges | 409 | `GRAPH_PARENT_CONFLICT` |
 | API-key provider requested | 403 | `APIKEY_DISABLED` |
 | Safety refusal | 422 | `SAFETY_REFUSAL` |
 | Moderation/content refusal | 422 or upstream mapped error | `MODERATION_REFUSED` |
@@ -166,6 +174,8 @@ Generation, edit, node, OAuth stream, inflight, history, and session graph saves
 
 Logs must never include raw prompts, effective prompts, revised prompts, OAuth/API tokens, authorization headers, cookies, raw request bodies, reference data URLs, generated base64, or raw upstream response bodies. Use counts and sizes instead: `promptChars`, `refs`, `imageChars`, `durationMs`, `httpStatus`, and `errorCode`.
 
+Node retry diagnostics include safe context such as `operation`, `clientNodeId`, `parentNodeId`, `errorEventType`, `errorEventCount`, and `upstreamCode`. They must not log prompt text or image payloads.
+
 ## Sync Checklist
 
 - [ ] If an endpoint is added, update this doc and `ui/src/lib/api.ts`.
@@ -184,6 +194,9 @@ Logs must never include raw prompts, effective prompts, revised prompts, OAuth/A
 - 2026-04-25: Updated server ownership after route decomposition and clarified generated-directory storage plus error-code UX contracts.
 - 2026-04-25: Documented sanitized API request IDs and API-only request logging.
 - 2026-04-25: Added Card News dev API, planner JSON, set manifest history, and job summary contracts.
+- 2026-04-25: Documented Card News `textFields` as the rendered text contract.
+- 2026-04-25: Documented child/edit node references and SSE inner-error diagnostics.
+- 2026-04-25: Documented node context/search modes and graph-edge-derived parent normalization.
 
 Previous document: `[[02-command-reference]]`
 

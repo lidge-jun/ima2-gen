@@ -70,7 +70,7 @@ sequenceDiagram
 
 | Endpoint | Role | Key fields |
 |---|---|---|
-| `POST /api/node/generate` | Generate/edit one node | `parentNodeId`, `prompt`, `quality`, `size`, `format`, `moderation`, `references`, `sessionId`, `clientNodeId`, `requestId`; response includes `refsCount` |
+| `POST /api/node/generate` | Generate/edit one node | `parentNodeId`, `prompt`, `quality`, `size`, `format`, `moderation`, `references`, `contextMode`, `searchMode`, `sessionId`, `clientNodeId`, `requestId`; response includes `refsCount`, `contextMode`, `searchMode` |
 | `GET /api/node/:nodeId` | Fetch node metadata | `nodeId`, `meta`, `url` |
 | `GET /api/sessions` | List sessions | `sessions` |
 | `POST /api/sessions` | Create a session | `title` |
@@ -78,6 +78,8 @@ sequenceDiagram
 | `PUT /api/sessions/:id/graph` | Save graph snapshot | `If-Match`, `nodes`, `edges` |
 
 `PUT /api/sessions/:id/graph` uses version-based saving. The client sends the current `graphVersion` in the `If-Match` header. The server returns the new `graphVersion` on success.
+
+Visual edges are the canonical parent graph. `parentServerNodeId` is a derived generation cache, not a separate source of truth. On load, edge changes, node changes, connect, disconnect, and save, the UI derives a node's parent server id from its single incoming edge. The server repeats that normalization in `saveGraph()` and rejects multiple incoming parent edges with `GRAPH_PARENT_CONFLICT`.
 
 ## Streaming And Recovery
 
@@ -108,6 +110,10 @@ During a batch, the client keeps a `latestServerNodeIdByClientId` map. If node `
 
 Stopping a batch stops only the remaining local queue. The current `/api/node/generate` request is allowed to finish or fail; hard-aborting a running OAuth request is outside this phase.
 
+## Single Node Regeneration
+
+Ready nodes expose two separate actions. `Regenerate` replaces the current client node in place. `New variant` creates a sibling node and generates into that new node. Custom-size confirmation preserves this intent through separate `node-in-place` and `node-variation` continuation kinds.
+
 ## Edge Disconnect
 
 Deleting an edge removes only the connection, not either node. The target node keeps its existing prompt and image preview, but future generation no longer uses the disconnected parent image.
@@ -122,7 +128,7 @@ A       B
 B.parentServerNodeId = null
 ```
 
-If a target somehow still has another incoming edge, the target's `parentServerNodeId` is recomputed from the remaining source node's current `serverNodeId`. Selection mode disables Delete/Backspace removal so graph selection and edge deletion do not collide.
+New connections are blocked if the target already has a different incoming parent edge. If a target somehow still has another incoming edge, the target's `parentServerNodeId` is recomputed from the remaining source node's current `serverNodeId`. Selection mode disables Delete/Backspace removal so graph selection and edge deletion do not collide.
 
 ## Conflict Reload Recovery
 
@@ -130,7 +136,7 @@ Session graph saves use `If-Match` graph versions. When the server returns `GRAP
 
 After the reload, node mode immediately runs history recovery. The matcher uses `pendingRequestId ?? recoveryRequestId` first, then falls back to `(sessionId, clientNodeId, createdAt)` so a completed node asset can be reattached even if the graph snapshot stored only the sanitized pending state.
 
-Recovered nodes become `ready` with `imageUrl` from history. Draft-only fields such as node-local `referenceImages` and transient `partialImageUrl` stay stripped from session graph saves; `refsCount` remains numeric metadata in sidecars/history.
+Recovered nodes become `ready` with `imageUrl` from history. Transient `partialImageUrl` stays stripped from session graph saves. Node-local `referenceImages` are also stripped from SQLite graph payloads, but the browser stores them separately in `localStorage` so same-browser reloads preserve visible node reference chips. `refsCount` remains numeric metadata in sidecars/history.
 
 ## Parent And External Source Inputs
 
@@ -146,15 +152,17 @@ Node mode separates visible node-local references from classic composer referenc
 
 | Reference state | Scope | Persistence | Behavior |
 |---|---|---|---|
-| Node-local `data.referenceImages` | One root node composer | Draft only, stripped from session save | Sent to `/api/node/generate` only for root nodes |
+| Node-local `data.referenceImages` | One node composer | Browser-local persistence under `ima2.nodeRefs.v1`; stripped from SQLite graph save | Sent to `/api/node/generate`; root nodes use refs for generation, child/edit nodes send refs after the parent image |
 | Classic `referenceImages` | Classic composer | In-memory classic draft | Parked/inactive in node mode and never sent by `generateNode()` |
 | Session style sheet | Active session | Stored through style sheet APIs | May influence prompts as a style prefix, but is not a reference chip |
 
-Child/edit nodes already have a parent image source. Extra references are blocked in the UI and rejected by `/api/node/generate` with `NODE_REFS_UNSUPPORTED_FOR_EDIT` so user attachments are not silently ignored.
+Child/edit nodes already have a parent image source. Extra node-local references are allowed and are sent to the edit path after the parent image and before the text prompt. They supplement the parent image; they do not replace it.
+
+The default node context policy is `parent-plus-refs`: immediate parent image plus explicit node-local references. `parent-only` is available when references must be ignored. `ancestry` is reserved and currently rejected; node mode does not silently send the full upstream chain. Edit search is also explicit. `searchMode` defaults to `off`; `on` is the only mode that adds edit web search.
 
 `duplicateBranchRoot()` seeds the source image into the duplicated root node's local draft references. It must not push into the classic global reference list.
 
-`sanitizeForSave()` removes node-local draft references before `PUT /api/sessions/:id/graph` to avoid base64 bloat and oversized node data replacement.
+`sanitizeForSave()` removes node-local reference data before `PUT /api/sessions/:id/graph` to avoid base64 bloat and oversized node data replacement. `ui/src/lib/nodeRefStorage.ts` handles browser-local persistence and prunes entries for deleted nodes after successful graph saves.
 
 Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric count only. They never store the reference image base64 after generation succeeds.
 
@@ -175,6 +183,8 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - [ ] If graph save policy changes, check `If-Match` version behavior and tests.
 - [ ] If node selection or batch generation changes, update `ui/src/lib/nodeSelection.ts`, `ui/src/lib/nodeBatch.ts`, and `tests/node-batch-contract.test.js`.
 - [ ] If edge disconnect behavior changes, update `NodeCanvas`, `useAppStore.disconnectEdges`, and `tests/node-edge-disconnect-contract.test.js`.
+- [ ] If single-node regeneration or variation behavior changes, update `ImageNode`, custom-size continuation routing, and `tests/node-regen-actions-contract.test.js`.
+- [ ] If node-local reference behavior changes, update child/edit reference handling and `tests/node-child-refs-contract.test.js`.
 - [ ] If asset delete/restore changes, review `asset-missing` state and history docs.
 - [x] Node mode is part of the npm-published UI by default; update build/package rules in `[[06-infra-operations]]` if this gate changes.
 
@@ -185,8 +195,10 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-24: Added conflict reload recovery notes for neutral graph-version copy and requestId-first node repair.
 - 2026-04-25: Added SQLite-backed inflight reliability note after 0.09.6 closeout.
 - 2026-04-25: Documented edge-only disconnect behavior and parent metadata cleanup.
+- 2026-04-25: Documented ready-node regenerate/new-variant split, layout slot behavior, and child/edit node references.
 - 2026-04-23: Documented the implemented node canvas, node API, and session persistence structure.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-25: Documented graph-edge source-of-truth, node-local reference persistence, and explicit context/search modes.
 
 Previous document: `[[04-frontend-architecture]]`
 

@@ -37,7 +37,7 @@ graph TD
 | `server.js` | 168 | Express bootstrap, middleware wiring, OAuth startup, route registration, static serving |
 | `routes/generate.js` | 269 | Classic generation API, model validation, reference validation, sidecar save |
 | `routes/edit.js` | 186 | Edit API, parent image path, OAuth edit response save |
-| `routes/nodes.js` | 363 | Node generation API, SSE partial streaming, node sidecar save, node fetch |
+| `routes/nodes.js` | 425 | Node generation API, explicit context/search policy, SSE partial streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
 | `routes/sessions.js` | 292 | SQLite-backed session list/load/save/rename/delete and graph save |
 | `routes/history.js` | 102 | History list, grouped gallery, soft delete and restore |
 | `routes/health.js` | 89 | Health, providers, billing, OAuth status |
@@ -57,7 +57,7 @@ graph TD
 | `bin/lib/output.js` | 48 | Terminal output, JSON, exit-code mapping |
 | `bin/lib/star-prompt.js` | 97 | CLI prompt decoration helper |
 | `bin/lib/storage-doctor.js` | 38 | CLI storage doctor formatting |
-| `lib/sessionStore.js` | 231 | SQLite session and graph persistence; lightweight session-title lookup |
+| `lib/sessionStore.js` | 272 | SQLite session and graph persistence, graph parent normalization, lightweight session-title lookup |
 | `lib/assetLifecycle.js` | 123 | Soft delete, restore, node asset-missing marking |
 | `lib/db.js` | 114 | SQLite bootstrap and migrations, including inflight table |
 | `lib/nodeStore.js` | 69 | Node image and metadata load/save |
@@ -68,6 +68,7 @@ graph TD
 | `lib/errorClassify.js` | 62 | Upstream/OAuth error classifier for stable error codes |
 | `lib/historyList.js` | 68 | History reconstruction from generated assets and sidecars |
 | `lib/storageMigration.js` | 284 | Legacy generated-folder scan and migration support |
+| `lib/oauthProxy.js` | 348 | OAuth Responses proxy helpers, generate/edit streaming, optional edit search, safe stream diagnostics |
 
 ## UI File Map
 
@@ -76,12 +77,14 @@ graph TD
 | App shell | `ui/src/App.tsx` | 100 | Initial hydration, polling, classic/node/card-news canvas switch |
 | Entry | `ui/src/main.tsx` | 10 | React mount |
 | Types | `ui/src/types.ts` | 121 | Provider, quality, size, image model, response types |
-| Store | `ui/src/store/useAppStore.ts` | 2378 | Zustand state, history, in-flight jobs, graph, sessions, errors, storage, custom size, node batch selection, edge disconnect |
-| API client | `ui/src/lib/api.ts` | 501 | Browser-side REST client |
-| Style | `ui/src/index.css` | 2979 | App layout, canvas, components, node-mode, settings, error, node batch, and card-news styling |
-| Components | `ui/src/components/*.tsx` | 3089 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, error surfaces |
+| Store | `ui/src/store/useAppStore.ts` | 2446 | Zustand state, history, in-flight jobs, graph, sessions, errors, storage, custom size, node batch selection, edge disconnect, node references, node regeneration actions |
+| API client | `ui/src/lib/api.ts` | 505 | Browser-side REST client |
+| Node graph helpers | `ui/src/lib/nodeGraph.ts` | 41 | Visual-edge parent derivation and incoming-edge conflict helpers |
+| Node ref storage | `ui/src/lib/nodeRefStorage.ts` | 54 | Browser-local node reference persistence outside SQLite graph payloads |
+| Style | `ui/src/index.css` | 3006 | App layout, canvas, components, node-mode, settings, error, node batch, compact node footer, and card-news styling |
+| Components | `ui/src/components/*.tsx` | 3106 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, error surfaces |
 | Hooks | `ui/src/hooks/*.ts` | 57 | Billing and OAuth status polling |
-| i18n | `ui/src/i18n/*` | 1026 | English/Korean translations and locale runtime |
+| i18n | `ui/src/i18n/*` | 1030 | English/Korean translations and locale runtime |
 
 ## Major Components
 
@@ -91,7 +94,7 @@ graph TD
 | `PromptComposer.tsx` | 219 | Prompt input, reference handling, style-sheet entry |
 | `NodeCanvas.tsx` | 166 | React Flow graph canvas, edge disconnect routing |
 | `RightPanel.tsx` | 129 | Quality, size, format, moderation, count controls |
-| `ImageNode.tsx` | 252 | Node-mode image card, partial preview, reference draft state |
+| `ImageNode.tsx` | 271 | Node-mode image card, partial preview, node-local references, compact footer, regenerate/new-variant actions |
 | `ProviderSelect.tsx` | 103 | OAuth/API provider display and disabled-state handling |
 | `SessionPicker.tsx` | 89 | Node-mode session picker |
 | `SettingsWorkspace.tsx` | 218 | Workspace-style settings page |
@@ -119,7 +122,16 @@ graph TD
 | `tests/error-classify.test.js` | 49 | Error string classifier contract |
 | `tests/size-custom-input-contract.test.js` | 214 | Custom size keyboard and confirmation contract |
 | `tests/node-batch-contract.test.js` | 62 | Node graph selection and batch generation contracts |
-| `tests/node-edge-disconnect-contract.test.js` | 52 | Edge-only disconnect and parent metadata cleanup contracts |
+| `tests/node-edge-disconnect-contract.test.js` | 53 | Edge-only disconnect and parent metadata cleanup contracts |
+| `tests/node-regen-actions-contract.test.js` | 40 | Ready-node regenerate/new-variant and custom-size continuation contracts |
+| `tests/node-layout-contract.test.js` | 21 | Position-based node placement contract |
+| `tests/node-diagnostics-contract.test.js` | 47 | Safe node retry/SSE stream diagnostics contract |
+| `tests/node-child-refs-contract.test.js` | 33 | Child/edit node reference attachment contract |
+| `tests/node-route-refs.test.js` | 71 | Node route reference validation and child/edit acceptance |
+| `tests/node-parent-source-contract.test.js` | 69 | Graph-edge source-of-truth and server graph normalization contract |
+| `tests/node-child-refs-payload.test.js` | 29 | Child reference payload and browser-local ref persistence contract |
+| `tests/node-context-policy.test.js` | 28 | Node context/search policy and safe logging contract |
+| `tests/node-footer-compact-contract.test.js` | 31 | Compact one-line node footer contract |
 | `tests/package-smoke.test.js` | 72 | Publish manifest dry-run contract |
 | `tests/package-install-smoke.mjs` | 157 | Optional tarball install smoke |
 
@@ -128,7 +140,7 @@ graph TD
 | Signal | Current state | Recommended docs to update |
 |---|---|---|
 | `server.js` is split | Route files own API surfaces; keep route map current | `03-server-api`, `06-infra-operations` |
-| `ui/src/index.css` is 2789 lines | Layout and component styles are concentrated | `04-frontend-architecture` |
+| `ui/src/index.css` is 3006 lines | Layout and component styles are concentrated | `04-frontend-architecture` |
 | `useAppStore.ts` is the central store | Classic, node, session, history, and toast state are together | `04-frontend-architecture`, `05-node-mode` |
 | `public/index.html.legacy` remains | Active UI is `ui/dist`; legacy HTML is only an artifact | `04-frontend-architecture`, `07-devlog-map` |
 
@@ -145,6 +157,7 @@ graph TD
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Added safe logger, terminal inflight, gallery title grouping, and related tests.
 - 2026-04-25: Updated line counts and ownership after route decomposition, model/error/custom-size/storage work, and package smoke tests.
+- 2026-04-25: Added node graph/ref helper files and contract tests for parent source-of-truth, reference payloads, context/search policy, and compact footer.
 
 Previous document: `[[00-structure-hub]]`
 

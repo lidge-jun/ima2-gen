@@ -116,18 +116,26 @@ Node generation uses SSE first through `postNodeGenerateStream()`. Partial image
 
 Node selection batch actions live on the canvas, not in Settings. `NodeCanvas` exposes a compact selection bar inside the React Flow area. Selection mode treats a normal node click as selecting the whole undirected connected component. Cmd/Ctrl modifies that selection: another component is added/removed, while a node inside the selected component can be toggled as an exception. Batch regeneration is sequential and in-place for selected nodes only; it does not use the single-node ready-state sibling branch.
 
-Node edge removal is routed explicitly instead of relying on raw React Flow edge changes. When an edge is removed, `useAppStore.disconnectEdges()` removes the visual edge and clears or recomputes the target node's `parentServerNodeId`. Selection mode disables Delete/Backspace deletion so graph selection cannot accidentally remove edges or nodes.
+Ready node actions are split in `ImageNode`: `Regenerate` replaces the current node in place, while `New variant` creates and generates into a sibling node. The store preserves this action choice through custom-size confirmation so a confirmed in-place regeneration cannot accidentally take the sibling path. Node layout helpers place new roots/children using actual existing node positions instead of raw edge counts, avoiding overlap after a middle child is deleted.
+
+Node-local image references are allowed on child/edit nodes. The child composer sends references together with the parent image instead of blocking attachment. Reference drafts remain node-local and are stripped from saved session graph payloads, but they are persisted separately in browser `localStorage` under `ima2.nodeRefs.v1` by `ui/src/lib/nodeRefStorage.ts`. This avoids base64 bloat in SQLite while keeping node chips available across normal reloads on the same browser profile.
+
+Node edges are the source of truth for parentage. `ui/src/lib/nodeGraph.ts` derives `parentServerNodeId` from the incoming visual edge and the source node's current `serverNodeId` whenever nodes or edges are loaded, changed, connected, disconnected, or saved. Node edge removal is routed explicitly instead of relying on raw React Flow edge changes. When an edge is removed, `useAppStore.disconnectEdges()` removes the visual edge and clears or recomputes the target node's `parentServerNodeId`. Selection mode disables Delete/Backspace deletion so graph selection cannot accidentally remove edges or nodes.
+
+Node generation sends an explicit context/search policy. The default request is `contextMode: "parent-plus-refs"` and `searchMode: "off"`, so a child edit uses only the immediate parent image plus the node's explicit reference chips. Full ancestry is not silently inferred. If edit search becomes a product option, the UI must turn `searchMode` on intentionally.
 
 Error handling is centralized. API helpers preserve `err.code` where the server sends `{ error: { code, message } }`; `handleError()` maps stable codes to either a toast or persistent `ErrorCard`. The card is reserved for actionable failures such as OAuth expiry, moderation refusal, upstream 5xx, network/proxy failure, and API-key-disabled policy.
 
 Card News keeps delivery local to its workspace. Generated cards are not assigned to classic `currentImage`. `CardDeckRail`, `CardStage`, `CardInspector`, `CardStatusBadge`, `CardNewsBatchBar`, and `PlannerMetaBadge` show card status, selected-card actions, planner mode, locked-card hints, and failed-card retry. `GalleryModal` preserves `setId`, card metadata, and set card lists when it groups history rows; opening a Card News set calls `cardNewsStore.loadSet(setId)` and switches UI mode to `card-news`.
+
+Card News text editing uses `textFields` as first-class text-box objects. `CardInspector` edits summary copy separately from visible text boxes and scene/design prompt. `TextFieldCard` controls text kind, placement, render mode, hierarchy, and source transition to user edits. `CardStage` previews in-image text fields as overlay guides before image generation and copies visible text together with summary copy. Frontend API normalization keeps legacy or partial cards safe by hydrating missing `textFields` to `[]`.
 
 ## Style And Layout
 
 | File | Current signal | Caution |
 |---|---|---|
 | `ui/src/index.css` | 2789 lines | Large structural changes can easily create CSS drift |
-| `ui/src/components/*.tsx` | 2773 lines | Component class names and CSS are tightly coupled |
+| `ui/src/components/*.tsx` | 3106 lines | Component class names and CSS are tightly coupled |
 | `ui/dist/` | Build output | Do not edit directly |
 | `public/index.html.legacy` | Legacy artifact | Do not use it as the source for new active UI behavior |
 
@@ -148,7 +156,10 @@ Card News keeps delivery local to its workspace. Generated cards are not assigne
 - 2026-04-25: Documented error-card UX, custom-size confirmation, storage gallery helpers, and card-news WIP caveat.
 - 2026-04-25: Documented node selection batch generation and canvas-level batch actions.
 - 2026-04-25: Documented explicit node edge disconnect routing and parent metadata cleanup.
+- 2026-04-25: Documented ready-node regenerate/new-variant split, position-based child layout, and child/edit node references.
 - 2026-04-25: Added Card News workspace/API/store details for planner JSON, progress, retry, and Gallery set loading.
+- 2026-04-25: Documented Card News text-field editing, overlay preview, and normalization rules.
+- 2026-04-25: Documented graph-edge-derived node parentage, node ref local persistence, and explicit node context/search request policy.
 
 Previous document: `[[03-server-api]]`
 
