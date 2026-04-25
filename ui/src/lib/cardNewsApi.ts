@@ -11,6 +11,42 @@ export type CardNewsCardStatus =
   | "error"
   | "skipped";
 
+export type CardNewsTextPlacement =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "center-left"
+  | "center"
+  | "center-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right"
+  | "free";
+
+export type CardNewsTextKind =
+  | "headline"
+  | "body"
+  | "caption"
+  | "cta"
+  | "badge"
+  | "number";
+
+export type CardNewsRenderMode = "in-image" | "ui-only";
+export type CardNewsTextHierarchy = "primary" | "secondary" | "supporting";
+
+export type CardNewsTextField = {
+  id: string;
+  kind: CardNewsTextKind;
+  text: string;
+  renderMode: CardNewsRenderMode;
+  placement: CardNewsTextPlacement;
+  slotId: string | null;
+  hierarchy: CardNewsTextHierarchy;
+  maxChars: number | null;
+  language: string | null;
+  source: "planner" | "user";
+};
+
 export type CardNewsPlannerMeta = {
   mode: "structured-output" | "json-mode" | "deterministic-fallback";
   model: string;
@@ -24,11 +60,26 @@ export type ImageTemplate = {
   previewUrl: string;
   stylePrompt: string;
   negativePrompt?: string;
-  slots: Array<Record<string, unknown>>;
+  slots: ImageTemplateSlot[];
   palette: string[];
   typography: Record<string, unknown> | null;
   recommendedRoleNodeIds: string[];
   createdBy: "system" | "user";
+};
+
+export type ImageTemplateSlot = {
+  id: string;
+  kind: "image" | "text" | "mixed" | "safe-area";
+  label: string;
+  placement: CardNewsTextPlacement;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  required: boolean;
+  textKind: CardNewsTextKind | null;
+  maxChars: number | null;
+  safeArea: boolean;
 };
 
 export type RoleTemplate = {
@@ -50,6 +101,8 @@ export type CardNewsCard = {
   headline: string;
   body: string;
   visualPrompt: string;
+  textFields: CardNewsTextField[];
+  templateSlotAssignments?: Record<string, string>;
   references: string[];
   locked: boolean;
   status: CardNewsCardStatus;
@@ -69,6 +122,20 @@ export type CardNewsPlan = {
   generationStrategy: CardNewsGenerationStrategy;
   cards: CardNewsCard[];
 };
+
+export function normalizeCardNewsCard(card: CardNewsCard): CardNewsCard {
+  return {
+    ...card,
+    textFields: Array.isArray(card.textFields) ? card.textFields : [],
+  };
+}
+
+export function normalizeCardNewsPlan(plan: CardNewsPlan): CardNewsPlan {
+  return {
+    ...plan,
+    cards: Array.isArray(plan.cards) ? plan.cards.map(normalizeCardNewsCard) : [],
+  };
+}
 
 export type CardNewsSetSummary = {
   setId: string;
@@ -118,7 +185,7 @@ export function listCardNewsRoleTemplates(): Promise<{ templates: RoleTemplate[]
   return jsonFetch("/api/cardnews/role-templates");
 }
 
-export function draftCardNews(payload: {
+export async function draftCardNews(payload: {
   title?: string;
   topic: string;
   audience?: string;
@@ -128,11 +195,12 @@ export function draftCardNews(payload: {
   roleTemplateId: string;
   size: string;
 }): Promise<{ plan: CardNewsPlan; planner?: CardNewsPlannerMeta }> {
-  return jsonFetch("/api/cardnews/draft", {
+  const result = await jsonFetch<{ plan: CardNewsPlan; planner?: CardNewsPlannerMeta }>("/api/cardnews/draft", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  return { ...result, plan: normalizeCardNewsPlan(result.plan) };
 }
 
 export function generateCardNews(payload: CardNewsPlan & {
@@ -193,5 +261,6 @@ export function listCardNewsSets(): Promise<{ sets: CardNewsSetSummary[] }> {
 }
 
 export function getCardNewsSet(setId: string): Promise<{ plan: CardNewsPlan }> {
-  return jsonFetch(`/api/cardnews/sets/${encodeURIComponent(setId)}`);
+  return jsonFetch<{ plan: CardNewsPlan }>(`/api/cardnews/sets/${encodeURIComponent(setId)}`)
+    .then((result) => ({ ...result, plan: normalizeCardNewsPlan(result.plan) }));
 }

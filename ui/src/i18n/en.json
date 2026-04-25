@@ -193,18 +193,23 @@
     "editPromptPlaceholder": "Edit prompt...",
     "promptPlaceholder": "Prompt...",
     "regenerate": "Regen",
+    "newVariation": "New variant",
     "generate": "Generate",
     "addChild": "Child",
     "addChildTitle": "Add child node",
     "duplicateBranch": "Branch",
     "duplicateBranchTitle": "Duplicate as a new branch root",
     "deleteTitle": "Delete",
+    "regenerateTitle": "Regenerate this node in place",
+    "newVariationTitle": "Create a new sibling variant under the same parent",
+    "parentImageRequired": "Generate the parent image first.",
     "attachRef": "Attach",
     "attachRefTitle": "Attach node reference images",
     "refAlt": "Node reference {n}",
     "removeRef": "Remove reference {n}",
     "dropRefs": "Drop images here",
     "nodeRefsUnsupportedForEdit": "Extra references are only supported on root nodes for now.",
+    "nodeRefsUsedWithParent": "Used together with the parent image.",
     "classicRefsParkedTitle": "Classic references are parked",
     "classicRefsParkedBody": "These images belong to the classic composer and are inactive in node mode.",
     "clearParkedRefs": "Clear parked references",
@@ -229,7 +234,8 @@
     "staleBecauseParentChanged": "An upstream node was regenerated; refresh this node when needed."
   },
   "edge": {
-    "disconnected": "Connection removed."
+    "disconnected": "Connection removed.",
+    "parentConflict": "A node can only have one parent connection."
   },
   "provider": {
     "authTitle": "Authentication",
@@ -309,6 +315,57 @@
     "headline": "Headline",
     "body": "Body",
     "visualPrompt": "Image prompt",
+    "summaryCopy": "Summary copy",
+    "designPrompt": "Scene / design prompt",
+    "textFields": "Text boxes",
+    "addTextField": "Add text box",
+    "removeTextField": "Remove",
+    "noTextFields": "No text boxes yet.",
+    "textFieldText": "Text",
+    "textKind": "Kind",
+    "placement": "Placement",
+    "renderMode": "Render mode",
+    "hierarchyLabel": "Hierarchy",
+    "textTooLong": "Text exceeds the suggested length.",
+    "textKinds": {
+      "headline": "Headline",
+      "body": "Body",
+      "caption": "Caption",
+      "cta": "CTA",
+      "badge": "Badge",
+      "number": "Number"
+    },
+    "renderModes": {
+      "in-image": "In image",
+      "ui-only": "UI only"
+    },
+    "hierarchy": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "supporting": "Supporting"
+    },
+    "placements": {
+      "top-left": "Top-left",
+      "top-center": "Top-center",
+      "top-right": "Top-right",
+      "center-left": "Center-left",
+      "center": "Center",
+      "center-right": "Center-right",
+      "bottom-left": "Bottom-left",
+      "bottom-center": "Bottom-center",
+      "bottom-right": "Bottom-right",
+      "free": "Free"
+    },
+    "roles": {
+      "cover": "Cover",
+      "hook": "Hook",
+      "problem": "Problem",
+      "insight": "Insight",
+      "example": "Example",
+      "data": "Data",
+      "summary": "Summary",
+      "cta": "CTA"
+    },
     "locked": "Locked",
     "unlocked": "Unlocked",
     "noCard": "Draft cards to edit them.",

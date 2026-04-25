@@ -193,18 +193,23 @@
     "editPromptPlaceholder": "수정 프롬프트...",
     "promptPlaceholder": "프롬프트...",
     "regenerate": "재생성",
+    "newVariation": "새 변형",
     "generate": "생성",
     "addChild": "자식",
     "addChildTitle": "자식 노드 추가",
     "duplicateBranch": "복제",
     "duplicateBranchTitle": "새 브랜치 루트로 복제",
     "deleteTitle": "삭제",
+    "regenerateTitle": "현재 노드 이미지를 제자리에서 다시 생성",
+    "newVariationTitle": "같은 부모 아래 새 변형 노드를 생성",
+    "parentImageRequired": "부모 이미지를 먼저 생성해야 합니다.",
     "attachRef": "첨부",
     "attachRefTitle": "노드 참조 이미지 첨부",
     "refAlt": "노드 참조 이미지 {n}",
     "removeRef": "참조 이미지 {n} 제거",
     "dropRefs": "이미지를 여기에 놓기",
     "nodeRefsUnsupportedForEdit": "추가 참조 이미지는 현재 루트 노드에서만 지원합니다.",
+    "nodeRefsUsedWithParent": "부모 이미지와 함께 참조로 사용됩니다.",
     "classicRefsParkedTitle": "클래식 참조 이미지가 보관 중입니다",
     "classicRefsParkedBody": "이 이미지는 클래식 작성창용이라 노드 모드 생성에는 사용되지 않습니다.",
     "clearParkedRefs": "보관된 참조 비우기",
@@ -229,7 +234,8 @@
     "staleBecauseParentChanged": "상위 노드가 재생성되어 다시 확인이 필요합니다."
   },
   "edge": {
-    "disconnected": "연결선을 끊었습니다."
+    "disconnected": "연결선을 끊었습니다.",
+    "parentConflict": "한 노드에는 부모 연결을 하나만 둘 수 있습니다."
   },
   "provider": {
     "authTitle": "인증 방식",
@@ -309,6 +315,57 @@
     "headline": "제목",
     "body": "본문",
     "visualPrompt": "이미지 프롬프트",
+    "summaryCopy": "요약 문구",
+    "designPrompt": "장면 / 디자인 프롬프트",
+    "textFields": "텍스트 박스",
+    "addTextField": "텍스트 박스 추가",
+    "removeTextField": "삭제",
+    "noTextFields": "아직 텍스트 박스가 없습니다.",
+    "textFieldText": "텍스트",
+    "textKind": "종류",
+    "placement": "위치",
+    "renderMode": "표시 방식",
+    "hierarchyLabel": "위계",
+    "textTooLong": "권장 길이를 초과했습니다.",
+    "textKinds": {
+      "headline": "제목",
+      "body": "본문",
+      "caption": "캡션",
+      "cta": "행동 유도",
+      "badge": "배지",
+      "number": "숫자"
+    },
+    "renderModes": {
+      "in-image": "이미지에 표시",
+      "ui-only": "메모만"
+    },
+    "hierarchy": {
+      "primary": "주요",
+      "secondary": "보조",
+      "supporting": "부가"
+    },
+    "placements": {
+      "top-left": "좌측 상단",
+      "top-center": "상단 중앙",
+      "top-right": "우측 상단",
+      "center-left": "좌측 중앙",
+      "center": "중앙",
+      "center-right": "우측 중앙",
+      "bottom-left": "좌측 하단",
+      "bottom-center": "하단 중앙",
+      "bottom-right": "우측 하단",
+      "free": "직접 지정"
+    },
+    "roles": {
+      "cover": "표지",
+      "hook": "후킹",
+      "problem": "문제",
+      "insight": "인사이트",
+      "example": "예시",
+      "data": "데이터",
+      "summary": "요약",
+      "cta": "행동 유도"
+    },
     "locked": "잠김",
     "unlocked": "열림",
     "noCard": "초안을 만들면 카드별로 수정할 수 있습니다.",

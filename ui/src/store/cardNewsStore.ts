@@ -7,12 +7,15 @@ import {
   getCardNewsSet,
   listCardNewsImageTemplates,
   listCardNewsRoleTemplates,
+  normalizeCardNewsCard,
+  normalizeCardNewsPlan,
   regenerateCardNewsCard,
   startCardNewsJob,
   type CardNewsCard,
   type CardNewsJobSummary,
   type CardNewsPlannerMeta,
   type CardNewsPlan,
+  type CardNewsTextField,
   type ImageTemplate,
   type RoleTemplate,
 } from "../lib/cardNewsApi";
@@ -46,6 +49,9 @@ type CardNewsState = {
   setCustomSize: (w: number, h: number) => void;
   draft: () => Promise<void>;
   updateCard: (id: string, patch: Partial<CardNewsCard>) => void;
+  updateTextField: (cardId: string, fieldId: string, patch: Partial<CardNewsTextField>) => void;
+  addTextField: (cardId: string, field: CardNewsTextField) => void;
+  removeTextField: (cardId: string, fieldId: string) => void;
   selectCard: (id: string) => void;
   getGenerationSummary: () => {
     total: number;
@@ -96,6 +102,7 @@ function mergeGeneratedCard(card: CardNewsCard, generated: CardNewsCard): CardNe
   return {
     ...card,
     ...generated,
+    textFields: Array.isArray(generated.textFields) ? generated.textFields : card.textFields,
     status,
     error: status === "error" ? normalizeCardError(generated.error) || t("cardNews.error") : undefined,
   };
@@ -115,6 +122,7 @@ function applyJobSummary(plan: CardNewsPlan, summary: CardNewsJobSummary): CardN
       return {
         ...card,
         ...jobCard,
+        textFields: Array.isArray(jobCard.textFields) ? jobCard.textFields : card.textFields,
         status: jobCard.status || card.status,
         error: normalizeCardError(jobCard.error),
       };
@@ -196,7 +204,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
         size: resolvedOutputSize(s),
       });
       set({
-        activePlan: plan,
+        activePlan: normalizeCardNewsPlan(plan),
         selectedCardId: plan.cards[0]?.id || null,
         plannerMeta: planner || null,
         loading: false,
@@ -212,6 +220,49 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
       activePlan: s.activePlan ? {
         ...s.activePlan,
         cards: s.activePlan.cards.map((card) => card.id === id ? { ...card, ...patch } : card),
+      } : null,
+    }));
+  },
+
+  updateTextField(cardId, fieldId, patch) {
+    set((s) => ({
+      activePlan: s.activePlan ? {
+        ...s.activePlan,
+        cards: s.activePlan.cards.map((card) => {
+          if (card.id !== cardId || card.locked) return card;
+          return {
+            ...card,
+            textFields: card.textFields.map((field) => (
+              field.id === fieldId ? { ...field, ...patch, source: patch.source || "user" } : field
+            )),
+          };
+        }),
+      } : null,
+    }));
+  },
+
+  addTextField(cardId, field) {
+    set((s) => ({
+      activePlan: s.activePlan ? {
+        ...s.activePlan,
+        cards: s.activePlan.cards.map((card) => (
+          card.id === cardId && !card.locked
+            ? { ...card, textFields: [...card.textFields, { ...field, source: "user" }] }
+            : card
+        )),
+      } : null,
+    }));
+  },
+
+  removeTextField(cardId, fieldId) {
+    set((s) => ({
+      activePlan: s.activePlan ? {
+        ...s.activePlan,
+        cards: s.activePlan.cards.map((card) => (
+          card.id === cardId && !card.locked
+            ? { ...card, textFields: card.textFields.filter((field) => field.id !== fieldId) }
+            : card
+        )),
       } : null,
     }));
   },
@@ -270,7 +321,8 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
       const loaded = await getCardNewsSet(summary.setId).catch(() => null);
       set((cur) => ({
         generating: false,
-        activePlan: loaded?.plan || (cur.activePlan ? applyJobSummary(cur.activePlan, summary) : cur.activePlan),
+        activePlan: loaded?.plan ? normalizeCardNewsPlan(loaded.plan)
+          : (cur.activePlan ? applyJobSummary(cur.activePlan, summary) : cur.activePlan),
       }));
       app.showToast(t("cardNews.generated", { count: summary.generated }));
     } catch (err) {
@@ -317,7 +369,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
         activePlan: cur.activePlan ? {
           ...cur.activePlan,
           cards: cur.activePlan.cards.map((item) => (
-            item.id === cardId ? mergeGeneratedCard(item, generated) : item
+              item.id === cardId ? mergeGeneratedCard(item, normalizeCardNewsCard(generated)) : item
           )),
         } : cur.activePlan,
       }));
@@ -339,7 +391,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { plan } = await getCardNewsSet(setId);
-      set({ activePlan: plan, selectedCardId: plan.cards[0]?.id || null, loading: false });
+      set({ activePlan: normalizeCardNewsPlan(plan), selectedCardId: plan.cards[0]?.id || null, loading: false });
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : String(err) });
     }

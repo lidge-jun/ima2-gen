@@ -47,6 +47,9 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(api, /\/api\/cardnews\/cards\/\$\{encodeURIComponent\(payload\.card\.id\)\}\/regenerate/);
     assert.match(api, /\/api\/cardnews\/sets\/\$\{encodeURIComponent\(setId\)\}/);
     assert.match(api, /CardNewsCardStatus/);
+    assert.match(api, /CardNewsTextField/);
+    assert.match(api, /textFields: CardNewsTextField\[\]/);
+    assert.match(api, /normalizeCardNewsPlan/);
     assert.match(api, /\| "generating"/);
     assert.match(store, /draftCardNews/);
     assert.match(store, /startCardNewsJob/);
@@ -59,6 +62,11 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(store, /retryCard/);
     assert.match(store, /loadSet/);
     assert.match(store, /function mergeGeneratedCard/);
+    assert.match(store, /updateTextField/);
+    assert.match(store, /addTextField/);
+    assert.match(store, /removeTextField/);
+    assert.match(store, /textFields: Array\.isArray\(generated\.textFields\) \? generated\.textFields : card\.textFields/);
+    assert.match(store, /textFields: Array\.isArray\(jobCard\.textFields\) \? jobCard\.textFields : card\.textFields/);
     assert.match(store, /status = generated\.status/);
     assert.match(store, /outputSizePreset/);
     assert.match(store, /resolvedOutputSize/);
@@ -80,10 +88,14 @@ describe("Card News frontend dev MVP contract", () => {
     const composer = readSource("ui/src/components/card-news/CardNewsComposer.tsx");
     const statusBadge = readSource("ui/src/components/card-news/CardStatusBadge.tsx");
     const plannerBadge = readSource("ui/src/components/card-news/PlannerMetaBadge.tsx");
+    const textFieldCard = readSource("ui/src/components/card-news/TextFieldCard.tsx");
+    const placementBadge = readSource("ui/src/components/card-news/PlacementBadge.tsx");
     const css = readSource("ui/src/index.css");
 
     assert.match(stage, /CardNewsBatchBar/);
     assert.match(stage, /PlannerMetaBadge/);
+    assert.match(stage, /card-news-stage-overlay/);
+    assert.match(stage, /textFields/);
     assert.match(stage, /cardNews\.actions\.copyPrompt/);
     assert.match(stage, /cardNews\.actions\.openImage/);
     assert.match(stage, /retryCard/);
@@ -91,6 +103,11 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(composer, /card-news-spinner/);
     assert.match(deck, /CardStatusBadge/);
     assert.match(deck, /card\.url/);
+    assert.match(deck, /roleLabel/);
+    assert.match(inspector, /TextFieldCard/);
+    assert.match(inspector, /updateTextField/);
+    assert.match(inspector, /addTextField/);
+    assert.match(inspector, /removeTextField/);
     assert.match(inspector, /generatedMeta/);
     assert.match(inspector, /lockedHelp/);
     assert.match(batchBar, /summary\.queued/);
@@ -110,6 +127,11 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(css, /\.card-news-batch-bar/);
     assert.match(css, /\.card-news-inline-status/);
     assert.match(css, /\.card-news-result-actions/);
+    assert.match(css, /\.card-news-text-field-card/);
+    assert.match(css, /\.card-news-stage-overlay/);
+    assert.match(textFieldCard, /source: "user"/);
+    assert.match(textFieldCard, /disabled=\{locked\}/);
+    assert.match(placementBadge, /placementLabel/);
   });
 
   it("preserves Card News set metadata through gallery history mapping", () => {
@@ -153,6 +175,15 @@ describe("Card News frontend dev MVP contract", () => {
       assert.match(source, /"status"/);
       assert.match(source, /"progress"/);
       assert.match(source, /"planner"/);
+      assert.match(source, /"textFields"/);
+      assert.match(source, /"placements"/);
+      assert.match(source, /"textKinds"/);
+      assert.match(source, /"renderModes"/);
+      assert.match(source, /"hierarchy"/);
+      assert.match(source, /"roles"/);
+      for (const key of ["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right", "free"]) {
+        assert.match(source, new RegExp(`"${key}"`));
+      }
     }
     assert.match(ko, /"openCardNewsSet"/);
     assert.match(en, /"openCardNewsSet"/);
