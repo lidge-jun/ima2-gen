@@ -2587,3 +2587,201 @@ body {
   padding: 12px 14px;
   border-top: 1px solid var(--border);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Foldable + mobile responsive enhancements (Z Fold cover screen, narrow
+   phones, landscape on small heights). The `(max-width: 800px)` block above
+   already swaps the desktop grid for a stacked layout and turns the right
+   panel into a drawer; this section tightens density for narrow viewports
+   and makes modals fullscreen so content stays usable down to ~280px wide.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* iOS/Android safe areas (notch, home indicator) — applies on every viewport
+   so it works for foldable home screen + landscape too. dvh keeps the layout
+   honest when the URL bar shows/hides on mobile. */
+.app {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Tighter chrome on phones AND fold cover screens. Widen the existing 800px
+   breakpoint with stronger defaults; narrower breakpoints below stack on top. */
+@media (max-width: 800px) {
+  .sidebar {
+    /* Allow the prompt + history strip to breathe; the canvas still gets
+       at least 40dvh. */
+    max-height: 60dvh;
+  }
+  .sidebar__scroll {
+    padding: 12px 12px env(safe-area-inset-bottom);
+    gap: 10px;
+  }
+  .canvas {
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .canvas-empty {
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .canvas-empty__icon { width: 72px; height: 72px; border-radius: 18px; }
+  .canvas-empty__title { font-size: 18px; }
+  .canvas-empty__hint { font-size: 13px; }
+  .canvas-empty__example { padding: 9px 12px; font-size: 12px; }
+  .canvas-skeleton__frame { width: min(420px, 80vw); }
+  .result-img {
+    /* Header sidebar already takes ~50dvh; cap the image so the prompt
+       caption stays visible. */
+    max-height: calc(50dvh - 48px);
+  }
+  .result-prompt { font-size: 11px; padding: 8px 12px; }
+  .logo { font-size: 18px; }
+  .prompt-area {
+    min-height: 64px;
+    font-size: 13px;
+    padding: 12px;
+  }
+  .billing-bar { padding: 8px 10px; }
+  /* Touch targets — 44px is the iOS HIG minimum, 48dp is the Android M3
+     guideline. We keep buttons visually compact but expand the hit area. */
+  .option-btn,
+  .gallery__close,
+  .gallery__filter-btn,
+  .shortcuts-modal__close,
+  .modal__btn {
+    min-height: 36px;
+  }
+  .right-panel-toggle {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Modals get edge-to-edge so cover screens don't waste pixels on chrome. */
+  .gallery {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    border-radius: 0;
+    border: none;
+  }
+  .gallery__header {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+  .gallery__header > .gallery__search {
+    grid-column: 1 / -1;
+  }
+  .shortcuts-modal {
+    width: min(420px, 96vw);
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+  .modal {
+    width: min(440px, 94vw);
+  }
+  .right-panel.drawer-open {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Narrow phones + foldable cover screens (Galaxy Z Flip cover, Pixel Fold
+   front display in portrait, iPhone SE). 480px is generous enough to also
+   catch tall narrow tablets in split view. */
+@media (max-width: 480px) {
+  body { font-size: 14px; }
+  .sidebar { max-height: 58dvh; }
+  .sidebar__scroll { padding: 10px 10px env(safe-area-inset-bottom); gap: 8px; }
+  .logo { font-size: 16px; gap: 6px; }
+  .logo-badge { font-size: 10px; padding: 1px 6px; }
+  .canvas { padding: 12px; }
+  .canvas-empty__icon { width: 60px; height: 60px; border-radius: 14px; }
+  .canvas-empty__title { font-size: 16px; }
+  .canvas-empty__hint { font-size: 12px; }
+  .prompt-area { min-height: 56px; padding: 10px; font-size: 13px; }
+  .option-row { gap: 4px; flex-wrap: wrap; }
+  .option-btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+  .billing-bar { font-size: 11px; padding: 7px 9px; }
+  .billing-bar .value { font-size: 12px; }
+  .right-panel,
+  .right-panel.collapsed,
+  .right-panel.drawer-open {
+    width: min(340px, 92vw);
+  }
+  .gallery__title { font-size: 14px; }
+  .gallery__meta { font-size: 10px; }
+}
+
+/* Galaxy Z Fold cover screen in portrait (~344-376px) and very narrow legacy
+   devices. Below this size we collapse meta strings, drop logo badge, and
+   stack option buttons on their own row. */
+@media (max-width: 380px) {
+  .sidebar__scroll { padding: 8px; gap: 6px; }
+  .logo-badge { display: none; }
+  .canvas { padding: 10px; }
+  .canvas-empty { padding: 0 12px; }
+  .canvas-empty__title { font-size: 15px; }
+  .canvas-empty__example { padding: 8px 10px; font-size: 11px; }
+  .canvas-skeleton__frame { width: min(320px, 85vw); }
+  .result-img { max-height: calc(50dvh - 40px); }
+  .prompt-area { min-height: 52px; padding: 9px; font-size: 12.5px; }
+  .billing-bar .label { font-size: 9px; }
+  .option-btn {
+    flex: 1 1 100%;
+    padding: 10px 8px;
+  }
+  .gallery__header { padding: 8px 10px; }
+  .gallery__title-row { gap: 6px; }
+  .gallery__close { width: 30px; height: 30px; }
+  .modal { padding: 16px; }
+  .modal__title { font-size: 14px; }
+}
+
+/* Landscape on short viewports (Z Flip / Fold open + landscape phones). The
+   stacked layout from `(max-width: 800px)` would put the sidebar over half
+   the height, leaving the canvas useless. Force a horizontal split instead,
+   matching the desktop layout but with a slim sidebar. */
+@media (max-width: 800px) and (orientation: landscape) and (max-height: 540px) {
+  .app {
+    grid-template-columns: 220px 1fr auto;
+    grid-template-rows: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .sidebar {
+    max-height: none;
+    height: 100dvh;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .canvas { min-height: 0; height: 100dvh; }
+  .right-panel,
+  .right-panel.drawer-open,
+  .right-panel.collapsed {
+    height: 100dvh;
+  }
+}
+
+/* Foldable open / small tablet (≈700–906px): keep the desktop layout but
+   slim the columns so the canvas isn't crushed. The `(max-width: 800px)`
+   stack rule fires below this; here we sit between phone and full desktop. */
+@media (min-width: 801px) and (max-width: 1024px) {
+  .app {
+    grid-template-columns: 220px 1fr auto;
+  }
+  .sidebar__scroll { padding: 14px 12px; }
+  .canvas { padding: 24px; }
+}
+
+/* Hover-aware fallback: touch devices skip hover transforms that can stick
+   visually after a tap. */
+@media (hover: none) {
+  .canvas-empty__example:hover { transform: none; }
+}
