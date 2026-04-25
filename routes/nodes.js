@@ -58,7 +58,7 @@ export function registerNodeRoutes(app, ctx) {
     const body = req.body || {};
     const streamResponse = wantsSse(req);
     const parentNodeId = body.parentNodeId ?? null;
-    const requestId = typeof body.requestId === "string" ? body.requestId : null;
+    const requestId = typeof body.requestId === "string" ? body.requestId : req.id;
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : null;
     const clientNodeId = typeof body.clientNodeId === "string" ? body.clientNodeId : null;
     let finishMeta = {};

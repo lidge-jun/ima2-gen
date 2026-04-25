@@ -19,7 +19,7 @@ function validateModeration(ctx, moderation) {
 
 export function registerEditRoutes(app, ctx) {
   app.post("/api/edit", async (req, res) => {
-    const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : null;
+    const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";
     let finishHttpStatus;
     let finishErrorCode;

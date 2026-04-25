@@ -124,6 +124,20 @@ describe("Server: /api/health + advertisement", () => {
     assert.strictEqual(body.data.recoveryDocsPath, "docs/RECOVER_OLD_IMAGES.md");
   });
 
+  it("serves app shell without stale index caching", async () => {
+    const r = await fetch(`http://localhost:${PORT}/`);
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers.get("content-type") || "", /text\/html/);
+    assert.strictEqual(r.headers.get("cache-control"), "no-store, max-age=0");
+  });
+
+  it("does not answer missing hashed assets with html", async () => {
+    const r = await fetch(`http://localhost:${PORT}/assets/missing-stale-bundle.css`);
+    assert.strictEqual(r.status, 404);
+    assert.match(r.headers.get("content-type") || "", /text\/plain/);
+    assert.doesNotMatch(await r.text(), /<!doctype html/i);
+  });
+
   it("writes ~/.ima2/server.json with pid + port", () => {
     const advertisePath = join(FAKE_HOME, ".ima2", "server.json");
     assert.ok(existsSync(advertisePath), "advertise file should exist");

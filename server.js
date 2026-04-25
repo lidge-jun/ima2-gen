@@ -15,6 +15,8 @@ import { ensureDefaultSession } from "./lib/sessionStore.js";
 import { startOAuthProxy } from "./lib/oauthLauncher.js";
 import { migrateGeneratedStorage } from "./lib/storageMigration.js";
 import { purgeStaleJobs } from "./lib/inflight.js";
+import { configureLogger } from "./lib/logger.js";
+import { createRequestLogger } from "./lib/requestLogger.js";
 import { configureRoutes } from "./routes/index.js";
 import { config } from "./config.js";
 
@@ -52,10 +54,28 @@ function readPackageVersion() {
   }
 }
 
+function setUiStaticHeaders(res, filePath) {
+  const normalized = filePath.replace(/\\/g, "/");
+  if (normalized.endsWith("/index.html")) {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    return;
+  }
+  if (normalized.includes("/assets/")) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  }
+}
+
 export function buildApp(ctx) {
   const app = express();
+  configureLogger({ level: ctx.config.log.level });
+  app.use(createRequestLogger());
   app.use(express.json({ limit: ctx.config.server.bodyLimit }));
-  app.use(express.static(join(ctx.rootDir, "ui", "dist")));
+  app.use(express.static(join(ctx.rootDir, "ui", "dist"), {
+    setHeaders: setUiStaticHeaders,
+  }));
+  app.use("/assets", (_req, res) => {
+    res.status(404).type("text/plain").send("Asset not found");
+  });
   app.use("/generated", express.static(ctx.config.storage.generatedDir, {
     maxAge: ctx.config.storage.staticMaxAge,
     immutable: true,

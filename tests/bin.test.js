@@ -92,6 +92,7 @@ describe("ima2 CLI", () => {
   });
 
   it("should reset config file", async () => {
+    mkdirSync(TEST_DIR, { recursive: true });
     writeFileSync(TEST_CONFIG, JSON.stringify({ provider: "api", apiKey: "test" }));
     assert.ok(existsSync(TEST_CONFIG));
 
