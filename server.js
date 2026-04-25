@@ -1649,7 +1649,21 @@ app.post("/api/enhance-prompt", async (req, res) => {
       return res.status(400).json({ error: "prompt too long", code: "PROMPT_TOO_LONG" });
     }
 
-    const body = buildEnhancePayload(prompt, language);
+    // Optional reference images. Same validator + cap as /api/generate.
+    const rawRefs = Array.isArray(req.body?.references) ? req.body.references : [];
+    if (rawRefs.length > 5) {
+      return res.status(400).json({ error: "references must be an array of up to 5 base64 strings", code: "INVALID_REFS" });
+    }
+    let refB64s = [];
+    if (rawRefs.length > 0) {
+      const refCheck = validateAndNormalizeRefs(rawRefs);
+      if (refCheck.error) {
+        return res.status(400).json({ error: refCheck.error, code: "INVALID_REFS" });
+      }
+      refB64s = refCheck.refs;
+    }
+
+    const body = buildEnhancePayload(prompt, language, refB64s);
     const result = await runResponses({ url: OAUTH_URL, body });
     const rawText = result.text || extractEnhancedText(result.raw);
     if (!rawText) {

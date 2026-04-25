@@ -235,7 +235,14 @@ export function PromptComposer() {
           applyEnhancedPrompt(prompt, next);
           setEnhanceOpen(false);
         }}
-        enhancer={async (p) => (await apiEnhance(p, "ko")).prompt}
+        enhancer={async (p) => {
+          // Strip the "data:image/...;base64," prefix so the server gets the
+          // raw base64 (matches the /api/generate references contract).
+          const refB64 = (refs ?? [])
+            .map((d) => d.replace(/^data:[^;]+;base64,/, ""))
+            .filter(Boolean);
+          return (await apiEnhance(p, "ko", refB64)).prompt;
+        }}
       />
     </div>
   );

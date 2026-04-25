@@ -346,11 +346,17 @@ export function deleteFailedLogItem(id: string): Promise<{ ok: boolean; id: stri
   });
 }
 
-export async function enhancePrompt(prompt: string, language: "ko" | "en" = "ko"): Promise<{ prompt: string }> {
+export async function enhancePrompt(
+  prompt: string,
+  language: "ko" | "en" = "ko",
+  references: string[] = [],
+): Promise<{ prompt: string }> {
+  const payload: Record<string, unknown> = { prompt, language };
+  if (references.length > 0) payload.references = references;
   const res = await fetch("/api/enhance-prompt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, language }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const body = await res.text();

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAppStore } from "../store/useAppStore";
 
 type Props = {
   open: boolean;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function EnhanceModal({ open, originalPrompt, onClose, onApply, enhancer }: Props) {
+  const refCount = useAppStore((s) => s.referenceImages.length);
   const [enhanced, setEnhanced] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,6 +57,11 @@ export function EnhanceModal({ open, originalPrompt, onClose, onApply, enhancer 
           <div className="enhance-modal__title">
             프롬프트 다듬기
             <span className="enhance-modal__badge">OAuth 사용</span>
+            {refCount > 0 ? (
+              <span className="enhance-modal__badge" title="첨부한 참조 이미지를 함께 보내 다듬습니다.">
+                참조 {refCount}장
+              </span>
+            ) : null}
           </div>
           <button type="button" className="enhance-modal__close" onClick={onClose} aria-label="닫기">×</button>
         </div>
