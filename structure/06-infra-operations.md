@@ -104,6 +104,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 | Dev server | `npm run dev` | UI is built, then `node --watch server.js` starts |
 | Package sanity | `npm run lint:pkg` | Required `files[]`, `bin`, and version fields are checked |
 | Package smoke | `npm pack --dry-run --json` | Verifies the publish manifest includes release-critical files |
+| Package install smoke | `npm run test:package-install` | Installs the tarball in a temp project and checks `doctor`, `/api/health`, and `/api/storage/status` |
 | CLI health | `ima2 ping` | Checks `/api/health` on the running server |
 
 ## Pre-Release Checklist
@@ -112,6 +113,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - [ ] Run `npm run build` to refresh `ui/dist`.
 - [ ] Run `npm run lint:pkg` to verify the publish file list.
 - [ ] Run `npm pack --dry-run --json` or rely on `tests/package-smoke.test.js` to confirm README, recovery docs, storage routes, doctor files, and `ui/dist/index.html` are included in the publish manifest.
+- [ ] Run `npm run test:package-install` before publish when you want a full tarball install smoke. This is opt-in because it performs a real temp `npm install`.
 - [ ] Check README and `structure/` docs for Node baseline, provider wording, and CLI table drift.
 - [ ] Do not run release scripts automatically; they include push/publish behavior.
 

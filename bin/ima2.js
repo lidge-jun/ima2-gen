@@ -3,6 +3,7 @@ import { createInterface } from "readline/promises";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 import { spawn, execSync } from "child_process";
 import { networkInterfaces, homedir } from "os";
 import { openUrl, resolveBin } from "./lib/platform.js";
@@ -14,6 +15,7 @@ import { config as runtimeConfig } from "../config.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const HOME = homedir();
+const requireFromRoot = createRequire(join(ROOT, "package.json"));
 // Config lives under runtimeConfig.storage.configDir (honors IMA2_CONFIG_DIR).
 // Legacy installs that stored config at <packageRoot>/.ima2/config.json will be
 // migrated on first write.
@@ -41,6 +43,18 @@ function loadConfig() {
 function saveConfig(config) {
   mkdirSync(CONFIG_DIR, { recursive: true });
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+function missingRuntimeDeps() {
+  const deps = ["express", "better-sqlite3", "openai", "openai-oauth"];
+  return deps.filter((dep) => {
+    try {
+      requireFromRoot.resolve(dep);
+      return false;
+    } catch {
+      return true;
+    }
+  });
 }
 
 async function setup() {
@@ -216,12 +230,14 @@ async function doctor() {
     fail++;
   }
 
-  // node_modules
-  if (existsSync(join(ROOT, "node_modules"))) {
-    console.log("  ✓ node_modules installed");
+  // Runtime dependencies may be hoisted by npm, pnpm, or Yarn. Resolve the
+  // packages instead of requiring a package-local node_modules folder.
+  const missingDeps = missingRuntimeDeps();
+  if (missingDeps.length === 0) {
+    console.log("  ✓ runtime dependencies resolvable");
     ok++;
   } else {
-    console.log("  ✗ node_modules missing — run 'npm install'");
+    console.log(`  ✗ missing runtime dependencies: ${missingDeps.join(", ")}`);
     fail++;
   }
 
