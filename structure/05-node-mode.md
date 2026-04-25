@@ -85,9 +85,44 @@ Root node generation requests use `postNodeGenerateStream()` and ask the server 
 
 `ImageNode` renders `data.partialImageUrl` while a node is `pending` or `reconciling`. This value is transient UI state only. `sanitizeForSave()` strips it before session graph persistence so base64 previews never inflate SQLite payloads.
 
-Each node request writes `requestId` into the node sidecar and `/api/history`. Recovery uses `pendingRequestId ?? recoveryRequestId` first, then falls back to `(sessionId, clientNodeId, createdAt)`. This avoids accidentally attaching an older retry result after reload or HMR.
+Each node request writes `requestId` into the node sidecar and `/api/history`. Recovery uses `pendingRequestId ?? recoveryRequestId` first, then falls back to `(sessionId, clientNodeId, createdAt)`. This avoids accidentally attaching an older retry result after reload or HMR. Active inflight jobs are persisted in SQLite so a server restart or UI reload can still expose enough metadata for the UI to reconcile instead of relying only on process memory.
 
 Pending and reconciling cards use a transform-only rotating border glow. Reduced-motion users keep the static glow without rotation.
+
+## Selection Batch Generation
+
+Node mode supports canvas-level selection and batch generation. Selection mode uses graph context rather than left-panel settings:
+
+```text
+click node              -> select the whole undirected connected component
+click another component -> replace selection
+Cmd/Ctrl + component    -> add/remove that component
+Cmd/Ctrl + selected node -> toggle that one node as an exception
+```
+
+Batch actions run sequentially. `Generate missing` skips selected nodes that already have a ready image. `Regenerate selected` replaces the image on the same client node and deliberately avoids the single-node sibling-regeneration path.
+
+During a batch, the client keeps a `latestServerNodeIdByClientId` map. If node `1` is regenerated before selected child `2`, node `2` uses the fresh server node id as its `parentNodeId`. If an unselected direct child depends on a regenerated parent, it is marked `stale` and its `parentServerNodeId` is rewired to the new parent. Deeper unselected descendants are also marked `stale`, but only direct changed-parent children are rewired immediately.
+
+`stale` therefore has two meanings in node mode: recovered graph/assets may differ, or an upstream node was regenerated while this node was intentionally left out of the batch. In both cases the preview may remain visible, but the node should be regenerated when the user wants it to match the latest upstream image.
+
+Stopping a batch stops only the remaining local queue. The current `/api/node/generate` request is allowed to finish or fail; hard-aborting a running OAuth request is outside this phase.
+
+## Edge Disconnect
+
+Deleting an edge removes only the connection, not either node. The target node keeps its existing prompt and image preview, but future generation no longer uses the disconnected parent image.
+
+```text
+A ─────> B
+B.parentServerNodeId = A.serverNodeId
+
+delete edge
+
+A       B
+B.parentServerNodeId = null
+```
+
+If a target somehow still has another incoming edge, the target's `parentServerNodeId` is recomputed from the remaining source node's current `serverNodeId`. Selection mode disables Delete/Backspace removal so graph selection and edge deletion do not collide.
 
 ## Conflict Reload Recovery
 
@@ -138,6 +173,8 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - [ ] If `ImageNodeData` shape changes, check session save, restore, and API types.
 - [ ] If `/api/node/generate` response changes, update `ui/src/lib/api.ts` and this doc.
 - [ ] If graph save policy changes, check `If-Match` version behavior and tests.
+- [ ] If node selection or batch generation changes, update `ui/src/lib/nodeSelection.ts`, `ui/src/lib/nodeBatch.ts`, and `tests/node-batch-contract.test.js`.
+- [ ] If edge disconnect behavior changes, update `NodeCanvas`, `useAppStore.disconnectEdges`, and `tests/node-edge-disconnect-contract.test.js`.
 - [ ] If asset delete/restore changes, review `asset-missing` state and history docs.
 - [x] Node mode is part of the npm-published UI by default; update build/package rules in `[[06-infra-operations]]` if this gate changes.
 
@@ -146,6 +183,8 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-24: Documented node-local reference inputs, parked classic references, and the child/edit reference guard.
 - 2026-04-24: Documented partial-image SSE streaming, requestId recovery, and pending-node glow.
 - 2026-04-24: Added conflict reload recovery notes for neutral graph-version copy and requestId-first node repair.
+- 2026-04-25: Added SQLite-backed inflight reliability note after 0.09.6 closeout.
+- 2026-04-25: Documented edge-only disconnect behavior and parent metadata cleanup.
 - 2026-04-23: Documented the implemented node canvas, node API, and session persistence structure.
 - 2026-04-23: Translated this document from Korean to English.
 

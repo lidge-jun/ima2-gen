@@ -1,0 +1,52 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const store = readFileSync("ui/src/store/useAppStore.ts", "utf-8");
+const canvas = readFileSync("ui/src/components/NodeCanvas.tsx", "utf-8");
+const ko = readFileSync("ui/src/i18n/ko.json", "utf-8");
+const en = readFileSync("ui/src/i18n/en.json", "utf-8");
+
+describe("node edge disconnect contract", () => {
+  it("exposes explicit edge disconnect actions in the graph store", () => {
+    assert.match(store, /disconnectEdge:\s*\(edgeId:\s*string\)\s*=>\s*void/);
+    assert.match(store, /disconnectEdges:\s*\(edgeIds:\s*string\[\]\)\s*=>\s*void/);
+    assert.match(store, /disconnectEdge:\s*\(edgeId\)\s*=>\s*\{/);
+    assert.match(store, /get\(\)\.disconnectEdges\(\[edgeId\]\)/);
+  });
+
+  it("routes React Flow edge removal through disconnectEdges", () => {
+    assert.match(canvas, /const disconnectEdges = useAppStore\(\(s\) => s\.disconnectEdges\)/);
+    assert.match(canvas, /change\.type === "remove"/);
+    assert.match(canvas, /disconnectEdges\(removedEdgeIds\)/);
+    assert.match(canvas, /setGraphEdges\(applyEdgeChanges\(changes, edges\) as GraphEdge\[\]\)/);
+  });
+
+  it("removes visual edges before saving the graph", () => {
+    assert.match(store, /const nextEdges = get\(\)\.graphEdges\.filter\(\(edge\) => !edgeIdSet\.has\(edge\.id\)\)/);
+    assert.match(store, /set\(\{ graphNodes: nextNodes, graphEdges: nextEdges \}\)/);
+    assert.match(store, /get\(\)\.scheduleGraphSave\(\)/);
+  });
+
+  it("clears target parentServerNodeId when no incoming edge remains", () => {
+    assert.match(store, /const remainingIncoming = nextEdges\.find\(\(edge\) => edge\.target === node\.id\)/);
+    assert.match(store, /parentServerNodeId:\s*remainingParent\?\.data\.serverNodeId \?\? null/);
+  });
+
+  it("preserves a remaining parent when another incoming edge still exists", () => {
+    assert.match(store, /const remainingParent = remainingIncoming/);
+    assert.match(store, /candidate\.id === remainingIncoming\.source/);
+  });
+
+  it("disables delete-key removal while node selection mode is active", () => {
+    assert.match(canvas, /if \(nodeSelectionMode\) return/);
+    assert.match(canvas, /deleteKeyCode=\{nodeSelectionMode \? null : \["Delete", "Backspace"\]\}/);
+    assert.match(canvas, /\[disconnectEdges, edges, nodeSelectionMode, setGraphEdges\]/);
+  });
+
+  it("adds localized disconnect feedback", () => {
+    assert.match(ko, /"edge":\s*\{\s*"disconnected":\s*"연결선을 끊었습니다\."/);
+    assert.match(en, /"edge":\s*\{\s*"disconnected":\s*"Connection removed\."/);
+    assert.match(store, /showToast\(t\("edge\.disconnected"\)\)/);
+  });
+});

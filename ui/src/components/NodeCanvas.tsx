@@ -12,10 +12,12 @@ import {
   type EdgeChange,
   type Connection,
   type OnConnectEnd,
+  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useAppStore, type GraphNode, type GraphEdge } from "../store/useAppStore";
 import { ImageNode } from "./ImageNode";
+import { NodeBatchBar } from "./NodeBatchBar";
 import { useI18n } from "../i18n";
 
 function NodeCanvasInner() {
@@ -24,10 +26,13 @@ function NodeCanvasInner() {
   const edges = useAppStore((s) => s.graphEdges);
   const setGraphNodes = useAppStore((s) => s.setGraphNodes);
   const setGraphEdges = useAppStore((s) => s.setGraphEdges);
+  const disconnectEdges = useAppStore((s) => s.disconnectEdges);
   const addRootNode = useAppStore((s) => s.addRootNode);
   const addChildNodeAt = useAppStore((s) => s.addChildNodeAt);
   const connectNodes = useAppStore((s) => s.connectNodes);
   const deleteNodes = useAppStore((s) => s.deleteNodes);
+  const nodeSelectionMode = useAppStore((s) => s.nodeSelectionMode);
+  const selectNodeGraph = useAppStore((s) => s.selectNodeGraph);
   const sessionLoading = useAppStore((s) => s.sessionLoading);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
 
@@ -42,9 +47,18 @@ function NodeCanvasInner() {
     [nodes, setGraphNodes],
   );
   const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) =>
-      setGraphEdges(applyEdgeChanges(changes, edges) as GraphEdge[]),
-    [edges, setGraphEdges],
+    (changes: EdgeChange[]) => {
+      const removedEdgeIds = changes
+        .filter((change) => change.type === "remove")
+        .map((change) => change.id);
+      if (removedEdgeIds.length > 0) {
+        if (nodeSelectionMode) return;
+        disconnectEdges(removedEdgeIds);
+        return;
+      }
+      setGraphEdges(applyEdgeChanges(changes, edges) as GraphEdge[]);
+    },
+    [disconnectEdges, edges, nodeSelectionMode, setGraphEdges],
   );
 
   const onConnect = useCallback(
@@ -73,6 +87,14 @@ function NodeCanvasInner() {
     (deleted: GraphNode[]) => deleteNodes(deleted.map((n) => n.id)),
     [deleteNodes],
   );
+  const onNodeClick: NodeMouseHandler<GraphNode> = useCallback(
+    (event, node) => {
+      if (!nodeSelectionMode) return;
+      event.preventDefault();
+      selectNodeGraph(node.id, event.metaKey || event.ctrlKey);
+    },
+    [nodeSelectionMode, selectNodeGraph],
+  );
 
   return (
     <main className="node-canvas" ref={wrapperRef}>
@@ -91,12 +113,17 @@ function NodeCanvasInner() {
             onConnect={onConnect}
             onConnectEnd={onConnectEnd}
             onNodesDelete={onNodesDelete}
+            onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
             connectionRadius={32}
+            selectionOnDrag={nodeSelectionMode}
+            multiSelectionKeyCode={nodeSelectionMode ? null : undefined}
+            panOnDrag={nodeSelectionMode ? [2] : true}
             fitView
-            deleteKeyCode={["Delete", "Backspace"]}
+            deleteKeyCode={nodeSelectionMode ? null : ["Delete", "Backspace"]}
             proOptions={{ hideAttribution: true }}
           >
+            <NodeBatchBar />
             <Background gap={24} color={resolvedTheme === "light" ? "#d9dee6" : "#2a2a2a"} />
             <Controls className="node-canvas__controls" />
             <MiniMap
