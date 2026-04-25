@@ -107,10 +107,40 @@ type PersistedInFlight = {
   startedAt: number;
   phase?: string;
   sessionId?: string | null;
+  parentNodeId?: string | null;
   clientNodeId?: string | null;
   kind?: "classic" | "node";
 };
 const INFLIGHT_TTL_MS = 180_000;
+
+type ServerInFlightJob = {
+  requestId: string;
+  kind?: string;
+  prompt?: string;
+  startedAt: number;
+  phase?: string;
+  meta?: Record<string, unknown>;
+};
+
+function toPersistedInFlightJob(job: ServerInFlightJob): PersistedInFlight {
+  const meta = job.meta ?? {};
+  const kind =
+    job.kind === "classic" || job.kind === "node"
+      ? job.kind
+      : meta.kind === "classic" || meta.kind === "node"
+        ? meta.kind
+        : undefined;
+  return {
+    id: job.requestId,
+    prompt: typeof job.prompt === "string" ? job.prompt : "",
+    startedAt: job.startedAt,
+    phase: typeof job.phase === "string" ? job.phase : undefined,
+    sessionId: typeof meta.sessionId === "string" ? meta.sessionId : null,
+    parentNodeId: typeof meta.parentNodeId === "string" ? meta.parentNodeId : null,
+    clientNodeId: typeof meta.clientNodeId === "string" ? meta.clientNodeId : null,
+    kind,
+  };
+}
 
 function loadInFlight(): PersistedInFlight[] {
   try {
@@ -131,6 +161,7 @@ function loadInFlight(): PersistedInFlight[] {
         startedAt: x.startedAt,
         phase: typeof x.phase === "string" ? x.phase : undefined,
         sessionId: typeof x.sessionId === "string" ? x.sessionId : null,
+        parentNodeId: typeof x.parentNodeId === "string" ? x.parentNodeId : null,
         clientNodeId: typeof x.clientNodeId === "string" ? x.clientNodeId : null,
         kind: x.kind === "classic" || x.kind === "node" ? x.kind : undefined,
       }));
@@ -557,7 +588,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           kind: inflightKind,
           sessionId: inflightSessionId,
         });
-        const byId = new Map(jobs.map((j) => [j.requestId, j.phase] as const));
+        const byId = new Map(jobs.map((j) => [j.requestId, j] as const));
         let changed = false;
         const now0 = Date.now();
         const GRACE_MS = 5000;
@@ -581,9 +612,26 @@ export const useAppStore = create<AppState>((set, get) => ({
             continue;
           }
           const p = byId.get(f.id);
-          if (p && p !== f.phase) {
-            changed = true;
-            nextInflight.push({ ...f, phase: p });
+          if (p) {
+            const serverJob = toPersistedInFlightJob(p);
+            const nextJob = {
+              ...f,
+              phase: serverJob.phase,
+              sessionId: serverJob.sessionId,
+              parentNodeId: serverJob.parentNodeId,
+              clientNodeId: serverJob.clientNodeId,
+              kind: serverJob.kind,
+            };
+            if (
+              nextJob.phase !== f.phase ||
+              nextJob.sessionId !== f.sessionId ||
+              nextJob.parentNodeId !== f.parentNodeId ||
+              nextJob.clientNodeId !== f.clientNodeId ||
+              nextJob.kind !== f.kind
+            ) {
+              changed = true;
+            }
+            nextInflight.push(nextJob);
           } else {
             nextInflight.push(f);
           }
@@ -657,20 +705,32 @@ export const useAppStore = create<AppState>((set, get) => ({
         kind: inflightKind,
         sessionId: inflightSessionId,
       });
-      const serverIds = new Set(jobs.map((j) => j.requestId));
+      const serverById = new Map(jobs.map((j) => [j.requestId, j] as const));
       const now = Date.now();
       const local = get().inFlight;
       // Keep local entries that are either still known to the server,
       // or started very recently (<10s — request may be in-flight before
-      // /api/inflight registered). Drop anything else as stale.
-      const merged = local.filter(
-        (f) => serverIds.has(f.id) || now - f.startedAt < 10_000,
-      );
+      // /api/inflight registered). Keep out-of-scope entries because this
+      // request only asked the server about the current mode/session.
+      const merged = local.flatMap((f) => {
+        const serverJob = serverById.get(f.id);
+        if (serverJob) {
+          const restored = toPersistedInFlightJob(serverJob);
+          return [{ ...f, ...restored, prompt: f.prompt || restored.prompt }];
+        }
+        const fKind = f.kind ?? "classic";
+        const matchesScope =
+          fKind === inflightKind &&
+          (inflightKind !== "node" ||
+            (f.sessionId ?? null) === (inflightSessionId ?? null));
+        if (!matchesScope) return [f];
+        return now - f.startedAt < 10_000 ? [f] : [];
+      });
       // Bring in server-only jobs (started from another tab / process)
       const localIds = new Set(merged.map((f) => f.id));
       for (const j of jobs) {
         if (!localIds.has(j.requestId)) {
-          merged.push({ id: j.requestId, prompt: j.prompt || "", startedAt: j.startedAt });
+          merged.push(toPersistedInFlightJob(j));
         }
       }
       saveInFlight(merged);

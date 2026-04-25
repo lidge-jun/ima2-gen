@@ -54,4 +54,19 @@ assert.ok(
   "node route sidecars and history listings should expose numeric refsCount metadata",
 );
 
+assert.ok(
+  storeSrc.includes("function toPersistedInFlightJob") &&
+    storeSrc.includes("parentNodeId: typeof meta.parentNodeId") &&
+    storeSrc.includes("clientNodeId: typeof meta.clientNodeId") &&
+    storeSrc.includes("kind: serverJob.kind") &&
+    storeSrc.includes("merged.push(toPersistedInFlightJob(j))"),
+  "server-only inflight reconciliation should preserve node job metadata",
+);
+
+assert.ok(
+  storeSrc.includes("Keep out-of-scope entries because this") &&
+    storeSrc.includes("if (!matchesScope) return [f]"),
+  "inflight reconciliation should not drop other session jobs when querying a scoped session",
+);
+
 console.log("node-pending-recovery-contract: ok");
