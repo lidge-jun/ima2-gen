@@ -405,7 +405,7 @@ export function Lightbox() {
           src={src}
           alt={currentImage.prompt ?? "전체 보기"}
           draggable={false}
-          title="클릭: 생성 세션으로 이동 · Space: 100%/맞춤"
+          title="클릭: 이 이미지로 재작업 (프롬프트·옵션 가져오기) · Space: 100%/맞춤"
         />
       </div>
 

@@ -1002,7 +1002,36 @@ export const useAppStore = create<AppState>((set, get) => ({
       } catch {}
     }
     if (!sid) {
-      get().showToast("이 이미지에는 연결된 생성 세션이 없습니다.");
+      // Classic-mode image — no graph session to jump to. Prefill the
+      // composer with this image's prompt + options so the click feels
+      // like "open this for re-work" instead of a dead end.
+      const prompt = (target.prompt ?? "").trim();
+      if (!prompt) {
+        get().showToast("이 이미지의 프롬프트 정보를 찾지 못했습니다.", true);
+        return;
+      }
+      const s = get();
+      set({
+        prompt,
+        originalPrompt:
+          typeof target.originalPrompt === "string" && target.originalPrompt.length > 0
+            ? target.originalPrompt
+            : null,
+        quality: (target.quality as Quality) || s.quality,
+        sizePreset: (target.size as SizePreset) || s.sizePreset,
+        moderation: (target.moderation as Moderation) || s.moderation,
+      });
+      get().showToast("프롬프트와 옵션을 가져왔습니다.");
+      // Focus the composer textarea after the lightbox unmounts.
+      setTimeout(() => {
+        const el = document.querySelector<HTMLTextAreaElement>(
+          ".composer__textarea, .prompt-area",
+        );
+        if (el) {
+          el.focus();
+          el.setSelectionRange(el.value.length, el.value.length);
+        }
+      }, 50);
       return;
     }
     if (get().uiMode !== "node") get().setUIMode("node");
