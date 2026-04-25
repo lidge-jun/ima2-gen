@@ -103,6 +103,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 | UI build | `npm run build` | `ui/dist` is updated |
 | Dev server | `npm run dev` | UI is built, then `node --watch server.js` starts |
 | Package sanity | `npm run lint:pkg` | Required `files[]`, `bin`, and version fields are checked |
+| Package smoke | `npm pack --dry-run --json` | Verifies the publish manifest includes release-critical files |
 | CLI health | `ima2 ping` | Checks `/api/health` on the running server |
 
 ## Pre-Release Checklist
@@ -110,6 +111,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - [ ] Run `npm test`.
 - [ ] Run `npm run build` to refresh `ui/dist`.
 - [ ] Run `npm run lint:pkg` to verify the publish file list.
+- [ ] Run `npm pack --dry-run --json` or rely on `tests/package-smoke.test.js` to confirm README, recovery docs, storage routes, doctor files, and `ui/dist/index.html` are included in the publish manifest.
 - [ ] Check README and `structure/` docs for Node baseline, provider wording, and CLI table drift.
 - [ ] Do not run release scripts automatically; they include push/publish behavior.
 
@@ -126,6 +128,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - 2026-04-23: Documented package, scripts, config, runtime data, and test/build operations.
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Added inflight terminal TTL and safe logging operations notes.
+- 2026-04-25: Added npm package smoke guidance for release-critical file inclusion.
 
 Previous document: `[[05-node-mode]]`
 

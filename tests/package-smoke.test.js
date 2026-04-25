@@ -1,0 +1,72 @@
+import { describe, it } from "node:test";
+import assert from "node:assert";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const REQUIRED_PACK_FILES = [
+  "README.md",
+  "docs/RECOVER_OLD_IMAGES.md",
+  "server.js",
+  "config.js",
+  "routes/storage.js",
+  "lib/openDirectory.js",
+  "lib/storageMigration.js",
+  "bin/ima2.js",
+  "bin/lib/storage-doctor.js",
+  "ui/dist/index.html",
+];
+
+function npmCommand() {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
+function readPackManifest() {
+  const packDestination = mkdtempSync(join(tmpdir(), "ima2-pack-smoke-"));
+  try {
+    const result = spawnSync(
+      npmCommand(),
+      ["pack", "--dry-run", "--json", "--pack-destination", packDestination],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          npm_config_loglevel: "silent",
+        },
+      },
+    );
+
+    assert.strictEqual(
+      result.status,
+      0,
+      `npm pack --dry-run failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+    );
+
+    try {
+      const parsed = JSON.parse(result.stdout);
+      assert.ok(Array.isArray(parsed), "npm pack output should be a JSON array");
+      assert.ok(parsed[0], "npm pack output should include one package manifest");
+      return parsed[0];
+    } catch (error) {
+      assert.fail(`Could not parse npm pack --dry-run --json output: ${error.message}`);
+    }
+  } finally {
+    rmSync(packDestination, { recursive: true, force: true });
+  }
+}
+
+describe("package smoke", () => {
+  it("includes release-critical files in npm pack output", () => {
+    const manifest = readPackManifest();
+    const packedFiles = new Set(manifest.files.map((file) => file.path));
+
+    for (const requiredFile of REQUIRED_PACK_FILES) {
+      assert.ok(
+        packedFiles.has(requiredFile),
+        `npm package should include ${requiredFile}`,
+      );
+    }
+  });
+});
