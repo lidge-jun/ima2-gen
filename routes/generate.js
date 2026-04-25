@@ -18,6 +18,10 @@ function validateModeration(ctx, moderation) {
   return { moderation };
 }
 
+function isNonRetryableGenerationError(err) {
+  return Number.isInteger(err?.status) && err.status >= 400 && err.status < 500;
+}
+
 export function registerGenerateRoutes(app, ctx) {
   app.post("/api/generate", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : null;
@@ -145,6 +149,7 @@ export function registerGenerateRoutes(app, ctx) {
             lastErr = new Error("Empty response (safety refusal)");
           } catch (e) {
             lastErr = e;
+            if (isNonRetryableGenerationError(e)) throw e;
           }
           if (attempt < MAX_RETRIES) {
             logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
@@ -208,6 +213,13 @@ export function registerGenerateRoutes(app, ctx) {
           finishHttpStatus = 422;
           finishErrorCode = "SAFETY_REFUSAL";
           return res.status(422).json({ error: firstErr.message, code: "SAFETY_REFUSAL" });
+        }
+        if (firstErr?.status && firstErr.status >= 400 && firstErr.status < 500) {
+          const code = firstErr.code || classifyUpstreamError(firstErr.message);
+          finishStatus = "error";
+          finishHttpStatus = firstErr.status;
+          finishErrorCode = code;
+          return res.status(firstErr.status).json({ error: firstErr.message, code });
         }
         finishStatus = "error";
         finishHttpStatus = 500;

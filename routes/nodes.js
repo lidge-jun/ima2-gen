@@ -49,6 +49,10 @@ function writeNodeError(res, status, code, message, parentNodeId) {
   });
 }
 
+function isNonRetryableGenerationError(err) {
+  return Number.isInteger(err?.status) && err.status >= 400 && err.status < 500;
+}
+
 function dataUrlFromB64(format, b64) {
   return `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`;
 }
@@ -237,6 +241,7 @@ export function registerNodeRoutes(app, ctx) {
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
           lastErr = e;
+          if (isNonRetryableGenerationError(e)) break;
         }
         if (attempt < MAX_RETRIES) {
           logEvent("node", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
@@ -244,13 +249,17 @@ export function registerNodeRoutes(app, ctx) {
       }
 
       if (!b64) {
+        const status = isNonRetryableGenerationError(lastErr) ? lastErr.status : 422;
+        const code = isNonRetryableGenerationError(lastErr)
+          ? (lastErr.code || classifyUpstreamError(lastErr.message))
+          : "SAFETY_REFUSAL";
         finishStatus = "error";
-        finishHttpStatus = 422;
-        finishErrorCode = "SAFETY_REFUSAL";
+        finishHttpStatus = status;
+        finishErrorCode = code;
         return writeNodeError(
           res,
-          422,
-          "SAFETY_REFUSAL",
+          status,
+          code,
           lastErr?.message || "Empty response after retry",
           parentNodeId,
         );
