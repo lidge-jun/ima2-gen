@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import express from "express";
@@ -8,6 +8,7 @@ import { listImageTemplates, getImageTemplate } from "../lib/cardNewsTemplateSto
 import { createCardNewsDraft } from "../lib/cardNewsPlanner.js";
 import { generateCardNewsSet } from "../lib/cardNewsGenerator.js";
 import { listHistoryRows } from "../lib/historyList.js";
+import { readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
 import {
   createCardNewsJob,
   getCardNewsJob,
@@ -75,8 +76,13 @@ describe("Card News 0.20 dev MVP contract", () => {
     assert.match(clientSource, /json_object/);
     assert.match(clientSource, /\/v1\/chat\/completions/);
     assert.match(schemaSource, /validatePlannerOutput/);
+    assert.match(schemaSource, /textFields/);
+    assert.match(schemaSource, /slotId/);
+    assert.match(schemaSource, /maxChars/);
+    assert.match(schemaSource, /language/);
     assert.equal(draft.planner.mode, "deterministic-fallback");
     assert.equal(draft.plan.cards.length, 3);
+    assert.deepEqual(draft.plan.cards[0].textFields, []);
   });
 
   it("honors planner upstream failure and deterministic fallback config", async () => {
@@ -151,6 +157,9 @@ describe("Card News 0.20 dev MVP contract", () => {
     assert.equal(templates[0].previewUrl.startsWith("/api/cardnews/image-templates/"), true);
 
     for (const id of ["academy-lesson-square", "clean-report-square"]) {
+      const template = templates.find((item) => item.id === id);
+      assert.ok(template.slots.every((slot) => slot.label && slot.placement));
+      assert.ok(template.slots.every((slot) => slot.kind !== "title" && slot.kind !== "body" && slot.kind !== "cta"));
       const base = await readFile(join(rootDir, "assets", "card-news", "templates", id, "base.png"));
       const preview = await readFile(join(rootDir, "assets", "card-news", "templates", id, "preview.png"));
       assert.deepEqual(readPngSize(base), { width: 1024, height: 1024 });
@@ -184,6 +193,21 @@ describe("Card News 0.20 dev MVP contract", () => {
     const ctx = makeCtx(generatedDir);
     const calls = [];
     const plan = await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" });
+    plan.cards[0] = {
+      ...plan.cards[0],
+      textFields: [{
+        id: "tf_1",
+        kind: "headline",
+        text: "중간고사 역전 플랜",
+        renderMode: "in-image",
+        placement: "top-right",
+        slotId: null,
+        hierarchy: "primary",
+        maxChars: 24,
+        language: "ko",
+        source: "planner",
+      }],
+    };
 
     const result = await generateCardNewsSet(ctx, plan, {
       generateFn: async (prompt, quality, size, moderation, refs) => {
@@ -198,13 +222,41 @@ describe("Card News 0.20 dev MVP contract", () => {
       assert.equal(calls.length, 3);
       assert.equal(new Set(calls.map((c) => c.refs[0])).size, 1);
       assert.equal(calls.every((c) => c.refs.length === 1), true);
-      assert.match(calls[0].prompt, /Rendered headline:/);
+      assert.doesNotMatch(calls[0].prompt, /Rendered headline:/);
+      assert.match(calls[0].prompt, /Render only the following readable text items exactly as written/);
+      assert.match(calls[0].prompt, /top-right/);
+      assert.match(calls[0].prompt, /중간고사/);
+      assert.match(calls[1].prompt, /Do not render readable text/);
 
       const manifest = JSON.parse(await readFile(join(generatedDir, "cardnews", result.setId, "manifest.json"), "utf8"));
       const sidecar = JSON.parse(await readFile(join(generatedDir, "cardnews", result.setId, "card-01.json"), "utf8"));
+      const loadedPlan = await readCardNewsSetPlan(ctx, result.setId);
       assert.equal(manifest.generationStrategy, "parallel-template-i2i");
       assert.equal(sidecar.sidecarFilename, "card-01.json");
+      assert.equal(sidecar.textFields[0].text, "중간고사 역전 플랜");
+      assert.equal(loadedPlan.cards[0].textFields[0].text, "중간고사 역전 플랜");
       assert.match(result.cards[0].url, /\/generated\/cardnews\//);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("hydrates legacy Card News set manifests with empty textFields", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ima2-card-news-legacy-"));
+    const generatedDir = join(root, "generated");
+    const ctx = makeCtx(generatedDir);
+    const dir = join(generatedDir, "cardnews", "cs_legacy");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "manifest.json"), JSON.stringify({
+      kind: "card-news-set",
+      setId: "cs_legacy",
+      title: "Legacy",
+      cards: [{ cardId: "card_1", cardOrder: 1, headline: "Old card" }],
+    }));
+
+    try {
+      const loaded = await readCardNewsSetPlan(ctx, "cs_legacy");
+      assert.deepEqual(loaded.cards[0].textFields, []);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -302,6 +354,7 @@ describe("Card News 0.20 dev MVP contract", () => {
       imageFilename: "card-01.png",
       headline: "Generated headline",
       body: "Generated body",
+      textFields: [{ id: "tf_1", text: "Visible", renderMode: "in-image" }],
       generatedAt,
     });
     const card = summary.cards[0];
@@ -313,6 +366,7 @@ describe("Card News 0.20 dev MVP contract", () => {
     assert.equal(card.imageFilename, "card-01.png");
     assert.equal(card.headline, "Generated headline");
     assert.equal(card.body, "Generated body");
+    assert.deepEqual(card.textFields, [{ id: "tf_1", text: "Visible", renderMode: "in-image" }]);
     assert.equal(card.generatedAt, generatedAt);
     assert.deepEqual(getCardNewsJob(job.jobId).cards[0], card);
   });

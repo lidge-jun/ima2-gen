@@ -7,9 +7,9 @@
   "stylePrompt": "Modern Korean academy lesson card, confident educational tone, bright study-focused composition, blue and white palette, safe headline area, reusable card-news frame.",
   "negativePrompt": "messy notes, unreadable tiny text, low contrast, watermark, signature, chaotic classroom",
   "slots": [
-    { "id": "title", "kind": "title", "x": 140, "y": 140, "w": 1768, "h": 320, "required": true },
-    { "id": "visual", "kind": "image", "x": 200, "y": 540, "w": 1648, "h": 1000, "required": true },
-    { "id": "caption", "kind": "body", "x": 200, "y": 1610, "w": 1648, "h": 260, "required": false }
+    { "id": "title", "kind": "text", "textKind": "headline", "label": "Top headline", "placement": "top-center", "x": 140, "y": 140, "w": 1768, "h": 320, "required": true, "maxChars": 28, "safeArea": true },
+    { "id": "visual", "kind": "image", "label": "Main visual area", "placement": "center", "x": 200, "y": 540, "w": 1648, "h": 1000, "required": true, "safeArea": false },
+    { "id": "caption", "kind": "text", "textKind": "body", "label": "Bottom caption", "placement": "bottom-center", "x": 200, "y": 1610, "w": 1648, "h": 260, "required": false, "maxChars": 48, "safeArea": true }
   ],
   "palette": ["white", "blue", "slate"],
   "typography": { "headline": "strong sans", "body": "rounded sans" },

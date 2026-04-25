@@ -40,6 +40,7 @@ function runCardNewsJob(ctx, jobId, plan) {
             error: card.error?.message || card.error || undefined,
             headline: card.headline,
             body: card.body,
+            textFields: Array.isArray(card.textFields) ? card.textFields : [],
             imageFilename: card.imageFilename || undefined,
             generatedAt: card.generatedAt || undefined,
             url,
