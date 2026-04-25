@@ -1,0 +1,161 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = process.cwd();
+
+function readSource(path) {
+  return readFileSync(join(root, path), "utf8");
+}
+
+describe("Card News frontend dev MVP contract", () => {
+  it("exposes Card News mode only through the dev feature gate", () => {
+    const devMode = readSource("ui/src/lib/devMode.ts");
+    const modes = readSource("ui/src/types.ts");
+    const switcher = readSource("ui/src/components/UIModeSwitch.tsx");
+
+    assert.match(devMode, /export const ENABLE_CARD_NEWS_MODE/);
+    assert.match(devMode, /VITE_IMA2_CARD_NEWS/);
+    assert.match(devMode, /VITE_IMA2_DEV/);
+    assert.match(modes, /"classic" \| "node" \| "card-news"/);
+    assert.match(switcher, /ENABLE_CARD_NEWS_MODE/);
+    assert.match(switcher, /uiMode\.cardNews/);
+  });
+
+  it("renders the Card News workspace and composer without Node fallthrough", () => {
+    const app = readSource("ui/src/App.tsx");
+    const sidebar = readSource("ui/src/components/Sidebar.tsx");
+
+    assert.match(app, /CardNewsWorkspace/);
+    assert.match(app, /uiMode === "card-news"/);
+    assert.match(app, /uiMode === "card-news" \? null : <RightPanel \/>/);
+    assert.match(sidebar, /CardNewsComposer/);
+    assert.match(sidebar, /uiMode === "card-news"/);
+    assert.match(sidebar, /<CardNewsComposer \/>/);
+  });
+
+  it("uses a dedicated Card News API and store for JSON-first draft then batch generation", () => {
+    const api = readSource("ui/src/lib/cardNewsApi.ts");
+    const store = readSource("ui/src/store/cardNewsStore.ts");
+    const composer = readSource("ui/src/components/card-news/CardNewsComposer.tsx");
+
+    assert.match(api, /\/api\/cardnews\/image-templates/);
+    assert.match(api, /\/api\/cardnews\/draft/);
+    assert.match(api, /\/api\/cardnews\/generate/);
+    assert.match(api, /\/api\/cardnews\/jobs/);
+    assert.match(api, /\/api\/cardnews\/cards\/\$\{encodeURIComponent\(payload\.card\.id\)\}\/regenerate/);
+    assert.match(api, /\/api\/cardnews\/sets\/\$\{encodeURIComponent\(setId\)\}/);
+    assert.match(api, /CardNewsCardStatus/);
+    assert.match(api, /\| "generating"/);
+    assert.match(store, /draftCardNews/);
+    assert.match(store, /startCardNewsJob/);
+    assert.match(store, /getCardNewsJob/);
+    assert.match(store, /applyJobSummary/);
+    assert.match(store, /regenerateCardNewsCard/);
+    assert.match(store, /getCardNewsSet/);
+    assert.match(store, /plannerMeta/);
+    assert.match(store, /getGenerationSummary/);
+    assert.match(store, /retryCard/);
+    assert.match(store, /loadSet/);
+    assert.match(store, /function mergeGeneratedCard/);
+    assert.match(store, /status = generated\.status/);
+    assert.match(store, /outputSizePreset/);
+    assert.match(store, /resolvedOutputSize/);
+    assert.match(store, /topic: ""/);
+    assert.match(store, /activePlan/);
+    assert.match(store, /startCardNewsJob/);
+    assert.match(store, /getCardNewsJob/);
+    assert.match(store, /while \(\["queued", "running"\]\.includes\(summary\.status\)\)/);
+    assert.match(composer, /1024²/);
+    assert.match(composer, /2048²/);
+    assert.match(composer, /cardNews\.outputSize/);
+  });
+
+  it("renders 0.21 delivery, progress, planner, and retry surfaces", () => {
+    const stage = readSource("ui/src/components/card-news/CardStage.tsx");
+    const deck = readSource("ui/src/components/card-news/CardDeckRail.tsx");
+    const inspector = readSource("ui/src/components/card-news/CardInspector.tsx");
+    const batchBar = readSource("ui/src/components/card-news/CardNewsBatchBar.tsx");
+    const composer = readSource("ui/src/components/card-news/CardNewsComposer.tsx");
+    const statusBadge = readSource("ui/src/components/card-news/CardStatusBadge.tsx");
+    const plannerBadge = readSource("ui/src/components/card-news/PlannerMetaBadge.tsx");
+    const css = readSource("ui/src/index.css");
+
+    assert.match(stage, /CardNewsBatchBar/);
+    assert.match(stage, /PlannerMetaBadge/);
+    assert.match(stage, /cardNews\.actions\.copyPrompt/);
+    assert.match(stage, /cardNews\.actions\.openImage/);
+    assert.match(stage, /retryCard/);
+    assert.match(composer, /card-news-inline-status/);
+    assert.match(composer, /card-news-spinner/);
+    assert.match(deck, /CardStatusBadge/);
+    assert.match(deck, /card\.url/);
+    assert.match(inspector, /generatedMeta/);
+    assert.match(inspector, /lockedHelp/);
+    assert.match(batchBar, /summary\.queued/);
+    assert.match(batchBar, /cardNews\.progress\.summary/);
+    assert.match(batchBar, /const EMPTY_CARDS/);
+    assert.match(batchBar, /activePlan\?\.cards \?\? EMPTY_CARDS/);
+    assert.doesNotMatch(batchBar, /useCardNewsStore\(\(s\) => s\.getGenerationSummary\(\)\)/);
+    assert.doesNotMatch(batchBar, /activePlan\?\.cards \|\| \[\]/);
+    assert.doesNotMatch(composer, /useCardNewsStore\(\(s\) => s\.getGenerationSummary\(\)\)/);
+    assert.match(statusBadge, /display === "queued" \|\| display === "generating"/);
+    assert.match(statusBadge, /card-news-spinner/);
+    assert.match(statusBadge, /cardNews\.status\.\$\{display\}/);
+    assert.match(plannerBadge, /cardNews\.planner\.structured/);
+    assert.match(plannerBadge, /cardNews\.planner\.jsonMode/);
+    assert.match(plannerBadge, /cardNews\.planner\.fallback/);
+    assert.match(css, /\.card-news-status-badge/);
+    assert.match(css, /\.card-news-batch-bar/);
+    assert.match(css, /\.card-news-inline-status/);
+    assert.match(css, /\.card-news-result-actions/);
+  });
+
+  it("preserves Card News set metadata through gallery history mapping", () => {
+    const appStore = readSource("ui/src/store/useAppStore.ts");
+    const gallery = readSource("ui/src/components/GalleryModal.tsx");
+    const api = readSource("ui/src/lib/api.ts");
+    const types = readSource("ui/src/types.ts");
+
+    assert.match(api, /setId\?: string \| null/);
+    assert.match(types, /"card-news-card" \| "card-news-set"/);
+    assert.match(types, /cards\?: Array/);
+    assert.match(appStore, /function mapHistoryItem/);
+    assert.match(appStore, /setId: it\.setId/);
+    assert.match(appStore, /cards: it\.cards/);
+    assert.match(gallery, /useCardNewsStore/);
+    assert.match(gallery, /loadSet\(item\.setId\)/);
+    assert.match(gallery, /setUIMode\("card-news"\)/);
+    assert.match(gallery, /gallery-card-news-set/);
+    assert.match(gallery, /item\.cards/);
+  });
+
+  it("keeps the Card News layout responsive inside the existing app shell", () => {
+    const css = readSource("ui/src/index.css");
+    const workspaceRule = /\.card-news-workspace\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+
+    assert.match(workspaceRule, /minmax\(160px, 220px\) minmax\(0, 1fr\) minmax\(200px, 260px\)/);
+    assert.match(css, /@media \(max-width: 1180px\)/);
+  });
+
+  it("has localized Card News UI copy", () => {
+    const ko = readSource("ui/src/i18n/ko.json");
+    const en = readSource("ui/src/i18n/en.json");
+
+    for (const source of [ko, en]) {
+      assert.match(source, /"cardNews"/);
+      assert.match(source, /"imageTemplate"/);
+      assert.match(source, /"roleTemplate"/);
+      assert.match(source, /"draft"/);
+      assert.match(source, /"batchGenerate"/);
+      assert.match(source, /"outputSize"/);
+      assert.match(source, /"status"/);
+      assert.match(source, /"progress"/);
+      assert.match(source, /"planner"/);
+    }
+    assert.match(ko, /"openCardNewsSet"/);
+    assert.match(en, /"openCardNewsSet"/);
+    assert.doesNotMatch(en, /Draft with Codex/);
+  });
+});

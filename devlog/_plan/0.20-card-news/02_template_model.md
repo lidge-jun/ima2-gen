@@ -12,6 +12,8 @@
 
 ## Image Template
 
+Image Template은 단순 배경이 아니라 카드뉴스 생성의 공통 i2i 기준 이미지다. 0.20 MVP에서는 모든 카드가 같은 template base image를 reference/input으로 받고, 각 카드의 역할과 copy에 맞는 prompt만 다르게 붙는다.
+
 ```ts
 type ImageTemplate = {
   id: string;
@@ -105,3 +107,24 @@ ref 3: 자료 스크린샷
 ref 4: 경쟁 카드뉴스 예시
 ref 5: 색감/구도 참고
 ```
+
+## Generation Strategy Model
+
+기본 전략은 `parallel-template-i2i`다.
+
+```ts
+type CardNewsGenerationStrategy =
+  | "parallel-template-i2i"
+  | "selected-card-i2i"
+  | "sequential-continuity-i2i";
+```
+
+의미:
+
+| Strategy | 용도 | MVP 상태 |
+|---|---|---|
+| `parallel-template-i2i` | 같은 image template asset을 공통 입력으로 사용하고, 카드별 prompt를 병렬 생성 | 기본값 |
+| `selected-card-i2i` | 이미 생성된 특정 카드 1장을 기반으로 수정/재생성 | MVP 포함 |
+| `sequential-continuity-i2i` | card 1 결과를 card 2 입력으로 넘기는 연속성 chain | 고급 옵션, 기본값 아님 |
+
+순차 i2i chain은 캐릭터/제품 연속 컷에는 유용하지만, 카드뉴스 기본 생성에는 맞지 않는다. 앞 카드 오류가 뒤 카드에 전파되고, 카드별 역할이 흐려지며, batch retry가 어려워진다.

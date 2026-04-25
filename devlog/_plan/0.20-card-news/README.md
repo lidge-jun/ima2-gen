@@ -14,6 +14,10 @@
 | `04_architecture.md` | 현재 코드베이스에 맞춘 backend/frontend 구조 |
 | `05_implementation_plan.md` | 구현 단계, 리스크, MVP 범위 |
 | `06_template_deep_dive.md` | 이미지 템플릿 asset 중심 후속 조사 |
+| `10_frontend_delivery_gap.md` | 생성 결과가 기존 Classic/Node처럼 즉시 프런트 상태로 들어오지 않는 문제 |
+| `11_gallery_session_history_gap.md` | Card News 결과가 갤러리/세션 히스토리에 기록되지 않는 문제 |
+| `12_generation_progress_gap.md` | Card News 생성 중 spinner/progress/in-flight 표시가 없는 문제 |
+| `13_codex_planner_json_output.md` | 하드코딩 scaffold 대신 Codex planner JSON output으로 초안을 만드는 문제 |
 
 ## 핵심 결론
 
@@ -28,6 +32,18 @@ Classic | Node | Card News
 - Node mode는 이미지 변형과 lineage 추적에 강하다.
 - Card News는 순서 있는 카드 세트, 카드별 역할, 문구, 일괄 생성, export가 핵심이다.
 - graph로 억지 표현하면 reorder, cover card, CTA, manifest, batch retry가 어색해진다.
+
+생성 전략은 `template-guided parallel i2i`를 기본값으로 둔다.
+
+```text
+공통 image template asset + 공통 style context
+        ↓
+카드별 prompt / role / copy
+        ↓
+각 카드 독립 생성, 병렬 요청
+```
+
+여기서 i2i는 "이전 카드 결과를 다음 카드에 먹이는 순차 생성"이 아니라, 같은 이미지 템플릿 asset을 모든 카드의 공통 기준으로 쓰는 방식이다. 순차 i2i chain은 느리고 오류 전파가 커서 기본값으로 두지 않는다.
 
 ## 제품 모델
 
@@ -48,13 +64,16 @@ Image Template  +  Role Node Template  +  Content Prompt
 ## MVP 방향
 
 - 실제 2048/3840 이미지 템플릿 asset 제공
-- `+ New Image Template`로 사용자 템플릿 생성
+- built-in Image Template만 활성화
+- `+ New Image Template`는 UI placeholder/disabled 상태로 두고 0.21로 보류
 - short/mid/long role node template 제공
 - content prompt + 참고 이미지 최대 5장
-- Codex CLI wrapper가 먼저 JSON outline 생성
+- structured-output planner가 먼저 JSON outline 생성
 - 사용자가 카드별 headline/body/visualPrompt 검토
 - lock/reorder/regenerate 가능
-- batch generate
+- template-guided parallel i2i batch generate
+- 선택 카드 i2i regenerate
+- sequential continuity mode는 고급 옵션으로 보류
 - ZIP export + `manifest.json`
 
 ## MVP에서 제외
@@ -64,6 +83,7 @@ Image Template  +  Role Node Template  +  Content Prompt
 - 긴 한국어 본문을 이미지 생성 모델에 직접 렌더링
 - scheduler/social posting
 - 모든 플랫폼 resize 동시 지원
+- npm package runtime 지원. 0.20 MVP는 `npm run dev` 개발 환경에서만 실행되도록 feature gate를 설정한다.
 
 ## 참고
 

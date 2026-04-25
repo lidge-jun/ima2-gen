@@ -164,6 +164,10 @@
     "storageNoticeUnknown": "저장 위치 상태를 확인하지 못했습니다. 업데이트 후 갤러리가 비어 보인다면 ima2 doctor로 이미지 폴더를 확인해 주세요.",
     "openGeneratedDir": "폴더 열기",
     "openGeneratedDirTitle": "생성 이미지 폴더 열기",
+    "cardNewsSet": "카드뉴스 세트",
+    "cardNewsCard": "카드뉴스 카드",
+    "openCardNewsSet": "세트 열기",
+    "openCardNewsSetFailed": "카드뉴스 세트를 열지 못했습니다.",
     "deleted": "삭제됨: {filename}",
     "undo": "되돌리기",
     "secondsSuffix": "{n}초"
@@ -205,6 +209,27 @@
     "classicRefsParkedBody": "이 이미지는 클래식 작성창용이라 노드 모드 생성에는 사용되지 않습니다.",
     "clearParkedRefs": "보관된 참조 비우기",
     "styleSheetActive": "세션 스타일 시트 적용 중"
+  },
+  "nodeBatch": {
+    "selectionOn": "선택 중",
+    "selectionOff": "선택",
+    "selectAll": "전체 선택",
+    "summary": "선택 {selected} · 미생성 {missing} · 영향 {stale}",
+    "generateMissing": "없는 것만 생성",
+    "regenerateSelected": "선택 재생성",
+    "stopRemaining": "남은 작업 중단",
+    "stopping": "중단 중",
+    "clear": "해제",
+    "noneSelected": "선택된 노드가 없습니다.",
+    "parentRequired": "부모 이미지가 준비되지 않은 선택 노드가 {count}개 있습니다.",
+    "nothingToRun": "생성할 선택 노드가 없습니다.",
+    "stopQueued": "현재 노드가 끝나면 남은 작업을 중단합니다.",
+    "failed": "{done}/{total} 완료 후 중단되었습니다.",
+    "finished": "{done}/{total} 노드 작업 완료",
+    "staleBecauseParentChanged": "상위 노드가 재생성되어 다시 확인이 필요합니다."
+  },
+  "edge": {
+    "disconnected": "연결선을 끊었습니다."
   },
   "provider": {
     "authTitle": "인증 방식",
@@ -250,7 +275,75 @@
   "uiMode": {
     "ariaLabel": "UI 모드",
     "classic": "기본",
-    "node": "노드"
+    "node": "노드",
+    "cardNews": "카드뉴스"
+  },
+  "cardNews": {
+    "workspace": "카드뉴스 작업공간",
+    "composer": "카드뉴스",
+    "composerHint": "템플릿은 스냅샷 기준이고, 출력 크기는 별도로 지정합니다.",
+    "topic": "주제",
+    "topicPlaceholder": "예: 중간고사 역전 플랜",
+    "audience": "대상",
+    "audiencePlaceholder": "예: 학부모",
+    "goal": "목표",
+    "goalPlaceholder": "예: 상담 신청",
+    "brief": "내용",
+    "briefPlaceholder": "카드뉴스에 들어갈 핵심 내용과 금지사항을 적어주세요.",
+    "outputSize": "출력 크기",
+    "customSize": "직접",
+    "draft": "초안 만들기",
+    "drafting": "초안 작성 중...",
+    "generateSet": "세트 생성",
+    "batchGenerate": "일괄 생성",
+    "generating": "생성 중...",
+    "generated": "{count}장 생성 완료.",
+    "missingGeneratedCard": "생성 응답에 이 카드가 포함되지 않았습니다.",
+    "error": "카드 생성에 실패했습니다.",
+    "imageTemplate": "이미지 템플릿",
+    "roleTemplate": "카드 구조",
+    "newTemplateLater": "커스텀 템플릿은 dev MVP 이후에 지원합니다",
+    "emptyTitle": "카드뉴스 초안을 만드세요",
+    "emptyBody": "템플릿과 구조를 고른 뒤 검토 가능한 JSON 카드 덱을 만듭니다.",
+    "inspector": "카드 편집",
+    "headline": "제목",
+    "body": "본문",
+    "visualPrompt": "이미지 프롬프트",
+    "locked": "잠김",
+    "unlocked": "열림",
+    "noCard": "초안을 만들면 카드별로 수정할 수 있습니다.",
+    "generatedMeta": "생성 메타데이터",
+    "lockedHelp": "잠긴 카드는 일괄 생성과 재시도에서 제외됩니다.",
+    "retryCard": "이 카드 재시도",
+    "actions": {
+      "copyPrompt": "프롬프트 복사",
+      "copyCopy": "문구 복사",
+      "openImage": "이미지 열기",
+      "downloadCard": "다운로드"
+    },
+    "status": {
+      "draft": "초안",
+      "queued": "대기",
+      "generating": "생성 중",
+      "generated": "완료",
+      "error": "오류",
+      "skipped": "제외",
+      "locked": "잠김"
+    },
+    "progress": {
+      "generating": "생성 중 {done}/{total}",
+      "summary": "완료 {done}/{total}",
+      "detail": "대기 {queued} · 오류 {errors} · 제외 {skipped}",
+      "cardGenerating": "이 카드를 생성 중입니다."
+    },
+    "planner": {
+      "structured": "구조화 JSON",
+      "jsonMode": "JSON 모드",
+      "repaired": "보정됨",
+      "fallback": "기본 초안",
+      "jsonOnlyHelp": "초안은 JSON만 만들고 이미지는 나중에 생성합니다.",
+      "error": "초안 생성 실패"
+    }
   },
   "sidebar": {
     "appName": "이미지 생성기",

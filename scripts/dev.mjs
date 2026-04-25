@@ -48,14 +48,17 @@ try {
 }
 
 console.log("[dev] building UI with dev diagnostics …");
-const build = run("npm", ["run", "ui:build"], { VITE_IMA2_DEV: "1" });
+const build = run("npm", ["run", "ui:build"], {
+  VITE_IMA2_DEV: "1",
+  VITE_IMA2_CARD_NEWS: "1",
+});
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 console.log("[dev] starting server with --watch …");
 const server = spawn(process.execPath, ["--watch", "server.js"], {
   cwd: ROOT,
   stdio: "inherit",
-  env: { ...process.env, IMA2_DEV: "1" },
+  env: { ...process.env, IMA2_DEV: "1", IMA2_CARD_NEWS: "1" },
 });
 server.on("exit", (code) => process.exit(code ?? 0));
 for (const sig of ["SIGINT", "SIGTERM"]) {

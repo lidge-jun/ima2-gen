@@ -164,6 +164,10 @@
     "storageNoticeUnknown": "Storage status could not be checked. If the gallery looks empty after an update, run ima2 doctor to inspect the image folder.",
     "openGeneratedDir": "Open folder",
     "openGeneratedDirTitle": "Open generated image folder",
+    "cardNewsSet": "Card News set",
+    "cardNewsCard": "Card News card",
+    "openCardNewsSet": "Open set",
+    "openCardNewsSetFailed": "Could not open the Card News set.",
     "deleted": "Deleted: {filename}",
     "undo": "Undo",
     "secondsSuffix": "{n}s"
@@ -205,6 +209,27 @@
     "classicRefsParkedBody": "These images belong to the classic composer and are inactive in node mode.",
     "clearParkedRefs": "Clear parked references",
     "styleSheetActive": "Session style sheet active"
+  },
+  "nodeBatch": {
+    "selectionOn": "Selecting",
+    "selectionOff": "Select",
+    "selectAll": "Select all",
+    "summary": "{selected} selected · {missing} missing · {stale} affected",
+    "generateMissing": "Generate missing",
+    "regenerateSelected": "Regenerate selected",
+    "stopRemaining": "Stop remaining",
+    "stopping": "Stopping",
+    "clear": "Clear",
+    "noneSelected": "No nodes selected.",
+    "parentRequired": "{count} selected node(s) need a ready parent image first.",
+    "nothingToRun": "No selected nodes need generation.",
+    "stopQueued": "The current node will finish, then the remaining queue will stop.",
+    "failed": "Stopped after {done}/{total} node(s).",
+    "finished": "Finished {done}/{total} node(s).",
+    "staleBecauseParentChanged": "An upstream node was regenerated; refresh this node when needed."
+  },
+  "edge": {
+    "disconnected": "Connection removed."
   },
   "provider": {
     "authTitle": "Authentication",
@@ -250,7 +275,75 @@
   "uiMode": {
     "ariaLabel": "UI mode",
     "classic": "Classic",
-    "node": "Node"
+    "node": "Node",
+    "cardNews": "Card News"
+  },
+  "cardNews": {
+    "workspace": "Card News workspace",
+    "composer": "Card News",
+    "composerHint": "Templates are visual snapshots; output size is set separately.",
+    "topic": "Topic",
+    "topicPlaceholder": "e.g. Exam comeback plan",
+    "audience": "Audience",
+    "audiencePlaceholder": "e.g. Parents",
+    "goal": "Goal",
+    "goalPlaceholder": "e.g. Book a consultation",
+    "brief": "Brief",
+    "briefPlaceholder": "Describe the card news content, required points, and exclusions.",
+    "outputSize": "Output size",
+    "customSize": "Custom",
+    "draft": "Draft outline",
+    "drafting": "Drafting...",
+    "generateSet": "Generate set",
+    "batchGenerate": "Batch generate",
+    "generating": "Generating...",
+    "generated": "Generated {count} cards.",
+    "missingGeneratedCard": "The generation response did not include this card.",
+    "error": "Card generation failed.",
+    "imageTemplate": "Image template",
+    "roleTemplate": "Card structure",
+    "newTemplateLater": "Custom templates are planned after the dev MVP",
+    "emptyTitle": "Draft a card news set",
+    "emptyBody": "Choose a template and structure, then draft a reviewable JSON deck.",
+    "inspector": "Card inspector",
+    "headline": "Headline",
+    "body": "Body",
+    "visualPrompt": "Image prompt",
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "noCard": "Draft cards to edit them.",
+    "generatedMeta": "Generated metadata",
+    "lockedHelp": "Locked cards are excluded from batch generation and retry.",
+    "retryCard": "Retry this card",
+    "actions": {
+      "copyPrompt": "Copy prompt",
+      "copyCopy": "Copy copy",
+      "openImage": "Open image",
+      "downloadCard": "Download"
+    },
+    "status": {
+      "draft": "Draft",
+      "queued": "Queued",
+      "generating": "Generating",
+      "generated": "Done",
+      "error": "Error",
+      "skipped": "Skipped",
+      "locked": "Locked"
+    },
+    "progress": {
+      "generating": "Generating {done}/{total}",
+      "summary": "Done {done}/{total}",
+      "detail": "{queued} queued · {errors} errors · {skipped} skipped",
+      "cardGenerating": "Generating this card."
+    },
+    "planner": {
+      "structured": "Structured JSON",
+      "jsonMode": "JSON mode",
+      "repaired": "Repaired",
+      "fallback": "Fallback draft",
+      "jsonOnlyHelp": "Draft creates JSON only. Images are generated later.",
+      "error": "Draft failed"
+    }
   },
   "sidebar": {
     "appName": "Image Generator",

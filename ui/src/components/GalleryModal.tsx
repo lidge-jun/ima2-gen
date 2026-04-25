@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { useCardNewsStore } from "../store/cardNewsStore";
 import type { GenerateItem } from "../types";
 import {
   deleteHistoryItem,
@@ -125,7 +126,8 @@ export function GalleryModal() {
         const toItem = (h: (typeof page.loose)[number]): GenerateItem => {
           const k = h.kind;
           const narrowedKind: GenerateItem["kind"] =
-            k === "classic" || k === "edit" || k === "generate" ? k : null;
+            k === "classic" || k === "edit" || k === "generate" ||
+            k === "card-news-card" || k === "card-news-set" ? k : null;
           return {
             image: h.url,
             url: h.url,
@@ -140,6 +142,12 @@ export function GalleryModal() {
             nodeId: h.nodeId ?? null,
             clientNodeId: h.clientNodeId ?? null,
             kind: narrowedKind,
+            setId: h.setId ?? null,
+            cardId: h.cardId ?? null,
+            cardOrder: h.cardOrder ?? null,
+            headline: h.headline ?? null,
+            body: h.body ?? null,
+            cards: h.cards,
           };
         };
         setSessionGroups(
@@ -230,6 +238,17 @@ export function GalleryModal() {
     }
   }
 
+  async function handleOpenCardNewsSet(item: GenerateItem) {
+    if (!item.setId) return;
+    try {
+      await useCardNewsStore.getState().loadSet(item.setId);
+      useAppStore.getState().setUIMode("card-news");
+      close();
+    } catch {
+      showToast(t("gallery.openCardNewsSetFailed"), true);
+    }
+  }
+
   function dismissStorageNotice() {
     setStorageDismissed(true);
     try {
@@ -250,6 +269,31 @@ export function GalleryModal() {
 
   const renderTile = (item: GenerateItem, keyPrefix: string, idx: number) => {
     const active = currentImage?.image === item.image;
+    if (item.kind === "card-news-set") {
+      return (
+        <div
+          key={`${keyPrefix}-${idx}-${item.filename ?? idx}`}
+          className="gallery__tile-wrap gallery-card-news-set"
+        >
+          <button
+            type="button"
+            className="gallery__tile"
+            onClick={() => void handleOpenCardNewsSet(item)}
+            title={item.headline ?? t("gallery.cardNewsSet")}
+          >
+            {item.image ? <img src={item.image} alt={item.headline ?? t("gallery.cardNewsSet")} loading="lazy" /> : null}
+            <div className="gallery__caption">
+              <span className="gallery__caption-text">{item.headline ?? t("gallery.cardNewsSet")}</span>
+            </div>
+            <div className="gallery-card-news-strip">
+              {(item.cards || []).slice(0, 5).map((card, cardIdx) => (
+                <span key={`${card.url}-${cardIdx}`}>{card.cardOrder ?? cardIdx + 1}</span>
+              ))}
+            </div>
+          </button>
+        </div>
+      );
+    }
     return (
       <div
         key={`${keyPrefix}-${idx}-${item.filename ?? idx}`}

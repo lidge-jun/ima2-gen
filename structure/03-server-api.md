@@ -6,7 +6,7 @@ aliases: [ima2 API, image_gen server API, ima2 endpoints]
 
 # Server API
 
-`server.js` is the runtime center of `ima2-gen`. The browser UI and CLI both call its `/api/*` endpoints. The server manages the OAuth proxy, stores generated image files, reconstructs history, and exposes graph sessions.
+`server.js` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*`. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
 
 This document matters because the UI and CLI share the same server contract. For example, `/api/generate` returns a different shape for single-image and multi-image responses. `/api/history` supports both a flat list and session grouping. Node mode uses separate `/api/node/generate` and `/api/sessions/*` contracts. If those differences are not documented, clients can break quietly.
 
@@ -18,14 +18,16 @@ When changing an API, find the endpoint here first. Then check the CLI usage in 
 
 ```mermaid
 graph TD
-    API["server.js /api"] --> STATUS["status<br/>providers health oauth"]
+    API["server.js + routes/* /api"] --> STATUS["status<br/>providers health oauth"]
     API --> IMG["classic image<br/>generate edit history"]
     API --> JOBS["inflight jobs"]
     API --> NODE["node mode<br/>node generate node fetch"]
+    API --> CARD["card news<br/>templates draft sets jobs"]
     API --> SESS["sessions<br/>sqlite graph"]
     API --> BILL["billing probe"]
-    IMG --> FILES["generated files<br/>sidecar metadata"]
+    IMG --> FILES["~/.ima2/generated<br/>sidecar metadata"]
     NODE --> FILES
+    CARD --> FILES
     SESS --> DB["SQLite"]
 ```
 
@@ -54,7 +56,7 @@ Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` n
 | `POST` | `/api/generate` | same body | For `n>1`: `{ images, elapsed, count, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
 | `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, model?, provider?, sessionId?, requestId? }` | `{ image, elapsed, filename, usage, provider, moderation, model }` |
 
-`/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to 8. Result files are written to `generated/`, and sidecar JSON stores prompt, quality, size, format, moderation, model, provider, usage, and web search counts.
+`/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to 8. Result files are written to the configured generated directory, usually `~/.ima2/generated`, and sidecar JSON stores prompt, quality, size, format, moderation, model, provider, usage, and web search counts.
 
 Image generation model selection is explicit. If omitted, the server defaults to `gpt-5.4-mini`. Supported image models are `gpt-5.4-mini`, `gpt-5.4`, and `gpt-5.5`. `gpt-5.3-codex-spark` can appear in OAuth model status, but it does not support the `image_generation` tool, so generation endpoints reject it with `IMAGE_MODEL_UNSUPPORTED` before calling OAuth.
 
@@ -67,7 +69,7 @@ Image generation model selection is explicit. If omitted, the server defaults to
 | `DELETE` | `/api/history/:filename` | none | `{ ok, trashId, filename, unlinkAt, sessionsTouched, nodesTouched }` |
 | `POST` | `/api/history/:filename/restore` | `{ trashId }` | `{ ok }` |
 
-History is reconstructed from image files and sidecar JSON under `generated/`. Delete is a soft-delete into `.trash/`, not an immediate permanent removal. Restore uses the returned `trashId`.
+History is reconstructed from image files and sidecar JSON under the configured generated directory. Delete is a soft-delete into `.trash/`, not an immediate permanent removal. Restore uses the returned `trashId`.
 
 When `groupBy=session` is used, session groups include `title` and `label` when the session still exists in SQLite. The gallery should prefer the title and only fall back to the short server session id.
 
@@ -93,6 +95,30 @@ When `parentNodeId` is present, the server reads the stored parent image and use
 `/api/node/generate` also supports an SSE response when the client sends `Accept: text/event-stream`. In that mode validation still happens before headers are opened. After the stream opens, the server may emit `phase`, `partial`, `done`, and `error` events. Root generation opts into OAuth `partial_images: 2`; child/edit generation stays final-only for now. Clients must treat partial events as progressive previews only and use the `done` payload as the canonical saved node.
 
 Node sidecars include `requestId` as recovery metadata. `/api/history` exposes the same field so a reloaded graph can match completed assets by request id before falling back to `(sessionId, clientNodeId, createdAt)`.
+
+## Card News Dev API
+
+Card News is a dev-gated MVP surface. It is intended for `npm run dev` product-flow validation before packaging and global install concerns are solved.
+
+| Method | Path | Body or query | Response |
+|---|---|---|---|
+| `GET` | `/api/cardnews/image-templates` | none | `{ templates }` |
+| `GET` | `/api/cardnews/image-templates/:templateId/preview` | none | PNG preview |
+| `GET` | `/api/cardnews/role-templates` | none | `{ templates }` |
+| `POST` | `/api/cardnews/draft` | `{ topic, audience?, goal?, contentBrief?, imageTemplateId, roleTemplateId, size }` | `{ plan: CardNewsPlan, planner? }` |
+| `POST` | `/api/cardnews/generate` | `CardNewsPlan & { quality, moderation, model?, sessionId? }` | `{ setId, manifest, cards }` |
+| `POST` | `/api/cardnews/cards/:cardId/regenerate` | `{ setId, card, cards?, quality, moderation, model? }` | set-level `{ setId, manifest, cards }` |
+| `GET` | `/api/cardnews/sets` | none | `{ sets }` |
+| `GET` | `/api/cardnews/sets/:setId` | none | `{ plan: CardNewsPlan }` |
+| `POST` | `/api/cardnews/jobs` | `CardNewsPlan` | `202 { jobId, setId, status, total, generated, errors, cards }` |
+| `GET` | `/api/cardnews/jobs/:jobId` | none | job summary or `404 CARD_NEWS_JOB_NOT_FOUND` |
+| `POST` | `/api/cardnews/jobs/:jobId/retry` | `{ cardIds }` | `202` job summary or `404 CARD_NEWS_JOB_NOT_FOUND` |
+
+`/api/cardnews/draft` is text-only. It first tries Responses Structured Outputs when enabled. If the local OAuth-compatible endpoint rejects that format, it falls back to chat-completions JSON mode, then validates and repairs the JSON locally. It returns `PLANNER_*` errors unless deterministic fallback is explicitly enabled in config. It never calls image-generation tools.
+
+Card News generation is template-guided parallel i2i. The template PNG is a style/reference input; output size is supplied separately by the UI. One card failure does not reject the whole set. Failed cards are returned with `status: "error"` and a sidecar; successful cards write `card-XX.png` plus `card-XX.json`. The set writes `manifest.json` with `kind: "card-news-set"`.
+
+History reconstruction recognizes both `card-news-card` sidecars and `card-news-set` manifests. Gallery clients can show individual card rows or open a set through `GET /api/cardnews/sets/:setId`.
 
 ## Session DB API
 
@@ -122,13 +148,21 @@ Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-G
 | Unsupported OAuth model for image generation | 400 | `IMAGE_MODEL_UNSUPPORTED` |
 | API-key provider requested | 403 | `APIKEY_DISABLED` |
 | Safety refusal | 422 | `SAFETY_REFUSAL` |
+| Moderation/content refusal | 422 or upstream mapped error | `MODERATION_REFUSED` |
+| OAuth session expired | upstream mapped error | `AUTH_CHATGPT_EXPIRED` |
+| Network/proxy failure | upstream mapped error | `NETWORK_FAILED` or `OAUTH_UNAVAILABLE` |
 | Missing graph version header | 428 | `GRAPH_VERSION_REQUIRED` |
 | Graph too large | 413 | `GRAPH_TOO_LARGE` |
 | Missing node metadata | 404 | `NODE_NOT_FOUND` |
+| Missing Card News job | 404 | `CARD_NEWS_JOB_NOT_FOUND` |
+| Planner upstream failure | 502 or mapped status | `PLANNER_UPSTREAM_FAILED` |
+| Planner invalid JSON/schema | 422 | `PLANNER_INVALID_JSON` or `PLANNER_SCHEMA_INVALID` |
 
 ## Observability Contract
 
-Server logs use compact structured lines such as `[node.request] requestId="..." quality="medium"`. Generation, edit, node, OAuth stream, inflight, history, and session graph saves should carry the same `requestId` where available.
+Server logs use compact structured lines such as `[node.request] requestId="..." quality="medium"`. Every `/api/*` request receives a sanitized `X-Request-Id` response header. If the client sends a safe `X-Request-Id` (`A-Z`, `a-z`, `0-9`, `.`, `_`, `:`, `-`, max 128 chars), the server echoes it; otherwise the server replaces it with `req_<uuid>`. Non-API static files and `/generated/*` assets are not mutated by the request logger.
+
+Generation, edit, node, OAuth stream, inflight, history, and session graph saves should carry the same `requestId` where available. Classic and node generation routes fall back to `req.id` when the JSON body does not provide a `requestId`.
 
 Logs must never include raw prompts, effective prompts, revised prompts, OAuth/API tokens, authorization headers, cookies, raw request bodies, reference data URLs, generated base64, or raw upstream response bodies. Use counts and sizes instead: `promptChars`, `refs`, `imageChars`, `durationMs`, `httpStatus`, and `errorCode`.
 
@@ -147,6 +181,9 @@ Logs must never include raw prompts, effective prompts, revised prompts, OAuth/A
 - 2026-04-24: Added node SSE partial streaming, requestId sidecar/history recovery, observability, terminal inflight, and gallery session-title response notes.
 - 2026-04-24: Added explicit image model selection contract for classic, edit, and node generation.
 - 2026-04-24: Clarified source-neutral `GRAPH_VERSION_CONFLICT` semantics and graph save metadata headers.
+- 2026-04-25: Updated server ownership after route decomposition and clarified generated-directory storage plus error-code UX contracts.
+- 2026-04-25: Documented sanitized API request IDs and API-only request logging.
+- 2026-04-25: Added Card News dev API, planner JSON, set manifest history, and job summary contracts.
 
 Previous document: `[[02-command-reference]]`
 

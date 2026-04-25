@@ -124,6 +124,12 @@ export type HistoryItem = {
   clientNodeId?: string | null;
   requestId?: string | null;
   kind?: string | null;
+  setId?: string | null;
+  cardId?: string | null;
+  cardOrder?: number | null;
+  headline?: string | null;
+  body?: string | null;
+  cards?: Array<{ url: string; headline?: string; cardOrder?: number }>;
   refsCount?: number;
 };
 

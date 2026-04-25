@@ -4,3 +4,7 @@ export const IS_DEV_UI =
   import.meta.env.DEV || import.meta.env.VITE_IMA2_DEV === "1";
 
 export const ENABLE_NODE_MODE = import.meta.env.VITE_IMA2_NODE_MODE !== "0";
+
+export const ENABLE_CARD_NEWS_MODE =
+  import.meta.env.VITE_IMA2_CARD_NEWS === "1" ||
+  import.meta.env.VITE_IMA2_DEV === "1";

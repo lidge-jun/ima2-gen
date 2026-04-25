@@ -34,6 +34,8 @@ function loadConfig(env = {}) {
         inflight: c.inflight,
         trash: c.trash,
         log: c.log,
+        features: c.features,
+        cardNewsPlanner: c.cardNewsPlanner,
         legacy: { PORT: m.PORT, OAUTH_PORT: m.OAUTH_PORT, BODY_LIMIT: m.BODY_LIMIT, NO_OAUTH_PROXY: m.NO_OAUTH_PROXY },
       }));
     });
@@ -71,6 +73,11 @@ test("config exposes default shape", () => {
   assert.equal(c.imageModels.default, "gpt-5.4-mini");
   assert.deepEqual(c.imageModels.valid.sort(), ["gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]);
   assert.deepEqual(c.imageModels.unsupported, ["gpt-5.3-codex-spark"]);
+  assert.equal(c.features.cardNews, false);
+  assert.equal(c.cardNewsPlanner.enabled, true);
+  assert.equal(c.cardNewsPlanner.model, "gpt-5.4-mini");
+  assert.equal(c.cardNewsPlanner.timeoutMs, 60000);
+  assert.equal(c.cardNewsPlanner.deterministicFallback, false);
 });
 
 test("env overrides win", () => {
@@ -88,6 +95,45 @@ test("env overrides win", () => {
   assert.equal(c.oauth.autoStart, false);
   assert.equal(c.server.bodyLimit, "10mb");
 });
+
+test("card news feature is dev-only unless explicitly enabled", () => {
+  const off = loadConfig({
+    IMA2_DEV: "",
+    IMA2_CARD_NEWS: "",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-card-news-off",
+  });
+  assert.equal(off.features.cardNews, false);
+
+  const dev = loadConfig({
+    IMA2_DEV: "1",
+    IMA2_CARD_NEWS: "",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-card-news-dev",
+  });
+  assert.equal(dev.features.cardNews, true);
+
+  const explicit = loadConfig({
+    IMA2_DEV: "",
+    IMA2_CARD_NEWS: "1",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-card-news-explicit",
+  });
+  assert.equal(explicit.features.cardNews, true);
+});
+
+test("card news planner env overrides win", () => {
+  const c = loadConfig({
+    IMA2_CARD_NEWS_PLANNER: "0",
+    IMA2_CARD_NEWS_PLANNER_MODEL: "gpt-5.5",
+    IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS: "12345",
+    IMA2_CARD_NEWS_PLANNER_FALLBACK: "1",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-card-news-planner",
+  });
+
+  assert.equal(c.cardNewsPlanner.enabled, false);
+  assert.equal(c.cardNewsPlanner.model, "gpt-5.5");
+  assert.equal(c.cardNewsPlanner.timeoutMs, 12345);
+  assert.equal(c.cardNewsPlanner.deterministicFallback, true);
+});
+
 
 test("legacy env alias: PORT falls back when IMA2_PORT absent", () => {
   const c = loadConfig({

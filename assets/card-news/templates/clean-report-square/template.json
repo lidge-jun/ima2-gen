@@ -1,0 +1,17 @@
+{
+  "id": "clean-report-square",
+  "name": "Clean Report Square",
+  "size": "2048x2048",
+  "previewFilename": "preview.png",
+  "baseFilename": "base.png",
+  "stylePrompt": "Clean Korean card news report layout, white editorial surface, subtle grid, restrained navy accent, large safe title area, clear central visual slot, minimal decoration.",
+  "negativePrompt": "busy layout, tiny text, watermark, signature, excessive decoration, cluttered typography",
+  "slots": [
+    { "id": "title", "kind": "title", "x": 160, "y": 160, "w": 1728, "h": 260, "required": true },
+    { "id": "visual", "kind": "image", "x": 160, "y": 500, "w": 1728, "h": 980, "required": true },
+    { "id": "cta", "kind": "cta", "x": 160, "y": 1620, "w": 1728, "h": 260, "required": false }
+  ],
+  "palette": ["white", "navy", "blue"],
+  "typography": { "headline": "bold sans", "body": "clean sans" },
+  "recommendedRoleNodeIds": ["mid-5", "short-3"]
+}

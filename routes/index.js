@@ -5,6 +5,7 @@ import { registerEditRoutes } from "./edit.js";
 import { registerNodeRoutes } from "./nodes.js";
 import { registerGenerateRoutes } from "./generate.js";
 import { registerStorageRoutes } from "./storage.js";
+import { registerCardNewsRoutes } from "./cardNews.js";
 
 export function configureRoutes(app, ctx) {
   registerHealthRoutes(app, ctx);
@@ -13,5 +14,6 @@ export function configureRoutes(app, ctx) {
   registerSessionRoutes(app, ctx);
   registerEditRoutes(app, ctx);
   registerNodeRoutes(app, ctx);
+  if (ctx.config.features.cardNews) registerCardNewsRoutes(app, ctx);
   registerGenerateRoutes(app, ctx);
 }

@@ -8,8 +8,9 @@ import { Toast } from "./components/Toast";
 import { ErrorCard } from "./components/ErrorCard";
 import { GalleryModal } from "./components/GalleryModal";
 import { CustomSizeConfirmModal } from "./components/CustomSizeConfirmModal";
+import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
-import { ENABLE_NODE_MODE } from "./lib/devMode";
+import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "./lib/devMode";
 
 export default function App() {
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
@@ -23,7 +24,10 @@ export default function App() {
   const syncThemeFromStorage = useAppStore((s) => s.syncThemeFromStorage);
   const refreshResolvedTheme = useAppStore((s) => s.refreshResolvedTheme);
   const uiModeRaw = useAppStore((s) => s.uiMode);
-  const uiMode = ENABLE_NODE_MODE ? uiModeRaw : "classic";
+  const uiMode =
+    uiModeRaw === "card-news" && ENABLE_CARD_NEWS_MODE ? "card-news" :
+      uiModeRaw === "node" && ENABLE_NODE_MODE ? "node" :
+        "classic";
 
   useEffect(() => {
     hydrateHistory();
@@ -78,10 +82,14 @@ export default function App() {
           <SettingsWorkspace />
         ) : uiMode === "classic" ? (
           <Canvas />
-        ) : (
+        ) : uiMode === "node" ? (
           <NodeCanvas />
+        ) : uiMode === "card-news" ? (
+          <CardNewsWorkspace />
+        ) : (
+          <Canvas />
         )}
-        <RightPanel />
+        {uiMode === "card-news" ? null : <RightPanel />}
       </div>
       <CustomSizeConfirmModal />
       <Toast />

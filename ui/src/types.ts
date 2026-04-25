@@ -1,4 +1,4 @@
-export type UIMode = "classic" | "node";
+export type UIMode = "classic" | "node" | "card-news";
 export type SettingsSection = "account" | "generation" | "appearance" | "language" | "future";
 export type ThemePreference = "system" | "dark" | "light";
 export type ResolvedTheme = "dark" | "light";
@@ -38,6 +38,7 @@ export type GenerateItem = {
   provider?: string;
   quality?: string;
   size?: string;
+  format?: string;
   moderation?: string;
   model?: string | null;
   usage?: { total_tokens?: number } & Record<string, unknown>;
@@ -47,7 +48,13 @@ export type GenerateItem = {
   nodeId?: string | null;
   clientNodeId?: string | null;
   requestId?: string | null;
-  kind?: "classic" | "edit" | "generate" | null;
+  kind?: "classic" | "edit" | "generate" | "card-news-card" | "card-news-set" | null;
+  setId?: string | null;
+  cardId?: string | null;
+  cardOrder?: number | null;
+  headline?: string | null;
+  body?: string | null;
+  cards?: Array<{ url: string; headline?: string; cardOrder?: number }>;
   refsCount?: number;
 };
 

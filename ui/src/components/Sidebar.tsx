@@ -7,8 +7,9 @@ import { SessionPicker } from "./SessionPicker";
 import { NodeStyleButton } from "./NodeStyleButton";
 import { SettingsButton } from "./SettingsButton";
 import { ImageModelSelect } from "./ImageModelSelect";
+import { CardNewsComposer } from "./card-news/CardNewsComposer";
 import { useAppStore } from "../store/useAppStore";
-import { ENABLE_NODE_MODE } from "../lib/devMode";
+import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
 import { useI18n } from "../i18n";
 
 export function Sidebar() {
@@ -17,7 +18,10 @@ export function Sidebar() {
   const referenceImages = useAppStore((s) => s.referenceImages);
   const clearReferences = useAppStore((s) => s.clearReferences);
   const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
-  const uiMode = ENABLE_NODE_MODE ? uiModeRaw : "classic";
+  const uiMode =
+    uiModeRaw === "card-news" && ENABLE_CARD_NEWS_MODE ? "card-news" :
+      uiModeRaw === "node" && ENABLE_NODE_MODE ? "node" :
+        "classic";
   return (
     <aside className="sidebar">
       <div className="sidebar__scroll">
@@ -38,6 +42,10 @@ export function Sidebar() {
             <PromptComposer />
             <GenerateButton />
             <InFlightList />
+          </>
+        ) : uiMode === "card-news" ? (
+          <>
+            <CardNewsComposer />
           </>
         ) : (
           <>

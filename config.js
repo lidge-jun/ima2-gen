@@ -142,6 +142,19 @@ export const config = {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, "info"),
     pretty: env.NODE_ENV !== "production",
   },
+  features: {
+    cardNews: pickBool(env.IMA2_CARD_NEWS, fileCfg.features?.cardNews, env.IMA2_DEV === "1"),
+  },
+  cardNewsPlanner: {
+    enabled: pickBool(env.IMA2_CARD_NEWS_PLANNER, fileCfg.cardNewsPlanner?.enabled, true),
+    model: pickStr(env.IMA2_CARD_NEWS_PLANNER_MODEL, fileCfg.cardNewsPlanner?.model, "gpt-5.4-mini"),
+    timeoutMs: pickInt(env.IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS, fileCfg.cardNewsPlanner?.timeoutMs, 60_000),
+    deterministicFallback: pickBool(
+      env.IMA2_CARD_NEWS_PLANNER_FALLBACK,
+      fileCfg.cardNewsPlanner?.deterministicFallback,
+      false,
+    ),
+  },
   dev: {
     viteDevMode: pickBool(env.VITE_IMA2_DEV, fileCfg.dev?.viteDevMode, false),
   },
@@ -170,3 +183,4 @@ export const STYLE_SHEET_MAX_PREFIX = config.styleSheet.maxPrefix;
 export const LOG_LEVEL = config.log.level;
 export const NO_OAUTH_PROXY = !config.oauth.autoStart;
 export const DEV_MODE = config.dev.viteDevMode;
+export const CARD_NEWS_ENABLED = config.features.cardNews;

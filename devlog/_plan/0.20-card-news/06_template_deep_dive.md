@@ -66,6 +66,26 @@ imageTemplate.stylePrompt
 
 이때 headline/body는 이미지 프롬프트에 짧게만 반영하고, 실제 본문은 sidecar로 보관한다.
 
+0.20 MVP에서 템플릿은 모든 카드 생성 요청의 공통 i2i 기준 이미지다.
+
+```text
+base.png + card visual prompt + role hint → generated card
+```
+
+각 카드는 같은 `base.png`를 참조하지만, 서로의 생성 결과를 참조하지 않는다.
+
+```text
+좋음:
+base.png → card-01.png
+base.png → card-02.png
+base.png → card-03.png
+
+기본값으로 피함:
+card-01.png → card-02.png → card-03.png
+```
+
+순차 chain은 동일 캐릭터/제품 연속성이 필요한 특수 세트에서만 `Continuity mode`로 검토한다.
+
 ## 왜 safe area 자동 검출을 미루는가
 
 초기부터 safe area 자동 검출을 넣으면 이미지 분석, 좌표 보정, UI editor가 모두 필요하다. MVP에서는 slot preset을 먼저 제공하는 편이 낫다.
