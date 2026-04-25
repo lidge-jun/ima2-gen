@@ -2866,6 +2866,53 @@ body {
 .lightbox__btn--close {
   background: rgba(0, 0, 0, 0.65);
 }
+.lightbox__btn--danger {
+  color: #fca5a5;
+}
+.lightbox__btn--danger:hover {
+  background: rgba(120, 30, 30, 0.85);
+  color: #fff;
+  border-color: rgba(255, 100, 100, 0.4);
+}
+.lightbox__btn--off {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.lightbox__undo {
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 12px;
+  z-index: 3;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.lightbox__undo-btn {
+  background: var(--accent-bright, #fff);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lightbox__undo-btn:hover {
+  background: #fff;
+}
+.lightbox__undo-timer {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
 
 .lightbox__nav {
   position: absolute;
