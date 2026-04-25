@@ -112,6 +112,10 @@ export type HistoryItem = {
   clientNodeId?: string | null;
   kind?: string | null;
   favorite?: boolean;
+  /** echoes the requestId that produced this image, when known. Lets the
+   *  client reconcile a pending in-flight entry after a refresh by matching
+   *  history rows against `inFlight[].id`. */
+  requestId?: string | null;
 };
 
 export type HistoryCursor = { before: number; beforeFilename: string };

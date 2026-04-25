@@ -382,7 +382,7 @@ function clampMaxAttempts(v, fallback = 2) {
 // Persist a failed generation attempt for the log UI + retry button.
 // Refs are NOT saved (see retry flow): refs live in the browser and are
 // re-attached when the user invokes retry from a history item that had them.
-async function writeFailureSidecar({ endpoint, prompt, originalPrompt = null, quality, size, format, moderation, attempts, error, sessionId = null, parentNodeId = null, clientNodeId = null, referenceCount = 0, owner = null }) {
+async function writeFailureSidecar({ endpoint, prompt, originalPrompt = null, quality, size, format, moderation, attempts, error, sessionId = null, parentNodeId = null, clientNodeId = null, referenceCount = 0, owner = null, requestId = null }) {
   try {
     const dir = join(__dirname, "generated", ".failed");
     await mkdir(dir, { recursive: true });
@@ -404,6 +404,7 @@ async function writeFailureSidecar({ endpoint, prompt, originalPrompt = null, qu
       clientNodeId,
       referenceCount,
       owner: owner || LEGACY_OWNER,
+      requestId,
       attempts: attempts || [],
       errorCode: error?.code || "UNKNOWN",
       errorMessage: error?.message || String(error || ""),
@@ -552,6 +553,7 @@ app.get("/api/history", async (req, res) => {
         maxAttempts: typeof meta?.maxAttempts === "number" ? meta.maxAttempts : null,
         attempts: Array.isArray(meta?.attempts) ? meta.attempts : [],
         referenceCount: typeof meta?.referenceCount === "number" ? meta.referenceCount : 0,
+        requestId: typeof meta?.requestId === "string" ? meta.requestId : null,
       };
     }));
 
@@ -734,6 +736,7 @@ app.get("/api/generation-log", async (req, res) => {
           filename: rel,
           url: `/generated/${rel.split("/").map(encodeURIComponent).join("/")}`,
           sessionId: meta?.sessionId || null,
+          requestId: typeof meta?.requestId === "string" ? meta.requestId : null,
           errorCode: null,
           errorMessage: null,
         });
@@ -762,6 +765,7 @@ app.get("/api/generation-log", async (req, res) => {
           filename: null,
           url: null,
           sessionId: m.sessionId || null,
+          requestId: typeof m.requestId === "string" ? m.requestId : null,
           errorCode: m.errorCode || null,
           errorMessage: m.errorMessage || null,
         });
@@ -1009,6 +1013,7 @@ app.post("/api/generate", async (req, res) => {
           referenceCount: refB64s.length,
           sessionId,
           owner: req.authUser || LEGACY_OWNER,
+          requestId,
         };
         await writeFile(join(__dirname, "generated", filename + ".json"), JSON.stringify(meta)).catch(() => {});
         images.push({
@@ -1041,6 +1046,7 @@ app.post("/api/generate", async (req, res) => {
         clientNodeId,
         referenceCount: refB64s.length,
         owner: req.authUser,
+        requestId,
       });
       if (firstErr?.code === "SAFETY_REFUSAL") {
         return res.status(422).json({ error: firstErr.message, code: "SAFETY_REFUSAL", attempts: firstErr.attempts || [] });
@@ -1104,6 +1110,7 @@ async function editViaOAuth(prompt, imageB64, quality, size, moderation = "auto"
 
 // -- Edit image (inpainting) --
 app.post("/api/edit", async (req, res) => {
+  const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : null;
   try {
     const { prompt: rawPrompt, image: imageB64, mask: maskB64, quality: rawQuality = "low", size: rawSize = "1024x1024", moderation: rawModeration = "auto", provider = "oauth", maxAttempts: rawMaxAttempts, originalPrompt: rawOriginalPrompt } =
       req.body;
@@ -1158,6 +1165,7 @@ app.post("/api/edit", async (req, res) => {
         error: e,
         referenceCount: 0,
         owner: req.authUser,
+        requestId,
       });
       throw e;
     }
@@ -1191,6 +1199,7 @@ app.post("/api/edit", async (req, res) => {
       maxAttempts,
       attempts: Array.isArray(editAttempts) ? editAttempts : [],
       owner: req.authUser || LEGACY_OWNER,
+      requestId,
     };
     await writeFile(join(__dirname, "generated", filename + ".json"), JSON.stringify(meta)).catch(() => {});
 
@@ -1198,6 +1207,7 @@ app.post("/api/edit", async (req, res) => {
       image: `data:image/png;base64,${resultB64}`,
       elapsed,
       filename,
+      requestId,
       usage,
       provider: "oauth",
       moderation,
@@ -1344,6 +1354,7 @@ app.post("/api/node/generate", async (req, res) => {
         clientNodeId,
         referenceCount: refB64s.length,
         owner: req.authUser,
+        requestId,
       });
       return res.status(err.status || 422).json({
         error: { code: err.code || "SAFETY_REFUSAL", message: err.message },
@@ -1381,6 +1392,7 @@ app.post("/api/node/generate", async (req, res) => {
       attempts: Array.isArray(nodeResult.attempts) ? nodeResult.attempts : [],
       referenceCount: refB64s.length,
       owner: req.authUser || LEGACY_OWNER,
+      requestId,
     };
     await mkdir(join(__dirname, "generated"), { recursive: true });
     const { filename } = await saveNode(__dirname, { nodeId, b64, meta, ext: format });

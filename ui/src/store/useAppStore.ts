@@ -26,6 +26,7 @@ import {
   saveSessionGraph,
   type SessionSummary,
   type SessionFull,
+  type HistoryItem,
 } from "../lib/api";
 import { compressImage } from "../lib/image";
 import { snap16 } from "../lib/size";
@@ -191,6 +192,86 @@ function saveInFlight(list: PersistedInFlight[]): void {
     }
   }
 }
+
+// Centralized debug logger. Toggle via `localStorage["ima2.debug"] = "1"` or
+// `?ima2_debug=1` on the URL — defaults to on for our self-hosted deploy
+// because the in-flight reconcile logic is the source of most "ghost
+// generation" bug reports. Output flows to the browser DevTools console with
+// a stable [ima2:topic] prefix so it can be filtered.
+const IMA2_DEBUG = (() => {
+  if (typeof window === "undefined") return false;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("ima2_debug") === "1") return true;
+    if (url.searchParams.get("ima2_debug") === "0") return false;
+    const stored = localStorage.getItem("ima2.debug");
+    if (stored === "0") return false;
+    if (stored === "1") return true;
+  } catch {}
+  return true;
+})();
+function dlog(topic: string, ...args: unknown[]): void {
+  if (!IMA2_DEBUG) return;
+  // eslint-disable-next-line no-console
+  console.log(`[ima2:${topic}]`, ...args);
+}
+function dwarn(topic: string, ...args: unknown[]): void {
+  if (!IMA2_DEBUG) return;
+  // eslint-disable-next-line no-console
+  console.warn(`[ima2:${topic}]`, ...args);
+}
+
+// Match running in-flight entries against history rows that carry the same
+// requestId. Promotes any matched entry from "running" → "success" and links
+// the resulting filename. Used by both reconcileInflight (one-shot on load)
+// and the polling tick (continuous). Lives at module scope so the helper can
+// be reused without going through the zustand `set` indirection twice.
+function reconcileWithHistoryItems(
+  items: HistoryItem[],
+  get: () => InflightAccess,
+  set: (partial: Partial<InflightAccess>) => void,
+): number {
+  const byReq = new Map<string, HistoryItem>();
+  for (const it of items) {
+    if (typeof it.requestId === "string" && it.requestId) {
+      byReq.set(it.requestId, it);
+    }
+  }
+  if (byReq.size === 0) return 0;
+  const local = get().inFlight;
+  let matched = 0;
+  const next = local.map((f) => {
+    if ((f.status ?? "running") !== "running") return f;
+    const hit = byReq.get(f.id);
+    if (!hit) return f;
+    matched++;
+    const endedAt = hit.createdAt || Date.now();
+    return {
+      ...f,
+      status: "success" as const,
+      endedAt,
+      elapsedMs: endedAt - f.startedAt,
+      filename: hit.filename,
+      phase: undefined,
+    };
+  });
+  if (matched > 0) {
+    dlog("inflight", "rescued via history match:", matched);
+    saveInFlight(next);
+    set({
+      inFlight: next,
+      activeGenerations: next.filter((f) => (f.status ?? "running") === "running").length,
+    });
+  }
+  return matched;
+}
+
+// Slim view of the store fields the helper above needs. Avoids importing the
+// full Store type (which would create a forward reference).
+type InflightAccess = {
+  inFlight: PersistedInFlight[];
+  activeGenerations: number;
+};
 
 // Page-unload guard: when the user navigates away or refreshes, in-flight
 // fetches abort and would otherwise hit the generate/generateNode catch
@@ -595,6 +676,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (typeof window === "undefined") return;
     const w = window as unknown as { __ima2InflightTimer?: number };
     if (w.__ima2InflightTimer) return;
+    dlog("inflight", "startInFlightPolling");
     const tick = async () => {
       const cur = get().inFlight;
       const running = cur.filter((f) => (f.status ?? "running") === "running");
@@ -602,6 +684,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (w.__ima2InflightTimer) {
           clearInterval(w.__ima2InflightTimer);
           w.__ima2InflightTimer = undefined;
+          dlog("inflight", "polling stopped (no running)");
         }
         return;
       }
@@ -661,6 +744,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           (a) => !existing.some((e) => e.filename === a.filename),
         );
         if (fresh.length > 0) {
+          dlog("inflight", "polling history fresh:", fresh.length);
           set((s) => {
             const nextCurrent = s.currentImage ?? fresh[0];
             if (!s.currentImage && fresh[0]?.filename) {
@@ -672,17 +756,27 @@ export const useAppStore = create<AppState>((set, get) => ({
             };
           });
         }
+        // Reconcile running inflight against fresh history rows by requestId.
+        // A running entry whose requestId matches a new history row is the
+        // success case after a refresh-during-fetch: server finished and
+        // wrote the sidecar, but the client never got the response back.
+        if (items.length > 0) {
+          reconcileWithHistoryItems(items, get, set);
+        }
         // TTL prune: drop expired terminal entries + reap stuck running entries.
         const now = Date.now();
         const remaining = get().inFlight.filter((f) => !isExpired(f, now));
         if (remaining.length !== get().inFlight.length) {
+          dlog("inflight", "TTL prune:", get().inFlight.length - remaining.length);
           saveInFlight(remaining);
           set({
             inFlight: remaining,
             activeGenerations: remaining.filter((f) => (f.status ?? "running") === "running").length,
           });
         }
-      } catch {}
+      } catch (err) {
+        dwarn("inflight", "polling tick failed:", err);
+      }
     };
     w.__ima2InflightTimer = window.setInterval(tick, 1500) as unknown as number;
   },
@@ -691,20 +785,75 @@ export const useAppStore = create<AppState>((set, get) => ({
       const inflightKind = get().uiMode === "node" ? "node" : "classic";
       const inflightSessionId =
         inflightKind === "node" ? get().activeSessionId ?? undefined : undefined;
-      const { jobs } = await getInflight({
-        kind: inflightKind,
-        sessionId: inflightSessionId,
-      });
+      // Fetch server inflight AND a recent history slice in parallel so we
+      // can rescue running entries that completed while the client was gone.
+      const [{ jobs }, historyPage] = await Promise.all([
+        getInflight({ kind: inflightKind, sessionId: inflightSessionId }),
+        getHistory({ limit: 100 }).catch(() => ({ items: [] as HistoryItem[], total: 0, nextCursor: null })),
+      ]);
+      const historyItems = historyPage.items || [];
       const serverIds = new Set(jobs.map((j) => j.requestId));
+      const historyByRequestId = new Map<string, HistoryItem>();
+      for (const it of historyItems) {
+        if (typeof it.requestId === "string" && it.requestId) {
+          historyByRequestId.set(it.requestId, it);
+        }
+      }
       const now = Date.now();
       const local = get().inFlight;
-      // Drop running entries the server doesn't know about that are also
-      // older than 10 s; keep terminal ones so the user sees their history.
-      const merged = local.filter((f) => {
+      let rescued = 0;
+      let dropped = 0;
+      let kept = 0;
+      const merged: PersistedInFlight[] = [];
+      for (const f of local) {
         const status = f.status ?? "running";
-        if (status !== "running") return !isExpired(f, now);
-        return serverIds.has(f.id) || now - f.startedAt < 10_000;
-      });
+        if (status !== "running") {
+          if (!isExpired(f, now)) merged.push(f);
+          continue;
+        }
+        // 1) Server still owns it → keep.
+        if (serverIds.has(f.id)) {
+          merged.push(f);
+          kept++;
+          continue;
+        }
+        // 2) History has a row with our requestId → completed while we were
+        //    away. Promote to success and link the filename.
+        const histMatch = historyByRequestId.get(f.id);
+        if (histMatch) {
+          const successItem: PersistedInFlight = {
+            ...f,
+            status: "success",
+            endedAt: histMatch.createdAt || now,
+            elapsedMs: (histMatch.createdAt || now) - f.startedAt,
+            filename: histMatch.filename,
+            phase: undefined,
+          };
+          merged.push(successItem);
+          rescued++;
+          continue;
+        }
+        // 3) Neither in server nor history. The legacy rule dropped after
+        //    10 s, but a slow generate (high quality / 4-up) routinely
+        //    takes longer. Hold the entry for the full TTL (180 s) so the
+        //    next polling tick still has a chance to find the sidecar.
+        if (now - f.startedAt < INFLIGHT_TTL_MS) {
+          merged.push(f);
+          kept++;
+          continue;
+        }
+        // 4) Truly stuck — convert to error so the user sees a retry button
+        //    instead of the entry silently vanishing.
+        merged.push({
+          ...f,
+          status: "error",
+          endedAt: now,
+          elapsedMs: now - f.startedAt,
+          errorMessage: f.errorMessage || "결과를 확인할 수 없습니다 (타임아웃)",
+          phase: undefined,
+        });
+        dropped++;
+      }
       const localIds = new Set(merged.map((f) => f.id));
       for (const j of jobs) {
         if (!localIds.has(j.requestId)) {
@@ -718,6 +867,37 @@ export const useAppStore = create<AppState>((set, get) => ({
           });
         }
       }
+      // Hydrate history with the slice we just read so subsequent polling
+      // ticks have a recent baseline (avoids first-tick refetch race).
+      if (historyItems.length > 0) {
+        const fresh: GenerateItem[] = historyItems.map((it) => ({
+          image: it.url,
+          url: it.url,
+          filename: it.filename,
+          thumb: it.url,
+          prompt: it.prompt ?? undefined,
+          originalPrompt: it.originalPrompt ?? undefined,
+          size: it.size ?? undefined,
+          quality: it.quality ?? undefined,
+          format: it.format as Format | undefined,
+          createdAt: it.createdAt,
+        }));
+        const existing = get().history;
+        const newOnes = fresh.filter((a) => !existing.some((e) => e.filename === a.filename));
+        if (newOnes.length > 0) {
+          set((s) => ({
+            history: [...newOnes, ...s.history].slice(0, HISTORY_LIMIT),
+          }));
+        }
+      }
+      dlog("inflight", "reconcile:", {
+        serverJobs: jobs.length,
+        localBefore: local.length,
+        rescued,
+        dropped,
+        kept,
+        historyMatched: historyByRequestId.size,
+      });
       saveInFlight(merged);
       set({
         inFlight: merged,
@@ -726,8 +906,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (merged.some((f) => (f.status ?? "running") === "running")) {
         get().startInFlightPolling();
       }
-    } catch {
-      // Silent — endpoint may not exist on older servers.
+    } catch (err) {
+      dwarn("inflight", "reconcile failed:", err);
     }
   },
   syncFromStorage: () => {
