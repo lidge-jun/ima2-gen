@@ -26,8 +26,9 @@ describe("node selection batch contract", () => {
 
   it("keeps batch regenerate in-place instead of using the sibling path", () => {
     assert.match(store, /runGenerateNodeInPlace/);
-    assert.match(store, /requestedNode\?\.data\.status === "ready" \? get\(\)\.addSiblingNode\(clientId\) : clientId/);
-    assert.match(store, /await get\(\)\.runGenerateNodeInPlace\(targetClientId/);
+    assert.match(store, /generateNodeVariation/);
+    assert.match(store, /const targetClientId = get\(\)\.addSiblingNode\(clientId\)/);
+    assert.match(store, /await get\(\)\.runGenerateNodeInPlace\(clientId as ClientNodeId/);
     assert.match(store, /n\.id !== clientId/);
   });
 
@@ -59,4 +60,3 @@ describe("node selection batch contract", () => {
     assert.match(batchBar, /nodeBatch\.stopRemaining/);
   });
 });
-

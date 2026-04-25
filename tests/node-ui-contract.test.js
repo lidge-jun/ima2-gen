@@ -20,8 +20,9 @@ describe("node UI compact metadata contract", () => {
     assert.match(statusRule, /overflow:\s*hidden/);
     assert.match(statusRule, /text-overflow:\s*ellipsis/);
     assert.match(statusRule, /white-space:\s*nowrap/);
-    assert.match(actionsRule, /display:\s*grid/);
-    assert.match(actionsRule, /grid-template-columns:/);
+    assert.match(actionsRule, /display:\s*flex/);
+    assert.match(actionsRule, /flex:\s*0 0 auto/);
+    assert.match(actionsRule, /align-items:\s*center/);
   });
 
   it("uses compact regenerate labels", () => {

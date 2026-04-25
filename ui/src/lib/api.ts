@@ -241,6 +241,8 @@ export type NodeGenerateRequest = {
   model?: ImageModel;
   provider?: "oauth";
   mode?: "auto" | "direct";
+  contextMode?: "parent-plus-refs" | "parent-only" | "ancestry";
+  searchMode?: "off" | "auto" | "on";
   references?: string[];
   requestId?: string;
   sessionId?: string | null;
@@ -261,6 +263,8 @@ export type NodeGenerateResponse = {
   moderation?: string;
   model?: string | null;
   refsCount?: number;
+  contextMode?: "parent-plus-refs" | "parent-only" | "ancestry";
+  searchMode?: "off" | "auto" | "on";
   revisedPrompt?: string | null;
   promptMode?: "auto" | "direct";
 };

@@ -24,7 +24,8 @@ describe("node edge disconnect contract", () => {
 
   it("removes visual edges before saving the graph", () => {
     assert.match(store, /const nextEdges = get\(\)\.graphEdges\.filter\(\(edge\) => !edgeIdSet\.has\(edge\.id\)\)/);
-    assert.match(store, /set\(\{ graphNodes: nextNodes, graphEdges: nextEdges \}\)/);
+    assert.match(store, /deriveParentServerNodeIds\(nextNodes, nextEdges\)/);
+    assert.match(store, /set\(\{ graphNodes: deriveParentServerNodeIds\(nextNodes, nextEdges\), graphEdges: nextEdges \}\)/);
     assert.match(store, /get\(\)\.scheduleGraphSave\(\)/);
   });
 

@@ -13,6 +13,8 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const addNodeReferences = useAppStore((s) => s.addNodeReferences);
   const removeNodeReference = useAppStore((s) => s.removeNodeReference);
   const generateNode = useAppStore((s) => s.generateNode);
+  const generateNodeInPlace = useAppStore((s) => s.generateNodeInPlace);
+  const generateNodeVariation = useAppStore((s) => s.generateNodeVariation);
   const addChildNode = useAppStore((s) => s.addChildNode);
   const duplicateBranchRoot = useAppStore((s) => s.duplicateBranchRoot);
   const deleteNode = useAppStore((s) => s.deleteNode);
@@ -20,7 +22,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const [isDraggingRef, setIsDraggingRef] = useState(false);
   const refs = d.referenceImages ?? [];
   const isBusy = d.status === "pending" || d.status === "reconciling";
-  const canAttachRefs = !d.parentServerNodeId && !isBusy && refs.length < MAX_NODE_REFS;
+  const canAttachRefs = !isBusy && refs.length < MAX_NODE_REFS;
 
   const onPromptChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodePrompt(id, e.target.value),
@@ -30,6 +32,14 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const onGenerate = useCallback(() => {
     void generateNode(id);
   }, [id, generateNode]);
+
+  const onRegenerateInPlace = useCallback(() => {
+    void generateNodeInPlace(id);
+  }, [id, generateNodeInPlace]);
+
+  const onNewVariation = useCallback(() => {
+    void generateNodeVariation(id);
+  }, [id, generateNodeVariation]);
 
   const onBranch = useCallback(() => {
     if (d.status !== "ready") return;
@@ -190,11 +200,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
             className="image-node__attach"
             onClick={() => canAttachRefs && fileInput.current?.click()}
             disabled={!canAttachRefs}
-            title={
-              d.parentServerNodeId
-                ? t("node.nodeRefsUnsupportedForEdit")
-                : t("node.attachRefTitle")
-            }
+            title={d.parentServerNodeId ? t("node.nodeRefsUsedWithParent") : t("node.attachRefTitle")}
           >
             {t("node.attachRef")}
           </button>
@@ -217,18 +223,30 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           }}
         />
       </div>
-      <div className="image-node__footer">
+      <div className="image-node__footer nodrag">
         <span className="image-node__status" title={statusLabel}>{statusLabel}</span>
-        <div className="image-node__actions nodrag">
-          <button type="button" onClick={onGenerate} disabled={isBusy}>
-            {d.status === "ready" ? t("node.regenerate") : t("node.generate")}
-          </button>
+        <div className="image-node__actions">
+          {d.status === "ready" ? (
+            <>
+              <button type="button" onClick={onRegenerateInPlace} disabled={isBusy} title={t("node.regenerateTitle")} aria-label={t("node.regenerateTitle")}>
+                ↻
+              </button>
+              <button type="button" onClick={onNewVariation} disabled={isBusy} title={t("node.newVariationTitle")} aria-label={t("node.newVariationTitle")}>
+                {t("node.newVariation")}
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={onGenerate} disabled={isBusy}>
+              {t("node.generate")}
+            </button>
+          )}
           {d.status === "ready" ? (
             <>
               <button
                 type="button"
                 onClick={onBranch}
                 title={t("node.addChildTitle")}
+                aria-label={t("node.addChildTitle")}
               >
                 {t("node.addChild")}
               </button>
@@ -236,12 +254,13 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
                 type="button"
                 onClick={onDuplicateBranch}
                 title={t("node.duplicateBranchTitle")}
+                aria-label={t("node.duplicateBranchTitle")}
               >
                 {t("node.duplicateBranch")}
               </button>
             </>
           ) : null}
-          <button type="button" onClick={onDelete} className="image-node__del" title={t("node.deleteTitle")}>×</button>
+          <button type="button" onClick={onDelete} className="image-node__del" title={t("node.deleteTitle")} aria-label={t("node.deleteTitle")}>×</button>
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="image-node__handle image-node__handle--source" />

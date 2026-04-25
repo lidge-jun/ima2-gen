@@ -47,7 +47,18 @@ import {
   IMAGE_MODEL_STORAGE_KEY,
   isImageModel,
 } from "../lib/imageModels";
-import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
+import { newClientNodeId, type ClientNodeId } from "../lib/graph";
+import {
+  deriveParentServerNodeIds,
+  wouldCreateMultipleIncomingEdge,
+} from "../lib/nodeGraph";
+import { getNextChildPosition, getNextRootPosition } from "../lib/nodeLayout";
+import {
+  clearNodeRefs as clearStoredNodeRefs,
+  loadNodeRefs,
+  pruneNodeRefs,
+  saveNodeRefs,
+} from "../lib/nodeRefStorage";
 import {
   applyComponentSelection,
   applySelectedNodeIds,
@@ -340,6 +351,7 @@ function mapSessionToGraph(session: SessionFull): {
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
       model: (d.model ?? null) as string | null,
+      referenceImages: loadNodeRefs(session.id, n.id),
     };
     return {
       id: n.id,
@@ -354,7 +366,7 @@ function mapSessionToGraph(session: SessionFull): {
     target: e.target,
   }));
   return {
-    graphNodes,
+    graphNodes: deriveParentServerNodeIds(graphNodes, graphEdges),
     graphEdges,
     graphVersion: session.graphVersion,
   };
@@ -370,7 +382,9 @@ type CustomSizeConfirmState = {
   reasons: CustomSizeAdjustmentReason[];
   continuation:
     | { kind: "classic" }
-    | { kind: "node"; clientId: ClientNodeId };
+    | { kind: "node"; clientId: ClientNodeId }
+    | { kind: "node-in-place"; clientId: ClientNodeId }
+    | { kind: "node-variation"; clientId: ClientNodeId };
 } | null;
 
 type AppState = {
@@ -451,6 +465,8 @@ type AppState = {
   removeNodeReference: (clientId: ClientNodeId, index: number) => void;
   clearNodeReferences: (clientId: ClientNodeId) => void;
   generateNode: (clientId: ClientNodeId) => Promise<void>;
+  generateNodeInPlace: (clientId: ClientNodeId) => Promise<void>;
+  generateNodeVariation: (clientId: ClientNodeId, sizeOverride?: string) => Promise<void>;
   runGenerateNode: (clientId: ClientNodeId, sizeOverride?: string) => Promise<void>;
   runGenerateNodeInPlace: (
     clientId: ClientNodeId,
@@ -872,11 +888,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   graphNodes: [],
   graphEdges: [],
   setGraphNodes: (graphNodes) => {
-    set({ graphNodes });
+    set({ graphNodes: deriveParentServerNodeIds(graphNodes, get().graphEdges) });
     get().scheduleGraphSave();
   },
   setGraphEdges: (graphEdges) => {
-    set({ graphEdges });
+    set({ graphEdges, graphNodes: deriveParentServerNodeIds(get().graphNodes, graphEdges) });
     get().scheduleGraphSave();
   },
   disconnectEdge: (edgeId) => {
@@ -903,7 +919,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
       };
     });
-    set({ graphNodes: nextNodes, graphEdges: nextEdges });
+    set({ graphNodes: deriveParentServerNodeIds(nextNodes, nextEdges), graphEdges: nextEdges });
     get().scheduleGraphSave();
     get().showToast(t("edge.disconnected"));
   },
@@ -1195,12 +1211,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addRootNode: () => {
     const clientId = newClientNodeId();
-    const depth = 0;
-    const siblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
-      position: initialPos(depth, siblings),
+      position: getNextRootPosition(get().graphNodes),
         data: {
           clientId,
           serverNodeId: null,
@@ -1221,11 +1235,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const parent = get().graphNodes.find((n) => n.id === parentClientId);
     if (!parent) return parentClientId;
     const clientId = newClientNodeId();
-    const siblings = get().graphEdges.filter((e) => e.source === parentClientId).length;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
-      position: { x: parent.position.x + 360, y: parent.position.y + siblings * 320 },
+      position: getNextChildPosition(parent, get().graphNodes, get().graphEdges),
         data: {
           clientId,
           serverNodeId: null,
@@ -1257,12 +1270,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const incomingEdge = get().graphEdges.find((e) => e.target === sourceClientId);
     if (!incomingEdge) {
       const clientId = newClientNodeId();
-      const depth = 0;
-      const siblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
       const node: GraphNode = {
         id: clientId,
         type: "imageNode",
-        position: initialPos(depth, siblings),
+        position: getNextRootPosition(get().graphNodes),
         data: {
           clientId,
           serverNodeId: null,
@@ -1284,11 +1295,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!parent) return sourceClientId;
 
     const clientId = newClientNodeId();
-    const siblings = get().graphEdges.filter((e) => e.source === parentClientId).length;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
-      position: { x: parent.position.x + 360, y: parent.position.y + siblings * 320 },
+      position: getNextChildPosition(parent, get().graphNodes, get().graphEdges),
       data: {
         clientId,
         serverNodeId: null,
@@ -1325,10 +1335,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   addNodeReferences: async (clientId, files) => {
     const node = get().graphNodes.find((n) => n.id === clientId);
     if (!node) return;
-    if (node.data.parentServerNodeId) {
-      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
-      return;
-    }
     const currentRefs = node.data.referenceImages ?? [];
     const allowed = MAX_REFERENCE_IMAGES - currentRefs.length;
     if (allowed <= 0) {
@@ -1352,22 +1358,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
     const valid = results.filter((x): x is string => !!x);
     if (valid.length > 0) {
+      const sessionId = get().activeSessionId;
       set({
         graphNodes: get().graphNodes.map((n) =>
-          n.id === clientId
-            ? {
+          {
+            if (n.id !== clientId) return n;
+            const refs = [
+              ...(n.data.referenceImages ?? []),
+              ...valid,
+            ].slice(0, MAX_REFERENCE_IMAGES);
+            saveNodeRefs(sessionId, clientId, refs);
+            return {
                 ...n,
                 data: {
                   ...n.data,
-                  referenceImages: [
-                    ...(n.data.referenceImages ?? []),
-                    ...valid,
-                  ].slice(0, MAX_REFERENCE_IMAGES),
+                  referenceImages: refs,
                 },
-              }
-            : n,
+              };
+          },
         ),
       });
+      get().scheduleGraphSave();
     }
     if (heicSkipped.length > 0) {
       get().showToast(t("toast.refHeicUnsupported"), true);
@@ -1384,43 +1395,45 @@ export const useAppStore = create<AppState>((set, get) => ({
   addNodeReferenceDataUrl: (clientId, dataUrl) => {
     const node = get().graphNodes.find((n) => n.id === clientId);
     if (!node) return;
-    if (node.data.parentServerNodeId) {
-      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
-      return;
-    }
     set({
       graphNodes: get().graphNodes.map((n) => {
         if (n.id !== clientId) return n;
         const refs = n.data.referenceImages ?? [];
         if (refs.length >= MAX_REFERENCE_IMAGES) return n;
+        const nextRefs = [...refs, dataUrl];
+        saveNodeRefs(get().activeSessionId, clientId, nextRefs);
         return {
           ...n,
           data: {
             ...n.data,
-            referenceImages: [...refs, dataUrl],
+            referenceImages: nextRefs,
           },
         };
       }),
     });
+    get().scheduleGraphSave();
   },
 
   removeNodeReference: (clientId, index) => {
     set({
-      graphNodes: get().graphNodes.map((n) =>
-        n.id === clientId
-          ? {
+      graphNodes: get().graphNodes.map((n) => {
+        if (n.id !== clientId) return n;
+        const refs = (n.data.referenceImages ?? []).filter((_, i) => i !== index);
+        saveNodeRefs(get().activeSessionId, clientId, refs);
+        return {
               ...n,
               data: {
                 ...n.data,
-                referenceImages: (n.data.referenceImages ?? []).filter((_, i) => i !== index),
+                referenceImages: refs,
               },
-            }
-          : n,
-      ),
+            };
+      }),
     });
+    get().scheduleGraphSave();
   },
 
   clearNodeReferences: (clientId) => {
+    clearStoredNodeRefs(get().activeSessionId, clientId);
     set({
       graphNodes: get().graphNodes.map((n) =>
         n.id === clientId
@@ -1434,6 +1447,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           : n,
       ),
     });
+    get().scheduleGraphSave();
   },
 
   duplicateBranchRoot: (sourceClientId) => {
@@ -1502,14 +1516,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   async generateNode(clientId) {
     const node = get().graphNodes.find((n) => n.id === clientId);
     if (!node) return;
-    const { prompt, parentServerNodeId } = node.data;
+    const { prompt } = node.data;
     if (!prompt.trim()) {
       get().showToast(t("toast.promptRequired"), true);
-      return;
-    }
-    const nodeRefs = node.data.referenceImages ?? [];
-    if (parentServerNodeId && nodeRefs.length > 0) {
-      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
       return;
     }
     const pending = getCustomSizeConfirmation(get(), { kind: "node", clientId });
@@ -1520,15 +1529,54 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().runGenerateNode(clientId);
   },
 
+  async generateNodeInPlace(clientId) {
+    const node = get().graphNodes.find((n) => n.id === clientId);
+    if (!node) return;
+    if (!node.data.prompt.trim()) {
+      get().showToast(t("toast.promptRequired"), true);
+      return;
+    }
+    const pending = getCustomSizeConfirmation(get(), { kind: "node-in-place", clientId });
+    if (pending) {
+      set({ customSizeConfirm: pending });
+      return;
+    }
+    await get().runGenerateNodeInPlace(clientId);
+  },
+
+  async generateNodeVariation(clientId, sizeOverride) {
+    const source = get().graphNodes.find((n) => n.id === clientId);
+    if (!source) return;
+    if (!source.data.prompt.trim()) {
+      get().showToast(t("toast.promptRequired"), true);
+      return;
+    }
+    if (!sizeOverride) {
+      const pending = getCustomSizeConfirmation(get(), { kind: "node-variation", clientId });
+      if (pending) {
+        set({ customSizeConfirm: pending });
+        return;
+      }
+    }
+    const targetClientId = get().addSiblingNode(clientId);
+    await get().runGenerateNodeInPlace(targetClientId, { sizeOverride });
+  },
+
   async runGenerateNode(clientId, sizeOverride) {
     const requestedNode = get().graphNodes.find((n) => n.id === clientId);
-    const targetClientId =
-      requestedNode?.data.status === "ready" ? get().addSiblingNode(clientId) : clientId;
+    const targetClientId = requestedNode?.data.status === "ready"
+      ? get().addSiblingNode(clientId)
+      : clientId;
     await get().runGenerateNodeInPlace(targetClientId, { sizeOverride });
   },
 
   async runGenerateNodeInPlace(clientId, options = {}) {
-    const node = get().graphNodes.find((n) => n.id === clientId);
+    const beforeRepair = get().graphNodes;
+    const repairedNodes = deriveParentServerNodeIds(beforeRepair, get().graphEdges);
+    if (repairedNodes.some((n, i) => n.data.parentServerNodeId !== beforeRepair[i]?.data.parentServerNodeId)) {
+      set({ graphNodes: repairedNodes });
+    }
+    const node = repairedNodes.find((n) => n.id === clientId);
     if (!node) return null;
     const { prompt, parentServerNodeId } = node.data;
     if (!prompt.trim()) {
@@ -1536,16 +1584,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       return null;
     }
     const nodeRefs = node.data.referenceImages ?? [];
-    if (parentServerNodeId && nodeRefs.length > 0) {
-      get().showToast(t("node.nodeRefsUnsupportedForEdit"), true);
-      return null;
-    }
     const s = get();
     const size = options.sizeOverride ?? s.getResolvedSize();
     const effectiveParentServerNodeId =
       options.parentServerNodeIdOverride !== undefined
         ? options.parentServerNodeIdOverride
         : parentServerNodeId;
+    const incoming = get().graphEdges.find((edge) => edge.target === clientId);
+    if (incoming && !effectiveParentServerNodeId) {
+      get().showToast(t("node.parentImageRequired"), true);
+      return null;
+    }
 
     // Capture request session so a later session switch does not corrupt graph B.
     const requestSessionId = s.activeSessionId;
@@ -1602,7 +1651,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         requestId: flightId,
         sessionId: requestSessionId,
         clientNodeId: clientId,
-        ...(nodeRefs.length && !effectiveParentServerNodeId
+        contextMode: "parent-plus-refs",
+        searchMode: "off",
+        ...(nodeRefs.length
           ? { references: nodeRefs.map(stripDataUrlPrefix) }
           : {}),
       }, {
@@ -1647,7 +1698,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           graphNodes: get().graphNodes.map((n) => {
             if (n.id !== clientId) return n;
             const nextData = { ...n.data };
-            delete nextData.referenceImages;
             delete nextData.partialImageUrl;
             return {
               ...n,
@@ -1794,23 +1844,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     const doomed = get().graphNodes.find((n) => n.id === clientId);
     const reqId = doomed?.data?.pendingRequestId;
     if (reqId) void cancelInflight(reqId);
+    clearStoredNodeRefs(get().activeSessionId, clientId);
+    const graphNodes = get().graphNodes.filter((n) => n.id !== clientId);
+    const graphEdges = get().graphEdges.filter((e) => e.source !== clientId && e.target !== clientId);
     set({
-      graphNodes: get().graphNodes.filter((n) => n.id !== clientId),
-      graphEdges: get().graphEdges.filter((e) => e.source !== clientId && e.target !== clientId),
+      graphNodes: deriveParentServerNodeIds(graphNodes, graphEdges),
+      graphEdges,
     });
     get().scheduleGraphSave();
   },
 
   deleteNodes: (clientIds) => {
     const set_ = new Set(clientIds);
+    for (const clientId of set_) clearStoredNodeRefs(get().activeSessionId, clientId);
     for (const n of get().graphNodes) {
       if (set_.has(n.id) && n.data?.pendingRequestId) {
         void cancelInflight(n.data.pendingRequestId);
       }
     }
+    const graphNodes = get().graphNodes.filter((n) => !set_.has(n.id));
+    const graphEdges = get().graphEdges.filter((e) => !set_.has(e.source) && !set_.has(e.target));
     set({
-      graphNodes: get().graphNodes.filter((n) => !set_.has(n.id)),
-      graphEdges: get().graphEdges.filter((e) => !set_.has(e.source) && !set_.has(e.target)),
+      graphNodes: deriveParentServerNodeIds(graphNodes, graphEdges),
+      graphEdges,
     });
     get().scheduleGraphSave();
   },
@@ -1853,18 +1909,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       (e) => e.source === sourceClientId && e.target === targetClientId,
     );
     if (existing) return;
+    if (wouldCreateMultipleIncomingEdge(get().graphEdges, sourceClientId, targetClientId)) {
+      get().showToast(t("edge.parentConflict"), true);
+      return;
+    }
     const source = get().graphNodes.find((n) => n.id === sourceClientId);
     if (!source) return;
+    const graphEdges = [
+      ...get().graphEdges,
+      { id: `${sourceClientId}->${targetClientId}`, source: sourceClientId, target: targetClientId },
+    ];
     set({
-      graphNodes: get().graphNodes.map((n) =>
-        n.id === targetClientId
-          ? { ...n, data: { ...n.data, parentServerNodeId: source.data.serverNodeId } }
-          : n,
-      ),
-      graphEdges: [
-        ...get().graphEdges,
-        { id: `${sourceClientId}->${targetClientId}`, source: sourceClientId, target: targetClientId },
-      ],
+      graphNodes: deriveParentServerNodeIds(get().graphNodes, graphEdges),
+      graphEdges,
     });
     get().scheduleGraphSave();
   },
@@ -2040,6 +2097,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     if (pending.continuation.kind === "classic") {
       await get().runGenerate(adjustedSize);
+      return;
+    }
+    if (pending.continuation.kind === "node-in-place") {
+      await get().runGenerateNodeInPlace(pending.continuation.clientId, {
+        sizeOverride: adjustedSize,
+      });
+      return;
+    }
+    if (pending.continuation.kind === "node-variation") {
+      await get().generateNodeVariation(pending.continuation.clientId, adjustedSize);
       return;
     }
     await get().runGenerateNode(pending.continuation.clientId, adjustedSize);
@@ -2243,6 +2310,7 @@ async function doSave(
       tabId: getGraphTabId(),
     });
     if (get().activeSessionId !== id) return "skipped";
+    pruneNodeRefs(id, get().graphNodes.map((n) => n.id));
     set({ activeSessionGraphVersion: res.graphVersion });
     return "saved";
   } catch (err) {

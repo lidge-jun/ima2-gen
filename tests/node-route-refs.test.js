@@ -32,7 +32,7 @@ describe("Node route reference handling", () => {
     });
   });
 
-  it("rejects child node requests with extra references", async () => {
+  it("allows child node requests to pass reference validation before parent loading", async () => {
     const res = await fetch(`${baseUrl}/api/node/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,12 +45,13 @@ describe("Node route reference handling", () => {
     });
 
     const body = await res.json();
-    assert.strictEqual(res.status, 400);
-    assert.strictEqual(body.error.code, "NODE_REFS_UNSUPPORTED_FOR_EDIT");
+    assert.strictEqual(res.status, 404);
+    assert.notStrictEqual(body.error.code, "NODE_REFS_UNSUPPORTED_FOR_EDIT");
+    assert.strictEqual(body.error.code, "NODE_NOT_FOUND");
     assert.strictEqual(body.parentNodeId, "parent_1");
   });
 
-  it("keeps malformed reference validation ahead of edit guard", async () => {
+  it("keeps malformed reference validation ahead of parent loading", async () => {
     const res = await fetch(`${baseUrl}/api/node/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

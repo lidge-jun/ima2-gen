@@ -33,12 +33,13 @@ function writeSse(res, event, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function writeNodeError(res, status, code, message, parentNodeId) {
+function writeNodeError(res, status, code, message, parentNodeId, details = {}) {
   if (res.headersSent) {
     writeSse(res, "error", {
       error: { code, message },
       parentNodeId,
       status,
+      ...details,
     });
     res.end();
     return;
@@ -46,6 +47,7 @@ function writeNodeError(res, status, code, message, parentNodeId) {
   res.status(status).json({
     error: { code, message },
     parentNodeId,
+    ...details,
   });
 }
 
@@ -82,6 +84,8 @@ export function registerNodeRoutes(app, ctx) {
         references = [],
         externalSrc = null,
         mode: promptMode = "auto",
+        contextMode: rawContextMode = "parent-plus-refs",
+        searchMode: rawSearchMode = "off",
         model: rawModel,
       } = body;
       const { provider = "oauth" } = body;
@@ -98,6 +102,19 @@ export function registerNodeRoutes(app, ctx) {
       }
       const imageModel = modelCheck.model;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
+      const contextMode = ["parent-plus-refs", "parent-only", "ancestry"].includes(rawContextMode)
+        ? rawContextMode
+        : "parent-plus-refs";
+      const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "off";
+      if (contextMode === "ancestry") {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "CONTEXT_MODE_UNSUPPORTED";
+        return res.status(400).json({
+          error: { code: "CONTEXT_MODE_UNSUPPORTED", message: "Ancestry context is not supported yet." },
+          parentNodeId,
+        });
+      }
 
       if (provider === "api") {
         finishStatus = "error";
@@ -125,18 +142,6 @@ export function registerNodeRoutes(app, ctx) {
         return res.status(400).json({
           error: { code: refCheck.code, message: refCheck.error },
           code: refCheck.code,
-          parentNodeId,
-        });
-      }
-      if ((parentNodeId || externalSrc) && refCheck.refs.length > 0) {
-        finishStatus = "error";
-        finishHttpStatus = 400;
-        finishErrorCode = "NODE_REFS_UNSUPPORTED_FOR_EDIT";
-        return res.status(400).json({
-          error: {
-            code: "NODE_REFS_UNSUPPORTED_FOR_EDIT",
-            message: "Extra references are only supported for root node generation.",
-          },
           parentNodeId,
         });
       }
@@ -173,9 +178,14 @@ export function registerNodeRoutes(app, ctx) {
       } else if (typeof externalSrc === "string" && externalSrc.length > 0) {
         parentB64 = await loadAssetB64(ctx.rootDir, externalSrc, ctx.config.storage.generatedDir);
       }
+      const operation = parentB64 ? "edit" : "generate";
+      const refsForRequest = contextMode === "parent-only" ? [] : refCheck.refs;
+      const webSearchEnabled = !parentB64 || searchMode === "on";
+      const parentImagePresent = !!parentB64;
+      const inputImageCount = (parentImagePresent ? 1 : 0) + refsForRequest.length;
       logEvent("node", "request", {
         requestId,
-        operation: parentB64 ? "edit" : "generate",
+        operation,
         sessionId,
         parentNodeId,
         clientNodeId,
@@ -183,7 +193,12 @@ export function registerNodeRoutes(app, ctx) {
         model: imageModel,
         size,
         moderation,
-        refs: refCheck.refs.length,
+        refs: refsForRequest.length,
+        inputImageCount,
+        parentImagePresent,
+        contextMode,
+        searchMode,
+        webSearchEnabled,
         promptChars: prompt.length,
         promptMode: normalizedPromptMode,
         styleSheetApplied: !!styleSheetApplied,
@@ -203,14 +218,32 @@ export function registerNodeRoutes(app, ctx) {
       let lastErr;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
+          logEvent("node", "attempt", {
+            requestId,
+            attempt,
+            operation,
+            sessionId,
+            parentNodeId,
+            clientNodeId,
+            model: imageModel,
+            moderation,
+            quality,
+            size,
+            refs: refsForRequest.length,
+            inputImageCount,
+            parentImagePresent,
+            contextMode,
+            searchMode,
+            webSearchEnabled,
+          });
           const r = parentB64
-            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel })
+            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel, references: refsForRequest, searchMode: searchMode === "on" ? "on" : "off" })
             : await generateViaOAuth(
                 effectivePrompt,
                 quality,
                 size,
                 moderation,
-                refCheck.refs,
+                refsForRequest,
                 requestId,
                 normalizedPromptMode,
                 ctx,
@@ -239,7 +272,16 @@ export function registerNodeRoutes(app, ctx) {
           lastErr = e;
         }
         if (attempt < MAX_RETRIES) {
-          logEvent("node", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
+          logEvent("node", "retry", {
+            requestId,
+            attempt: attempt + 1,
+            operation,
+            parentNodeId,
+            clientNodeId,
+            errorCode: lastErr?.code,
+            errorEventType: lastErr?.eventType,
+            errorEventCount: lastErr?.eventCount,
+          });
         }
       }
 
@@ -247,12 +289,28 @@ export function registerNodeRoutes(app, ctx) {
         finishStatus = "error";
         finishHttpStatus = 422;
         finishErrorCode = "SAFETY_REFUSAL";
+        logEvent("node", "final_error", {
+          requestId,
+          operation,
+          finalCode: "SAFETY_REFUSAL",
+          upstreamCode: lastErr?.code,
+          errorEventType: lastErr?.eventType,
+          errorEventCount: lastErr?.eventCount,
+          attempts: MAX_RETRIES + 1,
+          outerHttpAlreadyCommitted: res.headersSent,
+          sseErrorSent: streamResponse,
+        });
         return writeNodeError(
           res,
           422,
           "SAFETY_REFUSAL",
           lastErr?.message || "Empty response after retry",
           parentNodeId,
+          {
+            upstreamCode: lastErr?.code || null,
+            errorEventType: lastErr?.eventType || null,
+            errorEventCount: lastErr?.eventCount ?? null,
+          },
         );
       }
 
@@ -276,10 +334,12 @@ export function registerNodeRoutes(app, ctx) {
         elapsed,
         usage: usage || null,
         webSearchCalls,
+        contextMode,
+        searchMode,
         provider: "oauth",
         kind: parentB64 ? "edit" : "generate",
         requestId,
-        refsCount: refCheck.refs.length,
+        refsCount: refsForRequest.length,
         quality,
         size,
         format,
@@ -316,7 +376,9 @@ export function registerNodeRoutes(app, ctx) {
         provider: "oauth",
         model: imageModel,
         moderation,
-        refsCount: refCheck.refs.length,
+        refsCount: refsForRequest.length,
+        contextMode,
+        searchMode,
         warnings: qualityWarnings,
         revisedPrompt,
         promptMode: normalizedPromptMode,
