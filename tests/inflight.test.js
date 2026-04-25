@@ -1,16 +1,30 @@
-import { test, beforeEach } from "node:test";
+import { test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import {
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const TEST_DIR = mkdtempSync(join(tmpdir(), "ima2-inflight-test-"));
+process.env.IMA2_CONFIG_DIR = TEST_DIR;
+process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
+
+const {
   _resetForTests,
   finishJob,
   listJobs,
   listTerminalJobs,
   setJobPhase,
   startJob,
-} from "../lib/inflight.js";
+} = await import("../lib/inflight.js");
+const { closeDb } = await import("../lib/db.js");
 
 beforeEach(() => {
   _resetForTests();
+});
+
+after(() => {
+  closeDb();
+  rmSync(TEST_DIR, { recursive: true, force: true });
 });
 
 test("finishJob moves active jobs into terminal history without polluting active list", () => {
