@@ -22,26 +22,31 @@ function npmCommand() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
+function npmPackCommandArgs(packDestination) {
+  const args = ["pack", "--dry-run", "--json", "--pack-destination", packDestination];
+  if (process.env.npm_execpath) {
+    return { command: process.execPath, args: [process.env.npm_execpath, ...args] };
+  }
+  return { command: npmCommand(), args };
+}
+
 function readPackManifest() {
   const packDestination = mkdtempSync(join(tmpdir(), "ima2-pack-smoke-"));
   try {
-    const result = spawnSync(
-      npmCommand(),
-      ["pack", "--dry-run", "--json", "--pack-destination", packDestination],
-      {
-        cwd: process.cwd(),
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          npm_config_loglevel: "silent",
-        },
+    const { command, args } = npmPackCommandArgs(packDestination);
+    const result = spawnSync(command, args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        npm_config_loglevel: "silent",
       },
-    );
+    });
 
     assert.strictEqual(
       result.status,
       0,
-      `npm pack --dry-run failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+      `npm pack --dry-run failed\nerror:\n${result.error?.message || ""}\nstdout:\n${result.stdout || ""}\nstderr:\n${result.stderr || ""}`,
     );
 
     try {
