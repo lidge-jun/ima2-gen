@@ -164,6 +164,9 @@ Use OAuth for generation. API-key image generation is intentionally disabled in 
 **A large reference image fails**
 The app compresses large JPEG/PNG references before upload. If a file still fails, convert it to JPEG or PNG at a lower resolution and try again. HEIC/HEIF files are not supported by the browser path.
 
+**Old gallery images are missing after updating**
+Recent versions moved generated images from the installed package folder to `~/.ima2/generated`. Run `ima2 doctor` and see [Recover old images](docs/RECOVER_OLD_IMAGES.md).
+
 **`gpt-5.5` fails but other models work**
 Update Codex CLI first, then retry. If it still fails, your account or backend route may not expose the same image capability or quota for `gpt-5.5` yet; use `gpt-5.4` as the stable fallback.
 

@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import {
   getLegacyGeneratedCandidates,
+  inspectGeneratedStorage,
   migrateGeneratedStorage,
 } from "../lib/storageMigration.js";
 
@@ -38,7 +39,7 @@ test("legacy package generated assets are copied into the user data dir", async 
     await writeFile(join(legacyDir, "old.png.json"), "{}");
 
     const ctx = makeCtx(rootDir, targetDir);
-    const candidates = getLegacyGeneratedCandidates(ctx);
+    const candidates = await getLegacyGeneratedCandidates(ctx);
     assert.ok(candidates.includes(resolve(legacyDir)));
 
     const result = await migrateGeneratedStorage(ctx, { legacyDirs: [legacyDir] });
@@ -132,7 +133,7 @@ test("candidate discovery includes npm prefix, appdata, npm-global, and version 
     const npmPrefix = join(rootDir, "prefix");
     const appData = join(rootDir, "AppData", "Roaming");
     const home = join(rootDir, "home");
-    const candidates = getLegacyGeneratedCandidates(ctx, {
+    const candidates = await getLegacyGeneratedCandidates(ctx, {
       npm_config_prefix: npmPrefix,
       APPDATA: appData,
       IMA2_TEST_HOME: home,
@@ -152,12 +153,70 @@ test("candidate discovery includes npm prefix, appdata, npm-global, and version 
 test("candidate discovery covers Homebrew global installs when node resolves to Cellar", async () => {
   await withTempDirs(async ({ rootDir, targetDir }) => {
     const ctx = makeCtx(rootDir, targetDir);
-    const candidates = getLegacyGeneratedCandidates(ctx, {
+    const candidates = await getLegacyGeneratedCandidates(ctx, {
       IMA2_TEST_EXEC_PATH: "/opt/homebrew/Cellar/node/25.2.1/bin/node",
       IMA2_TEST_ARGV1: "/opt/homebrew/bin/ima2",
     });
 
     assert.ok(candidates.includes(resolve("/opt/homebrew/lib/node_modules/ima2-gen/generated")));
     assert.ok(candidates.includes(resolve("/opt/homebrew/node_modules/ima2-gen/generated")));
+  });
+});
+
+test("candidate discovery covers bun, yarn, pnpm, npx, and old node manager installs", async () => {
+  await withTempDirs(async ({ rootDir, targetDir }) => {
+    const ctx = makeCtx(rootDir, targetDir);
+    const home = join(rootDir, "home");
+    const localAppData = join(rootDir, "LocalAppData");
+    const npmCache = join(rootDir, ".npm");
+    const expected = [
+      join(home, ".bun", "install", "global", "node_modules", "ima2-gen", "generated"),
+      join(home, ".config", "yarn", "global", "node_modules", "ima2-gen", "generated"),
+      join(home, "Library", "pnpm", "global", "5", "node_modules", "ima2-gen", "generated"),
+      join(home, ".local", "share", "pnpm", "global", "5", "node_modules", "ima2-gen", "generated"),
+      join(npmCache, "_npx", "abc123", "node_modules", "ima2-gen", "generated"),
+      join(home, ".nvm", "versions", "node", "v22.0.0", "lib", "node_modules", "ima2-gen", "generated"),
+      join(home, ".fnm", "node-versions", "v22.0.0", "installation", "lib", "node_modules", "ima2-gen", "generated"),
+      join(home, ".asdf", "installs", "nodejs", "22.0.0", "lib", "node_modules", "ima2-gen", "generated"),
+      join(home, ".local", "share", "mise", "installs", "node", "22.0.0", "lib", "node_modules", "ima2-gen", "generated"),
+      join(localAppData, "Volta", "tools", "image", "packages", "ima2-gen", "lib", "node_modules", "ima2-gen", "generated"),
+    ];
+    for (const dir of expected) await mkdir(dir, { recursive: true });
+
+    const candidates = await getLegacyGeneratedCandidates(ctx, {
+      IMA2_TEST_HOME: home,
+      LOCALAPPDATA: localAppData,
+      npm_config_cache: npmCache,
+    });
+
+    for (const dir of expected) {
+      assert.ok(candidates.includes(resolve(dir)), dir);
+    }
+  });
+});
+
+test("inspectGeneratedStorage summarizes recoverable and not_found states", async () => {
+  await withTempDirs(async ({ rootDir, targetDir }) => {
+    const home = join(rootDir, "home");
+    const legacyDir = join(home, ".bun", "install", "global", "node_modules", "ima2-gen", "generated");
+    await mkdir(legacyDir, { recursive: true });
+    await writeFile(join(legacyDir, "old.png"), "old");
+
+    const recoverable = await inspectGeneratedStorage(makeCtx(rootDir, targetDir), {
+      env: { IMA2_TEST_HOME: home },
+      legacyDirs: [legacyDir],
+    });
+
+    assert.equal(recoverable.state, "recoverable");
+    assert.ok(recoverable.legacySourcesFound >= 1);
+    assert.ok(recoverable.legacyFilesFound >= 1);
+
+    await rm(legacyDir, { recursive: true, force: true });
+    const notFound = await inspectGeneratedStorage(makeCtx(rootDir, targetDir), {
+      env: { IMA2_TEST_HOME: home },
+      legacyDirs: [legacyDir],
+    });
+    assert.equal(notFound.state, "not_found");
+    assert.equal(notFound.messageKind, "apology");
   });
 });

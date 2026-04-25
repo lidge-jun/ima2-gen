@@ -72,6 +72,8 @@ Visible metadata should carry the selected model too. Current result metadata, h
 | `getHistoryGrouped` | `GET /api/history?groupBy=session` | Session-grouped history |
 | `deleteHistoryItem` | `DELETE /api/history/:filename` | Asset delete |
 | `restoreHistoryItem` | `POST /api/history/:filename/restore` | Undo/restore |
+| `getStorageStatus` | `GET /api/storage/status` | Gallery storage recovery notice |
+| `openGeneratedDir` | `POST /api/storage/open-generated-dir` | Gallery "Open folder" action |
 | `getInflight` | `GET /api/inflight` | Pending reconciliation |
 | `postNodeGenerate` | `POST /api/node/generate` | Node-mode generation |
 | `postNodeGenerateStream` | `POST /api/node/generate` with `Accept: text/event-stream` | Node-mode partial preview streaming |

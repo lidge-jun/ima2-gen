@@ -157,6 +157,9 @@ environment variables > ~/.ima2/config.json > built-in defaults
 **大参考图上传失败**
 JPEG/PNG 会在上传前自动压缩。如果仍然失败，请转成更低分辨率的 JPEG/PNG。HEIC/HEIF 不支持浏览器路径。
 
+**更新后看不到旧图库图片**
+新版本把生成图片目录从已安装的 package 文件夹移到了 `~/.ima2/generated`。请运行 `ima2 doctor`，并查看[旧图片恢复指南](RECOVER_OLD_IMAGES.md)。
+
 **只有 `gpt-5.5` 失败**
 请先更新 Codex CLI 后再试。如果仍然失败，说明当前账号或后端路径下 `gpt-5.5` 的图像 capability 或额度策略可能还不同；稳定替代方案是使用 `gpt-5.4`。
 

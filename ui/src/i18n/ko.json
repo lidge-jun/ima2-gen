@@ -30,6 +30,7 @@
     "promptCopied": "프롬프트를 복사했습니다",
     "imageCopied": "클립보드에 복사했습니다",
     "copyFailed": "복사에 실패했습니다",
+    "openGeneratedDirFailed": "이미지 폴더를 열지 못했습니다. ima2 doctor로 저장 경로를 확인해 주세요.",
     "noPromptToFork": "가져올 프롬프트가 없습니다",
     "forkStarted": "이 이미지의 프롬프트를 가져왔습니다. 수정 후 다시 생성하세요"
   },
@@ -157,6 +158,12 @@
     "emptySessions": "아직 저장된 세션이 없습니다.",
     "emptyAll": "아직 생성된 이미지가 없습니다. 먼저 하나 만들어보세요.",
     "noResults": "검색 결과가 없습니다.",
+    "storageNoticeTitle": "저장 위치 안내",
+    "storageNoticeRecoverable": "놀라게 해드려 죄송합니다. 최근 버전에서 갤러리 저장 위치가 설치 폴더에서 사용자 데이터 폴더로 바뀌었습니다. 예전 이미지가 이전 generated 폴더에 남아 있을 수 있어요. ima2 doctor를 실행하거나 복구 안내를 확인해 주세요.",
+    "storageNoticeNotFound": "놀라게 해드려 죄송합니다. 현재 이 컴퓨터에서 이전 generated 폴더를 찾지 못했습니다. 업데이트 중 예전 전역 설치 폴더가 교체된 경우 자동 복구가 어려울 수 있습니다. ima2 doctor와 복구 안내의 수동 검색 방법을 확인해 주세요.",
+    "storageNoticeUnknown": "저장 위치 상태를 확인하지 못했습니다. 업데이트 후 갤러리가 비어 보인다면 ima2 doctor로 이미지 폴더를 확인해 주세요.",
+    "openGeneratedDir": "폴더 열기",
+    "openGeneratedDirTitle": "생성 이미지 폴더 열기",
     "deleted": "삭제됨: {filename}",
     "undo": "되돌리기",
     "secondsSuffix": "{n}초"

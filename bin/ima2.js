@@ -7,6 +7,7 @@ import { spawn, execSync } from "child_process";
 import { networkInterfaces, homedir } from "os";
 import { openUrl, resolveBin } from "./lib/platform.js";
 import { maybePromptGithubStar } from "./lib/star-prompt.js";
+import { buildStorageDoctorLines } from "./lib/storage-doctor.js";
 import { detectCodexAuth } from "../lib/codexDetect.js";
 import { config as runtimeConfig } from "../config.js";
 
@@ -198,11 +199,11 @@ async function doctor() {
   // Node version
   const nodeVersion = process.version;
   const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
-  if (nodeMajor >= 18) {
-    console.log(`  ✓ Node.js ${nodeVersion} (>= 18)`);
+  if (nodeMajor >= 20) {
+    console.log(`  ✓ Node.js ${nodeVersion} (>= 20)`);
     ok++;
   } else {
-    console.log(`  ✗ Node.js ${nodeVersion} (requires >= 18)`);
+    console.log(`  ✗ Node.js ${nodeVersion} (requires >= 20)`);
     fail++;
   }
 
@@ -244,6 +245,13 @@ async function doctor() {
   // Port availability (simple check)
   const port = runtimeConfig.server.port;
   console.log(`  ℹ Default port: ${port}`);
+
+  const storageLines = await buildStorageDoctorLines({
+    rootDir: ROOT,
+    config: runtimeConfig,
+  });
+  console.log("");
+  for (const line of storageLines) console.log(line);
 
   console.log(`\n  ${ok} passed, ${fail} failed\n`);
   process.exit(fail > 0 ? 1 : 0);
@@ -322,7 +330,7 @@ switch (command) {
     showStatus();
     break;
   case "doctor":
-    doctor();
+    await doctor();
     break;
   case "open":
     openBrowser();

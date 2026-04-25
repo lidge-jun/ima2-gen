@@ -150,6 +150,24 @@ export type HistoryGroupedPage = {
   nextCursor: HistoryCursor | null;
 };
 
+export type StorageStatusState = "ok" | "recoverable" | "not_found" | "unknown";
+
+export type StorageStatus = {
+  generatedDirLabel: string;
+  generatedCount: number;
+  legacyCandidatesScanned: number;
+  legacySourcesFound: number;
+  legacyFilesFound: number;
+  state: StorageStatusState;
+  messageKind: StorageStatusState | "apology";
+  recoveryDocsPath: string;
+  doctorCommand: string;
+  overrides: {
+    generatedDir: boolean;
+    configDir: boolean;
+  };
+};
+
 export function getHistory(
   params: { limit?: number; since?: number; cursor?: HistoryCursor; sessionId?: string } = {},
 ): Promise<HistoryPage> {
@@ -175,6 +193,17 @@ export function getHistoryGrouped(
     qs.set("beforeFilename", params.cursor.beforeFilename);
   }
   return jsonFetch(`/api/history?${qs.toString()}`);
+}
+
+export async function getStorageStatus(): Promise<StorageStatus> {
+  const res = await jsonFetch<{ ok: boolean; data: StorageStatus }>("/api/storage/status");
+  return res.data;
+}
+
+export function openGeneratedDir(): Promise<{ ok: boolean }> {
+  return jsonFetch<{ ok: boolean }>("/api/storage/open-generated-dir", {
+    method: "POST",
+  });
 }
 
 export function deleteHistoryItem(filename: string): Promise<{

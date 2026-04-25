@@ -78,6 +78,8 @@ describe("ima2 CLI", () => {
   it("should run doctor", async () => {
     const { stdout, code } = await runCLI(["doctor"]);
     assert.ok(stdout.includes("Doctor"), "doctor should show header");
+    assert.ok(stdout.includes(">= 20"), "doctor should report package Node requirement");
+    assert.ok(stdout.includes("Storage"), "doctor should show storage section");
     assert.ok(stdout.includes("passed") || stdout.includes("failed"), "doctor should show results");
     // doctor exits 0 if all ok, 1 if failures
     assert.ok(code === 0 || code === 1, "doctor should exit 0 or 1");

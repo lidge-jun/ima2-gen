@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import type { GenerateItem } from "../types";
-import { deleteHistoryItem, restoreHistoryItem, getHistoryGrouped } from "../lib/api";
+import {
+  deleteHistoryItem,
+  restoreHistoryItem,
+  getHistoryGrouped,
+  getStorageStatus,
+  openGeneratedDir,
+  type StorageStatus,
+} from "../lib/api";
 import { useI18n } from "../i18n";
 
 type TrashPending = {
@@ -20,6 +27,7 @@ type SessionGroup = {
 };
 
 type DateBucketKey = "earlier" | "today" | "yesterday" | "thisWeek" | string;
+const STORAGE_NOTICE_DISMISSED_KEY = "ima2.storageNoticeDismissed.0.09.23";
 
 function dateBucket(createdAt: number | undefined): DateBucketKey {
   if (!createdAt) return "earlier";
@@ -46,12 +54,21 @@ export function GalleryModal() {
   const currentImage = useAppStore((s) => s.currentImage);
   const removeFromHistory = useAppStore((s) => s.removeFromHistory);
   const addHistoryItem = useAppStore((s) => s.addHistoryItem);
+  const showToast = useAppStore((s) => s.showToast);
 
   const [query, setQuery] = useState("");
   const [groupBy, setGroupBy] = useState<"date" | "session">("date");
   const [sessionGroups, setSessionGroups] = useState<SessionGroup[]>([]);
   const [loose, setLoose] = useState<GenerateItem[]>([]);
   const [pending, setPending] = useState<TrashPending | null>(null);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
+  const [storageDismissed, setStorageDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_NOTICE_DISMISSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +84,35 @@ export function GalleryModal() {
       setQuery("");
       setPending(null);
     }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await getStorageStatus();
+        if (!cancelled) setStorageStatus(status);
+      } catch {
+        if (!cancelled) {
+          setStorageStatus({
+            generatedDirLabel: "~/.ima2/generated",
+            generatedCount: 0,
+            legacyCandidatesScanned: 0,
+            legacySourcesFound: 0,
+            legacyFilesFound: 0,
+            state: "unknown",
+            messageKind: "unknown",
+            recoveryDocsPath: "docs/RECOVER_OLD_IMAGES.md",
+            doctorCommand: "ima2 doctor",
+            overrides: { generatedDir: false, configDir: false },
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -176,6 +222,23 @@ export function GalleryModal() {
     }
   }
 
+  async function handleOpenGeneratedDir() {
+    try {
+      await openGeneratedDir();
+    } catch {
+      showToast(t("toast.openGeneratedDirFailed"), true);
+    }
+  }
+
+  function dismissStorageNotice() {
+    setStorageDismissed(true);
+    try {
+      localStorage.setItem(STORAGE_NOTICE_DISMISSED_KEY, "1");
+    } catch {
+      // Storage-disabled browsers can still hide it for the current session.
+    }
+  }
+
   if (!open) return null;
 
   const localizeBucket = (key: string): string => {
@@ -227,6 +290,14 @@ export function GalleryModal() {
   const totalVisible = showSessions
     ? sessionGroups.reduce((a, g) => a + g.items.length, 0) + loose.length
     : filtered.length;
+  const showStorageNotice =
+    storageStatus != null &&
+    storageStatus.state !== "ok" &&
+    !storageDismissed;
+  const storageNoticeKey =
+    storageStatus?.state === "recoverable" ? "gallery.storageNoticeRecoverable"
+    : storageStatus?.state === "not_found" ? "gallery.storageNoticeNotFound"
+    : "gallery.storageNoticeUnknown";
 
   return (
     <div className="gallery-backdrop" onClick={close} role="presentation">
@@ -283,6 +354,38 @@ export function GalleryModal() {
           >
             ×
           </button>
+        </div>
+
+        <div className={`gallery__storage-bar${showStorageNotice ? " gallery__storage-bar--notice" : ""}`}>
+          {showStorageNotice ? (
+            <div className="gallery__storage-copy">
+              <div className="gallery__storage-title">{t("gallery.storageNoticeTitle")}</div>
+              <div className="gallery__storage-text">{t(storageNoticeKey)}</div>
+            </div>
+          ) : (
+            <div className="gallery__storage-copy gallery__storage-copy--quiet">
+              {storageStatus?.generatedDirLabel ?? "~/.ima2/generated"}
+            </div>
+          )}
+          <div className="gallery__storage-actions">
+            <button
+              type="button"
+              className="gallery__storage-button"
+              onClick={handleOpenGeneratedDir}
+              title={t("gallery.openGeneratedDirTitle")}
+            >
+              {t("gallery.openGeneratedDir")}
+            </button>
+            {showStorageNotice && (
+              <button
+                type="button"
+                className="gallery__storage-button gallery__storage-button--ghost"
+                onClick={dismissStorageNotice}
+              >
+                {t("common.close")}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="gallery__scroll">

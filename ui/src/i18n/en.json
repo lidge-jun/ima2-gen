@@ -30,6 +30,7 @@
     "promptCopied": "Prompt copied",
     "imageCopied": "Copied to clipboard",
     "copyFailed": "Copy failed",
+    "openGeneratedDirFailed": "Could not open the image folder. Run ima2 doctor to check the storage path.",
     "noPromptToFork": "No prompt to fork",
     "forkStarted": "Prompt imported. Edit and generate again."
   },
@@ -157,6 +158,12 @@
     "emptySessions": "No sessions saved yet.",
     "emptyAll": "No images yet. Create one first.",
     "noResults": "No results.",
+    "storageNoticeTitle": "Storage notice",
+    "storageNoticeRecoverable": "Sorry for the scare. Recent versions moved the gallery folder from the installed package to your user data folder. Your old images may still be in the previous generated folder. Run ima2 doctor or open the recovery guide.",
+    "storageNoticeNotFound": "Sorry for the scare. We could not find a previous generated folder on this machine. If the old global install folder was replaced during update, automatic recovery may not be possible. Run ima2 doctor and check the recovery guide for manual search steps.",
+    "storageNoticeUnknown": "Storage status could not be checked. If the gallery looks empty after an update, run ima2 doctor to inspect the image folder.",
+    "openGeneratedDir": "Open folder",
+    "openGeneratedDirTitle": "Open generated image folder",
     "deleted": "Deleted: {filename}",
     "undo": "Undo",
     "secondsSuffix": "{n}s"

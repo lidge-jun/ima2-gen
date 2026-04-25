@@ -111,6 +111,19 @@ describe("Server: /api/health + advertisement", () => {
     assert.ok(Number.isFinite(body.startedAt));
   });
 
+  it("GET /api/storage/status returns summarized storage status", async () => {
+    const r = await fetch(`http://localhost:${PORT}/api/storage/status`);
+    assert.strictEqual(r.status, 200);
+    const body = await r.json();
+    assert.strictEqual(body.ok, true);
+    assert.ok(body.data);
+    assert.ok(typeof body.data.generatedDirLabel === "string");
+    assert.ok(Number.isFinite(body.data.generatedCount));
+    assert.ok(Number.isFinite(body.data.legacyCandidatesScanned));
+    assert.ok(["ok", "recoverable", "not_found", "unknown"].includes(body.data.state));
+    assert.strictEqual(body.data.recoveryDocsPath, "docs/RECOVER_OLD_IMAGES.md");
+  });
+
   it("writes ~/.ima2/server.json with pid + port", () => {
     const advertisePath = join(FAKE_HOME, ".ima2", "server.json");
     assert.ok(existsSync(advertisePath), "advertise file should exist");

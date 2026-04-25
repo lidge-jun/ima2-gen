@@ -66,10 +66,12 @@ README may still mention a different Node baseline. The operational baseline is 
 | `~/.ima2/config.json` | Provider config and possible API key location | May contain secrets; never paste values into docs |
 | `~/.ima2/server.json` | Running server port advertisement | Used by CLI discovery |
 | `image_gen/.ima2/config.json` | Legacy config location | New CLI prefers the home config |
-| `~/.ima2/generated/` | Image files and sidecar metadata | Runtime output; survives npm global updates. Startup migration scans legacy package `generated/` folders across macOS/Linux/Windows npm global layouts |
+| `~/.ima2/generated/` | Image files and sidecar metadata | Runtime output; survives npm global updates. Startup migration scans legacy package `generated/` folders across npm, npx, pnpm, Yarn, Bun, nvm/fnm, asdf/mise, Volta, and common macOS/Linux/Windows global layouts |
 | `~/.ima2/generated/.trash/` | Soft-deleted assets | Restore and purge policy target |
 | SQLite DB | Session graph storage | Managed through `lib/db.js` and `lib/sessionStore.js` |
 | `ui/dist/` | Active UI bundle served by server | Build output, not source |
+
+`ima2 doctor` includes a Storage section with the current gallery path, legacy-source counts, and recovery-guide pointer. The browser gallery also calls `/api/storage/status` and can open the current generated folder through `/api/storage/open-generated-dir`; that endpoint accepts no arbitrary path.
 
 ## Environment Variables
 
