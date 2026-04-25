@@ -9,6 +9,7 @@ export function Canvas() {
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const openLightbox = useAppStore((s) => s.openLightbox);
 
   const [promptView, setPromptView] = useState<"enhanced" | "original">("enhanced");
 
@@ -115,6 +116,17 @@ export function Canvas() {
             key={currentImage.filename ?? currentImage.url ?? currentImage.image}
             src={currentImage.url ?? currentImage.image}
             alt="생성 결과"
+            role="button"
+            tabIndex={0}
+            title="클릭하여 전체 보기"
+            onClick={() => openLightbox()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openLightbox();
+              }
+            }}
+            style={{ cursor: "zoom-in" }}
           />
           {visiblePrompt ? (
             <div

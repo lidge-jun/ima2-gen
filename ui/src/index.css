@@ -2785,3 +2785,230 @@ body {
 @media (hover: none) {
   .canvas-empty__example:hover { transform: none; }
 }
+
+/* ── Lightbox / fullscreen image viewer ── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lightboxFade 0.16s ease-out;
+  padding: max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  user-select: none;
+}
+@keyframes lightboxFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox__topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: max(14px, env(safe-area-inset-top)) 18px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.25) 60%,
+    transparent 100%
+  );
+}
+.lightbox__counter {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  pointer-events: auto;
+}
+.lightbox__actions {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.lightbox__btn {
+  background: rgba(20, 20, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 40px;
+  min-height: 36px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.lightbox__btn:hover {
+  background: rgba(40, 40, 40, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.lightbox__btn:focus-visible {
+  outline: 2px solid var(--accent-bright, #fff);
+  outline-offset: 2px;
+}
+.lightbox__btn--close {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 20, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: background 120ms ease, transform 120ms ease;
+  /* Allow taps but ignore the dead zone left/right of the image so
+     swipe-to-navigate still works on touch devices. */
+}
+.lightbox__nav:hover {
+  background: rgba(40, 40, 40, 0.9);
+  transform: translateY(-50%) scale(1.05);
+}
+.lightbox__nav:focus-visible {
+  outline: 2px solid var(--accent-bright, #fff);
+  outline-offset: 2px;
+}
+.lightbox__nav--prev { left: 18px; }
+.lightbox__nav--next { right: 18px; }
+
+.lightbox__stage {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  /* Smooth panning on touch + reasonable inertia. */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.lightbox__img {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  border-radius: 4px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+.lightbox--fit .lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+.lightbox--actual .lightbox__img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
+.lightbox__caption {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: min(720px, calc(100% - 120px));
+  padding: 10px 14px;
+  background: rgba(20, 20, 20, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  z-index: 2;
+  backdrop-filter: blur(6px);
+}
+.lightbox__caption-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Gallery tile expand button — overlay top-left, complements the existing
+   delete (×) button on top-right. */
+.gallery__expand {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 120ms ease, background 120ms ease;
+  z-index: 2;
+}
+.gallery__tile-wrap:hover .gallery__expand,
+.gallery__tile-wrap:focus-within .gallery__expand {
+  opacity: 1;
+}
+.gallery__expand:hover {
+  background: rgba(0, 0, 0, 0.78);
+}
+@media (hover: none) {
+  /* Touch: keep the expand affordance always visible since hover never fires. */
+  .gallery__expand { opacity: 0.85; }
+}
+
+/* Lightbox responsive — narrow screens get larger touch targets and fewer
+   chrome elements so the image dominates. */
+@media (max-width: 800px) {
+  .lightbox__nav {
+    width: 44px;
+    height: 44px;
+  }
+  .lightbox__nav--prev { left: 8px; }
+  .lightbox__nav--next { right: 8px; }
+  .lightbox__caption {
+    max-width: calc(100% - 24px);
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  .lightbox__topbar { padding: max(10px, env(safe-area-inset-top)) 12px 10px; }
+}
+@media (max-width: 480px) {
+  .lightbox__btn { min-height: 40px; padding: 8px 10px; }
+  .lightbox__caption { bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 380px) {
+  /* Z Fold cover screen — hide chrome that crowds the image; nav arrows
+     stay because swipe is the primary gesture. */
+  .lightbox__counter { display: none; }
+  .lightbox__caption { display: none; }
+  .lightbox__nav { width: 40px; height: 40px; }
+}

@@ -40,6 +40,7 @@ export function GalleryModal() {
   const currentImage = useAppStore((s) => s.currentImage);
   const removeFromHistory = useAppStore((s) => s.removeFromHistory);
   const addHistoryItem = useAppStore((s) => s.addHistoryItem);
+  const openLightbox = useAppStore((s) => s.openLightbox);
 
   const [query, setQuery] = useState("");
   const [groupBy, setGroupBy] = useState<"date" | "session">("date");
@@ -202,7 +203,14 @@ export function GalleryModal() {
             selectHistory(item);
             close();
           }}
-          title={item.prompt ?? ""}
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            selectHistory(item);
+            close();
+            openLightbox(item.filename ?? null);
+          }}
+          title={`${item.prompt ?? ""}${item.prompt ? "\n" : ""}더블클릭: 전체 보기`}
         >
           <img src={item.thumb || item.image} alt={item.prompt ?? "생성 이미지"} loading="lazy" decoding="async" />
           {item.prompt && (
@@ -210,6 +218,26 @@ export function GalleryModal() {
               <span className="gallery__caption-text">{item.prompt}</span>
             </div>
           )}
+        </button>
+        <button
+          type="button"
+          className="gallery__expand"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            selectHistory(item);
+            close();
+            openLightbox(item.filename ?? null);
+          }}
+          title="전체 보기"
+          aria-label="전체 보기"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
         </button>
         {item.filename && (
           <button

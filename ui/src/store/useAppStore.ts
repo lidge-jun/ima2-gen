@@ -419,6 +419,11 @@ type AppState = {
   galleryOpen: boolean;
   openGallery: () => void;
   closeGallery: () => void;
+  lightboxOpen: boolean;
+  openLightbox: (filename?: string | null) => void;
+  closeLightbox: () => void;
+  lightboxNext: () => void;
+  lightboxPrev: () => void;
 
   uiMode: UIMode;
   setUIMode: (m: UIMode) => void;
@@ -941,6 +946,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   galleryOpen: false,
   openGallery: () => set({ galleryOpen: true }),
   closeGallery: () => set({ galleryOpen: false }),
+  lightboxOpen: false,
+  openLightbox: (filename) => {
+    if (filename) {
+      const target = get().history.find((h) => h.filename === filename);
+      if (target) get().selectHistory(target);
+    }
+    if (!get().currentImage) return;
+    set({ lightboxOpen: true });
+  },
+  closeLightbox: () => set({ lightboxOpen: false }),
+  lightboxNext: () => {
+    const cur = get().currentImage;
+    const hist = get().history;
+    if (!cur || hist.length === 0) return;
+    const idx = hist.findIndex(
+      (h) => (cur.filename && h.filename === cur.filename) || h.image === cur.image,
+    );
+    const nextIdx = idx < 0 ? 0 : Math.min(idx + 1, hist.length - 1);
+    if (nextIdx === idx) return;
+    get().selectHistory(hist[nextIdx]);
+  },
+  lightboxPrev: () => {
+    const cur = get().currentImage;
+    const hist = get().history;
+    if (!cur || hist.length === 0) return;
+    const idx = hist.findIndex(
+      (h) => (cur.filename && h.filename === cur.filename) || h.image === cur.image,
+    );
+    const prevIdx = idx < 0 ? 0 : Math.max(idx - 1, 0);
+    if (prevIdx === idx) return;
+    get().selectHistory(hist[prevIdx]);
+  },
 
   uiMode: loadUIMode(),
   setUIMode: (m) => {
