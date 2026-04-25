@@ -146,6 +146,8 @@ The endpoint list moved to [docs/API.md](docs/API.md) so this README can stay fo
 Useful references:
 
 - [API Reference](docs/API.md)
+- [FAQ](docs/FAQ.md)
+- [Recover old images](docs/RECOVER_OLD_IMAGES.md)
 - [Korean README](docs/README.ko.md)
 - [Japanese README](docs/README.ja.md)
 - [Chinese README](docs/README.zh-CN.md)
@@ -172,6 +174,8 @@ Update Codex CLI first, then retry. If it still fails, your account or backend r
 
 **The port is unexpectedly `3457`**
 Your shell may have inherited `PORT=3457` from another local tool. Run `unset PORT` or start with `IMA2_PORT=3333 ima2 serve`.
+
+For more beginner-friendly answers, see the [FAQ](docs/FAQ.md).
 
 ## Development
 

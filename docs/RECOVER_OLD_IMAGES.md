@@ -2,6 +2,8 @@
 
 `ima2-gen` moved generated images to a safer user-data folder in `v1.0.8`.
 
+For broader install and troubleshooting questions, see the [FAQ](FAQ.md) or [Korean FAQ](FAQ.ko.md).
+
 ## What changed
 
 Versions up to `v1.0.7` stored generated images inside the installed package:

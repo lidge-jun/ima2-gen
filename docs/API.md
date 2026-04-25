@@ -25,6 +25,47 @@ Image generation is OAuth-only in the current build.
 | `GET` | `/api/oauth/status` | OAuth proxy status and visible models |
 | `GET` | `/api/billing` | Billing/status probe, including API key source when configured |
 
+## Storage
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/storage/status` | Summarized gallery storage status for support UI |
+| `POST` | `/api/storage/open-generated-dir` | Ask the server process to open the generated image folder |
+
+`GET /api/storage/status` returns a support-safe summary, not raw legacy path arrays by default.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "generatedDirLabel": "~/.ima2/generated",
+    "generatedCount": 0,
+    "legacyCandidatesScanned": 18,
+    "legacySourcesFound": 0,
+    "legacyFilesFound": 0,
+    "state": "not_found",
+    "messageKind": "apology",
+    "recoveryDocsPath": "docs/RECOVER_OLD_IMAGES.md",
+    "doctorCommand": "ima2 doctor",
+    "overrides": {
+      "generatedDir": false,
+      "configDir": false
+    }
+  }
+}
+```
+
+Storage `state` values:
+
+| State | Meaning |
+|---|---|
+| `ok` | Current gallery has files or no recovery notice is needed |
+| `recoverable` | Legacy folders/files are still present and may be recoverable |
+| `not_found` | Current gallery is empty and no legacy folder was found |
+| `unknown` | Storage status inspection failed or was incomplete |
+
+`POST /api/storage/open-generated-dir` opens the generated image folder on the machine running `ima2 serve`. If the browser is connected to a remote server, VM, container, WSL instance, or another computer on the network, this action targets that server machine, not necessarily the browser device.
+
 ## In-Flight Jobs
 
 | Method | Path | Notes |
@@ -173,6 +214,7 @@ Style-sheet extraction can require an API key/openai client. This does not reope
 | `AUTH_API_KEY_INVALID` | API key is invalid, revoked, out of quota, or wrong org |
 | `NETWORK_FAILED` | Network, proxy, VPN, or firewall failure |
 | `OAUTH_UNAVAILABLE` | Local OAuth proxy is not available |
+| `OPEN_GENERATED_DIR_FAILED` | The server could not open the generated image folder |
 | `GRAPH_VERSION_REQUIRED` | Missing graph `If-Match` header |
 | `GRAPH_VERSION_CONFLICT` | Stale graph version |
 | `GRAPH_TOO_LARGE` | Graph exceeds node/edge limits |
