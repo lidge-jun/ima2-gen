@@ -222,14 +222,14 @@
     "styleSheetActive": "세션 스타일 시트 적용 중"
   },
   "nodeBatch": {
-    "selectionOn": "선택 중",
+    "selectionOn": "선택중",
     "selectionOff": "선택",
-    "selectAll": "전체 선택",
+    "selectAll": "전체",
     "summary": "선택 {selected} · 미생성 {missing} · 영향 {stale}",
-    "generateMissing": "없는 것만 생성",
-    "regenerateSelected": "선택 재생성",
-    "stopRemaining": "남은 작업 중단",
-    "stopping": "중단 중",
+    "generateMissing": "미생성",
+    "regenerateSelected": "재생성",
+    "stopRemaining": "중단",
+    "stopping": "중단중",
     "clear": "해제",
     "noneSelected": "선택된 노드가 없습니다.",
     "parentRequired": "부모 이미지가 준비되지 않은 선택 노드가 {count}개 있습니다.",
@@ -240,6 +240,8 @@
     "staleBecauseParentChanged": "상위 노드가 재생성되어 다시 확인이 필요합니다."
   },
   "edge": {
+    "disconnect": "끊기",
+    "disconnectTitle": "선택한 연결선 끊기",
     "disconnected": "연결선을 끊었습니다.",
     "parentConflict": "한 노드에는 부모 연결을 하나만 둘 수 있습니다."
   },

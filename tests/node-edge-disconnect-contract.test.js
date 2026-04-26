@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const store = readFileSync("ui/src/store/useAppStore.ts", "utf-8");
 const canvas = readFileSync("ui/src/components/NodeCanvas.tsx", "utf-8");
+const batchBar = readFileSync("ui/src/components/NodeBatchBar.tsx", "utf-8");
 const ko = readFileSync("ui/src/i18n/ko.json", "utf-8");
 const en = readFileSync("ui/src/i18n/en.json", "utf-8");
 
@@ -46,8 +47,18 @@ describe("node edge disconnect contract", () => {
   });
 
   it("adds localized disconnect feedback", () => {
-    assert.match(ko, /"edge":\s*\{\s*"disconnected":\s*"연결선을 끊었습니다\."/);
-    assert.match(en, /"edge":\s*\{\s*"disconnected":\s*"Connection removed\."/);
+    assert.match(ko, /"disconnected":\s*"연결선을 끊었습니다\."/);
+    assert.match(en, /"disconnected":\s*"Connection removed\."/);
     assert.match(store, /showToast\(t\("edge\.disconnected"\)\)/);
+  });
+
+  it("shows an explicit disconnect action when an edge is selected", () => {
+    assert.match(batchBar, /const disconnectEdges = useAppStore\(\(s\) => s\.disconnectEdges\)/);
+    assert.match(batchBar, /const selectedEdgeIds = edges\.filter\(\(edge\) => edge\.selected\)\.map\(\(edge\) => edge\.id\)/);
+    assert.match(batchBar, /selectedEdgeIds\.length > 0/);
+    assert.match(batchBar, /disconnectEdges\(selectedEdgeIds\)/);
+    assert.match(batchBar, /node-batch-bar__danger/);
+    assert.match(ko, /"disconnect":\s*"끊기"/);
+    assert.match(en, /"disconnect":\s*"Disconnect"/);
   });
 });

@@ -1949,7 +1949,16 @@ body {
   color: var(--text);
   padding: 0 10px;
   font-size: 12px;
+  white-space: nowrap;
   cursor: pointer;
+}
+.node-batch-bar__danger {
+  border-color: color-mix(in srgb, var(--red) 62%, var(--border)) !important;
+  color: var(--red) !important;
+}
+.node-batch-bar__danger:hover:not(:disabled),
+.node-batch-bar__danger:focus-visible {
+  background: color-mix(in srgb, var(--red) 10%, var(--surface)) !important;
 }
 .node-batch-bar button[aria-pressed="true"] {
   border-color: var(--accent-bright);

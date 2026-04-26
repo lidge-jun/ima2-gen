@@ -240,6 +240,8 @@
     "staleBecauseParentChanged": "An upstream node was regenerated; refresh this node when needed."
   },
   "edge": {
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect selected edge",
     "disconnected": "Connection removed.",
     "parentConflict": "A node can only have one parent connection."
   },

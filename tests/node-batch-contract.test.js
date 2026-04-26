@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 const store = readFileSync("ui/src/store/useAppStore.ts", "utf-8");
 const canvas = readFileSync("ui/src/components/NodeCanvas.tsx", "utf-8");
 const batchBar = readFileSync("ui/src/components/NodeBatchBar.tsx", "utf-8");
+const css = readFileSync("ui/src/index.css", "utf-8");
+const ko = readFileSync("ui/src/i18n/ko.json", "utf-8");
 const selectionLib = readFileSync("ui/src/lib/nodeSelection.ts", "utf-8");
 const batchLib = readFileSync("ui/src/lib/nodeBatch.ts", "utf-8");
 
@@ -58,5 +60,14 @@ describe("node selection batch contract", () => {
     assert.match(batchBar, /nodeBatch\.generateMissing/);
     assert.match(batchBar, /nodeBatch\.regenerateSelected/);
     assert.match(batchBar, /nodeBatch\.stopRemaining/);
+  });
+
+  it("keeps Korean batch controls compact and single-line", () => {
+    assert.match(batchBar, /nodeBatch\.selectAll/);
+    assert.match(css, /\.node-batch-bar button \{[^}]*white-space:\s*nowrap/s);
+    assert.match(ko, /"selectAll":\s*"전체"/);
+    assert.match(ko, /"generateMissing":\s*"미생성"/);
+    assert.match(ko, /"regenerateSelected":\s*"재생성"/);
+    assert.match(ko, /"stopRemaining":\s*"중단"/);
   });
 });

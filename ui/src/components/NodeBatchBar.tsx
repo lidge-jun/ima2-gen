@@ -19,8 +19,10 @@ export function NodeBatchBar() {
   const clearNodeSelection = useAppStore((s) => s.clearNodeSelection);
   const runNodeBatch = useAppStore((s) => s.runNodeBatch);
   const cancelNodeBatch = useAppStore((s) => s.cancelNodeBatch);
+  const disconnectEdges = useAppStore((s) => s.disconnectEdges);
 
   const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+  const selectedEdgeIds = edges.filter((edge) => edge.selected).map((edge) => edge.id);
   const selectedSet = new Set(selectedIds);
   const missingCount = nodes.filter((n) => selectedSet.has(n.id) && !nodeHasImage(n)).length;
   const staleImpact = getUnselectedDownstreamIds(edges, selectedIds).length;
@@ -37,6 +39,17 @@ export function NodeBatchBar() {
       <button type="button" onClick={selectAllGraphNodes} disabled={nodes.length === 0}>
         {t("nodeBatch.selectAll")}
       </button>
+      {selectedEdgeIds.length > 0 ? (
+        <button
+          type="button"
+          className="node-batch-bar__danger"
+          onClick={() => disconnectEdges(selectedEdgeIds)}
+          title={t("edge.disconnectTitle")}
+          aria-label={t("edge.disconnectTitle")}
+        >
+          {t("edge.disconnect")}
+        </button>
+      ) : null}
       {selectedIds.length > 0 ? (
         <>
           <span className="node-batch-bar__meta">
@@ -65,4 +78,3 @@ export function NodeBatchBar() {
     </Panel>
   );
 }
-
