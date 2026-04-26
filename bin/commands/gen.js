@@ -2,6 +2,7 @@ import { parseArgs } from "../lib/args.js";
 import { resolveServer, request, normalizeGenerate } from "../lib/client.js";
 import { fileToDataUri, dataUriToFile, defaultOutName, readStdin } from "../lib/files.js";
 import { out, die, dieWithError, color, json } from "../lib/output.js";
+import { config } from "../../config.js";
 
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
@@ -139,7 +140,7 @@ export default async function genCmd(argv) {
     } else if (outDir) {
       target = `${outDir}/${defaultOutName(i, norm.images.length)}`;
     } else {
-      target = defaultOutName(i, norm.images.length);
+      target = `${config.storage.generatedDir}/${defaultOutName(i, norm.images.length)}`;
     }
     await dataUriToFile(im.image, target);
     savedPaths.push(target);

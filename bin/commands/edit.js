@@ -2,6 +2,7 @@ import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { fileToDataUri, dataUriToFile, defaultOutName } from "../lib/files.js";
 import { out, die, dieWithError, color, json } from "../lib/output.js";
+import { config } from "../../config.js";
 
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
@@ -87,7 +88,7 @@ export default async function editCmd(argv) {
 
   const image = resp.image;
   if (!image) die(1, "server returned no image");
-  const target = args.out || defaultOutName(0, 1);
+  const target = args.out || `${config.storage.generatedDir}/${defaultOutName(0, 1)}`;
   await dataUriToFile(image, target);
 
   if (args.json) {
