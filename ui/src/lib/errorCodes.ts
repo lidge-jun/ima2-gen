@@ -9,6 +9,7 @@ export type ImaErrorCode =
   | "REF_TOO_MANY"
   | "MODERATION_REFUSED"
   | "SAFETY_REFUSAL"
+  | "EMPTY_RESPONSE"
   | "UPSTREAM_5XX"
   | "AUTH_CHATGPT_EXPIRED"
   | "AUTH_API_KEY_INVALID"
@@ -42,6 +43,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   REF_TOO_MANY: { surface: "toast", toastKey: "toast.refLimitExceeded" },
   MODERATION_REFUSED: { surface: "card", cardKey: "errorCard.moderationRefused", cta: "dismiss" },
   SAFETY_REFUSAL: { surface: "card", cardKey: "errorCard.moderationRefused", cta: "dismiss" },
+  EMPTY_RESPONSE: { surface: "card", cardKey: "errorCard.emptyResponse", cta: "dismiss" },
   UPSTREAM_5XX: { surface: "card", cardKey: "errorCard.upstream5xx", cta: "retry" },
   AUTH_CHATGPT_EXPIRED: { surface: "card", cardKey: "errorCard.authChatgptExpired", cta: "reauth" },
   AUTH_API_KEY_INVALID: { surface: "card", cardKey: "errorCard.authApiKeyInvalid", cta: "dismiss" },
@@ -63,6 +65,9 @@ export function classifyError(message: string): ImaErrorCode {
   if (!s) return "UNKNOWN";
   if (s.includes("moderation_blocked") || s.includes("moderation refused")) {
     return "MODERATION_REFUSED";
+  }
+  if (s.includes("no image data returned")) {
+    return "EMPTY_RESPONSE";
   }
   if (
     s.includes("token is expired") ||

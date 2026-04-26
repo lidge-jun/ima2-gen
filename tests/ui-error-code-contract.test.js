@@ -7,6 +7,7 @@ test("UI maps proxy and network errors to card surfaces", () => {
   assert.match(source, /NETWORK_FAILED:\s*\{ surface: "card", cardKey: "errorCard\.networkFailed"/);
   assert.match(source, /OAUTH_UNAVAILABLE:\s*\{ surface: "card", cardKey: "errorCard\.oauthUnavailable"/);
   assert.match(source, /INVALID_REQUEST:\s*\{ surface: "card", cardKey: "errorCard\.invalidRequest"/);
+  assert.match(source, /EMPTY_RESPONSE:\s*\{ surface: "card", cardKey: "errorCard\.emptyResponse"/);
   assert.match(source, /invalid_value/);
   assert.match(source, /minimum pixel budget/);
   assert.doesNotMatch(source, /content generation refused[^}]+MODERATION_REFUSED/s);
@@ -26,4 +27,6 @@ test("invalid request and open-folder feedback i18n keys exist", () => {
   assert.match(ko, /"openGeneratedDirOpened"/);
   assert.match(en, /"invalidRequest"/);
   assert.match(ko, /"invalidRequest"/);
+  assert.match(en, /"emptyResponse"/);
+  assert.match(ko, /"emptyResponse"/);
 });

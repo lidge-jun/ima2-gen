@@ -556,6 +556,11 @@
       "body": "Soften the wording or rephrase. Sensitive/violent content in reference images can also trigger this.",
       "cta": "Edit prompt"
     },
+    "emptyResponse": {
+      "title": "No image was returned",
+      "body": "Codex responded but didn't include image data. This isn't a moderation block — it's likely a transient hiccup or an unsupported size/quality/model combination. Retry, or try a different size or model.",
+      "cta": "Retry"
+    },
     "upstream5xx": {
       "title": "OpenAI is currently busy",
       "body": "Retrying usually resolves this. Check status.openai.com if it persists.",

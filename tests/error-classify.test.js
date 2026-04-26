@@ -59,6 +59,14 @@ test("falls back to UNKNOWN", () => {
   assert.equal(classifyUpstreamError("totally random failure message"), "UNKNOWN");
 });
 
+test("classifyUpstreamErrorCode does not over-match moderation", () => {
+  assert.equal(classifyUpstreamErrorCode("moderation_blocked"), "MODERATION_REFUSED");
+  assert.equal(classifyUpstreamErrorCode("moderation refused"), "MODERATION_REFUSED");
+  assert.equal(classifyUpstreamErrorCode("invalid_moderation"), "UNKNOWN");
+  assert.equal(classifyUpstreamErrorCode("moderation_timeout"), "UNKNOWN");
+  assert.equal(classifyUpstreamErrorCode("unknown"), "UNKNOWN");
+});
+
 test("chatgpt expiry wins over generic token", () => {
   assert.equal(classifyUpstreamError("your session token has expired"), "AUTH_CHATGPT_EXPIRED");
 });

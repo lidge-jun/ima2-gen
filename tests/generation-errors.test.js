@@ -34,3 +34,37 @@ test("explicit safety refusals remain safety refusals", () => {
   assert.equal(normalized.code, "SAFETY_REFUSAL");
   assert.equal(normalized.status, 422);
 });
+
+test("OAUTH_UPSTREAM_ERROR is passthrough, not SAFETY_REFUSAL", () => {
+  const err = new Error("OAuth proxy returned 502");
+  err.status = 502;
+  err.code = "OAUTH_UPSTREAM_ERROR";
+
+  const normalized = normalizeGenerationFailure(err);
+  assert.equal(normalized.code, "OAUTH_UPSTREAM_ERROR");
+  assert.equal(normalized.status, 502);
+});
+
+test("empty response with metadata maps to EMPTY_RESPONSE", () => {
+  const err = new Error("No image data received");
+  err.eventCount = 3;
+  err.size = "3824x2160";
+  err.quality = "medium";
+  err.model = "gpt-5.4-mini";
+
+  const normalized = normalizeGenerationFailure(err);
+  assert.equal(normalized.code, "EMPTY_RESPONSE");
+  assert.equal(normalized.status, 422);
+  assert.match(normalized.message, /3824x2160/);
+  assert.match(normalized.message, /gpt-5.4-mini/);
+});
+
+test("unrecognized errors map to UNKNOWN, not SAFETY_REFUSAL", () => {
+  const err = new Error("something went wrong");
+  err.status = 500;
+  err.code = "SOME_RANDOM_CODE";
+
+  const normalized = normalizeGenerationFailure(err);
+  assert.equal(normalized.code, "UNKNOWN");
+  assert.equal(normalized.status, 500);
+});
