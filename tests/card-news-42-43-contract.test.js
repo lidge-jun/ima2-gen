@@ -26,10 +26,13 @@ describe("Card News 42/43 editor and reopen contract", () => {
     assert.match(stage, /selectTextField\(field\.id\)/);
     assert.match(stage, /fallbackFieldStyle/);
     assert.match(stage, /cardNews\.selectTextField/);
+    assert.match(stage, /card-news-empty__deck/);
+    assert.match(stage, /card-news-empty__copy/);
     assert.match(inspector, /selectedTextFieldId === field\.id/);
     assert.match(inspector, /onSelect=\{\(\) => selectTextField\(field\.id\)\}/);
     assert.match(inspector, /card-news-advanced-prompt/);
     assert.match(inspector, /cardNews\.cardTitle/);
+    assert.match(inspector, /card-news-inspector-empty__mock/);
     assert.doesNotMatch(inspector, /cardNews\.body/);
     assert.match(textFieldCard, /selected\?: boolean/);
     assert.match(textFieldCard, /className=\{`card-news-text-field-card\$\{selected/);
@@ -38,6 +41,8 @@ describe("Card News 42/43 editor and reopen contract", () => {
     assert.match(plannerPrompt, /headline, body, textFields, and visualPrompt/);
     assert.match(css, /\.card-news-text-field-card\.selected/);
     assert.match(css, /\.card-news-stage-overlay__field\.selected/);
+    assert.match(css, /\.card-news-empty__deck/);
+    assert.match(css, /\.card-news-inspector-empty__mock/);
   });
 
   it("exposes safe manifest download and richer set metadata", () => {
