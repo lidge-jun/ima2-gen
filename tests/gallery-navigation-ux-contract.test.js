@@ -84,6 +84,10 @@ describe("gallery navigation UX contract", () => {
     const historyStrip = readSource("ui/src/components/HistoryStrip.tsx");
     const css = readSource("ui/src/index.css");
     const appRule = /\.app\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const rightPanelRule =
+      [...css.matchAll(/^\.right-panel\s*\{[^}]*\}/gm)].find((match) =>
+        match[0].includes("height: 100dvh"),
+      )?.[0] ?? "";
     const historyRule = /\.history-strip\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const addRule = /\.history-thumb--add\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const responsiveBlock = /@media \(max-width:\s*800px\)\s*\{[\s\S]*?\.canvas\s*\{/s.exec(css)?.[0] ?? "";
@@ -92,8 +96,9 @@ describe("gallery navigation UX contract", () => {
     assert.match(app, /<Sidebar \/>\s*<HistoryStrip \/>/);
     assert.doesNotMatch(sidebar, /HistoryStrip/);
 
-    assert.match(appRule, /--gallery-rail-w:\s*clamp\(72px,\s*7vw,\s*112px\)/);
+    assert.match(appRule, /--gallery-rail-w:\s*clamp\(61px,\s*6vw,\s*95px\)/);
     assert.match(appRule, /grid-template-columns:\s*260px var\(--gallery-rail-w\) minmax\(0,\s*1fr\) auto/);
+    assert.match(rightPanelRule, /width:\s*266px/);
     assert.match(historyRule, /flex-direction:\s*column/);
     assert.match(historyRule, /overflow-y:\s*auto/);
     assert.match(historyRule, /overflow-x:\s*hidden/);

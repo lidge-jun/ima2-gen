@@ -107,12 +107,33 @@ describe("node UI compact metadata contract", () => {
     assert.match(component, /type="target"/);
     assert.match(component, /id=\{`source-\$\{handleId\}`\}/);
     assert.match(component, /id=\{`target-\$\{handleId\}`\}/);
+    assert.match(canvas, /ConnectionMode/);
+    assert.match(canvas, /connectionMode=\{ConnectionMode\.Loose\}/);
     assert.match(canvas, /connectionRadius=\{32\}/);
     assert.match(handleRule, /transition:/);
     assert.match(hitRule, /inset:\s*-9px/);
     assert.match(hoverRule, /width:\s*14px !important/);
     assert.match(hoverRule, /height:\s*14px !important/);
     assert.match(hoverRule, /box-shadow:/);
+  });
+
+  it("renders one visible connection dot per node side", () => {
+    const css = readSource("ui/src/index.css");
+    const sourceRule = /\.image-node__handle--source\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const targetRule = /\.image-node__handle--target\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const topRule = /\.image-node__handle--top\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const rightRule = /\.image-node__handle--right\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const bottomRule = /\.image-node__handle--bottom\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const leftRule = /\.image-node__handle--left\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+
+    assert.match(sourceRule, /z-index:\s*2/);
+    assert.match(targetRule, /opacity:\s*0/);
+    assert.match(targetRule, /pointer-events:\s*none/);
+    assert.match(topRule, /left:\s*50% !important/);
+    assert.match(rightRule, /top:\s*50% !important/);
+    assert.match(bottomRule, /left:\s*50% !important/);
+    assert.match(leftRule, /top:\s*50% !important/);
+    assert.doesNotMatch(css, /calc\(50% [+-] 12px\)/);
   });
 
   it("preserves directional node connection handles through connect and session save", () => {

@@ -308,6 +308,18 @@ function stripDataUrlPrefix(dataUrl: string): string {
   return dataUrl.replace(/^data:[^;]+;base64,/, "");
 }
 
+async function compressReferenceSource(src: string, filename = "reference.png"): Promise<string> {
+  const resp = await fetch(src);
+  if (!resp.ok) throw new Error(`reference fetch failed: ${resp.status}`);
+  const blob = await resp.blob();
+  const file = new File([blob], filename, { type: blob.type || "image/png" });
+  return compressToBase64(file, {
+    // Generated PNGs can exceed the server's base64 reference cap. For i2i
+    // references, a flattened JPEG is the intended upload format.
+    preserveTransparency: false,
+  });
+}
+
 export type ImageNodeStatus =
   | "empty"
   | "pending"
@@ -666,24 +678,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().showToast(t("toast.refSlotFull"), true);
       return;
     }
-    let dataUrl = cur.image;
-    if (!dataUrl.startsWith("data:")) {
-      try {
-        const resp = await fetch(dataUrl);
-        const blob = await resp.blob();
-        dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () =>
-            typeof reader.result === "string"
-              ? resolve(reader.result)
-              : reject(new Error("read failed"));
-          reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-          reader.readAsDataURL(blob);
-        });
-      } catch {
-        get().showToast(t("toast.currentImageLoadFailed"), true);
-        return;
-      }
+    let dataUrl: string;
+    try {
+      dataUrl = await compressReferenceSource(cur.image, cur.filename || "current-reference.png");
+    } catch {
+      get().showToast(t("toast.currentImageLoadFailed"), true);
+      return;
     }
     set((s) => ({
       referenceImages: [...s.referenceImages, dataUrl].slice(0, MAX_REFERENCE_IMAGES),
@@ -1537,17 +1537,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const sourceUrl = source.data.imageUrl;
       (async () => {
         try {
-          const resp = await fetch(sourceUrl);
-          const blob = await resp.blob();
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () =>
-              typeof reader.result === "string"
-                ? resolve(reader.result)
-                : reject(new Error("read failed"));
-            reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-            reader.readAsDataURL(blob);
-          });
+          const dataUrl = await compressReferenceSource(sourceUrl, "node-reference.png");
           set({
             graphNodes: get().graphNodes.map((n) =>
               n.id === clientId

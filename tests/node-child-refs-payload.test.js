@@ -25,4 +25,13 @@ describe("node child reference payload contract", () => {
     assert.match(store, /loadNodeRefs\(session\.id, n\.id\)/);
     assert.match(store, /saveNodeRefs\(sessionId, clientId, refs\)/);
   });
+
+  it("compresses generated-image references before reusing them for i2i", () => {
+    assert.match(store, /async function compressReferenceSource\(src: string,\s*filename = "reference\.png"\)/);
+    assert.match(store, /new File\(\[blob\], filename, \{ type: blob\.type \|\| "image\/png" \}\)/);
+    assert.match(store, /compressToBase64\(file,\s*\{[\s\S]*preserveTransparency:\s*false/);
+    assert.match(store, /dataUrl = await compressReferenceSource\(cur\.image,\s*cur\.filename \|\| "current-reference\.png"\)/);
+    assert.match(store, /const dataUrl = await compressReferenceSource\(sourceUrl,\s*"node-reference\.png"\)/);
+    assert.doesNotMatch(store, /useCurrentAsReference:[\s\S]*?readAsDataURL\(blob\);[\s\S]*?addedCurrentAsRef/);
+  });
 });

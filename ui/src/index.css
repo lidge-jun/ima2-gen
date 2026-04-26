@@ -492,7 +492,7 @@ body {
 
 .app {
   display: grid;
-  --gallery-rail-w: clamp(72px, 7vw, 112px);
+  --gallery-rail-w: clamp(61px, 6vw, 95px);
   grid-template-columns: 260px var(--gallery-rail-w) minmax(0, 1fr) auto;
   height: 100dvh;
   overflow: hidden;
@@ -1337,7 +1337,7 @@ body {
   position: relative;
   background: var(--surface);
   border-left: 1px solid var(--border);
-  width: 280px;
+  width: 266px;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -2853,47 +2853,30 @@ body {
 }
 .image-node__handle--source {
   background: var(--accent-bright) !important;
+  z-index: 2;
 }
 .image-node__handle--target {
   background: var(--text-dim) !important;
+  opacity: 0;
+  pointer-events: none;
 }
-.image-node__handle--top.image-node__handle--source {
+.image-node__handle--top {
   top: 0 !important;
-  left: calc(50% + 12px) !important;
+  left: 50% !important;
   transform: translate(-50%, -50%) !important;
 }
-.image-node__handle--top.image-node__handle--target {
-  top: 0 !important;
-  left: calc(50% - 12px) !important;
-  transform: translate(-50%, -50%) !important;
-}
-.image-node__handle--right.image-node__handle--source {
-  top: calc(50% - 12px) !important;
+.image-node__handle--right {
+  top: 50% !important;
   right: 0 !important;
   transform: translate(50%, -50%) !important;
 }
-.image-node__handle--right.image-node__handle--target {
-  top: calc(50% + 12px) !important;
-  right: 0 !important;
-  transform: translate(50%, -50%) !important;
-}
-.image-node__handle--bottom.image-node__handle--source {
+.image-node__handle--bottom {
   bottom: 0 !important;
-  left: calc(50% + 12px) !important;
+  left: 50% !important;
   transform: translate(-50%, 50%) !important;
 }
-.image-node__handle--bottom.image-node__handle--target {
-  bottom: 0 !important;
-  left: calc(50% - 12px) !important;
-  transform: translate(-50%, 50%) !important;
-}
-.image-node__handle--left.image-node__handle--source {
-  top: calc(50% - 12px) !important;
-  left: 0 !important;
-  transform: translate(-50%, -50%) !important;
-}
-.image-node__handle--left.image-node__handle--target {
-  top: calc(50% + 12px) !important;
+.image-node__handle--left {
+  top: 50% !important;
   left: 0 !important;
   transform: translate(-50%, -50%) !important;
 }

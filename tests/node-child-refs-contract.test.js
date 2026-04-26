@@ -21,13 +21,16 @@ describe("child node references contract", () => {
 
   it("forwards edit references after the parent image and before text", () => {
     assert.match(oauth, /const references = Array\.isArray\(options\.references\)/);
-    assert.match(oauth, /\{ type: "input_image", image_url: `data:image\/png;base64,\$\{imageB64\}` \}/);
+    assert.match(oauth, /const imageForRequest = await compressReferenceB64ForOAuth\(imageB64/);
+    assert.match(oauth, /const referenceImagesForRequest = await Promise\.all/);
+    assert.match(oauth, /\{ type: "input_image", image_url: `data:image\/jpeg;base64,\$\{imageForRequest\.b64\}` \}/);
     assert.match(oauth, /\.\.\.referenceContent/);
     assert.match(oauth, /\{ type: "input_text", text: textPrompt \}/);
   });
 
   it("logs only reference counts for edit reference requests", () => {
     assert.match(oauth, /refsCount: references\.length/);
+    assert.match(oauth, /inputImageCompressed: imageForRequest\.compressed/);
     assert.doesNotMatch(oauth, /logEvent\("oauth-edit", "request", \{[^}]*references:/);
   });
 });

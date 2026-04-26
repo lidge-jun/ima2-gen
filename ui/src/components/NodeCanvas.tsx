@@ -8,6 +8,7 @@ import {
   applyEdgeChanges,
   useReactFlow,
   ReactFlowProvider,
+  ConnectionMode,
   type NodeChange,
   type EdgeChange,
   type Connection,
@@ -117,6 +118,7 @@ function NodeCanvasInner() {
             onNodesDelete={onNodesDelete}
             onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
+            connectionMode={ConnectionMode.Loose}
             connectionRadius={32}
             selectionOnDrag={nodeSelectionMode}
             multiSelectionKeyCode={nodeSelectionMode ? null : undefined}
