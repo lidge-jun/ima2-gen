@@ -61,6 +61,10 @@ function pickBool(envVal, fileVal, fallback) {
   return s === "1" || s === "true" || s === "yes";
 }
 
+export function defaultLogLevelForEnv(runtimeEnv = env) {
+  return runtimeEnv.IMA2_DEV === "1" ? "debug" : "warn";
+}
+
 export const config = {
   server: {
     // Accept both IMA2_PORT and legacy PORT.
@@ -139,7 +143,7 @@ export const config = {
     unsupported: new Set(["gpt-5.3-codex-spark"]),
   },
   log: {
-    level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, "info"),
+    level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
     pretty: env.NODE_ENV !== "production",
   },
   features: {

@@ -29,7 +29,12 @@ console.log("[dev] port fallback is handled by server.js; check ~/.ima2/server.j
 const server = spawn(process.execPath, ["--watch", "server.js"], {
   cwd: ROOT,
   stdio: "inherit",
-  env: { ...process.env, IMA2_DEV: "1", IMA2_CARD_NEWS: "1" },
+  env: {
+    ...process.env,
+    IMA2_DEV: "1",
+    IMA2_CARD_NEWS: "1",
+    IMA2_LOG_LEVEL: process.env.IMA2_LOG_LEVEL || "debug",
+  },
 });
 server.on("exit", (code) => process.exit(code ?? 0));
 for (const sig of ["SIGINT", "SIGTERM"]) {

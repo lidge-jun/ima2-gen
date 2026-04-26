@@ -55,6 +55,8 @@ test("config exposes default shape", () => {
     IMA2_OAUTH_PROXY_PORT: "",
     OAUTH_PORT: "",
     IMA2_NO_OAUTH_PROXY: "",
+    IMA2_DEV: "",
+    IMA2_LOG_LEVEL: "",
     IMA2_CONFIG_DIR: "/tmp/ima2-test-default",
   });
   assert.equal(c.server.port, 3333);
@@ -78,6 +80,7 @@ test("config exposes default shape", () => {
   assert.equal(c.cardNewsPlanner.model, "gpt-5.4-mini");
   assert.equal(c.cardNewsPlanner.timeoutMs, 60000);
   assert.equal(c.cardNewsPlanner.deterministicFallback, false);
+  assert.equal(c.log.level, "warn");
 });
 
 test("env overrides win", () => {
@@ -117,6 +120,29 @@ test("card news feature is dev-only unless explicitly enabled", () => {
     IMA2_CONFIG_DIR: "/tmp/ima2-test-card-news-explicit",
   });
   assert.equal(explicit.features.cardNews, true);
+});
+
+test("log level defaults are quiet unless dev mode is enabled", () => {
+  const normal = loadConfig({
+    IMA2_DEV: "",
+    IMA2_LOG_LEVEL: "",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-log-normal",
+  });
+  assert.equal(normal.log.level, "warn");
+
+  const dev = loadConfig({
+    IMA2_DEV: "1",
+    IMA2_LOG_LEVEL: "",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-log-dev",
+  });
+  assert.equal(dev.log.level, "debug");
+
+  const explicit = loadConfig({
+    IMA2_DEV: "1",
+    IMA2_LOG_LEVEL: "error",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-log-explicit",
+  });
+  assert.equal(explicit.log.level, "error");
 });
 
 test("card news planner env overrides win", () => {

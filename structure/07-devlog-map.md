@@ -10,7 +10,7 @@ aliases: [ima2 devlog map, image_gen roadmap, devlog map]
 
 This map matters because plans from multiple eras coexist. `_plan/README.md` and `_plan/unified-roadmap.md` now point to the same active direction. Completed `0.01`, `0.03`, `0.04`, `0.06`, `0.07`, and `0.09` implementation records have moved under `_fin/260423_*`. Structure docs should follow the current code and active roadmap rather than stale plan folders.
 
-For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. `0.09.4`, `0.09.4.1`, `0.09.6`, `0.09.7.1`, `0.09.8`, `0.09.15`, `0.09.16`, `0.09.20.1`, `0.09.21`, `0.09.23`, and `0.09.24` are completed or closeout-archived under `_fin/260425_*` or `_fin/260426_*`. Active `_plan` now keeps `0.09.17` and `0.09.18` as optional observability ops, `0.09.20-cli-backend-parity` as the remaining sliced CLI parity backlog after the safe classic slice, and node workflow follow-ups for graph selection, regeneration, references, and contract repair. Security hardening and containerization live under `_plan/0.99_future` until remote-access and packaging tradeoffs are settled.
+For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. `0.09.4`, `0.09.4.1`, `0.09.6`, `0.09.7.1`, `0.09.8`, `0.09.15`, `0.09.16`, `0.09.20.1`, `0.09.21`, `0.09.23`, `0.09.24`, and CLI parity work are completed or closeout-archived under `_fin/260425_*` or `_fin/260426_*`. Active `_plan` now keeps `0.09.17.1` as the serve/dev logging closeout, `0.09.18` as optional metrics observability, and node workflow follow-ups for graph selection, regeneration, references, and contract repair. Security hardening and containerization live under `_plan/0.99_future` until remote-access and packaging tradeoffs are settled.
 
 ---
 
@@ -21,8 +21,7 @@ graph TD
     DEV["devlog"] --> PLAN["_plan<br/>active and legacy plans"]
     DEV --> FIN["_fin<br/>completed work"]
     DEV --> SPIKES["_spikes<br/>exploration notes"]
-    PLAN --> ACTIVE["0.09.17..0.09.18<br/>active ops"]
-    PLAN --> CLI["0.09.20<br/>cli parity"]
+    PLAN --> ACTIVE["0.09.17.1..0.09.18<br/>active ops"]
     PLAN --> FUTURE["0.99_future<br/>deferred ops"]
     PLAN --> FOLLOW["0.10+<br/>feature tracks"]
     PLAN --> ROAD["README + unified-roadmap<br/>current direction"]
@@ -35,9 +34,9 @@ graph TD
 |---|---|---|
 | `devlog/_plan/README.md` | current | Active lane, completed moves, and next-work rules |
 | `devlog/_plan/unified-roadmap.md` | current | `0.09.6 + 0.09.15 -> 0.10 -> 0.12` flow |
-| `devlog/_plan/0.09.17-structured-logging/PRD.md` | in progress | Dependency-free structured logging hardening: log levels, sanitized request IDs, API-only request logging. |
+| `devlog/_plan/0.09.17-structured-logging/PRD.md` | closeout via `0.09.17.1` | Dependency-free structured logging is implemented; closeout separates quiet normal serve from verbose dev diagnostics. |
+| `devlog/_plan/0.09.17.1-serve-dev-log-closeout/PRD.md` | active closeout | Normal `ima2 serve` stays quiet; `ima2 serve --dev` and `npm run dev` enable verbose diagnostics. |
 | `devlog/_plan/0.09.18-metrics-observability/PRD.md` | queued | Prometheus metrics proposal. No metrics route exists yet. |
-| `devlog/_plan/0.09.20-cli-backend-parity/README.md` | concrete plan | CLI/backend parity backlog after `0.09.20.1`; remaining slices cover storage/runtime, history lifecycle, sessions/style, and node preview. |
 | `devlog/_plan/0.09.25-node-selection-batch/PRD.md` | in progress | Canvas-level node selection and sequential batch generation plan. |
 | `devlog/_plan/0.09.27-node-regen-layout-diagnostics/PRD.md` | in progress | Ready-node action split, position-based node placement, and safe edit stream diagnostics. |
 | `devlog/_plan/0.09.28-child-node-references/PRD.md` | in progress | Allow child/edit node-local references alongside the parent image. |
@@ -58,15 +57,16 @@ graph TD
 | `devlog/_spikes/generate-ux-notes.md` | Generation-progress UX exploration | Only carry forward ideas absorbed into node mode |
 | `devlog/_spikes/image-display-notes.md` | Result display exploration | Track only lightbox, compare, and mobile fallback ideas |
 | `devlog/_fin/260423_*`, `devlog/_fin/260424_*` | Completed implementation and experiments | Archive and evidence for completed work |
+| `devlog/_fin/260426_0.09.20-cli-backend-parity` | Completed CLI/backend parity closeout | Historical evidence for CLI parity work; reopen new CLI slices separately if needed |
 | deleted root-level `devlog/phase-*`, `devlog/0.09*`, `devlog/0.10*` tracked paths | Old locations | Use the current `_plan` or `_fin` locations instead |
 
 ## Roadmap Summary
 
 | Cycle | Name | Current interpretation |
 |---|---|---|
-| 0.09.17 | Structured logging | In progress; dependency-free logger/requestId hardening instead of Pino dependency |
+| 0.09.17 | Structured logging | Implemented; `0.09.17.1` closes UX by making normal serve quiet and dev modes verbose |
 | 0.09.18 | Metrics observability | Active ops; useful for self-host and debugging |
-| 0.09.20 | CLI/backend parity | Concrete sliced plan; `0.09.20.1` safe classic parity is complete, remaining slices cover storage/runtime, history lifecycle, sessions/style, and node preview |
+| 0.09.20 | CLI/backend parity | Archived as complete enough for the current lane; reopen future CLI slices separately if needed |
 | 0.09.25 | Node selection batch | In progress; canvas selection, in-place batch generation, stale downstream handling |
 | 0.09.26 | Edge disconnect | Active; edge-only delete and parent metadata cleanup |
 | 0.09.27 | Node regen/layout/diagnostics | Active; ready-node action split, position-based layout, safe edit retry diagnostics |
@@ -117,6 +117,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-25: Added active `0.09.29-node-contract-repair` for node parent/ref/context/footer contract cleanup.
 - 2026-04-26: Added queued `0.09.30-oauth-proxy-port-fallback` for backend/frontend/OAuth port binding and proxy error taxonomy.
 - 2026-04-26: Marked `0.09.20.1` complete, reflected implemented runtime binding work, and removed dev-only lanes from the evergreen roadmap map.
+- 2026-04-26: Added `0.09.17.1` serve/dev logging closeout and marked CLI parity archived under `_fin`.
 
 Previous document: `[[06-infra-operations]]`
 

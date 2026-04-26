@@ -91,7 +91,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `600000` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
 | `VITE_IMA2_NODE_MODE` | UI build-time gate; set `0` only for a classic-only bundle |
-| `IMA2_LOG_LEVEL` | Reserved log-level setting; current app emits safe structured logs |
+| `IMA2_LOG_LEVEL` | Normal `ima2 serve` defaults to `warn`; `IMA2_DEV=1` defaults to `debug` unless env or config override is set |
 
 Generation and edit endpoints currently hard-block `provider: "api"`. Even with an API key, image generation is OAuth-centered.
 
@@ -99,7 +99,7 @@ Runtime port fallback is intentional. If a preferred backend or OAuth proxy port
 
 ## Observability
 
-The server emits safe structured log lines for route lifecycle, OAuth responses, stream image receipt, inflight phase changes, session graph saves, and gallery history grouping. `IMA2_LOG_LEVEL` supports `debug`, `info`, `warn`, `error`, and `silent`; invalid values fall back to `info`.
+The server emits safe structured log lines for route lifecycle, OAuth responses, stream image receipt, inflight phase changes, session graph saves, and gallery history grouping. Normal `ima2 serve` is intentionally quiet and defaults structured logs to `warn`. `npm run dev`, `ima2 serve --dev`, and `IMA2_DEV=1` default to `debug` unless `IMA2_LOG_LEVEL` or `~/.ima2/config.json` provides an explicit log level. `IMA2_LOG_LEVEL` supports `debug`, `info`, `warn`, `error`, and `silent`; invalid values fall back to `info`.
 
 Every `/api/*` request gets a sanitized `X-Request-Id` header. Static UI files and `/generated/*` images are deliberately outside the request logger so gallery image serving does not create log noise or surprise headers. Correlate a UI request with `requestId` first, then follow the same id through `[http.request]`, `[generate.request]`, `[oauth.response]`, `[inflight.phase]`, `[oauth.image]`, `[generate.saved]`, `[http.response]`, and `[inflight.finish]`.
 
@@ -111,7 +111,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 |---|---|---|
 | Full test suite | `npm test` | `scripts/run-tests.mjs` runs `tests/*.test.js` |
 | UI build | `npm run build` | `ui/dist` is updated |
-| Dev server | `npm run dev` | UI is built, then `node --watch server.js` starts |
+| Dev server | `npm run dev` | UI is built, then `node --watch server.js` starts with verbose diagnostics |
 | Package sanity | `npm run lint:pkg` | Required `files[]`, `bin`, and version fields are checked |
 | Package smoke | `npm pack --dry-run --json` | Verifies the publish manifest includes release-critical files |
 | Package install smoke | `npm run test:package-install` | Installs the tarball in a temp project and checks `doctor`, `/api/health`, and `/api/storage/status` |

@@ -100,7 +100,7 @@ Style sheets let you capture a reusable visual direction.
 
 | Command | Description |
 |---|---|
-| `ima2 serve` | Start the local web server |
+| `ima2 serve [--dev]` | Start the local web server; `--dev` enables verbose server diagnostics |
 | `ima2 setup` | Reconfigure saved auth |
 | `ima2 status` | Show config and OAuth status |
 | `ima2 doctor` | Diagnose Node, package, config, and auth |
@@ -149,9 +149,15 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
 | `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Server fallback image model |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable the auto-started OAuth proxy |
-| `IMA2_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `silent` |
+| `IMA2_LOG_LEVEL` | `warn` | Normal serve defaults to `warn`; dev mode defaults to `debug`; supports `debug`, `info`, `warn`, `error`, or `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Recent terminal job retention for debug views |
 | `OPENAI_API_KEY` | — | API key for supported auxiliary paths, not image generation |
+
+### Logging modes
+
+`ima2 serve` keeps terminal output intentionally quiet: startup URLs, warnings, and errors stay visible, while request/node/OAuth structured logs are hidden by default.
+
+Use `ima2 serve --dev`, `npm run dev`, or `IMA2_LOG_LEVEL=debug ima2 serve` when you need request IDs, node generation phases, OAuth stream diagnostics, or inflight state transitions. Explicit `IMA2_LOG_LEVEL` and `~/.ima2/config.json` values still override the built-in defaults.
 
 ## API Reference
 
@@ -205,7 +211,7 @@ npm test
 npm run build
 ```
 
-`npm run dev` builds the UI and starts `server.js` with `--watch`. Node mode is part of the packaged UI by default.
+`npm run dev` builds the UI and starts `server.js` with `--watch` and verbose server diagnostics. Node mode is part of the packaged UI by default.
 
 ## License
 

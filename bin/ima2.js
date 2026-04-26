@@ -131,7 +131,7 @@ async function setup() {
   return config;
 }
 
-async function serve() {
+async function serve(serveArgs = []) {
   try {
     await maybePromptGithubStar();
   } catch (err) {
@@ -164,6 +164,11 @@ async function serve() {
   }
 
   const env = { ...process.env };
+  const serveDev = serveArgs.includes("--dev");
+  if (serveDev) {
+    env.IMA2_DEV = "1";
+    env.IMA2_LOG_LEVEL = env.IMA2_LOG_LEVEL || "debug";
+  }
 
   if (config.provider === "api" && config.apiKey) {
     env.OPENAI_API_KEY = config.apiKey;
@@ -311,7 +316,7 @@ function showHelp() {
   Usage: ima2 <command> [options]
 
   Server commands:
-    serve          Start the image generation server
+    serve [--dev]  Start the image generation server
     setup, login   Configure API key or OAuth (interactive)
     status         Show current configuration status
     doctor         Diagnose environment and setup
@@ -333,6 +338,7 @@ function showHelp() {
 
   Examples:
     ima2 serve                       Start server
+    ima2 serve --dev                 Start with verbose server diagnostics
     ima2 gen "a shiba in space"      Generate from CLI
     ima2 gen "merge" --ref a.png --ref b.png -q high -o out.png
     ima2 ls -n 10                    Last 10 generations
@@ -357,7 +363,7 @@ if ((!command || args.includes("-h") || args.includes("--help"))
 
 switch (command) {
   case "serve":
-    serve();
+    serve(args.slice(1));
     break;
   case "setup":
   case "login":
