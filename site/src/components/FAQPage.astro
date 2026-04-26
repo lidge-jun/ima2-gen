@@ -5,15 +5,50 @@ interface Props {
   lang: Lang;
 }
 
+interface CodeLabeled {
+  label: string;
+  cmd: string;
+}
+
+interface Item {
+  q: string;
+  a: string;
+  codes?: string[];
+  codesLabeled?: CodeLabeled[];
+}
+
+interface Group {
+  cat: string;
+  intro?: string;
+  items: Item[];
+}
+
 const { lang } = Astro.props;
 
-const groups = [
+const groups: Group[] = [
   {
     cat: 'faq.cat.install',
     items: [
       { q: 'faq.install.q1', a: 'faq.install.a1' },
-      { q: 'faq.install.q2', a: 'faq.install.a2' },
-      { q: 'faq.install.q3', a: 'faq.install.a3' },
+      {
+        q: 'faq.install.q2',
+        a: 'faq.install.a2',
+        codes: ['npm install -g ima2-gen', 'ima2 serve'],
+      },
+      {
+        q: 'faq.install.q3',
+        a: 'faq.install.a3',
+        codesLabeled: [
+          {
+            label: 'macOS',
+            cmd: 'curl -fsSL https://lidge-jun.github.io/ima2-gen/install-mac.sh | bash',
+          },
+          {
+            label: 'Windows PowerShell',
+            cmd: 'irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex',
+          },
+        ],
+      },
       { q: 'faq.install.q4', a: 'faq.install.a4' },
     ],
   },
@@ -33,7 +68,11 @@ const groups = [
       { q: 'faq.q2', a: 'faq.a2' },
       { q: 'faq.tech.q1', a: 'faq.tech.a1' },
       { q: 'faq.tech.q2', a: 'faq.tech.a2' },
-      { q: 'faq.tech.q3', a: 'faq.tech.a3' },
+      {
+        q: 'faq.tech.q3',
+        a: 'faq.tech.a3',
+        codes: ['github.com/lidge-jun/ima2-gen'],
+      },
     ],
   },
 ];
@@ -41,19 +80,52 @@ const groups = [
 
 <section class="faq-page">
   <div class="frame">
-    <div class="section-tag">{t(lang, 'faq.tag')}</div>
-    <h1 class="h-display page-h">{t(lang, 'faq.page.h')}</h1>
-    <p class="section-lede">{t(lang, 'faq.page.lede')}</p>
+    <div class="head">
+      <div class="section-tag">{t(lang, 'faq.tag')}</div>
+      <h1 class="h-display page-h">{t(lang, 'faq.page.h')}</h1>
+      <p class="section-lede">{t(lang, 'faq.page.lede')}</p>
+    </div>
+
+    <div class="toc" aria-label="categories">
+      {
+        groups.map((group, i) => (
+          <a href={`#${group.cat.replace(/\./g, '-')}`} class="toc-item">
+            <span class="toc-num">0{i + 1}</span>
+            <span class="toc-label">{t(lang, group.cat)}</span>
+            <span class="toc-count">{group.items.length}</span>
+          </a>
+        ))
+      }
+    </div>
 
     {
       groups.map((group) => (
-        <section class="faq-group">
+        <section class="faq-group" id={group.cat.replace(/\./g, '-')}>
           <h2 class="cat">{t(lang, group.cat)}</h2>
           <div class="items">
             {group.items.map((item) => (
               <details>
                 <summary>{t(lang, item.q)}</summary>
-                <p>{t(lang, item.a)}</p>
+                <div class="answer">
+                  <p>{t(lang, item.a)}</p>
+                  {item.codes && (
+                    <div class="codes">
+                      {item.codes.map((cmd) => (
+                        <pre class="code"><code>{cmd}</code><button class="copy" type="button" data-cmd={cmd} aria-label={`Copy ${cmd}`}>Copy</button></pre>
+                      ))}
+                    </div>
+                  )}
+                  {item.codesLabeled && (
+                    <div class="codes labeled">
+                      {item.codesLabeled.map((c) => (
+                        <div class="code-row">
+                          <span class="code-label">{c.label}</span>
+                          <pre class="code"><code>{c.cmd}</code><button class="copy" type="button" data-cmd={c.cmd} aria-label={`Copy ${c.label} command`}>Copy</button></pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </details>
             ))}
           </div>
@@ -63,20 +135,92 @@ const groups = [
   </div>
 </section>
 
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.faq-page .copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = btn.getAttribute('data-cmd') ?? '';
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const orig = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        window.setTimeout(() => {
+          btn.textContent = orig ?? 'Copy';
+          btn.classList.remove('copied');
+        }, 1400);
+      } catch {
+        // Fallback: select text inside <pre>
+        const pre = btn.closest('pre');
+        if (pre) {
+          const range = document.createRange();
+          range.selectNodeContents(pre.querySelector('code') ?? pre);
+          const sel = window.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }
+    });
+  });
+</script>
+
 <style>
   .faq-page {
     padding: 96px 0 120px;
   }
-  .page-h {
-    font-size: 56px;
-    margin-bottom: 18px;
+  .head {
     max-width: 720px;
   }
-  .faq-group {
-    margin-top: 72px;
+  .page-h {
+    font-size: 64px;
+    margin-bottom: 18px;
+    line-height: 1.02;
   }
-  .faq-group:first-of-type {
+  .head .section-lede {
+    margin-bottom: 0;
+  }
+
+  /* Table of contents — anti-slop: not symmetric, mono labels */
+  .toc {
     margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 160ms ease;
+  }
+  .toc-item:hover { background: var(--panel); }
+  .toc-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  .toc-label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .toc-count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .faq-group {
+    margin-top: 80px;
+    scroll-margin-top: 80px;
   }
   .faq-group .cat {
     font-family: var(--font-mono);
@@ -109,23 +253,94 @@ const groups = [
     content: '+';
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 18px;
+    font-size: 20px;
     line-height: 1;
     flex-shrink: 0;
+    transition: transform 200ms ease;
   }
   .items details[open] summary::after { content: '−'; }
-  .items details p {
+
+  .answer {
     margin-top: 14px;
+  }
+  .answer p {
     color: var(--text-dim);
     font-size: 15px;
     max-width: 760px;
     line-height: 1.7;
   }
 
+  /* Code blocks — terminal-flavored, panel bg, inline copy button */
+  .codes {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 760px;
+  }
+  .code-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .code-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .code {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    overflow-x: auto;
+  }
+  .code code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text);
+    background: none;
+    padding: 0;
+    white-space: pre;
+  }
+  .code .copy {
+    flex-shrink: 0;
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 4px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .code .copy:hover,
+  .code .copy:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+    outline: 0;
+  }
+  .code .copy.copied {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
   @media (max-width: 768px) {
     .faq-page { padding: 64px 0 80px; }
-    .page-h { font-size: 36px; }
-    .faq-group { margin-top: 48px; }
+    .page-h { font-size: 40px; }
+    .toc { grid-template-columns: 1fr; }
+    .faq-group { margin-top: 56px; }
     .items summary { font-size: 16px; }
+    .code code { font-size: 12px; }
   }
 </style>

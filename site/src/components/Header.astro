@@ -8,19 +8,23 @@ interface Props {
 
 const { lang } = Astro.props;
 const repoUrl = 'https://github.com/lidge-jun/ima2-gen';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const homeHref = lang === 'ko' ? `${base}/ko` : `${base}/`;
+const faqHref = lang === 'ko' ? `${base}/ko/faq` : `${base}/faq`;
 ---
 
 <header class="topbar">
   <div class="frame row">
-    <a href="#top" class="brand" aria-label={t(lang, 'header.brand.aria')}>
+    <a href={homeHref} class="brand" aria-label={t(lang, 'header.brand.aria')}>
       <span class="dot" aria-hidden="true"></span>
       <span>ima2-gen</span>
     </a>
     <nav aria-label={t(lang, 'header.nav.aria')}>
-      <a href="#workflows">{t(lang, 'header.nav.workflows')}</a>
-      <a href="#branch">{t(lang, 'header.nav.branch')}</a>
-      <a href="#local">{t(lang, 'header.nav.local')}</a>
-      <a href="#install">{t(lang, 'header.nav.install')}</a>
+      <a href={`${homeHref}#workflows`}>{t(lang, 'header.nav.workflows')}</a>
+      <a href={`${homeHref}#branch`}>{t(lang, 'header.nav.branch')}</a>
+      <a href={`${homeHref}#local`}>{t(lang, 'header.nav.local')}</a>
+      <a href={`${homeHref}#install`}>{t(lang, 'header.nav.install')}</a>
+      <a href={faqHref}>{t(lang, 'header.nav.faq')}</a>
     </nav>
     <div class="right">
       <LangToggle current={lang} />

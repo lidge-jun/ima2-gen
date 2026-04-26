@@ -18,6 +18,7 @@ const en: Dict = {
   'header.nav.branch': 'Branch',
   'header.nav.local': 'Local',
   'header.nav.install': 'Install',
+  'header.nav.faq': 'FAQ',
   'header.gh': 'GitHub ↗',
 
   // Hero
@@ -136,10 +137,10 @@ const en: Dict = {
     'No — it runs through the Codex CLI. If the CLI is missing, ima2-gen prompts you to install it on first run, then opens a login window. Approve and you are good to go.',
   'faq.install.q2': 'How do I install ima2-gen?',
   'faq.install.a2':
-    'Open Terminal (macOS / Linux) or PowerShell (Windows). Run "npm install -g ima2-gen", then "ima2 serve". Open http://localhost:3333 in your browser.',
+    'Open Terminal (macOS / Linux) or PowerShell (Windows). Install globally and start the server with the commands below. Then open http://localhost:3333 in your browser.',
   'faq.install.q3': 'What is npm? Is there a one-click install?',
   'faq.install.a3':
-    'npm is the Node.js package manager. If you do not have it, paste the one-line installer below — it sets up Node, ima2-gen, and starts the server. macOS: curl -fsSL https://lidge-jun.github.io/ima2-gen/install-mac.sh | bash. Windows PowerShell: irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex.',
+    'npm is the Node.js package manager. If you do not have it, paste the one-line installer for your OS — it sets up Node, ima2-gen, and starts the server in one go.',
   'faq.install.q4': 'Does it work on Windows / PowerShell?',
   'faq.install.a4':
     'Yes. Windows 10+ with PowerShell 5.1 or PowerShell 7 are supported. The installer script is signed via raw GitHub URL and prints every command before running it.',
@@ -190,6 +191,7 @@ const ko: Dict = {
   'header.nav.branch': '분기',
   'header.nav.local': '로컬',
   'header.nav.install': '설치',
+  'header.nav.faq': 'FAQ',
   'header.gh': 'GitHub ↗',
 
   // Hero
@@ -311,10 +313,10 @@ const ko: Dict = {
     '아니요. Codex CLI로 실행됩니다. CLI가 없으면 ima2-gen이 첫 실행 때 설치를 안내하고, 로그인 창을 띄워줍니다. 안내대로 깔면 바로 시작할 수 있습니다.',
   'faq.install.q2': '어떻게 설치하나요?',
   'faq.install.a2':
-    '터미널(macOS / Linux)이나 PowerShell(Windows)을 엽니다. "npm install -g ima2-gen"으로 설치하고 "ima2 serve"로 실행하세요. 브라우저에서 http://localhost:3333 을 열면 됩니다.',
+    '터미널(macOS / Linux) 또는 PowerShell(Windows)을 엽니다. 아래 명령어로 전역 설치하고 실행하세요. 브라우저에서 http://localhost:3333 을 열면 됩니다.',
   'faq.install.q3': 'npm이 뭔가요? 한 번에 설치하는 방법이 있나요?',
   'faq.install.a3':
-    'npm은 Node.js 패키지 매니저입니다. 처음이라면 아래 한 줄 명령어를 그대로 붙여 넣으세요. Node 설치부터 ima2-gen 실행까지 한 번에 끝납니다. macOS: curl -fsSL https://lidge-jun.github.io/ima2-gen/install-mac.sh | bash. Windows PowerShell: irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex.',
+    'npm은 Node.js 패키지 매니저입니다. 처음이라면 OS별 한 줄 명령어를 그대로 붙여 넣으세요. Node 설치부터 ima2-gen 실행까지 한 번에 끝납니다.',
   'faq.install.q4': 'Windows / PowerShell에서도 되나요?',
   'faq.install.a4':
     '됩니다. Windows 10 이상, PowerShell 5.1 또는 PowerShell 7을 지원합니다. 설치 스크립트는 raw GitHub URL로 받고, 실행 전 모든 명령을 화면에 출력합니다.',
