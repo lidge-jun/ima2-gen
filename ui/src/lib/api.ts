@@ -314,18 +314,29 @@ export function renameSession(id: string, title: string): Promise<{ ok: boolean 
 export function deleteSession(id: string): Promise<{ ok: boolean }> {
   return jsonFetch(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+export type GraphSaveMeta = {
+  saveId?: string;
+  saveReason?: string;
+  tabId?: string;
+};
+
 export function saveSessionGraph(
   id: string,
   graphVersion: number,
   nodes: SessionGraphNode[],
   edges: SessionGraphEdge[],
+  meta: GraphSaveMeta = {},
 ): Promise<{ ok: boolean; nodes: number; edges: number; graphVersion: number }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "If-Match": String(graphVersion),
+  };
+  if (meta.saveId) headers["X-Ima2-Graph-Save-Id"] = meta.saveId;
+  if (meta.saveReason) headers["X-Ima2-Graph-Save-Reason"] = meta.saveReason;
+  if (meta.tabId) headers["X-Ima2-Tab-Id"] = meta.tabId;
   return jsonFetch(`/api/sessions/${encodeURIComponent(id)}/graph`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "If-Match": String(graphVersion),
-    },
+    headers,
     body: JSON.stringify({ nodes, edges }),
   });
 }
