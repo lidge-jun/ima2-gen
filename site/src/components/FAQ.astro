@@ -1,5 +1,6 @@
 ---
 import { t, type Lang } from '../i18n/strings';
+import InlineCode from './InlineCode.astro';
 
 interface Props {
   lang: Lang;
@@ -23,7 +24,7 @@ const items = [
         items.map((item) => (
           <details class="reveal" open={item.open}>
             <summary>{t(lang, item.q)}</summary>
-            <p>{t(lang, item.a)}</p>
+            <p><InlineCode text={t(lang, item.a)} /></p>
           </details>
         ))
       }

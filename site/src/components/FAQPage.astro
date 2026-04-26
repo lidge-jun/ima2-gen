@@ -1,5 +1,6 @@
 ---
 import { t, type Lang } from '../i18n/strings';
+import InlineCode from './InlineCode.astro';
 
 interface Props {
   lang: Lang;
@@ -107,7 +108,7 @@ const groups: Group[] = [
               <details>
                 <summary>{t(lang, item.q)}</summary>
                 <div class="answer">
-                  <p>{t(lang, item.a)}</p>
+                  <p><InlineCode text={t(lang, item.a)} /></p>
                   {item.codes && (
                     <div class="codes">
                       {item.codes.map((cmd) => (

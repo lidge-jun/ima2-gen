@@ -1,0 +1,21 @@
+---
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+
+// Split on backtick-delimited spans. Even indices are plain text,
+// odd indices are wrapped in <code>.
+const parts = text.split(/(`[^`]+`)/g);
+---
+
+{
+  parts.map((part) =>
+    part.length > 2 && part.startsWith('`') && part.endsWith('`') ? (
+      <code class="inline-code">{part.slice(1, -1)}</code>
+    ) : (
+      part
+    )
+  )
+}
