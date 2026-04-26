@@ -43,7 +43,7 @@ describe("node UI compact metadata contract", () => {
 
   it("persists node output size so aspect-ratio layout survives reload", () => {
     const store = readSource("ui/src/store/useAppStore.ts");
-    const api = readSource("ui/src/lib/api.ts");
+    const api = readSource("ui/src/lib/nodeApi.ts");
     const route = readSource("routes/nodes.js");
 
     assert.match(api, /size\?: string \| null/);
@@ -97,16 +97,36 @@ describe("node UI compact metadata contract", () => {
 
   it("makes node connection handles easier to target", () => {
     const canvas = readSource("ui/src/components/NodeCanvas.tsx");
+    const component = readSource("ui/src/components/ImageNode.tsx");
     const css = readSource("ui/src/index.css");
     const handleRule = /\.image-node__handle\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const hitRule = /\.image-node__handle::before\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const hoverRule = /\.image-node:hover \.image-node__handle,[^{]+\{[^}]*\}/s.exec(css)?.[0] ?? "";
 
+    assert.match(component, /type="source"/);
+    assert.match(component, /type="target"/);
+    assert.match(component, /id=\{`source-\$\{handleId\}`\}/);
+    assert.match(component, /id=\{`target-\$\{handleId\}`\}/);
     assert.match(canvas, /connectionRadius=\{32\}/);
     assert.match(handleRule, /transition:/);
     assert.match(hitRule, /inset:\s*-9px/);
     assert.match(hoverRule, /width:\s*14px !important/);
     assert.match(hoverRule, /height:\s*14px !important/);
     assert.match(hoverRule, /box-shadow:/);
+  });
+
+  it("preserves directional node connection handles through connect and session save", () => {
+    const canvas = readSource("ui/src/components/NodeCanvas.tsx");
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(canvas, /connectNodes\(params\.source,\s*params\.target,\s*params\.sourceHandle,\s*params\.targetHandle\)/);
+    assert.match(canvas, /connectionState\.toNode \|\| connectionState\.toHandle/);
+    assert.match(store, /sourceHandle\?: string \| null/);
+    assert.match(store, /targetHandle\?: string \| null/);
+    assert.match(store, /sourceHandle,\s*\n\s*targetHandle,/);
+    assert.match(store, /sourceHandle:\s*e\.sourceHandle \?\? null/);
+    assert.match(store, /targetHandle:\s*e\.targetHandle \?\? null/);
+    assert.match(store, /sourceHandle:\s*typeof data\.sourceHandle === "string" \? data\.sourceHandle : null/);
+    assert.match(store, /targetHandle:\s*typeof data\.targetHandle === "string" \? data\.targetHandle : null/);
   });
 });

@@ -20,8 +20,10 @@ export default function App() {
   const syncFromStorage = useAppStore((s) => s.syncFromStorage);
   const theme = useAppStore((s) => s.theme);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
+  const themeFamily = useAppStore((s) => s.themeFamily);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const syncThemeFromStorage = useAppStore((s) => s.syncThemeFromStorage);
+  const syncThemeFamilyFromStorage = useAppStore((s) => s.syncThemeFamilyFromStorage);
   const refreshResolvedTheme = useAppStore((s) => s.refreshResolvedTheme);
   const uiModeRaw = useAppStore((s) => s.uiMode);
   const uiMode =
@@ -43,16 +45,23 @@ export default function App() {
         syncFromStorage();
       } else if (e.key === "ima2:theme") {
         syncThemeFromStorage();
+      } else if (e.key === "ima2:themeFamily") {
+        syncThemeFamilyFromStorage();
       }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [syncFromStorage, syncThemeFromStorage]);
+  }, [syncFromStorage, syncThemeFromStorage, syncThemeFamilyFromStorage]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = resolvedTheme;
-    document.documentElement.style.colorScheme = resolvedTheme;
-  }, [resolvedTheme]);
+    const root = document.documentElement;
+    // Legacy attribute (kept so existing :root[data-theme="dark|light"] selectors continue to match).
+    root.dataset.theme = resolvedTheme;
+    // Two-axis attributes for AI platform style themes.
+    root.dataset.themeMode = resolvedTheme;
+    root.dataset.themeFamily = themeFamily;
+    root.style.colorScheme = resolvedTheme;
+  }, [resolvedTheme, themeFamily]);
 
   useEffect(() => {
     if (theme !== "system") return;
@@ -75,7 +84,8 @@ export default function App() {
     <>
       <div
         className={`app${settingsOpen ? " app--settings-open" : ""}`}
-        data-theme={resolvedTheme}
+        data-theme-mode={resolvedTheme}
+        data-theme-family={themeFamily}
       >
         <Sidebar />
         {settingsOpen ? (

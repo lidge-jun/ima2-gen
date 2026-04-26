@@ -35,9 +35,9 @@ graph TD
 | File | Lines | Responsibility |
 |---|---:|---|
 | `server.js` | 235 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, route registration, static serving |
-| `routes/generate.js` | 269 | Classic generation API, model validation, reference validation, sidecar save |
+| `routes/generate.js` | 284 | Classic generation API, model validation, reference validation, upstream validation pass-through, sidecar save |
 | `routes/edit.js` | 186 | Edit API, parent image path, OAuth edit response save |
-| `routes/nodes.js` | 430 | Node generation API, explicit context/search policy, SSE partial streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
+| `routes/nodes.js` | 438 | Node generation API, explicit context/search policy, SSE partial/error streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
 | `routes/sessions.js` | 292 | SQLite-backed session list/load/save/rename/delete and graph save |
 | `routes/history.js` | 102 | History list, grouped gallery, soft delete and restore |
 | `routes/health.js` | 113 | Health, providers, billing, OAuth status, runtime port status, inflight cancel |
@@ -67,28 +67,29 @@ graph TD
 | `lib/logger.js` | 150 | Safe structured logging, redaction, level filtering, and test sink helpers |
 | `lib/requestLogger.js` | 48 | API-only request lifecycle logging and sanitized request ID middleware |
 | `lib/codexDetect.js` | 69 | Codex OAuth session detection helper |
-| `lib/errorClassify.js` | 62 | Upstream/OAuth error classifier for stable error codes |
+| `lib/errorClassify.js` | 100 | Upstream/OAuth error classifier for stable error codes, including provider validation errors |
 | `lib/historyList.js` | 142 | History reconstruction from generated assets, sidecars, and session-aware rows |
 | `lib/storageMigration.js` | 284 | Legacy generated-folder scan and migration support |
 | `lib/runtimePorts.js` | 93 | Port probing, fallback binding, and OAuth ready URL parsing |
 | `lib/oauthLauncher.js` | 64 | OAuth proxy child process startup and actual ready-port capture |
-| `lib/oauthProxy.js` | 382 | OAuth Responses proxy helpers, generate/edit streaming, optional edit search, safe stream diagnostics |
+| `lib/oauthProxy.js` | 464 | OAuth Responses proxy helpers, generate/edit streaming, upstream 4xx parsing, optional edit search, safe stream diagnostics |
 
 ## UI File Map
 
 | Area | File | Lines | Responsibility |
 |---|---|---:|---|
-| App shell | `ui/src/App.tsx` | 100 | Initial hydration, polling, classic/node canvas switch |
+| App shell | `ui/src/App.tsx` | 110 | Initial hydration, polling, classic/node canvas switch, theme attributes |
 | Entry | `ui/src/main.tsx` | 10 | React mount |
-| Types | `ui/src/types.ts` | 121 | Provider, quality, size, image model, response types |
-| Store | `ui/src/store/useAppStore.ts` | 2452 | Zustand state, history, in-flight jobs, graph, sessions, errors, storage, custom size, node batch selection, edge disconnect, node references, node regeneration actions |
-| API client | `ui/src/lib/api.ts` | 513 | Browser-side REST client |
+| Types | `ui/src/types.ts` | 137 | Provider, quality, size, image model, theme family, response types |
+| Store | `ui/src/store/useAppStore.ts` | 2496 | Zustand state, history, in-flight jobs, graph, sessions, errors, storage, themes, custom size, node batch selection, directional edge handles, edge disconnect, node references, node regeneration actions |
+| API client | `ui/src/lib/api.ts` | 377 | Browser-side REST client and session/storage APIs |
+| Node API client | `ui/src/lib/nodeApi.ts` | 148 | Node generation JSON/SSE client and node error status propagation |
 | Node graph helpers | `ui/src/lib/nodeGraph.ts` | 41 | Visual-edge parent derivation and incoming-edge conflict helpers |
 | Node ref storage | `ui/src/lib/nodeRefStorage.ts` | 54 | Browser-local node reference persistence outside SQLite graph payloads |
-| Style | `ui/src/index.css` | 3006 | App layout, canvas, components, node-mode, settings, error, node batch, and compact node footer styling |
-| Components | `ui/src/components/*.tsx` | 3126 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, error surfaces |
+| Style | `ui/src/index.css` | 3873 | App layout, canvas, components, node-mode, settings, themes, error, node batch, compact node footer, and directional node handle styling |
+| Components | `ui/src/components/*.tsx` | 3396 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, themes, error surfaces |
 | Hooks | `ui/src/hooks/*.ts` | 57 | Billing and OAuth status polling |
-| i18n | `ui/src/i18n/*` | 1030 | English/Korean translations and locale runtime |
+| i18n | `ui/src/i18n/*` | 1273 | English/Korean translations and locale runtime |
 
 ## Major Components
 
@@ -96,15 +97,16 @@ graph TD
 |---|---:|---|
 | `GalleryModal.tsx` | 495 | History gallery modal, storage recovery banner, open-folder action |
 | `PromptComposer.tsx` | 219 | Prompt input, reference handling, style-sheet entry |
-| `NodeCanvas.tsx` | 166 | React Flow graph canvas, edge disconnect routing |
+| `NodeCanvas.tsx` | 166 | React Flow graph canvas, directional handle connection routing, edge disconnect routing |
 | `RightPanel.tsx` | 129 | Quality, size, format, moderation, count controls |
-| `ImageNode.tsx` | 295 | Node-mode image card, fixed-height preview, partial preview, node-local references, compact footer, regenerate/new-variant actions |
+| `ImageNode.tsx` | 322 | Node-mode image card, four-direction source/target handles, fixed-height preview, partial preview, node-local references, compact footer, regenerate/new-variant actions |
 | `ProviderSelect.tsx` | 103 | OAuth/API provider display and disabled-state handling |
 | `SessionPicker.tsx` | 89 | Node-mode session picker |
 | `SettingsWorkspace.tsx` | 218 | Workspace-style settings page |
 | `StyleSheetDialog.tsx` | 249 | Session style-sheet summary, extract, edit dialog |
 | `SizePicker.tsx` | 106 | Preset/custom size picker with keyboard draft state |
 | `ImageModelSelect.tsx` | 101 | Shared Settings/sidebar image model selector |
+| `ThemeToggle.tsx` | 117 | Theme mode and theme family selector |
 | `ErrorCard.tsx` | 70 | Persistent CTA error surface |
 | `CustomSizeConfirmModal.tsx` | 85 | Blocking confirmation for adjusted custom sizes |
 
@@ -126,7 +128,7 @@ graph TD
 | `tests/error-classify.test.js` | 49 | Error string classifier contract |
 | `tests/size-custom-input-contract.test.js` | 214 | Custom size keyboard and confirmation contract |
 | `tests/node-batch-contract.test.js` | 62 | Node graph selection and batch generation contracts |
-| `tests/node-edge-disconnect-contract.test.js` | 53 | Edge-only disconnect and parent metadata cleanup contracts |
+| `tests/node-edge-disconnect-contract.test.js` | 77 | Edge-only disconnect, parent metadata cleanup, and reconnectable target-handle contracts |
 | `tests/node-regen-actions-contract.test.js` | 40 | Ready-node regenerate/new-variant and custom-size continuation contracts |
 | `tests/node-layout-contract.test.js` | 21 | Position-based node placement contract |
 | `tests/node-diagnostics-contract.test.js` | 47 | Safe node retry/SSE stream diagnostics contract |
@@ -147,7 +149,7 @@ graph TD
 | Signal | Current state | Recommended docs to update |
 |---|---|---|
 | `server.js` is split | Route files own API surfaces; keep route map current | `03-server-api`, `06-infra-operations` |
-| `ui/src/index.css` is 3006 lines | Layout and component styles are concentrated | `04-frontend-architecture` |
+| `ui/src/index.css` is 3873 lines | Layout and component styles are concentrated | `04-frontend-architecture` |
 | `useAppStore.ts` is the central store | Classic, node, session, history, and toast state are together | `04-frontend-architecture`, `05-node-mode` |
 | `public/index.html.legacy` remains | Active UI is `ui/dist`; legacy HTML is only an artifact | `04-frontend-architecture`, `07-devlog-map` |
 
@@ -166,6 +168,7 @@ graph TD
 - 2026-04-25: Updated line counts and ownership after route decomposition, model/error/custom-size/storage work, and package smoke tests.
 - 2026-04-25: Added node graph/ref helper files and contract tests for parent source-of-truth, reference payloads, context/search policy, and compact footer.
 - 2026-04-26: Refreshed CLI, runtime port fallback, node layout, and test-map ownership after the 0.09.20.1 and runtime binding work.
+- 2026-04-27: Updated node mode counts and responsibilities after four-direction React Flow handle support and handle-id session persistence.
 
 Previous document: `[[00-structure-hub]]`
 

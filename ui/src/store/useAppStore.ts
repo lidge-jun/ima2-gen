@@ -11,9 +11,11 @@ import type {
   ResolvedTheme,
   SettingsSection,
   SizePreset,
+  ThemeFamily,
   ThemePreference,
   UIMode,
 } from "../types";
+import { THEME_FAMILIES } from "../types";
 import { isMultiResponse } from "../types";
 import {
   postGenerate,
@@ -104,6 +106,16 @@ function loadThemePreference(): ThemePreference {
     if (raw === "system" || raw === "dark" || raw === "light") return raw;
   } catch {}
   return "system";
+}
+
+function loadThemeFamily(): ThemeFamily {
+  try {
+    const raw = localStorage.getItem("ima2:themeFamily");
+    if (raw && (THEME_FAMILIES as readonly string[]).includes(raw)) {
+      return raw as ThemeFamily;
+    }
+  } catch {}
+  return "default";
 }
 
 function loadImageModel(): ImageModel {
@@ -362,11 +374,16 @@ function mapSessionToGraph(session: SessionFull): {
       data,
     };
   });
-  const graphEdges: GraphEdge[] = session.edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-  }));
+  const graphEdges: GraphEdge[] = session.edges.map((e) => {
+    const data = (e.data ?? {}) as Record<string, unknown>;
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: typeof data.sourceHandle === "string" ? data.sourceHandle : null,
+      targetHandle: typeof data.targetHandle === "string" ? data.targetHandle : null,
+    };
+  });
   return {
     graphNodes: deriveParentServerNodeIds(graphNodes, graphEdges),
     graphEdges,
@@ -435,8 +452,11 @@ type AppState = {
 
   theme: ThemePreference;
   resolvedTheme: ResolvedTheme;
+  themeFamily: ThemeFamily;
   setTheme: (theme: ThemePreference) => void;
+  setThemeFamily: (family: ThemeFamily) => void;
   syncThemeFromStorage: () => void;
+  syncThemeFamilyFromStorage: () => void;
   refreshResolvedTheme: () => void;
 
   locale: Locale;
@@ -460,7 +480,12 @@ type AppState = {
   addSiblingNode: (sourceClientId: ClientNodeId) => ClientNodeId;
   duplicateBranchRoot: (sourceClientId: ClientNodeId) => ClientNodeId;
   addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
-  connectNodes: (sourceClientId: ClientNodeId, targetClientId: ClientNodeId) => void;
+  connectNodes: (
+    sourceClientId: ClientNodeId,
+    targetClientId: ClientNodeId,
+    sourceHandle?: string | null,
+    targetHandle?: string | null,
+  ) => void;
   updateNodePrompt: (clientId: ClientNodeId, prompt: string) => void;
   addNodeReferences: (clientId: ClientNodeId, files: File[]) => Promise<void>;
   addNodeReferenceDataUrl: (clientId: ClientNodeId, dataUrl: string) => void;
@@ -867,15 +892,25 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   theme: loadThemePreference(),
   resolvedTheme: resolveThemePreference(loadThemePreference()),
+  themeFamily: loadThemeFamily(),
   setTheme: (theme) => {
     try {
       localStorage.setItem("ima2:theme", theme);
     } catch {}
     set({ theme, resolvedTheme: resolveThemePreference(theme) });
   },
+  setThemeFamily: (family) => {
+    try {
+      localStorage.setItem("ima2:themeFamily", family);
+    } catch {}
+    set({ themeFamily: family });
+  },
   syncThemeFromStorage: () => {
     const theme = loadThemePreference();
     set({ theme, resolvedTheme: resolveThemePreference(theme) });
+  },
+  syncThemeFamilyFromStorage: () => {
+    set({ themeFamily: loadThemeFamily() });
   },
   refreshResolvedTheme: () => {
     set((s) => ({ resolvedTheme: resolveThemePreference(s.theme) }));
@@ -1907,7 +1942,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     return clientId;
   },
 
-  connectNodes: (sourceClientId, targetClientId) => {
+  connectNodes: (sourceClientId, targetClientId, sourceHandle = null, targetHandle = null) => {
     if (sourceClientId === targetClientId) return;
     const existing = get().graphEdges.find(
       (e) => e.source === sourceClientId && e.target === targetClientId,
@@ -1921,7 +1956,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!source) return;
     const graphEdges = [
       ...get().graphEdges,
-      { id: `${sourceClientId}->${targetClientId}`, source: sourceClientId, target: targetClientId },
+      {
+        id: `${sourceClientId}->${targetClientId}`,
+        source: sourceClientId,
+        target: targetClientId,
+        sourceHandle,
+        targetHandle,
+      },
     ];
     set({
       graphNodes: deriveParentServerNodeIds(get().graphNodes, graphEdges),
@@ -2306,7 +2347,10 @@ async function doSave(
     id: e.id,
     source: e.source,
     target: e.target,
-    data: {},
+    data: {
+      sourceHandle: e.sourceHandle ?? null,
+      targetHandle: e.targetHandle ?? null,
+    },
   }));
   const saveId = `gs_${Date.now().toString(36)}_${++graphSaveSeq}`;
   try {

@@ -35,6 +35,19 @@ describe("node edge disconnect contract", () => {
     assert.match(store, /parentServerNodeId:\s*remainingParent\?\.data\.serverNodeId \?\? null/);
   });
 
+  it("keeps directional target handles available after disconnect", () => {
+    const imageNode = readFileSync("ui/src/components/ImageNode.tsx", "utf-8");
+
+    assert.match(imageNode, /const NODE_HANDLE_POSITIONS = \[/);
+    assert.match(imageNode, /id:\s*"top"/);
+    assert.match(imageNode, /id:\s*"right"/);
+    assert.match(imageNode, /id:\s*"bottom"/);
+    assert.match(imageNode, /id:\s*"left"/);
+    assert.match(imageNode, /type="target"/);
+    assert.match(imageNode, /id=\{`target-\$\{handleId\}`\}/);
+    assert.doesNotMatch(imageNode, /d\.parentServerNodeId\s*\?\s*\(\s*<Handle\s+type="target"/s);
+  });
+
   it("preserves a remaining parent when another incoming edge still exists", () => {
     assert.match(store, /const remainingParent = remainingIncoming/);
     assert.match(store, /candidate\.id === remainingIncoming\.source/);

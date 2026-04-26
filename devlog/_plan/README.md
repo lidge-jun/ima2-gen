@@ -25,7 +25,8 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 5 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
 | 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
 | 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
-| 8 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 8 | `0.09.34-node-connect-regression/` | active/reopened | edge disconnect 이후 기존 노드끼리 연결되지 않고 새 노드만 생기는 React Flow target handle 회귀 수정. 상하좌우 4방향 연결점 포함. 후속 PRD는 disconnect 후 같은 노드쌍을 다른 handle로 재연결할 때 이전 anchor가 재사용되는 문제. |
+| 9 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 
 ## 완료로 이동한 항목
 
@@ -50,6 +51,7 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | `_plan/0.09.8-error-message-ux` | `_fin/260425_0.09.8-error-message-ux` | `errorClassify`, `errorCodes`, `errorHandler`, `ErrorCard`, i18n, classifier test가 존재한다. |
 | `_plan/0.21-custom-size-input` | `_fin/260425_0.21-custom-size-input` | keyboard-safe custom input, generation-time confirm modal, contract tests가 존재한다. |
 | `_plan/00_prompt` | `_fin/260425_00_prompt-quality-prompt-reference` | prompt 원문/diff 기록은 완료된 reference로 보관하고 active plan에서 제외한다. |
+| `_plan/0.09.33-upstream-validation-errors` | `_fin/260427_0.09.33-upstream-validation-errors` | upstream 4xx validation error가 `INVALID_REQUEST`로 정규화되고, classic/node JSON/SSE/UI/folder-open 회귀 테스트와 `npm test`, `npm run ui:build`가 통과했다. |
 
 ## 다음 작업 원칙
 
@@ -73,3 +75,9 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-25: 새 active `0.09.20-cli-backend-parity` rough plan을 추가. 기존 containerization `0.09.20`은 `0.99_future`에 유지.
 - 2026-04-26: `0.09.20-cli-backend-parity`를 최신 runtime fallback, storage recovery, sessions/style, node route 상태 기준으로 재작성. `0.09.20.1`~`0.09.20.5` slice로 분리.
 - 2026-04-26: `0.09.20.1` safe classic CLI parity 완료. closeout은 `_fin/260426_0.09.20.1-safe-classic-cli-parity`.
+- 2026-04-26: PR #3 검토 결과 upstream 4xx validation error pass-through 문제가 main에 미해결인 것을 확인하고 `0.09.33-upstream-validation-errors` queued lane을 추가.
+- 2026-04-26: `0.09.33`에 Slice D(크로스플랫폼 폴더 열기) + Slice E(Windows/Linux 환경 갭) 추가. 사용자 제보 기반 — `Content generation refused` 에러 로깅 + 폴더 열기 무응답 + Windows smoke.
+- 2026-04-27: `0.09.33-upstream-validation-errors` 구현/검증 완료 후 `_fin/260427_0.09.33-upstream-validation-errors`로 이동. `INVALID_REQUEST` 정규화, node SSE status 전파, 폴더 열기 feedback, 회귀 테스트를 완료했다.
+- 2026-04-27: 사용자 제보 기반 `0.09.34-node-connect-regression` active lane 추가. 증상은 노드끼리 연결하려 하면 기존 노드가 연결되지 않고 새 child node만 생성되는 React Flow target handle 회귀다.
+- 2026-04-27: `0.09.34` 플랜을 Context7/React Flow 공식 문서 기준으로 보강. 다중 handle은 unique id가 필요하며, 상하좌우 source/target handle과 `sourceHandle`/`targetHandle` 보존을 범위에 포함한다.
+- 2026-04-27: `0.09.34` 후속 PRD `PRD-reconnect-handle-anchor.md` 추가. top/top 연결 후 disconnect, side/middle 재연결 시 이전 top anchor가 재사용되는 문제를 handle-aware edge id와 disconnect 즉시 flush로 다룬다.

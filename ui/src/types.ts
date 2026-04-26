@@ -2,6 +2,15 @@ export type UIMode = "classic" | "node" | "card-news";
 export type SettingsSection = "account" | "generation" | "appearance" | "language" | "future";
 export type ThemePreference = "system" | "dark" | "light";
 export type ResolvedTheme = "dark" | "light";
+export type ResolvedThemeMode = "dark" | "light";
+export type ThemeFamily = "default" | "gpt" | "claude" | "gemini" | "grok";
+export const THEME_FAMILIES = [
+  "default",
+  "gpt",
+  "claude",
+  "gemini",
+  "grok",
+] as const satisfies readonly ThemeFamily[];
 export type Provider = "oauth" | "api";
 export type Quality = "low" | "medium" | "high";
 export type Format = "png" | "jpeg" | "webp";

@@ -84,6 +84,404 @@
   color-scheme: light;
 }
 
+/* ============================================================================
+ * Default family canvas tokens (Phase 3 prep — extracted from former NodeCanvas
+ * hardcoded values so React Flow can read CSS vars instead of mode-branching).
+ * Same values for default family preserve current visual output exactly.
+ * ============================================================================ */
+:root,
+:root[data-theme="dark"],
+:root[data-theme-mode="dark"][data-theme-family="default"] {
+  --canvas-grid: #2a2a2a;
+  --minimap-mask: rgba(10, 10, 10, 0.7);
+  --minimap-node-fill: #f0f0f0;
+  --minimap-node-stroke: #1a1a1a;
+  --minimap-bg: #141414;
+  --minimap-border: #2a2a2a;
+}
+:root[data-theme="light"],
+:root[data-theme-mode="light"][data-theme-family="default"] {
+  --canvas-grid: #d9dee6;
+  --minimap-mask: rgba(246, 247, 251, 0.72);
+  --minimap-node-fill: #1f2430;
+  --minimap-node-stroke: #ffffff;
+  --minimap-bg: #ffffff;
+  --minimap-border: #d9dee6;
+}
+
+/* ============================================================================
+ * GPT family — current ChatGPT (2026): monochrome, no green accent.
+ * ============================================================================ */
+:root[data-theme-mode="dark"][data-theme-family="gpt"] {
+  --bg: #212121;
+  --surface: #2f2f2f;
+  --surface-2: #383838;
+  --surface-3: #444444;
+  --border: #4a4a4a;
+  --border-strong: #5f5f5f;
+  --text: #ececec;
+  --text-dim: #b4b4b4;
+  --text-muted: #9b9b9b;
+  --text-faint: #7a7a7a;
+  --canvas-muted: #5f5f5f;
+  --accent: #ffffff;
+  --accent-bright: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.10);
+  --accent-ink: #0d0d0d;
+  --accent-shadow: rgba(0, 0, 0, 0.28);
+  --focus-ring: rgba(255, 255, 255, 0.18);
+  --hairline: rgba(255, 255, 255, 0.14);
+  --hairline-soft: rgba(255, 255, 255, 0.05);
+  --control-bg: rgba(255, 255, 255, 0.06);
+  --control-hover: rgba(255, 255, 255, 0.10);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --scrim-strong: rgba(0, 0, 0, 0.78);
+  --caption-scrim: rgba(0, 0, 0, 0.85);
+  --chip-scrim: rgba(0, 0, 0, 0.75);
+  --on-scrim: #ececec;
+  --shadow-soft: rgba(0, 0, 0, 0.22);
+  --shadow-strong: rgba(0, 0, 0, 0.36);
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --blue: #4a9eff;
+  --radius: 10px;
+  --font: "Söhne", "Inter", system-ui, sans-serif;
+  --mono: "Geist Mono", "SFMono-Regular", monospace;
+  --canvas-grid: #3a3a3a;
+  --minimap-mask: rgba(33, 33, 33, 0.72);
+  --minimap-node-fill: #ececec;
+  --minimap-node-stroke: #212121;
+  --minimap-bg: #2f2f2f;
+  --minimap-border: #4a4a4a;
+  color-scheme: dark;
+}
+:root[data-theme-mode="light"][data-theme-family="gpt"] {
+  --bg: #ffffff;
+  --surface: #f7f7f8;
+  --surface-2: #ececec;
+  --surface-3: #e3e3e3;
+  --border: #e5e5e5;
+  --border-strong: #cccccc;
+  --text: #0d0d0d;
+  --text-dim: #5d5d5d;
+  --text-muted: #737373;
+  --text-faint: #8e8e8e;
+  --canvas-muted: #b0b0b0;
+  --accent: #0d0d0d;
+  --accent-bright: #000000;
+  --accent-soft: rgba(13, 13, 13, 0.06);
+  --accent-ink: #ffffff;
+  --accent-shadow: rgba(13, 13, 13, 0.12);
+  --focus-ring: rgba(13, 13, 13, 0.18);
+  --hairline: rgba(13, 13, 13, 0.14);
+  --hairline-soft: rgba(13, 13, 13, 0.05);
+  --control-bg: rgba(13, 13, 13, 0.04);
+  --control-hover: rgba(13, 13, 13, 0.08);
+  --scrim: rgba(13, 13, 13, 0.34);
+  --scrim-strong: rgba(13, 13, 13, 0.46);
+  --caption-scrim: rgba(13, 13, 13, 0.78);
+  --chip-scrim: rgba(13, 13, 13, 0.72);
+  --on-scrim: #ffffff;
+  --shadow-soft: rgba(13, 13, 13, 0.06);
+  --shadow-strong: rgba(13, 13, 13, 0.14);
+  --green: #1a9a6c;
+  --amber: #b65f00;
+  --red: #d23333;
+  --blue: #2563eb;
+  --radius: 10px;
+  --font: "Söhne", "Inter", system-ui, sans-serif;
+  --mono: "Geist Mono", "SFMono-Regular", monospace;
+  --canvas-grid: #e3e3e3;
+  --minimap-mask: rgba(255, 255, 255, 0.72);
+  --minimap-node-fill: #0d0d0d;
+  --minimap-node-stroke: #ffffff;
+  --minimap-bg: #ffffff;
+  --minimap-border: #e5e5e5;
+  color-scheme: light;
+}
+
+/* ============================================================================
+ * Claude family — claude.com (2026): cream paper, Anthropic Sans, black-pill CTA.
+ * Coral accent only in highlights/links, not on primary buttons.
+ * ============================================================================ */
+:root[data-theme-mode="dark"][data-theme-family="claude"] {
+  --bg: #262624;
+  --surface: #2f2e2c;
+  --surface-2: #3a3935;
+  --surface-3: #46443f;
+  --border: #4d4a44;
+  --border-strong: #6c665b;
+  --text: #f2eee6;
+  --text-dim: #cfc7b8;
+  --text-muted: #aaa191;
+  --text-faint: #817869;
+  --canvas-muted: #6c665b;
+  --accent: #cc785c;
+  --accent-bright: #d97757;
+  --accent-soft: rgba(204, 120, 92, 0.18);
+  --accent-ink: #ffffff;
+  --accent-shadow: rgba(204, 120, 92, 0.24);
+  --focus-ring: rgba(204, 120, 92, 0.32);
+  --hairline: rgba(242, 238, 230, 0.14);
+  --hairline-soft: rgba(242, 238, 230, 0.05);
+  --control-bg: rgba(242, 238, 230, 0.05);
+  --control-hover: rgba(242, 238, 230, 0.10);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --scrim-strong: rgba(0, 0, 0, 0.78);
+  --caption-scrim: rgba(0, 0, 0, 0.85);
+  --chip-scrim: rgba(0, 0, 0, 0.75);
+  --on-scrim: #f2eee6;
+  --shadow-soft: rgba(0, 0, 0, 0.24);
+  --shadow-strong: rgba(0, 0, 0, 0.38);
+  --green: #5fa66f;
+  --amber: #cc9b4f;
+  --red: #d2654a;
+  --blue: #6b8fa6;
+  --radius: 12px;
+  --font: "Anthropic Sans", "Söhne", "Inter", system-ui, sans-serif;
+  --mono: "Geist Mono", "SFMono-Regular", monospace;
+  --canvas-grid: #3a3935;
+  --minimap-mask: rgba(38, 38, 36, 0.72);
+  --minimap-node-fill: #f2eee6;
+  --minimap-node-stroke: #262624;
+  --minimap-bg: #2f2e2c;
+  --minimap-border: #4d4a44;
+  color-scheme: dark;
+}
+:root[data-theme-mode="light"][data-theme-family="claude"] {
+  --bg: #faf9f5;
+  --surface: #ffffff;
+  --surface-2: #f0eee6;
+  --surface-3: #e7e4d8;
+  --border: #e2dfd2;
+  --border-strong: #c8c2b0;
+  --text: #141413;
+  --text-dim: #52514a;
+  --text-muted: #7a7164;
+  --text-faint: #9a907f;
+  --canvas-muted: #b8b0a0;
+  --accent: #cc785c;
+  --accent-bright: #b85f45;
+  --accent-soft: rgba(204, 120, 92, 0.14);
+  --accent-ink: #ffffff;
+  --accent-shadow: rgba(133, 82, 58, 0.18);
+  --focus-ring: rgba(204, 120, 92, 0.28);
+  --hairline: rgba(20, 20, 19, 0.14);
+  --hairline-soft: rgba(20, 20, 19, 0.05);
+  --control-bg: rgba(20, 20, 19, 0.045);
+  --control-hover: rgba(20, 20, 19, 0.08);
+  --scrim: rgba(20, 20, 19, 0.34);
+  --scrim-strong: rgba(20, 20, 19, 0.46);
+  --caption-scrim: rgba(20, 20, 19, 0.78);
+  --chip-scrim: rgba(20, 20, 19, 0.72);
+  --on-scrim: #faf9f5;
+  --shadow-soft: rgba(80, 65, 45, 0.10);
+  --shadow-strong: rgba(80, 65, 45, 0.18);
+  --green: #1a9a6c;
+  --amber: #b65f00;
+  --red: #d23333;
+  --blue: #2563eb;
+  --radius: 12px;
+  --font: "Anthropic Sans", "Söhne", "Inter", system-ui, sans-serif;
+  --mono: "Geist Mono", "SFMono-Regular", monospace;
+  --canvas-grid: #e7e4d8;
+  --minimap-mask: rgba(250, 249, 245, 0.78);
+  --minimap-node-fill: #141413;
+  --minimap-node-stroke: #ffffff;
+  --minimap-bg: #ffffff;
+  --minimap-border: #e2dfd2;
+  color-scheme: light;
+}
+
+/* ============================================================================
+ * Gemini family — gemini.google.com (2026): Material 3 cool blue-gray + solid
+ * Google Blue. Brand gradient only on logo / hero, never on action buttons.
+ * ============================================================================ */
+:root[data-theme-mode="dark"][data-theme-family="gemini"] {
+  --bg: #101418;
+  --surface: #1b1f24;
+  --surface-2: #232a31;
+  --surface-3: #2d3640;
+  --border: #3b4652;
+  --border-strong: #526171;
+  --text: #e9eef6;
+  --text-dim: #c0c8d2;
+  --text-muted: #9aa6b2;
+  --text-faint: #74808d;
+  --canvas-muted: #526171;
+  --accent: #8ab4f8;
+  --accent-bright: #a8c7fa;
+  --accent-soft: rgba(138, 180, 248, 0.18);
+  --accent-ink: #062e6f;
+  --accent-shadow: rgba(11, 87, 208, 0.25);
+  --focus-ring: rgba(138, 180, 248, 0.32);
+  --hairline: rgba(233, 238, 246, 0.14);
+  --hairline-soft: rgba(233, 238, 246, 0.05);
+  --control-bg: rgba(233, 238, 246, 0.06);
+  --control-hover: rgba(233, 238, 246, 0.10);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --scrim-strong: rgba(0, 0, 0, 0.78);
+  --caption-scrim: rgba(0, 0, 0, 0.85);
+  --chip-scrim: rgba(0, 0, 0, 0.75);
+  --on-scrim: #e9eef6;
+  --shadow-soft: rgba(0, 0, 0, 0.26);
+  --shadow-strong: rgba(0, 0, 0, 0.42);
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --radius: 22px;
+  --font: "Google Sans", "Google Sans Text", "Inter", system-ui, sans-serif;
+  --mono: "Roboto Mono", "Geist Mono", monospace;
+  --accent-gradient: linear-gradient(135deg, #4285f4 0%, #9168c0 52%, #d96570 100%);
+  --canvas-grid: #2d3640;
+  --minimap-mask: rgba(16, 20, 24, 0.72);
+  --minimap-node-fill: #e9eef6;
+  --minimap-node-stroke: #101418;
+  --minimap-bg: #1b1f24;
+  --minimap-border: #3b4652;
+  color-scheme: dark;
+}
+:root[data-theme-mode="light"][data-theme-family="gemini"] {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --surface-2: #e8edf3;
+  --surface-3: #dde3ec;
+  --border: #d5deea;
+  --border-strong: #b8c5d6;
+  --text: #1f1f1f;
+  --text-dim: #475569;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --canvas-muted: #94a3b8;
+  --accent: #0b57d0;
+  --accent-bright: #0842a0;
+  --accent-soft: rgba(11, 87, 208, 0.10);
+  --accent-ink: #ffffff;
+  --accent-shadow: rgba(11, 87, 208, 0.18);
+  --focus-ring: rgba(11, 87, 208, 0.28);
+  --hairline: rgba(31, 31, 31, 0.14);
+  --hairline-soft: rgba(31, 31, 31, 0.05);
+  --control-bg: rgba(11, 87, 208, 0.05);
+  --control-hover: rgba(11, 87, 208, 0.10);
+  --scrim: rgba(31, 31, 31, 0.34);
+  --scrim-strong: rgba(31, 31, 31, 0.46);
+  --caption-scrim: rgba(31, 31, 31, 0.78);
+  --chip-scrim: rgba(31, 31, 31, 0.72);
+  --on-scrim: #f0f4f8;
+  --shadow-soft: rgba(60, 64, 67, 0.10);
+  --shadow-strong: rgba(60, 64, 67, 0.20);
+  --green: #1a9a6c;
+  --amber: #b65f00;
+  --red: #d23333;
+  --blue: #0b57d0;
+  --radius: 22px;
+  --font: "Google Sans", "Google Sans Text", "Inter", system-ui, sans-serif;
+  --mono: "Roboto Mono", "Geist Mono", monospace;
+  --accent-gradient: linear-gradient(135deg, #4285f4 0%, #9168c0 52%, #d96570 100%);
+  --canvas-grid: #dde3ec;
+  --minimap-mask: rgba(240, 244, 248, 0.78);
+  --minimap-node-fill: #1f1f1f;
+  --minimap-node-stroke: #ffffff;
+  --minimap-bg: #ffffff;
+  --minimap-border: #d5deea;
+  color-scheme: light;
+}
+
+/* ============================================================================
+ * Grok family — grok.com (2026): pure-monochrome xAI brand, full-pill 9999px
+ * primary controls. No cyan / no X-blue accent.
+ * ============================================================================ */
+:root[data-theme-mode="dark"][data-theme-family="grok"] {
+  --bg: #050505;
+  --surface: #0d0d0d;
+  --surface-2: #161616;
+  --surface-3: #1f1f1f;
+  --border: #262626;
+  --border-strong: #404040;
+  --text: #fafafa;
+  --text-dim: #b8b8b8;
+  --text-muted: #8a8a8a;
+  --text-faint: #5a5a5a;
+  --canvas-muted: #5a5a5a;
+  --accent: #ffffff;
+  --accent-bright: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.10);
+  --accent-ink: #050505;
+  --accent-shadow: rgba(0, 0, 0, 0.45);
+  --focus-ring: rgba(255, 255, 255, 0.22);
+  --hairline: rgba(255, 255, 255, 0.14);
+  --hairline-soft: rgba(255, 255, 255, 0.05);
+  --control-bg: rgba(255, 255, 255, 0.05);
+  --control-hover: rgba(255, 255, 255, 0.10);
+  --scrim: rgba(0, 0, 0, 0.66);
+  --scrim-strong: rgba(0, 0, 0, 0.82);
+  --caption-scrim: rgba(0, 0, 0, 0.88);
+  --chip-scrim: rgba(0, 0, 0, 0.78);
+  --on-scrim: #fafafa;
+  --shadow-soft: rgba(0, 0, 0, 0.55);
+  --shadow-strong: rgba(0, 0, 0, 0.75);
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --blue: #4a9eff;
+  --radius: 9999px;
+  --font: "universalSans", "Inter", "Roboto", "Open Sans", system-ui, sans-serif;
+  --mono: "Geist Mono", "SFMono-Regular", monospace;
+  --canvas-grid: #1f1f1f;
+  --minimap-mask: rgba(5, 5, 5, 0.78);
+  --minimap-node-fill: #fafafa;
+  --minimap-node-stroke: #050505;
+  --minimap-bg: #0d0d0d;
+  --minimap-border: #262626;
+  color-scheme: dark;
+}
+:root[data-theme-mode="light"][data-theme-family="grok"] {
+  --bg: #fcfcfc;
+  --surface: #ffffff;
+  --surface-2: #f4f4f4;
+  --surface-3: #e9e9e9;
+  --border: #e3e3e3;
+  --border-strong: #c4c4c4;
+  --text: #050505;
+  --text-dim: #5a5a5a;
+  --text-muted: #7a7a7a;
+  --text-faint: #a0a0a0;
+  --canvas-muted: #a0a0a0;
+  --accent: #050505;
+  --accent-bright: #000000;
+  --accent-soft: rgba(5, 5, 5, 0.06);
+  --accent-ink: #ffffff;
+  --accent-shadow: rgba(5, 5, 5, 0.18);
+  --focus-ring: rgba(5, 5, 5, 0.22);
+  --hairline: rgba(5, 5, 5, 0.14);
+  --hairline-soft: rgba(5, 5, 5, 0.05);
+  --control-bg: rgba(5, 5, 5, 0.04);
+  --control-hover: rgba(5, 5, 5, 0.08);
+  --scrim: rgba(5, 5, 5, 0.34);
+  --scrim-strong: rgba(5, 5, 5, 0.46);
+  --caption-scrim: rgba(5, 5, 5, 0.78);
+  --chip-scrim: rgba(5, 5, 5, 0.72);
+  --on-scrim: #fcfcfc;
+  --shadow-soft: rgba(5, 5, 5, 0.06);
+  --shadow-strong: rgba(5, 5, 5, 0.14);
+  --green: #1a9a6c;
+  --amber: #b65f00;
+  --red: #d23333;
+  --blue: #2563eb;
+  --radius: 9999px;
+  --font: "universalSans", "Inter", "Roboto", "Open Sans", system-ui, sans-serif;
+  --mono: "Geist Mono", "SFMono-Regular", monospace;
+  --canvas-grid: #e9e9e9;
+  --minimap-mask: rgba(252, 252, 252, 0.78);
+  --minimap-node-fill: #050505;
+  --minimap-node-stroke: #ffffff;
+  --minimap-bg: #ffffff;
+  --minimap-border: #e3e3e3;
+  color-scheme: light;
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -211,6 +609,144 @@ body {
 }
 
 .theme-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.theme-toggle__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.theme-toggle__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.theme-toggle__family {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.theme-toggle__family-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font, "Outfit", sans-serif);
+  font-size: 12px;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.theme-toggle__family-trigger:hover {
+  background: var(--control-hover);
+  border-color: var(--border-strong);
+}
+
+.theme-toggle__family-trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: var(--control-hover);
+}
+
+.theme-toggle__family-caret {
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.theme-toggle__family-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background:
+    linear-gradient(
+      135deg,
+      var(--theme-toggle-dot-light, #fff) 0 50%,
+      var(--theme-toggle-dot-dark, #111) 50% 100%
+    );
+  flex: 0 0 auto;
+}
+
+/* Per-family dot preview colors (top-left/bottom-right split). */
+.theme-toggle__family-dot--default {
+  --theme-toggle-dot-light: #f0f0f0;
+  --theme-toggle-dot-dark: #1a1a1a;
+}
+.theme-toggle__family-dot--gpt {
+  --theme-toggle-dot-light: #f7f7f8;
+  --theme-toggle-dot-dark: #212121;
+}
+.theme-toggle__family-dot--claude {
+  --theme-toggle-dot-light: #faf9f5;
+  --theme-toggle-dot-dark: #cc785c;
+}
+.theme-toggle__family-dot--gemini {
+  --theme-toggle-dot-light: #f0f4f8;
+  --theme-toggle-dot-dark: #0b57d0;
+}
+.theme-toggle__family-dot--grok {
+  --theme-toggle-dot-light: #fcfcfc;
+  --theme-toggle-dot-dark: #050505;
+}
+
+.theme-toggle__family-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 160px;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-toggle__family-option {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font, "Outfit", sans-serif);
+  font-size: 12px;
+  text-align: left;
+  transition: background 140ms ease;
+}
+
+.theme-toggle__family-option:hover {
+  background: var(--control-hover);
+}
+
+.theme-toggle__family-option.is-active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.theme-toggle__mode {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 3px;
@@ -2287,6 +2823,49 @@ body {
 }
 .image-node__handle--source {
   background: var(--accent-bright) !important;
+}
+.image-node__handle--target {
+  background: var(--text-dim) !important;
+}
+.image-node__handle--top.image-node__handle--source {
+  top: 0 !important;
+  left: calc(50% + 12px) !important;
+  transform: translate(-50%, -50%) !important;
+}
+.image-node__handle--top.image-node__handle--target {
+  top: 0 !important;
+  left: calc(50% - 12px) !important;
+  transform: translate(-50%, -50%) !important;
+}
+.image-node__handle--right.image-node__handle--source {
+  top: calc(50% - 12px) !important;
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+.image-node__handle--right.image-node__handle--target {
+  top: calc(50% + 12px) !important;
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+.image-node__handle--bottom.image-node__handle--source {
+  bottom: 0 !important;
+  left: calc(50% + 12px) !important;
+  transform: translate(-50%, 50%) !important;
+}
+.image-node__handle--bottom.image-node__handle--target {
+  bottom: 0 !important;
+  left: calc(50% - 12px) !important;
+  transform: translate(-50%, 50%) !important;
+}
+.image-node__handle--left.image-node__handle--source {
+  top: calc(50% - 12px) !important;
+  left: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+.image-node__handle--left.image-node__handle--target {
+  top: calc(50% + 12px) !important;
+  left: 0 !important;
+  transform: translate(-50%, -50%) !important;
 }
 .image-node:hover .image-node__handle,
 .image-node__handle:hover,

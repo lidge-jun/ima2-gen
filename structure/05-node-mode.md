@@ -42,12 +42,13 @@ sequenceDiagram
 
 | File | Role |
 |---|---|
-| `ui/src/components/NodeCanvas.tsx` | React Flow wrapper, node/edge changes, child-node gesture |
-| `ui/src/components/ImageNode.tsx` | Node card UI, status display, image rendering |
+| `ui/src/components/NodeCanvas.tsx` | React Flow wrapper, node/edge changes, directional handle routing, child-node gesture |
+| `ui/src/components/ImageNode.tsx` | Node card UI, four-direction source/target handles, status display, image rendering |
 | `ui/src/components/SessionPicker.tsx` | Session selection and creation UX |
 | `ui/src/store/useAppStore.ts` | `graphNodes`, `graphEdges`, `graphVersion`, session actions |
 | `ui/src/lib/graph.ts` | Client node IDs and initial-position helpers |
-| `ui/src/lib/api.ts` | Node generation and session API client |
+| `ui/src/lib/api.ts` | Shared API client and node API re-export surface |
+| `ui/src/lib/nodeApi.ts` | Node generation JSON/SSE client |
 | `routes/nodes.js` | `/api/node/generate`, `/api/node/:nodeId` |
 | `routes/sessions.js` | `/api/sessions/*` |
 | `lib/nodeStore.js` | Node image and metadata storage |
@@ -79,11 +80,11 @@ sequenceDiagram
 
 `PUT /api/sessions/:id/graph` uses version-based saving. The client sends the current `graphVersion` in the `If-Match` header. The server returns the new `graphVersion` on success.
 
-Visual edges are the canonical parent graph. `parentServerNodeId` is a derived generation cache, not a separate source of truth. On load, edge changes, node changes, connect, disconnect, and save, the UI derives a node's parent server id from its single incoming edge. The server repeats that normalization in `saveGraph()` and rejects multiple incoming parent edges with `GRAPH_PARENT_CONFLICT`.
+Visual edges are the canonical parent graph. `parentServerNodeId` is a derived generation cache, not a separate source of truth. On load, edge changes, node changes, connect, disconnect, and save, the UI derives a node's parent server id from its single incoming edge. `ImageNode` renders top/right/bottom/left source and target handles with unique React Flow handle ids. `NodeCanvas` forwards `sourceHandle` and `targetHandle` into `connectNodes()`, and session graph saves preserve those ids in edge `data` so reloads keep the same visual anchors. The server repeats parent normalization in `saveGraph()` and rejects multiple incoming parent edges with `GRAPH_PARENT_CONFLICT`.
 
 ## Streaming And Recovery
 
-Root node generation requests use `postNodeGenerateStream()` and ask the server for `Accept: text/event-stream`. The server relays upstream partial images as `partial` events before the canonical `done` event. Child/edit nodes currently use the same route but remain final-only, because combining parent-edit semantics with extra progressive previews needs separate provider validation.
+Root node generation requests use `postNodeGenerateStream()` and ask the server for `Accept: text/event-stream`. The server relays upstream partial images as `partial` events before the canonical `done` event. Child/edit nodes currently use the same route but remain final-only, because combining parent-edit semantics with extra progressive previews needs separate provider validation. SSE `error` events carry `status` and upstream diagnostics so client-side handling can distinguish invalid request parameters from moderation and network failures.
 
 `ImageNode` renders `data.partialImageUrl` while a node is `pending` or `reconciling`. This value is transient UI state only. `sanitizeForSave()` strips it before session graph persistence so base64 previews never inflate SQLite payloads.
 
@@ -128,7 +129,7 @@ A       B
 B.parentServerNodeId = null
 ```
 
-New connections are blocked if the target already has a different incoming parent edge. If a target somehow still has another incoming edge, the target's `parentServerNodeId` is recomputed from the remaining source node's current `serverNodeId`. Selection mode disables Delete/Backspace removal so graph selection and edge deletion do not collide.
+New connections are blocked if the target already has a different incoming parent edge. If a target somehow still has another incoming edge, the target's `parentServerNodeId` is recomputed from the remaining source node's current `serverNodeId`. All nodes keep target handles available after disconnect, so a disconnected or independent node can be connected again without creating a new child node by mistake. Selection mode disables Delete/Backspace removal so graph selection and edge deletion do not collide.
 
 ## Conflict Reload Recovery
 
@@ -179,10 +180,11 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 ## Change Checklist
 
 - [ ] If `ImageNodeData` shape changes, check session save, restore, and API types.
-- [ ] If `/api/node/generate` response changes, update `ui/src/lib/api.ts` and this doc.
+- [ ] If `/api/node/generate` response changes, update `ui/src/lib/nodeApi.ts`, the `api.ts` re-export if needed, and this doc.
 - [ ] If graph save policy changes, check `If-Match` version behavior and tests.
 - [x] Node selection and batch generation implemented 260426; reference `ui/src/lib/nodeSelection.ts`, `ui/src/lib/nodeBatch.ts`, and `tests/node-batch-contract.test.js`.
 - [x] Edge disconnect implemented 260426; reference `NodeCanvas`, `useAppStore.disconnectEdges`, and `tests/node-edge-disconnect-contract.test.js`.
+- [x] Four-direction node connection handles implemented 260427; reference `ImageNode`, `NodeCanvas`, `useAppStore.connectNodes`, and `tests/node-ui-contract.test.js`.
 - [x] Single-node regeneration and variation implemented 260426; reference `ImageNode`, custom-size continuation routing, and `tests/node-regen-actions-contract.test.js`.
 - [x] Node-local references on child/edit nodes implemented 260426; reference child/edit reference handling and `tests/node-child-refs-contract.test.js`.
 - [ ] If asset delete/restore changes, review `asset-missing` state and history docs.
@@ -200,6 +202,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-25: Documented graph-edge source-of-truth, node-local reference persistence, and explicit context/search modes.
 - 2026-04-26: Marked node selection batch, edge disconnect, single-node regen/variation, and child node references as implemented in the change checklist after archival to `_fin/260426_*`.
+- 2026-04-27: Documented four-direction React Flow handles, handle-id session persistence, and the reconnect fix after edge disconnect.
 
 Previous document: `[[04-frontend-architecture]]`
 

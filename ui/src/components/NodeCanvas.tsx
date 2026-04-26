@@ -34,7 +34,6 @@ function NodeCanvasInner() {
   const nodeSelectionMode = useAppStore((s) => s.nodeSelectionMode);
   const selectNodeGraph = useAppStore((s) => s.selectNodeGraph);
   const sessionLoading = useAppStore((s) => s.sessionLoading);
-  const resolvedTheme = useAppStore((s) => s.resolvedTheme);
 
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -63,7 +62,9 @@ function NodeCanvasInner() {
 
   const onConnect = useCallback(
     (params: Connection) => {
-      if (params.source && params.target) connectNodes(params.source, params.target);
+      if (params.source && params.target) {
+        connectNodes(params.source, params.target, params.sourceHandle, params.targetHandle);
+      }
     },
     [connectNodes],
   );
@@ -73,6 +74,7 @@ function NodeCanvasInner() {
       if (connectionState.isValid) return;
       const fromNodeId = connectionState.fromNode?.id;
       if (!fromNodeId) return;
+      if (connectionState.toNode || connectionState.toHandle) return;
       const clientX =
         "touches" in event ? event.changedTouches[0].clientX : (event as MouseEvent).clientX;
       const clientY =
@@ -124,19 +126,17 @@ function NodeCanvasInner() {
             proOptions={{ hideAttribution: true }}
           >
             <NodeBatchBar />
-            <Background gap={24} color={resolvedTheme === "light" ? "#d9dee6" : "#2a2a2a"} />
+            <Background gap={24} color="var(--canvas-grid)" />
             <Controls className="node-canvas__controls" />
             <MiniMap
               pannable
               zoomable
-              maskColor={
-                resolvedTheme === "light" ? "rgba(246, 247, 251, 0.72)" : "rgba(10, 10, 10, 0.7)"
-              }
-              nodeColor={resolvedTheme === "light" ? "#1f2430" : "#f0f0f0"}
-              nodeStrokeColor={resolvedTheme === "light" ? "#ffffff" : "#1a1a1a"}
+              maskColor="var(--minimap-mask)"
+              nodeColor="var(--minimap-node-fill)"
+              nodeStrokeColor="var(--minimap-node-stroke)"
               style={{
-                background: resolvedTheme === "light" ? "#ffffff" : "#141414",
-                border: `1px solid ${resolvedTheme === "light" ? "#d9dee6" : "#2a2a2a"}`,
+                background: "var(--minimap-bg)",
+                border: "1px solid var(--minimap-border)",
               }}
             />
           </ReactFlow>

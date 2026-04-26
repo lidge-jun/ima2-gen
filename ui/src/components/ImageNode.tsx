@@ -8,6 +8,12 @@ const MAX_NODE_REFS = 5;
 const NODE_PREVIEW_HEIGHT = 240;
 const NODE_PREVIEW_MIN_WIDTH = 180;
 const NODE_PREVIEW_MAX_WIDTH = 420;
+const NODE_HANDLE_POSITIONS = [
+  { id: "top", position: Position.Top },
+  { id: "right", position: Position.Right },
+  { id: "bottom", position: Position.Bottom },
+  { id: "left", position: Position.Left },
+] as const;
 
 function getPreviewWidth(size?: string | null): number {
   const match = /^(\d+)x(\d+)$/.exec(size ?? "");
@@ -158,9 +164,15 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
       className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}
       style={nodeStyle}
     >
-      {d.parentServerNodeId ? (
-        <Handle type="target" position={Position.Left} className="image-node__handle" />
-      ) : null}
+      {NODE_HANDLE_POSITIONS.map(({ id: handleId, position }) => (
+        <Handle
+          key={`target-${handleId}`}
+          type="target"
+          id={`target-${handleId}`}
+          position={position}
+          className={`image-node__handle image-node__handle--target image-node__handle--${handleId}`}
+        />
+      ))}
       <div className="image-node__preview">
         {d.imageUrl && d.status !== "asset-missing" ? (
           <img src={d.imageUrl} alt={t("node.nodeImageAlt")} />
@@ -294,7 +306,15 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           <button type="button" onClick={onDelete} className="image-node__del" title={t("node.deleteTitle")} aria-label={t("node.deleteTitle")}>×</button>
         </div>
       </div>
-      <Handle type="source" position={Position.Right} className="image-node__handle image-node__handle--source" />
+      {NODE_HANDLE_POSITIONS.map(({ id: handleId, position }) => (
+        <Handle
+          key={`source-${handleId}`}
+          type="source"
+          id={`source-${handleId}`}
+          position={position}
+          className={`image-node__handle image-node__handle--source image-node__handle--${handleId}`}
+        />
+      ))}
     </div>
   );
 }
