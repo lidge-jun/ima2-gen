@@ -96,6 +96,8 @@ Node context is explicit. `contextMode` defaults to `parent-plus-refs`, meaning 
 
 `/api/node/generate` also supports an SSE response when the client sends `Accept: text/event-stream`. In that mode validation still happens before headers are opened. After the stream opens, the server may emit `phase`, `partial`, `done`, and `error` events. Root generation opts into OAuth `partial_images: 2`; child/edit generation stays final-only for now. If an upstream stream error happens after headers are committed, the outer HTTP status may remain `200`; clients must read the SSE `error` event and node state. Clients must treat partial events as progressive previews only and use the `done` payload as the canonical saved node.
 
+Upstream request/validation failures are normalized to `INVALID_REQUEST` while preserving raw provider diagnostics as `upstreamCode`, `upstreamType`, and `upstreamParam`. In SSE mode these fields travel inside the `error` event payload together with `status`.
+
 Node sidecars include `requestId` as recovery metadata. `/api/history` exposes the same field so a reloaded graph can match completed assets by request id before falling back to `(sessionId, clientNodeId, createdAt)`.
 
 ## Session DB API
@@ -126,6 +128,7 @@ Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-G
 | Invalid moderation | 400 | `INVALID_MODERATION` or string error |
 | Invalid image model | 400 | `INVALID_IMAGE_MODEL` |
 | Unsupported OAuth model for image generation | 400 | `IMAGE_MODEL_UNSUPPORTED` |
+| Upstream request/validation error | 400 | `INVALID_REQUEST` |
 | Unsupported node context mode | 400 | `CONTEXT_MODE_UNSUPPORTED` |
 | Multiple incoming parent edges | 409 | `GRAPH_PARENT_CONFLICT` |
 | API-key provider requested | 403 | `APIKEY_DISABLED` |

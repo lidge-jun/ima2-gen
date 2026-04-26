@@ -207,6 +207,7 @@ Style-sheet extraction can require an API key/openai client. This does not reope
 | `APIKEY_DISABLED` | API-key image generation is disabled |
 | `INVALID_IMAGE_MODEL` | Model name is unknown or unsupported |
 | `IMAGE_MODEL_UNSUPPORTED` | Model exists but cannot use image generation |
+| `INVALID_REQUEST` | Upstream request parameters are invalid; raw provider details may be included as `upstreamCode`, `upstreamType`, and `upstreamParam` |
 | `INVALID_MODERATION` | Moderation value is not `auto` or `low` |
 | `SAFETY_REFUSAL` | Upstream safety refusal |
 | `MODERATION_REFUSED` | Content generation refused by moderation |

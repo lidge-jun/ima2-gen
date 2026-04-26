@@ -235,9 +235,8 @@ export function GalleryModal() {
   async function handleOpenGeneratedDir() {
     try {
       await openGeneratedDir();
-    } catch {
-      showToast(t("toast.openGeneratedDirFailed"), true);
-    }
+      showToast(t("toast.openGeneratedDirOpened"));
+    } catch { showToast(t("toast.openGeneratedDirFailed"), true); }
   }
 
   async function handleOpenCardNewsSet(item: GenerateItem) {

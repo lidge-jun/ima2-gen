@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyUpstreamError } from "../lib/errorClassify.js";
+import { classifyUpstreamError, classifyUpstreamErrorCode } from "../lib/errorClassify.js";
 
 test("moderation refused", () => {
   assert.equal(classifyUpstreamError("moderation_blocked"), "MODERATION_REFUSED");
@@ -9,6 +9,16 @@ test("moderation refused", () => {
 
 test("generic retry wrapper is not treated as moderation", () => {
   assert.equal(classifyUpstreamError("Content generation refused after retries"), "UNKNOWN");
+});
+
+test("upstream validation errors map to invalid request", () => {
+  assert.equal(classifyUpstreamErrorCode("invalid_value"), "INVALID_REQUEST");
+  assert.equal(classifyUpstreamErrorCode("invalid_request_error"), "INVALID_REQUEST");
+  assert.equal(classifyUpstreamError("Invalid size '512x512'"), "INVALID_REQUEST");
+  assert.equal(
+    classifyUpstreamError("Requested resolution is below the current minimum pixel budget."),
+    "INVALID_REQUEST",
+  );
 });
 
 test("ChatGPT sign-in expired before api-key checks", () => {

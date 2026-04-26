@@ -6,7 +6,7 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth } from "../lib/oauthProxy.js";
-import { normalizeGenerationFailure } from "../lib/generationErrors.js";
+import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
@@ -146,6 +146,7 @@ export function registerGenerateRoutes(app, ctx) {
             lastErr = new Error("Empty response (safety refusal)");
           } catch (e) {
             lastErr = e;
+            if (isNonRetryableGenerationError(e)) break;
           }
           if (attempt < MAX_RETRIES) {
             logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
@@ -207,7 +208,14 @@ export function registerGenerateRoutes(app, ctx) {
           finishStatus = "error";
           finishHttpStatus = status;
           finishErrorCode = firstErr.code;
-          return res.status(status).json({ error: firstErr.message, code: firstErr.code, requestId });
+          return res.status(status).json({
+            error: firstErr.message,
+            code: firstErr.code,
+            upstreamCode: firstErr.upstreamCode || null,
+            upstreamType: firstErr.upstreamType || null,
+            upstreamParam: firstErr.upstreamParam || null,
+            requestId,
+          });
         }
         finishStatus = "error";
         finishHttpStatus = 500;
@@ -256,7 +264,14 @@ export function registerGenerateRoutes(app, ctx) {
       finishHttpStatus = err.status || 500;
       finishErrorCode = fallbackCode || "GENERATE_FAILED";
       logError("generate", "error", err, { requestId, code: finishErrorCode });
-      res.status(err.status || 500).json({ error: err.message, code: fallbackCode, requestId });
+      res.status(err.status || 500).json({
+        error: err.message,
+        code: fallbackCode,
+        upstreamCode: err.upstreamCode || null,
+        upstreamType: err.upstreamType || null,
+        upstreamParam: err.upstreamParam || null,
+        requestId,
+      });
     } finally {
       finishJob(requestId, {
         status: finishStatus,

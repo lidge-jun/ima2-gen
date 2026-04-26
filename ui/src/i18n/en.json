@@ -31,6 +31,7 @@
     "imageCopied": "Copied to clipboard",
     "copyFailed": "Copy failed",
     "openGeneratedDirFailed": "Could not open the image folder. Run ima2 doctor to check the storage path.",
+    "openGeneratedDirOpened": "Opened the generated image folder.",
     "noPromptToFork": "No prompt to fork",
     "forkStarted": "Prompt imported. Edit and generate again."
   },
@@ -473,7 +474,7 @@
     },
     "appearance": {
       "themeTitle": "Theme",
-      "themeBody": "Choose how the workspace should look on this device."
+      "themeBody": "Pick a theme style and brightness for this device."
     },
     "language": {
       "title": "Language",
@@ -501,9 +502,18 @@
   },
   "theme": {
     "label": "Theme",
+    "modeLabel": "Brightness",
+    "styleLabel": "Theme style",
     "system": "System",
     "dark": "Dark",
-    "light": "Light"
+    "light": "Light",
+    "family": {
+      "default": "Default",
+      "gpt": "GPT",
+      "claude": "Claude",
+      "gemini": "Gemini",
+      "grok": "Grok"
+    }
   },
   "styleSheet": {
     "toggle": "Apply style consistency",
@@ -570,6 +580,11 @@
       "title": "OAuth proxy unavailable",
       "body": "The OAuth proxy is starting, unavailable, or moved to a fallback port. Reload first; if it persists, run `ima2 doctor` and check the reported OAuth URL.",
       "cta": "Reload"
+    },
+    "invalidRequest": {
+      "title": "Image request needs changes",
+      "body": "One or more generation parameters are invalid. Check the raw error details below, then edit the prompt or size and try again.",
+      "cta": "Edit input"
     },
     "apikeyDisabled": {
       "title": "API-key mode is disabled",

@@ -20,11 +20,13 @@ const serverPath = join(__dirname, "..", "server.js");
 const historyListPath = join(__dirname, "..", "lib", "historyList.js");
 const nodeRoutePath = join(__dirname, "..", "routes", "nodes.js");
 const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
+const nodeApiPath = join(__dirname, "..", "ui", "src", "lib", "nodeApi.ts");
 
 const src = await readFile(serverPath, "utf8");
 const historySrc = await readFile(historyListPath, "utf8");
 const nodeSrc = await readFile(nodeRoutePath, "utf8");
 const apiSrc = await readFile(apiPath, "utf8");
+const nodeApiSrc = await readFile(nodeApiPath, "utf8");
 
 // Ensure both suffix constants and the builder exist
 assert.ok(src.includes("buildApp"), "buildApp export missing after server split");
@@ -38,7 +40,7 @@ assert.ok(nodeSrc.includes("userPrompt"), "node userPrompt meta field missing");
 assert.ok(nodeSrc.includes("refsCount"), "node refsCount meta field missing");
 assert.ok(nodeSrc.includes("partialImages: streamResponse ? 2 : 0"), "node partial_images opt-in missing");
 assert.ok(apiSrc.includes("postNodeGenerateStream"), "node SSE client missing");
-assert.ok(apiSrc.includes('Accept: "text/event-stream"'), "node SSE Accept header missing");
+assert.ok(nodeApiSrc.includes('Accept: "text/event-stream"'), "node SSE Accept header missing");
 
 assert.equal(PROMPT_FIDELITY_SUFFIX, AUTO_PROMPT_FIDELITY_SUFFIX);
 assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("only append English clarifiers at the end when helpful"));

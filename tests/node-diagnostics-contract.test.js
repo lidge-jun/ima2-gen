@@ -31,7 +31,7 @@ describe("node diagnostics contract", () => {
 
   it("does not collapse stream context into only SAFETY_REFUSAL", () => {
     assert.match(nodes, /logEvent\("node", "final_error"/);
-    assert.match(nodes, /upstreamCode: lastErr\?\.code/);
+    assert.match(nodes, /upstreamCode: lastErr\?\.upstreamCode \|\| lastErr\?\.code/);
     assert.match(nodes, /errorEventType: lastErr\?\.eventType/);
     assert.match(nodes, /errorEventCount: lastErr\?\.eventCount/);
   });

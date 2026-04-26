@@ -12,7 +12,7 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
-import { normalizeGenerationFailure } from "../lib/generationErrors.js";
+import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { logEvent, logError } from "../lib/logger.js";
@@ -48,6 +48,7 @@ function writeNodeError(res, status, code, message, parentNodeId, details = {}) 
   res.status(status).json({
     error: { code, message },
     parentNodeId,
+    status,
     ...details,
   });
 }
@@ -271,6 +272,7 @@ export function registerNodeRoutes(app, ctx) {
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
           lastErr = e;
+          if (isNonRetryableGenerationError(e)) break;
         }
         if (attempt < MAX_RETRIES) {
           logEvent("node", "retry", {
@@ -297,7 +299,7 @@ export function registerNodeRoutes(app, ctx) {
           requestId,
           operation,
           finalCode: finishErrorCode,
-          upstreamCode: lastErr?.code,
+          upstreamCode: lastErr?.upstreamCode || lastErr?.code,
           errorEventType: lastErr?.eventType,
           errorEventCount: lastErr?.eventCount,
           attempts: MAX_RETRIES + 1,
@@ -311,7 +313,9 @@ export function registerNodeRoutes(app, ctx) {
           finalErr.message,
           parentNodeId,
           {
-            upstreamCode: lastErr?.code || null,
+            upstreamCode: lastErr?.upstreamCode || lastErr?.code || null,
+            upstreamType: lastErr?.upstreamType || null,
+            upstreamParam: lastErr?.upstreamParam || null,
             errorEventType: lastErr?.eventType || null,
             errorEventCount: lastErr?.eventCount ?? null,
           },
@@ -401,7 +405,11 @@ export function registerNodeRoutes(app, ctx) {
       finishHttpStatus = err.status || 500;
       finishErrorCode = code;
       logError("node", "error", err, { requestId, code, parentNodeId, sessionId, clientNodeId });
-      writeNodeError(res, err.status || 500, code, err.message, parentNodeId);
+      writeNodeError(res, err.status || 500, code, err.message, parentNodeId, {
+        upstreamCode: err.upstreamCode || null,
+        upstreamType: err.upstreamType || null,
+        upstreamParam: err.upstreamParam || null,
+      });
     } finally {
       finishJob(requestId, {
         status: finishStatus,

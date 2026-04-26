@@ -14,6 +14,7 @@ export type ImaErrorCode =
   | "AUTH_API_KEY_INVALID"
   | "NETWORK_FAILED"
   | "OAUTH_UNAVAILABLE"
+  | "INVALID_REQUEST"
   | "INVALID_MODERATION"
   | "APIKEY_DISABLED"
   | "DB_ERROR"
@@ -46,6 +47,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   AUTH_API_KEY_INVALID: { surface: "card", cardKey: "errorCard.authApiKeyInvalid", cta: "dismiss" },
   NETWORK_FAILED: { surface: "card", cardKey: "errorCard.networkFailed", cta: "reload" },
   OAUTH_UNAVAILABLE: { surface: "card", cardKey: "errorCard.oauthUnavailable", cta: "reload" },
+  INVALID_REQUEST: { surface: "card", cardKey: "errorCard.invalidRequest", cta: "dismiss" },
   INVALID_MODERATION: { surface: "toast", toastKey: "toast.generateFailed" },
   APIKEY_DISABLED: { surface: "card", cardKey: "errorCard.apikeyDisabled", cta: "dismiss" },
   DB_ERROR: { surface: "toast", toastKey: "toast.generateFailed" },
@@ -90,6 +92,17 @@ export function classifyError(message: string): ImaErrorCode {
   }
   if (s.includes("oauth") && (s.includes("not running") || s.includes("unavailable") || s.includes("not ready"))) {
     return "OAUTH_UNAVAILABLE";
+  }
+  if (
+    s.includes("invalid_request_error") ||
+    s.includes("invalid_value") ||
+    s.includes("invalid size") ||
+    s.includes("invalid request") ||
+    s.includes("requested resolution") ||
+    s.includes("minimum pixel budget") ||
+    s.includes("unsupported value")
+  ) {
+    return "INVALID_REQUEST";
   }
   if (s.includes("an error occurred while processing") || /\b5\d\d\b/.test(s)) {
     return "UPSTREAM_5XX";

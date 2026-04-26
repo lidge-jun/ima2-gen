@@ -31,6 +31,7 @@
     "imageCopied": "클립보드에 복사했습니다",
     "copyFailed": "복사에 실패했습니다",
     "openGeneratedDirFailed": "이미지 폴더를 열지 못했습니다. ima2 doctor로 저장 경로를 확인해 주세요.",
+    "openGeneratedDirOpened": "생성 이미지 폴더를 열었습니다.",
     "noPromptToFork": "가져올 프롬프트가 없습니다",
     "forkStarted": "이 이미지의 프롬프트를 가져왔습니다. 수정 후 다시 생성하세요"
   },
@@ -473,7 +474,7 @@
     },
     "appearance": {
       "themeTitle": "테마",
-      "themeBody": "이 기기에서 작업공간을 어떤 톤으로 볼지 선택합니다."
+      "themeBody": "이 기기에서 사용할 테마 스타일과 밝기를 선택합니다."
     },
     "language": {
       "title": "언어",
@@ -501,9 +502,18 @@
   },
   "theme": {
     "label": "테마",
+    "modeLabel": "밝기",
+    "styleLabel": "테마 스타일",
     "system": "시스템",
     "dark": "다크",
-    "light": "라이트"
+    "light": "라이트",
+    "family": {
+      "default": "기본",
+      "gpt": "GPT",
+      "claude": "Claude",
+      "gemini": "Gemini",
+      "grok": "Grok"
+    }
   },
   "styleSheet": {
     "toggle": "스타일 일관성 적용",
@@ -570,6 +580,11 @@
       "title": "OAuth 프록시를 사용할 수 없어요",
       "body": "OAuth 프록시가 아직 시작 중이거나, 사용할 수 없거나, fallback 포트로 이동했을 수 있어요. 먼저 새로고침하고, 계속되면 `ima2 doctor`의 OAuth URL을 확인해 주세요.",
       "cta": "새로고침"
+    },
+    "invalidRequest": {
+      "title": "이미지 요청을 수정해야 해요",
+      "body": "생성 요청의 일부 값이 올바르지 않습니다. 아래 원본 오류를 확인한 뒤 프롬프트나 크기를 수정해 다시 시도해 주세요.",
+      "cta": "입력 수정"
     },
     "apikeyDisabled": {
       "title": "API-Key 모드가 비활성화되어 있어요",
