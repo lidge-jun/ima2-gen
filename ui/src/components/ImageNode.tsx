@@ -52,10 +52,11 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const onDelete = useCallback(() => deleteNode(id), [id, deleteNode]);
 
   const isBusy = d.status === "pending" || d.status === "reconciling";
+  const pendingDetail = d.pendingPhase ? ` · ${d.pendingPhase}` : "";
   const statusLabel = {
     empty: "비어 있음",
-    pending: "생성 중",
-    reconciling: `동기화 중${d.pendingPhase ? ` · ${d.pendingPhase}` : ""}`,
+    pending: `생성 중${pendingDetail}`,
+    reconciling: `동기화 중${pendingDetail}`,
     ready: `완료 · ${d.elapsed ?? "?"}s${d.webSearchCalls ? ` · 검색 ${d.webSearchCalls}` : ""}`,
     stale: `오래된 상태${d.error ? `: ${d.error}` : ""}`,
     "asset-missing": `에셋 누락${d.error ? `: ${d.error}` : ""}`,
@@ -78,6 +79,12 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
       <div className="image-node__preview">
         {d.imageUrl && d.status !== "asset-missing" ? (
           <img src={d.imageUrl} alt="노드 이미지" />
+        ) : isBusy && d.partialImageUrl ? (
+          <img
+            className="image-node__partial"
+            src={d.partialImageUrl}
+            alt="부분 이미지 (생성 중)"
+          />
         ) : isBusy ? (
           <div className="image-node__skeleton" />
         ) : d.status === "asset-missing" ? (

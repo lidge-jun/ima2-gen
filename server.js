@@ -176,20 +176,25 @@ const REFERENCE_DEVELOPER_PROMPT = withDefaultPrompt(
   "You are an image generator operating in reference mode. The user has attached one or more reference images. Treat the FIRST attached image as the authoritative visual source for identity, face, outfit, and background. Preserve those elements faithfully across the variation you produce. Only vary what the user explicitly asks to vary (pose, angle, expression, framing, etc.). Always use the image_generation tool; never respond with text only. Enhance with quality boosters (masterpiece, ultra detailed, 8k UHD, sharp focus, professional lighting) and avoid defects (blurry, deformed, bad anatomy, watermark, signature, jpeg artifacts). Render any requested text/typography with correct spelling. Do not perform a web search; the reference image(s) are already the source of truth.",
 );
 
-async function generateViaOAuth(prompt, quality, size, moderation = "auto", references = [], requestId = null) {
+async function generateViaOAuth(prompt, quality, size, moderation = "auto", references = [], requestId = null, options = {}) {
   const hasRefs = references.length > 0;
   const tag = requestId ? `[oauth][${requestId}]` : `[oauth]`;
+  const { partialImages, onPartialImage } = options;
   console.log(
     `${tag} call: quality=${quality} size=${size} moderation=${moderation} ` +
-    `refs=${references.length} promptLen=${prompt.length}`,
+    `refs=${references.length} promptLen=${prompt.length}` +
+    (partialImages ? ` partial=${partialImages}` : ""),
   );
 
-  const tools = hasRefs
-    ? [{ type: "image_generation", quality, size, moderation }]
-    : [
-        { type: "web_search" },
-        { type: "image_generation", quality, size, moderation },
-      ];
+  const imageTool = {
+    type: "image_generation",
+    quality,
+    size,
+    moderation,
+    ...(partialImages ? { partial_images: partialImages } : {}),
+  };
+
+  const tools = hasRefs ? [imageTool] : [{ type: "web_search" }, imageTool];
 
   const textPrompt = hasRefs
     ? `Use the attached reference image(s) as the primary visual source. Preserve the subject's identity, outfit, and background from the reference. Produce the user's request as a variation that keeps those elements intact:\n\n${prompt}`
@@ -222,6 +227,7 @@ async function generateViaOAuth(prompt, quality, size, moderation = "auto", refe
       stream: true,
     },
     onPhase,
+    onPartialImage,
   });
 
   if (stream.b64) {
@@ -1257,8 +1263,32 @@ app.post("/api/edit", async (req, res) => {
 });
 
 // -- Node mode (0.04) --
+function wantsSse(req) {
+  const accept = typeof req.headers.accept === "string" ? req.headers.accept : "";
+  return accept.includes("text/event-stream");
+}
+
+function writeSse(res, event, data) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function writeNodeError(res, status, code, message, parentNodeId) {
+  if (res.headersSent) {
+    writeSse(res, "error", { error: { code, message }, parentNodeId, status });
+    res.end();
+    return;
+  }
+  res.status(status).json({ error: { code, message }, parentNodeId });
+}
+
+function dataUrlFromB64(format, b64) {
+  return `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`;
+}
+
 app.post("/api/node/generate", async (req, res) => {
   const body = req.body || {};
+  const streamResponse = wantsSse(req);
   const parentNodeId = body.parentNodeId ?? null;
   const requestId = typeof body.requestId === "string" ? body.requestId : null;
   const sessionId = typeof body.sessionId === "string" ? body.sessionId : null;
@@ -1299,17 +1329,11 @@ app.post("/api/node/generate", async (req, res) => {
     const { provider = "oauth" } = body;
 
     if (provider === "api") {
-      return res.status(403).json({
-        error: { code: "APIKEY_DISABLED", message: "API key provider is disabled. Use OAuth." },
-        parentNodeId,
-      });
+      return writeNodeError(res, 403, "APIKEY_DISABLED", "API key provider is disabled. Use OAuth.", parentNodeId);
     }
 
     const nodeBadRequest = (check) =>
-      res.status(400).json({
-        error: { code: check.code, message: check.message },
-        parentNodeId,
-      });
+      writeNodeError(res, 400, check.code, check.message, parentNodeId);
 
     const pCheck = validatePrompt(rawPrompt);
     if (!pCheck.ok) return nodeBadRequest(pCheck);
@@ -1330,12 +1354,20 @@ app.post("/api/node/generate", async (req, res) => {
 
     const refCheck = validateAndNormalizeRefs(references);
     if (refCheck.error) {
-      return res.status(400).json({
-        error: { code: refCheck.code, message: refCheck.error },
-        parentNodeId,
-      });
+      return writeNodeError(res, 400, refCheck.code, refCheck.error, parentNodeId);
     }
     const refB64s = refCheck.refs;
+
+    // Open the SSE stream now — once we commit, future errors must be
+    // serialized as `event: error` instead of res.status().json().
+    if (streamResponse) {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+      });
+      writeSse(res, "phase", { requestId, phase: "streaming" });
+    }
 
     const startTime = Date.now();
     let parentB64 = null;
@@ -1362,6 +1394,17 @@ app.post("/api/node/generate", async (req, res) => {
                 moderation,
                 refB64s,
                 requestId,
+                {
+                  partialImages: streamResponse ? 2 : 0,
+                  onPartialImage: streamResponse
+                    ? (partial) =>
+                        writeSse(res, "partial", {
+                          requestId,
+                          image: dataUrlFromB64(format, partial.b64),
+                          index: partial.index,
+                        })
+                    : null,
+                },
               ),
         "node",
         maxAttempts,
@@ -1386,11 +1429,7 @@ app.post("/api/node/generate", async (req, res) => {
         owner: req.authUser,
         requestId,
       });
-      return res.status(err.status || 422).json({
-        error: { code: err.code || "SAFETY_REFUSAL", message: err.message },
-        parentNodeId,
-        attempts: err.attempts || [],
-      });
+      return writeNodeError(res, err.status || 422, err.code || "SAFETY_REFUSAL", err.message, parentNodeId);
     }
 
     const b64 = nodeResult.b64;
@@ -1427,11 +1466,11 @@ app.post("/api/node/generate", async (req, res) => {
     await mkdir(join(__dirname, "generated"), { recursive: true });
     const { filename } = await saveNode(__dirname, { nodeId, b64, meta, ext: format });
 
-    res.json({
+    const payload = {
       nodeId,
       parentNodeId,
       requestId,
-      image: `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`,
+      image: dataUrlFromB64(format, b64),
       filename,
       url: `/generated/${filename}`,
       elapsed,
@@ -1444,13 +1483,16 @@ app.post("/api/node/generate", async (req, res) => {
       size,
       safetyRetryAvailable: hasCompliantRetry(prompt),
       promptRewrittenForSafety: nodeResult.promptRewrittenForSafety === true,
-    });
+    };
+    if (streamResponse) {
+      writeSse(res, "done", payload);
+      res.end();
+    } else {
+      res.json(payload);
+    }
   } catch (err) {
     console.error("[node/generate] error:", err.message);
-    res.status(err.status || 500).json({
-      error: { code: err.code || "NODE_GEN_FAILED", message: err.message },
-      parentNodeId,
-    });
+    writeNodeError(res, err.status || 500, err.code || "NODE_GEN_FAILED", err.message, parentNodeId);
   } finally {
     finishJob(requestId);
   }

@@ -1945,6 +1945,17 @@ body {
      width already adapts via getPreviewWidth(size). */
   object-fit: contain;
 }
+/* Partial preview emitted via SSE while the upstream is still generating.
+   Slight saturation+contrast bump distinguishes it from the final image
+   without breaking color expectations. */
+.image-node__partial {
+  filter: saturate(1.04) contrast(1.03);
+  animation: image-node-partial-pulse 1.6s ease-in-out infinite;
+}
+@keyframes image-node-partial-pulse {
+  0%, 100% { opacity: 0.92; }
+  50% { opacity: 1; }
+}
 .image-node__placeholder, .image-node__skeleton {
   color: #555;
   font-size: 20px;
