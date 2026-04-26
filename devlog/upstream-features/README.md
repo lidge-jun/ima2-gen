@@ -49,7 +49,7 @@
 | # | 기능 | 상태 | upstream commit | 우리 PR | PRD |
 |---|------|------|-----------------|---------|-----|
 | 4.1 | **Card news 워크스페이스** | pending | `5e2194e` `c84f1d2` `13ea601` `8327306` | - | [card-news.md](card-news.md) |
-| 4.2 | **Node mode 정식화 + 스트리밍 + 배치선택** | in-progress | `c5aa4ca` `04f8bf5` `a91fef4` `6e02cbc` | sub-PR 1 [#7](https://github.com/ree9622/ima2-gen/pull/7) · sub-PR 2 [#8](https://github.com/ree9622/ima2-gen/pull/8) · sub-PR 3 [#9](https://github.com/ree9622/ima2-gen/pull/9) · sub-PR 4 [#10](https://github.com/ree9622/ima2-gen/pull/10) · sub-PR 5 [#11](https://github.com/ree9622/ima2-gen/pull/11) · sub-PR 6 [#12](https://github.com/ree9622/ima2-gen/pull/12) · sub-PR 7 [#13](https://github.com/ree9622/ima2-gen/pull/13) | [node-mode.md](node-mode.md) — 8개 sub-PR 분해 진행 중 |
+| 4.2 | **Node mode 정식화 + 스트리밍 + 배치선택** | done | `c5aa4ca` `04f8bf5` `a91fef4` `6e02cbc` `9d2d2e8` `26e95be` `2c6a38b` `47a9a93` `571ecd9` | [#7](https://github.com/ree9622/ima2-gen/pull/7) · [#8](https://github.com/ree9622/ima2-gen/pull/8) · [#9](https://github.com/ree9622/ima2-gen/pull/9) · [#10](https://github.com/ree9622/ima2-gen/pull/10) · [#11](https://github.com/ree9622/ima2-gen/pull/11) · [#12](https://github.com/ree9622/ima2-gen/pull/12) · [#13](https://github.com/ree9622/ima2-gen/pull/13) · sub-PR 8 (게이트 lift) | [node-mode.md](node-mode.md) — 8개 sub-PR 모두 머지. 게이트는 `VITE_IMA2_NODE_MODE=0` env 로 비활성화 가능 |
 
 ### Phase 5 — 자잘한 UX
 

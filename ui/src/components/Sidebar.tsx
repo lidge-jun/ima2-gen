@@ -6,11 +6,11 @@ import { InFlightList } from "./InFlightList";
 import { HistoryStrip } from "./HistoryStrip";
 import { SessionPicker } from "./SessionPicker";
 import { useAppStore } from "../store/useAppStore";
-import { IS_DEV_UI } from "../lib/devMode";
+import { ENABLE_NODE_MODE } from "../lib/devMode";
 
 export function Sidebar() {
   const uiModeRaw = useAppStore((s) => s.uiMode);
-  const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
+  const uiMode = ENABLE_NODE_MODE ? uiModeRaw : "classic";
   const openLogModal = useAppStore((s) => s.openLogModal);
   return (
     <aside className="sidebar">

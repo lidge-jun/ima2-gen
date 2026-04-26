@@ -9,7 +9,7 @@ import { GenerationLogModal } from "./components/GenerationLogModal";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { Lightbox } from "./components/Lightbox";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
-import { IS_DEV_UI } from "./lib/devMode";
+import { ENABLE_NODE_MODE } from "./lib/devMode";
 
 export default function App() {
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
@@ -18,7 +18,7 @@ export default function App() {
   const reconcileInflight = useAppStore((s) => s.reconcileInflight);
   const syncFromStorage = useAppStore((s) => s.syncFromStorage);
   const uiModeRaw = useAppStore((s) => s.uiMode);
-  const uiMode = IS_DEV_UI ? uiModeRaw : "classic";
+  const uiMode = ENABLE_NODE_MODE ? uiModeRaw : "classic";
 
   useEffect(() => {
     hydrateHistory();
