@@ -2757,6 +2757,27 @@ body {
   border-radius: 6px;
   object-fit: cover;
 }
+.card-news-template__body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.card-news-template__name,
+.card-news-template__meta,
+.card-news-template__sizes {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-news-template__name {
+  font-size: 12px;
+  color: var(--text);
+}
+.card-news-template__meta,
+.card-news-template__sizes {
+  font-size: 10px;
+  color: var(--text-muted);
+}
 .card-news-template.selected,
 .card-news-role-row button.selected,
 .card-news-deck-card.selected {

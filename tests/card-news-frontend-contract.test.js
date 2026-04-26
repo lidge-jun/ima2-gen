@@ -49,6 +49,8 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(api, /CardNewsCardStatus/);
     assert.match(api, /CardNewsTextField/);
     assert.match(api, /textFields: CardNewsTextField\[\]/);
+    assert.match(api, /recommendedOutputSizes: string\[\]/);
+    assert.match(api, /authoringLabel: string/);
     assert.match(api, /normalizeCardNewsPlan/);
     assert.match(api, /\| "generating"/);
     assert.match(store, /draftCardNews/);
@@ -78,6 +80,18 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(composer, /1024²/);
     assert.match(composer, /2048²/);
     assert.match(composer, /cardNews\.outputSize/);
+  });
+
+  it("shows template authoring metadata in the image template picker", () => {
+    const picker = readSource("ui/src/components/card-news/ImageTemplatePicker.tsx");
+    const css = readSource("ui/src/index.css");
+
+    assert.match(picker, /summarizeSlots/);
+    assert.match(picker, /template\.recommendedOutputSizes\.join/);
+    assert.match(picker, /card-news-template__meta/);
+    assert.match(picker, /card-news-template__sizes/);
+    assert.match(css, /\.card-news-template__body/);
+    assert.match(css, /\.card-news-template__sizes/);
   });
 
   it("renders 0.21 delivery, progress, planner, and retry surfaces", () => {

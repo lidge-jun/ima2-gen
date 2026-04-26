@@ -56,6 +56,7 @@ export type CardNewsPlannerMeta = {
 export type ImageTemplate = {
   id: string;
   name: string;
+  description: string;
   size: string;
   previewUrl: string;
   stylePrompt: string;
@@ -63,6 +64,8 @@ export type ImageTemplate = {
   slots: ImageTemplateSlot[];
   palette: string[];
   typography: Record<string, unknown> | null;
+  recommendedOutputSizes: string[];
+  authoringLabel: string;
   recommendedRoleNodeIds: string[];
   createdBy: "system" | "user";
 };

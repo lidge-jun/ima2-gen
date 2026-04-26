@@ -1,7 +1,10 @@
 {
   "id": "academy-lesson-square",
   "name": "Academy Lesson Square",
+  "description": "Education-focused square template with headline, visual, and caption safe areas.",
+  "authoringLabel": "Academy lesson carousel",
   "size": "2048x2048",
+  "recommendedOutputSizes": ["1024x1024", "2048x2048"],
   "previewFilename": "preview.png",
   "baseFilename": "base.png",
   "stylePrompt": "Modern Korean academy lesson card, confident educational tone, bright study-focused composition, blue and white palette, safe headline area, reusable card-news frame.",

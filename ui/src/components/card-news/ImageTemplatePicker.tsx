@@ -1,6 +1,12 @@
 import { useCardNewsStore } from "../../store/cardNewsStore";
 import { useI18n } from "../../i18n";
 
+function summarizeSlots(template: { slots: Array<{ kind: string; textKind: string | null }> }) {
+  const textSlots = template.slots.filter((slot) => slot.kind === "text" || slot.textKind).length;
+  const imageSlots = template.slots.filter((slot) => slot.kind === "image").length;
+  return `${textSlots} text / ${imageSlots} image`;
+}
+
 export function ImageTemplatePicker() {
   const { t } = useI18n();
   const templates = useCardNewsStore((s) => s.templates);
@@ -22,7 +28,11 @@ export function ImageTemplatePicker() {
             onClick={() => setImageTemplate(template.id)}
           >
             <img src={template.previewUrl} alt="" />
-            <span>{template.name}</span>
+            <span className="card-news-template__body">
+              <span className="card-news-template__name">{template.name}</span>
+              <span className="card-news-template__meta">{summarizeSlots(template)}</span>
+              <span className="card-news-template__sizes">{template.recommendedOutputSizes.join(" · ")}</span>
+            </span>
           </button>
         ))}
       </div>

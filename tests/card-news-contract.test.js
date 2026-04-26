@@ -9,6 +9,7 @@ import { createCardNewsDraft } from "../lib/cardNewsPlanner.js";
 import { generateCardNewsSet } from "../lib/cardNewsGenerator.js";
 import { listHistoryRows } from "../lib/historyList.js";
 import { readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
+import { repairPlannerOutput, validatePlannerOutput } from "../lib/cardNewsPlannerSchema.js";
 import {
   createCardNewsJob,
   getCardNewsJob,
@@ -72,6 +73,11 @@ describe("Card News 0.20 dev MVP contract", () => {
 
     assert.doesNotMatch(promptSource, /image_generation/);
     assert.match(promptSource, /JSON/);
+    assert.match(promptSource, /Role names such as cover\/problem\/cta are structural labels/);
+    assert.match(promptSource, /Use headline textFields for hook\/cover cards/);
+    assert.match(promptSource, /Placement examples:/);
+    assert.match(promptSource, /preferredSlots/);
+    assert.match(promptSource, /textFieldPolicy/);
     assert.match(clientSource, /json_schema/);
     assert.match(clientSource, /json_object/);
     assert.match(clientSource, /\/v1\/chat\/completions/);
@@ -83,6 +89,51 @@ describe("Card News 0.20 dev MVP contract", () => {
     assert.equal(draft.planner.mode, "deterministic-fallback");
     assert.equal(draft.plan.cards.length, 3);
     assert.deepEqual(draft.plan.cards[0].textFields, []);
+  });
+
+  it("keeps visible copy in textFields and out of visualPrompt", () => {
+    const roleTemplate = {
+      roles: [{ role: "cover", promptHint: "cover", preferredSlots: ["title"] }],
+    };
+    const visibleText = "중간고사 역전 플랜";
+    const output = {
+      title: "중간고사",
+      topic: "중간고사",
+      cards: [{
+        order: 1,
+        role: "cover",
+        headline: "중간고사",
+        body: "요약",
+        visualPrompt: `top headline should render ${visibleText}`,
+        textFields: [{
+          id: "tf_1",
+          kind: "headline",
+          text: visibleText,
+          renderMode: "in-image",
+          placement: "top-center",
+          slotId: "title",
+          hierarchy: "primary",
+          maxChars: 24,
+          language: "ko",
+          source: "planner",
+        }],
+        references: [],
+        locked: false,
+      }],
+    };
+
+    const invalid = validatePlannerOutput(output, roleTemplate);
+    assert.equal(invalid.ok, false);
+    assert.ok(invalid.errors.some((error) => error.includes("visualPrompt must not duplicate exact visible text")));
+
+    const repaired = repairPlannerOutput(output, {
+      topic: "중간고사",
+      contentBrief: "학부모 대상 안내",
+      roleTemplate,
+    });
+    assert.equal(repaired.ok, true);
+    assert.equal(repaired.plan.cards[0].textFields[0].text, visibleText);
+    assert.doesNotMatch(repaired.plan.cards[0].visualPrompt, new RegExp(visibleText));
   });
 
   it("honors planner upstream failure and deterministic fallback config", async () => {
@@ -158,8 +209,12 @@ describe("Card News 0.20 dev MVP contract", () => {
 
     for (const id of ["academy-lesson-square", "clean-report-square"]) {
       const template = templates.find((item) => item.id === id);
+      assert.deepEqual(template.recommendedOutputSizes, ["1024x1024", "2048x2048"]);
+      assert.equal(typeof template.authoringLabel, "string");
+      assert.equal(typeof template.description, "string");
       assert.ok(template.slots.every((slot) => slot.label && slot.placement));
       assert.ok(template.slots.every((slot) => slot.kind !== "title" && slot.kind !== "body" && slot.kind !== "cta"));
+      assert.ok(template.slots.filter((slot) => slot.kind === "text").every((slot) => Number.isInteger(slot.maxChars)));
       const base = await readFile(join(rootDir, "assets", "card-news", "templates", id, "base.png"));
       const preview = await readFile(join(rootDir, "assets", "card-news", "templates", id, "preview.png"));
       assert.deepEqual(readPngSize(base), { width: 1024, height: 1024 });

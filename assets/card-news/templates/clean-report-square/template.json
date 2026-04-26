@@ -1,7 +1,10 @@
 {
   "id": "clean-report-square",
   "name": "Clean Report Square",
+  "description": "Editorial report-style square template for clear title, visual, and CTA hierarchy.",
+  "authoringLabel": "Clean editorial report",
   "size": "2048x2048",
+  "recommendedOutputSizes": ["1024x1024", "2048x2048"],
   "previewFilename": "preview.png",
   "baseFilename": "base.png",
   "stylePrompt": "Clean Korean card news report layout, white editorial surface, subtle grid, restrained navy accent, large safe title area, clear central visual slot, minimal decoration.",

@@ -1,0 +1,107 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = process.cwd();
+
+function readSource(path) {
+  return readFileSync(join(root, path), "utf8");
+}
+
+describe("Card News smoke flow contract", () => {
+  it("keeps the template, draft, job, retry, and reopen API wiring intact", () => {
+    const api = readSource("ui/src/lib/cardNewsApi.ts");
+    const store = readSource("ui/src/store/cardNewsStore.ts");
+    const routes = readSource("routes/cardNews.js");
+
+    assert.match(api, /export function listCardNewsImageTemplates/);
+    assert.match(api, /export function listCardNewsRoleTemplates/);
+    assert.match(api, /export async function draftCardNews/);
+    assert.match(api, /export function startCardNewsJob/);
+    assert.match(api, /export function getCardNewsJob/);
+    assert.match(api, /export function getCardNewsSet/);
+    assert.match(api, /export async function regenerateCardNewsCard/);
+
+    assert.match(store, /async hydrate\(\)/);
+    assert.match(store, /async draft\(\)/);
+    assert.match(store, /async generateSet\(\)/);
+    assert.match(store, /function applyJobSummary/);
+    assert.match(store, /async retryCard\(cardId\)/);
+    assert.match(store, /async loadSet\(setId\)/);
+
+    assert.match(routes, /app\.post\("\/api\/cardnews\/draft"/);
+    assert.match(routes, /app\.post\("\/api\/cardnews\/jobs"/);
+    assert.match(routes, /app\.get\("\/api\/cardnews\/jobs\/:jobId"/);
+    assert.match(routes, /app\.get\("\/api\/cardnews\/sets\/:setId"/);
+  });
+
+  it("keeps the visible Card News workspace surfaces wired", () => {
+    const workspace = readSource("ui/src/components/card-news/CardNewsWorkspace.tsx");
+    const composer = readSource("ui/src/components/card-news/CardNewsComposer.tsx");
+    const stage = readSource("ui/src/components/card-news/CardStage.tsx");
+    const deck = readSource("ui/src/components/card-news/CardDeckRail.tsx");
+    const batchBar = readSource("ui/src/components/card-news/CardNewsBatchBar.tsx");
+    const statusBadge = readSource("ui/src/components/card-news/CardStatusBadge.tsx");
+    const inspector = readSource("ui/src/components/card-news/CardInspector.tsx");
+
+    assert.match(workspace, /ImageTemplatePicker/);
+    assert.match(workspace, /RoleTemplatePicker/);
+    assert.match(workspace, /CardStage/);
+    assert.match(workspace, /CardInspector/);
+
+    assert.match(composer, /useCardNewsStore\(\(s\) => s\.draft\)/);
+    assert.match(composer, /useCardNewsStore\(\(s\) => s\.generateSet\)/);
+    assert.match(composer, /void draft\(\)/);
+    assert.match(composer, /void generateSet\(\)/);
+
+    assert.match(stage, /card-news-stage-overlay/);
+    assert.match(stage, /renderMode === "in-image"/);
+    assert.match(stage, /card\.url/);
+    assert.match(stage, /retryCard\(card\.id\)/);
+
+    assert.match(deck, /card\.url/);
+    assert.match(deck, /CardStatusBadge/);
+
+    assert.match(batchBar, /summary\.queued/);
+    assert.match(batchBar, /summary\.errors/);
+    assert.match(batchBar, /summary\.skipped/);
+
+    assert.match(statusBadge, /display === "queued" \|\| display === "generating"/);
+    assert.match(statusBadge, /card-news-spinner/);
+
+    assert.match(inspector, /TextFieldCard/);
+    assert.match(inspector, /retryCard\(card\.id\)/);
+  });
+
+  it("keeps gallery set reopen wired to Card News mode", () => {
+    const gallery = readSource("ui/src/components/GalleryModal.tsx");
+
+    assert.match(gallery, /handleOpenCardNewsSet/);
+    assert.match(gallery, /loadSet\(item\.setId\)/);
+    assert.match(gallery, /setUIMode\("card-news"\)/);
+    assert.match(gallery, /item\.kind === "card-news-set"/);
+    assert.match(gallery, /gallery-card-news-set/);
+  });
+
+  it("documents manual smoke QA and forbids live generation endpoints", () => {
+    const plan = readSource("devlog/_plan/0.20-card-news/40_smoke_qa_harness.md");
+
+    for (const phrase of [
+      "Card News tab open",
+      "Draft outline",
+      "Verify textFields are visible",
+      "Batch generate",
+      "Verify queued/generating/generated states",
+      "Retry failed card",
+      "Reopen card-news set",
+    ]) {
+      assert.match(plan, new RegExp(phrase));
+    }
+
+    assert.match(plan, /Do not HTTP-call `POST \/api\/cardnews\/jobs`/);
+    assert.match(plan, /Do not HTTP-call `POST \/api\/cardnews\/generate`/);
+    assert.match(plan, /Do not use browser automation in 40/);
+    assert.match(plan, /Use source-contract tests or unit-level tests only/);
+  });
+});
