@@ -10,7 +10,7 @@ The `ima2` CLI lets users configure the server, generate images, edit images, in
 
 This matters because `ima2-gen` is both a browser app and an automation tool. Users can run `npx ima2-gen serve` for an instant local app, while scripts can call `ima2 gen` or `ima2 edit` against the same server. If the CLI contract drifts, README examples, tests, server discovery, and API response handling drift with it.
 
-Before using client commands, make sure a server is running. `ima2 serve` starts the server and OAuth proxy, then advertises the current port in `~/.ima2/server.json`. Client commands such as `ima2 gen`, `ima2 edit`, `ima2 ls`, `ima2 ps`, and `ima2 ping` use that advertisement file or an override to find the server.
+Before using client commands, make sure a server is running. `ima2 serve` starts the server and OAuth proxy, then advertises the actual bound URL in `~/.ima2/server.json`. Client commands such as `ima2 gen`, `ima2 edit`, `ima2 ls`, `ima2 ps`, and `ima2 ping` use that advertisement file or an override to find the server, including fallback ports when the default is busy.
 
 ---
 
@@ -117,7 +117,7 @@ sequenceDiagram
 |---:|---|---|
 | 1 | `--server <url>` | Strongest per-command override |
 | 2 | `IMA2_SERVER` | Environment override for client commands |
-| 3 | `~/.ima2/server.json` | Port advertisement written by the running server |
+| 3 | `~/.ima2/server.json` | URL/port advertisement written by the running server |
 | 4 | `http://localhost:3333` | Default fallback |
 
 ## Exit Codes
@@ -145,6 +145,7 @@ sequenceDiagram
 
 - 2026-04-23: Documented the current CLI command surface and discovery contract.
 - 2026-04-23: Translated this document from Korean to English.
+- 2026-04-26: Added classic CLI parity options, cancel command, terminal inflight listing, and actual-port discovery notes.
 
 Previous document: `[[01-file-function-map]]`
 

@@ -27,6 +27,8 @@ npx @openai/codex login
 npx ima2-gen serve
 ```
 
+If `3333` is already occupied, `ima2-gen` binds the next available port and writes the actual URL to `~/.ima2/server.json`. Use `ima2 open` or the URL printed in the terminal instead of assuming the port.
+
 You can also install it globally:
 
 ```bash
@@ -55,10 +57,10 @@ If the settings page says **Configured but disabled**, that means an API key exi
 
 ## Model Guidance
 
-Start with **`gpt-5.4`** when you want the safest balanced image workflow.
+The app defaults to **`gpt-5.4-mini`** for fast local iteration. Switch to **`gpt-5.4`** when you want the safest balanced image workflow.
 
 - `gpt-5.4` — recommended balanced choice.
-- `gpt-5.4-mini` — current app default and faster draft model.
+- `gpt-5.4-mini` — current default and faster draft model.
 - `gpt-5.5` — strongest quality option when your Codex CLI/OAuth backend supports it. It may use more quota, expose different tool capabilities, or require updating Codex CLI before it works reliably.
 
 The app also exposes quality (`low`, `medium`, `high`) and moderation (`auto`, `low`) controls.
@@ -139,12 +141,15 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | Variable | Default | Description |
 |---|---:|---|
 | `IMA2_PORT` / `PORT` | `3333` | Web server port |
+| `IMA2_HOST` | `127.0.0.1` | Web server bind host |
 | `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth proxy port |
 | `IMA2_SERVER` | — | CLI target override |
 | `IMA2_CONFIG_DIR` | `~/.ima2` | Config and SQLite location |
 | `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | Runtime discovery file |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
+| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Server fallback image model |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable the auto-started OAuth proxy |
+| `IMA2_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Recent terminal job retention for debug views |
 | `OPENAI_API_KEY` | — | API key for supported auxiliary paths, not image generation |
 
@@ -181,8 +186,8 @@ Recent versions moved generated images from the installed package folder to `~/.
 **`gpt-5.5` fails but other models work**
 Update Codex CLI first, then retry. If it still fails, your account or backend route may not expose the same image capability or quota for `gpt-5.5` yet; use `gpt-5.4` as the stable fallback.
 
-**The port is unexpectedly `3457`**
-Your shell may have inherited `PORT=3457` from another local tool. Run `unset PORT` or start with `IMA2_PORT=3333 ima2 serve`.
+**The app opened on a different port**
+If the requested server port is busy, `ima2-gen` falls back to the next available port and records it in `~/.ima2/server.json`. If the port is unexpectedly `3457`, your shell may also have inherited `PORT=3457` from another local tool. Run `unset PORT` or start with `IMA2_PORT=3333 ima2 serve`.
 
 **Port `10531` is already used on Windows**
 Some Windows security tools, including `AnySign4PC.exe`, may occupy the default OAuth proxy port. Current builds track the actual fallback OAuth port. If you still need a manual override, start with `IMA2_OAUTH_PROXY_PORT=11531 ima2 serve` and check `ima2 doctor`.

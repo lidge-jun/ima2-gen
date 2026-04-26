@@ -22,12 +22,10 @@ graph TD
     API --> IMG["classic image<br/>generate edit history"]
     API --> JOBS["inflight jobs"]
     API --> NODE["node mode<br/>node generate node fetch"]
-    API --> CARD["card news<br/>templates draft sets jobs"]
     API --> SESS["sessions<br/>sqlite graph"]
     API --> BILL["billing probe"]
     IMG --> FILES["~/.ima2/generated<br/>sidecar metadata"]
     NODE --> FILES
-    CARD --> FILES
     SESS --> DB["SQLite"]
 ```
 
@@ -35,9 +33,9 @@ graph TD
 
 | Method | Path | Response | Description |
 |---|---|---|---|
-| `GET` | `/api/providers` | `{ apiKey, oauth, oauthPort, apiKeyDisabled }` | Reports available providers to the UI |
-| `GET` | `/api/health` | `{ ok, version, provider, uptimeSec, activeJobs, pid, startedAt }` | Used by CLI discovery and health checks |
-| `GET` | `/api/oauth/status` | `{ status, models? }` | Checks whether the OAuth proxy is ready |
+| `GET` | `/api/providers` | `{ apiKey, oauth, oauthPort, apiKeyDisabled, runtime }` | Reports available providers and runtime ports to the UI |
+| `GET` | `/api/health` | `{ ok, version, provider, uptimeSec, activeJobs, pid, startedAt, runtime }` | Used by CLI discovery and health checks |
+| `GET` | `/api/oauth/status` | `{ status, models?, runtime }` | Checks whether the OAuth proxy is ready and reports actual proxy URL/port |
 | `GET` | `/api/billing` | `{ oauth, apiKeyValid, apiKeySource, credits?, costs? }` | Probes billing/model state when an API key exists |
 | `GET` | `/api/storage/status` | `{ ok, data: { generatedDirLabel, generatedCount, legacyCandidatesScanned, legacySourcesFound, legacyFilesFound, state, messageKind, recoveryDocsPath, doctorCommand, overrides } }` | Summarizes gallery storage and legacy recovery state for UI support banners |
 | `POST` | `/api/storage/open-generated-dir` | `{ ok }` | Opens only the configured generated image folder in the local OS file manager |
@@ -47,6 +45,8 @@ graph TD
 The live generation/edit provider is OAuth. Sending `provider: "api"` returns `403` with `APIKEY_DISABLED`. README may still mention the API-key path, but live generation endpoints hard-block API-key generation.
 
 Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` never accepts a browser-supplied path; it opens `ctx.config.storage.generatedDir` only.
+
+Runtime responses expose configured and actual ports separately. The backend can bind `3334+` when `3333` is occupied, and the OAuth proxy can report an actual fallback port when `10531` is occupied. Clients should follow the URL in `~/.ima2/server.json` or the `runtime.*.url` fields rather than rebuilding URLs from configured defaults.
 
 ## Classic Generate And Edit
 
@@ -98,32 +98,6 @@ Node context is explicit. `contextMode` defaults to `parent-plus-refs`, meaning 
 
 Node sidecars include `requestId` as recovery metadata. `/api/history` exposes the same field so a reloaded graph can match completed assets by request id before falling back to `(sessionId, clientNodeId, createdAt)`.
 
-## Card News Dev API
-
-Card News is a dev-gated MVP surface. It is intended for `npm run dev` product-flow validation before packaging and global install concerns are solved.
-
-| Method | Path | Body or query | Response |
-|---|---|---|---|
-| `GET` | `/api/cardnews/image-templates` | none | `{ templates }` |
-| `GET` | `/api/cardnews/image-templates/:templateId/preview` | none | PNG preview |
-| `GET` | `/api/cardnews/role-templates` | none | `{ templates }` |
-| `POST` | `/api/cardnews/draft` | `{ topic, audience?, goal?, contentBrief?, imageTemplateId, roleTemplateId, size }` | `{ plan: CardNewsPlan, planner? }` |
-| `POST` | `/api/cardnews/generate` | `CardNewsPlan & { quality, moderation, model?, sessionId? }` | `{ setId, manifest, cards }` |
-| `POST` | `/api/cardnews/cards/:cardId/regenerate` | `{ setId, card, cards?, quality, moderation, model? }` | set-level `{ setId, manifest, cards }` |
-| `GET` | `/api/cardnews/sets` | none | `{ sets }` |
-| `GET` | `/api/cardnews/sets/:setId` | none | `{ plan: CardNewsPlan }` |
-| `POST` | `/api/cardnews/jobs` | `CardNewsPlan` | `202 { jobId, setId, status, total, generated, errors, cards }` |
-| `GET` | `/api/cardnews/jobs/:jobId` | none | job summary or `404 CARD_NEWS_JOB_NOT_FOUND` |
-| `POST` | `/api/cardnews/jobs/:jobId/retry` | `{ cardIds }` | `202` job summary or `404 CARD_NEWS_JOB_NOT_FOUND` |
-
-`/api/cardnews/draft` is text-only. It first tries Responses Structured Outputs when enabled. If the local OAuth-compatible endpoint rejects that format, it falls back to chat-completions JSON mode, then validates and repairs the JSON locally. It returns `PLANNER_*` errors unless deterministic fallback is explicitly enabled in config. It never calls image-generation tools.
-
-Card News cards separate summary copy from rendered image text. `headline` and `body` are UI/gallery/search copy. Readable image text must be represented in `cards[].textFields[]`; only fields with `renderMode: "in-image"` are assembled into the image prompt. `role` remains a structural label and must not be rendered as visible text. Legacy plans without `textFields` hydrate as `textFields: []`.
-
-Card News generation is template-guided parallel i2i. The template PNG is a style/reference input; output size is supplied separately by the UI. One card failure does not reject the whole set. Failed cards are returned with `status: "error"` and a sidecar; successful cards write `card-XX.png` plus `card-XX.json`. The set writes `manifest.json` with `kind: "card-news-set"`.
-
-History reconstruction recognizes both `card-news-card` sidecars and `card-news-set` manifests. Gallery clients can show individual card rows or open a set through `GET /api/cardnews/sets/:setId`.
-
 ## Session DB API
 
 | Method | Path | Body or header | Response |
@@ -162,9 +136,6 @@ Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-G
 | Missing graph version header | 428 | `GRAPH_VERSION_REQUIRED` |
 | Graph too large | 413 | `GRAPH_TOO_LARGE` |
 | Missing node metadata | 404 | `NODE_NOT_FOUND` |
-| Missing Card News job | 404 | `CARD_NEWS_JOB_NOT_FOUND` |
-| Planner upstream failure | 502 or mapped status | `PLANNER_UPSTREAM_FAILED` |
-| Planner invalid JSON/schema | 422 | `PLANNER_INVALID_JSON` or `PLANNER_SCHEMA_INVALID` |
 
 ## Observability Contract
 
@@ -193,10 +164,9 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - 2026-04-24: Clarified source-neutral `GRAPH_VERSION_CONFLICT` semantics and graph save metadata headers.
 - 2026-04-25: Updated server ownership after route decomposition and clarified generated-directory storage plus error-code UX contracts.
 - 2026-04-25: Documented sanitized API request IDs and API-only request logging.
-- 2026-04-25: Added Card News dev API, planner JSON, set manifest history, and job summary contracts.
-- 2026-04-25: Documented Card News `textFields` as the rendered text contract.
 - 2026-04-25: Documented child/edit node references and SSE inner-error diagnostics.
 - 2026-04-25: Documented node context/search modes and graph-edge-derived parent normalization.
+- 2026-04-26: Documented runtime actual-port reporting and removed dev-only API details from the evergreen public API map.
 
 Previous document: `[[02-command-reference]]`
 

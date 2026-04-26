@@ -34,55 +34,59 @@ graph TD
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `server.js` | 168 | Express bootstrap, middleware wiring, OAuth startup, route registration, static serving |
+| `server.js` | 235 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, route registration, static serving |
 | `routes/generate.js` | 269 | Classic generation API, model validation, reference validation, sidecar save |
 | `routes/edit.js` | 186 | Edit API, parent image path, OAuth edit response save |
-| `routes/nodes.js` | 425 | Node generation API, explicit context/search policy, SSE partial streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
+| `routes/nodes.js` | 430 | Node generation API, explicit context/search policy, SSE partial streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
 | `routes/sessions.js` | 292 | SQLite-backed session list/load/save/rename/delete and graph save |
 | `routes/history.js` | 102 | History list, grouped gallery, soft delete and restore |
-| `routes/health.js` | 89 | Health, providers, billing, OAuth status |
+| `routes/health.js` | 113 | Health, providers, billing, OAuth status, runtime port status, inflight cancel |
 | `routes/storage.js` | 39 | Gallery storage status and generated-folder open action |
 | `routes/index.js` | 19 | Route registration hub |
-| `bin/ima2.js` | 378 | CLI setup, serve, status, doctor, open, reset, command dispatch |
-| `bin/commands/gen.js` | 136 | CLI image-generation client |
-| `bin/commands/edit.js` | 70 | CLI image-edit client |
+| `bin/ima2.js` | 400 | CLI setup, serve, status, doctor, open, reset, command dispatch |
+| `bin/commands/gen.js` | 159 | CLI image-generation client with model, mode, moderation, and session options |
+| `bin/commands/edit.js` | 99 | CLI image-edit client with model, mode, moderation, and session options |
+| `bin/commands/cancel.js` | 45 | Inflight cancel client |
 | `bin/commands/ls.js` | 49 | History list client |
-| `bin/commands/ps.js` | 46 | Inflight job list client |
+| `bin/commands/ps.js` | 78 | Inflight job list client, including optional terminal job snapshots |
 | `bin/commands/show.js` | 48 | Single history item display/reveal client |
 | `bin/commands/ping.js` | 28 | Server health probe client |
-| `bin/lib/client.js` | 97 | Server discovery, HTTP request wrapper, response normalization |
+| `bin/lib/client.js` | 100 | Server discovery, HTTP request wrapper, response normalization |
 | `bin/lib/platform.js` | 97 | Browser-open and binary-resolution helpers |
 | `bin/lib/args.js` | 73 | Dependency-free argv parser |
 | `bin/lib/files.js` | 39 | Data URI file conversion and output naming |
-| `bin/lib/output.js` | 48 | Terminal output, JSON, exit-code mapping |
+| `bin/lib/output.js` | 58 | Terminal output, JSON, exit-code mapping |
+| `bin/lib/error-hints.js` | 23 | CLI error hint formatting |
 | `bin/lib/star-prompt.js` | 97 | CLI prompt decoration helper |
 | `bin/lib/storage-doctor.js` | 38 | CLI storage doctor formatting |
 | `lib/sessionStore.js` | 272 | SQLite session and graph persistence, graph parent normalization, lightweight session-title lookup |
 | `lib/assetLifecycle.js` | 123 | Soft delete, restore, node asset-missing marking |
 | `lib/db.js` | 114 | SQLite bootstrap and migrations, including inflight table |
 | `lib/nodeStore.js` | 69 | Node image and metadata load/save |
-| `lib/inflight.js` | 204 | SQLite-backed active job registry and short-lived terminal job snapshots |
+| `lib/inflight.js` | 204 | SQLite-backed active job registry, cancel state, and short-lived terminal job snapshots |
 | `lib/logger.js` | 150 | Safe structured logging, redaction, level filtering, and test sink helpers |
 | `lib/requestLogger.js` | 48 | API-only request lifecycle logging and sanitized request ID middleware |
 | `lib/codexDetect.js` | 69 | Codex OAuth session detection helper |
 | `lib/errorClassify.js` | 62 | Upstream/OAuth error classifier for stable error codes |
-| `lib/historyList.js` | 68 | History reconstruction from generated assets and sidecars |
+| `lib/historyList.js` | 142 | History reconstruction from generated assets, sidecars, and session-aware rows |
 | `lib/storageMigration.js` | 284 | Legacy generated-folder scan and migration support |
-| `lib/oauthProxy.js` | 348 | OAuth Responses proxy helpers, generate/edit streaming, optional edit search, safe stream diagnostics |
+| `lib/runtimePorts.js` | 93 | Port probing, fallback binding, and OAuth ready URL parsing |
+| `lib/oauthLauncher.js` | 64 | OAuth proxy child process startup and actual ready-port capture |
+| `lib/oauthProxy.js` | 382 | OAuth Responses proxy helpers, generate/edit streaming, optional edit search, safe stream diagnostics |
 
 ## UI File Map
 
 | Area | File | Lines | Responsibility |
 |---|---|---:|---|
-| App shell | `ui/src/App.tsx` | 100 | Initial hydration, polling, classic/node/card-news canvas switch |
+| App shell | `ui/src/App.tsx` | 100 | Initial hydration, polling, classic/node canvas switch |
 | Entry | `ui/src/main.tsx` | 10 | React mount |
 | Types | `ui/src/types.ts` | 121 | Provider, quality, size, image model, response types |
-| Store | `ui/src/store/useAppStore.ts` | 2446 | Zustand state, history, in-flight jobs, graph, sessions, errors, storage, custom size, node batch selection, edge disconnect, node references, node regeneration actions |
-| API client | `ui/src/lib/api.ts` | 505 | Browser-side REST client |
+| Store | `ui/src/store/useAppStore.ts` | 2452 | Zustand state, history, in-flight jobs, graph, sessions, errors, storage, custom size, node batch selection, edge disconnect, node references, node regeneration actions |
+| API client | `ui/src/lib/api.ts` | 513 | Browser-side REST client |
 | Node graph helpers | `ui/src/lib/nodeGraph.ts` | 41 | Visual-edge parent derivation and incoming-edge conflict helpers |
 | Node ref storage | `ui/src/lib/nodeRefStorage.ts` | 54 | Browser-local node reference persistence outside SQLite graph payloads |
-| Style | `ui/src/index.css` | 3006 | App layout, canvas, components, node-mode, settings, error, node batch, compact node footer, and card-news styling |
-| Components | `ui/src/components/*.tsx` | 3106 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, error surfaces |
+| Style | `ui/src/index.css` | 3006 | App layout, canvas, components, node-mode, settings, error, node batch, and compact node footer styling |
+| Components | `ui/src/components/*.tsx` | 3126 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, error surfaces |
 | Hooks | `ui/src/hooks/*.ts` | 57 | Billing and OAuth status polling |
 | i18n | `ui/src/i18n/*` | 1030 | English/Korean translations and locale runtime |
 
@@ -90,11 +94,11 @@ graph TD
 
 | Component | Lines | Role |
 |---|---:|---|
-| `GalleryModal.tsx` | 457 | History gallery modal, storage recovery banner, open-folder action |
+| `GalleryModal.tsx` | 495 | History gallery modal, storage recovery banner, open-folder action |
 | `PromptComposer.tsx` | 219 | Prompt input, reference handling, style-sheet entry |
 | `NodeCanvas.tsx` | 166 | React Flow graph canvas, edge disconnect routing |
 | `RightPanel.tsx` | 129 | Quality, size, format, moderation, count controls |
-| `ImageNode.tsx` | 271 | Node-mode image card, partial preview, node-local references, compact footer, regenerate/new-variant actions |
+| `ImageNode.tsx` | 295 | Node-mode image card, fixed-height preview, partial preview, node-local references, compact footer, regenerate/new-variant actions |
 | `ProviderSelect.tsx` | 103 | OAuth/API provider display and disabled-state handling |
 | `SessionPicker.tsx` | 89 | Node-mode session picker |
 | `SettingsWorkspace.tsx` | 218 | Workspace-style settings page |
@@ -134,6 +138,9 @@ graph TD
 | `tests/node-footer-compact-contract.test.js` | 31 | Compact one-line node footer contract |
 | `tests/package-smoke.test.js` | 72 | Publish manifest dry-run contract |
 | `tests/package-install-smoke.mjs` | 157 | Optional tarball install smoke |
+| `tests/runtime-ports.test.js` | 58 | Server/OAuth port fallback contract |
+| `tests/vite-dev-port-contract.test.js` | 31 | Vite dev proxy discovery contract |
+| `tests/generate-proxy-error-contract.test.js` | 29 | Proxy/network errors stay distinct from moderation |
 
 ## Refactor Signals
 
@@ -158,6 +165,7 @@ graph TD
 - 2026-04-24: Added safe logger, terminal inflight, gallery title grouping, and related tests.
 - 2026-04-25: Updated line counts and ownership after route decomposition, model/error/custom-size/storage work, and package smoke tests.
 - 2026-04-25: Added node graph/ref helper files and contract tests for parent source-of-truth, reference payloads, context/search policy, and compact footer.
+- 2026-04-26: Refreshed CLI, runtime port fallback, node layout, and test-map ownership after the 0.09.20.1 and runtime binding work.
 
 Previous document: `[[00-structure-hub]]`
 

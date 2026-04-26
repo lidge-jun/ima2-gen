@@ -6,7 +6,7 @@ aliases: [ima2 operations, ima2 infra, image_gen operations]
 
 # Infrastructure And Operations
 
-`ima2-gen` operates as an npm package, local Node server, OAuth proxy, SQLite-backed graph store, image file store, and React build artifact. Users see one CLI, but internally the server, UI bundle, local config, and runtime data move together.
+`ima2-gen` operates as an npm package, local Node server, OAuth proxy, SQLite-backed graph store, image file store, and React build artifact. Users see one CLI, but internally the server, UI bundle, local config, runtime port discovery, and runtime data move together.
 
 This document matters because development mode and packaged mode take different paths. Developers run `npm run dev`, which builds the UI and launches the watched server. Users run `ima2 serve`, which checks for `ui/dist` and starts the server. Node mode is enabled in both paths by default. CLI clients read `~/.ima2/server.json` to find the running server. Config and generated data are split between the repo and the user's home directory.
 
@@ -22,10 +22,11 @@ graph TD
     CLI --> ADV["~/.ima2/server.json"]
     CLI --> SRV["server.js"]
     SRV --> DIST["ui/dist"]
-    SRV --> GEN["generated"]
+    SRV --> GEN["~/.ima2/generated"]
     SRV --> DB["SQLite via better-sqlite3"]
     SRV --> OAUTH["openai-oauth<br/>default port 10531"]
     SRV --> ENV["env vars"]
+    SRV --> ADV["actual runtime URLs<br/>~/.ima2/server.json"]
 ```
 
 ## Package Contract
@@ -79,18 +80,22 @@ README may still mention a different Node baseline. The operational baseline is 
 | Variable | Default or meaning |
 |---|---|
 | `OPENAI_API_KEY` | May be used for billing probes and legacy provider config |
-| `PORT` | Server port, default `3333` |
-| `OAUTH_PORT` | OAuth proxy port, default `10531` |
+| `IMA2_PORT` / `PORT` | Server preferred port, default `3333`; falls back to next free port when occupied |
+| `IMA2_HOST` | Server bind host, default `127.0.0.1` |
+| `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | OAuth proxy preferred port, default `10531`; the actual ready URL is captured when the proxy falls back |
 | `IMA2_SERVER` | CLI target server URL override |
 | `IMA2_CONFIG_DIR` | Used by tests to isolate config directory |
 | `IMA2_ADVERTISE_FILE` | Overrides runtime discovery file path |
 | `VITE_IMA2_API_TARGET` / `IMA2_DEV_API_TARGET` | Split Vite dev API proxy target override |
+| `IMA2_IMAGE_MODEL_DEFAULT` | Server fallback image model, default `gpt-5.4-mini` |
 | `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `600000` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
 | `VITE_IMA2_NODE_MODE` | UI build-time gate; set `0` only for a classic-only bundle |
 | `IMA2_LOG_LEVEL` | Reserved log-level setting; current app emits safe structured logs |
 
 Generation and edit endpoints currently hard-block `provider: "api"`. Even with an API key, image generation is OAuth-centered.
+
+Runtime port fallback is intentional. If a preferred backend or OAuth proxy port is occupied, the server records the actual bound URL in `~/.ima2/server.json` and health/status responses. CLI clients and split Vite dev proxy resolution should consume that actual URL instead of reconstructing `localhost:${configuredPort}`.
 
 ## Observability
 
@@ -138,6 +143,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - 2026-04-25: Added npm package smoke guidance for release-critical file inclusion.
 - 2026-04-25: Updated package metadata for version 1.1.0, `routes/`/`docs/` publish contract, and install-smoke script.
 - 2026-04-25: Updated logging operations for dependency-free levels, request IDs, and API-only middleware.
+- 2026-04-26: Documented actual runtime port fallback, CLI/Vite discovery, and image model default override.
 
 Previous document: `[[05-node-mode]]`
 

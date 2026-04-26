@@ -85,6 +85,7 @@ The runtime path is intentionally direct. CLI commands and the browser call `/ap
 - 2026-04-23: Created the initial `image_gen/structure` hub and eight-document reference set.
 - 2026-04-23: Translated the structure docs from Korean to English.
 - 2026-04-25: Updated the hub after route decomposition, home-directory storage migration, and 0.09 closeout audit.
+- 2026-04-26: Refreshed the docs around CLI parity, runtime port fallback, and public classic/node product scope.
 
 Previous document: none
 

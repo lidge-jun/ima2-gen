@@ -24,17 +24,13 @@ graph TD
     APP --> SETTINGS["SettingsWorkspace"]
     APP --> CLASSIC["Canvas"]
     APP --> NODE["NodeCanvas"]
-    APP --> CARD["CardNewsWorkspace"]
     APP --> RIGHT["RightPanel"]
     APP --> MODAL["GalleryModal"]
     STORE --> API["ui/src/lib/api.ts"]
-    CARD --> CARDSTORE["cardNewsStore"]
-    CARDSTORE --> CARDAPI["cardNewsApi.ts"]
     API --> SERVER["server.js /api"]
-    CARDAPI --> SERVER
 ```
 
-`App.tsx` hydrates history, loads sessions, reconciles inflight jobs, starts polling on mount, and syncs theme preference. If settings are open, it renders `SettingsWorkspace` in the center slot. Otherwise, if UI mode is `classic`, it renders `Canvas`; if node mode is enabled and UI mode is `node`, it renders `NodeCanvas`; if Card News dev mode is enabled and UI mode is `card-news`, it renders `CardNewsWorkspace` and hides the normal right panel. Node mode is enabled in packaged builds by default and can be hidden only by building with `VITE_IMA2_NODE_MODE=0`. Before unload or visibility changes, it flushes the graph save beacon.
+`App.tsx` hydrates history, loads sessions, reconciles inflight jobs, starts polling on mount, and syncs theme preference. If settings are open, it renders `SettingsWorkspace` in the center slot. Otherwise, if UI mode is `classic`, it renders `Canvas`; if node mode is enabled and UI mode is `node`, it renders `NodeCanvas`. Node mode is enabled in packaged builds by default and can be hidden only by building with `VITE_IMA2_NODE_MODE=0`. Before unload or visibility changes, it flushes the graph save beacon.
 
 Settings are a workspace replacement, not a modal overlay. `SettingsButton` lives next to the `ima2-gen` title in the sidebar. The compact image model selector also lives in this header as a fast switcher, while Settings shows the same choice with full model names. `SettingsWorkspace` keeps the outer shell fixed so the header and `X` close button do not scroll away; only the section index and content pane scroll. Selecting an item jumps the center document to that section instead of replacing the content panel. `SettingsWorkspace` closes with `X` or Escape and returns to the previous canvas path without mutating generation state.
 
@@ -47,7 +43,6 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | Center workspace | `Canvas.tsx`, `NodeCanvas.tsx`, `SettingsWorkspace.tsx`, `ImageNode.tsx` | Classic image display, graph canvas, or settings workspace |
 | Right panel | `RightPanel.tsx`, `SizePicker.tsx`, `CostEstimate.tsx` | Quality, size, format, moderation, count |
 | History | `HistoryStrip.tsx`, `GalleryModal.tsx`, `ResultActions.tsx` | Saved image browsing and actions |
-| Card News | `card-news/*`, `cardNewsStore.ts`, `cardNewsApi.ts` | Dev-gated card set planning, review, batch generation, retry, and set loading |
 | Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx`, `AccountSettings.tsx` | Pending jobs, notifications, billing/provider status |
 | Error UX | `ErrorCard.tsx`, `ui/src/lib/errorCodes.ts`, `errorHandler.ts` | Code-based localized error cards and toast routing |
 | Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts` | Keyboard-safe custom size drafts and generation-time adjustment confirmation |
@@ -62,7 +57,6 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery |
 | Inflight | `useAppStore.ts` plus `/api/inflight` | localStorage-backed pending jobs and polling |
 | Node graph | `useAppStore.ts` plus sessions API | Nodes, edges, graphVersion, session actions |
-| Card News set | `cardNewsStore.ts` plus `/api/cardnews/*` | Image template, role template, brief, planner metadata, active card plan, card statuses |
 | Settings workspace | `useAppStore.ts` | `settingsOpen` and active settings section |
 | UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale, theme |
 | Error surface | `useAppStore.ts` plus `ErrorCard.tsx` | `errorCard` state for actionable errors; toast remains for small errors |
@@ -90,25 +84,12 @@ Visible metadata should carry the selected model too. Current result metadata, h
 | `getOAuthStatus` | `GET /api/oauth/status` | Provider readiness |
 | `getBilling` | `GET /api/billing` | Billing bar and API status |
 
-Card News intentionally uses a separate API client, `ui/src/lib/cardNewsApi.ts`, instead of mixing its set-shaped payloads into the classic image helpers. The important functions are:
-
-| Function | Endpoint | Used by |
-|---|---|---|
-| `listCardNewsImageTemplates` | `GET /api/cardnews/image-templates` | Card News composer |
-| `listCardNewsRoleTemplates` | `GET /api/cardnews/role-templates` | Card News composer |
-| `draftCardNews` | `POST /api/cardnews/draft` | JSON-first planner outline |
-| `generateCardNews` | `POST /api/cardnews/generate` | Parallel template-guided batch generation |
-| `regenerateCardNewsCard` | `POST /api/cardnews/cards/:cardId/regenerate` | Selected-card retry/regeneration |
-| `listCardNewsSets` | `GET /api/cardnews/sets` | Gallery set discovery |
-| `getCardNewsSet` | `GET /api/cardnews/sets/:setId` | Gallery set open/load |
-
 ## Classic UI And Node UI
 
 | Mode | Condition | Main component | State flow |
 |---|---|---|---|
 | Classic | Default UI | `Canvas.tsx` | Sends prompt to `/api/generate`, then updates current image/history |
 | Node | Product feature enabled | `NodeCanvas.tsx` | Calls `/api/node/generate` per node, renders partial previews when streamed, and saves the graph to the session |
-| Card News | Dev feature enabled | `CardNewsWorkspace.tsx` | Builds a `CardNewsPlan`, shows planner/progress metadata, writes generated sets under `/generated/cardnews/<setId>/`, and opens set history from Gallery |
 
 Node mode uses `@xyflow/react`. Empty canvas creates a root node. Dragging an edge from an existing node can create a child node. Session loading displays a canvas overlay.
 
@@ -125,10 +106,6 @@ Node edges are the source of truth for parentage. `ui/src/lib/nodeGraph.ts` deri
 Node generation sends an explicit context/search policy. The default request is `contextMode: "parent-plus-refs"` and `searchMode: "off"`, so a child edit uses only the immediate parent image plus the node's explicit reference chips. Full ancestry is not silently inferred. If edit search becomes a product option, the UI must turn `searchMode` on intentionally.
 
 Error handling is centralized. API helpers preserve `err.code` where the server sends `{ error: { code, message } }`; `handleError()` maps stable codes to either a toast or persistent `ErrorCard`. The card is reserved for actionable failures such as OAuth expiry, moderation refusal, upstream 5xx, network/proxy failure, and API-key-disabled policy.
-
-Card News keeps delivery local to its workspace. Generated cards are not assigned to classic `currentImage`. `CardDeckRail`, `CardStage`, `CardInspector`, `CardStatusBadge`, `CardNewsBatchBar`, and `PlannerMetaBadge` show card status, selected-card actions, planner mode, locked-card hints, and failed-card retry. `GalleryModal` preserves `setId`, card metadata, and set card lists when it groups history rows; opening a Card News set calls `cardNewsStore.loadSet(setId)` and switches UI mode to `card-news`.
-
-Card News text editing uses `textFields` as first-class text-box objects. `CardInspector` edits summary copy separately from visible text boxes and scene/design prompt. `TextFieldCard` controls text kind, placement, render mode, hierarchy, and source transition to user edits. `CardStage` previews in-image text fields as overlay guides before image generation and copies visible text together with summary copy. Frontend API normalization keeps legacy or partial cards safe by hydrating missing `textFields` to `[]`.
 
 ## Style And Layout
 
@@ -153,13 +130,12 @@ Card News text editing uses `textFields` as first-class text-box objects. `CardI
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Documented node SSE partial preview rendering and JSON fallback.
 - 2026-04-24: Documented shared sidebar/settings image model selection.
-- 2026-04-25: Documented error-card UX, custom-size confirmation, storage gallery helpers, and card-news WIP caveat.
+- 2026-04-25: Documented error-card UX, custom-size confirmation, and storage gallery helpers.
 - 2026-04-25: Documented node selection batch generation and canvas-level batch actions.
 - 2026-04-25: Documented explicit node edge disconnect routing and parent metadata cleanup.
 - 2026-04-25: Documented ready-node regenerate/new-variant split, position-based child layout, and child/edit node references.
-- 2026-04-25: Added Card News workspace/API/store details for planner JSON, progress, retry, and Gallery set loading.
-- 2026-04-25: Documented Card News text-field editing, overlay preview, and normalization rules.
 - 2026-04-25: Documented graph-edge-derived node parentage, node ref local persistence, and explicit node context/search request policy.
+- 2026-04-26: Removed dev-only workspace details from the evergreen frontend architecture reference.
 
 Previous document: `[[03-server-api]]`
 

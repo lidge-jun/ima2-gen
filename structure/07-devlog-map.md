@@ -10,7 +10,7 @@ aliases: [ima2 devlog map, image_gen roadmap, devlog map]
 
 This map matters because plans from multiple eras coexist. `_plan/README.md` and `_plan/unified-roadmap.md` now point to the same active direction. Completed `0.01`, `0.03`, `0.04`, `0.06`, `0.07`, and `0.09` implementation records have moved under `_fin/260423_*`. Structure docs should follow the current code and active roadmap rather than stale plan folders.
 
-For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. `0.09.4`, `0.09.4.1`, `0.09.6`, `0.09.7.1`, `0.09.8`, `0.09.15`, `0.09.16`, `0.09.21`, `0.09.23`, and `0.09.24` are completed or closeout-archived under `_fin/260425_*`. Active `_plan` now keeps `0.09.17` and `0.09.18` as observability ops before 0.10, `0.09.20-cli-backend-parity` as a concrete sliced plan for updating the older CLI surface, and `0.09.25-node-selection-batch` for node selection batch generation. Security hardening and containerization live under `_plan/0.99_future` until remote-access and packaging tradeoffs are settled.
+For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. `0.09.4`, `0.09.4.1`, `0.09.6`, `0.09.7.1`, `0.09.8`, `0.09.15`, `0.09.16`, `0.09.20.1`, `0.09.21`, `0.09.23`, and `0.09.24` are completed or closeout-archived under `_fin/260425_*` or `_fin/260426_*`. Active `_plan` now keeps `0.09.17` and `0.09.18` as optional observability ops, `0.09.20-cli-backend-parity` as the remaining sliced CLI parity backlog after the safe classic slice, and node workflow follow-ups for graph selection, regeneration, references, and contract repair. Security hardening and containerization live under `_plan/0.99_future` until remote-access and packaging tradeoffs are settled.
 
 ---
 
@@ -37,17 +37,16 @@ graph TD
 | `devlog/_plan/unified-roadmap.md` | current | `0.09.6 + 0.09.15 -> 0.10 -> 0.12` flow |
 | `devlog/_plan/0.09.17-structured-logging/PRD.md` | in progress | Dependency-free structured logging hardening: log levels, sanitized request IDs, API-only request logging. |
 | `devlog/_plan/0.09.18-metrics-observability/PRD.md` | queued | Prometheus metrics proposal. No metrics route exists yet. |
-| `devlog/_plan/0.09.20-cli-backend-parity/README.md` | concrete plan | CLI/backend parity backlog split into `0.09.20.1` classic parity, storage/runtime, history lifecycle, sessions/style, and node preview. |
+| `devlog/_plan/0.09.20-cli-backend-parity/README.md` | concrete plan | CLI/backend parity backlog after `0.09.20.1`; remaining slices cover storage/runtime, history lifecycle, sessions/style, and node preview. |
 | `devlog/_plan/0.09.25-node-selection-batch/PRD.md` | in progress | Canvas-level node selection and sequential batch generation plan. |
 | `devlog/_plan/0.09.27-node-regen-layout-diagnostics/PRD.md` | in progress | Ready-node action split, position-based node placement, and safe edit stream diagnostics. |
 | `devlog/_plan/0.09.28-child-node-references/PRD.md` | in progress | Allow child/edit node-local references alongside the parent image. |
 | `devlog/_plan/0.09.29-node-contract-repair/README.md` | in progress | Repairs node graph/backend contract: edge-derived parents, child refs, context/search policy, compact node footer. |
-| `devlog/_plan/0.09.30-oauth-proxy-port-fallback/README.md` | queued | Fix runtime port binding contracts for backend server, Vite frontend dev server, OAuth proxy, and proxy error taxonomy. |
+| `devlog/_plan/0.09.30-oauth-proxy-port-fallback/README.md` | implemented, not archived | Runtime port binding contracts for backend server, split Vite dev server, OAuth proxy, and proxy error taxonomy. Archive when the plan folder is formally closed. |
 | `devlog/_plan/0.99_future/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal. Defer strict localhost/origin gates until remote-user impact is decided. |
 | `devlog/_plan/0.99_future/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal. Not a 0.10 blocker. |
-| `devlog/_plan/0.10-feature-expansion/PLAN.md` | next feature | Preset, compare, card-news, export direction |
+| `devlog/_plan/0.10-feature-expansion/PLAN.md` | next feature | Preset, compare, and export direction |
 | `devlog/_plan/0.12-research-mode/README.md` | partial | Research-mode productization after backend support |
-| `devlog/_plan/0.20-card-news/` | WIP/dev-only | User-owned parallel card-news lane. It is not a default npm feature until intentionally promoted. |
 | `devlog/_plan/backend-node-mode.md` | reference | Original backend endpoint and cleanup planning |
 | `devlog/_plan/frontend-node-mode.md` | reference | Original frontend node-mode and layout planning |
 
@@ -67,17 +66,17 @@ graph TD
 |---|---|---|
 | 0.09.17 | Structured logging | In progress; dependency-free logger/requestId hardening instead of Pino dependency |
 | 0.09.18 | Metrics observability | Active ops; useful for self-host and debugging |
-| 0.09.20 | CLI/backend parity | Concrete sliced plan; next recommended work is `0.09.20.1` safe classic CLI parity |
+| 0.09.20 | CLI/backend parity | Concrete sliced plan; `0.09.20.1` safe classic parity is complete, remaining slices cover storage/runtime, history lifecycle, sessions/style, and node preview |
 | 0.09.25 | Node selection batch | In progress; canvas selection, in-place batch generation, stale downstream handling |
 | 0.09.26 | Edge disconnect | Active; edge-only delete and parent metadata cleanup |
 | 0.09.27 | Node regen/layout/diagnostics | Active; ready-node action split, position-based layout, safe edit retry diagnostics |
 | 0.09.28 | Child node references | Active; child/edit node references are allowed alongside parent image |
 | 0.09.29 | Node contract repair | Active; graph edges are parent source of truth, child refs are sent, node context/search policy is explicit |
-| 0.09.30 | Runtime port binding contract | Queued; avoid stale backend/frontend/OAuth URLs and distinguish proxy/network errors from moderation |
+| 0.09.30 | Runtime port binding contract | Implemented in code; avoid stale backend/frontend/OAuth URLs and distinguish proxy/network errors from moderation |
 | 0.09.19 | Security hardening | Deferred to `0.99_future`; must avoid breaking remote/hard-user flows |
 | 0.09.20 | Containerization | Deferred to `0.99_future`; future packaging lane |
 | 0.10 | Feature expansion | Preset and compare MVP after current build is green |
-| 0.11 | Export and card-news base | Future lane after 0.10 |
+| 0.11 | Export polish | Future lane after 0.10 |
 | 0.12 | Research mode | Backend support exists; frontend productization remains |
 
 ## Structure Docs Versus Devlog
@@ -108,7 +107,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-24: Archived completed 0.09.11 through 0.09.14 work into `_fin/260424_*` and promoted 0.09.5 streaming as the next active target.
 - 2026-04-24: Archived completed 0.09.5 node streaming into `_fin/260424_0.09.5-node-streaming` and promoted 0.09.6 inflight reliability as the active target.
 - 2026-04-25: Updated active lane after archiving 0.09.4, 0.09.4.1, 0.09.6, 0.09.7.1, 0.09.8, 0.09.15, 0.09.16, 0.09.21, 0.09.23, and 0.09.24.
-- 2026-04-25: Kept 0.09.17/0.09.18 active, moved 0.09.19/0.09.20 into `_plan/0.99_future`, and clarified card-news as dev-only WIP.
+- 2026-04-25: Kept 0.09.17/0.09.18 active and moved 0.09.19/0.09.20 into `_plan/0.99_future`.
 - 2026-04-25: Added new active `0.09.20-cli-backend-parity` rough plan; existing containerization 0.09.20 remains deferred under `0.99_future`.
 - 2026-04-26: Refreshed `0.09.20-cli-backend-parity` into a concrete sliced plan after runtime fallback, storage recovery, sessions/style, history lifecycle, and node API changes.
 - 2026-04-25: Added active `0.09.25-node-selection-batch` for node selection and batch generation.
@@ -117,6 +116,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-25: Added active `0.09.27-node-regen-layout-diagnostics` and `0.09.28-child-node-references`.
 - 2026-04-25: Added active `0.09.29-node-contract-repair` for node parent/ref/context/footer contract cleanup.
 - 2026-04-26: Added queued `0.09.30-oauth-proxy-port-fallback` for backend/frontend/OAuth port binding and proxy error taxonomy.
+- 2026-04-26: Marked `0.09.20.1` complete, reflected implemented runtime binding work, and removed dev-only lanes from the evergreen roadmap map.
 
 Previous document: `[[06-infra-operations]]`
 
