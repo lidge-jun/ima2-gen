@@ -35,6 +35,7 @@ import {
   validateSize,
 } from "./lib/validate.js";
 import { createRequestLogger } from "./lib/requestLogger.js";
+import { validateAndNormalizeRefs } from "./lib/refs.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -145,36 +146,14 @@ app.use("/generated", async (req, res, next) => {
   return generatedStatic(req, res, next);
 });
 
-// -- Reference validation --
-const MAX_REF_B64_BYTES = 7 * 1024 * 1024; // ~5.2MB binary after base64 decode
-const BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
-function validateAndNormalizeRefs(references) {
-  if (!Array.isArray(references)) return { error: "references must be an array" };
-  if (references.length > 5) return { error: "references may not exceed 5 items" };
-  const out = [];
-  for (let i = 0; i < references.length; i++) {
-    const r = references[i];
-    if (typeof r !== "string") return { error: `references[${i}] must be a string` };
-    const b64 = r.replace(/^data:[^;]+;base64,/, "");
-    if (!b64) return { error: `references[${i}] is empty` };
-    if (b64.length > MAX_REF_B64_BYTES) {
-      return { error: `references[${i}] exceeds ${MAX_REF_B64_BYTES} bytes` };
-    }
-    if (!BASE64_RE.test(b64)) {
-      return { error: `references[${i}] is not valid base64` };
-    }
-    out.push(b64);
-  }
-  return { refs: out };
-}
-
 // Emits a 400 with both string + {code,message} shapes so old clients that
 // read err.error.toString() and new clients that introspect err.error.code
-// both see useful data.
+// both see useful data. Accepts the validator shapes
+// { code, message } (validate.js) and { code, error } (refs.js).
 function send400(res, result) {
   return res
     .status(400)
-    .json({ error: { code: result.code, message: result.message } });
+    .json({ error: { code: result.code, message: result.message ?? result.error } });
 }
 
 // -- OAuth proxy: generate via Responses API (stream mode) --
@@ -1004,11 +983,8 @@ app.post("/api/generate", async (req, res) => {
       },
     });
 
-    if (!Array.isArray(references) || references.length > 5) {
-      return res.status(400).json({ error: { code: "INVALID_REFS", message: "references must be an array of up to 5 base64 strings" } });
-    }
     const refCheck = validateAndNormalizeRefs(references);
-    if (refCheck.error) return res.status(400).json({ error: { code: "INVALID_REFS", message: refCheck.error } });
+    if (refCheck.error) return res.status(400).json({ error: { code: refCheck.code, message: refCheck.error } });
     const refB64s = refCheck.refs;
 
     if (provider === "api") {
@@ -1351,16 +1327,10 @@ app.post("/api/node/generate", async (req, res) => {
     const format = fCheck.value;
     const moderation = mCheck.value;
 
-    if (!Array.isArray(references) || references.length > 5) {
-      return res.status(400).json({
-        error: { code: "INVALID_REFS", message: "references must be an array of up to 5 base64 strings" },
-        parentNodeId,
-      });
-    }
     const refCheck = validateAndNormalizeRefs(references);
     if (refCheck.error) {
       return res.status(400).json({
-        error: { code: "INVALID_REFS", message: refCheck.error },
+        error: { code: refCheck.code, message: refCheck.error },
         parentNodeId,
       });
     }
@@ -1676,18 +1646,15 @@ app.post("/api/enhance-prompt", async (req, res) => {
     }
 
     // Optional reference images. Same validator + cap as /api/generate.
-    const rawRefs = Array.isArray(req.body?.references) ? req.body.references : [];
-    if (rawRefs.length > 5) {
-      return res.status(400).json({ error: "references must be an array of up to 5 base64 strings", code: "INVALID_REFS" });
+    // Omitted (undefined) defaults to [] and passes; explicit non-array
+    // inputs (e.g. a string) now surface as REF_NOT_ARRAY instead of being
+    // silently coerced to empty.
+    const rawRefs = req.body?.references ?? [];
+    const refCheck = validateAndNormalizeRefs(rawRefs);
+    if (refCheck.error) {
+      return res.status(400).json({ error: refCheck.error, code: refCheck.code });
     }
-    let refB64s = [];
-    if (rawRefs.length > 0) {
-      const refCheck = validateAndNormalizeRefs(rawRefs);
-      if (refCheck.error) {
-        return res.status(400).json({ error: refCheck.error, code: "INVALID_REFS" });
-      }
-      refB64s = refCheck.refs;
-    }
+    const refB64s = refCheck.refs;
 
     const body = buildEnhancePayload(prompt, language, refB64s);
     const result = await runResponses({ url: OAUTH_URL, body });
