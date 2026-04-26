@@ -19,7 +19,7 @@ const crossLangUrl =
     <div class="hero-text reveal">
       <div class="eyebrow">{t(lang, 'hero.eyebrow')}</div>
       <h1 class="h-display" id="hero-h1" aria-describedby="hero-sub">
-        {t(lang, 'hero.h1.line1')}<br />{t(lang, 'hero.h1.line2')}<br /><span class="em">{t(lang, 'hero.h1.em')}</span>
+        <span class="h-line">{t(lang, 'hero.h1.line1')}</span><br /><span class="h-line">{t(lang, 'hero.h1.line2')}</span><br /><span class="h-line em">{t(lang, 'hero.h1.em')}</span>
       </h1>
       <p class="sub" id="hero-sub">{t(lang, 'hero.sub')}</p>
       <CodeCopy command={t(lang, 'hero.cta.cmd')} />
@@ -50,10 +50,19 @@ const crossLangUrl =
     align-items: center;
   }
   .hero-text h1 {
-    /* Cap at 72px even on wide screens; shrink to 40px on small. Hero column is ~60% width. */
-    font-size: clamp(40px, 5.2vw, 72px);
+    /* Cap at 60px so the longest Korean line ("마음에 든 한 장,") fits without internal wrap. */
+    font-size: clamp(40px, 4.6vw, 60px);
     margin-bottom: 32px;
     letter-spacing: -0.04em;
+  }
+  /* Each <br>-separated unit stays on its own line — no mid-line wrap at any viewport. */
+  .hero-text h1 .h-line {
+    display: inline-block;
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) {
+    /* Allow wrap on very narrow screens to prevent overflow. */
+    .hero-text h1 .h-line { white-space: normal; }
   }
   .hero-text .sub {
     font-size: 20px;
