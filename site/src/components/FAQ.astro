@@ -6,6 +6,8 @@ interface Props {
 }
 
 const { lang } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const moreHref = lang === 'ko' ? `${base}/ko/faq` : `${base}/faq`;
 const items = [
   { q: 'faq.q1', a: 'faq.a1', open: true },
   { q: 'faq.q2', a: 'faq.a2', open: false },
@@ -26,6 +28,7 @@ const items = [
         ))
       }
     </div>
+    <a class="more reveal" href={moreHref}>{t(lang, 'faq.more')}</a>
   </div>
 </section>
 
@@ -62,5 +65,19 @@ const items = [
     font-size: 15px;
     max-width: 720px;
     line-height: 1.6;
+  }
+  .more {
+    display: inline-block;
+    margin-top: 28px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    border-bottom: 1px solid var(--accent);
+    padding-bottom: 4px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .more:hover {
+    color: var(--text);
+    border-color: var(--text);
   }
 </style>

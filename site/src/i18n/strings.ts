@@ -110,17 +110,59 @@ const en: Dict = {
   'install.link.ja': '日本語 README',
   'install.link.zh': '简体中文 README',
 
-  // FAQ
+  // FAQ — short list shown on landing
   'faq.tag': 'FAQ',
-  'faq.q1': 'What does Node mode actually do?',
+  'faq.more': 'See all FAQ →',
+  'faq.q1': 'When should I use Node mode?',
   'faq.a1':
-    'It treats one good frame as a parent and lets you fan out children — different prompts, different framing, different palettes — without losing the original. Children even recover by request ID after a page refresh.',
+    'When you want to compare several directions from a result you like. Vary the prompt, framing, or palette per node while the original frame stays put. Children survive a page refresh — they recover by request ID.',
   'faq.q2': 'Where do my images live?',
   'faq.a2':
-    'Locally. Generated frames and session metadata live in a user-data folder on your disk. Inspect, sync, version — your call. Nothing uploaded to a remote service.',
+    'Locally. Generated images and session logs live in your user-data folder. Inspect, sync, version — your call. Image files are not uploaded to a separate remote store.',
   'faq.q3': 'Do I need an OpenAI API key?',
   'faq.a3':
-    'Not for image generation. ima2-gen reuses your local Codex/ChatGPT OAuth session. A key may still be detected for auxiliary paths, but generation itself is OAuth-only.',
+    'Not for image generation. ima2-gen uses your local Codex/ChatGPT login. A key may still be detected for auxiliary tooling, but the generation path uses your login session by design.',
+
+  // FAQ — full detail page
+  'faq.page.title': 'FAQ — ima2-gen',
+  'faq.page.h': 'Frequently asked questions',
+  'faq.page.lede': 'Install, run, branch — answered short.',
+  'faq.cat.install': 'Install',
+  'faq.cat.usage': 'Usage',
+  'faq.cat.tech': 'Tech',
+
+  'faq.install.q1': 'Can I run it through the Codex desktop app?',
+  'faq.install.a1':
+    'No — it runs through the Codex CLI. If the CLI is missing, ima2-gen prompts you to install it on first run, then opens a login window. Approve and you are good to go.',
+  'faq.install.q2': 'How do I install ima2-gen?',
+  'faq.install.a2':
+    'Open Terminal (macOS / Linux) or PowerShell (Windows). Run "npm install -g ima2-gen", then "ima2 serve". Open http://localhost:3333 in your browser.',
+  'faq.install.q3': 'What is npm? Is there a one-click install?',
+  'faq.install.a3':
+    'npm is the Node.js package manager. If you do not have it, paste the one-line installer below — it sets up Node, ima2-gen, and starts the server. macOS: curl -fsSL https://lidge-jun.github.io/ima2-gen/install-mac.sh | bash. Windows PowerShell: irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex.',
+  'faq.install.q4': 'Does it work on Windows / PowerShell?',
+  'faq.install.a4':
+    'Yes. Windows 10+ with PowerShell 5.1 or PowerShell 7 are supported. The installer script is signed via raw GitHub URL and prints every command before running it.',
+
+  'faq.usage.q1': 'How many images can I generate at once?',
+  'faq.usage.a1':
+    'Up to eight in parallel from a single Classic run. Node mode runs each child node as its own request, so you can fan out as many branches as your quota allows.',
+  'faq.usage.q2': 'Can I attach reference images?',
+  'faq.usage.a2':
+    'Up to five references per prompt. Drag, drop, or paste them into the composer. Large files are compressed before upload, so you do not have to pre-process them.',
+  'faq.usage.q3': 'How does a Style sheet work?',
+  'faq.usage.a3':
+    'Save medium, composition, mood, palette, and negative cues into a sheet, then attach the sheet to any prompt. Style sheets persist across sessions, so you can reuse the same visual direction tomorrow.',
+
+  'faq.tech.q1': 'What data leaves my machine?',
+  'faq.tech.a1':
+    'The generation request goes to OpenAI to actually create the image. The result file and the session log stay on your disk. There is no separate ima2-gen analytics or remote store.',
+  'faq.tech.q2': 'Does it work offline?',
+  'faq.tech.a2':
+    'Generation needs the OpenAI API, so an internet connection is required for that step. Browsing the local gallery, organizing sessions, and editing style sheets all work offline.',
+  'faq.tech.q3': 'Is it open source?',
+  'faq.tech.a3':
+    'Yes. ima2-gen is MIT licensed. The code lives on GitHub: github.com/lidge-jun/ima2-gen.',
 
   // Footer
   'footer.line1': 'ima2-gen · MIT licensed',
@@ -137,7 +179,7 @@ const ko: Dict = {
   'meta.title': 'ima2-gen — 로컬 이미지 스튜디오, Classic + Node 분기',
   'meta.desc':
     'Classic으로 한 장을 빠르게, Node로 마음에 든 결과에서 여러 방향을 펼치는 로컬 이미지 스튜디오.',
-  'meta.og.title': 'ima2-gen — 마음에 든 한 장에서, 다음 컷을 바로',
+  'meta.og.title': 'ima2-gen — 마음에 든 한 장, 다음 컷은 바로 펼치기',
   'meta.og.desc':
     'Classic과 Node 분기 워크플로를 갖춘 로컬 이미지 스튜디오. npx 한 줄로 실행하고, 모든 결과는 내 컴퓨터에.',
 
@@ -152,11 +194,11 @@ const ko: Dict = {
 
   // Hero
   'hero.eyebrow': '로컬 이미지 스튜디오 · Classic + Node',
-  'hero.h1.line1': '마음에 든 한 장에서',
-  'hero.h1.line2': '다음 컷을',
-  'hero.h1.em': '바로 펼치세요.',
+  'hero.h1.line1': '마음에 든 한 장,',
+  'hero.h1.line2': '다음 컷은',
+  'hero.h1.em': '바로 펼치기.',
   'hero.sub':
-    '한 장 만들고 끝나는 작업이 아니라면. Classic으로 빠르게 한 장 완성하고, Node에서 색감·구도·카피 방향을 펼치세요. 원본은 그대로 남습니다.',
+    '한 장으로 끝나지 않는 작업을 위한 이미지 스튜디오. Classic에서 빠르게 한 장 완성하고, Node에서 색감·구도·카피 방향을 펼치세요. 원본은 그대로 남습니다.',
   'hero.cta.cmd': 'npx ima2-gen serve',
   'hero.cross.lang': 'English landing →',
   'hero.shot.alt':
@@ -200,8 +242,8 @@ const ko: Dict = {
 
   // Local & OAuth
   'local.tag': '03 · 로컬 & 오픈',
-  'local.h.before': '로그인은 한 번만, ',
-  'local.h.em': '결과는 내 컴퓨터에.',
+  'local.h.before': '로그인 한 번, ',
+  'local.h.em': '저장은 내 컴퓨터.',
   'local.lede':
     '이미 쓰는 Codex/ChatGPT 로그인으로 시작하세요. 만든 이미지와 작업 기록은 외부 서버가 아니라 내 컴퓨터에 남습니다.',
   'local.quote.before': '설정에 ',
@@ -243,21 +285,63 @@ const ko: Dict = {
   'install.link.ja': '日本語 README',
   'install.link.zh': '简体中文 README',
 
-  // FAQ
+  // FAQ — 랜딩 짧은 목록
   'faq.tag': 'FAQ',
+  'faq.more': '전체 FAQ 보기 →',
   'faq.q1': 'Node 모드는 언제 쓰나요?',
   'faq.a1':
-    '마음에 든 결과를 기준으로 여러 방향을 비교하고 싶을 때 씁니다. 프롬프트, 구도, 색감을 노드별로 바꿔 보면서도 원본은 그대로 남길 수 있어요. 새로고침해도 요청 기록을 기준으로 결과를 다시 불러옵니다.',
-  'faq.q2': '이미지는 어디 저장돼요?',
+    '마음에 든 결과에서 여러 방향을 비교하고 싶을 때 씁니다. 프롬프트, 구도, 색감을 노드별로 바꿔 보면서 원본은 그대로 남깁니다. 새로고침해도 요청 기록을 기준으로 결과를 다시 불러옵니다.',
+  'faq.q2': '이미지는 어디 저장되나요?',
   'faq.a2':
-    '생성한 이미지와 작업 기록은 로컬 사용자 데이터 폴더에 저장됩니다. 직접 확인하고, 동기화하고, 버전 관리할 수 있어요. 이미지 파일을 별도 외부 저장소에 올리지 않습니다.',
+    '로컬 사용자 데이터 폴더에 이미지와 작업 기록이 저장됩니다. 직접 확인, 동기화, 버전 관리까지 가능합니다. 이미지 파일을 별도 외부 저장소에 올리지 않습니다.',
   'faq.q3': 'OpenAI API key가 필요한가요?',
   'faq.a3':
-    '이미지 생성에는 필요 없습니다. 로컬에 로그인된 Codex/ChatGPT 계정을 사용합니다. API key가 설정돼 있어도 이미지 생성 경로는 로그인 세션을 우선 사용하도록 설계되어 있어요.',
+    '이미지 생성에는 필요 없습니다. 로컬에 로그인된 Codex/ChatGPT 계정을 그대로 사용합니다. API key가 설정돼 있어도 이미지 생성 경로는 로그인 세션을 우선 사용하도록 설계되어 있습니다.',
+
+  // FAQ — 상세 페이지
+  'faq.page.title': 'FAQ — ima2-gen',
+  'faq.page.h': '자주 묻는 질문',
+  'faq.page.lede': '설치, 실행, 분기 — 핵심만 짧게.',
+  'faq.cat.install': '설치',
+  'faq.cat.usage': '사용',
+  'faq.cat.tech': '기술',
+
+  'faq.install.q1': 'Codex 데스크톱 앱으로도 되나요?',
+  'faq.install.a1':
+    '아니요. Codex CLI로 실행됩니다. CLI가 없으면 ima2-gen이 첫 실행 때 설치를 안내하고, 로그인 창을 띄워줍니다. 안내대로 깔면 바로 시작할 수 있습니다.',
+  'faq.install.q2': '어떻게 설치하나요?',
+  'faq.install.a2':
+    '터미널(macOS / Linux)이나 PowerShell(Windows)을 엽니다. "npm install -g ima2-gen"으로 설치하고 "ima2 serve"로 실행하세요. 브라우저에서 http://localhost:3333 을 열면 됩니다.',
+  'faq.install.q3': 'npm이 뭔가요? 한 번에 설치하는 방법이 있나요?',
+  'faq.install.a3':
+    'npm은 Node.js 패키지 매니저입니다. 처음이라면 아래 한 줄 명령어를 그대로 붙여 넣으세요. Node 설치부터 ima2-gen 실행까지 한 번에 끝납니다. macOS: curl -fsSL https://lidge-jun.github.io/ima2-gen/install-mac.sh | bash. Windows PowerShell: irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex.',
+  'faq.install.q4': 'Windows / PowerShell에서도 되나요?',
+  'faq.install.a4':
+    '됩니다. Windows 10 이상, PowerShell 5.1 또는 PowerShell 7을 지원합니다. 설치 스크립트는 raw GitHub URL로 받고, 실행 전 모든 명령을 화면에 출력합니다.',
+
+  'faq.usage.q1': '한 번에 몇 장까지 만들 수 있나요?',
+  'faq.usage.a1':
+    'Classic은 한 번에 최대 8장까지 병렬로 만들 수 있습니다. Node에서는 자식 노드마다 별도 요청이 가니, 할당량이 허용하는 만큼 가지를 펼칠 수 있습니다.',
+  'faq.usage.q2': '레퍼런스 이미지를 붙일 수 있나요?',
+  'faq.usage.a2':
+    '프롬프트당 다섯 장까지 붙일 수 있습니다. 컴포저에 끌어 놓거나 붙여 넣으면 끝. 큰 파일은 자동으로 압축돼서 업로드되므로 미리 손볼 필요는 없습니다.',
+  'faq.usage.q3': 'Style sheet은 어떻게 쓰나요?',
+  'faq.usage.a3':
+    '매체, 구도, 분위기, 팔레트, 제외할 요소를 시트로 묶어 두고 프롬프트에 붙여 쓰면 됩니다. 시트는 세션을 넘겨도 유지되므로 같은 룩을 다음 작업에서도 그대로 가져갈 수 있습니다.',
+
+  'faq.tech.q1': '내 컴퓨터에서 어떤 데이터가 나가나요?',
+  'faq.tech.a1':
+    '이미지 생성 요청은 OpenAI로 전송됩니다. 결과 파일과 작업 기록은 로컬에만 남습니다. ima2-gen이 별도로 수집하는 분석 데이터나 외부 저장소는 없습니다.',
+  'faq.tech.q2': '오프라인에서도 되나요?',
+  'faq.tech.a2':
+    '이미지 생성은 OpenAI API 호출이 필요해 인터넷이 있어야 합니다. 로컬 갤러리 보기, 세션 정리, 스타일 시트 편집은 오프라인에서도 됩니다.',
+  'faq.tech.q3': '오픈소스인가요?',
+  'faq.tech.a3':
+    '네. MIT 라이선스로 공개되어 있습니다. 코드는 GitHub에서 볼 수 있습니다: github.com/lidge-jun/ima2-gen.',
 
   // Footer
   'footer.line1': 'ima2-gen · MIT 라이선스',
-  'footer.line2': '마음에 든 한 장에서, 다음 컷을 바로.',
+  'footer.line2': '마음에 든 한 장, 다음 컷은 바로.',
   'footer.line3': '로컬에서 만들고, 코드는 공개로.',
   'footer.lang.aria': '언어별 README',
 

@@ -1,0 +1,17 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Header from '../../../components/Header.astro';
+import FAQPage from '../../../components/FAQPage.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+import { t } from '../../../i18n/strings';
+
+const lang = 'ko' as const;
+---
+
+<Base lang={lang} title={t(lang, 'faq.page.title')}>
+  <Header lang={lang} />
+  <main>
+    <FAQPage lang={lang} />
+  </main>
+  <SiteFooter lang={lang} />
+</Base>

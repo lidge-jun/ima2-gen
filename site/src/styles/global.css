@@ -31,6 +31,20 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Korean: never break inside an 어절 (word). Allow break only between words. */
+html[lang='ko'] h1,
+html[lang='ko'] h2,
+html[lang='ko'] h3,
+html[lang='ko'] p,
+html[lang='ko'] li,
+html[lang='ko'] summary,
+html[lang='ko'] blockquote,
+html[lang='ko'] .eyebrow,
+html[lang='ko'] .section-tag {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

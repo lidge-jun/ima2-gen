@@ -1,0 +1,131 @@
+---
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const groups = [
+  {
+    cat: 'faq.cat.install',
+    items: [
+      { q: 'faq.install.q1', a: 'faq.install.a1' },
+      { q: 'faq.install.q2', a: 'faq.install.a2' },
+      { q: 'faq.install.q3', a: 'faq.install.a3' },
+      { q: 'faq.install.q4', a: 'faq.install.a4' },
+    ],
+  },
+  {
+    cat: 'faq.cat.usage',
+    items: [
+      { q: 'faq.q1', a: 'faq.a1' },
+      { q: 'faq.usage.q1', a: 'faq.usage.a1' },
+      { q: 'faq.usage.q2', a: 'faq.usage.a2' },
+      { q: 'faq.usage.q3', a: 'faq.usage.a3' },
+    ],
+  },
+  {
+    cat: 'faq.cat.tech',
+    items: [
+      { q: 'faq.q3', a: 'faq.a3' },
+      { q: 'faq.q2', a: 'faq.a2' },
+      { q: 'faq.tech.q1', a: 'faq.tech.a1' },
+      { q: 'faq.tech.q2', a: 'faq.tech.a2' },
+      { q: 'faq.tech.q3', a: 'faq.tech.a3' },
+    ],
+  },
+];
+---
+
+<section class="faq-page">
+  <div class="frame">
+    <div class="section-tag">{t(lang, 'faq.tag')}</div>
+    <h1 class="h-display page-h">{t(lang, 'faq.page.h')}</h1>
+    <p class="section-lede">{t(lang, 'faq.page.lede')}</p>
+
+    {
+      groups.map((group) => (
+        <section class="faq-group">
+          <h2 class="cat">{t(lang, group.cat)}</h2>
+          <div class="items">
+            {group.items.map((item) => (
+              <details>
+                <summary>{t(lang, item.q)}</summary>
+                <p>{t(lang, item.a)}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .faq-page {
+    padding: 96px 0 120px;
+  }
+  .page-h {
+    font-size: 56px;
+    margin-bottom: 18px;
+    max-width: 720px;
+  }
+  .faq-group {
+    margin-top: 72px;
+  }
+  .faq-group:first-of-type {
+    margin-top: 56px;
+  }
+  .faq-group .cat {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+    margin-bottom: 8px;
+  }
+  .items details {
+    border-bottom: 1px solid var(--line);
+    padding: 22px 0;
+  }
+  .items summary {
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text);
+    gap: 16px;
+  }
+  .items summary::-webkit-details-marker { display: none; }
+  .items summary::after {
+    content: '+';
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .items details[open] summary::after { content: '−'; }
+  .items details p {
+    margin-top: 14px;
+    color: var(--text-dim);
+    font-size: 15px;
+    max-width: 760px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 768px) {
+    .faq-page { padding: 64px 0 80px; }
+    .page-h { font-size: 36px; }
+    .faq-group { margin-top: 48px; }
+    .items summary { font-size: 16px; }
+  }
+</style>
