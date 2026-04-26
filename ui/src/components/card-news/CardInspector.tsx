@@ -32,7 +32,18 @@ export function CardInspector() {
   const card = plan?.cards.find((c) => c.id === selectedId) || plan?.cards[0];
 
   if (!card) {
-    return <aside className="card-news-inspector">{t("cardNews.noCard")}</aside>;
+    return (
+      <aside className="card-news-inspector card-news-inspector-empty">
+        <div className="section-title">{t("cardNews.inspector")}</div>
+        <div className="card-news-inspector-empty__mock" aria-hidden="true">
+          <span />
+          <strong />
+          <i />
+          <i />
+        </div>
+        <p>{t("cardNews.noCard")}</p>
+      </aside>
+    );
   }
 
   return (

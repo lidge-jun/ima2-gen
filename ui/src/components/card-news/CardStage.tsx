@@ -56,8 +56,20 @@ export function CardStage() {
   if (!plan || !card) {
     return (
       <section className="card-news-empty">
-        <h2>{t("cardNews.emptyTitle")}</h2>
-        <p>{t("cardNews.emptyBody")}</p>
+        <div className="card-news-empty__deck" aria-hidden="true">
+          <div className="card-news-empty__card card-news-empty__card--back" />
+          <div className="card-news-empty__card card-news-empty__card--mid" />
+          <div className="card-news-empty__card">
+            <span />
+            <strong />
+            <em />
+          </div>
+        </div>
+        <div className="card-news-empty__copy">
+          <span>{t("uiMode.cardNews")}</span>
+          <h2>{t("cardNews.emptyTitle")}</h2>
+          <p>{t("cardNews.emptyBody")}</p>
+        </div>
       </section>
     );
   }
