@@ -22,10 +22,12 @@ export function CardInspector() {
   const { t } = useI18n();
   const plan = useCardNewsStore((s) => s.activePlan);
   const selectedId = useCardNewsStore((s) => s.selectedCardId);
+  const selectedTextFieldId = useCardNewsStore((s) => s.selectedTextFieldId);
   const updateCard = useCardNewsStore((s) => s.updateCard);
   const updateTextField = useCardNewsStore((s) => s.updateTextField);
   const addTextField = useCardNewsStore((s) => s.addTextField);
   const removeTextField = useCardNewsStore((s) => s.removeTextField);
+  const selectTextField = useCardNewsStore((s) => s.selectTextField);
   const retryCard = useCardNewsStore((s) => s.retryCard);
   const card = plan?.cards.find((c) => c.id === selectedId) || plan?.cards[0];
 
@@ -37,23 +39,15 @@ export function CardInspector() {
     <aside className="card-news-inspector">
       <div className="section-title">{t("cardNews.inspector")}</div>
       <div className="card-news-inspector-group">
-        <span className="card-news-inspector-label">{t("cardNews.summaryCopy")}</span>
-      <label className="card-news-field">
-        <span>{t("cardNews.headline")}</span>
-        <input
-          value={card.headline}
-          disabled={card.locked}
-          onChange={(e) => updateCard(card.id, { headline: e.target.value })}
-        />
-      </label>
-      <label className="card-news-field">
-        <span>{t("cardNews.body")}</span>
-        <textarea
-          value={card.body}
-          disabled={card.locked}
-          onChange={(e) => updateCard(card.id, { body: e.target.value })}
-        />
-      </label>
+        <span className="card-news-inspector-label">{t("cardNews.cardTitle")}</span>
+        <label className="card-news-field">
+          <span>{t("cardNews.headline")}</span>
+          <input
+            value={card.headline}
+            disabled={card.locked}
+            onChange={(e) => updateCard(card.id, { headline: e.target.value })}
+          />
+        </label>
       </div>
       <div className="card-news-inspector-group">
         <div className="card-news-inspector-row">
@@ -72,22 +66,24 @@ export function CardInspector() {
             key={field.id}
             field={field}
             locked={card.locked}
+            selected={selectedTextFieldId === field.id}
+            onSelect={() => selectTextField(field.id)}
             onChange={(patch) => updateTextField(card.id, field.id, patch)}
             onRemove={() => removeTextField(card.id, field.id)}
           />
         )) : <p className="card-news-muted">{t("cardNews.noTextFields")}</p>}
       </div>
-      <div className="card-news-inspector-group">
-        <span className="card-news-inspector-label">{t("cardNews.designPrompt")}</span>
-      <label className="card-news-field">
-        <span>{t("cardNews.visualPrompt")}</span>
-        <textarea
-          value={card.visualPrompt}
-          disabled={card.locked}
-          onChange={(e) => updateCard(card.id, { visualPrompt: e.target.value })}
-        />
-      </label>
-      </div>
+      <details className="card-news-inspector-group card-news-advanced-prompt">
+        <summary>{t("cardNews.designPrompt")}</summary>
+        <label className="card-news-field">
+          <span>{t("cardNews.visualPrompt")}</span>
+          <textarea
+            value={card.visualPrompt}
+            disabled={card.locked}
+            onChange={(e) => updateCard(card.id, { visualPrompt: e.target.value })}
+          />
+        </label>
+      </details>
       {card.imageFilename ? (
         <div className="card-news-generated-meta">
           <span>{t("cardNews.generatedMeta")}</span>

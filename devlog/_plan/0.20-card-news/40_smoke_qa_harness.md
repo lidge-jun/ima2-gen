@@ -161,7 +161,7 @@ To verify this phase:
 
 ```bash
 node --test tests/card-news-smoke.test.js
-node --test tests/card-news-smoke.test.js tests/card-news-contract.test.js tests/card-news-frontend-contract.test.js tests/config.test.js
+node --test tests/card-news-contract.test.js tests/card-news-frontend-contract.test.js tests/card-news-smoke.test.js tests/config.test.js
 npm test
 npm run build
 git diff --check

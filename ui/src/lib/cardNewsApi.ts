@@ -145,6 +145,8 @@ export type CardNewsSetSummary = {
   title: string;
   cardCount: number;
   url?: string;
+  manifestUrl?: string;
+  folderLabel?: string;
   cards?: Array<Partial<CardNewsCard>>;
 };
 
@@ -266,4 +268,8 @@ export function listCardNewsSets(): Promise<{ sets: CardNewsSetSummary[] }> {
 export function getCardNewsSet(setId: string): Promise<{ plan: CardNewsPlan }> {
   return jsonFetch<{ plan: CardNewsPlan }>(`/api/cardnews/sets/${encodeURIComponent(setId)}`)
     .then((result) => ({ ...result, plan: normalizeCardNewsPlan(result.plan) }));
+}
+
+export function cardNewsManifestDownloadUrl(setId: string): string {
+  return `/api/cardnews/sets/${encodeURIComponent(setId)}/manifest?download=1`;
 }

@@ -27,6 +27,8 @@ const HIERARCHIES: CardNewsTextHierarchy[] = ["primary", "secondary", "supportin
 type TextFieldCardProps = {
   field: CardNewsTextField;
   locked: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
   onChange: (patch: Partial<CardNewsTextField>) => void;
   onRemove?: () => void;
 };
@@ -37,14 +39,17 @@ function enumLabel(group: string, value: string, t: (key: string) => string): st
   return label === key ? value : label;
 }
 
-export function TextFieldCard({ field, locked, onChange, onRemove }: TextFieldCardProps) {
+export function TextFieldCard({ field, locked, selected = false, onSelect, onChange, onRemove }: TextFieldCardProps) {
   const { t } = useI18n();
   const chars = field.text.length;
   const overLimit = typeof field.maxChars === "number" && chars > field.maxChars;
   const useTextarea = field.maxChars === null || field.maxChars > 80;
 
   return (
-    <div className="card-news-text-field-card">
+    <div
+      className={`card-news-text-field-card${selected ? " selected" : ""}`}
+      onClick={onSelect}
+    >
       <div className="card-news-text-field-card__header">
         <span>{enumLabel("textKinds", field.kind, t)}</span>
         <PlacementBadge placement={field.placement} />

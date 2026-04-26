@@ -10,7 +10,10 @@ import {
   openGeneratedDir,
   type StorageStatus,
 } from "../lib/api";
+import { cardNewsManifestDownloadUrl } from "../lib/cardNewsApi";
+import { dateBucket } from "../lib/galleryUtils";
 import { useI18n } from "../i18n";
+import { CardNewsGalleryTile } from "./CardNewsGalleryTile";
 
 type TrashPending = {
   filename: string;
@@ -27,24 +30,7 @@ type SessionGroup = {
   items: GenerateItem[];
 };
 
-type DateBucketKey = "earlier" | "today" | "yesterday" | "thisWeek" | string;
 const STORAGE_NOTICE_DISMISSED_KEY = "ima2.storageNoticeDismissed.0.09.23";
-
-function dateBucket(createdAt: number | undefined): DateBucketKey {
-  if (!createdAt) return "earlier";
-  const d = new Date(createdAt);
-  if (Number.isNaN(d.getTime())) return "earlier";
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return "thisWeek";
-  return d.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export function GalleryModal() {
   const { t } = useI18n();
@@ -249,6 +235,24 @@ export function GalleryModal() {
     }
   }
 
+  async function handleCopyCardNewsSetPath(item: GenerateItem, e: MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    if (!item.setId) return;
+    const path = `generated/cardnews/${item.setId}`;
+    try {
+      await navigator.clipboard?.writeText(path);
+      showToast(t("gallery.cardNewsPathCopied"));
+    } catch {
+      showToast(t("toast.copyFailed"), true);
+    }
+  }
+
+  function handleDownloadCardNewsManifest(item: GenerateItem, e: MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    if (!item.setId) return;
+    window.open(cardNewsManifestDownloadUrl(item.setId), "_blank", "noopener,noreferrer");
+  }
+
   function dismissStorageNotice() {
     setStorageDismissed(true);
     try {
@@ -275,22 +279,12 @@ export function GalleryModal() {
           key={`${keyPrefix}-${idx}-${item.filename ?? idx}`}
           className="gallery__tile-wrap gallery-card-news-set"
         >
-          <button
-            type="button"
-            className="gallery__tile"
-            onClick={() => void handleOpenCardNewsSet(item)}
-            title={item.headline ?? t("gallery.cardNewsSet")}
-          >
-            {item.image ? <img src={item.image} alt={item.headline ?? t("gallery.cardNewsSet")} loading="lazy" /> : null}
-            <div className="gallery__caption">
-              <span className="gallery__caption-text">{item.headline ?? t("gallery.cardNewsSet")}</span>
-            </div>
-            <div className="gallery-card-news-strip">
-              {(item.cards || []).slice(0, 5).map((card, cardIdx) => (
-                <span key={`${card.url}-${cardIdx}`}>{card.cardOrder ?? cardIdx + 1}</span>
-              ))}
-            </div>
-          </button>
+          <CardNewsGalleryTile
+            item={item}
+            onOpen={(next) => void handleOpenCardNewsSet(next)}
+            onCopyPath={handleCopyCardNewsSetPath}
+            onDownloadManifest={handleDownloadCardNewsManifest}
+          />
         </div>
       );
     }

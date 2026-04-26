@@ -24,6 +24,27 @@
 | `33_frontend_text_box_ux.md` | raw textarea 중심 UI를 텍스트 박스 편집 UX로 전환 |
 | `34_template_slot_labels.md` | 템플릿 slot에 placement/label/maxChars 의미 부여 |
 | `35_text_field_contract_tests.md` | 30~34 변경을 고정하는 backend/frontend contract tests |
+| `40_smoke_qa_harness.md` | 30~35 이후 실제 Card News wiring을 source-contract smoke로 검증 |
+| `41_prompt_quality_iteration.md` | correctness 재작업이 아닌 planner 품질 corpus/rubric/prompt iteration |
+| `42_frontend_editor_polish.md` | Card News editor UX를 제품 수준으로 다듬는 작업 |
+| `43_gallery_export_reopen.md` | 이미 구현된 reopen을 기준으로 export/folder/gallery polish 확정 |
+| `44_template_registry_authoring.md` | normalization 반복이 아닌 registry discovery/authoring/picker 전략 |
+| `45_generation_control_retry_cancel.md` | retry/cancel/concurrency/cost control의 API/store/UI 계약 |
+| `46_release_readiness.md` | npm global, package assets, feature flag, migration smoke 검증 |
+| `47_docs_presets_public_ux.md` | 44 이후 docs, presets, public UX 정리 |
+
+## 40-series 진행 순서
+
+| 단계 | 상태 | 의존성 | 메모 |
+|---|---|---|---|
+| `40` | implemented | 30~35 | 실제 generation을 호출하지 않는 source-contract smoke safety net |
+| `41` | implemented | 40 | prompt correctness가 아니라 output quality iteration |
+| `42` | implemented | 40 | editor polish, selected text field UX 포함 |
+| `43` | implemented | 40 | reopen baseline + manifest download/folder path polish |
+| `44` | implemented | 40 | explicit registry와 authoring metadata 검증 |
+| `45` | planned | 40 | cancel/retry/concurrency 계약을 먼저 고정 |
+| `46` | planned | 40, 43, 44 | package/runtime 검증과 migration fixture |
+| `47` | planned | 44, 46 | 실제 preset 추가는 44 registry 완료 후 진행 |
 
 ## 핵심 결론
 

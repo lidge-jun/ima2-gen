@@ -129,7 +129,14 @@ export type HistoryItem = {
   cardOrder?: number | null;
   headline?: string | null;
   body?: string | null;
-  cards?: Array<{ url: string; headline?: string; cardOrder?: number }>;
+  cards?: Array<{
+    url?: string;
+    headline?: string;
+    body?: string;
+    cardOrder?: number;
+    imageFilename?: string;
+    status?: string;
+  }>;
   refsCount?: number;
 };
 

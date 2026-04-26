@@ -11,7 +11,7 @@ import {
   updateCardNewsJob,
   updateCardNewsJobCard,
 } from "../lib/cardNewsJobStore.js";
-import { listCardNewsSets, readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
+import { listCardNewsSets, readCardNewsManifest, readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
 
 function sendError(res, err) {
   const status = err.status || 500;
@@ -90,6 +90,18 @@ export function registerCardNewsRoutes(app, ctx) {
   app.get("/api/cardnews/sets/:setId", async (req, res) => {
     try {
       res.json({ plan: await readCardNewsSetPlan(ctx, req.params.setId) });
+    } catch (err) {
+      sendError(res, err);
+    }
+  });
+
+  app.get("/api/cardnews/sets/:setId/manifest", async (req, res) => {
+    try {
+      const manifest = await readCardNewsManifest(ctx, req.params.setId);
+      if (req.query.download === "1") {
+        res.setHeader("Content-Disposition", `attachment; filename="${req.params.setId}-manifest.json"`);
+      }
+      res.type("application/json").send(JSON.stringify(manifest, null, 2));
     } catch (err) {
       sendError(res, err);
     }

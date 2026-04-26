@@ -27,6 +27,7 @@ type CardNewsState = {
   roleTemplates: RoleTemplate[];
   activePlan: CardNewsPlan | null;
   selectedCardId: string | null;
+  selectedTextFieldId: string | null;
   topic: string;
   audience: string;
   goal: string;
@@ -53,6 +54,7 @@ type CardNewsState = {
   addTextField: (cardId: string, field: CardNewsTextField) => void;
   removeTextField: (cardId: string, fieldId: string) => void;
   selectCard: (id: string) => void;
+  selectTextField: (fieldId: string | null) => void;
   getGenerationSummary: () => {
     total: number;
     done: number;
@@ -135,6 +137,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
   roleTemplates: [],
   activePlan: null,
   selectedCardId: null,
+  selectedTextFieldId: null,
   topic: "",
   audience: "",
   goal: "",
@@ -206,6 +209,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
       set({
         activePlan: normalizeCardNewsPlan(plan),
         selectedCardId: plan.cards[0]?.id || null,
+        selectedTextFieldId: null,
         plannerMeta: planner || null,
         loading: false,
       });
@@ -251,6 +255,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
             : card
         )),
       } : null,
+      selectedTextFieldId: field.id,
     }));
   },
 
@@ -264,11 +269,16 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
             : card
         )),
       } : null,
+      selectedTextFieldId: s.selectedTextFieldId === fieldId ? null : s.selectedTextFieldId,
     }));
   },
 
   selectCard(id) {
-    set({ selectedCardId: id });
+    set({ selectedCardId: id, selectedTextFieldId: null });
+  },
+
+  selectTextField(fieldId) {
+    set({ selectedTextFieldId: fieldId });
   },
 
   getGenerationSummary() {
@@ -323,6 +333,7 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
         generating: false,
         activePlan: loaded?.plan ? normalizeCardNewsPlan(loaded.plan)
           : (cur.activePlan ? applyJobSummary(cur.activePlan, summary) : cur.activePlan),
+        selectedTextFieldId: null,
       }));
       app.showToast(t("cardNews.generated", { count: summary.generated }));
     } catch (err) {
@@ -388,10 +399,15 @@ export const useCardNewsStore = create<CardNewsState>((set, get) => ({
   },
 
   async loadSet(setId) {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, selectedTextFieldId: null });
     try {
       const { plan } = await getCardNewsSet(setId);
-      set({ activePlan: normalizeCardNewsPlan(plan), selectedCardId: plan.cards[0]?.id || null, loading: false });
+      set({
+        activePlan: normalizeCardNewsPlan(plan),
+        selectedCardId: plan.cards[0]?.id || null,
+        selectedTextFieldId: null,
+        loading: false,
+      });
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : String(err) });
     }

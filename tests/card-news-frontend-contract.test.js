@@ -151,6 +151,7 @@ describe("Card News frontend dev MVP contract", () => {
   it("preserves Card News set metadata through gallery history mapping", () => {
     const appStore = readSource("ui/src/store/useAppStore.ts");
     const gallery = readSource("ui/src/components/GalleryModal.tsx");
+    const galleryTile = readSource("ui/src/components/CardNewsGalleryTile.tsx");
     const api = readSource("ui/src/lib/api.ts");
     const types = readSource("ui/src/types.ts");
 
@@ -164,7 +165,8 @@ describe("Card News frontend dev MVP contract", () => {
     assert.match(gallery, /loadSet\(item\.setId\)/);
     assert.match(gallery, /setUIMode\("card-news"\)/);
     assert.match(gallery, /gallery-card-news-set/);
-    assert.match(gallery, /item\.cards/);
+    assert.match(gallery, /CardNewsGalleryTile/);
+    assert.match(galleryTile, /item\.cards/);
   });
 
   it("keeps the Card News layout responsive inside the existing app shell", () => {
@@ -190,6 +192,7 @@ describe("Card News frontend dev MVP contract", () => {
       assert.match(source, /"progress"/);
       assert.match(source, /"planner"/);
       assert.match(source, /"textFields"/);
+      assert.match(source, /"cardTitle"/);
       assert.match(source, /"placements"/);
       assert.match(source, /"textKinds"/);
       assert.match(source, /"renderModes"/);
