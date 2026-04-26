@@ -134,12 +134,12 @@ const en: Dict = {
 
 const ko: Dict = {
   // Base / meta
-  'meta.title': 'ima2-gen — 로컬 이미지 스튜디오 (Classic + Node 분기)',
+  'meta.title': 'ima2-gen — 로컬 이미지 스튜디오, Classic + Node 분기',
   'meta.desc':
-    '로컬에서 Classic 모드로 이미지를 만들고, 마음에 드는 결과를 Node 그래프로 분기한다. 색감·구도·카피 변종을 부모 프레임을 잃지 않고 펼친다.',
-  'meta.og.title': 'ima2-gen — 마음에 든 이미지에서 가지를 친다',
+    'Classic으로 한 장 잡고, Node 그래프에서 색감·구도·카피 변형을 펼치는 로컬 이미지 스튜디오.',
+  'meta.og.title': 'ima2-gen — 맘에 드는 한 컷, 거기서 가지치기',
   'meta.og.desc':
-    'Classic + Node 그래프 분기를 갖춘 로컬 이미지 스튜디오. npx 한 줄로 띄우고, 모든 프레임은 내 컴퓨터에 남는다.',
+    'Classic + Node 분기 워크플로의 로컬 이미지 스튜디오. npx 한 줄로 띄우고, 모든 컷은 내 컴퓨터에.',
 
   // Header
   'header.brand.aria': 'ima2-gen 홈',
@@ -152,71 +152,71 @@ const ko: Dict = {
 
   // Hero
   'hero.eyebrow': '로컬 이미지 스튜디오 · Classic + Node',
-  'hero.h1.line1': '마음에 든',
-  'hero.h1.line2': '이미지에서',
-  'hero.h1.em': '가지를 친다.',
+  'hero.h1.line1': '맘에 드는 한 컷,',
+  'hero.h1.line2': '거기서',
+  'hero.h1.em': '가지치기.',
   'hero.sub':
-    '진짜로 반복하면서 시안을 만드는 사람을 위한 이미지 스튜디오. Classic으로 한 장 만들고, Node 그래프로 색감·구도·카피 변종을 펼친다. 부모 프레임은 그대로 둔 채로.',
+    '한 장 만들고 끝낼 작업이 아니라면. Classic으로 빠르게 한 장, Node 그래프로 색감·구도·카피 변형. 원본은 그대로.',
   'hero.cta.cmd': 'npx ima2-gen serve',
   'hero.cross.lang': 'English landing →',
   'hero.shot.alt':
-    'ima2-gen Classic 모드 — 프롬프트 컴포저, 생성 이미지, 모델 라벨, 결과 메타데이터가 한 화면에 보인다.',
+    'ima2-gen Classic 모드 — 프롬프트 컴포저, 생성 이미지, 모델 라벨, 결과 메타가 한 화면에.',
 
   // Two Workflows
-  'workflows.tag': '01 · 이미지 만드는 두 가지 길',
-  'workflows.h.before': '두 가지 방식으로 만든다. ',
-  'workflows.h.em': '분기는 한 가지 방식.',
+  'workflows.tag': '01 · 만드는 두 가지 방식',
+  'workflows.h.before': '만드는 길은 둘. ',
+  'workflows.h.em': '가지치는 길은 하나.',
   'workflows.lede':
-    'Classic은 한 장을 빠르게. Node는 부모 프레임 하나에서 변종을 트리처럼 펼친다. 만들고 싶은 게 무엇이냐에 따라 고르면 된다.',
+    'Classic은 한 장을 빠르게. Node는 맘에 든 부모에서 변종을 트리처럼. 그날 필요한 워크플로로 골라 쓰면 된다.',
   'workflows.classic.label': 'Classic',
-  'workflows.classic.h': '한 프롬프트, 한 장의 강한 결과.',
+  'workflows.classic.h': '한 장으로 끝내고 싶을 때.',
   'workflows.classic.body':
-    '쓰고, 레퍼런스 최대 다섯 장 붙이고, 생성한다. 마음에 들 때까지 반복. 어떤 결과에서든 이어 만들 수 있다.',
+    '프롬프트 쓰고, 레퍼런스 다섯 장까지 붙이고, 생성. 만족할 때까지 반복하고, 어떤 결과에서든 이어 만들 수 있다.',
   'workflows.classic.alt':
-    'ima2-gen Classic 모드 — 프롬프트 컴포저, 레퍼런스, 생성된 팀 단체 이미지가 보인다.',
+    'ima2-gen Classic 모드 — 프롬프트 컴포저, 레퍼런스, 생성된 인물 컷.',
   'workflows.node.label': 'Node',
-  'workflows.node.h': '한 프레임, 열 갈래.',
+  'workflows.node.h': '한 컷에서 열 갈래.',
   'workflows.node.body':
-    '부모를 고정한다. 자식을 펼친다 — 색감, 구도, 카피. 나란히 비교한다. 원본은 잃지 않는다.',
+    '부모 고정. 자식으로 색감·구도·카피 펼치기. 옆에 두고 비교. 원본은 안 잃는다.',
   'workflows.node.alt':
-    'ima2-gen Node 모드 — 생성된 카드들이 연결된 그래프와 노드별 메타데이터가 보인다.',
+    'ima2-gen Node 모드 — 연결된 카드들과 노드별 메타.',
 
   // Why Branch
-  'branch.tag': '02 · 워크플로로서의 분기',
-  'branch.h.before': '좋은 프레임은 ',
-  'branch.h.em': '출발점이다.',
+  'branch.tag': '02 · 분기, 그게 워크플로',
+  'branch.h.before': '좋은 한 장은 끝이 아니라 ',
+  'branch.h.em': '시작.',
   'branch.lede':
-    '부모를 고정하고 자식을 펼치는 것이 시각 아이디어가 실제로 전개되는 방식이다. ima2-gen은 이 방식을 기본으로 둔다.',
+    '부모를 잠그고 자식을 펼치는 게, 시각 아이디어가 실제로 자라는 방식. 그래서 ima2-gen은 이걸 기본 동작으로 박아 뒀다.',
   'branch.shot.alt':
-    'ima2-gen Node 모드 캔버스 — 부모 노드 하나와 색감·구도·카피 변종 자식 노드들.',
+    'ima2-gen Node 모드 — 부모 노드 한 장과 색감·구도·카피 변종 자식 노드들.',
   'branch.scenarios.aria': '분기 시나리오 단계',
-  'branch.s1.strong': '부모를 만든다.',
-  'branch.s1.body': '진짜 남기고 싶은 한 장을.',
-  'branch.s2.strong': '자식을 펼친다.',
-  'branch.s2.body': '색감 변경, 더 타이트한 크롭, 카피 여백 변화 — 노드 셋, 런 셋.',
-  'branch.s3.strong': '잃지 않고 비교한다.',
-  'branch.s3.body': '부모는 그대로 남는다. 자식은 새로고침 후에도 request ID로 복구된다.',
+  'branch.s1.strong': '먼저 부모 한 장.',
+  'branch.s1.body': '남기고 싶을 만큼 잘 나온 컷으로.',
+  'branch.s2.strong': '거기서 자식 펼치기.',
+  'branch.s2.body': '색감만 살짝, 크롭만 더 타이트, 카피 여백만 다르게 — 노드 셋이면 런 셋.',
+  'branch.s3.strong': '잃지 않고 나란히.',
+  'branch.s3.body': '부모는 그대로. 자식은 새로고침해도 request ID로 살아 돌아온다.',
 
   // Local & OAuth
   'local.tag': '03 · 로컬 & 오픈',
-  'local.h.before': '로그인은 한 번. ',
+  'local.h.before': '로그인 한 번, ',
   'local.h.em': '저장은 내 디스크.',
   'local.lede':
-    'ima2-gen은 이미 깔려 있는 Codex/ChatGPT 로그인을 그대로 쓴다. 생성된 프레임과 세션은 다른 사람의 서버가 아니라 내 디스크에 남는다.',
-  'local.quote.before': '설정 화면에 ',
+    '이미 쓰고 있는 Codex/ChatGPT 로그인을 그대로 활용. 만든 컷과 세션은 누군가의 서버가 아니라 내 디스크에 남는다.',
+  'local.quote.before': '설정에 ',
   'local.quote.strong': 'Configured but disabled',
   'local.quote.after':
-    '라고 떠 있으면, env/config에 API key가 있긴 하지만 이미지 생성은 여전히 OAuth로 동작한다는 뜻이다.',
-  'local.meta': '유저 데이터 폴더 · MIT 라이선스 · 살펴보고, 동기화하고, 버전 관리하고 — 사용자 마음대로.',
+    '가 떠 있다면, env/config에 key가 있어도 이미지 생성은 OAuth로만 돌아간다는 뜻.',
+  'local.meta': '사용자 데이터 폴더 · MIT · 들여다보고, 동기화하고, 버전 관리도 마음대로.',
   'local.shot.alt':
     'ima2-gen 설정 화면 — OAuth 활성, API key는 설정되어 있지만 비활성.',
 
   // Style & References
   'style.tag': '04 · 비주얼 메모리',
-  'style.h.before': '룩을 잡는다. ',
-  'style.h.em': '어디서나 다시 쓴다.',
+  'style.h.before': '한 번 잡은 룩, ',
+  'style.h.em': '어디서나 다시.',
   'style.lede':
-    '스타일 시트에 medium, composition, mood, palette, negative를 고정한다. 레퍼런스는 다섯 장까지 붙고, 세션이 바뀌어도 살아남는다.',
+    '스타일 시트에 medium·composition·mood·palette·negative를 박아 두면 끝. 레퍼런스도 다섯 장까지, 세션 너머로 살아남는다.',
   'style.shot.alt':
     'ima2-gen 스타일 시트 에디터 — medium, composition, mood, subject, palette, negative 필드.',
   'style.field.medium': 'medium',
@@ -228,9 +228,9 @@ const ko: Dict = {
 
   // Install
   'install.tag': '05 · 시작하기',
-  'install.h.before': '명령어 한 줄. ',
-  'install.h.em': '그 뒤는 반복.',
-  'install.lede': 'npx로 띄운다. Codex로 한 번 로그인한다. 가지를 치기 시작한다.',
+  'install.h.before': '명령어 한 줄, ',
+  'install.h.em': '그다음은 반복.',
+  'install.lede': 'npx로 띄우고, Codex로 한 번 로그인하고, 가지치기 시작.',
   'install.badge.npm': 'npm v1.1.0',
   'install.badge.node': 'Node ≥20',
   'install.badge.mit': 'MIT',
@@ -243,20 +243,20 @@ const ko: Dict = {
 
   // FAQ
   'faq.tag': 'FAQ',
-  'faq.q1': 'Node 모드는 정확히 뭘 하는 건가요?',
+  'faq.q1': 'Node 모드는 뭘 하는 건가요?',
   'faq.a1':
-    '좋은 프레임 하나를 부모로 두고, 자식 노드로 변종을 펼치게 해 줍니다 — 다른 프롬프트, 다른 구도, 다른 색감. 원본은 그대로 남습니다. 새로고침 후에도 자식은 request ID로 복구됩니다.',
-  'faq.q2': '내 이미지는 어디 저장되나요?',
+    '좋은 한 장을 부모로 두고, 자식 노드로 변형을 펼치는 작업면이에요. 다른 프롬프트, 다른 구도, 다른 색감을 한 화면에서 비교하고, 원본은 그대로 남깁니다. 새로고침해도 request ID로 자식이 살아 돌아옵니다.',
+  'faq.q2': '이미지는 어디 저장돼요?',
   'faq.a2':
-    '로컬에 저장됩니다. 생성된 프레임과 세션 메타데이터는 사용자 데이터 폴더에 남습니다. 살펴보고, 동기화하고, 버전 관리하는 건 사용자 마음대로입니다. 외부 서비스로 업로드되지 않습니다.',
+    '전부 로컬. 사용자 데이터 폴더에 컷과 세션 메타가 남아요. 들여다보고, 동기화하고, 버전 관리하는 건 본인 자유. 외부 서비스로는 아무것도 안 올라갑니다.',
   'faq.q3': 'OpenAI API key가 필요한가요?',
   'faq.a3':
-    '이미지 생성에는 필요 없습니다. ima2-gen은 로컬의 Codex/ChatGPT OAuth 세션을 그대로 씁니다. 보조 경로에서 API key가 감지될 수는 있지만, 생성 자체는 OAuth-only로 동작합니다.',
+    '이미지 생성에는 필요 없어요. 로컬의 Codex/ChatGPT OAuth를 그대로 씁니다. 환경에 key가 잡혀 있다면 보조 기능에서만 쓰일 수 있고, 생성 자체는 OAuth-only로 돌아갑니다.',
 
   // Footer
   'footer.line1': 'ima2-gen · MIT 라이선스',
-  'footer.line2': '마음에 든 이미지에서 가지를 친다.',
-  'footer.line3': '로컬에서 만든다. 공개 저장소에 기록한다.',
+  'footer.line2': '맘에 드는 한 컷, 거기서 가지치기.',
+  'footer.line3': '로컬에서, 공개로.',
   'footer.lang.aria': '언어별 README',
 
   // LangToggle
