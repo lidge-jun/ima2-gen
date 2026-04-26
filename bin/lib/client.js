@@ -5,7 +5,8 @@ import { homedir } from "node:os";
 export const DEFAULT_PORT = 3333;
 
 function readAdvertise() {
-  const p = join(homedir(), ".ima2", "server.json");
+  const p = process.env.IMA2_ADVERTISE_FILE ||
+    join(process.env.IMA2_CONFIG_DIR || join(homedir(), ".ima2"), "server.json");
   if (!existsSync(p)) return null;
   try {
     return JSON.parse(readFileSync(p, "utf-8"));
@@ -36,6 +37,8 @@ export async function resolveServer({ serverFlag } = {}) {
   const candidates = [];
   if (process.env.IMA2_SERVER) candidates.push(process.env.IMA2_SERVER.replace(/\/$/, ""));
   const adv = readAdvertise();
+  if (adv?.backend?.url) candidates.push(String(adv.backend.url).replace(/\/$/, ""));
+  if (adv?.url) candidates.push(String(adv.url).replace(/\/$/, ""));
   if (adv?.port) candidates.push(`http://localhost:${adv.port}`);
   candidates.push(`http://localhost:${DEFAULT_PORT}`);
 

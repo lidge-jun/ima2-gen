@@ -4,30 +4,9 @@
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createServer } from "node:net";
-import { config } from "../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
-const PORT = config.server.port;
-const OAUTH_PORT = config.oauth.proxyPort;
-
-function checkPortAvailable(port, label) {
-  return new Promise((resolve, reject) => {
-    const probe = createServer()
-      .once("error", (err) => {
-        if (err?.code === "EADDRINUSE") {
-          reject(new Error(`${label} port ${port} is already in use.`));
-          return;
-        }
-        reject(err);
-      })
-      .once("listening", () => {
-        probe.close(() => resolve());
-      })
-      .listen(port);
-  });
-}
 
 function run(cmd, args, env = {}) {
   return spawnSync(cmd, args, {
@@ -38,15 +17,6 @@ function run(cmd, args, env = {}) {
   });
 }
 
-try {
-  await checkPortAvailable(PORT, "Server");
-  await checkPortAvailable(OAUTH_PORT, "OAuth proxy");
-} catch (err) {
-  console.error(`[dev] ${err.message}`);
-  console.error("[dev] Stop the existing ima2/image_gen dev process first, then run npm run dev again.");
-  process.exit(1);
-}
-
 console.log("[dev] building UI with dev diagnostics …");
 const build = run("npm", ["run", "ui:build"], {
   VITE_IMA2_DEV: "1",
@@ -55,6 +25,7 @@ const build = run("npm", ["run", "ui:build"], {
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 console.log("[dev] starting server with --watch …");
+console.log("[dev] port fallback is handled by server.js; check ~/.ima2/server.json for actual URLs.");
 const server = spawn(process.execPath, ["--watch", "server.js"], {
   cwd: ROOT,
   stdio: "inherit",

@@ -19,6 +19,7 @@ import { configureLogger } from "./lib/logger.js";
 import { createRequestLogger } from "./lib/requestLogger.js";
 import { configureRoutes } from "./routes/index.js";
 import { config } from "./config.js";
+import { getServerPort, listenWithPortFallback } from "./lib/runtimePorts.js";
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -84,16 +85,33 @@ export function buildApp(ctx) {
   return app;
 }
 
+function runtimeHostUrl(host) {
+  if (!host || host === "0.0.0.0" || host === "::") return "localhost";
+  return host;
+}
+
 function advertise(ctx) {
   try {
     mkdirSync(dirname(ctx.config.storage.advertiseFile), { recursive: true });
     writeFileSync(
       ctx.config.storage.advertiseFile,
       JSON.stringify({
-        port: Number(ctx.config.server.port),
+        port: Number(ctx.serverActualPort || ctx.config.server.port),
+        url: ctx.serverUrl,
         pid: process.pid,
         startedAt: ctx.startedAt,
         version: ctx.packageVersion,
+        backend: {
+          configuredPort: Number(ctx.serverConfiguredPort || ctx.config.server.port),
+          actualPort: Number(ctx.serverActualPort || ctx.config.server.port),
+          url: ctx.serverUrl,
+        },
+        oauth: {
+          configuredPort: Number(ctx.oauthPort),
+          actualPort: Number(ctx.oauthActualPort || ctx.oauthPort),
+          url: ctx.oauthUrl,
+          status: ctx.oauthReadyState,
+        },
       }),
     );
   } catch (e) {
@@ -120,11 +138,16 @@ export async function createRuntimeContext(overrides = {}) {
   const apiKey = loadedKey.apiKey;
   const openai = overrides.openai ?? await createOpenAI(apiKey);
   const oauthPort = config.oauth.proxyPort;
-  return {
+  const ctx = {
     rootDir,
     config,
+    serverConfiguredPort: config.server.port,
+    serverActualPort: null,
+    serverUrl: `http://${runtimeHostUrl(config.server.host)}:${config.server.port}`,
     oauthPort,
+    oauthActualPort: oauthPort,
     oauthUrl: `http://127.0.0.1:${oauthPort}`,
+    oauthReadyState: config.oauth.autoStart ? "starting" : "disabled",
     hasApiKey: !!apiKey,
     apiKey,
     apiKeySource: loadedKey.apiKeySource,
@@ -132,6 +155,22 @@ export async function createRuntimeContext(overrides = {}) {
     startedAt: overrides.startedAt ?? Date.now(),
     packageVersion: overrides.packageVersion ?? readPackageVersion(),
   };
+  let resolveOAuthReady;
+  ctx.oauthReadyPromise = new Promise((resolve) => {
+    resolveOAuthReady = resolve;
+  });
+  ctx.markOAuthReady = ({ url, port } = {}) => {
+    if (url) ctx.oauthUrl = url;
+    if (port) ctx.oauthActualPort = port;
+    ctx.oauthReadyState = "ready";
+    resolveOAuthReady(ctx.oauthUrl);
+  };
+  ctx.markOAuthFailed = () => {
+    ctx.oauthReadyState = "failed";
+    resolveOAuthReady(null);
+  };
+  if (!config.oauth.autoStart) ctx.markOAuthReady({ url: ctx.oauthUrl, port: ctx.oauthPort });
+  return ctx;
 }
 
 export async function startServer(overrides = {}) {
@@ -147,31 +186,43 @@ export async function startServer(overrides = {}) {
         : startOAuthProxy({
             oauthPort: ctx.oauthPort,
             restartDelayMs: ctx.config.oauth.restartDelayMs,
+            onReady: ({ url, port }) => {
+              ctx.markOAuthReady({ url, port });
+              advertise(ctx);
+            },
+            onExit: () => ctx.markOAuthFailed(),
           });
+  if (overrides.oauthChild !== undefined || !ctx.config.oauth.autoStart) {
+    ctx.markOAuthReady({ url: ctx.oauthUrl, port: ctx.oauthPort });
+  }
 
   onShutdown(() => {
     unadvertise(ctx);
-    try { oauthChild?.kill(); } catch {}
+    try { oauthChild?.stop?.(); } catch {}
+    try { oauthChild?.kill?.(); } catch {}
   });
   process.on("exit", () => unadvertise(ctx));
 
-  const server = app.listen(ctx.config.server.port, () => {
-    console.log(`Image Gen running at http://localhost:${ctx.config.server.port}`);
-    console.log(`Provider policy: OAuth only (API key hard-disabled). OAuth proxy port ${ctx.oauthPort}.`);
-    advertise(ctx);
-    try {
-      const s = ensureDefaultSession();
-      console.log(`[db] default session: ${s.id} (${s.title})`);
-    } catch (err) {
-      console.error("[db] bootstrap failed:", err.message);
-    }
+  const server = await listenWithPortFallback(app, ctx.config.server.port, {
+    host: ctx.config.server.host,
+    label: "server",
+    onFallback: ({ requestedPort, actualPort }) => {
+      console.log(`[server.port] requested=${requestedPort} actual=${actualPort} reason=EADDRINUSE`);
+    },
   });
+  ctx.serverActualPort = getServerPort(server) || ctx.config.server.port;
+  ctx.serverUrl = `http://${runtimeHostUrl(ctx.config.server.host)}:${ctx.serverActualPort}`;
+  console.log(`Image Gen running at ${ctx.serverUrl}`);
+  console.log(`Provider policy: OAuth only (API key hard-disabled). OAuth proxy port ${ctx.oauthPort}.`);
+  advertise(ctx);
+  try {
+    const s = ensureDefaultSession();
+    console.log(`[db] default session: ${s.id} (${s.title})`);
+  } catch (err) {
+    console.error("[db] bootstrap failed:", err.message);
+  }
 
   server.on("error", (err) => {
-    if (err?.code === "EADDRINUSE") {
-      console.error(`[server] Port ${ctx.config.server.port} is already in use. Stop the existing image_gen server before starting another dev server.`);
-      process.exit(1);
-    }
     console.error("[server] Failed to start:", err?.message || err);
     process.exit(1);
   });

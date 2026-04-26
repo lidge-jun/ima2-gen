@@ -109,6 +109,10 @@ describe("Server: /api/health + advertisement", () => {
     assert.ok(Number.isFinite(body.activeJobs));
     assert.ok(Number.isFinite(body.pid));
     assert.ok(Number.isFinite(body.startedAt));
+    assert.equal(body.runtime.backend.configuredPort, Number(PORT));
+    assert.equal(body.runtime.backend.actualPort, Number(PORT));
+    assert.equal(body.runtime.oauth.configuredPort, Number(OAUTH_PORT));
+    assert.equal(body.runtime.oauth.actualPort, Number(OAUTH_PORT));
   });
 
   it("GET /api/storage/status returns summarized storage status", async () => {
@@ -143,8 +147,16 @@ describe("Server: /api/health + advertisement", () => {
     assert.ok(existsSync(advertisePath), "advertise file should exist");
     const info = JSON.parse(readFileSync(advertisePath, "utf-8"));
     assert.strictEqual(info.port, Number(PORT));
+    assert.strictEqual(info.url, `http://127.0.0.1:${PORT}`);
     assert.strictEqual(info.pid, child.pid);
     assert.ok(typeof info.version === "string");
+    assert.deepStrictEqual(info.backend, {
+      configuredPort: Number(PORT),
+      actualPort: Number(PORT),
+      url: `http://127.0.0.1:${PORT}`,
+    });
+    assert.strictEqual(info.oauth.configuredPort, Number(OAUTH_PORT));
+    assert.strictEqual(info.oauth.actualPort, Number(OAUTH_PORT));
   });
 
   it("/api/generate logs X-ima2-client tag when provided", async () => {

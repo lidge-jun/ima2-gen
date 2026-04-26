@@ -1,12 +1,29 @@
 import { listJobs, listTerminalJobs, finishJob } from "../lib/inflight.js";
 
 export function registerHealthRoutes(app, ctx) {
+  const runtimePorts = () => ({
+    backend: {
+      configuredPort: Number(ctx.serverConfiguredPort || ctx.config.server.port),
+      actualPort: Number(ctx.serverActualPort || ctx.config.server.port),
+      url: ctx.serverUrl || `http://localhost:${ctx.serverActualPort || ctx.config.server.port}`,
+    },
+    oauth: {
+      configuredPort: Number(ctx.oauthPort),
+      actualPort: Number(ctx.oauthActualPort || ctx.oauthPort),
+      url: ctx.oauthUrl,
+      status: ctx.oauthReadyState,
+    },
+  });
+
   app.get("/api/providers", (_req, res) => {
     res.json({
       apiKey: false,
       oauth: true,
       oauthPort: ctx.oauthPort,
+      oauthActualPort: ctx.oauthActualPort || ctx.oauthPort,
+      oauthUrl: ctx.oauthUrl,
       apiKeyDisabled: true,
+      runtime: runtimePorts(),
     });
   });
 
@@ -19,22 +36,29 @@ export function registerHealthRoutes(app, ctx) {
       activeJobs: listJobs().length,
       pid: process.pid,
       startedAt: ctx.startedAt,
+      runtime: runtimePorts(),
     });
   });
 
   app.get("/api/oauth/status", async (_req, res) => {
+    if (ctx.oauthReadyState === "starting") {
+      return res.json({ status: "starting", runtime: runtimePorts() });
+    }
+    if (ctx.oauthReadyState === "failed") {
+      return res.json({ status: "offline", runtime: runtimePorts() });
+    }
     try {
       const r = await fetch(`${ctx.oauthUrl}/v1/models`, {
         signal: AbortSignal.timeout(ctx.config.oauth.statusTimeoutMs),
       });
       if (r.ok) {
         const data = await r.json();
-        res.json({ status: "ready", models: data.data?.map((m) => m.id) || [] });
+        res.json({ status: "ready", models: data.data?.map((m) => m.id) || [], runtime: runtimePorts() });
       } else {
-        res.json({ status: "auth_required" });
+        res.json({ status: "auth_required", runtime: runtimePorts() });
       }
     } catch {
-      res.json({ status: "offline" });
+      res.json({ status: "offline", runtime: runtimePorts() });
     }
   });
 
