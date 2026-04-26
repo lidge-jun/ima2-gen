@@ -1971,6 +1971,63 @@ body {
   font-family: inherit;
   resize: vertical;
 }
+.image-node__refs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.image-node__ref,
+.image-node__ref-add {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border, #2a2a2a);
+}
+.image-node__ref img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.image-node__ref-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+.image-node__ref-del:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.image-node__ref-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim, #888);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.image-node__ref-add:hover:not(:disabled) {
+  background: var(--surface-3, #2a2a2a);
+}
+.image-node__ref-add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 .image-node__footer {
   display: grid;
   gap: 6px;
