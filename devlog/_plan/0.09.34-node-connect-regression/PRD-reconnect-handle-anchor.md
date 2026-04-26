@@ -36,6 +36,9 @@ Disconnect and reconnect must be deterministic:
 3. Reloading the session must keep the latest anchor choice, not an older
    top/top anchor.
 4. Empty-canvas child creation and graph parent semantics must remain unchanged.
+5. Programmatic child/sibling edges use the same edge id helper with `auto`
+   handle anchors, so user-created and button-created edges do not diverge into
+   mixed id schemes.
 
 ## Current Root-Cause Candidates
 
@@ -80,6 +83,8 @@ may briefly retain the previous handle metadata.
   the graph save.
 - Reconnecting the same nodes through side/middle handles creates an edge whose
   id or stored metadata is distinct from the old top/top edge.
+- `addChildNode()`, `addSiblingNode()`, and `addChildNodeAt()` use the same edge
+  id helper as `connectNodes()`.
 - Session save payload contains the latest side/middle `sourceHandle` and
   `targetHandle`.
 - Session load restores the latest side/middle handles.

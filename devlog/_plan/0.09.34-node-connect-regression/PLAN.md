@@ -275,8 +275,13 @@ function newGraphEdgeId(
   `sourceClientId->targetClientId`.
 - Keep duplicate/multiple-parent policy based on `source` and `target`, not on
   edge id.
-- Programmatic `addChildNode()` / `addChildNodeAt()` can keep their default edge
-  ids unless audit finds they need handle-aware ids too.
+- Use the helper at every edge creation site so edge ids are consistent:
+  - `connectNodes()`
+  - `addChildNode()`
+  - `addSiblingNode()`
+  - `addChildNodeAt()`
+- Programmatic child/sibling edges pass no handle ids, so their id uses the
+  `auto` anchor fallback.
 
 Suggested deterministic shape:
 
@@ -326,6 +331,8 @@ Required cases:
 - Connecting the same source/target with `source-top`/`target-top` and later
   `source-right`/`target-left` produces distinguishable edge identity or stored
   handle data.
+- `addChildNode()`, `addSiblingNode()`, and `addChildNodeAt()` all use the same
+  edge id helper with `auto` handle fallbacks.
 - Saved session edge `data` contains the latest `sourceHandle` and
   `targetHandle`.
 - Loaded graph edge restores the latest handle ids.

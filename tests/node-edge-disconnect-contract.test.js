@@ -30,6 +30,11 @@ describe("node edge disconnect contract", () => {
     assert.match(store, /get\(\)\.scheduleGraphSave\(\)/);
   });
 
+  it("flushes graph save immediately after edge disconnect", () => {
+    assert.match(store, /"edge-disconnect"/);
+    assert.match(store, /void get\(\)\.flushGraphSave\("edge-disconnect"\)/);
+  });
+
   it("clears target parentServerNodeId when no incoming edge remains", () => {
     assert.match(store, /const remainingIncoming = nextEdges\.find\(\(edge\) => edge\.target === node\.id\)/);
     assert.match(store, /parentServerNodeId:\s*remainingParent\?\.data\.serverNodeId \?\? null/);

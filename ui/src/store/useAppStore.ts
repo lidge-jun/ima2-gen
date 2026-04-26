@@ -260,7 +260,14 @@ function saveActiveSessionId(id: string | null): void {
 const HISTORY_LIMIT = 500;
 const MAX_REFERENCE_IMAGES = 5;
 
-type GraphSaveReason = "debounced" | "manual" | "switch-session" | "recovery" | "beforeunload" | "queued";
+type GraphSaveReason =
+  | "debounced"
+  | "manual"
+  | "switch-session"
+  | "recovery"
+  | "beforeunload"
+  | "queued"
+  | "edge-disconnect";
 type GraphSaveResult = "saved" | "skipped" | "conflict" | "failed";
 
 function narrowGenerateKind(k?: string | null): GenerateItem["kind"] {
@@ -332,6 +339,17 @@ export type ImageNodeData = {
 
 export type GraphNode = FlowNode<ImageNodeData>;
 export type GraphEdge = FlowEdge;
+
+function newGraphEdgeId(
+  sourceClientId: ClientNodeId,
+  targetClientId: ClientNodeId,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
+): string {
+  const sourceAnchor = sourceHandle ?? "auto";
+  const targetAnchor = targetHandle ?? "auto";
+  return `${sourceClientId}:${sourceAnchor}->${targetClientId}:${targetAnchor}`;
+}
 
 function mapSessionToGraph(session: SessionFull): {
   graphNodes: GraphNode[];
@@ -958,6 +976,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     set({ graphNodes: deriveParentServerNodeIds(nextNodes, nextEdges), graphEdges: nextEdges });
     get().scheduleGraphSave();
+    void get().flushGraphSave("edge-disconnect");
     get().showToast(t("edge.disconnected"));
   },
   nodeSelectionMode: false,
@@ -1288,7 +1307,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
       };
     const edge: GraphEdge = {
-      id: `${parentClientId}->${clientId}`,
+      id: newGraphEdgeId(parentClientId, clientId),
       source: parentClientId,
       target: clientId,
     };
@@ -1348,7 +1367,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
     };
     const edge: GraphEdge = {
-      id: `${parentClientId}->${clientId}`,
+      id: newGraphEdgeId(parentClientId, clientId),
       source: parentClientId,
       target: clientId,
     };
@@ -1930,7 +1949,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
     };
     const edge: GraphEdge = {
-      id: `${parentClientId}->${clientId}`,
+      id: newGraphEdgeId(parentClientId, clientId),
       source: parentClientId,
       target: clientId,
     };
@@ -1957,7 +1976,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const graphEdges = [
       ...get().graphEdges,
       {
-        id: `${sourceClientId}->${targetClientId}`,
+        id: newGraphEdgeId(sourceClientId, targetClientId, sourceHandle, targetHandle),
         source: sourceClientId,
         target: targetClientId,
         sourceHandle,

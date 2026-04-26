@@ -129,4 +129,24 @@ describe("node UI compact metadata contract", () => {
     assert.match(store, /sourceHandle:\s*typeof data\.sourceHandle === "string" \? data\.sourceHandle : null/);
     assert.match(store, /targetHandle:\s*typeof data\.targetHandle === "string" \? data\.targetHandle : null/);
   });
+
+  it("uses handle-aware edge ids for node connections", () => {
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(store, /function newGraphEdgeId\(/);
+    assert.match(store, /sourceHandle\?: string \| null/);
+    assert.match(store, /targetHandle\?: string \| null/);
+    assert.match(store, /const sourceAnchor = sourceHandle \?\? "auto"/);
+    assert.match(store, /const targetAnchor = targetHandle \?\? "auto"/);
+    assert.match(store, /return `\$\{sourceClientId\}:\$\{sourceAnchor\}->\$\{targetClientId\}:\$\{targetAnchor\}`/);
+    assert.match(store, /id:\s*newGraphEdgeId\(sourceClientId,\s*targetClientId,\s*sourceHandle,\s*targetHandle\)/);
+  });
+
+  it("uses the same edge id helper for programmatic child edges", () => {
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(store, /addChildNode:\s*\(parentClientId\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId\)/);
+    assert.match(store, /addSiblingNode:\s*\(sourceClientId\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId\)/);
+    assert.match(store, /addChildNodeAt:\s*\(parentClientId,\s*position\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId\)/);
+  });
 });
