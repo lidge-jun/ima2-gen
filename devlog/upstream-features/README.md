@@ -19,7 +19,7 @@
 | # | 기능 | 상태 | upstream commit | 우리 PR | 노트 |
 |---|------|------|-----------------|---------|------|
 | 1.1 | **Server 요청 로깅 + stale asset guard** | done | `31a8bbd` | [#1](https://github.com/ree9622/ima2-gen/pull/1) | `/api/*` 요청 로깅(redact body/query, X-Request-Id echo), UI bundle cache(no-store index + immutable assets + /assets 404 fallback). 기존 console.* 마이그레이션 + generated/ TTL은 별도 이슈 |
-| 1.2 | **Validator 에러 코드** | pending | `9f9fe53` | - | `REF_*` 6코드, 400 응답에 코드 포함 |
+| 1.2 | **Validator 에러 코드** | done | `9f9fe53` `f710958` `e1b0b65` | (PR 작성 중) | `lib/refs.js` 추출 + REF_NOT_ARRAY/TOO_MANY/NOT_STRING/EMPTY/TOO_LARGE/NOT_BASE64. 3 callsite 의 redundant precheck 삭제, code 전파. UI compress(`compress.ts`)/토스트 라우팅은 Phase 2.1/2.2 |
 | 1.3 | **Custom size 확인 다이얼로그** | pending | `d0f8dba` | - | custom size 입력 후 생성 전 확인 |
 | 1.4 | **Session graph 저장 충돌 방어** | pending | `c301a2b` | - | 같은 세션 동시 저장 시 last-write 보호 (멀티탭) |
 
