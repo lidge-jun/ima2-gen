@@ -229,3 +229,28 @@ The server writes an advertisement file at:
 ```
 
 CLI commands such as `ima2 ping`, `ima2 gen`, and `ima2 ls` use this file unless `--server` or `IMA2_SERVER` is provided.
+
+Current shape:
+
+```json
+{
+  "port": 3334,
+  "url": "http://localhost:3334",
+  "pid": 12345,
+  "startedAt": 1777180000000,
+  "version": "1.0.0",
+  "backend": {
+    "configuredPort": 3333,
+    "actualPort": 3334,
+    "url": "http://localhost:3334"
+  },
+  "oauth": {
+    "configuredPort": 10531,
+    "actualPort": 10532,
+    "url": "http://127.0.0.1:10532",
+    "status": "ready"
+  }
+}
+```
+
+Top-level `port` and `url` are kept for older CLI clients. New code should prefer `backend.url`.

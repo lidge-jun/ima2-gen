@@ -116,9 +116,17 @@ These require a running `ima2 serve`.
 | `ima2 ls` | List local history |
 | `ima2 show <name>` | Reveal a generated asset |
 | `ima2 ps` | List active jobs |
+| `ima2 cancel <requestId>` | Mark an in-flight job canceled |
 | `ima2 ping` | Health-check the running server |
 
-The server advertises its port at `~/.ima2/server.json`. Override discovery with `--server <url>` or `IMA2_SERVER=http://localhost:3333`.
+The server advertises its actual port at `~/.ima2/server.json`. If `3333` is busy, the backend can fall back to `3334+` and CLI commands follow the advertised URL. Override discovery with `--server <url>` or `IMA2_SERVER=http://localhost:3333`.
+
+```bash
+ima2 gen "poster" --model gpt-5.4 --mode direct --moderation low
+ima2 edit input.png --prompt "make it rainy" --model gpt-5.4
+ima2 ps --terminal
+ima2 cancel <requestId>
+```
 
 ## Configuration
 
@@ -134,6 +142,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth proxy port |
 | `IMA2_SERVER` | — | CLI target override |
 | `IMA2_CONFIG_DIR` | `~/.ima2` | Config and SQLite location |
+| `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | Runtime discovery file |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable the auto-started OAuth proxy |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Recent terminal job retention for debug views |
@@ -174,6 +183,9 @@ Update Codex CLI first, then retry. If it still fails, your account or backend r
 
 **The port is unexpectedly `3457`**
 Your shell may have inherited `PORT=3457` from another local tool. Run `unset PORT` or start with `IMA2_PORT=3333 ima2 serve`.
+
+**Port `10531` is already used on Windows**
+Some Windows security tools, including `AnySign4PC.exe`, may occupy the default OAuth proxy port. Current builds track the actual fallback OAuth port. If you still need a manual override, start with `IMA2_OAUTH_PROXY_PORT=11531 ima2 serve` and check `ima2 doctor`.
 
 For more beginner-friendly answers, see the [FAQ](docs/FAQ.md).
 

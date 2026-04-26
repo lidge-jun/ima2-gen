@@ -16,6 +16,7 @@ For Korean, see [FAQ.ko.md](FAQ.ko.md).
 | Old gallery images look missing | Run `ima2 doctor`, then see [Recover Old Generated Images](RECOVER_OLD_IMAGES.md). |
 | `gpt-5.5` fails | Update Codex CLI first, then try `gpt-5.4` as the stable fallback. |
 | Reference upload fails | Use JPEG/PNG, lower the resolution, and keep references to 5 images or fewer. |
+| Windows reports OAuth/proxy failures around port `10531` | Run `ima2 doctor`; if needed start with `IMA2_OAUTH_PROXY_PORT=11531 ima2 serve`. |
 
 ## Install and update
 
@@ -163,6 +164,36 @@ The API may report reference errors such as `REF_TOO_MANY`, `REF_TOO_LARGE`, `RE
 
 ## Network and OAuth errors
 
+### Why did the backend or OAuth proxy move to another port?
+
+`ima2-gen` is a local app. If the preferred backend port `3333` or OAuth proxy port `10531` is already in use, the runtime can fall back to the next available port and records the actual URLs in:
+
+```text
+~/.ima2/server.json
+```
+
+Use:
+
+```bash
+ima2 doctor
+```
+
+to see the configured and actual backend/OAuth URLs.
+
+### Windows: what if `AnySign4PC.exe` owns port `10531`?
+
+Some Windows security software can occupy the default OAuth proxy port. Current builds track the actual fallback port, but you can also force a quieter range:
+
+```bash
+IMA2_OAUTH_PROXY_PORT=11531 ima2 serve
+```
+
+For split frontend development, point Vite at the actual backend:
+
+```bash
+VITE_IMA2_API_TARGET=http://localhost:3334 npm run ui:dev
+```
+
 ### What does `failed to fetch` mean?
 
 Usually one of these:
@@ -203,4 +234,3 @@ If you run the server on a non-default port:
 ```bash
 IMA2_SERVER=http://localhost:3333 ima2 ping
 ```
-

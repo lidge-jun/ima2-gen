@@ -65,7 +65,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | Location | Role | Caution |
 |---|---|---|
 | `~/.ima2/config.json` | Provider config and possible API key location | May contain secrets; never paste values into docs |
-| `~/.ima2/server.json` | Running server port advertisement | Used by CLI discovery |
+| `~/.ima2/server.json` | Running server runtime advertisement | Used by CLI/Vite discovery; includes top-level backend URL plus nested backend/OAuth configured and actual ports |
 | `image_gen/.ima2/config.json` | Legacy config location | New CLI prefers the home config |
 | `~/.ima2/generated/` | Image files and sidecar metadata | Runtime output; survives npm global updates. Startup migration scans legacy package `generated/` folders across npm, npx, pnpm, Yarn, Bun, nvm/fnm, asdf/mise, Volta, and common macOS/Linux/Windows global layouts |
 | `~/.ima2/generated/.trash/` | Soft-deleted assets | Restore and purge policy target |
@@ -83,6 +83,8 @@ README may still mention a different Node baseline. The operational baseline is 
 | `OAUTH_PORT` | OAuth proxy port, default `10531` |
 | `IMA2_SERVER` | CLI target server URL override |
 | `IMA2_CONFIG_DIR` | Used by tests to isolate config directory |
+| `IMA2_ADVERTISE_FILE` | Overrides runtime discovery file path |
+| `VITE_IMA2_API_TARGET` / `IMA2_DEV_API_TARGET` | Split Vite dev API proxy target override |
 | `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `600000` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
 | `VITE_IMA2_NODE_MODE` | UI build-time gate; set `0` only for a classic-only bundle |

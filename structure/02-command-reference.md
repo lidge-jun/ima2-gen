@@ -57,6 +57,7 @@ sequenceDiagram
 | `ima2 ls` | `GET /api/history` | List recent generations |
 | `ima2 show <name>` | `GET /api/history` plus file path | Show or reveal one history item |
 | `ima2 ps` | `GET /api/inflight` | List running classic/node jobs |
+| `ima2 cancel <requestId>` | `DELETE /api/inflight/:requestId` | Mark a running/known job as canceled in the server registry |
 | `ima2 ping` | `GET /api/health` | Check server reachability and health |
 
 ## `gen` Options
@@ -75,6 +76,10 @@ sequenceDiagram
 | `--stdin` | false | Read extra prompt text from stdin |
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Override server discovery |
+| `--model <id>` | server default | Image model: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, or server-rejected `gpt-5.3-codex-spark` |
+| `--mode <auto|direct>` | `auto` | Prompt handling mode |
+| `--moderation <auto|low>` | `low` | OAuth moderation level |
+| `--session <id>` | none | Apply enabled session style sheet |
 
 ## `edit` Options
 
@@ -87,6 +92,24 @@ sequenceDiagram
 | `--json` | false | Print machine-readable JSON |
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Target server URL |
+| `--model <id>` | server default | Image model: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, or server-rejected `gpt-5.3-codex-spark` |
+| `--mode <auto|direct>` | `auto` | Prompt handling mode |
+| `--moderation <auto|low>` | `low` | OAuth moderation level |
+| `--session <id>` | none | Apply enabled session style sheet |
+
+## `ps` Options
+
+| Option | Default | Description |
+|---|---|---|
+| `--kind <classic|node>` | all | Filter running jobs by kind |
+| `--session <id>` | all | Filter running jobs by session |
+| `--terminal` | false | Include recently completed/error/canceled jobs |
+| `--json` | false | Print machine-readable JSON |
+| `--server <url>` | auto-discovered | Target server URL |
+
+## `cancel`
+
+`ima2 cancel <requestId>` calls `DELETE /api/inflight/:requestId`. It marks the job as canceled in the local server registry; it does not guarantee that an upstream provider request was physically killed.
 
 ## Server Discovery Priority
 
