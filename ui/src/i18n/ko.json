@@ -553,12 +553,12 @@
     },
     "networkFailed": {
       "title": "네트워크 연결 실패",
-      "body": "OpenAI/로컬 OAuth 프록시에 연결하지 못했어요. VPN/방화벽이나 `status.openai.com`을 확인해 주세요.",
+      "body": "OpenAI 또는 로컬 런타임 서비스에 연결하지 못했어요. 먼저 새로고침하고, 계속되면 VPN/방화벽과 `ima2 doctor`에 표시되는 포트를 확인해 주세요.",
       "cta": "새로고침"
     },
     "oauthUnavailable": {
       "title": "OAuth 프록시를 사용할 수 없어요",
-      "body": "로컬 OAuth 프록시가 실행 중이 아니에요. `ima2 serve`를 재시작한 뒤 다시 시도해 주세요.",
+      "body": "OAuth 프록시가 아직 시작 중이거나, 사용할 수 없거나, fallback 포트로 이동했을 수 있어요. 먼저 새로고침하고, 계속되면 `ima2 doctor`의 OAuth URL을 확인해 주세요.",
       "cta": "새로고침"
     },
     "apikeyDisabled": {

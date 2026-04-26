@@ -1,7 +1,11 @@
 import { parseArgs } from "../lib/args.js";
 import { resolveServer, request, normalizeGenerate } from "../lib/client.js";
 import { fileToDataUri, dataUriToFile, defaultOutName, readStdin } from "../lib/files.js";
-import { out, err, die, color, json, exitCodeForError } from "../lib/output.js";
+import { out, die, dieWithError, color, json, exitCodeForError } from "../lib/output.js";
+
+const VALID_MODES = new Set(["auto", "direct"]);
+const VALID_MODERATION = new Set(["auto", "low"]);
+const KNOWN_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex-spark"]);
 
 const SPEC = {
   flags: {
@@ -17,6 +21,10 @@ const SPEC = {
     stdin:     {              type: "boolean" },
     timeout:   {              type: "string", default: "180" },
     server:    {              type: "string" },
+    model:     {              type: "string" },
+    mode:      {              type: "string", default: "auto" },
+    moderation: {              type: "string", default: "low" },
+    session:   {              type: "string" },
     help:      { short: "h", type: "boolean" },
   },
 };
@@ -38,9 +46,14 @@ const HELP = `
         --stdin                              Read prompt from stdin
         --timeout <sec>                     Default: 180
         --server <url>                      Override server URL
+        --model <gpt-5.5|gpt-5.4|gpt-5.4-mini>
+        --mode <auto|direct>                Prompt handling mode. Default: auto
+        --moderation <auto|low>             Default: low
+        --session <id>                      Apply session style sheet if enabled
 
   Examples:
     ima2 gen "a shiba in space"
+    ima2 gen "poster" --model gpt-5.4 --mode direct --moderation low
     ima2 gen "merge" --ref a.png --ref b.png -q high -o out.png
     cat prompt.txt | ima2 gen --stdin -n 2 -d ./out
 `;
@@ -58,6 +71,11 @@ export default async function genCmd(argv) {
 
   const refs = args.ref || [];
   if (refs.length > 5) die(2, "max 5 --ref attachments");
+  if (!VALID_MODES.has(args.mode)) die(2, "--mode must be one of: auto, direct");
+  if (!VALID_MODERATION.has(args.moderation)) die(2, "--moderation must be one of: auto, low");
+  if (args.model && !KNOWN_IMAGE_MODELS.has(args.model)) {
+    die(2, "--model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.3-codex-spark");
+  }
 
   const n = Math.max(1, Math.min(8, parseInt(args.count) || 1));
   const timeoutMs = (parseInt(args.timeout) || 180) * 1000;
@@ -77,6 +95,10 @@ export default async function genCmd(argv) {
     size: args.size,
     n,
     references,
+    model: args.model,
+    mode: args.mode,
+    moderation: args.moderation,
+    sessionId: args.session,
   };
 
   let resp;
@@ -84,7 +106,7 @@ export default async function genCmd(argv) {
     resp = await request(server.base, "/api/generate", { method: "POST", body, timeoutMs });
   } catch (e) {
     if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
-    die(exitCodeForError(e), e.message);
+    dieWithError(e);
   }
 
   const norm = normalizeGenerate(resp);

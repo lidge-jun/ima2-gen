@@ -59,7 +59,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
 export function classifyError(message: string): ImaErrorCode {
   const s = (message || "").toLowerCase();
   if (!s) return "UNKNOWN";
-  if (s.includes("content generation refused") || s.includes("moderation_blocked") || s.includes("moderation refused")) {
+  if (s.includes("moderation_blocked") || s.includes("moderation refused")) {
     return "MODERATION_REFUSED";
   }
   if (
@@ -88,7 +88,7 @@ export function classifyError(message: string): ImaErrorCode {
   ) {
     return "NETWORK_FAILED";
   }
-  if (s.includes("oauth") && (s.includes("not running") || s.includes("unavailable"))) {
+  if (s.includes("oauth") && (s.includes("not running") || s.includes("unavailable") || s.includes("not ready"))) {
     return "OAUTH_UNAVAILABLE";
   }
   if (s.includes("an error occurred while processing") || /\b5\d\d\b/.test(s)) {

@@ -1,3 +1,5 @@
+import { formatErrorWithHint } from "./error-hints.js";
+
 const isTty = process.stdout.isTTY && !process.env.NO_COLOR;
 
 export const color = {
@@ -15,6 +17,10 @@ export function err(msg = "") { process.stderr.write(msg + "\n"); }
 export function die(code, msg) {
   if (msg) err(color.red("✗ ") + msg);
   process.exit(code);
+}
+
+export function dieWithError(e) {
+  die(exitCodeForError(e), formatErrorWithHint(e?.message || String(e), e?.code));
 }
 
 export function json(obj) {
@@ -40,7 +46,11 @@ export function table(rows, columns) {
 export function exitCodeForError(e) {
   if (e.code === "SERVER_UNREACHABLE") return 3;
   if (e.code === "APIKEY_DISABLED") return 4;
+  if (e.code === "AUTH_CHATGPT_EXPIRED" || e.code === "OAUTH_UNAVAILABLE") return 4;
+  if (e.code === "NETWORK_FAILED") return 6;
+  if (e.code === "REF_TOO_LARGE" || e.code === "REF_NOT_BASE64") return 5;
   if (e.code === "SAFETY_REFUSAL") return 7;
+  if (e.code === "MODERATION_REFUSED") return 7;
   if (e.name === "TimeoutError" || /abort/i.test(e.message || "")) return 8;
   if (e.status >= 500) return 6;
   if (e.status >= 400) return 5;

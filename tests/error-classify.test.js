@@ -3,8 +3,12 @@ import assert from "node:assert/strict";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 
 test("moderation refused", () => {
-  assert.equal(classifyUpstreamError("Content generation refused after retries"), "MODERATION_REFUSED");
   assert.equal(classifyUpstreamError("moderation_blocked"), "MODERATION_REFUSED");
+  assert.equal(classifyUpstreamError("moderation refused"), "MODERATION_REFUSED");
+});
+
+test("generic retry wrapper is not treated as moderation", () => {
+  assert.equal(classifyUpstreamError("Content generation refused after retries"), "UNKNOWN");
 });
 
 test("ChatGPT sign-in expired before api-key checks", () => {
@@ -36,6 +40,7 @@ test("upstream 5xx", () => {
 
 test("oauth proxy unavailable", () => {
   assert.equal(classifyUpstreamError("OAuth proxy is not running"), "OAUTH_UNAVAILABLE");
+  assert.equal(classifyUpstreamError("OAuth proxy is not ready yet"), "OAUTH_UNAVAILABLE");
 });
 
 test("falls back to UNKNOWN", () => {

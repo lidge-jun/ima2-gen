@@ -6,6 +6,7 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth } from "../lib/oauthProxy.js";
+import { normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
@@ -150,11 +151,9 @@ export function registerGenerateRoutes(app, ctx) {
             logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
           }
         }
-        const err = new Error("Content generation refused after retries");
-        err.code = "SAFETY_REFUSAL";
-        err.status = 422;
-        err.cause = lastErr;
-        throw err;
+        throw normalizeGenerationFailure(lastErr, {
+          safetyMessage: "Content generation refused after retries",
+        });
       };
 
       const results = await Promise.allSettled(Array.from({ length: count }, generateOne));
@@ -203,11 +202,12 @@ export function registerGenerateRoutes(app, ctx) {
 
       if (images.length === 0) {
         const firstErr = results.find((r) => r.status === "rejected")?.reason;
-        if (firstErr?.code === "SAFETY_REFUSAL") {
+        if (firstErr?.code) {
+          const status = firstErr.status || 500;
           finishStatus = "error";
-          finishHttpStatus = 422;
-          finishErrorCode = "SAFETY_REFUSAL";
-          return res.status(422).json({ error: firstErr.message, code: "SAFETY_REFUSAL" });
+          finishHttpStatus = status;
+          finishErrorCode = firstErr.code;
+          return res.status(status).json({ error: firstErr.message, code: firstErr.code, requestId });
         }
         finishStatus = "error";
         finishHttpStatus = 500;

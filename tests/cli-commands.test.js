@@ -74,7 +74,7 @@ describe("ima2 CLI commands (live server)", () => {
   it("ima2 ping reaches advertised server", async () => {
     const { stdout, code } = await runCLI(["ping"]);
     assert.strictEqual(code, 0);
-    assert.match(stdout, /localhost/);
+    assert.match(stdout, /http:\/\/(?:localhost|127\.0\.0\.1):/);
     assert.match(stdout, /v\d/);
   });
 
@@ -94,6 +94,14 @@ describe("ima2 CLI commands (live server)", () => {
     assert.ok(Array.isArray(obj.jobs));
   });
 
+  it("ima2 ps --terminal --json includes terminal jobs", async () => {
+    const { stdout, code } = await runCLI(["ps", "--terminal", "--json"]);
+    assert.strictEqual(code, 0);
+    const obj = JSON.parse(stdout.trim());
+    assert.ok(Array.isArray(obj.jobs));
+    assert.ok(Array.isArray(obj.terminalJobs));
+  });
+
   it("ima2 gen without prompt exits 2", async () => {
     const { code, stderr } = await runCLI(["gen"]);
     assert.strictEqual(code, 2);
@@ -105,6 +113,20 @@ describe("ima2 CLI commands (live server)", () => {
     assert.strictEqual(code, 0);
     assert.match(stdout, /ima2 gen/);
     assert.match(stdout, /--quality/);
+    assert.match(stdout, /--model/);
+    assert.match(stdout, /--mode/);
+    assert.match(stdout, /--moderation/);
+    assert.match(stdout, /--session/);
+  });
+
+  it("ima2 edit --help prints current payload options", async () => {
+    const { stdout, code } = await runCLI(["edit", "--help"]);
+    assert.strictEqual(code, 0);
+    assert.match(stdout, /ima2 edit/);
+    assert.match(stdout, /--model/);
+    assert.match(stdout, /--mode/);
+    assert.match(stdout, /--moderation/);
+    assert.match(stdout, /--session/);
   });
 
   it("ima2 ls --json works when history empty", async () => {
@@ -121,10 +143,30 @@ describe("ima2 CLI commands (live server)", () => {
     assert.strictEqual(code, 3);
   });
 
+  it("ima2 cancel without requestId exits 2", async () => {
+    const { code, stderr } = await runCLI(["cancel"]);
+    assert.strictEqual(code, 2);
+    assert.match(stderr, /requestId/i);
+  });
+
+  it("ima2 cancel marks a request id canceled", async () => {
+    const { stdout, code } = await runCLI(["cancel", "req_cli_test_cancel"]);
+    assert.strictEqual(code, 0);
+    assert.match(stdout, /canceled req_cli_test_cancel/);
+  });
+
+  it("ima2 cancel --json returns parseable shape", async () => {
+    const { stdout, code } = await runCLI(["cancel", "req_cli_test_cancel_json", "--json"]);
+    assert.strictEqual(code, 0);
+    const obj = JSON.parse(stdout.trim());
+    assert.deepStrictEqual(obj, { ok: true, requestId: "req_cli_test_cancel_json" });
+  });
+
   it("ima2 --help lists new commands", async () => {
     const { stdout, code } = await runCLI(["--help"]);
     assert.strictEqual(code, 0);
     assert.match(stdout, /gen <prompt>/);
     assert.match(stdout, /ping/);
+    assert.match(stdout, /cancel <id>/);
   });
 });

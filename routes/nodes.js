@@ -12,6 +12,7 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
+import { normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { logEvent, logError } from "../lib/logger.js";
@@ -286,13 +287,16 @@ export function registerNodeRoutes(app, ctx) {
       }
 
       if (!b64) {
+        const finalErr = normalizeGenerationFailure(lastErr, {
+          safetyMessage: lastErr?.message || "Empty response after retry",
+        });
         finishStatus = "error";
-        finishHttpStatus = 422;
-        finishErrorCode = "SAFETY_REFUSAL";
+        finishHttpStatus = finalErr.status || 500;
+        finishErrorCode = finalErr.code || "NODE_GEN_FAILED";
         logEvent("node", "final_error", {
           requestId,
           operation,
-          finalCode: "SAFETY_REFUSAL",
+          finalCode: finishErrorCode,
           upstreamCode: lastErr?.code,
           errorEventType: lastErr?.eventType,
           errorEventCount: lastErr?.eventCount,
@@ -302,9 +306,9 @@ export function registerNodeRoutes(app, ctx) {
         });
         return writeNodeError(
           res,
-          422,
-          "SAFETY_REFUSAL",
-          lastErr?.message || "Empty response after retry",
+          finishHttpStatus,
+          finishErrorCode,
+          finalErr.message,
           parentNodeId,
           {
             upstreamCode: lastErr?.code || null,

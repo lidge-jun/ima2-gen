@@ -45,6 +45,21 @@ function saveConfig(config) {
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 }
 
+function loadAdvertisement() {
+  const p = runtimeConfig.storage.advertiseFile;
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+function advertisedServerUrl() {
+  const adv = loadAdvertisement();
+  return adv?.backend?.url || adv?.url || (adv?.port ? `http://localhost:${adv.port}` : null);
+}
+
 function missingRuntimeDeps() {
   const deps = ["express", "better-sqlite3", "openai", "openai-oauth"];
   return deps.filter((dep) => {
@@ -259,8 +274,14 @@ async function doctor() {
   }
 
   // Port availability (simple check)
-  const port = runtimeConfig.server.port;
-  console.log(`  ℹ Default port: ${port}`);
+  const adv = loadAdvertisement();
+  console.log(`  ℹ Preferred backend port: ${runtimeConfig.server.port}`);
+  if (adv?.backend || adv?.port) {
+    console.log(`  ℹ Backend actual URL: ${adv?.backend?.url || adv?.url || `http://localhost:${adv.port}`}`);
+    if (adv?.oauth) {
+      console.log(`  ℹ OAuth actual URL: ${adv.oauth.url} (${adv.oauth.status || "unknown"})`);
+    }
+  }
 
   const storageLines = await buildStorageDoctorLines({
     rootDir: ROOT,
@@ -274,8 +295,7 @@ async function doctor() {
 }
 
 function openBrowser() {
-  const port = runtimeConfig.server.port;
-  const url = `http://localhost:${port}`;
+  const url = advertisedServerUrl() || `http://localhost:${runtimeConfig.server.port}`;
   const res = openUrl(url);
   if (res.ok) {
     console.log(`\n  Opening ${url} ...\n`);
@@ -304,6 +324,7 @@ function showHelp() {
     ls             List recent history            (ima2 ls --help)
     show <name>    Show one history item          (ima2 show --help)
     ps             List active jobs               (ima2 ps --help)
+    cancel <id>    Mark an in-flight job canceled (ima2 cancel --help)
     ping           Ping running server / check health
 
   Options:
@@ -329,7 +350,7 @@ if (args.includes("-v") || args.includes("--version")) {
 }
 
 if ((!command || args.includes("-h") || args.includes("--help"))
-    && !["gen", "edit", "ls", "show", "ps", "ping"].includes(command)) {
+    && !["gen", "edit", "ls", "show", "ps", "cancel", "ping"].includes(command)) {
   showHelp();
   process.exit(command ? 0 : 1);
 }
@@ -364,6 +385,7 @@ switch (command) {
   case "ls":
   case "show":
   case "ps":
+  case "cancel":
   case "ping": {
     const { setCliVersion } = await import("./lib/client.js");
     setCliVersion(pkg.version);

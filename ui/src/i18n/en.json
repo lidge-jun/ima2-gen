@@ -553,12 +553,12 @@
     },
     "networkFailed": {
       "title": "Network connection failed",
-      "body": "Could not reach OpenAI or the local OAuth proxy. Check VPN/firewall and status.openai.com.",
+      "body": "Could not reach OpenAI or the local runtime service. Reload first; if it persists, check VPN/firewall and the port shown by `ima2 doctor`.",
       "cta": "Reload"
     },
     "oauthUnavailable": {
       "title": "OAuth proxy unavailable",
-      "body": "The local OAuth proxy is not running. Restart `ima2 serve` and try again.",
+      "body": "The OAuth proxy is starting, unavailable, or moved to a fallback port. Reload first; if it persists, run `ima2 doctor` and check the reported OAuth URL.",
       "cta": "Reload"
     },
     "apikeyDisabled": {
