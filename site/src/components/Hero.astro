@@ -45,12 +45,13 @@ const crossLangUrl =
   }
   .hero-grid {
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 72px;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 56px;
     align-items: center;
   }
   .hero-text h1 {
-    font-size: 96px;
+    /* Cap at 72px even on wide screens; shrink to 40px on small. Hero column is ~60% width. */
+    font-size: clamp(40px, 5.2vw, 72px);
     margin-bottom: 32px;
     letter-spacing: -0.04em;
   }
@@ -97,7 +98,6 @@ const crossLangUrl =
   @media (max-width: 768px) {
     .hero { padding: 80px 0 72px; }
     .hero-grid { grid-template-columns: 1fr; gap: 36px; }
-    .hero-text h1 { font-size: 56px; }
     .hero-text .sub { font-size: 18px; }
     .hero-shot::before { inset: -8px -12px; }
   }

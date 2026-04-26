@@ -122,14 +122,16 @@ img {
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 0.98;
+  line-height: 1.02;
+  text-wrap: balance;
 }
 
 .h-section {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 1.12;
+  text-wrap: balance;
 }
 
 .h-mono {
@@ -171,7 +173,8 @@ img {
 }
 
 .section-h {
-  font-size: 56px;
+  /* Responsive: 32px on small viewports, up to 56px on wide. Also respects narrow columns. */
+  font-size: clamp(32px, 4.6vw + 8px, 56px);
   margin-bottom: 22px;
   max-width: 820px;
 }
