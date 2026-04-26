@@ -11,6 +11,21 @@ describe("Default prompt injection", () => {
     assert.ok(merged.endsWith("Base image instruction."));
   });
 
+  it("declares all human subjects as fictional AI personas (per user request 2026-04-26)", () => {
+    assert.ok(
+      /fictional AI-generated virtual personas/i.test(DEFAULT_PROMPT_INJECTION),
+      "default prompt must classify all human figures as AI-generated personas",
+    );
+    assert.ok(
+      /not depictions of real, identifiable individuals/i.test(DEFAULT_PROMPT_INJECTION),
+      "default prompt must explicitly say outputs are not real people",
+    );
+    assert.ok(
+      /do not surface this disclaimer as visible text/i.test(DEFAULT_PROMPT_INJECTION),
+      "the cue must stay internal — not rendered into the image",
+    );
+  });
+
   it("keeps the merged prompt free of bypass instructions", () => {
     const merged = withDefaultPrompt("Base image instruction.").toLowerCase();
 
