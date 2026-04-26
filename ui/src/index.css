@@ -2232,6 +2232,43 @@ body {
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-bright, #fff) 18%, transparent);
 }
 
+.node-batch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-2, #1a1a1a);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  color: var(--text, #ddd);
+}
+.node-batch-bar button {
+  background: var(--surface-3, #2a2a2a);
+  color: var(--text, #ddd);
+  border: 1px solid transparent;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.node-batch-bar button[aria-pressed="true"] {
+  background: var(--accent, #4a9eff);
+  color: white;
+}
+.node-batch-bar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.node-batch-bar__meta {
+  font-size: 10px;
+  color: var(--text-muted, #888);
+  white-space: nowrap;
+}
+
 .node-canvas__hint {
   position: absolute;
   bottom: 12px;

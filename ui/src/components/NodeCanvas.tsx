@@ -12,10 +12,12 @@ import {
   type EdgeChange,
   type Connection,
   type OnConnectEnd,
+  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useAppStore, type GraphNode, type GraphEdge } from "../store/useAppStore";
 import { ImageNode } from "./ImageNode";
+import { NodeBatchBar } from "./NodeBatchBar";
 
 function NodeCanvasInner() {
   const nodes = useAppStore((s) => s.graphNodes);
@@ -26,6 +28,8 @@ function NodeCanvasInner() {
   const addChildNodeAt = useAppStore((s) => s.addChildNodeAt);
   const connectNodes = useAppStore((s) => s.connectNodes);
   const deleteNodes = useAppStore((s) => s.deleteNodes);
+  const nodeSelectionMode = useAppStore((s) => s.nodeSelectionMode);
+  const selectNodeGraph = useAppStore((s) => s.selectNodeGraph);
   const sessionLoading = useAppStore((s) => s.sessionLoading);
 
   const { screenToFlowPosition } = useReactFlow();
@@ -71,6 +75,15 @@ function NodeCanvasInner() {
     [deleteNodes],
   );
 
+  const onNodeClick: NodeMouseHandler<GraphNode> = useCallback(
+    (event, node) => {
+      if (!nodeSelectionMode) return;
+      event.preventDefault();
+      selectNodeGraph(node.id, event.metaKey || event.ctrlKey);
+    },
+    [nodeSelectionMode, selectNodeGraph],
+  );
+
   return (
     <main className="node-canvas" ref={wrapperRef}>
       {sessionLoading && <div className="node-canvas__loading">세션 불러오는 중...</div>}
@@ -88,12 +101,17 @@ function NodeCanvasInner() {
             onConnect={onConnect}
             onConnectEnd={onConnectEnd}
             onNodesDelete={onNodesDelete}
+            onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
             connectionRadius={32}
+            selectionOnDrag={nodeSelectionMode}
+            multiSelectionKeyCode={nodeSelectionMode ? null : undefined}
+            panOnDrag={nodeSelectionMode ? [2] : true}
             fitView
-            deleteKeyCode={["Delete", "Backspace"]}
+            deleteKeyCode={nodeSelectionMode ? null : ["Delete", "Backspace"]}
             proOptions={{ hideAttribution: true }}
           >
+            <NodeBatchBar />
             <Background gap={24} color="#2a2a2a" />
             <Controls className="node-canvas__controls" />
             <MiniMap

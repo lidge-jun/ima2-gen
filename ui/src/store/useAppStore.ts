@@ -33,6 +33,18 @@ import { compressImage } from "../lib/image";
 import { snap16 } from "../lib/size";
 import { newClientNodeId, type ClientNodeId } from "../lib/graph";
 import { getNextRootPosition, getNextChildPosition } from "../lib/nodeLayout";
+import {
+  applyComponentSelection,
+  applySelectedNodeIds,
+  getSelectedNodeIds,
+} from "../lib/nodeSelection";
+import {
+  nodeHasImage,
+  topologicalSortSelected,
+  validateBatchDependencies,
+  getUnselectedDownstreamIds,
+  type NodeBatchMode,
+} from "../lib/nodeBatch";
 import type { PresetPayload } from "../lib/presets";
 import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
 
@@ -500,6 +512,17 @@ type AppState = {
   generateNode: (clientId: ClientNodeId) => Promise<void>;
   deleteNode: (clientId: ClientNodeId) => void;
   deleteNodes: (clientIds: ClientNodeId[]) => void;
+
+  // Node batch selection (Phase 4.2 sub-PR 5)
+  nodeSelectionMode: boolean;
+  nodeBatchRunning: boolean;
+  nodeBatchStopping: boolean;
+  toggleNodeSelectionMode: () => void;
+  selectAllGraphNodes: () => void;
+  selectNodeGraph: (clientId: ClientNodeId, additive: boolean) => void;
+  clearNodeSelection: () => void;
+  runNodeBatch: (mode: "missing-only" | "regenerate-all") => Promise<void>;
+  cancelNodeBatch: () => void;
 
   // Sessions (0.06)
   sessions: SessionSummary[];
@@ -1761,6 +1784,102 @@ export const useAppStore = create<AppState>((set, get) => ({
       ],
     });
     get().scheduleGraphSave();
+  },
+
+  // ── Node batch selection ──
+  nodeSelectionMode: false,
+  nodeBatchRunning: false,
+  nodeBatchStopping: false,
+  toggleNodeSelectionMode: () => {
+    const next = !get().nodeSelectionMode;
+    set({
+      nodeSelectionMode: next,
+      // Clear residual selection when turning the mode off — selected
+      // nodes would otherwise stay highlighted but inert.
+      ...(next ? {} : { graphNodes: applySelectedNodeIds(get().graphNodes, []) }),
+    });
+  },
+  selectAllGraphNodes: () => {
+    set({
+      graphNodes: applySelectedNodeIds(
+        get().graphNodes,
+        get().graphNodes.map((n) => n.id),
+      ),
+    });
+  },
+  selectNodeGraph: (clientId, additive) => {
+    set({
+      graphNodes: applyComponentSelection(
+        get().graphNodes,
+        get().graphEdges,
+        clientId,
+        additive,
+      ),
+    });
+  },
+  clearNodeSelection: () => {
+    set({ graphNodes: applySelectedNodeIds(get().graphNodes, []) });
+  },
+  cancelNodeBatch: () => {
+    if (!get().nodeBatchRunning) return;
+    set({ nodeBatchStopping: true });
+    get().showToast("배치 작업을 중지합니다 (현재 진행 중인 노드 완료 후).");
+  },
+  async runNodeBatch(mode) {
+    if (get().nodeBatchRunning) return;
+    const selectedIds = getSelectedNodeIds(get().graphNodes);
+    if (selectedIds.length === 0) {
+      get().showToast("선택된 노드가 없습니다.", true);
+      return;
+    }
+    const blocked = validateBatchDependencies(get().graphNodes, get().graphEdges, selectedIds);
+    if (blocked.length > 0) {
+      get().showToast(
+        `상위 노드가 아직 생성되지 않은 노드 ${blocked.length}개가 있어 실행할 수 없습니다.`,
+        true,
+      );
+      return;
+    }
+    const orderedIds = topologicalSortSelected(get().graphNodes, get().graphEdges, selectedIds);
+    const candidates = orderedIds.filter((id) => {
+      if (mode === "regenerate-all") {
+        // Phase 4.2 sub-PR 5 ships missing-only. In-place regenerate
+        // requires a deeper refactor of generateNode (currently spawns a
+        // sibling when status==='ready') — sub-PR 6 / 7 territory.
+        const node = get().graphNodes.find((n) => n.id === id);
+        return node ? !nodeHasImage(node) : false;
+      }
+      const node = get().graphNodes.find((n) => n.id === id);
+      return node ? !nodeHasImage(node) : false;
+    });
+    if (candidates.length === 0) {
+      get().showToast("실행할 노드가 없습니다 (모두 완료 상태).");
+      return;
+    }
+    set({ nodeBatchRunning: true, nodeBatchStopping: false });
+    let completed = 0;
+    try {
+      for (const clientId of candidates) {
+        if (get().nodeBatchStopping) break;
+        try {
+          await get().generateNode(clientId as ClientNodeId);
+          completed += 1;
+        } catch (err) {
+          console.warn("[node-batch] generation failed:", err);
+          get().showToast(
+            `${completed}/${candidates.length}개 완료 후 실패했습니다.`,
+            true,
+          );
+          break;
+        }
+      }
+      if (completed > 0) {
+        get().showToast(`배치 완료: ${completed}/${candidates.length}개 생성됨`);
+      }
+      get().scheduleGraphSave();
+    } finally {
+      set({ nodeBatchRunning: false, nodeBatchStopping: false });
+    }
   },
 
   setProvider: (provider) => set({ provider }),
