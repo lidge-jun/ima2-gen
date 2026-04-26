@@ -16,7 +16,7 @@ import {
   getHistory,
   getInflight,
   cancelInflight,
-  postNodeGenerate,
+  postNodeGenerateStream,
   setFavorite,
   listSessions as apiListSessions,
   createSession as apiCreateSession,
@@ -382,6 +382,9 @@ export type ImageNodeData = {
   // Resolved generation size ("1024x1024", "1536x1024", ...). Drives the
   // node card aspect ratio so non-square outputs aren't letterboxed.
   size?: string | null;
+  // Latest partial image (data: URL) emitted while the upstream is still
+  // generating. Cleared once the final image arrives.
+  partialImageUrl?: string | null;
 };
 
 export type GraphNode = FlowNode<ImageNodeData>;
@@ -1532,6 +1535,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 pendingPhase: "queued",
                 error: undefined,
                 size,
+                partialImageUrl: null,
               },
             }
           : n,
@@ -1542,24 +1546,58 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().startInFlightPolling();
 
     try {
-      const res = await postNodeGenerate({
-        parentNodeId: parentServerNodeId,
-        prompt,
-        quality: s.quality,
-        size,
-        format: s.format,
-        moderation: s.moderation,
-        requestId: flightId,
-        sessionId: s.activeSessionId,
-        clientNodeId: targetClientId,
-        maxAttempts: s.maxAttempts,
-        ...(s.originalPrompt && s.originalPrompt !== prompt
-          ? { originalPrompt: s.originalPrompt }
-          : {}),
-        ...(s.referenceImages.length && !parentServerNodeId
-          ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
-          : {}),
-      });
+      const res = await postNodeGenerateStream(
+        {
+          parentNodeId: parentServerNodeId,
+          prompt,
+          quality: s.quality,
+          size,
+          format: s.format,
+          moderation: s.moderation,
+          requestId: flightId,
+          sessionId: s.activeSessionId,
+          clientNodeId: targetClientId,
+          maxAttempts: s.maxAttempts,
+          ...(s.originalPrompt && s.originalPrompt !== prompt
+            ? { originalPrompt: s.originalPrompt }
+            : {}),
+          ...(s.referenceImages.length && !parentServerNodeId
+            ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
+            : {}),
+        },
+        {
+          onPartial: (partial) => {
+            set({
+              graphNodes: get().graphNodes.map((n) =>
+                n.id === targetClientId
+                  ? {
+                      ...n,
+                      data: {
+                        ...n.data,
+                        status: "pending",
+                        partialImageUrl: partial.image,
+                        pendingPhase: "partial",
+                      },
+                    }
+                  : n,
+              ),
+            });
+          },
+          onPhase: (phase) => {
+            if (!phase.phase) return;
+            set({
+              graphNodes: get().graphNodes.map((n) =>
+                n.id === targetClientId
+                  ? {
+                      ...n,
+                      data: { ...n.data, pendingPhase: phase.phase ?? n.data.pendingPhase },
+                    }
+                  : n,
+              ),
+            });
+          },
+        },
+      );
       set({
         graphNodes: get().graphNodes.map((n) =>
           n.id === targetClientId
@@ -1572,6 +1610,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                   status: "ready",
                   pendingRequestId: null,
                   pendingPhase: null,
+                  partialImageUrl: null,
                   elapsed: res.elapsed,
                   webSearchCalls: res.webSearchCalls,
                   size: res.size ?? n.data.size ?? size,
@@ -1615,6 +1654,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                   status: "error",
                   pendingRequestId: null,
                   pendingPhase: null,
+                  partialImageUrl: null,
                   error: msg,
                 },
               }
