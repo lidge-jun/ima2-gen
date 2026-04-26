@@ -35,6 +35,7 @@
   --scrim-strong: rgba(0, 0, 0, 0.78);
   --caption-scrim: rgba(0, 0, 0, 0.85);
   --chip-scrim: rgba(0, 0, 0, 0.75);
+  --on-scrim: #f6f7fb;
   --shadow-soft: rgba(0, 0, 0, 0.4);
   --shadow-strong: rgba(0, 0, 0, 0.5);
   --green: #22c55e;
@@ -73,6 +74,7 @@
   --scrim-strong: rgba(15, 19, 26, 0.42);
   --caption-scrim: rgba(15, 19, 26, 0.78);
   --chip-scrim: rgba(15, 19, 26, 0.72);
+  --on-scrim: #f8fafc;
   --shadow-soft: rgba(31, 36, 48, 0.14);
   --shadow-strong: rgba(31, 36, 48, 0.22);
   --green: #1a9a6c;
@@ -2295,11 +2297,12 @@ body {
   transform: translateX(-50%);
   font-family: var(--mono, monospace);
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--on-scrim);
   background: var(--chip-scrim);
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--on-scrim) 16%, transparent);
+  box-shadow: 0 8px 24px var(--shadow-soft);
   pointer-events: none;
   backdrop-filter: blur(4px);
 }
@@ -2458,7 +2461,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-dim);
+  color: var(--on-scrim);
   font-size: 13px;
   font-family: var(--mono, monospace);
   pointer-events: auto;

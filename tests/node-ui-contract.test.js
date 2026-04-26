@@ -81,6 +81,20 @@ describe("node UI compact metadata contract", () => {
     assert.match(en, /"generateTitle":\s*"Generate node image"/);
   });
 
+  it("keeps light-mode canvas overlays readable on dark scrims", () => {
+    const css = readSource("ui/src/index.css");
+    const rootRule = /:root,\s*:root\[data-theme="dark"\]\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const lightRule = /:root\[data-theme="light"\]\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const hintRule = /\.node-canvas__hint\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const loadingRule = /\.node-canvas__loading\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+
+    assert.match(rootRule, /--on-scrim:\s*#f6f7fb/);
+    assert.match(lightRule, /--on-scrim:\s*#f8fafc/);
+    assert.match(hintRule, /color:\s*var\(--on-scrim\)/);
+    assert.match(hintRule, /background:\s*var\(--chip-scrim\)/);
+    assert.match(loadingRule, /color:\s*var\(--on-scrim\)/);
+  });
+
   it("makes node connection handles easier to target", () => {
     const canvas = readSource("ui/src/components/NodeCanvas.tsx");
     const css = readSource("ui/src/index.css");
