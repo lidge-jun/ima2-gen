@@ -7,14 +7,13 @@ import {
   mkdirSync,
   writeFileSync,
   existsSync,
-  readdirSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { findAvailablePort } from "../lib/runtimePorts.js";
 
-const PORT = String(3900 + Math.floor(Math.random() * 100));
 const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-b9-home-"));
-const GEN_DIR = join(process.cwd(), "generated");
+const GEN_DIR = mkdtempSync(join(tmpdir(), "ima2-b9-generated-"));
 const TEST_PREFIX = `b9test_${Date.now()}_`;
 
 async function waitForHealth(base, timeoutMs = 10000) {
@@ -31,11 +30,16 @@ async function waitForHealth(base, timeoutMs = 10000) {
 
 describe("History: delete tombstone + pagination", () => {
   let child;
-  const base = `http://localhost:${PORT}`;
+  let base;
   const createdFiles = [];
   let titledSessionId = null;
 
   before(async () => {
+    const port = String(await findAvailablePort(4300 + Math.floor(Math.random() * 500), {
+      maxAttempts: 200,
+      host: "127.0.0.1",
+    }));
+    base = `http://localhost:${port}`;
     mkdirSync(GEN_DIR, { recursive: true });
     // Seed 3 tiny fake png files (valid PNG signature enough for listImages)
     const pngStub = Buffer.from([
@@ -51,7 +55,8 @@ describe("History: delete tombstone + pagination", () => {
     child = spawn("node", ["server.js"], {
       env: {
         ...process.env,
-        PORT,
+        PORT: port,
+        IMA2_CONFIG_DIR: join(FAKE_HOME, ".ima2"),
         HOME: FAKE_HOME,
         USERPROFILE: FAKE_HOME,
         IMA2_GENERATED_DIR: GEN_DIR,
@@ -86,18 +91,7 @@ describe("History: delete tombstone + pagination", () => {
       await new Promise((r) => child.on("exit", r));
     }
     rmSync(FAKE_HOME, { recursive: true, force: true });
-    for (const fn of createdFiles) {
-      try { rmSync(join(GEN_DIR, fn), { force: true }); } catch {}
-      try { rmSync(join(GEN_DIR, fn + ".json"), { force: true }); } catch {}
-    }
-    const trash = join(GEN_DIR, ".trash");
-    if (existsSync(trash)) {
-      for (const e of readdirSync(trash)) {
-        if (e.includes(TEST_PREFIX)) {
-          try { rmSync(join(trash, e), { force: true }); } catch {}
-        }
-      }
-    }
+    rmSync(GEN_DIR, { recursive: true, force: true });
   });
 
   it("delete moves file to .trash and restore brings it back", async () => {
