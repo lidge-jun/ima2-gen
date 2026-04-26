@@ -39,14 +39,16 @@ export default function App() {
   }, [syncFromStorage]);
 
   useEffect(() => {
+    // visibilitychange fires on every tab focus shift (mobile keyboard, alt-tab,
+    // dev tools), so the beacon would race the active queue and burn If-Match
+    // versions. beforeunload alone covers the only case where the queue cannot
+    // finish on its own — actual page unload.
     const onHide = () => {
       flushGraphSaveBeacon(useAppStore.getState);
     };
     window.addEventListener("beforeunload", onHide);
-    document.addEventListener("visibilitychange", onHide);
     return () => {
       window.removeEventListener("beforeunload", onHide);
-      document.removeEventListener("visibilitychange", onHide);
     };
   }, []);
 

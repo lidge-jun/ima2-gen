@@ -462,7 +462,7 @@ type AppState = {
   renameCurrentSession: (title: string) => Promise<void>;
   deleteSessionById: (id: string) => Promise<void>;
   scheduleGraphSave: () => void;
-  flushGraphSave: () => Promise<void>;
+  flushGraphSave: (reason?: "debounced" | "manual" | "switch-session" | "recovery" | "beforeunload" | "queued") => Promise<void>;
 
   setProvider: (p: Provider) => void;
   setQuality: (q: Quality) => void;
@@ -1123,7 +1123,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   async switchSession(id) {
     set({ sessionLoading: true });
-    await get().flushGraphSave();
+    await get().flushGraphSave("switch-session");
     try {
       const { session } = await apiGetSession(id);
       const { graphNodes, graphEdges, graphVersion } = mapSessionToGraph(session);
@@ -1242,8 +1242,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     scheduleGraphSaveImpl(get, set);
   },
 
-  async flushGraphSave() {
-    await flushGraphSaveImpl(get, set);
+  async flushGraphSave(reason = "manual") {
+    await flushGraphSaveImpl(get, set, reason);
   },
 
   addRootNode: () => {
@@ -1973,9 +1973,38 @@ export const useAppStore = create<AppState>((set, get) => ({
 }));
 
 // ── Graph autosave (module-level debounce) ──
+type GraphSaveReason =
+  | "debounced"
+  | "manual"
+  | "switch-session"
+  | "recovery"
+  | "beforeunload"
+  | "queued";
+type GraphSaveResult = "saved" | "skipped" | "conflict" | "failed";
+
 const SAVE_DEBOUNCE_MS = 800;
+const GRAPH_TAB_ID_KEY = "ima2.graphTabId";
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
-let saveGraphPromise: Promise<void> | null = null;
+let isSavingGraph = false;
+let needsGraphSave = false;
+let activeGraphSavePromise: Promise<void> | null = null;
+let graphSaveSeq = 0;
+
+function getGraphTabId(): string {
+  try {
+    const existing = sessionStorage.getItem(GRAPH_TAB_ID_KEY);
+    if (existing) return existing;
+    const next = `tab_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    sessionStorage.setItem(GRAPH_TAB_ID_KEY, next);
+    return next;
+  } catch {
+    return "tab_unavailable";
+  }
+}
+
+function nextGraphSaveId(): string {
+  return `gs_${Date.now().toString(36)}_${++graphSaveSeq}`;
+}
 
 async function reloadSessionAfterConflict(
   get: () => AppState,
@@ -1990,17 +2019,18 @@ async function reloadSessionAfterConflict(
     graphEdges,
     activeSessionGraphVersion: graphVersion,
   });
-  get().showToast("다른 탭에서 세션이 변경되어 최신 그래프를 다시 불러왔습니다.", true);
+  get().showToast("그래프 버전이 달라져 최신 그래프를 다시 불러왔습니다.", true);
 }
 
-function doSave(
+async function doSave(
   get: () => AppState,
   set: (patch: Partial<AppState>) => void,
-): Promise<void> {
+  reason: GraphSaveReason,
+): Promise<GraphSaveResult> {
   const id = get().activeSessionId;
   const graphVersion = get().activeSessionGraphVersion;
-  if (!id) return Promise.resolve();
-  if (graphVersion == null) return Promise.resolve();
+  if (!id) return "skipped";
+  if (graphVersion == null) return "skipped";
   const { graphNodes, graphEdges } = get();
   const nodes = graphNodes.map((n) => ({
     id: n.id,
@@ -2014,22 +2044,55 @@ function doSave(
     target: e.target,
     data: {},
   }));
-  return saveSessionGraph(id, graphVersion, nodes, edges)
-    .then((res) => {
-      set({ activeSessionGraphVersion: res.graphVersion });
-    })
-    .catch(async (err) => {
-      if ((err as { status?: number }).status === 409) {
-        await reloadSessionAfterConflict(get, set);
-        return;
-      }
-      console.warn("[sessions] save failed:", err);
+  try {
+    const res = await saveSessionGraph(id, graphVersion, nodes, edges, {
+      saveId: nextGraphSaveId(),
+      saveReason: reason,
+      tabId: getGraphTabId(),
     });
+    if (get().activeSessionId !== id) return "skipped";
+    set({ activeSessionGraphVersion: res.graphVersion });
+    return "saved";
+  } catch (err) {
+    if ((err as { status?: number }).status === 409) {
+      await reloadSessionAfterConflict(get, set);
+      return "conflict";
+    }
+    console.warn("[sessions] save failed:", err);
+    return "failed";
+  }
+}
+
+async function runGraphSaveQueue(
+  get: () => AppState,
+  set: (patch: Partial<AppState>) => void,
+  reason: GraphSaveReason,
+): Promise<void> {
+  if (isSavingGraph) {
+    needsGraphSave = true;
+    if (activeGraphSavePromise) await activeGraphSavePromise;
+    return;
+  }
+  isSavingGraph = true;
+  activeGraphSavePromise = (async () => {
+    let nextReason = reason;
+    do {
+      needsGraphSave = false;
+      const result = await doSave(get, set, nextReason);
+      if (result === "conflict" || result === "failed") break;
+      nextReason = "queued";
+    } while (needsGraphSave);
+  })().finally(() => {
+    isSavingGraph = false;
+    activeGraphSavePromise = null;
+  });
+  await activeGraphSavePromise;
 }
 
 function scheduleGraphSaveImpl(
   get: () => AppState,
   set: (patch: Partial<AppState>) => void,
+  reason: GraphSaveReason = "debounced",
 ) {
   const s = get();
   if (!s.activeSessionId) return;
@@ -2037,22 +2100,28 @@ function scheduleGraphSaveImpl(
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    saveGraphPromise = doSave(get, set).finally(() => {
-      saveGraphPromise = null;
-    });
+    void runGraphSaveQueue(get, set, reason);
   }, SAVE_DEBOUNCE_MS);
 }
 
 async function flushGraphSaveImpl(
   get: () => AppState,
   set: (patch: Partial<AppState>) => void,
+  reason: GraphSaveReason = "manual",
 ) {
+  let shouldSaveNow = false;
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
-    await doSave(get, set);
-  } else if (saveGraphPromise) {
-    await saveGraphPromise;
+    shouldSaveNow = true;
+  }
+  if (isSavingGraph) {
+    needsGraphSave = true;
+    if (activeGraphSavePromise) await activeGraphSavePromise;
+    return;
+  }
+  if (shouldSaveNow) {
+    await runGraphSaveQueue(get, set, reason);
   }
 }
 
@@ -2086,6 +2155,9 @@ export function flushGraphSaveBeacon(get: () => AppState): void {
       headers: {
         "Content-Type": "application/json",
         "If-Match": String(s.activeSessionGraphVersion),
+        "X-Ima2-Graph-Save-Id": nextGraphSaveId(),
+        "X-Ima2-Graph-Save-Reason": "beforeunload",
+        "X-Ima2-Tab-Id": getGraphTabId(),
       },
       body,
       keepalive: true,
