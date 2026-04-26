@@ -1,0 +1,52 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  aspect?: string;
+  eager?: boolean;
+}
+
+const { src, alt, caption, aspect, eager = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const cleanSrc = src.replace(/^\//, '');
+const href = `${base}/${cleanSrc}`;
+const loading = eager ? 'eager' : 'lazy';
+const fetchpriority = eager ? 'high' : 'auto';
+---
+
+<figure class="screenshot" style={aspect ? `--shot-aspect: ${aspect};` : undefined}>
+  <img
+    src={href}
+    alt={alt}
+    loading={loading}
+    fetchpriority={fetchpriority}
+    decoding="async"
+  />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .screenshot {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .screenshot img {
+    width: 100%;
+    height: auto;
+    display: block;
+    aspect-ratio: var(--shot-aspect, auto);
+    object-fit: cover;
+  }
+  .screenshot figcaption {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 10px 14px;
+    border-top: 1px solid var(--line);
+    letter-spacing: 0.04em;
+  }
+</style>

@@ -1,0 +1,69 @@
+---
+const items = [
+  {
+    q: 'What does Node mode actually do?',
+    a: 'It treats one good frame as a parent and lets you fan out children — different prompts, different framing, different palettes — without losing the original. Children even recover by request ID after a page refresh.',
+    open: true,
+  },
+  {
+    q: 'Where do my images live?',
+    a: 'Locally. Generated frames and session metadata live in a user-data folder on your disk. Inspect, sync, version — your call. Nothing uploaded to a remote service.',
+  },
+  {
+    q: 'Do I need an OpenAI API key?',
+    a: 'Not for image generation. ima2-gen reuses your local Codex/ChatGPT OAuth session. A key may still be detected for auxiliary paths, but generation itself is OAuth-only.',
+  },
+];
+---
+
+<section class="faq" id="faq">
+  <div class="frame">
+    <div class="section-tag reveal">FAQ</div>
+    <div class="faq-list">
+      {
+        items.map((item) => (
+          <details class="reveal" open={item.open}>
+            <summary>{item.q}</summary>
+            <p>{item.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq { padding: 80px 0; border-bottom: 1px solid var(--line); }
+  .faq-list details {
+    border-bottom: 1px solid var(--line);
+    padding: 22px 0;
+  }
+  .faq-list details:last-of-type { border-bottom: 0; }
+  .faq-list summary {
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text);
+  }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary::after {
+    content: '+';
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .faq-list details[open] summary::after { content: '−'; }
+  .faq-list details p {
+    margin-top: 14px;
+    color: var(--text-dim);
+    font-size: 15px;
+    max-width: 720px;
+    line-height: 1.6;
+  }
+</style>

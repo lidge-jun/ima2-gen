@@ -1,0 +1,70 @@
+---
+import Screenshot from './Screenshot.astro';
+
+const fields = ['medium', 'composition', 'mood', 'subject', 'palette', 'negative'];
+---
+
+<section class="std" id="style">
+  <div class="frame">
+    <div class="section-tag reveal">04 · Visual memory</div>
+    <div class="style-grid">
+      <div class="style-text reveal">
+        <h2 class="h-section section-h">
+          Capture the look. <span class="em">Reuse it everywhere.</span>
+        </h2>
+        <p class="section-lede">
+          Style sheets pin medium, composition, mood, palette, and negatives. References
+          attach up to five inputs and persist across sessions.
+        </p>
+        <ul class="field-list">
+          {fields.map((field) => <li>{field}</li>)}
+        </ul>
+      </div>
+      <div class="style-shot reveal">
+        <Screenshot
+          src="screenshots/style-sheet-editor.png"
+          alt="ima2-gen Style sheet editor with medium, composition, mood, subject, palette, and negative fields."
+          aspect="4/3"
+          eager
+        />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .style-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .style-text .section-lede { margin-bottom: 24px; }
+  .field-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+  }
+  .field-list li {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .field-list li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  @media (max-width: 768px) {
+    .style-grid { grid-template-columns: 1fr; gap: 32px; }
+  }
+</style>

@@ -1,0 +1,207 @@
+:root {
+  --bg: #111111;
+  --bg-soft: #1a1a1a;
+  --panel: #16181b;
+  --line: #2b2f36;
+  --text: #f3f1ec;
+  --text-dim: #b8b2a7;
+  --muted: #8b857b;
+  --accent: #c96f3b;
+  --accent-soft: rgba(201, 111, 59, 0.12);
+
+  --font-display: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Menlo, monospace;
+
+  --max: 1100px;
+  --gutter-d: 32px;
+  --gutter-m: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.frame {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter-d);
+}
+
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+
+.h-section {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.h-mono {
+  font-family: var(--font-mono);
+}
+
+.dim { color: var(--text-dim); }
+.muted { color: var(--muted); }
+.accent { color: var(--accent); }
+.em { color: var(--accent); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  margin-bottom: 22px;
+}
+
+.section-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.section-h {
+  font-size: 52px;
+  margin-bottom: 22px;
+  max-width: 780px;
+}
+
+.section-lede {
+  font-size: 18px;
+  color: var(--text-dim);
+  max-width: 660px;
+  margin-bottom: 56px;
+  line-height: 1.55;
+}
+
+section.std {
+  padding: 104px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Code copy block */
+.codeblock {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.codeblock .cmd {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--text);
+}
+
+.codeblock .cmd .prompt { color: var(--muted); margin-right: 10px; }
+.codeblock .cmd .accent-tok { color: var(--accent); }
+
+.codeblock .copy {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.codeblock .copy:hover,
+.codeblock .copy:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: 0;
+}
+
+.codeblock .copy.copied {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Focus rings */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Subtle on-load fade-in. No scroll-driven reveal — keeps content always rendered
+   for SEO / no-JS / headless capture. Animation only fires once per page load. */
+.reveal {
+  animation: fade-in 480ms ease both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .frame { padding: 0 var(--gutter-m); }
+  section.std { padding: 72px 0; }
+  .section-h { font-size: 36px; }
+  .section-lede { font-size: 16px; margin-bottom: 36px; }
+}

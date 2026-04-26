@@ -1,0 +1,96 @@
+---
+import Screenshot from './Screenshot.astro';
+---
+
+<section class="std" id="branch">
+  <div class="frame">
+    <div class="section-tag reveal">02 · Branching as a workflow</div>
+    <h2 class="h-section section-h reveal">
+      A good frame is a <span class="em">starting point.</span>
+    </h2>
+    <p class="section-lede reveal">
+      Locking the parent and fanning out children is how visual ideas actually develop.
+      ima2-gen makes it the default.
+    </p>
+    <div class="branch-grid">
+      <div class="branch-shot reveal">
+        <Screenshot
+          src="screenshots/node-mode.png"
+          alt="ima2-gen Node mode canvas with a parent node and child branches showing palette, framing, and copy variants."
+          aspect="4/3"
+          eager
+        />
+      </div>
+      <ol class="scenarios reveal" aria-label="Branching scenario steps">
+        <li>
+          <span class="step">01</span>
+          <div class="body">
+            <strong>Generate a parent.</strong> A frame you actually want to keep.
+          </div>
+        </li>
+        <li>
+          <span class="step">02</span>
+          <div class="body">
+            <strong>Fan out children.</strong> Palette swap, tighter crop, alternate copy
+            margin — three nodes, three runs.
+          </div>
+        </li>
+        <li>
+          <span class="step">03</span>
+          <div class="body">
+            <strong>Compare without loss.</strong> The parent stays. Children recover by
+            request ID even after a refresh.
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<style>
+  .branch-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .scenarios {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .scenarios li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .scenarios li:last-child { border-bottom: 0; }
+  .scenarios .step {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    padding-top: 2px;
+    min-width: 32px;
+    letter-spacing: 0.05em;
+  }
+  .scenarios .body {
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .scenarios .body strong {
+    color: var(--text);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .branch-grid { grid-template-columns: 1fr; gap: 32px; }
+    .scenarios .body { font-size: 15px; }
+  }
+</style>

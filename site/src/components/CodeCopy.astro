@@ -1,0 +1,53 @@
+---
+interface Props {
+  command: string;
+  highlight?: string;
+  ariaLabel?: string;
+}
+
+const { command, highlight = 'ima2-gen', ariaLabel } = Astro.props;
+const parts = command.split(highlight);
+---
+
+<div class="codeblock">
+  <span class="cmd">
+    <span class="prompt">$</span>
+    {
+      parts.map((part, i) => (
+        <>
+          {part}
+          {i < parts.length - 1 && <span class="accent-tok">{highlight}</span>}
+        </>
+      ))
+    }
+  </span>
+  <button
+    class="copy"
+    type="button"
+    data-command={command}
+    aria-label={ariaLabel ?? `Copy command: ${command}`}
+  >
+    Copy
+  </button>
+</div>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.codeblock .copy');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = btn.getAttribute('data-command') ?? '';
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        window.setTimeout(() => {
+          btn.textContent = original ?? 'Copy';
+          btn.classList.remove('copied');
+        }, 1400);
+      } catch (err) {
+        console.warn('Clipboard write failed', err);
+      }
+    });
+  });
+</script>

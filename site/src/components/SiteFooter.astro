@@ -1,0 +1,66 @@
+---
+const koReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ko.md';
+const jaReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ja.md';
+const zhReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.zh-CN.md';
+---
+
+<footer class="site-footer">
+  <div class="frame footer-row">
+    <div class="meta">
+      ima2-gen · MIT licensed<br />
+      Branch the images you love.<br />
+      Built local. Documented in the open.
+    </div>
+    <ul class="lang" aria-label="Language READMEs">
+      <li><span aria-current="true">en</span></li>
+      <li><a href={koReadme} target="_blank" rel="noopener">한국어</a></li>
+      <li><a href={jaReadme} target="_blank" rel="noopener">日本語</a></li>
+      <li><a href={zhReadme} target="_blank" rel="noopener">简体中文</a></li>
+    </ul>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    padding: 56px 0 80px;
+  }
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .lang {
+    list-style: none;
+    display: flex;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 0;
+    margin: 0;
+  }
+  .lang li { display: block; }
+  .lang a {
+    color: inherit;
+    border-bottom: 1px dotted var(--line);
+    padding-bottom: 2px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .lang a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .lang span[aria-current] {
+    color: var(--accent);
+    border-bottom: 1px dotted var(--accent);
+    padding-bottom: 2px;
+  }
+</style>

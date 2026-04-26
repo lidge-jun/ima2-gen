@@ -1,0 +1,126 @@
+---
+import CodeCopy from './CodeCopy.astro';
+
+const repoUrl = 'https://github.com/lidge-jun/ima2-gen';
+const npmUrl = 'https://www.npmjs.com/package/ima2-gen';
+const koReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ko.md';
+const jaReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ja.md';
+const zhReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.zh-CN.md';
+---
+
+<section class="std install-section" id="install">
+  <div class="frame">
+    <div class="section-tag reveal">05 · Get going</div>
+    <h2 class="h-section section-h reveal">
+      One command. <span class="em">Then iterate.</span>
+    </h2>
+    <p class="section-lede reveal">
+      Run it with npx. Sign in once with Codex. Start branching.
+    </p>
+    <div class="install-grid">
+      <div class="install-codes reveal">
+        <CodeCopy command="npx ima2-gen serve" />
+        <CodeCopy command="npm install -g ima2-gen" />
+        <CodeCopy command="npx @openai/codex login" highlight="@openai/codex" />
+      </div>
+      <div class="install-meta reveal">
+        <div class="badges">
+          <span class="badge npm">npm v1.1.0</span>
+          <span class="badge">Node ≥20</span>
+          <span class="badge">MIT</span>
+        </div>
+        <ul class="links" aria-label="Project links">
+          <li>
+            <a href={repoUrl} target="_blank" rel="noopener">
+              <span>GitHub repository</span><span class="arrow">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href={npmUrl} target="_blank" rel="noopener">
+              <span>npm package</span><span class="arrow">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href={koReadme} target="_blank" rel="noopener">
+              <span>한국어 README</span><span class="arrow">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href={jaReadme} target="_blank" rel="noopener">
+              <span>日本語 README</span><span class="arrow">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href={zhReadme} target="_blank" rel="noopener">
+              <span>简体中文 README</span><span class="arrow">↗</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .install-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+  }
+  .install-codes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .install-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 4px;
+  }
+  .badges {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--text-dim);
+  }
+  .badge.npm {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0;
+    margin: 0;
+  }
+  .links li { display: block; }
+  .links a {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--text);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .links a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .links a .arrow { color: var(--accent); }
+
+  @media (max-width: 768px) {
+    .install-grid { grid-template-columns: 1fr; gap: 32px; }
+  }
+</style>

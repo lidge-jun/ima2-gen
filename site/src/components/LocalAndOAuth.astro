@@ -1,0 +1,69 @@
+---
+import Screenshot from './Screenshot.astro';
+---
+
+<section class="std" id="local">
+  <div class="frame">
+    <div class="section-tag reveal">03 · Local &amp; open</div>
+    <div class="local-grid">
+      <div class="local-shot reveal">
+        <Screenshot
+          src="screenshots/settings-oauth-generation.png"
+          alt="ima2-gen Settings workspace showing OAuth active and an API key configured but disabled."
+          aspect="4/3"
+          eager
+        />
+      </div>
+      <div class="local-text reveal">
+        <h2 class="h-section section-h">Sign in. <span class="em">Stay local.</span></h2>
+        <p class="section-lede">
+          ima2-gen reuses your existing Codex/ChatGPT login. Generated frames and sessions
+          live on your disk — not on someone else's.
+        </p>
+        <blockquote class="pull-quote">
+          If the settings page says <strong>Configured but disabled</strong>, that means an
+          API key exists in env/config but image generation still uses OAuth.
+        </blockquote>
+        <p class="local-meta">
+          User-data folder · MIT licensed · Inspect, sync, version — your call.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .local-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .local-text .section-lede { margin-bottom: 28px; }
+  .pull-quote {
+    border-left: 2px solid var(--accent);
+    padding: 6px 0 6px 18px;
+    font-size: 17px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-style: italic;
+    margin: 0 0 22px 0;
+    line-height: 1.5;
+  }
+  .pull-quote strong {
+    color: var(--accent);
+    font-style: normal;
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .local-meta {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .local-grid { grid-template-columns: 1fr; gap: 32px; }
+  }
+</style>

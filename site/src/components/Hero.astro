@@ -1,0 +1,82 @@
+---
+import CodeCopy from './CodeCopy.astro';
+import Screenshot from './Screenshot.astro';
+
+const koReadmeUrl = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ko.md';
+---
+
+<section class="hero" id="top">
+  <div class="frame hero-grid">
+    <div class="hero-text reveal">
+      <div class="eyebrow">Local image studio · Classic + Node</div>
+      <h1 class="h-display" id="hero-h1" aria-describedby="hero-sub">
+        Branch the<br />images you<br /><span class="em">love.</span>
+      </h1>
+      <p class="sub" id="hero-sub">
+        An image studio for the way you actually iterate. Generate in Classic, fan out
+        variations in a Node graph — palette, framing, copy — without losing the parent
+        frame.
+      </p>
+      <CodeCopy command="npx ima2-gen serve" />
+      <a class="ko-link" href={koReadmeUrl} target="_blank" rel="noopener">
+        한국어 README →
+      </a>
+    </div>
+    <div class="hero-shot reveal" aria-hidden="false">
+      <Screenshot
+        src="screenshots/classic-generate-light.png"
+        alt="ima2-gen Classic mode showing the prompt composer, generated image, model label, and result metadata."
+        eager
+      />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding: 112px 0 96px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+  .hero-text h1 {
+    font-size: 88px;
+    margin-bottom: 28px;
+  }
+  .hero-text .sub {
+    font-size: 20px;
+    color: var(--text-dim);
+    max-width: 540px;
+    margin-bottom: 36px;
+    line-height: 1.55;
+  }
+  .hero-text .codeblock {
+    margin-bottom: 18px;
+  }
+  .ko-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .ko-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 768px) {
+    .hero { padding: 72px 0 64px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+    .hero-text h1 { font-size: 56px; }
+    .hero-text .sub { font-size: 18px; }
+  }
+</style>

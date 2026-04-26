@@ -1,0 +1,74 @@
+---
+const repoUrl = 'https://github.com/lidge-jun/ima2-gen';
+---
+
+<header class="topbar">
+  <div class="frame row">
+    <a href="#top" class="brand" aria-label="ima2-gen home">
+      <span class="dot" aria-hidden="true"></span>
+      <span>ima2-gen</span>
+    </a>
+    <nav aria-label="Section navigation">
+      <a href="#workflows">Workflows</a>
+      <a href="#branch">Branch</a>
+      <a href="#local">Local</a>
+      <a href="#install">Install</a>
+    </nav>
+    <a class="gh" href={repoUrl} target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</header>
+
+<style>
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(17, 17, 17, 0.78);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    gap: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text);
+  }
+  .brand .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  nav {
+    display: flex;
+    gap: 24px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  nav a:hover { color: var(--text); }
+  .gh {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    border: 1px solid var(--line);
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  .gh:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 640px) {
+    nav { display: none; }
+  }
+</style>
