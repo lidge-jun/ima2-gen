@@ -1,30 +1,27 @@
 ---
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
 const items = [
-  {
-    q: 'What does Node mode actually do?',
-    a: 'It treats one good frame as a parent and lets you fan out children — different prompts, different framing, different palettes — without losing the original. Children even recover by request ID after a page refresh.',
-    open: true,
-  },
-  {
-    q: 'Where do my images live?',
-    a: 'Locally. Generated frames and session metadata live in a user-data folder on your disk. Inspect, sync, version — your call. Nothing uploaded to a remote service.',
-  },
-  {
-    q: 'Do I need an OpenAI API key?',
-    a: 'Not for image generation. ima2-gen reuses your local Codex/ChatGPT OAuth session. A key may still be detected for auxiliary paths, but generation itself is OAuth-only.',
-  },
+  { q: 'faq.q1', a: 'faq.a1', open: true },
+  { q: 'faq.q2', a: 'faq.a2', open: false },
+  { q: 'faq.q3', a: 'faq.a3', open: false },
 ];
 ---
 
 <section class="faq" id="faq">
   <div class="frame">
-    <div class="section-tag reveal">FAQ</div>
+    <div class="section-tag reveal">{t(lang, 'faq.tag')}</div>
     <div class="faq-list">
       {
         items.map((item) => (
           <details class="reveal" open={item.open}>
-            <summary>{item.q}</summary>
-            <p>{item.a}</p>
+            <summary>{t(lang, item.q)}</summary>
+            <p>{t(lang, item.a)}</p>
           </details>
         ))
       }

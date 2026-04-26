@@ -1,29 +1,39 @@
 ---
 import Screenshot from './Screenshot.astro';
+import { t, type Lang } from '../i18n/strings';
 
-const fields = ['medium', 'composition', 'mood', 'subject', 'palette', 'negative'];
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const fields: string[] = [
+  'style.field.medium',
+  'style.field.composition',
+  'style.field.mood',
+  'style.field.subject',
+  'style.field.palette',
+  'style.field.negative',
+];
 ---
 
 <section class="std" id="style">
   <div class="frame">
-    <div class="section-tag reveal">04 · Visual memory</div>
+    <div class="section-tag reveal">{t(lang, 'style.tag')}</div>
     <div class="style-grid">
       <div class="style-text reveal">
         <h2 class="h-section section-h">
-          Capture the look. <span class="em">Reuse it everywhere.</span>
+          {t(lang, 'style.h.before')}<span class="em">{t(lang, 'style.h.em')}</span>
         </h2>
-        <p class="section-lede">
-          Style sheets pin medium, composition, mood, palette, and negatives. References
-          attach up to five inputs and persist across sessions.
-        </p>
+        <p class="section-lede">{t(lang, 'style.lede')}</p>
         <ul class="field-list">
-          {fields.map((field) => <li>{field}</li>)}
+          {fields.map((key) => <li>{t(lang, key)}</li>)}
         </ul>
       </div>
       <div class="style-shot reveal">
         <Screenshot
           src="screenshots/style-sheet-editor.png"
-          alt="ima2-gen Style sheet editor with medium, composition, mood, subject, palette, and negative fields."
+          alt={t(lang, 'style.shot.alt')}
           aspect="4/3"
           eager
         />

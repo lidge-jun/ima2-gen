@@ -6,6 +6,13 @@ export default defineConfig({
   site: 'https://lidge-jun.github.io',
   base: '/ima2-gen/',
   trailingSlash: 'never',
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'ko'],
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
   build: {
     inlineStylesheets: 'auto',
   },

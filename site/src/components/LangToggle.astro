@@ -1,0 +1,70 @@
+---
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  current: Lang;
+}
+
+const { current } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const enHref = `${base}/?lang=en`;
+const koHref = `${base}/ko/?lang=ko`;
+---
+
+<div class="lang-toggle" role="group" aria-label={t(current, 'lang.aria')}>
+  <a
+    href={enHref}
+    aria-current={current === 'en' ? 'page' : undefined}
+    data-lang="en"
+  >EN</a>
+  <span aria-hidden="true">/</span>
+  <a
+    href={koHref}
+    aria-current={current === 'ko' ? 'page' : undefined}
+    data-lang="ko"
+  >KO</a>
+</div>
+
+<script>
+  // Preserve current section anchor across language switch.
+  document.querySelectorAll<HTMLAnchorElement>('.lang-toggle a').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      const hash = window.location.hash;
+      if (!hash) return;
+      e.preventDefault();
+      const url = new URL(a.href);
+      url.hash = hash;
+      window.location.assign(url.toString());
+    });
+  });
+</script>
+
+<style>
+  .lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .lang-toggle a {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 2px 4px;
+    border-bottom: 1px dotted transparent;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .lang-toggle a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .lang-toggle a[aria-current='page'] {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .lang-toggle span {
+    color: var(--muted);
+    user-select: none;
+  }
+</style>

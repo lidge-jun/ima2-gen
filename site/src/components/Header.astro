@@ -1,20 +1,31 @@
 ---
+import { t, type Lang } from '../i18n/strings';
+import LangToggle from './LangToggle.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
 const repoUrl = 'https://github.com/lidge-jun/ima2-gen';
 ---
 
 <header class="topbar">
   <div class="frame row">
-    <a href="#top" class="brand" aria-label="ima2-gen home">
+    <a href="#top" class="brand" aria-label={t(lang, 'header.brand.aria')}>
       <span class="dot" aria-hidden="true"></span>
       <span>ima2-gen</span>
     </a>
-    <nav aria-label="Section navigation">
-      <a href="#workflows">Workflows</a>
-      <a href="#branch">Branch</a>
-      <a href="#local">Local</a>
-      <a href="#install">Install</a>
+    <nav aria-label={t(lang, 'header.nav.aria')}>
+      <a href="#workflows">{t(lang, 'header.nav.workflows')}</a>
+      <a href="#branch">{t(lang, 'header.nav.branch')}</a>
+      <a href="#local">{t(lang, 'header.nav.local')}</a>
+      <a href="#install">{t(lang, 'header.nav.install')}</a>
     </nav>
-    <a class="gh" href={repoUrl} target="_blank" rel="noopener">GitHub ↗</a>
+    <div class="right">
+      <LangToggle current={lang} />
+      <a class="gh" href={repoUrl} target="_blank" rel="noopener">{t(lang, 'header.gh')}</a>
+    </div>
   </div>
 </header>
 
@@ -57,6 +68,11 @@ const repoUrl = 'https://github.com/lidge-jun/ima2-gen';
     color: var(--text-dim);
   }
   nav a:hover { color: var(--text); }
+  .right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
   .gh {
     font-family: var(--font-mono);
     font-size: 12px;

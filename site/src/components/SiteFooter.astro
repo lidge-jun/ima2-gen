@@ -1,5 +1,14 @@
 ---
-const koReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ko.md';
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const enHref = `${base}/?lang=en`;
+const koHref = `${base}/ko/?lang=ko`;
 const jaReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ja.md';
 const zhReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.zh-CN.md';
 ---
@@ -7,13 +16,25 @@ const zhReadme = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.zh
 <footer class="site-footer">
   <div class="frame footer-row">
     <div class="meta">
-      ima2-gen · MIT licensed<br />
-      Branch the images you love.<br />
-      Built local. Documented in the open.
+      {t(lang, 'footer.line1')}<br />
+      {t(lang, 'footer.line2')}<br />
+      {t(lang, 'footer.line3')}
     </div>
-    <ul class="lang" aria-label="Language READMEs">
-      <li><span aria-current="true">en</span></li>
-      <li><a href={koReadme} target="_blank" rel="noopener">한국어</a></li>
+    <ul class="lang" aria-label={t(lang, 'footer.lang.aria')}>
+      <li>
+        {lang === 'en' ? (
+          <span aria-current="true">en</span>
+        ) : (
+          <a href={enHref}>en</a>
+        )}
+      </li>
+      <li>
+        {lang === 'ko' ? (
+          <span aria-current="true">한국어</span>
+        ) : (
+          <a href={koHref}>한국어</a>
+        )}
+      </li>
       <li><a href={jaReadme} target="_blank" rel="noopener">日本語</a></li>
       <li><a href={zhReadme} target="_blank" rel="noopener">简体中文</a></li>
     </ul>

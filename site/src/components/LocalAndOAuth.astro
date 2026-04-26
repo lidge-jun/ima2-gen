@@ -1,32 +1,35 @@
 ---
 import Screenshot from './Screenshot.astro';
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
 ---
 
 <section class="std" id="local">
   <div class="frame">
-    <div class="section-tag reveal">03 · Local &amp; open</div>
+    <div class="section-tag reveal">{t(lang, 'local.tag')}</div>
     <div class="local-grid">
       <div class="local-shot reveal">
         <Screenshot
           src="screenshots/settings-oauth-generation.png"
-          alt="ima2-gen Settings workspace showing OAuth active and an API key configured but disabled."
+          alt={t(lang, 'local.shot.alt')}
           aspect="4/3"
           eager
         />
       </div>
       <div class="local-text reveal">
-        <h2 class="h-section section-h">Sign in. <span class="em">Stay local.</span></h2>
-        <p class="section-lede">
-          ima2-gen reuses your existing Codex/ChatGPT login. Generated frames and sessions
-          live on your disk — not on someone else's.
-        </p>
+        <h2 class="h-section section-h">
+          {t(lang, 'local.h.before')}<span class="em">{t(lang, 'local.h.em')}</span>
+        </h2>
+        <p class="section-lede">{t(lang, 'local.lede')}</p>
         <blockquote class="pull-quote">
-          If the settings page says <strong>Configured but disabled</strong>, that means an
-          API key exists in env/config but image generation still uses OAuth.
+          {t(lang, 'local.quote.before')}<strong>{t(lang, 'local.quote.strong')}</strong>{t(lang, 'local.quote.after')}
         </blockquote>
-        <p class="local-meta">
-          User-data folder · MIT licensed · Inspect, sync, version — your call.
-        </p>
+        <p class="local-meta">{t(lang, 'local.meta')}</p>
       </div>
     </div>
   </div>

@@ -9,18 +9,20 @@ import StyleAndReferences from '../components/StyleAndReferences.astro';
 import InstallFooter from '../components/InstallFooter.astro';
 import FAQ from '../components/FAQ.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+
+const lang = 'en' as const;
 ---
 
-<Base>
-  <Header />
+<Base lang={lang}>
+  <Header lang={lang} />
   <main>
-    <Hero />
-    <TwoWorkflows />
-    <WhyBranch />
-    <LocalAndOAuth />
-    <StyleAndReferences />
-    <InstallFooter />
-    <FAQ />
+    <Hero lang={lang} />
+    <TwoWorkflows lang={lang} />
+    <WhyBranch lang={lang} />
+    <LocalAndOAuth lang={lang} />
+    <StyleAndReferences lang={lang} />
+    <InstallFooter lang={lang} />
+    <FAQ lang={lang} />
   </main>
-  <SiteFooter />
+  <SiteFooter lang={lang} />
 </Base>

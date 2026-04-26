@@ -1,31 +1,36 @@
 ---
 import CodeCopy from './CodeCopy.astro';
 import Screenshot from './Screenshot.astro';
+import { t, type Lang } from '../i18n/strings';
 
-const koReadmeUrl = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ko.md';
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const crossLangUrl =
+  lang === 'en'
+    ? 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README.ko.md'
+    : 'https://lidge-jun.github.io/ima2-gen/?lang=en';
 ---
 
 <section class="hero" id="top">
   <div class="frame hero-grid">
     <div class="hero-text reveal">
-      <div class="eyebrow">Local image studio · Classic + Node</div>
+      <div class="eyebrow">{t(lang, 'hero.eyebrow')}</div>
       <h1 class="h-display" id="hero-h1" aria-describedby="hero-sub">
-        Branch the<br />images you<br /><span class="em">love.</span>
+        {t(lang, 'hero.h1.line1')}<br />{t(lang, 'hero.h1.line2')}<br /><span class="em">{t(lang, 'hero.h1.em')}</span>
       </h1>
-      <p class="sub" id="hero-sub">
-        An image studio for the way you actually iterate. Generate in Classic, fan out
-        variations in a Node graph — palette, framing, copy — without losing the parent
-        frame.
-      </p>
-      <CodeCopy command="npx ima2-gen serve" />
-      <a class="ko-link" href={koReadmeUrl} target="_blank" rel="noopener">
-        한국어 README →
+      <p class="sub" id="hero-sub">{t(lang, 'hero.sub')}</p>
+      <CodeCopy command={t(lang, 'hero.cta.cmd')} />
+      <a class="ko-link" href={crossLangUrl} target={lang === 'en' ? '_blank' : undefined} rel={lang === 'en' ? 'noopener' : undefined}>
+        {t(lang, 'hero.cross.lang')}
       </a>
     </div>
-    <div class="hero-shot reveal" aria-hidden="false">
+    <div class="hero-shot reveal">
       <Screenshot
         src="screenshots/classic-generate-light.png"
-        alt="ima2-gen Classic mode showing the prompt composer, generated image, model label, and result metadata."
+        alt={t(lang, 'hero.shot.alt')}
         eager
       />
     </div>
@@ -53,9 +58,6 @@ const koReadmeUrl = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/README
     max-width: 540px;
     margin-bottom: 36px;
     line-height: 1.55;
-  }
-  .hero-text .codeblock {
-    margin-bottom: 18px;
   }
   .ko-link {
     display: inline-flex;

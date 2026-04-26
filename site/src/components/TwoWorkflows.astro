@@ -1,48 +1,46 @@
 ---
 import Screenshot from './Screenshot.astro';
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
 ---
 
 <section class="std" id="workflows">
   <div class="frame">
-    <div class="section-tag reveal">01 · Two ways to make</div>
+    <div class="section-tag reveal">{t(lang, 'workflows.tag')}</div>
     <h2 class="h-section section-h reveal">
-      Two ways to make. <span class="em">One way to branch.</span>
+      {t(lang, 'workflows.h.before')}<span class="em">{t(lang, 'workflows.h.em')}</span>
     </h2>
-    <p class="section-lede reveal">
-      Classic for one strong frame. Node for a tree of variations from a parent you locked
-      in. Pick the workflow your idea wants.
-    </p>
+    <p class="section-lede reveal">{t(lang, 'workflows.lede')}</p>
     <div class="workflows-grid">
       <article class="workflow-card reveal">
         <Screenshot
           src="screenshots/classic-mode.png"
-          alt="ima2-gen Classic mode with prompt composer, references, and a generated team portrait."
+          alt={t(lang, 'workflows.classic.alt')}
           aspect="16/10"
           eager
         />
         <div class="workflow-meta">
-          <div class="label">Classic</div>
-          <h3>One prompt, one strong frame.</h3>
-          <p>
-            Write, attach up to five references, generate. Iterate until it lands. Continue
-            from any result.
-          </p>
+          <div class="label">{t(lang, 'workflows.classic.label')}</div>
+          <h3>{t(lang, 'workflows.classic.h')}</h3>
+          <p>{t(lang, 'workflows.classic.body')}</p>
         </div>
       </article>
       <article class="workflow-card reveal">
         <Screenshot
           src="screenshots/node-graph-branching.png"
-          alt="ima2-gen Node mode with connected generated cards and per-node metadata."
+          alt={t(lang, 'workflows.node.alt')}
           aspect="16/10"
           eager
         />
         <div class="workflow-meta">
-          <div class="label">Node</div>
-          <h3>One frame, ten directions.</h3>
-          <p>
-            Lock a parent. Fan out children — palette, framing, copy. Compare side by side.
-            Never lose the original.
-          </p>
+          <div class="label">{t(lang, 'workflows.node.label')}</div>
+          <h3>{t(lang, 'workflows.node.h')}</h3>
+          <p>{t(lang, 'workflows.node.body')}</p>
         </div>
       </article>
     </div>

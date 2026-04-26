@@ -1,45 +1,47 @@
 ---
 import Screenshot from './Screenshot.astro';
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
 ---
 
 <section class="std" id="branch">
   <div class="frame">
-    <div class="section-tag reveal">02 · Branching as a workflow</div>
+    <div class="section-tag reveal">{t(lang, 'branch.tag')}</div>
     <h2 class="h-section section-h reveal">
-      A good frame is a <span class="em">starting point.</span>
+      {t(lang, 'branch.h.before')}<span class="em">{t(lang, 'branch.h.em')}</span>
     </h2>
-    <p class="section-lede reveal">
-      Locking the parent and fanning out children is how visual ideas actually develop.
-      ima2-gen makes it the default.
-    </p>
+    <p class="section-lede reveal">{t(lang, 'branch.lede')}</p>
     <div class="branch-grid">
       <div class="branch-shot reveal">
         <Screenshot
           src="screenshots/node-mode.png"
-          alt="ima2-gen Node mode canvas with a parent node and child branches showing palette, framing, and copy variants."
+          alt={t(lang, 'branch.shot.alt')}
           aspect="4/3"
           eager
         />
       </div>
-      <ol class="scenarios reveal" aria-label="Branching scenario steps">
+      <ol class="scenarios reveal" aria-label={t(lang, 'branch.scenarios.aria')}>
         <li>
           <span class="step">01</span>
           <div class="body">
-            <strong>Generate a parent.</strong> A frame you actually want to keep.
+            <strong>{t(lang, 'branch.s1.strong')}</strong> {t(lang, 'branch.s1.body')}
           </div>
         </li>
         <li>
           <span class="step">02</span>
           <div class="body">
-            <strong>Fan out children.</strong> Palette swap, tighter crop, alternate copy
-            margin — three nodes, three runs.
+            <strong>{t(lang, 'branch.s2.strong')}</strong> {t(lang, 'branch.s2.body')}
           </div>
         </li>
         <li>
           <span class="step">03</span>
           <div class="body">
-            <strong>Compare without loss.</strong> The parent stays. Children recover by
-            request ID even after a refresh.
+            <strong>{t(lang, 'branch.s3.strong')}</strong> {t(lang, 'branch.s3.body')}
           </div>
         </li>
       </ol>
@@ -58,7 +60,6 @@ import Screenshot from './Screenshot.astro';
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 0;
     margin: 0;
     padding: 0;
   }
