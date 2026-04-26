@@ -10,12 +10,20 @@ const REQUIRED_PACK_FILES = [
   "docs/RECOVER_OLD_IMAGES.md",
   "server.js",
   "config.js",
+  "routes/cardNews.js",
   "routes/storage.js",
+  "lib/cardNewsTemplateStore.js",
   "lib/openDirectory.js",
   "lib/storageMigration.js",
   "bin/ima2.js",
   "bin/lib/storage-doctor.js",
   "ui/dist/index.html",
+  "assets/card-news/templates/academy-lesson-square/template.json",
+  "assets/card-news/templates/academy-lesson-square/base.png",
+  "assets/card-news/templates/academy-lesson-square/preview.png",
+  "assets/card-news/templates/clean-report-square/template.json",
+  "assets/card-news/templates/clean-report-square/base.png",
+  "assets/card-news/templates/clean-report-square/preview.png",
 ];
 
 function npmCommand() {

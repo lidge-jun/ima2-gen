@@ -109,6 +109,32 @@ test("nested legacy folders are copied once and skipped on repeat", async () => 
   });
 });
 
+test("card news generated sets are copied once and skipped on repeat", async () => {
+  await withTempDirs(async ({ rootDir, targetDir }) => {
+    const setDir = join(rootDir, "generated", "cardnews", "cs_test_release");
+    await mkdir(setDir, { recursive: true });
+    await writeFile(join(setDir, "manifest.json"), JSON.stringify({ setId: "cs_test_release" }));
+    await writeFile(join(setDir, "card-01.json"), JSON.stringify({ cardId: "card-01" }));
+    await writeFile(join(setDir, "card-01.png"), "png");
+
+    const ctx = makeCtx(rootDir, targetDir);
+    const first = await migrateGeneratedStorage(ctx, {
+      legacyDirs: [join(rootDir, "generated")],
+    });
+    const second = await migrateGeneratedStorage(ctx, {
+      legacyDirs: [join(rootDir, "generated")],
+    });
+
+    const migratedSetDir = join(targetDir, "cardnews", "cs_test_release");
+    assert.equal(first.copied, 3);
+    assert.equal(second.copied, 0);
+    assert.equal(second.skippedExisting, 3);
+    assert.equal(await readFile(join(migratedSetDir, "manifest.json"), "utf8"), JSON.stringify({ setId: "cs_test_release" }));
+    assert.equal(await readFile(join(migratedSetDir, "card-01.json"), "utf8"), JSON.stringify({ cardId: "card-01" }));
+    assert.equal(await readFile(join(migratedSetDir, "card-01.png"), "utf8"), "png");
+  });
+});
+
 test("target and target-parent candidates are skipped to prevent recursive moves", async () => {
   await withTempDirs(async ({ rootDir, targetDir }) => {
     const sourceDir = join(rootDir, "generated");

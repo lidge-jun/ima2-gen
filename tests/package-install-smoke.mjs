@@ -77,7 +77,7 @@ function killServer(child) {
   });
 }
 
-test("packaged tarball installs and serves core status routes", async () => {
+test("packaged tarball installs, serves core status routes, and keeps Card News gated", async () => {
   const root = mkdtempSync(join(tmpdir(), "ima2-package-install-"));
   const packDir = join(root, "pack");
   const projectDir = join(root, "project");
@@ -148,8 +148,53 @@ test("packaged tarball installs and serves core status routes", async () => {
     assert.equal(storage.ok, true);
     assert.equal(typeof storage.data.generatedDirLabel, "string");
 
+    const cardNewsDefault = await fetch(
+      `http://127.0.0.1:${port}/api/cardnews/image-templates`,
+    );
+    assert.equal(cardNewsDefault.status, 404);
+
     const advertised = JSON.parse(readFileSync(join(configDir, "server.json"), "utf8"));
     assert.equal(advertised.port, port);
+
+    await killServer(child);
+    child = null;
+
+    const cardNewsPort = await freePort();
+    const cardNewsLogs = { stdout: "", stderr: "" };
+    child = spawn(process.execPath, [cliPath, "serve"], {
+      cwd: packageRoot,
+      env: {
+        ...env,
+        IMA2_CARD_NEWS: "1",
+        IMA2_PORT: String(cardNewsPort),
+        PORT: String(cardNewsPort),
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout.on("data", (chunk) => {
+      cardNewsLogs.stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      cardNewsLogs.stderr += chunk.toString();
+    });
+
+    const templates = await waitForJson(
+      `http://127.0.0.1:${cardNewsPort}/api/cardnews/image-templates`,
+      child,
+      cardNewsLogs,
+    );
+    assert.ok(Array.isArray(templates.templates));
+    assert.ok(
+      templates.templates.some((template) => template.id === "clean-report-square"),
+    );
+
+    const preview = await fetch(
+      `http://127.0.0.1:${cardNewsPort}/api/cardnews/image-templates/clean-report-square/preview`,
+    );
+    assert.equal(preview.status, 200);
+    assert.match(preview.headers.get("content-type") || "", /image\/png/);
+    const previewBytes = await preview.arrayBuffer();
+    assert.ok(previewBytes.byteLength > 1000);
   } finally {
     if (child) await killServer(child);
     rmSync(root, { recursive: true, force: true });

@@ -17,7 +17,7 @@
     "test": "node scripts/run-tests.mjs",
     "test:package-install": "node --test tests/package-install-smoke.mjs",
     "setup": "node bin/ima2.js setup",
-    "prepublishOnly": "npm run build && npm run lint:pkg",
+    "prepublishOnly": "npm test && npm run build && npm run test:package-install && npm run lint:pkg",
     "lint:pkg": "node -e \"const p=require('./package.json'); const req=['name','version','bin']; for(const k of req){if(!p[k])throw new Error('missing '+k)} const mustInclude=['bin/','lib/','routes/','server.js']; for(const f of mustInclude){if(!p.files.includes(f))throw new Error('files[] must include '+f)}\"",
     "release:patch": "npm version patch && npm publish && git push origin main --tags",
     "release:minor": "npm version minor && npm publish && git push origin main --tags",

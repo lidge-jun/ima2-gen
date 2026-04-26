@@ -28,6 +28,9 @@ jobs:
         run: npm --prefix ui run build
       - name: Run tests
         run: npm test
+      - name: Test package install
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
+        run: npm run test:package-install
       - name: Lint package.json
         if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
         run: npm run lint:pkg
