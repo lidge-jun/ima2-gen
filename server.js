@@ -9,7 +9,7 @@ import { existsSync, writeFileSync, unlinkSync, mkdirSync, readFileSync as fsRea
 import { homedir } from "os";
 import { randomBytes } from "crypto";
 import { newNodeId, saveNode, loadNodeB64, loadNodeMeta, loadAssetB64 } from "./lib/nodeStore.js";
-import { startJob, finishJob, listJobs, setJobPhase, setJobAttempt, getJob } from "./lib/inflight.js";
+import { startJob, finishJob, listJobs, setJobPhase, setJobAttempt, getJob, purgeStaleJobs } from "./lib/inflight.js";
 import {
   createSession,
   listSessions,
@@ -1837,5 +1837,14 @@ app.listen(PORT, () => {
     console.log(`[db] default session: ${s.id} (${s.title}) owner=${s.owner}`);
   } catch (err) {
     console.error("[db] bootstrap failed:", err.message);
+  }
+  // Inflight rows whose original fetch died with the previous process
+  // are not recoverable — drop everything older than the configured TTL
+  // before clients start polling /api/inflight.
+  try {
+    const purged = purgeStaleJobs();
+    if (purged > 0) console.log(`[inflight] purged ${purged} stale job(s) at startup`);
+  } catch (err) {
+    console.error("[inflight] startup purge failed:", err.message);
   }
 });

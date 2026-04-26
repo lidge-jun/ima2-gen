@@ -1,16 +1,30 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import {
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+// Inflight is now SQLite-backed (Phase 2.4); point it at a throwaway DB
+// so tests do not touch the user's ~/.ima2/sessions.db.
+const tmpDir = mkdtempSync(join(tmpdir(), "ima2-inflight-attempt-"));
+process.env.IMA2_DB_PATH = join(tmpDir, "sessions.db");
+
+const {
   startJob,
   setJobAttempt,
   setJobPhase,
   finishJob,
   listJobs,
   _resetForTests,
-} from "../lib/inflight.js";
+} = await import("../lib/inflight.js");
+const { closeDb } = await import("../lib/db.js");
 
 describe("inflight attempt tracking", () => {
   beforeEach(() => _resetForTests());
+  after(() => {
+    closeDb();
+    try { rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+  });
 
   it("startJob initializes attempt=1 and the requested maxAttempts", () => {
     startJob({ requestId: "r1", kind: "classic", prompt: "hello", maxAttempts: 3 });

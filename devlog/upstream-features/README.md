@@ -34,7 +34,7 @@
 | 2.1 | **에러 분류 + ErrorCard** | pending | `4b89901` | - | `lib/errorClassify.js`로 OpenAI 응답 분류 → 카드형 안내 UI. 우선순위: `MODERATION_REFUSED > AUTH_CHATGPT_EXPIRED > AUTH_API_KEY_INVALID > NETWORK_FAILED > UPSTREAM_5XX` |
 | 2.2 | **클라이언트 ref 압축** | pending | `9f9fe53` | - | canvas 리사이즈 + JPEG ladder 0.85→0.7→0.55, longest edge 4096px 캡 (iOS Safari) |
 | 2.3 | **config 중앙화** | pending | `170f29e` `355bc98` `d09f9d3` | - | `config.js` 단일 모듈, `IMA2_*` env + `config.json` 머지 |
-| 2.4 | **Inflight job 영속화 강화** | pending | `b9bf597` `a13773d` | - | 우리 `7ae92e9` 위에 sidecar 메타 보존 + 진행 중 작업 복구 |
+| 2.4 | **Inflight job 영속화 (server-side)** | done | `b9bf597` | (PR 작성 중) | `lib/inflight.js` SQLite-backed 전환 + schema 2→3 마이그레이션. `tb_inflight` 컬럼: owner/attempt/max_attempts 우리 필드 보존. 부팅 시 `purgeStaleJobs()` 1회. `[inflight.start/phase/attempt/finish/purge_stale]` 로깅. UI 복구 메타(`a13773d`)는 Phase 4.2 같이 |
 
 ### Phase 3 — 큰 기능 (L)
 
