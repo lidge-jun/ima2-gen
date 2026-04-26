@@ -181,10 +181,10 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - [ ] If `ImageNodeData` shape changes, check session save, restore, and API types.
 - [ ] If `/api/node/generate` response changes, update `ui/src/lib/api.ts` and this doc.
 - [ ] If graph save policy changes, check `If-Match` version behavior and tests.
-- [ ] If node selection or batch generation changes, update `ui/src/lib/nodeSelection.ts`, `ui/src/lib/nodeBatch.ts`, and `tests/node-batch-contract.test.js`.
-- [ ] If edge disconnect behavior changes, update `NodeCanvas`, `useAppStore.disconnectEdges`, and `tests/node-edge-disconnect-contract.test.js`.
-- [ ] If single-node regeneration or variation behavior changes, update `ImageNode`, custom-size continuation routing, and `tests/node-regen-actions-contract.test.js`.
-- [ ] If node-local reference behavior changes, update child/edit reference handling and `tests/node-child-refs-contract.test.js`.
+- [x] Node selection and batch generation implemented 260426; reference `ui/src/lib/nodeSelection.ts`, `ui/src/lib/nodeBatch.ts`, and `tests/node-batch-contract.test.js`.
+- [x] Edge disconnect implemented 260426; reference `NodeCanvas`, `useAppStore.disconnectEdges`, and `tests/node-edge-disconnect-contract.test.js`.
+- [x] Single-node regeneration and variation implemented 260426; reference `ImageNode`, custom-size continuation routing, and `tests/node-regen-actions-contract.test.js`.
+- [x] Node-local references on child/edit nodes implemented 260426; reference child/edit reference handling and `tests/node-child-refs-contract.test.js`.
 - [ ] If asset delete/restore changes, review `asset-missing` state and history docs.
 - [x] Node mode is part of the npm-published UI by default; update build/package rules in `[[06-infra-operations]]` if this gate changes.
 
@@ -199,6 +199,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-23: Documented the implemented node canvas, node API, and session persistence structure.
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-25: Documented graph-edge source-of-truth, node-local reference persistence, and explicit context/search modes.
+- 2026-04-26: Marked node selection batch, edge disconnect, single-node regen/variation, and child node references as implemented in the change checklist after archival to `_fin/260426_*`.
 
 Previous document: `[[04-frontend-architecture]]`
 

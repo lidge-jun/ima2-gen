@@ -136,6 +136,7 @@ Error handling is centralized. API helpers preserve `err.code` where the server 
 - 2026-04-25: Documented ready-node regenerate/new-variant split, position-based child layout, and child/edit node references.
 - 2026-04-25: Documented graph-edge-derived node parentage, node ref local persistence, and explicit node context/search request policy.
 - 2026-04-26: Removed dev-only workspace details from the evergreen frontend architecture reference.
+- 2026-04-26: Confirmed node selection batch, edge disconnect, single-node regen/variation, and child node references are implemented and archived under `_fin/260426_*`.
 
 Previous document: `[[03-server-api]]`
 
