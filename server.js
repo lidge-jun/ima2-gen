@@ -34,6 +34,7 @@ import {
   validateCount,
   validateSize,
 } from "./lib/validate.js";
+import { createRequestLogger } from "./lib/requestLogger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -90,7 +91,32 @@ function canAccess(meta, authUser) {
   return ownerOf(meta) === authUser;
 }
 
-app.use(express.static(join(__dirname, "ui", "dist")));
+// Structured /api/* request logging (echoes/issues X-Request-Id, redacts body
+// and query). Mounted after the auth-user middleware so authUser is captured.
+app.use(createRequestLogger());
+
+// UI bundle cache policy: index.html must never be cached (so a redeploy is
+// picked up immediately), but the hashed /assets/* files are content-addressed
+// and safe to mark immutable for a year.
+function setUiStaticHeaders(res, filePath) {
+  const normalized = filePath.replace(/\\/g, "/");
+  if (normalized.endsWith("/index.html")) {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    return;
+  }
+  if (normalized.includes("/assets/")) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  }
+}
+app.use(express.static(join(__dirname, "ui", "dist"), {
+  setHeaders: setUiStaticHeaders,
+}));
+// If a hashed asset path falls through (old browser tab requesting a bundle
+// that no longer exists post-deploy), return 404 instead of letting the SPA
+// fallback ship index.html as text/javascript.
+app.use("/assets", (_req, res) => {
+  res.status(404).type("text/plain").send("Asset not found");
+});
 
 // /generated is owner-gated when X-Auth-User is set. Sidecar JSON drives ACL.
 const GENERATED_DIR = join(__dirname, "generated");

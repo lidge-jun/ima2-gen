@@ -18,7 +18,7 @@
 
 | # | 기능 | 상태 | upstream commit | 우리 PR | 노트 |
 |---|------|------|-----------------|---------|------|
-| 1.1 | **Server 요청 로깅 + stale asset guard** | pending | `31a8bbd` | - | 모든 요청 method/path/status 로그, generated 디렉토리 오래된 파일 정리 |
+| 1.1 | **Server 요청 로깅 + stale asset guard** | in-progress | `31a8bbd` | (PR 작성 중) | `/api/*` 요청 로깅(redact body/query, X-Request-Id echo), UI bundle cache(no-store index + immutable assets + /assets 404 fallback). generated/ TTL은 별도 이슈로 분리 |
 | 1.2 | **Validator 에러 코드** | pending | `9f9fe53` | - | `REF_*` 6코드, 400 응답에 코드 포함 |
 | 1.3 | **Custom size 확인 다이얼로그** | pending | `d0f8dba` | - | custom size 입력 후 생성 전 확인 |
 | 1.4 | **Session graph 저장 충돌 방어** | pending | `c301a2b` | - | 같은 세션 동시 저장 시 last-write 보호 (멀티탭) |
