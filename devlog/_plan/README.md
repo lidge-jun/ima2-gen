@@ -24,7 +24,8 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 4 | `0.10-feature-expansion/` | queued | preset, compare, card-news, export bundle. |
 | 5 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
 | 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
-| 7 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
+| 8 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 
 ## 완료로 이동한 항목
 

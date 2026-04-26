@@ -57,6 +57,20 @@ Update to the latest version. Older versions had trouble spawning npm/npx shims 
 
 If Codex login itself is unreliable on native Windows, WSL can be the more predictable environment.
 
+### Windows says `EBUSY` or `resource busy or locked` during update. What should I do?
+
+This usually means npm cannot replace the global package because a running
+`ima2 serve`, stale `node.exe`, terminal, Explorer window, antivirus, or indexer
+still holds the package folder. Stop ima2, close related terminals, end stale
+`node.exe` processes if needed, then retry:
+
+```bash
+npm install -g ima2-gen@latest
+```
+
+If the lock persists, reboot Windows and run the update before starting ima2
+again.
+
 ## Authentication and providers
 
 ### Do I need an OpenAI API key?
@@ -145,6 +159,12 @@ No. The migration is copy-only. It does not delete or move legacy folders. If ol
 The gallery's **Open folder** button opens the generated image folder on the machine running `ima2 serve`.
 
 That is usually your own computer. If you are using a remote server, SSH session, VM, container, WSL, or another machine on your network, the folder opens or resolves on that server machine, not necessarily on the browser device.
+
+### Is Card News part of the stable public release?
+
+Not yet. Card News is still dev-only and experimental. The default published
+runtime should keep it hidden unless it is explicitly enabled for development,
+and public docs should not treat it as a stable feature.
 
 ## Reference images
 

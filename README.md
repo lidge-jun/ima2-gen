@@ -38,6 +38,11 @@ npm install -g ima2-gen
 ima2 serve
 ```
 
+Before updating a global install on Windows, stop any running `ima2 serve`
+process. If npm reports `EBUSY` or `resource busy or locked`, close ima2
+terminals, end stale `node.exe` processes if needed, and retry. If the lock
+persists, reboot and run the update before starting ima2 again.
+
 ## What It Does
 
 - **Classic mode**: generate, edit, reuse the current image, paste references, and continue from history.
@@ -85,6 +90,12 @@ Use Node mode when you want to explore branches.
 ![Node mode with connected generated cards and compact per-node metadata.](assets/screenshots/node-graph-branching.png)
 
 Each node keeps its own prompt and result. Root nodes can attach local references; child nodes use the parent image as their source. Completed jobs are matched back to nodes by request ID, so reloads and graph version conflicts can recover finished results.
+
+### Experimental Card News Mode
+
+Card News is still dev-only and experimental. It is hidden in the default
+published runtime unless explicitly enabled for development, and it should not
+be treated as a stable public feature yet.
 
 ### Settings And Style Sheets
 

@@ -140,10 +140,10 @@ const en: Dict = {
     'Open Terminal (macOS / Linux) or PowerShell (Windows). Install globally with `npm install -g ima2-gen`, then run `ima2 serve`. Open `http://localhost:3333` in your browser.',
   'faq.install.q3': 'What is npm? Is there a one-click install?',
   'faq.install.a3':
-    '`npm` is the Node.js package manager. If you do not have it, paste the one-line installer for your OS — it sets up Node, `ima2-gen`, and starts the server in one go.',
+    '`npm` is the Node.js package manager. If you do not have it, use the installer for your OS — it helps set up Node when needed, installs `ima2-gen`, and starts the server.',
   'faq.install.q4': 'Does it work on Windows / PowerShell?',
   'faq.install.a4':
-    'Yes. Windows 10+ with `PowerShell 5.1` or `PowerShell 7` are supported. The installer script is served via raw GitHub URL and prints every command before running it.',
+    'Yes. Windows 10+ with `PowerShell 5.1` or `PowerShell 7` are supported. The public installer script is served from GitHub Pages and prints every command before running it.',
 
   'faq.usage.q1': 'How many images can I generate at once?',
   'faq.usage.a1':
@@ -316,10 +316,10 @@ const ko: Dict = {
     '터미널(macOS / Linux) 또는 PowerShell(Windows)을 엽니다. `npm install -g ima2-gen`으로 전역 설치하고 `ima2 serve`로 실행하세요. 브라우저에서 `http://localhost:3333`을 열면 됩니다.',
   'faq.install.q3': 'npm이 뭔가요? 한 번에 설치하는 방법이 있나요?',
   'faq.install.a3':
-    '`npm`은 Node.js 패키지 매니저입니다. 처음이라면 OS별 한 줄 명령어를 그대로 붙여 넣으세요. Node 설치부터 `ima2-gen` 실행까지 한 번에 끝납니다.',
+    '`npm`은 Node.js 패키지 매니저입니다. 처음이라면 OS별 설치 스크립트를 사용할 수 있습니다. 스크립트는 Node가 없으면 설치를 안내하고, `ima2-gen` 설치와 서버 실행을 돕습니다.',
   'faq.install.q4': 'Windows / PowerShell에서도 되나요?',
   'faq.install.a4':
-    '됩니다. Windows 10 이상, `PowerShell 5.1` 또는 `PowerShell 7`을 지원합니다. 설치 스크립트는 raw GitHub URL로 받고, 실행 전 모든 명령을 화면에 출력합니다.',
+    '됩니다. Windows 10 이상, `PowerShell 5.1` 또는 `PowerShell 7`을 지원합니다. 공개 설치 스크립트는 GitHub Pages에서 제공되며, 실행 전 모든 명령을 화면에 출력합니다.',
 
   'faq.usage.q1': '한 번에 몇 장까지 만들 수 있나요?',
   'faq.usage.a1':

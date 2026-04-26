@@ -52,6 +52,19 @@ ima2 doctor
 
 Codex 로그인 자체가 Windows 네이티브 환경에서 불안정하다면 WSL이 더 예측 가능한 선택일 수 있습니다.
 
+### Windows 업데이트 중 `EBUSY` 또는 `resource busy or locked`가 떠요.
+
+대부분 실행 중인 `ima2 serve`, 남아 있는 `node.exe`, 터미널, Explorer, 백신,
+인덱서가 global package 폴더를 잡고 있어서 생깁니다. ima2 서버와 관련
+터미널을 닫고, 필요하면 작업 관리자에서 남은 `node.exe`를 종료한 뒤 다시
+시도하세요.
+
+```bash
+npm install -g ima2-gen@latest
+```
+
+계속 실패하면 Windows를 재부팅한 뒤 ima2를 실행하기 전에 바로 업데이트하세요.
+
 ## 인증과 provider
 
 ### OpenAI API 키가 필요한가요?
@@ -140,6 +153,12 @@ ima2 doctor
 갤러리의 **Open folder** 버튼은 `ima2 serve`가 실행 중인 머신의 생성 이미지 폴더를 엽니다.
 
 보통은 내 컴퓨터입니다. 하지만 원격 서버, SSH, VM, 컨테이너, WSL, 같은 네트워크의 다른 머신에서 서버를 돌리고 있다면 브라우저를 보고 있는 기기가 아니라 서버 머신 기준으로 열리거나 처리됩니다.
+
+### Card News는 공개 안정 기능인가요?
+
+아직 아닙니다. Card News는 dev-only / experimental 작업면입니다. 기본 배포
+런타임에서는 명시적으로 개발용 플래그를 켜지 않는 한 숨겨져 있어야 하며,
+공개 문서에서도 안정 기능처럼 다루지 않습니다.
 
 ## 레퍼런스 이미지
 
