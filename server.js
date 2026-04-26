@@ -1439,6 +1439,9 @@ app.post("/api/node/generate", async (req, res) => {
       webSearchCalls,
       provider: "oauth",
       moderation,
+      // Echo the resolved size so the UI can derive the node preview aspect
+      // ratio (custom sizes can be 3:1, 16:9 etc — square fallback distorts).
+      size,
       safetyRetryAvailable: hasCompliantRetry(prompt),
       promptRewrittenForSafety: nodeResult.promptRewrittenForSafety === true,
     });

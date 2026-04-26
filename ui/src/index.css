@@ -1913,7 +1913,8 @@ body {
 }
 
 .image-node {
-  width: 260px;
+  position: relative;
+  width: var(--node-preview-w, 240px);
   background: var(--surface-2, #1a1a1a);
   border: 1px solid var(--border, #2a2a2a);
   border-radius: 12px;
@@ -1929,7 +1930,7 @@ body {
 .image-node--error { border-color: #e05050; }
 .image-node__preview {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: var(--node-preview-h, 240px);
   background: var(--bg);
   border-radius: 8px;
   overflow: hidden;
@@ -1940,7 +1941,9 @@ body {
 .image-node__preview img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* contain (not cover) so non-square outputs aren't cropped — the card
+     width already adapts via getPreviewWidth(size). */
+  object-fit: contain;
 }
 .image-node__placeholder, .image-node__skeleton {
   color: #555;
@@ -1958,20 +1961,42 @@ body {
   resize: vertical;
 }
 .image-node__footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
   gap: 6px;
 }
-.image-node__status { font-size: 10px; color: var(--text-muted, #888); flex: 1; }
-.image-node__actions { display: flex; gap: 4px; }
+.image-node__status {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted, #888);
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.image-node__actions {
+  min-width: 0;
+  display: grid;
+  /* generate / branch / duplicate / × — narrowest x col holds the delete button */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) 30px;
+  gap: 6px;
+}
 .image-node__actions button {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--surface-3, #2a2a2a);
   color: var(--text, #ddd);
   border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 0 6px;
+  border-radius: 6px;
   font-size: 11px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
 .image-node__actions button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -2168,16 +2193,32 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 .image-node__handle {
+  position: absolute;
   width: 10px !important;
   height: 10px !important;
   background: var(--text-dim, #888) !important;
   border: 2px solid var(--surface-2, #1c1c1c) !important;
+  transition: background 0.12s ease, box-shadow 0.12s ease, height 0.12s ease, width 0.12s ease;
+}
+/* Invisible 28×28 hit target — generous radius so touch + trackpad land */
+.image-node__handle::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 999px;
 }
 .image-node__handle--source {
   background: var(--accent-bright, #fff) !important;
 }
-.image-node:hover .image-node__handle {
+.image-node:hover .image-node__handle,
+.image-node__handle:hover,
+.image-node__handle:focus-visible,
+.image-node__handle.connectingfrom,
+.image-node__handle.connectingto {
+  width: 14px !important;
+  height: 14px !important;
   background: var(--accent-bright, #fff) !important;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-bright, #fff) 18%, transparent);
 }
 
 .node-canvas__hint {

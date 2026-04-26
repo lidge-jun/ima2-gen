@@ -31,7 +31,8 @@ import {
 } from "../lib/api";
 import { compressImage } from "../lib/image";
 import { snap16 } from "../lib/size";
-import { newClientNodeId, initialPos, type ClientNodeId } from "../lib/graph";
+import { newClientNodeId, type ClientNodeId } from "../lib/graph";
+import { getNextRootPosition, getNextChildPosition } from "../lib/nodeLayout";
 import type { PresetPayload } from "../lib/presets";
 import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
 
@@ -378,6 +379,9 @@ export type ImageNodeData = {
   error?: string;
   elapsed?: number;
   webSearchCalls?: number;
+  // Resolved generation size ("1024x1024", "1536x1024", ...). Drives the
+  // node card aspect ratio so non-square outputs aren't letterboxed.
+  size?: string | null;
 };
 
 export type GraphNode = FlowNode<ImageNodeData>;
@@ -409,6 +413,7 @@ function mapSessionToGraph(session: SessionFull): {
       error: d.error as string | undefined,
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
+      size: typeof d.size === "string" ? d.size : null,
     };
     return {
       id: n.id,
@@ -1333,23 +1338,21 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addRootNode: () => {
     const clientId = newClientNodeId();
-    const depth = 0;
-    const siblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
-      position: initialPos(depth, siblings),
-        data: {
-          clientId,
-          serverNodeId: null,
-          parentServerNodeId: null,
-          prompt: "",
-          imageUrl: null,
-          status: "empty",
-          pendingRequestId: null,
-          pendingPhase: null,
-        },
-      };
+      position: getNextRootPosition(get().graphNodes),
+      data: {
+        clientId,
+        serverNodeId: null,
+        parentServerNodeId: null,
+        prompt: "",
+        imageUrl: null,
+        status: "empty",
+        pendingRequestId: null,
+        pendingPhase: null,
+      },
+    };
     set({ graphNodes: [...get().graphNodes, node] });
     get().scheduleGraphSave();
     return clientId;
@@ -1359,22 +1362,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     const parent = get().graphNodes.find((n) => n.id === parentClientId);
     if (!parent) return parentClientId;
     const clientId = newClientNodeId();
-    const siblings = get().graphEdges.filter((e) => e.source === parentClientId).length;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
-      position: { x: parent.position.x + 360, y: parent.position.y + siblings * 320 },
-        data: {
-          clientId,
-          serverNodeId: null,
-          parentServerNodeId: parent.data.serverNodeId,
-          prompt: "",
-          imageUrl: null,
-          status: "empty",
-          pendingRequestId: null,
-          pendingPhase: null,
-        },
-      };
+      position: getNextChildPosition(parent, get().graphNodes, get().graphEdges),
+      data: {
+        clientId,
+        serverNodeId: null,
+        parentServerNodeId: parent.data.serverNodeId,
+        prompt: "",
+        imageUrl: null,
+        status: "empty",
+        pendingRequestId: null,
+        pendingPhase: null,
+      },
+    };
     const edge: GraphEdge = {
       id: `${parentClientId}->${clientId}`,
       source: parentClientId,
@@ -1395,12 +1397,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const incomingEdge = get().graphEdges.find((e) => e.target === sourceClientId);
     if (!incomingEdge) {
       const clientId = newClientNodeId();
-      const depth = 0;
-      const siblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
       const node: GraphNode = {
         id: clientId,
         type: "imageNode",
-        position: initialPos(depth, siblings),
+        position: getNextRootPosition(get().graphNodes),
         data: {
           clientId,
           serverNodeId: null,
@@ -1422,11 +1422,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!parent) return sourceClientId;
 
     const clientId = newClientNodeId();
-    const siblings = get().graphEdges.filter((e) => e.source === parentClientId).length;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
-      position: { x: parent.position.x + 360, y: parent.position.y + siblings * 320 },
+      position: getNextChildPosition(parent, get().graphNodes, get().graphEdges),
       data: {
         clientId,
         serverNodeId: null,
@@ -1532,6 +1531,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 pendingRequestId: flightId,
                 pendingPhase: "queued",
                 error: undefined,
+                size,
               },
             }
           : n,
@@ -1574,6 +1574,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                   pendingPhase: null,
                   elapsed: res.elapsed,
                   webSearchCalls: res.webSearchCalls,
+                  size: res.size ?? n.data.size ?? size,
                 },
               }
             : n,

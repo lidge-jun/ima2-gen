@@ -235,6 +235,9 @@ export type NodeGenerateResponse = {
   webSearchCalls: number;
   provider: "oauth";
   moderation?: string;
+  // Echoed by /api/node/generate so the UI can preserve the preview aspect
+  // ratio without re-deriving from the node sidecar.
+  size?: string | null;
 };
 
 export type NodeErrorResponse = {

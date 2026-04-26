@@ -1,6 +1,27 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, type CSSProperties } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
+
+const NODE_PREVIEW_HEIGHT = 240;
+const NODE_PREVIEW_MIN_WIDTH = 180;
+const NODE_PREVIEW_MAX_WIDTH = 420;
+
+// Derive a card width that matches the generated image's aspect ratio so
+// the preview never gets letterboxed (e.g. 1536×1024 in a 240px square box
+// loses ~33% of pixels). Falls back to a square card when size is unknown.
+function getPreviewWidth(size?: string | null): number {
+  const match = /^(\d+)x(\d+)$/.exec(size ?? "");
+  if (!match) return NODE_PREVIEW_HEIGHT;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return NODE_PREVIEW_HEIGHT;
+  }
+  const scaledWidth = NODE_PREVIEW_HEIGHT * (width / height);
+  return Math.round(
+    Math.min(NODE_PREVIEW_MAX_WIDTH, Math.max(NODE_PREVIEW_MIN_WIDTH, scaledWidth)),
+  );
+}
 
 function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const d = data as ImageNodeData;
@@ -41,8 +62,16 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
     error: `오류: ${d.error ?? "알 수 없음"}`,
   }[d.status];
 
+  const nodeStyle = {
+    "--node-preview-w": `${getPreviewWidth(d.size)}px`,
+    "--node-preview-h": `${NODE_PREVIEW_HEIGHT}px`,
+  } as CSSProperties;
+
   return (
-    <div className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}>
+    <div
+      className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}
+      style={nodeStyle}
+    >
       {d.parentServerNodeId ? (
         <Handle type="target" position={Position.Left} className="image-node__handle" />
       ) : null}
@@ -69,14 +98,21 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         disabled={isBusy}
       />
       <div className="image-node__footer">
-        <span className="image-node__status">{statusLabel}</span>
+        <span className="image-node__status" title={statusLabel}>{statusLabel}</span>
         <div className="image-node__actions nodrag">
-          <button type="button" onClick={onGenerate} disabled={isBusy}>
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={isBusy}
+            title={d.status === "ready" ? "이 노드 다시 생성" : "이 노드 생성"}
+          >
             {d.status === "ready" ? "다시 생성" : "생성"}
           </button>
           {d.status === "ready" ? (
             <>
-              <button type="button" onClick={onBranch}>자식 추가</button>
+              <button type="button" onClick={onBranch} title="자식 노드 추가">
+                자식 추가
+              </button>
               <button
                 type="button"
                 onClick={onDuplicateBranch}

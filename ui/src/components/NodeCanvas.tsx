@@ -89,6 +89,7 @@ function NodeCanvasInner() {
             onConnectEnd={onConnectEnd}
             onNodesDelete={onNodesDelete}
             nodeTypes={nodeTypes}
+            connectionRadius={32}
             fitView
             deleteKeyCode={["Delete", "Backspace"]}
             proOptions={{ hideAttribution: true }}
