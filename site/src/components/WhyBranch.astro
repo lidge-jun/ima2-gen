@@ -53,8 +53,24 @@ const { lang } = Astro.props;
   .branch-grid {
     display: grid;
     grid-template-columns: 1.4fr 1fr;
-    gap: 56px;
+    gap: 64px;
     align-items: center;
+  }
+  .branch-shot {
+    position: relative;
+  }
+  .branch-shot::before {
+    content: '';
+    position: absolute;
+    inset: -10px -10px;
+    background: radial-gradient(ellipse at 30% 50%, rgba(201, 111, 59, 0.08), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 16px;
+  }
+  .branch-shot :global(.screenshot) {
+    position: relative;
+    z-index: 1;
   }
   .scenarios {
     list-style: none;
@@ -65,19 +81,25 @@ const { lang } = Astro.props;
   }
   .scenarios li {
     display: flex;
-    gap: 14px;
+    gap: 16px;
     align-items: flex-start;
-    padding: 18px 0;
+    padding: 20px 14px;
+    margin: 0 -14px;
     border-bottom: 1px solid var(--line);
+    border-radius: 8px;
+    transition: background 220ms ease;
+  }
+  .scenarios li:hover {
+    background: var(--panel);
   }
   .scenarios li:last-child { border-bottom: 0; }
   .scenarios .step {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--accent);
-    padding-top: 2px;
+    padding-top: 3px;
     min-width: 32px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
   }
   .scenarios .body {
     color: var(--text-dim);

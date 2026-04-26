@@ -52,17 +52,44 @@ const { lang } = Astro.props;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 28px;
+    align-items: stretch;
   }
   .workflow-card {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
+    transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 220ms ease,
+                box-shadow 280ms ease;
+    position: relative;
+  }
+  .workflow-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: 0 0 0 0 rgba(201, 111, 59, 0);
+    transition: box-shadow 280ms ease;
+  }
+  .workflow-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+  }
+  .workflow-card:hover::after {
+    box-shadow: 0 16px 40px -20px rgba(201, 111, 59, 0.45);
   }
   .workflow-card :global(.screenshot) {
     border: 0;
     border-bottom: 1px solid var(--line);
     border-radius: 0;
+  }
+  .workflow-card :global(.screenshot img) {
+    transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .workflow-card:hover :global(.screenshot img) {
+    transform: scale(1.015);
   }
   .workflow-meta { padding: 22px 22px 26px; }
   .workflow-meta .label {

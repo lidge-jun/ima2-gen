@@ -56,10 +56,17 @@ const items = [
     content: '+';
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 18px;
+    font-size: 20px;
     line-height: 1;
+    transition: transform 220ms ease;
   }
-  .faq-list details[open] summary::after { content: '−'; }
+  .faq-list details[open] summary::after {
+    content: '−';
+    transform: rotate(180deg);
+  }
+  .faq-list details[open] summary {
+    margin-bottom: 6px;
+  }
   .faq-list details p {
     margin-top: 14px;
     color: var(--text-dim);

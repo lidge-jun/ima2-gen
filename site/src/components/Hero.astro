@@ -39,25 +39,44 @@ const crossLangUrl =
 
 <style>
   .hero {
-    padding: 112px 0 96px;
+    padding: 128px 0 112px;
     border-bottom: 1px solid var(--line);
+    position: relative;
   }
   .hero-grid {
     display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 64px;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 72px;
     align-items: center;
   }
   .hero-text h1 {
-    font-size: 88px;
-    margin-bottom: 28px;
+    font-size: 96px;
+    margin-bottom: 32px;
+    letter-spacing: -0.04em;
   }
   .hero-text .sub {
     font-size: 20px;
     color: var(--text-dim);
     max-width: 540px;
     margin-bottom: 36px;
-    line-height: 1.55;
+    line-height: 1.6;
+  }
+  .hero-shot {
+    position: relative;
+  }
+  .hero-shot::before {
+    content: '';
+    position: absolute;
+    inset: -16px -24px;
+    background: radial-gradient(ellipse at center, rgba(201, 111, 59, 0.10), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 24px;
+  }
+  .hero-shot :global(.screenshot) {
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.6);
   }
   .ko-link {
     display: inline-flex;
@@ -76,9 +95,10 @@ const crossLangUrl =
   }
 
   @media (max-width: 768px) {
-    .hero { padding: 72px 0 64px; }
-    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+    .hero { padding: 80px 0 72px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 36px; }
     .hero-text h1 { font-size: 56px; }
     .hero-text .sub { font-size: 18px; }
+    .hero-shot::before { inset: -8px -12px; }
   }
 </style>

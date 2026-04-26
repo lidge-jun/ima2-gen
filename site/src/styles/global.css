@@ -64,7 +64,34 @@ body {
   font-size: 16px;
   line-height: 1.65;
   min-height: 100vh;
+  position: relative;
 }
+
+/* Atmospheric depth: warm orange gradient at top-right + subtle noise.
+   Both fixed; do not scroll. Both kept off interactive layers via z-index. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 88% -10%, rgba(201, 111, 59, 0.08), transparent 38%),
+    radial-gradient(circle at 12% 110%, rgba(201, 111, 59, 0.04), transparent 42%);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+}
+
+/* Keep main content above the atmospheric layers. */
+body > * { position: relative; z-index: 1; }
 
 a {
   color: inherit;
@@ -127,15 +154,26 @@ img {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   color: var(--accent);
   margin-bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-tag::before {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  background: var(--accent);
 }
 
 .section-h {
-  font-size: 52px;
+  font-size: 56px;
   margin-bottom: 22px;
-  max-width: 780px;
+  max-width: 820px;
 }
 
 .section-lede {
@@ -143,7 +181,7 @@ img {
   color: var(--text-dim);
   max-width: 660px;
   margin-bottom: 56px;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 section.std {
@@ -155,12 +193,19 @@ section.std {
 .codeblock {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 18px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  transition: border-color 220ms ease, background 220ms ease;
+}
+
+.codeblock:hover,
+.codeblock:focus-within {
+  border-color: var(--accent);
+  background: rgba(22, 24, 27, 0.95);
 }
 
 .codeblock .cmd {
