@@ -10,7 +10,7 @@ aliases: [ima2 unified roadmap, ima2 통합 로드맵, image_gen roadmap]
 
 `0.09.5-node-streaming`은 완료되어 `_fin/260424_0.09.5-node-streaming`으로 이동했다. Node mode 생성 중 partial image 표시, sidecar/history `requestId`, reload recovery matching, animated node border glow가 구현됐다.
 
-`0.09.6-inflight-reliability`, `0.09.15` package smoke, `0.09.16` FAQ는 완료되어 archive로 이동했다. 0.10 전에는 `0.09.17` structured logging과 `0.09.18` metrics observability를 처리하면 운영/지원 대응력이 좋아진다. 추가로 프런트/서버 기능이 늘어난 만큼 `0.09.20-cli-backend-parity`에서 낡은 CLI surface를 갱신할지 계획한다. `0.09.19` security hardening과 기존 `0.09.20` containerization은 원격 접속 유저와 배포 전략 영향이 커서 `0.99_future`로 미룬다. `0.20-card-news`는 dev-only WIP라 npm 배포 기본 blocker로 보지 않는다.
+`0.09.6-inflight-reliability`, `0.09.15` package smoke, `0.09.16` FAQ는 완료되어 archive로 이동했다. 0.10 전에는 `0.09.17` structured logging과 `0.09.18` metrics observability를 처리하면 운영/지원 대응력이 좋아진다. 추가로 프런트/서버 기능이 늘어난 만큼 `0.09.20-cli-backend-parity`에서 낡은 CLI surface를 `0.09.20.1`부터 작은 slice로 갱신한다. `0.09.19` security hardening과 기존 `0.09.20` containerization은 원격 접속 유저와 배포 전략 영향이 커서 `0.99_future`로 미룬다. `0.20-card-news`는 dev-only WIP라 npm 배포 기본 blocker로 보지 않는다.
 
 그 다음은 `0.10-feature-expansion`이다. 이 단계는 이미지 생성기를 재사용 가능한 작업대처럼 만드는 방향이다. prompt preset, batch compare, export bundle, card-news가 여기에 묶인다. 단, `0.10`의 첫 구현은 preset과 compare MVP로 제한한다. card-news는 export bundle이 잡힌 뒤에 이어간다.
 
@@ -44,7 +44,7 @@ graph LR
 | 0.09.16 | done | Community FAQ/docs. | `_fin/260425_0.09.16-docs-faq`. |
 | 0.09.17 | queued | Structured logging. | Active ops before 0.10 is reasonable. |
 | 0.09.18 | queued | Metrics observability. | Active ops after logging is reasonable. |
-| 0.09.20 | rough plan | CLI/backend parity. | Update CLI surface after 17/18 or before 0.10 if desired. |
+| 0.09.20 | active slices | CLI/backend parity split into `0.09.20.1`~`0.09.20.5`; `0.09.20.1` is done. | Continue with `0.09.20.2` storage/runtime/OAuth commands. |
 | 0.09.19 | deferred | Security hardening. | Moved to `0.99_future` to avoid breaking remote users. |
 | 0.99 future | deferred | Security/containerization. | Keep remote-user and packaging-heavy work out of the 0.10 critical path. |
 | 0.10 | queued | preset + compare MVP | Start after current build is green. |
@@ -123,3 +123,5 @@ graph LR
 - 2026-04-25: 0.09.6/15/16 및 stale/model/style/error/custom-size closeout을 `_fin`으로 정리하고 0.10 전 build-green 조건을 명시.
 - 2026-04-25: card-news는 dev-only WIP로 재분류하고, 0.09.19/security와 0.09.20/containerization은 `0.99_future`로 연기.
 - 2026-04-25: 새 `0.09.20-cli-backend-parity` rough plan을 추가해 프런트/서버 기능 대비 낡은 CLI surface 갱신을 별도 track으로 분리.
+- 2026-04-26: `0.09.20-cli-backend-parity`를 최신 runtime/storage/node/session 상태 기준으로 concrete plan으로 갱신. 권장 첫 PABCD는 `0.09.20.1` safe classic CLI parity.
+- 2026-04-26: `0.09.20.1` safe classic CLI parity 완료. 다음 CLI slice는 `0.09.20.2` storage/runtime/OAuth commands.

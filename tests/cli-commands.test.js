@@ -137,10 +137,47 @@ describe("ima2 CLI commands (live server)", () => {
   });
 
   it("ima2 gen with unreachable --server exits 3", async () => {
-    const { code } = await runCLI(["gen", "hi", "--server", "http://127.0.0.1:1"], {
+    const { code, stderr } = await runCLI(["gen", "hi", "--server", "http://127.0.0.1:1"], {
       IMA2_SERVER: "", // clear env
     });
     assert.strictEqual(code, 3);
+    assert.match(stderr, /Hint:/);
+    assert.match(stderr, /ima2 serve/);
+  });
+
+  it("ima2 gen --json keeps stdout parseable when server is unreachable", async () => {
+    const { stdout, stderr, code } = await runCLI(["gen", "hi", "--json", "--server", "http://127.0.0.1:1"], {
+      IMA2_SERVER: "",
+    });
+    assert.strictEqual(code, 3);
+    const obj = JSON.parse(stdout.trim());
+    assert.strictEqual(obj.ok, false);
+    assert.strictEqual(obj.code, "SERVER_UNREACHABLE");
+    assert.match(stderr, /Hint:/);
+  });
+
+  it("ima2 edit with unreachable --server prints a hint", async () => {
+    const { code, stderr } = await runCLI(["edit", "input.png", "--prompt", "hi", "--server", "http://127.0.0.1:1"], {
+      IMA2_SERVER: "",
+    });
+    assert.strictEqual(code, 3);
+    assert.match(stderr, /Hint:/);
+  });
+
+  it("ima2 ps with unreachable --server prints a hint", async () => {
+    const { code, stderr } = await runCLI(["ps", "--server", "http://127.0.0.1:1"], {
+      IMA2_SERVER: "",
+    });
+    assert.strictEqual(code, 3);
+    assert.match(stderr, /Hint:/);
+  });
+
+  it("ima2 cancel with unreachable --server prints a hint", async () => {
+    const { code, stderr } = await runCLI(["cancel", "req_nope", "--server", "http://127.0.0.1:1"], {
+      IMA2_SERVER: "",
+    });
+    assert.strictEqual(code, 3);
+    assert.match(stderr, /Hint:/);
   });
 
   it("ima2 cancel without requestId exits 2", async () => {

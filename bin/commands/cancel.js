@@ -1,6 +1,6 @@
 import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
-import { out, die, dieWithError, color, json, exitCodeForError } from "../lib/output.js";
+import { out, die, dieWithError, color, json } from "../lib/output.js";
 
 const SPEC = {
   flags: {
@@ -25,7 +25,10 @@ export default async function cancelCmd(argv) {
 
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    if (args.json) json({ ok: false, requestId, error: e.message, code: e.code, status: e.status });
+    dieWithError(e);
+  }
 
   try {
     await request(server.base, `/api/inflight/${encodeURIComponent(requestId)}`, {

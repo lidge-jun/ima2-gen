@@ -1,7 +1,7 @@
 import { parseArgs } from "../lib/args.js";
 import { resolveServer, request, normalizeGenerate } from "../lib/client.js";
 import { fileToDataUri, dataUriToFile, defaultOutName, readStdin } from "../lib/files.js";
-import { out, die, dieWithError, color, json, exitCodeForError } from "../lib/output.js";
+import { out, die, dieWithError, color, json } from "../lib/output.js";
 
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
@@ -84,7 +84,8 @@ export default async function genCmd(argv) {
   try {
     server = await resolveServer({ serverFlag: args.server });
   } catch (e) {
-    die(exitCodeForError(e), e.message);
+    if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
+    dieWithError(e);
   }
 
   const references = await Promise.all(refs.map((p) => fileToDataUri(p)));

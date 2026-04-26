@@ -1,6 +1,6 @@
 import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
-import { out, die, color, json, table, exitCodeForError } from "../lib/output.js";
+import { out, dieWithError, color, json, table } from "../lib/output.js";
 
 const SPEC = {
   flags: {
@@ -19,7 +19,10 @@ export default async function psCmd(argv) {
 
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
+    dieWithError(e);
+  }
 
   const qs = new URLSearchParams();
   if (args.kind) qs.set("kind", args.kind);
@@ -28,7 +31,10 @@ export default async function psCmd(argv) {
   const path = `/api/inflight${qs.toString() ? `?${qs}` : ""}`;
   let resp;
   try { resp = await request(server.base, path); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
+    dieWithError(e);
+  }
 
   const jobs = resp.jobs || resp.items || [];
   const terminalJobs = resp.terminalJobs || [];

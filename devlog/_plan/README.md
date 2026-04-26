@@ -20,7 +20,7 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 |---:|---|---|---|
 | 1 | `0.09.17-structured-logging/` | queued | request 추적/지원 대응을 위한 구조화 로그 트랙. |
 | 2 | `0.09.18-metrics-observability/` | queued | self-host/운영 진단을 위한 metrics 트랙. |
-| 3 | `0.09.20-cli-backend-parity/` | rough plan | 프런트/서버 기능 대비 낡은 CLI surface 갱신. |
+| 3 | `0.09.20-cli-backend-parity/` | active slices | 프런트/서버 기능 대비 낡은 CLI surface 갱신. `0.09.20.1`은 완료, 다음 권장 slice는 `0.09.20.2` storage/runtime/OAuth commands. |
 | 4 | `0.10-feature-expansion/` | queued | preset, compare, card-news, export bundle. |
 | 5 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
 | 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
@@ -54,7 +54,7 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 
 - [ ] 완료된 안정화 폴더는 `_plan`에 다시 끌어오지 않는다. 증거 확인은 `_fin/260425_*` archive를 본다.
 - [ ] `0.09.17`과 `0.09.18`은 0.10 전 관측성 품질을 높이는 active ops로 본다.
-- [ ] `0.09.20-cli-backend-parity`는 프런트가 가진 안정 기능을 CLI에서 얼마나 따라갈지 별도 PABCD로 확정한다.
+- [ ] `0.09.20-cli-backend-parity`는 `0.09.20.2`부터 이어간다. 다음 범위는 `storage status/open`, `runtime`, `oauth`, `billing` CLI command이다.
 - [ ] 보안 하드닝과 컨테이너화는 `0.99_future`에서 보관한다. 원격 접속/배포 전략 확정 전에는 실행하지 않는다.
 - [ ] `0.10`은 Classic 우선의 preset/compare 워크벤치로 시작한다.
 - [ ] `0.12`는 backend always-on research 상태를 인정하고, 남은 일은 FE 토글/표시/사용자 경고로 좁힌다.
@@ -70,3 +70,5 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-25: 0.09.4, 0.09.4.1, 0.09.6, 0.09.7.1, 0.09.8, 0.09.15, 0.09.16, 0.09.21, 0.09.23, 0.09.24를 완료/closeout archive로 정리하고 0.10 전 남은 운영 선택지를 재분류.
 - 2026-04-25: `0.09.17`/`0.09.18`은 active ops로 남기고, `0.09.19`/`0.09.20`은 `0.99_future`로 연기.
 - 2026-04-25: 새 active `0.09.20-cli-backend-parity` rough plan을 추가. 기존 containerization `0.09.20`은 `0.99_future`에 유지.
+- 2026-04-26: `0.09.20-cli-backend-parity`를 최신 runtime fallback, storage recovery, sessions/style, node route 상태 기준으로 재작성. `0.09.20.1`~`0.09.20.5` slice로 분리.
+- 2026-04-26: `0.09.20.1` safe classic CLI parity 완료. closeout은 `_fin/260426_0.09.20.1-safe-classic-cli-parity`.
