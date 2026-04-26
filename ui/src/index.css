@@ -874,6 +874,10 @@ body {
 .result-container.visible {
   display: flex;
 }
+.result-container:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
 
 .result-img {
   max-width: 100%;
@@ -973,6 +977,7 @@ body {
   gap: 6px;
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-inline: contain;
   padding: 10px 16px;
   flex: 0 0 auto;
   border-top: 1px solid var(--border);
@@ -3179,6 +3184,7 @@ body {
   gap: 10px;
   padding: 14px;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
 }
 .card-news-deck-card {
   flex: 0 0 92px;

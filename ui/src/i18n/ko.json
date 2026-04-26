@@ -132,6 +132,7 @@
   },
   "canvas": {
     "resultAlt": "생성 결과",
+    "imageViewerAria": "생성 이미지 뷰어. 좌우 방향키로 이전 또는 다음 이미지를 볼 수 있습니다.",
     "tokens": "{n} 토큰"
   },
   "gallery": {

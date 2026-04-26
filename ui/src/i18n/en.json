@@ -132,6 +132,7 @@
   },
   "canvas": {
     "resultAlt": "result",
+    "imageViewerAria": "Generated image viewer. Use left and right arrow keys to move between images.",
     "tokens": "{n} tokens"
   },
   "gallery": {

@@ -1,5 +1,6 @@
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { handleHorizontalWheel } from "../lib/horizontalWheel";
 
 export function HistoryStrip() {
   const history = useAppStore((s) => s.history);
@@ -9,7 +10,7 @@ export function HistoryStrip() {
   const { t } = useI18n();
 
   return (
-    <div className="history-strip">
+    <div className="history-strip" onWheel={handleHorizontalWheel}>
       <button
         type="button"
         className="history-thumb history-thumb--add"

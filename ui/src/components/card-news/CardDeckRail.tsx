@@ -1,5 +1,6 @@
 import { useCardNewsStore } from "../../store/cardNewsStore";
 import { useI18n } from "../../i18n";
+import { handleHorizontalWheel } from "../../lib/horizontalWheel";
 import { CardStatusBadge } from "./CardStatusBadge";
 
 type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
@@ -18,7 +19,7 @@ export function CardDeckRail() {
   if (!plan) return null;
 
   return (
-    <div className="card-news-deck" aria-label="Card deck">
+    <div className="card-news-deck" aria-label="Card deck" onWheel={handleHorizontalWheel}>
       {plan.cards.map((card) => (
         <button
           type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useCardNewsStore } from "../store/cardNewsStore";
 import type { GenerateItem } from "../types";
@@ -12,16 +12,16 @@ import {
 } from "../lib/api";
 import { cardNewsManifestDownloadUrl } from "../lib/cardNewsApi";
 import { dateBucket } from "../lib/galleryUtils";
+import { getGalleryItemKey } from "../lib/galleryNavigation";
 import { useI18n } from "../i18n";
 import { CardNewsGalleryTile } from "./CardNewsGalleryTile";
-
+import { GalleryImageTile } from "./GalleryImageTile";
 type TrashPending = {
   filename: string;
   trashId: string;
   item: GenerateItem;
   expiresAt: number;
 };
-
 type SessionGroup = {
   sessionId: string;
   title: string | null;
@@ -56,6 +56,8 @@ export function GalleryModal() {
       return false;
     }
   });
+  const scrollRef = useRef<HTMLDivElement | null>(null), itemRefs = useRef<Record<string, HTMLElement | null>>({});
+  const lastScrollTopRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
@@ -174,6 +176,20 @@ export function GalleryModal() {
     }
     return Array.from(map.entries());
   }, [filtered]);
+  const totalVisible = groupBy === "session"
+    ? sessionGroups.reduce((a, g) => a + g.items.length, 0) + loose.length
+    : filtered.length;
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const selectedKey = currentImage ? getGalleryItemKey(currentImage) : null;
+    const selectedEl = selectedKey ? itemRefs.current[selectedKey] : null;
+    if (selectedEl) {
+      selectedEl.scrollIntoView({ block: "center" });
+      return;
+    }
+    if (scrollRef.current) scrollRef.current.scrollTop = lastScrollTopRef.current;
+  }, [open, currentImage?.filename, currentImage?.image, groupBy, totalVisible, dateGroups.length, sessionGroups.length, loose.length]);
 
   useEffect(() => {
     if (!pending) return;
@@ -273,9 +289,13 @@ export function GalleryModal() {
 
   const renderTile = (item: GenerateItem, keyPrefix: string, idx: number) => {
     const active = currentImage?.image === item.image;
+    const setItemRef = (node: HTMLElement | null) => {
+      itemRefs.current[getGalleryItemKey(item)] = node;
+    };
     if (item.kind === "card-news-set") {
       return (
         <div
+          ref={setItemRef}
           key={`${keyPrefix}-${idx}-${item.filename ?? idx}`}
           className="gallery__tile-wrap gallery-card-news-set"
         >
@@ -289,45 +309,22 @@ export function GalleryModal() {
       );
     }
     return (
-      <div
+      <GalleryImageTile
         key={`${keyPrefix}-${idx}-${item.filename ?? idx}`}
-        className={`gallery__tile-wrap${active ? " gallery__tile-wrap--active" : ""}`}
-      >
-        <button
-          type="button"
-          className={`gallery__tile${active ? " gallery__tile--active" : ""}`}
-          onClick={() => {
-            selectHistory(item);
-            close();
-          }}
-          title={item.prompt ?? ""}
-        >
-          <img src={item.thumb || item.image} alt={item.prompt ?? t("gallery.imageAltFallback")} loading="lazy" decoding="async" />
-          {item.prompt && (
-            <div className="gallery__caption">
-              <span className="gallery__caption-text">{item.prompt}</span>
-            </div>
-          )}
-        </button>
-        {item.filename && (
-          <button
-            type="button"
-            className="gallery__delete"
-            onClick={(e) => handleDelete(item, e)}
-            title={t("gallery.deleteTitle")}
-            aria-label={t("gallery.deleteAria")}
-          >
-            ×
-          </button>
-        )}
-      </div>
+        item={item}
+        active={active}
+        itemRef={setItemRef}
+        onSelect={(next) => {
+          selectHistory(next);
+          close();
+        }}
+        onDelete={handleDelete}
+        t={t}
+      />
     );
   };
 
   const showSessions = groupBy === "session";
-  const totalVisible = showSessions
-    ? sessionGroups.reduce((a, g) => a + g.items.length, 0) + loose.length
-    : filtered.length;
   const showStorageNotice =
     storageStatus != null &&
     storageStatus.state !== "ok" &&
@@ -426,7 +423,13 @@ export function GalleryModal() {
           </div>
         </div>
 
-        <div className="gallery__scroll">
+        <div
+          className="gallery__scroll"
+          ref={scrollRef}
+          onScroll={() => {
+            lastScrollTopRef.current = scrollRef.current?.scrollTop ?? 0;
+          }}
+        >
           {showSessions ? (
             <>
               {sessionGroups.map((g) => (

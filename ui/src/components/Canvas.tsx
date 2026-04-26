@@ -1,6 +1,8 @@
+import type { KeyboardEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
 import { useI18n } from "../i18n";
+import { isEditableTarget } from "../lib/domEvents";
 import { getImageModelShortLabel } from "../lib/imageModels";
 
 function formatQualityAlias(quality: string | null | undefined): string | null {
@@ -19,6 +21,8 @@ function formatSizeAlias(size: string | null | undefined): string | null {
 
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
+  const history = useAppStore((s) => s.history);
+  const selectHistory = useAppStore((s) => s.selectHistory);
   const activeGenerations = useAppStore((s) => s.activeGenerations);
   const quality = useAppStore((s) => s.quality);
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
@@ -35,11 +39,36 @@ export function Canvas() {
   const displaySize = formatSizeAlias(currentImage?.size ?? getResolvedSize());
   const displayModel = getImageModelShortLabel(currentImage?.model);
 
+  const handleViewerKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (event.target !== event.currentTarget) return;
+    if (isEditableTarget(event.target)) return;
+
+    const currentIndex = history.findIndex((item) =>
+      currentImage?.filename
+        ? item.filename === currentImage.filename
+        : item.image === currentImage?.image,
+    );
+    if (currentIndex < 0) return;
+
+    const nextIndex = event.key === "ArrowLeft" ? currentIndex - 1 : currentIndex + 1;
+    const next = history[nextIndex];
+    if (!next) return;
+
+    event.preventDefault();
+    selectHistory(next);
+  };
+
   return (
     <main className="canvas">
       <div className={`progress-bar${activeGenerations > 0 ? " active" : ""}`} />
       {currentImage ? (
-        <div className="result-container visible">
+        <div
+          className="result-container visible"
+          tabIndex={0}
+          onKeyDown={handleViewerKeyDown}
+          aria-label={t("canvas.imageViewerAria")}
+        >
           <img
             className="result-img"
             key={currentImage.filename ?? currentImage.url ?? currentImage.image}
