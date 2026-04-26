@@ -36,6 +36,7 @@ import {
 } from "./lib/validate.js";
 import { createRequestLogger } from "./lib/requestLogger.js";
 import { validateAndNormalizeRefs } from "./lib/refs.js";
+import { logEvent, logError } from "./lib/logger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -1548,6 +1549,13 @@ app.delete("/api/sessions/:id", (req, res) => {
 });
 
 app.put("/api/sessions/:id/graph", (req, res) => {
+  // Save-tracking headers let multi-tab debugging tell apart which save
+  // path / which tab triggered each conflict. They are best-effort; an
+  // older client that omits them still works.
+  const saveId = req.get("X-Ima2-Graph-Save-Id") || null;
+  const saveReason = req.get("X-Ima2-Graph-Save-Reason") || null;
+  const tabId = req.get("X-Ima2-Tab-Id") || null;
+  const sessionId = req.params.id;
   try {
     const { nodes, edges } = req.body || {};
     const rawIfMatch = req.get("If-Match");
@@ -1581,11 +1589,21 @@ app.put("/api/sessions/:id/graph", (req, res) => {
         },
       });
     }
-    const result = saveGraph(req.params.id, {
+    const result = saveGraph(sessionId, {
       nodes,
       edges,
       expectedVersion,
       owner: req.authUser,
+    });
+    logEvent("session", "graph_save", {
+      sessionId,
+      saveId,
+      saveReason,
+      tabId,
+      nodes: nodes.length,
+      edges: edges.length,
+      graphVersion: result.graphVersion,
+      authUser: req.authUser || null,
     });
     res.json({
       ok: true,
@@ -1598,6 +1616,24 @@ app.put("/api/sessions/:id/graph", (req, res) => {
     const payload = { error: { code, message: err.message } };
     if (typeof err.currentVersion === "number") {
       payload.currentVersion = err.currentVersion;
+    }
+    if (code === "GRAPH_VERSION_CONFLICT") {
+      // Conflicts are expected concurrency events, not bugs — emit a
+      // structured warn-level event so they show up in observability
+      // without being treated as server errors.
+      logEvent("session", "graph_conflict", {
+        sessionId,
+        saveId,
+        saveReason,
+        tabId,
+        expectedVersion: Number(String(req.get("If-Match") || "").replace(/"/g, "")),
+        currentVersion: err.currentVersion ?? null,
+        nodes: Array.isArray(req.body?.nodes) ? req.body.nodes.length : null,
+        edges: Array.isArray(req.body?.edges) ? req.body.edges.length : null,
+        authUser: req.authUser || null,
+      });
+    } else {
+      logError("session", "graph_error", err, { sessionId, code, saveId, tabId });
     }
     res.status(err.status || 500).json(payload);
   }
