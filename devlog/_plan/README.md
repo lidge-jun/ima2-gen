@@ -1,5 +1,7 @@
 # ima2-gen 기능 백로그 (0.1 단위 증분)
 
+> **upstream 기능 도입 로드맵은 [`devlog/upstream-features/README.md`](../upstream-features/README.md)** — 89커밋 분석, Phase 1~5 진행 상황표, 큰 기능 PRD 4개. 그쪽이 단일 진실 출처.
+
 ## 완료된 기능
 
 ### 0.0 기본 기능 (완료 ✅)
