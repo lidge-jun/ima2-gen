@@ -66,6 +66,21 @@ describe("node UI compact metadata contract", () => {
     assert.doesNotMatch(en, /"regenerate":\s*"Regenerate"/);
   });
 
+  it("keeps the empty-node generate button readable in the compact footer", () => {
+    const component = readSource("ui/src/components/ImageNode.tsx");
+    const css = readSource("ui/src/index.css");
+    const en = readSource("ui/src/i18n/en.json");
+    const actionsRule = /\.image-node__actions button:first-child:not\(\.image-node__generate\),\s*\.image-node__del\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const generateRule = /\.image-node__generate\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+
+    assert.match(component, /className="image-node__generate"/);
+    assert.match(component, /aria-label=\{t\("node\.generateTitle"\)\}/);
+    assert.match(actionsRule, /width:\s*30px/);
+    assert.match(generateRule, /min-width:\s*44px !important/);
+    assert.match(en, /"generate":\s*"Gen"/);
+    assert.match(en, /"generateTitle":\s*"Generate node image"/);
+  });
+
   it("makes node connection handles easier to target", () => {
     const canvas = readSource("ui/src/components/NodeCanvas.tsx");
     const css = readSource("ui/src/index.css");

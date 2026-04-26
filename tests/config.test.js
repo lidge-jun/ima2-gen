@@ -80,7 +80,7 @@ test("config exposes default shape", () => {
   assert.equal(c.cardNewsPlanner.model, "gpt-5.4-mini");
   assert.equal(c.cardNewsPlanner.timeoutMs, 60000);
   assert.equal(c.cardNewsPlanner.deterministicFallback, false);
-  assert.equal(c.log.level, "warn");
+  assert.equal(c.log.level, "info");
 });
 
 test("env overrides win", () => {
@@ -122,13 +122,13 @@ test("card news feature is dev-only unless explicitly enabled", () => {
   assert.equal(explicit.features.cardNews, true);
 });
 
-test("log level defaults are quiet unless dev mode is enabled", () => {
+test("log level defaults show operational progress unless dev mode is enabled", () => {
   const normal = loadConfig({
     IMA2_DEV: "",
     IMA2_LOG_LEVEL: "",
     IMA2_CONFIG_DIR: "/tmp/ima2-test-log-normal",
   });
-  assert.equal(normal.log.level, "warn");
+  assert.equal(normal.log.level, "info");
 
   const dev = loadConfig({
     IMA2_DEV: "1",

@@ -62,7 +62,7 @@ function pickBool(envVal, fileVal, fallback) {
 }
 
 export function defaultLogLevelForEnv(runtimeEnv = env) {
-  return runtimeEnv.IMA2_DEV === "1" ? "debug" : "warn";
+  return runtimeEnv.IMA2_DEV === "1" ? "debug" : "info";
 }
 
 export const config = {

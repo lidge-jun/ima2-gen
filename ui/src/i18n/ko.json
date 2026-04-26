@@ -200,6 +200,7 @@
     "regenerate": "재생성",
     "newVariation": "새 변형",
     "generate": "생성",
+    "generateTitle": "노드 이미지 생성",
     "addChild": "자식",
     "addChildTitle": "자식 노드 추가",
     "duplicateBranch": "복제",

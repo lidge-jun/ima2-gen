@@ -260,7 +260,14 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
               </button>
             </>
           ) : (
-            <button type="button" onClick={onGenerate} disabled={isBusy}>
+            <button
+              type="button"
+              className="image-node__generate"
+              onClick={onGenerate}
+              disabled={isBusy}
+              title={t("node.generateTitle")}
+              aria-label={t("node.generateTitle")}
+            >
               {t("node.generate")}
             </button>
           )}

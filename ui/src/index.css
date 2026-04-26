@@ -2188,10 +2188,15 @@ body {
   white-space: nowrap;
   cursor: pointer;
 }
-.image-node__actions button:first-child,
+.image-node__actions button:first-child:not(.image-node__generate),
 .image-node__del {
   width: 30px;
   padding: 0;
+}
+.image-node__generate {
+  min-width: 44px !important;
+  padding: 0 9px !important;
+  text-transform: uppercase;
 }
 .image-node__actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 .image-node__del { color: var(--red) !important; }
