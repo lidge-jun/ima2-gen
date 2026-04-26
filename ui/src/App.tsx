@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Canvas } from "./components/Canvas";
 import { NodeCanvas } from "./components/NodeCanvas";
 import { RightPanel } from "./components/RightPanel";
+import { HistoryStrip } from "./components/HistoryStrip";
 import { SettingsWorkspace } from "./components/SettingsWorkspace";
 import { Toast } from "./components/Toast";
 import { ErrorCard } from "./components/ErrorCard";
@@ -88,6 +89,7 @@ export default function App() {
         data-theme-family={themeFamily}
       >
         <Sidebar />
+        <HistoryStrip />
         {settingsOpen ? (
           <SettingsWorkspace />
         ) : uiMode === "classic" ? (

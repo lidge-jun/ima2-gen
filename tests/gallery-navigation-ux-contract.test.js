@@ -78,6 +78,38 @@ describe("gallery navigation UX contract", () => {
     assert.match(css, /\.card-news-deck[\s\S]*overscroll-behavior-inline: contain/);
   });
 
+  it("renders the compact gallery strip as an adaptive app-level rail", () => {
+    const app = readSource("ui/src/App.tsx");
+    const sidebar = readSource("ui/src/components/Sidebar.tsx");
+    const historyStrip = readSource("ui/src/components/HistoryStrip.tsx");
+    const css = readSource("ui/src/index.css");
+    const appRule = /\.app\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const historyRule = /\.history-strip\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const addRule = /\.history-thumb--add\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const responsiveBlock = /@media \(max-width:\s*800px\)\s*\{[\s\S]*?\.canvas\s*\{/s.exec(css)?.[0] ?? "";
+
+    assert.match(app, /import \{ HistoryStrip \} from "\.\/components\/HistoryStrip"/);
+    assert.match(app, /<Sidebar \/>\s*<HistoryStrip \/>/);
+    assert.doesNotMatch(sidebar, /HistoryStrip/);
+
+    assert.match(appRule, /--gallery-rail-w:\s*clamp\(72px,\s*7vw,\s*112px\)/);
+    assert.match(appRule, /grid-template-columns:\s*260px var\(--gallery-rail-w\) minmax\(0,\s*1fr\) auto/);
+    assert.match(historyRule, /flex-direction:\s*column/);
+    assert.match(historyRule, /overflow-y:\s*auto/);
+    assert.match(historyRule, /overflow-x:\s*hidden/);
+    assert.match(addRule, /top:\s*0/);
+
+    assert.match(responsiveBlock, /grid-template-rows:\s*auto auto 1fr/);
+    assert.match(responsiveBlock, /\.history-strip\s*\{[\s\S]*flex-direction:\s*row/);
+    assert.match(responsiveBlock, /\.history-strip\s*\{[\s\S]*overflow-x:\s*auto/);
+    assert.match(responsiveBlock, /\.history-thumb--add\s*\{[\s\S]*left:\s*0/);
+
+    assert.match(historyStrip, /useRef<Record<string,\s*HTMLImageElement \| null>>/);
+    assert.match(historyStrip, /function getHistoryItemKey\(item: GenerateItem\): string/);
+    assert.match(historyStrip, /scrollIntoView\(\{ block: "nearest", inline: "nearest" \}\)/);
+    assert.match(historyStrip, /ref=\{\(node\) => \{/);
+  });
+
   it("does not introduce backend coupling for navigation UX", () => {
     const routes = readSource("routes/history.js");
     const test = readSource("tests/gallery-navigation-ux-contract.test.js");

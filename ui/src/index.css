@@ -492,7 +492,8 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: 260px 1fr auto;
+  --gallery-rail-w: clamp(72px, 7vw, 112px);
+  grid-template-columns: 260px var(--gallery-rail-w) minmax(0, 1fr) auto;
   height: 100dvh;
   overflow: hidden;
 }
@@ -1512,17 +1513,20 @@ body {
 
 .history-strip {
   display: flex;
+  flex-direction: column;
   gap: 6px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-inline: contain;
-  padding: 10px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-block: contain;
+  padding: 10px;
   flex: 0 0 auto;
-  border-top: 1px solid var(--border);
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border);
   background: var(--surface);
 }
 .history-strip::-webkit-scrollbar {
-  height: 4px;
+  width: 4px;
 }
 .history-strip::-webkit-scrollbar-track {
   background: transparent;
@@ -1533,8 +1537,10 @@ body {
 }
 
 .history-thumb {
-  width: 48px;
-  height: 48px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 52px;
+  max-height: 84px;
   flex-shrink: 0;
   border-radius: 6px;
   object-fit: cover;
@@ -1560,9 +1566,9 @@ body {
   border: 1px solid var(--border);
   opacity: 1;
   position: sticky;
-  left: 0;
+  top: 0;
   z-index: 2;
-  box-shadow: 6px 0 8px -6px var(--shadow-strong);
+  box-shadow: 0 6px 8px -6px var(--shadow-strong);
 }
 .history-thumb--add:hover {
   color: var(--accent);
@@ -2249,7 +2255,7 @@ body {
 @media (max-width: 800px) {
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
     height: auto;
     overflow: visible;
   }
@@ -2261,6 +2267,30 @@ body {
   }
   .sidebar__scroll {
     padding: 12px;
+  }
+  .history-strip {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    padding: 10px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-strip::-webkit-scrollbar {
+    width: auto;
+    height: 4px;
+  }
+  .history-thumb {
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    max-height: none;
+  }
+  .history-thumb--add {
+    top: auto;
+    left: 0;
+    box-shadow: 6px 0 8px -6px var(--shadow-strong);
   }
   .canvas {
     min-height: 50dvh;

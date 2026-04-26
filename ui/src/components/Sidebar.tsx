@@ -2,7 +2,6 @@ import { UIModeSwitch } from "./UIModeSwitch";
 import { PromptComposer } from "./PromptComposer";
 import { GenerateButton } from "./GenerateButton";
 import { InFlightList } from "./InFlightList";
-import { HistoryStrip } from "./HistoryStrip";
 import { SessionPicker } from "./SessionPicker";
 import { NodeStyleButton } from "./NodeStyleButton";
 import { SettingsButton } from "./SettingsButton";
@@ -72,7 +71,6 @@ export function Sidebar() {
           </>
         )}
       </div>
-      <HistoryStrip />
     </aside>
   );
 }

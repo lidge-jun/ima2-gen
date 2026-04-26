@@ -26,7 +26,8 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
 | 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
 | 8 | `0.09.34-node-connect-regression/` | active/reopened | edge disconnect 이후 기존 노드끼리 연결되지 않고 새 노드만 생기는 React Flow target handle 회귀 수정. 상하좌우 4방향 연결점 포함. 후속 PRD는 disconnect 후 같은 노드쌍을 다른 handle로 재연결할 때 이전 anchor가 재사용되는 문제. |
-| 9 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 9 | `0.09.36-gallery-double-sidebar-rail/` | planning | 하단 compact gallery strip을 왼쪽 sidebar 옆 세로 보조 rail로 이동하고, 좁은 화면에서는 기존 가로 strip으로 접히게 하는 UX 개선. |
+| 10 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 
 ## 완료로 이동한 항목
 
@@ -81,3 +82,4 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-27: 사용자 제보 기반 `0.09.34-node-connect-regression` active lane 추가. 증상은 노드끼리 연결하려 하면 기존 노드가 연결되지 않고 새 child node만 생성되는 React Flow target handle 회귀다.
 - 2026-04-27: `0.09.34` 플랜을 Context7/React Flow 공식 문서 기준으로 보강. 다중 handle은 unique id가 필요하며, 상하좌우 source/target handle과 `sourceHandle`/`targetHandle` 보존을 범위에 포함한다.
 - 2026-04-27: `0.09.34` 후속 PRD `PRD-reconnect-handle-anchor.md` 추가. top/top 연결 후 disconnect, side/middle 재연결 시 이전 top anchor가 재사용되는 문제를 handle-aware edge id와 disconnect 즉시 flush로 다룬다.
+- 2026-04-27: 사용자 correction 기준 `0.09.36-gallery-double-sidebar-rail` planning lane 추가. 기존 하단 compact gallery strip을 오른쪽 큰 rail이 아니라 왼쪽 sidebar 옆 두 번째 얇은 세로 rail로 옮기고, narrow viewport에서는 기존 가로 strip으로 접는 범위다.

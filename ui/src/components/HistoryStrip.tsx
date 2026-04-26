@@ -1,13 +1,26 @@
+import { useEffect, useRef } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { handleHorizontalWheel } from "../lib/horizontalWheel";
+import type { GenerateItem } from "../types";
+
+function getHistoryItemKey(item: GenerateItem): string {
+  return item.filename ?? item.url ?? item.image;
+}
 
 export function HistoryStrip() {
   const history = useAppStore((s) => s.history);
   const currentImage = useAppStore((s) => s.currentImage);
   const selectHistory = useAppStore((s) => s.selectHistory);
   const openGallery = useAppStore((s) => s.openGallery);
+  const thumbRefs = useRef<Record<string, HTMLImageElement | null>>({});
   const { t } = useI18n();
+  const activeKey = currentImage ? getHistoryItemKey(currentImage) : null;
+
+  useEffect(() => {
+    if (!activeKey) return;
+    thumbRefs.current[activeKey]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeKey, history]);
 
   return (
     <div className="history-strip" onWheel={handleHorizontalWheel}>
@@ -26,12 +39,14 @@ export function HistoryStrip() {
         </svg>
       </button>
       {history.map((item, i) => {
-        const active = item.filename
-          ? currentImage?.filename === item.filename
-          : currentImage?.image === item.image;
+        const key = getHistoryItemKey(item);
+        const active = activeKey === key;
         return (
           <img
             key={item.filename ?? `${i}-${item.image}`}
+            ref={(node) => {
+              thumbRefs.current[key] = node;
+            }}
             src={item.thumb || item.url || item.image}
             alt=""
             className={`history-thumb${active ? " active" : ""}`}
