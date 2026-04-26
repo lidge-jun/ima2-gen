@@ -1576,28 +1576,123 @@ export const useAppStore = create<AppState>((set, get) => ({
   duplicateBranchRoot: (sourceClientId) => {
     const source = get().graphNodes.find((n) => n.id === sourceClientId);
     if (!source) return sourceClientId;
-    const clientId = newClientNodeId();
-    const rootSiblings = get().graphNodes.filter((n) => !n.data.parentServerNodeId).length;
-    const node: GraphNode = {
-      id: clientId,
-      type: "imageNode",
-      position: { x: source.position.x + 420, y: source.position.y + 40 },
-      data: {
-        clientId,
-        serverNodeId: null,
-        parentServerNodeId: null,
-        prompt: source.data.prompt,
-        imageUrl: null,
-        status: "empty",
-        pendingRequestId: null,
-        pendingPhase: null,
-      },
-    };
-    // no parent edge — becomes a new branch root at root layer
-    void rootSiblings;
-    set({ graphNodes: [...get().graphNodes, node] });
+
+    // Collect the source + all descendants via BFS over outgoing edges.
+    const allEdges = get().graphEdges;
+    const allNodes = get().graphNodes;
+    const childrenBySource = new Map<string, string[]>();
+    for (const e of allEdges) {
+      const list = childrenBySource.get(e.source) ?? [];
+      list.push(e.target);
+      childrenBySource.set(e.source, list);
+    }
+    const idMap = new Map<string, string>();
+    idMap.set(sourceClientId, newClientNodeId());
+    const queue = [sourceClientId];
+    for (let i = 0; i < queue.length; i++) {
+      for (const child of childrenBySource.get(queue[i]) ?? []) {
+        if (idMap.has(child)) continue;
+        idMap.set(child, newClientNodeId());
+        queue.push(child);
+      }
+    }
+
+    const dx = 420;
+    const dy = 40;
+    const newNodes: GraphNode[] = [];
+    for (const [oldId, newId] of idMap) {
+      const oldNode = allNodes.find((n) => n.id === oldId);
+      if (!oldNode) continue;
+      const isCloneRoot = oldId === sourceClientId;
+      // Clones start fresh — no serverNodeId, no imageUrl. Children reset
+      // parentServerNodeId so each one will fetch its parent's new server
+      // id at generation time. The clone root becomes a brand-new root.
+      newNodes.push({
+        id: newId,
+        type: "imageNode",
+        position: {
+          x: oldNode.position.x + dx,
+          y: oldNode.position.y + dy,
+        },
+        data: {
+          clientId: newId as ClientNodeId,
+          serverNodeId: null,
+          parentServerNodeId: null,
+          prompt: oldNode.data.prompt,
+          imageUrl: null,
+          status: "empty",
+          pendingRequestId: null,
+          pendingPhase: null,
+          ...(isCloneRoot ? {} : { /* placeholder for non-root clones */ }),
+        },
+      });
+    }
+
+    const newEdges: GraphEdge[] = [];
+    for (const edge of allEdges) {
+      const newSource = idMap.get(edge.source);
+      const newTarget = idMap.get(edge.target);
+      if (!newSource || !newTarget) continue;
+      newEdges.push({
+        id: `${newSource}->${newTarget}`,
+        source: newSource,
+        target: newTarget,
+      });
+    }
+
+    set({
+      graphNodes: [...allNodes, ...newNodes],
+      graphEdges: [...allEdges, ...newEdges],
+    });
     get().scheduleGraphSave();
-    return clientId;
+
+    const newRootId = idMap.get(sourceClientId)!;
+
+    // Pre-seed the source image as a node-local reference on the new root
+    // so the first generateNode() carries style/composition. Fire-and-forget
+    // so the cloned subtree shows immediately; failures degrade to prompt-
+    // only continuation. Uses the node-local ref slot (Phase 4.2 sub-PR 6)
+    // rather than the session sidebar so cloning doesn't pollute global refs.
+    if (source.data.imageUrl) {
+      const sourceUrl = source.data.imageUrl;
+      void (async () => {
+        try {
+          const resp = await fetch(sourceUrl);
+          const blob = await resp.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              typeof reader.result === "string"
+                ? resolve(reader.result)
+                : reject(new Error("read failed"));
+            reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+            reader.readAsDataURL(blob);
+          });
+          const target = get().graphNodes.find((n) => n.id === newRootId);
+          if (!target) return;
+          const existing = target.data.referenceImages ?? [];
+          if (existing.length >= MAX_NODE_REFS) return;
+          set({
+            graphNodes: get().graphNodes.map((n) =>
+              n.id === newRootId
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      referenceImages: [...existing, dataUrl].slice(0, MAX_NODE_REFS),
+                    },
+                  }
+                : n,
+            ),
+          });
+          get().scheduleGraphSave();
+        } catch {
+          // non-fatal
+        }
+      })();
+    }
+
+    return newRootId as ClientNodeId;
   },
 
   async generateNode(clientId) {
