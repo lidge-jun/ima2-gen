@@ -1,6 +1,8 @@
-import { memo, useCallback, type CSSProperties } from "react";
+import { memo, useCallback, useRef, type CSSProperties } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
+
+const MAX_NODE_REFS = 5;
 
 const NODE_PREVIEW_HEIGHT = 240;
 const NODE_PREVIEW_MIN_WIDTH = 180;
@@ -30,10 +32,36 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const addChildNode = useAppStore((s) => s.addChildNode);
   const duplicateBranchRoot = useAppStore((s) => s.duplicateBranchRoot);
   const deleteNode = useAppStore((s) => s.deleteNode);
+  const addNodeReferences = useAppStore((s) => s.addNodeReferences);
+  const removeNodeReference = useAppStore((s) => s.removeNodeReference);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refs = d.referenceImages ?? [];
+  const isRoot = !d.parentServerNodeId;
+  const canAttachRef = isRoot && refs.length < MAX_NODE_REFS;
 
   const onPromptChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodePrompt(id, e.target.value),
     [id, updateNodePrompt],
+  );
+
+  const onPickRef = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const onRefSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      e.target.value = "";
+      if (files.length === 0) return;
+      void addNodeReferences(id, files);
+    },
+    [id, addNodeReferences],
+  );
+
+  const onRefRemove = useCallback(
+    (idx: number) => removeNodeReference(id, idx),
+    [id, removeNodeReference],
   );
 
   const onGenerate = useCallback(() => {
@@ -95,6 +123,43 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           <div className="image-node__placeholder">이미지 없음</div>
         )}
       </div>
+      {isRoot ? (
+        <div className="image-node__refs nodrag">
+          {refs.map((src, idx) => (
+            <div key={idx} className="image-node__ref">
+              <img src={src} alt={`참조 ${idx + 1}`} />
+              <button
+                type="button"
+                className="image-node__ref-del"
+                onClick={() => onRefRemove(idx)}
+                title="참조 제거"
+                disabled={isBusy}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {canAttachRef ? (
+            <button
+              type="button"
+              className="image-node__ref-add"
+              onClick={onPickRef}
+              disabled={isBusy}
+              title={`참조 이미지 추가 (최대 ${MAX_NODE_REFS}개)`}
+            >
+              +
+            </button>
+          ) : null}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={onRefSelected}
+          />
+        </div>
+      ) : null}
       <textarea
         className="image-node__prompt nodrag"
         value={d.prompt}

@@ -367,6 +367,7 @@ function saveSelectedFilename(filename: string | null): void {
 }
 
 const HISTORY_LIMIT = 500;
+const MAX_NODE_REFS = 5;
 
 export type ImageNodeStatus =
   | "empty"
@@ -395,6 +396,10 @@ export type ImageNodeData = {
   // Latest partial image (data: URL) emitted while the upstream is still
   // generating. Cleared once the final image arrives.
   partialImageUrl?: string | null;
+  // Node-local reference images (data URLs). Persisted with the graph save
+  // so a node can be regenerated standalone without depending on the
+  // session's transient referenceImages slot.
+  referenceImages?: string[];
 };
 
 export type GraphNode = FlowNode<ImageNodeData>;
@@ -427,6 +432,11 @@ function mapSessionToGraph(session: SessionFull): {
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
       size: typeof d.size === "string" ? d.size : null,
+      referenceImages: Array.isArray(d.referenceImages)
+        ? d.referenceImages.filter(
+            (r): r is string => typeof r === "string" && r.startsWith("data:"),
+          )
+        : undefined,
     };
     return {
       id: n.id,
@@ -507,6 +517,11 @@ type AppState = {
   addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
   connectNodes: (sourceClientId: ClientNodeId, targetClientId: ClientNodeId) => void;
   updateNodePrompt: (clientId: ClientNodeId, prompt: string) => void;
+  // Node-local references — only allowed on root nodes (parent edit mode
+  // already passes the parent image as the visual source).
+  addNodeReferences: (clientId: ClientNodeId, files: File[]) => Promise<void>;
+  removeNodeReference: (clientId: ClientNodeId, index: number) => void;
+  clearNodeReferences: (clientId: ClientNodeId) => void;
   generateNode: (clientId: ClientNodeId) => Promise<void>;
   deleteNode: (clientId: ClientNodeId) => void;
   deleteNodes: (clientIds: ClientNodeId[]) => void;
@@ -1483,6 +1498,81 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().scheduleGraphSave();
   },
 
+  addNodeReferences: async (clientId, files) => {
+    const node = get().graphNodes.find((n) => n.id === clientId);
+    if (!node) return;
+    if (node.data.parentServerNodeId) {
+      // Edit mode passes parent as the visual source — adding extra refs
+      // here would be ambiguous (which one wins?). Block at the action.
+      get().showToast("자식 노드는 부모 이미지를 자동 사용합니다 (참조 추가 불가).", true);
+      return;
+    }
+    const currentRefs = node.data.referenceImages ?? [];
+    const allowed = MAX_NODE_REFS - currentRefs.length;
+    if (allowed <= 0) {
+      get().showToast(`참조는 노드당 최대 ${MAX_NODE_REFS}개까지 가능합니다.`, true);
+      return;
+    }
+    const toAdd = files.slice(0, allowed);
+    const dataUrls = await Promise.all(
+      toAdd.map(
+        (f) =>
+          new Promise<string | null>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    );
+    const valid = dataUrls.filter((x): x is string => !!x);
+    if (valid.length === 0) return;
+    set({
+      graphNodes: get().graphNodes.map((n) =>
+        n.id === clientId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                referenceImages: [...currentRefs, ...valid].slice(0, MAX_NODE_REFS),
+              },
+            }
+          : n,
+      ),
+    });
+    if (files.length > allowed) {
+      get().showToast(`참조는 노드당 최대 ${MAX_NODE_REFS}개입니다 (초과분 제외).`, true);
+    }
+    get().scheduleGraphSave();
+  },
+
+  removeNodeReference: (clientId, index) => {
+    set({
+      graphNodes: get().graphNodes.map((n) =>
+        n.id === clientId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                referenceImages: (n.data.referenceImages ?? []).filter((_, i) => i !== index),
+              },
+            }
+          : n,
+      ),
+    });
+    get().scheduleGraphSave();
+  },
+
+  clearNodeReferences: (clientId) => {
+    set({
+      graphNodes: get().graphNodes.map((n) =>
+        n.id === clientId ? { ...n, data: { ...n.data, referenceImages: [] } } : n,
+      ),
+    });
+    get().scheduleGraphSave();
+  },
+
   duplicateBranchRoot: (sourceClientId) => {
     const source = get().graphNodes.find((n) => n.id === sourceClientId);
     if (!source) return sourceClientId;
@@ -1582,9 +1672,18 @@ export const useAppStore = create<AppState>((set, get) => ({
           ...(s.originalPrompt && s.originalPrompt !== prompt
             ? { originalPrompt: s.originalPrompt }
             : {}),
-          ...(s.referenceImages.length && !parentServerNodeId
-            ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
-            : {}),
+          // Node-local refs win over the session sidebar slot — they were
+          // attached specifically to this node, so users expect them to be
+          // used for regeneration even when the sidebar is empty/different.
+          ...((node.data.referenceImages?.length ?? 0) > 0 && !parentServerNodeId
+            ? {
+                references: node.data.referenceImages!.map((d) =>
+                  d.replace(/^data:[^;]+;base64,/, ""),
+                ),
+              }
+            : s.referenceImages.length && !parentServerNodeId
+              ? { references: s.referenceImages.map((d) => d.replace(/^data:[^;]+;base64,/, "")) }
+              : {}),
         },
         {
           onPartial: (partial) => {
