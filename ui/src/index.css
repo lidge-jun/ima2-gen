@@ -1956,7 +1956,7 @@ body {
 .image-node {
   position: relative;
   isolation: isolate;
-  width: 260px;
+  width: var(--node-preview-w, 240px);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -2001,7 +2001,7 @@ body {
 .image-node--error { border-color: var(--red); }
 .image-node__preview {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: var(--node-preview-h, 240px);
   background: var(--bg);
   border-radius: 8px;
   overflow: hidden;
@@ -2012,7 +2012,7 @@ body {
 .image-node__preview img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 .image-node__partial {
   filter: saturate(1.04) contrast(1.03);

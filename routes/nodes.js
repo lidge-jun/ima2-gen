@@ -375,6 +375,7 @@ export function registerNodeRoutes(app, ctx) {
         webSearchCalls,
         provider: "oauth",
         model: imageModel,
+        size,
         moderation,
         refsCount: refsForRequest.length,
         contextMode,

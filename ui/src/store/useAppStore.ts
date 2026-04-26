@@ -314,6 +314,7 @@ export type ImageNodeData = {
   elapsed?: number;
   webSearchCalls?: number;
   model?: string | null;
+  size?: string | null;
   referenceImages?: string[];
 };
 
@@ -351,6 +352,7 @@ function mapSessionToGraph(session: SessionFull): {
       elapsed: d.elapsed as number | undefined,
       webSearchCalls: d.webSearchCalls as number | undefined,
       model: (d.model ?? null) as string | null,
+      size: (d.size ?? null) as string | null,
       referenceImages: loadNodeRefs(session.id, n.id),
     };
     return {
@@ -1628,6 +1630,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 pendingStartedAt: startedAt,
                 partialImageUrl: null,
                 error: undefined,
+                size,
               },
             }
           : n,
@@ -1713,6 +1716,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 elapsed: res.elapsed,
                 webSearchCalls: res.webSearchCalls,
                 model: res.model ?? null,
+                size: res.size ?? size,
               },
             };
           }),
@@ -2205,6 +2209,7 @@ async function recoverGraphNodesFromHistory(
   let items: Array<{
     url: string;
     createdAt: number;
+    size?: string | null;
     sessionId?: string | null;
     nodeId?: string | null;
     clientNodeId?: string | null;
@@ -2245,6 +2250,7 @@ async function recoverGraphNodesFromHistory(
         status: "ready" as const,
         imageUrl: recovered.url, // canonical — jpeg/webp all covered
         serverNodeId: recovered.nodeId ?? n.data.serverNodeId,
+        size: recovered.size ?? n.data.size ?? null,
         pendingRequestId: null,
         recoveryRequestId: null,
         pendingPhase: null,

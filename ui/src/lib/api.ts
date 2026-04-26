@@ -262,6 +262,7 @@ export type NodeGenerateResponse = {
   provider: "oauth";
   moderation?: string;
   model?: string | null;
+  size?: string | null;
   refsCount?: number;
   contextMode?: "parent-plus-refs" | "parent-only" | "ancestry";
   searchMode?: "off" | "auto" | "on";

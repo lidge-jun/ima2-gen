@@ -25,6 +25,34 @@ describe("node UI compact metadata contract", () => {
     assert.match(actionsRule, /align-items:\s*center/);
   });
 
+  it("keeps preview height fixed while node width follows generated aspect ratio", () => {
+    const component = readSource("ui/src/components/ImageNode.tsx");
+    const css = readSource("ui/src/index.css");
+    const nodeRule = /\.image-node\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const previewRule = /\.image-node__preview\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const imageRule = /\.image-node__preview img\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+
+    assert.match(component, /function getPreviewWidth\(size\?: string \| null\): number/);
+    assert.match(component, /NODE_PREVIEW_HEIGHT \* \(width \/ height\)/);
+    assert.match(component, /"--node-preview-w": `\$\{getPreviewWidth\(d\.size\)\}px`/);
+    assert.match(nodeRule, /width:\s*var\(--node-preview-w,\s*240px\)/);
+    assert.match(previewRule, /height:\s*var\(--node-preview-h,\s*240px\)/);
+    assert.doesNotMatch(previewRule, /aspect-ratio:\s*1 \/ 1/);
+    assert.match(imageRule, /object-fit:\s*contain/);
+  });
+
+  it("persists node output size so aspect-ratio layout survives reload", () => {
+    const store = readSource("ui/src/store/useAppStore.ts");
+    const api = readSource("ui/src/lib/api.ts");
+    const route = readSource("routes/nodes.js");
+
+    assert.match(api, /size\?: string \| null/);
+    assert.match(route, /size,\s*\n\s*moderation/);
+    assert.match(store, /size: \(d\.size \?\? null\) as string \| null/);
+    assert.match(store, /size: res\.size \?\? size/);
+    assert.match(store, /size: recovered\.size \?\? n\.data\.size \?\? null/);
+  });
+
   it("uses compact regenerate labels", () => {
     const en = readSource("ui/src/i18n/en.json");
     const ko = readSource("ui/src/i18n/ko.json");

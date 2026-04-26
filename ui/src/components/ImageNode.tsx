@@ -1,10 +1,27 @@
-import { memo, useCallback, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
+import { memo, useCallback, useRef, useState, type ClipboardEvent, type CSSProperties, type DragEvent } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { getImageModelShortLabel } from "../lib/imageModels";
 
 const MAX_NODE_REFS = 5;
+const NODE_PREVIEW_HEIGHT = 240;
+const NODE_PREVIEW_MIN_WIDTH = 180;
+const NODE_PREVIEW_MAX_WIDTH = 420;
+
+function getPreviewWidth(size?: string | null): number {
+  const match = /^(\d+)x(\d+)$/.exec(size ?? "");
+  if (!match) return NODE_PREVIEW_HEIGHT;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return NODE_PREVIEW_HEIGHT;
+  }
+  const scaledWidth = NODE_PREVIEW_HEIGHT * (width / height);
+  return Math.round(
+    Math.min(NODE_PREVIEW_MAX_WIDTH, Math.max(NODE_PREVIEW_MIN_WIDTH, scaledWidth)),
+  );
+}
 
 function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const { t } = useI18n();
@@ -23,6 +40,10 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const refs = d.referenceImages ?? [];
   const isBusy = d.status === "pending" || d.status === "reconciling";
   const canAttachRefs = !isBusy && refs.length < MAX_NODE_REFS;
+  const nodeStyle = {
+    "--node-preview-w": `${getPreviewWidth(d.size)}px`,
+    "--node-preview-h": `${NODE_PREVIEW_HEIGHT}px`,
+  } as CSSProperties;
 
   const onPromptChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodePrompt(id, e.target.value),
@@ -133,7 +154,10 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const statusLabel = computeStatusLabel();
 
   return (
-    <div className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}>
+    <div
+      className={`image-node image-node--${d.status}${selected ? " image-node--selected" : ""}`}
+      style={nodeStyle}
+    >
       {d.parentServerNodeId ? (
         <Handle type="target" position={Position.Left} className="image-node__handle" />
       ) : null}
