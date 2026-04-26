@@ -34,15 +34,15 @@ graph TD
 |---|---|---|
 | `devlog/_plan/README.md` | current | Active lane, completed moves, and next-work rules |
 | `devlog/_plan/unified-roadmap.md` | current | `0.09.6 + 0.09.15 -> 0.10 -> 0.12` flow |
-| `devlog/_plan/0.09.17-structured-logging/PRD.md` | closeout via `0.09.17.1` | Dependency-free structured logging is implemented; closeout separates quiet normal serve from verbose dev diagnostics. |
-| `devlog/_plan/0.09.17.1-serve-dev-log-closeout/PRD.md` | active closeout | Normal `ima2 serve` stays quiet; `ima2 serve --dev` and `npm run dev` enable verbose diagnostics. |
-| `devlog/_plan/0.09.18-metrics-observability/PRD.md` | queued | Prometheus metrics proposal. No metrics route exists yet. |
+| `devlog/_fin/260426_0.09.17-structured-logging/PRD.md` | archived | Dependency-free structured logging implemented with safe request ID, redaction, and API lifecycle logs. |
+| `devlog/_fin/260426_0.09.17.1-serve-dev-log-closeout/PRD.md` | archived | Normal `ima2 serve` defaults to quiet `warn`; `ima2 serve --dev` and `npm run dev` enable verbose `debug` diagnostics. |
+| `devlog/_plan/0.09.18-metrics-observability/PRD.md` | deleted | Prometheus metrics proposal removed; local-first CLI tool does not need external observability stack. |
 | `devlog/_fin/260426_0.09.25-node-selection-batch/PRD.md` | archived | Canvas-level node selection and sequential batch generation. Implemented and verified. |
 | `devlog/_fin/260426_0.09.26-edge-disconnect/PRD.md` | archived | Edge-only removal and parent metadata cleanup. Implemented and verified. |
 | `devlog/_fin/260426_0.09.27-node-regen-layout-diagnostics/PRD.md` | archived | Ready-node action split, position-based node placement, and safe edit stream diagnostics. Implemented and verified. |
 | `devlog/_fin/260426_0.09.28-child-node-references/PRD.md` | archived | Allow child/edit node-local references alongside the parent image. Implemented and verified. |
-| `devlog/_plan/0.09.29-node-contract-repair/README.md` | in progress | Repairs node graph/backend contract: edge-derived parents, child refs, context/search policy, compact node footer. |
-| `devlog/_plan/0.09.30-oauth-proxy-port-fallback/README.md` | implemented, not archived | Runtime port binding contracts for backend server, split Vite dev server, OAuth proxy, and proxy error taxonomy. Archive when the plan folder is formally closed. |
+| `devlog/_fin/260426_0.09.29-node-contract-repair/README.md` | archived | Node graph/backend contract repairs: edge-derived parents, child refs, context/search policy, compact node footer. |
+| `devlog/_fin/260426_0.09.30-oauth-proxy-port-fallback/README.md` | archived | Runtime port binding contracts for backend server, split Vite dev server, OAuth proxy, and proxy error taxonomy. |
 | `devlog/_plan/0.99_future/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal. Defer strict localhost/origin gates until remote-user impact is decided. |
 | `devlog/_plan/0.99_future/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal. Not a 0.10 blocker. |
 | `devlog/_plan/0.10-feature-expansion/PLAN.md` | next feature | Preset, compare, and export direction |
@@ -65,15 +65,16 @@ graph TD
 
 | Cycle | Name | Current interpretation |
 |---|---|---|
-| 0.09.17 | Structured logging | Implemented; `0.09.17.1` closes UX by making normal serve quiet and dev modes verbose |
-| 0.09.18 | Metrics observability | Active ops; useful for self-host and debugging |
+| 0.09.17 | Structured logging | Archived 260426; dependency-free structured logging with safe request ID and redaction |
+| 0.09.17.1 | Serve/dev log closeout | Archived 260426; normal serve quiet, dev mode verbose |
+| 0.09.18 | Metrics observability | Deleted; not needed for local-first CLI tool |
 | 0.09.20 | CLI/backend parity | Archived as complete enough for the current lane; reopen future CLI slices separately if needed |
 | 0.09.25 | Node selection batch | Archived 260426; canvas selection, in-place batch generation, stale downstream handling |
 | 0.09.26 | Edge disconnect | Archived 260426; edge-only delete and parent metadata cleanup |
 | 0.09.27 | Node regen/layout/diagnostics | Archived 260426; ready-node action split, position-based layout, safe edit retry diagnostics |
 | 0.09.28 | Child node references | Archived 260426; child/edit node references are allowed alongside parent image |
-| 0.09.29 | Node contract repair | Active; graph edges are parent source of truth, child refs are sent, node context/search policy is explicit |
-| 0.09.30 | Runtime port binding contract | Implemented in code; avoid stale backend/frontend/OAuth URLs and distinguish proxy/network errors from moderation |
+| 0.09.29 | Node contract repair | Archived 260426; graph edges are parent source of truth, child refs are sent, node context/search policy is explicit |
+| 0.09.30 | Runtime port binding contract | Archived 260426; automatic port fallback with actual bound URL propagation and proxy/network error taxonomy |
 | 0.09.19 | Security hardening | Deferred to `0.99_future`; must avoid breaking remote/hard-user flows |
 | 0.09.20 | Containerization | Deferred to `0.99_future`; future packaging lane |
 | 0.10 | Feature expansion | Preset and compare MVP after current build is green |
@@ -120,6 +121,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-26: Marked `0.09.20.1` complete, reflected implemented runtime binding work, and removed dev-only lanes from the evergreen roadmap map.
 - 2026-04-26: Added `0.09.17.1` serve/dev logging closeout and marked CLI parity archived under `_fin`.
 - 2026-04-26: Archived `0.09.25`, `0.09.26`, `0.09.27`, and `0.09.28` node-mode work to `_fin/260426_*` after implementation verification. Removed active entries from the roadmap map.
+- 2026-04-26: Archived `0.09.17`, `0.09.17.1`, `0.09.29`, and `0.09.30` to `_fin/260426_*`. Deleted `0.09.18-metrics-observability` from `_plan`. Updated roadmap summary and reference tables.
 
 Previous document: `[[06-infra-operations]]`
 
