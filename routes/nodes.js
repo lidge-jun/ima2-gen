@@ -181,7 +181,10 @@ export function registerNodeRoutes(app, ctx) {
         parentB64 = await loadAssetB64(ctx.rootDir, externalSrc, ctx.config.storage.generatedDir);
       }
       const operation = parentB64 ? "edit" : "generate";
-      const refsForRequest = contextMode === "parent-only" ? [] : refCheck.refs;
+      const referenceDiagnostics = refCheck.referenceDiagnostics || [];
+      const generateReferenceDiagnostics = operation === "generate" ? referenceDiagnostics : [];
+      const referenceMismatchCount = generateReferenceDiagnostics.filter((ref) => ref.warnings?.includes("mime_mismatch")).length;
+      const refsForRequest = contextMode === "parent-only" ? [] : (refCheck.refDetails || refCheck.refs);
       const webSearchEnabled = !parentB64 || searchMode === "on";
       const parentImagePresent = !!parentB64;
       const inputImageCount = (parentImagePresent ? 1 : 0) + refsForRequest.length;
@@ -196,6 +199,9 @@ export function registerNodeRoutes(app, ctx) {
         size,
         moderation,
         refs: refsForRequest.length,
+        referenceMismatchCount,
+        refDetectedMimes: [...new Set(generateReferenceDiagnostics.map((ref) => ref.detectedMime).filter(Boolean))].join(","),
+        refDeclaredMimes: [...new Set(generateReferenceDiagnostics.map((ref) => ref.declaredMime).filter(Boolean))].join(","),
         inputImageCount,
         parentImagePresent,
         contextMode,
@@ -302,6 +308,9 @@ export function registerNodeRoutes(app, ctx) {
           upstreamCode: lastErr?.upstreamCode || lastErr?.code,
           errorEventType: lastErr?.eventType,
           errorEventCount: lastErr?.eventCount,
+          diagnosticReason: lastErr?.diagnosticReason,
+          retryKind: lastErr?.retryKind,
+          referencesDroppedOnRetry: lastErr?.referencesDroppedOnRetry,
           attempts: MAX_RETRIES + 1,
           outerHttpAlreadyCommitted: res.headersSent,
           sseErrorSent: streamResponse,
@@ -318,6 +327,11 @@ export function registerNodeRoutes(app, ctx) {
             upstreamParam: lastErr?.upstreamParam || null,
             errorEventType: lastErr?.eventType || null,
             errorEventCount: lastErr?.eventCount ?? null,
+            diagnosticReason: finalErr.diagnosticReason || lastErr?.diagnosticReason || null,
+            retryKind: finalErr.retryKind || lastErr?.retryKind || null,
+            referencesDroppedOnRetry: finalErr.referencesDroppedOnRetry ?? lastErr?.referencesDroppedOnRetry ?? null,
+            refsCount: finalErr.refsCount ?? lastErr?.refsCount ?? null,
+            inputImageCount: finalErr.inputImageCount ?? lastErr?.inputImageCount ?? null,
           },
         );
       }

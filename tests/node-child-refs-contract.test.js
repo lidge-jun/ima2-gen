@@ -29,6 +29,7 @@ describe("child node references contract", () => {
   });
 
   it("logs only reference counts for edit reference requests", () => {
+    assert.match(nodes, /const generateReferenceDiagnostics = operation === "generate" \? referenceDiagnostics : \[\]/);
     assert.match(oauth, /refsCount: references\.length/);
     assert.match(oauth, /inputImageCompressed: imageForRequest\.compressed/);
     assert.doesNotMatch(oauth, /logEvent\("oauth-edit", "request", \{[^}]*references:/);

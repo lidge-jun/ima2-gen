@@ -105,6 +105,8 @@ export function registerGenerateRoutes(app, ctx) {
         return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
       }
       const client = req.get("x-ima2-client") || "ui";
+      const referenceDiagnostics = refCheck.referenceDiagnostics || [];
+      const referenceMismatchCount = referenceDiagnostics.filter((ref) => ref.warnings?.includes("mime_mismatch")).length;
       logEvent("generate", "request", {
         requestId,
         client,
@@ -115,6 +117,9 @@ export function registerGenerateRoutes(app, ctx) {
         moderation,
         n: count,
         refs: refCheck.refs.length,
+        referenceMismatchCount,
+        refDetectedMimes: [...new Set(referenceDiagnostics.map((ref) => ref.detectedMime).filter(Boolean))].join(","),
+        refDeclaredMimes: [...new Set(referenceDiagnostics.map((ref) => ref.declaredMime).filter(Boolean))].join(","),
         sessionId,
         clientNodeId,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
@@ -137,7 +142,7 @@ export function registerGenerateRoutes(app, ctx) {
               quality,
               size,
               moderation,
-              refCheck.refs,
+              refCheck.refDetails || refCheck.refs,
               requestId,
               normalizedPromptMode,
               ctx,
@@ -232,6 +237,10 @@ export function registerGenerateRoutes(app, ctx) {
             upstreamCode: firstErr.upstreamCode || null,
             upstreamType: firstErr.upstreamType || null,
             upstreamParam: firstErr.upstreamParam || null,
+            diagnosticReason: firstErr.diagnosticReason || null,
+            retryKind: firstErr.retryKind || null,
+            referencesDroppedOnRetry: firstErr.referencesDroppedOnRetry ?? null,
+            errorEventCount: firstErr.eventCount ?? null,
             requestId,
           });
         }
@@ -288,6 +297,10 @@ export function registerGenerateRoutes(app, ctx) {
         upstreamCode: err.upstreamCode || null,
         upstreamType: err.upstreamType || null,
         upstreamParam: err.upstreamParam || null,
+        diagnosticReason: err.diagnosticReason || null,
+        retryKind: err.retryKind || null,
+        referencesDroppedOnRetry: err.referencesDroppedOnRetry ?? null,
+        errorEventCount: err.eventCount ?? null,
         requestId,
       });
     } finally {

@@ -57,6 +57,32 @@ test("empty response with metadata maps to EMPTY_RESPONSE", () => {
   assert.equal(normalized.status, 422);
   assert.match(normalized.message, /3840x2160/);
   assert.match(normalized.message, /gpt-5.4-mini/);
+  assert.equal(normalized.diagnosticReason, "experimental_4k_empty_response");
+  assert.equal(normalized.eventCount, 3);
+});
+
+test("empty response with reference mismatch preserves diagnostic metadata", () => {
+  const err = new Error("No image data received");
+  err.eventCount = 2;
+  err.size = "2048x1152";
+  err.referenceMismatchCount = 1;
+  err.referenceDiagnostics = [{
+    index: 0,
+    declaredMime: "image/png",
+    detectedMime: "image/jpeg",
+    b64Chars: 100,
+    approxBytes: 75,
+    source: "dataUrl",
+    warnings: ["mime_mismatch"],
+  }];
+  err.retryKind = "prompt_only";
+  err.referencesDroppedOnRetry = true;
+
+  const normalized = normalizeGenerationFailure(err);
+  assert.equal(normalized.code, "EMPTY_RESPONSE");
+  assert.equal(normalized.diagnosticReason, "reference_mime_mismatch_candidate");
+  assert.equal(normalized.referencesDroppedOnRetry, true);
+  assert.equal(normalized.referenceDiagnostics[0].b64, undefined);
 });
 
 test("unrecognized errors map to UNKNOWN, not SAFETY_REFUSAL", () => {

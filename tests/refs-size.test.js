@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateAndNormalizeRefs } from "../lib/refs.js";
+import { detectImageMimeFromB64, validateAndNormalizeRefs } from "../lib/refs.js";
 
 const VALID_B64 = "aGVsbG8=";
 
@@ -49,4 +49,22 @@ test("valid references strip data URL prefix and return normalized b64", () => {
 test("valid references without prefix pass through", () => {
   const r = validateAndNormalizeRefs([VALID_B64, VALID_B64]);
   assert.deepEqual(r.refs, [VALID_B64, VALID_B64]);
+});
+
+test("reference diagnostics preserve declared and detected MIME without exposing raw b64", () => {
+  const jpegB64 = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+  const r = validateAndNormalizeRefs([`data:image/png;base64,${jpegB64}`]);
+
+  assert.equal(r.error, undefined);
+  assert.equal(r.refDetails[0].declaredMime, "image/png");
+  assert.equal(r.refDetails[0].detectedMime, "image/jpeg");
+  assert.deepEqual(r.refDetails[0].warnings, ["mime_mismatch"]);
+  assert.equal(r.referenceDiagnostics[0].b64, undefined);
+  assert.equal(r.referenceDiagnostics[0].detectedMime, "image/jpeg");
+});
+
+test("detectImageMimeFromB64 detects common image signatures", () => {
+  assert.equal(detectImageMimeFromB64(Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString("base64")), "image/png");
+  assert.equal(detectImageMimeFromB64(Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64")), "image/jpeg");
+  assert.equal(detectImageMimeFromB64(Buffer.from("RIFFxxxxWEBP", "ascii").toString("base64")), "image/webp");
 });
