@@ -113,6 +113,25 @@
     "decrease": "개수 줄이기",
     "increase": "개수 늘리기"
   },
+  "metadata": {
+    "restoreTitle": "이미지 설정 복원",
+    "restoreBody": "이 이미지에 ima2 생성 정보가 있습니다. 프롬프트와 설정을 적용하거나 참조 이미지만 추가할 수 있습니다.",
+    "applySettings": "설정 적용",
+    "useAsReferenceOnly": "참조만 추가",
+    "noMetadata": "ima2 메타데이터가 없습니다.",
+    "invalidMetadata": "이미지 메타데이터가 올바르지 않습니다.",
+    "unsupportedFormat": "PNG, JPEG, WebP 메타데이터만 복원할 수 있습니다.",
+    "readFailed": "메타데이터를 읽지 못했습니다.",
+    "applied": "이미지 설정을 복원했습니다.",
+    "sourceXmp": "XMP",
+    "sourcePngComment": "PNG comment",
+    "imageAlt": "드롭한 이미지 미리보기",
+    "prompt": "프롬프트",
+    "size": "크기",
+    "quality": "품질",
+    "model": "모델",
+    "source": "출처"
+  },
   "generate": {
     "button": "생성",
     "buttonLoading": "생성 중 ({n})"

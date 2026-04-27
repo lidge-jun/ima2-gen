@@ -1,5 +1,6 @@
 import type {
   BillingResponse,
+  EmbeddedGenerationMetadata,
   GenerateRequest,
   GenerateResponse,
   OAuthStatus,
@@ -242,6 +243,26 @@ export function restoreHistoryItem(filename: string, trashId: string): Promise<{
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ trashId }),
+  });
+}
+
+export type ImageMetadataReadResponse = {
+  ok: boolean;
+  metadata: EmbeddedGenerationMetadata | null;
+  source: "xmp" | "png-comment" | null;
+  warnings?: string[];
+  code?: string;
+  error?: string;
+};
+
+export function readImageMetadata(input: {
+  filename: string;
+  dataUrl: string;
+}): Promise<ImageMetadataReadResponse> {
+  return jsonFetch("/api/metadata/read", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
 }
 

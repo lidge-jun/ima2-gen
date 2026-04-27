@@ -34,6 +34,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const d = data as ImageNodeData;
   const updateNodePrompt = useAppStore((s) => s.updateNodePrompt);
   const addNodeReferences = useAppStore((s) => s.addNodeReferences);
+  const readDroppedImageMetadata = useAppStore((s) => s.readDroppedImageMetadata);
   const removeNodeReference = useAppStore((s) => s.removeNodeReference);
   const generateNode = useAppStore((s) => s.generateNode);
   const generateNodeInPlace = useAppStore((s) => s.generateNodeInPlace);
@@ -91,14 +92,27 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
     return files;
   };
 
-  const onDropRefs = (e: DragEvent<HTMLDivElement>) => {
+  const handleNodeImageFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      const handled = await readDroppedImageMetadata(files[0], id);
+      if (handled) return;
+    }
+    await addNodeReferences(id, files);
+  };
+
+  const onDropRefs = async (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingRef(false);
-    if (!canAttachRefs) return;
     const files = Array.from(e.dataTransfer.files).filter((f) =>
       f.type.startsWith("image/"),
     );
+    if (files.length === 1) {
+      const handled = await readDroppedImageMetadata(files[0], id);
+      if (handled) return;
+    }
+    if (!canAttachRefs) return;
     if (files.length > 0) void addNodeReferences(id, files);
   };
 
@@ -254,7 +268,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           hidden
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []);
-            if (files.length > 0) void addNodeReferences(id, files);
+            if (files.length > 0) void handleNodeImageFiles(files);
             e.target.value = "";
           }}
         />

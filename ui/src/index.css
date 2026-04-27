@@ -2332,6 +2332,52 @@ body {
 .modal__btn--secondary:hover {
   background: var(--surface-3);
 }
+.metadata-restore-backdrop {
+  z-index: 240;
+}
+.metadata-restore {
+  width: min(560px, 92vw);
+}
+.metadata-restore__body {
+  display: grid;
+  gap: 12px;
+}
+.metadata-restore__preview {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.metadata-restore__preview img {
+  width: 120px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.metadata-restore__details {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.metadata-restore__details div {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+.metadata-restore__details span {
+  color: var(--text-dim);
+}
+.metadata-restore__details strong {
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .custom-size-confirm-backdrop {
   z-index: 230;
 }

@@ -4,6 +4,7 @@ import type {
   Format,
   GenerateItem,
   GenerateResponse,
+  EmbeddedGenerationMetadata,
   ImageModel,
   Moderation,
   Provider,
@@ -33,12 +34,13 @@ import {
   saveSessionStyleSheet,
   setSessionStyleSheetEnabled,
   extractSessionStyleSheet,
+  readImageMetadata,
   type SessionSummary,
   type SessionFull,
   type SessionGraphEdge,
   type StyleSheet,
 } from "../lib/api";
-import { compressImage } from "../lib/image";
+import { compressImage, readFileAsDataURL } from "../lib/image";
 import { compressToBase64, isHeic, hasAlphaChannel } from "../lib/compress";
 import {
   normalizeCustomSizePairDetailed,
@@ -464,6 +466,14 @@ type CustomSizeConfirmState = {
     | { kind: "node-variation"; clientId: ClientNodeId };
 } | null;
 
+type MetadataRestoreState = {
+  filename: string;
+  image: string;
+  metadata: EmbeddedGenerationMetadata;
+  source: "xmp" | "png-comment" | string;
+  targetNodeId?: ClientNodeId | null;
+} | null;
+
 type AppState = {
   provider: Provider;
   quality: Quality;
@@ -492,6 +502,11 @@ type AppState = {
   history: GenerateItem[];
   toast: ToastState;
   customSizeConfirm: CustomSizeConfirmState;
+  metadataRestore: MetadataRestoreState;
+  readDroppedImageMetadata: (file: File, targetNodeId?: ClientNodeId | null) => Promise<boolean>;
+  applyMetadataRestore: () => void;
+  cancelMetadataRestore: () => void;
+  addMetadataRestoreAsReference: () => void;
   rightPanelOpen: boolean;
   toggleRightPanel: () => void;
   galleryOpen: boolean;
@@ -625,6 +640,71 @@ function normalizeCount(value: number): Count {
   return Math.min(8, Math.max(1, Math.trunc(value || 1)));
 }
 
+const SIZE_PRESET_VALUES = new Set<SizePreset>([
+  "1024x1024",
+  "1536x1024",
+  "1024x1536",
+  "1360x1024",
+  "1024x1360",
+  "1824x1024",
+  "1024x1824",
+  "2048x2048",
+  "2048x1152",
+  "1152x2048",
+  "3840x2160",
+  "2160x3840",
+  "auto",
+  "custom",
+]);
+
+function parseMetadataSize(size?: string | null): { preset?: SizePreset; w?: number; h?: number } {
+  if (typeof size !== "string") return {};
+  if (SIZE_PRESET_VALUES.has(size as SizePreset)) return { preset: size as SizePreset };
+  const match = /^(\d+)x(\d+)$/.exec(size);
+  if (!match) return {};
+  const w = Number(match[1]);
+  const h = Number(match[2]);
+  if (!Number.isFinite(w) || !Number.isFinite(h)) return {};
+  return { preset: "custom", w, h };
+}
+
+function isQuality(value: unknown): value is Quality {
+  return value === "low" || value === "medium" || value === "high";
+}
+
+function isFormat(value: unknown): value is Format {
+  return value === "png" || value === "jpeg" || value === "webp";
+}
+
+function isModeration(value: unknown): value is Moderation {
+  return value === "low" || value === "auto";
+}
+
+function applyMetadataToState(
+  state: AppState,
+  metadata: EmbeddedGenerationMetadata,
+): Partial<AppState> {
+  const patch: Partial<AppState> = {};
+  const prompt = metadata.userPrompt || metadata.prompt;
+  if (typeof prompt === "string") patch.prompt = prompt;
+  if (isQuality(metadata.quality)) patch.quality = metadata.quality;
+  if (isFormat(metadata.format)) patch.format = metadata.format;
+  if (isModeration(metadata.moderation)) patch.moderation = metadata.moderation;
+  if (metadata.promptMode === "auto" || metadata.promptMode === "direct") {
+    patch.promptMode = metadata.promptMode;
+  }
+  if (metadata.model && isImageModel(metadata.model)) {
+    patch.imageModel = metadata.model;
+  }
+  const size = parseMetadataSize(metadata.size);
+  if (size.preset) patch.sizePreset = size.preset;
+  if (size.preset === "custom" && size.w && size.h) {
+    patch.customW = parseRequestedCustomSide(size.w, state.customW);
+    patch.customH = parseRequestedCustomSide(size.h, state.customH);
+  }
+  return patch;
+}
+
 function getCustomSizeConfirmation(
   state: AppState,
   continuation: NonNullable<CustomSizeConfirmState>["continuation"],
@@ -697,6 +777,62 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? s
         : { referenceImages: [...s.referenceImages, dataUrl] },
     );
+  },
+  metadataRestore: null,
+  readDroppedImageMetadata: async (file, targetNodeId = null) => {
+    if (!file.type.startsWith("image/")) return false;
+    let dataUrl = "";
+    try {
+      dataUrl = await readFileAsDataURL(file);
+      const result = await readImageMetadata({ filename: file.name, dataUrl });
+      if (!result.metadata) return false;
+      set({
+        metadataRestore: {
+          filename: file.name,
+          image: dataUrl,
+          metadata: result.metadata,
+          source: result.source ?? "xmp",
+          targetNodeId,
+        },
+      });
+      return true;
+    } catch {
+      get().showToast(t("metadata.readFailed"), true);
+      return false;
+    }
+  },
+  applyMetadataRestore: () => {
+    const pending = get().metadataRestore;
+    if (!pending) return;
+    const patch = applyMetadataToState(get(), pending.metadata);
+    if (patch.imageModel) saveImageModel(patch.imageModel);
+    if (pending.targetNodeId && typeof patch.prompt === "string") {
+      const prompt = patch.prompt;
+      set({
+        ...patch,
+        metadataRestore: null,
+        graphNodes: get().graphNodes.map((n) =>
+          n.id === pending.targetNodeId
+            ? { ...n, data: { ...n.data, prompt } }
+            : n,
+        ),
+      });
+      get().scheduleGraphSave();
+    } else {
+      set({ ...patch, metadataRestore: null });
+    }
+    get().showToast(t("metadata.applied"));
+  },
+  cancelMetadataRestore: () => set({ metadataRestore: null }),
+  addMetadataRestoreAsReference: () => {
+    const pending = get().metadataRestore;
+    if (!pending) return;
+    if (pending.targetNodeId) {
+      get().addNodeReferenceDataUrl(pending.targetNodeId, pending.image);
+    } else {
+      get().addReferenceDataUrl(pending.image);
+    }
+    set({ metadataRestore: null });
   },
   removeReference: (index) => {
     set((s) => ({

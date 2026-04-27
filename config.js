@@ -74,6 +74,11 @@ export const config = {
   },
   limits: {
     maxRefB64Bytes: pickInt(env.IMA2_MAX_REF_B64_BYTES, fileCfg.limits?.maxRefB64Bytes, 7 * 1024 * 1024),
+    maxMetadataReadB64Bytes: pickInt(
+      env.IMA2_MAX_METADATA_READ_B64_BYTES,
+      fileCfg.limits?.maxMetadataReadB64Bytes,
+      12 * 1024 * 1024,
+    ),
     maxRefCount: pickInt(env.IMA2_MAX_REF_COUNT, fileCfg.limits?.maxRefCount, 5),
     maxParallel: pickInt(env.IMA2_MAX_PARALLEL, fileCfg.limits?.maxParallel, 8),
     graphMaxNodes: pickInt(env.IMA2_GRAPH_MAX_NODES, fileCfg.limits?.graphMaxNodes, 500),

@@ -13,6 +13,7 @@ export function PromptComposer() {
 
   const refs = useAppStore((s) => s.referenceImages);
   const addReferences = useAppStore((s) => s.addReferences);
+  const readDroppedImageMetadata = useAppStore((s) => s.readDroppedImageMetadata);
   const removeReference = useAppStore((s) => s.removeReference);
   const useCurrentAsReference = useAppStore((s) => s.useCurrentAsReference);
   const currentImage = useAppStore((s) => s.currentImage);
@@ -27,13 +28,22 @@ export function PromptComposer() {
 
   const canAddMore = refs.length < MAX_REFS;
 
+  const handleImageFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      const handled = await readDroppedImageMetadata(files[0]);
+      if (handled) return;
+    }
+    await addReferences(files);
+  };
+
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files).filter((f) =>
       f.type.startsWith("image/"),
     );
-    if (files.length > 0) void addReferences(files);
+    if (files.length > 0) void handleImageFiles(files);
   };
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -209,7 +219,7 @@ export function PromptComposer() {
         hidden
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
-          if (files.length > 0) void addReferences(files);
+          if (files.length > 0) void handleImageFiles(files);
           e.target.value = "";
         }}
       />

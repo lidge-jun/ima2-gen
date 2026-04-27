@@ -11,6 +11,7 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { getStyleSheet } from "../lib/sessionStore.js";
 import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { logEvent, logError } from "../lib/logger.js";
+import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
@@ -165,8 +166,11 @@ export function registerGenerateRoutes(app, ctx) {
         if (r.status === "fulfilled" && r.value.b64) {
           const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
           const filename = `${Date.now()}_${rand}_${images.length}.${format}`;
-          await writeFile(join(ctx.config.storage.generatedDir, filename), Buffer.from(r.value.b64, "base64"));
           const meta = {
+            kind: "classic",
+            requestId,
+            sessionId,
+            clientNodeId,
             prompt,
             userPrompt: prompt,
             revisedPrompt: r.value.revisedPrompt || null,
@@ -182,7 +186,21 @@ export function registerGenerateRoutes(app, ctx) {
             createdAt: Date.now(),
             usage: r.value.usage || null,
             webSearchCalls: r.value.webSearchCalls || 0,
+            refsCount: refCheck.refs.length,
           };
+          const rawBuffer = Buffer.from(r.value.b64, "base64");
+          const embedded = await embedImageMetadataBestEffort(rawBuffer, format, meta, {
+            version: ctx.packageVersion,
+          });
+          if (!embedded.embedded) {
+            logEvent("generate", "metadata_embed_skipped", {
+              requestId,
+              filename,
+              code: embedded.code,
+              warning: embedded.warning,
+            });
+          }
+          await writeFile(join(ctx.config.storage.generatedDir, filename), embedded.buffer);
           await writeFile(join(ctx.config.storage.generatedDir, filename + ".json"), JSON.stringify(meta)).catch(() => {});
           images.push({
             image: `data:${mime};base64,${r.value.b64}`,

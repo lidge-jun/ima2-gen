@@ -113,6 +113,25 @@
     "decrease": "Decrease count",
     "increase": "Increase count"
   },
+  "metadata": {
+    "restoreTitle": "Restore image settings",
+    "restoreBody": "This image contains ima2 generation metadata. Apply its prompt and settings, or attach it as a reference only.",
+    "applySettings": "Apply settings",
+    "useAsReferenceOnly": "Reference only",
+    "noMetadata": "No ima2 metadata found.",
+    "invalidMetadata": "Invalid image metadata.",
+    "unsupportedFormat": "Only PNG, JPEG, and WebP metadata can be restored.",
+    "readFailed": "Could not read image metadata.",
+    "applied": "Image settings restored.",
+    "sourceXmp": "XMP",
+    "sourcePngComment": "PNG comment",
+    "imageAlt": "Dropped image preview",
+    "prompt": "Prompt",
+    "size": "Size",
+    "quality": "Quality",
+    "model": "Model",
+    "source": "Source"
+  },
   "generate": {
     "button": "Generate",
     "buttonLoading": "Generating ({n})"

@@ -74,6 +74,32 @@ export type GenerateItem = {
   refsCount?: number;
 };
 
+export type EmbeddedGenerationMetadata = {
+  schema: "ima2.generation.v1";
+  app: "ima2-gen";
+  version?: string | null;
+  createdAt?: number | null;
+  kind?: string | null;
+  prompt?: string | null;
+  userPrompt?: string | null;
+  revisedPrompt?: string | null;
+  promptMode?: "auto" | "direct" | null;
+  quality?: string | null;
+  size?: string | null;
+  format?: string | null;
+  moderation?: string | null;
+  model?: string | null;
+  provider?: string | null;
+  sessionId?: string | null;
+  nodeId?: string | null;
+  parentNodeId?: string | null;
+  clientNodeId?: string | null;
+  requestId?: string | null;
+  refsCount?: number;
+  webSearchCalls?: number;
+  styleSheetApplied?: boolean;
+};
+
 export type GenerateSingleResponse = {
   image: string;
   elapsed: number;
