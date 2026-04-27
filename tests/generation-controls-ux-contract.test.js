@@ -66,7 +66,7 @@ describe("generation controls custom plus UX contract", () => {
     assert.match(sizePicker, /if \(nextPreset !== "custom"\) \{[\s\S]*?setEditorOpen\(false\);[\s\S]*?setReplaceSlotId\(null\);[\s\S]*?\}/);
     assert.match(sizePicker, /onChange=\{selectPreset\}/);
     assert.match(sizePicker, /onClick=\{\(\) => selectPreset\(item\.value\)\}/);
-    assert.match(sizePicker, /setEditorOpen\(false\);[\s\S]*?\}\n\n  const reasonText =/);
+    assert.match(sizePicker, /setEditorOpen\(false\);[\s\S]*?\}\r?\n\r?\n  const reasonText =/);
   });
 
   it("offers 21:9 only as a custom ratio preset", () => {
