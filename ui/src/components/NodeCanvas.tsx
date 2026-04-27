@@ -81,7 +81,7 @@ function NodeCanvasInner() {
       const clientY =
         "touches" in event ? event.changedTouches[0].clientY : (event as MouseEvent).clientY;
       const pos = screenToFlowPosition({ x: clientX, y: clientY });
-      addChildNodeAt(fromNodeId, pos);
+      addChildNodeAt(fromNodeId, pos, connectionState.fromHandle?.id ?? null);
     },
     [addChildNodeAt, screenToFlowPosition],
   );

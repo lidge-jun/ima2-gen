@@ -354,6 +354,9 @@ export type ImageNodeData = {
 export type GraphNode = FlowNode<ImageNodeData>;
 export type GraphEdge = FlowEdge;
 
+const DEFAULT_CHILD_SOURCE_HANDLE = "source-right";
+const DEFAULT_CHILD_TARGET_HANDLE = "target-left";
+
 function newGraphEdgeId(
   sourceClientId: ClientNodeId,
   targetClientId: ClientNodeId,
@@ -363,6 +366,29 @@ function newGraphEdgeId(
   const sourceAnchor = sourceHandle ?? "auto";
   const targetAnchor = targetHandle ?? "auto";
   return `${sourceClientId}:${sourceAnchor}->${targetClientId}:${targetAnchor}`;
+}
+
+function normalizeNodeHandleId(
+  handleId: string | null | undefined,
+  type: "source" | "target",
+): string | null {
+  if (!handleId) return null;
+  return handleId.startsWith(`${type}-`) ? handleId : null;
+}
+
+function getOppositeTargetHandle(sourceHandle?: string | null): string | null {
+  switch (sourceHandle) {
+    case "source-top":
+      return "target-bottom";
+    case "source-right":
+      return "target-left";
+    case "source-bottom":
+      return "target-top";
+    case "source-left":
+      return "target-right";
+    default:
+      return null;
+  }
 }
 
 function mapSessionToGraph(session: SessionFull): {
@@ -511,7 +537,11 @@ type AppState = {
   addChildNode: (parentClientId: ClientNodeId) => ClientNodeId;
   addSiblingNode: (sourceClientId: ClientNodeId) => ClientNodeId;
   duplicateBranchRoot: (sourceClientId: ClientNodeId) => ClientNodeId;
-  addChildNodeAt: (parentClientId: ClientNodeId, position: { x: number; y: number }) => ClientNodeId;
+  addChildNodeAt: (
+    parentClientId: ClientNodeId,
+    position: { x: number; y: number },
+    sourceHandle?: string | null,
+  ) => ClientNodeId;
   connectNodes: (
     sourceClientId: ClientNodeId,
     targetClientId: ClientNodeId,
@@ -1311,11 +1341,13 @@ export const useAppStore = create<AppState>((set, get) => ({
           pendingRequestId: null,
           pendingPhase: null,
         },
-      };
+    };
     const edge: GraphEdge = {
-      id: newGraphEdgeId(parentClientId, clientId),
+      id: newGraphEdgeId(parentClientId, clientId, DEFAULT_CHILD_SOURCE_HANDLE, DEFAULT_CHILD_TARGET_HANDLE),
       source: parentClientId,
       target: clientId,
+      sourceHandle: DEFAULT_CHILD_SOURCE_HANDLE,
+      targetHandle: DEFAULT_CHILD_TARGET_HANDLE,
     };
     set({
       graphNodes: [...get().graphNodes, node],
@@ -1373,9 +1405,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
     };
     const edge: GraphEdge = {
-      id: newGraphEdgeId(parentClientId, clientId),
+      id: newGraphEdgeId(parentClientId, clientId, DEFAULT_CHILD_SOURCE_HANDLE, DEFAULT_CHILD_TARGET_HANDLE),
       source: parentClientId,
       target: clientId,
+      sourceHandle: DEFAULT_CHILD_SOURCE_HANDLE,
+      targetHandle: DEFAULT_CHILD_TARGET_HANDLE,
     };
     set({
       graphNodes: [...get().graphNodes, node],
@@ -1926,10 +1960,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().scheduleGraphSave();
   },
 
-  addChildNodeAt: (parentClientId, position) => {
+  addChildNodeAt: (parentClientId, position, sourceHandle = DEFAULT_CHILD_SOURCE_HANDLE) => {
     const parent = get().graphNodes.find((n) => n.id === parentClientId);
     if (!parent) return parentClientId;
     const clientId = newClientNodeId();
+    const normalizedSourceHandle =
+      normalizeNodeHandleId(sourceHandle, "source") ?? DEFAULT_CHILD_SOURCE_HANDLE;
+    const targetHandle = getOppositeTargetHandle(normalizedSourceHandle) ?? DEFAULT_CHILD_TARGET_HANDLE;
     const node: GraphNode = {
       id: clientId,
       type: "imageNode",
@@ -1946,9 +1983,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
     };
     const edge: GraphEdge = {
-      id: newGraphEdgeId(parentClientId, clientId),
+      id: newGraphEdgeId(parentClientId, clientId, normalizedSourceHandle, targetHandle),
       source: parentClientId,
       target: clientId,
+      sourceHandle: normalizedSourceHandle,
+      targetHandle,
     };
     set({
       graphNodes: [...get().graphNodes, node],

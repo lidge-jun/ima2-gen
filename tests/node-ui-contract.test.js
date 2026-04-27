@@ -186,8 +186,28 @@ describe("node UI compact metadata contract", () => {
   it("uses the same edge id helper for programmatic child edges", () => {
     const store = readSource("ui/src/store/useAppStore.ts");
 
-    assert.match(store, /addChildNode:\s*\(parentClientId\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId\)/);
-    assert.match(store, /addSiblingNode:\s*\(sourceClientId\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId\)/);
-    assert.match(store, /addChildNodeAt:\s*\(parentClientId,\s*position\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId\)/);
+    assert.match(store, /const DEFAULT_CHILD_SOURCE_HANDLE = "source-right"/);
+    assert.match(store, /const DEFAULT_CHILD_TARGET_HANDLE = "target-left"/);
+    assert.match(store, /addChildNode:\s*\(parentClientId\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId,\s*DEFAULT_CHILD_SOURCE_HANDLE,\s*DEFAULT_CHILD_TARGET_HANDLE\)/);
+    assert.match(store, /addSiblingNode:\s*\(sourceClientId\) => \{[\s\S]*?id:\s*newGraphEdgeId\(parentClientId,\s*clientId,\s*DEFAULT_CHILD_SOURCE_HANDLE,\s*DEFAULT_CHILD_TARGET_HANDLE\)/);
+    assert.match(store, /sourceHandle:\s*DEFAULT_CHILD_SOURCE_HANDLE/);
+    assert.match(store, /targetHandle:\s*DEFAULT_CHILD_TARGET_HANDLE/);
+  });
+
+  it("preserves the dragged source handle when creating a child node from a connector", () => {
+    const canvas = readSource("ui/src/components/NodeCanvas.tsx");
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(canvas, /connectionState\.fromHandle\?\.id \?\? null/);
+    assert.match(canvas, /addChildNodeAt\(fromNodeId,\s*pos,\s*connectionState\.fromHandle\?\.id \?\? null\)/);
+    assert.match(store, /function normalizeNodeHandleId\(/);
+    assert.match(store, /function getOppositeTargetHandle\(sourceHandle\?: string \| null\): string \| null/);
+    assert.match(store, /case "source-right":[\s\S]*?return "target-left"/);
+    assert.match(store, /addChildNodeAt:\s*\(parentClientId,\s*position,\s*sourceHandle = DEFAULT_CHILD_SOURCE_HANDLE\) => \{/);
+    assert.match(store, /const normalizedSourceHandle =[\s\S]*?normalizeNodeHandleId\(sourceHandle,\s*"source"\) \?\? DEFAULT_CHILD_SOURCE_HANDLE/);
+    assert.match(store, /const targetHandle = getOppositeTargetHandle\(normalizedSourceHandle\) \?\? DEFAULT_CHILD_TARGET_HANDLE/);
+    assert.match(store, /id:\s*newGraphEdgeId\(parentClientId,\s*clientId,\s*normalizedSourceHandle,\s*targetHandle\)/);
+    assert.match(store, /sourceHandle:\s*normalizedSourceHandle/);
+    assert.match(store, /targetHandle,/);
   });
 });
