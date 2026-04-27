@@ -5,6 +5,23 @@ export interface NormalizedPoint {
   y: number;
 }
 
+export interface DrawingPath {
+  id: string;
+  tool: "pen" | "arrow";
+  points: NormalizedPoint[];
+  color: string;
+  strokeWidth: number;
+}
+
+export interface BoundingBox {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+}
+
 export interface CanvasViewport {
   zoom: number;
   panX: number;
