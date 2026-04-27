@@ -4,6 +4,7 @@ import { registerSessionRoutes } from "./sessions.js";
 import { registerEditRoutes } from "./edit.js";
 import { registerNodeRoutes } from "./nodes.js";
 import { registerGenerateRoutes } from "./generate.js";
+import { registerMultimodeRoutes } from "./multimode.js";
 import { registerStorageRoutes } from "./storage.js";
 import { registerCardNewsRoutes } from "./cardNews.js";
 import { registerMetadataRoutes } from "./metadata.js";
@@ -18,6 +19,7 @@ export function configureRoutes(app, ctx) {
   registerEditRoutes(app, ctx);
   registerNodeRoutes(app, ctx);
   if (ctx.config.features.cardNews) registerCardNewsRoutes(app, ctx);
+  registerMultimodeRoutes(app, ctx);
   registerGenerateRoutes(app, ctx);
   registerPromptRoutes(app, ctx);
 }

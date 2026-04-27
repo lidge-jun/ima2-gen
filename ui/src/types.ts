@@ -73,7 +73,14 @@ export type GenerateItem = {
   }>;
   refsCount?: number;
   isFavorite?: boolean;
+  sequenceId?: string | null;
+  sequenceIndex?: number | null;
+  sequenceTotalRequested?: number | null;
+  sequenceTotalReturned?: number | null;
+  sequenceStatus?: "complete" | "partial" | "empty" | null;
 };
+
+export type MultimodeSequenceStatus = "pending" | "partial" | "complete" | "empty" | "error";
 
 export type EmbeddedGenerationMetadata = {
   schema: "ima2.generation.v1";
@@ -147,6 +154,30 @@ export type GenerateRequest = {
   references?: string[];
   requestId?: string;
   mode?: "auto" | "direct";
+};
+
+export type MultimodeGenerateRequest = Omit<GenerateRequest, "n"> & {
+  maxImages: number;
+};
+
+export type MultimodeGenerateResponse = {
+  ok: boolean;
+  requestId: string;
+  sequenceId: string;
+  requested: number;
+  returned: number;
+  status: "complete" | "partial" | "empty";
+  elapsed: string;
+  images: GenerateItem[];
+  usage?: GenerateItem["usage"];
+  provider: string;
+  quality?: string;
+  size?: string;
+  moderation?: string;
+  model?: string | null;
+  webSearchCalls?: number;
+  promptMode?: "auto" | "direct";
+  extraIgnored?: number;
 };
 
 export type OAuthStatus = {

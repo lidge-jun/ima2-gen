@@ -1062,6 +1062,42 @@ body {
   outline: none;
 }
 
+.multimode-toggle__button {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.multimode-toggle__button span:first-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.multimode-toggle__button:hover {
+  border-color: var(--border-strong);
+}
+
+.multimode-toggle__button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.multimode-toggle__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .cost-estimate {
   font-family: var(--mono);
   font-size: 12px;
@@ -1589,6 +1625,85 @@ body {
   gap: 8px;
 }
 
+.multimode-sequence {
+  width: min(100%, 1120px);
+  max-height: calc(100dvh - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.multimode-sequence__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.multimode-sequence__title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.multimode-sequence__meta {
+  margin-top: 3px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.multimode-sequence__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  min-height: 280px;
+  overflow: auto;
+}
+
+.multimode-sequence__grid.count-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.multimode-sequence__slot {
+  position: relative;
+  min-height: 180px;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.multimode-sequence__slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.multimode-sequence__badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.multimode-sequence__empty {
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: center;
+}
+
 .action-btn {
   padding: 8px 16px;
   background: var(--surface);
@@ -1601,6 +1716,22 @@ body {
   transition: all 0.15s;
 }
 .action-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.secondary-btn {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
   border-color: var(--border-strong);
   background: var(--surface-2);
 }
@@ -1719,13 +1850,52 @@ body {
   border-color: var(--accent);
   background: var(--control-bg);
 }
+.composer--multimode {
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--amber));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 62%, transparent), transparent 84%),
+    var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.composer--multimode .composer__textarea {
+  color: var(--text);
+}
+.composer--multimode .composer__textarea::placeholder {
+  color: var(--text-muted);
+}
 .composer__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 .composer__label {
   margin: 0;
+}
+.composer__header-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.composer__mode-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  max-width: 170px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface));
+  color: var(--accent-bright);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .composer__count {
   font-family: var(--mono);

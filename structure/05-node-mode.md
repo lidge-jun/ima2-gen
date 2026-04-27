@@ -203,6 +203,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-25: Documented graph-edge source-of-truth, node-local reference persistence, and explicit context/search modes.
 - 2026-04-26: Marked node selection batch, edge disconnect, single-node regen/variation, and child node references as implemented in the change checklist after archival to `_fin/260426_*`.
 - 2026-04-27: Documented four-direction React Flow handles, handle-id session persistence, and the reconnect fix after edge disconnect.
+- 2026-04-28: Refreshed cross-references after the 1.1.5 prompt library, image metadata, and dev-only card-news additions; node-mode contracts in this document remain unchanged.
 
 Previous document: `[[04-frontend-architecture]]`
 

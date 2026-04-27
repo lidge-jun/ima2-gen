@@ -116,6 +116,29 @@
     "decrease": "개수 줄이기",
     "increase": "개수 늘리기"
   },
+  "multimode": {
+    "label": "멀티모드",
+    "tooltip": "한 프롬프트로 단계별 시퀀스를 생성합니다",
+    "shortHint": "단계별 생성",
+    "maxStages": "최대 단계",
+    "highCountHint": "단계가 많으면 몇 분 걸릴 수 있습니다.",
+    "minMaxHint": "1-8단계까지 가능합니다.",
+    "composerBadge": "시퀀스 · 최대 {count}장",
+    "composerAriaLabel": "멀티모드 프롬프트 입력창, 최대 {count}개의 별도 이미지",
+    "promptPlaceholder": "단계별로 만들 장면을 입력하세요. 콜라주가 아니라 별도 이미지로 요청합니다.",
+    "promptPlaceholderWithRefs": "첨부한 참조를 바탕으로 단계별 시퀀스를 입력하세요.",
+    "toggleDisabledGenerating": "현재 생성이 끝난 뒤 변경할 수 있습니다",
+    "sequenceTitle": "멀티모드 시퀀스",
+    "sequenceProgress": "{returned}/{requested}장",
+    "stageLabel": "{index}단계",
+    "generating": "생성 중...",
+    "partialAlt": "멀티모드 중간 미리보기",
+    "partial": "{requested}장 중 {returned}장을 {elapsed}초 만에 생성했습니다.",
+    "complete": "{requested}장 중 {returned}장을 {elapsed}초 만에 생성했습니다.",
+    "empty": "반환된 이미지 없음",
+    "error": "생성 실패",
+    "cancel": "취소"
+  },
   "metadata": {
     "restoreTitle": "이미지 설정 복원",
     "restoreBody": "이 이미지에 ima2 생성 정보가 있습니다. 프롬프트와 설정을 적용하거나 참조 이미지만 추가할 수 있습니다.",
@@ -318,6 +341,7 @@
   "cost": {
     "free": "무료",
     "approx": "약 ${amount}",
+    "multimodeApprox": "최대 약 ${amount} ({count}장)",
     "label": "예상 비용"
   },
   "result": {

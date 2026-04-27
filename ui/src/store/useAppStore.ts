@@ -7,6 +7,8 @@ import type {
   EmbeddedGenerationMetadata,
   ImageModel,
   Moderation,
+  MultimodeGenerateResponse,
+  MultimodeSequenceStatus,
   Provider,
   Quality,
   ResolvedTheme,
@@ -20,6 +22,7 @@ import { THEME_FAMILIES } from "../types";
 import { isMultiResponse } from "../types";
 import {
   postGenerate,
+  postMultimodeGenerateStream,
   getHistory,
   getInflight,
   cancelInflight,
@@ -153,7 +156,7 @@ type PersistedInFlight = {
   sessionId?: string | null;
   parentNodeId?: string | null;
   clientNodeId?: string | null;
-  kind?: "classic" | "node";
+  kind?: "classic" | "node" | "multimode";
 };
 const INFLIGHT_TTL_MS = 180_000;
 
@@ -182,9 +185,9 @@ function composePrompt(mainPrompt: string, insertedPrompts: InsertedPrompt[]): s
 function toPersistedInFlightJob(job: ServerInFlightJob): PersistedInFlight {
   const meta = job.meta ?? {};
   const kind =
-    job.kind === "classic" || job.kind === "node"
+    job.kind === "classic" || job.kind === "node" || job.kind === "multimode"
       ? job.kind
-      : meta.kind === "classic" || meta.kind === "node"
+      : meta.kind === "classic" || meta.kind === "node" || meta.kind === "multimode"
         ? meta.kind
         : undefined;
   return {
@@ -220,7 +223,7 @@ function loadInFlight(): PersistedInFlight[] {
         sessionId: typeof x.sessionId === "string" ? x.sessionId : null,
         parentNodeId: typeof x.parentNodeId === "string" ? x.parentNodeId : null,
         clientNodeId: typeof x.clientNodeId === "string" ? x.clientNodeId : null,
-        kind: x.kind === "classic" || x.kind === "node" ? x.kind : undefined,
+        kind: x.kind === "classic" || x.kind === "node" || x.kind === "multimode" ? x.kind : undefined,
       }));
   } catch {
     return [];
@@ -321,6 +324,11 @@ function mapHistoryItem(it: Awaited<ReturnType<typeof getHistory>>["items"][numb
     cards: it.cards,
     refsCount: it.refsCount ?? 0,
     isFavorite: it.isFavorite ?? false,
+    sequenceId: it.sequenceId ?? null,
+    sequenceIndex: it.sequenceIndex ?? null,
+    sequenceTotalRequested: it.sequenceTotalRequested ?? null,
+    sequenceTotalReturned: it.sequenceTotalReturned ?? null,
+    sequenceStatus: it.sequenceStatus ?? null,
   };
 }
 
@@ -477,6 +485,7 @@ type CustomSizeConfirmState = {
   reasons: CustomSizeAdjustmentReason[];
   continuation:
     | { kind: "classic" }
+    | { kind: "multimode" }
     | { kind: "node"; clientId: ClientNodeId }
     | { kind: "node-in-place"; clientId: ClientNodeId }
     | { kind: "node-variation"; clientId: ClientNodeId };
@@ -490,6 +499,18 @@ type MetadataRestoreState = {
   targetNodeId?: ClientNodeId | null;
 } | null;
 
+export type MultimodeSequenceState = {
+  sequenceId: string;
+  requestId: string;
+  requested: number;
+  returned: number;
+  images: GenerateItem[];
+  partials: Array<{ image: string; index?: number | null }>;
+  status: MultimodeSequenceStatus;
+  elapsed?: string;
+  error?: string | null;
+};
+
 type AppState = {
   provider: Provider;
   quality: Quality;
@@ -500,6 +521,10 @@ type AppState = {
   moderation: Moderation;
   imageModel: ImageModel;
   count: Count;
+  multimode: boolean;
+  multimodeMaxImages: Count;
+  multimodeSequence: MultimodeSequenceState | null;
+  multimodeAbortController: AbortController | null;
   promptMode: "auto" | "direct";
   prompt: string;
   referenceImages: string[];
@@ -622,6 +647,10 @@ type AppState = {
   setModeration: (m: Moderation) => void;
   setImageModel: (m: ImageModel) => void;
   setCount: (c: Count) => void;
+  setMultimode: (enabled: boolean) => void;
+  setMultimodeMaxImages: (c: Count) => void;
+  generateMultimode: (sizeOverride?: string) => Promise<void>;
+  cancelMultimode: () => void;
   setPromptMode: (m: "auto" | "direct") => void;
   setPrompt: (p: string) => void;
   insertedPrompts: InsertedPrompt[];
@@ -761,6 +790,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   format: "png",
   moderation: "low",
   count: 1,
+  multimode: false,
+  multimodeMaxImages: 4,
+  multimodeSequence: null,
+  multimodeAbortController: null,
   promptMode: "auto",
   prompt: "",
   insertedPrompts: [],
@@ -2128,6 +2161,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ imageModel });
   },
   setCount: (count) => set({ count: normalizeCount(count) }),
+  setMultimode: (enabled) => {
+    if (enabled && get().uiMode !== "classic") return;
+    set({ multimode: enabled, multimodeSequence: enabled ? get().multimodeSequence : null });
+  },
+  setMultimodeMaxImages: (count) => set({ multimodeMaxImages: normalizeCount(count) }),
   setPromptMode: (promptMode) => set({ promptMode }),
   setPrompt: (prompt) => set({ prompt }),
   insertPromptToComposer: (prompt) =>
@@ -2181,12 +2219,172 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get();
     const prompt = composePrompt(s.prompt, s.insertedPrompts);
     if (!prompt) return;
-    const pending = getCustomSizeConfirmation(s, { kind: "classic" });
+    const useMultimode = s.uiMode === "classic" && s.multimode;
+    const pending = getCustomSizeConfirmation(s, { kind: useMultimode ? "multimode" : "classic" });
     if (pending) {
       set({ customSizeConfirm: pending });
       return;
     }
+    if (useMultimode) {
+      await get().generateMultimode();
+      return;
+    }
     await get().runGenerate();
+  },
+
+  async generateMultimode(sizeOverride) {
+    const s = get();
+    if (s.uiMode !== "classic") return;
+    if (s.multimodeAbortController) return;
+    const prompt = composePrompt(s.prompt, s.insertedPrompts);
+    if (!prompt) return;
+    const size = sizeOverride ?? s.getResolvedSize();
+    const flightId = `mm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const requested = normalizeCount(s.multimodeMaxImages);
+    const nextInFlight: PersistedInFlight[] = [
+      ...s.inFlight,
+      { id: flightId, prompt, startedAt, kind: "multimode" },
+    ];
+    const initialSequence: MultimodeSequenceState = {
+      sequenceId: flightId,
+      requestId: flightId,
+      requested,
+      returned: 0,
+      images: [],
+      partials: [],
+      status: "pending",
+    };
+    saveInFlight(nextInFlight);
+    set({
+      activeGenerations: s.activeGenerations + 1,
+      inFlight: nextInFlight,
+      multimodeAbortController: controller,
+      multimodeSequence: initialSequence,
+    });
+    get().startInFlightPolling();
+
+    try {
+      const res: MultimodeGenerateResponse = await postMultimodeGenerateStream(
+        {
+          prompt,
+          quality: s.quality,
+          size,
+          format: s.format,
+          moderation: s.moderation,
+          provider: s.provider,
+          maxImages: requested,
+          model: s.imageModel,
+          requestId: flightId,
+          mode: s.promptMode,
+          ...(s.referenceImages.length
+            ? { references: s.referenceImages.map(stripDataUrlPrefix) }
+            : {}),
+        },
+        {
+          onPartial: (partial) => {
+            set((state) => {
+              const current = state.multimodeSequence;
+              if (!current || current.requestId !== flightId) return {};
+              return {
+                multimodeSequence: {
+                  ...current,
+                  partials: [
+                    ...current.partials,
+                    { image: partial.image, index: partial.index ?? null },
+                  ].slice(-requested),
+                },
+              };
+            });
+          },
+          onImage: (image) => {
+            set((state) => {
+              const current = state.multimodeSequence;
+              if (!current || current.requestId !== flightId) return {};
+              const exists = current.images.some((item) => item.filename && item.filename === image.filename);
+              if (exists) return {};
+              return {
+                multimodeSequence: {
+                  ...current,
+                  sequenceId: image.sequenceId ?? current.sequenceId,
+                  returned: current.images.length + 1,
+                  images: [...current.images, image],
+                  status: "partial",
+                },
+              };
+            });
+          },
+        },
+        { signal: controller.signal },
+      );
+
+      const items = res.images.map((image) => ({
+        ...image,
+        prompt,
+        elapsed: Number.parseFloat(res.elapsed),
+        provider: res.provider,
+        usage: res.usage,
+        quality: res.quality ?? s.quality,
+        size: res.size ?? size,
+        model: res.model ?? s.imageModel,
+      }));
+      for (const item of items) {
+        await addHistory(item, set, get);
+      }
+      set({
+        multimodeSequence: {
+          sequenceId: res.sequenceId,
+          requestId: flightId,
+          requested: res.requested,
+          returned: res.returned,
+          images: items,
+          partials: [],
+          status: res.status,
+          elapsed: res.elapsed,
+        },
+      });
+      const toastKey = res.status === "complete" ? "multimode.complete" : "multimode.partial";
+      get().showToast(t(toastKey, { returned: res.returned, requested: res.requested, elapsed: res.elapsed }));
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        set((state) => {
+          const current = state.multimodeSequence;
+          if (!current || current.requestId !== flightId) return {};
+          return { multimodeSequence: { ...current, status: current.images.length > 0 ? "partial" : "empty" } };
+        });
+      } else {
+        set((state) => {
+          const current = state.multimodeSequence;
+          if (!current || current.requestId !== flightId) return {};
+          return { multimodeSequence: { ...current, status: "error", error: (err as Error).message } };
+        });
+        handleError(err, get());
+      }
+    } finally {
+      const remaining = get().inFlight.filter((f) => f.id !== flightId);
+      saveInFlight(remaining);
+      set({
+        activeGenerations: Math.max(0, get().activeGenerations - 1),
+        inFlight: remaining,
+        multimodeAbortController: null,
+      });
+    }
+  },
+
+  cancelMultimode: () => {
+    get().multimodeAbortController?.abort();
+    set((state) => {
+      const current = state.multimodeSequence;
+      if (!current) return { multimodeAbortController: null };
+      return {
+        multimodeAbortController: null,
+        multimodeSequence: {
+          ...current,
+          status: current.images.length > 0 ? "partial" : "empty",
+        },
+      };
+    });
   },
 
   async runGenerate(sizeOverride) {
@@ -2298,6 +2496,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     if (pending.continuation.kind === "classic") {
       await get().runGenerate(adjustedSize);
+      return;
+    }
+    if (pending.continuation.kind === "multimode") {
+      await get().generateMultimode(adjustedSize);
       return;
     }
     if (pending.continuation.kind === "node-in-place") {

@@ -1,7 +1,10 @@
 import type {
   BillingResponse,
   EmbeddedGenerationMetadata,
+  GenerateItem,
   GenerateRequest,
+  MultimodeGenerateRequest,
+  MultimodeGenerateResponse,
   GenerateResponse,
   OAuthStatus,
 } from "../types";
@@ -102,6 +105,93 @@ export function postGenerate(payload: GenerateRequest): Promise<GenerateResponse
   });
 }
 
+function parseSseBlock(block: string): { event: string | null; data: unknown } | null {
+  let event: string | null = null;
+  const dataLines: string[] = [];
+  for (const line of block.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+  }
+  if (dataLines.length === 0) return null;
+  const raw = dataLines.join("\n");
+  if (!raw || raw === "[DONE]") return null;
+  return { event, data: JSON.parse(raw) as unknown };
+}
+
+export async function postMultimodeGenerateStream(
+  payload: MultimodeGenerateRequest,
+  handlers: {
+    onPartial?: (partial: { image: string; requestId?: string | null; sequenceId?: string | null; index?: number | null }) => void;
+    onImage?: (image: GenerateItem) => void;
+    onPhase?: (phase: { phase?: string; requestId?: string | null; sequenceId?: string | null; maxImages?: number }) => void;
+  } = {},
+  options: { signal?: AbortSignal } = {},
+): Promise<MultimodeGenerateResponse> {
+  const res = await fetch("/api/generate/multimode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify(payload),
+    signal: options.signal,
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("text/event-stream")) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = data as { error?: string; code?: string; status?: number };
+      const e = new Error(err.error ?? `Request failed: ${res.status}`) as Error & { code?: string; status?: number };
+      e.code = err.code;
+      e.status = err.status ?? res.status;
+      throw e;
+    }
+    return data as MultimodeGenerateResponse;
+  }
+
+  if (!res.ok || !res.body) {
+    throw new Error(`Request failed: ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalPayload: MultimodeGenerateResponse | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const parsed = parseSseBlock(block);
+      if (parsed) {
+        if (parsed.event === "partial") {
+          handlers.onPartial?.(parsed.data as { image: string; requestId?: string | null; sequenceId?: string | null; index?: number | null });
+        } else if (parsed.event === "image") {
+          handlers.onImage?.(parsed.data as GenerateItem);
+        } else if (parsed.event === "phase") {
+          handlers.onPhase?.(parsed.data as { phase?: string; requestId?: string | null; sequenceId?: string | null; maxImages?: number });
+        } else if (parsed.event === "done") {
+          finalPayload = parsed.data as MultimodeGenerateResponse;
+        } else if (parsed.event === "error") {
+          const err = parsed.data as { error?: string; code?: string; status?: number };
+          const e = new Error(err.error ?? "Multimode generation failed") as Error & { code?: string; status?: number };
+          e.code = err.code;
+          e.status = err.status;
+          throw e;
+        }
+      }
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+
+  if (!finalPayload) {
+    throw new Error("Multimode stream ended without a final payload");
+  }
+  return finalPayload;
+}
+
 export function postEdit(payload: GenerateRequest): Promise<GenerateResponse> {
   return jsonFetch<GenerateResponse>("/api/edit", {
     method: "POST",
@@ -147,6 +237,11 @@ export type HistoryItem = {
   }>;
   refsCount?: number;
   isFavorite?: boolean;
+  sequenceId?: string | null;
+  sequenceIndex?: number | null;
+  sequenceTotalRequested?: number | null;
+  sequenceTotalReturned?: number | null;
+  sequenceStatus?: "complete" | "partial" | "empty" | null;
 };
 
 export type HistoryCursor = { before: number; beforeFilename: string };

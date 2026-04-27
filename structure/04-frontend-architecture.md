@@ -42,12 +42,15 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 |---|---|---|
 | App shell | `ui/src/App.tsx` | Initialization, storage sync, beforeunload save, canvas/settings switch |
 | Left panel | `Sidebar.tsx`, `PromptComposer.tsx`, `SettingsButton.tsx` | Focused generation entry plus settings access |
-| Center workspace | `Canvas.tsx`, `NodeCanvas.tsx`, `SettingsWorkspace.tsx`, `ImageNode.tsx` | Classic image display, graph canvas, or settings workspace |
+| Center workspace | `Canvas.tsx`, `NodeCanvas.tsx`, `SettingsWorkspace.tsx`, `ImageNode.tsx`, `card-news/CardNewsWorkspace.tsx` | Classic image display, graph canvas, settings, or dev-only card-news workspace |
 | Right panel | `RightPanel.tsx`, `SizePicker.tsx`, `CostEstimate.tsx` | Quality, size, format, moderation, count |
-| History | `HistoryStrip.tsx`, `GalleryModal.tsx`, `ResultActions.tsx` | Saved image browsing and actions |
+| History | `HistoryStrip.tsx`, `GalleryModal.tsx`, `ResultActions.tsx` | Saved image browsing, favorite, restore, drag-out, and metadata-restore actions |
 | Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx`, `AccountSettings.tsx` | Pending jobs, notifications, billing/provider status |
 | Error UX | `ErrorCard.tsx`, `ui/src/lib/errorCodes.ts`, `errorHandler.ts` | Code-based localized error cards and toast routing |
-| Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts` | Keyboard-safe custom size drafts and generation-time adjustment confirmation |
+| Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts`, `customSizeSlots.ts` | Keyboard-safe custom size drafts, slot persistence, and generation-time adjustment confirmation |
+| Prompt library | `PromptLibraryDialog.tsx`, `PromptLibraryButton.tsx`, `PromptLibraryEntry.tsx` | Library-style overlay for browsing, searching, favoriting, and inserting saved prompts |
+| Image metadata restore | `MetadataRestoreDialog.tsx`, `ui/src/lib/imageMetadataClient.ts` (`api.ts:postMetadataRead`) | Drop a previously generated PNG into the composer to restore prompt and parameters from embedded XMP |
+| Card-news (dev-only) | `ui/src/components/card-news/*`, `ui/src/store/cardNewsStore.ts`, `ui/src/lib/cardNewsApi.ts` | Topic→draft→template→generate→export flow, gated by `VITE_IMA2_CARD_NEWS=1` or `VITE_IMA2_DEV=1` |
 | i18n | `ui/src/i18n/index.ts`, `ko.json`, `en.json` | Locale load/save and translation lookup |
 
 ## State Model
@@ -56,16 +59,21 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 |---|---|---|
 | Generation options | `useAppStore.ts` | Provider, quality, size, format, moderation, image model, count |
 | Prompt/reference | `useAppStore.ts` | Prompt, reference images, add/remove/clear helpers |
-| Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery |
+| Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery, favorite toggle |
 | Inflight | `useAppStore.ts` plus `/api/inflight` | localStorage-backed pending jobs and polling |
-| Node graph | `useAppStore.ts` plus sessions API | Nodes, edges, graphVersion, session actions |
+| Node graph | `useAppStore.ts` plus sessions API | Nodes, edges, graphVersion, session actions, style sheet |
+| Prompt library | `useAppStore.ts` plus `/api/prompts/*` | Open/close, current folder, search query, favorite filter, in-flight loading |
+| Metadata restore | `useAppStore.ts` plus `/api/metadata/read` | Pending dropped image, parsed metadata, restore confirmation flow |
+| Card-news (dev-only) | `ui/src/store/cardNewsStore.ts` plus `/api/cardnews/*` | Topic/draft/template selection, manifest, jobs, regenerate/export state |
 | Settings workspace | `useAppStore.ts` | `settingsOpen` and active settings section |
-| UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale, theme |
+| UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale, theme, custom-size slots, dev mode flag |
 | Error surface | `useAppStore.ts` plus `ErrorCard.tsx` | `errorCard` state for actionable errors; toast remains for small errors |
 
 The image model preference is stored in `localStorage` as `ima2.imageModel`. Sidebar compact labels (`5.4m`, `5.4`, `5.5`) and Settings full labels (`GPT-5.4 Mini`, `GPT-5.4`, `GPT-5.5`) both read/write the same store field, so the next classic or node request sends the selected `model` instead of falling back to the default. The sidebar selector is intentionally tiny: the closed state shows only the compact label, opens a custom menu on click, and closes on outside click or Escape.
 
 Visible metadata should carry the selected model too. Current result metadata, hydrated history items, and ready node status labels use the server-returned or sidecar-restored `model` so UI debugging matches backend logs. The visible metadata uses compact aliases to preserve elapsed time: model aliases are `5.4m`/`5.4`/`5.5`, and quality aliases are `l`/`m`/`h`.
+
+`useAppStore.ts` is now 2739 lines and concentrates most cross-cutting state (classic, node, history, prompt library, metadata restore, settings, toasts). The card-news store is intentionally separated into `cardNewsStore.ts` (416 lines) so the dev-only feature does not bloat the main bundle path or persistence layer.
 
 ## API Client
 
@@ -77,9 +85,14 @@ Visible metadata should carry the selected model too. Current result metadata, h
 | `getHistoryGrouped` | `GET /api/history?groupBy=session` | Session-grouped history |
 | `deleteHistoryItem` | `DELETE /api/history/:filename` | Asset delete |
 | `restoreHistoryItem` | `POST /api/history/:filename/restore` | Undo/restore |
+| `setHistoryFavorite` | `POST /api/history/favorite` | Gallery favorite toggle |
 | `getStorageStatus` | `GET /api/storage/status` | Gallery storage recovery notice |
 | `openGeneratedDir` | `POST /api/storage/open-generated-dir` | Gallery "Open folder" action |
 | `getInflight` | `GET /api/inflight` | Pending reconciliation |
+| `postMetadataRead` | `POST /api/metadata/read` | Drag-and-drop metadata restore dialog |
+| Prompt library helpers | `/api/prompts*` | List, create, update, delete, favorite, import, export, folders |
+| Session style sheet helpers | `/api/sessions/:id/style-sheet*` | Get/save/enable/extract style sheet from a reference history image |
+| Card-news helpers | `/api/cardnews/*` (dev-only via `cardNewsApi.ts`) | Templates, role templates, sets, draft, generate, jobs, regenerate, export |
 | `postNodeGenerate` | `POST /api/node/generate` | Node-mode generation, implemented in `nodeApi.ts` |
 | `postNodeGenerateStream` | `POST /api/node/generate` with `Accept: text/event-stream` | Node-mode partial preview/error streaming, implemented in `nodeApi.ts` |
 | Session helpers | `/api/sessions/*` | Graph session list/load/save |
@@ -92,6 +105,7 @@ Visible metadata should carry the selected model too. Current result metadata, h
 |---|---|---|---|
 | Classic | Default UI | `Canvas.tsx` | Sends prompt to `/api/generate`, then updates current image/history |
 | Node | Product feature enabled | `NodeCanvas.tsx` | Calls `/api/node/generate` per node, renders partial previews when streamed, and saves the graph to the session |
+| Card-news | Dev-only, gated by `VITE_IMA2_CARD_NEWS=1` or `VITE_IMA2_DEV=1` | `card-news/CardNewsWorkspace.tsx` | Drives the dev-only topic→draft→template→generate→export flow against `/api/cardnews/*` and `cardNewsStore` |
 
 Node mode uses `@xyflow/react`. Empty canvas creates a root node. Dragging an edge from an existing node can create a child node. Session loading displays a canvas overlay.
 
@@ -113,8 +127,9 @@ Error handling is centralized. API helpers preserve `err.code` where the server 
 
 | File | Current signal | Caution |
 |---|---|---|
-| `ui/src/index.css` | 3873 lines | Large structural changes can easily create CSS drift |
-| `ui/src/components/*.tsx` | 3396 lines | Component class names and CSS are tightly coupled |
+| `ui/src/index.css` | 4497 lines | Large structural changes can easily create CSS drift across classic, node, prompt-library, gallery, and card-news surfaces |
+| `ui/src/components/*.tsx` | 4046 lines (excluding `card-news/` subtree) | Component class names and CSS are tightly coupled |
+| `ui/src/components/card-news/*.tsx` | Dev-only subtree | Do not touch from non-card-news work; gated behind `VITE_IMA2_CARD_NEWS=1` / `VITE_IMA2_DEV=1` |
 | `ui/dist/` | Build output | Do not edit directly |
 | `public/index.html.legacy` | Legacy artifact | Do not use it as the source for new active UI behavior |
 
@@ -140,6 +155,7 @@ Error handling is centralized. API helpers preserve `err.code` where the server 
 - 2026-04-26: Removed dev-only workspace details from the evergreen frontend architecture reference.
 - 2026-04-26: Confirmed node selection batch, edge disconnect, single-node regen/variation, and child node references are implemented and archived under `_fin/260426_*`.
 - 2026-04-27: Documented four-direction node handles and edge handle-id persistence after 0.09.34.
+- 2026-04-28: Added prompt library overlay, image-metadata restore dialog, session style-sheet helpers, dev-only card-news workspace and store, history favorite, and refreshed line counts (`useAppStore` 2739, `index.css` 4497, components 4046) for ima2-gen 1.1.5.
 
 Previous document: `[[03-server-api]]`
 

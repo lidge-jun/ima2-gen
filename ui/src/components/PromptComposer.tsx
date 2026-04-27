@@ -25,8 +25,17 @@ export function PromptComposer() {
   const [saveOpen, setSaveOpen] = useState(false);
   const promptMode = useAppStore((s) => s.promptMode);
   const setPromptMode = useAppStore((s) => s.setPromptMode);
+  const multimode = useAppStore((s) => s.multimode);
+  const multimodeMaxImages = useAppStore((s) => s.multimodeMaxImages);
 
   const canAddMore = refs.length < MAX_REFS;
+  const placeholder = multimode
+    ? refs.length > 0
+      ? t("multimode.promptPlaceholderWithRefs")
+      : t("multimode.promptPlaceholder")
+    : refs.length > 0
+      ? t("prompt.placeholderWithRefs")
+      : t("prompt.placeholder");
 
   const handleImageFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -95,7 +104,13 @@ export function PromptComposer() {
 
   return (
     <div
-      className={`composer${dragOver ? " composer--drag" : ""}`}
+      className={`composer${dragOver ? " composer--drag" : ""}${multimode ? " composer--multimode" : ""}`}
+      role="group"
+      aria-label={
+        multimode
+          ? t("multimode.composerAriaLabel", { count: multimodeMaxImages })
+          : t("prompt.label")
+      }
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -103,11 +118,18 @@ export function PromptComposer() {
     >
       <div className="composer__header">
         <span className="section-title composer__label">{t("prompt.label")}</span>
-        {refs.length > 0 && (
-          <span className="composer__count">
-            {t("prompt.refCount", { count: refs.length, max: MAX_REFS })}
-          </span>
-        )}
+        <div className="composer__header-meta">
+          {multimode && (
+            <span className="composer__mode-badge">
+              {t("multimode.composerBadge", { count: multimodeMaxImages })}
+            </span>
+          )}
+          {refs.length > 0 && (
+            <span className="composer__count">
+              {t("prompt.refCount", { count: refs.length, max: MAX_REFS })}
+            </span>
+          )}
+        </div>
       </div>
 
       {refs.length > 0 && (
@@ -150,11 +172,7 @@ export function PromptComposer() {
       <textarea
         className="prompt-area composer__textarea"
         value={prompt}
-        placeholder={
-          refs.length > 0
-            ? t("prompt.placeholderWithRefs")
-            : t("prompt.placeholder")
-        }
+        placeholder={placeholder}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

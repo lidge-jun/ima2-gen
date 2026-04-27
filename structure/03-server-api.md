@@ -18,15 +18,19 @@ When changing an API, find the endpoint here first. Then check the CLI usage in 
 
 ```mermaid
 graph TD
-    API["server.js + routes/* /api"] --> STATUS["status<br/>providers health oauth"]
+    API["server.js + routes/* /api"] --> STATUS["status<br/>providers health oauth billing"]
     API --> IMG["classic image<br/>generate edit history"]
     API --> JOBS["inflight jobs"]
     API --> NODE["node mode<br/>node generate node fetch"]
-    API --> SESS["sessions<br/>sqlite graph"]
-    API --> BILL["billing probe"]
-    IMG --> FILES["~/.ima2/generated<br/>sidecar metadata"]
+    API --> SESS["sessions<br/>sqlite graph + style sheet"]
+    API --> META["metadata read<br/>embedded XMP"]
+    API --> PROMPTS["prompt library<br/>crud folders import export"]
+    API --> CARD["cardnews dev-only<br/>templates jobs sets"]
+    IMG --> FILES["~/.ima2/generated<br/>sidecar metadata + embedded XMP"]
     NODE --> FILES
     SESS --> DB["SQLite"]
+    PROMPTS --> DB
+    CARD --> FILES
 ```
 
 ## Status And Provider Endpoints
@@ -68,6 +72,7 @@ Image generation model selection is explicit. If omitted, the server defaults to
 | `GET` | `/api/history` | `groupBy=session` | `{ sessions, loose, total, nextCursor }` |
 | `DELETE` | `/api/history/:filename` | none | `{ ok, trashId, filename, unlinkAt, sessionsTouched, nodesTouched }` |
 | `POST` | `/api/history/:filename/restore` | `{ trashId }` | `{ ok }` |
+| `POST` | `/api/history/favorite` | `{ filename, favorite }` | `{ ok, favorite }` |
 
 History is reconstructed from image files and sidecar JSON under the configured generated directory. Delete is a soft-delete into `.trash/`, not an immediate permanent removal. Restore uses the returned `trashId`.
 
@@ -110,6 +115,10 @@ Node sidecars include `requestId` as recovery metadata. `/api/history` exposes t
 | `PATCH` | `/api/sessions/:id` | `{ title }` | `{ ok: true }` |
 | `DELETE` | `/api/sessions/:id` | none | `{ ok: true }` |
 | `PUT` | `/api/sessions/:id/graph` | `If-Match` header, `{ nodes, edges }` | `{ ok, nodes, edges, graphVersion }` |
+| `GET` | `/api/sessions/:id/style-sheet` | none | `{ ok, styleSheet, styleSheetEnabled, styleSheetGeneratedAt, styleSheetSourceFilename }` |
+| `PUT` | `/api/sessions/:id/style-sheet` | `{ styleSheet, sourceFilename?, enabled? }` | `{ ok, styleSheet, styleSheetEnabled, styleSheetGeneratedAt, styleSheetSourceFilename }` |
+| `PATCH` | `/api/sessions/:id/style-sheet/enabled` | `{ enabled }` | `{ ok, styleSheetEnabled }` |
+| `POST` | `/api/sessions/:id/style-sheet/extract` | `{ filename }` | `{ ok, styleSheet, styleSheetGeneratedAt, styleSheetSourceFilename }` |
 
 Graph saving uses optimistic concurrency. Missing `If-Match` returns `428`. Version mismatch returns an error payload with the current version.
 
@@ -118,6 +127,57 @@ Graph edges are the source of truth for node parentage. On save, the server filt
 `GRAPH_VERSION_CONFLICT` only means the client saved against a stale `If-Match` graph version. It is not proof that another browser tab edited the graph; a delayed debounce, recovered node save, or session switch flush can also surface the same response. The UI should therefore use source-neutral language such as "graph version changed" unless a separate tab identity protocol proves otherwise.
 
 Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-Graph-Save-Reason`, and `X-Ima2-Tab-Id`. The server logs these values for `graph_save` and `graph_conflict` events but must not treat them as authorization or correctness inputs.
+
+Style sheet endpoints persist a per-session reference style summary in SQLite. `/style-sheet/extract` calls the OAuth Responses API with `IMA2_STYLE_MODEL` to derive a short text style sheet from a single history image; the route enforces that the source image belongs to the same session. `enabled` is a separate toggle that determines whether the style sheet is injected into the next prompt; the actual injection uses up to `IMA2_STYLE_SHEET_MAX_PREFIX` characters and is performed at the route layer.
+
+## Image Metadata API
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| `POST` | `/api/metadata/read` | `{ image }` (data URL or base64 PNG, capped by `IMA2_MAX_METADATA_READ_B64_BYTES`) | `{ ok, metadata: { prompt?, quality?, size?, format?, moderation?, model?, provider?, references?, ... } }` or `{ ok: false, code: "NO_METADATA" }` |
+
+Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`. `routes/metadata.js` parses an image base64 supplied by the UI and returns the embedded metadata so the user can drop a previously generated file back into the composer to restore prompt and parameters. The route never persists the uploaded image; it only reads embedded XMP.
+
+## Prompt Library API
+
+| Method | Path | Body or query | Response |
+|---|---|---|---|
+| `GET` | `/api/prompts` | `folderId?`, `favorite?`, `q?` | `{ ok, prompts }` |
+| `POST` | `/api/prompts` | `{ title?, body, folderId?, tags?, favorite? }` | `{ ok, prompt }` |
+| `GET` | `/api/prompts/:id` | none | `{ ok, prompt }` |
+| `PATCH` | `/api/prompts/:id` | `{ title?, body?, folderId?, tags?, favorite? }` | `{ ok, prompt }` |
+| `DELETE` | `/api/prompts/:id` | none | `{ ok }` |
+| `POST` | `/api/prompts/:id/favorite` | `{ favorite }` | `{ ok, favorite }` |
+| `POST` | `/api/prompts/import` | `{ prompts: [...] }` or NDJSON body | `{ ok, imported, skipped }` |
+| `GET` | `/api/prompts/export` | none | NDJSON stream of stored prompts |
+| `GET` | `/api/prompts/folders` | none | `{ ok, folders }` |
+| `POST` | `/api/prompts/folders` | `{ name }` | `{ ok, folder }` |
+| `PATCH` | `/api/prompts/folders/:id` | `{ name }` | `{ ok, folder }` |
+| `DELETE` | `/api/prompts/folders/:id` | none | `{ ok }` |
+
+Prompts and folders are stored in SQLite alongside sessions; migrations live in `lib/db.js`. The library supports favorite filtering, free-text search across title and body, folder grouping, and full-export round trips. Prompt rows are independent from history filenames so the same prompt body can be reused across sessions.
+
+## Card-News API (dev-only)
+
+The card-news routes are mounted only when `config.features.cardNews` is true, which currently requires `IMA2_CARD_NEWS=1` or `IMA2_DEV=1`. They are not part of the public publish surface.
+
+| Method | Path | Body or query | Response |
+|---|---|---|---|
+| `GET` | `/api/cardnews/image-templates` | none | `{ ok, templates }` |
+| `GET` | `/api/cardnews/image-templates/:templateId/preview` | none | `{ ok, preview }` or `404` |
+| `GET` | `/api/cardnews/role-templates` | none | `{ ok, roles }` |
+| `GET` | `/api/cardnews/sets` | none | `{ ok, sets }` |
+| `GET` | `/api/cardnews/sets/:setId` | none | `{ ok, set }` |
+| `GET` | `/api/cardnews/sets/:setId/manifest` | none | `{ ok, manifest }` |
+| `POST` | `/api/cardnews/draft` | `{ topic, options? }` | `{ ok, draft }` |
+| `POST` | `/api/cardnews/generate` | `{ draft, templateId, role?, options? }` | `{ ok, jobId }` |
+| `POST` | `/api/cardnews/jobs` | `{ ... }` | `{ ok, job }` |
+| `GET` | `/api/cardnews/jobs/:jobId` | none | `{ ok, job }` |
+| `POST` | `/api/cardnews/jobs/:jobId/retry` | none | `{ ok, job }` |
+| `POST` | `/api/cardnews/cards/:cardId/regenerate` | `{ ... }` | `{ ok, card }` |
+| `POST` | `/api/cardnews/export` | `{ jobId, format? }` | `{ ok, export }` |
+
+Implementation lives in `lib/cardNews*.js`: `cardNewsManifest`, `cardNewsPlanner`, `cardNewsSets`, `cardNewsTemplates`, `cardNewsRoles`, `cardNewsTextRender`, `cardNewsImageTemplates`, plus a top-level `lib/cardNews.js`. Optional planner integration is gated by `IMA2_CARD_NEWS_PLANNER`, with model and timeout configured by `IMA2_CARD_NEWS_PLANNER_MODEL` and `IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS` and an explicit `IMA2_CARD_NEWS_PLANNER_FALLBACK` switch. Generated card images and manifests share the same `~/.ima2/generated` directory as classic and node assets.
 
 ## Error States
 
@@ -139,6 +199,8 @@ Graph saves may include observability headers: `X-Ima2-Graph-Save-Id`, `X-Ima2-G
 | Missing graph version header | 428 | `GRAPH_VERSION_REQUIRED` |
 | Graph too large | 413 | `GRAPH_TOO_LARGE` |
 | Missing node metadata | 404 | `NODE_NOT_FOUND` |
+| Image without embedded metadata | 200 | `{ ok: false, code: "NO_METADATA" }` from `/api/metadata/read` |
+| Card-news routes when feature flag is off | 404 | Routes are not mounted unless `config.features.cardNews` |
 
 ## Observability Contract
 
@@ -170,6 +232,7 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - 2026-04-25: Documented child/edit node references and SSE inner-error diagnostics.
 - 2026-04-25: Documented node context/search modes and graph-edge-derived parent normalization.
 - 2026-04-26: Documented runtime actual-port reporting and removed dev-only API details from the evergreen public API map.
+- 2026-04-28: Added session style-sheet endpoints, `/api/history/favorite`, `/api/metadata/read`, prompt library CRUD/folders/import/export, and dev-gated card-news API surface for ima2-gen 1.1.5.
 
 Previous document: `[[02-command-reference]]`
 

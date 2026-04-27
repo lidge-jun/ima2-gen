@@ -39,11 +39,11 @@ sequenceDiagram
 
 | Command | Alias | Role | Main files |
 |---|---|---|---|
-| `ima2 serve` | none | Run setup if needed and start the server | `bin/ima2.js`, `server.js` |
+| `ima2 serve [--dev]` | none | Run setup if needed and start the server; `--dev` enables verbose diagnostics | `bin/ima2.js`, `server.js` |
 | `ima2 setup` | `login` | Configure API key or OAuth interactively | `bin/ima2.js` |
 | `ima2 status` | none | Show config, provider, and OAuth session state | `bin/ima2.js`, `lib/codexDetect.js` |
-| `ima2 doctor` | none | Check Node, package, node_modules, and config state | `bin/ima2.js` |
-| `ima2 open` | none | Open the web UI at the default port | `bin/ima2.js`, `bin/lib/platform.js` |
+| `ima2 doctor` | none | Check Node, package, node_modules, config, and storage state | `bin/ima2.js`, `bin/lib/storage-doctor.js` |
+| `ima2 open` | none | Open the web UI at the advertised or default port | `bin/ima2.js`, `bin/lib/platform.js` |
 | `ima2 reset` | none | Reset `~/.ima2/config.json` to an empty object | `bin/ima2.js` |
 | `ima2 --version` | `-v` | Print the package version | `bin/ima2.js`, `package.json` |
 | `ima2 --help` | `-h` | Print top-level help | `bin/ima2.js` |
@@ -146,6 +146,7 @@ sequenceDiagram
 - 2026-04-23: Documented the current CLI command surface and discovery contract.
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-26: Added classic CLI parity options, cancel command, terminal inflight listing, and actual-port discovery notes.
+- 2026-04-28: Documented the `serve --dev` verbose diagnostics flag and storage-doctor inclusion in `ima2 doctor`. Note that prompt-library, image-metadata, and card-news endpoints have no CLI client today; access them through the web UI or direct HTTP.
 
 Previous document: `[[01-file-function-map]]`
 

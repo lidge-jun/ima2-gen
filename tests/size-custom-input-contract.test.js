@@ -144,12 +144,16 @@ describe("custom size input contract", () => {
 
     assert.match(source, /customSizeConfirm: CustomSizeConfirmState/);
     assert.match(source, /continuation:\s*\n\s*\| \{ kind: "classic" \}/);
+    assert.match(source, /\| \{ kind: "multimode" \}/);
     assert.match(source, /\| \{ kind: "node"; clientId: ClientNodeId \}/);
-    assert.match(source, /getCustomSizeConfirmation\(s, \{ kind: "classic" \}\)/);
+    assert.match(source, /const useMultimode = s\.uiMode === "classic" && s\.multimode/);
+    assert.match(source, /getCustomSizeConfirmation\(s, \{ kind: useMultimode \? "multimode" : "classic" \}\)/);
     assert.match(source, /getCustomSizeConfirmation\(get\(\), \{ kind: "node", clientId \}\)/);
     assert.match(source, /runGenerate: \(sizeOverride\?: string\) => Promise<void>/);
+    assert.match(source, /generateMultimode: \(sizeOverride\?: string\) => Promise<void>/);
     assert.match(source, /runGenerateNode: \(clientId: ClientNodeId, sizeOverride\?: string\) => Promise<void>/);
     assert.match(source, /await get\(\)\.runGenerate\(adjustedSize\)/);
+    assert.match(source, /await get\(\)\.generateMultimode\(adjustedSize\)/);
     assert.match(source, /await get\(\)\.runGenerateNode\(pending\.continuation\.clientId, adjustedSize\)/);
   });
 

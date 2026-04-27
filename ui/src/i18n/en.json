@@ -116,6 +116,29 @@
     "decrease": "Decrease count",
     "increase": "Increase count"
   },
+  "multimode": {
+    "label": "Multimode",
+    "tooltip": "Generate a staged sequence from one prompt",
+    "shortHint": "one prompt sequence",
+    "maxStages": "Max stages",
+    "highCountHint": "Higher stage counts can take several minutes.",
+    "minMaxHint": "Use 1–8 stages.",
+    "composerBadge": "Sequence · up to {count}",
+    "composerAriaLabel": "Multimode prompt composer, up to {count} separate images",
+    "promptPlaceholder": "Describe the sequence. The app will ask for separate images, not a collage.",
+    "promptPlaceholderWithRefs": "Describe the staged sequence using the attached references.",
+    "toggleDisabledGenerating": "Wait for the current generation to finish",
+    "sequenceTitle": "Multimode sequence",
+    "sequenceProgress": "{returned}/{requested} images",
+    "stageLabel": "Stage {index}",
+    "generating": "Generating...",
+    "partialAlt": "Partial multimode preview",
+    "partial": "Generated {returned}/{requested} images in {elapsed}s.",
+    "complete": "Generated {returned}/{requested} images in {elapsed}s.",
+    "empty": "No image returned",
+    "error": "Generation failed",
+    "cancel": "Cancel"
+  },
   "metadata": {
     "restoreTitle": "Restore image settings",
     "restoreBody": "This image contains ima2 generation metadata. Apply its prompt and settings, or attach it as a reference only.",
@@ -318,6 +341,7 @@
   "cost": {
     "free": "free",
     "approx": "~${amount}",
+    "multimodeApprox": "up to ~${amount} ({count})",
     "label": "Est. cost"
   },
   "result": {

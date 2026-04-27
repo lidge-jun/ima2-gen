@@ -34,12 +34,12 @@ graph TD
 | Item | Current value |
 |---|---|
 | package name | `ima2-gen` |
-| version | `1.1.0` |
+| version | `1.1.5` |
 | type | `module` |
 | bin | `ima2` -> `./bin/ima2.js` |
 | package engine | `node >=20` |
 | publish files | `bin/`, `lib/`, `routes/`, `ui/dist/`, `docs/`, `assets/`, `server.js`, `config.js`, `.env.example`, `README.md` |
-| major dependencies | `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `ulid` |
+| major dependencies | `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `ulid` |
 
 README may still mention a different Node baseline. The operational baseline is the current `engines.node` field in `package.json`.
 
@@ -58,6 +58,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `npm run setup` | `node bin/ima2.js setup` | Configure provider |
 | `npm run lint:pkg` | package metadata check | Validate package fields and publish file list |
 | `npm run test:package-install` | temp tarball install smoke | Installs packed package and checks `ima2 doctor`, `/api/health`, and `/api/storage/status` |
+| `prepublishOnly` | `npm test && npm run build && npm run test:package-install && npm run lint:pkg` | Full pre-publish gate: tests, UI build, tarball install smoke, and package metadata lint |
 
 `release:*` scripts include npm publish and git push. Agents must not run them unless the user explicitly asks.
 
@@ -92,6 +93,33 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
 | `VITE_IMA2_NODE_MODE` | UI build-time gate; set `0` only for a classic-only bundle |
 | `IMA2_LOG_LEVEL` | Normal `ima2 serve` defaults to `warn`; `IMA2_DEV=1` defaults to `debug` unless env or config override is set |
+| `IMA2_DEV` | Master dev gate; enables verbose logs and turns on `config.features.cardNews` |
+| `IMA2_CARD_NEWS` | Server feature flag for the dev-only card-news API surface; either this or `IMA2_DEV=1` mounts `routes/cardNews.js` |
+| `IMA2_CARD_NEWS_PLANNER` | Optional flag to enable LLM-backed card-news planning |
+| `IMA2_CARD_NEWS_PLANNER_MODEL` | Model used when the card-news planner is enabled |
+| `IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS` | Card-news planner request timeout |
+| `IMA2_CARD_NEWS_PLANNER_FALLBACK` | Switch for falling back to the deterministic planner when the LLM planner fails |
+| `IMA2_GENERATED_DIR` / `IMA2_GENERATED_DIRNAME` | Override the generated images directory (absolute path or directory name under `~/.ima2`) |
+| `IMA2_TRASH_DIR` / `IMA2_TRASH_DIRNAME` | Override the trash directory used by soft-delete |
+| `IMA2_TRASH_TTL_MS` | Soft-delete retention before permanent purge |
+| `IMA2_DB_PATH` | Override the SQLite database path |
+| `IMA2_HISTORY_PAGE_SIZE` / `IMA2_HISTORY_MAX_PAGE` | History pagination tuning |
+| `IMA2_BODY_LIMIT` | Express JSON body limit |
+| `IMA2_MAX_REF_B64_BYTES` | Max base64 size per reference image |
+| `IMA2_MAX_METADATA_READ_B64_BYTES` | Max base64 size accepted by `/api/metadata/read` |
+| `IMA2_MAX_REF_COUNT` | Max number of reference images per request |
+| `IMA2_MAX_PARALLEL` | Max concurrent generation jobs |
+| `IMA2_GRAPH_MAX_NODES` / `IMA2_GRAPH_MAX_EDGES` | Session graph save guardrails |
+| `IMA2_GENERATED_HEX_BYTES` / `IMA2_NODE_HEX_BYTES` | Filename randomness for classic and node assets |
+| `IMA2_INFLIGHT_REAP_MS` | Inflight registry sweep interval |
+| `IMA2_OAUTH_STATUS_TIMEOUT_MS` | `/api/oauth/status` upstream timeout |
+| `IMA2_OAUTH_RESTART_DELAY_MS` | OAuth proxy restart cooldown |
+| `IMA2_NO_OAUTH_PROXY` | Disable the embedded OAuth proxy |
+| `IMA2_RESEARCH_SUFFIX` | Optional suffix appended when research mode is on |
+| `IMA2_STYLE_SHEET_MAX_PREFIX` | Max characters of a session style sheet injected into the next prompt |
+| `IMA2_STYLE_MODEL` | Model used by `/api/sessions/:id/style-sheet/extract` |
+| `IMA2_STATIC_MAX_AGE` | Static asset Cache-Control max-age |
+| `VITE_IMA2_DEV` | UI build-time dev flag; pairs with `VITE_IMA2_CARD_NEWS=1` to expose the dev-only card-news workspace in the bundle |
 
 Generation and edit endpoints currently hard-block `provider: "api"`. Even with an API key, image generation is OAuth-centered.
 
@@ -144,6 +172,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - 2026-04-25: Updated package metadata for version 1.1.0, `routes/`/`docs/` publish contract, and install-smoke script.
 - 2026-04-25: Updated logging operations for dependency-free levels, request IDs, and API-only middleware.
 - 2026-04-26: Documented actual runtime port fallback, CLI/Vite discovery, and image model default override.
+- 2026-04-28: Bumped package metadata to ima2-gen 1.1.5, added `sharp` as a major dependency, recorded the full `prepublishOnly` chain, and expanded the environment variable surface to cover dev/card-news flags, generated/trash directory overrides, SQLite path, OAuth timeouts, style-sheet limits, body/reference/metadata limits, graph guardrails, and Vite dev flags.
 
 Previous document: `[[05-node-mode]]`
 

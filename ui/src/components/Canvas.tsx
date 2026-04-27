@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
+import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
 import { useI18n } from "../i18n";
 import { isEditableTarget } from "../lib/domEvents";
 import { getImageModelShortLabel } from "../lib/imageModels";
@@ -21,6 +22,7 @@ function formatSizeAlias(size: string | null | undefined): string | null {
 
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
+  const multimodeSequence = useAppStore((s) => s.multimodeSequence);
   const history = useAppStore((s) => s.history);
   const selectHistory = useAppStore((s) => s.selectHistory);
   const activeGenerations = useAppStore((s) => s.activeGenerations);
@@ -62,7 +64,9 @@ export function Canvas() {
   return (
     <main className="canvas">
       <div className={`progress-bar${activeGenerations > 0 ? " active" : ""}`} />
-      {currentImage ? (
+      {multimodeSequence ? (
+        <MultimodeSequencePreview />
+      ) : currentImage ? (
         <div
           className="result-container visible"
           tabIndex={0}

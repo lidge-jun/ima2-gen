@@ -8,7 +8,7 @@ aliases: [ima2 structure hub, ima2 architecture, image_gen structure]
 
 `ima2-gen` is a combined image-generation CLI and web UI. Users start the local server with `ima2 serve`, then generate or edit images through either the browser UI or CLI commands. This folder documents that runtime path as a small architecture reference set.
 
-This hub matters because the codebase has several active centers of gravity. `server.js` now bootstraps the app and delegates most API surfaces to `routes/*`. `lib/*` owns storage, OAuth, logging, sessions, inflight state, and migration helpers. `bin/` owns the CLI automation surface. `ui/src/` owns the React UI and graph-based node mode. Without a structure guide, even a small API change can make it unclear whether CLI, UI, tests, or devlog docs also need to move.
+This hub matters because the codebase has several active centers of gravity. `server.js` now bootstraps the app and delegates most API surfaces to `routes/*`, including `generate`, `edit`, `nodes`, `sessions`, `history`, `health`, `storage`, `metadata`, `prompts`, and the dev-gated `cardNews`. `lib/*` owns storage, OAuth, logging, sessions, inflight state, migration helpers, image metadata embed/restore, prompt library SQLite, reference compression, and card-news planner/template stores. `bin/` owns the CLI automation surface. `ui/src/` owns the React UI, the React Flow node mode, the prompt library panel, and the dev-only card-news workspace. Without a structure guide, even a small API change can make it unclear whether CLI, UI, tests, or devlog docs also need to move.
 
 Start here when onboarding. Read the system overview, then open `[[01-file-function-map]]` for concrete file locations. Use `[[02-command-reference]]` for CLI work, `[[03-server-api]]` for server changes, `[[04-frontend-architecture]]` and `[[05-node-mode]]` for UI work, `[[06-infra-operations]]` for build/auth/runtime operations, and `[[07-devlog-map]]` for roadmap and archive interpretation.
 
@@ -86,6 +86,7 @@ The runtime path is intentionally direct. CLI commands and the browser call `/ap
 - 2026-04-23: Translated the structure docs from Korean to English.
 - 2026-04-25: Updated the hub after route decomposition, home-directory storage migration, and 0.09 closeout audit.
 - 2026-04-26: Refreshed the docs around CLI parity, runtime port fallback, and public classic/node product scope.
+- 2026-04-28: Updated hub for image metadata embed/restore, prompt library, dev-only card-news workspace, expanded route surface (`metadata`, `prompts`, `cardNews`), and `ima2-gen@1.1.5`.
 
 Previous document: none
 

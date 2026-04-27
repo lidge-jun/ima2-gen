@@ -37,6 +37,10 @@ export function RightPanel() {
   const setFormat = useAppStore((s) => s.setFormat);
   const moderation = useAppStore((s) => s.moderation);
   const setModeration = useAppStore((s) => s.setModeration);
+  const multimode = useAppStore((s) => s.multimode);
+  const setMultimode = useAppStore((s) => s.setMultimode);
+  const uiMode = useAppStore((s) => s.uiMode);
+  const showMultimodeControls = uiMode === "classic";
   const QUALITY_ITEMS = [
     { value: "low" as const, label: t("quality.lowLabel"), sub: t("quality.lowSub") },
     { value: "medium" as const, label: t("quality.mediumLabel"), sub: t("quality.mediumSub") },
@@ -105,6 +109,20 @@ export function RightPanel() {
           <p className="option-help">
             {t("moderation.explain")}
           </p>
+          {showMultimodeControls && (
+            <div className="option-group multimode-toggle">
+              <button
+                type="button"
+                className={`multimode-toggle__button${multimode ? " active" : ""}`}
+                aria-pressed={multimode}
+                title={t("multimode.tooltip")}
+                onClick={() => setMultimode(!multimode)}
+              >
+                <span>{t("multimode.label")}</span>
+                <span>{t("multimode.shortHint")}</span>
+              </button>
+            </div>
+          )}
           <CountPicker />
           <CostEstimate />
         </div>

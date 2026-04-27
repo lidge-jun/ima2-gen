@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { useI18n } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
 
@@ -11,27 +11,39 @@ function normalizeCount(value: number): number {
 export function CountPicker() {
   const count = useAppStore((s) => s.count);
   const setCount = useAppStore((s) => s.setCount);
+  const uiMode = useAppStore((s) => s.uiMode);
+  const multimodeEnabled = useAppStore((s) => s.multimode);
+  const multimodeMaxImages = useAppStore((s) => s.multimodeMaxImages);
+  const setMultimodeMaxImages = useAppStore((s) => s.setMultimodeMaxImages);
   const { t } = useI18n();
-  const [open, setOpen] = useState(!QUICK_COUNTS.includes(count as (typeof QUICK_COUNTS)[number]));
-  const [draft, setDraft] = useState(String(count));
+  const multimode = uiMode === "classic" && multimodeEnabled;
+  const value = multimode ? multimodeMaxImages : count;
+  const setValue = multimode ? setMultimodeMaxImages : setCount;
+  const [open, setOpen] = useState(!QUICK_COUNTS.includes(value as (typeof QUICK_COUNTS)[number]));
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setOpen(!QUICK_COUNTS.includes(value as (typeof QUICK_COUNTS)[number]));
+    setDraft(String(value));
+  }, [multimode, value]);
 
   function commit(value = draft) {
     const next = normalizeCount(Number.parseInt(value, 10));
-    setCount(next);
+    setValue(next);
     setDraft(String(next));
   }
 
   function setQuick(value: number) {
     setOpen(false);
     setDraft(String(value));
-    setCount(value);
+    setValue(value);
   }
 
   function step(delta: number) {
-    const next = normalizeCount(count + delta);
+    const next = normalizeCount(value + delta);
     setOpen(true);
     setDraft(String(next));
-    setCount(next);
+    setValue(next);
   }
 
   function commitOnEnter(e: KeyboardEvent<HTMLInputElement>) {
@@ -43,16 +55,16 @@ export function CountPicker() {
 
   return (
     <div className="option-group count-picker">
-      <div className="section-title">{t("count.title")}</div>
+      <div className="section-title">{multimode ? t("multimode.maxStages") : t("count.title")}</div>
       <div className="option-row">
-        {QUICK_COUNTS.map((value) => (
+        {QUICK_COUNTS.map((quick) => (
           <button
-            key={value}
+            key={quick}
             type="button"
-            className={`option-btn${count === value && !open ? " active" : ""}`}
-            onClick={() => setQuick(value)}
+            className={`option-btn${value === quick && !open ? " active" : ""}`}
+            onClick={() => setQuick(quick)}
           >
-            {value}
+            {quick}
           </button>
         ))}
         <button
@@ -60,7 +72,7 @@ export function CountPicker() {
           className={`option-btn${open ? " active" : ""}`}
           onClick={() => {
             setOpen((next) => !next);
-            setDraft(String(count));
+            setDraft(String(value));
           }}
         >
           {t("count.customPlus")}
@@ -88,7 +100,9 @@ export function CountPicker() {
             </button>
           </div>
           <p className="option-help">
-            {count >= 5 ? t("count.highCountHint") : t("count.minMaxHint")}
+            {value >= 5
+              ? t(multimode ? "multimode.highCountHint" : "count.highCountHint")
+              : t(multimode ? "multimode.minMaxHint" : "count.minMaxHint")}
           </p>
         </>
       ) : null}

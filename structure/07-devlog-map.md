@@ -10,7 +10,7 @@ aliases: [ima2 devlog map, image_gen roadmap, devlog map]
 
 This map matters because plans from multiple eras coexist. `_plan/README.md` and `_plan/unified-roadmap.md` now point to the same active direction. Completed `0.01`, `0.03`, `0.04`, `0.06`, `0.07`, and `0.09` implementation records have moved under `_fin/260423_*`. Structure docs should follow the current code and active roadmap rather than stale plan folders.
 
-For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. `0.09.4`, `0.09.4.1`, `0.09.6`, `0.09.7.1`, `0.09.8`, `0.09.15`, `0.09.16`, `0.09.20.1`, `0.09.21`, `0.09.23`, `0.09.24`, and CLI parity work are completed or closeout-archived under `_fin/260425_*` or `_fin/260426_*`. Active `_plan` now keeps `0.09.17.1` as the serve/dev logging closeout, `0.09.18` as optional metrics observability, and node workflow follow-ups for graph selection, regeneration, references, and contract repair. Security hardening and containerization live under `_plan/0.99_future` until remote-access and packaging tradeoffs are settled.
+For planning work, read `_plan/README.md` first, then `_plan/unified-roadmap.md` for the detailed lane. Most `0.09.x` cycles up to `0.09.30` are archived under `_fin/260423_*` through `_fin/260426_*`. The active lane now spans `0.09.31`-`0.09.41` plus the parallel feature tracks `0.20-card-news`, `0.23-prompt-library`, and the `1.1.5-windows-open-folder-fix` patch lane. `_fin/260426_0.22-gallery-navigation-ux` and `_fin/260427_0.09.33-upstream-validation-errors` are the most recent archives. Security hardening and containerization remain under `_plan/0.99_future` until remote-access and packaging tradeoffs are settled.
 
 ---
 
@@ -21,7 +21,9 @@ graph TD
     DEV["devlog"] --> PLAN["_plan<br/>active and legacy plans"]
     DEV --> FIN["_fin<br/>completed work"]
     DEV --> SPIKES["_spikes<br/>exploration notes"]
-    PLAN --> ACTIVE["0.09.17.1..0.09.18<br/>active ops"]
+    PLAN --> ACTIVE["0.09.31..0.09.41<br/>active ops"]
+    PLAN --> FEAT["0.20 card-news<br/>0.23 prompt-library"]
+    PLAN --> PATCH["1.1.5-windows-open-folder-fix"]
     PLAN --> FUTURE["0.99_future<br/>deferred ops"]
     PLAN --> FOLLOW["0.10+<br/>feature tracks"]
     PLAN --> ROAD["README + unified-roadmap<br/>current direction"]
@@ -33,22 +35,28 @@ graph TD
 | Document | Status | How to use it |
 |---|---|---|
 | `devlog/_plan/README.md` | current | Active lane, completed moves, and next-work rules |
-| `devlog/_plan/unified-roadmap.md` | current | `0.09.6 + 0.09.15 -> 0.10 -> 0.12` flow |
-| `devlog/_fin/260426_0.09.17-structured-logging/PRD.md` | archived | Dependency-free structured logging implemented with safe request ID, redaction, and API lifecycle logs. |
-| `devlog/_fin/260426_0.09.17.1-serve-dev-log-closeout/PRD.md` | archived | Normal `ima2 serve` defaults to quiet `warn`; `ima2 serve --dev` and `npm run dev` enable verbose `debug` diagnostics. |
-| `devlog/_plan/0.09.18-metrics-observability/PRD.md` | deleted | Prometheus metrics proposal removed; local-first CLI tool does not need external observability stack. |
-| `devlog/_fin/260426_0.09.25-node-selection-batch/PRD.md` | archived | Canvas-level node selection and sequential batch generation. Implemented and verified. |
-| `devlog/_fin/260426_0.09.26-edge-disconnect/PRD.md` | archived | Edge-only removal and parent metadata cleanup. Implemented and verified. |
-| `devlog/_fin/260426_0.09.27-node-regen-layout-diagnostics/PRD.md` | archived | Ready-node action split, position-based node placement, and safe edit stream diagnostics. Implemented and verified. |
-| `devlog/_fin/260426_0.09.28-child-node-references/PRD.md` | archived | Allow child/edit node-local references alongside the parent image. Implemented and verified. |
-| `devlog/_fin/260426_0.09.29-node-contract-repair/README.md` | archived | Node graph/backend contract repairs: edge-derived parents, child refs, context/search policy, compact node footer. |
-| `devlog/_fin/260426_0.09.30-oauth-proxy-port-fallback/README.md` | archived | Runtime port binding contracts for backend server, split Vite dev server, OAuth proxy, and proxy error taxonomy. |
-| `devlog/_plan/0.99_future/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal. Defer strict localhost/origin gates until remote-user impact is decided. |
-| `devlog/_plan/0.99_future/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal. Not a 0.10 blocker. |
+| `devlog/_plan/unified-roadmap.md` | current | Detailed roadmap flow |
+| `devlog/_plan/0.09.31-github-pages-landing/` | active | Marketing/docs landing site planning |
+| `devlog/_plan/0.09.32-final-release-closeout/` | active | Final 1.x release closeout track |
+| `devlog/_plan/0.09.34-node-connect-regression/` | active | Node connection regression follow-ups |
+| `devlog/_plan/0.09.35-safety-refusal-misclassification/` | active | Safety/refusal classifier corrections |
+| `devlog/_plan/0.09.36-gallery-double-sidebar-rail/` | active | Gallery double-sidebar rail layout work |
+| `devlog/_plan/0.09.37-generation-controls-custom-plus/` | active | Generation controls custom-size + slot UX |
+| `devlog/_plan/0.09.38-image-metadata-embed-restore/` | active | Embed XMP into PNGs and restore prompt/parameters from a dropped image |
+| `devlog/_plan/0.09.39-reference-4k-refusal-diagnostics/` | active | 4K reference refusal diagnostics |
+| `devlog/_plan/0.09.40-multimode-sequence-generation/` | active | Multi-mode sequence generation |
+| `devlog/_plan/0.09.41-censorship-bypass/` | active | Censorship/safety bypass research |
+| `devlog/_plan/0.20-card-news/` | active feature | Dev-only card-news workspace and `/api/cardnews/*` |
+| `devlog/_plan/0.23-prompt-library/` | active feature | Prompt library dialog and `/api/prompts/*` |
+| `devlog/_plan/1.1.5-windows-open-folder-fix/` | active patch | Windows open-folder regression for ima2-gen 1.1.5 |
+| `devlog/_plan/0.99_future/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal |
+| `devlog/_plan/0.99_future/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal |
 | `devlog/_plan/0.10-feature-expansion/PLAN.md` | next feature | Preset, compare, and export direction |
 | `devlog/_plan/0.12-research-mode/README.md` | partial | Research-mode productization after backend support |
 | `devlog/_plan/backend-node-mode.md` | reference | Original backend endpoint and cleanup planning |
 | `devlog/_plan/frontend-node-mode.md` | reference | Original frontend node-mode and layout planning |
+| `devlog/_fin/260426_0.22-gallery-navigation-ux/` | archived | Gallery navigation UX closeout |
+| `devlog/_fin/260427_0.09.33-upstream-validation-errors/` | archived | Upstream validation error normalization to `INVALID_REQUEST` with preserved diagnostics |
 
 ## Historical Or Reference Docs
 
@@ -57,29 +65,46 @@ graph TD
 | `devlog/_plan/_legacy/phase-*` | Old phase plans | Idea reference only, not active backlog |
 | `devlog/_spikes/generate-ux-notes.md` | Generation-progress UX exploration | Only carry forward ideas absorbed into node mode |
 | `devlog/_spikes/image-display-notes.md` | Result display exploration | Track only lightbox, compare, and mobile fallback ideas |
-| `devlog/_fin/260423_*`, `devlog/_fin/260424_*` | Completed implementation and experiments | Archive and evidence for completed work |
-| `devlog/_fin/260426_0.09.20-cli-backend-parity` | Completed CLI/backend parity closeout | Historical evidence for CLI parity work; reopen new CLI slices separately if needed |
+| `devlog/_spikes/260425_image_creator_skill/` | Image-creator skill spike | Exploration notes for prompt/template ergonomics; not a roadmap commitment |
+| `devlog/_fin/260423_*`, `260424_*`, `260425_*`, `260426_*`, `260427_*` | Completed implementation and experiments | Archive and evidence for completed work |
+| `devlog/_fin/260426_0.09.20-cli-backend-parity` | Completed CLI/backend parity closeout | Historical evidence; reopen new CLI slices separately if needed |
 | deleted root-level `devlog/phase-*`, `devlog/0.09*`, `devlog/0.10*` tracked paths | Old locations | Use the current `_plan` or `_fin` locations instead |
 
 ## Roadmap Summary
 
 | Cycle | Name | Current interpretation |
 |---|---|---|
-| 0.09.17 | Structured logging | Archived 260426; dependency-free structured logging with safe request ID and redaction |
-| 0.09.17.1 | Serve/dev log closeout | Archived 260426; normal serve quiet, dev mode verbose |
-| 0.09.18 | Metrics observability | Deleted; not needed for local-first CLI tool |
-| 0.09.20 | CLI/backend parity | Archived as complete enough for the current lane; reopen future CLI slices separately if needed |
-| 0.09.25 | Node selection batch | Archived 260426; canvas selection, in-place batch generation, stale downstream handling |
-| 0.09.26 | Edge disconnect | Archived 260426; edge-only delete and parent metadata cleanup |
-| 0.09.27 | Node regen/layout/diagnostics | Archived 260426; ready-node action split, position-based layout, safe edit retry diagnostics |
-| 0.09.28 | Child node references | Archived 260426; child/edit node references are allowed alongside parent image |
-| 0.09.29 | Node contract repair | Archived 260426; graph edges are parent source of truth, child refs are sent, node context/search policy is explicit |
-| 0.09.30 | Runtime port binding contract | Archived 260426; automatic port fallback with actual bound URL propagation and proxy/network error taxonomy |
-| 0.09.19 | Security hardening | Deferred to `0.99_future`; must avoid breaking remote/hard-user flows |
-| 0.09.20 | Containerization | Deferred to `0.99_future`; future packaging lane |
+| 0.09.17 / 0.09.17.1 | Structured logging + serve/dev closeout | Archived 260426 |
+| 0.09.18 | Metrics observability | Deleted; not needed for local-first CLI |
+| 0.09.20 | CLI/backend parity | Archived 260426 |
+| 0.09.20.1 | Safe classic CLI parity | Archived 260426 |
+| 0.09.22 | Session conflict false reload | Archived 260425 |
+| 0.09.23 | Global storage migration audit | Archived 260425 |
+| 0.09.24 | Package smoke | Archived 260425 |
+| 0.09.25-0.09.28 | Node selection / edge disconnect / regen-layout-diagnostics / child references | Archived 260426 |
+| 0.09.29 | Node contract repair | Archived 260426 |
+| 0.09.30 | OAuth proxy / runtime port fallback | Archived 260426 |
+| 0.09.31 | GitHub Pages landing | Active |
+| 0.09.32 | Final release closeout | Active |
+| 0.09.33 | Upstream validation errors | Archived 260427 |
+| 0.09.34 | Node connect regression | Active |
+| 0.09.35 | Safety refusal misclassification | Active |
+| 0.09.36 | Gallery double-sidebar rail | Active |
+| 0.09.37 | Generation controls custom plus | Active |
+| 0.09.38 | Image metadata embed/restore | Active |
+| 0.09.39 | Reference 4K refusal diagnostics | Active |
+| 0.09.40 | Multimode sequence generation | Active |
+| 0.09.41 | Censorship bypass research | Active |
+| 0.20 | Card-news | Active feature track; dev-only `/api/cardnews/*` and UI workspace |
+| 0.21 | Custom size input | Archived 260425 |
+| 0.22 | Gallery navigation UX | Archived 260426 |
+| 0.23 | Prompt library | Active feature track; `/api/prompts/*` and library dialog |
+| 0.09.19 | Security hardening | Deferred to `0.99_future` |
+| 0.09.20 (containerization) | Containerization | Deferred to `0.99_future` |
 | 0.10 | Feature expansion | Preset and compare MVP after current build is green |
 | 0.11 | Export polish | Future lane after 0.10 |
 | 0.12 | Research mode | Backend support exists; frontend productization remains |
+| 1.1.5 | Windows open-folder fix | Active patch lane bundled with the 1.1.5 release |
 
 ## Structure Docs Versus Devlog
 
@@ -122,6 +147,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-26: Added `0.09.17.1` serve/dev logging closeout and marked CLI parity archived under `_fin`.
 - 2026-04-26: Archived `0.09.25`, `0.09.26`, `0.09.27`, and `0.09.28` node-mode work to `_fin/260426_*` after implementation verification. Removed active entries from the roadmap map.
 - 2026-04-26: Archived `0.09.17`, `0.09.17.1`, `0.09.29`, and `0.09.30` to `_fin/260426_*`. Deleted `0.09.18-metrics-observability` from `_plan`. Updated roadmap summary and reference tables.
+- 2026-04-28: Refreshed the active lane to span `0.09.31`-`0.09.41`, the `0.20-card-news` and `0.23-prompt-library` feature tracks, and the `1.1.5-windows-open-folder-fix` patch lane. Added `_fin/260426_0.22-gallery-navigation-ux`, `_fin/260427_0.09.33-upstream-validation-errors`, and `_spikes/260425_image_creator_skill` to the reference tables. Updated the devlog structure diagram and roadmap summary for ima2-gen 1.1.5.
 
 Previous document: `[[06-infra-operations]]`
 
