@@ -151,6 +151,26 @@ describe("node UI compact metadata contract", () => {
     assert.match(store, /targetHandle:\s*typeof data\.targetHandle === "string" \? data\.targetHandle : null/);
   });
 
+  it("uses one graph edge serializer for normal and refresh saves", () => {
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(store, /type SessionGraphEdge/);
+    assert.match(store, /function serializeGraphEdgesForSave\(graphEdges: GraphEdge\[\]\): SessionGraphEdge\[\]/);
+    assert.match(store, /const edges = serializeGraphEdgesForSave\(graphEdges\)/);
+    assert.match(store, /const edges = serializeGraphEdgesForSave\(s\.graphEdges\)/);
+    assert.doesNotMatch(store, /data:\s*\{\s*\}\s*\}\)\)/);
+  });
+
+  it("flushes node completion saves without waiting for debounce", () => {
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(store, /"node-complete"/);
+    assert.match(store, /void get\(\)\.flushGraphSave\("node-complete"\)/);
+    assert.match(store, /serverNodeId:\s*res\.nodeId/);
+    assert.match(store, /imageUrl:\s*res\.url/);
+    assert.match(store, /status:\s*"ready"/);
+  });
+
   it("uses handle-aware edge ids for node connections", () => {
     const store = readSource("ui/src/store/useAppStore.ts");
 

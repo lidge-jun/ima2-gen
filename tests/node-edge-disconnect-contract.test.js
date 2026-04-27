@@ -35,6 +35,18 @@ describe("node edge disconnect contract", () => {
     assert.match(store, /void get\(\)\.flushGraphSave\("edge-disconnect"\)/);
   });
 
+  it("preserves handle metadata in beforeunload graph saves", () => {
+    assert.match(store, /function serializeGraphEdgesForSave\(graphEdges: GraphEdge\[\]\)/);
+    assert.match(store, /sourceHandle:\s*e\.sourceHandle \?\? null/);
+    assert.match(store, /targetHandle:\s*e\.targetHandle \?\? null/);
+    assert.match(store, /const edges = serializeGraphEdgesForSave\(graphEdges\)/);
+    assert.match(store, /const edges = serializeGraphEdgesForSave\(s\.graphEdges\)/);
+    assert.doesNotMatch(
+      store,
+      /flushGraphSaveBeacon[\s\S]*?const edges = s\.graphEdges\.map\(\(e\) => \(\{[\s\S]*?data:\s*\{\}/,
+    );
+  });
+
   it("clears target parentServerNodeId when no incoming edge remains", () => {
     assert.match(store, /const remainingIncoming = nextEdges\.find\(\(edge\) => edge\.target === node\.id\)/);
     assert.match(store, /parentServerNodeId:\s*remainingParent\?\.data\.serverNodeId \?\? null/);

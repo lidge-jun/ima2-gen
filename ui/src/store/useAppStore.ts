@@ -35,6 +35,7 @@ import {
   extractSessionStyleSheet,
   type SessionSummary,
   type SessionFull,
+  type SessionGraphEdge,
   type StyleSheet,
 } from "../lib/api";
 import { compressImage } from "../lib/image";
@@ -267,7 +268,8 @@ type GraphSaveReason =
   | "recovery"
   | "beforeunload"
   | "queued"
-  | "edge-disconnect";
+  | "edge-disconnect"
+  | "node-complete";
 type GraphSaveResult = "saved" | "skipped" | "conflict" | "failed";
 
 function narrowGenerateKind(k?: string | null): GenerateItem["kind"] {
@@ -1812,6 +1814,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // the originating session.
       if (get().activeSessionId === requestSessionId && graphMutated) {
         get().scheduleGraphSave();
+        void get().flushGraphSave("node-complete");
       }
     }
   },
@@ -2240,6 +2243,18 @@ function sanitizeForSave(d: ImageNodeData): Record<string, unknown> {
   };
 }
 
+function serializeGraphEdgesForSave(graphEdges: GraphEdge[]): SessionGraphEdge[] {
+  return graphEdges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    data: {
+      sourceHandle: e.sourceHandle ?? null,
+      targetHandle: e.targetHandle ?? null,
+    },
+  }));
+}
+
 // Recover nodes whose asset lives on disk (via /api/history) but whose
 // client-side state was lost (A sanitize, reload, HMR, conflict reload).
 // Candidate = node with neither imageUrl nor serverNodeId. Match requestId
@@ -2352,15 +2367,7 @@ async function doSave(
     y: n.position.y,
     data: sanitizeForSave(n.data),
   }));
-  const edges = graphEdges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    data: {
-      sourceHandle: e.sourceHandle ?? null,
-      targetHandle: e.targetHandle ?? null,
-    },
-  }));
+  const edges = serializeGraphEdgesForSave(graphEdges);
   const saveId = `gs_${Date.now().toString(36)}_${++graphSaveSeq}`;
   try {
     const res = await saveSessionGraph(id, graphVersion, nodes, edges, {
@@ -2462,12 +2469,7 @@ export function flushGraphSaveBeacon(get: () => AppState): void {
     y: n.position.y,
     data: sanitizeForSave(n.data),
   }));
-  const edges = s.graphEdges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    data: {},
-  }));
+  const edges = serializeGraphEdgesForSave(s.graphEdges);
   const url = `/api/sessions/${encodeURIComponent(s.activeSessionId)}/graph`;
   const body = JSON.stringify({ nodes, edges });
   try {
