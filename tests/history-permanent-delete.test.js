@@ -24,7 +24,7 @@ describe("history permanent delete contract", () => {
 
   it("permanent delete helper preserves path safety, 404 codes, sidecar cleanup, and node marking", () => {
     const lifecycle = readSource("lib/assetLifecycle.js");
-    const fn = /export async function deleteAssetPermanent[\s\S]*?\n}\n/.exec(lifecycle)?.[0] ?? "";
+    const fn = /export async function deleteAssetPermanent[\s\S]*?(?=\nexport async function )/.exec(lifecycle)?.[0] ?? "";
 
     assert.match(fn, /resolveInGenerated\(rootDir,\s*filename\)/);
     assert.match(fn, /await access\(src\)/);
