@@ -17,7 +17,7 @@ describe("node child reference payload contract", () => {
     assert.match(api, /contextMode\?: "parent-plus-refs" \| "parent-only" \| "ancestry"/);
     assert.match(api, /searchMode\?: "off" \| "auto" \| "on"/);
     assert.match(store, /contextMode: "parent-plus-refs"/);
-    assert.match(store, /searchMode: "off"/);
+    assert.match(store, /searchMode: "on"/);
   });
 
   it("persists node-local refs outside sanitized graph payload", () => {

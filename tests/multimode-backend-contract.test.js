@@ -36,7 +36,8 @@ describe("multimode backend contract", () => {
     assert.match(oauth, /const images = \[\]/);
     assert.match(oauth, /images\.push\(/);
     assert.match(oauth, /extraIgnored/);
-    assert.match(oauth, /tool_choice:\s*\{ type: "image_generation" \}/);
+    assert.match(oauth, /tools = \[\s*\{ type: "web_search" \}/);
+    assert.match(oauth, /tool_choice: "required"/);
   });
 
   it("persists sequence metadata and surfaces it through history", () => {

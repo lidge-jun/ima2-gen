@@ -11,10 +11,10 @@ describe("node context and edit search policy", () => {
     assert.match(route, /CONTEXT_MODE_UNSUPPORTED/);
   });
 
-  it("keeps edit search off by default but exposes explicit on mode", () => {
-    assert.match(route, /searchMode: rawSearchMode = "off"/);
-    assert.match(oauth, /const searchMode = options\.searchMode === "on" \? "on" : "off"/);
-    assert.match(oauth, /\.\.\(searchMode === "on" \? \[\{ type: "web_search" \}\] : \[\]\)/);
+  it("forces web_search on for every edit so factual prompts always research first", () => {
+    assert.match(route, /searchMode: rawSearchMode = "on"/);
+    assert.match(oauth, /\{ type: "web_search" \},\s*\{ type: "image_generation"/);
+    assert.match(oauth, /webSearchEnabled: true/);
   });
 
   it("logs safe context shape instead of raw prompts or images", () => {

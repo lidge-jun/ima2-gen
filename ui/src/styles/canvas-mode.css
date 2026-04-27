@@ -1,0 +1,80 @@
+/* Canvas Mode */
+
+.canvas--mode-open {
+  position: relative;
+  background-color: #0d0d0d;
+  background-image: radial-gradient(rgba(100, 200, 255, 0.25) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+.canvas--mode-open::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.canvas-mode-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  pointer-events: none;
+}
+
+.canvas-mode-topbar__label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.canvas-mode-close {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s;
+}
+
+.canvas-mode-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.canvas-mode-close kbd {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+/* Image zoom wrapper */
+.result-img {
+  transition: transform 0.2s ease;
+  transform-origin: center center;
+}
+
+/* Prevent wheel zoom */
+.canvas--mode-open {
+  overscroll-behavior: contain;
+}

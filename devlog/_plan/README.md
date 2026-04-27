@@ -25,13 +25,8 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 5 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
 | 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
 | 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
-| 8 | `0.09.34-node-connect-regression/` | active/reopened | edge disconnect 이후 기존 노드끼리 연결되지 않고 새 노드만 생기는 React Flow target handle 회귀 수정. 상하좌우 4방향 연결점 포함. 후속 PRD는 disconnect 후 같은 노드쌍을 다른 handle로 재연결할 때 이전 anchor가 재사용되는 문제. |
-| 9 | `0.09.36-gallery-double-sidebar-rail/` | planning | 하단 compact gallery strip을 왼쪽 sidebar 옆 세로 보조 rail로 이동하고, 좁은 화면에서는 기존 가로 strip으로 접히게 하는 UX 개선. |
-| 10 | `0.09.37-generation-controls-custom-plus/` | planning | GitHub #9 기반. 기존 오른쪽 세부 설정 패널과 size preset grid는 유지하고, 하단 custom 영역만 최대 3개 슬롯 + `+` 직접입력으로 보강하며 batch count도 수동 입력으로 확장한다. |
-| 11 | `0.09.38-image-metadata-embed-restore/` | planning | GitHub #13 기반. PNG/JPEG/WebP 생성 파일에 ima2 metadata를 XMP로 임베드하고, sidecar 없는 이미지 drag/drop restore를 지원하는 portable metadata lane. |
-| 12 | `0.09.39-reference-4k-refusal-diagnostics/` | planning | GitHub #11 + #12 기반. reference image 첨부와 4K size에서 발생하는 refusal/empty response/invalid request를 분리 진단하는 lane. |
-| 13 | `0.09.40-multimode-sequence-generation/` | planning | GitHub #17 기반. `multimode` 버튼으로 한 프롬프트에서 1-4장 텍스트 연속성 시퀀스를 한 번의 streamed Responses 호출로 생성하는 lane. |
-| 14 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 8 | `0.09.41-censorship-bypass/` | research | GPT Image 2 모더레이션 false-positive 우회 전략 연구. 자동 reframe / preprocessor 등은 미구현, 현재 STRATEGY 문서만 존재. |
+| 9 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 
 ## 완료로 이동한 항목
 
@@ -57,6 +52,18 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | `_plan/0.21-custom-size-input` | `_fin/260425_0.21-custom-size-input` | keyboard-safe custom input, generation-time confirm modal, contract tests가 존재한다. |
 | `_plan/00_prompt` | `_fin/260425_00_prompt-quality-prompt-reference` | prompt 원문/diff 기록은 완료된 reference로 보관하고 active plan에서 제외한다. |
 | `_plan/0.09.33-upstream-validation-errors` | `_fin/260427_0.09.33-upstream-validation-errors` | upstream 4xx validation error가 `INVALID_REQUEST`로 정규화되고, classic/node JSON/SSE/UI/folder-open 회귀 테스트와 `npm test`, `npm run ui:build`가 통과했다. |
+| `_plan/0.09.31-github-pages-landing` | `_fin/260428_0.09.31-github-pages-landing` | bilingual ko/en 라우팅, OG image, FAQ 상세 페이지, 한국어 카피 polish, 공유 install scripts가 모두 main에 배포되었다 (`c57027c`, `1442bd1`, `50ce358`, `6edcc9b`, `8199d46`). |
+| `_plan/0.09.34-node-connect-regression` | `_fin/260428_0.09.34-node-connect-regression` | 상하좌우 directional handle, deterministic edge id, handle anchor 보존, edge disconnect/reconnect 안정화가 모두 코드에 반영되었다 (`863ec72`, `1ec4e9f`, `90f7db3`, `4ff25eb`, `d962944`). |
+| `_plan/0.09.35-safety-refusal-misclassification` | `_fin/260428_0.09.35-safety-refusal-misclassification` | `SAFETY_REFUSAL` blind fallback이 `EMPTY_RESPONSE`로 교체되어 GitHub Issue #5가 닫혔다 (`45b7892 fix(error): replace SAFETY_REFUSAL fallback with EMPTY_RESPONSE (#5)`). |
+| `_plan/0.09.36-gallery-double-sidebar-rail` | `_fin/260428_0.09.36-gallery-double-sidebar-rail` | gallery strip이 adaptive rail로 이동되고 GitHub Issue #7이 닫혔다 (`dd482fc feat(ui): move gallery strip to adaptive rail`). |
+| `_plan/0.09.37-generation-controls-custom-plus` | `_fin/260428_0.09.37-generation-controls-custom-plus` | custom size 슬롯 + 수동 batch count가 추가되고 GitHub Issue #9가 닫혔다 (`0e29e68 feat: add custom generation controls`, `40b838a`, `8adf19e`). |
+| `_plan/0.09.38-image-metadata-embed-restore` | `_fin/260428_0.09.38-image-metadata-embed-restore` | PNG/JPEG/WebP metadata embed + drag-and-drop restore가 구현되어 GitHub Issue #13이 닫혔다 (`e1b72fc feat: embed and restore image metadata`). |
+| `_plan/0.09.39-reference-4k-refusal-diagnostics` | `_fin/260428_0.09.39-reference-4k-refusal-diagnostics` | 4K refusal/empty response 진단 경로가 구현되어 GitHub Issue #11/#12가 닫혔다 (`2b2b9d4 fix: diagnose reference 4k generation failures`). |
+| `_plan/0.09.40-multimode-sequence-generation` | `_fin/260428_0.09.40-multimode-sequence-generation` | 한 프롬프트에서 1-4장 sequence 생성이 구현되어 GitHub Issue #17이 닫혔다 (`afa871b feat: add multimode sequence generation`). |
+| `_plan/0.09.42-gallery-viewer-shortcuts-status` | `_fin/260428_0.09.42-gallery-viewer-shortcuts-status` | focusless gallery navigation, click-only delete, browser attention badge가 모두 구현되었다 (`786b737 feat: improve gallery viewer shortcuts`). |
+| `_plan/0.23-prompt-library` | `_fin/260428_0.23-prompt-library` | prompt library panel/save popover/inserted chip이 구현되어 GitHub Issue #16이 닫혔다 (`0bb06fc feat: add prompt library`). |
+| `_plan/1.1.5-windows-open-folder-fix` | `_fin/260428_1.1.5-windows-open-folder-fix` | v1.1.5 release에서 Windows `explorer.exe` 폴더 열기가 정상화되었다 (`2b32f9a fix(openDirectory)`, `41b84ca chore: release v1.1.5`). |
+| `_plan/0.09.43-prompt-composer-resize` | `_fin/260428_0.09.43-prompt-composer-resize` | prompt textarea 기본 50vh + 30-70vh 사용자 리사이즈 + localStorage persist 구현. GitHub Issue #23 충족, `npm test`(353/353), `npm run ui:build` 통과. |
 
 ## 다음 작업 원칙
 
@@ -91,3 +98,6 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-27: GitHub #13 기반 `0.09.38-image-metadata-embed-restore` planning lane 추가. Sharp 0.34.x의 PNG/JPEG/WebP XMP 지원과 PNG/WebP 컨테이너 metadata 조사를 반영해 sidecar JSON 유지 + embedded metadata restore PRD를 작성했다.
 - 2026-04-27: GitHub #11 + #12 기반 `0.09.39-reference-4k-refusal-diagnostics` planning lane 추가. reference MIME mismatch, prompt-only retry의 reference drop, 4K empty response, safety refusal 오분류를 분리하는 진단 PRD를 작성했다.
 - 2026-04-28: GitHub #17 기반 `0.09.40-multimode-sequence-generation` planning lane 추가. live smoke에서 한 번의 streamed Responses 호출로 `image_generation_call` 4개 수집이 가능함을 확인했고, 직원 엣지케이스 감사를 반영해 multimode 버튼, 1-4 max stage row, partial/empty/extra-result 처리, sequence metadata 요구사항을 PRD로 작성했다.
+- 2026-04-28: GitHub #14 + #21 기반 `0.09.42-gallery-viewer-shortcuts-status` planning lane 추가. #14는 focusless movement keys만 keyboard로 처리하고, delete/permanent delete는 클릭 전용으로 두며, zoom/sound/canvas mode를 분리했다. #21의 상단 active generation 빨간 불/count 표시를 같은 작은 UX slice로 묶었다.
+- 2026-04-28: 코드 반영이 끝난 11개 lane을 `_fin/260428_*`로 일괄 이동했다. 0.09.31 github-pages, 0.09.34 node-connect, 0.09.35 safety-refusal, 0.09.36 gallery-rail, 0.09.37 custom-controls, 0.09.38 metadata-embed, 0.09.39 4k-diagnostics, 0.09.40 multimode-sequence, 0.09.42 viewer-shortcuts, 0.23 prompt-library, 1.1.5 windows-folder-fix. 남은 active는 `0.09.32-final-release-closeout`과 `0.09.41-censorship-bypass`(연구)뿐이다.
+- 2026-04-28: GitHub #23 기반 `0.09.43-prompt-composer-resize` lane 추가/완료. prompt textarea가 기본 50vh, 사용자 30-70vh 리사이즈, localStorage persist 적용. `npm test`(353/353)와 `npm run ui:build` 통과 후 같은 날 `_fin/260428_0.09.43-prompt-composer-resize`로 이동.

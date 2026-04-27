@@ -10,6 +10,8 @@ export function ResultActions() {
   const permanentlyDeleteHistoryItemByClick = useAppStore(
     (s) => s.permanentlyDeleteHistoryItemByClick,
   );
+  const canvasOpen = useAppStore((s) => s.canvasOpen);
+  const openCanvas = useAppStore((s) => s.openCanvas);
 
   if (!currentImage) return null;
 
@@ -79,6 +81,19 @@ export function ResultActions() {
       >
         {t("result.continueHere")}
       </button>
+      {!canvasOpen && (
+        <button
+          type="button"
+          className="action-btn"
+          onClick={openCanvas}
+          title={t("canvas.open")}
+          aria-label={t("canvas.openAria")}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M4 4h8v8M12 4l-8 8"/>
+          </svg>
+        </button>
+      )}
       {currentImage.filename && (
         <>
           <button

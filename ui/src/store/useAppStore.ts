@@ -706,6 +706,14 @@ type AppState = {
   galleryFavorites: Set<string>;
   toggleGalleryFavorite: (filename: string) => Promise<void>;
   browserId: string;
+
+  // Canvas Mode (0.24)
+  canvasOpen: boolean;
+  canvasZoom: number;
+  openCanvas: () => void;
+  closeCanvas: () => void;
+  setCanvasZoom: (zoom: number) => void;
+  resetCanvasZoom: () => void;
 };
 
 function formatSize(w: number, h: number): string {
@@ -827,6 +835,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   promptLibraryLoading: false,
   galleryFavorites: new Set(),
   browserId: getBrowserId(),
+
+  // Canvas Mode state (0.24)
+  canvasOpen: false,
+  canvasZoom: 1,
 
   addReferences: async (files) => {
     const allowed = MAX_REFERENCE_IMAGES - get().referenceImages.length;
@@ -1883,7 +1895,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         sessionId: requestSessionId,
         clientNodeId: clientId,
         contextMode: "parent-plus-refs",
-        searchMode: "off",
+        searchMode: "on",
         ...(nodeRefs.length
           ? { references: nodeRefs.map(stripDataUrlPrefix) }
           : {}),
@@ -2733,6 +2745,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error("[GalleryFavorite] toggle failed", err);
     }
   },
+
+  // Canvas Mode actions (0.24)
+  openCanvas: () => set({ canvasOpen: true, canvasZoom: 1 }),
+  closeCanvas: () => set({ canvasOpen: false }),
+  setCanvasZoom: (zoom) => set({ canvasZoom: Math.max(0.5, Math.min(3, zoom)) }),
+  resetCanvasZoom: () => set({ canvasZoom: 1 }),
 }));
 
 // ── Graph autosave (module-level debounce) ──

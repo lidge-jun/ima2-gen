@@ -85,7 +85,7 @@ export function registerNodeRoutes(app, ctx) {
         externalSrc = null,
         mode: promptMode = "auto",
         contextMode: rawContextMode = "parent-plus-refs",
-        searchMode: rawSearchMode = "off",
+        searchMode: rawSearchMode = "on",
         model: rawModel,
       } = body;
       const { provider = "oauth" } = body;
@@ -105,7 +105,7 @@ export function registerNodeRoutes(app, ctx) {
       const contextMode = ["parent-plus-refs", "parent-only", "ancestry"].includes(rawContextMode)
         ? rawContextMode
         : "parent-plus-refs";
-      const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "off";
+      const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "on";
       if (contextMode === "ancestry") {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -168,7 +168,7 @@ export function registerNodeRoutes(app, ctx) {
       const generateReferenceDiagnostics = operation === "generate" ? referenceDiagnostics : [];
       const referenceMismatchCount = generateReferenceDiagnostics.filter((ref) => ref.warnings?.includes("mime_mismatch")).length;
       const refsForRequest = contextMode === "parent-only" ? [] : (refCheck.refDetails || refCheck.refs);
-      const webSearchEnabled = !parentB64 || searchMode === "on";
+      const webSearchEnabled = true;
       const parentImagePresent = !!parentB64;
       const inputImageCount = (parentImagePresent ? 1 : 0) + refsForRequest.length;
       logEvent("node", "request", {
@@ -227,7 +227,7 @@ export function registerNodeRoutes(app, ctx) {
             webSearchEnabled,
           });
           const r = parentB64
-            ? await editViaOAuth(prompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel, references: refsForRequest, searchMode: searchMode === "on" ? "on" : "off" })
+            ? await editViaOAuth(prompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel, references: refsForRequest, searchMode: "on" })
             : await generateViaOAuth(
                 prompt,
                 quality,

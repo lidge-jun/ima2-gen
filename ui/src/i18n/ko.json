@@ -205,7 +205,10 @@
   "canvas": {
     "resultAlt": "생성 결과",
     "imageViewerAria": "생성 이미지 뷰어. 좌우 방향키로 이전 또는 다음 이미지를 볼 수 있습니다.",
-    "tokens": "{n} 토큰"
+    "tokens": "{n} 토큰",
+    "open": "캔버스 열기",
+    "openAria": "캔버스 모드에서 이미지 열기",
+    "close": "캔버스 닫기"
   },
   "gallery": {
     "today": "오늘",

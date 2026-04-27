@@ -205,7 +205,10 @@
   "canvas": {
     "resultAlt": "result",
     "imageViewerAria": "Generated image viewer. Use left and right arrow keys to move between images.",
-    "tokens": "{n} tokens"
+    "tokens": "{n} tokens",
+    "open": "Open Canvas",
+    "openAria": "Open image in canvas mode",
+    "close": "Close Canvas"
   },
   "gallery": {
     "today": "Today",

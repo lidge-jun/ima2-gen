@@ -30,6 +30,10 @@ export function Canvas() {
   const quality = useAppStore((s) => s.quality);
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
   const showToast = useAppStore((s) => s.showToast);
+  const canvasOpen = useAppStore((s) => s.canvasOpen);
+  const openCanvas = useAppStore((s) => s.openCanvas);
+  const closeCanvas = useAppStore((s) => s.closeCanvas);
+  const canvasZoom = useAppStore((s) => s.canvasZoom);
   const { t } = useI18n();
 
   const copyPrompt = () => {
@@ -73,7 +77,21 @@ export function Canvas() {
   };
 
   return (
-    <main className="canvas">
+    <main className={`canvas${canvasOpen ? " canvas--mode-open" : ""}`}>
+      {canvasOpen && (
+        <div className="canvas-mode-topbar">
+          <span className="canvas-mode-topbar__label">Canvas Mode</span>
+          <button
+            type="button"
+            className="canvas-mode-close"
+            onClick={closeCanvas}
+            aria-label={t("canvas.close")}
+          >
+            <kbd>ESC</kbd>
+            <span>{t("canvas.close")}</span>
+          </button>
+        </div>
+      )}
       <div className={`progress-bar${activeGenerations > 0 ? " active" : ""}`} />
       {multimodeSequence ? (
         <MultimodeSequencePreview />
@@ -90,6 +108,15 @@ export function Canvas() {
             key={currentImage.filename ?? currentImage.url ?? currentImage.image}
             src={currentImage.url ?? currentImage.image}
             alt={t("canvas.resultAlt")}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              openCanvas();
+            }}
+            style={{
+              cursor: canvasOpen ? "default" : "zoom-in",
+              transform: canvasOpen ? `scale(${canvasZoom})` : undefined,
+              transition: canvasOpen ? "transform 0.2s ease" : undefined,
+            }}
           />
           {currentImage.prompt ? (
             <div className="result-prompt" onClick={copyPrompt}>
