@@ -35,6 +35,9 @@ import {
   saveSessionGraph,
   readImageMetadata,
   getBrowserId,
+  deleteHistoryItem,
+  restoreHistoryItem,
+  permanentlyDeleteHistoryItem,
   getPromptLibrary,
   createPrompt,
   deletePrompt,
@@ -87,6 +90,11 @@ import { t, loadLocale, saveLocale, type Locale } from "../i18n";
 import type { ImaErrorCode } from "../lib/errorCodes";
 import { handleError } from "../lib/errorHandler";
 import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
+import {
+  getNeighborAfterRemoval,
+  getShortcutTarget,
+  type GalleryShortcutAction,
+} from "../lib/galleryShortcuts";
 
 function loadRightPanelOpen(): boolean {
   try {
@@ -476,6 +484,12 @@ function mapSessionToGraph(session: SessionFull): {
 }
 
 type ToastState = { message: string; error: boolean; id: number } | null;
+type TrashPendingState = {
+  filename: string;
+  trashId: string;
+  item: GenerateItem;
+  expiresAt: number;
+} | null;
 
 type CustomSizeConfirmState = {
   requestedW: number;
@@ -534,6 +548,7 @@ type AppState = {
   clearReferences: () => void;
   useCurrentAsReference: () => Promise<void>;
   activeGenerations: number;
+  unseenGeneratedCount: number;
   inFlight: PersistedInFlight[];
   startInFlightPolling: () => void;
   reconcileInflight: () => Promise<void>;
@@ -541,6 +556,7 @@ type AppState = {
   syncFromStorage: () => void;
   currentImage: GenerateItem | null;
   history: GenerateItem[];
+  trashPending: TrashPendingState;
   toast: ToastState;
   customSizeConfirm: CustomSizeConfirmState;
   metadataRestore: MetadataRestoreState;
@@ -658,6 +674,12 @@ type AppState = {
   removeInsertedPromptFromComposer: (id: string) => void;
   clearInsertedPrompts: () => void;
   selectHistory: (item: GenerateItem) => void;
+  markGeneratedResultsSeen: () => void;
+  selectHistoryShortcutTarget: (action: GalleryShortcutAction) => void;
+  trashHistoryItem: (item: GenerateItem) => Promise<void>;
+  restorePendingTrash: () => Promise<void>;
+  clearPendingTrash: () => void;
+  permanentlyDeleteHistoryItemByClick: (item: GenerateItem) => Promise<void>;
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
   generate: () => Promise<void>;
@@ -930,6 +952,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().showToast(t("toast.addedCurrentAsRef"));
   },
   activeGenerations: loadInFlight().length,
+  unseenGeneratedCount: 0,
   inFlight: loadInFlight(),
   startInFlightPolling: () => {
     if (typeof window === "undefined") return;
@@ -1107,6 +1130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   currentImage: null,
   history: [],
+  trashPending: null,
   toast: null,
   customSizeConfirm: null,
   errorCard: null,
@@ -2185,7 +2209,83 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   selectHistory: (item) => {
     saveSelectedFilename(item.filename ?? null);
-    set({ currentImage: item });
+    set({ currentImage: item, unseenGeneratedCount: 0 });
+  },
+
+  markGeneratedResultsSeen: () => set({ unseenGeneratedCount: 0 }),
+
+  selectHistoryShortcutTarget: (action) => {
+    const target = getShortcutTarget(get().history, get().currentImage, action);
+    if (!target) return;
+    get().selectHistory(target);
+  },
+
+  trashHistoryItem: async (item) => {
+    if (!item.filename) return;
+    const filename = item.filename;
+    const current = get().currentImage;
+    const removingCurrent = current?.filename === filename;
+    const replacement = removingCurrent
+      ? getNeighborAfterRemoval(get().history, filename)
+      : current;
+    try {
+      const result = await deleteHistoryItem(filename);
+      set((s) => ({
+        history: s.history.filter((h) => h.filename !== filename),
+        currentImage: replacement,
+        trashPending: {
+          filename,
+          trashId: result.trashId,
+          item,
+          expiresAt: Date.now() + 9500,
+        },
+      }));
+      if (removingCurrent) saveSelectedFilename(replacement?.filename ?? null);
+    } catch (err) {
+      console.error("[history] trash failed", err);
+      get().showToast(t("gallery.deleteFailed"), true);
+    }
+  },
+
+  restorePendingTrash: async () => {
+    const pending = get().trashPending;
+    if (!pending) return;
+    try {
+      await restoreHistoryItem(pending.filename, pending.trashId);
+      get().addHistoryItem(pending.item);
+      set({ trashPending: null });
+    } catch (err) {
+      console.error("[history] restore failed", err);
+      get().showToast(t("gallery.restoreFailed"), true);
+    }
+  },
+
+  clearPendingTrash: () => set({ trashPending: null }),
+
+  permanentlyDeleteHistoryItemByClick: async (item) => {
+    if (!item.filename) return;
+    const filename = item.filename;
+    const ok = window.confirm(t("result.permanentDeleteConfirm", { filename }));
+    if (!ok) return;
+    const current = get().currentImage;
+    const removingCurrent = current?.filename === filename;
+    const replacement = removingCurrent
+      ? getNeighborAfterRemoval(get().history, filename)
+      : current;
+    try {
+      await permanentlyDeleteHistoryItem(filename);
+      set((s) => ({
+        history: s.history.filter((h) => h.filename !== filename),
+        currentImage: replacement,
+        trashPending:
+          s.trashPending?.filename === filename ? null : s.trashPending,
+      }));
+      if (removingCurrent) saveSelectedFilename(replacement?.filename ?? null);
+      get().showToast(t("gallery.permanentDeleted", { filename }));
+    } catch (err) {
+      console.error("[history] permanent delete failed", err);
+      get().showToast(t("gallery.deleteFailed"), true);
+    }
   },
 
   removeFromHistory: (filename) => {
@@ -2937,5 +3037,9 @@ async function addHistory(
   };
   const history = [withThumb, ...get().history].slice(0, HISTORY_LIMIT);
   saveSelectedFilename(withThumb.filename ?? null);
-  set({ history, currentImage: withThumb });
+  set({
+    history,
+    currentImage: withThumb,
+    unseenGeneratedCount: get().unseenGeneratedCount + 1,
+  });
 }

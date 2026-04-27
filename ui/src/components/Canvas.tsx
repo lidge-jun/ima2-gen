@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
 import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
@@ -23,8 +23,9 @@ function formatSizeAlias(size: string | null | undefined): string | null {
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
   const multimodeSequence = useAppStore((s) => s.multimodeSequence);
-  const history = useAppStore((s) => s.history);
-  const selectHistory = useAppStore((s) => s.selectHistory);
+  const selectHistoryShortcutTarget = useAppStore((s) => s.selectHistoryShortcutTarget);
+  const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
+  const markGeneratedResultsSeen = useAppStore((s) => s.markGeneratedResultsSeen);
   const activeGenerations = useAppStore((s) => s.activeGenerations);
   const quality = useAppStore((s) => s.quality);
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
@@ -42,23 +43,33 @@ export function Canvas() {
   const displayModel = getImageModelShortLabel(currentImage?.model);
 
   const handleViewerKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (event.shiftKey || !currentImage) return;
+      event.preventDefault();
+      void trashHistoryItem(currentImage);
+      return;
+    }
+
+    if (
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowRight" &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) return;
     if (event.target !== event.currentTarget) return;
     if (isEditableTarget(event.target)) return;
 
-    const currentIndex = history.findIndex((item) =>
-      currentImage?.filename
-        ? item.filename === currentImage.filename
-        : item.image === currentImage?.image,
-    );
-    if (currentIndex < 0) return;
-
-    const nextIndex = event.key === "ArrowLeft" ? currentIndex - 1 : currentIndex + 1;
-    const next = history[nextIndex];
-    if (!next) return;
-
     event.preventDefault();
-    selectHistory(next);
+    if (event.key === "ArrowLeft") selectHistoryShortcutTarget("previous");
+    else if (event.key === "ArrowRight") selectHistoryShortcutTarget("next");
+    else if (event.key === "Home") selectHistoryShortcutTarget("first");
+    else if (event.key === "End") selectHistoryShortcutTarget("last");
+  };
+
+  const handleViewerMouseDown = (event: MouseEvent<HTMLElement>) => {
+    if (isEditableTarget(event.target)) return;
+    markGeneratedResultsSeen();
+    event.currentTarget.focus();
   };
 
   return (
@@ -70,6 +81,7 @@ export function Canvas() {
         <div
           className="result-container visible"
           tabIndex={0}
+          onMouseDown={handleViewerMouseDown}
           onKeyDown={handleViewerKeyDown}
           aria-label={t("canvas.imageViewerAria")}
         >

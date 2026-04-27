@@ -251,6 +251,9 @@
     "deleted": "Deleted: {filename}",
     "undo": "Undo",
     "secondsSuffix": "{n}s",
+    "permanentDeleted": "Permanently deleted: {filename}",
+    "deleteFailed": "Could not delete image.",
+    "restoreFailed": "Could not restore image.",
     "favoriteTitle": "Add to favorites",
     "unfavoriteTitle": "Remove from favorites",
     "favoriteAria": "Add to favorites",
@@ -349,7 +352,12 @@
     "copyImage": "Copy image",
     "copyPrompt": "Copy prompt",
     "continueHere": "Continue here",
-    "continueHereTitle": "Import this image's prompt and keep working"
+    "continueHereTitle": "Import this image's prompt and keep working",
+    "delete": "Delete",
+    "deleteTitle": "Move to trash",
+    "more": "More",
+    "permanentDelete": "Permanently delete",
+    "permanentDeleteConfirm": "Permanently delete \"{filename}\"? This cannot be undone."
   },
   "session": {
     "switchTitle": "Switch session",

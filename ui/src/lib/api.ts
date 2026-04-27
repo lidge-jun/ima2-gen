@@ -363,6 +363,17 @@ export function deleteHistoryItem(filename: string): Promise<{
   return jsonFetch(`/api/history/${encodeURIComponent(filename)}`, { method: "DELETE" });
 }
 
+export function permanentlyDeleteHistoryItem(filename: string): Promise<{
+  ok: boolean;
+  filename: string;
+  sessionsTouched: number;
+  nodesTouched: number;
+}> {
+  return jsonFetch(`/api/history/${encodeURIComponent(filename)}/permanent`, {
+    method: "DELETE",
+  });
+}
+
 export function restoreHistoryItem(filename: string, trashId: string): Promise<{ ok: boolean }> {
   return jsonFetch(`/api/history/${encodeURIComponent(filename)}/restore`, {
     method: "POST",

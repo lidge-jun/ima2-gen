@@ -6,6 +6,12 @@ export function ResultActions() {
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
+  const permanentlyDeleteHistoryItemByClick = useAppStore(
+    (s) => s.permanentlyDeleteHistoryItemByClick,
+  );
+  const canvasOpen = useAppStore((s) => s.canvasOpen);
+  const openCanvas = useAppStore((s) => s.openCanvas);
 
   if (!currentImage) return null;
 
@@ -75,6 +81,41 @@ export function ResultActions() {
       >
         {t("result.continueHere")}
       </button>
+      {!canvasOpen && (
+        <button
+          type="button"
+          className="action-btn"
+          onClick={openCanvas}
+          title={t("canvas.open")}
+          aria-label={t("canvas.openAria")}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M4 4h8v8M12 4l-8 8"/>
+          </svg>
+        </button>
+      )}
+      {currentImage.filename && (
+        <>
+          <button
+            type="button"
+            className="action-btn action-btn--danger"
+            onClick={() => void trashHistoryItem(currentImage)}
+            title={t("result.deleteTitle")}
+          >
+            {t("result.delete")}
+          </button>
+          <details className="result-actions__more">
+            <summary className="action-btn">{t("result.more")}</summary>
+            <button
+              type="button"
+              className="result-actions__danger-item"
+              onClick={() => void permanentlyDeleteHistoryItemByClick(currentImage)}
+            >
+              {t("result.permanentDelete")}
+            </button>
+          </details>
+        </>
+      )}
     </div>
   );
 }

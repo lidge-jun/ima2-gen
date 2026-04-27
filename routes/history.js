@@ -1,5 +1,5 @@
 import { listHistoryRows } from "../lib/historyList.js";
-import { trashAsset, restoreAsset } from "../lib/assetLifecycle.js";
+import { trashAsset, restoreAsset, deleteAssetPermanent } from "../lib/assetLifecycle.js";
 import { getSessionTitleMap } from "../lib/sessionStore.js";
 import { logError, logEvent } from "../lib/logger.js";
 import { getDb } from "../lib/db.js";
@@ -85,6 +85,16 @@ export function registerHistoryRoutes(app, ctx) {
     } catch (err) {
       logError("history", "error", err);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/history/:filename/permanent", async (req, res) => {
+    try {
+      const filename = decodeURIComponent(req.params.filename);
+      const result = await deleteAssetPermanent(ctx.rootDir, filename);
+      res.json(result);
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message, code: err.code });
     }
   });
 

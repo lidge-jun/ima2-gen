@@ -3,8 +3,6 @@ import { useAppStore } from "../store/useAppStore";
 import { useCardNewsStore } from "../store/cardNewsStore";
 import type { GenerateItem } from "../types";
 import {
-  deleteHistoryItem,
-  restoreHistoryItem,
   getHistoryGrouped,
   getStorageStatus,
   openGeneratedDir,
@@ -16,12 +14,6 @@ import { getGalleryItemKey } from "../lib/galleryNavigation";
 import { useI18n } from "../i18n";
 import { CardNewsGalleryTile } from "./CardNewsGalleryTile";
 import { GalleryImageTile } from "./GalleryImageTile";
-type TrashPending = {
-  filename: string;
-  trashId: string;
-  item: GenerateItem;
-  expiresAt: number;
-};
 type SessionGroup = {
   sessionId: string;
   title: string | null;
@@ -39,8 +31,7 @@ export function GalleryModal() {
   const history = useAppStore((s) => s.history);
   const selectHistory = useAppStore((s) => s.selectHistory);
   const currentImage = useAppStore((s) => s.currentImage);
-  const removeFromHistory = useAppStore((s) => s.removeFromHistory);
-  const addHistoryItem = useAppStore((s) => s.addHistoryItem);
+  const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const showToast = useAppStore((s) => s.showToast);
   const toggleGalleryFavorite = useAppStore((s) => s.toggleGalleryFavorite);
 
@@ -49,7 +40,6 @@ export function GalleryModal() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [sessionGroups, setSessionGroups] = useState<SessionGroup[]>([]);
   const [loose, setLoose] = useState<GenerateItem[]>([]);
-  const [pending, setPending] = useState<TrashPending | null>(null);
   const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
   const [storageDismissed, setStorageDismissed] = useState(() => {
     try {
@@ -73,7 +63,6 @@ export function GalleryModal() {
   useEffect(() => {
     if (!open) {
       setQuery("");
-      setPending(null);
     }
   }, [open]);
 
@@ -211,45 +200,9 @@ export function GalleryModal() {
     if (scrollRef.current) scrollRef.current.scrollTop = lastScrollTopRef.current;
   }, [open, currentImage?.filename, currentImage?.image, groupBy, totalVisible, dateGroups.length, visibleSessionGroups.length, visibleLoose.length]);
 
-  useEffect(() => {
-    if (!pending) return;
-    const id = setInterval(() => {
-      setPending((cur) => {
-        if (!cur) return null;
-        if (Date.now() >= cur.expiresAt) return null;
-        return { ...cur };
-      });
-    }, 500);
-    return () => clearInterval(id);
-  }, [pending]);
-
   async function handleDelete(item: GenerateItem, e: MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
-    if (!item.filename) return;
-    try {
-      const r = await deleteHistoryItem(item.filename);
-      removeFromHistory(item.filename);
-      setPending({
-        filename: item.filename,
-        trashId: r.trashId,
-        item,
-        expiresAt: Date.now() + 9500,
-      });
-    } catch (err) {
-      console.error("[gallery] delete failed", err);
-    }
-  }
-
-  async function handleUndo() {
-    if (!pending) return;
-    try {
-      await restoreHistoryItem(pending.filename, pending.trashId);
-      addHistoryItem(pending.item);
-    } catch (err) {
-      console.error("[gallery] restore failed", err);
-    } finally {
-      setPending(null);
-    }
+    await trashHistoryItem(item);
   }
 
   async function handleOpenGeneratedDir() {
@@ -525,17 +478,6 @@ export function GalleryModal() {
           )}
         </div>
 
-        {pending && (
-          <div className="gallery__undo">
-            <span>{t("gallery.deleted", { filename: pending.filename })}</span>
-            <button type="button" onClick={handleUndo}>
-              {t("gallery.undo")}
-            </button>
-            <span className="gallery__undo-timer">
-              {t("gallery.secondsSuffix", { n: Math.max(0, Math.ceil((pending.expiresAt - Date.now()) / 1000)) })}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

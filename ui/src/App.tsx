@@ -10,12 +10,16 @@ import { ErrorCard } from "./components/ErrorCard";
 import { GalleryModal } from "./components/GalleryModal";
 import { CustomSizeConfirmModal } from "./components/CustomSizeConfirmModal";
 import { MetadataRestoreDialog } from "./components/MetadataRestoreDialog";
+import { TrashUndoToast } from "./components/TrashUndoToast";
 import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
 import { PromptLibraryPanel } from "./components/PromptLibraryPanel";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
 import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "./lib/devMode";
+import { useGalleryViewerNavigation } from "./hooks/useGalleryViewerNavigation";
+import { useBrowserAttentionBadge } from "./hooks/useBrowserAttentionBadge";
 
 export default function App() {
+  useGalleryViewerNavigation();
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
   const loadSessions = useAppStore((s) => s.loadSessions);
   const startInFlightPolling = useAppStore((s) => s.startInFlightPolling);
@@ -25,6 +29,7 @@ export default function App() {
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
   const themeFamily = useAppStore((s) => s.themeFamily);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
+  const unseenGeneratedCount = useAppStore((s) => s.unseenGeneratedCount);
   const syncThemeFromStorage = useAppStore((s) => s.syncThemeFromStorage);
   const syncThemeFamilyFromStorage = useAppStore((s) => s.syncThemeFamilyFromStorage);
   const refreshResolvedTheme = useAppStore((s) => s.refreshResolvedTheme);
@@ -33,6 +38,8 @@ export default function App() {
     uiModeRaw === "card-news" && ENABLE_CARD_NEWS_MODE ? "card-news" :
       uiModeRaw === "node" && ENABLE_NODE_MODE ? "node" :
         "classic";
+
+  useBrowserAttentionBadge(unseenGeneratedCount);
 
   useEffect(() => {
     hydrateHistory();
@@ -106,6 +113,7 @@ export default function App() {
         {uiMode === "card-news" ? null : <RightPanel />}
       </div>
       <CustomSizeConfirmModal />
+      <TrashUndoToast />
       <Toast />
       <ErrorCard />
       <GalleryModal />

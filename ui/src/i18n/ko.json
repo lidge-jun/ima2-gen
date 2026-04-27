@@ -251,6 +251,9 @@
     "deleted": "삭제됨: {filename}",
     "undo": "되돌리기",
     "secondsSuffix": "{n}초",
+    "permanentDeleted": "완전 삭제됨: {filename}",
+    "deleteFailed": "이미지를 삭제하지 못했습니다.",
+    "restoreFailed": "이미지를 복구하지 못했습니다.",
     "favoriteTitle": "즐겨찾기 추가",
     "unfavoriteTitle": "즐겨찾기 해제",
     "favoriteAria": "즐겨찾기 추가",
@@ -349,7 +352,12 @@
     "copyImage": "이미지 복사",
     "copyPrompt": "프롬프트 복사",
     "continueHere": "여기서 이어서",
-    "continueHereTitle": "이 이미지의 프롬프트를 가져와 이어서 작업"
+    "continueHereTitle": "이 이미지의 프롬프트를 가져와 이어서 작업",
+    "delete": "삭제",
+    "deleteTitle": "휴지통으로 이동",
+    "more": "더보기",
+    "permanentDelete": "완전 삭제",
+    "permanentDeleteConfirm": "\"{filename}\" 이미지를 완전히 삭제할까요? 이 작업은 되돌릴 수 없습니다."
   },
   "session": {
     "switchTitle": "세션 전환",

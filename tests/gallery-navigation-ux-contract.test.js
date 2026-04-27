@@ -18,16 +18,22 @@ describe("gallery navigation UX contract", () => {
     const css = readSource("ui/src/index.css");
 
     assert.match(canvas, /isEditableTarget/);
-    assert.match(canvas, /selectHistory/);
+    assert.match(canvas, /selectHistoryShortcutTarget/);
     assert.doesNotMatch(canvas, /selectImage/);
-    assert.match(canvas, /event\.key !== "ArrowLeft" && event\.key !== "ArrowRight"/);
+    assert.match(canvas, /event\.key !== "ArrowLeft"/);
+    assert.match(canvas, /event\.key !== "Home"/);
+    assert.match(canvas, /event\.key === "Delete" \|\| event\.key === "Backspace"/);
+    assert.match(canvas, /event\.shiftKey \|\| !currentImage/);
+    assert.match(canvas, /trashHistoryItem\(currentImage\)/);
     assert.match(canvas, /event\.target !== event\.currentTarget/);
     assert.match(canvas, /tabIndex=\{0\}/);
+    assert.match(canvas, /onKeyDown=\{handleViewerKeyDown\}/);
     assert.match(canvas, /className="result-container visible"/);
     assert.match(canvas, /aria-label=\{t\("canvas\.imageViewerAria"\)\}/);
     assert.match(domEvents, /HTMLInputElement/);
     assert.match(domEvents, /HTMLTextAreaElement/);
     assert.match(domEvents, /HTMLSelectElement/);
+    assert.match(domEvents, /HTMLButtonElement/);
     assert.match(domEvents, /isContentEditable/);
     assert.match(css, /\.result-container:focus-visible/);
     assert.match(ko, /imageViewerAria/);
