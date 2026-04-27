@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { t } from "../i18n";
 import { useAppStore } from "./useAppStore";
+import { IMAGE_SIZE_MAX_EDGE } from "../lib/size";
 import {
   draftCardNews,
   getCardNewsJob,
@@ -81,7 +82,7 @@ function snap16(n: number): number {
 }
 
 function clampSide(n: number): number {
-  return Math.min(3824, Math.max(1024, snap16(n)));
+  return Math.min(IMAGE_SIZE_MAX_EDGE, Math.max(1024, snap16(n)));
 }
 
 function resolvedOutputSize(s: CardNewsState): string {

@@ -44,11 +44,31 @@
     "title": "크기",
     "width": "가로",
     "height": "세로",
-    "hint": "한 변 최소 1024, 최대 3824, 16의 배수, 비율은 최대 3:1",
+    "hint": "16px 단위, 최대 변 3840, 비율 3:1 이하, 65.5만-829만 픽셀",
     "autoLabel": "자동",
     "autoSub": "모델 추천",
     "customLabel": "직접 입력",
-    "customSub": "자유 설정"
+    "customSub": "자유 설정",
+    "customPlus": "+ 직접",
+    "customSlots": "저장 크기",
+    "customSlot": "커스텀",
+    "customSlotLimit": "커스텀 크기는 최대 3개",
+    "saveCustomSlot": "커스텀 크기 저장",
+    "replaceCustomSlot": "슬롯 교체",
+    "ratioFree": "자유",
+    "ratio21x9": "21:9",
+    "normalizedPreview": "전송 크기",
+    "noAdjustment": "조정 없음",
+    "adjustedReasons": {
+      "snap": "16px 보정",
+      "maxEdge": "최대 변",
+      "ratio": "비율 제한",
+      "minPixels": "최소 픽셀",
+      "maxPixels": "최대 픽셀",
+      "min": "최소 변",
+      "max": "최대 변",
+      "pixels": "픽셀 제한"
+    }
   },
   "sizeConfirm": {
     "title": "크기 조정이 필요합니다",
@@ -59,6 +79,7 @@
     "cancel": "취소",
     "reasonRatio": "비율 제한 3:1을 초과했습니다.",
     "reasonPixels": "최대 픽셀 수 제한을 초과했습니다.",
+    "reasonMinPixels": "요청한 이미지의 픽셀 수가 너무 적습니다.",
     "reasonMin": "최소 크기보다 작습니다.",
     "reasonMax": "최대 크기보다 큽니다.",
     "reasonSnap": "16px 단위에 맞춰야 합니다."
@@ -84,7 +105,13 @@
     "title": "포맷"
   },
   "count": {
-    "title": "개수"
+    "title": "개수",
+    "customPlus": "+n",
+    "customLabel": "직접 입력 개수",
+    "highCountHint": "고품질이나 참조 이미지에서는 시간이 더 걸릴 수 있습니다.",
+    "minMaxHint": "1-8장까지 가능합니다.",
+    "decrease": "개수 줄이기",
+    "increase": "개수 늘리기"
   },
   "generate": {
     "button": "생성",

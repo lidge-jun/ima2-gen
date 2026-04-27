@@ -17,7 +17,7 @@ export type Format = "png" | "jpeg" | "webp";
 export type Moderation = "low" | "auto";
 export type ImageModel = "gpt-5.5" | "gpt-5.4" | "gpt-5.4-mini";
 export type UnsupportedImageModel = "gpt-5.3-codex-spark";
-export type Count = 1 | 2 | 4;
+export type Count = number;
 
 export type SizePreset =
   | "1024x1024"
@@ -30,8 +30,8 @@ export type SizePreset =
   | "2048x2048"
   | "2048x1152"
   | "1152x2048"
-  | "3824x2160"
-  | "2160x3824"
+  | "3840x2160"
+  | "2160x3840"
   | "auto"
   | "custom";
 

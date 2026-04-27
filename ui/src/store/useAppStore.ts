@@ -591,6 +591,10 @@ function formatSize(w: number, h: number): string {
   return `${w}x${h}`;
 }
 
+function normalizeCount(value: number): Count {
+  return Math.min(8, Math.max(1, Math.trunc(value || 1)));
+}
+
 function getCustomSizeConfirmation(
   state: AppState,
   continuation: NonNullable<CustomSizeConfirmState>["continuation"],
@@ -1997,7 +2001,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     saveImageModel(imageModel);
     set({ imageModel });
   },
-  setCount: (count) => set({ count }),
+  setCount: (count) => set({ count: normalizeCount(count) }),
   setPromptMode: (promptMode) => set({ promptMode }),
   setPrompt: (prompt) => set({ prompt }),
 

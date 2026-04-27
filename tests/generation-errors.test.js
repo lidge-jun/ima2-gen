@@ -48,14 +48,14 @@ test("OAUTH_UPSTREAM_ERROR is passthrough, not SAFETY_REFUSAL", () => {
 test("empty response with metadata maps to EMPTY_RESPONSE", () => {
   const err = new Error("No image data received");
   err.eventCount = 3;
-  err.size = "3824x2160";
+  err.size = "3840x2160";
   err.quality = "medium";
   err.model = "gpt-5.4-mini";
 
   const normalized = normalizeGenerationFailure(err);
   assert.equal(normalized.code, "EMPTY_RESPONSE");
   assert.equal(normalized.status, 422);
-  assert.match(normalized.message, /3824x2160/);
+  assert.match(normalized.message, /3840x2160/);
   assert.match(normalized.message, /gpt-5.4-mini/);
 });
 

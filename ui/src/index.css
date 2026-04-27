@@ -934,6 +934,124 @@ body {
   background: var(--accent-soft);
 }
 
+.size-picker {
+  gap: 6px;
+}
+
+.size-picker__quick-row,
+.size-picker__slot-row {
+  margin-top: 4px;
+}
+
+.size-picker__slot {
+  border-style: dashed;
+}
+
+.size-picker__ratio-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.size-picker__ratio,
+.size-picker__replace,
+.count-picker__step,
+.size-picker__save {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.size-picker__ratio {
+  min-width: 0;
+  padding: 6px 4px;
+}
+
+.size-picker__ratio:hover,
+.size-picker__replace:hover,
+.count-picker__step:hover,
+.size-picker__save:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.size-picker__ratio.active,
+.size-picker__replace.active {
+  border-color: var(--accent);
+  color: var(--accent-bright);
+  background: var(--accent-soft);
+}
+
+.size-picker__preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.size-picker__preview strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.size-picker__preview--reason {
+  display: block;
+  min-height: 24px;
+}
+
+.size-picker__replace-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.size-picker__replace {
+  padding: 6px 4px;
+}
+
+.size-picker__save {
+  width: 100%;
+  padding: 8px;
+  color: var(--accent-bright);
+}
+
+.count-picker__custom {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  gap: 4px;
+}
+
+.count-picker__step {
+  min-height: 34px;
+  font-size: 14px;
+}
+
+.count-picker__input {
+  min-width: 0;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+}
+
 .cost-estimate {
   font-family: var(--mono);
   font-size: 12px;

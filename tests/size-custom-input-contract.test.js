@@ -9,9 +9,10 @@ function readSource(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-const MIN = 1024;
-const MAX = 3824;
+const MIN = 16;
+const MAX = 3840;
 const MAX_RATIO = 3;
+const MIN_PIXELS = 655_360;
 const MAX_PIXELS = 8_294_400;
 
 function snap16(n) {
@@ -42,6 +43,16 @@ function fitRatio(w, h) {
 }
 
 function fitPixels(w, h) {
+  if (w * h < MIN_PIXELS) {
+    const scale = Math.sqrt(MIN_PIXELS / (w * h));
+    let nextW = clamp(ceil16(w * scale));
+    let nextH = clamp(ceil16(h * scale));
+    while (nextW * nextH < MIN_PIXELS) {
+      if (nextW <= nextH) nextW = clamp(nextW + 16);
+      else nextH = clamp(nextH + 16);
+    }
+    return { w: nextW, h: nextH, reason: "minPixels" };
+  }
   if (w * h <= MAX_PIXELS) return { w, h, reason: null };
   const scale = Math.sqrt(MAX_PIXELS / (w * h));
   let nextW = clamp(floor16(w * scale));
@@ -50,7 +61,7 @@ function fitPixels(w, h) {
     if (nextW >= nextH) nextW = clamp(nextW - 16);
     else nextH = clamp(nextH - 16);
   }
-  return { w: nextW, h: nextH, reason: "pixels" };
+  return { w: nextW, h: nextH, reason: "maxPixels" };
 }
 
 function normalizePair(rawW, rawH, fallbackW, fallbackH) {
@@ -118,10 +129,11 @@ describe("custom size input contract", () => {
   it("documents pair-level custom size constraints in the helper", () => {
     const source = readSource("ui/src/lib/size.ts");
 
-    assert.match(source, /export const CUSTOM_SIZE_MIN = 1024/);
-    assert.match(source, /export const CUSTOM_SIZE_MAX = 3824/);
-    assert.match(source, /export const CUSTOM_SIZE_MAX_RATIO = 3/);
-    assert.match(source, /export const CUSTOM_SIZE_MAX_PIXELS = 8_294_400/);
+    assert.match(source, /export const IMAGE_SIZE_MAX_EDGE = 3840/);
+    assert.match(source, /export const IMAGE_SIZE_MIN_PIXELS = 655_360/);
+    assert.match(source, /export const IMAGE_SIZE_MAX_PIXELS = 8_294_400/);
+    assert.match(source, /export const IMAGE_SIZE_MAX_RATIO = 3/);
+    assert.match(source, /export const CUSTOM_SIZE_MAX = IMAGE_SIZE_MAX_EDGE/);
     assert.match(source, /export type CustomSizeAdjustmentReason/);
     assert.match(source, /export function normalizeCustomSizePairDetailed/);
     assert.match(source, /export function normalizeCustomSizePair/);
@@ -181,28 +193,34 @@ describe("custom size input contract", () => {
 
   it("mirrors expected custom size normalization examples", () => {
     assert.deepEqual(normalizePair("900", "2048", 1920, 1088), {
-      w: 1024,
+      w: 896,
       h: 2048,
       adjusted: true,
-      reasons: ["snap", "min"],
+      reasons: ["snap"],
     });
-    assert.deepEqual(normalizePair("1024", "3824", 1920, 1088), {
+    assert.deepEqual(normalizePair("1024", "3840", 1920, 1088), {
       w: 1280,
-      h: 3824,
+      h: 3840,
       adjusted: true,
       reasons: ["ratio"],
     });
-    assert.deepEqual(normalizePair("3824", "1024", 1920, 1088), {
-      w: 3824,
+    assert.deepEqual(normalizePair("3840", "1024", 1920, 1088), {
+      w: 3840,
       h: 1280,
       adjusted: true,
       reasons: ["ratio"],
     });
-    assert.deepEqual(normalizePair("3824", "3824", 1920, 1088), {
+    assert.deepEqual(normalizePair("3840", "3840", 1920, 1088), {
       w: 2880,
       h: 2880,
       adjusted: true,
-      reasons: ["pixels"],
+      reasons: ["maxPixels"],
+    });
+    assert.deepEqual(normalizePair("512", "512", 1920, 1088), {
+      w: 816,
+      h: 816,
+      adjusted: true,
+      reasons: ["minPixels"],
     });
     assert.deepEqual(normalizePair("", "", 2048, 2048), {
       w: 2048,

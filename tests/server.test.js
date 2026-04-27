@@ -6,8 +6,8 @@ import express from "express";
 
 describe("Server Utils", () => {
   it("should validate image size format", () => {
-    const validSizes = ["1024x1024", "1536x1024", "1024x1536", "2048x2048"];
-    const invalidSizes = ["1024", "abcxdef", "1024x1024x1024", "3840x2160"];
+    const validSizes = ["1024x1024", "1536x1024", "1024x1536", "2048x2048", "3840x2160", "2160x3840", "2400x1024", "3840x1648"];
+    const invalidSizes = ["1024", "abcxdef", "1024x1024x1024", "4096x2160", "3840x1024", "512x512"];
 
     const sizeRegex = /^(\d+)x(\d+)$/;
 
@@ -17,7 +17,7 @@ describe("Server Utils", () => {
       const w = parseInt(match[1]);
       const h = parseInt(match[2]);
       assert.ok(w % 16 === 0 && h % 16 === 0, `${size} should be 16px aligned`);
-      assert.ok(Math.max(w, h) < 3840, `${size} max edge < 3840`);
+      assert.ok(Math.max(w, h) <= 3840, `${size} max edge <= 3840`);
       assert.ok(Math.max(w, h) / Math.min(w, h) <= 3, `${size} ratio <= 3:1`);
       const pixels = w * h;
       assert.ok(pixels >= 655360 && pixels <= 8294400, `${size} pixels in range`);
@@ -31,7 +31,7 @@ describe("Server Utils", () => {
         const invalid =
           w % 16 !== 0 ||
           h % 16 !== 0 ||
-          Math.max(w, h) >= 3840 ||
+          Math.max(w, h) > 3840 ||
           Math.max(w, h) / Math.min(w, h) > 3 ||
           w * h < 655360 ||
           w * h > 8294400;

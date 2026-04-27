@@ -14,12 +14,12 @@ const ALL_PRESETS = [
   "2048x2048",
   "2048x1152",
   "1152x2048",
-  "3824x2160",
-  "2160x3824",
+  "3840x2160",
+  "2160x3840",
 ];
 
 const MIN_SIDE = 1024;
-const MAX_SIDE = 3840; // strictly less than
+const MAX_SIDE = 3840;
 const MIN_PIXELS = 655_360;
 const MAX_PIXELS = 8_294_400;
 const MAX_RATIO = 3;
@@ -37,7 +37,7 @@ describe("gpt-image-2 size presets", () => {
 
       const maxSide = Math.max(w, h);
       const minSide = Math.min(w, h);
-      assert.ok(maxSide < MAX_SIDE, `${preset}: max side < ${MAX_SIDE}`);
+      assert.ok(maxSide <= MAX_SIDE, `${preset}: max side ≤ ${MAX_SIDE}`);
       assert.ok(minSide >= MIN_SIDE, `${preset}: min side ≥ ${MIN_SIDE}`);
 
       const ratio = maxSide / minSide;

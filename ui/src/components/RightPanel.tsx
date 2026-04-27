@@ -2,20 +2,15 @@ import { useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { OptionGroup } from "./OptionGroup";
 import { SizePicker } from "./SizePicker";
+import { CountPicker } from "./CountPicker";
 import { CostEstimate } from "./CostEstimate";
-import type { Count, Format, Moderation, Quality } from "../types";
+import type { Format, Moderation, Quality } from "../types";
 import { useI18n } from "../i18n";
 
 const FORMAT_ITEMS = [
   { value: "png" as const, label: "PNG" },
   { value: "jpeg" as const, label: "JPEG" },
   { value: "webp" as const, label: "WebP" },
-];
-
-const COUNT_ITEMS: { value: string; label: string }[] = [
-  { value: "1", label: "1" },
-  { value: "2", label: "2" },
-  { value: "4", label: "4" },
 ];
 
 export function RightPanel() {
@@ -42,9 +37,6 @@ export function RightPanel() {
   const setFormat = useAppStore((s) => s.setFormat);
   const moderation = useAppStore((s) => s.moderation);
   const setModeration = useAppStore((s) => s.setModeration);
-  const count = useAppStore((s) => s.count);
-  const setCount = useAppStore((s) => s.setCount);
-
   const QUALITY_ITEMS = [
     { value: "low" as const, label: t("quality.lowLabel"), sub: t("quality.lowSub") },
     { value: "medium" as const, label: t("quality.mediumLabel"), sub: t("quality.mediumSub") },
@@ -113,12 +105,7 @@ export function RightPanel() {
           <p className="option-help">
             {t("moderation.explain")}
           </p>
-          <OptionGroup<string>
-            title={t("count.title")}
-            items={COUNT_ITEMS}
-            value={String(count)}
-            onChange={(v) => setCount(Number(v) as Count)}
-          />
+          <CountPicker />
           <CostEstimate />
         </div>
       </aside>

@@ -5,9 +5,10 @@ import type { CustomSizeAdjustmentReason } from "../lib/size";
 
 function reasonKey(reasons: CustomSizeAdjustmentReason[]): string {
   if (reasons.includes("ratio")) return "sizeConfirm.reasonRatio";
-  if (reasons.includes("pixels")) return "sizeConfirm.reasonPixels";
+  if (reasons.includes("maxPixels") || reasons.includes("pixels")) return "sizeConfirm.reasonPixels";
+  if (reasons.includes("minPixels")) return "sizeConfirm.reasonMinPixels";
   if (reasons.includes("min")) return "sizeConfirm.reasonMin";
-  if (reasons.includes("max")) return "sizeConfirm.reasonMax";
+  if (reasons.includes("maxEdge") || reasons.includes("max")) return "sizeConfirm.reasonMax";
   return "sizeConfirm.reasonSnap";
 }
 
@@ -82,4 +83,3 @@ export function CustomSizeConfirmModal() {
     </div>
   );
 }
-

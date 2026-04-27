@@ -44,11 +44,31 @@
     "title": "Size",
     "width": "Width",
     "height": "Height",
-    "hint": "Each side 1024–3824, multiple of 16, ratio up to 3:1",
+    "hint": "16px steps, max edge 3840, ratio up to 3:1, 655K–8.29M pixels",
     "autoLabel": "Auto",
     "autoSub": "Model pick",
     "customLabel": "Custom",
-    "customSub": "Free form"
+    "customSub": "Free form",
+    "customPlus": "+ Custom",
+    "customSlots": "Saved sizes",
+    "customSlot": "Custom",
+    "customSlotLimit": "Up to 3 custom sizes",
+    "saveCustomSlot": "Save custom size",
+    "replaceCustomSlot": "Replace slot",
+    "ratioFree": "Free",
+    "ratio21x9": "21:9",
+    "normalizedPreview": "Will send",
+    "noAdjustment": "No adjustment",
+    "adjustedReasons": {
+      "snap": "snapped to 16px",
+      "maxEdge": "max edge",
+      "ratio": "ratio limit",
+      "minPixels": "minimum pixels",
+      "maxPixels": "maximum pixels",
+      "min": "minimum edge",
+      "max": "maximum edge",
+      "pixels": "pixel limit"
+    }
   },
   "sizeConfirm": {
     "title": "Size adjustment required",
@@ -59,6 +79,7 @@
     "cancel": "Cancel",
     "reasonRatio": "The ratio exceeds the 3:1 limit.",
     "reasonPixels": "The maximum pixel limit is exceeded.",
+    "reasonMinPixels": "The requested image has too few pixels.",
     "reasonMin": "The size is below the minimum.",
     "reasonMax": "The size is above the maximum.",
     "reasonSnap": "The size must align to 16px increments."
@@ -84,7 +105,13 @@
     "title": "Format"
   },
   "count": {
-    "title": "Count"
+    "title": "Count",
+    "customPlus": "+n",
+    "customLabel": "Custom count",
+    "highCountHint": "Higher counts can take longer with references or high quality.",
+    "minMaxHint": "Use 1–8 images.",
+    "decrease": "Decrease count",
+    "increase": "Increase count"
   },
   "generate": {
     "button": "Generate",
