@@ -70,10 +70,24 @@ describe("prompt library UI contract", () => {
     const store = readSource("ui/src/store/useAppStore.ts");
     const gallery = readSource("ui/src/components/GalleryModal.tsx");
     const tile = readSource("ui/src/components/GalleryImageTile.tsx");
+    const css = readSource("ui/src/index.css");
+    const en = JSON.parse(readSource("ui/src/i18n/en.json"));
+    const ko = JSON.parse(readSource("ui/src/i18n/ko.json"));
 
     assert.match(store, /isFavorite:\s*it\.isFavorite \?\? false/);
     assert.match(gallery, /isFavorite:\s*h\.isFavorite \?\? false/);
     assert.match(tile, /item\.isFavorite/);
+    assert.match(gallery, /const \[favoritesOnly, setFavoritesOnly\] = useState\(false\)/);
+    assert.match(gallery, /favoritesOnly && !h\.isFavorite/);
+    assert.match(gallery, /visibleSessionGroups/);
+    assert.match(gallery, /visibleLoose/);
+    assert.match(gallery, /className="gallery__favorite-filter"/);
+    assert.match(gallery, /t\("gallery\.emptyFavorites"\)/);
+    assert.match(css, /\.gallery__favorite-filter/);
+    assert.equal(en.gallery.filterFavorites, "Favorites");
+    assert.equal(typeof en.gallery.emptyFavorites, "string");
+    assert.equal(ko.gallery.filterFavorites, "즐겨찾기");
+    assert.equal(typeof ko.gallery.emptyFavorites, "string");
   });
 
   it("keeps prompt library primary button text readable across themes", () => {

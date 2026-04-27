@@ -51,8 +51,8 @@ describe("gallery navigation UX contract", () => {
     assert.match(gallery, /scrollIntoView\(\{ block: "center" \}\)/);
     assert.match(gallery, /lastScrollTopRef\.current/);
     assert.match(gallery, /totalVisible/);
-    assert.match(gallery, /sessionGroups\.length/);
-    assert.match(gallery, /loose\.length/);
+    assert.match(gallery, /visibleSessionGroups\.length/);
+    assert.match(gallery, /visibleLoose\.length/);
     assert.match(gallery, /dateGroups\.length/);
     assert.match(gallery, /GalleryImageTile/);
     assert.match(imageTile, /itemRef: \(node: HTMLElement \| null\) => void/);

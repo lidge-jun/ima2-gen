@@ -46,6 +46,7 @@ export function GalleryModal() {
 
   const [query, setQuery] = useState("");
   const [groupBy, setGroupBy] = useState<"date" | "session">("date");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [sessionGroups, setSessionGroups] = useState<SessionGroup[]>([]);
   const [loose, setLoose] = useState<GenerateItem[]>([]);
   const [pending, setPending] = useState<TrashPending | null>(null);
@@ -161,13 +162,30 @@ export function GalleryModal() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase().normalize("NFC");
-    if (!q) return history;
-    return history.filter(
-      (h) =>
+    return history.filter((h) => {
+      if (favoritesOnly && !h.isFavorite) return false;
+      if (!q) return true;
+      return (
         (h.prompt ?? "").toLowerCase().normalize("NFC").includes(q) ||
-        (h.filename ?? "").toLowerCase().normalize("NFC").includes(q),
-    );
-  }, [history, query]);
+        (h.filename ?? "").toLowerCase().normalize("NFC").includes(q)
+      );
+    });
+  }, [history, query, favoritesOnly]);
+
+  const visibleSessionGroups = useMemo(() => {
+    if (!favoritesOnly) return sessionGroups;
+    return sessionGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.isFavorite),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [sessionGroups, favoritesOnly]);
+
+  const visibleLoose = useMemo(() => {
+    if (!favoritesOnly) return loose;
+    return loose.filter((item) => item.isFavorite);
+  }, [loose, favoritesOnly]);
 
   const dateGroups = useMemo(() => {
     const map = new Map<string, GenerateItem[]>();
@@ -179,7 +197,7 @@ export function GalleryModal() {
     return Array.from(map.entries());
   }, [filtered]);
   const totalVisible = groupBy === "session"
-    ? sessionGroups.reduce((a, g) => a + g.items.length, 0) + loose.length
+    ? visibleSessionGroups.reduce((a, g) => a + g.items.length, 0) + visibleLoose.length
     : filtered.length;
 
   useLayoutEffect(() => {
@@ -191,7 +209,7 @@ export function GalleryModal() {
       return;
     }
     if (scrollRef.current) scrollRef.current.scrollTop = lastScrollTopRef.current;
-  }, [open, currentImage?.filename, currentImage?.image, groupBy, totalVisible, dateGroups.length, sessionGroups.length, loose.length]);
+  }, [open, currentImage?.filename, currentImage?.image, groupBy, totalVisible, dateGroups.length, visibleSessionGroups.length, visibleLoose.length]);
 
   useEffect(() => {
     if (!pending) return;
@@ -350,7 +368,27 @@ export function GalleryModal() {
             <div className="gallery__title">{t("gallery.title")}</div>
             <div className="gallery__meta">
               {t("gallery.total", { n: totalVisible })}
-              {query ? t("gallery.totalFiltered", { n: history.length }) : ""}
+              {query || favoritesOnly ? t("gallery.totalFiltered", { n: history.length }) : ""}
+            </div>
+            <div className="gallery__favorite-filter" role="tablist" aria-label={t("gallery.favoriteFilterAria")}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!favoritesOnly}
+                className={!favoritesOnly ? "active" : ""}
+                onClick={() => setFavoritesOnly(false)}
+              >
+                {t("gallery.filterAll")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={favoritesOnly}
+                className={favoritesOnly ? "active" : ""}
+                onClick={() => setFavoritesOnly(true)}
+              >
+                {t("gallery.filterFavorites")}
+              </button>
             </div>
             <div className="gallery__group-toggle" role="tablist" aria-label={t("gallery.sortByAria")}>
               <button
@@ -434,7 +472,7 @@ export function GalleryModal() {
         >
           {showSessions ? (
             <>
-              {sessionGroups.map((g) => (
+              {visibleSessionGroups.map((g) => (
                 <section key={g.sessionId} className="gallery__group">
                   <header className="gallery__group-header">
                     <span className="gallery__group-label" title={g.sessionId}>
@@ -447,25 +485,29 @@ export function GalleryModal() {
                   </div>
                 </section>
               ))}
-              {loose.length > 0 && (
+              {visibleLoose.length > 0 && (
                 <section className="gallery__group">
                   <header className="gallery__group-header">
                     <span className="gallery__group-label">{t("gallery.standalone")}</span>
-                    <span className="gallery__group-count">{loose.length}</span>
+                    <span className="gallery__group-count">{visibleLoose.length}</span>
                   </header>
                   <div className="gallery__grid">
-                    {loose.map((item, i) => renderTile(item, "loose", i))}
+                    {visibleLoose.map((item, i) => renderTile(item, "loose", i))}
                   </div>
                 </section>
               )}
-              {sessionGroups.length === 0 && loose.length === 0 && (
-                <div className="gallery__empty">{t("gallery.emptySessions")}</div>
+              {visibleSessionGroups.length === 0 && visibleLoose.length === 0 && (
+                <div className="gallery__empty">
+                  {favoritesOnly ? t("gallery.emptyFavorites") : t("gallery.emptySessions")}
+                </div>
               )}
             </>
           ) : filtered.length === 0 ? (
             <div className="gallery__empty">
               {history.length === 0
                 ? t("gallery.emptyAll")
+                : favoritesOnly
+                  ? t("gallery.emptyFavorites")
                 : t("gallery.noResults")}
             </div>
           ) : (

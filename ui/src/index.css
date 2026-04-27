@@ -2173,6 +2173,7 @@ body {
 .gallery__delete:hover {
   background: var(--red);
 }
+.gallery__favorite-filter,
 .gallery__group-toggle {
   display: inline-flex;
   gap: 4px;
@@ -2182,6 +2183,10 @@ body {
   border-radius: 8px;
   padding: 2px;
 }
+.gallery__favorite-filter {
+  margin-left: 0;
+}
+.gallery__favorite-filter button,
 .gallery__group-toggle button {
   background: transparent;
   border: none;
@@ -2191,6 +2196,7 @@ body {
   border-radius: 6px;
   cursor: pointer;
 }
+.gallery__favorite-filter button.active,
 .gallery__group-toggle button.active {
   background: var(--accent);
   color: var(--accent-ink);
