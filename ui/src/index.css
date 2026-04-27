@@ -2083,7 +2083,11 @@ body {
   border: none;
   padding: 4px 2px;
   background: transparent;
-  min-height: 72px;
+  min-height: 80px;
+  max-height: 218px;
+  line-height: 1.5;
+  resize: none;
+  overflow-y: auto;
 }
 .composer__textarea:focus,
 .composer__textarea:focus-visible {
@@ -2782,6 +2786,9 @@ body {
   }
   .sidebar__scroll {
     padding: 12px;
+  }
+  .composer__textarea {
+    min-height: 96px;
   }
   .history-strip {
     flex-direction: row;

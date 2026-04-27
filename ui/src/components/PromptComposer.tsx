@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { SavePromptPopover } from "./SavePromptPopover";
@@ -21,6 +21,7 @@ export function PromptComposer() {
   const currentImage = useAppStore((s) => s.currentImage);
 
   const fileInput = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const promptMode = useAppStore((s) => s.promptMode);
@@ -86,6 +87,13 @@ export function PromptComposer() {
     const room = MAX_REFS - refs.length;
     void addReferences(files.slice(0, room));
   };
+
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [prompt]);
 
   useEffect(() => {
     const handler = (e: globalThis.ClipboardEvent) => {
@@ -176,6 +184,7 @@ export function PromptComposer() {
       )}
 
       <textarea
+        ref={textareaRef}
         className="prompt-area composer__textarea"
         value={prompt}
         placeholder={placeholder}
