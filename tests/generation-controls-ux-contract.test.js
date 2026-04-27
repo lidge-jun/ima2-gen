@@ -59,6 +59,16 @@ describe("generation controls custom plus UX contract", () => {
     assert.match(sizePicker, /replaceCustomSizeSlot\(slots, replaceSlotId, normalized\)/);
   });
 
+  it("collapses the custom editor when another size option is selected or saved", () => {
+    const sizePicker = readSource("ui/src/components/SizePicker.tsx");
+
+    assert.match(sizePicker, /function selectPreset\(nextPreset: SizePreset\)/);
+    assert.match(sizePicker, /if \(nextPreset !== "custom"\) \{[\s\S]*?setEditorOpen\(false\);[\s\S]*?setReplaceSlotId\(null\);[\s\S]*?\}/);
+    assert.match(sizePicker, /onChange=\{selectPreset\}/);
+    assert.match(sizePicker, /onClick=\{\(\) => selectPreset\(item\.value\)\}/);
+    assert.match(sizePicker, /setEditorOpen\(false\);[\s\S]*?\}\n\n  const reasonText =/);
+  });
+
   it("offers 21:9 only as a custom ratio preset", () => {
     const sizeLib = readSource("ui/src/lib/size.ts");
 

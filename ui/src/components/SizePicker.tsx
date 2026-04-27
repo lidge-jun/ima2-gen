@@ -58,7 +58,10 @@ export function SizePicker() {
   }, [customW, customH]);
 
   useEffect(() => {
-    if (isCustom) setEditorOpen(true);
+    if (!isCustom) {
+      setEditorOpen(false);
+      setReplaceSlotId(null);
+    }
   }, [isCustom]);
 
   function setSlotsAndPersist(next: CustomSizeSlot[]) {
@@ -85,6 +88,14 @@ export function SizePicker() {
     setSizePreset("custom");
     setEditorOpen(true);
     setReplaceSlotId(slots.length >= MAX_CUSTOM_SIZE_SLOTS ? slots[0]?.id ?? null : null);
+  }
+
+  function selectPreset(nextPreset: SizePreset) {
+    setSizePreset(nextPreset);
+    if (nextPreset !== "custom") {
+      setEditorOpen(false);
+      setReplaceSlotId(null);
+    }
   }
 
   function selectSlot(slot: CustomSizeSlot) {
@@ -116,6 +127,7 @@ export function SizePicker() {
     setDraftW(String(preview.w));
     setDraftH(String(preview.h));
     setReplaceSlotId(normalized.id);
+    setEditorOpen(false);
   }
 
   const reasonText =
@@ -126,17 +138,17 @@ export function SizePicker() {
   return (
     <div className="option-group size-picker">
       <div className="section-title">{t("size.title")}</div>
-      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW1)} value={sizePreset} onChange={setSizePreset} />
-      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW2)} value={sizePreset} onChange={setSizePreset} />
-      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW3)} value={sizePreset} onChange={setSizePreset} />
-      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW4)} value={sizePreset} onChange={setSizePreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW1)} value={sizePreset} onChange={selectPreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW2)} value={sizePreset} onChange={selectPreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW3)} value={sizePreset} onChange={selectPreset} />
+      <OptionGroup<SizePreset> title="" items={toItems(SIZE_PRESETS_ROW4)} value={sizePreset} onChange={selectPreset} />
       <div className="option-row size-picker__quick-row">
         {toItems(customRow).map((item) => (
           <button
             key={item.value}
             type="button"
             className={`option-btn${sizePreset === item.value ? " active" : ""}`}
-            onClick={() => setSizePreset(item.value)}
+            onClick={() => selectPreset(item.value)}
           >
             {item.label}
             {item.sub ? (
