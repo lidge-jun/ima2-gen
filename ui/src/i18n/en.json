@@ -173,8 +173,6 @@
     "attachTitle": "Attach reference images",
     "useCurrent": "Use current",
     "useCurrentTitle": "Use current result as a reference",
-    "style": "Style",
-    "styleTitle": "Open style consistency settings",
     "directMode": "Direct",
     "directModeTitle": "Pass prompt through verbatim (Direct mode)",
     "hint": "Ctrl + Enter to generate",
@@ -276,8 +274,7 @@
     "nodeRefsUsedWithParent": "Used together with the parent image.",
     "classicRefsParkedTitle": "Classic references are parked",
     "classicRefsParkedBody": "These images belong to the classic composer and are inactive in node mode.",
-    "clearParkedRefs": "Clear parked references",
-    "styleSheetActive": "Session style sheet active"
+    "clearParkedRefs": "Clear parked references"
   },
   "nodeBatch": {
     "selectionOn": "Selecting",
@@ -570,35 +567,6 @@
       "claude": "Claude",
       "gemini": "Gemini",
       "grok": "Grok"
-    }
-  },
-  "styleSheet": {
-    "toggle": "Apply style consistency",
-    "extract": "Extract from prompt",
-    "extracting": "Extracting…",
-    "edit": "Edit",
-    "save": "Save",
-    "cancel": "Cancel",
-    "emptyHint": "No style sheet yet. Extract from the current prompt to lock in a look.",
-    "noPrompt": "Enter a prompt first",
-    "extracted": "Style sheet extracted",
-    "editorTitle": "Edit style sheet",
-    "saved": "Style sheet saved",
-    "errNoKey": "Style-sheet extraction needs an OpenAI API key. Connect one via setup.",
-    "errBadOutput": "Model returned an unusable sheet — try a more specific prompt.",
-    "placeholderMedium": "e.g. oil painting, cinematic photo",
-    "placeholderComposition": "e.g. centered portrait, wide landscape",
-    "placeholderMood": "e.g. cinematic, dreamlike",
-    "placeholderSubject": "e.g. young woman in red jacket",
-    "placeholderPalette": "#0a0a0a, #f97316, warm amber",
-    "placeholderNegative": "blur, watermark, text",
-    "fields": {
-      "medium": "Medium",
-      "composition": "Composition",
-      "mood": "Mood",
-      "subject": "Subject details",
-      "palette": "Palette (comma-separated hex or names)",
-      "negative": "Negative (comma-separated)"
     }
   },
   "errorCard": {

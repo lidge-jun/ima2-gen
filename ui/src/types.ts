@@ -98,7 +98,6 @@ export type EmbeddedGenerationMetadata = {
   requestId?: string | null;
   refsCount?: number;
   webSearchCalls?: number;
-  styleSheetApplied?: boolean;
 };
 
 export type GenerateSingleResponse = {

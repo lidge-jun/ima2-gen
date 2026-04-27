@@ -5,8 +5,6 @@ import { editViaOAuth } from "../lib/oauthProxy.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel } from "../lib/imageModels.js";
-import { getStyleSheet } from "../lib/sessionStore.js";
-import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 
@@ -57,7 +55,6 @@ export function registerEditRoutes(app, ctx) {
           quality,
           model: imageModel,
           size,
-          styleSheetApplied: false,
         },
       });
 
@@ -81,21 +78,6 @@ export function registerEditRoutes(app, ctx) {
         return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
       }
 
-      let effectivePrompt = prompt;
-      let styleSheetApplied = null;
-      if (sessionId) {
-        try {
-          const data = getStyleSheet(sessionId);
-          if (data && data.enabled && data.styleSheet) {
-            const prefix = renderStyleSheetPrefix(data.styleSheet);
-            if (prefix) {
-              effectivePrompt = `${prefix} ${prompt}`.slice(0, 4000);
-              styleSheetApplied = data.styleSheet;
-            }
-          }
-        } catch {}
-      }
-
       logEvent("edit", "request", {
         requestId,
         client: req.get("x-ima2-client") || "ui",
@@ -107,12 +89,11 @@ export function registerEditRoutes(app, ctx) {
         sessionId,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
         promptMode: normalizedPromptMode,
-        styleSheetApplied: !!styleSheetApplied,
         inputImageChars: typeof imageB64 === "string" ? imageB64.length : 0,
       });
       const startTime = Date.now();
       const { b64: resultB64, usage, revisedPrompt } = await editViaOAuth(
-        effectivePrompt,
+        prompt,
         imageB64,
         quality,
         size,
@@ -132,8 +113,6 @@ export function registerEditRoutes(app, ctx) {
         userPrompt: prompt,
         revisedPrompt: revisedPrompt || null,
         promptMode: normalizedPromptMode,
-        effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
-        styleSheetApplied: styleSheetApplied || undefined,
         quality,
         size,
         moderation,

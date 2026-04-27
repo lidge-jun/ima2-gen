@@ -3,7 +3,6 @@ import { PromptComposer } from "./PromptComposer";
 import { GenerateButton } from "./GenerateButton";
 import { InFlightList } from "./InFlightList";
 import { SessionPicker } from "./SessionPicker";
-import { NodeStyleButton } from "./NodeStyleButton";
 import { SettingsButton } from "./SettingsButton";
 import { ImageModelSelect } from "./ImageModelSelect";
 import { CardNewsComposer } from "./card-news/CardNewsComposer";
@@ -16,7 +15,6 @@ export function Sidebar() {
   const uiModeRaw = useAppStore((s) => s.uiMode);
   const referenceImages = useAppStore((s) => s.referenceImages);
   const clearReferences = useAppStore((s) => s.clearReferences);
-  const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
   const uiMode =
     uiModeRaw === "card-news" && ENABLE_CARD_NEWS_MODE ? "card-news" :
       uiModeRaw === "node" && ENABLE_NODE_MODE ? "node" :
@@ -50,7 +48,6 @@ export function Sidebar() {
         ) : (
           <>
             <SessionPicker />
-            <NodeStyleButton />
             {referenceImages.length > 0 ? (
               <div className="node-mode-ref-warning" role="status">
                 <strong>{t("node.classicRefsParkedTitle")}</strong>
@@ -58,11 +55,6 @@ export function Sidebar() {
                 <button type="button" onClick={clearReferences}>
                   {t("node.clearParkedRefs")}
                 </button>
-              </div>
-            ) : null}
-            {styleSheetEnabled ? (
-              <div className="node-mode-style-badge" role="status">
-                {t("node.styleSheetActive")}
               </div>
             ) : null}
             <div className="sidebar__node-hint">

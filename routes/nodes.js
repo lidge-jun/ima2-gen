@@ -13,8 +13,6 @@ import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
-import { getStyleSheet } from "../lib/sessionStore.js";
-import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { logEvent, logError } from "../lib/logger.js";
 
 function validateModeration(ctx, moderation) {
@@ -158,21 +156,6 @@ export function registerNodeRoutes(app, ctx) {
         });
       }
 
-      let effectivePrompt = prompt;
-      let styleSheetApplied = null;
-      if (sessionId) {
-        try {
-          const data = getStyleSheet(sessionId);
-          if (data && data.enabled && data.styleSheet) {
-            const prefix = renderStyleSheetPrefix(data.styleSheet);
-            if (prefix) {
-              effectivePrompt = `${prefix} ${prompt}`.slice(0, 4000);
-              styleSheetApplied = data.styleSheet;
-            }
-          }
-        } catch {}
-      }
-
       const startTime = Date.now();
       let parentB64 = null;
       if (parentNodeId) {
@@ -209,7 +192,6 @@ export function registerNodeRoutes(app, ctx) {
         webSearchEnabled,
         promptChars: prompt.length,
         promptMode: normalizedPromptMode,
-        styleSheetApplied: !!styleSheetApplied,
       });
 
       if (streamResponse) {
@@ -245,9 +227,9 @@ export function registerNodeRoutes(app, ctx) {
             webSearchEnabled,
           });
           const r = parentB64
-            ? await editViaOAuth(effectivePrompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel, references: refsForRequest, searchMode: searchMode === "on" ? "on" : "off" })
+            ? await editViaOAuth(prompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel, references: refsForRequest, searchMode: searchMode === "on" ? "on" : "off" })
             : await generateViaOAuth(
-                effectivePrompt,
+                prompt,
                 quality,
                 size,
                 moderation,
@@ -347,8 +329,6 @@ export function registerNodeRoutes(app, ctx) {
         userPrompt: prompt,
         revisedPrompt,
         promptMode: normalizedPromptMode,
-        effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
-        styleSheetApplied: styleSheetApplied || undefined,
         options: { quality, size, format, moderation },
         model: imageModel,
         createdAt: Date.now(),

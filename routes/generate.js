@@ -8,8 +8,6 @@ import { normalizeImageModel } from "../lib/imageModels.js";
 import { generateViaOAuth } from "../lib/oauthProxy.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { startJob, finishJob } from "../lib/inflight.js";
-import { getStyleSheet } from "../lib/sessionStore.js";
-import { renderStyleSheetPrefix } from "../lib/styleSheet.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
@@ -58,25 +56,10 @@ export function registerGenerateRoutes(app, ctx) {
       if (moderationCheck.error) return res.status(400).json({ error: moderationCheck.error });
       const count = Math.min(Math.max(parseInt(n) || 1, 1), 8);
 
-      let effectivePrompt = prompt;
-      let styleSheetApplied = null;
-      if (sessionId) {
-        try {
-          const data = getStyleSheet(sessionId);
-          if (data && data.enabled && data.styleSheet) {
-            const prefix = renderStyleSheetPrefix(data.styleSheet);
-            if (prefix) {
-              effectivePrompt = `${prefix} ${prompt}`.slice(0, 4000);
-              styleSheetApplied = data.styleSheet;
-            }
-          }
-        } catch {}
-      }
-
       startJob({
         requestId,
         kind: "classic",
-        prompt: effectivePrompt,
+        prompt,
         meta: {
           kind: "classic",
           sessionId,
@@ -86,7 +69,6 @@ export function registerGenerateRoutes(app, ctx) {
           model: imageModel,
           size,
           n: count,
-          styleSheetApplied: !!styleSheetApplied,
         },
       });
 
@@ -124,7 +106,6 @@ export function registerGenerateRoutes(app, ctx) {
         clientNodeId,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
         promptMode: normalizedPromptMode,
-        styleSheetApplied: !!styleSheetApplied,
       });
       const startTime = Date.now();
 
@@ -138,7 +119,7 @@ export function registerGenerateRoutes(app, ctx) {
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
           try {
             const r = await generateViaOAuth(
-              effectivePrompt,
+              prompt,
               quality,
               size,
               moderation,
@@ -180,8 +161,6 @@ export function registerGenerateRoutes(app, ctx) {
             userPrompt: prompt,
             revisedPrompt: r.value.revisedPrompt || null,
             promptMode: normalizedPromptMode,
-            effectivePrompt: styleSheetApplied ? effectivePrompt : undefined,
-            styleSheetApplied: styleSheetApplied || undefined,
             quality,
             size,
             format,
