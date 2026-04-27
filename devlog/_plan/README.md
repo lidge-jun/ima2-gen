@@ -27,7 +27,11 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
 | 8 | `0.09.34-node-connect-regression/` | active/reopened | edge disconnect 이후 기존 노드끼리 연결되지 않고 새 노드만 생기는 React Flow target handle 회귀 수정. 상하좌우 4방향 연결점 포함. 후속 PRD는 disconnect 후 같은 노드쌍을 다른 handle로 재연결할 때 이전 anchor가 재사용되는 문제. |
 | 9 | `0.09.36-gallery-double-sidebar-rail/` | planning | 하단 compact gallery strip을 왼쪽 sidebar 옆 세로 보조 rail로 이동하고, 좁은 화면에서는 기존 가로 strip으로 접히게 하는 UX 개선. |
-| 10 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 10 | `0.09.37-generation-controls-custom-plus/` | planning | GitHub #9 기반. 기존 오른쪽 세부 설정 패널과 size preset grid는 유지하고, 하단 custom 영역만 최대 3개 슬롯 + `+` 직접입력으로 보강하며 batch count도 수동 입력으로 확장한다. |
+| 11 | `0.09.38-image-metadata-embed-restore/` | planning | GitHub #13 기반. PNG/JPEG/WebP 생성 파일에 ima2 metadata를 XMP로 임베드하고, sidecar 없는 이미지 drag/drop restore를 지원하는 portable metadata lane. |
+| 12 | `0.09.39-reference-4k-refusal-diagnostics/` | planning | GitHub #11 + #12 기반. reference image 첨부와 4K size에서 발생하는 refusal/empty response/invalid request를 분리 진단하는 lane. |
+| 13 | `0.09.40-multimode-sequence-generation/` | planning | GitHub #17 기반. `multimode` 버튼으로 한 프롬프트에서 1-4장 텍스트 연속성 시퀀스를 한 번의 streamed Responses 호출로 생성하는 lane. |
+| 14 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 
 ## 완료로 이동한 항목
 
@@ -83,3 +87,7 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-27: `0.09.34` 플랜을 Context7/React Flow 공식 문서 기준으로 보강. 다중 handle은 unique id가 필요하며, 상하좌우 source/target handle과 `sourceHandle`/`targetHandle` 보존을 범위에 포함한다.
 - 2026-04-27: `0.09.34` 후속 PRD `PRD-reconnect-handle-anchor.md` 추가. top/top 연결 후 disconnect, side/middle 재연결 시 이전 top anchor가 재사용되는 문제를 handle-aware edge id와 disconnect 즉시 flush로 다룬다.
 - 2026-04-27: 사용자 correction 기준 `0.09.36-gallery-double-sidebar-rail` planning lane 추가. 기존 하단 compact gallery strip을 오른쪽 큰 rail이 아니라 왼쪽 sidebar 옆 두 번째 얇은 세로 rail로 옮기고, narrow viewport에서는 기존 가로 strip으로 접는 범위다.
+- 2026-04-27: GitHub #9 기반 `0.09.37-generation-controls-custom-plus` planning lane 추가. OpenAI `gpt-image-2` size 제약(16px 배수, max edge 3840, ratio 3:1, pixel budget)을 반영하되 기존 오른쪽 세부 설정 패널과 preset grid는 유지하고, 하단 custom 영역만 최대 3개 슬롯 + `+` 직접입력으로 보강한다.
+- 2026-04-27: GitHub #13 기반 `0.09.38-image-metadata-embed-restore` planning lane 추가. Sharp 0.34.x의 PNG/JPEG/WebP XMP 지원과 PNG/WebP 컨테이너 metadata 조사를 반영해 sidecar JSON 유지 + embedded metadata restore PRD를 작성했다.
+- 2026-04-27: GitHub #11 + #12 기반 `0.09.39-reference-4k-refusal-diagnostics` planning lane 추가. reference MIME mismatch, prompt-only retry의 reference drop, 4K empty response, safety refusal 오분류를 분리하는 진단 PRD를 작성했다.
+- 2026-04-28: GitHub #17 기반 `0.09.40-multimode-sequence-generation` planning lane 추가. live smoke에서 한 번의 streamed Responses 호출로 `image_generation_call` 4개 수집이 가능함을 확인했고, 직원 엣지케이스 감사를 반영해 multimode 버튼, 1-4 max stage row, partial/empty/extra-result 처리, sequence metadata 요구사항을 PRD로 작성했다.

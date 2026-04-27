@@ -5,9 +5,42 @@ status: planning-reopened
 owner: Boss
 prd: ./README.md
 followupPrd: ./PRD-reconnect-handle-anchor.md
+revisedPrd: ./PRD-refresh-handle-persistence-and-live-sync.md
 ---
 
 # PLAN — Node Connect Regression
+
+## Revised Follow-up — Refresh Handle Persistence + Live Node Sync
+
+Latest PRD:
+
+- [PRD-refresh-handle-persistence-and-live-sync.md](./PRD-refresh-handle-persistence-and-live-sync.md)
+
+New user report:
+
+```text
+cmd shift r 하면 다시 상단 노드로 복귀되고
+중간 커넥터 끼리 연결한것도 상단 노드로 바뀌어
+
+노드 생성때 바로 반영이 안되고 새로고침해야지 노드에 반영되는 문제
+```
+
+Primary confirmed root cause:
+
+- normal graph saves preserve `edge.data.sourceHandle` and `edge.data.targetHandle`;
+- `flushGraphSaveBeacon()` currently sends `data: {}` for every edge during
+  `beforeunload`;
+- browser refresh can therefore overwrite saved directional anchor metadata;
+- reload maps missing handle data to `null`, and React Flow falls back to its
+  default handle position.
+
+Implementation direction:
+
+1. Extract a single edge serialization helper for graph saves.
+2. Use it in both normal save and `beforeunload` beacon save.
+3. Add contract tests that beacon save cannot drop handle metadata.
+4. Trace and harden node generation completion so final `done` updates the node
+   immediately and persists with a generation-specific save reason.
 
 ## Follow-up — Reconnect Handle Anchor Persistence
 

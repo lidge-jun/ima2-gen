@@ -81,6 +81,7 @@ Primary references:
 ## Follow-up PRD
 
 - [PRD-reconnect-handle-anchor.md](./PRD-reconnect-handle-anchor.md)
+- [PRD-refresh-handle-persistence-and-live-sync.md](./PRD-refresh-handle-persistence-and-live-sync.md)
 
 Reopened after a user report that this sequence can still reuse the old visual
 anchor:
@@ -91,3 +92,20 @@ top/top connect -> disconnect -> side/middle reconnect
 
 The follow-up focuses on handle-aware edge identity and immediate disconnect
 save flushing.
+
+## Revised Follow-up — Refresh / Live Sync
+
+Reopened again after a user report that:
+
+```text
+cmd shift r 하면 다시 상단 노드로 복귀되고
+중간 커넥터 끼리 연결한것도 상단 노드로 바뀌어
+
+노드 생성때 바로 반영이 안되고 새로고침해야지 노드에 반영
+```
+
+The latest PRD focuses on:
+
+- preserving `sourceHandle` / `targetHandle` in the `beforeunload` beacon save path;
+- preventing refresh from overwriting good handle metadata with `{}`;
+- hardening node generation completion so a successful result appears on the current node without refresh.
