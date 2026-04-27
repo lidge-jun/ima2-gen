@@ -42,6 +42,7 @@ export function GalleryModal() {
   const removeFromHistory = useAppStore((s) => s.removeFromHistory);
   const addHistoryItem = useAppStore((s) => s.addHistoryItem);
   const showToast = useAppStore((s) => s.showToast);
+  const toggleGalleryFavorite = useAppStore((s) => s.toggleGalleryFavorite);
 
   const [query, setQuery] = useState("");
   const [groupBy, setGroupBy] = useState<"date" | "session">("date");
@@ -136,6 +137,7 @@ export function GalleryModal() {
             headline: h.headline ?? null,
             body: h.body ?? null,
             cards: h.cards,
+            isFavorite: h.isFavorite ?? false,
           };
         };
         setSessionGroups(
@@ -318,6 +320,7 @@ export function GalleryModal() {
           close();
         }}
         onDelete={handleDelete}
+        onToggleFavorite={(next) => void toggleGalleryFavorite(next.filename!)}
         t={t}
       />
     );

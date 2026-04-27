@@ -2,12 +2,15 @@ import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { StyleSheetDialog } from "./StyleSheetDialog";
+import { SavePromptPopover } from "./SavePromptPopover";
 
 const MAX_REFS = 5;
 
 export function PromptComposer() {
   const prompt = useAppStore((s) => s.prompt);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const insertedPrompts = useAppStore((s) => s.insertedPrompts);
+  const removeInsertedPrompt = useAppStore((s) => s.removeInsertedPromptFromComposer);
   const generate = useAppStore((s) => s.generate);
   const { t } = useI18n();
 
@@ -21,6 +24,7 @@ export function PromptComposer() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
   const styleSheetEnabled = useAppStore((s) => s.styleSheetEnabled);
   const promptMode = useAppStore((s) => s.promptMode);
@@ -128,6 +132,25 @@ export function PromptComposer() {
         </div>
       )}
 
+      {insertedPrompts.length > 0 && (
+        <div className="composer__prompt-chips">
+          {insertedPrompts.map((item) => (
+            <div key={item.id} className="composer__prompt-chip" title={item.name}>
+              <span className="composer__prompt-chip-plus" aria-hidden="true">+</span>
+              <span className="composer__prompt-chip-title">{item.name}</span>
+              <button
+                type="button"
+                className="composer__prompt-chip-remove"
+                onClick={() => removeInsertedPrompt(item.id)}
+                aria-label={t("promptLibrary.removeInserted", { name: item.name })}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <textarea
         className="prompt-area composer__textarea"
         value={prompt}
@@ -202,6 +225,28 @@ export function PromptComposer() {
           <span aria-hidden="true" style={{ fontWeight: 700, fontSize: 11 }}>1:1</span>
           <span>{t("prompt.directMode")}</span>
         </button>
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="composer__tool"
+            onClick={() => setSaveOpen((v) => !v)}
+            disabled={!prompt.trim()}
+            title={t("promptLibrary.saveTitle")}
+            aria-label={t("promptLibrary.saveTitle")}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{t("promptLibrary.save")}</span>
+          </button>
+          {saveOpen && (
+            <SavePromptPopover
+              text={prompt}
+              mode={promptMode}
+              onClose={() => setSaveOpen(false)}
+            />
+          )}
+        </div>
         <span className="composer__hint">{t("prompt.hint")}</span>
       </div>
 

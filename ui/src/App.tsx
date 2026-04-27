@@ -11,6 +11,7 @@ import { GalleryModal } from "./components/GalleryModal";
 import { CustomSizeConfirmModal } from "./components/CustomSizeConfirmModal";
 import { MetadataRestoreDialog } from "./components/MetadataRestoreDialog";
 import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
+import { PromptLibraryPanel } from "./components/PromptLibraryPanel";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
 import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "./lib/devMode";
 
@@ -109,6 +110,7 @@ export default function App() {
       <ErrorCard />
       <GalleryModal />
       <MetadataRestoreDialog />
+      <PromptLibraryPanel />
     </>
   );
 }

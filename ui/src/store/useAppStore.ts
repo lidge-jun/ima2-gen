@@ -35,6 +35,13 @@ import {
   setSessionStyleSheetEnabled,
   extractSessionStyleSheet,
   readImageMetadata,
+  getBrowserId,
+  getPromptLibrary,
+  createPrompt,
+  deletePrompt,
+  togglePromptFavorite,
+  toggleGalleryFavorite,
+  importPromptLibrary,
   type SessionSummary,
   type SessionFull,
   type SessionGraphEdge,
@@ -163,6 +170,19 @@ type ServerInFlightJob = {
   phase?: string;
   meta?: Record<string, unknown>;
 };
+
+type InsertedPrompt = {
+  id: string;
+  name: string;
+  text: string;
+};
+
+function composePrompt(mainPrompt: string, insertedPrompts: InsertedPrompt[]): string {
+  return [
+    ...insertedPrompts.map((prompt) => prompt.text.trim()).filter(Boolean),
+    mainPrompt.trim(),
+  ].filter(Boolean).join("\n\n");
+}
 
 function toPersistedInFlightJob(job: ServerInFlightJob): PersistedInFlight {
   const meta = job.meta ?? {};
@@ -305,6 +325,7 @@ function mapHistoryItem(it: Awaited<ReturnType<typeof getHistory>>["items"][numb
     body: it.body ?? null,
     cards: it.cards,
     refsCount: it.refsCount ?? 0,
+    isFavorite: it.isFavorite ?? false,
   };
 }
 
@@ -617,6 +638,10 @@ type AppState = {
   setCount: (c: Count) => void;
   setPromptMode: (m: "auto" | "direct") => void;
   setPrompt: (p: string) => void;
+  insertedPrompts: InsertedPrompt[];
+  insertPromptToComposer: (prompt: InsertedPrompt) => void;
+  removeInsertedPromptFromComposer: (id: string) => void;
+  clearInsertedPrompts: () => void;
   selectHistory: (item: GenerateItem) => void;
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
@@ -630,6 +655,20 @@ type AppState = {
   showErrorCard: (code: ImaErrorCode, params?: { fallbackMessage?: string }) => void;
   dismissErrorCard: () => void;
   getResolvedSize: () => string;
+
+  // Prompt Library (0.23)
+  promptLibraryOpen: boolean;
+  togglePromptLibrary: () => void;
+  promptLibrary: { prompts: import("../lib/api").PromptItem[]; folders: import("../lib/api").PromptFolder[] };
+  promptLibraryLoading: boolean;
+  loadPromptLibrary: () => Promise<void>;
+  savePromptToLibrary: (payload: { name?: string; text: string; tags?: string[]; folderId?: string; mode?: "auto" | "direct" }) => Promise<void>;
+  deletePromptFromLibrary: (id: string) => Promise<void>;
+  togglePromptFavorite: (id: string) => Promise<void>;
+  importPromptsToLibrary: (files: File[]) => Promise<void>;
+  galleryFavorites: Set<string>;
+  toggleGalleryFavorite: (filename: string) => Promise<void>;
+  browserId: string;
 };
 
 function formatSize(w: number, h: number): string {
@@ -738,7 +777,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   count: 1,
   promptMode: "auto",
   prompt: "",
+  insertedPrompts: [],
   referenceImages: [],
+
+  // Prompt Library state (0.23)
+  promptLibraryOpen: false,
+  promptLibrary: { prompts: [], folders: [] },
+  promptLibraryLoading: false,
+  galleryFavorites: new Set(),
+  browserId: getBrowserId(),
+
   addReferences: async (files) => {
     const allowed = MAX_REFERENCE_IMAGES - get().referenceImages.length;
     const toAdd = files.slice(0, Math.max(0, allowed));
@@ -2179,6 +2227,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCount: (count) => set({ count: normalizeCount(count) }),
   setPromptMode: (promptMode) => set({ promptMode }),
   setPrompt: (prompt) => set({ prompt }),
+  insertPromptToComposer: (prompt) =>
+    set((state) => {
+      const exists = state.insertedPrompts.some((item) => item.id === prompt.id);
+      return {
+        insertedPrompts: exists
+          ? state.insertedPrompts
+          : [...state.insertedPrompts, prompt],
+      };
+    }),
+  removeInsertedPromptFromComposer: (id) =>
+    set((state) => ({
+      insertedPrompts: state.insertedPrompts.filter((prompt) => prompt.id !== id),
+    })),
+  clearInsertedPrompts: () => set({ insertedPrompts: [] }),
 
   selectHistory: (item) => {
     saveSelectedFilename(item.filename ?? null);
@@ -2214,7 +2276,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   async generate() {
     const s = get();
-    const prompt = s.prompt.trim();
+    const prompt = composePrompt(s.prompt, s.insertedPrompts);
     if (!prompt) return;
     const pending = getCustomSizeConfirmation(s, { kind: "classic" });
     if (pending) {
@@ -2226,7 +2288,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   async runGenerate(sizeOverride) {
     const s = get();
-    const prompt = s.prompt.trim();
+    const prompt = composePrompt(s.prompt, s.insertedPrompts);
     if (!prompt) return;
 
     const size = sizeOverride ?? s.getResolvedSize();
@@ -2377,6 +2439,94 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   dismissErrorCard() {
     set({ errorCard: null });
+  },
+
+  // ── Prompt Library actions (0.23) ──
+  togglePromptLibrary() {
+    set((s) => ({ promptLibraryOpen: !s.promptLibraryOpen }));
+  },
+
+  async loadPromptLibrary() {
+    set({ promptLibraryLoading: true });
+    try {
+      const data = await getPromptLibrary();
+      set({ promptLibrary: { prompts: data.prompts, folders: data.folders }, promptLibraryLoading: false });
+    } catch (err) {
+      console.error("[PromptLibrary] load failed", err);
+      set({ promptLibraryLoading: false });
+    }
+  },
+
+  async savePromptToLibrary(payload) {
+    try {
+      await createPrompt(payload);
+      await get().loadPromptLibrary();
+      get().showToast(t("promptLibrary.saved"));
+    } catch (err) {
+      console.error("[PromptLibrary] save failed", err);
+      get().showToast(t("promptLibrary.saveFailed"), true);
+    }
+  },
+
+  async deletePromptFromLibrary(id) {
+    try {
+      await deletePrompt(id);
+      await get().loadPromptLibrary();
+    } catch (err) {
+      console.error("[PromptLibrary] delete failed", err);
+    }
+  },
+
+  async togglePromptFavorite(id) {
+    try {
+      await togglePromptFavorite(id);
+      await get().loadPromptLibrary();
+    } catch (err) {
+      console.error("[PromptLibrary] favorite toggle failed", err);
+    }
+  },
+
+  async importPromptsToLibrary(files) {
+    try {
+      const prompts: Array<{ name: string; text: string; tags: string[] }> = [];
+      for (const file of files) {
+        if (!/\.(txt|md)$/i.test(file.name)) continue;
+        const text = await file.text();
+        if (!text.trim()) continue;
+        const name = file.name.replace(/\.(txt|md)$/i, "");
+        prompts.push({ name: name.trim() || t("promptLibrary.untitled"), text: text.trim(), tags: [] });
+      }
+      if (prompts.length === 0) {
+        get().showToast(t("promptLibrary.importNoValidFiles"), true);
+        return;
+      }
+      const result = await importPromptLibrary({ prompts });
+      await get().loadPromptLibrary();
+      get().showToast(t("promptLibrary.imported", { count: result.promptsImported }));
+    } catch (err) {
+      console.error("[PromptLibrary] import failed", err);
+      get().showToast(t("promptLibrary.importFailed"), true);
+    }
+  },
+
+  async toggleGalleryFavorite(filename) {
+    try {
+      const result = await toggleGalleryFavorite(filename);
+      set((s) => {
+        const next = new Set(s.galleryFavorites);
+        if (result.isFavorite) next.add(filename);
+        else next.delete(filename);
+        return { galleryFavorites: next };
+      });
+      // Also update history items in place
+      set((s) => ({
+        history: s.history.map((h) =>
+          h.filename === filename ? { ...h, isFavorite: result.isFavorite } : h,
+        ),
+      }));
+    } catch (err) {
+      console.error("[GalleryFavorite] toggle failed", err);
+    }
   },
 }));
 

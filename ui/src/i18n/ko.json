@@ -3,7 +3,9 @@
     "ok": "확인",
     "cancel": "취소",
     "delete": "삭제",
-    "close": "닫기"
+    "close": "닫기",
+    "saving": "저장 중...",
+    "loading": "불러오는 중..."
   },
   "toast": {
     "localStorageFull": "로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.",
@@ -223,7 +225,11 @@
     "cardNewsCount": "{n}장",
     "deleted": "삭제됨: {filename}",
     "undo": "되돌리기",
-    "secondsSuffix": "{n}초"
+    "secondsSuffix": "{n}초",
+    "favoriteTitle": "즐겨찾기 추가",
+    "unfavoriteTitle": "즐겨찾기 해제",
+    "favoriteAria": "즐겨찾기 추가",
+    "unfavoriteAria": "즐겨찾기 해제"
   },
   "node": {
     "empty": "비어 있음",
@@ -643,5 +649,33 @@
       "body": "본 앱은 OAuth(ChatGPT 로그인) 전용으로 동작합니다. 공급자를 OAuth로 전환해 주세요.",
       "cta": "확인"
     }
+  },
+  "promptLibrary": {
+    "title": "프롬프트 라이브러리",
+    "saveTitle": "프롬프트 라이브러리에 저장",
+    "save": "저장",
+    "saved": "프롬프트를 저장했습니다",
+    "saveFailed": "저장에 실패했습니다",
+    "name": "이름",
+    "tags": "태그",
+    "search": "프롬프트 검색...",
+    "favorites": "즐겨찾기",
+    "load": "불러오기",
+    "insert": "삽입",
+    "inserted": "프롬프트를 삽입했습니다",
+    "removeInserted": "삽입한 프롬프트 {name} 제거",
+    "favorite": "즐겨찾기",
+    "unfavorite": "즐겨찾기 해제",
+    "empty": "저장된 프롬프트가 없어요.",
+    "content": "내용",
+    "copy": "복사",
+    "untitled": "제목 없음",
+    "addNew": "새 프롬프트 추가",
+    "import": "불러오기",
+    "importFiles": ".txt 또는 .md 파일 불러오기",
+    "dropImport": ".txt 또는 .md 파일을 놓으면 프롬프트로 가져옵니다",
+    "imported": "프롬프트 {count}개를 가져왔습니다",
+    "importFailed": "가져오기에 실패했습니다",
+    "importNoValidFiles": ".txt 또는 .md 프롬프트 파일이 없습니다."
   }
 }

@@ -146,6 +146,7 @@ export type HistoryItem = {
     status?: string;
   }>;
   refsCount?: number;
+  isFavorite?: boolean;
 };
 
 export type HistoryCursor = { before: number; beforeFilename: string };
@@ -189,6 +190,27 @@ export type StorageStatus = {
   };
 };
 
+let _browserId: string | null = null;
+export function getBrowserId(): string {
+  if (!_browserId) {
+    const raw = localStorage.getItem("ima2.browserId");
+    if (raw) _browserId = raw;
+    else {
+      _browserId = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+      localStorage.setItem("ima2.browserId", _browserId);
+    }
+  }
+  return _browserId;
+}
+
+function jsonFetchWithBrowserId<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string>),
+    "X-Ima2-Browser-Id": getBrowserId(),
+  };
+  return jsonFetch<T>(url, { ...init, headers });
+}
+
 export function getHistory(
   params: { limit?: number; since?: number; cursor?: HistoryCursor; sessionId?: string } = {},
 ): Promise<HistoryPage> {
@@ -200,7 +222,7 @@ export function getHistory(
     qs.set("beforeFilename", params.cursor.beforeFilename);
   }
   if (params.sessionId) qs.set("sessionId", params.sessionId);
-  return jsonFetch(`/api/history?${qs.toString()}`);
+  return jsonFetchWithBrowserId(`/api/history?${qs.toString()}`);
 }
 
 export function getHistoryGrouped(
@@ -213,7 +235,15 @@ export function getHistoryGrouped(
     qs.set("before", String(params.cursor.before));
     qs.set("beforeFilename", params.cursor.beforeFilename);
   }
-  return jsonFetch(`/api/history?${qs.toString()}`);
+  return jsonFetchWithBrowserId(`/api/history?${qs.toString()}`);
+}
+
+export function toggleGalleryFavorite(filename: string): Promise<{ isFavorite: boolean }> {
+  return jsonFetchWithBrowserId<{ isFavorite: boolean }>("/api/history/favorite", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename }),
+  });
 }
 
 export async function getStorageStatus(): Promise<StorageStatus> {
@@ -395,4 +425,148 @@ export function extractSessionStyleSheet(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, referenceDataUrl }),
   });
+}
+
+// ── Prompt Library (0.23) ─────────────────────────────────────────────────
+
+export type PromptFolder = {
+  id: string;
+  parentId: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type PromptItem = {
+  id: string;
+  folderId: string;
+  name: string;
+  text: string;
+  tags: string[];
+  mode: "auto" | "direct" | null;
+  isFavorite: boolean;
+  favoritedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type PromptLibraryPage = {
+  prompts: PromptItem[];
+  folders: PromptFolder[];
+};
+
+export function getPromptLibrary(params?: {
+  search?: string;
+  folderId?: string;
+  favoritesOnly?: boolean;
+}): Promise<PromptLibraryPage> {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.folderId) qs.set("folderId", params.folderId);
+  if (params?.favoritesOnly) qs.set("favoritesOnly", "1");
+  return jsonFetch(`/api/prompts?${qs.toString()}`);
+}
+
+export function createPrompt(payload: {
+  name?: string;
+  text: string;
+  tags?: string[];
+  folderId?: string;
+  mode?: "auto" | "direct";
+}): Promise<{ prompt: PromptItem }> {
+  return jsonFetch("/api/prompts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePrompt(
+  id: string,
+  payload: Partial<{
+    name: string;
+    text: string;
+    tags: string[];
+    folderId: string;
+    mode: "auto" | "direct";
+  }>,
+): Promise<{ prompt: PromptItem }> {
+  return jsonFetch(`/api/prompts/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deletePrompt(id: string): Promise<{ ok: boolean }> {
+  return jsonFetch(`/api/prompts/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function togglePromptFavorite(id: string): Promise<{ isFavorite: boolean; favoritedAt: number | null }> {
+  return jsonFetch(`/api/prompts/${encodeURIComponent(id)}/favorite`, { method: "POST" });
+}
+
+export function importPromptLibrary(payload: {
+  version?: number;
+  folders?: Array<{ id?: string; name: string; parentId?: string }>;
+  prompts?: Array<{
+    id?: string;
+    name: string;
+    text: string;
+    tags?: string[];
+    folderId?: string;
+    mode?: "auto" | "direct";
+    isFavorite?: boolean;
+  }>;
+}): Promise<{ foldersCreated: number; promptsImported: number; duplicatesSkipped: number }> {
+  return jsonFetch("/api/prompts/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function exportPromptLibrary(): Promise<{
+  version: number;
+  exportedAt: string;
+  folders: Array<{ id: string; name: string; parentId: string }>;
+  prompts: Array<{
+    id: string;
+    name: string;
+    text: string;
+    tags: string[];
+    folderId: string;
+    mode: string | null;
+    isFavorite: boolean;
+  }>;
+}> {
+  return jsonFetch("/api/prompts/export");
+}
+
+export function getPromptFolders(): Promise<{ folders: PromptFolder[] }> {
+  return jsonFetch("/api/prompts/folders");
+}
+
+export function createPromptFolder(payload: { name: string; parentId?: string }): Promise<{ folder: PromptFolder }> {
+  return jsonFetch("/api/prompts/folders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePromptFolder(
+  id: string,
+  payload: { name?: string; parentId?: string },
+): Promise<{ folder: PromptFolder }> {
+  return jsonFetch(`/api/prompts/folders/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deletePromptFolder(id: string, strategy?: "moveToRoot" | "deleteItems"): Promise<{ ok: boolean }> {
+  const qs = strategy ? `?strategy=${strategy}` : "";
+  return jsonFetch(`/api/prompts/folders/${encodeURIComponent(id)}${qs}`, { method: "DELETE" });
 }

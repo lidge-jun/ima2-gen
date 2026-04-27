@@ -72,6 +72,7 @@ export type GenerateItem = {
     status?: string;
   }>;
   refsCount?: number;
+  isFavorite?: boolean;
 };
 
 export type EmbeddedGenerationMetadata = {

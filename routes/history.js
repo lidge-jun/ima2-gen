@@ -2,6 +2,7 @@ import { listHistoryRows } from "../lib/historyList.js";
 import { trashAsset, restoreAsset } from "../lib/assetLifecycle.js";
 import { getSessionTitleMap } from "../lib/sessionStore.js";
 import { logError, logEvent } from "../lib/logger.js";
+import { getDb } from "../lib/db.js";
 
 export function registerHistoryRoutes(app, ctx) {
   app.get("/api/history", async (req, res) => {
@@ -16,8 +17,17 @@ export function registerHistoryRoutes(app, ctx) {
       const sinceTs = parseInt(req.query.since);
       const sessionId = typeof req.query.sessionId === "string" ? req.query.sessionId : null;
       const groupBy = req.query.groupBy === "session" ? "session" : null;
+      const browserId = req.headers["x-ima2-browser-id"] || null;
 
       const rows = await listHistoryRows(ctx.config.storage.generatedDir);
+
+      // Enrich with favorite status
+      let favoriteSet = new Set();
+      if (browserId) {
+        const db = getDb();
+        const favRows = db.prepare("SELECT filename FROM gallery_favorites WHERE browser_id = ?").all(browserId);
+        favoriteSet = new Set(favRows.map((r) => r.filename));
+      }
 
       let filtered = rows;
       if (Number.isFinite(sinceTs)) {
@@ -34,7 +44,7 @@ export function registerHistoryRoutes(app, ctx) {
         filtered = filtered.filter((r) => r.sessionId === sessionId);
       }
 
-      const page = filtered.slice(0, limit);
+      const page = filtered.slice(0, limit).map((r) => ({ ...r, isFavorite: favoriteSet.has(r.filename) }));
       const nextCursor = page.length === limit && filtered.length > limit
         ? { before: page[page.length - 1].createdAt, beforeFilename: page[page.length - 1].filename }
         : null;
@@ -97,6 +107,37 @@ export function registerHistoryRoutes(app, ctx) {
       res.json(result);
     } catch (err) {
       res.status(err.status || 500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/history/favorite", async (req, res) => {
+    try {
+      const db = getDb();
+      const { filename } = req.body || {};
+      const browserId = req.headers["x-ima2-browser-id"];
+
+      if (!filename || typeof filename !== "string") {
+        return res.status(400).json({ error: "filename is required" });
+      }
+      if (!browserId || typeof browserId !== "string") {
+        return res.status(400).json({ error: "X-Ima2-Browser-Id header is required" });
+      }
+
+      const existing = db.prepare("SELECT id FROM gallery_favorites WHERE browser_id = ? AND filename = ?").get(browserId, filename);
+
+      if (existing) {
+        db.prepare("DELETE FROM gallery_favorites WHERE browser_id = ? AND filename = ?").run(browserId, filename);
+        res.json({ isFavorite: false });
+      } else {
+        const id = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+        db.prepare(
+          "INSERT INTO gallery_favorites (id, browser_id, filename, favorited_at) VALUES (?, ?, ?, ?)"
+        ).run(id, browserId, filename, Math.floor(Date.now() / 1000));
+        res.json({ isFavorite: true });
+      }
+    } catch (err) {
+      logError("history", "favorite_error", err);
+      res.status(500).json({ error: err.message });
     }
   });
 }

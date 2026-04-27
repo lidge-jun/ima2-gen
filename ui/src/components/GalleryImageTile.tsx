@@ -9,14 +9,15 @@ type GalleryImageTileProps = {
   itemRef: (node: HTMLElement | null) => void;
   onSelect: (item: GenerateItem) => void;
   onDelete: (item: GenerateItem, event: MouseEvent<HTMLButtonElement>) => void;
+  onToggleFavorite?: (item: GenerateItem) => void;
   t: TranslateFn;
 };
 
-export function GalleryImageTile({ item, active, itemRef, onSelect, onDelete, t }: GalleryImageTileProps) {
+export function GalleryImageTile({ item, active, itemRef, onSelect, onDelete, onToggleFavorite, t }: GalleryImageTileProps) {
   return (
     <div
       ref={itemRef}
-      className={`gallery__tile-wrap${active ? " gallery__tile-wrap--active" : ""}`}
+      className={`gallery__tile-wrap${active ? " gallery__tile-wrap--active" : ""}${item.isFavorite ? " gallery__tile-wrap--favorite" : ""}`}
     >
       <button
         type="button"
@@ -36,6 +37,20 @@ export function GalleryImageTile({ item, active, itemRef, onSelect, onDelete, t 
           </div>
         )}
       </button>
+      {item.filename && onToggleFavorite && (
+        <button
+          type="button"
+          className={`gallery__favorite${item.isFavorite ? " gallery__favorite--on" : ""}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleFavorite(item);
+          }}
+          title={item.isFavorite ? t("gallery.unfavoriteTitle") : t("gallery.favoriteTitle")}
+          aria-label={item.isFavorite ? t("gallery.unfavoriteAria") : t("gallery.favoriteAria")}
+        >
+          {item.isFavorite ? "★" : "☆"}
+        </button>
+      )}
       {item.filename && (
         <button
           type="button"

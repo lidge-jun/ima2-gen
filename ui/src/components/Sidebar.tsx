@@ -31,6 +31,7 @@ export function Sidebar() {
             <div className="logo-subtitle">gpt-image-2 studio</div>
           </div>
           <div className="logo-actions">
+            <PromptLibraryButton />
             <ImageModelSelect variant="sidebar" />
             <SettingsButton />
           </div>
@@ -72,5 +73,23 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+  );
+}
+
+function PromptLibraryButton() {
+  const { t } = useI18n();
+  const toggle = useAppStore((s) => s.togglePromptLibrary);
+  return (
+    <button
+      type="button"
+      className="settings-button"
+      onClick={toggle}
+      title={t("promptLibrary.title")}
+      aria-label={t("promptLibrary.title")}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      </svg>
+    </button>
   );
 }

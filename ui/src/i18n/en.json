@@ -3,7 +3,9 @@
     "ok": "OK",
     "cancel": "Cancel",
     "delete": "Delete",
-    "close": "Close"
+    "close": "Close",
+    "saving": "Saving...",
+    "loading": "Loading..."
   },
   "toast": {
     "localStorageFull": "Local storage is full — recent state may not persist.",
@@ -223,7 +225,11 @@
     "cardNewsCount": "{n} cards",
     "deleted": "Deleted: {filename}",
     "undo": "Undo",
-    "secondsSuffix": "{n}s"
+    "secondsSuffix": "{n}s",
+    "favoriteTitle": "Add to favorites",
+    "unfavoriteTitle": "Remove from favorites",
+    "favoriteAria": "Add to favorites",
+    "unfavoriteAria": "Remove from favorites"
   },
   "node": {
     "empty": "Empty",
@@ -643,5 +649,33 @@
       "body": "This app is OAuth-only (ChatGPT login). Switch the provider to OAuth.",
       "cta": "OK"
     }
+  },
+  "promptLibrary": {
+    "title": "Prompt Library",
+    "saveTitle": "Save to Prompt Library",
+    "save": "Save",
+    "saved": "Prompt saved",
+    "saveFailed": "Save failed",
+    "name": "Name",
+    "tags": "Tags",
+    "search": "Search prompts...",
+    "favorites": "Favorites",
+    "load": "Load",
+    "insert": "Insert",
+    "inserted": "Prompt inserted",
+    "removeInserted": "Remove inserted prompt {name}",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "empty": "No saved prompts yet.",
+    "content": "Content",
+    "copy": "Copy",
+    "untitled": "Untitled",
+    "addNew": "Add new prompt",
+    "import": "Import",
+    "importFiles": "Import .txt or .md files",
+    "dropImport": "Drop .txt or .md files to import prompts",
+    "imported": "Imported {count} prompt(s)",
+    "importFailed": "Import failed",
+    "importNoValidFiles": "No .txt or .md prompt files found."
   }
 }

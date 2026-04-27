@@ -3,6 +3,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useAppStore, type ImageNodeData, type GraphNode } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { getImageModelShortLabel } from "../lib/imageModels";
+import { SavePromptPopover } from "./SavePromptPopover";
 
 const MAX_NODE_REFS = 5;
 const NODE_PREVIEW_HEIGHT = 240;
@@ -44,6 +45,7 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
   const deleteNode = useAppStore((s) => s.deleteNode);
   const fileInput = useRef<HTMLInputElement>(null);
   const [isDraggingRef, setIsDraggingRef] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const refs = d.referenceImages ?? [];
   const isBusy = d.status === "pending" || d.status === "reconciling";
   const canAttachRefs = !isBusy && refs.length < MAX_NODE_REFS;
@@ -276,6 +278,23 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
       <div className="image-node__footer nodrag">
         <span className="image-node__status" title={statusLabel}>{statusLabel}</span>
         <div className="image-node__actions">
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setSaveOpen((v) => !v)}
+              disabled={!d.prompt?.trim()}
+              title={t("promptLibrary.saveTitle")}
+              aria-label={t("promptLibrary.saveTitle")}
+            >
+              ☆
+            </button>
+            {saveOpen && (
+              <SavePromptPopover
+                text={d.prompt || ""}
+                onClose={() => setSaveOpen(false)}
+              />
+            )}
+          </div>
           {d.status === "ready" ? (
             <>
               <button type="button" onClick={onRegenerateInPlace} disabled={isBusy} title={t("node.regenerateTitle")} aria-label={t("node.regenerateTitle")}>
