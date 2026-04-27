@@ -90,14 +90,22 @@ describe("generation controls custom plus UX contract", () => {
 
   it("updates 3840 constraints across cost, i18n, and contracts", () => {
     const cost = readSource("ui/src/lib/cost.ts");
+    const sizeLib = readSource("ui/src/lib/size.ts");
+    const sizePicker = readSource("ui/src/components/SizePicker.tsx");
     const en = readSource("ui/src/i18n/en.json");
     const ko = readSource("ui/src/i18n/ko.json");
 
     assert.match(cost, /"3840x2160"/);
     assert.match(cost, /"2160x3840"/);
     assert.doesNotMatch(cost, /3824x2160/);
+    assert.match(sizeLib, /export const IMAGE_SIZE_MAX_SQUARE/);
+    assert.match(sizePicker, /squareMaxHint/);
+    assert.match(sizePicker, /preview\.reasons\.includes\("maxPixels"\)/);
+    assert.match(sizePicker, /IMAGE_SIZE_MAX_SQUARE/);
     assert.match(en, /max edge 3840/);
+    assert.match(en, /Square maximum is \{size\}/);
     assert.match(ko, /최대 변 3840/);
+    assert.match(ko, /정사각형 최대는 \{size\}/);
     for (const source of [en, ko]) {
       assert.match(source, /"customPlus"/);
       assert.match(source, /"customSlotLimit"/);

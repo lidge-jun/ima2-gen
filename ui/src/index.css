@@ -1010,6 +1010,16 @@ body {
   min-height: 24px;
 }
 
+.size-picker__preview--detail {
+  display: block;
+  min-height: 0;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  white-space: normal;
+  line-height: 1.35;
+}
+
 .size-picker__replace-row {
   display: grid;
   grid-template-columns: 1fr;

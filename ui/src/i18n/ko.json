@@ -59,6 +59,7 @@
     "ratio21x9": "21:9",
     "normalizedPreview": "전송 크기",
     "noAdjustment": "조정 없음",
+    "squareMaxHint": "829만 픽셀 제한 때문에 정사각형 최대는 {size}입니다.",
     "adjustedReasons": {
       "snap": "16px 보정",
       "maxEdge": "최대 변",

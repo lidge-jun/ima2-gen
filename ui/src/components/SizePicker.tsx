@@ -4,6 +4,7 @@ import { OptionGroup, type OptionItem } from "./OptionGroup";
 import type { SizePreset } from "../types";
 import {
   CUSTOM_RATIO_PRESETS,
+  IMAGE_SIZE_MAX_SQUARE,
   MAX_CUSTOM_SIZE_SLOTS,
   SIZE_PRESETS_ROW1,
   SIZE_PRESETS_ROW2,
@@ -134,6 +135,12 @@ export function SizePicker() {
     preview.reasons.length > 0
       ? preview.reasons.map((reason) => t(`size.adjustedReasons.${reason}`)).join(", ")
       : t("size.noAdjustment");
+  const squareMaxHint =
+    preview.reasons.includes("maxPixels") && preview.requestedW === preview.requestedH && preview.w === preview.h
+      ? t("size.squareMaxHint", {
+        size: `${IMAGE_SIZE_MAX_SQUARE}×${IMAGE_SIZE_MAX_SQUARE}`,
+      })
+      : null;
 
   return (
     <div className="option-group size-picker">
@@ -240,6 +247,11 @@ export function SizePicker() {
           <div className="size-picker__preview size-picker__preview--reason">
             {reasonText}
           </div>
+          {squareMaxHint ? (
+            <div className="size-picker__preview size-picker__preview--detail">
+              {squareMaxHint}
+            </div>
+          ) : null}
           {slots.length >= MAX_CUSTOM_SIZE_SLOTS ? (
             <div className="size-picker__replace-row">
               <span>{t("size.replaceCustomSlot")}</span>

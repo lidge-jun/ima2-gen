@@ -59,6 +59,7 @@
     "ratio21x9": "21:9",
     "normalizedPreview": "Will send",
     "noAdjustment": "No adjustment",
+    "squareMaxHint": "Square maximum is {size} because of the 8.29M pixel limit.",
     "adjustedReasons": {
       "snap": "snapped to 16px",
       "maxEdge": "max edge",
