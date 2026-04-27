@@ -1899,6 +1899,13 @@ body {
   border-color: var(--accent);
   background: var(--control-bg);
 }
+.composer--direct {
+  border-color: color-mix(in srgb, var(--green) 64%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--green) 13%, transparent), transparent 72%),
+    var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 20%, transparent);
+}
 .composer--multimode {
   border-color: color-mix(in srgb, var(--accent) 72%, var(--amber));
   background:
@@ -1941,6 +1948,24 @@ body {
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composer__direct-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  max-width: 150px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--green) 58%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--green) 14%, var(--surface));
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -2089,6 +2114,11 @@ body {
 .composer__tool:focus-visible {
   border-color: var(--accent);
   color: var(--text);
+}
+.composer__tool--on {
+  border-color: color-mix(in srgb, var(--green) 72%, var(--border));
+  background: color-mix(in srgb, var(--green) 13%, var(--surface-2));
+  color: var(--green);
 }
 .composer__tool:disabled {
   opacity: 0.4;

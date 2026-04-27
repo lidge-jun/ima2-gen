@@ -197,6 +197,7 @@
     "useCurrent": "Use current",
     "useCurrentTitle": "Use current result as a reference",
     "directMode": "Direct",
+    "directModeActive": "1:1 Direct on",
     "directModeTitle": "Pass prompt through verbatim (Direct mode)",
     "hint": "Ctrl + Enter to generate",
     "dropHere": "Drop to attach as reference (up to {max})"

@@ -27,6 +27,7 @@ export function PromptComposer() {
   const setPromptMode = useAppStore((s) => s.setPromptMode);
   const multimode = useAppStore((s) => s.multimode);
   const multimodeMaxImages = useAppStore((s) => s.multimodeMaxImages);
+  const isDirectMode = promptMode === "direct";
 
   const canAddMore = refs.length < MAX_REFS;
   const placeholder = multimode
@@ -104,7 +105,7 @@ export function PromptComposer() {
 
   return (
     <div
-      className={`composer${dragOver ? " composer--drag" : ""}${multimode ? " composer--multimode" : ""}`}
+      className={`composer${dragOver ? " composer--drag" : ""}${isDirectMode && !multimode ? " composer--direct" : ""}${multimode ? " composer--multimode" : ""}`}
       role="group"
       aria-label={
         multimode
@@ -122,6 +123,11 @@ export function PromptComposer() {
           {multimode && (
             <span className="composer__mode-badge">
               {t("multimode.composerBadge", { count: multimodeMaxImages })}
+            </span>
+          )}
+          {isDirectMode && (
+            <span className="composer__direct-badge">
+              {t("prompt.directModeActive")}
             </span>
           )}
           {refs.length > 0 && (
@@ -211,11 +217,11 @@ export function PromptComposer() {
         </button>
         <button
           type="button"
-          className={`composer__tool${promptMode === "direct" ? " composer__tool--on" : ""}`}
-          onClick={() => setPromptMode(promptMode === "direct" ? "auto" : "direct")}
+          className={`composer__tool${isDirectMode ? " composer__tool--on" : ""}`}
+          onClick={() => setPromptMode(isDirectMode ? "auto" : "direct")}
           title={t("prompt.directModeTitle")}
           aria-label={t("prompt.directModeTitle")}
-          aria-pressed={promptMode === "direct"}
+          aria-pressed={isDirectMode}
         >
           <span aria-hidden="true" style={{ fontWeight: 700, fontSize: 11 }}>1:1</span>
           <span>{t("prompt.directMode")}</span>
