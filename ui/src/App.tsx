@@ -30,6 +30,7 @@ import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
     const themeFamily = useAppStore((s) => s.themeFamily);
     const settingsOpen = useAppStore((s) => s.settingsOpen);
     const unseenGeneratedCount = useAppStore((s) => s.unseenGeneratedCount);
+    const historyStripLayout = useAppStore((s) => s.historyStripLayout);
     const syncThemeFromStorage = useAppStore((s) => s.syncThemeFromStorage);
     const syncThemeFamilyFromStorage = useAppStore((s) => s.syncThemeFamilyFromStorage);
     const refreshResolvedTheme = useAppStore((s) => s.refreshResolvedTheme);
@@ -93,9 +94,14 @@ import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
     return (
       <>
         <div
-          className={`app${settingsOpen ? " app--settings-open" : ""}`}
+          className={`app${settingsOpen ? " app--settings-open" : ""}${
+            historyStripLayout === "horizontal" ? " app--history-horizontal" : ""
+          }${
+            historyStripLayout === "sidebar" ? " app--history-sidebar" : ""
+          }`}
           data-theme-mode={resolvedTheme}
           data-theme-family={themeFamily}
+          data-history-strip-layout={historyStripLayout}
         >
           <Sidebar />
           <HistoryStrip />

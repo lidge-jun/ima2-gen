@@ -11,6 +11,7 @@ function getHistoryItemKey(item: GenerateItem): string {
 export function HistoryStrip() {
   const history = useAppStore((s) => s.history);
   const currentImage = useAppStore((s) => s.currentImage);
+  const historyStripLayout = useAppStore((s) => s.historyStripLayout);
   const selectHistory = useAppStore((s) => s.selectHistory);
   const openGallery = useAppStore((s) => s.openGallery);
   const thumbRefs = useRef<Record<string, HTMLImageElement | null>>({});
@@ -23,7 +24,14 @@ export function HistoryStrip() {
   }, [activeKey, history]);
 
   return (
-    <div className="history-strip" onWheel={handleHorizontalWheel}>
+    <div
+      className={`history-strip${
+        historyStripLayout === "horizontal" ? " history-strip--horizontal" : ""
+      }${historyStripLayout === "sidebar" ? " history-strip--sidebar" : ""
+      }`}
+      onWheel={handleHorizontalWheel}
+      data-layout={historyStripLayout}
+    >
       <button
         type="button"
         className="history-thumb history-thumb--add"

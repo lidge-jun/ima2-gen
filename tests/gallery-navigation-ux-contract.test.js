@@ -84,41 +84,85 @@ describe("gallery navigation UX contract", () => {
     assert.match(css, /\.card-news-deck[\s\S]*overscroll-behavior-inline: contain/);
   });
 
-  it("renders the compact gallery strip as an adaptive app-level rail", () => {
+  it("renders the compact gallery strip with rail and horizontal layout options", () => {
     const app = readSource("ui/src/App.tsx");
     const sidebar = readSource("ui/src/components/Sidebar.tsx");
     const historyStrip = readSource("ui/src/components/HistoryStrip.tsx");
+    const settings = readSource("ui/src/components/SettingsWorkspace.tsx");
+    const toggle = readSource("ui/src/components/HistoryStripLayoutToggle.tsx");
+    const store = readSource("ui/src/store/useAppStore.ts");
+    const types = readSource("ui/src/types.ts");
+    const ko = readSource("ui/src/i18n/ko.json");
+    const en = readSource("ui/src/i18n/en.json");
     const css = readSource("ui/src/index.css");
     const appRule = /\.app\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const horizontalAppRule = /\.app--history-horizontal\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const sidebarAppRule = /\.app--history-sidebar\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const rightPanelRule =
       [...css.matchAll(/^\.right-panel\s*\{[^}]*\}/gm)].find((match) =>
         match[0].includes("height: 100dvh"),
       )?.[0] ?? "";
-    const historyRule = /\.history-strip\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const historyRule =
+      [...css.matchAll(/\.history-strip\s*\{[^}]*\}/gs)].find((match) =>
+        match[0].includes("flex-direction: column"),
+      )?.[0] ?? "";
+    const horizontalRule = /\.history-strip--horizontal\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    const sidebarRule = /\.history-strip--sidebar\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const addRule = /\.history-thumb--add\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const responsiveBlock = /@media \(max-width:\s*800px\)\s*\{[\s\S]*?\.canvas\s*\{/s.exec(css)?.[0] ?? "";
 
     assert.match(app, /import \{ HistoryStrip \} from "\.\/components\/HistoryStrip"/);
+    assert.match(app, /historyStripLayout/);
+    assert.match(app, /app--history-horizontal/);
+    assert.match(app, /app--history-sidebar/);
+    assert.match(app, /data-history-strip-layout=\{historyStripLayout\}/);
     assert.match(app, /<Sidebar \/>\s*<HistoryStrip \/>/);
     assert.doesNotMatch(sidebar, /HistoryStrip/);
 
     assert.match(appRule, /--gallery-rail-w:\s*clamp\(61px,\s*6vw,\s*95px\)/);
     assert.match(appRule, /grid-template-columns:\s*260px var\(--gallery-rail-w\) minmax\(0,\s*1fr\) auto/);
+    assert.match(horizontalAppRule, /grid-template-columns:\s*260px minmax\(0,\s*1fr\) auto/);
+    assert.match(horizontalAppRule, /grid-template-rows:\s*var\(--history-strip-h\) minmax\(0,\s*1fr\)/);
+    assert.match(sidebarAppRule, /grid-template-columns:\s*260px minmax\(0,\s*1fr\) auto/);
+    assert.match(sidebarAppRule, /grid-template-rows:\s*minmax\(0,\s*1fr\) var\(--history-strip-h\)/);
     assert.match(rightPanelRule, /width:\s*266px/);
     assert.match(historyRule, /flex-direction:\s*column/);
     assert.match(historyRule, /overflow-y:\s*auto/);
     assert.match(historyRule, /overflow-x:\s*hidden/);
+    assert.match(horizontalRule, /flex-direction:\s*row/);
+    assert.match(horizontalRule, /overflow-x:\s*auto/);
+    assert.match(horizontalRule, /border-bottom:\s*1px solid var\(--border\)/);
+    assert.match(sidebarRule, /flex-direction:\s*row/);
+    assert.match(sidebarRule, /border-top:\s*1px solid var\(--border\)/);
+    assert.match(sidebarRule, /border-right:\s*1px solid var\(--border\)/);
     assert.match(addRule, /top:\s*0/);
 
     assert.match(responsiveBlock, /grid-template-rows:\s*auto auto 1fr/);
+    assert.match(responsiveBlock, /\.app--history-horizontal \.history-strip/);
+    assert.match(responsiveBlock, /\.app--history-sidebar \.history-strip/);
     assert.match(responsiveBlock, /\.history-strip\s*\{[\s\S]*flex-direction:\s*row/);
     assert.match(responsiveBlock, /\.history-strip\s*\{[\s\S]*overflow-x:\s*auto/);
     assert.match(responsiveBlock, /\.history-thumb--add\s*\{[\s\S]*left:\s*0/);
 
+    assert.match(types, /export type HistoryStripLayout = "rail" \| "horizontal" \| "sidebar"/);
+    assert.match(store, /historyStripLayout:\s*HistoryStripLayout/);
+    assert.match(store, /loadHistoryStripLayout/);
+    assert.match(store, /ima2\.historyStripLayout/);
+    assert.match(store, /setHistoryStripLayout/);
     assert.match(historyStrip, /useRef<Record<string,\s*HTMLImageElement \| null>>/);
+    assert.match(historyStrip, /historyStripLayout/);
+    assert.match(historyStrip, /history-strip--horizontal/);
+    assert.match(historyStrip, /history-strip--sidebar/);
+    assert.match(historyStrip, /data-layout=\{historyStripLayout\}/);
     assert.match(historyStrip, /function getHistoryItemKey\(item: GenerateItem\): string/);
     assert.match(historyStrip, /scrollIntoView\(\{ block: "nearest", inline: "nearest" \}\)/);
     assert.match(historyStrip, /ref=\{\(node\) => \{/);
+    assert.match(settings, /HistoryStripLayoutToggle/);
+    assert.match(toggle, /history-layout-toggle/);
+    assert.match(toggle, /aria-pressed=\{layout === option\}/);
+    assert.match(toggle, /\["rail", "horizontal", "sidebar"\]/);
+    assert.match(en, /historyStripLayoutTitle/);
+    assert.match(ko, /historyStripLayoutTitle/);
   });
 
   it("does not introduce backend coupling for navigation UX", () => {

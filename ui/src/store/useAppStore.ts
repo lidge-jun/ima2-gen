@@ -4,6 +4,7 @@ import type {
   Format,
   GenerateItem,
   GenerateResponse,
+  HistoryStripLayout,
   EmbeddedGenerationMetadata,
   ImageModel,
   Moderation,
@@ -132,6 +133,14 @@ function loadThemeFamily(): ThemeFamily {
     }
   } catch {}
   return "default";
+}
+
+function loadHistoryStripLayout(): HistoryStripLayout {
+  try {
+    const raw = localStorage.getItem("ima2.historyStripLayout");
+    if (raw === "rail" || raw === "horizontal" || raw === "sidebar") return raw;
+  } catch {}
+  return "rail";
 }
 
 function loadImageModel(): ImageModel {
@@ -583,8 +592,10 @@ type AppState = {
   theme: ThemePreference;
   resolvedTheme: ResolvedTheme;
   themeFamily: ThemeFamily;
+  historyStripLayout: HistoryStripLayout;
   setTheme: (theme: ThemePreference) => void;
   setThemeFamily: (family: ThemeFamily) => void;
+  setHistoryStripLayout: (layout: HistoryStripLayout) => void;
   syncThemeFromStorage: () => void;
   syncThemeFamilyFromStorage: () => void;
   refreshResolvedTheme: () => void;
@@ -1186,6 +1197,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   theme: loadThemePreference(),
   resolvedTheme: resolveThemePreference(loadThemePreference()),
   themeFamily: loadThemeFamily(),
+  historyStripLayout: loadHistoryStripLayout(),
   setTheme: (theme) => {
     try {
       localStorage.setItem("ima2:theme", theme);
@@ -1197,6 +1209,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem("ima2:themeFamily", family);
     } catch {}
     set({ themeFamily: family });
+  },
+  setHistoryStripLayout: (layout) => {
+    try {
+      localStorage.setItem("ima2.historyStripLayout", layout);
+    } catch {}
+    set({ historyStripLayout: layout });
   },
   syncThemeFromStorage: () => {
     const theme = loadThemePreference();

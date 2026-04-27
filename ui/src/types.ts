@@ -1,5 +1,6 @@
 export type UIMode = "classic" | "node" | "card-news";
 export type SettingsSection = "account" | "generation" | "appearance" | "language" | "future";
+export type HistoryStripLayout = "rail" | "horizontal" | "sidebar";
 export type ThemePreference = "system" | "dark" | "light";
 export type ResolvedTheme = "dark" | "light";
 export type ResolvedThemeMode = "dark" | "light";
