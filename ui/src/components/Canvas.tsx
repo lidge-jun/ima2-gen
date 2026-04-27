@@ -1,10 +1,14 @@
-import type { KeyboardEvent, MouseEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
 import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
 import { useI18n } from "../i18n";
 import { isEditableTarget } from "../lib/domEvents";
 import { getImageModelShortLabel } from "../lib/imageModels";
+import { useCanvasAnnotations } from "../hooks/useCanvasAnnotations";
+import { screenToNormalized } from "../lib/canvas/coordinates";
+import { CanvasAnnotationLayer } from "./canvas-mode/CanvasAnnotationLayer";
+import { CanvasToolbar } from "./canvas-mode/CanvasToolbar";
 
 function formatQualityAlias(quality: string | null | undefined): string | null {
   if (quality === "low") return "l";
@@ -35,6 +39,9 @@ export function Canvas() {
   const closeCanvas = useAppStore((s) => s.closeCanvas);
   const canvasZoom = useAppStore((s) => s.canvasZoom);
   const { t } = useI18n();
+  const annotationFrameRef = useRef<HTMLDivElement>(null);
+  const previousImageKeyRef = useRef<string | null>(null);
+  const annotations = useCanvasAnnotations();
 
   const copyPrompt = () => {
     if (!currentImage?.prompt) return;
@@ -45,8 +52,33 @@ export function Canvas() {
   const displayQuality = formatQualityAlias(currentImage?.quality ?? quality);
   const displaySize = formatSizeAlias(currentImage?.size ?? getResolvedSize());
   const displayModel = getImageModelShortLabel(currentImage?.model);
+  const imageKey = currentImage?.filename ?? currentImage?.url ?? currentImage?.image ?? null;
+
+  useEffect(() => {
+    if (!canvasOpen) {
+      previousImageKeyRef.current = imageKey;
+      return;
+    }
+
+    if (previousImageKeyRef.current === null) {
+      previousImageKeyRef.current = imageKey;
+      return;
+    }
+
+    if (previousImageKeyRef.current !== imageKey) {
+      annotations.clear();
+      previousImageKeyRef.current = imageKey;
+    }
+  }, [annotations.clear, canvasOpen, imageKey]);
 
   const handleViewerKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (canvasOpen && ["1", "2", "3", "4"].includes(event.key)) {
+      event.preventDefault();
+      const tools = ["pan", "pen", "box", "arrow"] as const;
+      annotations.setTool(tools[Number(event.key) - 1]);
+      return;
+    }
+
     if (event.key === "Delete" || event.key === "Backspace") {
       if (event.shiftKey || !currentImage) return;
       event.preventDefault();
@@ -76,6 +108,28 @@ export function Canvas() {
     event.currentTarget.focus();
   };
 
+  const handleAnnotationPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!canvasOpen || annotations.activeTool === "pan") return;
+    if (!annotationFrameRef.current) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    annotations.startDrawing(screenToNormalized(event, annotationFrameRef.current));
+  };
+
+  const handleAnnotationPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!canvasOpen || annotations.activeTool === "pan") return;
+    if (!annotationFrameRef.current) return;
+    annotations.moveDrawing(screenToNormalized(event, annotationFrameRef.current));
+  };
+
+  const handleAnnotationPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!canvasOpen || annotations.activeTool === "pan") return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    annotations.endDrawing();
+  };
+
   return (
     <main className={`canvas${canvasOpen ? " canvas--mode-open" : ""}`}>
       {canvasOpen && (
@@ -103,21 +157,46 @@ export function Canvas() {
           onKeyDown={handleViewerKeyDown}
           aria-label={t("canvas.imageViewerAria")}
         >
-          <img
-            className="result-img"
-            key={currentImage.filename ?? currentImage.url ?? currentImage.image}
-            src={currentImage.url ?? currentImage.image}
-            alt={t("canvas.resultAlt")}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              openCanvas();
-            }}
+          <div
+            ref={annotationFrameRef}
+            className="canvas-annotation-frame"
+            onPointerDown={handleAnnotationPointerDown}
+            onPointerMove={handleAnnotationPointerMove}
+            onPointerUp={handleAnnotationPointerUp}
+            onPointerCancel={handleAnnotationPointerUp}
             style={{
-              cursor: canvasOpen ? "default" : "zoom-in",
+              cursor: canvasOpen && annotations.activeTool !== "pan" ? "crosshair" : canvasOpen ? "default" : "zoom-in",
               transform: canvasOpen ? `scale(${canvasZoom})` : undefined,
               transition: canvasOpen ? "transform 0.2s ease" : undefined,
             }}
-          />
+          >
+            <img
+              className="result-img"
+              key={currentImage.filename ?? currentImage.url ?? currentImage.image}
+              src={currentImage.url ?? currentImage.image}
+              alt={t("canvas.resultAlt")}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                openCanvas();
+              }}
+            />
+            {canvasOpen && (
+              <CanvasAnnotationLayer
+                paths={annotations.paths}
+                boxes={annotations.boxes}
+                activePath={annotations.activePath}
+                activeBox={annotations.activeBox}
+              />
+            )}
+          </div>
+          {canvasOpen && (
+            <CanvasToolbar
+              activeTool={annotations.activeTool}
+              hasAnnotations={annotations.hasAnnotations}
+              onToolChange={annotations.setTool}
+              onClear={annotations.clear}
+            />
+          )}
           {currentImage.prompt ? (
             <div className="result-prompt" onClick={copyPrompt}>
               {currentImage.prompt}

@@ -208,7 +208,15 @@
     "tokens": "{n} 토큰",
     "open": "캔버스 열기",
     "openAria": "캔버스 모드에서 이미지 열기",
-    "close": "캔버스 닫기"
+    "close": "캔버스 닫기",
+    "toolbar": {
+      "label": "캔버스 주석 도구",
+      "pan": "이동",
+      "pen": "펜",
+      "box": "박스",
+      "arrow": "화살표",
+      "clear": "모두 지우기"
+    }
   },
   "gallery": {
     "today": "오늘",
@@ -562,9 +570,24 @@
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 이미지 생성 미지원",
       "unsupportedHelp": "기본값은 GPT-5.4 Mini입니다. GPT-5.3 Codex Spark는 OAuth 모델 상태에 보일 수 있지만 image_generation 도구를 지원하지 않습니다."
     },
+    "reasoning": {
+      "title": "추론 강도",
+      "body": "값이 높을수록 생성 전에 plan/검색/프롬프트 보강에 더 많은 reasoning 토큰을 사용합니다.",
+      "low": "Low — 가장 빠름, 추론 최소",
+      "medium": "Medium — 기본 균형값",
+      "high": "High — 더 깊은 리서치와 통합",
+      "xhigh": "Xhigh — 최대 추론, 가장 느림"
+    },
     "appearance": {
       "themeTitle": "테마",
-      "themeBody": "이 기기에서 사용할 테마 스타일과 밝기를 선택합니다."
+      "themeBody": "이 기기에서 사용할 테마 스타일과 밝기를 선택합니다.",
+      "historyStripLayoutTitle": "히스토리 썸네일",
+      "historyStripLayoutBody": "작업공간 옆 작은 히스토리 배열 방식을 고릅니다.",
+      "historyStripLayout": {
+        "rail": "세로",
+        "horizontal": "상단 가로",
+        "sidebar": "사이드바"
+      }
     },
     "language": {
       "title": "언어",

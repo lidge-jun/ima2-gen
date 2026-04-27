@@ -208,7 +208,15 @@
     "tokens": "{n} tokens",
     "open": "Open Canvas",
     "openAria": "Open image in canvas mode",
-    "close": "Close Canvas"
+    "close": "Close Canvas",
+    "toolbar": {
+      "label": "Canvas annotation tools",
+      "pan": "Pan",
+      "pen": "Pen",
+      "box": "Box",
+      "arrow": "Arrow",
+      "clear": "Clear all"
+    }
   },
   "gallery": {
     "today": "Today",
@@ -562,9 +570,24 @@
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — unsupported for images",
       "unsupportedHelp": "Default is GPT-5.4 Mini. GPT-5.3 Codex Spark may appear in OAuth model status, but it does not support the image_generation tool."
     },
+    "reasoning": {
+      "title": "Reasoning effort",
+      "body": "Higher effort spends more reasoning tokens on planning, web search, and prompt enrichment before generating.",
+      "low": "Low — fastest, minimal reasoning",
+      "medium": "Medium — balanced default",
+      "high": "High — deeper research and synthesis",
+      "xhigh": "Xhigh — maximum reasoning, slowest"
+    },
     "appearance": {
       "themeTitle": "Theme",
-      "themeBody": "Pick a theme style and brightness for this device."
+      "themeBody": "Pick a theme style and brightness for this device.",
+      "historyStripLayoutTitle": "History thumbnails",
+      "historyStripLayoutBody": "Choose how the compact history strip sits beside the workspace.",
+      "historyStripLayout": {
+        "rail": "Rail",
+        "horizontal": "Top row",
+        "sidebar": "Sidebar"
+      }
     },
     "language": {
       "title": "Language",

@@ -20,6 +20,7 @@ export interface BoundingBox {
   width: number;
   height: number;
   color: string;
+  strokeWidth: number;
 }
 
 export interface CanvasViewport {

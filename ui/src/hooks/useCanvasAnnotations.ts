@@ -1,8 +1,10 @@
-import { useReducer, useCallback } from "react";
-import type { DrawingPath, BoundingBox, NormalizedPoint } from "../types/canvas";
+import { useCallback, useMemo, useReducer } from "react";
+import type { CanvasTool, DrawingPath, BoundingBox, NormalizedPoint } from "../types/canvas";
+
+type AnnotationTool = Exclude<CanvasTool, "memo">;
 
 interface State {
-  activeTool: "pan" | "pen" | "box" | "arrow";
+  activeTool: AnnotationTool;
   toolColor: string;
   strokeWidth: number;
   paths: DrawingPath[];
@@ -12,7 +14,7 @@ interface State {
 }
 
 type Action =
-  | { type: "SET_TOOL"; tool: State["activeTool"] }
+  | { type: "SET_TOOL"; tool: AnnotationTool }
   | { type: "START_PATH"; point: NormalizedPoint }
   | { type: "ADD_POINT"; point: NormalizedPoint }
   | { type: "END_PATH" }
@@ -79,7 +81,18 @@ function reducer(state: State, action: Action): State {
       if (width < 0.01 || height < 0.01) return { ...state, activeBox: null };
       return {
         ...state,
-        boxes: [...state.boxes, { id: crypto.randomUUID(), x, y, width, height, color: state.toolColor }],
+        boxes: [
+          ...state.boxes,
+          {
+            id: crypto.randomUUID(),
+            x,
+            y,
+            width,
+            height,
+            color: state.toolColor,
+            strokeWidth: state.strokeWidth,
+          },
+        ],
         activeBox: null,
       };
     }
@@ -92,8 +105,12 @@ function reducer(state: State, action: Action): State {
 
 export function useCanvasAnnotations() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const hasAnnotations = useMemo(
+    () => state.paths.length > 0 || state.boxes.length > 0,
+    [state.paths.length, state.boxes.length],
+  );
 
-  const setTool = useCallback((tool: State["activeTool"]) => {
+  const setTool = useCallback((tool: AnnotationTool) => {
     dispatch({ type: "SET_TOOL", tool });
   }, []);
 
@@ -127,6 +144,7 @@ export function useCanvasAnnotations() {
 
   return {
     ...state,
+    hasAnnotations,
     setTool,
     startDrawing,
     moveDrawing,
