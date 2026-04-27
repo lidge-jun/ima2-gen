@@ -59,6 +59,30 @@
 | 5.2 | **CLI cancel + 명확한 에러** | pending | `cf727f7` `8327306` | - | asrock는 systemd 없어 부분 가치 |
 | 5.3 | **CLI GitHub star 프롬프트** | skip | `00235fb` | - | 우리 fork엔 무관 |
 
+### Phase 6 — b210f10 이후 신규 (2026-04-26~ upstream 추가분)
+
+| # | 기능 | 상태 | upstream commit | 우리 PR | 노트 |
+|---|------|------|-----------------|---------|------|
+| 6.1 | **Reference MIME 자동 탐지** | review | `2b2b9d4` (부분) | TBD | `lib/refs.js` 매직넘버 sniff (PNG/JPEG/WEBP) + `validateAndNormalizeRefs`가 `refDetails` 포함 반환. server.js OAuth 호출(generate/edit) data URL이 잘못된 PNG 라벨 대신 실제 MIME 사용. 4K 진단 reason / referenceDiagnostics 페이로드는 우리에게 `lib/generationErrors.js`/`lib/oauthProxy.js` 부재로 미반영 (별도 PR) |
+| 6.2 | **Image metadata embed/restore** | pending | `e1b72fc` | - | PNG XMP 임베드 + 드래그앤드롭 복원 다이얼로그. routes/* 우리 server.js로 통합 필요 |
+| 6.3 | **Prompt library** | pending | `0bb06fc` | - | 자주 쓰는 프롬프트 저장/검색/재사용 (SQLite). PromptLibraryPanel + Save popover + DetailModal 등 9컴포넌트 |
+| 6.4 | **Custom generation controls** | pending | `0e29e68` | - | CountPicker 신규 + SizePicker custom slot 메모리. 우리에게 i18n/CustomSizeConfirmModal 부재 — i18n 시스템 도입 또는 한국어 직접 박기 결정 필요 |
+| 6.5 | **Gallery 즐겨찾기 필터** | done(자체) | `52ab801` | - | 우리는 이미 `GalleryModal.tsx:321`에서 한국어 UI로 자체 구현 완료 |
+| 6.6 | **Gallery 키보드 네비/위치 복원/가로 휠** | pending | `0a8cd34` | - | 갤러리 키보드 화살표·tab, 모달 닫고 다시 열 때 스크롤 복원 |
+| 6.7 | **Gallery strip → adaptive rail** | pending | `dd482fc` | - | 사이드바 더블 레일 |
+| 6.8 | **노드 방향성 핸들** | pending | `863ec72` | - | NodeCanvas/ImageNode — 사용자 작업 영역과 충돌 가능 |
+| 6.9 | **노드 엣지 명시적 disconnect** | pending | `e7826f7` | - | 위와 동일 영역 |
+| 6.10 | **노드 references/regen 플로우 개선** | pending | `6e02cbc` | - | - |
+| 6.11 | **노드 preview aspect ratio 보존** | pending | `571ecd9` | - | - |
+| 6.12 | **`ima2 serve --dev` + 로그 기본 warn** | pending | `f04f2ef` | - | 우리는 `config.js` 단일 모듈 미도입 → Phase 2.3 의존 |
+| 6.13 | **Windows explorer.exe 폴더 열기** | skip | `2b32f9a` | - | 우리에게 `lib/openDirectory.js` 미존재 (폴더 열기 기능 자체 없음) |
+| 6.14 | **CLI gen/edit → configured generatedDir** | pending | `c4ff8cc` | - | bin/commands 위주, 작은 변경 |
+| 6.15 | **upstream validation 에러 surface** | pending | `f4eff44` | - | OAuth 응답 에러를 일반 메시지로 가리던 걸 실제 에러 노출 |
+| 6.16 | **SAFETY_REFUSAL → EMPTY_RESPONSE 폴백** | pending | `45b7892` | - | 우리 `lib/safetyRetry.js` 사용자 작업 중 — 재정렬 후 |
+| 6.17 | **square custom size 제한 안내** | pending | `8adf19e` | - | UI 메시지 |
+| 6.18 | **Astro 사이트 / Pages / FAQ** | skip | `c7cb07b` `1442bd1` `c57027c` 등 12건 | - | fork에서 별도 사이트 운영 안 함 |
+| 6.19 | **Card-news 추가 작업** | pending | `021d0b4` `13ea601` `c84f1d2` `8327306` `6438782` | - | Phase 4.1과 합치거나 별도 트랙 |
+
 ### 중복 (이미 우리가 해결, 작업 불필요)
 
 | upstream commit | 메시지 | 우리 동등 |

@@ -3,7 +3,12 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateAndNormalizeRefs, MAX_REF_COUNT, MAX_REF_B64_BYTES } from "../lib/refs.js";
+import {
+  validateAndNormalizeRefs,
+  detectImageMimeFromB64,
+  MAX_REF_COUNT,
+  MAX_REF_B64_BYTES,
+} from "../lib/refs.js";
 
 const VALID_B64 = "aGVsbG8="; // "hello"
 
@@ -75,4 +80,59 @@ test("happy path: bare base64 entries pass through unchanged", () => {
 
 test("MAX_REF_B64_BYTES constant matches our 7 MB encoded cap (~5.2 MB decoded)", () => {
   assert.equal(MAX_REF_B64_BYTES, 7 * 1024 * 1024);
+});
+
+test("detectImageMimeFromB64 sniffs common image signatures", () => {
+  // PNG: 89 50 4E 47
+  assert.equal(
+    detectImageMimeFromB64(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]).toString("base64")),
+    "image/png",
+  );
+  // JPEG: FF D8 FF
+  assert.equal(
+    detectImageMimeFromB64(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]).toString("base64")),
+    "image/jpeg",
+  );
+  // WEBP: RIFF....WEBP
+  assert.equal(
+    detectImageMimeFromB64(Buffer.from("RIFF\x00\x00\x00\x00WEBP", "binary").toString("base64")),
+    "image/webp",
+  );
+});
+
+test("detectImageMimeFromB64 returns null on unknown payloads", () => {
+  // 'hello' is 4-byte ASCII — no image header
+  assert.equal(detectImageMimeFromB64(VALID_B64), null);
+  assert.equal(detectImageMimeFromB64(""), null);
+  assert.equal(detectImageMimeFromB64(null), null);
+  assert.equal(detectImageMimeFromB64(undefined), null);
+});
+
+test("validateAndNormalizeRefs returns refDetails with declared/detected MIME", () => {
+  const jpegB64 = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+  const r = validateAndNormalizeRefs([`data:image/jpeg;base64,${jpegB64}`]);
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.refs, [jpegB64]);
+  assert.equal(r.refDetails[0].declaredMime, "image/jpeg");
+  assert.equal(r.refDetails[0].detectedMime, "image/jpeg");
+  assert.equal(r.refDetails[0].source, "dataUrl");
+  assert.deepEqual(r.refDetails[0].warnings, []);
+});
+
+test("validateAndNormalizeRefs flags mime_mismatch when label and body disagree", () => {
+  // Body is JPEG but data URL declares image/png — common UI bug we want to detect.
+  const jpegB64 = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+  const r = validateAndNormalizeRefs([`data:image/png;base64,${jpegB64}`]);
+  assert.equal(r.refDetails[0].declaredMime, "image/png");
+  assert.equal(r.refDetails[0].detectedMime, "image/jpeg");
+  assert.deepEqual(r.refDetails[0].warnings, ["mime_mismatch"]);
+});
+
+test("validateAndNormalizeRefs marks bare base64 source as rawBase64", () => {
+  const pngB64 = Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString("base64");
+  const r = validateAndNormalizeRefs([pngB64]);
+  assert.equal(r.refDetails[0].declaredMime, null);
+  assert.equal(r.refDetails[0].detectedMime, "image/png");
+  assert.equal(r.refDetails[0].source, "rawBase64");
+  assert.deepEqual(r.refDetails[0].warnings, []);
 });
