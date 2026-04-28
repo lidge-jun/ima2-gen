@@ -9,6 +9,20 @@
 
 Make annotation editing usable once users have many objects on an image.
 
+## QA Baseline To Preserve
+
+Phase 7 selection is an in-Canvas editing feature only.
+
+- Do not expose canvas version files in Gallery or HistoryStrip.
+- Default viewer actions keep using the source/original image.
+- Canvas Mode actions keep using the canvas-edited version.
+- Selection/delete/move operations must affect annotation objects only, not
+  gallery/history image rows.
+- The latest saved canvas version remains resolved through the current source
+  image and must keep the source prompt for `Continue Here`.
+- `Esc` behavior from Phase 6 remains required: editable fields blur first,
+  then Canvas closes through the save-aware close path.
+
 ## Files
 
 ### New
@@ -24,10 +38,11 @@ tests/canvas-hit-test-contract.test.js
 ui/src/hooks/useCanvasAnnotations.ts
 ui/src/components/canvas-mode/CanvasAnnotationLayer.tsx
 ui/src/components/canvas-mode/CanvasToolbar.tsx
-ui/src/components/canvas-mode/CanvasModeShell.tsx
+ui/src/components/Canvas.tsx
 ui/src/lib/canvas/annotationRenderer.ts
 ui/src/styles/canvas-mode.css
 tests/canvas-selection-contract.test.js
+tests/gallery-navigation-ux-contract.test.js
 ```
 
 ## State Diff
@@ -81,9 +96,9 @@ Rules:
 Selected annotations get a consistent outline/handles treatment without changing
 their saved color or stroke width.
 
-## Shell Diff
+## Canvas Integration Diff
 
-`ui/src/components/canvas-mode/CanvasModeShell.tsx`
+`ui/src/components/Canvas.tsx`
 
 ```diff
 + if (activeTool === "pan" && hit) {
@@ -94,6 +109,15 @@ their saved color or stroke width.
 +   annotations.moveSelected(normalizedDelta);
 + }
 ```
+
+Rules:
+
+- Selection gestures must run against `canvasDisplayImage` / annotation state
+  inside Canvas, never against the default viewer source row.
+- Deleting selected annotations must not call `trashHistoryItem`,
+  `permanentlyDeleteHistoryItemByClick`, or any gallery/history delete action.
+- Empty canvas click clears annotation selection only. It must not change the
+  current gallery/history item.
 
 ## Toolbar Diff
 
@@ -110,6 +134,8 @@ their saved color or stroke width.
 - Selection box selects multiple annotations.
 - Delete selected removes only selected annotations.
 - Moving selected annotations preserves normalized coordinates.
+- Selection code does not import or call gallery/history delete actions.
+- Gallery/HistoryStrip still filter out `canvasVersion` items.
 
 ## Manual QA
 
@@ -117,4 +143,8 @@ their saved color or stroke width.
 - Shift-select multiple annotations, move them together.
 - Drag-select a region and delete selected annotations.
 - Verify history from Phase 6 captures group operations as one action.
-
+- Save a canvas version, confirm it remains hidden in Gallery/HistoryStrip.
+- In Canvas, select/move annotations on the saved canvas version and verify
+  default viewer remains the source image after close.
+- Canvas `Continue Here`, copy, and download still target the edited canvas
+  version while default viewer actions target the source image.

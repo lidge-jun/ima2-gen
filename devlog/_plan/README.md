@@ -26,7 +26,9 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
 | 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
 | 8 | `0.09.41-censorship-bypass/` | research | GPT Image 2 모더레이션 false-positive 우회 전략 연구. 자동 reframe / preprocessor 등은 미구현, 현재 STRATEGY 문서만 존재. |
-| 9 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 9 | `0.09.44-comfyui-bridge/` | planning | GitHub #15 기반 ComfyUI bridge. PR1은 current image More menu → local ComfyUI `/upload/image`만 범위로 둔다. |
+| 10 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 11 | `0.23.1-prompt-library-github-import/` | planned | Prompt Library import UX 후속. `불러오기`를 dropzone dialog로 바꾸고 GitHub Markdown prompt sources / curated Nano Banana repos import를 추가한다. |
 
 ## 완료로 이동한 항목
 
@@ -101,3 +103,5 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-28: GitHub #14 + #21 기반 `0.09.42-gallery-viewer-shortcuts-status` planning lane 추가. #14는 focusless movement keys만 keyboard로 처리하고, delete/permanent delete는 클릭 전용으로 두며, zoom/sound/canvas mode를 분리했다. #21의 상단 active generation 빨간 불/count 표시를 같은 작은 UX slice로 묶었다.
 - 2026-04-28: 코드 반영이 끝난 11개 lane을 `_fin/260428_*`로 일괄 이동했다. 0.09.31 github-pages, 0.09.34 node-connect, 0.09.35 safety-refusal, 0.09.36 gallery-rail, 0.09.37 custom-controls, 0.09.38 metadata-embed, 0.09.39 4k-diagnostics, 0.09.40 multimode-sequence, 0.09.42 viewer-shortcuts, 0.23 prompt-library, 1.1.5 windows-folder-fix. 남은 active는 `0.09.32-final-release-closeout`과 `0.09.41-censorship-bypass`(연구)뿐이다.
 - 2026-04-28: GitHub #23 기반 `0.09.43-prompt-composer-resize` lane 추가/완료. prompt textarea가 기본 50vh, 사용자 30-70vh 리사이즈, localStorage persist 적용. `npm test`(353/353)와 `npm run ui:build` 통과 후 같은 날 `_fin/260428_0.09.43-prompt-composer-resize`로 이동.
+- 2026-04-28: GitHub #15 기반 `0.09.44-comfyui-bridge` planning lane 추가. Oracle 감사 결과를 반영해 PR1은 `더보기 → ComfyUI로 보내기` image upload only로 제한하고, ComfyUI custom node와 workflow automation은 후속 PRD로 분리했다.
+- 2026-04-28: 사용자 요청 기반 `0.23.1-prompt-library-github-import` planning lane 추가. Prompt Library `불러오기`는 Finder 직행 대신 dropzone dialog로 열고, GitHub Markdown file/path import와 curated Nano Banana prompt repositories를 포함한다.
