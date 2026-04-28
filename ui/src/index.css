@@ -5147,22 +5147,32 @@ body {
   position: absolute;
   top: 6px;
   left: 6px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  z-index: 2;
-  opacity: 0;
-  transition: opacity 0.15s;
+  font-size: 16px;
+  z-index: 3;
+  opacity: 0.55;
+  transition: opacity 0.15s, background 0.15s, transform 0.12s;
+}
+.gallery__favorite:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  transform: scale(1.08);
 }
 .gallery__tile-wrap:hover .gallery__favorite {
+  opacity: 1;
+}
+.gallery__favorite:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 2px;
   opacity: 1;
 }
 .gallery__favorite--on {
