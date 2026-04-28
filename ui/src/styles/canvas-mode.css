@@ -94,6 +94,58 @@
   z-index: 2;
 }
 
+.canvas-memo-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.canvas-memo {
+  position: absolute;
+  z-index: 4;
+  min-width: 160px;
+  max-width: 260px;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid rgba(44, 37, 12, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 246, 179, 0.96);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  color: #2f2a13;
+  font: 500 14px/1.35 var(--font-ui, sans-serif);
+  line-height: 1.35;
+  pointer-events: auto;
+  resize: both;
+  transform: translate(-8px, -8px);
+}
+
+.canvas-save-state {
+  position: absolute;
+  left: 50%;
+  bottom: 76px;
+  z-index: 11;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(12, 14, 17, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.canvas-save-state--error {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+
+.canvas-memo:focus {
+  outline: 2px solid rgba(100, 200, 255, 0.72);
+  outline-offset: 2px;
+}
+
 .canvas-toolbar {
   position: absolute;
   left: 50%;
@@ -141,6 +193,74 @@
   box-shadow: inset 0 0 0 1px rgba(100, 200, 255, 0.42);
 }
 
+.canvas-toolbar__button--primary {
+  background: rgba(100, 200, 255, 0.16);
+  color: #fff;
+}
+
+.canvas-toolbar__split-button {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 6px;
+}
+
+.canvas-toolbar__split-button--active {
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.canvas-toolbar__button--split-main {
+  width: 38px;
+  border-radius: 6px 0 0 6px;
+}
+
+.canvas-toolbar__button--split-menu {
+  width: 26px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 6px 6px 0;
+}
+
+.canvas-toolbar__icon--small {
+  width: 14px;
+  height: 14px;
+}
+
+.canvas-toolbar__eraser-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 14;
+  display: grid;
+  min-width: 148px;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(12, 14, 17, 0.97);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+.canvas-toolbar__eraser-menu-item {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.canvas-toolbar__eraser-menu-item:hover,
+.canvas-toolbar__eraser-menu-item--active {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fff;
+}
+
+.canvas-toolbar__button--busy {
+  cursor: progress;
+}
+
 .canvas-toolbar__button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -165,4 +285,28 @@
   font-weight: 600;
   line-height: 1;
   color: rgba(255, 255, 255, 0.46);
+}
+
+@media (max-width: 720px) {
+  .canvas-toolbar {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    justify-content: center;
+    flex-wrap: wrap;
+    transform: none;
+  }
+
+  .canvas-memo {
+    min-width: 140px;
+    max-width: min(220px, 70vw);
+  }
+
+  .canvas-save-state {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 54px);
+    transform: none;
+    text-align: center;
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { handleHorizontalWheel } from "../lib/horizontalWheel";
@@ -17,11 +17,15 @@ export function HistoryStrip() {
   const thumbRefs = useRef<Record<string, HTMLImageElement | null>>({});
   const { t } = useI18n();
   const activeKey = currentImage ? getHistoryItemKey(currentImage) : null;
+  const visibleHistory = useMemo(
+    () => history.filter((item) => !item.canvasVersion),
+    [history],
+  );
 
   useEffect(() => {
     if (!activeKey) return;
     thumbRefs.current[activeKey]?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [activeKey, history]);
+  }, [activeKey, visibleHistory]);
 
   return (
     <div
@@ -46,7 +50,7 @@ export function HistoryStrip() {
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
       </button>
-      {history.map((item, i) => {
+      {visibleHistory.map((item, i) => {
         const key = getHistoryItemKey(item);
         const active = activeKey === key;
         return (

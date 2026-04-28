@@ -1,4 +1,6 @@
-export type CanvasTool = "pan" | "pen" | "box" | "arrow" | "memo";
+export type CanvasTool = "pan" | "pen" | "box" | "arrow" | "memo" | "eraser";
+
+export type CanvasEraserMode = "object" | "brush";
 
 export interface NormalizedPoint {
   x: number;
@@ -21,6 +23,36 @@ export interface BoundingBox {
   height: number;
   color: string;
   strokeWidth: number;
+}
+
+export interface CanvasMemo {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+}
+
+export interface AnnotationSnapshot {
+  paths: DrawingPath[];
+  boxes: BoundingBox[];
+  memos: CanvasMemo[];
+}
+
+export interface SelectionBox {
+  start: NormalizedPoint;
+  current: NormalizedPoint;
+}
+
+export interface EraserStroke {
+  points: NormalizedPoint[];
+  radius: number;
+}
+
+export interface SavedCanvasAnnotations {
+  paths: DrawingPath[];
+  boxes: BoundingBox[];
+  memos: CanvasMemo[];
 }
 
 export interface CanvasViewport {

@@ -17,8 +17,11 @@ describe("canvas annotation contract", () => {
     assert.match(source, /pen/);
     assert.match(source, /box/);
     assert.match(source, /arrow/);
+    assert.match(source, /memo/);
     assert.match(source, /canvas-toolbar__shortcut/);
     assert.doesNotMatch(source, /<span>\{tool\.label\}<\/span>/);
+    assert.doesNotMatch(source, />\s*Apply\s*</);
+    assert.doesNotMatch(source, />\s*Export\s*</);
   });
 
   it("has annotation canvas layer", () => {
@@ -32,6 +35,7 @@ describe("canvas annotation contract", () => {
     const source = readSource("ui/src/lib/canvas/annotationRenderer.ts");
     assert.match(source, /renderAnnotationPath/);
     assert.match(source, /renderBoundingBox/);
+    assert.match(source, /renderCanvasMemo/);
     assert.match(source, /drawArrowHead/);
   });
 
@@ -68,15 +72,17 @@ describe("canvas annotation contract", () => {
     assert.ok(promptIndex > frameIndex);
     assert.ok(metaIndex > frameIndex);
     assert.ok(actionsIndex > frameIndex);
+    assert.ok(metaIndex < actionsIndex);
+    assert.ok(actionsIndex < promptIndex);
     assert.match(source, /className="canvas-annotation-frame"[\s\S]*transform: canvasOpen \? `scale\(\$\{canvasZoom\}\)`/);
     assert.doesNotMatch(source, /<img[\s\S]{0,500}transform: canvasOpen \? `scale\(\$\{canvasZoom\}\)`/);
   });
 
-  it("clears temporary annotations when the current image changes", () => {
+  it("resets temporary annotations when the current image changes", () => {
     const source = readSource("ui/src/components/Canvas.tsx");
     assert.match(source, /previousImageKeyRef/);
     assert.match(source, /currentImage\?\.filename \?\? currentImage\?\.url \?\? currentImage\?\.image/);
-    assert.match(source, /annotations\.clear\(\)/);
+    assert.match(source, /annotations\.resetLocal\(\)/);
   });
 
   it("has annotation state contracts", () => {
@@ -92,10 +98,16 @@ describe("canvas annotation contract", () => {
     for (const locale of [en, ko]) {
       assert.equal(typeof locale.canvas.toolbar.label, "string");
       assert.equal(typeof locale.canvas.toolbar.pan, "string");
-      assert.equal(typeof locale.canvas.toolbar.pen, "string");
-      assert.equal(typeof locale.canvas.toolbar.box, "string");
-      assert.equal(typeof locale.canvas.toolbar.arrow, "string");
-      assert.equal(typeof locale.canvas.toolbar.clear, "string");
-    }
-  });
+    assert.equal(typeof locale.canvas.toolbar.pen, "string");
+    assert.equal(typeof locale.canvas.toolbar.box, "string");
+    assert.equal(typeof locale.canvas.toolbar.arrow, "string");
+    assert.equal(typeof locale.canvas.toolbar.memo, "string");
+    assert.equal(typeof locale.canvas.toolbar.apply, "string");
+    assert.equal(typeof locale.canvas.toolbar.applyDone, "string");
+    assert.equal(typeof locale.canvas.toolbar.applyFailed, "string");
+    assert.equal(typeof locale.canvas.toolbar.export, "string");
+    assert.equal(typeof locale.canvas.toolbar.exportFailed, "string");
+    assert.equal(typeof locale.canvas.toolbar.clear, "string");
+  }
+});
 });

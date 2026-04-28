@@ -39,6 +39,10 @@ export type SizePreset =
 export type GenerateItem = {
   image: string;
   url?: string;
+  canvasMergedAt?: number;
+  canvasVersion?: boolean;
+  canvasSourceFilename?: string | null;
+  canvasEditableFilename?: string | null;
   filename?: string;
   prompt?: string;
   userPrompt?: string | null;
@@ -89,6 +93,10 @@ export type EmbeddedGenerationMetadata = {
   version?: string | null;
   createdAt?: number | null;
   kind?: string | null;
+  canvasVersion?: boolean;
+  canvasSourceFilename?: string | null;
+  canvasEditableFilename?: string | null;
+  canvasMergedAt?: number | null;
   prompt?: string | null;
   userPrompt?: string | null;
   revisedPrompt?: string | null;
@@ -151,10 +159,13 @@ export type GenerateRequest = {
   provider: Provider;
   n: number;
   model?: ImageModel;
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
   image?: string;
+  mask?: string;
   references?: string[];
   requestId?: string;
   mode?: "auto" | "direct";
+  webSearchEnabled?: boolean;
 };
 
 export type MultimodeGenerateRequest = Omit<GenerateRequest, "n"> & {

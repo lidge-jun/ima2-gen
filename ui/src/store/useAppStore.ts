@@ -61,6 +61,16 @@ import {
   IMAGE_MODEL_STORAGE_KEY,
   isImageModel,
 } from "../lib/imageModels";
+import {
+  DEFAULT_REASONING_EFFORT,
+  REASONING_EFFORT_STORAGE_KEY,
+  isReasoningEffort,
+  type ReasoningEffort,
+} from "../lib/reasoning";
+import {
+  DEFAULT_WEB_SEARCH_ENABLED,
+  WEB_SEARCH_STORAGE_KEY,
+} from "../lib/webSearch";
 import { newClientNodeId, type ClientNodeId } from "../lib/graph";
 import {
   deriveParentServerNodeIds,
@@ -157,6 +167,37 @@ function saveImageModel(model: ImageModel): void {
   } catch {}
 }
 
+function loadReasoningEffort(): ReasoningEffort {
+  try {
+    const raw = localStorage.getItem(REASONING_EFFORT_STORAGE_KEY);
+    if (isReasoningEffort(raw)) return raw;
+  } catch {}
+  return DEFAULT_REASONING_EFFORT;
+}
+
+function saveReasoningEffort(effort: ReasoningEffort): void {
+  try {
+    localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, effort);
+  } catch {}
+}
+
+function loadWebSearchEnabled(): boolean {
+  try {
+    const raw = localStorage.getItem(WEB_SEARCH_STORAGE_KEY);
+    if (raw === "false") return false;
+    if (raw === "true") return true;
+  } catch {}
+  return DEFAULT_WEB_SEARCH_ENABLED;
+}
+
+function saveWebSearchEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(enabled));
+  } catch {}
+}
+
+const GENERATION_DEFAULTS_STORAGE_KEY = "ima2.generationDefaults";
+
 function resolveThemePreference(theme: ThemePreference): ResolvedTheme {
   if (theme === "dark" || theme === "light") return theme;
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -184,6 +225,14 @@ type ServerInFlightJob = {
   startedAt: number;
   phase?: string;
   meta?: Record<string, unknown>;
+};
+
+type ServerTerminalJob = ServerInFlightJob & {
+  status?: "completed" | "error" | "canceled";
+  finishedAt?: number;
+  durationMs?: number;
+  httpStatus?: number;
+  errorCode?: string;
 };
 
 type InsertedPrompt = {
@@ -217,6 +266,18 @@ function toPersistedInFlightJob(job: ServerInFlightJob): PersistedInFlight {
     clientNodeId: typeof meta.clientNodeId === "string" ? meta.clientNodeId : null,
     kind,
   };
+}
+
+function terminalJobError(job: ServerTerminalJob): Error & { code?: string; status?: number } {
+  const code = typeof job.errorCode === "string" && job.errorCode
+    ? job.errorCode
+    : "UNKNOWN";
+  const e = new Error(code === "EMPTY_RESPONSE"
+    ? "No image data returned from the image backend."
+    : "Generation failed on the server.") as Error & { code?: string; status?: number };
+  e.code = code;
+  e.status = typeof job.httpStatus === "number" ? job.httpStatus : undefined;
+  return e;
 }
 
 function loadInFlight(): PersistedInFlight[] {
@@ -333,6 +394,10 @@ function mapHistoryItem(it: Awaited<ReturnType<typeof getHistory>>["items"][numb
     clientNodeId: it.clientNodeId ?? null,
     requestId: it.requestId ?? null,
     kind: narrowGenerateKind(it.kind),
+    canvasVersion: Boolean(it.canvasVersion),
+    canvasSourceFilename: it.canvasSourceFilename ?? null,
+    canvasEditableFilename: it.canvasEditableFilename ?? null,
+    canvasMergedAt: it.canvasMergedAt ?? undefined,
     setId: it.setId ?? null,
     cardId: it.cardId ?? null,
     cardOrder: it.cardOrder ?? null,
@@ -543,6 +608,8 @@ type AppState = {
   format: Format;
   moderation: Moderation;
   imageModel: ImageModel;
+  reasoningEffort: ReasoningEffort;
+  webSearchEnabled: boolean;
   count: Count;
   multimode: boolean;
   multimodeMaxImages: Count;
@@ -551,11 +618,14 @@ type AppState = {
   promptMode: "auto" | "direct";
   prompt: string;
   referenceImages: string[];
+  canvasReferenceImage: string | null;
   addReferences: (files: File[]) => Promise<void>;
   addReferenceDataUrl: (dataUrl: string) => void;
   removeReference: (index: number) => void;
   clearReferences: () => void;
   useCurrentAsReference: () => Promise<void>;
+  useImageAsReference: (item: GenerateItem) => Promise<void>;
+  attachCanvasVersionReference: (item: GenerateItem) => Promise<void>;
   activeGenerations: number;
   unseenGeneratedCount: number;
   inFlight: PersistedInFlight[];
@@ -564,6 +634,8 @@ type AppState = {
   reconcileGraphPending: () => Promise<void>;
   syncFromStorage: () => void;
   currentImage: GenerateItem | null;
+  applyMergedCanvasImage: (item: GenerateItem) => void;
+  addGeneratedHistoryItem: (item: GenerateItem) => Promise<void>;
   history: GenerateItem[];
   trashPending: TrashPendingState;
   toast: ToastState;
@@ -673,6 +745,8 @@ type AppState = {
   setFormat: (f: Format) => void;
   setModeration: (m: Moderation) => void;
   setImageModel: (m: ImageModel) => void;
+  setReasoningEffort: (e: ReasoningEffort) => void;
+  setWebSearchEnabled: (enabled: boolean) => void;
   setCount: (c: Count) => void;
   setMultimode: (enabled: boolean) => void;
   setMultimodeMaxImages: (c: Count) => void;
@@ -775,6 +849,86 @@ function isModeration(value: unknown): value is Moderation {
   return value === "low" || value === "auto";
 }
 
+function isProvider(value: unknown): value is Provider {
+  return value === "oauth" || value === "api";
+}
+
+function isPromptMode(value: unknown): value is "auto" | "direct" {
+  return value === "auto" || value === "direct";
+}
+
+function isSizePreset(value: unknown): value is SizePreset {
+  return typeof value === "string" && SIZE_PRESET_VALUES.has(value as SizePreset);
+}
+
+function isInsertedPromptArray(value: unknown): value is InsertedPrompt[] {
+  return Array.isArray(value) && value.every((item) =>
+    item &&
+    typeof item.id === "string" &&
+    typeof item.name === "string" &&
+    typeof item.text === "string",
+  );
+}
+
+type GenerationDefaults = Partial<{
+  provider: Provider;
+  quality: Quality;
+  sizePreset: SizePreset;
+  customW: number;
+  customH: number;
+  format: Format;
+  moderation: Moderation;
+  count: Count;
+  multimode: boolean;
+  multimodeMaxImages: Count;
+  promptMode: "auto" | "direct";
+  prompt: string;
+  insertedPrompts: InsertedPrompt[];
+}>;
+
+function loadGenerationDefaults(): GenerationDefaults {
+  try {
+    const raw = localStorage.getItem(GENERATION_DEFAULTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: GenerationDefaults = {};
+    if (isProvider(parsed.provider)) out.provider = parsed.provider;
+    if (isQuality(parsed.quality)) out.quality = parsed.quality;
+    if (isSizePreset(parsed.sizePreset)) out.sizePreset = parsed.sizePreset;
+    if (typeof parsed.customW === "number" && Number.isFinite(parsed.customW)) {
+      out.customW = parseRequestedCustomSide(parsed.customW, 1920);
+    }
+    if (typeof parsed.customH === "number" && Number.isFinite(parsed.customH)) {
+      out.customH = parseRequestedCustomSide(parsed.customH, 1088);
+    }
+    if (isFormat(parsed.format)) out.format = parsed.format;
+    if (isModeration(parsed.moderation)) out.moderation = parsed.moderation;
+    if (typeof parsed.count === "number") out.count = normalizeCount(parsed.count);
+    if (typeof parsed.multimode === "boolean") out.multimode = parsed.multimode;
+    if (typeof parsed.multimodeMaxImages === "number") {
+      out.multimodeMaxImages = normalizeCount(parsed.multimodeMaxImages);
+    }
+    if (isPromptMode(parsed.promptMode)) out.promptMode = parsed.promptMode;
+    if (typeof parsed.prompt === "string") out.prompt = parsed.prompt;
+    if (isInsertedPromptArray(parsed.insertedPrompts)) {
+      out.insertedPrompts = parsed.insertedPrompts;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function saveGenerationDefaultsPatch(patch: GenerationDefaults): void {
+  try {
+    const current = loadGenerationDefaults();
+    localStorage.setItem(
+      GENERATION_DEFAULTS_STORAGE_KEY,
+      JSON.stringify({ ...current, ...patch }),
+    );
+  } catch {}
+}
+
 function applyMetadataToState(
   state: AppState,
   metadata: EmbeddedGenerationMetadata,
@@ -822,23 +976,26 @@ function getCustomSizeConfirmation(
   };
 }
 
+const storedGenerationDefaults = loadGenerationDefaults();
+
 export const useAppStore = create<AppState>((set, get) => ({
-  provider: "oauth",
-  quality: "medium",
-  sizePreset: "1024x1024",
-  customW: 1920,
-  customH: 1088,
-  format: "png",
-  moderation: "low",
-  count: 1,
-  multimode: false,
-  multimodeMaxImages: 4,
+  provider: storedGenerationDefaults.provider ?? "oauth",
+  quality: storedGenerationDefaults.quality ?? "medium",
+  sizePreset: storedGenerationDefaults.sizePreset ?? "1024x1024",
+  customW: storedGenerationDefaults.customW ?? 1920,
+  customH: storedGenerationDefaults.customH ?? 1088,
+  format: storedGenerationDefaults.format ?? "png",
+  moderation: storedGenerationDefaults.moderation ?? "low",
+  count: storedGenerationDefaults.count ?? 1,
+  multimode: storedGenerationDefaults.multimode ?? false,
+  multimodeMaxImages: storedGenerationDefaults.multimodeMaxImages ?? 4,
   multimodeSequence: null,
   multimodeAbortController: null,
-  promptMode: "auto",
-  prompt: "",
-  insertedPrompts: [],
+  promptMode: storedGenerationDefaults.promptMode ?? "auto",
+  prompt: storedGenerationDefaults.prompt ?? "",
+  insertedPrompts: storedGenerationDefaults.insertedPrompts ?? [],
   referenceImages: [],
+  canvasReferenceImage: null,
 
   // Prompt Library state (0.23)
   promptLibraryOpen: false,
@@ -949,9 +1106,34 @@ export const useAppStore = create<AppState>((set, get) => ({
   removeReference: (index) => {
     set((s) => ({
       referenceImages: s.referenceImages.filter((_, i) => i !== index),
+      canvasReferenceImage:
+        s.referenceImages[index] === s.canvasReferenceImage ? null : s.canvasReferenceImage,
     }));
   },
-  clearReferences: () => set({ referenceImages: [] }),
+  clearReferences: () => set({ referenceImages: [], canvasReferenceImage: null }),
+  attachCanvasVersionReference: async (item) => {
+    let dataUrl: string;
+    try {
+      dataUrl = await compressReferenceSource(
+        item.image,
+        item.filename || "canvas-version-reference.png",
+      );
+    } catch {
+      get().showToast(t("toast.currentImageLoadFailed"), true);
+      throw new Error("canvas_reference_attach_failed");
+    }
+    set((s) => {
+      const withoutPrevious = s.canvasReferenceImage
+        ? s.referenceImages.filter((ref) => ref !== s.canvasReferenceImage)
+        : s.referenceImages;
+      const withoutDuplicate = withoutPrevious.filter((ref) => ref !== dataUrl);
+      return {
+        canvasReferenceImage: dataUrl,
+        referenceImages: [dataUrl, ...withoutDuplicate].slice(0, MAX_REFERENCE_IMAGES),
+      };
+    });
+    get().showToast(t("canvas.version.usingAsReference"));
+  },
   useCurrentAsReference: async () => {
     const cur = get().currentImage;
     if (!cur) {
@@ -965,6 +1147,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     let dataUrl: string;
     try {
       dataUrl = await compressReferenceSource(cur.image, cur.filename || "current-reference.png");
+    } catch {
+      get().showToast(t("toast.currentImageLoadFailed"), true);
+      return;
+    }
+    set((s) => ({
+      referenceImages: [...s.referenceImages, dataUrl].slice(0, MAX_REFERENCE_IMAGES),
+    }));
+    get().showToast(t("toast.addedCurrentAsRef"));
+  },
+  useImageAsReference: async (item) => {
+    if (get().referenceImages.length >= MAX_REFERENCE_IMAGES) {
+      get().showToast(t("toast.refSlotFull"), true);
+      return;
+    }
+    let dataUrl: string;
+    try {
+      dataUrl = await compressReferenceSource(item.image, item.filename || "canvas-reference.png");
     } catch {
       get().showToast(t("toast.currentImageLoadFailed"), true);
       return;
@@ -995,11 +1194,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         const inflightKind: "classic" | "node" = get().uiMode === "node" ? "node" : "classic";
         const inflightSessionId =
           inflightKind === "node" ? get().activeSessionId ?? undefined : undefined;
-        const { jobs } = await getInflight({
+        const { jobs, terminalJobs = [] } = await getInflight({
           kind: inflightKind,
           sessionId: inflightSessionId,
+          includeTerminal: true,
         });
         const byId = new Map(jobs.map((j) => [j.requestId, j] as const));
+        const terminalById = new Map((terminalJobs as ServerTerminalJob[]).map((j) => [j.requestId, j] as const));
+        const terminalErrors: Array<Error & { code?: string; status?: number }> = [];
         let changed = false;
         const now0 = Date.now();
         const GRACE_MS = 5000;
@@ -1014,6 +1216,14 @@ export const useAppStore = create<AppState>((set, get) => ({
               (f.sessionId ?? null) === (inflightSessionId ?? null));
           if (!matchesScope) {
             nextInflight.push(f);
+            continue;
+          }
+          const terminal = terminalById.get(f.id);
+          if (terminal) {
+            changed = true;
+            if (terminal.status === "error") {
+              terminalErrors.push(terminalJobError(terminal));
+            }
             continue;
           }
           // If server no longer knows this job and enough time has passed,
@@ -1050,6 +1260,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (changed) {
           saveInFlight(nextInflight);
           set({ inFlight: nextInflight, activeGenerations: nextInflight.length });
+        }
+        for (const err of terminalErrors) {
+          handleError(err, get());
         }
       } catch {}
       try {
@@ -1096,11 +1309,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       const inflightKind = get().uiMode === "node" ? "node" : "classic";
       const inflightSessionId =
         inflightKind === "node" ? get().activeSessionId ?? undefined : undefined;
-      const { jobs } = await getInflight({
+      const { jobs, terminalJobs = [] } = await getInflight({
         kind: inflightKind,
         sessionId: inflightSessionId,
+        includeTerminal: true,
       });
       const serverById = new Map(jobs.map((j) => [j.requestId, j] as const));
+      const terminalById = new Map((terminalJobs as ServerTerminalJob[]).map((j) => [j.requestId, j] as const));
+      const terminalErrors: Array<Error & { code?: string; status?: number }> = [];
       const now = Date.now();
       const local = get().inFlight;
       // Keep local entries that are either still known to the server,
@@ -1119,6 +1335,13 @@ export const useAppStore = create<AppState>((set, get) => ({
           (inflightKind !== "node" ||
             (f.sessionId ?? null) === (inflightSessionId ?? null));
         if (!matchesScope) return [f];
+        const terminal = terminalById.get(f.id);
+        if (terminal) {
+          if (terminal.status === "error") {
+            terminalErrors.push(terminalJobError(terminal));
+          }
+          return [];
+        }
         return now - f.startedAt < 10_000 ? [f] : [];
       });
       // Bring in server-only jobs (started from another tab / process)
@@ -1130,6 +1353,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       saveInFlight(merged);
       set({ inFlight: merged, activeGenerations: merged.length });
+      for (const err of terminalErrors) {
+        handleError(err, get());
+      }
       if (merged.length > 0) get().startInFlightPolling();
     } catch {
       // Silent — endpoint may not exist on older servers.
@@ -1152,6 +1378,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (nextInflight.length > 0) get().startInFlightPolling();
   },
   currentImage: null,
+  applyMergedCanvasImage: (item) => {
+    set((s) => ({
+      history: item.filename
+        ? s.history.some((h) => h.filename === item.filename)
+          ? s.history.map((h) => (h.filename === item.filename ? item : h))
+          : [item, ...s.history].slice(0, HISTORY_LIMIT)
+        : s.history,
+    }));
+  },
+  addGeneratedHistoryItem: async (item) => {
+    await addHistory(item, set, get);
+  },
   history: [],
   trashPending: null,
   toast: null,
@@ -1171,6 +1409,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   closeGallery: () => set({ galleryOpen: false }),
 
   imageModel: loadImageModel(),
+  reasoningEffort: loadReasoningEffort(),
+  webSearchEnabled: loadWebSearchEnabled(),
 
   settingsOpen: false,
   activeSettingsSection: "account",
@@ -1909,11 +2149,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         format: s.format,
         moderation: s.moderation,
         model: s.imageModel,
+        reasoningEffort: s.reasoningEffort,
         requestId: flightId,
         sessionId: requestSessionId,
         clientNodeId: clientId,
         contextMode: "parent-plus-refs",
-        searchMode: "on",
+        searchMode: s.webSearchEnabled ? "on" : "off",
+        webSearchEnabled: s.webSearchEnabled,
         ...(nodeRefs.length
           ? { references: nodeRefs.map(stripDataUrlPrefix) }
           : {}),
@@ -2200,42 +2442,89 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().scheduleGraphSave();
   },
 
-  setProvider: (provider) => set({ provider }),
-  setQuality: (quality) => set({ quality }),
-  setSizePreset: (sizePreset) => set({ sizePreset }),
+  setProvider: (provider) => {
+    saveGenerationDefaultsPatch({ provider });
+    set({ provider });
+  },
+  setQuality: (quality) => {
+    saveGenerationDefaultsPatch({ quality });
+    set({ quality });
+  },
+  setSizePreset: (sizePreset) => {
+    saveGenerationDefaultsPatch({ sizePreset });
+    set({ sizePreset });
+  },
   setCustomSize: (w, h) =>
-    set((state) => ({
-      customW: parseRequestedCustomSide(w, state.customW),
-      customH: parseRequestedCustomSide(h, state.customH),
-    })),
-  setFormat: (format) => set({ format }),
-  setModeration: (moderation) => set({ moderation }),
+    set((state) => {
+      const customW = parseRequestedCustomSide(w, state.customW);
+      const customH = parseRequestedCustomSide(h, state.customH);
+      saveGenerationDefaultsPatch({ customW, customH });
+      return { customW, customH };
+    }),
+  setFormat: (format) => {
+    saveGenerationDefaultsPatch({ format });
+    set({ format });
+  },
+  setModeration: (moderation) => {
+    saveGenerationDefaultsPatch({ moderation });
+    set({ moderation });
+  },
   setImageModel: (imageModel) => {
     saveImageModel(imageModel);
     set({ imageModel });
   },
-  setCount: (count) => set({ count: normalizeCount(count) }),
+  setReasoningEffort: (reasoningEffort) => {
+    saveReasoningEffort(reasoningEffort);
+    set({ reasoningEffort });
+  },
+  setWebSearchEnabled: (webSearchEnabled) => {
+    saveWebSearchEnabled(webSearchEnabled);
+    set({ webSearchEnabled });
+  },
+  setCount: (count) => {
+    const next = normalizeCount(count);
+    saveGenerationDefaultsPatch({ count: next });
+    set({ count: next });
+  },
   setMultimode: (enabled) => {
     if (enabled && get().uiMode !== "classic") return;
+    saveGenerationDefaultsPatch({ multimode: enabled });
     set({ multimode: enabled, multimodeSequence: enabled ? get().multimodeSequence : null });
   },
-  setMultimodeMaxImages: (count) => set({ multimodeMaxImages: normalizeCount(count) }),
-  setPromptMode: (promptMode) => set({ promptMode }),
-  setPrompt: (prompt) => set({ prompt }),
+  setMultimodeMaxImages: (count) => {
+    const next = normalizeCount(count);
+    saveGenerationDefaultsPatch({ multimodeMaxImages: next });
+    set({ multimodeMaxImages: next });
+  },
+  setPromptMode: (promptMode) => {
+    saveGenerationDefaultsPatch({ promptMode });
+    set({ promptMode });
+  },
+  setPrompt: (prompt) => {
+    saveGenerationDefaultsPatch({ prompt });
+    set({ prompt });
+  },
   insertPromptToComposer: (prompt) =>
     set((state) => {
       const exists = state.insertedPrompts.some((item) => item.id === prompt.id);
+      const insertedPrompts = exists
+        ? state.insertedPrompts
+        : [...state.insertedPrompts, prompt];
+      saveGenerationDefaultsPatch({ insertedPrompts });
       return {
-        insertedPrompts: exists
-          ? state.insertedPrompts
-          : [...state.insertedPrompts, prompt],
+        insertedPrompts,
       };
     }),
   removeInsertedPromptFromComposer: (id) =>
-    set((state) => ({
-      insertedPrompts: state.insertedPrompts.filter((prompt) => prompt.id !== id),
-    })),
-  clearInsertedPrompts: () => set({ insertedPrompts: [] }),
+    set((state) => {
+      const insertedPrompts = state.insertedPrompts.filter((prompt) => prompt.id !== id);
+      saveGenerationDefaultsPatch({ insertedPrompts });
+      return { insertedPrompts };
+    }),
+  clearInsertedPrompts: () => {
+    saveGenerationDefaultsPatch({ insertedPrompts: [] });
+    set({ insertedPrompts: [] });
+  },
 
   selectHistory: (item) => {
     saveSelectedFilename(item.filename ?? null);
@@ -2406,6 +2695,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           provider: s.provider,
           maxImages: requested,
           model: s.imageModel,
+          reasoningEffort: s.reasoningEffort,
+          webSearchEnabled: s.webSearchEnabled,
           requestId: flightId,
           mode: s.promptMode,
           ...(s.referenceImages.length
@@ -2547,6 +2838,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         provider: s.provider,
         n: s.count,
         model: s.imageModel,
+        reasoningEffort: s.reasoningEffort,
+        webSearchEnabled: s.webSearchEnabled,
         requestId: flightId,
         mode: s.promptMode,
         ...(s.referenceImages.length

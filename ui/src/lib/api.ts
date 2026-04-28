@@ -8,6 +8,7 @@ import type {
   GenerateResponse,
   OAuthStatus,
 } from "../types";
+import type { SavedCanvasAnnotations } from "../types/canvas";
 
 export {
   postNodeGenerate,
@@ -187,12 +188,15 @@ export async function postMultimodeGenerateStream(
   }
 
   if (!finalPayload) {
-    throw new Error("Multimode stream ended without a final payload");
+    const e = new Error("No image data returned from the multimode stream") as Error & { code?: string; status?: number };
+    e.code = "EMPTY_RESPONSE";
+    e.status = 422;
+    throw e;
   }
   return finalPayload;
 }
 
-export function postEdit(payload: GenerateRequest): Promise<GenerateResponse> {
+export function postEdit(payload: GenerateRequest & { mask?: string }): Promise<GenerateResponse> {
   return jsonFetch<GenerateResponse>("/api/edit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -222,6 +226,10 @@ export type HistoryItem = {
   clientNodeId?: string | null;
   requestId?: string | null;
   kind?: string | null;
+  canvasVersion?: boolean;
+  canvasSourceFilename?: string | null;
+  canvasEditableFilename?: string | null;
+  canvasMergedAt?: number | null;
   setId?: string | null;
   cardId?: string | null;
   cardOrder?: number | null;
@@ -382,6 +390,20 @@ export function restoreHistoryItem(filename: string, trashId: string): Promise<{
   });
 }
 
+export type ComfyExportResponse = {
+  ok: true;
+  sourceFilename: string;
+  uploadedFilename: string;
+};
+
+export function exportImageToComfy(input: { filename: string }): Promise<ComfyExportResponse> {
+  return jsonFetch<ComfyExportResponse>("/api/comfy/export-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: input.filename }),
+  });
+}
+
 export type ImageMetadataReadResponse = {
   ok: boolean;
   metadata: EmbeddedGenerationMetadata | null;
@@ -399,6 +421,64 @@ export function readImageMetadata(input: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  });
+}
+
+export function fetchCanvasAnnotations(filename: string): Promise<{
+  annotations: SavedCanvasAnnotations | null;
+}> {
+  return jsonFetchWithBrowserId(`/api/annotations/${encodeURIComponent(filename)}`);
+}
+
+export async function saveCanvasAnnotations(
+  filename: string,
+  payload: SavedCanvasAnnotations,
+): Promise<void> {
+  await jsonFetchWithBrowserId(`/api/annotations/${encodeURIComponent(filename)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ annotations: payload }),
+  });
+}
+
+export async function deleteCanvasAnnotations(filename: string): Promise<void> {
+  await jsonFetchWithBrowserId(`/api/annotations/${encodeURIComponent(filename)}`, {
+    method: "DELETE",
+  });
+}
+
+export function createCanvasVersion(payload: {
+  sourceFilename: string;
+  image: Blob;
+  prompt?: string | null;
+}): Promise<{ item: GenerateItem }> {
+  const qs = new URLSearchParams({ sourceFilename: payload.sourceFilename });
+  return jsonFetch(`/api/canvas-versions?${qs.toString()}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "image/png",
+    },
+    body: payload.image,
+  });
+}
+
+export function updateCanvasVersion(
+  filename: string,
+  payload: {
+    image: Blob;
+    sourceFilename?: string | null;
+    prompt?: string | null;
+  },
+): Promise<{ item: GenerateItem }> {
+  const qs = new URLSearchParams();
+  if (payload.sourceFilename) qs.set("sourceFilename", payload.sourceFilename);
+  const suffix = qs.size > 0 ? `?${qs.toString()}` : "";
+  return jsonFetch(`/api/canvas-versions/${encodeURIComponent(filename)}${suffix}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "image/png",
+    },
+    body: payload.image,
   });
 }
 

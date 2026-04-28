@@ -24,6 +24,10 @@ type SessionGroup = {
 
 const STORAGE_NOTICE_DISMISSED_KEY = "ima2.storageNoticeDismissed.0.09.23";
 
+function isGalleryVisibleItem(item: Pick<GenerateItem, "canvasVersion">): boolean {
+  return !item.canvasVersion;
+}
+
 export function GalleryModal() {
   const { t } = useI18n();
   const open = useAppStore((s) => s.galleryOpen);
@@ -50,6 +54,7 @@ export function GalleryModal() {
   });
   const scrollRef = useRef<HTMLDivElement | null>(null), itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const lastScrollTopRef = useRef(0);
+  const galleryHistory = useMemo(() => history.filter(isGalleryVisibleItem), [history]);
 
   useEffect(() => {
     if (!open) return;
@@ -136,10 +141,10 @@ export function GalleryModal() {
             title: s.title ?? null,
             label: s.label ?? null,
             displayLabel: s.title || s.label || s.sessionId.slice(0, 8),
-            items: s.items.map(toItem),
-          })),
+            items: s.items.filter(isGalleryVisibleItem).map(toItem),
+          })).filter((group) => group.items.length > 0),
         );
-        setLoose(page.loose.map(toItem));
+        setLoose(page.loose.filter(isGalleryVisibleItem).map(toItem));
       } catch {
         // Fallback: use current history only.
       }
@@ -151,7 +156,7 @@ export function GalleryModal() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase().normalize("NFC");
-    return history.filter((h) => {
+    return galleryHistory.filter((h) => {
       if (favoritesOnly && !h.isFavorite) return false;
       if (!q) return true;
       return (
@@ -159,7 +164,7 @@ export function GalleryModal() {
         (h.filename ?? "").toLowerCase().normalize("NFC").includes(q)
       );
     });
-  }, [history, query, favoritesOnly]);
+  }, [galleryHistory, query, favoritesOnly]);
 
   const visibleSessionGroups = useMemo(() => {
     if (!favoritesOnly) return sessionGroups;
@@ -321,7 +326,7 @@ export function GalleryModal() {
             <div className="gallery__title">{t("gallery.title")}</div>
             <div className="gallery__meta">
               {t("gallery.total", { n: totalVisible })}
-              {query || favoritesOnly ? t("gallery.totalFiltered", { n: history.length }) : ""}
+              {query || favoritesOnly ? t("gallery.totalFiltered", { n: galleryHistory.length }) : ""}
             </div>
             <div className="gallery__favorite-filter" role="tablist" aria-label={t("gallery.favoriteFilterAria")}>
               <button
@@ -457,7 +462,7 @@ export function GalleryModal() {
             </>
           ) : filtered.length === 0 ? (
             <div className="gallery__empty">
-              {history.length === 0
+              {galleryHistory.length === 0
                 ? t("gallery.emptyAll")
                 : favoritesOnly
                   ? t("gallery.emptyFavorites")

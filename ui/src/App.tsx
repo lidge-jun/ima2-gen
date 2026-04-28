@@ -124,7 +124,7 @@ import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
         <ErrorCard />
         <GalleryModal />
         <MetadataRestoreDialog />
-        <PromptLibraryPanel />
+        {uiMode === "card-news" ? <PromptLibraryPanel /> : null}
       </>
     );
   }
