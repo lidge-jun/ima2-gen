@@ -109,4 +109,31 @@ describe("package smoke", () => {
       );
     }
   });
+
+  it("excludes UI sourcemaps from normal release packages", () => {
+    const missingBuildOutputs = REQUIRED_BUILD_PACK_FILES.filter((file) => !existsSync(join(process.cwd(), file)));
+    if (missingBuildOutputs.length > 0) {
+      assert.ok(true, `build output not present; skipped: ${missingBuildOutputs.join(", ")}`);
+      return;
+    }
+
+    const manifest = readPackManifest();
+    const mapFiles = manifest.files
+      .map((file) => file.path)
+      .filter((path) => path.startsWith("ui/dist/") && path.endsWith(".map"));
+
+    assert.deepEqual(mapFiles, [], "normal npm package should not include ui/dist sourcemaps");
+  });
+
+  it("excludes docs screenshots, test assets, and Python caches from release packages", () => {
+    const manifest = readPackManifest();
+    const packedFiles = manifest.files.map((file) => file.path);
+    const packedFileSet = new Set(packedFiles);
+
+    assert.ok(!packedFileSet.has("assets/screenshot.png"));
+    assert.ok(!packedFileSet.has("assets/phase-a-bg-cleanup-test.png"));
+    assert.ok(!packedFiles.some((path) => path.startsWith("assets/screenshots/")));
+    assert.ok(!packedFiles.some((path) => path.includes("__pycache__")));
+    assert.ok(!packedFiles.some((path) => path.endsWith(".pyc")));
+  });
 });

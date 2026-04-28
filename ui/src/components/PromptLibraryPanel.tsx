@@ -1,13 +1,16 @@
-import { useEffect, useState, useCallback } from "react";
+import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { PromptLibraryRow } from "./PromptLibraryRow";
 import { SavePromptPopover } from "./SavePromptPopover";
-import { PromptImportDialog } from "./PromptImportDialog";
 
 type PromptLibraryPanelProps = {
   variant?: "overlay" | "embedded";
 };
+
+const LazyPromptImportDialog = lazy(() =>
+  import("./PromptImportDialog").then((module) => ({ default: module.PromptImportDialog })),
+);
 
 export function PromptLibraryPanel({ variant = "overlay" }: PromptLibraryPanelProps) {
   const { t } = useI18n();
@@ -133,11 +136,15 @@ export function PromptLibraryPanel({ variant = "overlay" }: PromptLibraryPanelPr
           </div>
         )}
 
-        <PromptImportDialog
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
-          onImported={load}
-        />
+        {importOpen ? (
+          <Suspense fallback={null}>
+            <LazyPromptImportDialog
+              open={importOpen}
+              onClose={() => setImportOpen(false)}
+              onImported={load}
+            />
+          </Suspense>
+        ) : null}
       </div>
   );
 

@@ -106,6 +106,8 @@ import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
 import {
   getNeighborAfterRemoval,
   getShortcutTarget,
+  getVisibleGalleryItems,
+  resolveVisibleShortcutCurrent,
   type GalleryShortcutAction,
 } from "../lib/galleryShortcuts";
 
@@ -1414,15 +1416,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     const nextInflight = loadInFlight();
     const nextSelected = loadSelectedFilename();
     const nextImageModel = loadImageModel();
-    set((s) => ({
-      inFlight: nextInflight,
-      activeGenerations: nextInflight.length,
-      imageModel: nextImageModel,
-      currentImage:
-        nextSelected && s.currentImage?.filename !== nextSelected
-          ? s.history.find((h) => h.filename === nextSelected) ?? s.currentImage
-          : s.currentImage,
-    }));
+    set((s) => {
+      const matched = nextSelected
+        ? s.history.find((h) => h.filename === nextSelected) ?? null
+        : null;
+      const normalized = matched
+        ? resolveVisibleShortcutCurrent(s.history, matched)
+        : null;
+      const visibleFallback = getVisibleGalleryItems(s.history)[0] ?? null;
+      const currentImage = s.currentImage?.canvasVersion
+        ? resolveVisibleShortcutCurrent(s.history, s.currentImage) ?? visibleFallback
+        : s.currentImage;
+      return {
+        inFlight: nextInflight,
+        activeGenerations: nextInflight.length,
+        imageModel: nextImageModel,
+        currentImage:
+          nextSelected && currentImage?.filename !== nextSelected
+            ? normalized ?? currentImage
+            : currentImage,
+      };
+    });
     if (nextInflight.length > 0) get().startInFlightPolling();
   },
   currentImage: null,
@@ -2583,8 +2597,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   selectHistory: (item) => {
-    saveSelectedFilename(item.filename ?? null);
-    set({ currentImage: item, unseenGeneratedCount: 0 });
+    const history = get().history;
+    const target = item.canvasVersion
+      ? resolveVisibleShortcutCurrent(history, item) ?? getVisibleGalleryItems(history)[0] ?? null
+      : resolveVisibleShortcutCurrent(history, item) ?? item;
+    saveSelectedFilename(target?.filename ?? null);
+    set({ currentImage: target, unseenGeneratedCount: 0 });
   },
 
   markGeneratedResultsSeen: () => set({ unseenGeneratedCount: 0 }),
@@ -3066,8 +3084,15 @@ export const useAppStore = create<AppState>((set, get) => ({
           const matched = selected
             ? history.find((it) => it.filename === selected)
             : null;
-          set({ history, currentImage: matched ?? history[0] });
-          if (!matched) saveSelectedFilename(history[0]?.filename ?? null);
+          const visibleHistory = getVisibleGalleryItems(history);
+          const currentImage =
+            (matched ? resolveVisibleShortcutCurrent(history, matched) : null) ??
+            visibleHistory[0] ??
+            null;
+          set({ history, currentImage });
+          if (currentImage?.filename !== selected) {
+            saveSelectedFilename(currentImage?.filename ?? null);
+          }
         }
       } catch (err) {
         console.warn("[history] load failed:", err);

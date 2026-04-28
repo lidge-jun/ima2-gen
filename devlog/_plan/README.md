@@ -29,6 +29,9 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 | 9 | `0.09.44-comfyui-bridge/` | planning | GitHub #15 기반 ComfyUI bridge. PR1은 current image More menu → local ComfyUI `/upload/image`만 범위로 둔다. |
 | 10 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
 | 11 | `0.23.1-prompt-library-github-import/` | planned | Prompt Library import UX 후속. `불러오기`를 dropzone dialog로 바꾸고 GitHub Markdown prompt sources / curated Nano Banana repos import를 추가한다. |
+| 12 | `0.25-canvas-intelligence/` | planned | Canvas Mode 후속을 투명배경화, 로고/레퍼런스 벡터화, SAM3/Magic Layers식 레이어화+PPTX 재구성의 3개 독립 축으로 재정렬한다. |
+| 13 | `260429_gallery_canvas_arrow_navigation_leak/` | planned | GitHub #35. Gallery/HistoryStrip은 canvasVersion을 숨기고, 기본 shortcut navigation도 같은 visible source domain만 순회하게 한다. Canvas Mode 좌우 이동은 대상 source의 canvas version이 있으면 그것을 표시하고 없으면 원본으로 fallback한다. |
+| 14 | `0.26-app-weight-reduction/` | planning | GitHub #36. 1.1.7 이후 체감 무거움 대응. release package diet, frontend code splitting, Canvas runtime perf를 분리해 초기 JS/CSS/패키지 무게와 Canvas CPU 스파이크를 줄인다. |
 
 ## 완료로 이동한 항목
 
@@ -105,3 +108,6 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 - 2026-04-28: GitHub #23 기반 `0.09.43-prompt-composer-resize` lane 추가/완료. prompt textarea가 기본 50vh, 사용자 30-70vh 리사이즈, localStorage persist 적용. `npm test`(353/353)와 `npm run ui:build` 통과 후 같은 날 `_fin/260428_0.09.43-prompt-composer-resize`로 이동.
 - 2026-04-28: GitHub #15 기반 `0.09.44-comfyui-bridge` planning lane 추가. Oracle 감사 결과를 반영해 PR1은 `더보기 → ComfyUI로 보내기` image upload only로 제한하고, ComfyUI custom node와 workflow automation은 후속 PRD로 분리했다.
 - 2026-04-28: 사용자 요청 기반 `0.23.1-prompt-library-github-import` planning lane 추가. Prompt Library `불러오기`는 Finder 직행 대신 dropzone dialog로 열고, GitHub Markdown file/path import와 curated Nano Banana prompt repositories를 포함한다.
+- 2026-04-29: 사용자 clarification과 Oracle browser `gpt-5-pro` 3회 검토를 반영해 `0.25-canvas-intelligence` planning lane 추가. 기존 annotation SVG/PPTX/alpha 문맥과 분리하여 투명배경화, Illustrator식 raster vectorization, SAM3/Magic Layers식 layer extraction + PPTX reconstruction을 별도 phase 파일로 작성했다.
+- 2026-04-29: GitHub #35 기반 `260429_gallery_canvas_arrow_navigation_leak` lane 보강. 기본/gallery shortcut navigation은 Gallery/HistoryStrip과 동일한 visible source domain만 순회하고, Canvas Mode 좌우 이동은 대상 source에 저장된 canvas version이 있으면 그것을 표시하되 없으면 원본으로 fallback하는 정책을 명시했다.
+- 2026-04-29: 사용자 제보 기반 `0.26-app-weight-reduction` planning lane 추가. 1.1.7 이후 체감 무거움의 원인을 기능 증가 + unsplit frontend bundle + production sourcemap/package asset weight로 보고, release package diet, frontend code splitting, Canvas runtime performance 3개 phase로 분리했다.

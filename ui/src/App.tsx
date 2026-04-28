@@ -1,18 +1,14 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { Canvas } from "./components/Canvas";
-import { NodeCanvas } from "./components/NodeCanvas";
 import { RightPanel } from "./components/RightPanel";
 import { HistoryStrip } from "./components/HistoryStrip";
-import { SettingsWorkspace } from "./components/SettingsWorkspace";
 import { Toast } from "./components/Toast";
 import { ErrorCard } from "./components/ErrorCard";
 import { GalleryModal } from "./components/GalleryModal";
 import { CustomSizeConfirmModal } from "./components/CustomSizeConfirmModal";
 import { MetadataRestoreDialog } from "./components/MetadataRestoreDialog";
 import { TrashUndoToast } from "./components/TrashUndoToast";
-import { CardNewsWorkspace } from "./components/card-news/CardNewsWorkspace";
-import { PromptLibraryPanel } from "./components/PromptLibraryPanel";
 import { MobileSettingsToggle } from "./components/MobileSettingsToggle";
 import { MobileAppBar } from "./components/MobileAppBar";
 import { MobileComposeSheet } from "./components/MobileComposeSheet";
@@ -22,6 +18,23 @@ import { useGalleryViewerNavigation } from "./hooks/useGalleryViewerNavigation";
 import { useBrowserAttentionBadge } from "./hooks/useBrowserAttentionBadge";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useVisualViewportInset } from "./hooks/useVisualViewportInset";
+
+const LazyNodeCanvas = lazy(() =>
+  import("./components/NodeCanvas").then((module) => ({ default: module.NodeCanvas })),
+);
+const LazySettingsWorkspace = lazy(() =>
+  import("./components/SettingsWorkspace").then((module) => ({ default: module.SettingsWorkspace })),
+);
+const LazyCardNewsWorkspace = lazy(() =>
+  import("./components/card-news/CardNewsWorkspace").then((module) => ({ default: module.CardNewsWorkspace })),
+);
+const LazyPromptLibraryPanel = lazy(() =>
+  import("./components/PromptLibraryPanel").then((module) => ({ default: module.PromptLibraryPanel })),
+);
+
+function WorkspaceFallback() {
+  return <main className="canvas canvas--lazy-loading" aria-busy="true" />;
+}
 
 export default function App() {
   useGalleryViewerNavigation();
@@ -113,17 +126,19 @@ export default function App() {
         <Sidebar />
         <MobileAppBar />
         <HistoryStrip />
-        {settingsOpen ? (
-          <SettingsWorkspace />
-        ) : uiMode === "classic" ? (
-          <Canvas />
-        ) : uiMode === "node" ? (
-          <NodeCanvas />
-        ) : uiMode === "card-news" ? (
-          <CardNewsWorkspace />
-        ) : (
-          <Canvas />
-        )}
+        <Suspense fallback={<WorkspaceFallback />}>
+          {settingsOpen ? (
+            <LazySettingsWorkspace />
+          ) : uiMode === "classic" ? (
+            <Canvas />
+          ) : uiMode === "node" ? (
+            <LazyNodeCanvas />
+          ) : uiMode === "card-news" ? (
+            <LazyCardNewsWorkspace />
+          ) : (
+            <Canvas />
+          )}
+        </Suspense>
         {uiMode === "card-news" ? null : <RightPanel />}
       </div>
       <CustomSizeConfirmModal />
@@ -134,7 +149,11 @@ export default function App() {
       <MetadataRestoreDialog />
       <MobileComposeSheet />
       <MobileSettingsToggle />
-      {uiMode === "card-news" ? <PromptLibraryPanel /> : null}
+      {uiMode === "card-news" ? (
+        <Suspense fallback={null}>
+          <LazyPromptLibraryPanel />
+        </Suspense>
+      ) : null}
     </>
   );
 }

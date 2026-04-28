@@ -6,8 +6,12 @@ import type {
   CanvasTool,
   HexColor,
 } from "../../types/canvas";
+import type { BackgroundRemovalStats } from "../../lib/canvas/backgroundRemoval";
 import { useI18n } from "../../i18n";
+import { CanvasBackgroundControl } from "./CanvasBackgroundControl";
+import { CanvasBackgroundCleanupPanel } from "./CanvasBackgroundCleanupPanel";
 import { CanvasStylePopover } from "./CanvasStylePopover";
+import { CanvasToolPicker } from "./CanvasToolPicker";
 
 type AnnotationTool = CanvasTool;
 
@@ -38,43 +42,19 @@ interface CanvasToolbarProps {
   exportMatteColor?: HexColor;
   onExportBackgroundChange?: (mode: CanvasExportBackground) => void;
   onExportMatteColorChange?: (color: HexColor) => void;
-}
-
-interface BackgroundControlProps {
-  mode: CanvasExportBackground;
-  matteColor: HexColor;
-  onModeChange: (mode: CanvasExportBackground) => void;
-  onMatteColorChange: (color: HexColor) => void;
-}
-
-function BackgroundControl({ mode, matteColor, onModeChange, onMatteColorChange }: BackgroundControlProps) {
-  const { t } = useI18n();
-  return (
-    <div className="canvas-toolbar__bg" role="group" aria-label={t("canvas.toolbar.bgGroup")}>
-      <button
-        type="button"
-        className={`canvas-toolbar__bg-tab${mode === "alpha" ? " active" : ""}`}
-        onClick={() => onModeChange("alpha")}
-      >
-        {t("canvas.toolbar.bgAlpha")}
-      </button>
-      <button
-        type="button"
-        className={`canvas-toolbar__bg-tab${mode === "matte" ? " active" : ""}`}
-        onClick={() => onModeChange("matte")}
-      >
-        {t("canvas.toolbar.bgMatte")}
-      </button>
-      {mode === "matte" ? (
-        <input
-          type="color"
-          aria-label={t("canvas.toolbar.bgMatteColor")}
-          value={matteColor}
-          onChange={(e) => onMatteColorChange(e.target.value as HexColor)}
-        />
-      ) : null}
-    </div>
-  );
+  cleanupTolerance?: number;
+  cleanupSeedCount?: number;
+  cleanupStats?: BackgroundRemovalStats | null;
+  cleanupHasPreview?: boolean;
+  isCleanupPickingSeed?: boolean;
+  isCleanupPreviewing?: boolean;
+  isCleanupApplying?: boolean;
+  onCleanupAutoSample?: () => void;
+  onCleanupPickSeed?: () => void;
+  onCleanupToleranceChange?: (value: number) => void;
+  onCleanupPreview?: () => void;
+  onCleanupApply?: () => void;
+  onCleanupReset?: () => void;
 }
 
 export function CanvasToolbar({
@@ -104,6 +84,19 @@ export function CanvasToolbar({
   exportMatteColor = "#ffffff",
   onExportBackgroundChange,
   onExportMatteColorChange,
+  cleanupTolerance = 28,
+  cleanupSeedCount = 0,
+  cleanupStats = null,
+  cleanupHasPreview = false,
+  isCleanupPickingSeed = false,
+  isCleanupPreviewing = false,
+  isCleanupApplying = false,
+  onCleanupAutoSample,
+  onCleanupPickSeed,
+  onCleanupToleranceChange,
+  onCleanupPreview,
+  onCleanupApply,
+  onCleanupReset,
 }: CanvasToolbarProps) {
   const { t } = useI18n();
   const [eraserMenuOpen, setEraserMenuOpen] = useState(false);
@@ -138,23 +131,7 @@ export function CanvasToolbar({
 
   return (
     <div className="canvas-toolbar" aria-label={t("canvas.toolbar.label")}>
-      {tools.map((tool) => {
-        const Icon = tool.icon;
-        return (
-          <button
-            key={tool.id}
-            type="button"
-            className={`canvas-toolbar__button${activeTool === tool.id ? " canvas-toolbar__button--active" : ""}`}
-            onClick={() => onToolChange(tool.id)}
-            aria-label={`${tool.label} (${tool.shortcut})`}
-            aria-pressed={activeTool === tool.id}
-            title={`${tool.label} (${tool.shortcut})`}
-          >
-            <Icon />
-            <span className="canvas-toolbar__shortcut" aria-hidden="true">{tool.shortcut}</span>
-          </button>
-        );
-      })}
+      <CanvasToolPicker tools={tools} activeTool={activeTool} onToolChange={onToolChange} />
       <CanvasStylePopover style={style} onStyleChange={onStyleChange} />
       <div
         ref={eraserRef}
@@ -284,11 +261,35 @@ export function CanvasToolbar({
         </button>
       ) : null}
       {onExport && onExportBackgroundChange && onExportMatteColorChange ? (
-        <BackgroundControl
+        <CanvasBackgroundControl
           mode={exportBackground}
           matteColor={exportMatteColor}
           onModeChange={onExportBackgroundChange}
           onMatteColorChange={onExportMatteColorChange}
+        />
+      ) : null}
+      {onCleanupAutoSample &&
+      onCleanupPickSeed &&
+      onCleanupToleranceChange &&
+      onCleanupPreview &&
+      onCleanupApply &&
+      onCleanupReset ? (
+        <CanvasBackgroundCleanupPanel
+          seedCount={cleanupSeedCount}
+          tolerance={cleanupTolerance}
+          stats={cleanupStats}
+          hasPreview={cleanupHasPreview}
+          isPickingSeed={isCleanupPickingSeed}
+          isPreviewing={isCleanupPreviewing}
+          isApplying={isCleanupApplying}
+          keepOpen={isCleanupPickingSeed}
+          disabled={isApplying || isExporting}
+          onAutoSample={onCleanupAutoSample}
+          onPickSeed={onCleanupPickSeed}
+          onToleranceChange={onCleanupToleranceChange}
+          onPreview={onCleanupPreview}
+          onApply={onCleanupApply}
+          onReset={onCleanupReset}
         />
       ) : null}
       {onExport ? (

@@ -8,11 +8,41 @@ function itemMatches(item: GenerateItem, currentImage: GenerateItem | null): boo
   return item.image === currentImage.image;
 }
 
+function getCanvasSourceFilenames(item: GenerateItem): string[] {
+  return [
+    item.canvasSourceFilename,
+    item.canvasEditableFilename,
+  ].filter((filename): filename is string => Boolean(filename));
+}
+
+export function getVisibleGalleryItems(history: GenerateItem[]): GenerateItem[] {
+  return history.filter((item) => !item.canvasVersion);
+}
+
+export function resolveVisibleShortcutCurrent(
+  history: GenerateItem[],
+  currentImage: GenerateItem | null,
+): GenerateItem | null {
+  if (!currentImage) return null;
+  const visibleHistory = getVisibleGalleryItems(history);
+  if (!currentImage.canvasVersion) {
+    return visibleHistory.find((item) => itemMatches(item, currentImage)) ?? null;
+  }
+
+  const sourceFilenames = getCanvasSourceFilenames(currentImage);
+  const sourceMatch = visibleHistory.find((item) =>
+    item.filename ? sourceFilenames.includes(item.filename) : false,
+  );
+  return sourceMatch ?? null;
+}
+
 export function getHistoryIndex(
   history: GenerateItem[],
   currentImage: GenerateItem | null,
 ): number {
-  return history.findIndex((item) => itemMatches(item, currentImage));
+  const visibleHistory = getVisibleGalleryItems(history);
+  const visibleCurrent = resolveVisibleShortcutCurrent(history, currentImage);
+  return visibleHistory.findIndex((item) => itemMatches(item, visibleCurrent));
 }
 
 export function getShortcutTarget(
@@ -20,21 +50,23 @@ export function getShortcutTarget(
   currentImage: GenerateItem | null,
   action: GalleryShortcutAction,
 ): GenerateItem | null {
-  if (history.length === 0) return null;
-  if (action === "first") return history[0] ?? null;
-  if (action === "last") return history[history.length - 1] ?? null;
+  const visibleHistory = getVisibleGalleryItems(history);
+  if (visibleHistory.length === 0) return null;
+  if (action === "first") return visibleHistory[0] ?? null;
+  if (action === "last") return visibleHistory[visibleHistory.length - 1] ?? null;
 
   const currentIndex = getHistoryIndex(history, currentImage);
   if (currentIndex < 0) return null;
   const nextIndex = action === "previous" ? currentIndex - 1 : currentIndex + 1;
-  return history[nextIndex] ?? null;
+  return visibleHistory[nextIndex] ?? null;
 }
 
 export function getNeighborAfterRemoval(
   history: GenerateItem[],
   filename: string,
 ): GenerateItem | null {
-  const removeIndex = history.findIndex((item) => item.filename === filename);
+  const visibleHistory = getVisibleGalleryItems(history);
+  const removeIndex = visibleHistory.findIndex((item) => item.filename === filename);
   if (removeIndex < 0) return null;
-  return history[removeIndex + 1] ?? history[removeIndex - 1] ?? null;
+  return visibleHistory[removeIndex + 1] ?? visibleHistory[removeIndex - 1] ?? null;
 }

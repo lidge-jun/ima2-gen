@@ -464,6 +464,9 @@
 .canvas--space-held .canvas-annotation-frame {
   cursor: grab;
 }
+.canvas--zoom-hand .canvas-annotation-frame {
+  cursor: grab;
+}
 .canvas--pan-active .canvas-annotation-frame {
   cursor: grabbing !important;
 }

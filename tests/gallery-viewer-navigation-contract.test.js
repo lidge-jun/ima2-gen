@@ -31,6 +31,9 @@ describe("gallery viewer focusless navigation contract", () => {
     assert.match(domEvents, /HTMLButtonElement/);
     assert.match(store, /selectHistoryShortcutTarget:\s*\(action\) =>/);
     assert.match(store, /getShortcutTarget\(get\(\)\.history,\s*get\(\)\.currentImage,\s*action\)/);
+    assert.match(store, /resolveVisibleShortcutCurrent,/);
+    assert.match(store, /getVisibleGalleryItems,/);
+    assert.match(store, /saveSelectedFilename\(target\?\.filename \?\? null\)/);
     assert.match(canvas, /const handleViewerMouseDown/);
     assert.match(canvas, /isEditableTarget\(event\.target\)/);
     assert.match(canvas, /event\.currentTarget\.focus\(\)/);

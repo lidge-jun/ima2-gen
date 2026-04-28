@@ -113,7 +113,10 @@ describe("ComfyUI custom node contract", () => {
 
   it("keeps the integration included in npm package metadata", () => {
     const pkg = JSON.parse(readSource("package.json"));
-    assert.ok(pkg.files.includes("integrations/"));
-    assert.match(pkg.scripts["lint:pkg"], /integrations\//);
+    assert.ok(pkg.files.includes("integrations/comfyui/ima2_gen_bridge/__init__.py"));
+    assert.ok(pkg.files.includes("integrations/comfyui/ima2_gen_bridge/nodes.py"));
+    assert.ok(pkg.files.includes("integrations/comfyui/ima2_gen_bridge/README.md"));
+    assert.doesNotMatch(pkg.scripts["lint:pkg"], /'integrations\/'/);
+    assert.match(pkg.scripts["lint:pkg"], /integrations\/comfyui\/ima2_gen_bridge\/nodes\.py/);
   });
 });

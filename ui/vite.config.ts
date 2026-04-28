@@ -19,6 +19,7 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    sourcemap: true,
+    manifest: true,
+    sourcemap: process.env.VITE_SOURCEMAP === "1",
   },
 });

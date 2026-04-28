@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import {
   commitPromptImport,
   getPromptImportCuratedSources,
@@ -10,14 +10,23 @@ import {
 } from "../lib/api";
 import { useI18n } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
-import { PromptImportDiscoverySection } from "./PromptImportDiscoverySection";
-import { PromptImportFolderSection } from "./PromptImportFolderSection";
 
 type PromptImportDialogProps = {
   open: boolean;
   onClose: () => void;
   onImported: () => Promise<void>;
 };
+
+const LazyPromptImportDiscoverySection = lazy(() =>
+  import("./PromptImportDiscoverySection").then((module) => ({
+    default: module.PromptImportDiscoverySection,
+  })),
+);
+const LazyPromptImportFolderSection = lazy(() =>
+  import("./PromptImportFolderSection").then((module) => ({
+    default: module.PromptImportFolderSection,
+  })),
+);
 
 const SUPPORTED_FILE_RE = /\.(txt|md|markdown)$/i;
 
@@ -281,12 +290,14 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
           </div>
         </div>
 
-        <PromptImportFolderSection
-          input={githubInput}
-          disabled={busy}
-          onCandidates={addPreviewCandidates}
-          onError={setError}
-        />
+        <Suspense fallback={null}>
+          <LazyPromptImportFolderSection
+            input={githubInput}
+            disabled={busy}
+            onCandidates={addPreviewCandidates}
+            onError={setError}
+          />
+        </Suspense>
 
         <div className="prompt-import-dialog__source-tabs" role="tablist" aria-label={t("promptLibrary.curatedSources")}>
           <button
@@ -357,11 +368,13 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
           ) : null}
         </div>
         ) : (
-          <PromptImportDiscoverySection
-            disabled={busy}
-            onError={setError}
-            onSourcesChanged={loadCuratedSources}
-          />
+          <Suspense fallback={<div className="prompt-import-dialog__empty">{t("common.loading")}</div>}>
+            <LazyPromptImportDiscoverySection
+              disabled={busy}
+              onError={setError}
+              onSourcesChanged={loadCuratedSources}
+            />
+          </Suspense>
         )}
 
         {error ? <div className="prompt-import-dialog__error" role="alert">{error}</div> : null}

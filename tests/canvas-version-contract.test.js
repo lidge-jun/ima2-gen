@@ -46,7 +46,8 @@ describe("canvas version frontend contract", () => {
     assert.match(source, /function findCanvasVersionForSource\(history: GenerateItem\[], source: GenerateItem \| null\): GenerateItem \| null/);
     assert.match(source, /canvasMergedAt=\$\{image\.canvasMergedAt\}/);
     assert.match(source, /const canvasDisplayImage = canvasOpen \? \(canvasVersionItem \?\? latestCanvasVersion \?\? currentImage\) : currentImage/);
-    assert.match(source, /const imageSrc = canvasDisplayImage \? getCanvasDisplaySrc\(canvasDisplayImage\) : null/);
+    assert.match(source, /const baseImageSrc = canvasDisplayImage \? getCanvasDisplaySrc\(canvasDisplayImage\) : null/);
+    assert.match(source, /const imageSrc = backgroundCleanupPreview\?\.dataUrl \?\? baseImageSrc/);
     assert.match(source, /key=\{\`\$\{canvasDisplayImage\?\.filename \?\? canvasDisplayImage\?\.url \?\? canvasDisplayImage\?\.image\}:\$\{canvasDisplayImage\?\.canvasMergedAt \?\? ""\}`\}/);
     assert.match(source, /src=\{imageSrc \?\? currentImage\.image\}/);
   });

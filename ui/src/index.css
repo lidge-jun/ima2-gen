@@ -1393,6 +1393,10 @@ body {
   border-right: 1px solid var(--border);
 }
 
+.settings-nav--mobile {
+  display: none;
+}
+
 .settings-nav__item {
   width: 100%;
   display: flex;
@@ -3118,6 +3122,22 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--border);
     background: color-mix(in srgb, var(--surface) 94%, transparent);
+  }
+  .settings-nav--mobile {
+    display: block;
+  }
+  .settings-layout > .settings-nav:not(.settings-nav--mobile) {
+    display: none;
+  }
+  .settings-nav--mobile select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    background: var(--surface-2);
+    font: inherit;
   }
   .settings-nav__item {
     min-width: 120px;

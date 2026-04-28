@@ -15,11 +15,11 @@ describe("generation controls custom plus UX contract", () => {
 
     assert.match(rightPanel, /import \{ SizePicker \} from "\.\/SizePicker"/);
     assert.match(rightPanel, /import \{ CountPicker \} from "\.\/CountPicker"/);
-    assert.match(rightPanel, /import \{ PromptLibraryPanel \} from "\.\/PromptLibraryPanel"/);
+    assert.match(rightPanel, /lazy\(\(\) =>\s*import\("\.\/PromptLibraryPanel"\)/);
     assert.match(rightPanel, /<SizePicker \/>/);
     assert.match(rightPanel, /<CountPicker \/>/);
     assert.match(rightPanel, /promptLibraryOpen/);
-    assert.match(rightPanel, /<PromptLibraryPanel variant="embedded" \/>/);
+    assert.match(rightPanel, /<LazyPromptLibraryPanel variant="embedded" \/>/);
     assert.match(rightPanel, /right-panel-tabs/);
     assert.doesNotMatch(rightPanel, /COUNT_ITEMS/);
   });

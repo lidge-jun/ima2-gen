@@ -12,6 +12,7 @@ const merge = readFileSync(join(root, "ui/src/lib/canvas/mergeRenderer.ts"), "ut
 const exportR = readFileSync(join(root, "ui/src/lib/canvas/exportRenderer.ts"), "utf8");
 const canvas = readFileSync(join(root, "ui/src/components/Canvas.tsx"), "utf8");
 const toolbar = readFileSync(join(root, "ui/src/components/canvas-mode/CanvasToolbar.tsx"), "utf8");
+const bgControl = readFileSync(join(root, "ui/src/components/canvas-mode/CanvasBackgroundControl.tsx"), "utf8");
 const css = readFileSync(join(root, "ui/src/styles/canvas-mode.css"), "utf8");
 const en = JSON.parse(readFileSync(join(root, "ui/src/i18n/en.json"), "utf8"));
 const ko = JSON.parse(readFileSync(join(root, "ui/src/i18n/ko.json"), "utf8"));
@@ -51,9 +52,9 @@ test("Canvas wires export background option into export call", () => {
 });
 
 test("Toolbar BackgroundControl rendered before Export", () => {
-  assert.match(toolbar, /canvas-toolbar__bg/);
-  assert.match(toolbar, /BackgroundControl/);
-  assert.match(toolbar, /onMatteColorChange/);
+  assert.match(toolbar, /CanvasBackgroundControl/);
+  assert.match(bgControl, /canvas-toolbar__bg/);
+  assert.match(bgControl, /onMatteColorChange/);
 });
 
 test("CSS adds alpha checkerboard and toolbar bg group", () => {

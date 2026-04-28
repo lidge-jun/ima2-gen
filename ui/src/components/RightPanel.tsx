@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { OptionGroup } from "./OptionGroup";
 import { SizePicker } from "./SizePicker";
 import { CountPicker } from "./CountPicker";
 import { CostEstimate } from "./CostEstimate";
-import { PromptLibraryPanel } from "./PromptLibraryPanel";
 import type { Format, Moderation, Quality } from "../types";
 import { useI18n } from "../i18n";
+
+const LazyPromptLibraryPanel = lazy(() =>
+  import("./PromptLibraryPanel").then((module) => ({ default: module.PromptLibraryPanel })),
+);
 
 const FORMAT_ITEMS = [
   { value: "png" as const, label: "PNG" },
@@ -118,7 +121,9 @@ export function RightPanel() {
             </button>
           </div>
           {promptLibraryOpen ? (
-            <PromptLibraryPanel variant="embedded" />
+            <Suspense fallback={<div className="prompt-library-panel__loading">{t("common.loading")}</div>}>
+              <LazyPromptLibraryPanel variant="embedded" />
+            </Suspense>
           ) : (
             <div className="right-panel-settings" role="tabpanel">
               <OptionGroup<Quality>

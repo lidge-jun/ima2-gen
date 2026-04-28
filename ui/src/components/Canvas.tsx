@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useRef,
   useState,
@@ -7,6 +9,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
+  type WheelEvent,
 } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
@@ -44,15 +47,49 @@ import {
   makeCanvasExportFilename,
 } from "../lib/canvas/exportRenderer";
 import { imageUsesAlpha } from "../lib/canvas/alphaDetect";
-import { CanvasAnnotationLayer } from "./canvas-mode/CanvasAnnotationLayer";
-import { CanvasMemoOverlay } from "./canvas-mode/CanvasMemoOverlay";
-import { CanvasToolbar } from "./canvas-mode/CanvasToolbar";
+import {
+  getCornerBackgroundRemovalSeeds,
+  renderBackgroundRemovalMaskOverlay,
+  renderBackgroundRemovalPreview,
+  type BackgroundRemovalOverlayResult,
+  type BackgroundRemovalRenderResult,
+  type BackgroundRemovalStats,
+} from "../lib/canvas/backgroundRemoval";
 import type { NormalizedPoint } from "../types/canvas";
+
+const LazyCanvasAnnotationLayer = lazy(() =>
+  import("./canvas-mode/CanvasAnnotationLayer").then((module) => ({
+    default: module.CanvasAnnotationLayer,
+  })),
+);
+const LazyCanvasMemoOverlay = lazy(() =>
+  import("./canvas-mode/CanvasMemoOverlay").then((module) => ({ default: module.CanvasMemoOverlay })),
+);
+const LazyCanvasToolbar = lazy(() =>
+  import("./canvas-mode/CanvasToolbar").then((module) => ({ default: module.CanvasToolbar })),
+);
+const LazyCanvasViewportMiniMap = lazy(() =>
+  import("./canvas-mode/CanvasViewportMiniMap").then((module) => ({
+    default: module.CanvasViewportMiniMap,
+  })),
+);
+const LazyCanvasZoomControl = lazy(() =>
+  import("./canvas-mode/CanvasZoomControl").then((module) => ({ default: module.CanvasZoomControl })),
+);
 
 const OBJECT_ERASER_CURSOR =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='8' fill='white' fill-opacity='0.16' stroke='black' stroke-width='3'/%3E%3Ccircle cx='14' cy='14' r='8' fill='none' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='14' cy='14' r='2' fill='white' stroke='black' stroke-width='1'/%3E%3C/svg%3E\") 14 14, auto";
 const BRUSH_ERASER_CURSOR =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='8' fill='white' fill-opacity='0.18' stroke='black' stroke-width='3'/%3E%3Ccircle cx='14' cy='14' r='8' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E\") 14 14, auto";
+
+interface BackgroundCleanupSnapshot {
+  seeds: NormalizedPoint[];
+  tolerance: number;
+  preview: BackgroundRemovalRenderResult | null;
+  maskOverlay: BackgroundRemovalOverlayResult | null;
+  stats: BackgroundRemovalStats | null;
+  pickingSeed: boolean;
+}
 
 function formatQualityAlias(quality: string | null | undefined): string | null {
   if (quality === "low") return "l";
@@ -156,6 +193,8 @@ export function Canvas() {
   const canvasPanX = useAppStore((s) => s.canvasPanX);
   const canvasPanY = useAppStore((s) => s.canvasPanY);
   const setCanvasPan = useAppStore((s) => s.setCanvasPan);
+  const setCanvasZoom = useAppStore((s) => s.setCanvasZoom);
+  const resetCanvasZoom = useAppStore((s) => s.resetCanvasZoom);
   const exportBackground = useAppStore((s) => s.canvasExportBackground);
   const exportMatteColor = useAppStore((s) => s.canvasExportMatteColor);
   const setExportBackground = useAppStore((s) => s.setCanvasExportBackground);
@@ -192,7 +231,24 @@ export function Canvas() {
   const [isApplying, setIsApplying] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isEditingWithMask, setIsEditingWithMask] = useState(false);
+  const [backgroundCleanupSeeds, setBackgroundCleanupSeeds] = useState<NormalizedPoint[]>([]);
+  const [backgroundCleanupTolerance, setBackgroundCleanupTolerance] = useState(28);
+  const [backgroundCleanupPreview, setBackgroundCleanupPreview] =
+    useState<BackgroundRemovalRenderResult | null>(null);
+  const [backgroundCleanupMaskOverlay, setBackgroundCleanupMaskOverlay] =
+    useState<BackgroundRemovalOverlayResult | null>(null);
+  const [backgroundCleanupStats, setBackgroundCleanupStats] =
+    useState<BackgroundRemovalStats | null>(null);
+  const [isBackgroundCleanupPickingSeed, setIsBackgroundCleanupPickingSeed] = useState(false);
+  const [isBackgroundCleanupPreviewing, setIsBackgroundCleanupPreviewing] = useState(false);
+  const [isBackgroundCleanupApplying, setIsBackgroundCleanupApplying] = useState(false);
+  const backgroundCleanupUndoRef = useRef<BackgroundCleanupSnapshot[]>([]);
   const annotations = useCanvasAnnotations();
+  const canDragViewportWithSelect =
+    canvasOpen &&
+    canvasZoom > 1.01 &&
+    annotations.activeTool === "select" &&
+    !isBackgroundCleanupPickingSeed;
 
   const copyPrompt = () => {
     if (!currentImage?.prompt) return;
@@ -206,7 +262,52 @@ export function Canvas() {
   const imageKey = currentImage?.filename ?? currentImage?.url ?? currentImage?.image ?? null;
   const latestCanvasVersion = findCanvasVersionForSource(history, currentImage);
   const canvasDisplayImage = canvasOpen ? (canvasVersionItem ?? latestCanvasVersion ?? currentImage) : currentImage;
-  const imageSrc = canvasDisplayImage ? getCanvasDisplaySrc(canvasDisplayImage) : null;
+  const baseImageSrc = canvasDisplayImage ? getCanvasDisplaySrc(canvasDisplayImage) : null;
+  const imageSrc = backgroundCleanupPreview?.dataUrl ?? baseImageSrc;
+
+  const resetBackgroundCleanup = () => {
+    setBackgroundCleanupSeeds([]);
+    setBackgroundCleanupPreview(null);
+    setBackgroundCleanupMaskOverlay(null);
+    setBackgroundCleanupStats(null);
+    setIsBackgroundCleanupPickingSeed(false);
+    setIsBackgroundCleanupPreviewing(false);
+    setIsBackgroundCleanupApplying(false);
+  };
+
+  const getBackgroundCleanupSnapshot = (): BackgroundCleanupSnapshot => ({
+    seeds: [...backgroundCleanupSeeds],
+    tolerance: backgroundCleanupTolerance,
+    preview: backgroundCleanupPreview,
+    maskOverlay: backgroundCleanupMaskOverlay,
+    stats: backgroundCleanupStats,
+    pickingSeed: isBackgroundCleanupPickingSeed,
+  });
+
+  const pushBackgroundCleanupUndo = (): void => {
+    backgroundCleanupUndoRef.current = [
+      ...backgroundCleanupUndoRef.current.slice(-19),
+      getBackgroundCleanupSnapshot(),
+    ];
+  };
+
+  const restoreBackgroundCleanupSnapshot = (snapshot: BackgroundCleanupSnapshot): void => {
+    setBackgroundCleanupSeeds(snapshot.seeds);
+    setBackgroundCleanupTolerance(snapshot.tolerance);
+    setBackgroundCleanupPreview(snapshot.preview);
+    setBackgroundCleanupMaskOverlay(snapshot.maskOverlay);
+    setBackgroundCleanupStats(snapshot.stats);
+    setIsBackgroundCleanupPickingSeed(snapshot.pickingSeed);
+    setIsBackgroundCleanupPreviewing(false);
+    setIsBackgroundCleanupApplying(false);
+  };
+
+  const undoBackgroundCleanup = (): boolean => {
+    const previous = backgroundCleanupUndoRef.current.pop();
+    if (!previous) return false;
+    restoreBackgroundCleanupSnapshot(previous);
+    return true;
+  };
 
   const resetCanvasSession = () => {
     canvasSourceImageRef.current = null;
@@ -217,6 +318,8 @@ export function Canvas() {
     }
     setCanvasVersionItem(null);
     setCanvasSaveState("idle");
+    backgroundCleanupUndoRef.current = [];
+    resetBackgroundCleanup();
     lastMergedDataUrlRef.current = null;
     selectionDragRef.current = { mode: null, lastPoint: null, didMove: false };
   };
@@ -268,6 +371,28 @@ export function Canvas() {
 
   useEffect(() => {
     if (!canvasOpen) return;
+    const preventCanvasPinchDefault = (event: Event): void => {
+      event.preventDefault();
+    };
+    const preventCtrlWheelDefault = (event: globalThis.WheelEvent): void => {
+      if (event.ctrlKey) event.preventDefault();
+    };
+    const wheelOptions: AddEventListenerOptions = { passive: false, capture: true };
+    const gestureOptions: AddEventListenerOptions = { passive: false };
+    window.addEventListener("wheel", preventCtrlWheelDefault, wheelOptions);
+    window.addEventListener("gesturestart", preventCanvasPinchDefault, gestureOptions);
+    window.addEventListener("gesturechange", preventCanvasPinchDefault, gestureOptions);
+    window.addEventListener("gestureend", preventCanvasPinchDefault, gestureOptions);
+    return () => {
+      window.removeEventListener("wheel", preventCtrlWheelDefault, wheelOptions);
+      window.removeEventListener("gesturestart", preventCanvasPinchDefault, gestureOptions);
+      window.removeEventListener("gesturechange", preventCanvasPinchDefault, gestureOptions);
+      window.removeEventListener("gestureend", preventCanvasPinchDefault, gestureOptions);
+    };
+  }, [canvasOpen]);
+
+  useEffect(() => {
+    if (!canvasOpen) return;
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.code !== "Space") return;
       if (isEditableTarget(e.target)) return;
@@ -303,6 +428,7 @@ export function Canvas() {
     canvasDisplayImage?.url,
     canvasDisplayImage?.image,
     canvasDisplayImage?.canvasMergedAt,
+    backgroundCleanupPreview?.dataUrl,
   ]);
 
   useEffect(() => {
@@ -357,6 +483,24 @@ export function Canvas() {
       return;
     }
 
+    if (canvasOpen && event.key === "]") {
+      event.preventDefault();
+      setCanvasZoom(canvasZoom + 0.1);
+      return;
+    }
+
+    if (canvasOpen && event.key === "[") {
+      event.preventDefault();
+      setCanvasZoom(canvasZoom - 0.1);
+      return;
+    }
+
+    if (canvasOpen && event.key === "0") {
+      event.preventDefault();
+      resetCanvasZoom();
+      return;
+    }
+
     if (event.key === "Delete" || event.key === "Backspace") {
       if (event.shiftKey || !currentImage) return;
       event.preventDefault();
@@ -384,6 +528,31 @@ export function Canvas() {
     if (isEditableTarget(event.target)) return;
     markGeneratedResultsSeen();
     event.currentTarget.focus();
+  };
+
+  const handleViewerWheel = (event: WheelEvent<HTMLElement>) => {
+    if (!canvasOpen) return;
+    event.preventDefault();
+    if (event.ctrlKey) {
+      setCanvasZoom(canvasZoom - event.deltaY * 0.01);
+      return;
+    }
+    setCanvasPan(canvasPanX - event.deltaX, canvasPanY - event.deltaY);
+  };
+
+  const startViewportPan = (
+    event: PointerEvent<HTMLDivElement>,
+  ): void => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    viewportPanRef.current = {
+      active: true,
+      startX: event.clientX,
+      startY: event.clientY,
+      basePanX: canvasPanX,
+      basePanY: canvasPanY,
+      pointerId: event.pointerId,
+    };
+    setViewportPanActive(true);
   };
 
   const handleCenterDragOver = useCallback((e: ReactDragEvent<HTMLElement>) => {
@@ -418,20 +587,20 @@ export function Canvas() {
     const isMiddle = event.button === 1;
     if (spaceHeld || isMiddle) {
       event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      viewportPanRef.current = {
-        active: true,
-        startX: event.clientX,
-        startY: event.clientY,
-        basePanX: canvasPanX,
-        basePanY: canvasPanY,
-        pointerId: event.pointerId,
-      };
-      setViewportPanActive(true);
+      startViewportPan(event);
       return;
     }
     event.preventDefault();
     const point = screenToNormalized(event, annotationFrameRef.current);
+    if (isBackgroundCleanupPickingSeed) {
+      pushBackgroundCleanupUndo();
+      const nextSeeds = [...backgroundCleanupSeeds, point];
+      setBackgroundCleanupSeeds(nextSeeds);
+      setBackgroundCleanupPreview(null);
+      setBackgroundCleanupStats(null);
+      void runBackgroundCleanupMaskOverlay(nextSeeds);
+      return;
+    }
     if (annotations.activeTool === "select") {
       const hit = hitTestAnnotation({
         point,
@@ -444,6 +613,9 @@ export function Canvas() {
         else annotations.selectOne(hit);
         annotations.startSelectedMove();
         selectionDragRef.current = { mode: "move", lastPoint: point, didMove: false };
+      } else if (canDragViewportWithSelect) {
+        startViewportPan(event);
+        return;
       } else {
         annotations.clearSelection();
         annotations.startSelectionBox(point);
@@ -560,6 +732,133 @@ export function Canvas() {
     annotations.endDrawing();
   };
 
+  const runBackgroundCleanupMaskOverlay = useCallback(async (
+    seeds: NormalizedPoint[] = backgroundCleanupSeeds,
+  ): Promise<void> => {
+    if (!imageElementRef.current || !currentImage || seeds.length === 0) return;
+    setIsBackgroundCleanupPreviewing(true);
+    try {
+      const result = await renderBackgroundRemovalMaskOverlay({
+        imageElement: imageElementRef.current,
+        seeds,
+        tolerance: backgroundCleanupTolerance,
+      });
+      setBackgroundCleanupMaskOverlay(result);
+      setBackgroundCleanupStats(result.stats);
+    } catch {
+      showToast(t("canvas.toolbar.cleanupFailed"), true);
+    } finally {
+      setIsBackgroundCleanupPreviewing(false);
+    }
+  }, [
+    backgroundCleanupSeeds,
+    backgroundCleanupTolerance,
+    currentImage,
+    showToast,
+    t,
+  ]);
+
+  const runBackgroundCleanupPreview = useCallback(async (): Promise<BackgroundRemovalRenderResult | null> => {
+    if (!imageElementRef.current || !currentImage) return null;
+    pushBackgroundCleanupUndo();
+    const seeds = backgroundCleanupSeeds.length > 0
+      ? backgroundCleanupSeeds
+      : getCornerBackgroundRemovalSeeds();
+    if (backgroundCleanupSeeds.length === 0) setBackgroundCleanupSeeds(seeds);
+    setIsBackgroundCleanupPreviewing(true);
+    try {
+      const result = await renderBackgroundRemovalPreview({
+        imageElement: imageElementRef.current,
+        seeds,
+        tolerance: backgroundCleanupTolerance,
+      });
+      setBackgroundCleanupPreview(result);
+      setBackgroundCleanupMaskOverlay(null);
+      setBackgroundCleanupStats(result.stats);
+      return result;
+    } catch {
+      showToast(t("canvas.toolbar.cleanupFailed"), true);
+      return null;
+    } finally {
+      setIsBackgroundCleanupPreviewing(false);
+    }
+  }, [
+    backgroundCleanupSeeds,
+    backgroundCleanupTolerance,
+    currentImage,
+    showToast,
+    t,
+  ]);
+
+  const handleBackgroundCleanupAutoSample = (): void => {
+    pushBackgroundCleanupUndo();
+    const seeds = getCornerBackgroundRemovalSeeds();
+    setBackgroundCleanupSeeds(seeds);
+    setBackgroundCleanupPreview(null);
+    setBackgroundCleanupMaskOverlay(null);
+    setBackgroundCleanupStats(null);
+    setIsBackgroundCleanupPickingSeed(false);
+    void runBackgroundCleanupMaskOverlay(seeds);
+  };
+
+  const handleBackgroundCleanupPickSeed = (): void => {
+    pushBackgroundCleanupUndo();
+    setIsBackgroundCleanupPickingSeed((value) => !value);
+  };
+
+  const handleBackgroundCleanupToleranceChange = (value: number): void => {
+    pushBackgroundCleanupUndo();
+    setBackgroundCleanupTolerance(value);
+    setBackgroundCleanupPreview(null);
+    setBackgroundCleanupMaskOverlay(null);
+    setBackgroundCleanupStats(null);
+  };
+
+  const handleBackgroundCleanupReset = (): void => {
+    pushBackgroundCleanupUndo();
+    resetBackgroundCleanup();
+  };
+
+  const handleBackgroundCleanupApply = async (): Promise<void> => {
+    if (!currentImage) return;
+    const source = canvasSourceImageRef.current ?? currentImage;
+    if (!source?.filename) {
+      showToast(t("canvas.toolbar.cleanupFailed"), true);
+      return;
+    }
+    setIsBackgroundCleanupApplying(true);
+    setCanvasSaveState("saving");
+    try {
+      pushBackgroundCleanupUndo();
+      const result = backgroundCleanupPreview ?? await runBackgroundCleanupPreview();
+      if (!result) {
+        setCanvasSaveState("error");
+        return;
+      }
+      const response = await createCanvasVersion({
+        sourceFilename: source.canvasSourceFilename ?? source.filename,
+        image: result.blob,
+        prompt: source.prompt,
+      });
+      const savedItem = withSourcePrompt(response.item, source);
+      lastMergedDataUrlRef.current = result.dataUrl;
+      setCanvasVersionItem(savedItem);
+      applyMergedCanvasImage(savedItem);
+      await attachCanvasVersionReference(savedItem);
+      setCanvasSaveState("saved");
+      setBackgroundCleanupPreview(null);
+      setBackgroundCleanupMaskOverlay(null);
+      setBackgroundCleanupStats(result.stats);
+      setIsBackgroundCleanupPickingSeed(false);
+      showToast(t("canvas.toolbar.cleanupApplied"));
+    } catch {
+      setCanvasSaveState("error");
+      showToast(t("canvas.toolbar.cleanupFailed"), true);
+    } finally {
+      setIsBackgroundCleanupApplying(false);
+    }
+  };
+
   const saveCanvasVersionAndUseReference = useCallback(async (): Promise<GenerateItem | null> => {
     if (!imageElementRef.current || !currentImage) return null;
     const source = canvasSourceImageRef.current ?? currentImage;
@@ -646,8 +945,12 @@ export function Canvas() {
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
-        if (event.shiftKey) annotations.redo();
-        else annotations.undo();
+        if (event.shiftKey) {
+          annotations.redo();
+          return;
+        }
+        if (undoBackgroundCleanup()) return;
+        annotations.undo();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -736,7 +1039,7 @@ export function Canvas() {
 
   return (
     <main
-      className={`canvas${canvasOpen ? " canvas--mode-open" : ""}${dropActive ? " canvas--drop-active" : ""}${spaceHeld ? " canvas--space-held" : ""}${viewportPanActive ? " canvas--pan-active" : ""}`}
+      className={`canvas${canvasOpen ? " canvas--mode-open" : ""}${dropActive ? " canvas--drop-active" : ""}${spaceHeld ? " canvas--space-held" : ""}${viewportPanActive ? " canvas--pan-active" : ""}${canDragViewportWithSelect ? " canvas--zoom-hand" : ""}`}
       onDragOver={handleCenterDragOver}
       onDragLeave={handleCenterDragLeave}
       onDrop={handleCenterDrop}
@@ -748,7 +1051,20 @@ export function Canvas() {
       ) : null}
       {canvasOpen && (
         <div className="canvas-mode-topbar">
-          <span className="canvas-mode-topbar__label">Canvas Mode</span>
+          <div className="canvas-mode-topbar__stack">
+            <span className="canvas-mode-topbar__label">Canvas Mode</span>
+            <Suspense fallback={null}>
+              <LazyCanvasZoomControl
+                zoom={canvasZoom}
+                onZoomIn={() => setCanvasZoom(canvasZoom + 0.1)}
+                onZoomOut={() => setCanvasZoom(canvasZoom - 0.1)}
+                onZoomReset={resetCanvasZoom}
+              />
+            </Suspense>
+            <span className="canvas-mode-topbar__shortcuts">
+              {t("canvas.toolbar.zoomShortcutHint")}
+            </span>
+          </div>
           <button
             type="button"
             className="canvas-mode-close"
@@ -768,12 +1084,19 @@ export function Canvas() {
           className="result-container visible"
           tabIndex={0}
           onMouseDown={handleViewerMouseDown}
+          onWheel={handleViewerWheel}
           onKeyDown={handleViewerKeyDown}
           aria-label={t("canvas.imageViewerAria")}
         >
           <div
             ref={annotationFrameRef}
-            className={`canvas-annotation-frame${imageHasAlpha && canvasOpen ? " canvas-annotation-frame--alpha" : ""}`}
+            className={`canvas-annotation-frame${
+              (imageHasAlpha || backgroundCleanupPreview) && canvasOpen ? " canvas-annotation-frame--alpha" : ""
+            }${
+              isBackgroundCleanupPickingSeed && canvasOpen ? " canvas-annotation-frame--cleanup-picking" : ""
+            }${
+              backgroundCleanupMaskOverlay && canvasOpen ? " canvas-annotation-frame--cleanup-mask" : ""
+            }`}
             onPointerDown={handleAnnotationPointerDown}
             onPointerMove={handleAnnotationPointerMove}
             onPointerUp={handleAnnotationPointerUp}
@@ -781,10 +1104,12 @@ export function Canvas() {
             style={{
               cursor: viewportPanActive
                 ? "grabbing"
-                : spaceHeld
+                : spaceHeld || canDragViewportWithSelect
                   ? "grab"
                   : canvasOpen
-                    ? annotations.activeTool === "select"
+                    ? isBackgroundCleanupPickingSeed
+                      ? "crosshair"
+                      : annotations.activeTool === "select"
                       ? "default"
                       : annotations.activeTool === "eraser"
                         ? annotations.eraserMode === "object"
@@ -809,9 +1134,17 @@ export function Canvas() {
                 openCanvas();
               }}
             />
+            {canvasOpen && backgroundCleanupMaskOverlay ? (
+              <img
+                className="canvas-background-cleanup-mask"
+                src={backgroundCleanupMaskOverlay.dataUrl}
+                alt=""
+                aria-hidden="true"
+              />
+            ) : null}
             {canvasOpen && (
-              <>
-                <CanvasAnnotationLayer
+              <Suspense fallback={null}>
+                <LazyCanvasAnnotationLayer
                   paths={annotations.paths}
                   boxes={annotations.boxes}
                   memos={annotations.memos}
@@ -820,7 +1153,7 @@ export function Canvas() {
                   activePath={annotations.activePath}
                   activeBox={annotations.activeBox}
                 />
-                <CanvasMemoOverlay
+                <LazyCanvasMemoOverlay
                   memos={annotations.memos}
                   activeMemoId={annotations.activeMemoId}
                   onUpdate={annotations.updateMemo}
@@ -828,37 +1161,64 @@ export function Canvas() {
                   onFocus={annotations.focusMemo}
                   onCommit={annotations.commitMemoEdit}
                 />
-              </>
+              </Suspense>
             )}
           </div>
+          {canvasOpen && imageSrc ? (
+            <Suspense fallback={null}>
+              <LazyCanvasViewportMiniMap
+                imageSrc={imageSrc}
+                zoom={canvasZoom}
+                panX={canvasPanX}
+                panY={canvasPanY}
+                resetLabel={t("canvas.toolbar.zoomReset")}
+                onReset={resetCanvasZoom}
+              />
+            </Suspense>
+          ) : null}
           {canvasOpen && (
-            <CanvasToolbar
-              activeTool={annotations.activeTool}
-              eraserMode={annotations.eraserMode}
-              onEraserModeChange={annotations.setEraserMode}
-              style={{ color: annotations.toolColor, strokeWidth: annotations.strokeWidth }}
-              onStyleChange={annotations.setStyle}
-              hasExportableContent={annotations.hasAnnotations}
-              onToolChange={annotations.setTool}
-              onClear={annotations.clear}
-              onApply={() => void handleApplyCanvas()}
-              onExport={() => void handleExportCanvas()}
-              onUndo={annotations.undo}
-              onRedo={annotations.redo}
-              canUndo={annotations.canUndo}
-              canRedo={annotations.canRedo}
-              onDeleteSelected={annotations.deleteSelected}
-              selectedCount={annotations.selectedIds.length}
-              onEditWithMask={() => void handleEditWithMask()}
-              canEditWithMask={annotations.boxes.length > 0}
-              isEditingWithMask={isEditingWithMask}
-              isApplying={isApplying}
-              isExporting={isExporting}
-              exportBackground={exportBackground}
-              exportMatteColor={exportMatteColor}
-              onExportBackgroundChange={setExportBackground}
-              onExportMatteColorChange={setExportMatteColor}
-            />
+            <Suspense fallback={null}>
+              <LazyCanvasToolbar
+                activeTool={annotations.activeTool}
+                eraserMode={annotations.eraserMode}
+                onEraserModeChange={annotations.setEraserMode}
+                style={{ color: annotations.toolColor, strokeWidth: annotations.strokeWidth }}
+                onStyleChange={annotations.setStyle}
+                hasExportableContent={annotations.hasAnnotations}
+                onToolChange={annotations.setTool}
+                onClear={annotations.clear}
+                onApply={() => void handleApplyCanvas()}
+                onExport={() => void handleExportCanvas()}
+                onUndo={annotations.undo}
+                onRedo={annotations.redo}
+                canUndo={annotations.canUndo}
+                canRedo={annotations.canRedo}
+                onDeleteSelected={annotations.deleteSelected}
+                selectedCount={annotations.selectedIds.length}
+                onEditWithMask={() => void handleEditWithMask()}
+                canEditWithMask={annotations.boxes.length > 0}
+                isEditingWithMask={isEditingWithMask}
+                isApplying={isApplying}
+                isExporting={isExporting}
+                exportBackground={exportBackground}
+                exportMatteColor={exportMatteColor}
+                onExportBackgroundChange={setExportBackground}
+                onExportMatteColorChange={setExportMatteColor}
+                cleanupTolerance={backgroundCleanupTolerance}
+                cleanupSeedCount={backgroundCleanupSeeds.length}
+                cleanupStats={backgroundCleanupStats}
+                cleanupHasPreview={Boolean(backgroundCleanupPreview)}
+                isCleanupPickingSeed={isBackgroundCleanupPickingSeed}
+                isCleanupPreviewing={isBackgroundCleanupPreviewing}
+                isCleanupApplying={isBackgroundCleanupApplying}
+                onCleanupAutoSample={handleBackgroundCleanupAutoSample}
+                onCleanupPickSeed={handleBackgroundCleanupPickSeed}
+                onCleanupToleranceChange={handleBackgroundCleanupToleranceChange}
+                onCleanupPreview={() => void runBackgroundCleanupPreview()}
+                onCleanupApply={() => void handleBackgroundCleanupApply()}
+                onCleanupReset={handleBackgroundCleanupReset}
+              />
+            </Suspense>
           )}
           {canvasOpen && canvasSaveState !== "idle" ? (
             <div className={`canvas-save-state canvas-save-state--${canvasSaveState}`}>
