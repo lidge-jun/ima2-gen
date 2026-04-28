@@ -160,6 +160,9 @@ environment variables > ~/.ima2/config.json > built-in defaults
 **OAuth 로그인이 안 돼요**
 `npx @openai/codex login`을 실행하고, `ima2 status`를 확인한 뒤 `ima2 serve`를 다시 시작하세요.
 
+**프록시/VPN 환경에서 `fetch failed`가 반복돼요**
+로컬 OAuth 프록시가 접근 가능한지 확인하세요. 프록시가 필요한 네트워크라면 프록시 클라이언트의 TUN/TURN류 모드를 켠 뒤 `npx openai-oauth --port 10531`을 다시 시도하세요. 그래도 실패하면 `ima2 serve` 또는 `openai-oauth`를 실행하는 같은 터미널에 `HTTP_PROXY`와 `HTTPS_PROXY`를 설정하세요.
+
 **이미지 생성이 `APIKEY_DISABLED`로 실패해요**
 현재 빌드에서는 OAuth로 생성해야 합니다. API-key 이미지 생성은 의도적으로 비활성화되어 있습니다.
 

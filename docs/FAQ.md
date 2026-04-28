@@ -17,6 +17,7 @@ For Korean, see [FAQ.ko.md](FAQ.ko.md).
 | `gpt-5.5` fails | Update Codex CLI first, then try `gpt-5.4` as the stable fallback. |
 | Reference upload fails | Use JPEG/PNG, lower the resolution, and keep references to 5 images or fewer. |
 | Windows reports OAuth/proxy failures around port `10531` | Run `ima2 doctor`; if needed start with `IMA2_OAUTH_PROXY_PORT=11531 ima2 serve`. |
+| `fetch failed` repeats on a proxy/VPN network | Enable proxy TUN/TURN-style mode, or set `HTTP_PROXY` / `HTTPS_PROXY` in the same terminal. |
 
 ## Install and update
 
@@ -231,6 +232,25 @@ ima2 ping
 ```
 
 Then restart `ima2 serve` if needed.
+
+### What if `fetch failed` keeps happening behind a proxy or VPN?
+
+This usually means the local OAuth proxy cannot reach the upstream service through your network path. `openai-oauth` runs as a local localhost proxy, commonly on port `10531`.
+
+Try:
+
+```bash
+npx openai-oauth --port 10531
+```
+
+If your network requires a proxy, enable your proxy client's TUN/TURN-style mode so terminal processes can use it. If that is not enough, set the proxy variables in the same terminal that runs `openai-oauth` or `ima2 serve`:
+
+```bash
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+```
+
+Use the host and port from your proxy client. If `ima2-gen` still fails after the local OAuth proxy is reachable, collect the exact command, OS, proxy setup, and terminal error before opening a new issue.
 
 ### What should I check on a company computer?
 

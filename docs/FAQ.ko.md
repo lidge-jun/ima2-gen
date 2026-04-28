@@ -17,6 +17,7 @@ English version: [FAQ.md](FAQ.md)
 | `gpt-5.5`만 실패함 | Codex CLI를 업데이트하고, 안정 대안으로 `gpt-5.4`를 사용합니다. |
 | 레퍼런스 업로드 실패 | JPEG/PNG로 변환하고 해상도를 낮춰 보세요. 레퍼런스는 최대 5장입니다. |
 | Windows에서 `10531` 포트 관련 OAuth/proxy 오류가 남 | `ima2 doctor`를 실행하고, 필요하면 `IMA2_OAUTH_PROXY_PORT=11531 ima2 serve`로 시작하세요. |
+| 프록시/VPN 환경에서 `fetch failed`가 반복됨 | 프록시 클라이언트의 TUN/TURN류 모드를 켜거나, 같은 터미널에 `HTTP_PROXY` / `HTTPS_PROXY`를 설정하세요. |
 
 ## 설치와 업데이트
 
@@ -223,6 +224,25 @@ ima2 ping
 ```
 
 필요하면 `ima2 serve`를 다시 시작합니다.
+
+### 프록시나 VPN 뒤에서 `fetch failed`가 계속 나면 어떻게 하나요?
+
+대부분 로컬 OAuth 프록시가 현재 네트워크 경로로 upstream 서비스에 닿지 못하는 상황입니다. `openai-oauth`는 보통 `10531` 포트의 localhost 프록시로 실행됩니다.
+
+먼저 시도하세요.
+
+```bash
+npx openai-oauth --port 10531
+```
+
+프록시가 필요한 네트워크라면 터미널 프로세스도 프록시를 타도록 프록시 클라이언트의 TUN/TURN류 모드를 켜세요. 그래도 안 되면 `openai-oauth` 또는 `ima2 serve`를 실행하는 같은 터미널에 프록시 환경 변수를 설정합니다.
+
+```bash
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+```
+
+호스트와 포트는 사용하는 프록시 클라이언트 값에 맞춰 바꾸세요. 로컬 OAuth 프록시가 접근 가능한 상태에서도 `ima2-gen`이 계속 실패하면, 새 이슈를 열 때 실행 명령, OS, 프록시 설정, 터미널 오류를 함께 남겨 주세요.
 
 ### 회사 컴퓨터에서는 무엇을 확인해야 하나요?
 

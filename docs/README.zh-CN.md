@@ -153,6 +153,9 @@ environment variables > ~/.ima2/config.json > built-in defaults
 **OAuth 登录失败**
 运行 `npx @openai/codex login`，用 `ima2 status` 确认状态，然后重启 `ima2 serve`。
 
+**在代理/VPN 网络下反复出现 `fetch failed`**
+请先确认本地 OAuth proxy 可以访问。如果你的网络需要代理，请在代理客户端里开启 TUN/TURN 类似的转发模式，然后重试 `npx openai-oauth --port 10531`。如果仍然失败，请在运行 `ima2 serve` 或 `openai-oauth` 的同一个终端里设置 `HTTP_PROXY` 和 `HTTPS_PROXY`。
+
 **生成图片时返回 `APIKEY_DISABLED`**
 当前 build 需要使用 OAuth 生成。API-key image generation 是有意关闭的。
 

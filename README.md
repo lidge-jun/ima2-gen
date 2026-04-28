@@ -193,6 +193,9 @@ Start `ima2 serve`, then check `~/.ima2/server.json`. You can also run `ima2 pin
 **OAuth login does not work**
 Run `npx @openai/codex login`, confirm `ima2 status`, then restart `ima2 serve`.
 
+**`fetch failed` repeats on a proxy/VPN network**
+Check that the local OAuth proxy is reachable. On networks that require a proxy, enable your proxy client's TUN/TURN-style mode, then retry `npx openai-oauth --port 10531`. If it still fails, set `HTTP_PROXY` and `HTTPS_PROXY` in the same terminal that runs `ima2 serve` or `openai-oauth`.
+
 **Images fail with `APIKEY_DISABLED`**
 Use OAuth for generation. API-key image generation is intentionally disabled in this build.
 
