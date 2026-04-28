@@ -20,5 +20,9 @@ describe("canvas hit test contract", () => {
     assert.match(source, /paths/);
     assert.match(source, /reverse\(\)/);
     assert.match(source, /distanceToSegment/);
+    assert.match(source, /CanvasObjectKey/);
+    assert.match(source, /keyForPath/);
+    assert.match(source, /keyForBox/);
+    assert.match(source, /keyForMemo/);
   });
 });

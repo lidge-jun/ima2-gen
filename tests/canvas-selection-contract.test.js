@@ -18,6 +18,8 @@ describe("canvas selection contract", () => {
     assert.match(hook, /toggleSelected/);
     assert.match(hook, /deleteSelected/);
     assert.match(hook, /moveSelected/);
+    assert.match(hook, /objectKeyMatches/);
+    assert.match(hook, /parseCanvasObjectKey/);
     assert.match(canvas, /activeTool === "pan"/);
     assert.match(canvas, /hitTestAnnotation/);
     assert.match(canvas, /findAnnotationsInBox/);

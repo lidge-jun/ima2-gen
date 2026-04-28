@@ -26,6 +26,10 @@ describe("canvas undo redo contract", () => {
     assert.match(hook, /moveBaseline/);
     assert.match(hook, /pushSnapshot\(state, state\.moveBaseline\)/);
     assert.match(hook, /COMMIT_SELECTED_MOVE/);
+    assert.match(hook, /START_ERASER_STROKE/);
+    assert.match(hook, /END_ERASER_STROKE/);
+    assert.match(hook, /eraserBaseline/);
+    assert.match(hook, /pushSnapshot\(state, state\.eraserBaseline\)/);
   });
 
   it("handles MacBook Escape and canvas undo through a window listener", () => {
