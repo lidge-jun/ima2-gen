@@ -127,7 +127,7 @@ function unadvertise(ctx) {
   } catch {}
 }
 
-export async function createRuntimeContext(overrides = {}) {
+export async function createRuntimeContext(overrides: any = {}) {
   const loadedKey =
     overrides.apiKey !== undefined
       ? {
@@ -138,7 +138,7 @@ export async function createRuntimeContext(overrides = {}) {
   const apiKey = loadedKey.apiKey;
   const openai = overrides.openai ?? await createOpenAI(apiKey);
   const oauthPort = config.oauth.proxyPort;
-  const ctx = {
+  const ctx: any = {
     rootDir,
     config,
     serverConfiguredPort: config.server.port,
@@ -159,7 +159,7 @@ export async function createRuntimeContext(overrides = {}) {
   ctx.oauthReadyPromise = new Promise((resolve) => {
     resolveOAuthReady = resolve;
   });
-  ctx.markOAuthReady = ({ url, port } = {}) => {
+  ctx.markOAuthReady = ({ url, port }: any = {}) => {
     if (url) ctx.oauthUrl = url;
     if (port) ctx.oauthActualPort = port;
     ctx.oauthReadyState = "ready";
@@ -173,7 +173,7 @@ export async function createRuntimeContext(overrides = {}) {
   return ctx;
 }
 
-export async function startServer(overrides = {}) {
+export async function startServer(overrides: any = {}) {
   const ctx = await createRuntimeContext(overrides);
   await migrateGeneratedStorage(ctx);
   purgeStaleJobs();
@@ -203,7 +203,7 @@ export async function startServer(overrides = {}) {
   });
   process.on("exit", () => unadvertise(ctx));
 
-  const server = await listenWithPortFallback(app, ctx.config.server.port, {
+  const server: any = await listenWithPortFallback(app, ctx.config.server.port, {
     host: ctx.config.server.host,
     label: "server",
     onFallback: ({ requestedPort, actualPort }) => {
