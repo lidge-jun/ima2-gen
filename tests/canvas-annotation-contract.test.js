@@ -13,7 +13,7 @@ describe("canvas annotation contract", () => {
   it("has toolbar component with core tools", () => {
     const source = readSource("ui/src/components/canvas-mode/CanvasToolbar.tsx");
     assert.match(source, /CanvasToolbar/);
-    assert.match(source, /pan/);
+    assert.match(source, /select/);
     assert.match(source, /pen/);
     assert.match(source, /box/);
     assert.match(source, /arrow/);
@@ -74,8 +74,8 @@ describe("canvas annotation contract", () => {
     assert.ok(actionsIndex > frameIndex);
     assert.ok(metaIndex < actionsIndex);
     assert.ok(actionsIndex < promptIndex);
-    assert.match(source, /className="canvas-annotation-frame"[\s\S]*transform: canvasOpen \? `scale\(\$\{canvasZoom\}\)`/);
-    assert.doesNotMatch(source, /<img[\s\S]{0,500}transform: canvasOpen \? `scale\(\$\{canvasZoom\}\)`/);
+    assert.match(source, /className="canvas-annotation-frame"[\s\S]*transform: canvasOpen[\s\S]{0,160}translate\(\$\{canvasPanX\}px, \$\{canvasPanY\}px\) scale\(\$\{canvasZoom\}\)/);
+    assert.doesNotMatch(source, /<img[\s\S]{0,500}transform: canvasOpen[\s\S]{0,40}scale\(\$\{canvasZoom\}\)/);
   });
 
   it("resets temporary annotations when the current image changes", () => {
@@ -97,7 +97,7 @@ describe("canvas annotation contract", () => {
     const ko = JSON.parse(readSource("ui/src/i18n/ko.json"));
     for (const locale of [en, ko]) {
       assert.equal(typeof locale.canvas.toolbar.label, "string");
-      assert.equal(typeof locale.canvas.toolbar.pan, "string");
+      assert.equal(typeof locale.canvas.toolbar.select, "string");
     assert.equal(typeof locale.canvas.toolbar.pen, "string");
     assert.equal(typeof locale.canvas.toolbar.box, "string");
     assert.equal(typeof locale.canvas.toolbar.arrow, "string");

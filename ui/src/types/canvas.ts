@@ -1,4 +1,4 @@
-export type CanvasTool = "pan" | "pen" | "box" | "arrow" | "memo" | "eraser";
+export type CanvasTool = "select" | "pen" | "box" | "arrow" | "memo" | "eraser";
 
 export type CanvasEraserMode = "object" | "brush";
 

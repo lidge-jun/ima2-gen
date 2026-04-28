@@ -63,7 +63,7 @@ export function CanvasToolbar({
     : t("canvas.toolbar.brushEraser");
 
   const tools = [
-    { id: "pan", shortcut: "1", label: t("canvas.toolbar.pan"), icon: HandIcon },
+    { id: "select", shortcut: "1", label: t("canvas.toolbar.select"), icon: HandIcon },
     { id: "pen", shortcut: "2", label: t("canvas.toolbar.pen"), icon: PenIcon },
     { id: "box", shortcut: "3", label: t("canvas.toolbar.box"), icon: BoxIcon },
     { id: "arrow", shortcut: "4", label: t("canvas.toolbar.arrow"), icon: ArrowIcon },

@@ -801,10 +801,14 @@ type AppState = {
   // Canvas Mode (0.24)
   canvasOpen: boolean;
   canvasZoom: number;
+  canvasPanX: number;
+  canvasPanY: number;
   openCanvas: () => void;
   closeCanvas: () => void;
   setCanvasZoom: (zoom: number) => void;
   resetCanvasZoom: () => void;
+  setCanvasPan: (x: number, y: number) => void;
+  resetCanvasPan: () => void;
 };
 
 function formatSize(w: number, h: number): string {
@@ -1014,6 +1018,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Canvas Mode state (0.24)
   canvasOpen: false,
   canvasZoom: 1,
+  canvasPanX: 0,
+  canvasPanY: 0,
 
   addReferences: async (files) => {
     const allowed = MAX_REFERENCE_IMAGES - get().referenceImages.length;
@@ -3133,10 +3139,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Canvas Mode actions (0.24)
-  openCanvas: () => set({ canvasOpen: true, canvasZoom: 1 }),
+  openCanvas: () => set({ canvasOpen: true, canvasZoom: 1, canvasPanX: 0, canvasPanY: 0 }),
   closeCanvas: () => set({ canvasOpen: false }),
   setCanvasZoom: (zoom) => set({ canvasZoom: Math.max(0.5, Math.min(3, zoom)) }),
-  resetCanvasZoom: () => set({ canvasZoom: 1 }),
+  resetCanvasZoom: () => set({ canvasZoom: 1, canvasPanX: 0, canvasPanY: 0 }),
+  setCanvasPan: (x, y) => {
+    const cap = 4000;
+    set({
+      canvasPanX: Math.max(-cap, Math.min(cap, x)),
+      canvasPanY: Math.max(-cap, Math.min(cap, y)),
+    });
+  },
+  resetCanvasPan: () => set({ canvasPanX: 0, canvasPanY: 0 }),
 }));
 
 // ── Graph autosave (module-level debounce) ──

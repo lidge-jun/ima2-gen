@@ -126,7 +126,7 @@ const HISTORY_LIMIT = 50;
 const persistedStyle = loadCanvasStyle();
 
 const initialState: State = {
-  activeTool: "pan",
+  activeTool: "select",
   toolColor: persistedStyle.color,
   strokeWidth: persistedStyle.strokeWidth,
   paths: [],

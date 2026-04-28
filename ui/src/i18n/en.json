@@ -223,7 +223,7 @@
     },
     "toolbar": {
       "label": "Canvas annotation tools",
-      "pan": "Pan",
+      "select": "Select",
       "pen": "Pen",
       "box": "Box",
       "arrow": "Arrow",

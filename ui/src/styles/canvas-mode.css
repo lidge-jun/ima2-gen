@@ -459,3 +459,11 @@
     background: color-mix(in srgb, var(--accent, #2563eb) 18%, transparent);
   }
 }
+
+/* ── Viewport pan (Phase 10) ── */
+.canvas--space-held .canvas-annotation-frame {
+  cursor: grab;
+}
+.canvas--pan-active .canvas-annotation-frame {
+  cursor: grabbing !important;
+}

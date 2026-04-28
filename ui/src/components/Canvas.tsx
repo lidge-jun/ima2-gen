@@ -152,6 +152,9 @@ export function Canvas() {
   const openCanvas = useAppStore((s) => s.openCanvas);
   const closeCanvas = useAppStore((s) => s.closeCanvas);
   const canvasZoom = useAppStore((s) => s.canvasZoom);
+  const canvasPanX = useAppStore((s) => s.canvasPanX);
+  const canvasPanY = useAppStore((s) => s.canvasPanY);
+  const setCanvasPan = useAppStore((s) => s.setCanvasPan);
   const applyMergedCanvasImage = useAppStore((s) => s.applyMergedCanvasImage);
   const addGeneratedHistoryItem = useAppStore((s) => s.addGeneratedHistoryItem);
   const attachCanvasVersionReference = useAppStore((s) => s.attachCanvasVersionReference);
@@ -168,6 +171,16 @@ export function Canvas() {
     lastPoint: NormalizedPoint | null;
     didMove: boolean;
   }>({ mode: null, lastPoint: null, didMove: false });
+  const viewportPanRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    basePanX: number;
+    basePanY: number;
+    pointerId: number | null;
+  }>({ active: false, startX: 0, startY: 0, basePanX: 0, basePanY: 0, pointerId: null });
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const [viewportPanActive, setViewportPanActive] = useState(false);
   const [canvasVersionItem, setCanvasVersionItem] = useState<GenerateItem | null>(null);
   const [canvasSaveState, setCanvasSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isApplying, setIsApplying] = useState(false);
@@ -248,6 +261,25 @@ export function Canvas() {
   }, [annotations.load, canvasOpen, currentImage?.canvasVersion, currentImage?.filename]);
 
   useEffect(() => {
+    if (!canvasOpen) return;
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (isEditableTarget(e.target)) return;
+      if (!spaceHeld) setSpaceHeld(true);
+      e.preventDefault();
+    };
+    const onKeyUp = (e: globalThis.KeyboardEvent) => {
+      if (e.code === "Space") setSpaceHeld(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [canvasOpen, spaceHeld]);
+
+  useEffect(() => {
     if (!canvasOpen || !currentImage?.filename || currentImage.canvasVersion) return;
     if (!annotations.isDirty) return;
     const filename = currentImage.filename;
@@ -288,7 +320,7 @@ export function Canvas() {
 
     if (canvasOpen && ["1", "2", "3", "4", "5", "6"].includes(event.key)) {
       event.preventDefault();
-      const tools = ["pan", "pen", "box", "arrow", "memo", "eraser"] as const;
+      const tools = ["select", "pen", "box", "arrow", "memo", "eraser"] as const;
       annotations.setTool(tools[Number(event.key) - 1]);
       return;
     }
@@ -357,9 +389,24 @@ export function Canvas() {
     if (!canvasOpen) return;
     if (isEditableTarget(event.target)) return;
     if (!annotationFrameRef.current) return;
+    const isMiddle = event.button === 1;
+    if (spaceHeld || isMiddle) {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      viewportPanRef.current = {
+        active: true,
+        startX: event.clientX,
+        startY: event.clientY,
+        basePanX: canvasPanX,
+        basePanY: canvasPanY,
+        pointerId: event.pointerId,
+      };
+      setViewportPanActive(true);
+      return;
+    }
     event.preventDefault();
     const point = screenToNormalized(event, annotationFrameRef.current);
-    if (annotations.activeTool === "pan") {
+    if (annotations.activeTool === "select") {
       const hit = hitTestAnnotation({
         point,
         paths: annotations.paths,
@@ -411,8 +458,17 @@ export function Canvas() {
     if (!canvasOpen) return;
     if (isEditableTarget(event.target)) return;
     if (!annotationFrameRef.current) return;
+    if (viewportPanRef.current.active) {
+      const dx = event.clientX - viewportPanRef.current.startX;
+      const dy = event.clientY - viewportPanRef.current.startY;
+      setCanvasPan(
+        viewportPanRef.current.basePanX + dx,
+        viewportPanRef.current.basePanY + dy,
+      );
+      return;
+    }
     const point = screenToNormalized(event, annotationFrameRef.current);
-    if (annotations.activeTool === "pan") {
+    if (annotations.activeTool === "select") {
       if (selectionDragRef.current.mode === "move" && selectionDragRef.current.lastPoint) {
         const delta = {
           x: point.x - selectionDragRef.current.lastPoint.x,
@@ -439,10 +495,25 @@ export function Canvas() {
   const handleAnnotationPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (!canvasOpen) return;
     if (isEditableTarget(event.target)) return;
+    if (viewportPanRef.current.active && viewportPanRef.current.pointerId === event.pointerId) {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      viewportPanRef.current = {
+        active: false,
+        startX: 0,
+        startY: 0,
+        basePanX: 0,
+        basePanY: 0,
+        pointerId: null,
+      };
+      setViewportPanActive(false);
+      return;
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    if (annotations.activeTool === "pan") {
+    if (annotations.activeTool === "select") {
       if (selectionDragRef.current.mode === "move" && selectionDragRef.current.didMove) {
         annotations.commitSelectedMove();
       }
@@ -635,7 +706,7 @@ export function Canvas() {
 
   return (
     <main
-      className={`canvas${canvasOpen ? " canvas--mode-open" : ""}${dropActive ? " canvas--drop-active" : ""}`}
+      className={`canvas${canvasOpen ? " canvas--mode-open" : ""}${dropActive ? " canvas--drop-active" : ""}${spaceHeld ? " canvas--space-held" : ""}${viewportPanActive ? " canvas--pan-active" : ""}`}
       onDragOver={handleCenterDragOver}
       onDragLeave={handleCenterDragLeave}
       onDrop={handleCenterDrop}
@@ -678,17 +749,23 @@ export function Canvas() {
             onPointerUp={handleAnnotationPointerUp}
             onPointerCancel={handleAnnotationPointerUp}
             style={{
-              cursor: canvasOpen
-                ? annotations.activeTool === "pan"
-                  ? "default"
-                  : annotations.activeTool === "eraser"
-                    ? annotations.eraserMode === "object"
-                      ? OBJECT_ERASER_CURSOR
-                      : BRUSH_ERASER_CURSOR
-                    : "crosshair"
-                : "zoom-in",
-              transform: canvasOpen ? `scale(${canvasZoom})` : undefined,
-              transition: canvasOpen ? "transform 0.2s ease" : undefined,
+              cursor: viewportPanActive
+                ? "grabbing"
+                : spaceHeld
+                  ? "grab"
+                  : canvasOpen
+                    ? annotations.activeTool === "select"
+                      ? "default"
+                      : annotations.activeTool === "eraser"
+                        ? annotations.eraserMode === "object"
+                          ? OBJECT_ERASER_CURSOR
+                          : BRUSH_ERASER_CURSOR
+                        : "crosshair"
+                    : "zoom-in",
+              transform: canvasOpen
+                ? `translate(${canvasPanX}px, ${canvasPanY}px) scale(${canvasZoom})`
+                : undefined,
+              transition: canvasOpen && !viewportPanActive ? "transform 0.2s ease" : undefined,
             }}
           >
             <img
