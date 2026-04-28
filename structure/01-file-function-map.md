@@ -47,7 +47,7 @@ graph TD
 | `routes/storage.js` | 39 | Gallery storage status and generated-folder open action |
 | `routes/metadata.js` | 71 | `/api/metadata/read` for embedded XMP image metadata extraction |
 | `routes/prompts.js` | 379 | Prompt library CRUD, favorites, import/export, and folder management |
-| `routes/promptImport.js` | 299 | Prompt library preview/commit import API plus PR2 curated source search and PR3 GitHub folder browse/preview endpoints |
+| `routes/promptImport.js` | 354 | Prompt library preview/commit import API plus PR2 curated search, PR3 GitHub folder browse/preview, and PR4 discovery review endpoints |
 | `routes/cardNews.js` | 183 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
 | `bin/ima2.js` | 406 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
 | `bin/commands/gen.js` | 160 | CLI image-generation client with model, mode, moderation, and session options |
@@ -100,11 +100,13 @@ graph TD
 | `lib/cardNewsGenerator.js` | 162 | Card-by-card image assembly orchestrator |
 | `lib/promptImport/errors.js` | 16 | Prompt import error type and detection helpers |
 | `lib/promptImport/curatedSources.js` | 139 | Static curated prompt source registry for PR2 indexed search |
+| `lib/promptImport/discoveryRegistry.js` | 236 | File-based PR4 discovery review queue, approved/rejected state, reviewed source conversion, and allowed-path validation |
 | `lib/promptImport/githubFolder.js` | 296 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
+| `lib/promptImport/githubDiscovery.js` | 248 | GitHub repository discovery search, rate-limit normalization, candidate scoring, and registry upsert |
 | `lib/promptImport/githubSource.js` | 239 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
 | `lib/promptImport/gptImageHints.js` | 68 | `gpt-image-2` model/task/size/quality hint and warning extraction |
 | `lib/promptImport/parsePromptCandidates.js` | 153 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
-| `lib/promptImport/promptIndex.js` | 226 | File-based curated source index/cache, refresh, and search orchestration |
+| `lib/promptImport/promptIndex.js` | 248 | File-based curated/reviewed source index/cache, refresh, and search orchestration |
 | `lib/promptImport/rankPromptCandidates.js` | 49 | Query scoring for curated prompt candidates |
 
 ## UI File Map
@@ -149,7 +151,8 @@ graph TD
 | `CardNewsGalleryTile.tsx` | 58 | Card-news set tile in the gallery |
 | `PromptComposer.tsx` | 250 | Prompt input, reference handling, style-sheet entry, save-to-library |
 | `PromptLibraryPanel.tsx` | 152 | Prompt library overlay/embedded panel with favorites, search, insert/load, and dialog-first import entry |
-| `PromptImportDialog.tsx` | 374 | Prompt import modal/dropzone with local/GitHub preview, folder section composition, curated source search, candidate selection, warnings, and commit |
+| `PromptImportDialog.tsx` | 409 | Prompt import modal/dropzone with local/GitHub preview, folder section composition, curated/discovery source tabs, candidate selection, warnings, and commit |
+| `PromptImportDiscoverySection.tsx` | 168 | GitHub discovery UI, query input, scored candidate review, approve/reject actions, and discovery warnings |
 | `PromptImportFolderSection.tsx` | 121 | GitHub folder browse UI, selected file list, folder preview action, and folder warnings |
 | `PromptLibraryRow.tsx` | 75 | Single prompt-library row with actions |
 | `PromptDetailModal.tsx` | 81 | Prompt detail/edit modal |
@@ -222,6 +225,8 @@ graph TD
 | `tests/prompt-import-dialog-ui-contract.test.js` | 53 | Prompt import dialog-first UI and `.markdown` support contract |
 | `tests/prompt-import-folder-contract.test.js` | 164 | GitHub folder normalization, Contents API filtering, selected path validation, and route/config contract |
 | `tests/prompt-import-folder-ui-contract.test.js` | 69 | Folder browse UI/API helper, no-auto-import, bounded list CSS, and i18n contract |
+| `tests/prompt-discovery-contract.test.js` | 273 | GitHub discovery search, rate limit, server-only token, review registry, allowed-path validation, and reviewed source contract |
+| `tests/prompt-discovery-ui-contract.test.js` | 73 | Discovery UI/API helper, no-auto-import, bounded list CSS, and i18n contract |
 | `tests/prompt-index-ranking-contract.test.js` | 60 | Curated registry, gpt-image-2 hint extraction, warning extraction, and ranking contract |
 | `tests/prompt-curated-search-contract.test.js` | 46 | Curated search route, commit-compatible candidate, no-auto-import, and file-cache contract |
 | `tests/image-metadata-route.test.js` | 111 | `/api/metadata/read` route contract |

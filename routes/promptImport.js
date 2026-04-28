@@ -17,6 +17,11 @@ import {
   refreshCuratedSource,
   searchCuratedPrompts,
 } from "../lib/promptImport/promptIndex.js";
+import { searchGitHubDiscovery } from "../lib/promptImport/githubDiscovery.js";
+import {
+  listDiscoveryCandidates,
+  reviewDiscoveryCandidate,
+} from "../lib/promptImport/discoveryRegistry.js";
 
 function promptImportLimits(ctx) {
   return {
@@ -32,6 +37,8 @@ function promptImportLimits(ctx) {
     indexCacheTtlMs: ctx.config.limits.promptImportIndexCacheTtlMs,
     maxFolderFiles: ctx.config.limits.promptImportMaxFolderFiles,
     maxFolderPreviewFiles: ctx.config.limits.promptImportMaxFolderPreviewFiles,
+    discoverySearchLimit: ctx.config.limits.promptImportDiscoverySearchLimit,
+    discoveryMaxQueries: ctx.config.limits.promptImportDiscoveryMaxQueries,
   };
 }
 
@@ -213,9 +220,57 @@ function commitCandidates(candidates, folderId, limits) {
 export function registerPromptImportRoutes(app, ctx) {
   app.get("/api/prompts/import/curated-sources", async (req, res) => {
     try {
-      res.json(getPromptImportSources());
+      res.json(await getPromptImportSources(ctx));
     } catch (error) {
       logError("promptImport", "curated_sources_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.get("/api/prompts/import/discovery", async (req, res) => {
+    try {
+      const candidates = await listDiscoveryCandidates(ctx, {
+        status: typeof req.query?.status === "string" ? req.query.status : undefined,
+      });
+      res.json({ candidates, warnings: [] });
+    } catch (error) {
+      logError("promptImport", "discovery_list_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.post("/api/prompts/import/discovery-search", async (req, res) => {
+    try {
+      const limits = promptImportLimits(ctx);
+      const seeds = Array.isArray(req.body?.seeds) ? req.body.seeds : [];
+      if (seeds.length > limits.discoveryMaxQueries) {
+        throw promptImportError("GITHUB_DISCOVERY_TOO_MANY_QUERIES", "Too many discovery queries", 413);
+      }
+      const result = await searchGitHubDiscovery(ctx, {
+        q: req.body?.q,
+        seeds,
+        limit: req.body?.limit,
+        maxQueries: limits.discoveryMaxQueries,
+      });
+      res.json(result);
+    } catch (error) {
+      logError("promptImport", "discovery_search_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.post("/api/prompts/import/discovery-review", async (req, res) => {
+    try {
+      const result = await reviewDiscoveryCandidate(ctx, {
+        repo: req.body?.repo,
+        status: req.body?.status,
+        reviewNotes: req.body?.reviewNotes,
+        allowedPaths: req.body?.allowedPaths,
+        defaultSearch: req.body?.defaultSearch,
+      });
+      res.json(result);
+    } catch (error) {
+      logError("promptImport", "discovery_review_error", error);
       sendPromptImportError(res, error);
     }
   });

@@ -663,6 +663,46 @@ export type PromptCuratedSource = {
   defaultSearch: boolean;
 };
 
+export type PromptDiscoveryReviewStatus = "candidate" | "approved" | "rejected";
+
+export type PromptDiscoveryCandidate = {
+  id: string;
+  repo: string;
+  owner: string;
+  name: string;
+  fullName: string;
+  htmlUrl: string;
+  description: string;
+  defaultBranch: string;
+  stars: number;
+  forks: number;
+  openIssues: number;
+  updatedAt: string | null;
+  pushedAt: string | null;
+  licenseSpdx: string;
+  topics: string[];
+  language: string | null;
+  score: number;
+  scoreReasons: string[];
+  warnings: string[];
+  status: PromptDiscoveryReviewStatus;
+  query: string;
+  discoveredAt: string;
+  reviewedAt?: string | null;
+  reviewNotes?: string;
+  approvedSource?: PromptCuratedSource | null;
+};
+
+export type PromptDiscoverySearchResponse = {
+  candidates: PromptDiscoveryCandidate[];
+  warnings: string[];
+  rateLimit?: {
+    limit: number | null;
+    remaining: number | null;
+    resetAt: string | null;
+  };
+};
+
 export type PromptIndexedCandidate = PromptImportCandidate & {
   candidateId?: string;
   textPreview?: string;
@@ -810,6 +850,45 @@ export function refreshPromptImportCuratedSource(payload: {
   sourceId: string;
 }): Promise<{ source: PromptCuratedSource | null; indexedFiles: number; candidateCount: number; warnings: string[] }> {
   return jsonFetch("/api/prompts/import/curated-refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPromptImportDiscovery(params?: {
+  status?: PromptDiscoveryReviewStatus;
+}): Promise<{ candidates: PromptDiscoveryCandidate[]; warnings: string[] }> {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  const suffix = qs.size > 0 ? `?${qs.toString()}` : "";
+  return jsonFetch(`/api/prompts/import/discovery${suffix}`);
+}
+
+export function searchPromptImportDiscovery(payload: {
+  q?: string;
+  seeds?: string[];
+  limit?: number;
+}): Promise<PromptDiscoverySearchResponse> {
+  return jsonFetch("/api/prompts/import/discovery-search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      q: payload.q,
+      seeds: payload.seeds,
+      limit: payload.limit,
+    }),
+  });
+}
+
+export function reviewPromptImportDiscoveryCandidate(payload: {
+  repo: string;
+  status: "approved" | "rejected";
+  reviewNotes?: string;
+  allowedPaths?: string[];
+  defaultSearch?: boolean;
+}): Promise<{ candidate: PromptDiscoveryCandidate; source?: PromptCuratedSource | null; warnings: string[] }> {
+  return jsonFetch("/api/prompts/import/discovery-review", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

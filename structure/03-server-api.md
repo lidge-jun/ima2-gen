@@ -159,6 +159,9 @@ Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`
 | `POST` | `/api/prompts/import/curated-refresh` | `{ sourceId }` | `{ source, indexedFiles, candidateCount, warnings }` for one curated source |
 | `POST` | `/api/prompts/import/folder-files` | `{ source: { kind: "github-folder", input } }` | `{ source, files, warnings }` for supported files in one GitHub folder |
 | `POST` | `/api/prompts/import/folder-preview` | `{ source: { kind: "github-folder", input }, paths }` | `{ source, files, candidates, warnings }` preview for selected listed folder files |
+| `GET` | `/api/prompts/import/discovery` | `status?` | `{ candidates, warnings }` from the local discovery review queue |
+| `POST` | `/api/prompts/import/discovery-search` | `{ q?, seeds?, limit? }` | `{ candidates, warnings, rateLimit? }` from GitHub repository discovery |
+| `POST` | `/api/prompts/import/discovery-review` | `{ repo, status, reviewNotes?, allowedPaths?, defaultSearch? }` | `{ candidate, source?, warnings }` after approving or rejecting a discovery candidate |
 | `GET` | `/api/prompts/export` | none | NDJSON stream of stored prompts |
 | `GET` | `/api/prompts/folders` | none | `{ ok, folders }` |
 | `POST` | `/api/prompts/folders` | `{ name }` | `{ ok, folder }` |
@@ -172,6 +175,8 @@ Prompt import PR1 is preview-first. `/api/prompts/import/preview` accepts either
 Prompt import PR2 adds curated indexed search without introducing a DB migration. Static sources live in `lib/promptImport/curatedSources.js`; indexed source/candidate cache is written under `config.storage.promptImportIndexCacheFile`, usually `~/.ima2/prompt-import-index.json`, with atomic temp-file writes. Curated search is read-only: results remain commit-compatible prompt candidates with mandatory `text`, but they are never saved until the UI sends selected candidates to `/api/prompts/import/commit`. `gpt-image-2` model/task/size/quality hints and warnings are stored in candidate metadata for ranking and UI display, while attribution and license state persists through tags such as `source:<sourceId>`, `license:<spdx>`, `trust:<tier>`, and `attribution-required`.
 
 Prompt import PR3 adds GitHub folder browse without recursive crawling or auto-import. `/api/prompts/import/folder-files` lists only supported `.md`, `.markdown`, and `.txt` files from a single GitHub Contents API directory. `/api/prompts/import/folder-preview` re-lists the same folder server-side and previews only selected paths that appear in that listing as supported `type: "file"` entries; client-supplied download URLs are never trusted. Slash-branch shorthand remains rejected with `AMBIGUOUS_GITHUB_REF`, and ambiguous `tree/feature/foo/...` URLs do not trigger a slash-branch resolver in PR3. Saving still goes through `/api/prompts/import/commit`.
+
+Prompt import PR4 adds GitHub repository discovery as a manual-review workflow. Discovery search calls GitHub from the server only, optionally using `IMA2_GITHUB_TOKEN`, and never exposes the token to the browser. Results are stored in a file-backed review queue under `config.storage.promptImportDiscoveryRegistryFile`, usually `~/.ima2/prompt-import-discovery.json`. Discovery candidates are not prompt candidates and cannot be committed directly; the user must approve or reject them through `/api/prompts/import/discovery-review`. Approved reviewed sources are merged into curated source listings and can join indexed search only when they have validated `.md`, `.markdown`, or `.txt` `allowedPaths`; slash default branches and empty paths are listed with warnings but skipped from default search/indexing.
 
 ## Card-News API (dev-only)
 

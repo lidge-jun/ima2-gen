@@ -4858,6 +4858,15 @@ body {
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
   font-size: 11px;
 }
+.prompt-import-dialog__source-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+.prompt-import-dialog__source-tabs button {
+  min-width: 0;
+}
 .prompt-import-dialog__curated {
   padding: 0 14px 12px;
   display: flex;
@@ -4926,6 +4935,83 @@ body {
   padding: 7px 9px;
   color: var(--text-dim);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 11px;
+}
+.prompt-import-dialog__discovery {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prompt-import-dialog__discovery-actions {
+  display: flex;
+  gap: 8px;
+}
+.prompt-import-dialog__discovery-actions input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.prompt-import-dialog__discovery-list {
+  max-height: 188px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.prompt-import-dialog__discovery-candidate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.prompt-import-dialog__discovery-candidate strong,
+.prompt-import-dialog__discovery-candidate small,
+.prompt-import-dialog__discovery-candidate em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prompt-import-dialog__discovery-candidate strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.prompt-import-dialog__discovery-candidate small,
+.prompt-import-dialog__discovery-candidate em {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: normal;
+}
+.prompt-import-dialog__score {
+  justify-self: end;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 10px;
+  font-weight: 600;
+}
+.prompt-import-dialog__review-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.prompt-import-dialog__discovery-warning {
+  grid-column: 1 / -1;
+  color: var(--text-dim);
   font-size: 11px;
 }
 .prompt-import-dialog__error {

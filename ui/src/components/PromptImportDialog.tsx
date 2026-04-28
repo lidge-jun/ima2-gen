@@ -10,6 +10,7 @@ import {
 } from "../lib/api";
 import { useI18n } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
+import { PromptImportDiscoverySection } from "./PromptImportDiscoverySection";
 import { PromptImportFolderSection } from "./PromptImportFolderSection";
 
 type PromptImportDialogProps = {
@@ -37,6 +38,7 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
   const [curatedBusy, setCuratedBusy] = useState(false);
   const [curatedWarnings, setCuratedWarnings] = useState<string[]>([]);
+  const [sourcePanel, setSourcePanel] = useState<"curated" | "discovery">("curated");
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +46,12 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
     window.setTimeout(() => dialogRef.current?.focus(), 0);
     return () => previousFocusRef.current?.focus();
   }, [open]);
+
+  const loadCuratedSources = useCallback(async () => {
+    const data = await getPromptImportCuratedSources();
+    setCuratedSources(data.sources);
+    setSelectedSourceIds(new Set(data.sources.filter((source) => source.defaultSearch).map((source) => source.id)));
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -280,6 +288,26 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
           onError={setError}
         />
 
+        <div className="prompt-import-dialog__source-tabs" role="tablist" aria-label={t("promptLibrary.curatedSources")}>
+          <button
+            type="button"
+            className={sourcePanel === "curated" ? "active" : ""}
+            onClick={() => setSourcePanel("curated")}
+            aria-pressed={sourcePanel === "curated"}
+          >
+            {t("promptLibrary.curatedSources")}
+          </button>
+          <button
+            type="button"
+            className={sourcePanel === "discovery" ? "active" : ""}
+            onClick={() => setSourcePanel("discovery")}
+            aria-pressed={sourcePanel === "discovery"}
+          >
+            {t("promptLibrary.discovery")}
+          </button>
+        </div>
+
+        {sourcePanel === "curated" ? (
         <div className="prompt-import-dialog__curated">
           <div className="prompt-import-dialog__section-title">
             <strong>{t("promptLibrary.curatedSources")}</strong>
@@ -328,6 +356,13 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
             </div>
           ) : null}
         </div>
+        ) : (
+          <PromptImportDiscoverySection
+            disabled={busy}
+            onError={setError}
+            onSourcesChanged={loadCuratedSources}
+          />
+        )}
 
         {error ? <div className="prompt-import-dialog__error" role="alert">{error}</div> : null}
 

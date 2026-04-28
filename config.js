@@ -147,6 +147,21 @@ export const config = {
       fileCfg.limits?.promptImportMaxFolderPreviewFiles,
       20,
     ),
+    promptImportDiscoverySearchLimit: pickInt(
+      env.IMA2_PROMPT_IMPORT_DISCOVERY_SEARCH_LIMIT,
+      fileCfg.limits?.promptImportDiscoverySearchLimit,
+      20,
+    ),
+    promptImportDiscoveryCacheTtlMs: pickInt(
+      env.IMA2_PROMPT_IMPORT_DISCOVERY_CACHE_TTL_MS,
+      fileCfg.limits?.promptImportDiscoveryCacheTtlMs,
+      60 * 60 * 1000,
+    ),
+    promptImportDiscoveryMaxQueries: pickInt(
+      env.IMA2_PROMPT_IMPORT_DISCOVERY_MAX_QUERIES,
+      fileCfg.limits?.promptImportDiscoveryMaxQueries,
+      5,
+    ),
   },
   history: {
     defaultPageSize: pickInt(
@@ -178,6 +193,9 @@ export const config = {
         : ["auto", "low"],
     ),
   },
+  github: {
+    token: pickStr(env.IMA2_GITHUB_TOKEN, fileCfg.github?.token, ""),
+  },
   storage: {
     configDir,
     packageRoot,
@@ -190,6 +208,11 @@ export const config = {
       env.IMA2_PROMPT_IMPORT_INDEX_CACHE_FILE,
       fileCfg.storage?.promptImportIndexCacheFile,
       join(configDir, "prompt-import-index.json"),
+    ),
+    promptImportDiscoveryRegistryFile: pickStr(
+      env.IMA2_PROMPT_IMPORT_DISCOVERY_REGISTRY_FILE,
+      fileCfg.storage?.promptImportDiscoveryRegistryFile,
+      join(configDir, "prompt-import-discovery.json"),
     ),
     configFile: join(configDir, "config.json"),
     advertiseFile: pickStr(env.IMA2_ADVERTISE_FILE, fileCfg.storage?.advertiseFile, join(configDir, "server.json")),
