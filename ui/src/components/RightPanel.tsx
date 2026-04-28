@@ -74,16 +74,20 @@ export function RightPanel() {
         className={`right-panel${open ? "" : " collapsed"}${isMobile && drawerOpen ? " drawer-open" : ""}`}
         aria-label={t("panel.detailSettings")}
       >
-        <button
-          type="button"
-          className="right-panel-toggle"
-          aria-expanded={open}
-          aria-controls="right-panel-body"
-          onClick={toggle}
-          title={open ? t("panel.toggleHide") : t("panel.toggleShow")}
-        >
-          {isMobile ? (open ? t("panel.close") : t("panel.open")) : open ? ">" : "<"}
-        </button>
+        {/* Mobile toggle is rendered separately by <MobileSettingsToggle /> from App.tsx
+            (HT-2: lifted out of the transformed <aside> to avoid Safari fixed-descendant bugs). */}
+        {!isMobile && (
+          <button
+            type="button"
+            className="right-panel-toggle"
+            aria-expanded={open}
+            aria-controls="right-panel-body"
+            onClick={toggle}
+            title={open ? t("panel.toggleHide") : t("panel.toggleShow")}
+          >
+            {open ? ">" : "<"}
+          </button>
+        )}
         <div
           id="right-panel-body"
           className="right-panel-body"

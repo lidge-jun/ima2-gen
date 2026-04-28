@@ -146,6 +146,19 @@ export function SettingsWorkspace() {
         </header>
 
         <div className="settings-layout">
+          <nav className="settings-nav settings-nav--mobile" aria-label={t("settings.navAria")}>
+            <select
+              value={active}
+              onChange={(e) => scrollToSection(e.target.value as SettingsSection)}
+              aria-label={t("settings.navAria")}
+            >
+              {SETTINGS_SECTIONS.map((section) => (
+                <option key={section} value={section}>
+                  {t(`settings.sections.${section}.title`)}
+                </option>
+              ))}
+            </select>
+          </nav>
           <nav className="settings-nav" aria-label={t("settings.navAria")}>
             {SETTINGS_SECTIONS.map((section) => (
               <button

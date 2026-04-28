@@ -20,9 +20,11 @@ import { useAppStore, type GraphNode, type GraphEdge } from "../store/useAppStor
 import { ImageNode } from "./ImageNode";
 import { NodeBatchBar } from "./NodeBatchBar";
 import { useI18n } from "../i18n";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 function NodeCanvasInner() {
   const { t } = useI18n();
+  const isMobile = useIsMobile();
   const nodes = useAppStore((s) => s.graphNodes);
   const edges = useAppStore((s) => s.graphEdges);
   const setGraphNodes = useAppStore((s) => s.setGraphNodes);
@@ -130,17 +132,19 @@ function NodeCanvasInner() {
             <NodeBatchBar />
             <Background gap={24} color="var(--canvas-grid)" />
             <Controls className="node-canvas__controls" />
-            <MiniMap
-              pannable
-              zoomable
-              maskColor="var(--minimap-mask)"
-              nodeColor="var(--minimap-node-fill)"
-              nodeStrokeColor="var(--minimap-node-stroke)"
-              style={{
-                background: "var(--minimap-bg)",
-                border: "1px solid var(--minimap-border)",
-              }}
-            />
+            {!isMobile && (
+              <MiniMap
+                pannable
+                zoomable
+                maskColor="var(--minimap-mask)"
+                nodeColor="var(--minimap-node-fill)"
+                nodeStrokeColor="var(--minimap-node-stroke)"
+                style={{
+                  background: "var(--minimap-bg)",
+                  border: "1px solid var(--minimap-border)",
+                }}
+              />
+            )}
           </ReactFlow>
           <button
             type="button"

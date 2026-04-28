@@ -10,7 +10,7 @@ import { useAppStore } from "../store/useAppStore";
 import { ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
 import { useI18n } from "../i18n";
 
-export function Sidebar() {
+export function SidebarStack() {
   const { t } = useI18n();
   const uiModeRaw = useAppStore((s) => s.uiMode);
   const referenceImages = useAppStore((s) => s.referenceImages);
@@ -19,50 +19,59 @@ export function Sidebar() {
     uiModeRaw === "card-news" && ENABLE_CARD_NEWS_MODE ? "card-news" :
       uiModeRaw === "node" && ENABLE_NODE_MODE ? "node" :
         "classic";
+
+  return (
+    <>
+      <div className="logo">
+        <div className="logo-mark" aria-hidden="true" />
+        <div className="logo-copy">
+          <div className="logo-title">ima2-gen</div>
+          <div className="logo-subtitle">gpt-image-2 studio</div>
+        </div>
+        <div className="logo-actions">
+          <PromptLibraryButton />
+          <ImageModelSelect variant="sidebar" />
+          <SettingsButton />
+        </div>
+      </div>
+      <UIModeSwitch />
+      {uiMode === "classic" ? (
+        <>
+          <PromptComposer />
+          <GenerateButton />
+          <InFlightList />
+        </>
+      ) : uiMode === "card-news" ? (
+        <>
+          <CardNewsComposer />
+        </>
+      ) : (
+        <>
+          <SessionPicker />
+          {referenceImages.length > 0 ? (
+            <div className="node-mode-ref-warning" role="status">
+              <strong>{t("node.classicRefsParkedTitle")}</strong>
+              <span>{t("node.classicRefsParkedBody")}</span>
+              <button type="button" onClick={clearReferences}>
+                {t("node.clearParkedRefs")}
+              </button>
+            </div>
+          ) : null}
+          <div className="sidebar__node-hint">
+            {t("sidebar.nodeModeHint")}
+          </div>
+          <InFlightList />
+        </>
+      )}
+    </>
+  );
+}
+
+export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar__scroll">
-        <div className="logo">
-          <div className="logo-mark" aria-hidden="true" />
-          <div className="logo-copy">
-            <div className="logo-title">ima2-gen</div>
-            <div className="logo-subtitle">gpt-image-2 studio</div>
-          </div>
-          <div className="logo-actions">
-            <PromptLibraryButton />
-            <ImageModelSelect variant="sidebar" />
-            <SettingsButton />
-          </div>
-        </div>
-        <UIModeSwitch />
-        {uiMode === "classic" ? (
-          <>
-            <PromptComposer />
-            <GenerateButton />
-            <InFlightList />
-          </>
-        ) : uiMode === "card-news" ? (
-          <>
-            <CardNewsComposer />
-          </>
-        ) : (
-          <>
-            <SessionPicker />
-            {referenceImages.length > 0 ? (
-              <div className="node-mode-ref-warning" role="status">
-                <strong>{t("node.classicRefsParkedTitle")}</strong>
-                <span>{t("node.classicRefsParkedBody")}</span>
-                <button type="button" onClick={clearReferences}>
-                  {t("node.clearParkedRefs")}
-                </button>
-              </div>
-            ) : null}
-            <div className="sidebar__node-hint">
-              {t("sidebar.nodeModeHint")}
-            </div>
-            <InFlightList />
-          </>
-        )}
+        <SidebarStack />
       </div>
     </aside>
   );

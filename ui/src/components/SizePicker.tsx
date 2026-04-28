@@ -206,7 +206,7 @@ export function SizePicker() {
               </button>
             ))}
           </div>
-          <div className="option-row">
+          <div className="option-row size-picker__custom-row">
             <input
               type="text"
               inputMode="numeric"
@@ -218,16 +218,7 @@ export function SizePicker() {
               onKeyDown={commitOnEnter}
               placeholder={t("size.width")}
             />
-            <span
-              style={{
-                color: "var(--text-dim)",
-                alignSelf: "center",
-                fontFamily: "var(--mono)",
-                fontSize: 12,
-              }}
-            >
-              x
-            </span>
+            <span className="size-picker__dimension-separator" aria-hidden="true">×</span>
             <input
               type="text"
               inputMode="numeric"

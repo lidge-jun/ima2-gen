@@ -132,7 +132,8 @@ describe("gallery navigation UX contract", () => {
     assert.match(app, /app--history-horizontal/);
     assert.match(app, /app--history-sidebar/);
     assert.match(app, /data-history-strip-layout=\{historyStripLayout\}/);
-    assert.match(app, /<Sidebar \/>\s*<HistoryStrip \/>/);
+    assert.match(app, /import \{ MobileAppBar \} from "\.\/components\/MobileAppBar"/);
+    assert.match(app, /<Sidebar \/>\s*<MobileAppBar \/>\s*<HistoryStrip \/>/);
     assert.doesNotMatch(sidebar, /HistoryStrip/);
 
     assert.match(appRule, /--gallery-rail-w:\s*clamp\(61px,\s*6vw,\s*95px\)/);
