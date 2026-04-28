@@ -2,7 +2,7 @@ import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalizeGitHubSource, fetchGitHubSourceText } from "../lib/promptImport/githubSource.js";
+import { normalizeGitHubSource, fetchGitHubSource, fetchGitHubSourceText } from "../lib/promptImport/githubSource.js";
 import { parsePromptCandidates } from "../lib/promptImport/parsePromptCandidates.js";
 
 const root = process.cwd();
@@ -96,6 +96,28 @@ describe("prompt import GitHub contract", () => {
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /non-file page/,
     );
+  });
+
+  it("exposes metadata fetch while preserving text-only fetch behavior", async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      url: "https://raw.githubusercontent.com/o/r/main/a.md",
+      headers: new Headers({ etag: "\"abc\"" }),
+      arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
+    });
+    const result = await fetchGitHubSource({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits);
+    assert.equal(result.etag, "\"abc\"");
+    assert.equal(typeof result.contentHash, "string");
+    assert.equal(result.sizeBytes > 0, true);
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      url: "https://raw.githubusercontent.com/o/r/main/a.md",
+      headers: new Headers(),
+      arrayBuffer: async () => new TextEncoder().encode("another valid prompt body that is long enough to parse").buffer,
+    });
+    const text = await fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits);
+    assert.match(text, /another valid prompt body/);
   });
 
   it("rejects ambiguous branch refs that need folder/API resolution", () => {

@@ -48,7 +48,7 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx`, `AccountSettings.tsx` | Pending jobs, notifications, billing/provider status |
 | Error UX | `ErrorCard.tsx`, `ui/src/lib/errorCodes.ts`, `errorHandler.ts` | Code-based localized error cards and toast routing |
 | Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts`, `customSizeSlots.ts` | Keyboard-safe custom size drafts, slot persistence, and generation-time adjustment confirmation |
-| Prompt library | `PromptLibraryPanel.tsx`, `PromptLibraryRow.tsx`, `PromptDetailModal.tsx`, `SavePromptPopover.tsx`, `PromptImportDialog.tsx` | Right-panel/overlay prompt library for browsing, searching, favoriting, inserting, saving, and preview-first prompt imports |
+| Prompt library | `PromptLibraryPanel.tsx`, `PromptLibraryRow.tsx`, `PromptDetailModal.tsx`, `SavePromptPopover.tsx`, `PromptImportDialog.tsx`, `PromptImportFolderSection.tsx` | Right-panel/overlay prompt library for browsing, searching, favoriting, inserting, saving, preview-first imports, PR2 curated source search, and PR3 GitHub folder file selection |
 | Image metadata restore | `MetadataRestoreDialog.tsx`, `ui/src/lib/imageMetadataClient.ts` (`api.ts:postMetadataRead`) | Drop a previously generated PNG into the composer to restore prompt and parameters from embedded XMP |
 | Card-news (dev-only) | `ui/src/components/card-news/*`, `ui/src/store/cardNewsStore.ts`, `ui/src/lib/cardNewsApi.ts` | Topic→draft→template→generate→export flow, gated by `VITE_IMA2_CARD_NEWS=1` or `VITE_IMA2_DEV=1` |
 | i18n | `ui/src/i18n/index.ts`, `ko.json`, `en.json` | Locale load/save and translation lookup |
@@ -90,7 +90,7 @@ Visible metadata should carry the selected model too. Current result metadata, h
 | `openGeneratedDir` | `POST /api/storage/open-generated-dir` | Gallery "Open folder" action |
 | `getInflight` | `GET /api/inflight` | Pending reconciliation |
 | `postMetadataRead` | `POST /api/metadata/read` | Drag-and-drop metadata restore dialog |
-| Prompt library helpers | `/api/prompts*` | List, create, update, delete, favorite, import, export, folders, prompt import preview/commit |
+| Prompt library helpers | `/api/prompts*` | List, create, update, delete, favorite, import, export, folders, prompt import preview/commit, curated sources/search/refresh, GitHub folder list/preview |
 | Session style sheet helpers | `/api/sessions/:id/style-sheet*` | Get/save/enable/extract style sheet from a reference history image |
 | Card-news helpers | `/api/cardnews/*` (dev-only via `cardNewsApi.ts`) | Templates, role templates, sets, draft, generate, jobs, regenerate, export |
 | `postNodeGenerate` | `POST /api/node/generate` | Node-mode generation, implemented in `nodeApi.ts` |
@@ -157,6 +157,8 @@ Error handling is centralized. API helpers preserve `err.code` where the server 
 - 2026-04-27: Documented four-direction node handles and edge handle-id persistence after 0.09.34.
 - 2026-04-28: Added prompt library overlay, image-metadata restore dialog, session style-sheet helpers, dev-only card-news workspace and store, history favorite, and refreshed line counts (`useAppStore` 2739, `index.css` 4497, components 4046) for ima2-gen 1.1.5.
 - 2026-04-28: Documented prompt import preview/commit API, dialog-first import UX, local/GitHub `.md`/`.markdown`/`.txt` support, and refreshed line counts (`useAppStore` 3374, `index.css` 5250, components 5263).
+- 2026-04-28: Documented PR2 curated source search inside `PromptImportDialog`, including indexed search/refresh helpers and commit-compatible candidate flow.
+- 2026-04-28: Documented PR3 GitHub folder browse through `PromptImportFolderSection`, selected-file preview, and folder list/preview API helpers.
 
 Previous document: `[[03-server-api]]`
 

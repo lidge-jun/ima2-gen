@@ -122,6 +122,31 @@ export const config = {
       fileCfg.limits?.promptImportMaxSourceCharsScanned,
       512 * 1024,
     ),
+    promptImportMaxRepoIndexFiles: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_REPO_INDEX_FILES,
+      fileCfg.limits?.promptImportMaxRepoIndexFiles,
+      500,
+    ),
+    promptImportCuratedSearchLimit: pickInt(
+      env.IMA2_PROMPT_IMPORT_CURATED_SEARCH_LIMIT,
+      fileCfg.limits?.promptImportCuratedSearchLimit,
+      50,
+    ),
+    promptImportIndexCacheTtlMs: pickInt(
+      env.IMA2_PROMPT_IMPORT_INDEX_CACHE_TTL_MS,
+      fileCfg.limits?.promptImportIndexCacheTtlMs,
+      24 * 60 * 60 * 1000,
+    ),
+    promptImportMaxFolderFiles: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_FOLDER_FILES,
+      fileCfg.limits?.promptImportMaxFolderFiles,
+      100,
+    ),
+    promptImportMaxFolderPreviewFiles: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_FOLDER_PREVIEW_FILES,
+      fileCfg.limits?.promptImportMaxFolderPreviewFiles,
+      20,
+    ),
   },
   history: {
     defaultPageSize: pickInt(
@@ -161,6 +186,11 @@ export const config = {
     generatedDirName: pickStr(env.IMA2_GENERATED_DIRNAME, fileCfg.storage?.generatedDirName, "generated"),
     trashDirName: pickStr(env.IMA2_TRASH_DIRNAME, fileCfg.storage?.trashDirName, ".trash"),
     dbPath: pickStr(env.IMA2_DB_PATH, fileCfg.storage?.dbPath, join(configDir, "sessions.db")),
+    promptImportIndexCacheFile: pickStr(
+      env.IMA2_PROMPT_IMPORT_INDEX_CACHE_FILE,
+      fileCfg.storage?.promptImportIndexCacheFile,
+      join(configDir, "prompt-import-index.json"),
+    ),
     configFile: join(configDir, "config.json"),
     advertiseFile: pickStr(env.IMA2_ADVERTISE_FILE, fileCfg.storage?.advertiseFile, join(configDir, "server.json")),
     staticMaxAge: pickStr(env.IMA2_STATIC_MAX_AGE, fileCfg.storage?.staticMaxAge, "1y"),

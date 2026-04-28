@@ -35,18 +35,19 @@ graph TD
 | File | Lines | Responsibility |
 |---|---:|---|
 | `server.js` | 235 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, route registration, static serving |
-| `config.js` | 253 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import caps, and backward-compatible flat re-exports |
+| `config.js` | 273 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, and backward-compatible flat re-exports |
 | `routes/index.js` | 33 | Route registration hub: health, storage, metadata, history, sessions, edit, nodes, generate, prompts, prompt import, and (when `features.cardNews`) cardNews |
 | `routes/generate.js` | 294 | Classic generation API, model validation, reference validation, upstream validation pass-through, sidecar save |
 | `routes/edit.js` | 165 | Edit API, parent image path, OAuth edit response save |
 | `routes/nodes.js` | 432 | Node generation API, explicit context/search policy, SSE partial/error streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
 | `routes/sessions.js` | 292 | SQLite-backed session list/load/save/rename/delete, style-sheet get/put/enable/extract, graph save |
 | `routes/history.js` | 143 | History list, grouped gallery, soft delete, restore, gallery favorite toggle |
+| `routes/imageImport.js` | 35 | `POST /api/history/import-local` raw image upload (PNG/JPEG/WebP) — Phase 10 drop-import for Canvas |
 | `routes/health.js` | 113 | Providers, health, OAuth status, inflight list/cancel, billing |
 | `routes/storage.js` | 39 | Gallery storage status and generated-folder open action |
 | `routes/metadata.js` | 71 | `/api/metadata/read` for embedded XMP image metadata extraction |
 | `routes/prompts.js` | 379 | Prompt library CRUD, favorites, import/export, and folder management |
-| `routes/promptImport.js` | 175 | Prompt library preview/commit import API for local/GitHub `.md`, `.markdown`, and `.txt` files |
+| `routes/promptImport.js` | 299 | Prompt library preview/commit import API plus PR2 curated source search and PR3 GitHub folder browse/preview endpoints |
 | `routes/cardNews.js` | 183 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
 | `bin/ima2.js` | 406 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
 | `bin/commands/gen.js` | 160 | CLI image-generation client with model, mode, moderation, and session options |
@@ -76,6 +77,7 @@ graph TD
 | `lib/errorClassify.js` | 100 | Upstream/OAuth error classifier for stable error codes, including provider validation errors |
 | `lib/generationErrors.js` | 121 | Generation error normalization, retry classification, status mapping |
 | `lib/historyList.js` | 155 | History reconstruction from generated assets, sidecars, embedded XMP metadata fallback, session-aware rows |
+| `lib/localImportStore.js` | 110 | Validates raw PNG/JPEG/WebP body, writes timestamped `imported-*` to generated/, embeds XMP metadata, returns GenerateItem-shaped row |
 | `lib/storageMigration.js` | 284 | Legacy generated-folder scan and migration support |
 | `lib/runtimePorts.js` | 93 | Port probing, fallback binding, and OAuth ready URL parsing |
 | `lib/oauthLauncher.js` | 64 | OAuth proxy child process startup and actual ready-port capture |
@@ -97,8 +99,13 @@ graph TD
 | `lib/cardNewsPlannerSchema.js` | 259 | Card-news planner JSON schema, validation, and repair |
 | `lib/cardNewsGenerator.js` | 162 | Card-by-card image assembly orchestrator |
 | `lib/promptImport/errors.js` | 16 | Prompt import error type and detection helpers |
-| `lib/promptImport/githubSource.js` | 205 | GitHub prompt source normalization, host/path validation, redirect validation, and remote text fetch |
-| `lib/promptImport/parsePromptCandidates.js` | 140 | Conservative Markdown/TXT prompt candidate extraction with length and count caps |
+| `lib/promptImport/curatedSources.js` | 139 | Static curated prompt source registry for PR2 indexed search |
+| `lib/promptImport/githubFolder.js` | 296 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
+| `lib/promptImport/githubSource.js` | 239 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
+| `lib/promptImport/gptImageHints.js` | 68 | `gpt-image-2` model/task/size/quality hint and warning extraction |
+| `lib/promptImport/parsePromptCandidates.js` | 153 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
+| `lib/promptImport/promptIndex.js` | 226 | File-based curated source index/cache, refresh, and search orchestration |
+| `lib/promptImport/rankPromptCandidates.js` | 49 | Query scoring for curated prompt candidates |
 
 ## UI File Map
 
@@ -110,7 +117,7 @@ graph TD
 | Store | `ui/src/store/useAppStore.ts` | 3374 | Zustand state for classic, node, sessions, history, in-flight jobs, errors, storage, themes, custom size, node batch selection, directional edge handles, edge disconnect, node references, node regeneration, prompt library, metadata restore |
 | Card-news store | `ui/src/store/cardNewsStore.ts` | 416 | Card-news plan, role/image template selection, planner draft, job polling, regenerate actions |
 | Mode/dev gates | `ui/src/lib/devMode.ts` | 10 | `IS_DEV_UI`, `ENABLE_NODE_MODE`, `ENABLE_CARD_NEWS_MODE` build-time flags |
-| API client | `ui/src/lib/api.ts` | 764 | Browser-side REST client: generate, edit, history, sessions, storage, prompts, prompt folders, prompt import preview/commit, image metadata read |
+| API client | `ui/src/lib/api.ts` | 888 | Browser-side REST client: generate, edit, history, sessions, storage, prompts, prompt folders, prompt import preview/commit, curated search, GitHub folder browse/preview, image metadata read |
 | Card-news API client | `ui/src/lib/cardNewsApi.ts` | 275 | Card-news templates, draft, jobs, regenerate, set/manifest helpers |
 | Node API client | `ui/src/lib/nodeApi.ts` | 148 | Node generation JSON/SSE client and node error status propagation |
 | Node graph helpers | `ui/src/lib/nodeGraph.ts` | 41 | Visual-edge parent derivation and incoming-edge conflict helpers |
@@ -128,10 +135,10 @@ graph TD
 | Image models | `ui/src/lib/imageModels.ts` | 30 | UI-side image model labels |
 | Storage | `ui/src/lib/storage.ts` | 25 | localStorage helpers |
 | Gallery utils | `ui/src/lib/galleryUtils.ts` | 17 | Gallery navigation helpers |
-| Style | `ui/src/index.css` | 5250 | App layout, canvas, components, node-mode, settings, themes, error, node batch, compact node footer, directional node handle, prompt library, prompt import dialog, card-news, gallery double-rail styling |
+| Style | `ui/src/index.css` | 5394 | App layout, canvas, components, node-mode, settings, themes, error, node batch, compact node footer, directional node handle, prompt library, prompt import dialog, curated source search, folder browse, card-news, gallery double-rail styling |
 | Components | `ui/src/components/*.tsx` | 5263 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, themes, error surfaces, prompt library, prompt import dialog, gallery tiles, metadata restore, card-news workspace |
 | Hooks | `ui/src/hooks/*.ts` | 57 | Billing and OAuth status polling |
-| i18n | `ui/src/i18n/*` | 1599 | English/Korean translations and locale runtime |
+| i18n | `ui/src/i18n/*` | 1548 | English/Korean translations and locale runtime |
 
 ## Major Components
 
@@ -142,7 +149,8 @@ graph TD
 | `CardNewsGalleryTile.tsx` | 58 | Card-news set tile in the gallery |
 | `PromptComposer.tsx` | 250 | Prompt input, reference handling, style-sheet entry, save-to-library |
 | `PromptLibraryPanel.tsx` | 152 | Prompt library overlay/embedded panel with favorites, search, insert/load, and dialog-first import entry |
-| `PromptImportDialog.tsx` | 247 | Prompt import modal/dropzone with local file preview, GitHub file preview, candidate selection, and commit |
+| `PromptImportDialog.tsx` | 374 | Prompt import modal/dropzone with local/GitHub preview, folder section composition, curated source search, candidate selection, warnings, and commit |
+| `PromptImportFolderSection.tsx` | 121 | GitHub folder browse UI, selected file list, folder preview action, and folder warnings |
 | `PromptLibraryRow.tsx` | 75 | Single prompt-library row with actions |
 | `PromptDetailModal.tsx` | 81 | Prompt detail/edit modal |
 | `SavePromptPopover.tsx` | 82 | Save-current-prompt popover |
@@ -212,6 +220,10 @@ graph TD
 | `tests/prompt-library-ui-contract.test.js` | 171 | Prompt library UI/API contract |
 | `tests/prompt-import-github-contract.test.js` | 161 | Prompt import GitHub normalization, redirect safety, parser, config, and route registration contract |
 | `tests/prompt-import-dialog-ui-contract.test.js` | 53 | Prompt import dialog-first UI and `.markdown` support contract |
+| `tests/prompt-import-folder-contract.test.js` | 164 | GitHub folder normalization, Contents API filtering, selected path validation, and route/config contract |
+| `tests/prompt-import-folder-ui-contract.test.js` | 69 | Folder browse UI/API helper, no-auto-import, bounded list CSS, and i18n contract |
+| `tests/prompt-index-ranking-contract.test.js` | 60 | Curated registry, gpt-image-2 hint extraction, warning extraction, and ranking contract |
+| `tests/prompt-curated-search-contract.test.js` | 46 | Curated search route, commit-compatible candidate, no-auto-import, and file-cache contract |
 | `tests/image-metadata-route.test.js` | 111 | `/api/metadata/read` route contract |
 | `tests/image-metadata-xmp.test.js` | 74 | XMP build/parse round trip |
 | `tests/image-metadata-ui-contract.test.js` | 89 | Drag/drop metadata restore UI contract |
@@ -267,6 +279,7 @@ graph TD
 - 2026-04-26: Refreshed CLI, runtime port fallback, node layout, and test-map ownership after the 0.09.20.1 and runtime binding work.
 - 2026-04-27: Updated node mode counts and responsibilities after four-direction React Flow handle support and handle-id session persistence.
 - 2026-04-28: Added prompt import route/helper cluster, dialog-first prompt import UI, related tests, and refreshed line counts after PR1 GitHub/local `.md`/`.markdown`/`.txt` import.
+- 2026-04-28: Added PR2 curated prompt source registry, file-based prompt index/cache, gpt-image-2 hint extraction, curated search/refresh endpoints, and updated prompt import UI ownership.
 - 2026-04-28: Added prompt library (`routes/prompts.js`, `lib/db.js` migrations, prompt UI), image metadata embed/restore (`lib/imageMetadata*.js`, `routes/metadata.js`), card-news cluster (`routes/cardNews.js`, `lib/cardNews*.js`, `ui/src/components/card-news/*`, `ui/src/store/cardNewsStore.ts`), and refreshed line counts/test map for ima2-gen 1.1.5.
 
 Previous document: `[[00-structure-hub]]`

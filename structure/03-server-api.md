@@ -73,8 +73,11 @@ Image generation model selection is explicit. If omitted, the server defaults to
 | `DELETE` | `/api/history/:filename` | none | `{ ok, trashId, filename, unlinkAt, sessionsTouched, nodesTouched }` |
 | `POST` | `/api/history/:filename/restore` | `{ trashId }` | `{ ok }` |
 | `POST` | `/api/history/favorite` | `{ filename, favorite }` | `{ ok, favorite }` |
+| `POST` | `/api/history/import-local` | raw body `image/png` \| `image/jpeg` \| `image/webp`; optional header `X-Ima2-Original-Filename` | `201 { item }` (GenerateItem with `kind: "imported"`) |
 
 History is reconstructed from image files and sidecar JSON under the configured generated directory. Delete is a soft-delete into `.trash/`, not an immediate permanent removal. Restore uses the returned `trashId`.
+
+`/api/history/import-local` accepts a single raw image body and writes it into `generated/` as `imported-<yyyymmddhhmmss>-<rand6>.<ext>` with embedded XMP metadata (`kind: "imported"`). Frontend uses this to drop external images directly onto the Canvas viewer area; the response item is appended to the in-memory history list and selected as the current image.
 
 When `groupBy=session` is used, session groups include `title` and `label` when the session still exists in SQLite. The gallery should prefer the title and only fall back to the short server session id.
 
@@ -151,6 +154,11 @@ Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`
 | `POST` | `/api/prompts/import` | `{ prompts: [...] }` or NDJSON body | Existing bulk import route for local/export compatibility |
 | `POST` | `/api/prompts/import/preview` | `{ source: { kind: "local", filename, text } }` or `{ source: { kind: "github", input } }` | `{ source, candidates, warnings }` preview for single `.md`, `.markdown`, or `.txt` sources |
 | `POST` | `/api/prompts/import/commit` | `{ candidates, folderId? }` | `{ foldersCreated, promptsImported, duplicatesSkipped }` |
+| `GET` | `/api/prompts/import/curated-sources` | none | `{ sources }` static curated and manual-review source registry |
+| `POST` | `/api/prompts/import/curated-search` | `{ q?, sourceIds?, limit? }` | `{ results, sources, warnings }` from the file-based curated prompt index |
+| `POST` | `/api/prompts/import/curated-refresh` | `{ sourceId }` | `{ source, indexedFiles, candidateCount, warnings }` for one curated source |
+| `POST` | `/api/prompts/import/folder-files` | `{ source: { kind: "github-folder", input } }` | `{ source, files, warnings }` for supported files in one GitHub folder |
+| `POST` | `/api/prompts/import/folder-preview` | `{ source: { kind: "github-folder", input }, paths }` | `{ source, files, candidates, warnings }` preview for selected listed folder files |
 | `GET` | `/api/prompts/export` | none | NDJSON stream of stored prompts |
 | `GET` | `/api/prompts/folders` | none | `{ ok, folders }` |
 | `POST` | `/api/prompts/folders` | `{ name }` | `{ ok, folder }` |
@@ -159,7 +167,11 @@ Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`
 
 Prompts and folders are stored in SQLite alongside sessions; migrations live in `lib/db.js`. The library supports favorite filtering, free-text search across title and body, folder grouping, and full-export round trips. Prompt rows are independent from history filenames so the same prompt body can be reused across sessions.
 
-Prompt import PR1 is preview-first. `/api/prompts/import/preview` accepts either local text supplied by the browser or a GitHub file source and returns prompt candidates without saving. GitHub sources are limited to `github.com` and `raw.githubusercontent.com`, reject host spoofing, unsupported extensions, encoded slash/backslash, traversal, folder URLs, oversized files, and redirected final URLs that are not supported prompt files. `/api/prompts/import/commit` saves only selected candidates through the same SQLite prompt semantics as the existing import path and stores source metadata as tags only, such as `github`, `repo:owner/repo`, `ref:main`, `file:prompts.md`, and `ext:md`. Structured source indexes are deferred to the PR2 plan.
+Prompt import PR1 is preview-first. `/api/prompts/import/preview` accepts either local text supplied by the browser or a GitHub file source and returns prompt candidates without saving. GitHub sources are limited to `github.com` and `raw.githubusercontent.com`, reject host spoofing, unsupported extensions, encoded slash/backslash, traversal, folder URLs, oversized files, and redirected final URLs that are not supported prompt files. `/api/prompts/import/commit` saves only selected candidates through the same SQLite prompt semantics as the existing import path and stores source metadata as tags only, such as `github`, `repo:owner/repo`, `ref:main`, `file:prompts.md`, and `ext:md`.
+
+Prompt import PR2 adds curated indexed search without introducing a DB migration. Static sources live in `lib/promptImport/curatedSources.js`; indexed source/candidate cache is written under `config.storage.promptImportIndexCacheFile`, usually `~/.ima2/prompt-import-index.json`, with atomic temp-file writes. Curated search is read-only: results remain commit-compatible prompt candidates with mandatory `text`, but they are never saved until the UI sends selected candidates to `/api/prompts/import/commit`. `gpt-image-2` model/task/size/quality hints and warnings are stored in candidate metadata for ranking and UI display, while attribution and license state persists through tags such as `source:<sourceId>`, `license:<spdx>`, `trust:<tier>`, and `attribution-required`.
+
+Prompt import PR3 adds GitHub folder browse without recursive crawling or auto-import. `/api/prompts/import/folder-files` lists only supported `.md`, `.markdown`, and `.txt` files from a single GitHub Contents API directory. `/api/prompts/import/folder-preview` re-lists the same folder server-side and previews only selected paths that appear in that listing as supported `type: "file"` entries; client-supplied download URLs are never trusted. Slash-branch shorthand remains rejected with `AMBIGUOUS_GITHUB_REF`, and ambiguous `tree/feature/foo/...` URLs do not trigger a slash-branch resolver in PR3. Saving still goes through `/api/prompts/import/commit`.
 
 ## Card-News API (dev-only)
 
@@ -237,6 +249,7 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - 2026-04-25: Documented node context/search modes and graph-edge-derived parent normalization.
 - 2026-04-26: Documented runtime actual-port reporting and removed dev-only API details from the evergreen public API map.
 - 2026-04-28: Added session style-sheet endpoints, `/api/history/favorite`, `/api/metadata/read`, prompt library CRUD/folders/import/export, and dev-gated card-news API surface for ima2-gen 1.1.5.
+- 2026-04-28: Added PR2 prompt import curated-source, curated-search, and curated-refresh API contracts plus file-cache and tag-based attribution notes.
 
 Previous document: `[[02-command-reference]]`
 

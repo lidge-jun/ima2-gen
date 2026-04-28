@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   useCallback,
+  type DragEvent as ReactDragEvent,
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
@@ -127,6 +128,8 @@ function responseToGenerateItem(response: GenerateResponse, prompt: string): Gen
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
   const history = useAppStore((s) => s.history);
+  const importLocalImageToHistory = useAppStore((s) => s.importLocalImageToHistory);
+  const [dropActive, setDropActive] = useState(false);
   const multimodeSequence = useAppStore((s) => s.multimodeSequence);
   const selectHistoryShortcutTarget = useAppStore((s) => s.selectHistoryShortcutTarget);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
@@ -321,6 +324,31 @@ export function Canvas() {
     markGeneratedResultsSeen();
     event.currentTarget.focus();
   };
+
+  const handleCenterDragOver = useCallback((e: ReactDragEvent<HTMLElement>) => {
+    if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+    e.preventDefault();
+    setDropActive((prev) => (prev ? prev : true));
+  }, []);
+
+  const handleCenterDragLeave = useCallback((e: ReactDragEvent<HTMLElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setDropActive(false);
+  }, []);
+
+  const handleCenterDrop = useCallback(
+    async (e: ReactDragEvent<HTMLElement>) => {
+      if (!Array.from(e.dataTransfer.types).includes("Files")) return;
+      e.preventDefault();
+      setDropActive(false);
+      const files = Array.from(e.dataTransfer.files).filter((f) =>
+        /^image\/(png|jpeg|webp)$/.test(f.type),
+      );
+      if (files.length === 0) return;
+      await importLocalImageToHistory(files[0]);
+    },
+    [importLocalImageToHistory],
+  );
 
   const handleAnnotationPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!canvasOpen) return;
@@ -603,7 +631,17 @@ export function Canvas() {
   };
 
   return (
-    <main className={`canvas${canvasOpen ? " canvas--mode-open" : ""}`}>
+    <main
+      className={`canvas${canvasOpen ? " canvas--mode-open" : ""}${dropActive ? " canvas--drop-active" : ""}`}
+      onDragOver={handleCenterDragOver}
+      onDragLeave={handleCenterDragLeave}
+      onDrop={handleCenterDrop}
+    >
+      {dropActive ? (
+        <div className="canvas__drop-overlay" aria-hidden>
+          <span className="canvas__drop-hint">{t("canvas.drop.hint")}</span>
+        </div>
+      ) : null}
       {canvasOpen && (
         <div className="canvas-mode-topbar">
           <span className="canvas-mode-topbar__label">Canvas Mode</span>
@@ -688,6 +726,8 @@ export function Canvas() {
               activeTool={annotations.activeTool}
               eraserMode={annotations.eraserMode}
               onEraserModeChange={annotations.setEraserMode}
+              style={{ color: annotations.toolColor, strokeWidth: annotations.strokeWidth }}
+              onStyleChange={annotations.setStyle}
               hasExportableContent={annotations.hasAnnotations}
               onToolChange={annotations.setTool}
               onClear={annotations.clear}

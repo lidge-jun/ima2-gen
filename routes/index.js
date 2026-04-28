@@ -13,6 +13,7 @@ import { registerPromptImportRoutes } from "./promptImport.js";
 import { registerAnnotationRoutes } from "./annotations.js";
 import { registerCanvasVersionRoutes } from "./canvasVersions.js";
 import { registerComfyRoutes } from "./comfy.js";
+import { registerImageImportRoutes } from "./imageImport.js";
 
 export function configureRoutes(app, ctx) {
   registerHealthRoutes(app, ctx);
@@ -21,6 +22,7 @@ export function configureRoutes(app, ctx) {
   registerHistoryRoutes(app, ctx);
   registerAnnotationRoutes(app, ctx);
   registerCanvasVersionRoutes(app, ctx);
+  registerImageImportRoutes(app, ctx);
   registerComfyRoutes(app, ctx);
   registerSessionRoutes(app, ctx);
   registerEditRoutes(app, ctx);

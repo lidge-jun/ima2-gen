@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
-import { commitPromptImport, previewPromptImport, type PromptImportCandidate } from "../lib/api";
+import {
+  commitPromptImport,
+  getPromptImportCuratedSources,
+  previewPromptImport,
+  refreshPromptImportCuratedSource,
+  searchPromptImportCurated,
+  type PromptCuratedSource,
+  type PromptImportCandidate,
+} from "../lib/api";
 import { useI18n } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
+import { PromptImportFolderSection } from "./PromptImportFolderSection";
 
 type PromptImportDialogProps = {
   open: boolean;
@@ -23,12 +32,34 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [curatedSources, setCuratedSources] = useState<PromptCuratedSource[]>([]);
+  const [curatedQuery, setCuratedQuery] = useState("");
+  const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
+  const [curatedBusy, setCuratedBusy] = useState(false);
+  const [curatedWarnings, setCuratedWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
     previousFocusRef.current = document.activeElement as HTMLElement | null;
     window.setTimeout(() => dialogRef.current?.focus(), 0);
     return () => previousFocusRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void getPromptImportCuratedSources()
+      .then((data) => {
+        if (cancelled) return;
+        setCuratedSources(data.sources);
+        setSelectedSourceIds(new Set(data.sources.filter((source) => source.defaultSearch).map((source) => source.id)));
+      })
+      .catch(() => {
+        if (!cancelled) setCuratedSources([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   const addPreviewCandidates = useCallback((next: PromptImportCandidate[]) => {
@@ -84,6 +115,43 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
       setBusy(false);
     }
   }, [addPreviewCandidates, githubInput, t]);
+
+  const searchCurated = useCallback(async () => {
+    setCuratedBusy(true);
+    setError(null);
+    setCuratedWarnings([]);
+    try {
+      const result = await searchPromptImportCurated({
+        q: curatedQuery.trim(),
+        sourceIds: [...selectedSourceIds],
+      });
+      addPreviewCandidates(result.results);
+      setCuratedWarnings(result.warnings);
+      if (result.results.length === 0) setError(t("promptLibrary.noCuratedResults"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("promptLibrary.importFailed"));
+    } finally {
+      setCuratedBusy(false);
+    }
+  }, [addPreviewCandidates, curatedQuery, selectedSourceIds, t]);
+
+  const refreshSource = useCallback(
+    async (sourceId: string) => {
+      setCuratedBusy(true);
+      setError(null);
+      setCuratedWarnings([]);
+      try {
+        const result = await refreshPromptImportCuratedSource({ sourceId });
+        setCuratedWarnings(result.warnings);
+        showToast(t("promptLibrary.curatedRefreshed", { count: result.candidateCount }));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("promptLibrary.importFailed"));
+      } finally {
+        setCuratedBusy(false);
+      }
+    },
+    [showToast, t],
+  );
 
   const commitSelected = useCallback(async () => {
     const picked = candidates.filter((candidate) => selected.has(candidate.id));
@@ -205,6 +273,62 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
           </div>
         </div>
 
+        <PromptImportFolderSection
+          input={githubInput}
+          disabled={busy}
+          onCandidates={addPreviewCandidates}
+          onError={setError}
+        />
+
+        <div className="prompt-import-dialog__curated">
+          <div className="prompt-import-dialog__section-title">
+            <strong>{t("promptLibrary.curatedSources")}</strong>
+            <span>{t("promptLibrary.curatedSourcesHint")}</span>
+          </div>
+          <div className="prompt-import-dialog__source-list">
+            {curatedSources.filter((source) => source.trustTier !== "manual-review").map((source) => (
+              <label key={source.id} className="prompt-import-dialog__source">
+                <input
+                  type="checkbox"
+                  checked={selectedSourceIds.has(source.id)}
+                  onChange={(event) => {
+                    setSelectedSourceIds((prev) => {
+                      const next = new Set(prev);
+                      if (event.target.checked) next.add(source.id);
+                      else next.delete(source.id);
+                      return next;
+                    });
+                  }}
+                />
+                <span>
+                  <strong>{source.displayName}</strong>
+                  <small>{source.licenseSpdx} · {source.trustTier}</small>
+                </span>
+                <button type="button" onClick={() => void refreshSource(source.id)} disabled={curatedBusy}>
+                  {t("promptLibrary.refreshSource")}
+                </button>
+              </label>
+            ))}
+          </div>
+          <div className="prompt-import-dialog__search-results">
+            <input
+              type="text"
+              value={curatedQuery}
+              onChange={(event) => setCuratedQuery(event.target.value)}
+              placeholder={t("promptLibrary.curatedSearchPlaceholder")}
+              aria-label={t("promptLibrary.curatedSearch")}
+            />
+            <button type="button" onClick={() => void searchCurated()} disabled={curatedBusy || selectedSourceIds.size === 0}>
+              {curatedBusy ? t("common.loading") : t("promptLibrary.curatedSearch")}
+            </button>
+          </div>
+          {curatedWarnings.length > 0 ? (
+            <div className="prompt-import-dialog__warning">
+              {curatedWarnings.slice(0, 3).join(" · ")}
+            </div>
+          ) : null}
+        </div>
+
         {error ? <div className="prompt-import-dialog__error" role="alert">{error}</div> : null}
 
         <div className="prompt-import-dialog__preview" aria-live="polite">
@@ -228,6 +352,9 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
                 <span>
                   <strong>{candidate.name}</strong>
                   <small>{candidate.text.slice(0, 180)}</small>
+                  {candidate.warnings?.length ? (
+                    <b className="prompt-import-dialog__hint-chip">{candidate.warnings[0]}</b>
+                  ) : null}
                   {candidate.tags.length > 0 ? <em>{candidate.tags.join(" · ")}</em> : null}
                 </span>
               </label>

@@ -8,6 +8,9 @@
     "loading": "Loading..."
   },
   "toast": {
+    "localImportSuccess": "Image added to gallery",
+    "localImportFailed": "Failed to import image",
+    "localImportInvalid": "Only PNG, JPEG, or WebP is supported",
     "localStorageFull": "Local storage is full — recent state may not persist.",
     "refLimitExceeded": "References are capped at 5. Extra images were dropped.",
     "refTooLarge": "Image is too large. Convert to JPEG/PNG or lower the resolution and try again.",
@@ -214,6 +217,9 @@
     "open": "Open Canvas",
     "openAria": "Open image in canvas mode",
     "close": "Close Canvas",
+    "drop": {
+      "hint": "Drop image to add to gallery"
+    },
     "toolbar": {
       "label": "Canvas annotation tools",
       "pan": "Pan",
@@ -238,6 +244,9 @@
       "editMaskDisabled": "Draw a box first",
       "editMaskFailed": "Masked edit failed",
       "editMaskUnsupported": "Masked edit is not supported by the current image provider",
+      "style": "Style",
+      "color": "Color",
+      "strokeWidth": "Stroke width",
       "clear": "Clear all"
     },
     "version": {
@@ -753,6 +762,29 @@
     "importSelectAtLeastOne": "Select at least one prompt to save.",
     "imported": "Imported {count} prompt(s)",
     "importFailed": "Import failed",
-    "importNoValidFiles": "No .txt, .md, or .markdown prompt files found."
+    "importNoValidFiles": "No .txt, .md, or .markdown prompt files found.",
+    "curatedSources": "Curated sources",
+    "curatedSourcesHint": "Search indexed public prompt sources",
+    "curatedSearch": "Search",
+    "curatedSearchPlaceholder": "nano banana, gpt-image-2, typography...",
+    "refreshSource": "Refresh",
+    "curatedRefreshed": "Indexed {count} prompt candidate(s)",
+    "sourceTrustTier": "Source trust",
+    "requiresAttribution": "Attribution required",
+    "modelHints": "Model hints",
+    "taskHints": "Task hints",
+    "warnings": "Warnings",
+    "transparentUnsupportedGptImage2": "Transparent background is not supported by gpt-image-2",
+    "noCuratedResults": "No curated prompt candidates found.",
+    "folderBrowse": "Browse folder",
+    "folderBrowseHint": "Loads supported files from a GitHub folder",
+    "folderFiles": "Folder files",
+    "folderFilesEmpty": "No importable .md, .markdown, or .txt files found.",
+    "folderPreviewSelected": "Preview selected files",
+    "folderSelectedCount": "{count} selected",
+    "folderWarnings": "Folder warnings",
+    "folderTooManyFiles": "Too many files; showing a limited set.",
+    "folderNoSelection": "Select files to preview.",
+    "folderUnsupported": "Only GitHub folders are supported."
   }
 }

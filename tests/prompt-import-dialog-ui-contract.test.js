@@ -26,12 +26,17 @@ describe("prompt import dialog UI contract", () => {
     assert.match(dialog, /accept="\.txt,\.md,\.markdown,text\/plain,text\/markdown"/);
     assert.match(dialog, /previewPromptImport/);
     assert.match(dialog, /commitPromptImport/);
+    assert.match(dialog, /searchPromptImportCurated/);
+    assert.match(dialog, /refreshPromptImportCuratedSource/);
     assert.match(dialog, /owner\/repo:path\/to\/prompts\.md/);
 
     assert.match(api, /\/api\/prompts\/import\/preview/);
     assert.match(api, /\/api\/prompts\/import\/commit/);
+    assert.match(api, /\/api\/prompts\/import\/curated-search/);
     assert.match(css, /\.prompt-import-dialog__dropzone/);
     assert.match(css, /\.prompt-import-dialog__candidate/);
+    assert.match(css, /\.prompt-import-dialog__curated/);
+    assert.match(css, /\.prompt-import-dialog__hint-chip/);
   });
 
   it("updates local import extension support and translated copy", () => {
@@ -46,6 +51,8 @@ describe("prompt import dialog UI contract", () => {
       assert.equal(typeof dict.promptLibrary.importGithubLabel, "string");
       assert.equal(typeof dict.promptLibrary.importPreview, "string");
       assert.equal(typeof dict.promptLibrary.importCommit, "string");
+      assert.equal(typeof dict.promptLibrary.curatedSources, "string");
+      assert.equal(typeof dict.promptLibrary.curatedSearch, "string");
       assert.match(dict.promptLibrary.importFiles, /\.markdown/);
       assert.match(dict.promptLibrary.importNoValidFiles, /\.markdown/);
     }

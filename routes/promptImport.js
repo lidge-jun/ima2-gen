@@ -6,7 +6,17 @@ import {
   isSupportedPromptFileName,
   normalizeGitHubSource,
 } from "../lib/promptImport/githubSource.js";
+import {
+  fetchGitHubFolderFiles,
+  fetchSelectedGitHubFolderFiles,
+  normalizeGitHubFolderSource,
+} from "../lib/promptImport/githubFolder.js";
 import { parsePromptCandidates } from "../lib/promptImport/parsePromptCandidates.js";
+import {
+  getPromptImportSources,
+  refreshCuratedSource,
+  searchCuratedPrompts,
+} from "../lib/promptImport/promptIndex.js";
 
 function promptImportLimits(ctx) {
   return {
@@ -17,6 +27,11 @@ function promptImportLimits(ctx) {
     maxCandidateChars: ctx.config.limits.promptImportMaxCandidateChars,
     minCandidateChars: ctx.config.limits.promptImportMinCandidateChars,
     maxSourceCharsScanned: ctx.config.limits.promptImportMaxSourceCharsScanned,
+    maxRepoIndexFiles: ctx.config.limits.promptImportMaxRepoIndexFiles,
+    curatedSearchLimit: ctx.config.limits.promptImportCuratedSearchLimit,
+    indexCacheTtlMs: ctx.config.limits.promptImportIndexCacheTtlMs,
+    maxFolderFiles: ctx.config.limits.promptImportMaxFolderFiles,
+    maxFolderPreviewFiles: ctx.config.limits.promptImportMaxFolderPreviewFiles,
   };
 }
 
@@ -96,6 +111,58 @@ async function buildPreview(req, ctx) {
   return { source, candidates, warnings: [] };
 }
 
+function normalizeFolderInput(body) {
+  const input = typeof body?.source?.input === "string" ? body.source.input : body?.input;
+  return normalizeGitHubFolderSource(input);
+}
+
+async function buildFolderFiles(req, ctx) {
+  const limits = promptImportLimits(ctx);
+  const source = normalizeFolderInput(req.body || {});
+  return fetchGitHubFolderFiles(source, limits);
+}
+
+async function buildFolderPreview(req, ctx) {
+  const limits = promptImportLimits(ctx);
+  const source = normalizeFolderInput(req.body || {});
+  const paths = Array.isArray(req.body?.paths) ? req.body.paths : [];
+  const selected = await fetchSelectedGitHubFolderFiles(source, paths, limits);
+  const candidates = [];
+  const warnings = [...selected.warnings];
+
+  for (const file of selected.files) {
+    const text = file.text.length > limits.maxSourceCharsScanned
+      ? file.text.slice(0, limits.maxSourceCharsScanned)
+      : file.text;
+    const parsed = parsePromptCandidates({
+      text,
+      filename: file.path,
+      source: {
+        kind: "github",
+        owner: source.owner,
+        repo: source.repo,
+        ref: source.ref,
+        path: file.path,
+        htmlUrl: file.htmlUrl,
+      },
+      tags: [...source.tags, `file:${file.name}`, `ext:${file.extension}`],
+      limits,
+    });
+    if (parsed.length === 0) warnings.push(`${file.path}: no prompt candidates`);
+    candidates.push(...parsed);
+  }
+
+  if (candidates.length === 0) {
+    throw promptImportError("PROMPT_IMPORT_EMPTY", "No prompt candidates were found", 422);
+  }
+  return {
+    source,
+    files: selected.files.map(({ text, contentHash, ...file }) => file),
+    candidates: candidates.slice(0, limits.maxPromptCandidatesPerImport),
+    warnings,
+  };
+}
+
 function assertCommitCandidateText(text, limits) {
   if (text.length < limits.minCandidateChars) {
     throw promptImportError("PROMPT_IMPORT_EMPTY", "Prompt candidate is too short", 422);
@@ -144,6 +211,63 @@ function commitCandidates(candidates, folderId, limits) {
 }
 
 export function registerPromptImportRoutes(app, ctx) {
+  app.get("/api/prompts/import/curated-sources", async (req, res) => {
+    try {
+      res.json(getPromptImportSources());
+    } catch (error) {
+      logError("promptImport", "curated_sources_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.post("/api/prompts/import/curated-search", async (req, res) => {
+    try {
+      const result = await searchCuratedPrompts(ctx, {
+        q: req.body?.q,
+        sourceIds: req.body?.sourceIds,
+        limit: req.body?.limit,
+      });
+      res.json(result);
+    } catch (error) {
+      logError("promptImport", "curated_search_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.post("/api/prompts/import/curated-refresh", async (req, res) => {
+    try {
+      const sourceId = typeof req.body?.sourceId === "string" ? req.body.sourceId : "";
+      if (!sourceId) {
+        throw promptImportError("INVALID_GITHUB_SOURCE", "Curated source is required", 400);
+      }
+      const result = await refreshCuratedSource(ctx, sourceId);
+      res.json(result);
+    } catch (error) {
+      logError("promptImport", "curated_refresh_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.post("/api/prompts/import/folder-files", async (req, res) => {
+    try {
+      const result = await buildFolderFiles(req, ctx);
+      res.json(result);
+    } catch (error) {
+      logError("promptImport", "folder_files_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
+  app.post("/api/prompts/import/folder-preview", async (req, res) => {
+    try {
+      const result = await buildFolderPreview(req, ctx);
+      res.json(result);
+    } catch (error) {
+      logError("promptImport", "folder_preview_error", error);
+      sendPromptImportError(res, error);
+    }
+  });
+
   app.post("/api/prompts/import/preview", async (req, res) => {
     try {
       const preview = await buildPreview(req, ctx);

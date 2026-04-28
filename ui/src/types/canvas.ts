@@ -60,3 +60,10 @@ export interface CanvasViewport {
   panX: number;
   panY: number;
 }
+
+export type HexColor = `#${string}`;
+
+export interface CanvasAnnotationStyle {
+  color: HexColor;
+  strokeWidth: number;
+}

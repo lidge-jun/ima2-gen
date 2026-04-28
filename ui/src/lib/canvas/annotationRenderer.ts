@@ -66,8 +66,8 @@ export function renderBoundingBox(
         y: Math.min(box.start.y, box.current.y),
         width: Math.abs(box.current.x - box.start.x),
         height: Math.abs(box.current.y - box.start.y),
-        color: "#ef4444",
-        strokeWidth: 3,
+        color: "#64c8ff",
+        strokeWidth: 2,
       }
     : box;
 

@@ -45,6 +45,7 @@ import {
   togglePromptFavorite,
   toggleGalleryFavorite,
   importPromptLibrary,
+  importLocalImage,
   type SessionSummary,
   type SessionFull,
   type SessionGraphEdge,
@@ -767,6 +768,7 @@ type AppState = {
   permanentlyDeleteHistoryItemByClick: (item: GenerateItem) => Promise<void>;
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
+  importLocalImageToHistory: (file: File) => Promise<GenerateItem | null>;
   generate: () => Promise<void>;
   runGenerate: (sizeOverride?: string) => Promise<void>;
   confirmCustomSizeAdjustment: () => Promise<void>;
@@ -2627,6 +2629,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       createdAt: item.createdAt || Date.now(),
     };
     set({ history: [withDefaults, ...s.history].slice(0, HISTORY_LIMIT) });
+  },
+
+  importLocalImageToHistory: async (file) => {
+    if (!file.type || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      get().showToast(t("toast.localImportInvalid"), true);
+      return null;
+    }
+    try {
+      const item = await importLocalImage(file);
+      get().addHistoryItem(item);
+      set({ currentImage: item, unseenGeneratedCount: 0 });
+      if (item.filename) saveSelectedFilename(item.filename);
+      get().showToast(t("toast.localImportSuccess"));
+      return item;
+    } catch {
+      get().showToast(t("toast.localImportFailed"), true);
+      return null;
+    }
   },
 
   getResolvedSize: () => {

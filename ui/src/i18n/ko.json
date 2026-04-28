@@ -8,6 +8,9 @@
     "loading": "불러오는 중..."
   },
   "toast": {
+    "localImportSuccess": "이미지가 갤러리에 추가됐어요",
+    "localImportFailed": "이미지 가져오기 실패",
+    "localImportInvalid": "PNG, JPEG, WebP만 지원해요",
     "localStorageFull": "로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.",
     "refLimitExceeded": "참조 이미지는 최대 5장까지 추가할 수 있습니다. 초과한 이미지는 제외되었습니다.",
     "refTooLarge": "이미지가 너무 큽니다. JPEG/PNG로 미리 변환하거나 해상도를 낮춰 다시 시도해 주세요.",
@@ -214,6 +217,9 @@
     "open": "캔버스 열기",
     "openAria": "캔버스 모드에서 이미지 열기",
     "close": "캔버스 닫기",
+    "drop": {
+      "hint": "이미지를 떨어뜨려 갤러리에 추가"
+    },
     "toolbar": {
       "label": "캔버스 주석 도구",
       "pan": "이동",
@@ -238,6 +244,9 @@
       "editMaskDisabled": "먼저 박스를 그려주세요",
       "editMaskFailed": "마스크 편집 실패",
       "editMaskUnsupported": "현재 이미지 제공자는 마스크 편집을 지원하지 않습니다",
+      "style": "스타일",
+      "color": "색상",
+      "strokeWidth": "선 굵기",
       "clear": "모두 지우기"
     },
     "version": {
@@ -753,6 +762,29 @@
     "importSelectAtLeastOne": "저장할 프롬프트를 하나 이상 선택하세요.",
     "imported": "프롬프트 {count}개를 가져왔습니다",
     "importFailed": "가져오기에 실패했습니다",
-    "importNoValidFiles": ".txt, .md, .markdown 프롬프트 파일이 없습니다."
+    "importNoValidFiles": ".txt, .md, .markdown 프롬프트 파일이 없습니다.",
+    "curatedSources": "추천 소스",
+    "curatedSourcesHint": "검토된 공개 프롬프트 소스 검색",
+    "curatedSearch": "검색",
+    "curatedSearchPlaceholder": "nano banana, gpt-image-2, typography...",
+    "refreshSource": "갱신",
+    "curatedRefreshed": "프롬프트 후보 {count}개를 인덱싱했습니다",
+    "sourceTrustTier": "소스 신뢰도",
+    "requiresAttribution": "출처 표시 필요",
+    "modelHints": "모델 힌트",
+    "taskHints": "작업 힌트",
+    "warnings": "경고",
+    "transparentUnsupportedGptImage2": "gpt-image-2는 투명 배경을 지원하지 않습니다",
+    "noCuratedResults": "추천 소스에서 프롬프트 후보를 찾지 못했습니다.",
+    "folderBrowse": "폴더 보기",
+    "folderBrowseHint": "GitHub 폴더의 지원 파일만 불러옵니다",
+    "folderFiles": "폴더 파일",
+    "folderFilesEmpty": "가져올 수 있는 .md / .markdown / .txt 파일이 없습니다",
+    "folderPreviewSelected": "선택 파일 미리보기",
+    "folderSelectedCount": "{count}개 선택됨",
+    "folderWarnings": "폴더 경고",
+    "folderTooManyFiles": "파일이 너무 많아 일부만 표시했습니다",
+    "folderNoSelection": "미리볼 파일을 선택하세요",
+    "folderUnsupported": "GitHub 폴더만 지원합니다"
   }
 }

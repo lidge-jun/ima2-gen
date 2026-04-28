@@ -2,11 +2,13 @@ import { useCallback, useMemo, useReducer } from "react";
 import type {
   AnnotationSnapshot,
   BoundingBox,
+  CanvasAnnotationStyle,
   CanvasEraserMode,
   CanvasMemo,
   CanvasTool,
   DrawingPath,
   EraserStroke,
+  HexColor,
   NormalizedPoint,
   SavedCanvasAnnotations,
   SelectionBox,
@@ -16,9 +18,57 @@ import { objectKeyMatches, parseCanvasObjectKey, type CanvasObjectKey } from "..
 
 type AnnotationTool = CanvasTool;
 
+const CANVAS_STYLE_STORAGE_KEY = "ima2.canvas.annotationStyle.v1";
+
+export const CANVAS_STYLE_COLORS: HexColor[] = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#38bdf8",
+  "#6366f1",
+  "#a855f7",
+  "#111827",
+  "#ffffff",
+];
+
+export const CANVAS_STROKE_WIDTHS: number[] = [2, 3, 5, 8];
+
+const DEFAULT_CANVAS_STYLE: CanvasAnnotationStyle = {
+  color: "#ef4444",
+  strokeWidth: 3,
+};
+
+function loadCanvasStyle(): CanvasAnnotationStyle {
+  if (typeof window === "undefined") return DEFAULT_CANVAS_STYLE;
+  try {
+    const raw = window.localStorage.getItem(CANVAS_STYLE_STORAGE_KEY);
+    if (!raw) return DEFAULT_CANVAS_STYLE;
+    const parsed = JSON.parse(raw) as Partial<CanvasAnnotationStyle>;
+    const color = typeof parsed.color === "string" && CANVAS_STYLE_COLORS.includes(parsed.color as HexColor)
+      ? (parsed.color as HexColor)
+      : DEFAULT_CANVAS_STYLE.color;
+    const strokeWidth = typeof parsed.strokeWidth === "number" && CANVAS_STROKE_WIDTHS.includes(parsed.strokeWidth)
+      ? parsed.strokeWidth
+      : DEFAULT_CANVAS_STYLE.strokeWidth;
+    return { color, strokeWidth };
+  } catch {
+    return DEFAULT_CANVAS_STYLE;
+  }
+}
+
+function persistCanvasStyle(style: CanvasAnnotationStyle): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CANVAS_STYLE_STORAGE_KEY, JSON.stringify(style));
+  } catch {
+    /* ignore quota / unavailable */
+  }
+}
+
 interface State extends AnnotationSnapshot {
   activeTool: AnnotationTool;
-  toolColor: string;
+  toolColor: HexColor;
   strokeWidth: number;
   activeMemoId: string | null;
   activePath: DrawingPath | null;
@@ -38,6 +88,7 @@ interface State extends AnnotationSnapshot {
 type Action =
   | { type: "SET_TOOL"; tool: AnnotationTool }
   | { type: "SET_ERASER_MODE"; mode: CanvasEraserMode }
+  | { type: "SET_STYLE"; style: CanvasAnnotationStyle }
   | { type: "START_PATH"; point: NormalizedPoint }
   | { type: "ADD_POINT"; point: NormalizedPoint }
   | { type: "END_PATH" }
@@ -72,10 +123,12 @@ type Action =
 
 const HISTORY_LIMIT = 50;
 
+const persistedStyle = loadCanvasStyle();
+
 const initialState: State = {
   activeTool: "pan",
-  toolColor: "#ef4444",
-  strokeWidth: 3,
+  toolColor: persistedStyle.color,
+  strokeWidth: persistedStyle.strokeWidth,
   paths: [],
   boxes: [],
   memos: [],
@@ -166,6 +219,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, activeTool: action.tool };
     case "SET_ERASER_MODE":
       return { ...state, eraserMode: action.mode };
+    case "SET_STYLE":
+      return {
+        ...state,
+        toolColor: action.style.color,
+        strokeWidth: action.style.strokeWidth,
+      };
     case "START_PATH":
       return {
         ...state,
@@ -241,11 +300,24 @@ function reducer(state: State, action: Action): State {
         selectedIds: [],
       };
     case "LOAD":
-      return { ...initialState, activeTool: state.activeTool, eraserMode: state.eraserMode, ...action.payload };
+      return {
+        ...initialState,
+        activeTool: state.activeTool,
+        eraserMode: state.eraserMode,
+        toolColor: state.toolColor,
+        strokeWidth: state.strokeWidth,
+        ...action.payload,
+      };
     case "MARK_SAVED":
       return { ...state, isDirty: false };
     case "RESET_LOCAL":
-      return { ...initialState, activeTool: state.activeTool, eraserMode: state.eraserMode };
+      return {
+        ...initialState,
+        activeTool: state.activeTool,
+        eraserMode: state.eraserMode,
+        toolColor: state.toolColor,
+        strokeWidth: state.strokeWidth,
+      };
     case "UNDO": {
       const previous = state.past.at(-1);
       if (!previous) return state;
@@ -387,6 +459,10 @@ export function useCanvasAnnotations() {
   const canRedo = state.future.length > 0;
 
   const setTool = useCallback((tool: AnnotationTool) => dispatch({ type: "SET_TOOL", tool }), []);
+  const setStyle = useCallback((style: CanvasAnnotationStyle) => {
+    persistCanvasStyle(style);
+    dispatch({ type: "SET_STYLE", style });
+  }, []);
   const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);
   const load = useCallback((payload: SavedCanvasAnnotations) => dispatch({ type: "LOAD", payload }), []);
   const markSaved = useCallback(() => dispatch({ type: "MARK_SAVED" }), []);
@@ -438,6 +514,7 @@ export function useCanvasAnnotations() {
     canRedo,
     hasAnnotations,
     setTool,
+    setStyle,
     setEraserMode,
     startDrawing,
     moveDrawing,

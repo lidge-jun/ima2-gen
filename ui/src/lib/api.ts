@@ -606,6 +606,78 @@ export type PromptImportCandidate = {
     path?: string;
     htmlUrl?: string;
     filename?: string;
+    sourceId?: string;
+  };
+};
+
+export type PromptGitHubFolderSource = {
+  kind: "github-folder";
+  owner?: string;
+  repo?: string;
+  ref?: string;
+  path?: string;
+  htmlUrl?: string;
+  apiUrl?: string;
+  tags?: string[];
+};
+
+export type PromptGitHubFolderFile = {
+  name: string;
+  path: string;
+  extension: string;
+  sizeBytes: number;
+  htmlUrl: string;
+  selected?: boolean;
+  warnings?: string[];
+};
+
+export type PromptImportFolderFilesResponse = {
+  source: PromptGitHubFolderSource;
+  files: PromptGitHubFolderFile[];
+  warnings: string[];
+};
+
+export type PromptImportFolderPreviewResponse = {
+  source: PromptGitHubFolderSource;
+  files: PromptGitHubFolderFile[];
+  candidates: PromptImportCandidate[];
+  warnings: string[];
+};
+
+export type PromptCuratedSource = {
+  id: string;
+  repo: string;
+  owner?: string;
+  name?: string;
+  displayName: string;
+  defaultRef: string;
+  allowedPaths: string[];
+  extensions: string[];
+  sourceType: string;
+  licenseSpdx: string;
+  requiresAttribution: boolean;
+  trustTier: string;
+  lastVerifiedAt: string | null;
+  notes: string;
+  searchSeeds: string[];
+  defaultSearch: boolean;
+};
+
+export type PromptIndexedCandidate = PromptImportCandidate & {
+  candidateId?: string;
+  textPreview?: string;
+  headingPath?: string | null;
+  ordinal?: number;
+  promptHash?: string;
+  sourceFileId?: string;
+  score?: number;
+  scoreHints?: {
+    modelHints?: string[];
+    generationSurfaceHints?: string[];
+    taskHints?: string[];
+    sizeHints?: string[];
+    qualityHints?: string[];
+    warnings?: string[];
   };
 };
 
@@ -718,6 +790,58 @@ export function commitPromptImport(payload: {
   });
 }
 
+export function getPromptImportCuratedSources(): Promise<{ sources: PromptCuratedSource[] }> {
+  return jsonFetch("/api/prompts/import/curated-sources");
+}
+
+export function searchPromptImportCurated(payload: {
+  q?: string;
+  sourceIds?: string[];
+  limit?: number;
+}): Promise<{ results: PromptIndexedCandidate[]; sources: PromptCuratedSource[]; warnings: string[] }> {
+  return jsonFetch("/api/prompts/import/curated-search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function refreshPromptImportCuratedSource(payload: {
+  sourceId: string;
+}): Promise<{ source: PromptCuratedSource | null; indexedFiles: number; candidateCount: number; warnings: string[] }> {
+  return jsonFetch("/api/prompts/import/curated-refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPromptImportFolderFiles(payload: {
+  source: { kind: "github-folder"; input: string };
+}): Promise<PromptImportFolderFilesResponse> {
+  return jsonFetch("/api/prompts/import/folder-files", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source: { kind: "github-folder", input: payload.source.input },
+    }),
+  });
+}
+
+export function previewPromptImportFolderFiles(payload: {
+  source: { kind: "github-folder"; input: string };
+  paths: string[];
+}): Promise<PromptImportFolderPreviewResponse> {
+  return jsonFetch("/api/prompts/import/folder-preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source: { kind: "github-folder", input: payload.source.input },
+      paths: payload.paths,
+    }),
+  });
+}
+
 export function exportPromptLibrary(): Promise<{
   version: number;
   exportedAt: string;
@@ -761,4 +885,29 @@ export function updatePromptFolder(
 export function deletePromptFolder(id: string, strategy?: "moveToRoot" | "deleteItems"): Promise<{ ok: boolean }> {
   const qs = strategy ? `?strategy=${strategy}` : "";
   return jsonFetch(`/api/prompts/folders/${encodeURIComponent(id)}${qs}`, { method: "DELETE" });
+}
+
+export async function importLocalImage(file: File): Promise<GenerateItem> {
+  const buffer = await file.arrayBuffer();
+  const res = await fetch("/api/history/import-local", {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "image/png",
+      "X-Ima2-Original-Filename": encodeURIComponent(file.name),
+    },
+    body: buffer,
+  });
+  if (!res.ok) {
+    let detail: { error?: string; code?: string } = {};
+    try {
+      detail = await res.json();
+    } catch {
+      /* ignore */
+    }
+    const err = new Error(detail.error || `Import failed (${res.status})`);
+    (err as Error & { code?: string }).code = detail.code || "IMPORT_FAILED";
+    throw err;
+  }
+  const json = (await res.json()) as { item: GenerateItem };
+  return json.item;
 }

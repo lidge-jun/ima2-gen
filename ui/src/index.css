@@ -4776,6 +4776,138 @@ body {
   padding: 7px 10px;
   font-size: 13px;
 }
+.prompt-import-dialog__folder {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prompt-import-dialog__folder-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.prompt-import-dialog__folder-actions span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.prompt-import-dialog__folder-list {
+  max-height: 148px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.prompt-import-dialog__folder-file {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.prompt-import-dialog__folder-file span {
+  min-width: 0;
+}
+.prompt-import-dialog__folder-file strong,
+.prompt-import-dialog__folder-file small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prompt-import-dialog__folder-file strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.prompt-import-dialog__folder-file small,
+.prompt-import-dialog__folder-file em {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: normal;
+}
+.prompt-import-dialog__folder-warning {
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 11px;
+}
+.prompt-import-dialog__curated {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prompt-import-dialog__section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.prompt-import-dialog__section-title strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.prompt-import-dialog__section-title span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.prompt-import-dialog__source-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.prompt-import-dialog__source {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.prompt-import-dialog__source span,
+.prompt-import-dialog__source strong,
+.prompt-import-dialog__source small {
+  display: block;
+}
+.prompt-import-dialog__source strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.prompt-import-dialog__source small {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.prompt-import-dialog__search-results {
+  display: flex;
+  gap: 8px;
+}
+.prompt-import-dialog__search-results input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.prompt-import-dialog__warning {
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 11px;
+}
 .prompt-import-dialog__error {
   margin: 0 14px 12px;
   padding: 8px 10px;
@@ -4833,6 +4965,18 @@ body {
   color: var(--text-dim);
   font-size: 11px;
   font-style: normal;
+}
+.prompt-import-dialog__hint-chip {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
 }
 .prompt-library-row {
   padding: 10px 12px;

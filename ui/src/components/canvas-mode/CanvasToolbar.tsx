@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { CanvasEraserMode, CanvasTool } from "../../types/canvas";
+import type { CanvasAnnotationStyle, CanvasEraserMode, CanvasTool } from "../../types/canvas";
 import { useI18n } from "../../i18n";
+import { CanvasStylePopover } from "./CanvasStylePopover";
 
 type AnnotationTool = CanvasTool;
 
@@ -11,6 +12,8 @@ interface CanvasToolbarProps {
   onToolChange: (tool: AnnotationTool) => void;
   eraserMode?: CanvasEraserMode;
   onEraserModeChange?: (mode: CanvasEraserMode) => void;
+  style: CanvasAnnotationStyle;
+  onStyleChange: (style: CanvasAnnotationStyle) => void;
   onClear: () => void;
   onApply?: () => void;
   onExport?: () => void;
@@ -34,6 +37,8 @@ export function CanvasToolbar({
   onToolChange,
   eraserMode = "object",
   onEraserModeChange,
+  style,
+  onStyleChange,
   onClear,
   onApply,
   onExport,
@@ -99,6 +104,7 @@ export function CanvasToolbar({
           </button>
         );
       })}
+      <CanvasStylePopover style={style} onStyleChange={onStyleChange} />
       <div
         ref={eraserRef}
         className={`canvas-toolbar__split-button${activeTool === "eraser" ? " canvas-toolbar__split-button--active" : ""}`}
