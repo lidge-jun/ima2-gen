@@ -41,7 +41,7 @@ function loadConfig(env = {}) {
       }));
     });
   `;
-  const res = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+  const res = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], {
     env: { ...process.env, ...env, NODE_ENV: env.NODE_ENV || "test" },
     encoding: "utf-8",
   });
