@@ -19,7 +19,7 @@ const en = JSON.parse(readFileSync(join(root, "ui/src/i18n/en.json"), "utf8"));
 const ko = JSON.parse(readFileSync(join(root, "ui/src/i18n/ko.json"), "utf8"));
 
 function extractBackgroundPickBranch() {
-  const match = canvas.match(/if \(isBackgroundCleanupPickingSeed\) \{[\s\S]*?return;\n    \}/);
+  const match = canvas.match(/if \(isBackgroundCleanupPickingSeed\) \{[\s\S]*?return;\r?\n    \}/);
   assert.ok(match, "Canvas should keep an explicit background-pick pointer branch");
   return match[0];
 }
