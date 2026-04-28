@@ -87,6 +87,41 @@ export const config = {
     maxParallel: pickInt(env.IMA2_MAX_PARALLEL, fileCfg.limits?.maxParallel, 8),
     graphMaxNodes: pickInt(env.IMA2_GRAPH_MAX_NODES, fileCfg.limits?.graphMaxNodes, 500),
     graphMaxEdges: pickInt(env.IMA2_GRAPH_MAX_EDGES, fileCfg.limits?.graphMaxEdges, 1000),
+    promptImportMaxFileBytes: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_FILE_BYTES,
+      fileCfg.limits?.promptImportMaxFileBytes,
+      512 * 1024,
+    ),
+    promptImportMaxCandidatesPerFile: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_CANDIDATES_PER_FILE,
+      fileCfg.limits?.promptImportMaxCandidatesPerFile,
+      100,
+    ),
+    promptImportMaxCandidatesPerImport: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_CANDIDATES_PER_IMPORT,
+      fileCfg.limits?.promptImportMaxCandidatesPerImport,
+      100,
+    ),
+    promptImportFetchTimeoutMs: pickInt(
+      env.IMA2_PROMPT_IMPORT_FETCH_TIMEOUT_MS,
+      fileCfg.limits?.promptImportFetchTimeoutMs,
+      8000,
+    ),
+    promptImportMaxCandidateChars: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_CANDIDATE_CHARS,
+      fileCfg.limits?.promptImportMaxCandidateChars,
+      12000,
+    ),
+    promptImportMinCandidateChars: pickInt(
+      env.IMA2_PROMPT_IMPORT_MIN_CANDIDATE_CHARS,
+      fileCfg.limits?.promptImportMinCandidateChars,
+      40,
+    ),
+    promptImportMaxSourceCharsScanned: pickInt(
+      env.IMA2_PROMPT_IMPORT_MAX_SOURCE_CHARS_SCANNED,
+      fileCfg.limits?.promptImportMaxSourceCharsScanned,
+      512 * 1024,
+    ),
   },
   history: {
     defaultPageSize: pickInt(

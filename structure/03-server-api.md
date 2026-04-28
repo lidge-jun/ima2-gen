@@ -148,7 +148,9 @@ Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`
 | `PATCH` | `/api/prompts/:id` | `{ title?, body?, folderId?, tags?, favorite? }` | `{ ok, prompt }` |
 | `DELETE` | `/api/prompts/:id` | none | `{ ok }` |
 | `POST` | `/api/prompts/:id/favorite` | `{ favorite }` | `{ ok, favorite }` |
-| `POST` | `/api/prompts/import` | `{ prompts: [...] }` or NDJSON body | `{ ok, imported, skipped }` |
+| `POST` | `/api/prompts/import` | `{ prompts: [...] }` or NDJSON body | Existing bulk import route for local/export compatibility |
+| `POST` | `/api/prompts/import/preview` | `{ source: { kind: "local", filename, text } }` or `{ source: { kind: "github", input } }` | `{ source, candidates, warnings }` preview for single `.md`, `.markdown`, or `.txt` sources |
+| `POST` | `/api/prompts/import/commit` | `{ candidates, folderId? }` | `{ foldersCreated, promptsImported, duplicatesSkipped }` |
 | `GET` | `/api/prompts/export` | none | NDJSON stream of stored prompts |
 | `GET` | `/api/prompts/folders` | none | `{ ok, folders }` |
 | `POST` | `/api/prompts/folders` | `{ name }` | `{ ok, folder }` |
@@ -156,6 +158,8 @@ Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`
 | `DELETE` | `/api/prompts/folders/:id` | none | `{ ok }` |
 
 Prompts and folders are stored in SQLite alongside sessions; migrations live in `lib/db.js`. The library supports favorite filtering, free-text search across title and body, folder grouping, and full-export round trips. Prompt rows are independent from history filenames so the same prompt body can be reused across sessions.
+
+Prompt import PR1 is preview-first. `/api/prompts/import/preview` accepts either local text supplied by the browser or a GitHub file source and returns prompt candidates without saving. GitHub sources are limited to `github.com` and `raw.githubusercontent.com`, reject host spoofing, unsupported extensions, encoded slash/backslash, traversal, folder URLs, oversized files, and redirected final URLs that are not supported prompt files. `/api/prompts/import/commit` saves only selected candidates through the same SQLite prompt semantics as the existing import path and stores source metadata as tags only, such as `github`, `repo:owner/repo`, `ref:main`, `file:prompts.md`, and `ext:md`. Structured source indexes are deferred to the PR2 plan.
 
 ## Card-News API (dev-only)
 

@@ -35,8 +35,8 @@ graph TD
 | File | Lines | Responsibility |
 |---|---:|---|
 | `server.js` | 235 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, route registration, static serving |
-| `config.js` | 195 | Centralized runtime config (env > `~/.ima2/config.json` > defaults) and backward-compatible flat re-exports |
-| `routes/index.js` | 23 | Route registration hub: health, storage, metadata, history, sessions, edit, nodes, generate, prompts, and (when `features.cardNews`) cardNews |
+| `config.js` | 253 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import caps, and backward-compatible flat re-exports |
+| `routes/index.js` | 33 | Route registration hub: health, storage, metadata, history, sessions, edit, nodes, generate, prompts, prompt import, and (when `features.cardNews`) cardNews |
 | `routes/generate.js` | 294 | Classic generation API, model validation, reference validation, upstream validation pass-through, sidecar save |
 | `routes/edit.js` | 165 | Edit API, parent image path, OAuth edit response save |
 | `routes/nodes.js` | 432 | Node generation API, explicit context/search policy, SSE partial/error streaming, child references, safe retry diagnostics, node sidecar save, node fetch |
@@ -46,6 +46,7 @@ graph TD
 | `routes/storage.js` | 39 | Gallery storage status and generated-folder open action |
 | `routes/metadata.js` | 71 | `/api/metadata/read` for embedded XMP image metadata extraction |
 | `routes/prompts.js` | 379 | Prompt library CRUD, favorites, import/export, and folder management |
+| `routes/promptImport.js` | 175 | Prompt library preview/commit import API for local/GitHub `.md`, `.markdown`, and `.txt` files |
 | `routes/cardNews.js` | 183 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
 | `bin/ima2.js` | 406 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
 | `bin/commands/gen.js` | 160 | CLI image-generation client with model, mode, moderation, and session options |
@@ -95,6 +96,9 @@ graph TD
 | `lib/cardNewsPlannerPrompt.js` | 60 | Card-news planner prompt builder |
 | `lib/cardNewsPlannerSchema.js` | 259 | Card-news planner JSON schema, validation, and repair |
 | `lib/cardNewsGenerator.js` | 162 | Card-by-card image assembly orchestrator |
+| `lib/promptImport/errors.js` | 16 | Prompt import error type and detection helpers |
+| `lib/promptImport/githubSource.js` | 205 | GitHub prompt source normalization, host/path validation, redirect validation, and remote text fetch |
+| `lib/promptImport/parsePromptCandidates.js` | 140 | Conservative Markdown/TXT prompt candidate extraction with length and count caps |
 
 ## UI File Map
 
@@ -103,10 +107,10 @@ graph TD
 | App shell | `ui/src/App.tsx` | 116 | Initial hydration, polling, classic/node/card-news canvas switch, theme attributes, prompt library overlay |
 | Entry | `ui/src/main.tsx` | 10 | React mount |
 | Types | `ui/src/types.ts` | 163 | Provider, quality, size, image model, theme family, embedded metadata, response types |
-| Store | `ui/src/store/useAppStore.ts` | 2739 | Zustand state for classic, node, sessions, history, in-flight jobs, errors, storage, themes, custom size, node batch selection, directional edge handles, edge disconnect, node references, node regeneration, prompt library, metadata restore |
+| Store | `ui/src/store/useAppStore.ts` | 3374 | Zustand state for classic, node, sessions, history, in-flight jobs, errors, storage, themes, custom size, node batch selection, directional edge handles, edge disconnect, node references, node regeneration, prompt library, metadata restore |
 | Card-news store | `ui/src/store/cardNewsStore.ts` | 416 | Card-news plan, role/image template selection, planner draft, job polling, regenerate actions |
 | Mode/dev gates | `ui/src/lib/devMode.ts` | 10 | `IS_DEV_UI`, `ENABLE_NODE_MODE`, `ENABLE_CARD_NEWS_MODE` build-time flags |
-| API client | `ui/src/lib/api.ts` | 523 | Browser-side REST client: generate, edit, history, sessions, storage, prompts, prompt folders, image metadata read |
+| API client | `ui/src/lib/api.ts` | 764 | Browser-side REST client: generate, edit, history, sessions, storage, prompts, prompt folders, prompt import preview/commit, image metadata read |
 | Card-news API client | `ui/src/lib/cardNewsApi.ts` | 275 | Card-news templates, draft, jobs, regenerate, set/manifest helpers |
 | Node API client | `ui/src/lib/nodeApi.ts` | 148 | Node generation JSON/SSE client and node error status propagation |
 | Node graph helpers | `ui/src/lib/nodeGraph.ts` | 41 | Visual-edge parent derivation and incoming-edge conflict helpers |
@@ -124,10 +128,10 @@ graph TD
 | Image models | `ui/src/lib/imageModels.ts` | 30 | UI-side image model labels |
 | Storage | `ui/src/lib/storage.ts` | 25 | localStorage helpers |
 | Gallery utils | `ui/src/lib/galleryUtils.ts` | 17 | Gallery navigation helpers |
-| Style | `ui/src/index.css` | 4497 | App layout, canvas, components, node-mode, settings, themes, error, node batch, compact node footer, directional node handle, prompt library, card-news, gallery double-rail styling |
-| Components | `ui/src/components/*.tsx` | 4046 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, themes, error surfaces, prompt library, gallery tiles, metadata restore, card-news workspace |
+| Style | `ui/src/index.css` | 5250 | App layout, canvas, components, node-mode, settings, themes, error, node batch, compact node footer, directional node handle, prompt library, prompt import dialog, card-news, gallery double-rail styling |
+| Components | `ui/src/components/*.tsx` | 5263 | Sidebar, canvas, modal, node cards, batch bar, panels, controls, settings, themes, error surfaces, prompt library, prompt import dialog, gallery tiles, metadata restore, card-news workspace |
 | Hooks | `ui/src/hooks/*.ts` | 57 | Billing and OAuth status polling |
-| i18n | `ui/src/i18n/*` | 1389 | English/Korean translations and locale runtime |
+| i18n | `ui/src/i18n/*` | 1599 | English/Korean translations and locale runtime |
 
 ## Major Components
 
@@ -137,7 +141,8 @@ graph TD
 | `GalleryImageTile.tsx` | 67 | Per-image gallery thumbnail and selection state |
 | `CardNewsGalleryTile.tsx` | 58 | Card-news set tile in the gallery |
 | `PromptComposer.tsx` | 250 | Prompt input, reference handling, style-sheet entry, save-to-library |
-| `PromptLibraryPanel.tsx` | 205 | Prompt library overlay with folders, favorites, and search |
+| `PromptLibraryPanel.tsx` | 152 | Prompt library overlay/embedded panel with favorites, search, insert/load, and dialog-first import entry |
+| `PromptImportDialog.tsx` | 247 | Prompt import modal/dropzone with local file preview, GitHub file preview, candidate selection, and commit |
 | `PromptLibraryRow.tsx` | 75 | Single prompt-library row with actions |
 | `PromptDetailModal.tsx` | 81 | Prompt detail/edit modal |
 | `SavePromptPopover.tsx` | 82 | Save-current-prompt popover |
@@ -204,7 +209,9 @@ graph TD
 | `tests/gallery-navigation-ux-contract.test.js` | 125 | Gallery navigation UX contract |
 | `tests/ui-error-code-contract.test.js` | 32 | UI error code contract surface |
 | `tests/prompt-fidelity.test.js` | 71 | Prompt fidelity contract |
-| `tests/prompt-library-ui-contract.test.js` | 150 | Prompt library UI/API contract |
+| `tests/prompt-library-ui-contract.test.js` | 171 | Prompt library UI/API contract |
+| `tests/prompt-import-github-contract.test.js` | 161 | Prompt import GitHub normalization, redirect safety, parser, config, and route registration contract |
+| `tests/prompt-import-dialog-ui-contract.test.js` | 53 | Prompt import dialog-first UI and `.markdown` support contract |
 | `tests/image-metadata-route.test.js` | 111 | `/api/metadata/read` route contract |
 | `tests/image-metadata-xmp.test.js` | 74 | XMP build/parse round trip |
 | `tests/image-metadata-ui-contract.test.js` | 89 | Drag/drop metadata restore UI contract |
@@ -235,11 +242,12 @@ graph TD
 | Signal | Current state | Recommended docs to update |
 |---|---|---|
 | `server.js` is split | Route files own API surfaces; keep route map current | `03-server-api`, `06-infra-operations` |
-| `ui/src/index.css` is 4497 lines | Layout and component styles are concentrated; card-news, prompt library, gallery rail share the same file | `04-frontend-architecture` |
-| `useAppStore.ts` is the central store at 2739 lines | Classic, node, session, history, prompt-library, metadata-restore, and toast state are together | `04-frontend-architecture`, `05-node-mode` |
+| `ui/src/index.css` is 5250 lines | Layout and component styles are concentrated; card-news, prompt library, prompt import dialog, gallery rail share the same file | `04-frontend-architecture` |
+| `useAppStore.ts` is the central store at 3374 lines | Classic, node, session, history, prompt-library, metadata-restore, and toast state are together | `04-frontend-architecture`, `05-node-mode` |
 | `cardNewsStore.ts` is a separate dev-only store at 416 lines | Card-news plan/job state is isolated from `useAppStore` | `04-frontend-architecture`, `06-infra-operations` |
 | `lib/oauthProxy.js` is 600 lines | OAuth Responses streaming is the largest single helper; further split candidates | `03-server-api`, `05-node-mode` |
 | `routes/prompts.js` is 379 lines | Prompt library CRUD + folders + import/export grew beyond a single concern | `03-server-api`, `04-frontend-architecture` |
+| `lib/promptImport/*` cluster | Prompt source validation and parsing are split from prompt CRUD to keep PR1 import logic isolated | `03-server-api`, `04-frontend-architecture` |
 | `lib/cardNews*.js` cluster | Dev-only feature isolated behind `config.features.cardNews`; not on the publish path by default | `06-infra-operations`, `07-devlog-map` |
 
 ## Change Checklist
@@ -258,6 +266,7 @@ graph TD
 - 2026-04-25: Added node graph/ref helper files and contract tests for parent source-of-truth, reference payloads, context/search policy, and compact footer.
 - 2026-04-26: Refreshed CLI, runtime port fallback, node layout, and test-map ownership after the 0.09.20.1 and runtime binding work.
 - 2026-04-27: Updated node mode counts and responsibilities after four-direction React Flow handle support and handle-id session persistence.
+- 2026-04-28: Added prompt import route/helper cluster, dialog-first prompt import UI, related tests, and refreshed line counts after PR1 GitHub/local `.md`/`.markdown`/`.txt` import.
 - 2026-04-28: Added prompt library (`routes/prompts.js`, `lib/db.js` migrations, prompt UI), image metadata embed/restore (`lib/imageMetadata*.js`, `routes/metadata.js`), card-news cluster (`routes/cardNews.js`, `lib/cardNews*.js`, `ui/src/components/card-news/*`, `ui/src/store/cardNewsStore.ts`), and refreshed line counts/test map for ima2-gen 1.1.5.
 
 Previous document: `[[00-structure-hub]]`

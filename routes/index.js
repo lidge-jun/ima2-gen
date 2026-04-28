@@ -9,6 +9,7 @@ import { registerStorageRoutes } from "./storage.js";
 import { registerCardNewsRoutes } from "./cardNews.js";
 import { registerMetadataRoutes } from "./metadata.js";
 import { registerPromptRoutes } from "./prompts.js";
+import { registerPromptImportRoutes } from "./promptImport.js";
 import { registerAnnotationRoutes } from "./annotations.js";
 import { registerCanvasVersionRoutes } from "./canvasVersions.js";
 import { registerComfyRoutes } from "./comfy.js";
@@ -28,4 +29,5 @@ export function configureRoutes(app, ctx) {
   registerMultimodeRoutes(app, ctx);
   registerGenerateRoutes(app, ctx);
   registerPromptRoutes(app, ctx);
+  registerPromptImportRoutes(app, ctx);
 }

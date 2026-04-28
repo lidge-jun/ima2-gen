@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useRef, type ChangeEvent } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { PromptLibraryRow } from "./PromptLibraryRow";
 import { SavePromptPopover } from "./SavePromptPopover";
+import { PromptImportDialog } from "./PromptImportDialog";
 
 type PromptLibraryPanelProps = {
   variant?: "overlay" | "embedded";
@@ -21,65 +22,15 @@ export function PromptLibraryPanel({ variant = "overlay" }: PromptLibraryPanelPr
   const insertPromptToComposer = useAppStore((s) => s.insertPromptToComposer);
   const clearInsertedPrompts = useAppStore((s) => s.clearInsertedPrompts);
   const showToast = useAppStore((s) => s.showToast);
-  const importPrompts = useAppStore((s) => s.importPromptsToLibrary);
 
   const [search, setSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const dragCounterRef = useRef(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     if (open) void load();
   }, [open, load]);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current += 1;
-    if (dragCounterRef.current > 0) setDragActive(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-    if (dragCounterRef.current === 0) setDragActive(false);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounterRef.current = 0;
-      setDragActive(false);
-
-      const files = Array.from(e.dataTransfer.files).filter((f) =>
-        /\.(txt|md)$/i.test(f.name),
-      );
-      if (files.length > 0) {
-        void importPrompts(files);
-      }
-    },
-    [importPrompts],
-  );
-
-  const handleFileImport = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files ?? []);
-      if (files.length > 0) {
-        void importPrompts(files);
-      }
-      e.target.value = "";
-    },
-    [importPrompts],
-  );
 
   const insertPrompt = useCallback(
     (prompt: { id: string; name: string; text: string }) => {
@@ -122,20 +73,12 @@ export function PromptLibraryPanel({ variant = "overlay" }: PromptLibraryPanelPr
             </button>
             <button
               className="prompt-library-panel__import"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setImportOpen(true)}
               title={t("promptLibrary.importFiles")}
               aria-label={t("promptLibrary.importFiles")}
             >
               {t("promptLibrary.import")}
             </button>
-            <input
-              ref={fileInputRef}
-              className="prompt-library-panel__file-input"
-              type="file"
-              accept=".txt,.md,text/plain,text/markdown"
-              multiple
-              onChange={handleFileImport}
-            />
             <button onClick={toggle} aria-label={t("common.close")}>×</button>
           </div>
           {addOpen && (
@@ -190,24 +133,16 @@ export function PromptLibraryPanel({ variant = "overlay" }: PromptLibraryPanelPr
           </div>
         )}
 
-        {dragActive && (
-          <div className="prompt-library-panel__drop-overlay">
-            <div className="prompt-library-panel__drop-message">
-              {t("promptLibrary.dropImport")}
-            </div>
-          </div>
-        )}
+        <PromptImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImported={load}
+        />
       </div>
   );
 
   return (
-    <div
-      className={`prompt-library-panel prompt-library-panel--${variant}`}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
+    <div className={`prompt-library-panel prompt-library-panel--${variant}`}>
       {variant === "overlay" ? (
         <div className="prompt-library-panel__backdrop" onClick={toggle} />
       ) : null}

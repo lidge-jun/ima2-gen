@@ -592,6 +592,38 @@ export type PromptLibraryPage = {
   folders: PromptFolder[];
 };
 
+export type PromptImportCandidate = {
+  id: string;
+  name: string;
+  text: string;
+  tags: string[];
+  warnings?: string[];
+  source?: {
+    kind?: "local" | "github";
+    owner?: string;
+    repo?: string;
+    ref?: string;
+    path?: string;
+    htmlUrl?: string;
+    filename?: string;
+  };
+};
+
+export type PromptImportPreview = {
+  source: {
+    kind: "local" | "github";
+    owner?: string;
+    repo?: string;
+    ref?: string;
+    path?: string;
+    filename?: string;
+    htmlUrl?: string;
+    tags?: string[];
+  };
+  candidates: PromptImportCandidate[];
+  warnings: string[];
+};
+
 export function getPromptLibrary(params?: {
   search?: string;
   folderId?: string;
@@ -657,6 +689,29 @@ export function importPromptLibrary(payload: {
   }>;
 }): Promise<{ foldersCreated: number; promptsImported: number; duplicatesSkipped: number }> {
   return jsonFetch("/api/prompts/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function previewPromptImport(payload: {
+  source:
+    | { kind: "local"; filename: string; text: string }
+    | { kind: "github"; input: string };
+}): Promise<PromptImportPreview> {
+  return jsonFetch("/api/prompts/import/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function commitPromptImport(payload: {
+  candidates: PromptImportCandidate[];
+  folderId?: string;
+}): Promise<{ foldersCreated: number; promptsImported: number; duplicatesSkipped: number }> {
+  return jsonFetch("/api/prompts/import/commit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

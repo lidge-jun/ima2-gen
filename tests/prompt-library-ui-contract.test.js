@@ -31,7 +31,7 @@ describe("prompt library UI contract", () => {
     assert.equal(koJson.gallery.favoriteTitle, "즐겨찾기 추가");
   });
 
-  it("supports prompt import through file picker and drag-drop with translated UI", () => {
+  it("supports dialog-first prompt import with translated UI", () => {
     const panel = readSource("ui/src/components/PromptLibraryPanel.tsx");
     const store = readSource("ui/src/store/useAppStore.ts");
     const css = readSource("ui/src/index.css");
@@ -39,16 +39,15 @@ describe("prompt library UI contract", () => {
     const ko = JSON.parse(readSource("ui/src/i18n/ko.json"));
 
     assert.match(panel, /className="prompt-library-panel__import"/);
-    assert.match(panel, /fileInputRef\.current\?\.click\(\)/);
-    assert.match(panel, /accept="\.txt,\.md,text\/plain,text\/markdown"/);
-    assert.match(panel, /onDrop=\{handleDrop\}/);
+    assert.match(panel, /PromptImportDialog/);
+    assert.match(panel, /setImportOpen\(true\)/);
+    assert.doesNotMatch(panel, /fileInputRef\.current\?\.click\(\)/);
     assert.match(panel, /variant = "overlay"/);
     assert.match(panel, /prompt-library-panel--\$\{variant\}/);
     assert.match(panel, /variant === "overlay"/);
-    assert.match(panel, /t\("promptLibrary\.dropImport"\)/);
     assert.doesNotMatch(panel, /Drop \.txt or \.md files to import prompts/);
 
-    assert.match(store, /\\\.\(txt\|md\)\$/);
+    assert.match(store, /txt\|md\|markdown/);
     assert.match(store, /t\("promptLibrary\.imported"/);
     assert.match(store, /t\("promptLibrary\.importFailed"\)/);
     assert.match(store, /t\("promptLibrary\.importNoValidFiles"\)/);
@@ -64,6 +63,8 @@ describe("prompt library UI contract", () => {
       assert.equal(typeof dict.promptLibrary.import, "string");
       assert.equal(typeof dict.promptLibrary.importFiles, "string");
       assert.equal(typeof dict.promptLibrary.dropImport, "string");
+      assert.equal(typeof dict.promptLibrary.importTitle, "string");
+      assert.equal(typeof dict.promptLibrary.importGithubLabel, "string");
       assert.equal(typeof dict.promptLibrary.imported, "string");
       assert.equal(typeof dict.promptLibrary.importFailed, "string");
       assert.equal(typeof dict.promptLibrary.importNoValidFiles, "string");

@@ -740,10 +740,19 @@
     "untitled": "Untitled",
     "addNew": "Add new prompt",
     "import": "Import",
-    "importFiles": "Import .txt or .md files",
-    "dropImport": "Drop .txt or .md files to import prompts",
+    "importFiles": "Import .txt, .md, .markdown, or GitHub files",
+    "dropImport": "Drop .txt, .md, or .markdown files to import prompts",
+    "importTitle": "Import prompts",
+    "importDropTitle": "Drag files here",
+    "importDropHint": "Preview .txt, .md, and .markdown files before saving",
+    "importChooseFiles": "Choose files",
+    "importGithubLabel": "GitHub file URL or path",
+    "importPreview": "Preview",
+    "importPreviewEmpty": "Drop files or enter a GitHub path to preview candidates.",
+    "importCommit": "Save selected",
+    "importSelectAtLeastOne": "Select at least one prompt to save.",
     "imported": "Imported {count} prompt(s)",
     "importFailed": "Import failed",
-    "importNoValidFiles": "No .txt or .md prompt files found."
+    "importNoValidFiles": "No .txt, .md, or .markdown prompt files found."
   }
 }

@@ -3018,10 +3018,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const prompts: Array<{ name: string; text: string; tags: string[] }> = [];
       for (const file of files) {
-        if (!/\.(txt|md)$/i.test(file.name)) continue;
+        if (!/\.(txt|md|markdown)$/i.test(file.name)) continue;
         const text = await file.text();
         if (!text.trim()) continue;
-        const name = file.name.replace(/\.(txt|md)$/i, "");
+        const name = file.name.replace(/\.(txt|md|markdown)$/i, "");
         prompts.push({ name: name.trim() || t("promptLibrary.untitled"), text: text.trim(), tags: [] });
       }
       if (prompts.length === 0) {
