@@ -43,6 +43,7 @@ import {
   exportCanvasImage,
   makeCanvasExportFilename,
 } from "../lib/canvas/exportRenderer";
+import { imageUsesAlpha } from "../lib/canvas/alphaDetect";
 import { CanvasAnnotationLayer } from "./canvas-mode/CanvasAnnotationLayer";
 import { CanvasMemoOverlay } from "./canvas-mode/CanvasMemoOverlay";
 import { CanvasToolbar } from "./canvas-mode/CanvasToolbar";
@@ -155,6 +156,11 @@ export function Canvas() {
   const canvasPanX = useAppStore((s) => s.canvasPanX);
   const canvasPanY = useAppStore((s) => s.canvasPanY);
   const setCanvasPan = useAppStore((s) => s.setCanvasPan);
+  const exportBackground = useAppStore((s) => s.canvasExportBackground);
+  const exportMatteColor = useAppStore((s) => s.canvasExportMatteColor);
+  const setExportBackground = useAppStore((s) => s.setCanvasExportBackground);
+  const setExportMatteColor = useAppStore((s) => s.setCanvasExportMatteColor);
+  const [imageHasAlpha, setImageHasAlpha] = useState(false);
   const applyMergedCanvasImage = useAppStore((s) => s.applyMergedCanvasImage);
   const addGeneratedHistoryItem = useAppStore((s) => s.addGeneratedHistoryItem);
   const attachCanvasVersionReference = useAppStore((s) => s.attachCanvasVersionReference);
@@ -278,6 +284,26 @@ export function Canvas() {
       window.removeEventListener("keyup", onKeyUp);
     };
   }, [canvasOpen, spaceHeld]);
+
+  useEffect(() => {
+    const node = imageElementRef.current;
+    if (!node || !canvasOpen) {
+      setImageHasAlpha(false);
+      return;
+    }
+    const detect = () => setImageHasAlpha(imageUsesAlpha(node));
+    if (node.complete) detect();
+    else {
+      node.addEventListener("load", detect);
+      return () => node.removeEventListener("load", detect);
+    }
+  }, [
+    canvasOpen,
+    canvasDisplayImage?.filename,
+    canvasDisplayImage?.url,
+    canvasDisplayImage?.image,
+    canvasDisplayImage?.canvasMergedAt,
+  ]);
 
   useEffect(() => {
     if (!canvasOpen || !currentImage?.filename || currentImage.canvasVersion) return;
@@ -638,13 +664,17 @@ export function Canvas() {
     if (!imageElementRef.current || !currentImage) return;
     setIsExporting(true);
     try {
+      const matte = exportBackground === "matte";
       const blob = await exportCanvasImage({
         imageElement: imageElementRef.current,
         paths: annotations.paths,
         boxes: annotations.boxes,
         memos: annotations.memos,
+        background: matte
+          ? { mode: "matte", color: exportMatteColor }
+          : { mode: "alpha" },
       });
-      downloadCanvasBlob(blob, makeCanvasExportFilename());
+      downloadCanvasBlob(blob, makeCanvasExportFilename({ matte }));
     } catch {
       showToast(t("canvas.toolbar.exportFailed"), true);
     } finally {
@@ -743,7 +773,7 @@ export function Canvas() {
         >
           <div
             ref={annotationFrameRef}
-            className="canvas-annotation-frame"
+            className={`canvas-annotation-frame${imageHasAlpha && canvasOpen ? " canvas-annotation-frame--alpha" : ""}`}
             onPointerDown={handleAnnotationPointerDown}
             onPointerMove={handleAnnotationPointerMove}
             onPointerUp={handleAnnotationPointerUp}
@@ -824,6 +854,10 @@ export function Canvas() {
               isEditingWithMask={isEditingWithMask}
               isApplying={isApplying}
               isExporting={isExporting}
+              exportBackground={exportBackground}
+              exportMatteColor={exportMatteColor}
+              onExportBackgroundChange={setExportBackground}
+              onExportMatteColorChange={setExportMatteColor}
             />
           )}
           {canvasOpen && canvasSaveState !== "idle" ? (

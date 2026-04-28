@@ -224,6 +224,10 @@
     "toolbar": {
       "label": "Canvas annotation tools",
       "select": "Select",
+      "bgGroup": "Export background",
+      "bgAlpha": "Alpha",
+      "bgMatte": "Matte",
+      "bgMatteColor": "Matte color",
       "pen": "Pen",
       "box": "Box",
       "arrow": "Arrow",

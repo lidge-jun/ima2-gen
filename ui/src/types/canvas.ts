@@ -63,6 +63,13 @@ export interface CanvasViewport {
 
 export type HexColor = `#${string}`;
 
+export type CanvasExportBackground = "alpha" | "matte";
+
+export interface CanvasExportBackgroundOption {
+  mode: CanvasExportBackground;
+  matteColor: HexColor;
+}
+
 export interface CanvasAnnotationStyle {
   color: HexColor;
   strokeWidth: number;

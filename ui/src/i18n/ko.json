@@ -224,6 +224,10 @@
     "toolbar": {
       "label": "캔버스 주석 도구",
       "select": "선택",
+      "bgGroup": "내보내기 배경",
+      "bgAlpha": "투명",
+      "bgMatte": "단색",
+      "bgMatteColor": "단색 색상",
       "pen": "펜",
       "box": "박스",
       "arrow": "화살표",

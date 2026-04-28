@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { CanvasExportBackground, HexColor } from "../types/canvas";
 import type {
   Count,
   Format,
@@ -152,6 +153,34 @@ function loadHistoryStripLayout(): HistoryStripLayout {
     if (raw === "rail" || raw === "horizontal" || raw === "sidebar") return raw;
   } catch {}
   return "rail";
+}
+
+const CANVAS_EXPORT_BG_KEY = "ima2.canvas.exportBackground.v1";
+
+function loadCanvasExportBackground(): { mode: CanvasExportBackground; matteColor: HexColor } {
+  if (typeof window === "undefined") return { mode: "alpha", matteColor: "#ffffff" };
+  try {
+    const raw = window.localStorage.getItem(CANVAS_EXPORT_BG_KEY);
+    if (!raw) return { mode: "alpha", matteColor: "#ffffff" };
+    const parsed = JSON.parse(raw) as Partial<{ mode: CanvasExportBackground; matteColor: string }>;
+    const mode: CanvasExportBackground = parsed.mode === "matte" ? "matte" : "alpha";
+    const matteColor: HexColor =
+      typeof parsed.matteColor === "string" && /^#[0-9a-fA-F]{6}$/.test(parsed.matteColor)
+        ? (parsed.matteColor as HexColor)
+        : "#ffffff";
+    return { mode, matteColor };
+  } catch {
+    return { mode: "alpha", matteColor: "#ffffff" };
+  }
+}
+
+function persistCanvasExportBackground(mode: CanvasExportBackground, matteColor: HexColor): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CANVAS_EXPORT_BG_KEY, JSON.stringify({ mode, matteColor }));
+  } catch {
+    /* ignore quota / unavailable */
+  }
 }
 
 function loadImageModel(): ImageModel {
@@ -803,12 +832,16 @@ type AppState = {
   canvasZoom: number;
   canvasPanX: number;
   canvasPanY: number;
+  canvasExportBackground: CanvasExportBackground;
+  canvasExportMatteColor: HexColor;
   openCanvas: () => void;
   closeCanvas: () => void;
   setCanvasZoom: (zoom: number) => void;
   resetCanvasZoom: () => void;
   setCanvasPan: (x: number, y: number) => void;
   resetCanvasPan: () => void;
+  setCanvasExportBackground: (mode: CanvasExportBackground) => void;
+  setCanvasExportMatteColor: (color: HexColor) => void;
 };
 
 function formatSize(w: number, h: number): string {
@@ -1020,6 +1053,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   canvasZoom: 1,
   canvasPanX: 0,
   canvasPanY: 0,
+  canvasExportBackground: loadCanvasExportBackground().mode,
+  canvasExportMatteColor: loadCanvasExportBackground().matteColor,
 
   addReferences: async (files) => {
     const allowed = MAX_REFERENCE_IMAGES - get().referenceImages.length;
@@ -3151,6 +3186,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
   resetCanvasPan: () => set({ canvasPanX: 0, canvasPanY: 0 }),
+  setCanvasExportBackground: (mode) => {
+    set({ canvasExportBackground: mode });
+    persistCanvasExportBackground(mode, get().canvasExportMatteColor);
+  },
+  setCanvasExportMatteColor: (color) => {
+    set({ canvasExportMatteColor: color });
+    persistCanvasExportBackground(get().canvasExportBackground, color);
+  },
 }));
 
 // ── Graph autosave (module-level debounce) ──

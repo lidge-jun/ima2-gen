@@ -26,7 +26,7 @@ describe("canvas export contract", () => {
     assert.match(source, /exportCanvasImage/);
     assert.match(source, /renderMergedCanvasImage/);
     assert.match(source, /makeCanvasExportFilename/);
-    assert.match(source, /canvas-export-\$\{stamp\}\.png/);
+    assert.match(source, /canvas-export-\$\{stamp\}\$\{suffix\}\.png/);
   });
 
   it("downloads blobs through object URLs with cleanup", () => {

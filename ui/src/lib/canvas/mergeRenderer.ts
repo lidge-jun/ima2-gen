@@ -10,6 +10,7 @@ export interface MergeCanvasInput {
   paths: DrawingPath[];
   boxes: BoundingBox[];
   memos: CanvasMemo[];
+  background?: { mode: "alpha" } | { mode: "matte"; color: string };
 }
 
 export interface MergeCanvasResult {
@@ -38,6 +39,11 @@ export async function renderMergedCanvasImage(
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas_context_unavailable");
+
+  if (input.background?.mode === "matte") {
+    ctx.fillStyle = input.background.color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   ctx.drawImage(input.imageElement, 0, 0, canvas.width, canvas.height);
 

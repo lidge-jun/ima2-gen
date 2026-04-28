@@ -74,7 +74,7 @@ describe("canvas annotation contract", () => {
     assert.ok(actionsIndex > frameIndex);
     assert.ok(metaIndex < actionsIndex);
     assert.ok(actionsIndex < promptIndex);
-    assert.match(source, /className="canvas-annotation-frame"[\s\S]*transform: canvasOpen[\s\S]{0,160}translate\(\$\{canvasPanX\}px, \$\{canvasPanY\}px\) scale\(\$\{canvasZoom\}\)/);
+    assert.match(source, /canvas-annotation-frame[\s\S]*transform: canvasOpen[\s\S]{0,200}translate\(\$\{canvasPanX\}px, \$\{canvasPanY\}px\) scale\(\$\{canvasZoom\}\)/);
     assert.doesNotMatch(source, /<img[\s\S]{0,500}transform: canvasOpen[\s\S]{0,40}scale\(\$\{canvasZoom\}\)/);
   });
 

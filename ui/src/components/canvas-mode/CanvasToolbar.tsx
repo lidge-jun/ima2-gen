@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { CanvasAnnotationStyle, CanvasEraserMode, CanvasTool } from "../../types/canvas";
+import type {
+  CanvasAnnotationStyle,
+  CanvasEraserMode,
+  CanvasExportBackground,
+  CanvasTool,
+  HexColor,
+} from "../../types/canvas";
 import { useI18n } from "../../i18n";
 import { CanvasStylePopover } from "./CanvasStylePopover";
 
@@ -28,6 +34,47 @@ interface CanvasToolbarProps {
   isEditingWithMask?: boolean;
   isApplying?: boolean;
   isExporting?: boolean;
+  exportBackground?: CanvasExportBackground;
+  exportMatteColor?: HexColor;
+  onExportBackgroundChange?: (mode: CanvasExportBackground) => void;
+  onExportMatteColorChange?: (color: HexColor) => void;
+}
+
+interface BackgroundControlProps {
+  mode: CanvasExportBackground;
+  matteColor: HexColor;
+  onModeChange: (mode: CanvasExportBackground) => void;
+  onMatteColorChange: (color: HexColor) => void;
+}
+
+function BackgroundControl({ mode, matteColor, onModeChange, onMatteColorChange }: BackgroundControlProps) {
+  const { t } = useI18n();
+  return (
+    <div className="canvas-toolbar__bg" role="group" aria-label={t("canvas.toolbar.bgGroup")}>
+      <button
+        type="button"
+        className={`canvas-toolbar__bg-tab${mode === "alpha" ? " active" : ""}`}
+        onClick={() => onModeChange("alpha")}
+      >
+        {t("canvas.toolbar.bgAlpha")}
+      </button>
+      <button
+        type="button"
+        className={`canvas-toolbar__bg-tab${mode === "matte" ? " active" : ""}`}
+        onClick={() => onModeChange("matte")}
+      >
+        {t("canvas.toolbar.bgMatte")}
+      </button>
+      {mode === "matte" ? (
+        <input
+          type="color"
+          aria-label={t("canvas.toolbar.bgMatteColor")}
+          value={matteColor}
+          onChange={(e) => onMatteColorChange(e.target.value as HexColor)}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export function CanvasToolbar({
@@ -53,6 +100,10 @@ export function CanvasToolbar({
   isEditingWithMask,
   isApplying,
   isExporting,
+  exportBackground = "alpha",
+  exportMatteColor = "#ffffff",
+  onExportBackgroundChange,
+  onExportMatteColorChange,
 }: CanvasToolbarProps) {
   const { t } = useI18n();
   const [eraserMenuOpen, setEraserMenuOpen] = useState(false);
@@ -231,6 +282,14 @@ export function CanvasToolbar({
         >
           <TrashIcon />
         </button>
+      ) : null}
+      {onExport && onExportBackgroundChange && onExportMatteColorChange ? (
+        <BackgroundControl
+          mode={exportBackground}
+          matteColor={exportMatteColor}
+          onModeChange={onExportBackgroundChange}
+          onMatteColorChange={onExportMatteColorChange}
+        />
       ) : null}
       {onExport ? (
         <button

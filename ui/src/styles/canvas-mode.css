@@ -467,3 +467,48 @@
 .canvas--pan-active .canvas-annotation-frame {
   cursor: grabbing !important;
 }
+
+/* ── Alpha-aware canvas (Phase 11) ── */
+.canvas-annotation-frame--alpha {
+  background-image:
+    linear-gradient(45deg, rgba(127, 127, 127, 0.18) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(127, 127, 127, 0.18) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(127, 127, 127, 0.18) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(127, 127, 127, 0.18) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-color: var(--surface);
+}
+
+.canvas-toolbar__bg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  margin: 0 4px;
+}
+.canvas-toolbar__bg-tab {
+  font-size: 11px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.canvas-toolbar__bg-tab.active {
+  background: var(--surface-2, var(--surface));
+  color: var(--text);
+  border-color: var(--border);
+}
+.canvas-toolbar__bg input[type="color"] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}

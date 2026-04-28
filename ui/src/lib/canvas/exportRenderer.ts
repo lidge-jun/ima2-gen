@@ -6,9 +6,13 @@ export async function exportCanvasImage(input: MergeCanvasInput): Promise<Blob> 
   return merged.blob;
 }
 
-export function makeCanvasExportFilename(date = new Date()): string {
+export function makeCanvasExportFilename(
+  options: { matte?: boolean } = {},
+  date = new Date(),
+): string {
   const stamp = date.toISOString().slice(0, 19).replace(/[-:T]/g, "");
-  return `canvas-export-${stamp}.png`;
+  const suffix = options.matte ? "-flat" : "";
+  return `canvas-export-${stamp}${suffix}.png`;
 }
 
 export function downloadCanvasBlob(blob: Blob, filename: string): void {
