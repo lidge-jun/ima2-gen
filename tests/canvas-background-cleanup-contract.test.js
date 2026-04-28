@@ -44,6 +44,8 @@ test("background cleanup preserves foreground pixels and emits transparent PNG p
   assert.match(backgroundRemoval, /"image\/png"/);
   assert.match(backgroundRemoval, /blobToDataUrl/);
   assert.match(backgroundRemoval, /renderBackgroundRemovalMaskOverlay/);
+  assert.match(backgroundRemoval, /BACKGROUND_REMOVAL_OVERLAY_MAX_DIMENSION = 1024/);
+  assert.match(backgroundRemoval, /maxDimension = BACKGROUND_REMOVAL_OVERLAY_MAX_DIMENSION/);
   assert.match(backgroundRemoval, /overlay\.data\[offset\] = 168/);
   assert.match(backgroundRemoval, /overlay\.data\[offset \+ 3\] = 150/);
 });
@@ -54,6 +56,8 @@ test("Canvas wires cleanup preview, seed picking, and apply-as-new-version", () 
   assert.match(canvas, /backgroundCleanupPreview/);
   assert.match(canvas, /backgroundCleanupMaskOverlay/);
   assert.match(canvas, /backgroundCleanupUndoRef/);
+  assert.match(canvas, /backgroundCleanupRenderSeqRef/);
+  assert.match(canvas, /backgroundCleanupToleranceTimerRef/);
   assert.match(canvas, /pushBackgroundCleanupUndo/);
   assert.match(canvas, /undoBackgroundCleanup/);
   assert.match(canvas, /isBackgroundCleanupPickingSeed/);
@@ -67,6 +71,42 @@ test("Canvas wires cleanup preview, seed picking, and apply-as-new-version", () 
   assert.match(canvas, /handleBackgroundCleanupApply/);
   assert.match(canvas, /createCanvasVersion\(\{/);
   assert.match(canvas, /attachCanvasVersionReference\(savedItem\)/);
+});
+
+test("cleanup renders ignore stale async results and debounce tolerance overlays", () => {
+  assert.match(canvas, /const renderSeq = backgroundCleanupRenderSeqRef\.current \+ 1/);
+  assert.match(canvas, /backgroundCleanupRenderSeqRef\.current !== renderSeq/);
+  assert.match(canvas, /window\.clearTimeout\(backgroundCleanupToleranceTimerRef\.current\)/);
+  assert.match(canvas, /window\.setTimeout\(\(\) => \{/);
+  assert.match(canvas, /runBackgroundCleanupMaskOverlay\(seeds, value\)/);
+});
+
+test("cleanup apply recomputes from the natural image instead of reusing preview blobs", () => {
+  const applyMatch = canvas.match(/const handleBackgroundCleanupApply = async \(\): Promise<void> => \{[\s\S]*?finally \{/);
+  assert.ok(applyMatch, "Canvas should keep a dedicated background cleanup apply handler");
+  const applyBody = applyMatch[0];
+
+  assert.match(applyBody, /renderBackgroundRemovalPreview\(\{/);
+  assert.match(applyBody, /imageElement: imageElementRef\.current/);
+  assert.match(applyBody, /getCornerBackgroundRemovalSeeds\(\)/);
+  assert.doesNotMatch(applyBody, /backgroundCleanupPreview \?\?/);
+});
+
+test("cleanup mask overlay can downscale preview work without changing final apply", () => {
+  assert.match(backgroundRemoval, /const naturalWidth = imageElement\.naturalWidth/);
+  assert.match(backgroundRemoval, /const naturalHeight = imageElement\.naturalHeight/);
+  assert.match(backgroundRemoval, /Math\.min\(1, maxDimension \/ Math\.max\(naturalWidth, naturalHeight\)\)/);
+  assert.match(backgroundRemoval, /context\.drawImage\(imageElement, 0, 0, width, height\)/);
+});
+
+test("alpha detection caches per image element and source dimensions", () => {
+  const alphaDetect = readFileSync(join(root, "ui/src/lib/canvas/alphaDetect.ts"), "utf8");
+
+  assert.match(alphaDetect, /const alphaCache = new WeakMap<HTMLImageElement, AlphaCacheEntry>\(\)/);
+  assert.match(alphaDetect, /cached\.src === image\.currentSrc/);
+  assert.match(alphaDetect, /cached\.width === image\.naturalWidth/);
+  assert.match(alphaDetect, /cached\.height === image\.naturalHeight/);
+  assert.match(alphaDetect, /alphaCache\.set\(image/);
 });
 
 test("Background pick mode keeps its cursor active after a click", () => {

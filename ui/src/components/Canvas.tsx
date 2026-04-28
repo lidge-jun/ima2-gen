@@ -243,6 +243,8 @@ export function Canvas() {
   const [isBackgroundCleanupPreviewing, setIsBackgroundCleanupPreviewing] = useState(false);
   const [isBackgroundCleanupApplying, setIsBackgroundCleanupApplying] = useState(false);
   const backgroundCleanupUndoRef = useRef<BackgroundCleanupSnapshot[]>([]);
+  const backgroundCleanupRenderSeqRef = useRef(0);
+  const backgroundCleanupToleranceTimerRef = useRef<number | null>(null);
   const annotations = useCanvasAnnotations();
   const canDragViewportWithSelect =
     canvasOpen &&
@@ -266,6 +268,11 @@ export function Canvas() {
   const imageSrc = backgroundCleanupPreview?.dataUrl ?? baseImageSrc;
 
   const resetBackgroundCleanup = () => {
+    backgroundCleanupRenderSeqRef.current += 1;
+    if (backgroundCleanupToleranceTimerRef.current != null) {
+      window.clearTimeout(backgroundCleanupToleranceTimerRef.current);
+      backgroundCleanupToleranceTimerRef.current = null;
+    }
     setBackgroundCleanupSeeds([]);
     setBackgroundCleanupPreview(null);
     setBackgroundCleanupMaskOverlay(null);
@@ -734,21 +741,28 @@ export function Canvas() {
 
   const runBackgroundCleanupMaskOverlay = useCallback(async (
     seeds: NormalizedPoint[] = backgroundCleanupSeeds,
+    tolerance: number = backgroundCleanupTolerance,
   ): Promise<void> => {
     if (!imageElementRef.current || !currentImage || seeds.length === 0) return;
+    const renderSeq = backgroundCleanupRenderSeqRef.current + 1;
+    backgroundCleanupRenderSeqRef.current = renderSeq;
     setIsBackgroundCleanupPreviewing(true);
     try {
       const result = await renderBackgroundRemovalMaskOverlay({
         imageElement: imageElementRef.current,
         seeds,
-        tolerance: backgroundCleanupTolerance,
+        tolerance,
       });
+      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return;
       setBackgroundCleanupMaskOverlay(result);
       setBackgroundCleanupStats(result.stats);
     } catch {
+      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return;
       showToast(t("canvas.toolbar.cleanupFailed"), true);
     } finally {
-      setIsBackgroundCleanupPreviewing(false);
+      if (backgroundCleanupRenderSeqRef.current === renderSeq) {
+        setIsBackgroundCleanupPreviewing(false);
+      }
     }
   }, [
     backgroundCleanupSeeds,
@@ -761,6 +775,8 @@ export function Canvas() {
   const runBackgroundCleanupPreview = useCallback(async (): Promise<BackgroundRemovalRenderResult | null> => {
     if (!imageElementRef.current || !currentImage) return null;
     pushBackgroundCleanupUndo();
+    const renderSeq = backgroundCleanupRenderSeqRef.current + 1;
+    backgroundCleanupRenderSeqRef.current = renderSeq;
     const seeds = backgroundCleanupSeeds.length > 0
       ? backgroundCleanupSeeds
       : getCornerBackgroundRemovalSeeds();
@@ -772,15 +788,19 @@ export function Canvas() {
         seeds,
         tolerance: backgroundCleanupTolerance,
       });
+      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return null;
       setBackgroundCleanupPreview(result);
       setBackgroundCleanupMaskOverlay(null);
       setBackgroundCleanupStats(result.stats);
       return result;
     } catch {
+      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return null;
       showToast(t("canvas.toolbar.cleanupFailed"), true);
       return null;
     } finally {
-      setIsBackgroundCleanupPreviewing(false);
+      if (backgroundCleanupRenderSeqRef.current === renderSeq) {
+        setIsBackgroundCleanupPreviewing(false);
+      }
     }
   }, [
     backgroundCleanupSeeds,
@@ -808,10 +828,21 @@ export function Canvas() {
 
   const handleBackgroundCleanupToleranceChange = (value: number): void => {
     pushBackgroundCleanupUndo();
+    if (backgroundCleanupToleranceTimerRef.current != null) {
+      window.clearTimeout(backgroundCleanupToleranceTimerRef.current);
+      backgroundCleanupToleranceTimerRef.current = null;
+    }
     setBackgroundCleanupTolerance(value);
     setBackgroundCleanupPreview(null);
     setBackgroundCleanupMaskOverlay(null);
     setBackgroundCleanupStats(null);
+    const seeds = [...backgroundCleanupSeeds];
+    if (seeds.length > 0) {
+      backgroundCleanupToleranceTimerRef.current = window.setTimeout(() => {
+        backgroundCleanupToleranceTimerRef.current = null;
+        void runBackgroundCleanupMaskOverlay(seeds, value);
+      }, 180);
+    }
   };
 
   const handleBackgroundCleanupReset = (): void => {
@@ -820,7 +851,7 @@ export function Canvas() {
   };
 
   const handleBackgroundCleanupApply = async (): Promise<void> => {
-    if (!currentImage) return;
+    if (!currentImage || !imageElementRef.current) return;
     const source = canvasSourceImageRef.current ?? currentImage;
     if (!source?.filename) {
       showToast(t("canvas.toolbar.cleanupFailed"), true);
@@ -830,7 +861,13 @@ export function Canvas() {
     setCanvasSaveState("saving");
     try {
       pushBackgroundCleanupUndo();
-      const result = backgroundCleanupPreview ?? await runBackgroundCleanupPreview();
+      const result = await renderBackgroundRemovalPreview({
+        imageElement: imageElementRef.current,
+        seeds: backgroundCleanupSeeds.length > 0
+          ? backgroundCleanupSeeds
+          : getCornerBackgroundRemovalSeeds(),
+        tolerance: backgroundCleanupTolerance,
+      });
       if (!result) {
         setCanvasSaveState("error");
         return;

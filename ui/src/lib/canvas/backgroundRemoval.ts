@@ -7,6 +7,7 @@ const DEFAULT_SEEDS: NormalizedPoint[] = [
   { x: 0, y: 1 },
   { x: 1, y: 1 },
 ];
+export const BACKGROUND_REMOVAL_OVERLAY_MAX_DIMENSION = 1024;
 
 export interface BackgroundRemovalImageData {
   width: number;
@@ -41,6 +42,10 @@ export interface BackgroundRemovalOptions {
   imageElement: HTMLImageElement;
   seeds: NormalizedPoint[];
   tolerance: number;
+}
+
+export interface BackgroundRemovalOverlayOptions extends BackgroundRemovalOptions {
+  maxDimension?: number;
 }
 
 interface SampledColor {
@@ -177,15 +182,23 @@ function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-function drawSourceImage(imageElement: HTMLImageElement): {
+function drawSourceImage(
+  imageElement: HTMLImageElement,
+  maxDimension?: number,
+): {
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   width: number;
   height: number;
 } {
-  const width = imageElement.naturalWidth;
-  const height = imageElement.naturalHeight;
-  if (width <= 0 || height <= 0) throw new Error("background_cleanup_image_not_ready");
+  const naturalWidth = imageElement.naturalWidth;
+  const naturalHeight = imageElement.naturalHeight;
+  if (naturalWidth <= 0 || naturalHeight <= 0) throw new Error("background_cleanup_image_not_ready");
+  const scale = maxDimension && maxDimension > 0
+    ? Math.min(1, maxDimension / Math.max(naturalWidth, naturalHeight))
+    : 1;
+  const width = Math.max(1, Math.round(naturalWidth * scale));
+  const height = Math.max(1, Math.round(naturalHeight * scale));
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -229,9 +242,10 @@ export async function renderBackgroundRemovalMaskOverlay({
   imageElement,
   seeds,
   tolerance,
-}: BackgroundRemovalOptions): Promise<BackgroundRemovalOverlayResult> {
+  maxDimension = BACKGROUND_REMOVAL_OVERLAY_MAX_DIMENSION,
+}: BackgroundRemovalOverlayOptions): Promise<BackgroundRemovalOverlayResult> {
   try {
-    const { context, width, height } = drawSourceImage(imageElement);
+    const { context, width, height } = drawSourceImage(imageElement, maxDimension);
     const source = context.getImageData(0, 0, width, height);
     const result = removeContiguousBackground(
       { width, height, data: source.data },
