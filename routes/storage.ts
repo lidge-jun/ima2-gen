@@ -11,7 +11,7 @@ export function registerStorageRoutes(app, ctx) {
   });
 
   app.post("/api/storage/open-generated-dir", async (_req, res) => {
-    const result = await openDirectory(ctx.config.storage.generatedDir);
+    const result: any = await openDirectory(ctx.config.storage.generatedDir);
     if (result.ok) return res.json({ ok: true });
     return res.status(500).json({
       ok: false,

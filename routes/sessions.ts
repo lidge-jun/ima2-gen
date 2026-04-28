@@ -270,7 +270,7 @@ export function registerSessionRoutes(app, ctx) {
       res.json({ ok: true, nodes: nodes.length, edges: edges.length, graphVersion: result.graphVersion });
     } catch (err) {
       const code = err.code || "DB_ERROR";
-      const payload = { error: { code, message: err.message } };
+      const payload: any = { error: { code, message: err.message } };
       if (typeof err.currentVersion === "number") payload.currentVersion = err.currentVersion;
       if (code === "GRAPH_VERSION_CONFLICT") {
         logEvent("session", "graph_conflict", {

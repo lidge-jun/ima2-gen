@@ -120,7 +120,7 @@ export function registerEditRoutes(app, ctx) {
         finishErrorCode = "INVALID_EDIT_INPUT";
         return res.status(400).json({ error: "Prompt and image are required" });
       }
-      const maskCheck = validateEditMask(imageB64, rawMask);
+      const maskCheck: any = validateEditMask(imageB64, rawMask);
       if (maskCheck.error) {
         finishStatus = "error";
         finishHttpStatus = 400;

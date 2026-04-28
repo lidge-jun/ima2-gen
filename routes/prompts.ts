@@ -176,11 +176,11 @@ export function registerPromptRoutes(app, ctx) {
       const now = Math.floor(Date.now() / 1000);
 
       // Build name→id map for existing folders
-      const existingFolders = db.prepare("SELECT * FROM prompt_folders").all();
-      const folderMap = new Map(existingFolders.map((f) => [f.id, f]));
+      const existingFolders: any[] = db.prepare("SELECT * FROM prompt_folders").all() as any[];
+      const folderMap = new Map(existingFolders.map((f: any) => [f.id, f]));
       const namePathMap = new Map();
       for (const f of existingFolders) {
-        const parent = folderMap.get(f.parent_id);
+        const parent: any = folderMap.get(f.parent_id);
         const path = parent && parent.id !== "__root__" ? `${parent.name}/${f.name}` : f.name;
         namePathMap.set(path.toLowerCase(), f.id);
       }

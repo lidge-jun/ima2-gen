@@ -186,7 +186,7 @@ export function registerGenerateRoutes(app, ctx) {
             refsCount: refCheck.refs.length,
           };
           const rawBuffer = Buffer.from(r.value.b64, "base64");
-          const embedded = await embedImageMetadataBestEffort(rawBuffer, format, meta, {
+          const embedded: any = await embedImageMetadataBestEffort(rawBuffer, format, meta, {
             version: ctx.packageVersion,
           });
           if (!embedded.embedded) {

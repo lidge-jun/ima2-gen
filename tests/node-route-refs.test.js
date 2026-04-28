@@ -1,7 +1,7 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import express from "express";
-import { registerNodeRoutes } from "../routes/nodes.js";
+import { registerNodeRoutes } from "../routes/nodes.ts";
 
 const VALID_B64 = "aGVsbG8=";
 

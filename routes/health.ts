@@ -52,7 +52,7 @@ export function registerHealthRoutes(app, ctx) {
         signal: AbortSignal.timeout(ctx.config.oauth.statusTimeoutMs),
       });
       if (r.ok) {
-        const data = await r.json();
+        const data: any = await r.json();
         res.json({ status: "ready", models: data.data?.map((m) => m.id) || [], runtime: runtimePorts() });
       } else {
         res.json({ status: "auth_required", runtime: runtimePorts() });
@@ -101,7 +101,7 @@ export function registerHealthRoutes(app, ctx) {
         fetch("https://api.openai.com/v1/models", { headers }),
       ]);
 
-      const billing = { apiKeySource: ctx.apiKeySource ?? "env" };
+      const billing: any = { apiKeySource: ctx.apiKeySource ?? "env" };
       if (subRes.status === "fulfilled" && subRes.value.ok) billing.costs = await subRes.value.json();
       if (usageRes.status === "fulfilled" && usageRes.value.ok) billing.credits = await usageRes.value.json();
       billing.apiKeyValid = modelsRes.status === "fulfilled" && modelsRes.value.ok === true;

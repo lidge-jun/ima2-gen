@@ -34,7 +34,7 @@ function normalizePayload(value) {
   return { payload: normalized, text };
 }
 
-export function registerAnnotationRoutes(app) {
+export function registerAnnotationRoutes(app, _ctx?: any) {
   app.get("/api/annotations/:filename", (req, res) => {
     try {
       const browserId = getBrowserId(req);
