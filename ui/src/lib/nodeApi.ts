@@ -8,10 +8,12 @@ export type NodeGenerateRequest = {
   format: string;
   moderation: "low" | "auto";
   model?: ImageModel;
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
   provider?: "oauth";
   mode?: "auto" | "direct";
   contextMode?: "parent-plus-refs" | "parent-only" | "ancestry";
   searchMode?: "off" | "auto" | "on";
+  webSearchEnabled?: boolean;
   references?: string[];
   requestId?: string;
   sessionId?: string | null;
@@ -142,7 +144,10 @@ export async function postNodeGenerateStream(
   }
 
   if (!finalPayload) {
-    throw new Error("Node stream ended without a final image");
+    const e = new Error("No image data returned from the node stream") as Error & { code?: string; status?: number };
+    e.code = "EMPTY_RESPONSE";
+    e.status = 422;
+    throw e;
   }
   return finalPayload;
 }

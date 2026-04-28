@@ -16,8 +16,10 @@ describe("node child reference payload contract", () => {
   it("declares explicit node context and search policy on node requests", () => {
     assert.match(api, /contextMode\?: "parent-plus-refs" \| "parent-only" \| "ancestry"/);
     assert.match(api, /searchMode\?: "off" \| "auto" \| "on"/);
+    assert.match(api, /webSearchEnabled\?: boolean/);
     assert.match(store, /contextMode: "parent-plus-refs"/);
-    assert.match(store, /searchMode: "on"/);
+    assert.match(store, /searchMode: s\.webSearchEnabled \? "on" : "off"/);
+    assert.match(store, /webSearchEnabled: s\.webSearchEnabled/);
   });
 
   it("persists node-local refs outside sanitized graph payload", () => {

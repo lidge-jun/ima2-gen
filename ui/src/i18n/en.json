@@ -35,7 +35,12 @@
     "openGeneratedDirFailed": "Could not open the image folder. Run ima2 doctor to check the storage path.",
     "openGeneratedDirOpened": "Opened the generated image folder.",
     "noPromptToFork": "No prompt to fork",
-    "forkStarted": "Prompt imported. Edit and generate again."
+    "forkStarted": "Prompt imported. Edit and generate again.",
+    "comfyExported": "Sent to ComfyUI as {filename}.",
+    "comfyExportInvalidUrl": "ComfyUI URL must be a local HTTP address.",
+    "comfyExportInvalidImage": "This saved image cannot be sent to ComfyUI.",
+    "comfyExportImageNotFound": "Saved image file was not found.",
+    "comfyExportFailed": "Could not upload image to ComfyUI."
   },
   "inflight": {
     "queued": "Queued",
@@ -215,7 +220,31 @@
       "pen": "Pen",
       "box": "Box",
       "arrow": "Arrow",
+      "memo": "Sticky memo",
+      "eraser": "Eraser",
+      "eraserMenu": "Eraser options",
+      "objectEraser": "Object eraser",
+      "brushEraser": "Brush eraser",
+      "apply": "Save canvas version",
+      "applyDone": "Canvas version saved",
+      "applyFailed": "Could not save canvas version",
+      "export": "Export image",
+      "exporting": "Exporting...",
+      "exportFailed": "Export failed",
+      "undo": "Undo",
+      "redo": "Redo",
+      "deleteSelected": "Delete selected",
+      "editMask": "Edit boxed areas",
+      "editMaskDisabled": "Draw a box first",
+      "editMaskFailed": "Masked edit failed",
+      "editMaskUnsupported": "Masked edit is not supported by the current image provider",
       "clear": "Clear all"
+    },
+    "version": {
+      "saving": "Saving canvas version...",
+      "saved": "Canvas version saved",
+      "failed": "Could not save canvas version",
+      "usingAsReference": "Canvas version is ready as a reference"
     }
   },
   "gallery": {
@@ -368,6 +397,8 @@
     "delete": "Delete",
     "deleteTitle": "Move to trash",
     "more": "More",
+    "sendToComfyUI": "Send to ComfyUI",
+    "sendToComfyUITitle": "Upload this saved image to local ComfyUI",
     "permanentDelete": "Permanently delete",
     "permanentDeleteConfirm": "Permanently delete \"{filename}\"? This cannot be undone."
   },
@@ -577,6 +608,12 @@
       "medium": "Medium — balanced default",
       "high": "High — deeper research and synthesis",
       "xhigh": "Xhigh — maximum reasoning, slowest"
+    },
+    "webSearch": {
+      "title": "Web search",
+      "body": "Use live search before generation for real people, brands, products, places, and recent events.",
+      "on": "Search on",
+      "off": "Search off"
     },
     "appearance": {
       "themeTitle": "Theme",

@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel } from "../lib/imageModels.js";
+import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
 import { generateMultimodeViaOAuth } from "../lib/oauthProxy.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
@@ -56,6 +56,8 @@ export function registerMultimodeRoutes(app, ctx) {
         references = [],
         mode: promptMode = "auto",
         model: rawModel,
+        reasoningEffort: rawReasoningEffort,
+        webSearchEnabled: rawWebSearchEnabled = true,
       } = req.body;
       const maxImages = normalizeMaxImages(req.body?.maxImages);
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
@@ -69,6 +71,16 @@ export function registerMultimodeRoutes(app, ctx) {
         return;
       }
       const imageModel = modelCheck.model;
+      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
+      if (reasoningCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = reasoningCheck.status;
+        finishErrorCode = reasoningCheck.code;
+        sendSse(res, "error", { error: reasoningCheck.error, code: reasoningCheck.code, status: reasoningCheck.status, requestId });
+        return;
+      }
+      const reasoningEffort = reasoningCheck.effort;
+      const webSearchEnabled = rawWebSearchEnabled !== false;
       if (!prompt) {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -122,6 +134,7 @@ export function registerMultimodeRoutes(app, ctx) {
         maxImages,
         refs: refCheck.refs.length,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
+        webSearchEnabled,
       });
 
       const startTime = Date.now();
@@ -143,6 +156,8 @@ export function registerMultimodeRoutes(app, ctx) {
         {
           model: imageModel,
           maxImages,
+          reasoningEffort,
+          webSearchEnabled,
           onPartialImage: (partial) =>
             sendSse(res, "partial", {
               image: `data:${mime};base64,${partial.b64}`,
@@ -184,6 +199,7 @@ export function registerMultimodeRoutes(app, ctx) {
           createdAt: Date.now(),
           usage: generated.usage || null,
           webSearchCalls: generated.webSearchCalls || 0,
+          webSearchEnabled,
           refsCount: refCheck.refs.length,
         };
         const rawBuffer = Buffer.from(image.b64, "base64");
@@ -224,6 +240,7 @@ export function registerMultimodeRoutes(app, ctx) {
         model: imageModel,
         usage: generated.usage || null,
         webSearchCalls: generated.webSearchCalls || 0,
+        webSearchEnabled,
         warnings: qualityWarnings,
         extraIgnored: generated.extraIgnored || 0,
         promptMode: normalizedPromptMode,

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { SavePromptPopover } from "./SavePromptPopover";
+import { WebSearchToggle } from "./WebSearchToggle";
 
 const MAX_REFS = 5;
 
@@ -235,6 +236,7 @@ export function PromptComposer() {
           <span aria-hidden="true" style={{ fontWeight: 700, fontSize: 11 }}>1:1</span>
           <span>{t("prompt.directMode")}</span>
         </button>
+        <WebSearchToggle variant="compact" />
         <div style={{ position: "relative" }}>
           <button
             type="button"

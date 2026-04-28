@@ -11,10 +11,12 @@ describe("node context and edit search policy", () => {
     assert.match(route, /CONTEXT_MODE_UNSUPPORTED/);
   });
 
-  it("forces web_search on for every edit so factual prompts always research first", () => {
+  it("defaults web_search on while honoring an explicit off switch", () => {
     assert.match(route, /searchMode: rawSearchMode = "on"/);
-    assert.match(oauth, /\{ type: "web_search" \},\s*\{ type: "image_generation"/);
-    assert.match(oauth, /webSearchEnabled: true/);
+    assert.match(route, /body\.webSearchEnabled !== false && searchMode !== "off"/);
+    assert.match(oauth, /resolveWebSearchEnabled/);
+    assert.match(oauth, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
+    assert.match(oauth, /webSearchEnabled/);
   });
 
   it("logs safe context shape instead of raw prompts or images", () => {
@@ -25,4 +27,3 @@ describe("node context and edit search policy", () => {
     assert.doesNotMatch(oauth, /logEvent\("oauth-edit", "request", \{[^}]*prompt/);
   });
 });
-

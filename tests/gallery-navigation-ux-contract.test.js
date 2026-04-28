@@ -66,6 +66,22 @@ describe("gallery navigation UX contract", () => {
     assert.match(navigation, /export function getGalleryItemKey/);
   });
 
+  it("keeps canvas versions internal instead of showing them in gallery surfaces", () => {
+    const gallery = readSource("ui/src/components/GalleryModal.tsx");
+    const historyStrip = readSource("ui/src/components/HistoryStrip.tsx");
+
+    assert.match(gallery, /function isGalleryVisibleItem\(item: Pick<GenerateItem, "canvasVersion">\): boolean/);
+    assert.match(gallery, /return !item\.canvasVersion/);
+    assert.match(gallery, /const galleryHistory = useMemo\(\(\) => history\.filter\(isGalleryVisibleItem\), \[history\]\)/);
+    assert.match(gallery, /galleryHistory\.filter/);
+    assert.match(gallery, /s\.items\.filter\(isGalleryVisibleItem\)\.map\(toItem\)/);
+    assert.match(gallery, /page\.loose\.filter\(isGalleryVisibleItem\)\.map\(toItem\)/);
+    assert.match(gallery, /galleryHistory\.length === 0/);
+    assert.match(historyStrip, /const visibleHistory = useMemo\(/);
+    assert.match(historyStrip, /history\.filter\(\(item\) => !item\.canvasVersion\)/);
+    assert.match(historyStrip, /visibleHistory\.map/);
+  });
+
   it("maps vertical wheel input to horizontal thumbnail scrolling safely", () => {
     const wheel = readSource("ui/src/lib/horizontalWheel.ts");
     const historyStrip = readSource("ui/src/components/HistoryStrip.tsx");

@@ -10,7 +10,7 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel } from "../lib/imageModels.js";
+import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
 import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { logEvent, logError } from "../lib/logger.js";
@@ -87,6 +87,7 @@ export function registerNodeRoutes(app, ctx) {
         contextMode: rawContextMode = "parent-plus-refs",
         searchMode: rawSearchMode = "on",
         model: rawModel,
+        reasoningEffort: rawReasoningEffort,
       } = body;
       const { provider = "oauth" } = body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
@@ -101,11 +102,23 @@ export function registerNodeRoutes(app, ctx) {
         });
       }
       const imageModel = modelCheck.model;
+      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
+      if (reasoningCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = reasoningCheck.status;
+        finishErrorCode = reasoningCheck.code;
+        return res.status(reasoningCheck.status).json({
+          error: { code: reasoningCheck.code, message: reasoningCheck.error },
+          parentNodeId,
+        });
+      }
+      const reasoningEffort = reasoningCheck.effort;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
       const contextMode = ["parent-plus-refs", "parent-only", "ancestry"].includes(rawContextMode)
         ? rawContextMode
         : "parent-plus-refs";
       const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "on";
+      const webSearchEnabled = body.webSearchEnabled !== false && searchMode !== "off";
       if (contextMode === "ancestry") {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -168,7 +181,6 @@ export function registerNodeRoutes(app, ctx) {
       const generateReferenceDiagnostics = operation === "generate" ? referenceDiagnostics : [];
       const referenceMismatchCount = generateReferenceDiagnostics.filter((ref) => ref.warnings?.includes("mime_mismatch")).length;
       const refsForRequest = contextMode === "parent-only" ? [] : (refCheck.refDetails || refCheck.refs);
-      const webSearchEnabled = true;
       const parentImagePresent = !!parentB64;
       const inputImageCount = (parentImagePresent ? 1 : 0) + refsForRequest.length;
       logEvent("node", "request", {
@@ -227,7 +239,13 @@ export function registerNodeRoutes(app, ctx) {
             webSearchEnabled,
           });
           const r = parentB64
-            ? await editViaOAuth(prompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, { model: imageModel, references: refsForRequest, searchMode: "on" })
+            ? await editViaOAuth(prompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, {
+                model: imageModel,
+                references: refsForRequest,
+                searchMode,
+                reasoningEffort,
+                webSearchEnabled,
+              })
             : await generateViaOAuth(
                 prompt,
                 quality,
@@ -239,6 +257,8 @@ export function registerNodeRoutes(app, ctx) {
                 ctx,
                 {
                   model: imageModel,
+                  reasoningEffort,
+                  webSearchEnabled,
                   partialImages: streamResponse ? 2 : 0,
                   onPartialImage: streamResponse
                     ? (partial) =>
@@ -336,6 +356,7 @@ export function registerNodeRoutes(app, ctx) {
         elapsed,
         usage: usage || null,
         webSearchCalls,
+        webSearchEnabled,
         contextMode,
         searchMode,
         provider: "oauth",
@@ -375,6 +396,7 @@ export function registerNodeRoutes(app, ctx) {
         elapsed,
         usage,
         webSearchCalls,
+        webSearchEnabled,
         provider: "oauth",
         model: imageModel,
         size,

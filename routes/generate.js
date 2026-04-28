@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel } from "../lib/imageModels.js";
+import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
 import { generateViaOAuth } from "../lib/oauthProxy.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { startJob, finishJob } from "../lib/inflight.js";
@@ -39,6 +39,8 @@ export function registerGenerateRoutes(app, ctx) {
         references = [],
         mode: promptMode = "auto",
         model: rawModel,
+        reasoningEffort: rawReasoningEffort,
+        webSearchEnabled: rawWebSearchEnabled = true,
       } = req.body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
       const modelCheck = normalizeImageModel(ctx, rawModel);
@@ -49,6 +51,15 @@ export function registerGenerateRoutes(app, ctx) {
         return res.status(modelCheck.status).json({ error: modelCheck.error, code: modelCheck.code });
       }
       const imageModel = modelCheck.model;
+      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
+      if (reasoningCheck.error) {
+        finishStatus = "error";
+        finishHttpStatus = reasoningCheck.status;
+        finishErrorCode = reasoningCheck.code;
+        return res.status(reasoningCheck.status).json({ error: reasoningCheck.error, code: reasoningCheck.code });
+      }
+      const reasoningEffort = reasoningCheck.effort;
+      const webSearchEnabled = rawWebSearchEnabled !== false;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
       if (!prompt) return res.status(400).json({ error: "Prompt is required" });
@@ -106,6 +117,7 @@ export function registerGenerateRoutes(app, ctx) {
         clientNodeId,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
         promptMode: normalizedPromptMode,
+        webSearchEnabled,
       });
       const startTime = Date.now();
 
@@ -127,7 +139,7 @@ export function registerGenerateRoutes(app, ctx) {
               requestId,
               normalizedPromptMode,
               ctx,
-              { model: imageModel },
+              { model: imageModel, reasoningEffort, webSearchEnabled },
             );
             if (r.b64) return r;
             lastErr = new Error("Empty response (safety refusal)");
@@ -170,6 +182,7 @@ export function registerGenerateRoutes(app, ctx) {
             createdAt: Date.now(),
             usage: r.value.usage || null,
             webSearchCalls: r.value.webSearchCalls || 0,
+            webSearchEnabled,
             refsCount: refCheck.refs.length,
           };
           const rawBuffer = Buffer.from(r.value.b64, "base64");
@@ -242,6 +255,7 @@ export function registerGenerateRoutes(app, ctx) {
         warnings: qualityWarnings,
         revisedPrompt: firstRevised,
         promptMode: normalizedPromptMode,
+        webSearchEnabled,
       };
 
       if (count === 1) {

@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { AccountSettings } from "./AccountSettings";
 import { ImageModelSelect } from "./ImageModelSelect";
+import { ReasoningEffortSelect } from "./ReasoningEffortSelect";
+import { WebSearchToggle } from "./WebSearchToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { HistoryStripLayoutToggle } from "./HistoryStripLayoutToggle";
@@ -177,6 +179,24 @@ export function SettingsWorkspace() {
                 </div>
                 <div className="settings-row__control">
                   <ImageModelSelect variant="settings" />
+                </div>
+              </article>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.reasoning.title")}</h4>
+                  <p>{t("settings.reasoning.body")}</p>
+                </div>
+                <div className="settings-row__control">
+                  <ReasoningEffortSelect />
+                </div>
+              </article>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.webSearch.title")}</h4>
+                  <p>{t("settings.webSearch.body")}</p>
+                </div>
+                <div className="settings-row__control">
+                  <WebSearchToggle />
                 </div>
               </article>
             </SettingsSectionBlock>

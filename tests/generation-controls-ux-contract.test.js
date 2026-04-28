@@ -15,8 +15,12 @@ describe("generation controls custom plus UX contract", () => {
 
     assert.match(rightPanel, /import \{ SizePicker \} from "\.\/SizePicker"/);
     assert.match(rightPanel, /import \{ CountPicker \} from "\.\/CountPicker"/);
+    assert.match(rightPanel, /import \{ PromptLibraryPanel \} from "\.\/PromptLibraryPanel"/);
     assert.match(rightPanel, /<SizePicker \/>/);
     assert.match(rightPanel, /<CountPicker \/>/);
+    assert.match(rightPanel, /promptLibraryOpen/);
+    assert.match(rightPanel, /<PromptLibraryPanel variant="embedded" \/>/);
+    assert.match(rightPanel, /right-panel-tabs/);
     assert.doesNotMatch(rightPanel, /COUNT_ITEMS/);
   });
 
@@ -85,7 +89,21 @@ describe("generation controls custom plus UX contract", () => {
     assert.match(countPicker, /inputMode="numeric"/);
     assert.match(countPicker, /Math\.min\(8, Math\.max\(1, Math\.trunc\(value \|\| 1\)\)\)/);
     assert.match(store, /function normalizeCount\(value: number\): Count/);
-    assert.match(store, /setCount: \(count\) => set\(\{ count: normalizeCount\(count\) \}\)/);
+    assert.match(store, /const next = normalizeCount\(count\);/);
+    assert.match(store, /saveGenerationDefaultsPatch\(\{ count: next \}\);/);
+  });
+
+  it("persists prompt and generation presets across refresh", () => {
+    const store = readSource("ui/src/store/useAppStore.ts");
+
+    assert.match(store, /GENERATION_DEFAULTS_STORAGE_KEY = "ima2\.generationDefaults"/);
+    assert.match(store, /function loadGenerationDefaults\(\): GenerationDefaults/);
+    assert.match(store, /function saveGenerationDefaultsPatch\(patch: GenerationDefaults\): void/);
+    assert.match(store, /prompt: storedGenerationDefaults\.prompt \?\? ""/);
+    assert.match(store, /sizePreset: storedGenerationDefaults\.sizePreset \?\? "1024x1024"/);
+    assert.match(store, /setPrompt: \(prompt\) => \{[\s\S]*?saveGenerationDefaultsPatch\(\{ prompt \}\);/);
+    assert.match(store, /setSizePreset: \(sizePreset\) => \{[\s\S]*?saveGenerationDefaultsPatch\(\{ sizePreset \}\);/);
+    assert.match(store, /saveGenerationDefaultsPatch\(\{ insertedPrompts \}\);/);
   });
 
   it("updates 3840 constraints across cost, i18n, and contracts", () => {

@@ -4,7 +4,11 @@ import { useI18n } from "../i18n";
 import { PromptLibraryRow } from "./PromptLibraryRow";
 import { SavePromptPopover } from "./SavePromptPopover";
 
-export function PromptLibraryPanel() {
+type PromptLibraryPanelProps = {
+  variant?: "overlay" | "embedded";
+};
+
+export function PromptLibraryPanel({ variant = "overlay" }: PromptLibraryPanelProps) {
   const { t } = useI18n();
   const open = useAppStore((s) => s.promptLibraryOpen);
   const toggle = useAppStore((s) => s.togglePromptLibrary);
@@ -103,19 +107,11 @@ export function PromptLibraryPanel() {
     );
   });
 
-  return (
-    <div
-      className="prompt-library-panel"
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      <div className="prompt-library-panel__backdrop" onClick={toggle} />
+  const content = (
       <div className="prompt-library-panel__drawer">
         <div className="prompt-library-panel__header">
           <h3>{t("promptLibrary.title")}</h3>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div className="prompt-library-panel__actions">
             <button
               className="prompt-library-panel__add"
               onClick={() => setAddOpen((v) => !v)}
@@ -157,14 +153,16 @@ export function PromptLibraryPanel() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <label className="prompt-library-panel__filter">
-            <input
-              type="checkbox"
-              checked={favoritesOnly}
-              onChange={(e) => setFavoritesOnly(e.target.checked)}
-            />
-            <span>★ {t("promptLibrary.favorites")}</span>
-          </label>
+          <button
+            type="button"
+            className={`prompt-library-panel__filter-toggle${favoritesOnly ? " active" : ""}`}
+            aria-pressed={favoritesOnly}
+            title={t("promptLibrary.favorites")}
+            onClick={() => setFavoritesOnly((v) => !v)}
+          >
+            <span aria-hidden="true">★</span>
+            <span>{t("promptLibrary.favorites")}</span>
+          </button>
         </div>
 
         {loading ? (
@@ -200,6 +198,20 @@ export function PromptLibraryPanel() {
           </div>
         )}
       </div>
+  );
+
+  return (
+    <div
+      className={`prompt-library-panel prompt-library-panel--${variant}`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {variant === "overlay" ? (
+        <div className="prompt-library-panel__backdrop" onClick={toggle} />
+      ) : null}
+      {content}
     </div>
   );
 }

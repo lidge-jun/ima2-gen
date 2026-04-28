@@ -4,6 +4,7 @@ import { OptionGroup } from "./OptionGroup";
 import { SizePicker } from "./SizePicker";
 import { CountPicker } from "./CountPicker";
 import { CostEstimate } from "./CostEstimate";
+import { PromptLibraryPanel } from "./PromptLibraryPanel";
 import type { Format, Moderation, Quality } from "../types";
 import { useI18n } from "../i18n";
 
@@ -16,6 +17,8 @@ const FORMAT_ITEMS = [
 export function RightPanel() {
   const open = useAppStore((s) => s.rightPanelOpen);
   const toggle = useAppStore((s) => s.toggleRightPanel);
+  const promptLibraryOpen = useAppStore((s) => s.promptLibraryOpen);
+  const togglePromptLibrary = useAppStore((s) => s.togglePromptLibrary);
   const { t } = useI18n();
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.matchMedia("(max-width: 800px)").matches : false,
@@ -86,45 +89,74 @@ export function RightPanel() {
           className="right-panel-body"
           hidden={!open}
         >
-          <div className="section-title">{t("panel.detailSettings")}</div>
-          <OptionGroup<Quality>
-            title={t("quality.title")}
-            items={QUALITY_ITEMS}
-            value={quality}
-            onChange={setQuality}
-          />
-          <SizePicker />
-          <OptionGroup<Format>
-            title={t("format.title")}
-            items={FORMAT_ITEMS}
-            value={format}
-            onChange={setFormat}
-          />
-          <OptionGroup<Moderation>
-            title={t("moderation.title")}
-            items={MOD_ITEMS}
-            value={moderation}
-            onChange={setModeration}
-          />
-          <p className="option-help">
-            {t("moderation.explain")}
-          </p>
-          {showMultimodeControls && (
-            <div className="option-group multimode-toggle">
-              <button
-                type="button"
-                className={`multimode-toggle__button${multimode ? " active" : ""}`}
-                aria-pressed={multimode}
-                title={t("multimode.tooltip")}
-                onClick={() => setMultimode(!multimode)}
-              >
-                <span>{t("multimode.label")}</span>
-                <span>{t("multimode.shortHint")}</span>
-              </button>
+          <div className="right-panel-tabs" role="tablist" aria-label={t("panel.detailSettings")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!promptLibraryOpen}
+              className={`right-panel-tabs__button${promptLibraryOpen ? "" : " active"}`}
+              onClick={() => {
+                if (promptLibraryOpen) togglePromptLibrary();
+              }}
+            >
+              {t("panel.detailSettings")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={promptLibraryOpen}
+              className={`right-panel-tabs__button${promptLibraryOpen ? " active" : ""}`}
+              onClick={() => {
+                if (!promptLibraryOpen) togglePromptLibrary();
+              }}
+            >
+              {t("promptLibrary.title")}
+            </button>
+          </div>
+          {promptLibraryOpen ? (
+            <PromptLibraryPanel variant="embedded" />
+          ) : (
+            <div className="right-panel-settings" role="tabpanel">
+              <OptionGroup<Quality>
+                title={t("quality.title")}
+                items={QUALITY_ITEMS}
+                value={quality}
+                onChange={setQuality}
+              />
+              <SizePicker />
+              <OptionGroup<Format>
+                title={t("format.title")}
+                items={FORMAT_ITEMS}
+                value={format}
+                onChange={setFormat}
+              />
+              <OptionGroup<Moderation>
+                title={t("moderation.title")}
+                items={MOD_ITEMS}
+                value={moderation}
+                onChange={setModeration}
+              />
+              <p className="option-help">
+                {t("moderation.explain")}
+              </p>
+              {showMultimodeControls && (
+                <div className="option-group multimode-toggle">
+                  <button
+                    type="button"
+                    className={`multimode-toggle__button${multimode ? " active" : ""}`}
+                    aria-pressed={multimode}
+                    title={t("multimode.tooltip")}
+                    onClick={() => setMultimode(!multimode)}
+                  >
+                    <span>{t("multimode.label")}</span>
+                    <span>{t("multimode.shortHint")}</span>
+                  </button>
+                </div>
+              )}
+              <CountPicker />
+              <CostEstimate />
             </div>
           )}
-          <CountPicker />
-          <CostEstimate />
         </div>
       </aside>
     </>

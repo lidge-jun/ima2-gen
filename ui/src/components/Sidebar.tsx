@@ -71,11 +71,19 @@ export function Sidebar() {
 function PromptLibraryButton() {
   const { t } = useI18n();
   const toggle = useAppStore((s) => s.togglePromptLibrary);
+  const promptLibraryOpen = useAppStore((s) => s.promptLibraryOpen);
+  const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useAppStore((s) => s.toggleRightPanel);
+  const openPromptLibrary = () => {
+    if (!promptLibraryOpen && !rightPanelOpen) toggleRightPanel();
+    toggle();
+  };
+
   return (
     <button
       type="button"
       className="settings-button"
-      onClick={toggle}
+      onClick={openPromptLibrary}
       title={t("promptLibrary.title")}
       aria-label={t("promptLibrary.title")}
     >

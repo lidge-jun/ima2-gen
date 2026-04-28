@@ -36,7 +36,8 @@ describe("multimode backend contract", () => {
     assert.match(oauth, /const images = \[\]/);
     assert.match(oauth, /images\.push\(/);
     assert.match(oauth, /extraIgnored/);
-    assert.match(oauth, /tools = \[\s*\{ type: "web_search" \}/);
+    assert.match(oauth, /buildImageTools\(webSearchEnabled/);
+    assert.match(oauth, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
     assert.match(oauth, /tool_choice: "required"/);
   });
 

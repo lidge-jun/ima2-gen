@@ -42,6 +42,9 @@ describe("prompt library UI contract", () => {
     assert.match(panel, /fileInputRef\.current\?\.click\(\)/);
     assert.match(panel, /accept="\.txt,\.md,text\/plain,text\/markdown"/);
     assert.match(panel, /onDrop=\{handleDrop\}/);
+    assert.match(panel, /variant = "overlay"/);
+    assert.match(panel, /prompt-library-panel--\$\{variant\}/);
+    assert.match(panel, /variant === "overlay"/);
     assert.match(panel, /t\("promptLibrary\.dropImport"\)/);
     assert.doesNotMatch(panel, /Drop \.txt or \.md files to import prompts/);
 
@@ -53,6 +56,7 @@ describe("prompt library UI contract", () => {
 
     assert.match(css, /\.prompt-library-panel__import/);
     assert.match(css, /\.prompt-library-panel__file-input/);
+    assert.match(css, /\.prompt-library-panel__actions/);
 
     for (const dict of [en, ko]) {
       assert.equal(typeof dict.promptLibrary.saved, "string");
@@ -106,6 +110,7 @@ describe("prompt library UI contract", () => {
     const row = readSource("ui/src/components/PromptLibraryRow.tsx");
     const modal = readSource("ui/src/components/PromptDetailModal.tsx");
     const composer = readSource("ui/src/components/PromptComposer.tsx");
+    const sidebar = readSource("ui/src/components/Sidebar.tsx");
     const store = readSource("ui/src/store/useAppStore.ts");
     const css = readSource("ui/src/index.css");
     const en = JSON.parse(readSource("ui/src/i18n/en.json"));
@@ -134,6 +139,8 @@ describe("prompt library UI contract", () => {
     assert.match(composer, /className="composer__prompt-chip"/);
     assert.match(composer, /className="composer__prompt-chip-title"/);
     assert.match(composer, /removeInsertedPrompt\(item\.id\)/);
+    assert.match(sidebar, /rightPanelOpen/);
+    assert.match(sidebar, /toggleRightPanel/);
 
     assert.match(css, /\.prompt-library-row__insert/);
     assert.match(css, /\.prompt-detail-modal__insert/);
@@ -146,5 +153,18 @@ describe("prompt library UI contract", () => {
     assert.equal(ko.promptLibrary.insert, "삽입");
     assert.equal(typeof ko.promptLibrary.inserted, "string");
     assert.equal(typeof ko.promptLibrary.removeInserted, "string");
+  });
+
+  it("uses an icon button instead of a checkbox for prompt favorites filtering", () => {
+    const panel = readSource("ui/src/components/PromptLibraryPanel.tsx");
+    const css = readSource("ui/src/index.css");
+
+    assert.match(panel, /className=\{`prompt-library-panel__filter-toggle\$\{favoritesOnly \? " active" : ""\}`\}/);
+    assert.match(panel, /aria-pressed=\{favoritesOnly\}/);
+    assert.match(panel, /onClick=\{\(\) => setFavoritesOnly\(\(v\) => !v\)\}/);
+    assert.doesNotMatch(panel, /type="checkbox"/);
+    assert.doesNotMatch(panel, /prompt-library-panel__filter"/);
+    assert.match(css, /\.prompt-library-panel__filter-toggle/);
+    assert.match(css, /\.prompt-library-panel__filter-toggle\.active/);
   });
 });
