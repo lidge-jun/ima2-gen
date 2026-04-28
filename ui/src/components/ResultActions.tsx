@@ -1,30 +1,41 @@
+import { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { exportImageToComfy } from "../lib/api";
+import type { GenerateItem } from "../types";
 
-export function ResultActions() {
+interface ResultActionsProps {
+  imageOverride?: GenerateItem | null;
+}
+
+export function ResultActions({ imageOverride = null }: ResultActionsProps) {
   const { t } = useI18n();
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const useImageAsReference = useAppStore((s) => s.useImageAsReference);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const permanentlyDeleteHistoryItemByClick = useAppStore(
     (s) => s.permanentlyDeleteHistoryItemByClick,
   );
   const canvasOpen = useAppStore((s) => s.canvasOpen);
   const openCanvas = useAppStore((s) => s.openCanvas);
+  const [comfyExporting, setComfyExporting] = useState(false);
 
-  if (!currentImage) return null;
+  const actionImage = imageOverride ?? currentImage;
+  if (!actionImage) return null;
+  const canExportToComfy = Boolean(actionImage.filename);
 
   const download = () => {
     const a = document.createElement("a");
-    a.href = currentImage.image;
-    a.download = currentImage.filename || "generated.png";
+    a.href = actionImage.image;
+    a.download = actionImage.filename || "generated.png";
     a.click();
   };
 
   const copyImage = async () => {
     try {
-      const res = await fetch(currentImage.image);
+      const res = await fetch(actionImage.image);
       const blob = await res.blob();
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
       showToast(t("toast.imageCopied"));
@@ -34,21 +45,21 @@ export function ResultActions() {
   };
 
   const copyPrompt = () => {
-    if (!currentImage.prompt) return;
-    void navigator.clipboard.writeText(currentImage.prompt);
+    if (!actionImage.prompt) return;
+    void navigator.clipboard.writeText(actionImage.prompt);
     showToast(t("toast.promptCopied"));
   };
 
   const newFromHere = async () => {
-    if (!currentImage.prompt) {
+    if (!actionImage.prompt) {
       showToast(t("toast.noPromptToFork"), true);
       return;
     }
-    setPrompt(currentImage.prompt);
+    setPrompt(actionImage.prompt);
     // 0.09.5: auto-attach the current image as a reference so continuations
     // preserve style/composition, not just prompt text.
     try {
-      await useAppStore.getState().useCurrentAsReference();
+      await useImageAsReference(actionImage);
     } catch {
       // non-fatal — fall back to prompt-only fork
     }
@@ -60,6 +71,28 @@ export function ResultActions() {
       promptEl.setSelectionRange(promptEl.value.length, promptEl.value.length);
     }
     showToast(t("toast.forkStarted"));
+  };
+
+  const sendToComfyUI = async () => {
+    if (!actionImage.filename || comfyExporting) return;
+    setComfyExporting(true);
+    try {
+      const result = await exportImageToComfy({ filename: actionImage.filename });
+      showToast(t("toast.comfyExported", { filename: result.uploadedFilename }));
+    } catch (error) {
+      const code = error instanceof Error ? (error as Error & { code?: string }).code : undefined;
+      const key =
+        code === "COMFY_URL_NOT_LOCAL"
+          ? "toast.comfyExportInvalidUrl"
+          : code === "COMFY_IMAGE_INVALID"
+            ? "toast.comfyExportInvalidImage"
+            : code === "COMFY_IMAGE_NOT_FOUND"
+              ? "toast.comfyExportImageNotFound"
+              : "toast.comfyExportFailed";
+      showToast(t(key), true);
+    } finally {
+      setComfyExporting(false);
+    }
   };
 
   return (
@@ -94,25 +127,38 @@ export function ResultActions() {
           </svg>
         </button>
       )}
-      {currentImage.filename && (
+      {actionImage.filename && (
         <>
           <button
             type="button"
             className="action-btn action-btn--danger"
-            onClick={() => void trashHistoryItem(currentImage)}
+            onClick={() => void trashHistoryItem(actionImage)}
             title={t("result.deleteTitle")}
           >
             {t("result.delete")}
           </button>
           <details className="result-actions__more">
             <summary className="action-btn">{t("result.more")}</summary>
-            <button
-              type="button"
-              className="result-actions__danger-item"
-              onClick={() => void permanentlyDeleteHistoryItemByClick(currentImage)}
-            >
-              {t("result.permanentDelete")}
-            </button>
+            <div className="result-actions__menu">
+              {canExportToComfy && (
+                <button
+                  type="button"
+                  className="result-actions__menu-item"
+                  onClick={() => void sendToComfyUI()}
+                  title={t("result.sendToComfyUITitle")}
+                  disabled={comfyExporting}
+                >
+                  {t("result.sendToComfyUI")}
+                </button>
+              )}
+              <button
+                type="button"
+                className="result-actions__menu-item result-actions__danger-item"
+                onClick={() => void permanentlyDeleteHistoryItemByClick(actionImage)}
+              >
+                {t("result.permanentDelete")}
+              </button>
+            </div>
           </details>
         </>
       )}

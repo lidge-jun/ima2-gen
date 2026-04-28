@@ -52,8 +52,8 @@ describe("gallery viewer focusless navigation contract", () => {
     const hook = readSource("ui/src/hooks/useGalleryViewerNavigation.ts");
 
     assert.doesNotMatch(hook, /trashHistoryItem/);
-    assert.match(resultActions, /onClick=\{\(\) => void trashHistoryItem\(currentImage\)\}/);
-    assert.match(resultActions, /onClick=\{\(\) => void permanentlyDeleteHistoryItemByClick\(currentImage\)\}/);
+    assert.match(resultActions, /onClick=\{\(\) => void trashHistoryItem\(actionImage\)\}/);
+    assert.match(resultActions, /onClick=\{\(\) => void permanentlyDeleteHistoryItemByClick\(actionImage\)\}/);
     assert.match(resultActions, /result\.permanentDelete/);
     assert.match(store, /window\.confirm\(t\("result\.permanentDeleteConfirm"/);
   });

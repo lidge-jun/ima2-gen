@@ -9,12 +9,18 @@ import { registerStorageRoutes } from "./storage.js";
 import { registerCardNewsRoutes } from "./cardNews.js";
 import { registerMetadataRoutes } from "./metadata.js";
 import { registerPromptRoutes } from "./prompts.js";
+import { registerAnnotationRoutes } from "./annotations.js";
+import { registerCanvasVersionRoutes } from "./canvasVersions.js";
+import { registerComfyRoutes } from "./comfy.js";
 
 export function configureRoutes(app, ctx) {
   registerHealthRoutes(app, ctx);
   registerStorageRoutes(app, ctx);
   registerMetadataRoutes(app, ctx);
   registerHistoryRoutes(app, ctx);
+  registerAnnotationRoutes(app, ctx);
+  registerCanvasVersionRoutes(app, ctx);
+  registerComfyRoutes(app, ctx);
   registerSessionRoutes(app, ctx);
   registerEditRoutes(app, ctx);
   registerNodeRoutes(app, ctx);

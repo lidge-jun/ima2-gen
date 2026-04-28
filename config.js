@@ -50,6 +50,10 @@ function pickInt(envVal, fileVal, fallback) {
   const n = Number(candidate);
   return Number.isFinite(n) ? n : fallback;
 }
+function pickPositiveInt(envVal, fileVal, fallback) {
+  const n = pickInt(envVal, fileVal, fallback);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 function pickStr(envVal, fileVal, fallback) {
   return firstDefined(envVal, fileVal) ?? fallback;
 }
@@ -146,6 +150,12 @@ export const config = {
     default: pickStr(env.IMA2_IMAGE_MODEL_DEFAULT, fileCfg.imageModels?.default, "gpt-5.4-mini"),
     valid: new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]),
     unsupported: new Set(["gpt-5.3-codex-spark"]),
+    reasoningEffort: pickStr(
+      env.IMA2_REASONING_EFFORT,
+      fileCfg.imageModels?.reasoningEffort,
+      "medium",
+    ),
+    validReasoningEfforts: new Set(["low", "medium", "high", "xhigh"]),
   },
   log: {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
@@ -162,6 +172,19 @@ export const config = {
       env.IMA2_CARD_NEWS_PLANNER_FALLBACK,
       fileCfg.cardNewsPlanner?.deterministicFallback,
       false,
+    ),
+  },
+  comfy: {
+    defaultUrl: pickStr(env.IMA2_COMFY_URL, fileCfg.comfy?.defaultUrl, "http://127.0.0.1:8188"),
+    uploadTimeoutMs: pickPositiveInt(
+      env.IMA2_COMFY_UPLOAD_TIMEOUT_MS,
+      fileCfg.comfy?.uploadTimeoutMs,
+      30_000,
+    ),
+    maxUploadBytes: pickPositiveInt(
+      env.IMA2_COMFY_MAX_UPLOAD_BYTES,
+      fileCfg.comfy?.maxUploadBytes,
+      50 * 1024 * 1024,
     ),
   },
   dev: {
