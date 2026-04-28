@@ -122,6 +122,64 @@ Required cases:
 - Success toast interpolates `uploadedFilename`.
 - Failure toasts preserve and map stable error codes from `jsonFetch`.
 
+## PR2 ComfyUI Custom Node Contract Tests
+
+New file:
+
+```text
+tests/comfyui-custom-node-contract.test.js
+```
+
+Required cases:
+
+- `integrations/comfyui/ima2_gen_bridge/__init__.py` exists.
+- `integrations/comfyui/ima2_gen_bridge/nodes.py` exists.
+- `integrations/comfyui/ima2_gen_bridge/README.md` exists.
+- `nodes.py` exposes `NODE_CLASS_MAPPINGS`.
+- `nodes.py` exposes `NODE_DISPLAY_NAME_MAPPINGS`.
+- `nodes.py` defines `Ima2Generate`.
+- `Ima2Generate` defines `INPUT_TYPES`, `RETURN_TYPES`, `RETURN_NAMES`,
+  `FUNCTION`, and `CATEGORY`.
+- `RETURN_TYPES` is exactly `("IMAGE", "STRING", "STRING")`.
+- `RETURN_NAMES` is exactly `("image", "filename", "metadata")`.
+- `FUNCTION` points to `generate`.
+- `generate(...)` has defaults for optional ComfyUI inputs:
+  `server_url=""`, `quality="medium"`, `size="1024x1024"`,
+  `moderation="low"`, `timeout=180`, `model=""`, `mode="auto"`,
+  and `web_search=True`.
+- model dropdown includes `""`, `gpt-5.5`, `gpt-5.4`, and
+  `gpt-5.4-mini`.
+- model dropdown does not include `gpt-5.3-codex-spark`.
+- node calls `POST /api/generate`.
+- node sends `X-ima2-client: comfyui/bridge`.
+- payload contains `"n": 1`.
+- payload contains `"format": "png"`.
+- payload maps Comfy widget `web_search` to server key `webSearchEnabled`.
+- payload does not send raw `web_search`.
+- payload does not include `provider: "api"`.
+- source does not include `api_key`, `OPENAI_API_KEY`, token path reads,
+  OAuth file reads, keychain reads, `subprocess`, or `shell=True`.
+- response handler reads single-image `image` and `filename` fields.
+- data URL decode path converts image bytes to a ComfyUI-compatible
+  `[B,H,W,C]` float tensor.
+- loopback URL validation accepts `127.0.0.1`, `localhost`, and `::1`.
+- loopback URL validation rejects HTTPS, remote domains, LAN IPs, embedded
+  credentials, path, query, and fragment.
+- README documents install by copy or symlink into `ComfyUI/custom_nodes/`.
+- README documents `ima2 serve` as a prerequisite.
+- README states PR2 is text-to-image only.
+
+## PR2 Package Tests
+
+Modify package checks:
+
+- `package.json` `files` includes `integrations/`.
+- `package.json` `lint:pkg` `mustInclude` includes `integrations/`.
+- `tests/package-smoke.test.js` asserts `npm pack` includes:
+  - `integrations/comfyui/ima2_gen_bridge/__init__.py`
+  - `integrations/comfyui/ima2_gen_bridge/nodes.py`
+  - `integrations/comfyui/ima2_gen_bridge/README.md`
+
 ## Manual Smoke
 
 With ComfyUI running:
@@ -154,3 +212,16 @@ npm run ui:build
 
 If the repository has no `tsc --noEmit` root command, `npm run ui:build`
 serves as the frontend static type/build gate.
+
+For PR2, also run:
+
+```bash
+node --test tests/comfyui-custom-node-contract.test.js
+node --test tests/package-smoke.test.js
+python3 -m py_compile integrations/comfyui/ima2_gen_bridge/*.py
+cd ui && npx tsc -b --noEmit
+```
+
+`python3 -m py_compile` is a local/manual gate for syntax confidence. Keep the
+cross-platform CI blocking gate on Node tests unless Python command naming is
+standardized in CI.

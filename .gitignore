@@ -7,3 +7,5 @@ devlog/
 ui/dist/
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo
+__pycache__/
+*.pyc
