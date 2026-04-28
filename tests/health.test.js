@@ -14,7 +14,7 @@ const OAUTH_PORT = String(10532 + Math.floor(Math.random() * 400));
 const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-test-home-"));
 const FAKE_GENERATED_DIR = mkdtempSync(join(tmpdir(), "ima2-test-generated-"));
 
-const HEALTH_TIMEOUT = process.platform === "win32" ? 30000 : 8000;
+const HEALTH_TIMEOUT = process.platform === "win32" || process.platform === "darwin" ? 30000 : 8000;
 
 async function waitForHealth(base, timeoutMs = HEALTH_TIMEOUT) {
   const deadline = Date.now() + timeoutMs;

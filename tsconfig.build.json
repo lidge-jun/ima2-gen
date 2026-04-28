@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": false,
+    "allowJs": false
+  },
+  "include": [
+    "server.ts",
+    "config.ts",
+    "lib/**/*.ts",
+    "routes/**/*.ts",
+    "types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "ui",
+    "tests",
+    "scripts",
+    "integrations",
+    "bin",
+    "**/*.test.ts",
+    "**/*.d.ts"
+  ]
+}
