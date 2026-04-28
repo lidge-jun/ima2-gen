@@ -25,12 +25,12 @@ async function probe(base, timeoutMs = 600) {
   }
 }
 
-export async function resolveServer({ serverFlag } = {}) {
+export async function resolveServer({ serverFlag }: any = {}) {
   if (serverFlag) {
     const base = serverFlag.replace(/\/$/, "");
     const health = await probe(base);
     if (health) return { base, health };
-    const err = new Error(`server unreachable at ${base}`);
+    const err: any = new Error(`server unreachable at ${base}`);
     err.code = "SERVER_UNREACHABLE";
     throw err;
   }
@@ -49,12 +49,12 @@ export async function resolveServer({ serverFlag } = {}) {
     const health = await probe(base);
     if (health) return { base, health };
   }
-  const err = new Error("server unreachable — is 'ima2 serve' running?");
+  const err: any = new Error("server unreachable — is 'ima2 serve' running?");
   err.code = "SERVER_UNREACHABLE";
   throw err;
 }
 
-export async function request(base, path, { method = "GET", body, timeoutMs = 180_000 } = {}) {
+export async function request(base, path, { method = "GET", body, timeoutMs = 180_000 }: any = {}) {
   const res = await fetch(base + path, {
     method,
     headers: {
@@ -65,10 +65,10 @@ export async function request(base, path, { method = "GET", body, timeoutMs = 18
     signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text();
-  let json = null;
+  let json: any = null;
   try { json = JSON.parse(text); } catch {}
   if (!res.ok) {
-    const err = new Error(json?.error || `HTTP ${res.status}`);
+    const err: any = new Error(json?.error || `HTTP ${res.status}`);
     err.status = res.status;
     err.code = json?.code || null;
     err.body = json || text;

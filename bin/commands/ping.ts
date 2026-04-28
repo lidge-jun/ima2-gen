@@ -16,10 +16,11 @@ export default async function pingCmd(argv) {
 
   try {
     const { base, health } = await resolveServer({ serverFlag: args.server });
+    const h: any = health;
     if (args.json) {
-      json({ ok: true, base, ...health });
+      json({ ok: true, base, ...h });
     } else {
-      out(color.green("✓ ") + `${base}  v${health.version}  uptime ${health.uptimeSec}s  activeJobs ${health.activeJobs}`);
+      out(color.green("✓ ") + `${base}  v${h.version}  uptime ${h.uptimeSec}s  activeJobs ${h.activeJobs}`);
     }
   } catch (e) {
     if (args.json) { json({ ok: false, error: e.message }); process.exit(exitCodeForError(e)); }

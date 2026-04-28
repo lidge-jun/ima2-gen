@@ -1,14 +1,14 @@
 // Tiny argv parser — no dependencies.
 // Supports: --long, --long=val, --long val, -s, -s val, repeatable flags, positional, --.
 
-export function parseArgs(argv, spec = {}) {
-  const shortMap = {};
-  for (const [name, def] of Object.entries(spec.flags || {})) {
+export function parseArgs(argv, spec: any = {}): any {
+  const shortMap: any = {};
+  for (const [name, def] of Object.entries<any>(spec.flags || {})) {
     if (def.short) shortMap[def.short] = name;
   }
 
-  const out = { positional: [], _unknown: [] };
-  for (const [name, def] of Object.entries(spec.flags || {})) {
+  const out: any = { positional: [], _unknown: [] };
+  for (const [name, def] of Object.entries<any>(spec.flags || {})) {
     if (def.repeatable) out[name] = [];
     else if ("default" in def) out[name] = def.default;
   }

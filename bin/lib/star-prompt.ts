@@ -66,7 +66,7 @@ async function askYesNo(question) {
   }
 }
 
-export async function maybePromptGithubStar(deps = {}) {
+export async function maybePromptGithubStar(deps: any = {}) {
   const stdinIsTTY = deps.stdinIsTTY ?? process.stdin.isTTY;
   const stdoutIsTTY = deps.stdoutIsTTY ?? process.stdout.isTTY;
   if (!stdinIsTTY || !stdoutIsTTY) return;
