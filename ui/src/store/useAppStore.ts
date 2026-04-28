@@ -614,8 +614,9 @@ type AppState = {
   count: Count;
   multimode: boolean;
   multimodeMaxImages: Count;
-  multimodeSequence: MultimodeSequenceState | null;
-  multimodeAbortController: AbortController | null;
+  multimodeSequences: Record<string, MultimodeSequenceState>;
+  multimodeAbortControllers: Record<string, AbortController>;
+  multimodePreviewFlightId: string | null;
   promptMode: "auto" | "direct";
   prompt: string;
   referenceImages: string[];
@@ -648,6 +649,9 @@ type AppState = {
   addMetadataRestoreAsReference: () => void;
   rightPanelOpen: boolean;
   toggleRightPanel: () => void;
+  composeSheetOpen: boolean;
+  openComposeSheet: () => void;
+  closeComposeSheet: () => void;
   galleryOpen: boolean;
   openGallery: () => void;
   closeGallery: () => void;
@@ -991,8 +995,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   count: storedGenerationDefaults.count ?? 1,
   multimode: storedGenerationDefaults.multimode ?? false,
   multimodeMaxImages: storedGenerationDefaults.multimodeMaxImages ?? 4,
-  multimodeSequence: null,
-  multimodeAbortController: null,
+  multimodeSequences: {},
+  multimodeAbortControllers: {},
+  multimodePreviewFlightId: null,
   promptMode: storedGenerationDefaults.promptMode ?? "auto",
   prompt: storedGenerationDefaults.prompt ?? "",
   insertedPrompts: storedGenerationDefaults.insertedPrompts ?? [],
@@ -1406,6 +1411,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       } catch {}
       return { rightPanelOpen: next };
     }),
+  composeSheetOpen: false,
+  openComposeSheet: () => set({ composeSheetOpen: true }),
+  closeComposeSheet: () => set({ composeSheetOpen: false }),
   galleryOpen: false,
   openGallery: () => set({ galleryOpen: true }),
   closeGallery: () => set({ galleryOpen: false }),
@@ -2491,7 +2499,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setMultimode: (enabled) => {
     if (enabled && get().uiMode !== "classic") return;
     saveGenerationDefaultsPatch({ multimode: enabled });
-    set({ multimode: enabled, multimodeSequence: enabled ? get().multimodeSequence : null });
+    const s = get();
+    set({
+      multimode: enabled,
+      multimodeSequences: enabled ? s.multimodeSequences : {},
+      multimodePreviewFlightId: enabled ? s.multimodePreviewFlightId : null,
+    });
   },
   setMultimodeMaxImages: (count) => {
     const next = normalizeCount(count);
@@ -2674,7 +2687,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   async generateMultimode(sizeOverride) {
     const s = get();
     if (s.uiMode !== "classic") return;
-    if (s.multimodeAbortController) return;
     const prompt = composePrompt(s.prompt, s.insertedPrompts);
     if (!prompt) return;
     const size = sizeOverride ?? s.getResolvedSize();
@@ -2699,8 +2711,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       activeGenerations: s.activeGenerations + 1,
       inFlight: nextInFlight,
-      multimodeAbortController: controller,
-      multimodeSequence: initialSequence,
+      multimodeAbortControllers: { ...s.multimodeAbortControllers, [flightId]: controller },
+      multimodeSequences: { ...s.multimodeSequences, [flightId]: initialSequence },
+      multimodePreviewFlightId: flightId,
     });
     get().startInFlightPolling();
 
@@ -2726,32 +2739,38 @@ export const useAppStore = create<AppState>((set, get) => ({
         {
           onPartial: (partial) => {
             set((state) => {
-              const current = state.multimodeSequence;
-              if (!current || current.requestId !== flightId) return {};
+              const current = state.multimodeSequences[flightId];
+              if (!current) return {};
               return {
-                multimodeSequence: {
-                  ...current,
-                  partials: [
-                    ...current.partials,
-                    { image: partial.image, index: partial.index ?? null },
-                  ].slice(-requested),
+                multimodeSequences: {
+                  ...state.multimodeSequences,
+                  [flightId]: {
+                    ...current,
+                    partials: [
+                      ...current.partials,
+                      { image: partial.image, index: partial.index ?? null },
+                    ].slice(-requested),
+                  },
                 },
               };
             });
           },
           onImage: (image) => {
             set((state) => {
-              const current = state.multimodeSequence;
-              if (!current || current.requestId !== flightId) return {};
+              const current = state.multimodeSequences[flightId];
+              if (!current) return {};
               const exists = current.images.some((item) => item.filename && item.filename === image.filename);
               if (exists) return {};
               return {
-                multimodeSequence: {
-                  ...current,
-                  sequenceId: image.sequenceId ?? current.sequenceId,
-                  returned: current.images.length + 1,
-                  images: [...current.images, image],
-                  status: "partial",
+                multimodeSequences: {
+                  ...state.multimodeSequences,
+                  [flightId]: {
+                    ...current,
+                    sequenceId: image.sequenceId ?? current.sequenceId,
+                    returned: current.images.length + 1,
+                    images: [...current.images, image],
+                    status: "partial",
+                  },
                 },
               };
             });
@@ -2773,56 +2792,92 @@ export const useAppStore = create<AppState>((set, get) => ({
       for (const item of items) {
         await addHistory(item, set, get);
       }
-      set({
-        multimodeSequence: {
-          sequenceId: res.sequenceId,
-          requestId: flightId,
-          requested: res.requested,
-          returned: res.returned,
-          images: items,
-          partials: [],
-          status: res.status,
-          elapsed: res.elapsed,
+      set((state) => ({
+        multimodeSequences: {
+          ...state.multimodeSequences,
+          [flightId]: {
+            sequenceId: res.sequenceId,
+            requestId: flightId,
+            requested: res.requested,
+            returned: res.returned,
+            images: items,
+            partials: [],
+            status: res.status,
+            elapsed: res.elapsed,
+          },
         },
-      });
+      }));
       const toastKey = res.status === "complete" ? "multimode.complete" : "multimode.partial";
       get().showToast(t(toastKey, { returned: res.returned, requested: res.requested, elapsed: res.elapsed }));
     } catch (err) {
       if ((err as Error).name === "AbortError") {
         set((state) => {
-          const current = state.multimodeSequence;
-          if (!current || current.requestId !== flightId) return {};
-          return { multimodeSequence: { ...current, status: current.images.length > 0 ? "partial" : "empty" } };
+          const current = state.multimodeSequences[flightId];
+          if (!current) return {};
+          return {
+            multimodeSequences: {
+              ...state.multimodeSequences,
+              [flightId]: {
+                ...current,
+                status: current.images.length > 0 ? "partial" : "empty",
+              },
+            },
+          };
         });
       } else {
         set((state) => {
-          const current = state.multimodeSequence;
-          if (!current || current.requestId !== flightId) return {};
-          return { multimodeSequence: { ...current, status: "error", error: (err as Error).message } };
+          const current = state.multimodeSequences[flightId];
+          if (!current) return {};
+          return {
+            multimodeSequences: {
+              ...state.multimodeSequences,
+              [flightId]: { ...current, status: "error", error: (err as Error).message },
+            },
+          };
         });
         handleError(err, get());
       }
     } finally {
       const remaining = get().inFlight.filter((f) => f.id !== flightId);
       saveInFlight(remaining);
-      set({
-        activeGenerations: Math.max(0, get().activeGenerations - 1),
-        inFlight: remaining,
-        multimodeAbortController: null,
+      set((state) => {
+        const nextControllers = { ...state.multimodeAbortControllers };
+        delete nextControllers[flightId];
+        let nextPreview = state.multimodePreviewFlightId;
+        if (nextPreview === flightId) {
+          const finalStatus = state.multimodeSequences[flightId]?.status;
+          const isCleanFinish = finalStatus === "complete" || finalStatus === "partial";
+          if (!isCleanFinish) {
+            const fallbackIds = Object.keys(nextControllers);
+            nextPreview = fallbackIds.length > 0
+              ? fallbackIds[fallbackIds.length - 1]
+              : null;
+          }
+        }
+        return {
+          activeGenerations: Math.max(0, state.activeGenerations - 1),
+          inFlight: remaining,
+          multimodeAbortControllers: nextControllers,
+          multimodePreviewFlightId: nextPreview,
+        };
       });
     }
   },
 
   cancelMultimode: () => {
-    get().multimodeAbortController?.abort();
+    const flightId = get().multimodePreviewFlightId;
+    if (!flightId) return;
+    get().multimodeAbortControllers[flightId]?.abort();
     set((state) => {
-      const current = state.multimodeSequence;
-      if (!current) return { multimodeAbortController: null };
+      const current = state.multimodeSequences[flightId];
+      if (!current) return {};
       return {
-        multimodeAbortController: null,
-        multimodeSequence: {
-          ...current,
-          status: current.images.length > 0 ? "partial" : "empty",
+        multimodeSequences: {
+          ...state.multimodeSequences,
+          [flightId]: {
+            ...current,
+            status: current.images.length > 0 ? "partial" : "empty",
+          },
         },
       };
     });

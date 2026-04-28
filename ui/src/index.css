@@ -1852,6 +1852,26 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.multimode-sequence__slot[role="button"] {
+  cursor: pointer;
+}
+
+.multimode-sequence__slot[role="button"]:hover {
+  border-color: var(--accent, #2563eb);
+  transform: translateY(-1px);
+}
+
+.multimode-sequence__slot[role="button"]:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 2px;
+}
+
+.multimode-sequence__slot.active {
+  border-color: var(--accent, #2563eb);
+  box-shadow: 0 0 0 2px var(--accent, #2563eb);
 }
 
 .multimode-sequence__slot img {

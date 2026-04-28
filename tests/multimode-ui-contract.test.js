@@ -32,12 +32,13 @@ describe("multimode frontend UX contract", () => {
     const api = readSource("ui/src/lib/api.ts");
 
     assert.match(store, /multimodeMaxImages: Count/);
-    assert.match(store, /multimodeAbortController: AbortController \| null/);
+    assert.match(store, /multimodeAbortControllers:\s*Record<string,\s*AbortController>/);
+    assert.match(store, /multimodeSequences:\s*Record<string,\s*MultimodeSequenceState>/);
+    assert.match(store, /multimodePreviewFlightId:\s*string\s*\|\s*null/);
     assert.match(store, /const useMultimode = s\.uiMode === "classic" && s\.multimode/);
     assert.match(store, /if \(useMultimode\) \{[\s\S]*?await get\(\)\.generateMultimode\(\);[\s\S]*?return;[\s\S]*?\}/);
     assert.match(store, /if \(enabled && get\(\)\.uiMode !== "classic"\) return/);
     assert.match(store, /if \(s\.uiMode !== "classic"\) return/);
-    assert.match(store, /if \(s\.multimodeAbortController\) return/);
     assert.match(store, /postMultimodeGenerateStream\(/);
     assert.match(store, /signal: controller\.signal/);
     assert.match(store, /cancelMultimode: \(\) => \{/);

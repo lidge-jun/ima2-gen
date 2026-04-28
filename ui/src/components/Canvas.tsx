@@ -130,7 +130,10 @@ export function Canvas() {
   const history = useAppStore((s) => s.history);
   const importLocalImageToHistory = useAppStore((s) => s.importLocalImageToHistory);
   const [dropActive, setDropActive] = useState(false);
-  const multimodeSequence = useAppStore((s) => s.multimodeSequence);
+  const multimodeSequence = useAppStore((s) => {
+    const id = s.multimodePreviewFlightId;
+    return id ? s.multimodeSequences[id] ?? null : null;
+  });
   const selectHistoryShortcutTarget = useAppStore((s) => s.selectHistoryShortcutTarget);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const markGeneratedResultsSeen = useAppStore((s) => s.markGeneratedResultsSeen);
