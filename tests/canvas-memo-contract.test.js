@@ -34,7 +34,7 @@ describe("canvas memo contract", () => {
   it("guards keyboard shortcuts before tool switching and deletion", () => {
     const source = readSource("ui/src/components/Canvas.tsx");
     const editableIndex = source.indexOf("if (isEditableTarget(event.target))");
-    const shortcutIndex = source.indexOf('["1", "2", "3", "4", "5"]');
+    const shortcutIndex = source.indexOf('["1", "2", "3", "4", "5", "6"]');
     const deleteIndex = source.indexOf('event.key === "Delete"');
     assert.ok(editableIndex > -1);
     assert.ok(shortcutIndex > editableIndex);
