@@ -10,7 +10,7 @@ Node mode extends `ima2-gen` from a single-image generator into a graph-based im
 
 This mode matters because it is the likely center of future workflows. Classic UI revolves around one prompt and a list of image results. Node mode can represent lineage, retries, comparisons, and research-style branching as a graph. That connects API contracts, store state, session DB, and asset lifecycle.
 
-To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.js` owns `/api/node/generate`, while `routes/sessions.js` and `lib/sessionStore.js` persist graph state.
+To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.ts` owns `/api/node/generate`, while `routes/sessions.ts` and `lib/sessionStore.ts` persist graph state. The current migration keeps paired `.js` runtime files for many `lib/*` modules, so verify both source and runtime paths when touching Node Mode backend code.
 
 ---
 
@@ -20,7 +20,7 @@ To understand node mode, start with three files. `NodeCanvas.tsx` owns graph int
 sequenceDiagram
     participant UI as NodeCanvas
     participant Store as useAppStore
-    participant API as routes/nodes.js
+    participant API as routes/nodes.ts
     participant OAuth as openai-oauth
     participant Files as generated
     participant DB as SQLite session
@@ -49,11 +49,11 @@ sequenceDiagram
 | `ui/src/lib/graph.ts` | Client node IDs and initial-position helpers |
 | `ui/src/lib/api.ts` | Shared API client and node API re-export surface |
 | `ui/src/lib/nodeApi.ts` | Node generation JSON/SSE client |
-| `routes/nodes.js` | `/api/node/generate`, `/api/node/:nodeId` |
-| `routes/sessions.js` | `/api/sessions/*` |
-| `lib/nodeStore.js` | Node image and metadata storage |
-| `lib/sessionStore.js` | SQLite sessions, nodes, edges, graphVersion |
-| `lib/assetLifecycle.js` | Keeps node state coherent when assets are deleted |
+| `routes/nodes.ts` | `/api/node/generate`, `/api/node/:nodeId` |
+| `routes/sessions.ts` | `/api/sessions/*` |
+| `lib/nodeStore.ts` | Node image and metadata storage |
+| `lib/sessionStore.ts` | SQLite sessions, nodes, edges, graphVersion |
+| `lib/assetLifecycle.ts` | Keeps node state coherent when assets are deleted |
 
 ## Node State Model
 

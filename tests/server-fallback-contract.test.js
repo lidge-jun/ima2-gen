@@ -28,7 +28,7 @@ test("server falls back when advertised localhost port is occupied", async () =>
   const generated = mkdtempSync(join(tmpdir(), "ima2-server-fallback-generated-"));
   let child;
   try {
-    child = spawn(process.execPath, ["server.js"], {
+    child = spawn(process.execPath, ["--import", "tsx", "server.ts"], {
       cwd: process.cwd(),
       stdio: ["ignore", "pipe", "pipe"],
       env: {

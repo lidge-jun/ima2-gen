@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import sharp from "sharp";
-import { editViaOAuth, generateViaOAuth, parseOpenAIErrorBody } from "../lib/oauthProxy.js";
+import { editViaOAuth, generateViaOAuth, parseOpenAIErrorBody } from "../lib/oauthProxy.ts";
 
 test("OAuth non-ok responses do not expose raw upstream body in logs or errors", async () => {
   const privateText = "private prompt text from upstream body";

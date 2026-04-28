@@ -13,7 +13,7 @@ describe("Card News smoke flow contract", () => {
   it("keeps the template, draft, job, retry, and reopen API wiring intact", () => {
     const api = readSource("ui/src/lib/cardNewsApi.ts");
     const store = readSource("ui/src/store/cardNewsStore.ts");
-    const routes = readSource("routes/cardNews.js");
+    const routes = readSource("routes/cardNews.ts");
 
     assert.match(api, /export function listCardNewsImageTemplates/);
     assert.match(api, /export function listCardNewsRoleTemplates/);

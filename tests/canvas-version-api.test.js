@@ -11,8 +11,8 @@ function readSource(path) {
 
 describe("canvas version API contract", () => {
   it("registers raw PNG canvas version routes", () => {
-    const index = readSource("routes/index.js");
-    const route = readSource("routes/canvasVersions.js");
+    const index = readSource("routes/index.ts");
+    const route = readSource("routes/canvasVersions.ts");
     assert.match(index, /registerCanvasVersionRoutes/);
     assert.match(route, /express\.raw\(\{ type: "image\/png"/);
     assert.match(route, /app\.post\("\/api\/canvas-versions"/);
@@ -20,7 +20,7 @@ describe("canvas version API contract", () => {
   });
 
   it("stores canvas versions under generatedDir with metadata", () => {
-    const store = readSource("lib/canvasVersionStore.js");
+    const store = readSource("lib/canvasVersionStore.ts");
     assert.match(store, /createCanvasVersion/);
     assert.match(store, /updateCanvasVersion/);
     assert.match(store, /PNG_SIGNATURE/);
@@ -33,7 +33,7 @@ describe("canvas version API contract", () => {
   });
 
   it("rejects traversal and non-canvas update filenames", () => {
-    const store = readSource("lib/canvasVersionStore.js");
+    const store = readSource("lib/canvasVersionStore.ts");
     assert.match(store, /filename !== basename\(filename\)/);
     assert.match(store, /filename\.includes\("\.\."\)/);
     assert.match(store, /\^canvas-\[a-zA-Z0-9\._-\]\+\\\.png\$/);
@@ -41,8 +41,8 @@ describe("canvas version API contract", () => {
   });
 
   it("surfaces canvas version metadata in history rows", () => {
-    const history = readSource("lib/historyList.js");
-    const metadata = readSource("lib/imageMetadata.js");
+    const history = readSource("lib/historyList.ts");
+    const metadata = readSource("lib/imageMetadata.ts");
     assert.match(history, /canvasVersion: Boolean\(meta\?\.canvasVersion\)/);
     assert.match(history, /canvasSourceFilename/);
     assert.match(history, /canvasEditableFilename/);

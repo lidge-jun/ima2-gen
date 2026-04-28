@@ -2,8 +2,8 @@ import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { request } from "node:http";
-import { configureLogger } from "../lib/logger.js";
-import { createRequestLogger, normalizeRequestId } from "../lib/requestLogger.js";
+import { configureLogger } from "../lib/logger.ts";
+import { createRequestLogger, normalizeRequestId } from "../lib/requestLogger.ts";
 
 function makeApp(lines) {
   const app = express();

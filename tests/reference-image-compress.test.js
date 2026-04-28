@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import sharp from "sharp";
-import { compressReferenceB64ForOAuth } from "../lib/referenceImageCompress.js";
+import { compressReferenceB64ForOAuth } from "../lib/referenceImageCompress.ts";
 
 test("compressReferenceB64ForOAuth re-encodes oversized generated PNG references", async () => {
   const width = 1024;

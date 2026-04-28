@@ -11,7 +11,7 @@ function readSource(path) {
 
 describe("oauth proxy edit mask contract", () => {
   it("rejects masked edits explicitly until a verified provider path exists", () => {
-    const source = readSource("lib/oauthProxy.js");
+    const source = readSource("lib/oauthProxy.ts");
     assert.match(source, /typeof options\.mask === "string"/);
     assert.match(source, /mask_unsupported/);
     assert.match(source, /EDIT_MASK_NOT_SUPPORTED/);

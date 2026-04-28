@@ -2,8 +2,8 @@ import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalizeGitHubSource, fetchGitHubSource, fetchGitHubSourceText } from "../lib/promptImport/githubSource.js";
-import { parsePromptCandidates } from "../lib/promptImport/parsePromptCandidates.js";
+import { normalizeGitHubSource, fetchGitHubSource, fetchGitHubSourceText } from "../lib/promptImport/githubSource.ts";
+import { parsePromptCandidates } from "../lib/promptImport/parsePromptCandidates.ts";
 
 const root = process.cwd();
 const originalFetch = globalThis.fetch;
@@ -164,10 +164,10 @@ Create a typography-led launch poster with a strict grid, large readable headlin
   });
 
   it("registers preview and commit routes without replacing the existing bulk import route", () => {
-    const route = readSource("routes/promptImport.js");
-    const index = readSource("routes/index.js");
-    const prompts = readSource("routes/prompts.js");
-    const config = readSource("config.js");
+    const route = readSource("routes/promptImport.ts");
+    const index = readSource("routes/index.ts");
+    const prompts = readSource("routes/prompts.ts");
+    const config = readSource("config.ts");
 
     assert.match(route, /registerPromptImportRoutes/);
     assert.match(route, /\/api\/prompts\/import\/preview/);

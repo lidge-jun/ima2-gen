@@ -6,11 +6,13 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 
 # ima2-gen 현재 계획 허브
 
-`_plan`은 지금부터 "앞으로 할 일"만 담는다. 이미 구현되어 코드로 확인된 항목은 `_fin`으로 보냈다. 오래된 phase 문서는 완료가 아니라 과거 방향성이므로 `_plan/_legacy`에 묶었다. 현재 0.09 안정화 트랙의 핵심 구현은 대부분 닫혔고, 남은 것은 운영 관측성(`0.09.17`~`0.09.18`), CLI/backend parity(`0.09.20`), 0.10 기능 확장, research mode 제품화, card-news dev-only WIP이다. 보안/컨테이너화는 원격 하드유저 영향과 배포 전략을 더 봐야 해서 `0.99_future`로 미뤘다.
+`_plan`은 지금부터 "앞으로 할 일"만 담는다. 이미 구현되어 코드로 확인된 항목은 `_fin`으로 보냈다. 오래된 phase 문서는 완료가 아니라 과거 방향성이므로 `_plan/_legacy`에 둔다.
 
-이 정리가 중요한 이유는 로드맵 번호가 여러 번 바뀌었기 때문이다. React 마이그레이션, Node mode foundation, session DB, CLI 통합, cross-platform, gallery 안정화, server decomposition, config centralization, settings workspace, node image input, observability logging, node reference attachment, packaged node-mode productization, node streaming은 이미 코드에 반영되어 있다. `_plan`에는 이제 inflight persistence, integration tests, FAQ, metrics/security/containerization, feature expansion, research mode만 남긴다.
+현재 active lane은 2026-04-29 기준 실제 폴더와 GitHub 이슈 상태를 기준으로 다시 줄였다. 모바일 UX는 #33 실기기 피드백을 반영해 #37/#38로 재분리했고, #34의 큰 UX 제안은 #39~#43으로 쪼갰다. Canvas/Gallery navigation leak #35는 구현 완료되어 `_fin/260429_gallery_canvas_arrow_navigation_leak`로 이동했다.
 
-작업을 시작할 때는 이 문서를 먼저 본다. 다음 안정화 track은 `0.09.17-structured-logging`과 `0.09.18-metrics-observability`이다. 그 다음 CLI parity track은 `0.09.20-cli-backend-parity`이고, feature track은 `0.10-feature-expansion`이다. `0.20-card-news`는 dev-only/WIP이므로 배포 blocker가 아니라, 해당 변경을 커밋/푸시할 때만 build 포함 여부를 따로 확인한다. `0.12-research-mode`는 백엔드 경로는 있으나 프론트 토글과 제품화가 남은 별도 트랙이다.
+2026-04-29 03:00 Oracle browser `gpt-5-pro` 감사 결과를 반영해, TypeScript migration (#24)이 끝나기 전에는 새 기능 구현을 시작하지 않는다. 지금 `_plan`에 추가된 새 폴더들은 post-TS implementation 준비용이며, migrated tree의 `npm test`, UI build, CI가 green인 것을 첫 gate로 둔다.
+
+작업을 시작할 때는 이 문서를 먼저 본다. 완료 여부는 `_plan`에 남은 문서가 아니라 현재 코드, 테스트, GitHub issue 상태로 판정한다.
 
 ---
 
@@ -18,20 +20,47 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 
 | 순서 | 경로 | 상태 | 역할 |
 |---:|---|---|---|
-| 1 | `0.09.17-structured-logging/` | queued | request 추적/지원 대응을 위한 구조화 로그 트랙. |
-| 2 | `0.09.18-metrics-observability/` | queued | self-host/운영 진단을 위한 metrics 트랙. |
-| 3 | `0.09.20-cli-backend-parity/` | active slices | 프런트/서버 기능 대비 낡은 CLI surface 갱신. `0.09.20.1`은 완료, 다음 권장 slice는 `0.09.20.2` storage/runtime/OAuth commands. |
-| 4 | `0.10-feature-expansion/` | queued | preset, compare, card-news, export bundle. |
-| 5 | `0.12-research-mode/` | partial | OAuth web_search 기반 research mode 제품화. |
-| 6 | `0.20-card-news/` | WIP/dev-only | 님이 병렬로 작업 중인 card-news lane. npm 배포 기본 기능이 아니라 dev 사용자를 위한 WIP. |
-| 7 | `0.09.32-final-release-closeout/` | active | npm/GitHub Pages 최종 배포 전 release gate, package smoke, docs blocker를 닫는 마감 lane. |
-| 8 | `0.09.41-censorship-bypass/` | research | GPT Image 2 모더레이션 false-positive 우회 전략 연구. 자동 reframe / preprocessor 등은 미구현, 현재 STRATEGY 문서만 존재. |
-| 9 | `0.09.44-comfyui-bridge/` | planning | GitHub #15 기반 ComfyUI bridge. PR1은 current image More menu → local ComfyUI `/upload/image`만 범위로 둔다. |
-| 10 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
-| 11 | `0.23.1-prompt-library-github-import/` | planned | Prompt Library import UX 후속. `불러오기`를 dropzone dialog로 바꾸고 GitHub Markdown prompt sources / curated Nano Banana repos import를 추가한다. |
-| 12 | `0.25-canvas-intelligence/` | planned | Canvas Mode 후속을 투명배경화, 로고/레퍼런스 벡터화, SAM3/Magic Layers식 레이어화+PPTX 재구성의 3개 독립 축으로 재정렬한다. |
-| 13 | `260429_gallery_canvas_arrow_navigation_leak/` | planned | GitHub #35. Gallery/HistoryStrip은 canvasVersion을 숨기고, 기본 shortcut navigation도 같은 visible source domain만 순회하게 한다. Canvas Mode 좌우 이동은 대상 source의 canvas version이 있으면 그것을 표시하고 없으면 원본으로 fallback한다. |
-| 14 | `0.26-app-weight-reduction/` | planning | GitHub #36. 1.1.7 이후 체감 무거움 대응. release package diet, frontend code splitting, Canvas runtime perf를 분리해 초기 JS/CSS/패키지 무게와 Canvas CPU 스파이크를 줄인다. |
+| 1 | `260428_0.09.45-mobile-ui-overhaul/` | partial | #33 1차 모바일 RightPanel/settings drawer. 실기기 피드백상 설정 정보구조는 #37로 후속 분리. |
+| 2 | `260428_0.09.46-mobile-classic-layout/` | partial | 모바일 app bar / compose sheet. `appbar.compose` 직관성 문제는 #38로 후속 분리. |
+| 3 | `260428_0.09.47-mobile-overlays/` | partial | 모바일 overlay/settings nav. SettingsWorkspace는 #37에서 다시 정리. |
+| 4 | `260428_0.09.48-mobile-node-cardnews/` | partial | Node/Card News 모바일 대응. CSS/test coverage가 남아 active로 유지. |
+| 5 | `260429_community_ux_split/` | triaged | #33/#34를 #37~#43으로 분할한 UX triage map. |
+| 6 | `0.25-canvas-intelligence/` | planned | 투명배경화, Illustrator식 raster vectorization, SAM3/Magic Layers식 layer extraction + PPTX reconstruction. |
+| 7 | `0.26-app-weight-reduction/` | active/check | GitHub #36. package diet/code splitting/Canvas runtime perf 구현은 되었으나 CI green 확인 전까지 active 유지. |
+| 8 | `typescript-migration/` | active/risky | GitHub #24. TS toolchain/route/lib source migration 중. `.ts` source와 emitted/legacy `.js` runtime 전략을 맞춰야 한다. |
+| 9 | `260429_issue37-mobile-settings-workspace/` | planned/post-TS | GitHub #37. 모바일 SettingsWorkspace IA 재설계. |
+| 10 | `260429_issue38-mobile-generate-flow/` | planned/post-TS | GitHub #38. 모바일 생성/compose entry 명확화. |
+| 11 | `260429_issue41-generation-activity-log/` | planned/post-TS | GitHub #41. generation 실패/진행 상태 passive feedback. |
+| 12 | `260429_issue39-gallery-delete-semantics/` | planned/post-TS | GitHub #39. Del/Shift+Del soft/permanent delete 의미 정리. |
+| 13 | `260429_issue40-viewer-lightbox/` | planned/post-TS | GitHub #40. 이미지 inspection lightbox. |
+| 14 | `260429_issue43-settings-persistence-audit/` | planned/post-TS | GitHub #43. desktop/mobile persisted settings parity. |
+| 15 | `260429_issue42-gallery-current-session-default/` | planned/post-TS | GitHub #42. Gallery current-session default + All Images toggle. |
+| 16 | `0.09.41-censorship-bypass/` | research | GPT Image 2 moderation false-positive 우회 전략 연구. |
+| 17 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+
+## Post-TS implementation order
+
+Oracle browser `gpt-5-pro`의 2026-04-29 감사 결과 기준으로, TypeScript migration 이후 구현 순서는 아래를 기본값으로 둔다.
+
+1. `typescript-migration/` closeout: migrated tree 기준 `npm test`, UI build, CI green.
+2. `0.26-app-weight-reduction/`: #36 post-TS exit check. 새 기능 전에 classic startup weight가 유지되는지 확인.
+3. `260429_issue37-mobile-settings-workspace/`: 모바일 settings IA P0.
+4. `260429_issue38-mobile-generate-flow/`: 모바일 generate/compose P1.
+5. `260429_issue41-generation-activity-log/`: generation passive failure feedback P1.
+6. `0.25-canvas-intelligence/31-provider-masked-edit/`: provider capability gate가 있는 #31.
+7. `260429_issue39-gallery-delete-semantics/`: Gallery soft/permanent delete semantics.
+8. `260429_issue40-viewer-lightbox/`: viewer inspection lightbox.
+9. `260429_issue43-settings-persistence-audit/`: mobile/desktop settings persistence audit.
+10. `260429_issue42-gallery-current-session-default/`: current-session Gallery default.
+11. `0.25-canvas-intelligence/27-logo-vector-package/`: Illustrator식 raster-to-vector asset package.
+12. `0.25-canvas-intelligence/28-layerdocument-pptx-reconstruction/`: LayerDocument -> PPTX reconstruction.
+
+## Stale assumptions corrected
+
+- GitHub #27 is not "annotation SVG export" as the main product. The active scope is logo/reference raster-to-vector packaging. Annotation SVG can be an optional overlay only.
+- GitHub #28 is not "dump SVG into PPTX". The active scope is `LayerDocument -> PptxGenJS` reconstruction with PNG-alpha fallback.
+- GitHub #31 must not fake masked edit through prompt-only generation. Provider capability must be proven before enabling UI.
+- Gallery permanent delete should verify the existing `/api/history/:filename/permanent` route after #24 rather than assume the API is absent.
 
 ## 완료로 이동한 항목
 

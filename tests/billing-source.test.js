@@ -2,7 +2,7 @@ import { describe, it, afterEach } from "node:test";
 import assert from "node:assert";
 import express from "express";
 import { request } from "node:http";
-import { registerHealthRoutes } from "../routes/health.js";
+import { registerHealthRoutes } from "../routes/health.ts";
 
 const originalFetch = globalThis.fetch;
 

@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
-const CONFIG_JS = join(ROOT, "config.js");
+const CONFIG_JS = join(ROOT, "config.ts");
 const CONFIG_URL = pathToFileURL(CONFIG_JS).href;
 
 // Run a small node inline program with a custom env and capture JSON output so

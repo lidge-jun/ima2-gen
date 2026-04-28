@@ -11,7 +11,7 @@ function readSource(path) {
 
 describe("PNG info contract", () => {
   it("reads PNG IHDR dimensions and alpha color types", () => {
-    const source = readSource("lib/pngInfo.js");
+    const source = readSource("lib/pngInfo.ts");
     assert.match(source, /PNG_SIGNATURE_HEX/);
     assert.match(source, /IHDR/);
     assert.match(source, /readUInt32BE\(16\)/);

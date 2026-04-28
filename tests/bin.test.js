@@ -15,7 +15,7 @@ function delay(ms) {
 
 function runCLI(args = []) {
   return new Promise((resolve) => {
-    const child = spawn("node", ["bin/ima2.js", ...args], {
+    const child = spawn("node", ["--import", "tsx", "bin/ima2.ts", ...args], {
       cwd: process.cwd(),
       env: {
         ...process.env,
@@ -97,7 +97,7 @@ describe("ima2 CLI", () => {
     writeFileSync(TEST_CONFIG, JSON.stringify({ provider: "api", apiKey: "test" }));
     assert.ok(existsSync(TEST_CONFIG));
 
-    const child = spawn("node", ["bin/ima2.js", "reset"], {
+    const child = spawn("node", ["--import", "tsx", "bin/ima2.ts", "reset"], {
       cwd: process.cwd(),
       env: {
         ...process.env,

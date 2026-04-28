@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const storePath = join(__dirname, "..", "ui", "src", "store", "useAppStore.ts");
-const historyPath = join(__dirname, "..", "lib", "historyList.js");
-const nodesRoutePath = join(__dirname, "..", "routes", "nodes.js");
+const historyPath = join(__dirname, "..", "lib", "historyList.ts");
+const nodesRoutePath = join(__dirname, "..", "routes", "nodes.ts");
 
 const storeSrc = await readFile(storePath, "utf8");
 const historySrc = await readFile(historyPath, "utf8");

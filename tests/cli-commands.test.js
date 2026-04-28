@@ -10,7 +10,7 @@ const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-cmd-home-"));
 
 function runCLI(args, extraEnv = {}) {
   return new Promise((resolve) => {
-    const child = spawn("node", ["bin/ima2.js", ...args], {
+    const child = spawn("node", ["--import", "tsx", "bin/ima2.ts", ...args], {
       cwd: process.cwd(),
       env: { ...process.env, HOME: FAKE_HOME, USERPROFILE: FAKE_HOME, ...extraEnv },
     });
@@ -41,7 +41,7 @@ describe("ima2 CLI commands (live server)", () => {
   let serverStderr = "";
 
   before(async () => {
-    server = spawn("node", ["server.js"], {
+    server = spawn("node", ["--import", "tsx", "server.ts"], {
       env: {
         ...process.env,
         PORT,

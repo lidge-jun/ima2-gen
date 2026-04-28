@@ -5,7 +5,7 @@ import { once } from "node:events";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { registerImageImportRoutes } from "../routes/imageImport.js";
+import { registerImageImportRoutes } from "../routes/imageImport.ts";
 
 const PNG_FIXTURE = Buffer.from(
   "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63600000000200015c2d05cf0000000049454e44ae426082",

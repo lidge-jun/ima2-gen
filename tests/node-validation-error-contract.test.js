@@ -6,7 +6,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { config } from "../config.js";
-import { registerNodeRoutes } from "../routes/nodes.js";
+import { registerNodeRoutes } from "../routes/nodes.ts";
 
 const invalidSizeBody = {
   error: {

@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import express from "express";
-import { registerNodeRoutes } from "../routes/nodes.js";
+import { registerNodeRoutes } from "../routes/nodes.ts";
 
 const PARTIAL_B64 = Buffer.from("partial").toString("base64");
 const FINAL_B64 = Buffer.from("final").toString("base64");

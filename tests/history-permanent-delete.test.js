@@ -11,7 +11,7 @@ function readSource(path) {
 
 describe("history permanent delete contract", () => {
   it("adds a permanent delete route without changing trash semantics", () => {
-    const routes = readSource("routes/history.js");
+    const routes = readSource("routes/history.ts");
     const permanentIndex = routes.indexOf('app.delete("/api/history/:filename/permanent"');
     const trashIndex = routes.indexOf('app.delete("/api/history/:filename"');
 
@@ -23,7 +23,7 @@ describe("history permanent delete contract", () => {
   });
 
   it("permanent delete helper preserves path safety, 404 codes, sidecar cleanup, and node marking", () => {
-    const lifecycle = readSource("lib/assetLifecycle.js");
+    const lifecycle = readSource("lib/assetLifecycle.ts");
     const fn = /export async function deleteAssetPermanent[\s\S]*?(?=\nexport async function )/.exec(lifecycle)?.[0] ?? "";
 
     assert.match(fn, /resolveInGenerated\(rootDir,\s*filename\)/);

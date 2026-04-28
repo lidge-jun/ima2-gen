@@ -15,8 +15,8 @@ const {
   listTerminalJobs,
   setJobPhase,
   startJob,
-} = await import("../lib/inflight.js");
-const { closeDb } = await import("../lib/db.js");
+} = await import("../lib/inflight.ts");
+const { closeDb } = await import("../lib/db.ts");
 
 beforeEach(() => {
   _resetForTests();

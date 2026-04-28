@@ -4,19 +4,19 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import express from "express";
-import { listImageTemplates, getImageTemplate } from "../lib/cardNewsTemplateStore.js";
-import { createCardNewsDraft } from "../lib/cardNewsPlanner.js";
-import { generateCardNewsSet } from "../lib/cardNewsGenerator.js";
-import { listHistoryRows } from "../lib/historyList.js";
-import { readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
-import { repairPlannerOutput, validatePlannerOutput } from "../lib/cardNewsPlannerSchema.js";
+import { listImageTemplates, getImageTemplate } from "../lib/cardNewsTemplateStore.ts";
+import { createCardNewsDraft } from "../lib/cardNewsPlanner.ts";
+import { generateCardNewsSet } from "../lib/cardNewsGenerator.ts";
+import { listHistoryRows } from "../lib/historyList.ts";
+import { readCardNewsSetPlan } from "../lib/cardNewsManifestStore.ts";
+import { repairPlannerOutput, validatePlannerOutput } from "../lib/cardNewsPlannerSchema.ts";
 import {
   createCardNewsJob,
   getCardNewsJob,
   retryCardNewsJob,
   updateCardNewsJobCard,
-} from "../lib/cardNewsJobStore.js";
-import { configureRoutes } from "../routes/index.js";
+} from "../lib/cardNewsJobStore.ts";
+import { configureRoutes } from "../routes/index.ts";
 
 const rootDir = process.cwd();
 const PNG_B64 = Buffer.from("generated-card").toString("base64");
@@ -62,9 +62,9 @@ async function listenPlanner(handler) {
 
 describe("Card News 0.20 dev MVP contract", () => {
   it("keeps the planner text-only and returns planner metadata", async () => {
-    const promptSource = await readFile(join(rootDir, "lib", "cardNewsPlannerPrompt.js"), "utf8");
-    const clientSource = await readFile(join(rootDir, "lib", "cardNewsPlannerClient.js"), "utf8");
-    const schemaSource = await readFile(join(rootDir, "lib", "cardNewsPlannerSchema.js"), "utf8");
+    const promptSource = await readFile(join(rootDir, "lib", "cardNewsPlannerPrompt.ts"), "utf8");
+    const clientSource = await readFile(join(rootDir, "lib", "cardNewsPlannerClient.ts"), "utf8");
+    const schemaSource = await readFile(join(rootDir, "lib", "cardNewsPlannerSchema.ts"), "utf8");
     const draft = await createCardNewsDraft(makeCtx("/tmp/ima2-card-news-planner"), {
       topic: "JSON output",
       roleTemplateId: "short-3",
@@ -368,7 +368,7 @@ describe("Card News 0.20 dev MVP contract", () => {
   });
 
   it("tracks generation jobs with queued, skipped, error, and retry states", () => {
-    const routeSource = readFile(join(rootDir, "routes", "cardNews.js"), "utf8");
+    const routeSource = readFile(join(rootDir, "routes", "cardNews.ts"), "utf8");
     const job = createCardNewsJob({
       setId: "cs_job",
       cards: [

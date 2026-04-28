@@ -11,7 +11,7 @@ function readSource(path) {
 
 describe("prompt curated search contract", () => {
   it("registers curated source, search, and refresh routes without replacing commit", () => {
-    const route = readSource("routes/promptImport.js");
+    const route = readSource("routes/promptImport.ts");
     assert.match(route, /\/api\/prompts\/import\/curated-sources/);
     assert.match(route, /\/api\/prompts\/import\/curated-search/);
     assert.match(route, /\/api\/prompts\/import\/curated-refresh/);
@@ -19,7 +19,7 @@ describe("prompt curated search contract", () => {
   });
 
   it("keeps indexed candidates commit-compatible and avoids auto-import", () => {
-    const index = readSource("lib/promptImport/promptIndex.js");
+    const index = readSource("lib/promptImport/promptIndex.ts");
     const api = readSource("ui/src/lib/api.ts");
     const dialog = readSource("ui/src/components/PromptImportDialog.tsx");
 
@@ -34,8 +34,8 @@ describe("prompt curated search contract", () => {
   });
 
   it("persists attribution through tags and uses a file cache instead of DB migration", () => {
-    const index = readSource("lib/promptImport/promptIndex.js");
-    const config = readSource("config.js");
+    const index = readSource("lib/promptImport/promptIndex.ts");
+    const config = readSource("config.ts");
     assert.match(index, /attribution-required/);
     assert.match(index, /license:\$\{source\.licenseSpdx\}/);
     assert.match(index, /writeFile\(tmp/);

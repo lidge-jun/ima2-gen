@@ -1,8 +1,8 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { normalizeImageModel } from "../lib/imageModels.js";
-import { registerNodeRoutes } from "../routes/nodes.js";
+import { normalizeImageModel } from "../lib/imageModels.ts";
+import { registerNodeRoutes } from "../routes/nodes.ts";
 
 describe("image model normalization", () => {
   it("defaults to gpt-5.4-mini without route config", () => {

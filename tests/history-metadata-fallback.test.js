@@ -4,8 +4,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import sharp from "sharp";
-import { listHistoryRows } from "../lib/historyList.js";
-import { embedImageMetadata } from "../lib/imageMetadataStore.js";
+import { listHistoryRows } from "../lib/historyList.ts";
+import { embedImageMetadata } from "../lib/imageMetadataStore.ts";
 
 async function makeEmbeddedPng(meta) {
   const raw = await sharp({

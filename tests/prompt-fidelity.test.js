@@ -13,12 +13,12 @@ import {
   PROMPT_FIDELITY_SUFFIX,
   buildEditTextPrompt,
   buildUserTextPrompt,
-} from "../lib/oauthProxy.js";
+} from "../lib/oauthProxy.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const serverPath = join(__dirname, "..", "server.js");
-const historyListPath = join(__dirname, "..", "lib", "historyList.js");
-const nodeRoutePath = join(__dirname, "..", "routes", "nodes.js");
+const serverPath = join(__dirname, "..", "server.ts");
+const historyListPath = join(__dirname, "..", "lib", "historyList.ts");
+const nodeRoutePath = join(__dirname, "..", "routes", "nodes.ts");
 const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
 const nodeApiPath = join(__dirname, "..", "ui", "src", "lib", "nodeApi.ts");
 

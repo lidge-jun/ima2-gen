@@ -40,7 +40,7 @@ describe("style feature removal contract", () => {
   });
 
   it("does not mutate prompts with a style sheet in generation routes", () => {
-    for (const path of ["routes/generate.js", "routes/edit.js", "routes/nodes.js"]) {
+    for (const path of ["routes/generate.ts", "routes/edit.ts", "routes/nodes.ts"]) {
       const source = readSource(path);
 
       assert.doesNotMatch(source, /getStyleSheet/);

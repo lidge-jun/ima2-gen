@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { openDirectory } from "../lib/openDirectory.js";
+import { openDirectory } from "../lib/openDirectory.ts";
 
 function fakeChild() {
   const child = new EventEmitter();

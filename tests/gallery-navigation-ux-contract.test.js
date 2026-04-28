@@ -183,7 +183,7 @@ describe("gallery navigation UX contract", () => {
   });
 
   it("does not introduce backend coupling for navigation UX", () => {
-    const routes = readSource("routes/history.js");
+    const routes = readSource("routes/history.ts");
     const test = readSource("tests/gallery-navigation-ux-contract.test.js");
 
     assert.doesNotMatch(routes, /galleryNavigation/);

@@ -60,7 +60,7 @@ describe("Server: /api/health + advertisement", () => {
     });
     await new Promise((resolve) => oauthServer.listen(Number(OAUTH_PORT), "127.0.0.1", resolve));
 
-    child = spawn("node", ["server.js"], {
+    child = spawn("node", ["--import", "tsx", "server.ts"], {
       env: {
         ...process.env,
         PORT,

@@ -15,7 +15,7 @@ describe("Card News 42/43 editor and reopen contract", () => {
     const stage = readSource("ui/src/components/card-news/CardStage.tsx");
     const inspector = readSource("ui/src/components/card-news/CardInspector.tsx");
     const textFieldCard = readSource("ui/src/components/card-news/TextFieldCard.tsx");
-    const plannerPrompt = readSource("lib/cardNewsPlannerPrompt.js");
+    const plannerPrompt = readSource("lib/cardNewsPlannerPrompt.ts");
     const css = readSource("ui/src/index.css");
 
     assert.match(store, /selectedTextFieldId: string \| null/);
@@ -46,8 +46,8 @@ describe("Card News 42/43 editor and reopen contract", () => {
   });
 
   it("exposes safe manifest download and richer set metadata", () => {
-    const manifestStore = readSource("lib/cardNewsManifestStore.js");
-    const routes = readSource("routes/cardNews.js");
+    const manifestStore = readSource("lib/cardNewsManifestStore.ts");
+    const routes = readSource("routes/cardNews.ts");
     const cardNewsApi = readSource("ui/src/lib/cardNewsApi.ts");
     const api = readSource("ui/src/lib/api.ts");
     const types = readSource("ui/src/types.ts");

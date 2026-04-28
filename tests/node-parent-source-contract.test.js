@@ -8,8 +8,8 @@ const TEST_DIR = mkdtempSync(join(tmpdir(), "ima2-node-parent-contract-"));
 process.env.IMA2_CONFIG_DIR = TEST_DIR;
 process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
 
-const db = await import("../lib/db.js");
-const sessionStore = await import("../lib/sessionStore.js");
+const db = await import("../lib/db.ts");
+const sessionStore = await import("../lib/sessionStore.ts");
 
 after(() => {
   db.closeDb();

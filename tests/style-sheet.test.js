@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { coerceStyleSheet, renderStyleSheetPrefix } from "../lib/styleSheet.js";
+import { coerceStyleSheet, renderStyleSheetPrefix } from "../lib/styleSheet.ts";
 
 describe("coerceStyleSheet", () => {
   it("returns null on non-object input", () => {

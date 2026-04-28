@@ -2,8 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const oauth = readFileSync("lib/oauthProxy.js", "utf-8");
-const nodes = readFileSync("routes/nodes.js", "utf-8");
+const oauth = readFileSync("lib/oauthProxy.ts", "utf-8");
+const nodes = readFileSync("routes/nodes.ts", "utf-8");
 
 describe("node diagnostics contract", () => {
   it("preserves safe OAuth stream error metadata", () => {

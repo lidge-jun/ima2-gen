@@ -10,6 +10,8 @@ This document is a fast map of the current `ima2-gen` file layout. Use it to und
 
 The map matters because the repository looks small, but runtime responsibility is split across several areas. `server.js` is now a small bootstrap file, API ownership lives in `routes/*`, and runtime helpers live in `lib/*`. The CLI is split into `bin/commands/*`, and the UI is split across `ui/src/components/*`, `ui/src/lib/*`, and `ui/src/store/useAppStore.ts`. Reading responsibilities and line counts together helps reveal both impact radius and refactor targets.
 
+Snapshot note, 2026-04-29: the server-side migration is mid-flight. Route source files are now `routes/*.ts`, while many `lib/*` helpers currently exist as paired `*.ts` source plus emitted/legacy `*.js` runtime files. When a table below mentions an older `.js` route/lib path, prefer the `.ts` source path and verify the paired runtime `.js` import still exists before shipping.
+
 Before adding a feature, choose the surface first. For CLI work, read `bin/` and `[[02-command-reference]]`. For API work, read `server.js`, `lib/*`, and `[[03-server-api]]`. For UI work, read `ui/src/` and `[[04-frontend-architecture]]`. For graph workflow work, also read `[[05-node-mode]]`.
 
 ---
@@ -31,6 +33,29 @@ graph TD
 ```
 
 ## Core File Line Counts
+
+### Current Route Source Layout
+
+```text
+routes/
+  annotations.ts        GET/PUT/DELETE /api/annotations/:filename
+  canvasVersions.ts     POST/PUT /api/canvas-versions
+  comfy.ts              POST /api/comfy/export-image
+  edit.ts               POST /api/edit
+  generate.ts           POST /api/generate
+  multimode.ts          POST /api/generate/multimode
+  nodes.ts              POST /api/node/generate, GET /api/node/:nodeId
+  sessions.ts           /api/sessions* + graph + style-sheet
+  history.ts            /api/history* + favorite/delete/restore/permanent
+  imageImport.ts        POST /api/history/import-local
+  health.ts             providers/health/oauth/inflight/billing
+  storage.ts            storage status/open generated dir
+  metadata.ts           POST /api/metadata/read
+  prompts.ts            prompt CRUD/folders/import/export
+  promptImport.ts       curated/discovery/folder/preview/commit import routes
+  cardNews.ts           dev-gated /api/cardnews/*
+  index.ts              route registration hub
+```
 
 | File | Lines | Responsibility |
 |---|---:|---|

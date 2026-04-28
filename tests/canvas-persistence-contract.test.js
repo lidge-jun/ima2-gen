@@ -39,8 +39,8 @@ describe("canvas annotation persistence contract", () => {
   });
 
   it("has backend annotation routes and db upsert", () => {
-    const routes = readSource("routes/annotations.js");
-    const db = readSource("lib/db.js");
+    const routes = readSource("routes/annotations.ts");
+    const db = readSource("lib/db.ts");
     assert.match(routes, /app\.get\("\/api\/annotations\/:filename"/);
     assert.match(routes, /app\.put\("\/api\/annotations\/:filename"/);
     assert.match(routes, /app\.delete\("\/api\/annotations\/:filename"/);

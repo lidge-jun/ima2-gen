@@ -12,6 +12,8 @@ This matters because README and older devlog entries still contain traces of the
 
 Start UI work at `App.tsx` to understand how classic canvas and node canvas diverge. General server calls are in `ui/src/lib/api.ts`; node generation JSON/SSE calls are in `ui/src/lib/nodeApi.ts` and re-exported through `api.ts`. State is centralized in `ui/src/store/useAppStore.ts`. For screen-level structure, start with `Sidebar`, `Canvas`, `NodeCanvas`, `RightPanel`, and `GalleryModal`.
 
+Snapshot note, 2026-04-29: mobile UI now has dedicated components (`MobileAppBar`, `MobileComposeSheet`, `MobileSettingsToggle`) and hooks (`useIsMobile`, `useVisualViewportInset`). Canvas Mode UI is split under `ui/src/components/canvas-mode/` and lazy-loaded from the default viewer path. There is no separate `ui/src/lib/imageMetadataClient.ts`; metadata restore calls live in `ui/src/lib/api.ts`.
+
 ---
 
 ## Render Flow
@@ -49,7 +51,7 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | Error UX | `ErrorCard.tsx`, `ui/src/lib/errorCodes.ts`, `errorHandler.ts` | Code-based localized error cards and toast routing |
 | Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts`, `customSizeSlots.ts` | Keyboard-safe custom size drafts, slot persistence, and generation-time adjustment confirmation |
 | Prompt library | `PromptLibraryPanel.tsx`, `PromptLibraryRow.tsx`, `PromptDetailModal.tsx`, `SavePromptPopover.tsx`, `PromptImportDialog.tsx`, `PromptImportFolderSection.tsx`, `PromptImportDiscoverySection.tsx` | Right-panel/overlay prompt library for browsing, searching, favoriting, inserting, saving, preview-first imports, PR2 curated source search, PR3 GitHub folder file selection, and PR4 reviewed-source discovery |
-| Image metadata restore | `MetadataRestoreDialog.tsx`, `ui/src/lib/imageMetadataClient.ts` (`api.ts:postMetadataRead`) | Drop a previously generated PNG into the composer to restore prompt and parameters from embedded XMP |
+| Image metadata restore | `MetadataRestoreDialog.tsx`, `ui/src/lib/api.ts` (`postMetadataRead`) | Drop a previously generated PNG into the composer to restore prompt and parameters from embedded XMP |
 | Card-news (dev-only) | `ui/src/components/card-news/*`, `ui/src/store/cardNewsStore.ts`, `ui/src/lib/cardNewsApi.ts` | Topic→draft→template→generate→export flow, gated by `VITE_IMA2_CARD_NEWS=1` or `VITE_IMA2_DEV=1` |
 | i18n | `ui/src/i18n/index.ts`, `ko.json`, `en.json` | Locale load/save and translation lookup |
 

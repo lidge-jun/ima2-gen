@@ -4,14 +4,14 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { searchGitHubDiscovery } from "../lib/promptImport/githubDiscovery.js";
+import { searchGitHubDiscovery } from "../lib/promptImport/githubDiscovery.ts";
 import {
   listDiscoveryCandidates,
   listReviewedDiscoverySources,
   reviewDiscoveryCandidate,
   upsertDiscoveryCandidates,
-} from "../lib/promptImport/discoveryRegistry.js";
-import { getPromptImportSources } from "../lib/promptImport/promptIndex.js";
+} from "../lib/promptImport/discoveryRegistry.ts";
+import { getPromptImportSources } from "../lib/promptImport/promptIndex.ts";
 
 const root = process.cwd();
 const originalFetch = globalThis.fetch;
@@ -77,8 +77,8 @@ describe("prompt discovery contract", () => {
   });
 
   it("registers discovery routes and keeps search separate from commit", () => {
-    const route = readSource("routes/promptImport.js");
-    const discovery = readSource("lib/promptImport/githubDiscovery.js");
+    const route = readSource("routes/promptImport.ts");
+    const discovery = readSource("lib/promptImport/githubDiscovery.ts");
     assert.match(route, /\/api\/prompts\/import\/discovery/);
     assert.match(route, /\/api\/prompts\/import\/discovery-search/);
     assert.match(route, /\/api\/prompts\/import\/discovery-review/);

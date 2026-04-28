@@ -6,8 +6,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import express from "express";
-import { exportImageToComfy, normalizeComfyOrigin } from "../lib/comfyBridge.js";
-import { registerComfyRoutes } from "../routes/comfy.js";
+import { exportImageToComfy, normalizeComfyOrigin } from "../lib/comfyBridge.ts";
+import { registerComfyRoutes } from "../routes/comfy.ts";
 import { config as baseConfig } from "../config.js";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
@@ -192,7 +192,7 @@ test("public route accepts only filename and returns stable envelopes", async ()
 }));
 
 test("configured app registers the Comfy route", () => {
-  const routes = readFileSync(join(process.cwd(), "routes/index.js"), "utf8");
+  const routes = readFileSync(join(process.cwd(), "routes/index.ts"), "utf8");
   assert.match(routes, /registerComfyRoutes/);
-  assert.equal(existsSync(join(process.cwd(), "routes/comfy.js")), true);
+  assert.equal(existsSync(join(process.cwd(), "routes/comfy.ts")), true);
 });

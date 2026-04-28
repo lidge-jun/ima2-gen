@@ -2,8 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const route = readFileSync("routes/nodes.js", "utf-8");
-const oauth = readFileSync("lib/oauthProxy.js", "utf-8");
+const route = readFileSync("routes/nodes.ts", "utf-8");
+const oauth = readFileSync("lib/oauthProxy.ts", "utf-8");
 
 describe("node context and edit search policy", () => {
   it("defaults node context to parent-plus-refs and rejects ancestry until implemented", () => {

@@ -7,9 +7,9 @@
     "ima2": "./bin/ima2.js"
   },
   "scripts": {
-    "start": "node bin/ima2.js serve",
+    "start": "tsx server.ts",
     "dev": "node scripts/dev.mjs",
-    "dev:server": "node --watch server.js",
+    "dev:server": "tsx watch server.ts",
     "ui:install": "cd ui && npm install",
     "ui:dev": "cd ui && npm run dev",
     "ui:build": "cd ui && npm run build",
@@ -48,10 +48,12 @@
     "ui/dist/",
     "docs/",
     "assets/card-news/templates/",
-    "server.js",
-    "config.js",
+    "server.ts",
+    "config.ts",
     ".env.example",
-    "README.md"
+    "README.md",
+    "server.js",
+    "config.js"
   ],
   "engines": {
     "node": ">=20"

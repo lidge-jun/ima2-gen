@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeOAuthParams, VALID_IMAGE_QUALITIES } from "../lib/oauthNormalize.js";
+import { normalizeOAuthParams, VALID_IMAGE_QUALITIES } from "../lib/oauthNormalize.ts";
 
 test("oauth provider preserves every supported quality", () => {
   for (const quality of VALID_IMAGE_QUALITIES) {

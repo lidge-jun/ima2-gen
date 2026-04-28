@@ -6,7 +6,7 @@ import {
   fetchGitHubFolderFiles,
   fetchSelectedGitHubFolderFiles,
   normalizeGitHubFolderSource,
-} from "../lib/promptImport/githubFolder.js";
+} from "../lib/promptImport/githubFolder.ts";
 
 const root = process.cwd();
 const originalFetch = globalThis.fetch;
@@ -221,8 +221,8 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("registers folder routes, config caps, and route contracts", () => {
-    const route = readSource("routes/promptImport.js");
-    const config = readSource("config.js");
+    const route = readSource("routes/promptImport.ts");
+    const config = readSource("config.ts");
     const api = readSource("ui/src/lib/api.ts");
 
     assert.match(route, /\/api\/prompts\/import\/folder-files/);

@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { detectImageMimeFromB64, validateAndNormalizeRefs } from "../lib/refs.js";
+import { detectImageMimeFromB64, validateAndNormalizeRefs } from "../lib/refs.ts";
 
 const VALID_B64 = "aGVsbG8=";
 

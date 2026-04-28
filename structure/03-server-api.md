@@ -6,7 +6,7 @@ aliases: [ima2 API, image_gen server API, ima2 endpoints]
 
 # Server API
 
-`server.js` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*`. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
+`server.js` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*`. Current route source files are TypeScript (`routes/*.ts`) with runtime-compatible `.js` imports/build output handled separately. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
 
 This document matters because the UI and CLI share the same server contract. For example, `/api/generate` returns a different shape for single-image and multi-image responses. `/api/history` supports both a flat list and session grouping. Node mode uses separate `/api/node/generate` and `/api/sessions/*` contracts. If those differences are not documented, clients can break quietly.
 
@@ -24,6 +24,9 @@ graph TD
     API --> NODE["node mode<br/>node generate node fetch"]
     API --> SESS["sessions<br/>sqlite graph + style sheet"]
     API --> META["metadata read<br/>embedded XMP"]
+    API --> CANVAS["canvas<br/>annotations versions"]
+    API --> COMFY["comfy bridge<br/>local upload"]
+    API --> MULTI["multimode<br/>sequence generation"]
     API --> PROMPTS["prompt library<br/>crud folders import export"]
     API --> CARD["cardnews dev-only<br/>templates jobs sets"]
     IMG --> FILES["~/.ima2/generated<br/>sidecar metadata + embedded XMP"]
@@ -59,6 +62,7 @@ Runtime responses expose configured and actual ports separately. The backend can
 | `POST` | `/api/generate` | `{ prompt, quality?, size?, format?, moderation?, model?, provider?, n?, references?, sessionId?, clientNodeId?, requestId? }` | For `n=1`: `{ image, elapsed, filename, requestId, usage, provider, webSearchCalls, quality, size, moderation, model }` |
 | `POST` | `/api/generate` | same body | For `n>1`: `{ images, elapsed, count, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
 | `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, model?, provider?, sessionId?, requestId? }` | `{ image, elapsed, filename, usage, provider, moderation, model }` |
+| `POST` | `/api/generate/multimode` | `{ prompt, modes, quality?, size?, moderation?, model?, sessionId?, requestId? }` | `{ status, images, returned, requested, elapsed, requestId }` |
 
 `/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to 8. Result files are written to the configured generated directory, usually `~/.ima2/generated`, and sidecar JSON stores prompt, quality, size, format, moderation, model, provider, usage, and web search counts.
 
@@ -80,6 +84,22 @@ History is reconstructed from image files and sidecar JSON under the configured 
 `/api/history/import-local` accepts a single raw image body and writes it into `generated/` as `imported-<yyyymmddhhmmss>-<rand6>.<ext>` with embedded XMP metadata (`kind: "imported"`). Frontend uses this to drop external images directly onto the Canvas viewer area; the response item is appended to the in-memory history list and selected as the current image.
 
 When `groupBy=session` is used, session groups include `title` and `label` when the session still exists in SQLite. The gallery should prefer the title and only fall back to the short server session id.
+
+## Canvas, Metadata, And Local Integrations
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| `GET` | `/api/annotations/:filename` | none | `{ annotations }` |
+| `PUT` | `/api/annotations/:filename` | `{ annotations }` | `{ ok }` |
+| `DELETE` | `/api/annotations/:filename` | none | `{ ok }` |
+| `POST` | `/api/canvas-versions` | raw PNG payload + canvas metadata headers | `{ item }` |
+| `PUT` | `/api/canvas-versions/:filename` | raw PNG payload + canvas metadata headers | `{ item }` |
+| `POST` | `/api/metadata/read` | `{ image }` | `{ metadata, missing? }` |
+| `POST` | `/api/comfy/export-image` | `{ filename, origin? }` | `{ ok, uploadedFilename }` |
+
+Canvas annotation and canvas-version routes are internal editor persistence surfaces. Canvas versions are hidden from the normal Gallery and HistoryStrip visible domain; navigation should prefer source images and only display a matching canvas version inside Canvas Mode.
+
+`/api/comfy/export-image` accepts a generated filename only, validates local-loopback ComfyUI origins, and uploads the selected image to ComfyUI without exposing arbitrary filesystem paths.
 
 ## Inflight Jobs
 

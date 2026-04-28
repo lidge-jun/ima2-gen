@@ -4,8 +4,8 @@ import { readFileSync } from "node:fs";
 
 const store = readFileSync("ui/src/store/useAppStore.ts", "utf-8");
 const imageNode = readFileSync("ui/src/components/ImageNode.tsx", "utf-8");
-const nodes = readFileSync("routes/nodes.js", "utf-8");
-const oauth = readFileSync("lib/oauthProxy.js", "utf-8");
+const nodes = readFileSync("routes/nodes.ts", "utf-8");
+const oauth = readFileSync("lib/oauthProxy.ts", "utf-8");
 
 describe("child node references contract", () => {
   it("does not block child node references in the frontend", () => {

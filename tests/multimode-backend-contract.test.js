@@ -11,9 +11,9 @@ function readSource(path) {
 
 describe("multimode backend contract", () => {
   it("registers a separate multimode route instead of overloading classic generate", () => {
-    const index = readSource("routes/index.js");
-    const route = readSource("routes/multimode.js");
-    const classic = readSource("routes/generate.js");
+    const index = readSource("routes/index.ts");
+    const route = readSource("routes/multimode.ts");
+    const classic = readSource("routes/generate.ts");
 
     assert.match(index, /registerMultimodeRoutes/);
     assert.match(route, /app\.post\("\/api\/generate\/multimode"/);
@@ -23,7 +23,7 @@ describe("multimode backend contract", () => {
   });
 
   it("uses a strict prompt wrapper and collects multiple image_generation_call outputs", () => {
-    const oauth = readSource("lib/oauthProxy.js");
+    const oauth = readSource("lib/oauthProxy.ts");
 
     assert.match(oauth, /export function buildMultimodeSequencePrompt/);
     assert.match(oauth, /You MUST create up to N separate image_generation_call outputs/);
@@ -42,8 +42,8 @@ describe("multimode backend contract", () => {
   });
 
   it("persists sequence metadata and surfaces it through history", () => {
-    const route = readSource("routes/multimode.js");
-    const history = readSource("lib/historyList.js");
+    const route = readSource("routes/multimode.ts");
+    const history = readSource("lib/historyList.ts");
     const api = readSource("ui/src/lib/api.ts");
 
     for (const source of [route, history, api]) {

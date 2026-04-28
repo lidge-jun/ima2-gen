@@ -11,7 +11,7 @@ function readSource(path) {
 
 describe("edit mask API contract", () => {
   it("validates optional PNG alpha masks before provider calls", () => {
-    const route = readSource("routes/edit.js");
+    const route = readSource("routes/edit.ts");
     assert.match(route, /mask: rawMask/);
     assert.match(route, /validateEditMask/);
     assert.match(route, /INVALID_EDIT_MASK_BASE64/);
@@ -25,14 +25,14 @@ describe("edit mask API contract", () => {
   });
 
   it("keeps unsupported mask provider behavior explicit", () => {
-    const oauth = readSource("lib/oauthProxy.js");
+    const oauth = readSource("lib/oauthProxy.ts");
     assert.match(oauth, /options\.mask/);
     assert.match(oauth, /EDIT_MASK_NOT_SUPPORTED/);
     assert.match(oauth, /mask_unsupported/);
   });
 
   it("parses PNG IHDR metadata through a helper", () => {
-    const png = readSource("lib/pngInfo.js");
+    const png = readSource("lib/pngInfo.ts");
     assert.match(png, /export function parsePngInfo/);
     assert.match(png, /readUInt32BE\(16\)/);
     assert.match(png, /readUInt32BE\(20\)/);

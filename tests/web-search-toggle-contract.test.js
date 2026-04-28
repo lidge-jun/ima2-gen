@@ -31,9 +31,9 @@ describe("web search toggle contract", () => {
   });
 
   it("keeps server search on by default and removes web_search when off", () => {
-    const generate = readSource("routes/generate.js");
-    const nodes = readSource("routes/nodes.js");
-    const oauth = readSource("lib/oauthProxy.js");
+    const generate = readSource("routes/generate.ts");
+    const nodes = readSource("routes/nodes.ts");
+    const oauth = readSource("lib/oauthProxy.ts");
 
     assert.match(generate, /webSearchEnabled: rawWebSearchEnabled = true/);
     assert.match(nodes, /searchMode: rawSearchMode = "on"/);

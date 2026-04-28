@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const gen = readFileSync("bin/commands/gen.js", "utf-8");
-const edit = readFileSync("bin/commands/edit.js", "utf-8");
+const gen = readFileSync("bin/commands/gen.ts", "utf-8");
+const edit = readFileSync("bin/commands/edit.ts", "utf-8");
 
 test("CLI generation defaults save into configured generatedDir, not cwd", () => {
   assert.match(gen, /import \{ config \} from "\.\.\/\.\.\/config\.js"/);

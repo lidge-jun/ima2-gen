@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { findAvailablePort } from "../lib/runtimePorts.js";
+import { findAvailablePort } from "../lib/runtimePorts.ts";
 
 const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-b9-home-"));
 const GEN_DIR = mkdtempSync(join(tmpdir(), "ima2-b9-generated-"));
@@ -52,7 +52,7 @@ describe("History: delete tombstone + pagination", () => {
       createdFiles.push(fn);
     }
 
-    child = spawn("node", ["server.js"], {
+    child = spawn("node", ["--import", "tsx", "server.ts"], {
       env: {
         ...process.env,
         PORT: port,

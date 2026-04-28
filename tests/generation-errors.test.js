@@ -4,7 +4,7 @@ import {
   errorCodeFrom,
   isNonRetryableGenerationError,
   normalizeGenerationFailure,
-} from "../lib/generationErrors.js";
+} from "../lib/generationErrors.ts";
 
 test("upstream 4xx validation errors normalize to INVALID_REQUEST", () => {
   const err = new Error("Invalid size '512x512'. Requested resolution is below the current minimum pixel budget.");

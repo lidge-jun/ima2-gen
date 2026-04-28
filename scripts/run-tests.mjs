@@ -16,7 +16,7 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const child = spawn(process.execPath, ["--test", ...files], {
+const child = spawn(process.execPath, ["--import", "tsx", "--test", ...files], {
   stdio: "inherit",
 });
 child.on("exit", (code) => process.exit(code ?? 1));

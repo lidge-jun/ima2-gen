@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const storePath = join(__dirname, "..", "ui", "src", "store", "useAppStore.ts");
 const appPath = join(__dirname, "..", "ui", "src", "App.tsx");
 const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
-const sessionRoutesPath = join(__dirname, "..", "routes", "sessions.js");
+const sessionRoutesPath = join(__dirname, "..", "routes", "sessions.ts");
 const enPath = join(__dirname, "..", "ui", "src", "i18n", "en.json");
 const koPath = join(__dirname, "..", "ui", "src", "i18n", "ko.json");
 
