@@ -47,6 +47,11 @@ import { CanvasMemoOverlay } from "./canvas-mode/CanvasMemoOverlay";
 import { CanvasToolbar } from "./canvas-mode/CanvasToolbar";
 import type { NormalizedPoint } from "../types/canvas";
 
+const OBJECT_ERASER_CURSOR =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='8' fill='white' fill-opacity='0.16' stroke='black' stroke-width='3'/%3E%3Ccircle cx='14' cy='14' r='8' fill='none' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='14' cy='14' r='2' fill='white' stroke='black' stroke-width='1'/%3E%3C/svg%3E\") 14 14, auto";
+const BRUSH_ERASER_CURSOR =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='8' fill='white' fill-opacity='0.18' stroke='black' stroke-width='3'/%3E%3Ccircle cx='14' cy='14' r='8' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E\") 14 14, auto";
+
 function formatQualityAlias(quality: string | null | undefined): string | null {
   if (quality === "low") return "l";
   if (quality === "medium") return "m";
@@ -636,7 +641,9 @@ export function Canvas() {
                 ? annotations.activeTool === "pan"
                   ? "default"
                   : annotations.activeTool === "eraser"
-                    ? "cell"
+                    ? annotations.eraserMode === "object"
+                      ? OBJECT_ERASER_CURSOR
+                      : BRUSH_ERASER_CURSOR
                     : "crosshair"
                 : "zoom-in",
               transform: canvasOpen ? `scale(${canvasZoom})` : undefined,

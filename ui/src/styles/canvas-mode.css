@@ -202,6 +202,8 @@
   position: relative;
   display: inline-flex;
   align-items: stretch;
+  flex: 0 0 auto;
+  overflow: visible;
   border-radius: 6px;
 }
 
@@ -218,6 +220,32 @@
   width: 26px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0 6px 6px 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.canvas-toolbar__button--split-menu:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.canvas-toolbar__split-button--active .canvas-toolbar__button--split-menu {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fff;
+}
+
+.canvas-toolbar__divider {
+  width: 1px;
+  height: 26px;
+  flex: 0 0 auto;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.canvas-toolbar__button--mask:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.26);
+  box-shadow: none;
 }
 
 .canvas-toolbar__icon--small {

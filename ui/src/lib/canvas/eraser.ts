@@ -13,6 +13,12 @@ export interface EraserStrokeResult {
 }
 
 const MIN_FRAGMENT_POINTS = 2;
+const EPSILON = 0.000001;
+
+interface SegmentCut {
+  leftT: number;
+  rightT: number;
+}
 
 export function erasePathsByStroke({
   paths,
@@ -45,15 +51,42 @@ export function splitPathByEraser(
   if (path.points.length < MIN_FRAGMENT_POINTS || eraserPoints.length === 0 || radius <= 0) return [path];
 
   const kept: NormalizedPoint[][] = [];
-  let current: NormalizedPoint[] = [];
+  let current: NormalizedPoint[] = isPointErased(path.points[0], eraserPoints, radius)
+    ? []
+    : [path.points[0]];
 
-  for (const point of path.points) {
-    if (isPointErased(point, eraserPoints, radius)) {
+  for (let i = 1; i < path.points.length; i += 1) {
+    const a = path.points[i - 1];
+    const b = path.points[i];
+    const bErased = isPointErased(b, eraserPoints, radius);
+    const cut = getSegmentEraserCut(a, b, eraserPoints, radius);
+
+    if (cut) {
+      if (current.length === 0 && !isPointErased(a, eraserPoints, radius)) {
+        current = [a];
+      }
+      if (current.length > 0 && cut.leftT > EPSILON) {
+        addPoint(current, pointAtSegment(a, b, cut.leftT));
+      }
+      if (current.length >= MIN_FRAGMENT_POINTS) kept.push(current);
+      current = [];
+
+      if (cut.rightT < 1 - EPSILON && !bErased) {
+        current = [pointAtSegment(a, b, cut.rightT), b];
+      }
+      continue;
+    }
+
+    if (bErased) {
       if (current.length >= MIN_FRAGMENT_POINTS) kept.push(current);
       current = [];
       continue;
     }
-    current.push(point);
+
+    if (current.length === 0 && !isPointErased(a, eraserPoints, radius)) {
+      current = [a];
+    }
+    addPoint(current, b);
   }
 
   if (current.length >= MIN_FRAGMENT_POINTS) kept.push(current);
@@ -86,6 +119,75 @@ export function distance(a: NormalizedPoint, b: NormalizedPoint): number {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getSegmentEraserCut(
+  a: NormalizedPoint,
+  b: NormalizedPoint,
+  eraserPoints: NormalizedPoint[],
+  radius: number,
+): SegmentCut | null {
+  const segmentLength = distance(a, b);
+  if (segmentLength <= EPSILON) {
+    return isPointErased(a, eraserPoints, radius) ? { leftT: 0, rightT: 1 } : null;
+  }
+
+  let bestT: number | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const eraserPoint of eraserPoints) {
+    const t = projectPointToSegmentT(eraserPoint, a, b);
+    const projected = pointAtSegment(a, b, t);
+    const candidateDistance = distance(eraserPoint, projected);
+    if (candidateDistance < bestDistance) {
+      bestDistance = candidateDistance;
+      bestT = t;
+    }
+  }
+
+  for (let i = 1; i < eraserPoints.length; i += 1) {
+    const samples = [0, 0.25, 0.5, 0.75, 1];
+    for (const sample of samples) {
+      const eraserPoint = pointAtSegment(eraserPoints[i - 1], eraserPoints[i], sample);
+      const t = projectPointToSegmentT(eraserPoint, a, b);
+      const projected = pointAtSegment(a, b, t);
+      const candidateDistance = distance(eraserPoint, projected);
+      if (candidateDistance < bestDistance) {
+        bestDistance = candidateDistance;
+        bestT = t;
+      }
+    }
+  }
+
+  if (bestT === null || bestDistance > radius) return null;
+
+  const halfGap = Math.max(radius / segmentLength, 0.01);
+  return {
+    leftT: Math.max(0, bestT - halfGap),
+    rightT: Math.min(1, bestT + halfGap),
+  };
+}
+
+function projectPointToSegmentT(point: NormalizedPoint, a: NormalizedPoint, b: NormalizedPoint): number {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const wx = point.x - a.x;
+  const wy = point.y - a.y;
+  const lenSq = vx * vx + vy * vy;
+  if (lenSq === 0) return 0;
+  return Math.max(0, Math.min(1, (wx * vx + wy * vy) / lenSq));
+}
+
+function pointAtSegment(a: NormalizedPoint, b: NormalizedPoint, t: number): NormalizedPoint {
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+  };
+}
+
+function addPoint(points: NormalizedPoint[], point: NormalizedPoint): void {
+  const last = points.at(-1);
+  if (!last || distance(last, point) > EPSILON) points.push(point);
 }
 
 function distanceToSegment(point: NormalizedPoint, a: NormalizedPoint, b: NormalizedPoint): number {

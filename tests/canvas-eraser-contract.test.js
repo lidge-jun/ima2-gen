@@ -28,6 +28,11 @@ describe("canvas eraser contract", () => {
     assert.match(source, /splitPathByEraser/);
     assert.match(source, /MIN_FRAGMENT_POINTS/);
     assert.match(source, /changed/);
+    assert.match(source, /getSegmentEraserCut/);
+    assert.match(source, /projectPointToSegmentT/);
+    assert.match(source, /pointAtSegment/);
+    assert.match(source, /leftT/);
+    assert.match(source, /rightT/);
     assert.match(source, /tool: path\.tool === "arrow" && index !== arrowIndex \? "pen" : path\.tool/);
   });
 
@@ -50,5 +55,9 @@ describe("canvas eraser contract", () => {
     assert.doesNotMatch(canvas, /"7"/);
     assert.match(canvas, /annotations\.eraserMode === "object"/);
     assert.match(canvas, /annotations\.eraserMode === "brush"/);
+    assert.match(canvas, /OBJECT_ERASER_CURSOR/);
+    assert.match(canvas, /BRUSH_ERASER_CURSOR/);
+    assert.match(canvas, /annotations\.eraserMode === "object"[\s\S]*OBJECT_ERASER_CURSOR[\s\S]*BRUSH_ERASER_CURSOR/);
+    assert.doesNotMatch(canvas, /\? "cell"/);
   });
 });

@@ -161,6 +161,7 @@ export function CanvasToolbar({
           </div>
         ) : null}
       </div>
+      <span className="canvas-toolbar__divider" aria-hidden="true" />
       {onApply ? (
         <button
           type="button"
@@ -178,7 +179,7 @@ export function CanvasToolbar({
       {onEditWithMask ? (
         <button
           type="button"
-          className={`canvas-toolbar__button canvas-toolbar__button--primary${
+          className={`canvas-toolbar__button canvas-toolbar__button--primary canvas-toolbar__button--mask${
             isEditingWithMask ? " canvas-toolbar__button--busy" : ""
           }`}
           onClick={onEditWithMask}
