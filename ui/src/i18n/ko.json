@@ -39,6 +39,7 @@
     "openGeneratedDirOpened": "생성 이미지 폴더를 열었습니다.",
     "noPromptToFork": "가져올 프롬프트가 없습니다",
     "forkStarted": "이 이미지의 프롬프트를 가져왔습니다. 수정 후 다시 생성하세요",
+    "forkStartedNoPrompt": "이미지를 참조로 첨부했어요. 프롬프트 입력 후 생성하세요",
     "comfyExported": "ComfyUI로 보냈습니다: {filename}",
     "comfyExportInvalidUrl": "ComfyUI URL은 로컬 HTTP 주소여야 합니다.",
     "comfyExportInvalidImage": "이 저장 이미지는 ComfyUI로 보낼 수 없습니다.",

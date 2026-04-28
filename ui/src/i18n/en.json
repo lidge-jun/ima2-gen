@@ -39,6 +39,7 @@
     "openGeneratedDirOpened": "Opened the generated image folder.",
     "noPromptToFork": "No prompt to fork",
     "forkStarted": "Prompt imported. Edit and generate again.",
+    "forkStartedNoPrompt": "Image attached as reference. Type a prompt and generate.",
     "comfyExported": "Sent to ComfyUI as {filename}.",
     "comfyExportInvalidUrl": "ComfyUI URL must be a local HTTP address.",
     "comfyExportInvalidImage": "This saved image cannot be sent to ComfyUI.",

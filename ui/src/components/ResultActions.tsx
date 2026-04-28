@@ -51,13 +51,8 @@ export function ResultActions({ imageOverride = null }: ResultActionsProps) {
   };
 
   const newFromHere = async () => {
-    if (!actionImage.prompt) {
-      showToast(t("toast.noPromptToFork"), true);
-      return;
-    }
-    setPrompt(actionImage.prompt);
-    // 0.09.5: auto-attach the current image as a reference so continuations
-    // preserve style/composition, not just prompt text.
+    const hasPrompt = Boolean(actionImage.prompt);
+    if (hasPrompt) setPrompt(actionImage.prompt as string);
     try {
       await useImageAsReference(actionImage);
     } catch {
@@ -70,7 +65,7 @@ export function ResultActions({ imageOverride = null }: ResultActionsProps) {
       promptEl.focus();
       promptEl.setSelectionRange(promptEl.value.length, promptEl.value.length);
     }
-    showToast(t("toast.forkStarted"));
+    showToast(t(hasPrompt ? "toast.forkStarted" : "toast.forkStartedNoPrompt"));
   };
 
   const sendToComfyUI = async () => {
