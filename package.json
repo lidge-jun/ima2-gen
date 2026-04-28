@@ -17,6 +17,7 @@
     "test": "node scripts/run-tests.mjs",
     "test:package-install": "node --test tests/package-install-smoke.mjs",
     "setup": "node bin/ima2.js setup",
+    "prepack": "npm run build:server && npm run build:cli",
     "prepublishOnly": "npm run typecheck && npm run build:server && npm run build:cli && npm run lint:pkg && npm run test:package-install",
     "lint:pkg": "node -e \"const p=require('./package.json'); const req=['name','version','bin']; for(const k of req){if(!p[k])throw new Error('missing '+k)} const mustInclude=['bin/','lib/','routes/','integrations/comfyui/ima2_gen_bridge/__init__.py','integrations/comfyui/ima2_gen_bridge/nodes.py','integrations/comfyui/ima2_gen_bridge/README.md','assets/card-news/templates/','server.js']; for(const f of mustInclude){if(!p.files.includes(f))throw new Error('files[] must include '+f)}\"",
     "release:patch": "npm version patch && npm publish && git push origin main --tags",
