@@ -84,24 +84,33 @@ describe("Card News smoke flow contract", () => {
     assert.match(gallery, /gallery-card-news-set/);
   });
 
-  it("documents manual smoke QA and forbids live generation endpoints", () => {
-    const plan = readSource("devlog/_plan/0.20-card-news/40_smoke_qa_harness.md");
+  it("keeps manual smoke QA covered by tracked source contracts", () => {
+    const en = readSource("ui/src/i18n/en.json");
+    const composer = readSource("ui/src/components/card-news/CardNewsComposer.tsx");
+    const stage = readSource("ui/src/components/card-news/CardStage.tsx");
+    const gallery = readSource("ui/src/components/GalleryModal.tsx");
+    const smokeTest = readSource("tests/card-news-smoke.test.js");
 
     for (const phrase of [
-      "Card News tab open",
       "Draft outline",
-      "Verify textFields are visible",
       "Batch generate",
-      "Verify queued/generating/generated states",
-      "Retry failed card",
-      "Reopen card-news set",
+      "Retry this card",
+      "Open image",
+      "Download",
+      "Card News set path copied.",
     ]) {
-      assert.match(plan, new RegExp(phrase));
+      assert.match(en, new RegExp(phrase));
     }
 
-    assert.match(plan, /Do not HTTP-call `POST \/api\/cardnews\/jobs`/);
-    assert.match(plan, /Do not HTTP-call `POST \/api\/cardnews\/generate`/);
-    assert.match(plan, /Do not use browser automation in 40/);
-    assert.match(plan, /Use source-contract tests or unit-level tests only/);
+    assert.match(composer, /t\("cardNews\.draft"\)/);
+    assert.match(composer, /t\("cardNews\.batchGenerate"\)/);
+    assert.match(stage, /t\("cardNews\.retryCard"\)/);
+    assert.match(stage, /t\("cardNews\.actions\.openImage"\)/);
+    assert.match(stage, /t\("cardNews\.actions\.downloadCard"\)/);
+    assert.match(gallery, /handleOpenCardNewsSet/);
+    assert.match(gallery, /setUIMode\("card-news"\)/);
+
+    assert.doesNotMatch(smokeTest, new RegExp("await\\s+" + "generateCardNews\\("));
+    assert.doesNotMatch(smokeTest, new RegExp("await\\s+" + "startCardNewsJob\\("));
   });
 });
