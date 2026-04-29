@@ -103,11 +103,11 @@ graph TD
 | 260429 community UX split | #33/#34 triage | Active triage map for #37~#43 |
 | 260429 issue37 | Mobile settings workspace | Planned post-TS |
 | 260429 issue38 | Mobile generate flow | Planned post-TS |
+| 260429 issue41 | Generation activity log | Planned post-TS |
 | 260429 issue39 | Gallery delete semantics | Planned post-TS |
 | 260429 issue40 | Viewer lightbox | Planned post-TS |
-| 260429 issue41 | Generation activity log | Planned post-TS |
-| 260429 issue42 | Gallery current-session default | Planned post-TS |
 | 260429 issue43 | Settings persistence audit | Planned post-TS |
+| 260429 issue42 | Gallery current-session default | Planned post-TS |
 | 0.20 | Card-news | Archived under `_fin/0.20-card-news`; reopen narrower issues only |
 | 0.21 | Custom size input | Archived 260425 |
 | 0.22 | Gallery navigation UX | Archived 260426 |
