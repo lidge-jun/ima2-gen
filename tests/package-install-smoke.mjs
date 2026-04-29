@@ -92,7 +92,9 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
     const pack = run(npmCommand(), ["pack", "--json", "--pack-destination", packDir], {
       cwd: process.cwd(),
     });
-    const packManifest = JSON.parse(pack.stdout);
+    const packJson = pack.stdout.match(/\[\s*\{[\s\S]*\}\s*\]\s*$/);
+    assert.ok(packJson, `npm pack output should end with a JSON manifest array\nstdout:\n${pack.stdout}`);
+    const packManifest = JSON.parse(packJson[0]);
     const tarball = join(packDir, packManifest[0].filename);
 
     run(npmCommand(), ["init", "-y"], { cwd: projectDir });

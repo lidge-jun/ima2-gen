@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,6 +33,15 @@ const REQUIRED_SOURCE_PACK_FILES = [
 
 const REQUIRED_BUILD_PACK_FILES = [
   "ui/dist/index.html",
+];
+
+const REQUIRED_RUNTIME_PACK_FILES = [
+  "server.js",
+  "config.js",
+  "bin/ima2.js",
+  "routes/cardNews.js",
+  "routes/storage.js",
+  "lib/cardNewsTemplateStore.js",
 ];
 
 function npmCommand() {
@@ -67,7 +76,9 @@ function readPackManifest() {
     );
 
     try {
-      const parsed = JSON.parse(result.stdout);
+      const jsonMatch = result.stdout.match(/\[\s*\{[\s\S]*\}\s*\]\s*$/);
+      assert.ok(jsonMatch, `npm pack output should end with a JSON manifest array\nstdout:\n${result.stdout}`);
+      const parsed = JSON.parse(jsonMatch[0]);
       assert.ok(Array.isArray(parsed), "npm pack output should be a JSON array");
       assert.ok(parsed[0], "npm pack output should include one package manifest");
       return parsed[0];
@@ -93,12 +104,6 @@ describe("package smoke", () => {
   });
 
   it("includes built UI files when build output exists", () => {
-    const missingBuildOutputs = REQUIRED_BUILD_PACK_FILES.filter((file) => !existsSync(join(process.cwd(), file)));
-    if (missingBuildOutputs.length > 0) {
-      assert.ok(true, `build output not present; skipped: ${missingBuildOutputs.join(", ")}`);
-      return;
-    }
-
     const manifest = readPackManifest();
     const packedFiles = new Set(manifest.files.map((file) => file.path));
 
@@ -110,13 +115,19 @@ describe("package smoke", () => {
     }
   });
 
-  it("excludes UI sourcemaps from normal release packages", () => {
-    const missingBuildOutputs = REQUIRED_BUILD_PACK_FILES.filter((file) => !existsSync(join(process.cwd(), file)));
-    if (missingBuildOutputs.length > 0) {
-      assert.ok(true, `build output not present; skipped: ${missingBuildOutputs.join(", ")}`);
-      return;
-    }
+  it("includes emitted runtime JavaScript files for package execution", () => {
+    const manifest = readPackManifest();
+    const packedFiles = new Set(manifest.files.map((file) => file.path));
 
+    for (const requiredFile of REQUIRED_RUNTIME_PACK_FILES) {
+      assert.ok(
+        packedFiles.has(requiredFile),
+        `npm package should include emitted runtime file ${requiredFile}`,
+      );
+    }
+  });
+
+  it("excludes UI sourcemaps from normal release packages", () => {
     const manifest = readPackManifest();
     const mapFiles = manifest.files
       .map((file) => file.path)

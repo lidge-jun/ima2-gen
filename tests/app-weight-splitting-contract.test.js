@@ -9,6 +9,15 @@ function readSource(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
+function visitStaticImports(manifest, chunk, seen = new Set()) {
+  if (!chunk || seen.has(chunk.file)) return seen;
+  seen.add(chunk.file);
+  for (const importId of chunk.imports ?? []) {
+    visitStaticImports(manifest, manifest[importId], seen);
+  }
+  return seen;
+}
+
 test("release builds use manifest and opt-in sourcemaps", () => {
   const viteConfig = readSource("ui/vite.config.ts");
 
@@ -73,15 +82,16 @@ test("canvas mode-only widgets are lazy-loaded from the default viewer", () => {
 
 test("built output splits mode and prompt-import chunks when dist exists", () => {
   const manifestPath = join(root, "ui/dist/.vite/manifest.json");
-  if (!existsSync(manifestPath)) {
-    assert.ok(true, "build manifest not present; run cd ui && npm run build for bundle verification");
-    return;
-  }
+  assert.ok(existsSync(manifestPath), "build manifest must exist; run npm run ui:build before bundle verification");
 
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   const keys = Object.keys(manifest).join("\n");
   const assetsDir = join(root, "ui/dist/assets");
   const jsFiles = readdirSync(assetsDir).filter((file) => file.endsWith(".js"));
+  const entries = Object.values(manifest).filter((chunk) => chunk.isEntry);
+  assert.equal(entries.length, 1, `expected one Vite entry chunk, got ${entries.length}`);
+  const staticInitialFiles = visitStaticImports(manifest, entries[0]);
+  const dynamicImports = new Set(entries.flatMap((chunk) => chunk.dynamicImports ?? []));
 
   assert.match(keys, /src\/components\/NodeCanvas\.tsx/);
   assert.match(keys, /src\/components\/card-news\/CardNewsWorkspace\.tsx/);
@@ -98,5 +108,29 @@ test("built output splits mode and prompt-import chunks when dist exists", () =>
   assert.ok(
     jsFiles.some((file) => file.startsWith("CanvasToolbar-")),
     "CanvasToolbar should be emitted as its own canvas-mode lazy chunk",
+  );
+  assert.ok(
+    dynamicImports.has("src/components/NodeCanvas.tsx"),
+    "NodeCanvas should be reachable through a dynamic import from the entry",
+  );
+  assert.ok(
+    dynamicImports.has("src/components/card-news/CardNewsWorkspace.tsx"),
+    "CardNewsWorkspace should be reachable through a dynamic import from the entry",
+  );
+  assert.ok(
+    dynamicImports.has("src/components/PromptLibraryPanel.tsx"),
+    "PromptLibraryPanel should be reachable through a dynamic import from the entry",
+  );
+  assert.ok(
+    !staticInitialFiles.has(manifest["src/components/NodeCanvas.tsx"]?.file),
+    "NodeCanvas chunk should not be part of the entry's static import graph",
+  );
+  assert.ok(
+    !staticInitialFiles.has(manifest["src/components/card-news/CardNewsWorkspace.tsx"]?.file),
+    "CardNewsWorkspace chunk should not be part of the entry's static import graph",
+  );
+  assert.ok(
+    !staticInitialFiles.has(manifest["src/components/PromptLibraryPanel.tsx"]?.file),
+    "PromptLibraryPanel chunk should not be part of the entry's static import graph",
   );
 });
