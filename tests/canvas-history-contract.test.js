@@ -39,6 +39,8 @@ describe("canvas undo redo contract", () => {
     ].map(readSource).join("\n");
     assert.match(canvas, /window\.addEventListener\("keydown", onKeyDown\)/);
     assert.match(canvas, /event\.key === "Escape"/);
+    assert.match(canvas, /if \(event\.defaultPrevented\) return;/);
+    assert.match(canvas, /event\.stopPropagation\(\)/);
     assert.match(canvas, /handleCloseCanvas/);
     assert.match(canvas, /event\.key\.toLowerCase\(\) === "z"/);
     assert.match(canvas, /annotations\.undo\(\)/);

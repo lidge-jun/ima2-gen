@@ -21,6 +21,8 @@ describe("canvas version frontend contract", () => {
     assert.match(source, /handleCloseCanvas = async \(\): Promise<void>/);
     assert.match(source, /if \(!saved\) return/);
     assert.match(source, /event\.key === "Escape"[\s\S]*handleCloseCanvas/);
+    assert.match(source, /if \(event\.defaultPrevented\) return;/);
+    assert.match(source, /event\.key === "Escape"[\s\S]*event\.stopPropagation\(\)[\s\S]*handleCloseCanvas/);
     assert.match(source, /onClose=\{\(\) => void handleCloseCanvas\(\)\}/);
   });
 

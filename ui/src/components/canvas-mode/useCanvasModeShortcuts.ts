@@ -73,6 +73,7 @@ export function useCanvasModeShortcuts({
   useEffect(() => {
     if (!canvasOpen) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (isEditableTarget(event.target)) {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -127,6 +128,7 @@ export function useCanvasModeShortcuts({
 
     if (canvasOpen && event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
       void handleCloseCanvas();
       return;
     }
