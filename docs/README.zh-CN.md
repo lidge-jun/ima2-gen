@@ -4,9 +4,11 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
+> 🌐 **Live site**: [lidge-jun.github.io/ima2-gen](https://lidge-jun.github.io/ima2-gen/) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/)
+>
 > **其他语言**: [English](../README.md) · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-`ima2-gen` 是一个本地图像生成工作室，让你像使用小型桌面应用一样使用 ChatGPT/Codex OAuth 图像生成流程。
+`ima2-gen` 是一个本地图像生成工作室，为你提供类似小型桌面应用的 ChatGPT/Codex OAuth 图像生成体验。
 
 用 `npx` 启动，登录 Codex OAuth，输入 prompt，然后通过历史记录、参考图、style sheet、节点分支、multimode 批量候选和 Canvas Mode 清理持续迭代。默认图像生成路径不需要 OpenAI API key。
 
@@ -42,7 +44,7 @@ ima2 serve
 - **Node mode**：从一张满意的图出发，向多个方向分支探索。
 - **Multimode batches**：用同一个 prompt 同时生成多个候选 slot，并从最好的结果继续。
 - **Canvas Mode**：支持缩放/平移、标注、橡皮擦、背景清理、透明 checkerboard 预览，以及 alpha/matte export。
-- **Local gallery**：把生成结果保存在本机，并按 session 查看历史。
+- **Local gallery**：将生成结果保存在本地，并按会话 (session) 查看历史。
 - **Reference images**：支持拖放、粘贴和文件选择；大图会在上传前自动压缩。
 - **Prompt library imports**：把本地 prompt pack、GitHub folder、curated GPT-image hint 导入内置 prompt library。
 - **Style sheets**：保存一套视觉方向，并复用到 classic/node prompt。
@@ -65,7 +67,7 @@ ima2 serve
 
 - `gpt-5.4` — 推荐的均衡选择。
 - `gpt-5.4-mini` — 当前应用默认值，适合快速草稿。
-- `gpt-5.5` — 在支持的环境中是质量最强的选择。但它可能消耗更多额度，也可能需要更新 Codex CLI，或依赖账号/后端路径是否开放对应的图像 capability。
+- `gpt-5.5` — 在支持的环境中是质量最高的选择。但它可能消耗更多额度，也可能需要更新 Codex CLI，或依赖账号/后端路径是否开放对应的图像 capability。
 
 Quality 支持 `low`, `medium`, `high`；moderation 支持 `auto`, `low`。
 
@@ -85,19 +87,19 @@ Quality 支持 `low`, `medium`, `high`；moderation 支持 `auto`, `low`。
 
 ### Node mode
 
-适合把想法分叉后对比。
+适合将创意分支发散并进行直观对比。
 
 ![显示连接节点、生成卡片和节点元数据的 Node mode 界面](../assets/screenshots/node-graph-branching.png)
 
-每个节点都有自己的 prompt 和结果。根节点可以附加本地参考图；子节点会使用父图作为来源。完成的任务会通过 request ID 重新匹配，因此刷新或 graph version conflict 后也能恢复结果。
+每个节点都有自己的 prompt 和结果。根节点可以附加本地参考图；子节点将使用父节点图片作为参考来源。完成的任务会通过 request ID 重新匹配，因此刷新或 graph version conflict 后也能恢复结果。
 
 ### Canvas Mode
 
 当生成结果已经接近目标，但还需要局部清理或背景处理时使用 Canvas Mode。
 
-- 缩放后的图片中，viewport pan 与 selection tool 分离，移动画面时不容易误改 annotation。
+- 缩放后的图片中，viewport pan 与 selection tool 分离，避免在移动画面时误触或修改 annotation。
 - 支持 annotation、eraser、multiselect、group、undo/redo 和 sticky note。
-- 可以点选 background cleanup seed，预览 mask，并保存为 canvas version。
+- 可点击指定 background cleanup seed，预览 mask，并保存为 canvas version。
 - 透明图会显示 checkerboard preview，export 可选择保留 alpha 或合成指定 matte color。
 - 保存的 canvas version 不会出现在 Gallery/HistoryStrip 中，但 Canvas Mode 可以复用它，也可以把它作为下一次 reference。
 
@@ -108,6 +110,10 @@ Quality 支持 `low`, `medium`, `high`；moderation 支持 `auto`, `low`。
 Prompt library 可以从 local files、GitHub folders、curated sources 和 GPT-image hint packs 导入。导入后的 prompt 会写入本地 index，因此下次启动后仍可搜索和 ranking。
 
 ![显示 file drop、GitHub folder preview、curated sources 和 discovered prompt results 的 prompt import dialog](../assets/screenshots/prompt-import-dialog.png)
+
+### Experimental Card News Mode
+
+Card News 仍是开发专用的实验功能。默认公开运行环境中，除非明确以开发用途启用，否则它会保持隐藏；目前不应将其视为稳定的公开功能。
 
 ### Settings 和 Style sheets
 

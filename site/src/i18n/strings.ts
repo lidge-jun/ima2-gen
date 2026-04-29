@@ -155,6 +155,8 @@ const en: Dict = {
   'faq.page.title': 'FAQ — ima2-gen',
   'faq.page.h': 'Frequently asked questions',
   'faq.page.lede': 'Install, run, branch — answered short.',
+  'faq.ui.copy': 'Copy',
+  'faq.ui.copied': 'Copied',
   'faq.cat.install': 'Install',
   'faq.cat.usage': 'Usage',
   'faq.cat.tech': 'Tech',
@@ -244,7 +246,7 @@ const ko: Dict = {
   'workflows.h.before': '만드는 방식은 두 가지. ',
   'workflows.h.em': '마무리는 Canvas.',
   'workflows.lede':
-    '빠르게 한 장이나 여러 후보가 필요하면 Classic/multimode. 마음에 든 결과에서 여러 방향을 보고 싶다면 Node. 부분 정리는 Canvas Mode에서 이어갑니다.',
+    '빠르게 한 장을 만들거나 여러 후보를 동시에 보려면 Classic 또는 Multimode를 사용하세요. 마음에 든 결과에서 여러 방향으로 가지를 뻗고 싶다면 Node, 부분적인 보정이나 배경 정리는 Canvas Mode에서 이어갈 수 있습니다.',
   'workflows.classic.label': 'Classic',
   'workflows.classic.h': '빠르게 한 장을 완성할 때.',
   'workflows.classic.body':
@@ -260,10 +262,10 @@ const ko: Dict = {
 
   // Latest Capabilities
   'latest.tag': '02 · 새로 들어온 작업 도구',
-  'latest.h.before': '여러 후보, 정리, ',
+  'latest.h.before': '배치 생성, 다듬기, ',
   'latest.h.em': '가져오기.',
   'latest.lede':
-    '최근 릴리스에는 multimode 후보 슬롯, Canvas Mode 정리 도구, 파일/GitHub/curated source 기반 prompt library import가 들어왔습니다.',
+    '최근 릴리스에는 여러 후보를 한 번에 뽑는 multimode 슬롯, Canvas Mode의 정리 도구, 그리고 파일/GitHub/추천 소스를 통해 프롬프트를 가져오는 라이브러리 기능이 추가되었습니다.',
   'latest.multimode.label': 'Multimode',
   'latest.multimode.h': '하나의 프롬프트에서 네 후보.',
   'latest.multimode.body':
@@ -279,7 +281,7 @@ const ko: Dict = {
   'latest.import.label': 'Prompt import',
   'latest.import.h': 'Prompt pack 가져오기.',
   'latest.import.body':
-    '로컬 파일을 끌어오고, GitHub folder를 미리 보고, curated source를 갱신해 선택한 prompt를 내장 library에 index합니다.',
+    '로컬 파일을 끌어오고, GitHub 폴더를 미리 보며, 추천 소스(curated source)를 갱신하여 선택한 프롬프트를 내장 라이브러리에 저장합니다.',
   'latest.import.alt':
     'ima2-gen prompt import dialog — 파일 drop, GitHub path 입력, curated source, 발견된 prompt 결과.',
 
@@ -364,6 +366,8 @@ const ko: Dict = {
   'faq.page.title': 'FAQ — ima2-gen',
   'faq.page.h': '자주 묻는 질문',
   'faq.page.lede': '설치, 실행, 분기 — 핵심만 짧게.',
+  'faq.ui.copy': '복사',
+  'faq.ui.copied': '복사됨',
   'faq.cat.install': '설치',
   'faq.cat.usage': '사용',
   'faq.cat.tech': '기술',
@@ -392,7 +396,7 @@ const ko: Dict = {
     '`매체`, `구도`, `분위기`, `팔레트`, `제외할 요소`를 시트로 묶어 두고 프롬프트에 붙여 쓰면 됩니다. 시트는 세션을 넘겨도 유지되므로 같은 룩을 다음 작업에서도 그대로 가져갈 수 있습니다.',
   'faq.usage.q4': 'Multimode는 뭔가요?',
   'faq.usage.a4':
-    '하나의 프롬프트에서 여러 Classic 후보를 동시에 시작하고 slot별 진행 상황을 보여주는 방식입니다. 중간에 멈추거나 partial 결과를 확인한 뒤 가장 좋은 이미지에서 이어갈 수 있습니다.',
+    '하나의 프롬프트에서 여러 Classic 후보를 동시에 시작하고 slot별 진행 상황을 보여주는 방식입니다. 진행 도중 특정 슬롯을 취소하거나 중간 결과를 확인한 뒤, 가장 잘 나온 이미지에서 작업을 이어갈 수 있습니다.',
   'faq.usage.q5': 'GitHub에서 prompt를 가져올 수 있나요?',
   'faq.usage.a5':
     '가능합니다. Prompt library는 로컬 prompt pack, GitHub folder, curated source, GPT-image hint pack을 가져와 로컬 index에 저장하고 검색/ranking에 사용합니다.',
@@ -402,7 +406,7 @@ const ko: Dict = {
     '이미지 생성 요청은 OpenAI로 전송됩니다. 결과 파일과 작업 기록은 로컬에만 남습니다. `ima2-gen`이 별도로 수집하는 분석 데이터나 외부 저장소는 없습니다.',
   'faq.tech.q2': '오프라인에서도 되나요?',
   'faq.tech.a2':
-    '이미지 생성은 OpenAI API 호출이 필요해 인터넷이 있어야 합니다. 로컬 갤러리 보기, 세션 정리, 스타일 시트 편집은 오프라인에서도 됩니다.',
+    '이미지 생성은 OpenAI API 호출이 필요해 인터넷이 있어야 합니다. 하지만 로컬 갤러리 조회, 세션 정리, 스타일 시트 편집 등의 기능은 오프라인에서도 자유롭게 사용할 수 있습니다.',
   'faq.tech.q3': '오픈소스인가요?',
   'faq.tech.a3':
     '네. `ima2-gen`은 MIT 라이선스로 공개되어 있습니다. 코드는 GitHub에서 볼 수 있습니다.',

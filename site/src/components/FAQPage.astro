@@ -25,6 +25,8 @@ interface Group {
 }
 
 const { lang } = Astro.props;
+const copyLabel = t(lang, 'faq.ui.copy');
+const copiedLabel = t(lang, 'faq.ui.copied');
 
 const groups: Group[] = [
   {
@@ -114,7 +116,7 @@ const groups: Group[] = [
                   {item.codes && (
                     <div class="codes">
                       {item.codes.map((cmd) => (
-                        <pre class="code"><code>{cmd}</code><button class="copy" type="button" data-cmd={cmd} aria-label={`Copy ${cmd}`}>Copy</button></pre>
+                        <pre class="code"><code>{cmd}</code><button class="copy" type="button" data-cmd={cmd} data-copy-label={copyLabel} data-copied-label={copiedLabel} aria-label={`${copyLabel} ${cmd}`}>{copyLabel}</button></pre>
                       ))}
                     </div>
                   )}
@@ -123,7 +125,7 @@ const groups: Group[] = [
                       {item.codesLabeled.map((c) => (
                         <div class="code-row">
                           <span class="code-label">{c.label}</span>
-                          <pre class="code"><code>{c.cmd}</code><button class="copy" type="button" data-cmd={c.cmd} aria-label={`Copy ${c.label} command`}>Copy</button></pre>
+                          <pre class="code"><code>{c.cmd}</code><button class="copy" type="button" data-cmd={c.cmd} data-copy-label={copyLabel} data-copied-label={copiedLabel} aria-label={`${copyLabel} ${c.label}`}>{copyLabel}</button></pre>
                         </div>
                       ))}
                     </div>
@@ -145,10 +147,12 @@ const groups: Group[] = [
       try {
         await navigator.clipboard.writeText(cmd);
         const orig = btn.textContent;
-        btn.textContent = 'Copied';
+        const copyText = btn.getAttribute('data-copy-label') ?? 'Copy';
+        const copiedText = btn.getAttribute('data-copied-label') ?? 'Copied';
+        btn.textContent = copiedText;
         btn.classList.add('copied');
         window.setTimeout(() => {
-          btn.textContent = orig ?? 'Copy';
+          btn.textContent = orig ?? copyText;
           btn.classList.remove('copied');
         }, 1400);
       } catch {
