@@ -801,6 +801,7 @@ type AppState = {
   restorePendingTrash: () => Promise<void>;
   clearPendingTrash: () => void;
   permanentlyDeleteHistoryItemByClick: (item: GenerateItem) => Promise<void>;
+  permanentlyDeleteHistoryItemByShortcut: (item: GenerateItem) => Promise<void>;
   removeFromHistory: (filename: string) => void;
   addHistoryItem: (item: GenerateItem) => void;
   importLocalImageToHistory: (file: File) => Promise<GenerateItem | null>;
@@ -2614,26 +2615,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   trashHistoryItem: async (item) => {
-    if (!item.filename) return;
-    const filename = item.filename;
+    const target = item.canvasVersion ? resolveVisibleShortcutCurrent(get().history, item) : item;
+    if (!target || target.canvasVersion || !target.filename) {
+      get().showToast(t("gallery.deleteFailed"), true);
+      return;
+    }
+    const filename = target.filename;
     const current = get().currentImage;
-    const removingCurrent = current?.filename === filename;
+    const visibleCurrent = current ? resolveVisibleShortcutCurrent(get().history, current) ?? current : null;
+    const removingCurrent = visibleCurrent?.filename === filename;
     const replacement = removingCurrent
       ? getNeighborAfterRemoval(get().history, filename)
       : current;
     try {
-      const result = await deleteHistoryItem(filename);
+      await deleteHistoryItem(filename);
       set((s) => ({
         history: s.history.filter((h) => h.filename !== filename),
         currentImage: replacement,
-        trashPending: {
-          filename,
-          trashId: result.trashId,
-          item,
-          expiresAt: Date.now() + 9500,
-        },
+        trashPending: null,
       }));
       if (removingCurrent) saveSelectedFilename(replacement?.filename ?? null);
+      get().showToast(t("gallery.movedToSystemTrash", { filename }));
     } catch (err) {
       console.error("[history] trash failed", err);
       get().showToast(t("gallery.deleteFailed"), true);
@@ -2656,12 +2658,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearPendingTrash: () => set({ trashPending: null }),
 
   permanentlyDeleteHistoryItemByClick: async (item) => {
-    if (!item.filename) return;
-    const filename = item.filename;
+    await get().permanentlyDeleteHistoryItemByShortcut(item);
+  },
+
+  permanentlyDeleteHistoryItemByShortcut: async (item) => {
+    const target = item.canvasVersion ? resolveVisibleShortcutCurrent(get().history, item) : item;
+    if (!target || target.canvasVersion || !target.filename) {
+      get().showToast(t("gallery.deleteFailed"), true);
+      return;
+    }
+    const filename = target.filename;
     const ok = window.confirm(t("result.permanentDeleteConfirm", { filename }));
     if (!ok) return;
     const current = get().currentImage;
-    const removingCurrent = current?.filename === filename;
+    const visibleCurrent = current ? resolveVisibleShortcutCurrent(get().history, current) ?? current : null;
+    const removingCurrent = visibleCurrent?.filename === filename;
     const replacement = removingCurrent
       ? getNeighborAfterRemoval(get().history, filename)
       : current;

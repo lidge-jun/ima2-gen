@@ -1,11 +1,8 @@
 import { getDb } from "./db.js";
-import { rename, unlink, mkdir, access } from "fs/promises";
-import { join, resolve, sep } from "path";
+import { rename, unlink, access } from "fs/promises";
+import { resolve, sep } from "path";
+import { moveToSystemTrash } from "./systemTrash.js";
 import { config } from "../config.js";
-
-const DIR = config.storage.generatedDirName;
-const TRASH = config.storage.trashDirName;
-const TRASH_TTL_MS = config.trash.ttlMs;
 
 function resolveInGenerated(rootDir, relPath) {
   void rootDir;
@@ -79,29 +76,30 @@ export async function trashAsset(rootDir, filename) {
     err.code = "ASSET_NOT_FOUND";
     throw err;
   }
-  const trashDir = resolve(config.storage.trashDir);
-  await mkdir(trashDir, { recursive: true });
-  // Flatten filename (subdir separators -> __) so trash is flat & easy to restore
-  const flat = filename.replace(/[\\/]+/g, "__");
-  const trashPath = join(trashDir, `${Date.now()}_${flat}`);
-  await rename(src, trashPath);
-  // Move sidecar too (best-effort)
-  await rename(src + ".json", trashPath + ".json").catch(() => {});
+
+  const sidecar = `${src}.json`;
+  const paths = [src];
+  try {
+    await access(sidecar);
+    paths.push(sidecar);
+  } catch {}
+
+  try {
+    await moveToSystemTrash(paths);
+  } catch (cause) {
+    const err: any = new Error("Could not move asset to system trash");
+    err.status = 500;
+    err.code = "SYSTEM_TRASH_FAILED";
+    err.cause = cause;
+    throw err;
+  }
 
   const summary = markNodesAssetMissing(filename);
-
-  // Schedule hard delete after TTL
-  const unlinkAt = Date.now() + TRASH_TTL_MS;
-  setTimeout(async () => {
-    await unlink(trashPath).catch(() => {});
-    await unlink(trashPath + ".json").catch(() => {});
-  }, TRASH_TTL_MS).unref?.();
-
   return {
     ok: true,
-    trashId: trashPath.slice(trashDir.length + 1),
     filename,
-    unlinkAt,
+    trash: "system",
+    undoableInApp: false,
     sessionsTouched: summary.sessionsTouched,
     nodesTouched: summary.nodesTouched,
   };

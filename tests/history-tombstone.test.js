@@ -7,6 +7,7 @@ import {
   mkdirSync,
   writeFileSync,
   existsSync,
+  readdirSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -14,6 +15,7 @@ import { findAvailablePort } from "../lib/runtimePorts.ts";
 
 const FAKE_HOME = mkdtempSync(join(tmpdir(), "ima2-b9-home-"));
 const GEN_DIR = mkdtempSync(join(tmpdir(), "ima2-b9-generated-"));
+const SYSTEM_TRASH_DIR = join(GEN_DIR, ".system-trash");
 const TEST_PREFIX = `b9test_${Date.now()}_`;
 
 async function waitForHealth(base, timeoutMs = 10000) {
@@ -61,6 +63,8 @@ describe("History: delete tombstone + pagination", () => {
         USERPROFILE: FAKE_HOME,
         IMA2_GENERATED_DIR: GEN_DIR,
         IMA2_TRASH_DIR: join(GEN_DIR, ".trash"),
+        IMA2_TEST_SYSTEM_TRASH_DIR: SYSTEM_TRASH_DIR,
+        NODE_ENV: "test",
         IMA2_NO_OAUTH_PROXY: "1",
       },
       cwd: process.cwd(),
@@ -94,10 +98,12 @@ describe("History: delete tombstone + pagination", () => {
     rmSync(GEN_DIR, { recursive: true, force: true });
   });
 
-  it("delete moves file to .trash and restore brings it back", async () => {
+  it("delete moves file and sidecar to the configured OS-trash test seam", async () => {
     const target = createdFiles[0];
     const srcPath = join(GEN_DIR, target);
+    const sidecarPath = join(GEN_DIR, `${target}.json`);
     assert.ok(existsSync(srcPath), "seed file exists");
+    writeFileSync(sidecarPath, JSON.stringify({ prompt: "trash sidecar" }));
 
     const delRes = await fetch(`${base}/api/history/${encodeURIComponent(target)}`, {
       method: "DELETE",
@@ -105,22 +111,17 @@ describe("History: delete tombstone + pagination", () => {
     assert.strictEqual(delRes.status, 200, "delete returns 200");
     const delBody = await delRes.json();
     assert.ok(delBody.ok);
-    assert.ok(delBody.trashId, "trashId returned");
+    assert.strictEqual(delBody.trash, "system");
+    assert.strictEqual(delBody.undoableInApp, false);
+    assert.ok(!("trashId" in delBody), "OS-trash delete does not expose an in-app trashId");
+    assert.ok(!("unlinkAt" in delBody), "OS-trash delete does not expose a TTL unlink time");
     assert.ok(!existsSync(srcPath), "source file removed from generated/");
+    assert.ok(!existsSync(sidecarPath), "sidecar removed from generated/");
 
-    const trashDir = join(GEN_DIR, ".trash");
-    assert.ok(existsSync(trashDir), ".trash/ created");
-
-    const restoreRes = await fetch(
-      `${base}/api/history/${encodeURIComponent(target)}/restore`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trashId: delBody.trashId }),
-      },
-    );
-    assert.strictEqual(restoreRes.status, 200, "restore returns 200");
-    assert.ok(existsSync(srcPath), "file restored to generated/");
+    assert.ok(existsSync(SYSTEM_TRASH_DIR), "system trash test seam created");
+    const trashed = readdirSync(SYSTEM_TRASH_DIR);
+    assert.ok(trashed.some((name) => name.endsWith(target)), "image moved through system trash seam");
+    assert.ok(trashed.some((name) => name.endsWith(`${target}.json`)), "sidecar moved through system trash seam");
   });
 
   it("history pagination is deduped by composite cursor", async () => {

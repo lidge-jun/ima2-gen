@@ -66,6 +66,7 @@
     "openai": "^5.8.2",
     "openai-oauth": "^1.0.2",
     "sharp": "^0.34.5",
+    "trash": "^10.1.1",
     "ulid": "^3.0.2"
   },
   "devDependencies": {

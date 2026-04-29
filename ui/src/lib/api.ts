@@ -362,9 +362,9 @@ export function openGeneratedDir(): Promise<{ ok: boolean }> {
 
 export function deleteHistoryItem(filename: string): Promise<{
   ok: boolean;
-  trashId: string;
   filename: string;
-  unlinkAt: number;
+  trash: "system";
+  undoableInApp: false;
   sessionsTouched: number;
   nodesTouched: number;
 }> {
