@@ -7,7 +7,7 @@ import {
   loadAssetB64,
 } from "../lib/nodeStore.js";
 import { startJob, finishJob } from "../lib/inflight.js";
-import { validateAndNormalizeRefs } from "../lib/refs.js";
+import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
@@ -67,11 +67,20 @@ export function registerNodeRoutes(app, ctx) {
     let finishStatus = "completed";
     let finishHttpStatus;
     let finishErrorCode;
+    const referencePayload = summarizeReferencePayload(body.references);
     startJob({
       requestId,
       kind: "node",
       prompt: body.prompt,
-      meta: { kind: "node", sessionId, parentNodeId, clientNodeId },
+      meta: {
+        kind: "node",
+        sessionId,
+        parentNodeId,
+        clientNodeId,
+        refsCount: referencePayload.refsCount,
+        referenceBytes: referencePayload.referenceBytes,
+        referenceB64Chars: referencePayload.referenceB64Chars,
+      },
     });
 
     try {
@@ -194,6 +203,7 @@ export function registerNodeRoutes(app, ctx) {
         size,
         moderation,
         refs: refsForRequest.length,
+        referenceBytes: referencePayload.referenceBytes,
         referenceMismatchCount,
         refDetectedMimes: [...new Set(generateReferenceDiagnostics.map((ref) => ref.detectedMime).filter(Boolean))].join(","),
         refDeclaredMimes: [...new Set(generateReferenceDiagnostics.map((ref) => ref.declaredMime).filter(Boolean))].join(","),

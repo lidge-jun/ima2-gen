@@ -50,6 +50,25 @@ export function safeReferenceDiagnostics(refDetails = []) {
   }));
 }
 
+export function summarizeReferencePayload(references) {
+  if (!Array.isArray(references)) {
+    return { refsCount: 0, referenceBytes: 0, referenceB64Chars: 0 };
+  }
+  let referenceBytes = 0;
+  let referenceB64Chars = 0;
+  for (const ref of references) {
+    if (typeof ref !== "string") continue;
+    const b64 = ref.replace(DATA_URL_RE, "");
+    referenceB64Chars += b64.length;
+    referenceBytes += approxBase64Bytes(b64);
+  }
+  return {
+    refsCount: references.length,
+    referenceBytes,
+    referenceB64Chars,
+  };
+}
+
 export function validateAndNormalizeRefs(references, {
   maxCount = config.limits.maxRefCount,
   maxB64Bytes = config.limits.maxRefB64Bytes,

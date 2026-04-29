@@ -1240,6 +1240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
         return;
       }
+      let scopedActiveServerIds = new Set<string>();
       // Merge server-side phase info so the spinner label reflects real progress
       try {
         const inflightKind: "classic" | "node" = get().uiMode === "node" ? "node" : "classic";
@@ -1250,6 +1251,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           sessionId: inflightSessionId,
           includeTerminal: true,
         });
+        scopedActiveServerIds = new Set(jobs.map((j) => j.requestId));
         const byId = new Map(jobs.map((j) => [j.requestId, j] as const));
         const terminalById = new Map((terminalJobs as ServerTerminalJob[]).map((j) => [j.requestId, j] as const));
         const terminalErrors: Array<Error & { code?: string; status?: number }> = [];
@@ -1308,6 +1310,16 @@ export const useAppStore = create<AppState>((set, get) => ({
             nextInflight.push(f);
           }
         }
+        // Re-add active jobs that only the server knows about. This covers
+        // reload/abort races where localStorage lost requestIds while the
+        // backend kept streaming.
+        const nextIds = new Set(nextInflight.map((f) => f.id));
+        for (const j of jobs) {
+          if (!nextIds.has(j.requestId)) {
+            nextInflight.push(toPersistedInFlightJob(j));
+            changed = true;
+          }
+        }
         if (changed) {
           saveInFlight(nextInflight);
           set({ inFlight: nextInflight, activeGenerations: nextInflight.length });
@@ -1345,7 +1357,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         // is also unreliable when the same prompt is queued twice.
         const now = Date.now();
         const remaining = get().inFlight.filter(
-          (f) => now - f.startedAt < INFLIGHT_TTL_MS,
+          (f) => scopedActiveServerIds.has(f.id) || now - f.startedAt < INFLIGHT_TTL_MS,
         );
         if (remaining.length !== get().inFlight.length) {
           saveInFlight(remaining);

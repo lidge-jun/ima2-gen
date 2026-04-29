@@ -43,7 +43,9 @@ assert.ok(apiSrc.includes("postNodeGenerateStream"), "node SSE client missing");
 assert.ok(nodeApiSrc.includes('Accept: "text/event-stream"'), "node SSE Accept header missing");
 
 assert.equal(PROMPT_FIDELITY_SUFFIX, AUTO_PROMPT_FIDELITY_SUFFIX);
-assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("only append English clarifiers at the end when helpful"));
+assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("treat the user's prompt as the source of truth"));
+assert.ok(AUTO_PROMPT_FIDELITY_SUFFIX.includes("pass it through unchanged"));
+assert.ok(!AUTO_PROMPT_FIDELITY_SUFFIX.includes("only append English clarifiers at the end when helpful"));
 assert.ok(!DIRECT_PROMPT_FIDELITY_SUFFIX.includes("append English clarifiers"));
 assert.ok(DIRECT_PROMPT_FIDELITY_SUFFIX.includes("Do not translate, summarize, restyle, add clarifiers"));
 
@@ -52,7 +54,9 @@ const generateAuto = buildUserTextPrompt("고양이 수채화", "auto");
 assert.ok(generateDirect.includes("Generate an image with this exact prompt, no modifications"));
 assert.ok(!generateDirect.includes("append English clarifiers"));
 assert.ok(generateAuto.includes("Generate an image: 고양이 수채화"));
-assert.ok(generateAuto.includes("If the subject matter requires factual accuracy"));
+assert.ok(generateAuto.includes("If factual visual accuracy is required"));
+assert.ok(generateAuto.includes("If the user's prompt is already visually sufficient"));
+assert.ok(generateAuto.includes("pass the user's prompt through"));
 assert.notEqual(generateDirect, generateAuto);
 
 const editDirect = buildEditTextPrompt("배경만 바꿔", "direct");
@@ -66,6 +70,11 @@ for (const prompt of [GENERATE_DEVELOPER_PROMPT, EDIT_DEVELOPER_PROMPT]) {
   assert.ok(prompt.includes("absolute quality"), "developer prompt should use neutral quality language");
   assert.ok(!prompt.includes("8k UHD"), "developer prompt should not force 8k/photo boilerplate");
   assert.ok(!prompt.includes("default to photorealistic"), "developer prompt should not force photorealism");
+  assert.ok(prompt.includes("at least 1 web_search call"), "real-person search should start at one call");
+  assert.ok(prompt.includes("visually sufficient"), "developer prompt should pass through sufficient prompts");
+  assert.ok(prompt.includes("do not search"), "developer prompt should avoid search when prompt is sufficient");
+  assert.ok(!prompt.includes("AT LEAST 3"), "real-person search should not force 3+ calls");
+  assert.ok(!prompt.includes("4-5"), "real-person search should not prefer 4-5 calls");
 }
 
 console.log("prompt-fidelity: ok");

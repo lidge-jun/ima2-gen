@@ -27,6 +27,27 @@ test("first in-flight reconciliation still uses persisted local request IDs", ()
   );
 });
 
+test("polling restores server-only active jobs after terminal cleanup", () => {
+  const store = readSource("ui/src/store/useAppStore.ts");
+
+  assert.match(store, /const nextIds = new Set\(nextInflight\.map\(\(f\) => f\.id\)\);/);
+  assert.match(
+    store,
+    /for \(const j of jobs\) \{\s*if \(!nextIds\.has\(j\.requestId\)\) \{\s*nextInflight\.push\(toPersistedInFlightJob\(j\)\);\s*changed = true;/,
+  );
+});
+
+test("polling TTL prune keeps server-active jobs even after local TTL expires", () => {
+  const store = readSource("ui/src/store/useAppStore.ts");
+
+  assert.match(store, /let scopedActiveServerIds = new Set<string>\(\);/);
+  assert.match(store, /scopedActiveServerIds = new Set\(jobs\.map\(\(j\) => j\.requestId\)\);/);
+  assert.match(
+    store,
+    /\(f\) => scopedActiveServerIds\.has\(f\.id\) \|\| now - f\.startedAt < INFLIGHT_TTL_MS/,
+  );
+});
+
 test("app reconciles in-flight state on mount after reload", () => {
   const app = readSource("ui/src/App.tsx");
 

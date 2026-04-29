@@ -63,6 +63,16 @@ describe("canvas apply merged contract", () => {
     assert.match(actions, /imageOverride\?: GenerateItem \| null/);
     assert.match(actions, /const actionImage = imageOverride \?\? currentImage/);
     assert.match(actions, /useImageAsReference\(actionImage\)/);
+    assert.match(actions, /CANVAS_MODE_PROMPT_ID/);
+    assert.match(actions, /canvas-mode-context/);
+    assert.match(actions, /CANVAS_MODE_PROMPT_NAME/);
+    assert.match(actions, /Canvas Mode/);
+    assert.match(actions, /insertPromptToComposer/);
+    assert.match(actions, /canvasOpen && imageOverride/);
+    assert.match(actions, /blank white canvas or paper/);
+    assert.match(actions, /user-drawn strokes/);
+    assert.match(actions, /source content and preserve\/complete/);
+    assert.match(actions, /edit instructions/);
     assert.match(canvas, /<ResultActions imageOverride=\{canvasOpen \? canvasDisplayImage : null\} \/>/);
     assert.match(store, /compressReferenceSource\(cur\.image/);
     assert.match(store, /useImageAsReference: async \(item\)/);

@@ -8,11 +8,22 @@ interface ResultActionsProps {
   imageOverride?: GenerateItem | null;
 }
 
+const CANVAS_MODE_PROMPT_ID = "canvas-mode-context";
+const CANVAS_MODE_PROMPT_NAME = "Canvas Mode";
+const CANVAS_MODE_PROMPT_TEXT = [
+  "Canvas Mode context:",
+  "The user edited or annotated the reference image on a canvas.",
+  "If the image is a blank white canvas or paper with user-drawn strokes, treat those strokes as source content and preserve/complete them.",
+  "If the image is an existing picture with circles, arrows, sticky notes, handwritten marks, or memo notes over it, treat those marks as edit instructions. Apply the instruction, then remove the marks from the final image unless explicitly asked to keep them.",
+  "Infer the intended edit from the canvas marks and memo text. Preserve unrelated image content.",
+].join("\n");
+
 export function ResultActions({ imageOverride = null }: ResultActionsProps) {
   const { t } = useI18n();
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const insertPromptToComposer = useAppStore((s) => s.insertPromptToComposer);
   const useImageAsReference = useAppStore((s) => s.useImageAsReference);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const permanentlyDeleteHistoryItemByClick = useAppStore(
@@ -57,6 +68,13 @@ export function ResultActions({ imageOverride = null }: ResultActionsProps) {
       await useImageAsReference(actionImage);
     } catch {
       // non-fatal — fall back to prompt-only fork
+    }
+    if (canvasOpen && imageOverride) {
+      insertPromptToComposer({
+        id: CANVAS_MODE_PROMPT_ID,
+        name: CANVAS_MODE_PROMPT_NAME,
+        text: CANVAS_MODE_PROMPT_TEXT,
+      });
     }
     const promptEl = document.querySelector<HTMLTextAreaElement>(
       'textarea[name="prompt"], textarea#prompt, .sidebar textarea',

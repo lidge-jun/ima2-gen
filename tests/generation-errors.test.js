@@ -45,6 +45,20 @@ test("OAUTH_UPSTREAM_ERROR is passthrough, not SAFETY_REFUSAL", () => {
   assert.equal(normalized.status, 502);
 });
 
+test("OAuth image timeout is passthrough and non-retryable", () => {
+  const err = new Error("OAuth image generation timed out");
+  err.status = 504;
+  err.code = "OAUTH_IMAGE_TIMEOUT";
+
+  assert.equal(errorCodeFrom(err), "OAUTH_IMAGE_TIMEOUT");
+  assert.equal(isNonRetryableGenerationError(err), true);
+
+  const normalized = normalizeGenerationFailure(err);
+  assert.equal(normalized.code, "OAUTH_IMAGE_TIMEOUT");
+  assert.equal(normalized.status, 504);
+  assert.equal(normalized.message, err.message);
+});
+
 test("empty response with metadata maps to EMPTY_RESPONSE", () => {
   const err = new Error("No image data received");
   err.eventCount = 3;

@@ -181,11 +181,16 @@ export const config = {
     // IMA2_NO_OAUTH_PROXY=1 disables auto-start; default is auto-start enabled.
     autoStart: !pickBool(env.IMA2_NO_OAUTH_PROXY, fileCfg.oauth?.disableAutoStart, false),
     statusTimeoutMs: pickInt(env.IMA2_OAUTH_STATUS_TIMEOUT_MS, fileCfg.oauth?.statusTimeoutMs, 3000),
+    generationTimeoutMs: pickInt(
+      env.IMA2_OAUTH_GENERATION_TIMEOUT_MS,
+      fileCfg.oauth?.generationTimeoutMs,
+      400 * 1000,
+    ),
     restartDelayMs: pickInt(env.IMA2_OAUTH_RESTART_DELAY_MS, fileCfg.oauth?.restartDelayMs, 5000),
     researchSuffix: pickStr(
       env.IMA2_RESEARCH_SUFFIX,
       fileCfg.oauth?.researchSuffix,
-      "\n\nIf the subject matter requires factual accuracy (faces, products, places, recent events), search the web for accurate visual references first, then generate.",
+      "\n\nIf factual visual accuracy is required and the user's prompt or attached visual context is not already sufficient, use at least one concise web_search call for references before generating. If the user's prompt is already visually sufficient, do not search, rewrite, translate, summarize, or add clarifiers; pass the user's prompt through as the image_generation prompt argument.",
     ),
     validModeration: new Set(
       Array.isArray(fileCfg.oauth?.validModeration) && fileCfg.oauth.validModeration.length

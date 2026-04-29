@@ -13,6 +13,7 @@ import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
 import { useI18n } from "../i18n";
 import { isEditableTarget } from "../lib/domEvents";
 import { getImageModelShortLabel } from "../lib/imageModels";
+import { createBlankCanvasFile } from "../lib/canvas/blankCanvas";
 import type { GenerateItem } from "../types";
 
 const LazyCanvasModeWorkspace = lazy(() =>
@@ -63,6 +64,7 @@ export function Canvas() {
   const showToast = useAppStore((s) => s.showToast);
   const { t } = useI18n();
   const [dropActive, setDropActive] = useState(false);
+  const [creatingBlankCanvas, setCreatingBlankCanvas] = useState(false);
 
   const copyPrompt = (): void => {
     if (!currentImage?.prompt) return;
@@ -130,6 +132,20 @@ export function Canvas() {
     },
     [importLocalImageToHistory],
   );
+
+  const handleCreateBlankCanvas = useCallback(async (): Promise<void> => {
+    if (creatingBlankCanvas) return;
+    setCreatingBlankCanvas(true);
+    try {
+      const file = await createBlankCanvasFile();
+      const item = await importLocalImageToHistory(file);
+      if (item) openCanvas();
+    } catch {
+      showToast(t("canvas.blank.failed"), true);
+    } finally {
+      setCreatingBlankCanvas(false);
+    }
+  }, [creatingBlankCanvas, importLocalImageToHistory, openCanvas, showToast, t]);
 
   if (canvasOpen && currentImage) {
     return (
@@ -199,6 +215,22 @@ export function Canvas() {
               {currentImage.prompt}
             </div>
           ) : null}
+        </div>
+      ) : !currentImage ? (
+        <div className="canvas__blank-entry">
+          <div className="canvas__blank-sheet" aria-hidden />
+          <div className="canvas__blank-copy">
+            <strong>{t("canvas.blank.title")}</strong>
+            <span>{t("canvas.blank.subtitle")}</span>
+          </div>
+          <button
+            type="button"
+            className="canvas__blank-button"
+            onClick={() => void handleCreateBlankCanvas()}
+            disabled={creatingBlankCanvas}
+          >
+            {creatingBlankCanvas ? t("canvas.blank.creating") : t("canvas.blank.create")}
+          </button>
         </div>
       ) : null}
     </main>

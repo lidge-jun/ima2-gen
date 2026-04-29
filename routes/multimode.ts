@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
-import { validateAndNormalizeRefs } from "../lib/refs.js";
+import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
@@ -117,12 +117,22 @@ export function registerMultimodeRoutes(app, ctx) {
         sendSse(res, "error", { error: refCheck.error, code: refCheck.code, status: 400, requestId });
         return;
       }
+      const referencePayload = summarizeReferencePayload(references);
 
       startJob({
         requestId,
         kind: "multimode",
         prompt,
-        meta: { kind: "multimode", quality, model: imageModel, size, maxImages },
+        meta: {
+          kind: "multimode",
+          quality,
+          model: imageModel,
+          size,
+          maxImages,
+          refsCount: referencePayload.refsCount,
+          referenceBytes: referencePayload.referenceBytes,
+          referenceB64Chars: referencePayload.referenceB64Chars,
+        },
       });
 
       logEvent("multimode", "request", {
@@ -133,6 +143,7 @@ export function registerMultimodeRoutes(app, ctx) {
         moderation,
         maxImages,
         refs: refCheck.refs.length,
+        referenceBytes: referencePayload.referenceBytes,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
         webSearchEnabled,
       });

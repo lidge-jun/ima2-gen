@@ -48,6 +48,40 @@ describe("canvas-mode contract", () => {
     assert.match(canvas, /openCanvas/);
   });
 
+  it("creates a blank canvas through the local import path", () => {
+    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const helper = readSource("ui/src/lib/canvas/blankCanvas.ts");
+    const css = readSource("ui/src/index.css");
+    const en = readSource("ui/src/i18n/en.json");
+    const ko = readSource("ui/src/i18n/ko.json");
+    assert.match(canvas, /createBlankCanvasFile/);
+    assert.match(canvas, /await importLocalImageToHistory\(file\)/);
+    assert.match(canvas, /if \(item\) openCanvas\(\)/);
+    assert.match(canvas, /\) : !currentImage \? \(/);
+    assert.match(canvas, /canvas__blank-entry/);
+    assert.match(canvas, /canvas\.blank\.create/);
+    assert.match(helper, /document\.createElement\("canvas"\)/);
+    assert.match(helper, /ctx\.fillStyle = "#ffffff"/);
+    assert.match(helper, /canvas\.toBlob/);
+    assert.match(helper, /new File\(\[blob\], BLANK_CANVAS_FILENAME/);
+    assert.match(css, /\.canvas__blank-entry/);
+    assert.match(css, /\.canvas__blank-sheet/);
+    assert.match(css, /\.canvas__blank-copy/);
+    assert.match(css, /\.canvas__blank-button/);
+    assert.match(en, /"blank": \{/);
+    assert.match(en, /"title": "Blank canvas"/);
+    assert.match(en, /"subtitle": "Sketch on white paper, then continue from it\."/);
+    assert.match(en, /"create": "Create blank canvas"/);
+    assert.match(en, /"creating": "Creating\.\.\."/);
+    assert.match(en, /"failed": "Could not create blank canvas"/);
+    assert.match(ko, /"blank": \{/);
+    assert.match(ko, /"title": "흰 캔버스"/);
+    assert.match(ko, /"subtitle": "흰 종이에 그린 뒤 여기서 이어가세요\."/);
+    assert.match(ko, /"create": "흰 캔버스 만들기"/);
+    assert.match(ko, /"creating": "만드는 중\.\.\."/);
+    assert.match(ko, /"failed": "흰 캔버스를 만들 수 없습니다"/);
+  });
+
   it("has canvas button in ResultActions", () => {
     const actions = readSource("ui/src/components/ResultActions.tsx");
     assert.match(actions, /canvasOpen/);

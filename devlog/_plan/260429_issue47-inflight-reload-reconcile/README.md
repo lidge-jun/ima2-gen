@@ -72,6 +72,37 @@ const local = get().inFlight.length > 0 ? get().inFlight : loadInFlight();
 This prevents pre-reconcile rendering while preserving request IDs and
 out-of-scope jobs during the first reconciliation pass.
 
+Polling must also restore server-only active jobs after terminal cleanup:
+
+```ts
+const nextIds = new Set(nextInflight.map((f) => f.id));
+for (const j of jobs) {
+  if (!nextIds.has(j.requestId)) {
+    nextInflight.push(toPersistedInFlightJob(j));
+    changed = true;
+  }
+}
+```
+
+This covers reload/abort races where one terminal job is removed from local UI
+state while other backend jobs keep streaming but no longer have matching local
+request IDs.
+
+Polling TTL pruning must not remove jobs that the server still reports as
+active:
+
+```ts
+const scopedActiveServerIds = new Set(jobs.map((j) => j.requestId));
+const remaining = get().inFlight.filter(
+  (f) => scopedActiveServerIds.has(f.id) || now - f.startedAt < INFLIGHT_TTL_MS,
+);
+```
+
+This covers long-running backend streams where a server-only active job is older
+than the local UI TTL. Without this guard, each polling tick can re-add the
+server-active job and then immediately remove it, causing visible spinner
+flicker around `/api/history` refreshes.
+
 ### MODIFY - `config.ts`
 
 Before:
@@ -102,6 +133,8 @@ Add a source-level contract test that locks the reload behavior:
 - initial store state does not call loadInFlight() for activeGenerations;
 - initial store state does not call loadInFlight() for inFlight;
 - reconcileInflight() explicitly uses loadInFlight() as the first-pass local snapshot;
+- polling re-adds server-only active jobs after terminal cleanup;
+- polling TTL prune keeps server-active jobs even after the local TTL expires;
 - App.tsx still calls reconcileInflight() on mount.
 ```
 
@@ -110,6 +143,7 @@ Add a source-level contract test that locks the reload behavior:
 ```text
 - Reload no longer flashes stale local spinners before the first server reconcile.
 - Server-active jobs still restore through /api/inflight.
+- Long-running server-active jobs do not flicker out during polling TTL prune.
 - Terminal completion/error/cancel snapshots remain visible for 5 minutes by default.
 - Focused tests pass.
 - Typecheck passes.

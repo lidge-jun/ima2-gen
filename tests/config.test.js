@@ -65,6 +65,9 @@ test("config exposes default shape", () => {
   assert.equal(c.server.bodyLimit, "50mb");
   assert.equal(c.oauth.proxyPort, 10531);
   assert.equal(c.oauth.autoStart, true);
+  assert.equal(c.oauth.generationTimeoutMs, 400000);
+  assert.ok(c.oauth.researchSuffix.includes("If factual visual accuracy is required"));
+  assert.ok(c.oauth.researchSuffix.includes("pass the user's prompt through"));
   assert.equal(c.limits.maxRefCount, 5);
   assert.equal(c.history.defaultPageSize, 50);
   assert.equal(c.history.maxPageCap, 500);
@@ -91,6 +94,7 @@ test("env overrides win", () => {
   const c = loadConfig({
     IMA2_PORT: "4321",
     IMA2_OAUTH_PROXY_PORT: "20000",
+    IMA2_OAUTH_GENERATION_TIMEOUT_MS: "123456",
     IMA2_MAX_REF_COUNT: "7",
     IMA2_NO_OAUTH_PROXY: "1",
     IMA2_BODY_LIMIT: "10mb",
@@ -98,6 +102,7 @@ test("env overrides win", () => {
   });
   assert.equal(c.server.port, 4321);
   assert.equal(c.oauth.proxyPort, 20000);
+  assert.equal(c.oauth.generationTimeoutMs, 123456);
   assert.equal(c.limits.maxRefCount, 7);
   assert.equal(c.oauth.autoStart, false);
   assert.equal(c.server.bodyLimit, "10mb");

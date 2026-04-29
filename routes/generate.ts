@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
-import { validateAndNormalizeRefs } from "../lib/refs.js";
+import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
@@ -66,6 +66,7 @@ export function registerGenerateRoutes(app, ctx) {
       const moderationCheck = validateModeration(ctx, moderation);
       if (moderationCheck.error) return res.status(400).json({ error: moderationCheck.error });
       const count = Math.min(Math.max(parseInt(n) || 1, 1), 8);
+      const referencePayload = summarizeReferencePayload(references);
 
       startJob({
         requestId,
@@ -80,6 +81,9 @@ export function registerGenerateRoutes(app, ctx) {
           model: imageModel,
           size,
           n: count,
+          refsCount: referencePayload.refsCount,
+          referenceBytes: referencePayload.referenceBytes,
+          referenceB64Chars: referencePayload.referenceB64Chars,
         },
       });
 
@@ -110,6 +114,7 @@ export function registerGenerateRoutes(app, ctx) {
         moderation,
         n: count,
         refs: refCheck.refs.length,
+        referenceBytes: referencePayload.referenceBytes,
         referenceMismatchCount,
         refDetectedMimes: [...new Set(referenceDiagnostics.map((ref) => ref.detectedMime).filter(Boolean))].join(","),
         refDeclaredMimes: [...new Set(referenceDiagnostics.map((ref) => ref.declaredMime).filter(Boolean))].join(","),

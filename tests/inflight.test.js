@@ -67,6 +67,20 @@ test("finishJob records canceled status for explicit cancellation", () => {
   assert.equal(terminal[0].status, "canceled");
 });
 
+test("active jobs expose reference diagnostics in metadata", () => {
+  startJob({
+    requestId: "req_refs",
+    kind: "classic",
+    prompt: "private prompt",
+    meta: { refsCount: 1, referenceBytes: 1234, referenceB64Chars: 1648 },
+  });
+
+  const [job] = listJobs({ kind: "classic" });
+  assert.equal(job.meta.refsCount, 1);
+  assert.equal(job.meta.referenceBytes, 1234);
+  assert.equal(job.meta.referenceB64Chars, 1648);
+});
+
 test("terminal jobs remain observable across a reload-debug window", () => {
   const realNow = Date.now;
   const startedAt = 1_777_400_000_000;

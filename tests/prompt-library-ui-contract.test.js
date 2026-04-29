@@ -113,6 +113,7 @@ describe("prompt library UI contract", () => {
     const composer = readSource("ui/src/components/PromptComposer.tsx");
     const sidebar = readSource("ui/src/components/Sidebar.tsx");
     const store = readSource("ui/src/store/useAppStore.ts");
+    const actions = readSource("ui/src/components/ResultActions.tsx");
     const css = readSource("ui/src/index.css");
     const en = JSON.parse(readSource("ui/src/i18n/en.json"));
     const ko = JSON.parse(readSource("ui/src/i18n/ko.json"));
@@ -140,6 +141,10 @@ describe("prompt library UI contract", () => {
     assert.match(composer, /className="composer__prompt-chip"/);
     assert.match(composer, /className="composer__prompt-chip-title"/);
     assert.match(composer, /removeInsertedPrompt\(item\.id\)/);
+    assert.match(actions, /insertPromptToComposer/);
+    assert.match(actions, /id:\s*CANVAS_MODE_PROMPT_ID/);
+    assert.match(actions, /name:\s*CANVAS_MODE_PROMPT_NAME/);
+    assert.match(actions, /text:\s*CANVAS_MODE_PROMPT_TEXT/);
     assert.match(sidebar, /rightPanelOpen/);
     assert.match(sidebar, /toggleRightPanel/);
 

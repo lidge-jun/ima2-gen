@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { detectImageMimeFromB64, validateAndNormalizeRefs } from "../lib/refs.ts";
+import { detectImageMimeFromB64, summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.ts";
 
 const VALID_B64 = "aGVsbG8=";
 
@@ -67,4 +67,12 @@ test("detectImageMimeFromB64 detects common image signatures", () => {
   assert.equal(detectImageMimeFromB64(Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString("base64")), "image/png");
   assert.equal(detectImageMimeFromB64(Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64")), "image/jpeg");
   assert.equal(detectImageMimeFromB64(Buffer.from("RIFFxxxxWEBP", "ascii").toString("base64")), "image/webp");
+});
+
+test("summarizeReferencePayload reports count and byte diagnostics without raw payload", () => {
+  const payload = summarizeReferencePayload([`data:image/png;base64,${VALID_B64}`, VALID_B64]);
+
+  assert.equal(payload.refsCount, 2);
+  assert.equal(payload.referenceB64Chars, VALID_B64.length * 2);
+  assert.equal(payload.referenceBytes, Buffer.from(VALID_B64, "base64").length * 2);
 });

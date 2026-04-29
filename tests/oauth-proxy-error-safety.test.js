@@ -94,6 +94,8 @@ test("generateViaOAuth labels reference inputs with detected MIME", async () => 
       }),
       /stop/,
     );
+    const body = JSON.parse(requestBody);
+    assert.equal(body.tool_choice, "required");
     assert.match(requestBody, /data:image\/jpeg;base64/);
     assert.doesNotMatch(requestBody, /data:image\/png;base64/);
   } finally {
@@ -129,6 +131,32 @@ test("editViaOAuth no-image stream preserves empty response metadata", async () 
         assert.equal(err.refsCount, 0);
         assert.equal(err.inputImageCount, 1);
         assert.equal(err.parentImagePresent, true);
+        return true;
+      },
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("generateViaOAuth times out a stalled image stream", async () => {
+  const server = createServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "text/event-stream" });
+    res.write("data: {\"type\":\"response.created\"}\n\n");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = server.address().port;
+
+  try {
+    await assert.rejects(
+      generateViaOAuth("safe test", "medium", "1024x1024", "low", [], "req_timeout", "auto", {
+        oauthUrl: `http://127.0.0.1:${port}`,
+        config: { oauth: { generationTimeoutMs: 25 } },
+      }),
+      (err) => {
+        assert.equal(err.message, "OAuth image generation timed out");
+        assert.equal(err.status, 504);
+        assert.equal(err.code, "OAUTH_IMAGE_TIMEOUT");
         return true;
       },
     );

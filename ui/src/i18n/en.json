@@ -218,6 +218,13 @@
     "open": "Open Canvas",
     "openAria": "Open image in canvas mode",
     "close": "Close Canvas",
+    "blank": {
+      "title": "Blank canvas",
+      "subtitle": "Sketch on white paper, then continue from it.",
+      "create": "Create blank canvas",
+      "creating": "Creating...",
+      "failed": "Could not create blank canvas"
+    },
     "drop": {
       "hint": "Drop image to add to gallery"
     },
