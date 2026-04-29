@@ -49,6 +49,9 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
   });
   const selectHistoryShortcutTarget = useAppStore((s) => s.selectHistoryShortcutTarget);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
+  const permanentlyDeleteHistoryItemByShortcut = useAppStore(
+    (s) => s.permanentlyDeleteHistoryItemByShortcut,
+  );
   const markGeneratedResultsSeen = useAppStore((s) => s.markGeneratedResultsSeen);
   const activeGenerations = useAppStore((s) => s.activeGenerations);
   const quality = useAppStore((s) => s.quality);
@@ -303,6 +306,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     handleCloseCanvas,
     selectHistoryShortcutTarget,
     trashHistoryItem,
+    permanentlyDeleteHistoryItemByShortcut,
     setCanvasZoom,
     resetCanvasZoom,
   });

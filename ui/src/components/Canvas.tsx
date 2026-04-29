@@ -51,6 +51,9 @@ export function Canvas() {
   });
   const selectHistoryShortcutTarget = useAppStore((s) => s.selectHistoryShortcutTarget);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
+  const permanentlyDeleteHistoryItemByShortcut = useAppStore(
+    (s) => s.permanentlyDeleteHistoryItemByShortcut,
+  );
   const markGeneratedResultsSeen = useAppStore((s) => s.markGeneratedResultsSeen);
   const activeGenerations = useAppStore((s) => s.activeGenerations);
   const quality = useAppStore((s) => s.quality);
@@ -69,10 +72,14 @@ export function Canvas() {
 
   const handleViewerKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
     if (event.key === "Delete" || event.key === "Backspace") {
-      if (event.shiftKey || !currentImage) return;
+      if (!currentImage) return;
       if (event.target !== event.currentTarget) return;
       if (isEditableTarget(event.target)) return;
       event.preventDefault();
+      if (event.shiftKey) {
+        void permanentlyDeleteHistoryItemByShortcut(currentImage);
+        return;
+      }
       void trashHistoryItem(currentImage);
       return;
     }

@@ -23,7 +23,8 @@ describe("gallery navigation UX contract", () => {
     assert.match(canvas, /event\.key !== "ArrowLeft"/);
     assert.match(canvas, /event\.key !== "Home"/);
     assert.match(canvas, /event\.key === "Delete" \|\| event\.key === "Backspace"/);
-    assert.match(canvas, /event\.shiftKey \|\| !currentImage/);
+    assert.match(canvas, /event\.shiftKey/);
+    assert.match(canvas, /permanentlyDeleteHistoryItemByShortcut\(currentImage\)/);
     assert.match(canvas, /trashHistoryItem\(currentImage\)/);
     assert.match(canvas, /event\.target !== event\.currentTarget/);
     assert.match(canvas, /tabIndex=\{0\}/);

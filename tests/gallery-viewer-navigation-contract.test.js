@@ -40,7 +40,9 @@ describe("gallery viewer focusless navigation contract", () => {
     assert.match(canvas, /onMouseDown=\{handleViewerMouseDown\}/);
     assert.match(canvas, /onKeyDown=\{handleViewerKeyDown\}/);
     assert.match(canvas, /event\.key === "Delete" \|\| event\.key === "Backspace"/);
-    assert.match(canvas, /event\.shiftKey \|\| !currentImage/);
+    assert.match(canvas, /event\.target !== event\.currentTarget/);
+    assert.match(canvas, /event\.shiftKey/);
+    assert.match(canvas, /permanentlyDeleteHistoryItemByShortcut\(currentImage\)/);
     assert.match(canvas, /trashHistoryItem\(currentImage\)/);
     assert.match(canvas, /selectHistoryShortcutTarget\("previous"\)/);
     assert.match(canvas, /selectHistoryShortcutTarget\("first"\)/);
@@ -49,15 +51,21 @@ describe("gallery viewer focusless navigation contract", () => {
     assert.match(css, /\.right-panel-backdrop\s*\{[\s\S]*?pointer-events:\s*none;/);
   });
 
-  it("keeps permanent delete click-only", () => {
+  it("keeps permanent delete explicit by click or focused Shift+Delete", () => {
     const resultActions = readSource("ui/src/components/ResultActions.tsx");
     const store = readSource("ui/src/store/useAppStore.ts");
     const hook = readSource("ui/src/hooks/useGalleryViewerNavigation.ts");
+    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvasShortcuts = readSource("ui/src/components/canvas-mode/useCanvasModeShortcuts.ts");
 
     assert.doesNotMatch(hook, /trashHistoryItem/);
     assert.match(resultActions, /onClick=\{\(\) => void trashHistoryItem\(actionImage\)\}/);
     assert.match(resultActions, /onClick=\{\(\) => void permanentlyDeleteHistoryItemByClick\(actionImage\)\}/);
     assert.match(resultActions, /result\.permanentDelete/);
+    assert.match(canvas, /event\.shiftKey[\s\S]*permanentlyDeleteHistoryItemByShortcut\(currentImage\)/);
+    assert.match(canvasShortcuts, /event\.shiftKey[\s\S]*permanentlyDeleteHistoryItemByShortcut\(currentImage\)/);
+    assert.match(canvasShortcuts, /event\.target !== event\.currentTarget/);
+    assert.match(store, /permanentlyDeleteHistoryItemByClick:\s*async \(item\) => \{[\s\S]*permanentlyDeleteHistoryItemByShortcut\(item\)/);
     assert.match(store, /window\.confirm\(t\("result\.permanentDeleteConfirm"/);
   });
 });

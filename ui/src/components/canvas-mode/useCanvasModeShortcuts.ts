@@ -11,6 +11,7 @@ interface UseCanvasModeShortcutsArgs {
   handleCloseCanvas: () => Promise<void>;
   selectHistoryShortcutTarget: (action: "previous" | "next" | "first" | "last") => void;
   trashHistoryItem: (item: GenerateItem) => Promise<void> | void;
+  permanentlyDeleteHistoryItemByShortcut: (item: GenerateItem) => Promise<void> | void;
   setCanvasZoom: (zoom: number) => void;
   resetCanvasZoom: () => void;
 }
@@ -24,6 +25,7 @@ export function useCanvasModeShortcuts({
   handleCloseCanvas,
   selectHistoryShortcutTarget,
   trashHistoryItem,
+  permanentlyDeleteHistoryItemByShortcut,
   setCanvasZoom,
   resetCanvasZoom,
 }: UseCanvasModeShortcutsArgs) {
@@ -152,8 +154,13 @@ export function useCanvasModeShortcuts({
     }
 
     if (event.key === "Delete" || event.key === "Backspace") {
-      if (event.shiftKey || !currentImage) return;
+      if (!currentImage) return;
+      if (event.target !== event.currentTarget) return;
       event.preventDefault();
+      if (event.shiftKey) {
+        void permanentlyDeleteHistoryItemByShortcut(currentImage);
+        return;
+      }
       void trashHistoryItem(currentImage);
       return;
     }
