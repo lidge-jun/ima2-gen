@@ -4,12 +4,12 @@ type Dict = Record<string, string>;
 
 const en: Dict = {
   // Base / meta
-  'meta.title': 'ima2-gen — Local Image Studio with Classic + Node Branching',
+  'meta.title': 'ima2-gen — Local Image Studio with Classic + Node + Canvas',
   'meta.desc':
-    'Generate images locally with Classic mode, then branch the ones you love in a Node graph — palette, framing, and copy variants without losing the parent.',
-  'meta.og.title': 'ima2-gen — Branch the images you love',
+    'Generate images locally with Classic mode, branch the ones you love in a Node graph, and clean them up in Canvas Mode.',
+  'meta.og.title': 'ima2-gen — Generate, branch, clean up',
   'meta.og.desc':
-    'A local image studio with Classic + Node-graph branching. Run it with npx, keep every frame on your machine.',
+    'A local image studio with Classic, Node-graph branching, multimode batches, and Canvas Mode cleanup. Run it with npx.',
 
   // Header
   'header.brand.aria': 'ima2-gen home',
@@ -22,38 +22,63 @@ const en: Dict = {
   'header.gh': 'GitHub ↗',
 
   // Hero
-  'hero.eyebrow': 'Local image studio · Classic + Node',
+  'hero.eyebrow': 'Local image studio · Classic + Node + Canvas',
   'hero.h1.line1': 'Branch the',
   'hero.h1.line2': 'images you',
   'hero.h1.em': 'love.',
   'hero.sub':
-    "An image studio for the way you actually iterate. Generate in Classic, fan out variations in a Node graph — palette, framing, copy — without losing the parent frame.",
+    "An image studio for the way you actually iterate. Generate in Classic, fan out variations in a Node graph, run multimode batches, then clean up the winning frame in Canvas Mode.",
   'hero.cta.cmd': 'npx ima2-gen serve',
   'hero.cross.lang': '한국어 README →',
   'hero.shot.alt':
     'ima2-gen Classic mode showing the prompt composer, generated image, model label, and result metadata.',
 
   // Two Workflows
-  'workflows.tag': '01 · Two ways to make',
+  'workflows.tag': '01 · Generate, branch, refine',
   'workflows.h.before': 'Two ways to make. ',
-  'workflows.h.em': 'One way to branch.',
+  'workflows.h.em': 'Canvas to refine.',
   'workflows.lede':
-    "Classic for one strong frame. Node for a tree of variations from a parent you locked in. Pick the workflow your idea wants.",
+    "Classic for one strong frame or a multimode batch. Node for a tree of variations from a parent you locked in. Canvas for cleanup before the next prompt.",
   'workflows.classic.label': 'Classic',
   'workflows.classic.h': 'One prompt, one strong frame.',
   'workflows.classic.body':
-    'Write, attach up to five references, generate. Iterate until it lands. Continue from any result.',
+    'Write, attach up to five references, generate one result or several multimode slots. Iterate until it lands. Continue from any result.',
   'workflows.classic.alt':
     'ima2-gen Classic mode with prompt composer, references, and a generated team portrait.',
   'workflows.node.label': 'Node',
   'workflows.node.h': 'One frame, ten directions.',
   'workflows.node.body':
-    'Lock a parent. Fan out children — palette, framing, copy. Compare side by side. Never lose the original.',
+    'Lock a parent. Fan out children — palette, framing, copy. Compare side by side. Running branches recover by request ID.',
   'workflows.node.alt':
     'ima2-gen Node mode with connected generated cards and per-node metadata.',
 
+  // Latest Capabilities
+  'latest.tag': '02 · New in the studio',
+  'latest.h.before': 'Batch, polish, ',
+  'latest.h.em': 'import.',
+  'latest.lede':
+    'Recent releases added multimode candidate slots, Canvas Mode cleanup tools, and prompt-library imports from files, GitHub folders, and curated sources.',
+  'latest.multimode.label': 'Multimode',
+  'latest.multimode.h': 'Four candidates from one prompt.',
+  'latest.multimode.body':
+    'Run a sequence from Classic mode, watch each slot progress, cancel when needed, and continue from the strongest result.',
+  'latest.multimode.alt':
+    'ima2-gen multimode sequence showing four generating slots and active job history.',
+  'latest.canvas.label': 'Canvas Mode',
+  'latest.canvas.h': 'Clean up the winning frame.',
+  'latest.canvas.body':
+    'Pan around a zoomed image, annotate target areas, clean backgrounds, and export transparent or matte-backed canvas versions.',
+  'latest.canvas.alt':
+    'ima2-gen Canvas Mode showing annotation marks, sticky note, zoom controls, and canvas toolbar.',
+  'latest.import.label': 'Prompt import',
+  'latest.import.h': 'Bring prompt packs in.',
+  'latest.import.body':
+    'Drag local files, preview GitHub folders, refresh curated sources, and index selected prompts into the built-in library.',
+  'latest.import.alt':
+    'ima2-gen prompt import dialog with local file drop, GitHub path input, curated sources, and discovered prompt results.',
+
   // Why Branch
-  'branch.tag': '02 · Branching as a workflow',
+  'branch.tag': '03 · Branching as a workflow',
   'branch.h.before': 'A good frame is a ',
   'branch.h.em': 'starting point.',
   'branch.lede':
@@ -69,7 +94,7 @@ const en: Dict = {
   'branch.s3.body': 'The parent stays. Children recover by request ID even after a refresh.',
 
   // Local & OAuth
-  'local.tag': '03 · Local & open',
+  'local.tag': '04 · Local & open',
   'local.h.before': 'Sign in. ',
   'local.h.em': 'Stay local.',
   'local.lede':
@@ -82,11 +107,11 @@ const en: Dict = {
     'ima2-gen Settings workspace showing OAuth active and an API key configured but disabled.',
 
   // Style & References
-  'style.tag': '04 · Visual memory',
-  'style.h.before': 'Capture the look. ',
-  'style.h.em': 'Reuse it everywhere.',
+  'style.tag': '05 · Canvas, style & references',
+  'style.h.before': 'Clean the frame. ',
+  'style.h.em': 'Keep the look.',
   'style.lede':
-    'Style sheets pin medium, composition, mood, palette, and negatives. References attach up to five inputs and persist across sessions.',
+    'Canvas Mode separates pan from selection, adds background cleanup, and exports alpha or matte-backed versions. Style sheets and references keep the visual direction reusable.',
   'style.shot.alt':
     'ima2-gen Style sheet editor with medium, composition, mood, subject, palette, and negative fields.',
   'style.field.medium': 'medium',
@@ -95,13 +120,15 @@ const en: Dict = {
   'style.field.subject': 'subject',
   'style.field.palette': 'palette',
   'style.field.negative': 'negative',
+  'style.field.canvas': 'canvas cleanup',
+  'style.field.alpha': 'alpha / matte export',
 
   // Install
-  'install.tag': '05 · Get going',
+  'install.tag': '06 · Get going',
   'install.h.before': 'One command. ',
   'install.h.em': 'Then iterate.',
   'install.lede': 'Run it with npx. Sign in once with Codex. Start branching.',
-  'install.badge.npm': 'npm v1.1.0',
+  'install.badge.npm': 'npm v1.1.8',
   'install.badge.node': 'Node ≥20',
   'install.badge.mit': 'MIT',
   'install.links.aria': 'Project links',
@@ -114,9 +141,9 @@ const en: Dict = {
   // FAQ — short list shown on landing
   'faq.tag': 'FAQ',
   'faq.more': 'See all FAQ →',
-  'faq.q1': 'When should I use Node mode?',
+  'faq.q1': 'When should I use Node mode or Canvas Mode?',
   'faq.a1':
-    'When you want to compare several directions from a result you like. Vary the prompt, framing, or palette per node while the original frame stays put. Children survive a page refresh — they recover by `request ID`.',
+    'Use Node mode to compare several directions from a result you like. Use Canvas Mode when the frame is close but needs targeted cleanup, background work, annotation, or alpha/matte export.',
   'faq.q2': 'Where do my images live?',
   'faq.a2':
     'Locally. Generated images and session logs live in your user-data folder. Inspect, sync, version — your call. Image files are not uploaded to a separate remote store.',
@@ -154,6 +181,12 @@ const en: Dict = {
   'faq.usage.q3': 'How does a Style sheet work?',
   'faq.usage.a3':
     'Save `medium`, `composition`, `mood`, `palette`, and `negative` cues into a sheet, then attach the sheet to any prompt. Style sheets persist across sessions, so you can reuse the same visual direction tomorrow.',
+  'faq.usage.q4': 'What is multimode?',
+  'faq.usage.a4':
+    'Multimode starts several Classic candidates from one prompt and shows slot-by-slot progress. You can stop a run, inspect partial results, and continue from the best image.',
+  'faq.usage.q5': 'Can I import prompts from GitHub?',
+  'faq.usage.a5':
+    'Yes. The prompt library can import local prompt packs, GitHub folders, curated sources, and GPT-image hint packs, then index them locally for search and ranking.',
 
   'faq.tech.q1': 'What data leaves my machine?',
   'faq.tech.a1':
@@ -177,12 +210,12 @@ const en: Dict = {
 
 const ko: Dict = {
   // Base / meta
-  'meta.title': 'ima2-gen — 로컬 이미지 스튜디오, Classic + Node 분기',
+  'meta.title': 'ima2-gen — 로컬 이미지 스튜디오, Classic + Node + Canvas',
   'meta.desc':
-    'Classic으로 한 장을 빠르게, Node로 마음에 든 결과에서 여러 방향을 펼치는 로컬 이미지 스튜디오.',
-  'meta.og.title': 'ima2-gen — 마음에 든 한 장, 다음 컷은 바로 펼치기',
+    'Classic으로 만들고, Node로 분기하고, Canvas Mode로 정리하는 로컬 이미지 스튜디오.',
+  'meta.og.title': 'ima2-gen — 만들고, 분기하고, 정리하기',
   'meta.og.desc':
-    'Classic과 Node 분기 워크플로를 갖춘 로컬 이미지 스튜디오. npx 한 줄로 실행하고, 모든 결과는 내 컴퓨터에.',
+    'Classic, Node 분기, multimode batch, Canvas Mode cleanup을 갖춘 로컬 이미지 스튜디오. npx 한 줄로 시작합니다.',
 
   // Header
   'header.brand.aria': 'ima2-gen 홈',
@@ -195,38 +228,63 @@ const ko: Dict = {
   'header.gh': 'GitHub ↗',
 
   // Hero
-  'hero.eyebrow': '로컬 이미지 스튜디오 · Classic + Node',
+  'hero.eyebrow': '로컬 이미지 스튜디오 · Classic + Node + Canvas',
   'hero.h1.line1': '마음에 든 한 장,',
   'hero.h1.line2': '다음 컷은',
   'hero.h1.em': '바로 펼치기.',
   'hero.sub':
-    '한 장으로 끝나지 않는 작업을 위한 이미지 스튜디오. Classic에서 빠르게 한 장 완성하고, Node에서 색감·구도·카피 방향을 펼치세요. 원본은 그대로 남습니다.',
+    '한 장으로 끝나지 않는 작업을 위한 이미지 스튜디오. Classic에서 만들고, Node에서 방향을 펼치고, multimode로 후보를 빠르게 보고, Canvas Mode에서 결과를 정리하세요.',
   'hero.cta.cmd': 'npx ima2-gen serve',
   'hero.cross.lang': 'English landing →',
   'hero.shot.alt':
     'ima2-gen Classic 모드 — 프롬프트 컴포저, 생성 이미지, 모델 라벨, 결과 메타가 한 화면에.',
 
   // Two Workflows
-  'workflows.tag': '01 · 만드는 두 가지 방식',
+  'workflows.tag': '01 · 생성, 분기, 정리',
   'workflows.h.before': '만드는 방식은 두 가지. ',
-  'workflows.h.em': '이어가는 흐름은 하나.',
+  'workflows.h.em': '마무리는 Canvas.',
   'workflows.lede':
-    '빠르게 한 장이 필요하면 Classic. 마음에 든 결과에서 여러 방향을 보고 싶다면 Node. 작업 방식에 맞게 골라 쓰세요.',
+    '빠르게 한 장이나 여러 후보가 필요하면 Classic/multimode. 마음에 든 결과에서 여러 방향을 보고 싶다면 Node. 부분 정리는 Canvas Mode에서 이어갑니다.',
   'workflows.classic.label': 'Classic',
   'workflows.classic.h': '빠르게 한 장을 완성할 때.',
   'workflows.classic.body':
-    '프롬프트를 쓰고, 레퍼런스를 다섯 장까지 붙이고, 생성하세요. 만족할 때까지 반복하고, 어떤 결과에서든 이어 만들 수 있습니다.',
+    '프롬프트를 쓰고, 레퍼런스를 다섯 장까지 붙이고, 한 장 또는 multimode 후보 여러 장을 만드세요. 어떤 결과에서든 이어 만들 수 있습니다.',
   'workflows.classic.alt':
     'ima2-gen Classic 모드 — 프롬프트 컴포저, 레퍼런스, 생성된 인물 컷.',
   'workflows.node.label': 'Node',
   'workflows.node.h': '한 컷에서 여러 방향으로.',
   'workflows.node.body':
-    '기준이 될 한 장을 고정하고, 색감·구도·카피를 노드별로 펼치세요. 나란히 비교하면서 원본은 그대로 남깁니다.',
+    '기준이 될 한 장을 고정하고, 색감·구도·카피를 노드별로 펼치세요. 실행 중인 branch는 request ID 기준으로 복구됩니다.',
   'workflows.node.alt':
     'ima2-gen Node 모드 — 연결된 카드들과 노드별 메타.',
 
+  // Latest Capabilities
+  'latest.tag': '02 · 새로 들어온 작업 도구',
+  'latest.h.before': '여러 후보, 정리, ',
+  'latest.h.em': '가져오기.',
+  'latest.lede':
+    '최근 릴리스에는 multimode 후보 슬롯, Canvas Mode 정리 도구, 파일/GitHub/curated source 기반 prompt library import가 들어왔습니다.',
+  'latest.multimode.label': 'Multimode',
+  'latest.multimode.h': '하나의 프롬프트에서 네 후보.',
+  'latest.multimode.body':
+    'Classic에서 시퀀스를 실행하고, 슬롯별 진행을 보면서 필요하면 취소하고, 가장 좋은 결과에서 바로 이어갈 수 있습니다.',
+  'latest.multimode.alt':
+    'ima2-gen multimode sequence — 네 개 생성 슬롯과 진행 중 작업 히스토리.',
+  'latest.canvas.label': 'Canvas Mode',
+  'latest.canvas.h': '마음에 든 컷을 정리하기.',
+  'latest.canvas.body':
+    '확대된 이미지를 이동하고, 수정 지점을 표시하고, 배경을 정리한 뒤 투명 또는 matte-backed canvas version으로 export합니다.',
+  'latest.canvas.alt':
+    'ima2-gen Canvas Mode — annotation, sticky note, zoom control, canvas toolbar가 보이는 화면.',
+  'latest.import.label': 'Prompt import',
+  'latest.import.h': 'Prompt pack 가져오기.',
+  'latest.import.body':
+    '로컬 파일을 끌어오고, GitHub folder를 미리 보고, curated source를 갱신해 선택한 prompt를 내장 library에 index합니다.',
+  'latest.import.alt':
+    'ima2-gen prompt import dialog — 파일 drop, GitHub path 입력, curated source, 발견된 prompt 결과.',
+
   // Why Branch
-  'branch.tag': '02 · 분기, 그게 워크플로',
+  'branch.tag': '03 · 분기, 그게 워크플로',
   'branch.h.before': '마음에 든 한 장이 ',
   'branch.h.em': '다음 작업의 시작.',
   'branch.lede':
@@ -243,7 +301,7 @@ const ko: Dict = {
   'branch.s3.body': '새로고침해도 요청 기록을 기준으로 결과를 다시 불러옵니다.',
 
   // Local & OAuth
-  'local.tag': '03 · 로컬 & 오픈',
+  'local.tag': '04 · 로컬 & 오픈',
   'local.h.before': '로그인 한 번, ',
   'local.h.em': '저장은 내 컴퓨터.',
   'local.lede':
@@ -257,11 +315,11 @@ const ko: Dict = {
     'ima2-gen 설정 화면 — OAuth 활성, API key는 설정되어 있지만 비활성.',
 
   // Style & References
-  'style.tag': '04 · 비주얼 메모리',
-  'style.h.before': '한 번 잡은 룩, ',
-  'style.h.em': '어디서나 다시.',
+  'style.tag': '05 · Canvas, 스타일, 레퍼런스',
+  'style.h.before': '프레임은 정리하고, ',
+  'style.h.em': '룩은 유지하기.',
   'style.lede':
-    '스타일 시트에 매체, 구도, 분위기, 팔레트, 제외할 요소를 저장해 두세요. 레퍼런스는 다섯 장까지 붙이고 다음 작업에서도 이어 쓸 수 있습니다.',
+    'Canvas Mode는 화면 이동과 선택을 분리하고, 배경 정리와 alpha/matte export를 지원합니다. 스타일 시트와 레퍼런스는 다음 작업에서도 같은 방향을 유지하게 해줍니다.',
   'style.shot.alt':
     'ima2-gen 스타일 시트 에디터 — medium, composition, mood, subject, palette, negative 필드.',
   'style.field.medium': 'medium',
@@ -270,14 +328,16 @@ const ko: Dict = {
   'style.field.subject': 'subject',
   'style.field.palette': 'palette',
   'style.field.negative': 'negative',
+  'style.field.canvas': 'canvas cleanup',
+  'style.field.alpha': 'alpha / matte export',
 
   // Install
-  'install.tag': '05 · 시작하기',
+  'install.tag': '06 · 시작하기',
   'install.h.before': '한 줄로 실행하고, ',
   'install.h.em': '바로 반복하세요.',
   'install.lede':
     'npx로 열고, Codex로 로그인하세요. 마음에 드는 결과가 나오면 바로 다음 방향을 펼칠 수 있습니다.',
-  'install.badge.npm': 'npm v1.1.0',
+  'install.badge.npm': 'npm v1.1.8',
   'install.badge.node': 'Node ≥20',
   'install.badge.mit': 'MIT',
   'install.links.aria': '프로젝트 링크',
@@ -290,9 +350,9 @@ const ko: Dict = {
   // FAQ — 랜딩 짧은 목록
   'faq.tag': 'FAQ',
   'faq.more': '전체 FAQ 보기 →',
-  'faq.q1': 'Node 모드는 언제 쓰나요?',
+  'faq.q1': 'Node 모드와 Canvas Mode는 언제 쓰나요?',
   'faq.a1':
-    '마음에 든 결과에서 여러 방향을 비교하고 싶을 때 씁니다. 프롬프트, 구도, 색감을 노드별로 바꿔 보면서 원본은 그대로 남깁니다. 새로고침해도 `request ID`를 기준으로 결과를 다시 불러옵니다.',
+    '마음에 든 결과에서 여러 방향을 비교하려면 Node 모드를 씁니다. 이미지가 거의 맞지만 배경 정리, annotation, alpha/matte export 같은 부분 정리가 필요하면 Canvas Mode를 씁니다.',
   'faq.q2': '이미지는 어디 저장되나요?',
   'faq.a2':
     '로컬 사용자 데이터 폴더에 이미지와 작업 기록이 저장됩니다. 직접 확인, 동기화, 버전 관리까지 가능합니다. 이미지 파일을 별도 외부 저장소에 올리지 않습니다.',
@@ -330,6 +390,12 @@ const ko: Dict = {
   'faq.usage.q3': 'Style sheet은 어떻게 쓰나요?',
   'faq.usage.a3':
     '`매체`, `구도`, `분위기`, `팔레트`, `제외할 요소`를 시트로 묶어 두고 프롬프트에 붙여 쓰면 됩니다. 시트는 세션을 넘겨도 유지되므로 같은 룩을 다음 작업에서도 그대로 가져갈 수 있습니다.',
+  'faq.usage.q4': 'Multimode는 뭔가요?',
+  'faq.usage.a4':
+    '하나의 프롬프트에서 여러 Classic 후보를 동시에 시작하고 slot별 진행 상황을 보여주는 방식입니다. 중간에 멈추거나 partial 결과를 확인한 뒤 가장 좋은 이미지에서 이어갈 수 있습니다.',
+  'faq.usage.q5': 'GitHub에서 prompt를 가져올 수 있나요?',
+  'faq.usage.a5':
+    '가능합니다. Prompt library는 로컬 prompt pack, GitHub folder, curated source, GPT-image hint pack을 가져와 로컬 index에 저장하고 검색/ranking에 사용합니다.',
 
   'faq.tech.q1': '내 컴퓨터에서 어떤 데이터가 나가나요?',
   'faq.tech.a1':

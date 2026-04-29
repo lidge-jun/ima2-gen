@@ -1,0 +1,106 @@
+---
+import Screenshot from './Screenshot.astro';
+import { t, type Lang } from '../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const cards = [
+  {
+    label: 'latest.multimode.label',
+    title: 'latest.multimode.h',
+    body: 'latest.multimode.body',
+    src: 'screenshots/multimode-sequence.png',
+    alt: 'latest.multimode.alt',
+    aspect: '16/9',
+  },
+  {
+    label: 'latest.canvas.label',
+    title: 'latest.canvas.h',
+    body: 'latest.canvas.body',
+    src: 'screenshots/canvas-mode-cleanup.png',
+    alt: 'latest.canvas.alt',
+    aspect: '1/1',
+  },
+  {
+    label: 'latest.import.label',
+    title: 'latest.import.h',
+    body: 'latest.import.body',
+    src: 'screenshots/prompt-import-dialog.png',
+    alt: 'latest.import.alt',
+    aspect: '5/6',
+  },
+];
+---
+
+<section class="std latest-section" id="latest">
+  <div class="frame">
+    <div class="section-tag reveal">{t(lang, 'latest.tag')}</div>
+    <h2 class="h-section section-h reveal">
+      {t(lang, 'latest.h.before')}<span class="em">{t(lang, 'latest.h.em')}</span>
+    </h2>
+    <p class="section-lede reveal">{t(lang, 'latest.lede')}</p>
+    <div class="latest-grid">
+      {
+        cards.map((card) => (
+          <article class="latest-card reveal">
+            <Screenshot src={card.src} alt={t(lang, card.alt)} aspect={card.aspect} />
+            <div class="latest-copy">
+              <div class="label">{t(lang, card.label)}</div>
+              <h3>{t(lang, card.title)}</h3>
+              <p>{t(lang, card.body)}</p>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .latest-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+    align-items: stretch;
+  }
+  .latest-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .latest-card :global(.screenshot) {
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+  }
+  .latest-copy {
+    padding: 20px 20px 24px;
+  }
+  .latest-copy .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .latest-copy h3 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .latest-copy p {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 980px) {
+    .latest-grid { grid-template-columns: 1fr; }
+  }
+</style>

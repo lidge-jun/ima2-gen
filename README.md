@@ -10,7 +10,7 @@
 
 `ima2-gen` is a local image generation studio for people who want the ChatGPT/Codex image workflow in a small desktop-like web app.
 
-Run it with `npx`, sign in with Codex OAuth, type a prompt, and keep iterating with history, references, style sheets, and node branches. No OpenAI API key is required for image generation in the default path.
+Run it with `npx`, sign in with Codex OAuth, type a prompt, and keep iterating with history, references, style sheets, node branches, multimode batches, and Canvas Mode cleanup. No OpenAI API key is required for image generation in the default path.
 
 ![ima2-gen classic generation screen with prompt composer, generated image, compact model label, and result metadata.](assets/screenshots/classic-generate-light.png)
 
@@ -47,9 +47,13 @@ persists, reboot and run the update before starting ima2 again.
 
 - **Classic mode**: generate, edit, reuse the current image, paste references, and continue from history.
 - **Node mode**: branch a good image into multiple directions without losing the original.
+- **Multimode batches**: launch several Classic outputs from one prompt, watch slot-by-slot progress, and continue from the best result.
+- **Canvas Mode**: zoom, pan, annotate, erase, clean backgrounds, keep transparent previews, and export either alpha or matte-backed versions.
 - **Local gallery**: keep generated assets on your machine with session-aware history.
 - **Reference images**: drag, drop, paste, and attach up to 5 references; large images are compressed before upload.
+- **Prompt library imports**: import local prompt packs, GitHub folders, and curated GPT-image prompt hints into the built-in prompt library.
 - **Style sheets**: extract and reuse a visual direction across classic and node prompts.
+- **Mobile shell**: use the app bar, compose sheet, and compact settings toggle on smaller screens.
 - **Observable jobs**: active and recent jobs are tracked with safe logs and request IDs.
 
 ## OAuth Only For Image Generation
@@ -81,7 +85,10 @@ Use Classic when you want one strong result quickly.
 1. Write a prompt.
 2. Attach or paste references if needed.
 3. Pick model, quality, size, format, and moderation.
-4. Generate, copy, download, or continue from the result.
+4. Generate one image, or enable multimode to fan out several candidate slots from the same prompt.
+5. Copy, download, continue from the result, or send it into Canvas Mode.
+
+![Multimode sequence with four candidate slots generating from one prompt and active job history in the sidebar.](assets/screenshots/multimode-sequence.png)
 
 ### Node Mode
 
@@ -90,6 +97,24 @@ Use Node mode when you want to explore branches.
 ![Node mode with connected generated cards and compact per-node metadata.](assets/screenshots/node-graph-branching.png)
 
 Each node keeps its own prompt and result. Root nodes can attach local references; child nodes use the parent image as their source. Completed jobs are matched back to nodes by request ID, so reloads and graph version conflicts can recover finished results.
+
+### Canvas Mode
+
+Use Canvas Mode when a generated image is close but needs targeted cleanup before the next prompt.
+
+- Separate viewport panning from selection so you can move around a zoomed image without accidentally changing annotations.
+- Use annotation, eraser, multiselect, grouping, undo/redo, and sticky notes while keeping the original gallery image available.
+- Pick background-cleanup seeds, preview the mask, and save the cleanup as a canvas version.
+- Detect transparent images and show a checkerboard preview; export with preserved alpha or with a chosen matte color.
+- Saved canvas versions stay hidden from Gallery and HistoryStrip, but Canvas Mode can reuse them and attach a canvas version as the next reference.
+
+![Canvas Mode with zoom controls, annotation marks, a sticky note, and the canvas toolbar.](assets/screenshots/canvas-mode-cleanup.png)
+
+### Prompt Library And Imports
+
+The prompt library can now be filled from local files, GitHub folders, curated sources, and GPT-image hint packs. Imported prompts are indexed locally so search and ranking work without re-importing the same source every session.
+
+![Prompt import dialog with file drop, GitHub folder preview, curated sources, and discovered prompt results.](assets/screenshots/prompt-import-dialog.png)
 
 ### Experimental Card News Mode
 
@@ -223,11 +248,12 @@ git clone https://github.com/lidge-jun/ima2-gen.git
 cd ima2-gen
 npm install
 npm run dev
+npm run typecheck
 npm test
 npm run build
 ```
 
-`npm run dev` builds the UI and starts `server.js` with `--watch` and verbose server diagnostics. Node mode is part of the packaged UI by default.
+`npm run dev` builds the UI and starts the TypeScript server entry with `--watch` and verbose server diagnostics. `npm run typecheck`, `npm run build:server`, and `npm run build:cli` verify the TypeScript migration and package emit path. Node mode and Canvas Mode are part of the packaged UI by default.
 
 ## License
 
