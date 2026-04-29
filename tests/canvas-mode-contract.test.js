@@ -50,13 +50,15 @@ describe("canvas-mode contract", () => {
 
   it("creates a blank canvas through the local import path", () => {
     const canvas = readSource("ui/src/components/Canvas.tsx");
+    const hook = readSource("ui/src/hooks/useCreateBlankCanvas.ts");
     const helper = readSource("ui/src/lib/canvas/blankCanvas.ts");
     const css = readSource("ui/src/index.css");
     const en = readSource("ui/src/i18n/en.json");
     const ko = readSource("ui/src/i18n/ko.json");
-    assert.match(canvas, /createBlankCanvasFile/);
-    assert.match(canvas, /await importLocalImageToHistory\(file\)/);
-    assert.match(canvas, /if \(item\) openCanvas\(\)/);
+    assert.match(canvas, /useCreateBlankCanvas/);
+    assert.match(hook, /createBlankCanvasFile/);
+    assert.match(hook, /await importLocalImageToHistory\(file\)/);
+    assert.match(hook, /if \(item\) openCanvas\(\)/);
     assert.match(canvas, /\) : !currentImage \? \(/);
     assert.match(canvas, /canvas__blank-entry/);
     assert.match(canvas, /canvas\.blank\.create/);
@@ -80,6 +82,25 @@ describe("canvas-mode contract", () => {
     assert.match(ko, /"create": "흰 캔버스 만들기"/);
     assert.match(ko, /"creating": "만드는 중\.\.\."/);
     assert.match(ko, /"failed": "흰 캔버스를 만들 수 없습니다"/);
+  });
+
+  it("exposes Blank Canvas from Canvas Mode topbar and Shift+B", () => {
+    const workspace = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
+    const topbar = readSource("ui/src/components/canvas-mode/CanvasModeTopbar.tsx");
+    const shortcuts = readSource("ui/src/components/canvas-mode/useCanvasModeShortcuts.ts");
+    const css = readSource("ui/src/styles/canvas-mode.css");
+    assert.match(workspace, /useCreateBlankCanvas/);
+    assert.match(workspace, /blankCanvasShortcut="Shift\+B"/);
+    assert.match(workspace, /onCreateBlankCanvas=\{\(\) => void createBlankCanvas\(\)\}/);
+    assert.match(topbar, /canvas-mode-topbar__center/);
+    assert.match(topbar, /canvas-mode-blank/);
+    assert.match(topbar, /blankCanvasShortcut/);
+    assert.match(shortcuts, /event\.shiftKey/);
+    assert.match(shortcuts, /event\.key\.toLowerCase\(\) === "b"/);
+    assert.match(shortcuts, /isEditableTarget\(event\.target\)/);
+    assert.match(shortcuts, /onCreateBlankCanvas/);
+    assert.match(css, /\.canvas-mode-topbar__center/);
+    assert.match(css, /\.canvas-mode-blank/);
   });
 
   it("has canvas button in ResultActions", () => {

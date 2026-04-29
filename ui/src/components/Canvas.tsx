@@ -8,12 +8,12 @@ import {
   type MouseEvent,
 } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { useCreateBlankCanvas } from "../hooks/useCreateBlankCanvas";
 import { ResultActions } from "./ResultActions";
 import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
 import { useI18n } from "../i18n";
 import { isEditableTarget } from "../lib/domEvents";
 import { getImageModelShortLabel } from "../lib/imageModels";
-import { createBlankCanvasFile } from "../lib/canvas/blankCanvas";
 import type { GenerateItem } from "../types";
 
 const LazyCanvasModeWorkspace = lazy(() =>
@@ -64,7 +64,7 @@ export function Canvas() {
   const showToast = useAppStore((s) => s.showToast);
   const { t } = useI18n();
   const [dropActive, setDropActive] = useState(false);
-  const [creatingBlankCanvas, setCreatingBlankCanvas] = useState(false);
+  const { creatingBlankCanvas, createBlankCanvas } = useCreateBlankCanvas();
 
   const copyPrompt = (): void => {
     if (!currentImage?.prompt) return;
@@ -132,20 +132,6 @@ export function Canvas() {
     },
     [importLocalImageToHistory],
   );
-
-  const handleCreateBlankCanvas = useCallback(async (): Promise<void> => {
-    if (creatingBlankCanvas) return;
-    setCreatingBlankCanvas(true);
-    try {
-      const file = await createBlankCanvasFile();
-      const item = await importLocalImageToHistory(file);
-      if (item) openCanvas();
-    } catch {
-      showToast(t("canvas.blank.failed"), true);
-    } finally {
-      setCreatingBlankCanvas(false);
-    }
-  }, [creatingBlankCanvas, importLocalImageToHistory, openCanvas, showToast, t]);
 
   if (canvasOpen && currentImage) {
     return (
@@ -226,7 +212,7 @@ export function Canvas() {
           <button
             type="button"
             className="canvas__blank-button"
-            onClick={() => void handleCreateBlankCanvas()}
+            onClick={() => void createBlankCanvas()}
             disabled={creatingBlankCanvas}
           >
             {creatingBlankCanvas ? t("canvas.blank.creating") : t("canvas.blank.create")}

@@ -14,6 +14,8 @@ interface UseCanvasModeShortcutsArgs {
   permanentlyDeleteHistoryItemByShortcut: (item: GenerateItem) => Promise<void> | void;
   setCanvasZoom: (zoom: number) => void;
   resetCanvasZoom: () => void;
+  onCreateBlankCanvas: () => Promise<void> | void;
+  isCreatingBlankCanvas: boolean;
 }
 
 export function useCanvasModeShortcuts({
@@ -28,6 +30,8 @@ export function useCanvasModeShortcuts({
   permanentlyDeleteHistoryItemByShortcut,
   setCanvasZoom,
   resetCanvasZoom,
+  onCreateBlankCanvas,
+  isCreatingBlankCanvas,
 }: UseCanvasModeShortcutsArgs) {
   const [spaceHeld, setSpaceHeld] = useState(false);
 
@@ -89,6 +93,17 @@ export function useCanvasModeShortcuts({
         void handleCloseCanvas();
         return;
       }
+      if (
+        event.shiftKey &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "b"
+      ) {
+        event.preventDefault();
+        if (!isCreatingBlankCanvas && !event.repeat) void onCreateBlankCanvas();
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
         if (event.shiftKey) {
@@ -108,6 +123,8 @@ export function useCanvasModeShortcuts({
     annotations.undo,
     canvasOpen,
     handleCloseCanvas,
+    isCreatingBlankCanvas,
+    onCreateBlankCanvas,
     undoBackgroundCleanup,
   ]);
 

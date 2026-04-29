@@ -14,6 +14,7 @@ import { useI18n } from "../../i18n";
 import { isEditableTarget } from "../../lib/domEvents";
 import { getImageModelShortLabel } from "../../lib/imageModels";
 import type { GenerateItem } from "../../types";
+import { useCreateBlankCanvas } from "../../hooks/useCreateBlankCanvas";
 import {
   deleteCanvasAnnotations,
   fetchCanvasAnnotations,
@@ -81,6 +82,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
   const addGeneratedHistoryItem = useAppStore((s) => s.addGeneratedHistoryItem);
   const attachCanvasVersionReference = useAppStore((s) => s.attachCanvasVersionReference);
   const { t } = useI18n();
+  const { creatingBlankCanvas, createBlankCanvas } = useCreateBlankCanvas();
   const annotationFrameRef = useRef<HTMLDivElement>(null);
   const imageElementRef = useRef<HTMLImageElement>(null);
   const previousImageKeyRef = useRef<string | null>(null);
@@ -309,6 +311,8 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     permanentlyDeleteHistoryItemByShortcut,
     setCanvasZoom,
     resetCanvasZoom,
+    onCreateBlankCanvas: createBlankCanvas,
+    isCreatingBlankCanvas: creatingBlankCanvas,
   });
   const canDragViewportWithSelect =
     canvasOpen &&
@@ -351,10 +355,15 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
         <CanvasModeTopbar
           zoom={canvasZoom}
           closeLabel={t("canvas.close")}
+          blankCanvasLabel={t("canvas.blank.title")}
+          blankCanvasAriaLabel={`${creatingBlankCanvas ? t("canvas.blank.creating") : t("canvas.blank.create")} (Shift+B)`}
+          blankCanvasShortcut="Shift+B"
+          blankCanvasBusy={creatingBlankCanvas}
           shortcutHint={t("canvas.toolbar.zoomShortcutHint")}
           onZoomIn={() => setCanvasZoom(canvasZoom + 0.1)}
           onZoomOut={() => setCanvasZoom(canvasZoom - 0.1)}
           onZoomReset={resetCanvasZoom}
+          onCreateBlankCanvas={() => void createBlankCanvas()}
           onClose={() => void handleCloseCanvas()}
         />
       )}
