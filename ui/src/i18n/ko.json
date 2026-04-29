@@ -639,6 +639,7 @@
     "reasoning": {
       "title": "추론 강도",
       "body": "값이 높을수록 생성 전에 plan/검색/프롬프트 보강에 더 많은 reasoning 토큰을 사용합니다.",
+      "none": "Off — 추가 추론 없음",
       "low": "Low — 가장 빠름, 추론 최소",
       "medium": "Medium — 기본 균형값",
       "high": "High — 더 깊은 리서치와 통합",

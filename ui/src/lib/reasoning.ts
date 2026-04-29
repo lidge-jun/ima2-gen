@@ -1,6 +1,6 @@
-export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
+export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
 
-export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium";
+export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "none";
 export const REASONING_EFFORT_STORAGE_KEY = "ima2.reasoningEffort";
 
 export const REASONING_EFFORT_OPTIONS: Array<{
@@ -8,6 +8,7 @@ export const REASONING_EFFORT_OPTIONS: Array<{
   shortLabel: string;
   fullLabelKey: string;
 }> = [
+  { value: "none", shortLabel: "off", fullLabelKey: "settings.reasoning.none" },
   { value: "low", shortLabel: "low", fullLabelKey: "settings.reasoning.low" },
   { value: "medium", shortLabel: "med", fullLabelKey: "settings.reasoning.medium" },
   { value: "high", shortLabel: "high", fullLabelKey: "settings.reasoning.high" },

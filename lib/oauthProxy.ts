@@ -7,8 +7,8 @@ import { detectImageMimeFromB64, safeReferenceDiagnostics } from "./refs.js";
 
 const RESEARCH_SUFFIX = config.oauth.researchSuffix;
 
-const FALLBACK_REASONING_EFFORT = "medium";
-const VALID_REASONING_EFFORTS = new Set(["low", "medium", "high", "xhigh"]);
+const FALLBACK_REASONING_EFFORT = "none";
+const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
 
 function resolveReasoningEffort(ctx, options: any = {}) {
   const fromOptions = typeof options.reasoningEffort === "string" ? options.reasoningEffort : null;

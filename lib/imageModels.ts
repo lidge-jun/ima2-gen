@@ -1,8 +1,8 @@
 const FALLBACK_IMAGE_MODEL = "gpt-5.4-mini";
 const VALID_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]);
 const UNSUPPORTED_IMAGE_MODELS = new Set(["gpt-5.3-codex-spark"]);
-const FALLBACK_REASONING_EFFORT = "medium";
-const VALID_REASONING_EFFORTS = new Set(["low", "medium", "high", "xhigh"]);
+const FALLBACK_REASONING_EFFORT = "none";
+const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
 
 export function normalizeReasoningEffort(ctx, rawEffort) {
   const configured = ctx?.config?.imageModels;
@@ -14,7 +14,7 @@ export function normalizeReasoningEffort(ctx, rawEffort) {
   }
   if (!valid.has(rawEffort)) {
     return {
-      error: "reasoningEffort must be one of: low, medium, high, xhigh",
+      error: "reasoningEffort must be one of: none, low, medium, high, xhigh",
       code: "INVALID_REASONING_EFFORT",
       status: 400,
     };

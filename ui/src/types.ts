@@ -159,7 +159,7 @@ export type GenerateRequest = {
   provider: Provider;
   n: number;
   model?: ImageModel;
-  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
+  reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh";
   image?: string;
   mask?: string;
   references?: string[];

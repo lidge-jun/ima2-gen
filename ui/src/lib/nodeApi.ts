@@ -8,7 +8,7 @@ export type NodeGenerateRequest = {
   format: string;
   moderation: "low" | "auto";
   model?: ImageModel;
-  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
+  reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh";
   provider?: "oauth";
   mode?: "auto" | "direct";
   contextMode?: "parent-plus-refs" | "parent-only" | "ancestry";

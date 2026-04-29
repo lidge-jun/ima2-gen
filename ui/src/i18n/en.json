@@ -639,6 +639,7 @@
     "reasoning": {
       "title": "Reasoning effort",
       "body": "Higher effort spends more reasoning tokens on planning, web search, and prompt enrichment before generating.",
+      "none": "Off — no extra reasoning",
       "low": "Low — fastest, minimal reasoning",
       "medium": "Medium — balanced default",
       "high": "High — deeper research and synthesis",

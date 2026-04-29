@@ -243,7 +243,7 @@ export const config = {
       fileCfg.imageModels?.reasoningEffort,
       "medium",
     ),
-    validReasoningEfforts: new Set(["low", "medium", "high", "xhigh"]),
+    validReasoningEfforts: new Set(["none", "low", "medium", "high", "xhigh"]),
   },
   log: {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
