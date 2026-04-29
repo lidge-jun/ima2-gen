@@ -106,23 +106,6 @@ const en: Dict = {
   'local.shot.alt':
     'ima2-gen Settings workspace showing OAuth active and an API key configured but disabled.',
 
-  // Style & References
-  'style.tag': '05 · Canvas, style & references',
-  'style.h.before': 'Clean the frame. ',
-  'style.h.em': 'Keep the look.',
-  'style.lede':
-    'Canvas Mode separates pan from selection, adds background cleanup, and exports alpha or matte-backed versions. Style sheets and references keep the visual direction reusable.',
-  'style.shot.alt':
-    'ima2-gen Style sheet editor with medium, composition, mood, subject, palette, and negative fields.',
-  'style.field.medium': 'medium',
-  'style.field.composition': 'composition',
-  'style.field.mood': 'mood',
-  'style.field.subject': 'subject',
-  'style.field.palette': 'palette',
-  'style.field.negative': 'negative',
-  'style.field.canvas': 'canvas cleanup',
-  'style.field.alpha': 'alpha / matte export',
-
   // Install
   'install.tag': '06 · Get going',
   'install.h.before': 'One command. ',
@@ -315,23 +298,6 @@ const ko: Dict = {
   'local.meta': '로컬 저장 · MIT 라이선스 · 확인, 동기화, 버전 관리까지 원하는 방식으로.',
   'local.shot.alt':
     'ima2-gen 설정 화면 — OAuth 활성, API key는 설정되어 있지만 비활성.',
-
-  // Style & References
-  'style.tag': '05 · Canvas, 스타일, 레퍼런스',
-  'style.h.before': '프레임은 정리하고, ',
-  'style.h.em': '룩은 유지하기.',
-  'style.lede':
-    'Canvas Mode는 화면 이동과 선택을 분리하고, 배경 정리와 alpha/matte export를 지원합니다. 스타일 시트와 레퍼런스는 다음 작업에서도 같은 방향을 유지하게 해줍니다.',
-  'style.shot.alt':
-    'ima2-gen 스타일 시트 에디터 — medium, composition, mood, subject, palette, negative 필드.',
-  'style.field.medium': 'medium',
-  'style.field.composition': 'composition',
-  'style.field.mood': 'mood',
-  'style.field.subject': 'subject',
-  'style.field.palette': 'palette',
-  'style.field.negative': 'negative',
-  'style.field.canvas': 'canvas cleanup',
-  'style.field.alpha': 'alpha / matte export',
 
   // Install
   'install.tag': '06 · 시작하기',

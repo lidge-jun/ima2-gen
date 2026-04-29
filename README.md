@@ -10,7 +10,7 @@
 
 `ima2-gen` is a local image generation studio for people who want the ChatGPT/Codex image workflow in a small desktop-like web app.
 
-Run it with `npx`, sign in with Codex OAuth, type a prompt, and keep iterating with history, references, style sheets, node branches, multimode batches, and Canvas Mode cleanup. No OpenAI API key is required for image generation in the default path.
+Run it with `npx`, sign in with Codex OAuth, type a prompt, and keep iterating with history, references, node branches, multimode batches, and Canvas Mode cleanup. No OpenAI API key is required for image generation in the default path.
 
 ![ima2-gen classic generation screen with prompt composer, generated image, compact model label, and result metadata.](assets/screenshots/classic-generate-light.png)
 
@@ -52,7 +52,6 @@ persists, reboot and run the update before starting ima2 again.
 - **Local gallery**: keep generated assets on your machine with session-aware history.
 - **Reference images**: drag, drop, paste, and attach up to 5 references; large images are compressed before upload.
 - **Prompt library imports**: import local prompt packs, GitHub folders, and curated GPT-image prompt hints into the built-in prompt library.
-- **Style sheets**: extract and reuse a visual direction across classic and node prompts.
 - **Mobile shell**: use the app bar, compose sheet, and compact settings toggle on smaller screens.
 - **Observable jobs**: active and recent jobs are tracked with safe logs and request IDs.
 
@@ -60,7 +59,7 @@ persists, reboot and run the update before starting ima2 again.
 
 Image generation currently runs through the local Codex/ChatGPT OAuth path.
 
-API keys may still be detected for auxiliary developer features such as billing checks or style-sheet extraction, but generation routes reject `provider: "api"` with `APIKEY_DISABLED`.
+API keys may still be detected for auxiliary developer features such as billing checks, but generation routes reject `provider: "api"` with `APIKEY_DISABLED`.
 
 If the settings page says **Configured but disabled**, that means an API key exists in env/config but image generation still uses OAuth.
 
@@ -122,15 +121,11 @@ Card News is still dev-only and experimental. It is hidden in the default
 published runtime unless explicitly enabled for development, and it should not
 be treated as a stable public feature yet.
 
-### Settings And Style Sheets
+### Settings
 
 The settings workspace keeps account, model, appearance, and language controls away from the generation sidebar.
 
 ![Settings workspace with account navigation and generation model controls.](assets/screenshots/settings-workspace.png)
-
-Style sheets let you capture a reusable visual direction.
-
-![Style sheet editor with medium, composition, mood, subject, palette, and negative fields.](assets/screenshots/style-sheet-editor.png)
 
 ## CLI Commands
 
@@ -147,101 +142,31 @@ Style sheets let you capture a reusable visual direction.
 
 ### Client
 
-These require a running `ima2 serve`.
-
-#### Generation
+These require a running `ima2 serve`. The CLI covers every server route. The most common ones are below — the [full CLI reference](docs/CLI.md) lists everything (generation, history, sessions, prompt library, annotations, Card News, observability, config).
 
 | Command | Description |
 |---|---|
-| `ima2 gen <prompt>` | Generate from the CLI; supports `--reasoning-effort`, `--web-search` |
-| `ima2 edit <file> --prompt <text>` | Edit an existing image; supports `--reasoning-effort`, `--web-search` |
-| `ima2 multimode <prompt>` | Multi-image SSE generation (streams phase / partial / image events) |
-| `ima2 node generate` / `ima2 node show <id>` | Node-mode generate (SSE) and metadata read |
-
-#### History and metadata
-
-| Command | Description |
-|---|---|
+| `ima2 gen <prompt>` | Generate from the CLI |
+| `ima2 edit <file> --prompt <text>` | Edit an existing image |
+| `ima2 multimode <prompt>` | Multi-image SSE generation |
 | `ima2 ls [--session <id>] [--favorites]` | List recent history |
-| `ima2 show <name> [--metadata]` | Reveal a generated asset; optional embedded-metadata read |
-| `ima2 history rm <name> [--permanent]` | Soft-delete or permanently delete |
-| `ima2 history restore --trash-id <id>` | Restore from trash |
-| `ima2 history favorite <name>` | Toggle favorite |
-| `ima2 history import <file>` | Import a local image into history |
-| `ima2 metadata <file>` | Read embedded metadata from any local image |
-
-#### Sessions and graphs
-
-| Command | Description |
-|---|---|
-| `ima2 session ls / show / create / rm / rename` | Session CRUD |
-| `ima2 session graph save / load <id>` | Graph snapshot save/load (uses `If-Match`) |
-| `ima2 session style-sheet get / put / enable / disable / extract` | Style-sheet ops |
-
-#### Annotations and canvas
-
-| Command | Description |
-|---|---|
-| `ima2 annotate get / set / rm <name>` | Image annotation CRUD |
-| `ima2 canvas-versions save / update <name>` | Save/update raw canvas PNG versions |
-
-#### Prompt library
-
-| Command | Description |
-|---|---|
-| `ima2 prompt ls / show / create / edit / rm / favorite / export` | Prompt CRUD + export |
-| `ima2 prompt folder ls / create / rename / rm` | Prompt folder ops |
-| `ima2 prompt import sources / refresh / curated / discovery / folder` | Curated and discovery imports |
-
-#### Card News (requires `IMA2_CARD_NEWS=1`)
-
-| Command | Description |
-|---|---|
-| `ima2 cardnews templates / sets` | List image / role templates and card sets |
-| `ima2 cardnews template preview <id>` | Preview a template |
-| `ima2 cardnews set show / manifest <id>` | Show set or manifest |
-| `ima2 cardnews draft / generate / export [--data <json>]` | Pass-through body endpoints |
-| `ima2 cardnews job create / show / retry [--cards <ids>]` | Job lifecycle |
-| `ima2 cardnews card regenerate <id>` | Regenerate a single card |
-
-#### Observability and jobs
-
-| Command | Description |
-|---|---|
-| `ima2 ps` / `ima2 inflight ls` | List active jobs (alias) |
-| `ima2 cancel <id>` / `ima2 inflight rm <id>` | Mark/force-remove an in-flight job |
-| `ima2 storage status` | Storage inspection |
-| `ima2 storage open` | Open generated dir in OS file manager (POST) |
-| `ima2 billing` / `ima2 providers` / `ima2 oauth status` | Billing, providers, OAuth proxy state |
-
-#### Config
-
-| Command | Description |
-|---|---|
-| `ima2 config path` | Print the config file path |
-| `ima2 config ls [--effective]` | File layer (default) or merged effective config |
-| `ima2 config get <key>` | Read a dotted key (secrets are redacted) |
-| `ima2 config set <key> <value>` | Write to file layer; rejects auth keys; warns on env override |
-| `ima2 config rm <key>` | Remove a key from the file layer |
-
-#### Other
-
-| Command | Description |
-|---|---|
-| `ima2 comfy export <filename>` | Export a ComfyUI workflow |
+| `ima2 show <name> [--metadata]` | Reveal a generated asset |
+| `ima2 prompt ls -q <search>` | Search the prompt library |
+| `ima2 inflight ls [--terminal]` | List active and recent jobs (alias of `ps`) |
+| `ima2 config set <key> <value>` | Write to `~/.ima2/config.json` |
 | `ima2 ping` | Health-check the running server |
 
-The server advertises its actual port at `~/.ima2/server.json`. If `3333` is busy, the backend can fall back to `3334+` and CLI commands follow the advertised URL. Override discovery with `--server <url>` or `IMA2_SERVER=http://localhost:3333`.
+The server advertises its actual port at `~/.ima2/server.json`. If `3333` is busy, the backend falls back to `3334+` and CLI commands follow the advertised URL. Override discovery with `--server <url>` or `IMA2_SERVER=http://localhost:3333`.
 
 ```bash
-ima2 gen "poster" --model gpt-5.4 --mode direct --moderation low --reasoning-effort high
-ima2 edit input.png --prompt "make it rainy" --model gpt-5.4 --web-search
+ima2 gen "poster" --model gpt-5.4 --reasoning-effort high
+ima2 edit input.png --prompt "make it rainy" --web-search
 ima2 multimode "two cats playing" -n 2
-ima2 ls --session sess_abc --favorites
-ima2 prompt ls -q sunset
 ima2 inflight ls --terminal
 ima2 config set imageModels.reasoningEffort high
 ```
+
+Full reference: [docs/CLI.md](docs/CLI.md).
 
 ## Configuration
 
@@ -278,6 +203,7 @@ The endpoint list moved to [docs/API.md](docs/API.md) so this README can stay fo
 
 Useful references:
 
+- [CLI Reference](docs/CLI.md)
 - [API Reference](docs/API.md)
 - [FAQ](docs/FAQ.md)
 - [Recover old images](docs/RECOVER_OLD_IMAGES.md)
