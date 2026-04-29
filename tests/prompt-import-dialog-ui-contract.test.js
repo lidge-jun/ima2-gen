@@ -34,7 +34,9 @@ describe("prompt import dialog UI contract", () => {
     assert.match(api, /\/api\/prompts\/import\/commit/);
     assert.match(api, /\/api\/prompts\/import\/curated-search/);
     assert.match(css, /\.prompt-import-dialog__dropzone/);
-    assert.match(css, /\.prompt-import-dialog__candidate/);
+    assert.match(css, /\.prompt-import-dialog__workspace/);
+    assert.match(css, /\.prompt-import-dialog__results/);
+    assert.match(css, /\.prompt-import-dialog__candidate-preview/);
     assert.match(css, /\.prompt-import-dialog__curated/);
     assert.match(css, /\.prompt-import-dialog__hint-chip/);
   });
@@ -51,6 +53,17 @@ describe("prompt import dialog UI contract", () => {
       assert.equal(typeof dict.promptLibrary.importGithubLabel, "string");
       assert.equal(typeof dict.promptLibrary.importPreview, "string");
       assert.equal(typeof dict.promptLibrary.importCommit, "string");
+      assert.equal(typeof dict.promptLibrary.importSelected, "string");
+      assert.equal(typeof dict.promptLibrary.importThisPrompt, "string");
+      assert.equal(typeof dict.promptLibrary.previewPrompt, "string");
+      assert.equal(typeof dict.promptLibrary.selectPrompt, "string");
+      assert.equal(typeof dict.promptLibrary.selectedPrompt, "string");
+      assert.equal(typeof dict.promptLibrary.searchResults, "string");
+      assert.equal(typeof dict.promptLibrary.promptText, "string");
+      assert.equal(typeof dict.promptLibrary.sourceDetails, "string");
+      assert.equal(typeof dict.promptLibrary.license, "string");
+      assert.equal(typeof dict.promptLibrary.attributionRequired, "string");
+      assert.equal(typeof dict.promptLibrary.compatibilityWarnings, "string");
       assert.equal(typeof dict.promptLibrary.curatedSources, "string");
       assert.equal(typeof dict.promptLibrary.curatedSearch, "string");
       assert.match(dict.promptLibrary.importFiles, /\.markdown/);

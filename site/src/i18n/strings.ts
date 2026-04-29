@@ -73,9 +73,9 @@ const en: Dict = {
   'latest.import.label': 'Prompt import',
   'latest.import.h': 'Bring prompt packs in.',
   'latest.import.body':
-    'Drag local files, preview GitHub folders, refresh curated sources, and index selected prompts into the built-in library.',
+    'Use the import dialog to drop files, preview GitHub folders, refresh curated sources, and review searched candidates before adding selected prompts to the library.',
   'latest.import.alt':
-    'ima2-gen prompt import dialog with local file drop, GitHub path input, curated sources, and discovered prompt results.',
+    'ima2-gen prompt import dialog for reviewing GitHub folders, curated sources, and searched prompt candidates before import.',
 
   // Why Branch
   'branch.tag': '03 · Branching as a workflow',
@@ -281,9 +281,9 @@ const ko: Dict = {
   'latest.import.label': 'Prompt import',
   'latest.import.h': 'Prompt pack 가져오기.',
   'latest.import.body':
-    '로컬 파일을 끌어오고, GitHub 폴더를 미리 보며, 추천 소스(curated source)를 갱신하여 선택한 프롬프트를 내장 라이브러리에 저장합니다.',
+    '불러오기 다이얼로그에서 로컬 파일, GitHub 폴더, 추천 소스, 검색된 후보를 검토한 뒤 선택한 프롬프트만 라이브러리에 저장합니다.',
   'latest.import.alt':
-    'ima2-gen prompt import dialog — 파일 drop, GitHub path 입력, curated source, 발견된 prompt 결과.',
+    'ima2-gen 프롬프트 불러오기 다이얼로그 — GitHub 폴더, 추천 소스, 검색된 프롬프트 후보를 저장 전 검토하는 화면.',
 
   // Why Branch
   'branch.tag': '03 · 분기, 그게 워크플로',

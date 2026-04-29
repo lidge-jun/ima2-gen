@@ -4726,7 +4726,7 @@ body {
 }
 .prompt-import-dialog__panel {
   position: relative;
-  width: min(620px, calc(100vw - 24px));
+  width: min(920px, calc(100vw - 24px));
   max-height: min(760px, calc(100dvh - 24px));
   display: flex;
   flex-direction: column;
@@ -5043,6 +5043,154 @@ body {
   background: color-mix(in srgb, var(--red) 10%, var(--surface));
   font-size: 12px;
 }
+.prompt-import-dialog__workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  gap: 14px;
+  padding: 0 14px 14px;
+}
+.prompt-import-dialog__results,
+.prompt-import-dialog__candidate-preview {
+  min-height: 280px;
+  max-height: min(44vh, 520px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 86%, var(--surface));
+}
+.prompt-import-dialog__results {
+  display: grid;
+  align-content: start;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px;
+}
+.prompt-import-dialog__result-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.prompt-import-dialog__result-card.active {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.prompt-import-dialog__result-main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.prompt-import-dialog__result-main strong,
+.prompt-import-dialog__result-main span,
+.prompt-import-dialog__result-main small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.prompt-import-dialog__result-main strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.prompt-import-dialog__result-main span {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.prompt-import-dialog__result-main small {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.prompt-import-dialog__result-meta,
+.prompt-import-dialog__preview-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.prompt-import-dialog__result-meta em,
+.prompt-import-dialog__preview-chips em,
+.prompt-import-dialog__preview-chips b {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: var(--text-dim);
+  background: var(--bg);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+}
+.prompt-import-dialog__preview-chips b {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+}
+.prompt-import-dialog__result-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.prompt-import-dialog__result-actions label,
+.prompt-import-dialog__preview-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.prompt-import-dialog__candidate-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+.prompt-import-dialog__preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.prompt-import-dialog__preview-header span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.prompt-import-dialog__preview-header h4 {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.prompt-import-dialog__preview-field {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.prompt-import-dialog__preview-field strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.prompt-import-dialog__preview-field p {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.prompt-import-dialog__preview-field small {
+  color: var(--text-dim);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
 .prompt-import-dialog__preview {
   flex: 1;
   min-height: 130px;
@@ -5103,6 +5251,16 @@ body {
   font-size: 10px;
   font-weight: 500;
   background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+}
+@media (max-width: 760px) {
+  .prompt-import-dialog__workspace {
+    grid-template-columns: 1fr;
+  }
+  .prompt-import-dialog__results,
+  .prompt-import-dialog__candidate-preview {
+    min-height: 220px;
+    max-height: 32vh;
+  }
 }
 .prompt-library-row {
   padding: 10px 12px;

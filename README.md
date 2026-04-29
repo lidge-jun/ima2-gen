@@ -114,7 +114,7 @@ Use Canvas Mode when a generated image is close but needs targeted cleanup befor
 
 The prompt library can now be filled from local files, GitHub folders, curated sources, and GPT-image hint packs. Imported prompts are indexed locally so search and ranking work without re-importing the same source every session.
 
-![Prompt import dialog with file drop, GitHub folder preview, curated sources, and discovered prompt results.](assets/screenshots/prompt-import-dialog.png)
+![Prompt import dialog for bringing prompts into the library, showing GitHub folder controls, curated sources, and searched prompt candidates before import.](assets/screenshots/prompt-import-dialog.png)
 
 ### Experimental Card News Mode
 

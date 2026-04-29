@@ -10,6 +10,8 @@ import {
 } from "../lib/api";
 import { useI18n } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
+import { PromptImportCandidatePreview } from "./PromptImportCandidatePreview";
+import { PromptImportSearchResults } from "./PromptImportSearchResults";
 
 type PromptImportDialogProps = {
   open: boolean;
@@ -39,6 +41,7 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
   const [githubInput, setGithubInput] = useState("");
   const [candidates, setCandidates] = useState<PromptImportCandidate[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [activeCandidateId, setActiveCandidateId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -87,6 +90,7 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
         if (!known.has(candidate.id)) merged.push(candidate);
       }
       setSelected(new Set(merged.map((candidate) => candidate.id)));
+      setActiveCandidateId((current) => current ?? merged[0]?.id ?? null);
       return merged;
     });
   }, []);
@@ -170,8 +174,16 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
     [showToast, t],
   );
 
-  const commitSelected = useCallback(async () => {
-    const picked = candidates.filter((candidate) => selected.has(candidate.id));
+  const toggleCandidateSelected = useCallback((id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const commitCandidates = useCallback(async (picked: PromptImportCandidate[]) => {
     if (picked.length === 0) {
       setError(t("promptLibrary.importSelectAtLeastOne"));
       return;
@@ -188,7 +200,17 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
     } finally {
       setBusy(false);
     }
-  }, [candidates, onClose, onImported, selected, showToast, t]);
+  }, [onClose, onImported, showToast, t]);
+
+  const commitSelected = useCallback(async () => {
+    const picked = candidates.filter((candidate) => selected.has(candidate.id));
+    await commitCandidates(picked);
+  }, [candidates, commitCandidates, selected]);
+
+  const importOneCandidate = useCallback((candidate: PromptImportCandidate) => {
+    setSelected(new Set([candidate.id]));
+    void commitCandidates([candidate]);
+  }, [commitCandidates]);
 
   const handleFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -379,41 +401,29 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
 
         {error ? <div className="prompt-import-dialog__error" role="alert">{error}</div> : null}
 
-        <div className="prompt-import-dialog__preview" aria-live="polite">
-          {candidates.length === 0 ? (
-            <div className="prompt-import-dialog__empty">{t("promptLibrary.importPreviewEmpty")}</div>
-          ) : (
-            candidates.map((candidate) => (
-              <label key={candidate.id} className="prompt-import-dialog__candidate">
-                <input
-                  type="checkbox"
-                  checked={selected.has(candidate.id)}
-                  onChange={(event) => {
-                    setSelected((prev) => {
-                      const next = new Set(prev);
-                      if (event.target.checked) next.add(candidate.id);
-                      else next.delete(candidate.id);
-                      return next;
-                    });
-                  }}
-                />
-                <span>
-                  <strong>{candidate.name}</strong>
-                  <small>{candidate.text.slice(0, 180)}</small>
-                  {candidate.warnings?.length ? (
-                    <b className="prompt-import-dialog__hint-chip">{candidate.warnings[0]}</b>
-                  ) : null}
-                  {candidate.tags.length > 0 ? <em>{candidate.tags.join(" · ")}</em> : null}
-                </span>
-              </label>
-            ))
-          )}
+        <div className="prompt-import-dialog__workspace" aria-live="polite">
+          <PromptImportSearchResults
+            candidates={candidates}
+            selectedIds={selected}
+            activeCandidateId={activeCandidateId}
+            busy={busy}
+            onSelectCandidate={(candidate) => setActiveCandidateId(candidate.id)}
+            onToggleSelected={toggleCandidateSelected}
+            onImportOne={importOneCandidate}
+          />
+          <PromptImportCandidatePreview
+            candidate={candidates.find((candidate) => candidate.id === activeCandidateId) ?? null}
+            selected={activeCandidateId ? selected.has(activeCandidateId) : false}
+            disabled={busy}
+            onToggleSelected={toggleCandidateSelected}
+            onImportOne={importOneCandidate}
+          />
         </div>
 
         <div className="prompt-import-dialog__footer">
           <button type="button" onClick={onClose}>{t("common.cancel")}</button>
           <button type="button" onClick={() => void commitSelected()} disabled={busy || selected.size === 0}>
-            {busy ? t("common.loading") : t("promptLibrary.importCommit")}
+            {busy ? t("common.loading") : t("promptLibrary.importSelected", { count: selected.size })}
           </button>
         </div>
       </div>

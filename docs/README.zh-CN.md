@@ -109,7 +109,7 @@ Quality 支持 `low`, `medium`, `high`；moderation 支持 `auto`, `low`。
 
 Prompt library 可以从 local files、GitHub folders、curated sources 和 GPT-image hint packs 导入。导入后的 prompt 会写入本地 index，因此下次启动后仍可搜索和 ranking。
 
-![显示 file drop、GitHub folder preview、curated sources 和 discovered prompt results 的 prompt import dialog](../assets/screenshots/prompt-import-dialog.png)
+![导入到 prompt library 前用于查看 GitHub folder、curated sources 和搜索候选 prompt 的 prompt import dialog](../assets/screenshots/prompt-import-dialog.png)
 
 ### Experimental Card News Mode
 
