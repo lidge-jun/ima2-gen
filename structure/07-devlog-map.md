@@ -10,7 +10,7 @@ aliases: [ima2 devlog map, image_gen roadmap, devlog map]
 
 This map matters because plans from multiple eras coexist. `_plan/README.md` is the current source of truth for active lanes; there is no current `devlog/_plan/unified-roadmap.md` file. Completed implementation records live under `_fin/`, including the old 0.09 stabilization work, card-news, prompt-library import, ComfyUI bridge, Canvas Mode core phases, and recent Gallery/Canvas navigation fixes. Structure docs should follow the current code and active roadmap rather than stale plan folders.
 
-For planning work, read `_plan/README.md` first. As of 2026-04-29 the active lane is centered on the TypeScript migration gate, post-TS mobile/community UX plans (#37-#43), Canvas Intelligence issue subplans (#31/#27/#28), App Weight Reduction (`0.26` until CI is green), censorship-bypass research, and deferred future ops. Completed or duplicate plan folders should move out of `_plan` promptly.
+For planning work, read `_plan/README.md` first. As of 2026-04-29 the TypeScript migration gate has been merged to `main` and archived under `_fin/260429_typescript-migration`; GitHub #24 remains open only as observation tracking for strict-only cleanup and JS runtime artifact strategy. The active lane is centered on App Weight Reduction (`0.26` post-TS check, with Node/React Flow weight risk), post-TS mobile/community UX plans (#37-#43), Canvas Intelligence issue subplans (#31/#27/#28), censorship-bypass research, and deferred future ops. Completed or duplicate plan folders should move out of `_plan` promptly.
 
 ---
 
@@ -24,12 +24,12 @@ graph TD
     PLAN --> MOBILE["0.09.45..0.09.48<br/>mobile UX references"]
     PLAN --> UX["260429 issue37..43<br/>post-TS UX plans"]
     PLAN --> INTEL["0.25 canvas intelligence<br/>#31/#27/#28 subplans"]
-    PLAN --> PERF["0.26 app weight reduction<br/>until CI green"]
-    PLAN --> TS["typescript-migration<br/>active/risky"]
+    PLAN --> PERF["0.26 app weight reduction<br/>post-TS check"]
     PLAN --> RESEARCH["0.09.41<br/>censorship research"]
     PLAN --> FUTURE["0.99_future<br/>deferred ops"]
     PLAN --> ROAD["README<br/>current direction"]
     PLAN --> LEGACY["_legacy<br/>old phase plans"]
+    FIN --> TS_DONE["260429 typescript migration<br/>merged to main"]
 ```
 
 ## Current Reference Docs
@@ -54,10 +54,10 @@ graph TD
 | `devlog/_plan/0.25-canvas-intelligence/31-provider-masked-edit/` | planned/post-TS | #31 provider-backed masked edit capability gate. |
 | `devlog/_plan/0.25-canvas-intelligence/27-logo-vector-package/` | planned/post-TS | #27 Illustrator-style raster-to-vector asset package. |
 | `devlog/_plan/0.25-canvas-intelligence/28-layerdocument-pptx-reconstruction/` | planned/post-TS | #28 LayerDocument to PPTX reconstruction. |
-| `devlog/_plan/0.26-app-weight-reduction/` | active/check | #36 package/code-splitting/runtime perf; keep active until CI is green. |
-| `devlog/_plan/typescript-migration/` | active/risky | #24 TypeScript source migration and JS runtime/build strategy. |
+| `devlog/_plan/0.26-app-weight-reduction/` | active/check | #36 package/code-splitting/runtime perf; post-TS check should verify Node/React Flow code remains out of the default entry path. |
 | `devlog/_plan/0.99_future/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal |
 | `devlog/_plan/0.99_future/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal |
+| `devlog/_fin/260429_typescript-migration/` | archived/observe | #24 functional TypeScript migration merged to `main`; remaining strict-only cleanup is issue observation tracking, not an active folder. |
 | `devlog/_fin/260429_gallery_canvas_arrow_navigation_leak/` | archived | #35 Gallery/Canvas hidden canvasVersion navigation fix. |
 | `devlog/_fin/260426_0.22-gallery-navigation-ux/` | archived | Gallery navigation UX closeout |
 | `devlog/_fin/260427_0.09.33-upstream-validation-errors/` | archived | Upstream validation error normalization to `INVALID_REQUEST` with preserved diagnostics |
@@ -113,7 +113,8 @@ graph TD
 | 0.22 | Gallery navigation UX | Archived 260426 |
 | 0.23 | Prompt library | Archived 260428 |
 | 0.25 | Canvas intelligence | Active planning with #31/#27/#28 subplans |
-| 0.26 | App weight reduction | Active/check until CI green |
+| 0.26 | App weight reduction | Active/check after TS migration; verify Node/React Flow path remains lazy and default entry weight stays reduced |
+| TypeScript migration / #24 | Backend/CLI TypeScript source migration | Archived 260429; observe strict-only cleanup and JS runtime artifact strategy in the GitHub issue |
 | 0.09.19 | Security hardening | Deferred to `0.99_future` |
 | 0.09.20 (containerization) | Containerization | Deferred to `0.99_future` |
 | 0.10 | Feature expansion | Preset and compare MVP after current build is green |
@@ -165,6 +166,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-28: Refreshed the active lane to span `0.09.31`-`0.09.41`, the `0.20-card-news` and `0.23-prompt-library` feature tracks, and the `1.1.5-windows-open-folder-fix` patch lane. Added `_fin/260426_0.22-gallery-navigation-ux`, `_fin/260427_0.09.33-upstream-validation-errors`, and `_spikes/260425_image_creator_skill` to the reference tables. Updated the devlog structure diagram and roadmap summary for ima2-gen 1.1.5.
 - 2026-04-29: Refreshed active lane from actual `_plan` folders. Removed stale `unified-roadmap.md` references, marked completed 0.09.31-.40, 0.20, 0.23, 1.1.5 lanes archived, and added active mobile UX, Canvas Intelligence, App Weight Reduction, and TypeScript migration tracks.
 - 2026-04-29: Added Oracle browser `gpt-5-pro` post-TypeScript roadmap split. Created post-TS plan entries for #37-#43 and Canvas Intelligence subplans for #31/#27/#28, while leaving TypeScript migration untouched as the current gate.
+- 2026-04-29: Moved TypeScript migration to `_fin/260429_typescript-migration` after merge to `main`; #24 remains observation tracking for strict-only cleanup and JS runtime artifact strategy. Kept `0.26-app-weight-reduction` active for post-TS verification, especially Node/React Flow bundle weight.
 
 Previous document: `[[06-infra-operations]]`
 
