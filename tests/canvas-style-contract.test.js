@@ -73,7 +73,7 @@ describe("canvas annotation style contract", () => {
   });
 
   it("Canvas wires style + onStyleChange from hook", () => {
-    const src = readSource("ui/src/components/Canvas.tsx");
+    const src = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
     assert.match(src, /style=\{\{ color: annotations\.toolColor, strokeWidth: annotations\.strokeWidth \}\}/);
     assert.match(src, /onStyleChange=\{annotations\.setStyle\}/);
   });

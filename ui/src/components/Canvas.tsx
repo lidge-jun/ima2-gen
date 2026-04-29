@@ -1,15 +1,11 @@
 import {
   lazy,
   Suspense,
-  useEffect,
-  useRef,
-  useState,
   useCallback,
+  useState,
   type DragEvent as ReactDragEvent,
   type KeyboardEvent,
   type MouseEvent,
-  type PointerEvent,
-  type WheelEvent,
 } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ResultActions } from "./ResultActions";
@@ -17,79 +13,13 @@ import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
 import { useI18n } from "../i18n";
 import { isEditableTarget } from "../lib/domEvents";
 import { getImageModelShortLabel } from "../lib/imageModels";
-import type { GenerateItem, GenerateResponse } from "../types";
-import { isMultiResponse } from "../types";
-import {
-  createCanvasVersion,
-  deleteCanvasAnnotations,
-  fetchCanvasAnnotations,
-  postEdit,
-  saveCanvasAnnotations,
-  updateCanvasVersion,
-} from "../lib/api";
-import { useCanvasAnnotations } from "../hooks/useCanvasAnnotations";
-import { screenToNormalized } from "../lib/canvas/coordinates";
-import { renderMergedCanvasImage } from "../lib/canvas/mergeRenderer";
-import {
-  blobToDataUrl,
-  imageElementToPngDataUrl,
-  renderMaskFromBoxes,
-} from "../lib/canvas/maskRenderer";
-import {
-  findAnnotationsInBox,
-  hitTestAnnotation,
-  normalizeSelectionBox,
-} from "../lib/canvas/hitTest";
-import { objectKeyMatches } from "../lib/canvas/objectKeys";
-import {
-  downloadCanvasBlob,
-  exportCanvasImage,
-  makeCanvasExportFilename,
-} from "../lib/canvas/exportRenderer";
-import { imageUsesAlpha } from "../lib/canvas/alphaDetect";
-import {
-  getCornerBackgroundRemovalSeeds,
-  renderBackgroundRemovalMaskOverlay,
-  renderBackgroundRemovalPreview,
-  type BackgroundRemovalOverlayResult,
-  type BackgroundRemovalRenderResult,
-  type BackgroundRemovalStats,
-} from "../lib/canvas/backgroundRemoval";
-import type { NormalizedPoint } from "../types/canvas";
+import type { GenerateItem } from "../types";
 
-const LazyCanvasAnnotationLayer = lazy(() =>
-  import("./canvas-mode/CanvasAnnotationLayer").then((module) => ({
-    default: module.CanvasAnnotationLayer,
+const LazyCanvasModeWorkspace = lazy(() =>
+  import("./canvas-mode").then((module) => ({
+    default: module.CanvasModeWorkspace,
   })),
 );
-const LazyCanvasMemoOverlay = lazy(() =>
-  import("./canvas-mode/CanvasMemoOverlay").then((module) => ({ default: module.CanvasMemoOverlay })),
-);
-const LazyCanvasToolbar = lazy(() =>
-  import("./canvas-mode/CanvasToolbar").then((module) => ({ default: module.CanvasToolbar })),
-);
-const LazyCanvasViewportMiniMap = lazy(() =>
-  import("./canvas-mode/CanvasViewportMiniMap").then((module) => ({
-    default: module.CanvasViewportMiniMap,
-  })),
-);
-const LazyCanvasZoomControl = lazy(() =>
-  import("./canvas-mode/CanvasZoomControl").then((module) => ({ default: module.CanvasZoomControl })),
-);
-
-const OBJECT_ERASER_CURSOR =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='8' fill='white' fill-opacity='0.16' stroke='black' stroke-width='3'/%3E%3Ccircle cx='14' cy='14' r='8' fill='none' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='14' cy='14' r='2' fill='white' stroke='black' stroke-width='1'/%3E%3C/svg%3E\") 14 14, auto";
-const BRUSH_ERASER_CURSOR =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='8' fill='white' fill-opacity='0.18' stroke='black' stroke-width='3'/%3E%3Ccircle cx='14' cy='14' r='8' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E\") 14 14, auto";
-
-interface BackgroundCleanupSnapshot {
-  seeds: NormalizedPoint[];
-  tolerance: number;
-  preview: BackgroundRemovalRenderResult | null;
-  maskOverlay: BackgroundRemovalOverlayResult | null;
-  stats: BackgroundRemovalStats | null;
-  pickingSeed: boolean;
-}
 
 function formatQualityAlias(quality: string | null | undefined): string | null {
   if (quality === "low") return "l";
@@ -105,69 +35,16 @@ function formatSizeAlias(size: string | null | undefined): string | null {
   return size.replace("x", "×");
 }
 
-function getCanvasDisplaySrc(image: GenerateItem): string {
+function getClassicImageSrc(image: GenerateItem): string {
   const src = image.url ?? image.image;
   if (!image.canvasVersion || !image.canvasMergedAt || src.startsWith("data:")) return src;
   const separator = src.includes("?") ? "&" : "?";
   return `${src}${separator}canvasMergedAt=${image.canvasMergedAt}`;
 }
 
-function withSourcePrompt(item: GenerateItem, source: GenerateItem | null): GenerateItem {
-  if (!item.canvasVersion || item.prompt || !source?.prompt) return item;
-  return { ...item, prompt: source.prompt };
-}
-
-function findCanvasVersionForSource(history: GenerateItem[], source: GenerateItem | null): GenerateItem | null {
-  if (!source?.filename) return null;
-  const match = history.find((item) =>
-    item.canvasVersion &&
-    (item.canvasSourceFilename === source.filename || item.canvasEditableFilename === source.filename)
-  ) ?? null;
-  return match ? withSourcePrompt(match, source) : null;
-}
-
-function responseToGenerateItem(response: GenerateResponse, prompt: string): GenerateItem {
-  if (isMultiResponse(response)) {
-    const first = response.images[0];
-    if (!first) throw new Error("edit_empty_response");
-    return {
-      ...first,
-      prompt,
-      provider: response.provider,
-      quality: response.quality,
-      size: response.size,
-      moderation: response.moderation,
-      model: response.model,
-      usage: response.usage,
-      kind: "edit",
-      createdAt: Date.now(),
-    };
-  }
-  return {
-    image: response.image,
-    url: response.filename ? `/generated/${response.filename}` : response.image,
-    thumb: response.image,
-    filename: response.filename,
-    prompt,
-    elapsed: response.elapsed,
-    provider: response.provider,
-    quality: response.quality,
-    size: response.size,
-    moderation: response.moderation,
-    model: response.model,
-    usage: response.usage,
-    revisedPrompt: response.revisedPrompt ?? null,
-    promptMode: response.promptMode ?? null,
-    kind: "edit",
-    createdAt: Date.now(),
-  };
-}
-
 export function Canvas() {
   const currentImage = useAppStore((s) => s.currentImage);
-  const history = useAppStore((s) => s.history);
   const importLocalImageToHistory = useAppStore((s) => s.importLocalImageToHistory);
-  const [dropActive, setDropActive] = useState(false);
   const multimodeSequence = useAppStore((s) => {
     const id = s.multimodePreviewFlightId;
     return id ? s.multimodeSequences[id] ?? null : null;
@@ -177,339 +54,24 @@ export function Canvas() {
   const markGeneratedResultsSeen = useAppStore((s) => s.markGeneratedResultsSeen);
   const activeGenerations = useAppStore((s) => s.activeGenerations);
   const quality = useAppStore((s) => s.quality);
-  const format = useAppStore((s) => s.format);
-  const moderation = useAppStore((s) => s.moderation);
-  const provider = useAppStore((s) => s.provider);
-  const imageModel = useAppStore((s) => s.imageModel);
-  const reasoningEffort = useAppStore((s) => s.reasoningEffort);
-  const promptMode = useAppStore((s) => s.promptMode);
-  const webSearchEnabled = useAppStore((s) => s.webSearchEnabled);
   const getResolvedSize = useAppStore((s) => s.getResolvedSize);
-  const showToast = useAppStore((s) => s.showToast);
   const canvasOpen = useAppStore((s) => s.canvasOpen);
   const openCanvas = useAppStore((s) => s.openCanvas);
-  const closeCanvas = useAppStore((s) => s.closeCanvas);
-  const canvasZoom = useAppStore((s) => s.canvasZoom);
-  const canvasPanX = useAppStore((s) => s.canvasPanX);
-  const canvasPanY = useAppStore((s) => s.canvasPanY);
-  const setCanvasPan = useAppStore((s) => s.setCanvasPan);
-  const setCanvasZoom = useAppStore((s) => s.setCanvasZoom);
-  const resetCanvasZoom = useAppStore((s) => s.resetCanvasZoom);
-  const exportBackground = useAppStore((s) => s.canvasExportBackground);
-  const exportMatteColor = useAppStore((s) => s.canvasExportMatteColor);
-  const setExportBackground = useAppStore((s) => s.setCanvasExportBackground);
-  const setExportMatteColor = useAppStore((s) => s.setCanvasExportMatteColor);
-  const [imageHasAlpha, setImageHasAlpha] = useState(false);
-  const applyMergedCanvasImage = useAppStore((s) => s.applyMergedCanvasImage);
-  const addGeneratedHistoryItem = useAppStore((s) => s.addGeneratedHistoryItem);
-  const attachCanvasVersionReference = useAppStore((s) => s.attachCanvasVersionReference);
+  const showToast = useAppStore((s) => s.showToast);
   const { t } = useI18n();
-  const annotationFrameRef = useRef<HTMLDivElement>(null);
-  const imageElementRef = useRef<HTMLImageElement>(null);
-  const previousImageKeyRef = useRef<string | null>(null);
-  const loadedDraftKeyRef = useRef<string | null>(null);
-  const draftSaveTimerRef = useRef<number | null>(null);
-  const canvasSourceImageRef = useRef<GenerateItem | null>(null);
-  const lastMergedDataUrlRef = useRef<string | null>(null);
-  const selectionDragRef = useRef<{
-    mode: "move" | "box" | null;
-    lastPoint: NormalizedPoint | null;
-    didMove: boolean;
-  }>({ mode: null, lastPoint: null, didMove: false });
-  const viewportPanRef = useRef<{
-    active: boolean;
-    startX: number;
-    startY: number;
-    basePanX: number;
-    basePanY: number;
-    pointerId: number | null;
-  }>({ active: false, startX: 0, startY: 0, basePanX: 0, basePanY: 0, pointerId: null });
-  const [spaceHeld, setSpaceHeld] = useState(false);
-  const [viewportPanActive, setViewportPanActive] = useState(false);
-  const [canvasVersionItem, setCanvasVersionItem] = useState<GenerateItem | null>(null);
-  const [canvasSaveState, setCanvasSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [isApplying, setIsApplying] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isEditingWithMask, setIsEditingWithMask] = useState(false);
-  const [backgroundCleanupSeeds, setBackgroundCleanupSeeds] = useState<NormalizedPoint[]>([]);
-  const [backgroundCleanupTolerance, setBackgroundCleanupTolerance] = useState(28);
-  const [backgroundCleanupPreview, setBackgroundCleanupPreview] =
-    useState<BackgroundRemovalRenderResult | null>(null);
-  const [backgroundCleanupMaskOverlay, setBackgroundCleanupMaskOverlay] =
-    useState<BackgroundRemovalOverlayResult | null>(null);
-  const [backgroundCleanupStats, setBackgroundCleanupStats] =
-    useState<BackgroundRemovalStats | null>(null);
-  const [isBackgroundCleanupPickingSeed, setIsBackgroundCleanupPickingSeed] = useState(false);
-  const [isBackgroundCleanupPreviewing, setIsBackgroundCleanupPreviewing] = useState(false);
-  const [isBackgroundCleanupApplying, setIsBackgroundCleanupApplying] = useState(false);
-  const backgroundCleanupUndoRef = useRef<BackgroundCleanupSnapshot[]>([]);
-  const backgroundCleanupRenderSeqRef = useRef(0);
-  const backgroundCleanupToleranceTimerRef = useRef<number | null>(null);
-  const annotations = useCanvasAnnotations();
-  const canDragViewportWithSelect =
-    canvasOpen &&
-    canvasZoom > 1.01 &&
-    annotations.activeTool === "select" &&
-    !isBackgroundCleanupPickingSeed;
+  const [dropActive, setDropActive] = useState(false);
 
-  const copyPrompt = () => {
+  const copyPrompt = (): void => {
     if (!currentImage?.prompt) return;
     void navigator.clipboard.writeText(currentImage.prompt);
     showToast(t("toast.promptCopied"));
   };
 
-  const displayQuality = formatQualityAlias(currentImage?.quality ?? quality);
-  const displaySize = formatSizeAlias(currentImage?.size ?? getResolvedSize());
-  const displayModel = getImageModelShortLabel(currentImage?.model);
-  const imageKey = currentImage?.filename ?? currentImage?.url ?? currentImage?.image ?? null;
-  const latestCanvasVersion = findCanvasVersionForSource(history, currentImage);
-  const canvasDisplayImage = canvasOpen ? (canvasVersionItem ?? latestCanvasVersion ?? currentImage) : currentImage;
-  const baseImageSrc = canvasDisplayImage ? getCanvasDisplaySrc(canvasDisplayImage) : null;
-  const imageSrc = backgroundCleanupPreview?.dataUrl ?? baseImageSrc;
-
-  const resetBackgroundCleanup = () => {
-    backgroundCleanupRenderSeqRef.current += 1;
-    if (backgroundCleanupToleranceTimerRef.current != null) {
-      window.clearTimeout(backgroundCleanupToleranceTimerRef.current);
-      backgroundCleanupToleranceTimerRef.current = null;
-    }
-    setBackgroundCleanupSeeds([]);
-    setBackgroundCleanupPreview(null);
-    setBackgroundCleanupMaskOverlay(null);
-    setBackgroundCleanupStats(null);
-    setIsBackgroundCleanupPickingSeed(false);
-    setIsBackgroundCleanupPreviewing(false);
-    setIsBackgroundCleanupApplying(false);
-  };
-
-  const getBackgroundCleanupSnapshot = (): BackgroundCleanupSnapshot => ({
-    seeds: [...backgroundCleanupSeeds],
-    tolerance: backgroundCleanupTolerance,
-    preview: backgroundCleanupPreview,
-    maskOverlay: backgroundCleanupMaskOverlay,
-    stats: backgroundCleanupStats,
-    pickingSeed: isBackgroundCleanupPickingSeed,
-  });
-
-  const pushBackgroundCleanupUndo = (): void => {
-    backgroundCleanupUndoRef.current = [
-      ...backgroundCleanupUndoRef.current.slice(-19),
-      getBackgroundCleanupSnapshot(),
-    ];
-  };
-
-  const restoreBackgroundCleanupSnapshot = (snapshot: BackgroundCleanupSnapshot): void => {
-    setBackgroundCleanupSeeds(snapshot.seeds);
-    setBackgroundCleanupTolerance(snapshot.tolerance);
-    setBackgroundCleanupPreview(snapshot.preview);
-    setBackgroundCleanupMaskOverlay(snapshot.maskOverlay);
-    setBackgroundCleanupStats(snapshot.stats);
-    setIsBackgroundCleanupPickingSeed(snapshot.pickingSeed);
-    setIsBackgroundCleanupPreviewing(false);
-    setIsBackgroundCleanupApplying(false);
-  };
-
-  const undoBackgroundCleanup = (): boolean => {
-    const previous = backgroundCleanupUndoRef.current.pop();
-    if (!previous) return false;
-    restoreBackgroundCleanupSnapshot(previous);
-    return true;
-  };
-
-  const resetCanvasSession = () => {
-    canvasSourceImageRef.current = null;
-    loadedDraftKeyRef.current = null;
-    if (draftSaveTimerRef.current != null) {
-      window.clearTimeout(draftSaveTimerRef.current);
-      draftSaveTimerRef.current = null;
-    }
-    setCanvasVersionItem(null);
-    setCanvasSaveState("idle");
-    backgroundCleanupUndoRef.current = [];
-    resetBackgroundCleanup();
-    lastMergedDataUrlRef.current = null;
-    selectionDragRef.current = { mode: null, lastPoint: null, didMove: false };
-  };
-
-  useEffect(() => {
-    if (!canvasOpen) {
-      previousImageKeyRef.current = imageKey;
-      resetCanvasSession();
-      return;
-    }
-
-    if (previousImageKeyRef.current === null) {
-      previousImageKeyRef.current = imageKey;
-      canvasSourceImageRef.current = currentImage;
-      setCanvasVersionItem(latestCanvasVersion);
-      return;
-    }
-
-    if (previousImageKeyRef.current !== imageKey) {
-      annotations.resetLocal();
-      resetCanvasSession();
-      canvasSourceImageRef.current = currentImage;
-      setCanvasVersionItem(latestCanvasVersion);
-      previousImageKeyRef.current = imageKey;
-    }
-  }, [annotations.resetLocal, canvasOpen, currentImage, imageKey, latestCanvasVersion]);
-
-  useEffect(() => {
-    if (!canvasOpen || !currentImage || canvasSourceImageRef.current) return;
-    canvasSourceImageRef.current = currentImage;
-    setCanvasVersionItem(latestCanvasVersion);
-  }, [canvasOpen, currentImage, latestCanvasVersion]);
-
-  useEffect(() => {
-    if (!canvasOpen || !currentImage?.filename || currentImage.canvasVersion) return;
-    const filename = currentImage.filename;
-    if (loadedDraftKeyRef.current === filename) return;
-    loadedDraftKeyRef.current = filename;
-    let cancelled = false;
-    void fetchCanvasAnnotations(filename)
-      .then((res) => {
-        if (!cancelled && res.annotations) annotations.load(res.annotations);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [annotations.load, canvasOpen, currentImage?.canvasVersion, currentImage?.filename]);
-
-  useEffect(() => {
-    if (!canvasOpen) return;
-    const preventCanvasPinchDefault = (event: Event): void => {
-      event.preventDefault();
-    };
-    const preventCtrlWheelDefault = (event: globalThis.WheelEvent): void => {
-      if (event.ctrlKey) event.preventDefault();
-    };
-    const wheelOptions: AddEventListenerOptions = { passive: false, capture: true };
-    const gestureOptions: AddEventListenerOptions = { passive: false };
-    window.addEventListener("wheel", preventCtrlWheelDefault, wheelOptions);
-    window.addEventListener("gesturestart", preventCanvasPinchDefault, gestureOptions);
-    window.addEventListener("gesturechange", preventCanvasPinchDefault, gestureOptions);
-    window.addEventListener("gestureend", preventCanvasPinchDefault, gestureOptions);
-    return () => {
-      window.removeEventListener("wheel", preventCtrlWheelDefault, wheelOptions);
-      window.removeEventListener("gesturestart", preventCanvasPinchDefault, gestureOptions);
-      window.removeEventListener("gesturechange", preventCanvasPinchDefault, gestureOptions);
-      window.removeEventListener("gestureend", preventCanvasPinchDefault, gestureOptions);
-    };
-  }, [canvasOpen]);
-
-  useEffect(() => {
-    if (!canvasOpen) return;
-    const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      if (isEditableTarget(e.target)) return;
-      if (!spaceHeld) setSpaceHeld(true);
-      e.preventDefault();
-    };
-    const onKeyUp = (e: globalThis.KeyboardEvent) => {
-      if (e.code === "Space") setSpaceHeld(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, [canvasOpen, spaceHeld]);
-
-  useEffect(() => {
-    const node = imageElementRef.current;
-    if (!node || !canvasOpen) {
-      setImageHasAlpha(false);
-      return;
-    }
-    const detect = () => setImageHasAlpha(imageUsesAlpha(node));
-    if (node.complete) detect();
-    else {
-      node.addEventListener("load", detect);
-      return () => node.removeEventListener("load", detect);
-    }
-  }, [
-    canvasOpen,
-    canvasDisplayImage?.filename,
-    canvasDisplayImage?.url,
-    canvasDisplayImage?.image,
-    canvasDisplayImage?.canvasMergedAt,
-    backgroundCleanupPreview?.dataUrl,
-  ]);
-
-  useEffect(() => {
-    if (!canvasOpen || !currentImage?.filename || currentImage.canvasVersion) return;
-    if (!annotations.isDirty) return;
-    const filename = currentImage.filename;
-    if (draftSaveTimerRef.current != null) window.clearTimeout(draftSaveTimerRef.current);
-    draftSaveTimerRef.current = window.setTimeout(() => {
-      const payload = annotations.toPayload();
-      const request = annotations.hasAnnotations
-        ? saveCanvasAnnotations(filename, payload)
-        : deleteCanvasAnnotations(filename);
-      void request
-        .then(() => annotations.markSaved())
-        .catch(() => {});
-    }, 500);
-    return () => {
-      if (draftSaveTimerRef.current != null) {
-        window.clearTimeout(draftSaveTimerRef.current);
-        draftSaveTimerRef.current = null;
-      }
-    };
-  }, [
-    annotations,
-    annotations.hasAnnotations,
-    annotations.isDirty,
-    canvasOpen,
-    currentImage?.canvasVersion,
-    currentImage?.filename,
-  ]);
-
-  const handleViewerKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (isEditableTarget(event.target)) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        (event.target as HTMLElement).blur();
-        annotations.focusMemo(null);
-      }
-      return;
-    }
-
-    if (canvasOpen && ["1", "2", "3", "4", "5", "6"].includes(event.key)) {
-      event.preventDefault();
-      const tools = ["select", "pen", "box", "arrow", "memo", "eraser"] as const;
-      annotations.setTool(tools[Number(event.key) - 1]);
-      return;
-    }
-
-    if (canvasOpen && event.key === "Escape") {
-      event.preventDefault();
-      void handleCloseCanvas();
-      return;
-    }
-
-    if (canvasOpen && event.key === "]") {
-      event.preventDefault();
-      setCanvasZoom(canvasZoom + 0.1);
-      return;
-    }
-
-    if (canvasOpen && event.key === "[") {
-      event.preventDefault();
-      setCanvasZoom(canvasZoom - 0.1);
-      return;
-    }
-
-    if (canvasOpen && event.key === "0") {
-      event.preventDefault();
-      resetCanvasZoom();
-      return;
-    }
-
+  const handleViewerKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
     if (event.key === "Delete" || event.key === "Backspace") {
       if (event.shiftKey || !currentImage) return;
+      if (event.target !== event.currentTarget) return;
+      if (isEditableTarget(event.target)) return;
       event.preventDefault();
       void trashHistoryItem(currentImage);
       return;
@@ -531,55 +93,30 @@ export function Canvas() {
     else if (event.key === "End") selectHistoryShortcutTarget("last");
   };
 
-  const handleViewerMouseDown = (event: MouseEvent<HTMLElement>) => {
+  const handleViewerMouseDown = (event: MouseEvent<HTMLElement>): void => {
     if (isEditableTarget(event.target)) return;
     markGeneratedResultsSeen();
     event.currentTarget.focus();
   };
 
-  const handleViewerWheel = (event: WheelEvent<HTMLElement>) => {
-    if (!canvasOpen) return;
+  const handleCenterDragOver = useCallback((event: ReactDragEvent<HTMLElement>): void => {
+    if (!Array.from(event.dataTransfer.types).includes("Files")) return;
     event.preventDefault();
-    if (event.ctrlKey) {
-      setCanvasZoom(canvasZoom - event.deltaY * 0.01);
-      return;
-    }
-    setCanvasPan(canvasPanX - event.deltaX, canvasPanY - event.deltaY);
-  };
-
-  const startViewportPan = (
-    event: PointerEvent<HTMLDivElement>,
-  ): void => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    viewportPanRef.current = {
-      active: true,
-      startX: event.clientX,
-      startY: event.clientY,
-      basePanX: canvasPanX,
-      basePanY: canvasPanY,
-      pointerId: event.pointerId,
-    };
-    setViewportPanActive(true);
-  };
-
-  const handleCenterDragOver = useCallback((e: ReactDragEvent<HTMLElement>) => {
-    if (!Array.from(e.dataTransfer.types).includes("Files")) return;
-    e.preventDefault();
     setDropActive((prev) => (prev ? prev : true));
   }, []);
 
-  const handleCenterDragLeave = useCallback((e: ReactDragEvent<HTMLElement>) => {
-    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+  const handleCenterDragLeave = useCallback((event: ReactDragEvent<HTMLElement>): void => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
     setDropActive(false);
   }, []);
 
   const handleCenterDrop = useCallback(
-    async (e: ReactDragEvent<HTMLElement>) => {
-      if (!Array.from(e.dataTransfer.types).includes("Files")) return;
-      e.preventDefault();
+    async (event: ReactDragEvent<HTMLElement>): Promise<void> => {
+      if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+      event.preventDefault();
       setDropActive(false);
-      const files = Array.from(e.dataTransfer.files).filter((f) =>
-        /^image\/(png|jpeg|webp)$/.test(f.type),
+      const files = Array.from(event.dataTransfer.files).filter((file) =>
+        /^image\/(png|jpeg|webp)$/.test(file.type),
       );
       if (files.length === 0) return;
       await importLocalImageToHistory(files[0]);
@@ -587,496 +124,22 @@ export function Canvas() {
     [importLocalImageToHistory],
   );
 
-  const handleAnnotationPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!canvasOpen) return;
-    if (isEditableTarget(event.target)) return;
-    if (!annotationFrameRef.current) return;
-    const isMiddle = event.button === 1;
-    if (spaceHeld || isMiddle) {
-      event.preventDefault();
-      startViewportPan(event);
-      return;
-    }
-    event.preventDefault();
-    const point = screenToNormalized(event, annotationFrameRef.current);
-    if (isBackgroundCleanupPickingSeed) {
-      pushBackgroundCleanupUndo();
-      const nextSeeds = [...backgroundCleanupSeeds, point];
-      setBackgroundCleanupSeeds(nextSeeds);
-      setBackgroundCleanupPreview(null);
-      setBackgroundCleanupStats(null);
-      void runBackgroundCleanupMaskOverlay(nextSeeds);
-      return;
-    }
-    if (annotations.activeTool === "select") {
-      const hit = hitTestAnnotation({
-        point,
-        paths: annotations.paths,
-        boxes: annotations.boxes,
-        memos: annotations.memos,
-      });
-      if (hit) {
-        if (event.shiftKey) annotations.toggleSelected(hit);
-        else annotations.selectOne(hit);
-        annotations.startSelectedMove();
-        selectionDragRef.current = { mode: "move", lastPoint: point, didMove: false };
-      } else if (canDragViewportWithSelect) {
-        startViewportPan(event);
-        return;
-      } else {
-        annotations.clearSelection();
-        annotations.startSelectionBox(point);
-        selectionDragRef.current = { mode: "box", lastPoint: point, didMove: false };
-      }
-      event.currentTarget.setPointerCapture(event.pointerId);
-      return;
-    }
-    if (annotations.activeTool === "memo") {
-      annotations.createMemo(point);
-      requestAnimationFrame(() => {
-        annotationFrameRef.current
-          ?.querySelector<HTMLTextAreaElement>(".canvas-memo--active")
-          ?.focus();
-      });
-      return;
-    }
-    if (annotations.activeTool === "eraser") {
-      if (annotations.eraserMode === "object") {
-        const hit = hitTestAnnotation({
-          point,
-          paths: annotations.paths,
-          boxes: annotations.boxes,
-          memos: annotations.memos,
-        });
-        if (hit) annotations.eraseObjectAtPoint(hit);
-        return;
-      }
-      event.currentTarget.setPointerCapture(event.pointerId);
-      annotations.startEraserStroke(point);
-      return;
-    }
-    event.currentTarget.setPointerCapture(event.pointerId);
-    annotations.startDrawing(point);
-  };
+  if (canvasOpen && currentImage) {
+    return (
+      <Suspense fallback={<main className="canvas canvas--mode-open" aria-busy="true" />}>
+        <LazyCanvasModeWorkspace currentImage={currentImage} />
+      </Suspense>
+    );
+  }
 
-  const handleAnnotationPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!canvasOpen) return;
-    if (isEditableTarget(event.target)) return;
-    if (!annotationFrameRef.current) return;
-    if (viewportPanRef.current.active) {
-      const dx = event.clientX - viewportPanRef.current.startX;
-      const dy = event.clientY - viewportPanRef.current.startY;
-      setCanvasPan(
-        viewportPanRef.current.basePanX + dx,
-        viewportPanRef.current.basePanY + dy,
-      );
-      return;
-    }
-    const point = screenToNormalized(event, annotationFrameRef.current);
-    if (annotations.activeTool === "select") {
-      if (selectionDragRef.current.mode === "move" && selectionDragRef.current.lastPoint) {
-        const delta = {
-          x: point.x - selectionDragRef.current.lastPoint.x,
-          y: point.y - selectionDragRef.current.lastPoint.y,
-        };
-        if (Math.abs(delta.x) > 0.0005 || Math.abs(delta.y) > 0.0005) {
-          annotations.moveSelected(delta);
-          selectionDragRef.current.didMove = true;
-        }
-        selectionDragRef.current.lastPoint = point;
-      } else if (selectionDragRef.current.mode === "box") {
-        annotations.updateSelectionBox(point);
-      }
-      return;
-    }
-    if (annotations.activeTool === "memo") return;
-    if (annotations.activeTool === "eraser") {
-      if (annotations.eraserMode === "brush") annotations.updateEraserStroke(point);
-      return;
-    }
-    annotations.moveDrawing(point);
-  };
-
-  const handleAnnotationPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (!canvasOpen) return;
-    if (isEditableTarget(event.target)) return;
-    if (viewportPanRef.current.active && viewportPanRef.current.pointerId === event.pointerId) {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-      viewportPanRef.current = {
-        active: false,
-        startX: 0,
-        startY: 0,
-        basePanX: 0,
-        basePanY: 0,
-        pointerId: null,
-      };
-      setViewportPanActive(false);
-      return;
-    }
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    if (annotations.activeTool === "select") {
-      if (selectionDragRef.current.mode === "move" && selectionDragRef.current.didMove) {
-        annotations.commitSelectedMove();
-      }
-      if (selectionDragRef.current.mode === "box" && annotations.selectionBox) {
-        annotations.endSelectionBox(findAnnotationsInBox({
-          box: normalizeSelectionBox(annotations.selectionBox),
-          annotations: annotations.toPayload(),
-        }));
-      }
-      selectionDragRef.current = { mode: null, lastPoint: null, didMove: false };
-      return;
-    }
-    if (annotations.activeTool === "memo") return;
-    if (annotations.activeTool === "eraser") {
-      if (annotations.eraserMode === "brush") annotations.endEraserStroke();
-      return;
-    }
-    annotations.endDrawing();
-  };
-
-  const runBackgroundCleanupMaskOverlay = useCallback(async (
-    seeds: NormalizedPoint[] = backgroundCleanupSeeds,
-    tolerance: number = backgroundCleanupTolerance,
-  ): Promise<void> => {
-    if (!imageElementRef.current || !currentImage || seeds.length === 0) return;
-    const renderSeq = backgroundCleanupRenderSeqRef.current + 1;
-    backgroundCleanupRenderSeqRef.current = renderSeq;
-    setIsBackgroundCleanupPreviewing(true);
-    try {
-      const result = await renderBackgroundRemovalMaskOverlay({
-        imageElement: imageElementRef.current,
-        seeds,
-        tolerance,
-      });
-      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return;
-      setBackgroundCleanupMaskOverlay(result);
-      setBackgroundCleanupStats(result.stats);
-    } catch {
-      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return;
-      showToast(t("canvas.toolbar.cleanupFailed"), true);
-    } finally {
-      if (backgroundCleanupRenderSeqRef.current === renderSeq) {
-        setIsBackgroundCleanupPreviewing(false);
-      }
-    }
-  }, [
-    backgroundCleanupSeeds,
-    backgroundCleanupTolerance,
-    currentImage,
-    showToast,
-    t,
-  ]);
-
-  const runBackgroundCleanupPreview = useCallback(async (): Promise<BackgroundRemovalRenderResult | null> => {
-    if (!imageElementRef.current || !currentImage) return null;
-    pushBackgroundCleanupUndo();
-    const renderSeq = backgroundCleanupRenderSeqRef.current + 1;
-    backgroundCleanupRenderSeqRef.current = renderSeq;
-    const seeds = backgroundCleanupSeeds.length > 0
-      ? backgroundCleanupSeeds
-      : getCornerBackgroundRemovalSeeds();
-    if (backgroundCleanupSeeds.length === 0) setBackgroundCleanupSeeds(seeds);
-    setIsBackgroundCleanupPreviewing(true);
-    try {
-      const result = await renderBackgroundRemovalPreview({
-        imageElement: imageElementRef.current,
-        seeds,
-        tolerance: backgroundCleanupTolerance,
-      });
-      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return null;
-      setBackgroundCleanupPreview(result);
-      setBackgroundCleanupMaskOverlay(null);
-      setBackgroundCleanupStats(result.stats);
-      return result;
-    } catch {
-      if (backgroundCleanupRenderSeqRef.current !== renderSeq) return null;
-      showToast(t("canvas.toolbar.cleanupFailed"), true);
-      return null;
-    } finally {
-      if (backgroundCleanupRenderSeqRef.current === renderSeq) {
-        setIsBackgroundCleanupPreviewing(false);
-      }
-    }
-  }, [
-    backgroundCleanupSeeds,
-    backgroundCleanupTolerance,
-    currentImage,
-    showToast,
-    t,
-  ]);
-
-  const handleBackgroundCleanupAutoSample = (): void => {
-    pushBackgroundCleanupUndo();
-    const seeds = getCornerBackgroundRemovalSeeds();
-    setBackgroundCleanupSeeds(seeds);
-    setBackgroundCleanupPreview(null);
-    setBackgroundCleanupMaskOverlay(null);
-    setBackgroundCleanupStats(null);
-    setIsBackgroundCleanupPickingSeed(false);
-    void runBackgroundCleanupMaskOverlay(seeds);
-  };
-
-  const handleBackgroundCleanupPickSeed = (): void => {
-    pushBackgroundCleanupUndo();
-    setIsBackgroundCleanupPickingSeed((value) => !value);
-  };
-
-  const handleBackgroundCleanupToleranceChange = (value: number): void => {
-    pushBackgroundCleanupUndo();
-    if (backgroundCleanupToleranceTimerRef.current != null) {
-      window.clearTimeout(backgroundCleanupToleranceTimerRef.current);
-      backgroundCleanupToleranceTimerRef.current = null;
-    }
-    setBackgroundCleanupTolerance(value);
-    setBackgroundCleanupPreview(null);
-    setBackgroundCleanupMaskOverlay(null);
-    setBackgroundCleanupStats(null);
-    const seeds = [...backgroundCleanupSeeds];
-    if (seeds.length > 0) {
-      backgroundCleanupToleranceTimerRef.current = window.setTimeout(() => {
-        backgroundCleanupToleranceTimerRef.current = null;
-        void runBackgroundCleanupMaskOverlay(seeds, value);
-      }, 180);
-    }
-  };
-
-  const handleBackgroundCleanupReset = (): void => {
-    pushBackgroundCleanupUndo();
-    resetBackgroundCleanup();
-  };
-
-  const handleBackgroundCleanupApply = async (): Promise<void> => {
-    if (!currentImage || !imageElementRef.current) return;
-    const source = canvasSourceImageRef.current ?? currentImage;
-    if (!source?.filename) {
-      showToast(t("canvas.toolbar.cleanupFailed"), true);
-      return;
-    }
-    setIsBackgroundCleanupApplying(true);
-    setCanvasSaveState("saving");
-    try {
-      pushBackgroundCleanupUndo();
-      const result = await renderBackgroundRemovalPreview({
-        imageElement: imageElementRef.current,
-        seeds: backgroundCleanupSeeds.length > 0
-          ? backgroundCleanupSeeds
-          : getCornerBackgroundRemovalSeeds(),
-        tolerance: backgroundCleanupTolerance,
-      });
-      if (!result) {
-        setCanvasSaveState("error");
-        return;
-      }
-      const response = await createCanvasVersion({
-        sourceFilename: source.canvasSourceFilename ?? source.filename,
-        image: result.blob,
-        prompt: source.prompt,
-      });
-      const savedItem = withSourcePrompt(response.item, source);
-      lastMergedDataUrlRef.current = result.dataUrl;
-      setCanvasVersionItem(savedItem);
-      applyMergedCanvasImage(savedItem);
-      await attachCanvasVersionReference(savedItem);
-      setCanvasSaveState("saved");
-      setBackgroundCleanupPreview(null);
-      setBackgroundCleanupMaskOverlay(null);
-      setBackgroundCleanupStats(result.stats);
-      setIsBackgroundCleanupPickingSeed(false);
-      showToast(t("canvas.toolbar.cleanupApplied"));
-    } catch {
-      setCanvasSaveState("error");
-      showToast(t("canvas.toolbar.cleanupFailed"), true);
-    } finally {
-      setIsBackgroundCleanupApplying(false);
-    }
-  };
-
-  const saveCanvasVersionAndUseReference = useCallback(async (): Promise<GenerateItem | null> => {
-    if (!imageElementRef.current || !currentImage) return null;
-    const source = canvasSourceImageRef.current ?? currentImage;
-    if (!source?.filename) {
-      showToast(t("canvas.version.failed"), true);
-      return null;
-    }
-    setIsApplying(true);
-    setCanvasSaveState("saving");
-    try {
-      const merged = await renderMergedCanvasImage({
-        imageElement: imageElementRef.current,
-        paths: annotations.paths,
-        boxes: annotations.boxes,
-        memos: annotations.memos,
-      });
-      lastMergedDataUrlRef.current = merged.dataUrl;
-      const result = canvasVersionItem?.filename
-        ? await updateCanvasVersion(canvasVersionItem.filename, {
-            image: merged.blob,
-            sourceFilename: source.canvasSourceFilename ?? source.filename,
-            prompt: source.prompt,
-          })
-        : await createCanvasVersion({
-            sourceFilename: source.filename,
-            image: merged.blob,
-            prompt: source.prompt,
-          });
-      const savedItem = withSourcePrompt(result.item, source);
-      setCanvasVersionItem(savedItem);
-      applyMergedCanvasImage(savedItem);
-      await attachCanvasVersionReference(savedItem);
-      await deleteCanvasAnnotations(source.filename).catch(() => {});
-      annotations.resetLocal();
-      annotations.markSaved();
-      setCanvasSaveState("saved");
-      showToast(t("canvas.version.saved"));
-      return savedItem;
-    } catch {
-      setCanvasSaveState("error");
-      showToast(t("canvas.version.failed"), true);
-      return null;
-    } finally {
-      setIsApplying(false);
-    }
-  }, [
-    annotations,
-    applyMergedCanvasImage,
-    attachCanvasVersionReference,
-    canvasVersionItem?.filename,
-    currentImage,
-    showToast,
-    t,
-  ]);
-
-  const handleApplyCanvas = async (): Promise<void> => {
-    await saveCanvasVersionAndUseReference();
-  };
-
-  const handleCloseCanvas = async (): Promise<void> => {
-    if (annotations.hasAnnotations || annotations.isDirty) {
-      const saved = await saveCanvasVersionAndUseReference();
-      if (!saved) return;
-    }
-    closeCanvas();
-    resetCanvasSession();
-  };
-
-  useEffect(() => {
-    if (!canvasOpen) return;
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (isEditableTarget(event.target)) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          (event.target as HTMLElement).blur();
-          annotations.focusMemo(null);
-        }
-        return;
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        void handleCloseCanvas();
-        return;
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          annotations.redo();
-          return;
-        }
-        if (undoBackgroundCleanup()) return;
-        annotations.undo();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    annotations.focusMemo,
-    annotations.redo,
-    annotations.undo,
-    canvasOpen,
-    handleCloseCanvas,
-  ]);
-
-  const handleExportCanvas = async (): Promise<void> => {
-    if (!imageElementRef.current || !currentImage) return;
-    setIsExporting(true);
-    try {
-      const matte = exportBackground === "matte";
-      const blob = await exportCanvasImage({
-        imageElement: imageElementRef.current,
-        paths: annotations.paths,
-        boxes: annotations.boxes,
-        memos: annotations.memos,
-        background: matte
-          ? { mode: "matte", color: exportMatteColor }
-          : { mode: "alpha" },
-      });
-      downloadCanvasBlob(blob, makeCanvasExportFilename({ matte }));
-    } catch {
-      showToast(t("canvas.toolbar.exportFailed"), true);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleEditWithMask = async (): Promise<void> => {
-    if (!imageElementRef.current || !canvasDisplayImage || annotations.boxes.length === 0) return;
-    setIsEditingWithMask(true);
-    try {
-      let editImage = lastMergedDataUrlRef.current;
-      if (annotations.isDirty || annotations.hasAnnotations) {
-        const saved = await saveCanvasVersionAndUseReference();
-        if (!saved) return;
-        editImage = lastMergedDataUrlRef.current;
-      }
-      if (!editImage) editImage = await imageElementToPngDataUrl(imageElementRef.current);
-      const selectedBoxes = annotations.boxes.filter((box) =>
-        annotations.selectedIds.some((id) => objectKeyMatches(id, "box", box.id)),
-      );
-      const mask = await blobToDataUrl(await renderMaskFromBoxes({
-        imageElement: imageElementRef.current,
-        boxes: selectedBoxes.length > 0 ? selectedBoxes : annotations.boxes,
-      }));
-      const prompt = canvasDisplayImage.prompt ?? currentImage?.prompt ?? "";
-      if (!prompt.trim()) {
-        showToast(t("toast.noPromptToFork"), true);
-        return;
-      }
-      const response = await postEdit({
-        prompt,
-        image: editImage,
-        mask,
-        quality,
-        size: canvasDisplayImage.size ?? currentImage?.size ?? getResolvedSize(),
-        format,
-        moderation,
-        provider,
-        n: 1,
-        model: imageModel,
-        reasoningEffort,
-        mode: promptMode,
-        webSearchEnabled,
-      });
-      await addGeneratedHistoryItem(responseToGenerateItem(response, prompt));
-    } catch (err) {
-      const code = (err as { code?: string }).code;
-      showToast(
-        code === "EDIT_MASK_NOT_SUPPORTED"
-          ? t("canvas.toolbar.editMaskUnsupported")
-          : t("canvas.toolbar.editMaskFailed"),
-        true,
-      );
-    } finally {
-      setIsEditingWithMask(false);
-    }
-  };
+  const displayQuality = formatQualityAlias(currentImage?.quality ?? quality);
+  const displaySize = formatSizeAlias(currentImage?.size ?? getResolvedSize());
+  const displayModel = getImageModelShortLabel(currentImage?.model);
+  const imageSrc = currentImage ? getClassicImageSrc(currentImage) : null;
 
   return (
     <main
-      className={`canvas${canvasOpen ? " canvas--mode-open" : ""}${dropActive ? " canvas--drop-active" : ""}${spaceHeld ? " canvas--space-held" : ""}${viewportPanActive ? " canvas--pan-active" : ""}${canDragViewportWithSelect ? " canvas--zoom-hand" : ""}`}
+      className={`canvas${dropActive ? " canvas--drop-active" : ""}`}
       onDragOver={handleCenterDragOver}
       onDragLeave={handleCenterDragLeave}
       onDrop={handleCenterDrop}
@@ -1086,186 +149,29 @@ export function Canvas() {
           <span className="canvas__drop-hint">{t("canvas.drop.hint")}</span>
         </div>
       ) : null}
-      {canvasOpen && (
-        <div className="canvas-mode-topbar">
-          <div className="canvas-mode-topbar__stack">
-            <span className="canvas-mode-topbar__label">Canvas Mode</span>
-            <Suspense fallback={null}>
-              <LazyCanvasZoomControl
-                zoom={canvasZoom}
-                onZoomIn={() => setCanvasZoom(canvasZoom + 0.1)}
-                onZoomOut={() => setCanvasZoom(canvasZoom - 0.1)}
-                onZoomReset={resetCanvasZoom}
-              />
-            </Suspense>
-            <span className="canvas-mode-topbar__shortcuts">
-              {t("canvas.toolbar.zoomShortcutHint")}
-            </span>
-          </div>
-          <button
-            type="button"
-            className="canvas-mode-close"
-            onClick={() => void handleCloseCanvas()}
-            aria-label={t("canvas.close")}
-          >
-            <kbd>ESC</kbd>
-            <span>{t("canvas.close")}</span>
-          </button>
-        </div>
-      )}
       <div className={`progress-bar${activeGenerations > 0 ? " active" : ""}`} />
       {multimodeSequence ? (
         <MultimodeSequencePreview />
-      ) : currentImage ? (
+      ) : currentImage && imageSrc ? (
         <div
           className="result-container visible"
           tabIndex={0}
           onMouseDown={handleViewerMouseDown}
-          onWheel={handleViewerWheel}
           onKeyDown={handleViewerKeyDown}
           aria-label={t("canvas.imageViewerAria")}
         >
-          <div
-            ref={annotationFrameRef}
-            className={`canvas-annotation-frame${
-              (imageHasAlpha || backgroundCleanupPreview) && canvasOpen ? " canvas-annotation-frame--alpha" : ""
-            }${
-              isBackgroundCleanupPickingSeed && canvasOpen ? " canvas-annotation-frame--cleanup-picking" : ""
-            }${
-              backgroundCleanupMaskOverlay && canvasOpen ? " canvas-annotation-frame--cleanup-mask" : ""
-            }`}
-            onPointerDown={handleAnnotationPointerDown}
-            onPointerMove={handleAnnotationPointerMove}
-            onPointerUp={handleAnnotationPointerUp}
-            onPointerCancel={handleAnnotationPointerUp}
-            style={{
-              cursor: viewportPanActive
-                ? "grabbing"
-                : spaceHeld || canDragViewportWithSelect
-                  ? "grab"
-                  : canvasOpen
-                    ? isBackgroundCleanupPickingSeed
-                      ? "crosshair"
-                      : annotations.activeTool === "select"
-                      ? "default"
-                      : annotations.activeTool === "eraser"
-                        ? annotations.eraserMode === "object"
-                          ? OBJECT_ERASER_CURSOR
-                          : BRUSH_ERASER_CURSOR
-                        : "crosshair"
-                    : "zoom-in",
-              transform: canvasOpen
-                ? `translate(${canvasPanX}px, ${canvasPanY}px) scale(${canvasZoom})`
-                : undefined,
-              transition: canvasOpen && !viewportPanActive ? "transform 0.2s ease" : undefined,
-            }}
-          >
+          <div className="canvas-annotation-frame">
             <img
-              ref={imageElementRef}
               className="result-img"
-              key={`${canvasDisplayImage?.filename ?? canvasDisplayImage?.url ?? canvasDisplayImage?.image}:${canvasDisplayImage?.canvasMergedAt ?? ""}`}
-              src={imageSrc ?? currentImage.image}
+              key={`${currentImage.filename ?? currentImage.url ?? currentImage.image}:${currentImage.canvasMergedAt ?? ""}`}
+              src={imageSrc}
               alt={t("canvas.resultAlt")}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
+              onDoubleClick={(event) => {
+                event.stopPropagation();
                 openCanvas();
               }}
             />
-            {canvasOpen && backgroundCleanupMaskOverlay ? (
-              <img
-                className="canvas-background-cleanup-mask"
-                src={backgroundCleanupMaskOverlay.dataUrl}
-                alt=""
-                aria-hidden="true"
-              />
-            ) : null}
-            {canvasOpen && (
-              <Suspense fallback={null}>
-                <LazyCanvasAnnotationLayer
-                  paths={annotations.paths}
-                  boxes={annotations.boxes}
-                  memos={annotations.memos}
-                  selectedIds={annotations.selectedIds}
-                  selectionBox={annotations.selectionBox}
-                  activePath={annotations.activePath}
-                  activeBox={annotations.activeBox}
-                />
-                <LazyCanvasMemoOverlay
-                  memos={annotations.memos}
-                  activeMemoId={annotations.activeMemoId}
-                  onUpdate={annotations.updateMemo}
-                  onDelete={annotations.deleteMemo}
-                  onFocus={annotations.focusMemo}
-                  onCommit={annotations.commitMemoEdit}
-                />
-              </Suspense>
-            )}
           </div>
-          {canvasOpen && imageSrc ? (
-            <Suspense fallback={null}>
-              <LazyCanvasViewportMiniMap
-                imageSrc={imageSrc}
-                zoom={canvasZoom}
-                panX={canvasPanX}
-                panY={canvasPanY}
-                resetLabel={t("canvas.toolbar.zoomReset")}
-                onReset={resetCanvasZoom}
-              />
-            </Suspense>
-          ) : null}
-          {canvasOpen && (
-            <Suspense fallback={null}>
-              <LazyCanvasToolbar
-                activeTool={annotations.activeTool}
-                eraserMode={annotations.eraserMode}
-                onEraserModeChange={annotations.setEraserMode}
-                style={{ color: annotations.toolColor, strokeWidth: annotations.strokeWidth }}
-                onStyleChange={annotations.setStyle}
-                hasExportableContent={annotations.hasAnnotations}
-                onToolChange={annotations.setTool}
-                onClear={annotations.clear}
-                onApply={() => void handleApplyCanvas()}
-                onExport={() => void handleExportCanvas()}
-                onUndo={annotations.undo}
-                onRedo={annotations.redo}
-                canUndo={annotations.canUndo}
-                canRedo={annotations.canRedo}
-                onDeleteSelected={annotations.deleteSelected}
-                selectedCount={annotations.selectedIds.length}
-                onEditWithMask={() => void handleEditWithMask()}
-                canEditWithMask={annotations.boxes.length > 0}
-                isEditingWithMask={isEditingWithMask}
-                isApplying={isApplying}
-                isExporting={isExporting}
-                exportBackground={exportBackground}
-                exportMatteColor={exportMatteColor}
-                onExportBackgroundChange={setExportBackground}
-                onExportMatteColorChange={setExportMatteColor}
-                cleanupTolerance={backgroundCleanupTolerance}
-                cleanupSeedCount={backgroundCleanupSeeds.length}
-                cleanupStats={backgroundCleanupStats}
-                cleanupHasPreview={Boolean(backgroundCleanupPreview)}
-                isCleanupPickingSeed={isBackgroundCleanupPickingSeed}
-                isCleanupPreviewing={isBackgroundCleanupPreviewing}
-                isCleanupApplying={isBackgroundCleanupApplying}
-                onCleanupAutoSample={handleBackgroundCleanupAutoSample}
-                onCleanupPickSeed={handleBackgroundCleanupPickSeed}
-                onCleanupToleranceChange={handleBackgroundCleanupToleranceChange}
-                onCleanupPreview={() => void runBackgroundCleanupPreview()}
-                onCleanupApply={() => void handleBackgroundCleanupApply()}
-                onCleanupReset={handleBackgroundCleanupReset}
-              />
-            </Suspense>
-          )}
-          {canvasOpen && canvasSaveState !== "idle" ? (
-            <div className={`canvas-save-state canvas-save-state--${canvasSaveState}`}>
-              {canvasSaveState === "saving"
-                ? t("canvas.version.saving")
-                : canvasSaveState === "saved"
-                  ? t("canvas.version.saved")
-                  : t("canvas.version.failed")}
-            </div>
-          ) : null}
           <div className="result-meta">
             {[
               currentImage.elapsed != null ? `${currentImage.elapsed}s` : null,
@@ -1277,10 +183,10 @@ export function Canvas() {
               displayModel,
               currentImage.provider ?? null,
             ]
-              .filter((v): v is string => Boolean(v))
+              .filter((value): value is string => Boolean(value))
               .join(" · ")}
           </div>
-          <ResultActions imageOverride={canvasOpen ? canvasDisplayImage : null} />
+          <ResultActions />
           {currentImage.prompt ? (
             <div className="result-prompt" onClick={copyPrompt}>
               {currentImage.prompt}

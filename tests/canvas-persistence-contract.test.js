@@ -29,7 +29,10 @@ describe("canvas annotation persistence contract", () => {
   });
 
   it("loads source drafts and deletes them after baked save", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/useCanvasModeSession.ts",
+    ].map(readSource).join("\n");
     assert.match(canvas, /fetchCanvasAnnotations/);
     assert.match(canvas, /saveCanvasAnnotations/);
     assert.match(canvas, /deleteCanvasAnnotations/);

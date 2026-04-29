@@ -23,12 +23,15 @@ describe("canvas-mode contract", () => {
     assert.match(css, /\.canvas-mode-close/);
   });
 
-  it("has CanvasModeShell component", () => {
-    const shell = readSource("ui/src/components/canvas-mode/CanvasModeShell.tsx");
-    assert.match(shell, /export function CanvasModeShell/);
-    assert.match(shell, /canvasOpen/);
-    assert.match(shell, /closeCanvas/);
-    assert.match(shell, /Escape/);
+  it("has CanvasModeWorkspace behind the feature boundary", () => {
+    const featureIndex = readSource("ui/src/components/canvas-mode/index.ts");
+    const workspace = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
+    const shortcuts = readSource("ui/src/components/canvas-mode/useCanvasModeShortcuts.ts");
+    assert.match(featureIndex, /export \{ CanvasModeWorkspace \} from "\.\/CanvasModeWorkspace";/);
+    assert.match(workspace, /export function CanvasModeWorkspace/);
+    assert.match(workspace, /canvasOpen/);
+    assert.match(workspace, /handleCloseCanvas/);
+    assert.match(shortcuts, /Escape/);
   });
 
   it("has canvas state in store", () => {
@@ -53,7 +56,7 @@ describe("canvas-mode contract", () => {
   });
 
   it("applies canvas mode class to main canvas", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
     assert.match(canvas, /canvas--mode-open/);
   });
 

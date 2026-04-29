@@ -11,7 +11,11 @@ function readSource(path) {
 
 describe("canvas apply merged contract", () => {
   it("wires apply and export actions from Canvas", () => {
-    const source = readSource("ui/src/components/Canvas.tsx");
+    const source = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/CanvasModeStage.tsx",
+      "ui/src/components/canvas-mode/useCanvasModeSession.ts",
+    ].map(readSource).join("\n");
     assert.match(source, /handleApplyCanvas/);
     assert.match(source, /saveCanvasVersionAndUseReference/);
     assert.match(source, /renderMergedCanvasImage/);
@@ -30,7 +34,7 @@ describe("canvas apply merged contract", () => {
     assert.match(store, /s\.history\.some\(\(h\) => h\.filename === item\.filename\)/);
     assert.match(store, /\[item, \.\.\.s\.history\]/);
 
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = readSource("ui/src/components/canvas-mode/useCanvasModeSession.ts");
     assert.match(canvas, /createCanvasVersion/);
     assert.match(canvas, /updateCanvasVersion/);
     assert.match(canvas, /image: merged\.blob/);
@@ -39,7 +43,10 @@ describe("canvas apply merged contract", () => {
   });
 
   it("forces the canvas image element to show the saved version immediately", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/canvasModeHelpers.ts",
+    ].map(readSource).join("\n");
     assert.match(canvas, /getCanvasDisplaySrc/);
     assert.match(canvas, /findCanvasVersionForSource/);
     assert.match(canvas, /canvasDisplayImage = canvasOpen \? \(canvasVersionItem \?\? latestCanvasVersion \?\? currentImage\) : currentImage/);
@@ -52,7 +59,7 @@ describe("canvas apply merged contract", () => {
   it("keeps Continue Here on a compressed canvas reference path", () => {
     const actions = readSource("ui/src/components/ResultActions.tsx");
     const store = readSource("ui/src/store/useAppStore.ts");
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
     assert.match(actions, /imageOverride\?: GenerateItem \| null/);
     assert.match(actions, /const actionImage = imageOverride \?\? currentImage/);
     assert.match(actions, /useImageAsReference\(actionImage\)/);

@@ -46,7 +46,10 @@ describe("canvas annotation contract", () => {
   });
 
   it("wires annotation tools inside Canvas", () => {
-    const source = readSource("ui/src/components/Canvas.tsx");
+    const source = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/CanvasModeStage.tsx",
+    ].map(readSource).join("\n");
     assert.match(source, /CanvasToolbar/);
     assert.match(source, /CanvasAnnotationLayer/);
     assert.match(source, /onPointerDown/);
@@ -58,10 +61,13 @@ describe("canvas annotation contract", () => {
   });
 
   it("scales the image annotation frame instead of the image element", () => {
-    const source = readSource("ui/src/components/Canvas.tsx");
+    const source = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/CanvasModeStage.tsx",
+    ].map(readSource).join("\n");
     const frameIndex = source.indexOf("canvas-annotation-frame");
-    const layerIndex = source.indexOf("<LazyCanvasAnnotationLayer", frameIndex);
-    const toolbarIndex = source.indexOf("<LazyCanvasToolbar", frameIndex);
+    const layerIndex = source.indexOf("<CanvasAnnotationLayer", frameIndex);
+    const toolbarIndex = source.indexOf("<CanvasToolbar", frameIndex);
     const promptIndex = source.indexOf("result-prompt");
     const metaIndex = source.indexOf("result-meta");
     const actionsIndex = source.indexOf("<ResultActions");
@@ -79,7 +85,7 @@ describe("canvas annotation contract", () => {
   });
 
   it("resets temporary annotations when the current image changes", () => {
-    const source = readSource("ui/src/components/Canvas.tsx");
+    const source = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
     assert.match(source, /previousImageKeyRef/);
     assert.match(source, /currentImage\?\.filename \?\? currentImage\?\.url \?\? currentImage\?\.image/);
     assert.match(source, /annotations\.resetLocal\(\)/);

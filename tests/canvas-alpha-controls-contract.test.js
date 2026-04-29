@@ -10,7 +10,11 @@ const types = readFileSync(join(root, "ui/src/types/canvas.ts"), "utf8");
 const store = readFileSync(join(root, "ui/src/store/useAppStore.ts"), "utf8");
 const merge = readFileSync(join(root, "ui/src/lib/canvas/mergeRenderer.ts"), "utf8");
 const exportR = readFileSync(join(root, "ui/src/lib/canvas/exportRenderer.ts"), "utf8");
-const canvas = readFileSync(join(root, "ui/src/components/Canvas.tsx"), "utf8");
+const canvas = [
+  "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+  "ui/src/components/canvas-mode/useCanvasBackgroundCleanup.ts",
+  "ui/src/components/canvas-mode/useCanvasModeSession.ts",
+].map((path) => readFileSync(join(root, path), "utf8")).join("\n");
 const toolbar = readFileSync(join(root, "ui/src/components/canvas-mode/CanvasToolbar.tsx"), "utf8");
 const bgControl = readFileSync(join(root, "ui/src/components/canvas-mode/CanvasBackgroundControl.tsx"), "utf8");
 const css = readFileSync(join(root, "ui/src/styles/canvas-mode.css"), "utf8");

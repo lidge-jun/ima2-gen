@@ -12,7 +12,10 @@ function readSource(path) {
 describe("canvas selection contract", () => {
   it("keeps multi-select and delete scoped to canvas annotations", () => {
     const hook = readSource("ui/src/hooks/useCanvasAnnotations.ts");
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/useCanvasModePointerHandlers.ts",
+    ].map(readSource).join("\n");
     assert.match(hook, /selectedIds/);
     assert.match(hook, /selectOne/);
     assert.match(hook, /toggleSelected/);

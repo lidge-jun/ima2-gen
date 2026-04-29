@@ -49,7 +49,12 @@ describe("canvas eraser contract", () => {
   });
 
   it("routes shortcut 6 to eraser and keeps shortcut 7 unused", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/useCanvasModeShortcuts.ts",
+      "ui/src/components/canvas-mode/useCanvasModePointerHandlers.ts",
+      "ui/src/components/canvas-mode/canvasModeHelpers.ts",
+    ].map(readSource).join("\n");
     assert.match(canvas, /\["1", "2", "3", "4", "5", "6"\]/);
     assert.match(canvas, /\["select", "pen", "box", "arrow", "memo", "eraser"\]/);
     assert.doesNotMatch(canvas, /"7"/);

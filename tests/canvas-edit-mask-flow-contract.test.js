@@ -11,7 +11,7 @@ function readSource(path) {
 
 describe("canvas edit mask flow contract", () => {
   it("saves dirty canvas before masked edit and uses canvas context", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = readSource("ui/src/components/canvas-mode/useCanvasModeSession.ts");
     assert.match(canvas, /handleEditWithMask/);
     assert.match(canvas, /saveCanvasVersionAndUseReference/);
     assert.match(canvas, /lastMergedDataUrlRef/);
@@ -25,7 +25,7 @@ describe("canvas edit mask flow contract", () => {
   });
 
   it("wires toolbar mask edit affordance without changing default viewer policy", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
     const toolbar = readSource("ui/src/components/canvas-mode/CanvasToolbar.tsx");
     assert.match(canvas, /onEditWithMask=\{\(\) => void handleEditWithMask\(\)\}/);
     assert.match(canvas, /canEditWithMask=\{annotations\.boxes\.length > 0\}/);

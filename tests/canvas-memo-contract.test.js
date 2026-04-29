@@ -23,7 +23,7 @@ describe("canvas memo contract", () => {
 
   it("prevents memo text input from bubbling into drawing handlers", () => {
     const overlay = readSource("ui/src/components/canvas-mode/CanvasMemoOverlay.tsx");
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
     assert.match(overlay, /event\.stopPropagation\(\)/);
     assert.match(overlay, /onPointerDown=\{stopMemoPointer\}/);
     assert.match(overlay, /onPointerMove=\{stopMemoPointer\}/);
@@ -32,7 +32,7 @@ describe("canvas memo contract", () => {
   });
 
   it("guards keyboard shortcuts before tool switching and deletion", () => {
-    const source = readSource("ui/src/components/Canvas.tsx");
+    const source = readSource("ui/src/components/canvas-mode/useCanvasModeShortcuts.ts");
     const editableIndex = source.indexOf("if (isEditableTarget(event.target))");
     const shortcutIndex = source.indexOf('["1", "2", "3", "4", "5", "6"]');
     const deleteIndex = source.indexOf('event.key === "Delete"');

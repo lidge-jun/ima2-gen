@@ -1,0 +1,92 @@
+import type { CSSProperties, PointerEventHandler, RefObject } from "react";
+import { CanvasAnnotationLayer } from "./CanvasAnnotationLayer";
+import { CanvasMemoOverlay } from "./CanvasMemoOverlay";
+
+interface CanvasModeStageProps {
+  annotationFrameRef: RefObject<HTMLDivElement | null>;
+  imageElementRef: RefObject<HTMLImageElement | null>;
+  frameClassName: string;
+  frameStyle: CSSProperties;
+  imageKey: string;
+  imageSrc: string;
+  fallbackImage: string;
+  alt: string;
+  canvasOpen: boolean;
+  maskOverlayUrl: string | null;
+  annotations: any;
+  onOpenCanvas: () => void;
+  onPointerDown: PointerEventHandler<HTMLDivElement>;
+  onPointerMove: PointerEventHandler<HTMLDivElement>;
+  onPointerUp: PointerEventHandler<HTMLDivElement>;
+}
+
+export function CanvasModeStage({
+  annotationFrameRef,
+  imageElementRef,
+  frameClassName,
+  frameStyle,
+  imageKey,
+  imageSrc,
+  fallbackImage,
+  alt,
+  canvasOpen,
+  maskOverlayUrl,
+  annotations,
+  onOpenCanvas,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+}: CanvasModeStageProps) {
+  return (
+    <div
+      ref={annotationFrameRef}
+      className={frameClassName}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={frameStyle}
+    >
+      <img
+        ref={imageElementRef}
+        className="result-img"
+        key={imageKey}
+        src={imageSrc ?? fallbackImage}
+        alt={alt}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          onOpenCanvas();
+        }}
+      />
+      {canvasOpen && maskOverlayUrl ? (
+        <img
+          className="canvas-background-cleanup-mask"
+          src={maskOverlayUrl}
+          alt=""
+          aria-hidden="true"
+        />
+      ) : null}
+      {canvasOpen && (
+        <>
+          <CanvasAnnotationLayer
+            paths={annotations.paths}
+            boxes={annotations.boxes}
+            memos={annotations.memos}
+            selectedIds={annotations.selectedIds}
+            selectionBox={annotations.selectionBox}
+            activePath={annotations.activePath}
+            activeBox={annotations.activeBox}
+          />
+          <CanvasMemoOverlay
+            memos={annotations.memos}
+            activeMemoId={annotations.activeMemoId}
+            onUpdate={annotations.updateMemo}
+            onDelete={annotations.deleteMemo}
+            onFocus={annotations.focusMemo}
+            onCommit={annotations.commitMemoEdit}
+          />
+        </>
+      )}
+    </div>
+  );
+}

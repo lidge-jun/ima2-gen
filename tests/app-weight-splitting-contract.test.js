@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 const root = process.cwd();
 
@@ -16,6 +16,20 @@ function visitStaticImports(manifest, chunk, seen = new Set()) {
     visitStaticImports(manifest, manifest[importId], seen);
   }
   return seen;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function assertNoStaticImport(source, modulePath) {
+  const pattern = new RegExp(`from ["']${escapeRegExp(modulePath)}["']`);
+  assert.ok(!pattern.test(source), `${modulePath} must not be statically imported`);
+}
+
+function readEntryStaticJs(manifest, entry) {
+  const files = Array.from(visitStaticImports(manifest, entry));
+  return files.map((file) => readSource(join("ui/dist", file))).join("\n");
 }
 
 test("release builds use manifest and opt-in sourcemaps", () => {
@@ -65,19 +79,59 @@ test("prompt library and import subflows are loaded on demand", () => {
   assert.doesNotMatch(promptImport, /import \{ PromptImportFolderSection \}/);
 });
 
-test("canvas mode-only widgets are lazy-loaded from the default viewer", () => {
+test("canvas mode workspace is lazy-loaded through the feature boundary", () => {
+  const canvas = readSource("ui/src/components/Canvas.tsx");
+  const featureIndexPath = join(root, "ui/src/components/canvas-mode/index.ts");
+  const workspacePath = join(root, "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
+
+  assert.ok(existsSync(featureIndexPath), "canvas-mode feature barrel must exist");
+  assert.ok(existsSync(workspacePath), "CanvasModeWorkspace must exist");
+
+  const featureIndex = readSource("ui/src/components/canvas-mode/index.ts");
+  const workspace = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
+
+  assert.match(canvas, /const LazyCanvasModeWorkspace = lazy\(\(\) =>\s*import\("\.\/canvas-mode"\)/);
+  assert.doesNotMatch(canvas, /import\("\.\/canvas-mode\/Canvas/);
+  assert.doesNotMatch(
+    canvas,
+    /LazyCanvasAnnotationLayer|LazyCanvasMemoOverlay|LazyCanvasToolbar|LazyCanvasViewportMiniMap|LazyCanvasZoomControl/,
+  );
+
+  assert.match(featureIndex, /export \{ CanvasModeWorkspace \} from "\.\/CanvasModeWorkspace";/);
+  assert.match(featureIndex, /export type \{ CanvasModeWorkspaceProps \} from "\.\/canvasModeTypes";/);
+  assert.doesNotMatch(featureIndex, /export \*/);
+  assert.doesNotMatch(
+    featureIndex,
+    /CanvasModeShell|CanvasToolbar|CanvasAnnotationLayer|CanvasMemoOverlay|CanvasViewportMiniMap|CanvasZoomControl/,
+  );
+
+  assert.match(workspace, /import \{ CanvasToolbar \} from "\.\/CanvasToolbar";/);
+  assert.doesNotMatch(workspace, /lazy\(\(\) =>\s*import\("\.\/Canvas/);
+  assert.doesNotMatch(workspace, /CanvasModeShell/);
+});
+
+test("classic Canvas shell does not own Canvas Mode internals", () => {
   const canvas = readSource("ui/src/components/Canvas.tsx");
 
-  assert.match(canvas, /const LazyCanvasAnnotationLayer = lazy\(\(\) =>/);
-  assert.match(canvas, /const LazyCanvasMemoOverlay = lazy\(\(\) =>/);
-  assert.match(canvas, /const LazyCanvasToolbar = lazy\(\(\) =>/);
-  assert.match(canvas, /const LazyCanvasViewportMiniMap = lazy\(\(\) =>/);
-  assert.match(canvas, /const LazyCanvasZoomControl = lazy\(\(\) =>/);
-  assert.doesNotMatch(canvas, /import \{ CanvasAnnotationLayer \}/);
-  assert.doesNotMatch(canvas, /import \{ CanvasMemoOverlay \}/);
-  assert.doesNotMatch(canvas, /import \{ CanvasToolbar \}/);
-  assert.doesNotMatch(canvas, /import \{ CanvasViewportMiniMap \}/);
-  assert.doesNotMatch(canvas, /import \{ CanvasZoomControl \}/);
+  for (const modulePath of [
+    "../hooks/useCanvasAnnotations",
+    "../lib/canvas/coordinates",
+    "../lib/canvas/mergeRenderer",
+    "../lib/canvas/maskRenderer",
+    "../lib/canvas/hitTest",
+    "../lib/canvas/objectKeys",
+    "../lib/canvas/exportRenderer",
+    "../lib/canvas/alphaDetect",
+    "../lib/canvas/backgroundRemoval",
+  ]) {
+    assertNoStaticImport(canvas, modulePath);
+  }
+
+  assert.doesNotMatch(canvas, /useCanvasAnnotations\(/);
+  assert.doesNotMatch(canvas, /fetchCanvasAnnotations|saveCanvasAnnotations|deleteCanvasAnnotations/);
+  assert.doesNotMatch(canvas, /createCanvasVersion|updateCanvasVersion|postEdit/);
+  assert.doesNotMatch(canvas, /NormalizedPoint/);
+  assert.doesNotMatch(canvas, /CanvasModeShell/);
 });
 
 test("built output splits mode and prompt-import chunks when dist exists", () => {
@@ -97,17 +151,15 @@ test("built output splits mode and prompt-import chunks when dist exists", () =>
   assert.match(keys, /src\/components\/card-news\/CardNewsWorkspace\.tsx/);
   assert.match(keys, /src\/components\/PromptLibraryPanel\.tsx/);
   assert.match(keys, /src\/components\/PromptImportDialog\.tsx/);
-  assert.match(keys, /src\/components\/canvas-mode\/CanvasToolbar\.tsx/);
-  assert.match(keys, /src\/components\/canvas-mode\/CanvasZoomControl\.tsx/);
-  assert.match(keys, /src\/components\/canvas-mode\/CanvasViewportMiniMap\.tsx/);
+  assert.match(keys, /src\/components\/canvas-mode\/index\.ts/);
   assert.ok(jsFiles.length > 1, "build should emit multiple JS chunks after lazy splitting");
   assert.ok(
     jsFiles.some((file) => file.startsWith("NodeCanvas-")),
     "NodeCanvas should be emitted as its own lazy chunk",
   );
   assert.ok(
-    jsFiles.some((file) => file.startsWith("CanvasToolbar-")),
-    "CanvasToolbar should be emitted as its own canvas-mode lazy chunk",
+    jsFiles.some((file) => file.startsWith("index-") && file !== basename(entries[0].file)),
+    "Canvas Mode should be emitted as its own lazy feature chunk",
   );
   assert.ok(
     dynamicImports.has("src/components/NodeCanvas.tsx"),
@@ -122,6 +174,10 @@ test("built output splits mode and prompt-import chunks when dist exists", () =>
     "PromptLibraryPanel should be reachable through a dynamic import from the entry",
   );
   assert.ok(
+    dynamicImports.has("src/components/canvas-mode/index.ts"),
+    "Canvas Mode should be reachable through a dynamic import from the entry",
+  );
+  assert.ok(
     !staticInitialFiles.has(manifest["src/components/NodeCanvas.tsx"]?.file),
     "NodeCanvas chunk should not be part of the entry's static import graph",
   );
@@ -133,4 +189,23 @@ test("built output splits mode and prompt-import chunks when dist exists", () =>
     !staticInitialFiles.has(manifest["src/components/PromptLibraryPanel.tsx"]?.file),
     "PromptLibraryPanel chunk should not be part of the entry's static import graph",
   );
+  assert.ok(
+    !staticInitialFiles.has(manifest["src/components/canvas-mode/index.ts"]?.file),
+    "Canvas Mode chunk should not be part of the entry's static import graph",
+  );
+
+  const entryStaticJs = readEntryStaticJs(manifest, entries[0]);
+  for (const sentinel of [
+    "useCanvasAnnotations",
+    "renderMergedCanvasImage",
+    "renderMaskFromBoxes",
+    "renderBackgroundRemovalPreview",
+    "removeContiguousBackground",
+    "imageUsesAlpha",
+    "@xyflow/react",
+    "react-flow__renderer",
+    "react-flow__node",
+  ]) {
+    assert.doesNotMatch(entryStaticJs, new RegExp(escapeRegExp(sentinel)));
+  }
 });

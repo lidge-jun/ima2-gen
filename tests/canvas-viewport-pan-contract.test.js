@@ -8,7 +8,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const types = readFileSync(join(root, "ui/src/types/canvas.ts"), "utf8");
 const hook = readFileSync(join(root, "ui/src/hooks/useCanvasAnnotations.ts"), "utf8");
-const canvas = readFileSync(join(root, "ui/src/components/Canvas.tsx"), "utf8");
+const canvas = [
+  "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+  "ui/src/components/canvas-mode/CanvasModeTopbar.tsx",
+  "ui/src/components/canvas-mode/useCanvasModePointerHandlers.ts",
+  "ui/src/components/canvas-mode/useCanvasModeShortcuts.ts",
+].map((path) => readFileSync(join(root, path), "utf8")).join("\n");
 const store = readFileSync(join(root, "ui/src/store/useAppStore.ts"), "utf8");
 const coords = readFileSync(join(root, "ui/src/lib/canvas/coordinates.ts"), "utf8");
 const toolbar = readFileSync(join(root, "ui/src/components/canvas-mode/CanvasToolbar.tsx"), "utf8");

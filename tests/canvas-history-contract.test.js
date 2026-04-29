@@ -33,7 +33,10 @@ describe("canvas undo redo contract", () => {
   });
 
   it("handles MacBook Escape and canvas undo through a window listener", () => {
-    const canvas = readSource("ui/src/components/Canvas.tsx");
+    const canvas = [
+      "ui/src/components/canvas-mode/useCanvasModeShortcuts.ts",
+      "ui/src/components/canvas-mode/useCanvasModePointerHandlers.ts",
+    ].map(readSource).join("\n");
     assert.match(canvas, /window\.addEventListener\("keydown", onKeyDown\)/);
     assert.match(canvas, /event\.key === "Escape"/);
     assert.match(canvas, /handleCloseCanvas/);

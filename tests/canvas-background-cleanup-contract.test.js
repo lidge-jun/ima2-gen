@@ -7,7 +7,13 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const backgroundRemoval = readFileSync(join(root, "ui/src/lib/canvas/backgroundRemoval.ts"), "utf8");
-const canvas = readFileSync(join(root, "ui/src/components/Canvas.tsx"), "utf8");
+const canvas = [
+  "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+  "ui/src/components/canvas-mode/CanvasModeStage.tsx",
+  "ui/src/components/canvas-mode/useCanvasBackgroundCleanup.ts",
+  "ui/src/components/canvas-mode/useCanvasModePointerHandlers.ts",
+  "ui/src/components/canvas-mode/useCanvasModeShortcuts.ts",
+].map((path) => readFileSync(join(root, path), "utf8")).join("\n");
 const toolbar = readFileSync(join(root, "ui/src/components/canvas-mode/CanvasToolbar.tsx"), "utf8");
 const panel = readFileSync(
   join(root, "ui/src/components/canvas-mode/CanvasBackgroundCleanupPanel.tsx"),
@@ -55,15 +61,15 @@ test("Canvas wires cleanup preview, seed picking, and apply-as-new-version", () 
   assert.match(canvas, /backgroundCleanupTolerance/);
   assert.match(canvas, /backgroundCleanupPreview/);
   assert.match(canvas, /backgroundCleanupMaskOverlay/);
-  assert.match(canvas, /backgroundCleanupUndoRef/);
-  assert.match(canvas, /backgroundCleanupRenderSeqRef/);
-  assert.match(canvas, /backgroundCleanupToleranceTimerRef/);
-  assert.match(canvas, /pushBackgroundCleanupUndo/);
+  assert.match(canvas, /undoRef/);
+  assert.match(canvas, /renderSeqRef/);
+  assert.match(canvas, /toleranceTimerRef/);
+  assert.match(canvas, /pushUndo/);
   assert.match(canvas, /undoBackgroundCleanup/);
   assert.match(canvas, /isBackgroundCleanupPickingSeed/);
   assert.match(canvas, /renderBackgroundRemovalPreview/);
   assert.match(canvas, /renderBackgroundRemovalMaskOverlay/);
-  assert.match(canvas, /imageSrc = backgroundCleanupPreview\?\.dataUrl \?\? baseImageSrc/);
+  assert.match(canvas, /imageSrc = backgroundCleanup\.backgroundCleanupPreview\?\.dataUrl \?\? baseImageSrc/);
   assert.match(canvas, /canvas-background-cleanup-mask/);
   assert.doesNotMatch(canvas, /canvas-background-cleanup-seed/);
   assert.match(canvas, /canvas-annotation-frame--cleanup-picking/);
@@ -74,15 +80,15 @@ test("Canvas wires cleanup preview, seed picking, and apply-as-new-version", () 
 });
 
 test("cleanup renders ignore stale async results and debounce tolerance overlays", () => {
-  assert.match(canvas, /const renderSeq = backgroundCleanupRenderSeqRef\.current \+ 1/);
-  assert.match(canvas, /backgroundCleanupRenderSeqRef\.current !== renderSeq/);
-  assert.match(canvas, /window\.clearTimeout\(backgroundCleanupToleranceTimerRef\.current\)/);
+  assert.match(canvas, /const renderSeq = renderSeqRef\.current \+ 1/);
+  assert.match(canvas, /renderSeqRef\.current !== renderSeq/);
+  assert.match(canvas, /window\.clearTimeout\(toleranceTimerRef\.current\)/);
   assert.match(canvas, /window\.setTimeout\(\(\) => \{/);
   assert.match(canvas, /runBackgroundCleanupMaskOverlay\(seeds, value\)/);
 });
 
 test("cleanup apply recomputes from the natural image instead of reusing preview blobs", () => {
-  const applyMatch = canvas.match(/const handleBackgroundCleanupApply = async \(\): Promise<void> => \{[\s\S]*?finally \{/);
+  const applyMatch = canvas.match(/const handleBackgroundCleanupApply = useCallback\(async \(\): Promise<void> => \{[\s\S]*?finally \{/);
   assert.ok(applyMatch, "Canvas should keep a dedicated background cleanup apply handler");
   const applyBody = applyMatch[0];
 
@@ -111,8 +117,9 @@ test("alpha detection caches per image element and source dimensions", () => {
 
 test("Background pick mode keeps its cursor active after a click", () => {
   const pickBranch = extractBackgroundPickBranch();
-  assert.match(pickBranch, /setBackgroundCleanupSeeds\(nextSeeds\)/);
-  assert.match(pickBranch, /void runBackgroundCleanupMaskOverlay\(nextSeeds\)/);
+  assert.match(pickBranch, /addBackgroundCleanupSeed\(point\)/);
+  assert.match(canvas, /setBackgroundCleanupSeeds\(nextSeeds\)/);
+  assert.match(canvas, /void runBackgroundCleanupMaskOverlay\(nextSeeds\)/);
   assert.doesNotMatch(pickBranch, /setIsBackgroundCleanupPickingSeed\(false\)/);
 });
 
