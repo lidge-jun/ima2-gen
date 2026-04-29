@@ -21,6 +21,9 @@ const SPEC = {
     mode:    {              type: "string", default: "auto" },
     moderation: {            type: "string", default: "low" },
     session: {              type: "string" },
+    "reasoning-effort": {  type: "string" },
+    "web-search":      {  type: "boolean" },
+    "no-web-search":   {  type: "boolean" },
     help:    { short: "h", type: "boolean" },
   },
 };
@@ -40,6 +43,8 @@ const HELP = `
         --mode <auto|direct>       Prompt handling mode. Default: auto
         --moderation <auto|low>    Default: low
         --session <id>             Apply session style sheet if enabled
+        --reasoning-effort <none|low|medium|high|xhigh>
+        --web-search / --no-web-search    Override default web-search toggle
 `;
 
 export default async function editCmd(argv) {
@@ -52,6 +57,13 @@ export default async function editCmd(argv) {
   if (!VALID_MODERATION.has(args.moderation)) die(2, "--moderation must be one of: auto, low");
   if (args.model && !KNOWN_IMAGE_MODELS.has(args.model)) {
     die(2, "--model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.3-codex-spark");
+  }
+  const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh"]);
+  if (args["reasoning-effort"] && !VALID_REASONING.has(args["reasoning-effort"])) {
+    die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh");
+  }
+  if (args["web-search"] && args["no-web-search"]) {
+    die(2, "--web-search and --no-web-search are mutually exclusive");
   }
 
   let server;
@@ -67,18 +79,22 @@ export default async function editCmd(argv) {
   const timeoutMs = (parseInt(args.timeout) || 180) * 1000;
   let resp;
   try {
+    const editBody: any = {
+      prompt: args.prompt,
+      image: imageB64,
+      quality: args.quality,
+      size: args.size,
+      model: args.model,
+      mode: args.mode,
+      moderation: args.moderation,
+      sessionId: args.session,
+    };
+    if (args["reasoning-effort"]) editBody.reasoningEffort = args["reasoning-effort"];
+    if (args["no-web-search"]) editBody.webSearchEnabled = false;
+    else if (args["web-search"]) editBody.webSearchEnabled = true;
     resp = await request(server.base, "/api/edit", {
       method: "POST",
-      body: {
-        prompt: args.prompt,
-        image: imageB64,
-        quality: args.quality,
-        size: args.size,
-        model: args.model,
-        mode: args.mode,
-        moderation: args.moderation,
-        sessionId: args.session,
-      },
+      body: editBody,
       timeoutMs,
     });
   } catch (e) {

@@ -328,8 +328,24 @@ function showHelp() {
     edit <file>    Edit an existing image         (ima2 edit --help)
     ls             List recent history            (ima2 ls --help)
     show <name>    Show one history item          (ima2 show --help)
+    session <sub>  Session/graph CRUD             (ima2 session --help)
+    history <sub>  History write-ops              (ima2 history --help)
+    prompt <sub>   Prompt library + folders + import (ima2 prompt --help)
+    multimode <prompt>   Multi-image SSE generation (ima2 multimode --help)
+    node <sub>     Node-mode generate/show          (ima2 node --help)
+    annotate <sub> Image annotations CRUD           (ima2 annotate --help)
+    canvas-versions <sub>  Canvas version save/update (ima2 canvas-versions --help)
+    metadata <file>  Read embedded metadata
+    comfy <sub>    ComfyUI workflow export          (ima2 comfy --help)
+    cardnews <sub> Card News templates/jobs/export  (ima2 cardnews --help)
     ps             List active jobs               (ima2 ps --help)
     cancel <id>    Mark an in-flight job canceled (ima2 cancel --help)
+    inflight <sub> Inflight jobs (ls / rm)         (ima2 inflight --help)
+    storage <sub>  Storage status / open-dir       (ima2 storage --help)
+    billing        API usage / quota
+    providers      Configured providers
+    oauth <sub>    OAuth proxy status              (ima2 oauth --help)
+    config <sub>   Config get/set/ls/path/rm       (ima2 config --help)
     ping           Ping running server / check health
 
   Options:
@@ -356,7 +372,7 @@ if (args.includes("-v") || args.includes("--version")) {
 }
 
 if ((!command || args.includes("-h") || args.includes("--help"))
-    && !["gen", "edit", "ls", "show", "ps", "cancel", "ping"].includes(command)) {
+    && !["gen", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "config", "ping"].includes(command)) {
   showHelp();
   process.exit(command ? 0 : 1);
 }
@@ -392,11 +408,33 @@ switch (command) {
   case "show":
   case "ps":
   case "cancel":
+  case "session":
+  case "history":
+  case "prompt":
+  case "multimode":
+  case "node":
+  case "annotate":
+  case "canvas-versions":
+  case "metadata":
+  case "comfy":
+  case "cardnews":
+  case "config":
   case "ping": {
     const { setCliVersion } = await import("./lib/client.js");
     setCliVersion(pkg.version);
     const mod = await import(`./commands/${command}.js`);
     await mod.default(args.slice(1));
+    break;
+  }
+  case "storage":
+  case "billing":
+  case "providers":
+  case "oauth":
+  case "inflight": {
+    const { setCliVersion } = await import("./lib/client.js");
+    setCliVersion(pkg.version);
+    const mod = await import("./commands/observability.js");
+    await mod.default([command, ...args.slice(1)]);
     break;
   }
   default:

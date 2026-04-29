@@ -54,23 +54,32 @@ export async function resolveServer({ serverFlag }: any = {}) {
   throw err;
 }
 
-export async function request(base, path, { method = "GET", body, timeoutMs = 180_000 }: any = {}) {
+export async function request(base, path, {
+  method = "GET",
+  body,
+  headers: extraHeaders,
+  raw = false,
+  timeoutMs = 180_000,
+}: any = {}) {
+  const baseHeaders: Record<string, string> = raw
+    ? { "X-ima2-client": `cli/${CLI_VERSION}` }
+    : { "Content-Type": "application/json", "X-ima2-client": `cli/${CLI_VERSION}` };
+  const finalHeaders = { ...baseHeaders, ...(extraHeaders || {}) };
   const res = await fetch(base + path, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      "X-ima2-client": `cli/${CLI_VERSION}`,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    headers: finalHeaders,
+    body: body === undefined ? undefined
+        : raw ? body
+        : JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text();
   let json: any = null;
   try { json = JSON.parse(text); } catch {}
   if (!res.ok) {
-    const err: any = new Error(json?.error || `HTTP ${res.status}`);
+    const err: any = new Error(json?.error?.message || json?.error || `HTTP ${res.status}`);
     err.status = res.status;
-    err.code = json?.code || null;
+    err.code = json?.error?.code || json?.code || null;
     err.body = json || text;
     throw err;
   }

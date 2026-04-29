@@ -149,23 +149,98 @@ Style sheets let you capture a reusable visual direction.
 
 These require a running `ima2 serve`.
 
+#### Generation
+
 | Command | Description |
 |---|---|
-| `ima2 gen <prompt>` | Generate from the CLI |
-| `ima2 edit <file> --prompt <text>` | Edit an existing image |
-| `ima2 ls` | List local history |
-| `ima2 show <name>` | Reveal a generated asset |
-| `ima2 ps` | List active jobs |
-| `ima2 cancel <requestId>` | Mark an in-flight job canceled |
+| `ima2 gen <prompt>` | Generate from the CLI; supports `--reasoning-effort`, `--web-search` |
+| `ima2 edit <file> --prompt <text>` | Edit an existing image; supports `--reasoning-effort`, `--web-search` |
+| `ima2 multimode <prompt>` | Multi-image SSE generation (streams phase / partial / image events) |
+| `ima2 node generate` / `ima2 node show <id>` | Node-mode generate (SSE) and metadata read |
+
+#### History and metadata
+
+| Command | Description |
+|---|---|
+| `ima2 ls [--session <id>] [--favorites]` | List recent history |
+| `ima2 show <name> [--metadata]` | Reveal a generated asset; optional embedded-metadata read |
+| `ima2 history rm <name> [--permanent]` | Soft-delete or permanently delete |
+| `ima2 history restore --trash-id <id>` | Restore from trash |
+| `ima2 history favorite <name>` | Toggle favorite |
+| `ima2 history import <file>` | Import a local image into history |
+| `ima2 metadata <file>` | Read embedded metadata from any local image |
+
+#### Sessions and graphs
+
+| Command | Description |
+|---|---|
+| `ima2 session ls / show / create / rm / rename` | Session CRUD |
+| `ima2 session graph save / load <id>` | Graph snapshot save/load (uses `If-Match`) |
+| `ima2 session style-sheet get / put / enable / disable / extract` | Style-sheet ops |
+
+#### Annotations and canvas
+
+| Command | Description |
+|---|---|
+| `ima2 annotate get / set / rm <name>` | Image annotation CRUD |
+| `ima2 canvas-versions save / update <name>` | Save/update raw canvas PNG versions |
+
+#### Prompt library
+
+| Command | Description |
+|---|---|
+| `ima2 prompt ls / show / create / edit / rm / favorite / export` | Prompt CRUD + export |
+| `ima2 prompt folder ls / create / rename / rm` | Prompt folder ops |
+| `ima2 prompt import sources / refresh / curated / discovery / folder` | Curated and discovery imports |
+
+#### Card News (requires `IMA2_CARD_NEWS=1`)
+
+| Command | Description |
+|---|---|
+| `ima2 cardnews templates / sets` | List image / role templates and card sets |
+| `ima2 cardnews template preview <id>` | Preview a template |
+| `ima2 cardnews set show / manifest <id>` | Show set or manifest |
+| `ima2 cardnews draft / generate / export [--data <json>]` | Pass-through body endpoints |
+| `ima2 cardnews job create / show / retry [--cards <ids>]` | Job lifecycle |
+| `ima2 cardnews card regenerate <id>` | Regenerate a single card |
+
+#### Observability and jobs
+
+| Command | Description |
+|---|---|
+| `ima2 ps` / `ima2 inflight ls` | List active jobs (alias) |
+| `ima2 cancel <id>` / `ima2 inflight rm <id>` | Mark/force-remove an in-flight job |
+| `ima2 storage status` | Storage inspection |
+| `ima2 storage open` | Open generated dir in OS file manager (POST) |
+| `ima2 billing` / `ima2 providers` / `ima2 oauth status` | Billing, providers, OAuth proxy state |
+
+#### Config
+
+| Command | Description |
+|---|---|
+| `ima2 config path` | Print the config file path |
+| `ima2 config ls [--effective]` | File layer (default) or merged effective config |
+| `ima2 config get <key>` | Read a dotted key (secrets are redacted) |
+| `ima2 config set <key> <value>` | Write to file layer; rejects auth keys; warns on env override |
+| `ima2 config rm <key>` | Remove a key from the file layer |
+
+#### Other
+
+| Command | Description |
+|---|---|
+| `ima2 comfy export <filename>` | Export a ComfyUI workflow |
 | `ima2 ping` | Health-check the running server |
 
 The server advertises its actual port at `~/.ima2/server.json`. If `3333` is busy, the backend can fall back to `3334+` and CLI commands follow the advertised URL. Override discovery with `--server <url>` or `IMA2_SERVER=http://localhost:3333`.
 
 ```bash
-ima2 gen "poster" --model gpt-5.4 --mode direct --moderation low
-ima2 edit input.png --prompt "make it rainy" --model gpt-5.4
-ima2 ps --terminal
-ima2 cancel <requestId>
+ima2 gen "poster" --model gpt-5.4 --mode direct --moderation low --reasoning-effort high
+ima2 edit input.png --prompt "make it rainy" --model gpt-5.4 --web-search
+ima2 multimode "two cats playing" -n 2
+ima2 ls --session sess_abc --favorites
+ima2 prompt ls -q sunset
+ima2 inflight ls --terminal
+ima2 config set imageModels.reasoningEffort high
 ```
 
 ## Configuration

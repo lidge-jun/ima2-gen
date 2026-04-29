@@ -6,6 +6,8 @@ const SPEC = {
   flags: {
     count:  { short: "n", type: "string", default: "20" },
     json:   { type: "boolean" },
+    session: { type: "string" },
+    favorites: { type: "boolean" },
     server: { type: "string" },
     help:   { short: "h", type: "boolean" },
   },
@@ -13,18 +15,27 @@ const SPEC = {
 
 export default async function lsCmd(argv) {
   const args = parseArgs(argv, SPEC);
-  if (args.help) { out("ima2 ls [-n count] [--json]"); return; }
+  if (args.help) {
+    out("ima2 ls [-n count] [--session <id>] [--favorites] [--json]");
+    return;
+  }
 
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
   catch (e) { die(exitCodeForError(e), e.message); }
 
   const limit = parseInt(args.count) || 20;
+  const qs = new URLSearchParams();
+  if (args.session) qs.set("sessionId", args.session);
+  qs.set("limit", String(Math.max(limit, args.favorites ? 200 : limit)));
+  const path = `/api/history?${qs.toString()}`;
   let resp;
-  try { resp = await request(server.base, "/api/history"); }
+  try { resp = await request(server.base, path); }
   catch (e) { die(exitCodeForError(e), e.message); }
 
-  const items = (resp.items || resp.history || []).slice(0, limit);
+  let items = (resp.items || resp.history || []);
+  if (args.favorites) items = items.filter((it) => it.isFavorite === true);
+  items = items.slice(0, limit);
 
   if (args.json) { json({ items }); return; }
 

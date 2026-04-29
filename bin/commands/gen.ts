@@ -26,6 +26,9 @@ const SPEC = {
     mode:      {              type: "string", default: "auto" },
     moderation: {              type: "string", default: "low" },
     session:   {              type: "string" },
+    "reasoning-effort": {     type: "string" },
+    "web-search":      {     type: "boolean" },
+    "no-web-search":   {     type: "boolean" },
     help:      { short: "h", type: "boolean" },
   },
 };
@@ -51,6 +54,9 @@ const HELP = `
         --mode <auto|direct>                Prompt handling mode. Default: auto
         --moderation <auto|low>             Default: low
         --session <id>                      Apply session style sheet if enabled
+        --reasoning-effort <none|low|medium|high|xhigh>
+                                            Override server's reasoning effort
+        --web-search / --no-web-search      Override default web-search toggle
 
   Examples:
     ima2 gen "a shiba in space"
@@ -77,6 +83,13 @@ export default async function genCmd(argv) {
   if (args.model && !KNOWN_IMAGE_MODELS.has(args.model)) {
     die(2, "--model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.3-codex-spark");
   }
+  const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh"]);
+  if (args["reasoning-effort"] && !VALID_REASONING.has(args["reasoning-effort"])) {
+    die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh");
+  }
+  if (args["web-search"] && args["no-web-search"]) {
+    die(2, "--web-search and --no-web-search are mutually exclusive");
+  }
 
   const n = Math.max(1, Math.min(8, parseInt(args.count) || 1));
   const timeoutMs = (parseInt(args.timeout) || 180) * 1000;
@@ -91,7 +104,7 @@ export default async function genCmd(argv) {
 
   const references = await Promise.all(refs.map((p) => fileToDataUri(p)));
 
-  const body = {
+  const body: any = {
     prompt,
     quality: args.quality,
     size: args.size,
@@ -102,6 +115,9 @@ export default async function genCmd(argv) {
     moderation: args.moderation,
     sessionId: args.session,
   };
+  if (args["reasoning-effort"]) body.reasoningEffort = args["reasoning-effort"];
+  if (args["no-web-search"]) body.webSearchEnabled = false;
+  else if (args["web-search"]) body.webSearchEnabled = true;
 
   let resp;
   try {

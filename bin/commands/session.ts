@@ -1,0 +1,265 @@
+import { readFile } from "fs/promises";
+import { parseArgs } from "../lib/args.js";
+import { resolveServer, request } from "../lib/client.js";
+import { out, die, color, json, exitCodeForError, table } from "../lib/output.js";
+
+const HELP = `
+  ima2 session <subcommand> [options]
+
+  Subcommands:
+    ls [--json]                            List sessions
+    show <id> [--json]                     Show session details
+    create <title>                         Create a new session
+    rm <id> [--yes]                        Delete a session
+    rename <id> <title>                    Rename a session
+    graph save <id> <file>                 Save graph JSON (uses If-Match for concurrency)
+    graph load <id> [--out <file>]         Load graph JSON (stdout or --out)
+    style-sheet get <id> [--json]
+    style-sheet put <id> <file>            Replace full style sheet
+    style-sheet enable <id>
+    style-sheet disable <id>
+    style-sheet extract <id>               LLM-extract style sheet from session content
+
+  Common options:
+        --server <url>                     Override server URL
+        --json                             JSON output
+        --yes                              Skip destructive confirmation
+`;
+
+const COMMON_FLAGS = {
+  json: { type: "boolean" },
+  server: { type: "string" },
+  yes: { type: "boolean" },
+  out: { type: "string" },
+  help: { short: "h", type: "boolean" },
+};
+
+async function getServer(args) {
+  try { return await resolveServer({ serverFlag: args.server }); }
+  catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
+}
+
+async function lsSub(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const server = await getServer(args);
+  const resp = await request(server.base, "/api/sessions").catch(handle);
+  const sessions = resp.sessions || [];
+  if (args.json) { json({ sessions }); return; }
+  if (sessions.length === 0) { out(color.dim("(no sessions)")); return; }
+  table(sessions, [
+    { key: "id", label: "ID" },
+    { key: "title", label: "TITLE" },
+    { key: "createdAt", label: "WHEN", format: (v) => v ? new Date(v).toISOString().slice(0, 19) : "" },
+  ]);
+}
+
+async function showSub(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const id = args.positional[0];
+  if (!id) die(2, "session id required");
+  const server = await getServer(args);
+  const resp = await request(server.base, `/api/sessions/${encodeURIComponent(id)}`).catch(handle);
+  if (args.json) { json(resp); return; }
+  const s = resp.session || resp;
+  out(color.bold(s.id || id));
+  out(color.dim("  title: ") + (s.title || ""));
+  if (s.graph) out(color.dim("  graph: ") + `${s.graph.nodes?.length ?? 0} nodes, ${s.graph.edges?.length ?? 0} edges, version ${s.graph.version}`);
+  if (s.styleSheet) out(color.dim("  styleSheet: ") + (s.styleSheet.enabled ? "enabled" : "disabled"));
+}
+
+async function createSub(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const title = args.positional.join(" ").trim();
+  if (!title) die(2, "title required");
+  const server = await getServer(args);
+  const resp = await request(server.base, "/api/sessions", {
+    method: "POST",
+    body: { title },
+  }).catch(handle);
+  if (args.json) { json(resp); return; }
+  out(color.green("✓ ") + (resp.session?.id || "(no id returned)"));
+}
+
+async function rmSub(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const id = args.positional[0];
+  if (!id) die(2, "session id required");
+  if (!args.yes && !process.stdin.isTTY) die(2, "destructive: pass --yes for non-TTY");
+  if (!args.yes) {
+    process.stdout.write(`Delete session ${id}? [y/N] `);
+    const ans = await readLine();
+    if (!/^y(es)?$/i.test(ans.trim())) { out("(canceled)"); return; }
+  }
+  const server = await getServer(args);
+  await request(server.base, `/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(handle);
+  out(color.green("✓ deleted"));
+}
+
+async function renameSub(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const [id, ...rest] = args.positional;
+  const title = rest.join(" ").trim();
+  if (!id || !title) die(2, "usage: session rename <id> <title>");
+  const server = await getServer(args);
+  await request(server.base, `/api/sessions/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: { title },
+  }).catch(handle);
+  out(color.green("✓ renamed"));
+}
+
+async function graphSub(argv) {
+  const action = argv[0];
+  const rest = argv.slice(1);
+  if (action === "save") return graphSave(rest);
+  if (action === "load") return graphLoad(rest);
+  die(2, "usage: session graph <save|load> ...");
+}
+
+async function graphSave(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const [id, file] = args.positional;
+  if (!id || !file) die(2, "usage: session graph save <id> <file>");
+  const buf = await readFile(file, "utf-8");
+  let parsed;
+  try { parsed = JSON.parse(buf); } catch { die(2, "graph file is not valid JSON"); }
+  const { nodes, edges } = parsed;
+  if (!Array.isArray(nodes) || !Array.isArray(edges))
+    die(2, "graph file must contain { nodes: [], edges: [] }");
+  const server = await getServer(args);
+  // Step 1: fetch current version
+  const current: any = await request(server.base, `/api/sessions/${encodeURIComponent(id)}`).catch(handle);
+  const version = current?.session?.graph?.version;
+  if (typeof version !== "number") die(1, "could not resolve current graph version");
+  // Step 2: PUT with If-Match
+  try {
+    const result: any = await request(server.base, `/api/sessions/${encodeURIComponent(id)}/graph`, {
+      method: "PUT",
+      body: { nodes, edges },
+      headers: { "If-Match": `"${version}"` },
+    });
+    if (args.json) { json(result); return; }
+    out(color.green(`✓ saved (graphVersion: ${result.graphVersion})`));
+  } catch (e: any) {
+    if (e.status === 412 || e.code === "GRAPH_VERSION_CONFLICT") die(1, "graph version conflict — fetch latest and retry");
+    if (e.status === 413) die(1, e.message);
+    handle(e);
+  }
+}
+
+async function graphLoad(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const id = args.positional[0];
+  if (!id) die(2, "usage: session graph load <id>");
+  const server = await getServer(args);
+  const resp: any = await request(server.base, `/api/sessions/${encodeURIComponent(id)}`).catch(handle);
+  const graph = resp?.session?.graph;
+  if (!graph) die(1, "no graph for session");
+  const text = JSON.stringify(graph, null, 2);
+  if (args.out) {
+    const { writeFile } = await import("fs/promises");
+    await writeFile(args.out, text);
+    out(color.green("✓ ") + args.out);
+  } else {
+    process.stdout.write(text + "\n");
+  }
+}
+
+async function styleSheetSub(argv) {
+  const action = argv[0];
+  const rest = argv.slice(1);
+  if (action === "get") return ssGet(rest);
+  if (action === "put") return ssPut(rest);
+  if (action === "enable") return ssEnable(rest, true);
+  if (action === "disable") return ssEnable(rest, false);
+  if (action === "extract") return ssExtract(rest);
+  die(2, "usage: session style-sheet <get|put|enable|disable|extract> ...");
+}
+
+async function ssGet(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const id = args.positional[0];
+  if (!id) die(2, "session id required");
+  const server = await getServer(args);
+  const resp = await request(server.base, `/api/sessions/${encodeURIComponent(id)}/style-sheet`).catch(handle);
+  json(resp);
+}
+
+async function ssPut(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const [id, file] = args.positional;
+  if (!id || !file) die(2, "usage: session style-sheet put <id> <file>");
+  const buf = await readFile(file, "utf-8");
+  let parsed;
+  try { parsed = JSON.parse(buf); } catch { die(2, "style-sheet file is not valid JSON"); }
+  const server = await getServer(args);
+  await request(server.base, `/api/sessions/${encodeURIComponent(id)}/style-sheet`, {
+    method: "PUT",
+    body: parsed,
+  }).catch(handle);
+  out(color.green("✓ style-sheet updated"));
+}
+
+async function ssEnable(argv, enabled) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const id = args.positional[0];
+  if (!id) die(2, "session id required");
+  const server = await getServer(args);
+  await request(server.base, `/api/sessions/${encodeURIComponent(id)}/style-sheet/enabled`, {
+    method: "PATCH",
+    body: { enabled },
+  }).catch(handle);
+  out(color.green(enabled ? "✓ enabled" : "✓ disabled"));
+}
+
+async function ssExtract(argv) {
+  const args = parseArgs(argv, { flags: COMMON_FLAGS });
+  const id = args.positional[0];
+  if (!id) die(2, "session id required");
+  const server = await getServer(args);
+  const resp = await request(server.base, `/api/sessions/${encodeURIComponent(id)}/style-sheet/extract`, {
+    method: "POST",
+    timeoutMs: 120_000,
+  }).catch(handle);
+  json(resp);
+}
+
+function handle(e) {
+  die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`);
+}
+
+async function readLine(): Promise<string> {
+  return new Promise((resolve) => {
+    let buf = "";
+    process.stdin.setEncoding("utf-8");
+    const onData = (chunk) => {
+      buf += chunk;
+      const nl = buf.indexOf("\n");
+      if (nl !== -1) {
+        process.stdin.removeListener("data", onData);
+        process.stdin.pause();
+        resolve(buf.slice(0, nl));
+      }
+    };
+    process.stdin.resume();
+    process.stdin.on("data", onData);
+  });
+}
+
+const SUB: Record<string, (argv: any[]) => Promise<void>> = {
+  ls: lsSub,
+  show: showSub,
+  create: createSub,
+  rm: rmSub,
+  rename: renameSub,
+  graph: graphSub,
+  "style-sheet": styleSheetSub,
+};
+
+export default async function sessionCmd(argv) {
+  const sub = argv[0];
+  if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
+  const handler = SUB[sub];
+  if (!handler) die(2, `unknown subcommand: ${sub}\n${HELP}`);
+  return handler(argv.slice(1));
+}

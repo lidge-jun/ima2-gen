@@ -221,6 +221,43 @@ Style-sheet extraction can require an API key/openai client. This does not reope
 | `GRAPH_TOO_LARGE` | Graph exceeds node/edge limits |
 | `NODE_NOT_FOUND` | Node metadata was not found |
 
+## Endpoint → CLI Mapping
+
+As of 0.09.x, every server route under `/api/*` has a CLI wrapper. Use this table to find the command that calls a given endpoint. (See README.md "Client" section for full flag lists.)
+
+| Endpoint | CLI |
+|---|---|
+| `POST /api/generate` | `ima2 gen` |
+| `POST /api/edit` | `ima2 edit` |
+| `POST /api/generate/multi` (SSE) | `ima2 multimode` |
+| `POST /api/node/generate` (SSE) / `GET /api/node/:id` | `ima2 node generate` / `ima2 node show` |
+| `GET /api/history` | `ima2 ls` |
+| `DELETE /api/history/:name` / `…/permanent` | `ima2 history rm [--permanent]` |
+| `POST /api/history/restore` | `ima2 history restore --trash-id` |
+| `POST /api/history/favorite` | `ima2 history favorite` |
+| `POST /api/history/import-local` | `ima2 history import` |
+| `POST /api/metadata/read` | `ima2 metadata` / `ima2 show --metadata` |
+| `GET/POST/PUT/DELETE /api/sessions[/…]` | `ima2 session ls/show/create/rm/rename` |
+| `GET/PUT /api/sessions/:id/graph` | `ima2 session graph load/save` |
+| `GET/PUT /api/sessions/:id/style-sheet[/…]` | `ima2 session style-sheet …` |
+| `GET/PUT/DELETE /api/annotations/:name` | `ima2 annotate get/set/rm` |
+| `POST /api/canvas-versions` / `PUT /api/canvas-versions/:name` | `ima2 canvas-versions save/update` |
+| `GET/POST/PUT/DELETE /api/prompts[/…]` | `ima2 prompt …` |
+| `GET/POST/PUT/DELETE /api/prompt-folders[/…]` | `ima2 prompt folder …` |
+| `…/api/prompt-import/…` | `ima2 prompt import sources/refresh/curated/discovery/folder` |
+| `…/api/cardnews/…` (gated on `features.cardNews`) | `ima2 cardnews …` |
+| `POST /api/comfy/export-image` | `ima2 comfy export` |
+| `GET /api/inflight` / `DELETE /api/inflight/:id` | `ima2 inflight ls` (alias `ps`) / `ima2 inflight rm` (alias `cancel`) |
+| `GET /api/storage/status` / `POST /api/storage/open-generated-dir` | `ima2 storage status` / `ima2 storage open` |
+| `GET /api/billing` / `GET /api/providers` / `GET /api/oauth/status` | `ima2 billing` / `ima2 providers` / `ima2 oauth status` |
+| `GET /api/health` | `ima2 ping` |
+
+Notes:
+- `ima2 history favorite` and `ima2 annotate …` send `X-Ima2-Browser-Id: cli-<sha1prefix>` derived from the config dir, so CLI activity does not collide with browser sessions.
+- `ima2 session graph save` performs a GET-then-PUT with `If-Match: "<version>"` to guard against `GRAPH_VERSION_CONFLICT`.
+- `ima2 history import` and `ima2 canvas-versions save/update` send raw bytes with `Content-Type: image/<png|jpeg|webp>`; the SSE endpoints (`multimode`, `node generate`) use `Accept: text/event-stream`.
+- `ima2 cardnews …` checks `runtimeConfig.features.cardNews` before calling the gated endpoints; when disabled the CLI exits 2 with a clear message instead of producing a 404.
+
 ## CLI Discovery
 
 The server writes an advertisement file at:
