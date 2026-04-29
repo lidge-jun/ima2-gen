@@ -5054,12 +5054,40 @@ body {
 }
 .prompt-import-dialog__results,
 .prompt-import-dialog__candidate-preview {
-  min-height: 280px;
+  min-height: 0;
   max-height: min(44vh, 520px);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--bg) 86%, var(--surface));
+}
+.prompt-import-dialog__results-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--bg) 86%, var(--surface));
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.prompt-import-dialog__results-header strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.prompt-import-dialog__results-header-actions {
+  display: flex;
+  gap: 6px;
+}
+.prompt-import-dialog__add-source-toggle {
+  margin: 0 14px 8px;
+  align-self: flex-start;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 .prompt-import-dialog__results {
   display: grid;

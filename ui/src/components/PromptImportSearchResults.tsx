@@ -8,6 +8,8 @@ type PromptImportSearchResultsProps = {
   busy?: boolean;
   onSelectCandidate: (candidate: PromptImportCandidate) => void;
   onToggleSelected: (id: string, selected: boolean) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
   onImportOne: (candidate: PromptImportCandidate) => void;
 };
 
@@ -35,6 +37,8 @@ export function PromptImportSearchResults({
   busy = false,
   onSelectCandidate,
   onToggleSelected,
+  onSelectAll,
+  onClearSelection,
   onImportOne,
 }: PromptImportSearchResultsProps) {
   const { t } = useI18n();
@@ -47,8 +51,31 @@ export function PromptImportSearchResults({
     );
   }
 
+  const allSelected = candidates.every((c) => selectedIds.has(c.id));
+
   return (
     <section className="prompt-import-dialog__results" aria-label={t("promptLibrary.searchResults")}>
+      <header className="prompt-import-dialog__results-header">
+        <strong>
+          {t("promptLibrary.searchResultsHeader", { count: candidates.length })}
+        </strong>
+        <div className="prompt-import-dialog__results-header-actions">
+          <button
+            type="button"
+            onClick={onSelectAll}
+            disabled={allSelected}
+          >
+            {t("promptLibrary.selectAllCandidates")}
+          </button>
+          <button
+            type="button"
+            onClick={onClearSelection}
+            disabled={selectedIds.size === 0}
+          >
+            {t("promptLibrary.clearCandidateSelection")}
+          </button>
+        </div>
+      </header>
       {candidates.map((candidate) => {
         const selected = selectedIds.has(candidate.id);
         const active = activeCandidateId === candidate.id;

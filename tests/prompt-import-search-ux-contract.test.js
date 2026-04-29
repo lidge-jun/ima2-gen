@@ -86,4 +86,53 @@ describe("prompt import search UX contract", () => {
       assert.equal(typeof dict.promptLibrary.compatibilityWarnings, "string");
     }
   });
+
+  it("v2: starts with no curated sources selected even when defaultSearch is true", () => {
+    const dialog = readSource("ui/src/components/PromptImportDialog.tsx");
+    assert.match(dialog, /setSelectedSourceIds\(new Set\(\)\)/);
+    assert.doesNotMatch(dialog, /source\.defaultSearch/);
+  });
+
+  it("v2: does not auto-select preview candidates", () => {
+    const dialog = readSource("ui/src/components/PromptImportDialog.tsx");
+    const fn = /const addPreviewCandidates = useCallback\([\s\S]*?\}, \[\]\);/.exec(dialog)?.[0] ?? "";
+    assert.ok(fn.length > 0, "addPreviewCandidates not found");
+    assert.doesNotMatch(fn, /setSelected\(new Set\(merged\.map/);
+  });
+
+  it("v2: exposes select-all and clear actions on the results component", () => {
+    const results = readSource("ui/src/components/PromptImportSearchResults.tsx");
+    assert.match(results, /onSelectAll/);
+    assert.match(results, /onClearSelection/);
+    assert.match(results, /promptLibrary\.selectAllCandidates/);
+    assert.match(results, /promptLibrary\.clearCandidateSelection/);
+    assert.match(results, /promptLibrary\.searchResultsHeader/);
+  });
+
+  it("v2: collapses upper input sections when candidates exist", () => {
+    const dialog = readSource("ui/src/components/PromptImportDialog.tsx");
+    assert.match(dialog, /const hasResults = candidates\.length > 0/);
+    assert.match(dialog, /const showUpperSections = !hasResults \|\| forceShowSources/);
+    assert.match(dialog, /promptLibrary\.addAnotherSource/);
+    assert.match(dialog, /setForceShowSources\(true\)/);
+  });
+
+  it("v2: results region drops min-height: 280px so the panel cannot squeeze", () => {
+    const css = readSource("ui/src/index.css");
+    const block = /\.prompt-import-dialog__results,\s*\n\.prompt-import-dialog__candidate-preview \{[\s\S]*?\}/.exec(css)?.[0] ?? "";
+    assert.ok(block.length > 0, "results+preview block not found");
+    assert.doesNotMatch(block, /min-height:\s*280px/);
+    assert.match(block, /min-height:\s*0/);
+  });
+
+  it("v2: i18n keys for select-all / clear / add-another / results-header exist", () => {
+    const en = JSON.parse(readSource("ui/src/i18n/en.json"));
+    const ko = JSON.parse(readSource("ui/src/i18n/ko.json"));
+    for (const dict of [en, ko]) {
+      assert.equal(typeof dict.promptLibrary.selectAllCandidates, "string");
+      assert.equal(typeof dict.promptLibrary.clearCandidateSelection, "string");
+      assert.equal(typeof dict.promptLibrary.addAnotherSource, "string");
+      assert.equal(typeof dict.promptLibrary.searchResultsHeader, "string");
+    }
+  });
 });

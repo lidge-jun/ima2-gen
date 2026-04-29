@@ -51,6 +51,10 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
   const [curatedBusy, setCuratedBusy] = useState(false);
   const [curatedWarnings, setCuratedWarnings] = useState<string[]>([]);
   const [sourcePanel, setSourcePanel] = useState<"curated" | "discovery">("curated");
+  const [forceShowSources, setForceShowSources] = useState(false);
+
+  const hasResults = candidates.length > 0;
+  const showUpperSections = !hasResults || forceShowSources;
 
   useEffect(() => {
     if (!open) return;
@@ -62,7 +66,7 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
   const loadCuratedSources = useCallback(async () => {
     const data = await getPromptImportCuratedSources();
     setCuratedSources(data.sources);
-    setSelectedSourceIds(new Set(data.sources.filter((source) => source.defaultSearch).map((source) => source.id)));
+    setSelectedSourceIds(new Set());
   }, []);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
       .then((data) => {
         if (cancelled) return;
         setCuratedSources(data.sources);
-        setSelectedSourceIds(new Set(data.sources.filter((source) => source.defaultSearch).map((source) => source.id)));
+        setSelectedSourceIds(new Set());
       })
       .catch(() => {
         if (!cancelled) setCuratedSources([]);
@@ -89,7 +93,6 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
       for (const candidate of next) {
         if (!known.has(candidate.id)) merged.push(candidate);
       }
-      setSelected(new Set(merged.map((candidate) => candidate.id)));
       setActiveCandidateId((current) => current ?? merged[0]?.id ?? null);
       return merged;
     });
@@ -183,6 +186,14 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
     });
   }, []);
 
+  const selectAllCandidates = useCallback(() => {
+    setSelected(new Set(candidates.map((c) => c.id)));
+  }, [candidates]);
+
+  const clearCandidateSelection = useCallback(() => {
+    setSelected(new Set());
+  }, []);
+
   const commitCandidates = useCallback(async (picked: PromptImportCandidate[]) => {
     if (picked.length === 0) {
       setError(t("promptLibrary.importSelectAtLeastOne"));
@@ -272,105 +283,113 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
           <button type="button" onClick={onClose} aria-label={t("common.close")}>×</button>
         </div>
 
-        <div
-          className={`prompt-import-dialog__dropzone${dragActive ? " active" : ""}`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={handleDrop}
-        >
-          <strong>{t("promptLibrary.importDropTitle")}</strong>
-          <span>{t("promptLibrary.importDropHint")}</span>
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
-            {t("promptLibrary.importChooseFiles")}
-          </button>
-          <input
-            ref={fileInputRef}
-            className="prompt-library-panel__file-input"
-            type="file"
-            accept=".txt,.md,.markdown,text/plain,text/markdown"
-            multiple
-            onChange={handleFileChange}
-          />
-        </div>
+        {showUpperSections && (
+          <>
+            <div
+              className={`prompt-import-dialog__dropzone${dragActive ? " active" : ""}`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleDrop}
+            >
+              <strong>{t("promptLibrary.importDropTitle")}</strong>
+              <span>{t("promptLibrary.importDropHint")}</span>
+              <button type="button" onClick={() => fileInputRef.current?.click()}>
+                {t("promptLibrary.importChooseFiles")}
+              </button>
+              <input
+                ref={fileInputRef}
+                className="prompt-library-panel__file-input"
+                type="file"
+                accept=".txt,.md,.markdown,text/plain,text/markdown"
+                multiple
+                onChange={handleFileChange}
+              />
+            </div>
 
-        <div className="prompt-import-dialog__github">
-          <label htmlFor="prompt-import-github">{t("promptLibrary.importGithubLabel")}</label>
-          <div>
-            <input
-              id="prompt-import-github"
-              type="text"
-              value={githubInput}
-              onChange={(event) => setGithubInput(event.target.value)}
-              placeholder="owner/repo:path/to/prompts.md"
-            />
-            <button type="button" onClick={() => void previewGithub()} disabled={busy || !githubInput.trim()}>
-              {t("promptLibrary.importPreview")}
-            </button>
-          </div>
-        </div>
-
-        <Suspense fallback={null}>
-          <LazyPromptImportFolderSection
-            input={githubInput}
-            disabled={busy}
-            onCandidates={addPreviewCandidates}
-            onError={setError}
-          />
-        </Suspense>
-
-        <div className="prompt-import-dialog__source-tabs" role="tablist" aria-label={t("promptLibrary.curatedSources")}>
-          <button
-            type="button"
-            className={sourcePanel === "curated" ? "active" : ""}
-            onClick={() => setSourcePanel("curated")}
-            aria-pressed={sourcePanel === "curated"}
-          >
-            {t("promptLibrary.curatedSources")}
-          </button>
-          <button
-            type="button"
-            className={sourcePanel === "discovery" ? "active" : ""}
-            onClick={() => setSourcePanel("discovery")}
-            aria-pressed={sourcePanel === "discovery"}
-          >
-            {t("promptLibrary.discovery")}
-          </button>
-        </div>
-
-        {sourcePanel === "curated" ? (
-        <div className="prompt-import-dialog__curated">
-          <div className="prompt-import-dialog__section-title">
-            <strong>{t("promptLibrary.curatedSources")}</strong>
-            <span>{t("promptLibrary.curatedSourcesHint")}</span>
-          </div>
-          <div className="prompt-import-dialog__source-list">
-            {curatedSources.filter((source) => source.trustTier !== "manual-review").map((source) => (
-              <label key={source.id} className="prompt-import-dialog__source">
+            <div className="prompt-import-dialog__github">
+              <label htmlFor="prompt-import-github">{t("promptLibrary.importGithubLabel")}</label>
+              <div>
                 <input
-                  type="checkbox"
-                  checked={selectedSourceIds.has(source.id)}
-                  onChange={(event) => {
-                    setSelectedSourceIds((prev) => {
-                      const next = new Set(prev);
-                      if (event.target.checked) next.add(source.id);
-                      else next.delete(source.id);
-                      return next;
-                    });
-                  }}
+                  id="prompt-import-github"
+                  type="text"
+                  value={githubInput}
+                  onChange={(event) => setGithubInput(event.target.value)}
+                  placeholder="owner/repo:path/to/prompts.md"
                 />
-                <span>
-                  <strong>{source.displayName}</strong>
-                  <small>{source.licenseSpdx} · {source.trustTier}</small>
-                </span>
-                <button type="button" onClick={() => void refreshSource(source.id)} disabled={curatedBusy}>
-                  {t("promptLibrary.refreshSource")}
+                <button type="button" onClick={() => void previewGithub()} disabled={busy || !githubInput.trim()}>
+                  {t("promptLibrary.importPreview")}
                 </button>
-              </label>
-            ))}
-          </div>
+              </div>
+            </div>
+
+            <Suspense fallback={null}>
+              <LazyPromptImportFolderSection
+                input={githubInput}
+                disabled={busy}
+                onCandidates={addPreviewCandidates}
+                onError={setError}
+              />
+            </Suspense>
+
+            <div className="prompt-import-dialog__source-tabs" role="tablist" aria-label={t("promptLibrary.curatedSources")}>
+              <button
+                type="button"
+                className={sourcePanel === "curated" ? "active" : ""}
+                onClick={() => setSourcePanel("curated")}
+                aria-pressed={sourcePanel === "curated"}
+              >
+                {t("promptLibrary.curatedSources")}
+              </button>
+              <button
+                type="button"
+                className={sourcePanel === "discovery" ? "active" : ""}
+                onClick={() => setSourcePanel("discovery")}
+                aria-pressed={sourcePanel === "discovery"}
+              >
+                {t("promptLibrary.discovery")}
+              </button>
+            </div>
+          </>
+        )}
+
+        {(showUpperSections ? sourcePanel === "curated" : true) && (
+        <div className="prompt-import-dialog__curated">
+          {showUpperSections && (
+            <>
+              <div className="prompt-import-dialog__section-title">
+                <strong>{t("promptLibrary.curatedSources")}</strong>
+                <span>{t("promptLibrary.curatedSourcesHint")}</span>
+              </div>
+              <div className="prompt-import-dialog__source-list">
+                {curatedSources.filter((source) => source.trustTier !== "manual-review").map((source) => (
+                  <label key={source.id} className="prompt-import-dialog__source">
+                    <input
+                      type="checkbox"
+                      checked={selectedSourceIds.has(source.id)}
+                      onChange={(event) => {
+                        setSelectedSourceIds((prev) => {
+                          const next = new Set(prev);
+                          if (event.target.checked) next.add(source.id);
+                          else next.delete(source.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    <span>
+                      <strong>{source.displayName}</strong>
+                      <small>{source.licenseSpdx} · {source.trustTier}</small>
+                    </span>
+                    <button type="button" onClick={() => void refreshSource(source.id)} disabled={curatedBusy}>
+                      {t("promptLibrary.refreshSource")}
+                    </button>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
           <div className="prompt-import-dialog__search-results">
             <input
               type="text"
@@ -389,7 +408,9 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
             </div>
           ) : null}
         </div>
-        ) : (
+        )}
+
+        {showUpperSections && sourcePanel === "discovery" && (
           <Suspense fallback={<div className="prompt-import-dialog__empty">{t("common.loading")}</div>}>
             <LazyPromptImportDiscoverySection
               disabled={busy}
@@ -397,6 +418,16 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
               onSourcesChanged={loadCuratedSources}
             />
           </Suspense>
+        )}
+
+        {hasResults && !forceShowSources && (
+          <button
+            type="button"
+            className="prompt-import-dialog__add-source-toggle"
+            onClick={() => setForceShowSources(true)}
+          >
+            {t("promptLibrary.addAnotherSource")}
+          </button>
         )}
 
         {error ? <div className="prompt-import-dialog__error" role="alert">{error}</div> : null}
@@ -409,6 +440,8 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
             busy={busy}
             onSelectCandidate={(candidate) => setActiveCandidateId(candidate.id)}
             onToggleSelected={toggleCandidateSelected}
+            onSelectAll={selectAllCandidates}
+            onClearSelection={clearCandidateSelection}
             onImportOne={importOneCandidate}
           />
           <PromptImportCandidatePreview
