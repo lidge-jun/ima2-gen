@@ -66,3 +66,32 @@ test("finishJob records canceled status for explicit cancellation", () => {
   assert.equal(terminal.length, 1);
   assert.equal(terminal[0].status, "canceled");
 });
+
+test("terminal jobs remain observable across a reload-debug window", () => {
+  const realNow = Date.now;
+  const startedAt = 1_777_400_000_000;
+  try {
+    Date.now = () => startedAt;
+    startJob({
+      requestId: "req_terminal_window",
+      kind: "classic",
+      prompt: "private prompt",
+      meta: {},
+    });
+    setJobPhase("req_terminal_window", "streaming");
+
+    Date.now = () => startedAt + 10_000;
+    finishJob("req_terminal_window", {
+      status: "completed",
+      httpStatus: 200,
+    });
+
+    Date.now = () => startedAt + 70_000;
+    assert.equal(listTerminalJobs({ kind: "classic" }).length, 1);
+
+    Date.now = () => startedAt + 10_000 + 5 * 60 * 1000 + 1;
+    assert.equal(listTerminalJobs({ kind: "classic" }).length, 0);
+  } finally {
+    Date.now = realNow;
+  }
+});

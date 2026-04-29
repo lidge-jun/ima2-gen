@@ -71,7 +71,7 @@ test("config exposes default shape", () => {
   assert.equal(c.ids.generatedHexBytes, 4);
   assert.equal(c.ids.nodeHexBytes, 5);
   assert.equal(c.inflight.ttlMs, 600000);
-  assert.equal(c.inflight.terminalTtlMs, 30000);
+  assert.equal(c.inflight.terminalTtlMs, 300000);
   assert.deepEqual(c.oauth.validModeration.sort(), ["auto", "low"]);
   assert.equal(c.imageModels.default, "gpt-5.4-mini");
   assert.deepEqual(c.imageModels.valid.sort(), ["gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]);

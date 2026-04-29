@@ -1224,9 +1224,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     get().showToast(t("toast.addedCurrentAsRef"));
   },
-  activeGenerations: loadInFlight().length,
+  activeGenerations: 0,
   unseenGeneratedCount: 0,
-  inFlight: loadInFlight(),
+  inFlight: [],
   startInFlightPolling: () => {
     if (typeof window === "undefined") return;
     const w = window as unknown as { __ima2InflightTimer?: number };
@@ -1369,7 +1369,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       const terminalById = new Map((terminalJobs as ServerTerminalJob[]).map((j) => [j.requestId, j] as const));
       const terminalErrors: Array<Error & { code?: string; status?: number }> = [];
       const now = Date.now();
-      const local = get().inFlight;
+      const currentLocal = get().inFlight;
+      const local = currentLocal.length > 0 ? currentLocal : loadInFlight();
       // Keep local entries that are either still known to the server,
       // or started very recently (<10s — request may be in-flight before
       // /api/inflight registered). Keep out-of-scope entries because this
