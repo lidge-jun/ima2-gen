@@ -12,7 +12,7 @@ This matters because README and older devlog entries still contain traces of the
 
 Start UI work at `App.tsx` to understand how classic canvas and node canvas diverge. General server calls are in `ui/src/lib/api.ts`; node generation JSON/SSE calls are in `ui/src/lib/nodeApi.ts` and re-exported through `api.ts`. State is centralized in `ui/src/store/useAppStore.ts`. For screen-level structure, start with `Sidebar`, `Canvas`, `NodeCanvas`, `RightPanel`, and `GalleryModal`.
 
-Snapshot note, 2026-04-29: mobile UI now has dedicated components (`MobileAppBar`, `MobileComposeSheet`, `MobileSettingsToggle`) and hooks (`useIsMobile`, `useVisualViewportInset`). Canvas Mode UI is split under `ui/src/components/canvas-mode/` and lazy-loaded from the default viewer path. There is no separate `ui/src/lib/imageMetadataClient.ts`; metadata restore calls live in `ui/src/lib/api.ts`.
+Snapshot note, 2026-04-29: mobile UI now has dedicated components (`MobileAppBar`, `MobileComposeSheet`, `MobileSettingsToggle`) and hooks (`useIsMobile`, `useVisualViewportInset`). Canvas Mode UI is split under `ui/src/components/canvas-mode/` and lazy-loaded from the default viewer path; background cleanup preview work has stale-render cancellation/debounce guards while final apply/export paths preserve natural image dimensions. There is no separate `ui/src/lib/imageMetadataClient.ts`; metadata restore calls live in `ui/src/lib/api.ts`.
 
 ---
 
