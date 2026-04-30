@@ -3594,7 +3594,9 @@ body {
 }
 .image-node__footer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  row-gap: 4px;
   gap: 6px;
   min-width: 0;
 }
@@ -3609,10 +3611,15 @@ body {
   white-space: nowrap;
 }
 .image-node__actions {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 4px;
   gap: 4px;
+  min-width: 0;
+  max-width: 100%;
 }
 .image-node__actions button {
   width: auto;

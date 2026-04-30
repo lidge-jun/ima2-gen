@@ -17,7 +17,8 @@ describe("node compact footer contract", () => {
 
   it("uses a one-line flex footer instead of a multi-row action grid", () => {
     assert.match(css, /\.image-node__footer \{\s*display: flex/);
-    assert.match(css, /\.image-node__actions \{\s*flex: 0 0 auto;\s*display: flex/);
+    assert.match(css, /\.image-node__actions \{\s*flex: 0 1 auto;\s*display: flex/);
+    assert.match(css, /\.image-node__actions \{[^}]*flex-wrap:\s*wrap/);
     assert.doesNotMatch(css, /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 0\.9fr\)/);
   });
 

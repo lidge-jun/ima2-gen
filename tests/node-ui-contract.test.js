@@ -21,7 +21,8 @@ describe("node UI compact metadata contract", () => {
     assert.match(statusRule, /text-overflow:\s*ellipsis/);
     assert.match(statusRule, /white-space:\s*nowrap/);
     assert.match(actionsRule, /display:\s*flex/);
-    assert.match(actionsRule, /flex:\s*0 0 auto/);
+    assert.match(actionsRule, /flex:\s*0 1 auto/);
+    assert.match(actionsRule, /flex-wrap:\s*wrap/);
     assert.match(actionsRule, /align-items:\s*center/);
   });
 
