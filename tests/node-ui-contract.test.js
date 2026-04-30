@@ -47,7 +47,7 @@ describe("node UI compact metadata contract", () => {
     const route = readSource("routes/nodes.ts");
 
     assert.match(api, /size\?: string \| null/);
-    assert.match(route, /size,\s*\n\s*moderation/);
+    assert.match(route, /size: effectiveSize,\s*\n\s*moderation/);
     assert.match(store, /size: \(d\.size \?\? null\) as string \| null/);
     assert.match(store, /size: res\.size \?\? size/);
     assert.match(store, /size: recovered\.size \?\? n\.data\.size \?\? null/);

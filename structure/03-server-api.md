@@ -6,7 +6,7 @@ aliases: [ima2 API, image_gen server API, ima2 endpoints]
 
 # Server API
 
-`server.js` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*`. Current route source files are TypeScript (`routes/*.ts`) with runtime-compatible `.js` imports/build output handled separately. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
+`server.ts` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*.ts`. The TypeScript migration is closed (#24); paired `server.js`/`routes/*.js` are committed runtime artifacts produced by the build, not hand-edited. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
 
 This document matters because the UI and CLI share the same server contract. For example, `/api/generate` returns a different shape for single-image and multi-image responses. `/api/history` supports both a flat list and session grouping. Node mode uses separate `/api/node/generate` and `/api/sessions/*` contracts. If those differences are not documented, clients can break quietly.
 
@@ -18,7 +18,7 @@ When changing an API, find the endpoint here first. Then check the CLI usage in 
 
 ```mermaid
 graph TD
-    API["server.js + routes/* /api"] --> STATUS["status<br/>providers health oauth billing"]
+    API["server.ts + routes/* /api"] --> STATUS["status<br/>providers health oauth billing"]
     API --> IMG["classic image<br/>generate edit history"]
     API --> JOBS["inflight jobs"]
     API --> NODE["node mode<br/>node generate node fetch"]
@@ -40,16 +40,16 @@ graph TD
 
 | Method | Path | Response | Description |
 |---|---|---|---|
-| `GET` | `/api/providers` | `{ apiKey, oauth, oauthPort, apiKeyDisabled, runtime }` | Reports available providers and runtime ports to the UI |
+| `GET` | `/api/providers` | `{ apiKey, oauth, oauthPort, apiKeyDisabled, apiKeySource, runtime }` | Reports available providers and runtime ports to the UI. `apiKeyDisabled` is a legacy compatibility field and is `false` in current API-provider builds. |
 | `GET` | `/api/health` | `{ ok, version, provider, uptimeSec, activeJobs, pid, startedAt, runtime }` | Used by CLI discovery and health checks |
 | `GET` | `/api/oauth/status` | `{ status, models?, runtime }` | Checks whether the OAuth proxy is ready and reports actual proxy URL/port |
 | `GET` | `/api/billing` | `{ oauth, apiKeyValid, apiKeySource, credits?, costs? }` | Probes billing/model state when an API key exists |
 | `GET` | `/api/storage/status` | `{ ok, data: { generatedDirLabel, generatedCount, legacyCandidatesScanned, legacySourcesFound, legacyFilesFound, state, messageKind, recoveryDocsPath, doctorCommand, overrides } }` | Summarizes gallery storage and legacy recovery state for UI support banners |
 | `POST` | `/api/storage/open-generated-dir` | `{ ok }` | Opens only the configured generated image folder in the local OS file manager |
 
-`/api/billing` reports `apiKeySource` as `"none"`, `"env"`, or `"config"`. The UI uses this as a status signal only: an env/config API key may be detected and shown as configured, but API-key generation stays disabled unless the provider policy changes.
+`/api/billing` reports `apiKeySource` as `"none"`, `"env"`, or `"config"`. API-key generation requires a configured key and returns `API_KEY_REQUIRED` before upstream when `provider: "api"` is requested without one.
 
-The live generation/edit provider is OAuth. Sending `provider: "api"` returns `403` with `APIKEY_DISABLED`. README may still mention the API-key path, but live generation endpoints hard-block API-key generation.
+The live generation/edit provider can be OAuth or API-key based. Both paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs.
 
 Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` never accepts a browser-supplied path; it opens `ctx.config.storage.generatedDir` only.
 
@@ -68,6 +68,8 @@ Runtime responses expose configured and actual ports separately. The backend can
 
 Image generation model selection is explicit. If omitted, the server defaults to `gpt-5.4-mini`. Supported image models are `gpt-5.4-mini`, `gpt-5.4`, and `gpt-5.5`. `gpt-5.3-codex-spark` can appear in OAuth model status, but it does not support the `image_generation` tool, so generation endpoints reject it with `IMAGE_MODEL_UNSUPPORTED` before calling OAuth.
 
+For `provider: "api"`, missing options use `config.apiProvider` defaults: `gpt-5.4-mini`, `low` reasoning effort, `1024x1024`, and web search enabled. Validated request options still pass through. Masked edits are sent as mask/selection guidance; callers should not treat them as pixel-perfect inpainting.
+
 ## History And Asset Lifecycle
 
 | Method | Path | Query or body | Response |
@@ -75,11 +77,12 @@ Image generation model selection is explicit. If omitted, the server defaults to
 | `GET` | `/api/history` | `limit`, `since`, `before`, `beforeFilename`, `sessionId` | `{ items, total, nextCursor }` |
 | `GET` | `/api/history` | `groupBy=session` | `{ sessions, loose, total, nextCursor }` |
 | `DELETE` | `/api/history/:filename` | none | `{ ok, trashId, filename, unlinkAt, sessionsTouched, nodesTouched }` |
+| `DELETE` | `/api/history/:filename/permanent` | none | `{ ok, filename }` — bypasses soft-delete, removes the file (and any sidecar) immediately |
 | `POST` | `/api/history/:filename/restore` | `{ trashId }` | `{ ok }` |
 | `POST` | `/api/history/favorite` | `{ filename, favorite }` | `{ ok, favorite }` |
 | `POST` | `/api/history/import-local` | raw body `image/png` \| `image/jpeg` \| `image/webp`; optional header `X-Ima2-Original-Filename` | `201 { item }` (GenerateItem with `kind: "imported"`) |
 
-History is reconstructed from image files and sidecar JSON under the configured generated directory. Delete is a soft-delete into `.trash/`, not an immediate permanent removal. Restore uses the returned `trashId`.
+History is reconstructed from image files and sidecar JSON under the configured generated directory. `DELETE /api/history/:filename` is a soft-delete into the OS trash via `lib/systemTrash.ts` (`trash` dependency); `lib/assetLifecycle.ts` returns a `trashId` so the UI can offer undo through `POST /api/history/:filename/restore`. `DELETE /api/history/:filename/permanent` skips the trash and removes the file plus any sidecar immediately — used by the gallery's permanent-delete affordance.
 
 `/api/history/import-local` accepts a single raw image body and writes it into `generated/` as `imported-<yyyymmddhhmmss>-<rand6>.<ext>` with embedded XMP metadata (`kind: "imported"`). Frontend uses this to drop external images directly onto the Canvas viewer area; the response item is appended to the in-memory history list and selected as the current image.
 
@@ -159,7 +162,7 @@ Style sheet endpoints persist a per-session reference style summary in SQLite. `
 |---|---|---|---|
 | `POST` | `/api/metadata/read` | `{ image }` (data URL or base64 PNG, capped by `IMA2_MAX_METADATA_READ_B64_BYTES`) | `{ ok, metadata: { prompt?, quality?, size?, format?, moderation?, model?, provider?, references?, ... } }` or `{ ok: false, code: "NO_METADATA" }` |
 
-Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`. `routes/metadata.js` parses an image base64 supplied by the UI and returns the embedded metadata so the user can drop a previously generated file back into the composer to restore prompt and parameters. The route never persists the uploaded image; it only reads embedded XMP.
+Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.ts`. `routes/metadata.ts` parses an image base64 supplied by the UI and returns the embedded metadata so the user can drop a previously generated file back into the composer to restore prompt and parameters. The route never persists the uploaded image; it only reads embedded XMP.
 
 ## Prompt Library API
 
@@ -188,11 +191,11 @@ Generated PNGs embed the same sidecar fields into XMP via `lib/imageMetadata.js`
 | `PATCH` | `/api/prompts/folders/:id` | `{ name }` | `{ ok, folder }` |
 | `DELETE` | `/api/prompts/folders/:id` | none | `{ ok }` |
 
-Prompts and folders are stored in SQLite alongside sessions; migrations live in `lib/db.js`. The library supports favorite filtering, free-text search across title and body, folder grouping, and full-export round trips. Prompt rows are independent from history filenames so the same prompt body can be reused across sessions.
+Prompts and folders are stored in SQLite alongside sessions; migrations live in `lib/db.ts`. The library supports favorite filtering, free-text search across title and body, folder grouping, and full-export round trips. Prompt rows are independent from history filenames so the same prompt body can be reused across sessions.
 
 Prompt import PR1 is preview-first. `/api/prompts/import/preview` accepts either local text supplied by the browser or a GitHub file source and returns prompt candidates without saving. GitHub sources are limited to `github.com` and `raw.githubusercontent.com`, reject host spoofing, unsupported extensions, encoded slash/backslash, traversal, folder URLs, oversized files, and redirected final URLs that are not supported prompt files. `/api/prompts/import/commit` saves only selected candidates through the same SQLite prompt semantics as the existing import path and stores source metadata as tags only, such as `github`, `repo:owner/repo`, `ref:main`, `file:prompts.md`, and `ext:md`.
 
-Prompt import PR2 adds curated indexed search without introducing a DB migration. Static sources live in `lib/promptImport/curatedSources.js`; indexed source/candidate cache is written under `config.storage.promptImportIndexCacheFile`, usually `~/.ima2/prompt-import-index.json`, with atomic temp-file writes. Curated search is read-only: results remain commit-compatible prompt candidates with mandatory `text`, but they are never saved until the UI sends selected candidates to `/api/prompts/import/commit`. `gpt-image-2` model/task/size/quality hints and warnings are stored in candidate metadata for ranking and UI display, while attribution and license state persists through tags such as `source:<sourceId>`, `license:<spdx>`, `trust:<tier>`, and `attribution-required`.
+Prompt import PR2 adds curated indexed search without introducing a DB migration. Static sources live in `lib/promptImport/curatedSources.ts`; indexed source/candidate cache is written under `config.storage.promptImportIndexCacheFile`, usually `~/.ima2/prompt-import-index.json`, with atomic temp-file writes. Curated search is read-only: results remain commit-compatible prompt candidates with mandatory `text`, but they are never saved until the UI sends selected candidates to `/api/prompts/import/commit`. `gpt-image-2` model/task/size/quality hints and warnings are stored in candidate metadata for ranking and UI display, while attribution and license state persists through tags such as `source:<sourceId>`, `license:<spdx>`, `trust:<tier>`, and `attribution-required`.
 
 Prompt import PR3 adds GitHub folder browse without recursive crawling or auto-import. `/api/prompts/import/folder-files` lists only supported `.md`, `.markdown`, and `.txt` files from a single GitHub Contents API directory. `/api/prompts/import/folder-preview` re-lists the same folder server-side and previews only selected paths that appear in that listing as supported `type: "file"` entries; client-supplied download URLs are never trusted. Slash-branch shorthand remains rejected with `AMBIGUOUS_GITHUB_REF`, and ambiguous `tree/feature/foo/...` URLs do not trigger a slash-branch resolver in PR3. Saving still goes through `/api/prompts/import/commit`.
 
@@ -218,7 +221,7 @@ The card-news routes are mounted only when `config.features.cardNews` is true, w
 | `POST` | `/api/cardnews/cards/:cardId/regenerate` | `{ ... }` | `{ ok, card }` |
 | `POST` | `/api/cardnews/export` | `{ jobId, format? }` | `{ ok, export }` |
 
-Implementation lives in `lib/cardNews*.js`: `cardNewsManifest`, `cardNewsPlanner`, `cardNewsSets`, `cardNewsTemplates`, `cardNewsRoles`, `cardNewsTextRender`, `cardNewsImageTemplates`, plus a top-level `lib/cardNews.js`. Optional planner integration is gated by `IMA2_CARD_NEWS_PLANNER`, with model and timeout configured by `IMA2_CARD_NEWS_PLANNER_MODEL` and `IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS` and an explicit `IMA2_CARD_NEWS_PLANNER_FALLBACK` switch. Generated card images and manifests share the same `~/.ima2/generated` directory as classic and node assets.
+Implementation lives in `lib/cardNews*.ts`: `cardNewsTemplateStore`, `cardNewsRoleTemplateStore`, `cardNewsManifestStore`, `cardNewsJobStore`, `cardNewsPlanner`, `cardNewsPlannerClient`, `cardNewsPlannerPrompt`, `cardNewsPlannerSchema`, and `cardNewsGenerator`. Optional planner integration is gated by `IMA2_CARD_NEWS_PLANNER`, with model and timeout configured by `IMA2_CARD_NEWS_PLANNER_MODEL` and `IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS` and an explicit `IMA2_CARD_NEWS_PLANNER_FALLBACK` switch. Generated card images and manifests share the same `~/.ima2/generated` directory as classic and node assets.
 
 ## Error States
 
@@ -232,7 +235,7 @@ Implementation lives in `lib/cardNews*.js`: `cardNewsManifest`, `cardNewsPlanner
 | Upstream request/validation error | 400 | `INVALID_REQUEST` |
 | Unsupported node context mode | 400 | `CONTEXT_MODE_UNSUPPORTED` |
 | Multiple incoming parent edges | 409 | `GRAPH_PARENT_CONFLICT` |
-| API-key provider requested | 403 | `APIKEY_DISABLED` |
+| API-key provider requested without a configured key | 401 | `API_KEY_REQUIRED` |
 | Safety refusal | 422 | `SAFETY_REFUSAL` |
 | Moderation/content refusal | 422 or upstream mapped error | `MODERATION_REFUSED` |
 | OAuth session expired | upstream mapped error | `AUTH_CHATGPT_EXPIRED` |
@@ -259,11 +262,11 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - [ ] If a CLI-called endpoint changes, update `[[02-command-reference]]`.
 - [ ] If error shape is standardized, check all error tables and UI toast handling.
 - [ ] If the session graph contract changes, update `[[05-node-mode]]`.
-- [ ] If `server.js` is split into route files, update line counts in `[[01-file-function-map]]`.
+- [ ] If `server.ts` is split into route files, update line counts in `[[01-file-function-map]]`.
 
 ## Change Log
 
-- 2026-04-23: Documented the current `server.js` endpoint surface and response shapes.
+- 2026-04-23: Documented the current `server.ts` endpoint surface and response shapes.
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-24: Added node SSE partial streaming, requestId sidecar/history recovery, observability, terminal inflight, and gallery session-title response notes.
 - 2026-04-24: Added explicit image model selection contract for classic, edit, and node generation.
@@ -274,6 +277,7 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - 2026-04-25: Documented node context/search modes and graph-edge-derived parent normalization.
 - 2026-04-26: Documented runtime actual-port reporting and removed dev-only API details from the evergreen public API map.
 - 2026-04-28: Added session style-sheet endpoints, `/api/history/favorite`, `/api/metadata/read`, prompt library CRUD/folders/import/export, and dev-gated card-news API surface for ima2-gen 1.1.5.
+- 2026-04-30: Added `DELETE /api/history/:filename/permanent`, switched all `lib/*` and `routes/*` references to `.ts` source paths after the TypeScript migration close, and clarified that soft-delete now routes through `lib/systemTrash.ts` (OS trash) instead of `.trash/`.
 - 2026-04-28: Added PR2 prompt import curated-source, curated-search, and curated-refresh API contracts plus file-cache and tag-based attribution notes.
 
 Previous document: `[[02-command-reference]]`

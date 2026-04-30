@@ -50,13 +50,13 @@ ima2 serve
 - **Mobile shell**: 작은 화면에서는 app bar, compose sheet, compact settings toggle로 조작합니다.
 - **Observable jobs**: 진행 중인 작업과 최근 완료된 작업을 request ID로 추적합니다.
 
-## 이미지 생성은 OAuth 전용입니다
+## 이미지 생성은 OAuth와 API Key를 지원합니다
 
-현재 이미지 생성은 로컬 Codex/ChatGPT OAuth 경로로 실행됩니다.
+기본 이미지 생성은 로컬 Codex/ChatGPT OAuth 경로로 실행됩니다.
 
-API 키가 env/config에 있어도 billing 확인 같은 보조 기능에만 쓰일 수 있습니다. 생성 엔드포인트에서 `provider: "api"`를 보내면 `APIKEY_DISABLED`가 반환됩니다.
+API 키가 env/config에 있으면 생성 엔드포인트에서 `provider: "api"`를 보내 Responses API `image_generation` 도구를 사용할 수 있습니다.
 
-설정 화면에 **Configured but disabled**가 보이면, API 키는 감지됐지만 이미지 생성은 여전히 OAuth로 실행된다는 뜻입니다.
+설정 화면에 **API key provider available**이 보이면, API 키가 감지됐고 생성/편집/멀티모드/노드 요청에 사용할 수 있다는 뜻입니다.
 
 ![OAuth 활성화와 API 키 비활성 상태를 보여주는 설정 화면](../assets/screenshots/settings-oauth-generation.png)
 
@@ -199,8 +199,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 **프록시/VPN 환경에서 `fetch failed`가 반복돼요**
 로컬 OAuth 프록시가 접근 가능한지 확인하세요. 프록시가 필요한 네트워크라면 프록시 클라이언트의 TUN/TURN류 모드를 켠 뒤 `npx openai-oauth --port 10531`을 다시 시도하세요. 그래도 실패하면 `ima2 serve` 또는 `openai-oauth`를 실행하는 같은 터미널에 `HTTP_PROXY`와 `HTTPS_PROXY`를 설정하세요.
 
-**이미지 생성이 `APIKEY_DISABLED`로 실패해요**
-현재 빌드에서는 OAuth로 생성해야 합니다. API-key 이미지 생성은 의도적으로 비활성화되어 있습니다.
+**이미지 생성이 `API_KEY_REQUIRED`로 실패해요**
+`provider: "api"` 요청에 사용할 API 키가 설정되어 있지 않다는 뜻입니다. API 키를 설정하거나 OAuth 공급자로 전환하세요.
 
 **큰 레퍼런스 이미지가 실패해요**
 JPEG/PNG는 업로드 전에 자동 압축됩니다. 그래도 실패하면 해상도를 낮춘 JPEG/PNG로 바꿔 다시 시도하세요. HEIC/HEIF는 브라우저 경로에서 지원하지 않습니다.

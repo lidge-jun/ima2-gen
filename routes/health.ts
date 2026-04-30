@@ -17,12 +17,13 @@ export function registerHealthRoutes(app, ctx) {
 
   app.get("/api/providers", (_req, res) => {
     res.json({
-      apiKey: false,
+      apiKey: Boolean(ctx.hasApiKey),
       oauth: true,
       oauthPort: ctx.oauthPort,
       oauthActualPort: ctx.oauthActualPort || ctx.oauthPort,
       oauthUrl: ctx.oauthUrl,
-      apiKeyDisabled: true,
+      apiKeyDisabled: false,
+      apiKeySource: ctx.apiKeySource ?? "none",
       runtime: runtimePorts(),
     });
   });

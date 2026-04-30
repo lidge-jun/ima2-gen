@@ -50,15 +50,15 @@ ima2 serve
 - **Mobile shell**: 小さい画面では app bar、compose sheet、compact settings toggle で操作できます。
 - **Observable jobs**: 進行中の生成と最近の生成を request ID で追跡できます。
 
-## 画像生成は OAuth 専用です
+## 画像生成は OAuth と API key をサポートします
 
-現在の画像生成は、ローカルの Codex/ChatGPT OAuth 経路で実行されます。
+既定の画像生成は、ローカルの Codex/ChatGPT OAuth 経路で実行されます。
 
-API key が env/config に存在していても、billing 確認などの補助機能に使われるだけです。生成エンドポイントで `provider: "api"` を送ると `APIKEY_DISABLED` が返ります。
+API key が env/config に存在する場合、生成エンドポイントで `provider: "api"` を指定すると Responses API の `image_generation` tool を使用できます。
 
-Settings に **Configured but disabled** と表示される場合、API key は検出されていますが、画像生成は OAuth で動いているという意味です。
+Settings に **API key provider available** と表示される場合、API key が検出され、生成・編集・multimode・node request に使用できるという意味です。
 
-![OAuth active と API key disabled の状態を示す settings 画面](../assets/screenshots/settings-oauth-generation.png)
+![OAuth active と API key provider available の状態を示す settings 画面](../assets/screenshots/settings-oauth-generation.png)
 
 ## モデルの選び方
 
@@ -196,8 +196,8 @@ Endpoint 一覧は [API Reference](API.md) に分離しました。
 **OAuth login がうまくいかない**
 `npx @openai/codex login` を実行し、`ima2 status` を確認してから `ima2 serve` を再起動してください。
 
-**画像生成が `APIKEY_DISABLED` で失敗する**
-この build では OAuth で生成してください。API-key image generation は意図的に無効化されています。
+**画像生成が `API_KEY_REQUIRED` で失敗する**
+`provider: "api"` request に使う API key が設定されていません。API key を設定するか OAuth provider に切り替えてください。
 
 **大きな参照画像が失敗する**
 JPEG/PNG は送信前に自動圧縮されます。それでも失敗する場合は、解像度を下げた JPEG/PNG に変換してください。HEIC/HEIF は browser path ではサポートしていません。

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const route = readFileSync("routes/nodes.ts", "utf-8");
 const oauth = readFileSync("lib/oauthProxy.ts", "utf-8");
+const providerOptions = readFileSync("lib/providerOptions.ts", "utf-8");
 
 describe("node context and edit search policy", () => {
   it("defaults node context to parent-plus-refs and rejects ancestry until implemented", () => {
@@ -13,7 +14,9 @@ describe("node context and edit search policy", () => {
 
   it("defaults web_search on while honoring an explicit off switch", () => {
     assert.match(route, /searchMode: rawSearchMode = "on"/);
-    assert.match(route, /body\.webSearchEnabled !== false && searchMode !== "off"/);
+    assert.match(route, /resolveProviderOptions/);
+    assert.match(providerOptions, /rawWebSearchEnabled !== false && searchMode !== "off"/);
+    assert.match(providerOptions, /apiConfig\.allowWebSearch !== false/);
     assert.match(oauth, /resolveWebSearchEnabled/);
     assert.match(oauth, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
     assert.match(oauth, /webSearchEnabled/);

@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
-import { editViaOAuth } from "../lib/oauthProxy.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
+import { resolveProviderOptions } from "../lib/providerOptions.js";
+import { editViaResponses } from "../lib/responsesImageAdapter.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { hasPngAlphaChannel, parsePngInfo } from "../lib/pngInfo.js";
@@ -81,23 +81,24 @@ export function registerEditRoutes(app, ctx) {
         webSearchEnabled: rawWebSearchEnabled = true,
       } = req.body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
-      const modelCheck = normalizeImageModel(ctx, rawModel);
-      if (modelCheck.error) {
+      const providerOptions = resolveProviderOptions(ctx, {
+        provider,
+        rawModel,
+        rawReasoningEffort,
+        rawSize: size,
+        rawWebSearchEnabled,
+      });
+      if (providerOptions.error) {
         finishStatus = "error";
-        finishHttpStatus = modelCheck.status;
-        finishErrorCode = modelCheck.code;
-        return res.status(modelCheck.status).json({ error: modelCheck.error, code: modelCheck.code });
+        finishHttpStatus = providerOptions.status;
+        finishErrorCode = providerOptions.code;
+        return res.status(providerOptions.status).json({ error: providerOptions.error, code: providerOptions.code });
       }
-      const imageModel = modelCheck.model;
-      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
-      if (reasoningCheck.error) {
-        finishStatus = "error";
-        finishHttpStatus = reasoningCheck.status;
-        finishErrorCode = reasoningCheck.code;
-        return res.status(reasoningCheck.status).json({ error: reasoningCheck.error, code: reasoningCheck.code });
-      }
-      const reasoningEffort = reasoningCheck.effort;
-      const webSearchEnabled = rawWebSearchEnabled !== false;
+      const imageModel = providerOptions.model;
+      const reasoningEffort = providerOptions.reasoningEffort;
+      const effectiveSize = providerOptions.size;
+      const webSearchEnabled = providerOptions.webSearchEnabled;
+      const activeProvider = providerOptions.provider;
       const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
@@ -110,7 +111,7 @@ export function registerEditRoutes(app, ctx) {
           sessionId,
           quality,
           model: imageModel,
-          size,
+          size: effectiveSize,
         },
       });
 
@@ -134,20 +135,14 @@ export function registerEditRoutes(app, ctx) {
         finishErrorCode = "INVALID_MODERATION";
         return res.status(400).json({ error: moderationCheck.error });
       }
-      if (provider === "api") {
-        finishStatus = "error";
-        finishHttpStatus = 403;
-        finishErrorCode = "APIKEY_DISABLED";
-        return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
-      }
 
       logEvent("edit", "request", {
         requestId,
         client: req.get("x-ima2-client") || "ui",
-        provider: "oauth",
+        provider: activeProvider,
         quality,
         model: imageModel,
-        size,
+        size: effectiveSize,
         moderation,
         sessionId,
         promptChars: typeof prompt === "string" ? prompt.length : 0,
@@ -158,11 +153,12 @@ export function registerEditRoutes(app, ctx) {
         maskBytes: maskCheck.maskBytes ?? 0,
       });
       const startTime = Date.now();
-      const { b64: resultB64, usage, revisedPrompt, webSearchCalls = 0 } = await editViaOAuth(
+      const { b64: resultB64, usage, revisedPrompt, webSearchCalls = 0 } = await editViaResponses(
+        activeProvider,
         prompt,
         imageB64,
         quality,
-        size,
+        effectiveSize,
         moderation,
         normalizedPromptMode,
         ctx,
@@ -180,11 +176,11 @@ export function registerEditRoutes(app, ctx) {
         revisedPrompt: revisedPrompt || null,
         promptMode: normalizedPromptMode,
         quality,
-        size,
+        size: effectiveSize,
         moderation,
         model: imageModel,
         format: "png",
-        provider: "oauth",
+        provider: activeProvider,
         kind: "edit",
         createdAt: Date.now(),
         usage: usage || null,
@@ -206,7 +202,7 @@ export function registerEditRoutes(app, ctx) {
         elapsed,
         filename,
         usage,
-        provider: "oauth",
+        provider: activeProvider,
         model: imageModel,
         moderation,
         warnings: qualityWarnings,

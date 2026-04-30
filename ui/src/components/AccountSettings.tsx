@@ -23,6 +23,7 @@ export function AccountSettings() {
     data?.apiKeySource === "config"
       ? t("settings.account.apiSourceConfig")
       : t("settings.account.apiSourceEnv");
+  const apiReady = data?.apiKeyValid === true;
 
   return (
     <>
@@ -45,9 +46,13 @@ export function AccountSettings() {
             <h4>{t("settings.account.apiTitle")}</h4>
             <p>{t("settings.account.apiBody")}</p>
           </div>
-          <div className="settings-status is-muted">
+          <div className={`settings-status${apiReady ? " is-ok" : " is-muted"}`}>
             <span aria-hidden="true" />
-            {error ? t("settings.account.apiUnknown") : t("settings.account.apiDisabled")}
+            {error
+              ? t("settings.account.apiUnknown")
+              : apiReady
+                ? t("settings.account.apiReady")
+                : t("settings.account.apiUnavailable")}
           </div>
         </article>
       ) : null}

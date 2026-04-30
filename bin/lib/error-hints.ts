@@ -1,6 +1,6 @@
 const HINTS = {
   SERVER_UNREACHABLE: "Start `ima2 serve`, or pass `--server <url>`.",
-  APIKEY_DISABLED: "Image generation is OAuth-only. Use Codex login/OAuth.",
+  APIKEY_DISABLED: "API-key generation is supported in current builds; switch providers or update the configured API key.",
   IMAGE_MODEL_UNSUPPORTED:
     "This model is visible but cannot generate images here. Use gpt-5.4 or gpt-5.4-mini.",
   INVALID_IMAGE_MODEL: "Use one of: gpt-5.5, gpt-5.4, gpt-5.4-mini.",

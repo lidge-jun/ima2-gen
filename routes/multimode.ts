@@ -4,8 +4,8 @@ import { randomBytes } from "crypto";
 import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
-import { generateMultimodeViaOAuth } from "../lib/oauthProxy.js";
+import { resolveProviderOptions } from "../lib/providerOptions.js";
+import { generateMultimodeViaResponses } from "../lib/responsesImageAdapter.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
@@ -62,25 +62,25 @@ export function registerMultimodeRoutes(app, ctx) {
       const maxImages = normalizeMaxImages(req.body?.maxImages);
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
-      const modelCheck = normalizeImageModel(ctx, rawModel);
-      if (modelCheck.error) {
+      const providerOptions = resolveProviderOptions(ctx, {
+        provider,
+        rawModel,
+        rawReasoningEffort,
+        rawSize: size,
+        rawWebSearchEnabled,
+      });
+      if (providerOptions.error) {
         finishStatus = "error";
-        finishHttpStatus = modelCheck.status;
-        finishErrorCode = modelCheck.code;
-        sendSse(res, "error", { error: modelCheck.error, code: modelCheck.code, status: modelCheck.status, requestId });
+        finishHttpStatus = providerOptions.status;
+        finishErrorCode = providerOptions.code;
+        sendSse(res, "error", { error: providerOptions.error, code: providerOptions.code, status: providerOptions.status, requestId });
         return;
       }
-      const imageModel = modelCheck.model;
-      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
-      if (reasoningCheck.error) {
-        finishStatus = "error";
-        finishHttpStatus = reasoningCheck.status;
-        finishErrorCode = reasoningCheck.code;
-        sendSse(res, "error", { error: reasoningCheck.error, code: reasoningCheck.code, status: reasoningCheck.status, requestId });
-        return;
-      }
-      const reasoningEffort = reasoningCheck.effort;
-      const webSearchEnabled = rawWebSearchEnabled !== false;
+      const imageModel = providerOptions.model;
+      const reasoningEffort = providerOptions.reasoningEffort;
+      const effectiveSize = providerOptions.size;
+      const webSearchEnabled = providerOptions.webSearchEnabled;
+      const activeProvider = providerOptions.provider;
       if (!prompt) {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -96,19 +96,6 @@ export function registerMultimodeRoutes(app, ctx) {
         sendSse(res, "error", { error: moderationCheck.error, code: finishErrorCode, status: 400, requestId });
         return;
       }
-      if (provider === "api") {
-        finishStatus = "error";
-        finishHttpStatus = 403;
-        finishErrorCode = "APIKEY_DISABLED";
-        sendSse(res, "error", {
-          error: "API key provider is disabled. Use OAuth (Codex login).",
-          code: finishErrorCode,
-          status: 403,
-          requestId,
-        });
-        return;
-      }
-
       const refCheck = validateAndNormalizeRefs(references);
       if (refCheck.error) {
         finishStatus = "error";
@@ -127,7 +114,7 @@ export function registerMultimodeRoutes(app, ctx) {
           kind: "multimode",
           quality,
           model: imageModel,
-          size,
+          size: effectiveSize,
           maxImages,
           refsCount: referencePayload.refsCount,
           referenceBytes: referencePayload.referenceBytes,
@@ -139,7 +126,7 @@ export function registerMultimodeRoutes(app, ctx) {
         requestId,
         quality,
         model: imageModel,
-        size,
+        size: effectiveSize,
         moderation,
         maxImages,
         refs: refCheck.refs.length,
@@ -155,10 +142,11 @@ export function registerMultimodeRoutes(app, ctx) {
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
 
       sendSse(res, "phase", { phase: "streaming", requestId, sequenceId, maxImages });
-      const generated = await generateMultimodeViaOAuth(
+      const generated = await generateMultimodeViaResponses(
+        activeProvider,
         prompt,
         quality,
-        size,
+        effectiveSize,
         moderation,
         refCheck.refDetails || refCheck.refs,
         requestId,
@@ -202,11 +190,11 @@ export function registerMultimodeRoutes(app, ctx) {
           revisedPrompt: image.revisedPrompt || null,
           promptMode: normalizedPromptMode,
           quality,
-          size,
+          size: effectiveSize,
           format,
           moderation,
           model: imageModel,
-          provider: "oauth",
+          provider: activeProvider,
           createdAt: Date.now(),
           usage: generated.usage || null,
           webSearchCalls: generated.webSearchCalls || 0,
@@ -244,9 +232,9 @@ export function registerMultimodeRoutes(app, ctx) {
         status,
         elapsed,
         images,
-        provider: "oauth",
+        provider: activeProvider,
         quality,
-        size,
+        size: effectiveSize,
         moderation,
         model: imageModel,
         usage: generated.usage || null,

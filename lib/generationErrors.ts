@@ -7,6 +7,7 @@ const PASSTHROUGH_CODES = new Set([
   "AUTH_API_KEY_INVALID",
   "UPSTREAM_5XX",
   "OAUTH_IMAGE_TIMEOUT",
+  "API_KEY_REQUIRED",
   "INVALID_REQUEST",
   "OAUTH_UPSTREAM_ERROR",
 ]);
@@ -57,6 +58,7 @@ export function isNonRetryableGenerationError(err) {
 export function statusForErrorCode(code, fallback = 500) {
   if (code === "OAUTH_UNAVAILABLE" || code === "NETWORK_FAILED") return 503;
   if (code === "AUTH_CHATGPT_EXPIRED" || code === "AUTH_API_KEY_INVALID") return 401;
+  if (code === "API_KEY_REQUIRED") return 401;
   if (code === "UPSTREAM_5XX") return 502;
   if (code === "OAUTH_IMAGE_TIMEOUT") return 504;
   if (code === "INVALID_REQUEST") return 400;

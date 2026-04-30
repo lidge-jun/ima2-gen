@@ -178,7 +178,8 @@
     "remaining": "${remaining} remaining",
     "thisMonth": "${amount} this month",
     "oauthFree": "OAuth · free via codex",
-    "apiDisabled": "API key disabled (OAuth only)",
+    "apiDisabled": "API key ready",
+    "apiReady": "API key ready",
     "oauthMode": "OAuth mode"
   },
   "history": {
@@ -636,12 +637,14 @@
     "account": {
       "primaryEyebrow": "Active provider",
       "oauthTitle": "OAuth is active",
-      "oauthBody": "Generation currently runs through your Codex OAuth session. API-key generation remains disabled in this build.",
+      "oauthBody": "OAuth generation runs through your Codex OAuth session. You can switch to API-key mode when a valid key is configured.",
       "apiSourceEnv": "OPENAI_API_KEY detected",
       "apiSourceConfig": "config.json API key detected",
-      "apiTitle": "Configured but disabled",
-      "apiBody": "ima2-gen found an API key in env/config, but the app is OAuth-only right now. Remove the key only if you do not want this status shown.",
-      "apiDisabled": "Disabled",
+      "apiTitle": "API key provider available",
+      "apiBody": "ima2-gen can use this API key for generation, edit, multimode, and node requests through the Responses API.",
+      "apiDisabled": "Unavailable",
+      "apiReady": "Ready",
+      "apiUnavailable": "Unavailable",
       "apiUnknown": "Status unknown"
     },
     "imageModel": {
@@ -747,7 +750,7 @@
     },
     "authApiKeyInvalid": {
       "title": "API key authentication failed",
-      "body": "The key is invalid, revoked, out of quota, or tied to the wrong org. This app runs in OAuth mode, so switch to ChatGPT login.",
+      "body": "The key is missing, invalid, revoked, out of quota, or tied to the wrong org. Switch to OAuth or update the configured API key.",
       "cta": "OK"
     },
     "networkFailed": {
@@ -766,8 +769,8 @@
       "cta": "Edit input"
     },
     "apikeyDisabled": {
-      "title": "API-key mode is disabled",
-      "body": "This app is OAuth-only (ChatGPT login). Switch the provider to OAuth.",
+      "title": "API-key mode is unavailable",
+      "body": "This build supports API-key generation, but the current request could not use a configured key. Switch to OAuth or update the API key.",
       "cta": "OK"
     }
   },

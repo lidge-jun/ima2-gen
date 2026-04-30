@@ -25,7 +25,7 @@ sequenceDiagram
     participant OAuth as openai-oauth
 
     User->>CLI: ima2 serve
-    CLI->>Server: node server.js
+    CLI->>Server: tsx server.ts (dev) / node server.js (publish)
     Server->>OAuth: start local proxy
     Server->>Adv: advertise port
     User->>CLI: ima2 gen prompt
@@ -39,25 +39,43 @@ sequenceDiagram
 
 | Command | Alias | Role | Main files |
 |---|---|---|---|
-| `ima2 serve [--dev]` | none | Run setup if needed and start the server; `--dev` enables verbose diagnostics | `bin/ima2.js`, `server.js` |
-| `ima2 setup` | `login` | Configure API key or OAuth interactively | `bin/ima2.js` |
-| `ima2 status` | none | Show config, provider, and OAuth session state | `bin/ima2.js`, `lib/codexDetect.js` |
-| `ima2 doctor` | none | Check Node, package, node_modules, config, and storage state | `bin/ima2.js`, `bin/lib/storage-doctor.js` |
-| `ima2 open` | none | Open the web UI at the advertised or default port | `bin/ima2.js`, `bin/lib/platform.js` |
-| `ima2 reset` | none | Reset `~/.ima2/config.json` to an empty object | `bin/ima2.js` |
-| `ima2 --version` | `-v` | Print the package version | `bin/ima2.js`, `package.json` |
-| `ima2 --help` | `-h` | Print top-level help | `bin/ima2.js` |
+| `ima2 serve [--dev]` | none | Run setup if needed and start the server; `--dev` enables verbose diagnostics | `bin/ima2.ts`, `server.ts` |
+| `ima2 setup` | `login` | Configure API key or OAuth interactively | `bin/ima2.ts` |
+| `ima2 status` | none | Show config, provider, and OAuth session state | `bin/ima2.ts`, `lib/codexDetect.ts` |
+| `ima2 doctor` | none | Check Node, package, node_modules, config, and storage state | `bin/ima2.ts`, `bin/lib/storage-doctor.ts` |
+| `ima2 open` | none | Open the web UI at the advertised or default port | `bin/ima2.ts`, `bin/lib/platform.ts` |
+| `ima2 reset` | none | Reset `~/.ima2/config.json` to an empty object | `bin/ima2.ts` |
+| `ima2 --version` | `-v` | Print the package version | `bin/ima2.ts`, `package.json` |
+| `ima2 --help` | `-h` | Print top-level help | `bin/ima2.ts` |
 
 ## Client Commands
+
+The CLI surface was expanded to near-feature-parity with the server API in #45 (`feat(cli): full feature parity with server API`, commit 9698fc1). The table below groups commands by the API surface they wrap. Run `ima2 <command> --help` for full per-command flags.
 
 | Command | Server API | Role |
 |---|---|---|
 | `ima2 gen <prompt>` | `POST /api/generate` | Generate image(s) from a prompt and optional references |
 | `ima2 edit <file>` | `POST /api/edit` | Edit an existing image with a prompt |
-| `ima2 ls` | `GET /api/history` | List recent generations |
+| `ima2 multimode <spec>` | `POST /api/generate/multimode` | Run a multimode generation sequence |
+| `ima2 node <subcommand>` | `/api/node/*` | Node-mode generate/show/list (graph-aware) |
+| `ima2 session <subcommand>` | `/api/sessions*` | List/load/save/rename/delete sessions and style sheets |
+| `ima2 history <subcommand>` | `/api/history*` | List, show, favorite, restore, soft-delete, permanent-delete history items |
+| `ima2 prompt <subcommand>` | `/api/prompts*` and `/api/prompt-import/*` | Prompt library list/show/save/delete/import/export |
+| `ima2 annotate <subcommand>` | `/api/annotations/:filename` | Get/put/delete canvas annotations |
+| `ima2 canvas-versions <subcommand>` | `/api/canvas-versions*` | List/save canvas version snapshots |
+| `ima2 metadata <subcommand>` | `/api/metadata/read` | Read embedded XMP metadata from images |
+| `ima2 comfy <subcommand>` | `/api/comfy/export-image` | Export images to a ComfyUI bridge workspace |
+| `ima2 cardnews <subcommand>` | `/api/cardnews/*` | Dev-gated card-news templates/sets/jobs |
+| `ima2 config <get\|set>` | local | Read/write `~/.ima2/config.json` |
+| `ima2 inflight <subcommand>` | `/api/inflight*` | List/cancel running jobs (alias surface for `ps`/`cancel`) |
+| `ima2 storage <subcommand>` | `/api/storage*` | Storage status and open generated dir |
+| `ima2 billing` | `/api/billing` | Show billing/usage summary |
+| `ima2 providers` | `/api/providers` | Show available providers and modes |
+| `ima2 oauth <subcommand>` | `/api/oauth*` | OAuth status and helpers |
+| `ima2 ls` | `GET /api/history` | History list (legacy alias of `history list`) |
 | `ima2 show <name>` | `GET /api/history` plus file path | Show or reveal one history item |
-| `ima2 ps` | `GET /api/inflight` | List running classic/node jobs |
-| `ima2 cancel <requestId>` | `DELETE /api/inflight/:requestId` | Mark a running/known job as canceled in the server registry |
+| `ima2 ps` | `GET /api/inflight` | List running classic/node jobs (legacy alias of `inflight list`) |
+| `ima2 cancel <requestId>` | `DELETE /api/inflight/:requestId` | Mark a running/known job as canceled (legacy alias of `inflight cancel`) |
 | `ima2 ping` | `GET /api/health` | Check server reachability and health |
 
 ## `gen` Options
@@ -79,6 +97,8 @@ sequenceDiagram
 | `--model <id>` | server default | Image model: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, or server-rejected `gpt-5.3-codex-spark` |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
+| `--reasoning-effort <low|medium|high>` | server default | Reasoning effort hint for prompt-aware models |
+| `--web-search` / `--no-web-search` | server default | Toggle Responses-API web search for the request |
 | `--session <id>` | none | Apply enabled session style sheet |
 
 ## `edit` Options
@@ -95,6 +115,8 @@ sequenceDiagram
 | `--model <id>` | server default | Image model: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, or server-rejected `gpt-5.3-codex-spark` |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
+| `--reasoning-effort <low|medium|high>` | server default | Reasoning effort hint for prompt-aware models |
+| `--web-search` / `--no-web-search` | server default | Toggle Responses-API web search for the request |
 | `--session <id>` | none | Apply enabled session style sheet |
 
 ## `ps` Options
@@ -135,9 +157,9 @@ sequenceDiagram
 
 ## Sync Checklist
 
-- [ ] If top-level commands in `bin/ima2.js` change, update the server-command table.
-- [ ] If `bin/commands/*.js` options change, update the option tables and README.
-- [ ] If `bin/lib/client.js` discovery order changes, update this doc and `[[06-infra-operations]]`.
+- [ ] If top-level commands in `bin/ima2.ts` change, update the server-command table.
+- [ ] If `bin/commands/*.ts` options change, update the option tables and README.
+- [ ] If `bin/lib/client.ts` discovery order changes, update this doc and `[[06-infra-operations]]`.
 - [ ] If API response shape changes, update `[[03-server-api]]` and CLI normalization logic.
 - [ ] If exit-code mapping changes, update README and tests.
 
@@ -147,6 +169,7 @@ sequenceDiagram
 - 2026-04-23: Translated this document from Korean to English.
 - 2026-04-26: Added classic CLI parity options, cancel command, terminal inflight listing, and actual-port discovery notes.
 - 2026-04-28: Documented the `serve --dev` verbose diagnostics flag and storage-doctor inclusion in `ima2 doctor`. Note that prompt-library, image-metadata, and card-news endpoints have no CLI client today; access them through the web UI or direct HTTP.
+- 2026-04-30: Captured the CLI feature-parity #45 surface (multimode, node, session, history, prompt, annotate, canvas-versions, metadata, comfy, cardnews, config, inflight, storage, billing, providers, oauth) and documented the new `--reasoning-effort` and `--web-search` / `--no-web-search` flags on `gen`/`edit`. Switched all `bin/*` path references from `.js` to `.ts` source.
 
 Previous document: `[[01-file-function-map]]`
 

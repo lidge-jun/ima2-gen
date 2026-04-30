@@ -10,7 +10,7 @@
 
 `ima2-gen` is a local image generation studio for people who want the ChatGPT/Codex image workflow in a small desktop-like web app.
 
-Run it with `npx`, sign in with Codex OAuth, type a prompt, and keep iterating with history, references, node branches, multimode batches, and Canvas Mode cleanup. No OpenAI API key is required for image generation in the default path.
+Run it with `npx`, sign in with Codex OAuth, type a prompt, and keep iterating with history, references, node branches, multimode batches, and Canvas Mode cleanup. No OpenAI API key is required for the default path, but API-key generation is also supported when configured.
 
 ![ima2-gen classic generation screen with prompt composer, generated image, compact model label, and result metadata.](assets/screenshots/classic-generate-light.png)
 
@@ -55,15 +55,17 @@ persists, reboot and run the update before starting ima2 again.
 - **Mobile shell**: use the app bar, compose sheet, and compact settings toggle on smaller screens.
 - **Observable jobs**: active and recent jobs are tracked with safe logs and request IDs.
 
-## OAuth Only For Image Generation
+## Provider Paths
 
-Image generation currently runs through the local Codex/ChatGPT OAuth path.
+Image generation can run through either the local Codex/ChatGPT OAuth path or a configured OpenAI API key.
 
-API keys may still be detected for auxiliary developer features such as billing checks, but generation routes reject `provider: "api"` with `APIKEY_DISABLED`.
+- `provider: "oauth"` uses the local Codex OAuth proxy.
+- `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool.
+- API-key generation supports classic generate, edit, mask-guided edit, multimode, and node generation.
 
-If the settings page says **Configured but disabled**, that means an API key exists in env/config but image generation still uses OAuth.
+If no provider is specified, the app keeps the current OAuth/default behavior. API-key generation defaults to `gpt-5.4-mini`, `low` reasoning, and `1024x1024` unless the request passes validated model, reasoning, size, or web-search options.
 
-![Settings workspace showing OAuth active and API key configured but disabled.](assets/screenshots/settings-oauth-generation.png)
+![Settings workspace showing OAuth active and API key provider available.](assets/screenshots/settings-oauth-generation.png)
 
 ## Model Guidance
 
@@ -189,7 +191,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable the auto-started OAuth proxy |
 | `IMA2_LOG_LEVEL` | `warn` | Normal serve defaults to `warn`; dev mode defaults to `debug`; supports `debug`, `info`, `warn`, `error`, or `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Recent terminal job retention for debug views |
-| `OPENAI_API_KEY` | — | API key for supported auxiliary paths, not image generation |
+| `OPENAI_API_KEY` | — | API key for the `provider: "api"` Responses API image path and auxiliary API-key features |
 
 ### Logging modes
 
@@ -222,8 +224,8 @@ Run `npx @openai/codex login`, confirm `ima2 status`, then restart `ima2 serve`.
 **`fetch failed` repeats on a proxy/VPN network**
 Check that the local OAuth proxy is reachable. On networks that require a proxy, enable your proxy client's TUN/TURN-style mode, then retry `npx openai-oauth --port 10531`. If it still fails, set `HTTP_PROXY` and `HTTPS_PROXY` in the same terminal that runs `ima2 serve` or `openai-oauth`.
 
-**Images fail with `APIKEY_DISABLED`**
-Use OAuth for generation. API-key image generation is intentionally disabled in this build.
+**Images fail with `API_KEY_REQUIRED`**
+Set `OPENAI_API_KEY` or configure an API key before using `provider: "api"`. The default OAuth path still works without an API key.
 
 **A large reference image fails**
 The app compresses large JPEG/PNG references before upload. If a file still fails, convert it to JPEG or PNG at a lower resolution and try again. HEIC/HEIF files are not supported by the browser path.

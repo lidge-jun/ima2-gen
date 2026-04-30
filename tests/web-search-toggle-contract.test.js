@@ -33,12 +33,17 @@ describe("web search toggle contract", () => {
   it("keeps server search on by default and removes web_search when off", () => {
     const generate = readSource("routes/generate.ts");
     const nodes = readSource("routes/nodes.ts");
+    const providerOptions = readSource("lib/providerOptions.ts");
     const oauth = readSource("lib/oauthProxy.ts");
+    const adapter = readSource("lib/responsesImageAdapter.ts");
 
     assert.match(generate, /webSearchEnabled: rawWebSearchEnabled = true/);
     assert.match(nodes, /searchMode: rawSearchMode = "on"/);
-    assert.match(nodes, /body\.webSearchEnabled !== false && searchMode !== "off"/);
+    assert.match(nodes, /resolveProviderOptions/);
+    assert.match(providerOptions, /rawWebSearchEnabled !== false && searchMode !== "off"/);
+    assert.match(providerOptions, /apiConfig\.allowWebSearch !== false/);
     assert.match(oauth, /function resolveWebSearchEnabled/);
     assert.match(oauth, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
+    assert.match(adapter, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
   });
 });

@@ -64,7 +64,8 @@ test("/api/generate returns upstream validation as INVALID_REQUEST without retry
     assert.equal(body.upstreamCode, "invalid_value");
     assert.equal(body.upstreamType, "invalid_request_error");
     assert.equal(body.upstreamParam, "tools[0].size");
-    assert.equal(body.error, invalidSizeBody.error.message);
+    assert.equal(body.error, "OpenAI rejected the image request parameters.");
+    assert.doesNotMatch(JSON.stringify(body), /512x512/);
     assert.equal(upstreamHits, 1);
   } finally {
     await new Promise((resolve) => appServer.close(resolve));

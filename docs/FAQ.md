@@ -12,7 +12,7 @@ For Korean, see [FAQ.ko.md](FAQ.ko.md).
 |---|---|
 | The server is unreachable | Run `ima2 serve`, then `ima2 ping`. |
 | OAuth login fails | Run `npx @openai/codex login`, then restart `ima2 serve`. |
-| API key generation is disabled | Use OAuth for image generation. API keys are only used by auxiliary paths. |
+| API key provider says `API_KEY_REQUIRED` | Configure an API key, or switch back to the OAuth provider. |
 | Old gallery images look missing | Run `ima2 doctor`, then see [Recover Old Generated Images](RECOVER_OLD_IMAGES.md). |
 | `gpt-5.5` fails | Update Codex CLI first, then try `gpt-5.4` as the stable fallback. |
 | Reference upload fails | Use JPEG/PNG, lower the resolution, and keep references to 5 images or fewer. |
@@ -76,13 +76,13 @@ again.
 
 ### Do I need an OpenAI API key?
 
-No for image generation. The normal generation path uses your local Codex/ChatGPT OAuth session.
+No for the default generation path. The normal path uses your local Codex/ChatGPT OAuth session.
 
-You may still see an API key detected in settings. That only means an API key exists in env/config. Image generation routes still reject `provider: "api"` with `APIKEY_DISABLED`.
+If you configure an API key, image generation routes can also use `provider: "api"` through the Responses API `image_generation` tool.
 
-### Why does the settings page say "Configured but disabled"?
+### Why does the settings page say "API key provider available"?
 
-It means `ima2-gen` found an API key, but API-key image generation is intentionally disabled in this build. Use OAuth for generation.
+It means `ima2-gen` found a valid API key. API-key mode can generate, edit, run multimode, and create node outputs. If no key is configured, `provider: "api"` fails before upstream with `API_KEY_REQUIRED`.
 
 ### If Codex CLI is already logged in, does ima2-gen reuse it?
 

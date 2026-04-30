@@ -4,8 +4,8 @@ import { randomBytes } from "crypto";
 import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
-import { generateViaOAuth } from "../lib/oauthProxy.js";
+import { resolveProviderOptions } from "../lib/providerOptions.js";
+import { generateViaResponses } from "../lib/responsesImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
@@ -43,23 +43,24 @@ export function registerGenerateRoutes(app, ctx) {
         webSearchEnabled: rawWebSearchEnabled = true,
       } = req.body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
-      const modelCheck = normalizeImageModel(ctx, rawModel);
-      if (modelCheck.error) {
+      const providerOptions = resolveProviderOptions(ctx, {
+        provider,
+        rawModel,
+        rawReasoningEffort,
+        rawSize: size,
+        rawWebSearchEnabled,
+      });
+      if (providerOptions.error) {
         finishStatus = "error";
-        finishHttpStatus = modelCheck.status;
-        finishErrorCode = modelCheck.code;
-        return res.status(modelCheck.status).json({ error: modelCheck.error, code: modelCheck.code });
+        finishHttpStatus = providerOptions.status;
+        finishErrorCode = providerOptions.code;
+        return res.status(providerOptions.status).json({ error: providerOptions.error, code: providerOptions.code });
       }
-      const imageModel = modelCheck.model;
-      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
-      if (reasoningCheck.error) {
-        finishStatus = "error";
-        finishHttpStatus = reasoningCheck.status;
-        finishErrorCode = reasoningCheck.code;
-        return res.status(reasoningCheck.status).json({ error: reasoningCheck.error, code: reasoningCheck.code });
-      }
-      const reasoningEffort = reasoningCheck.effort;
-      const webSearchEnabled = rawWebSearchEnabled !== false;
+      const imageModel = providerOptions.model;
+      const reasoningEffort = providerOptions.reasoningEffort;
+      const effectiveSize = providerOptions.size;
+      const webSearchEnabled = providerOptions.webSearchEnabled;
+      const activeProvider = providerOptions.provider;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
 
       if (!prompt) return res.status(400).json({ error: "Prompt is required" });
@@ -79,7 +80,7 @@ export function registerGenerateRoutes(app, ctx) {
           clientNodeId,
           quality,
           model: imageModel,
-          size,
+          size: effectiveSize,
           n: count,
           refsCount: referencePayload.refsCount,
           referenceBytes: referencePayload.referenceBytes,
@@ -95,22 +96,16 @@ export function registerGenerateRoutes(app, ctx) {
         return res.status(400).json({ error: refCheck.error, code: refCheck.code });
       }
 
-      if (provider === "api") {
-        finishStatus = "error";
-        finishHttpStatus = 403;
-        finishErrorCode = "APIKEY_DISABLED";
-        return res.status(403).json({ error: "API key provider is disabled. Use OAuth (Codex login).", code: "APIKEY_DISABLED" });
-      }
       const client = req.get("x-ima2-client") || "ui";
       const referenceDiagnostics = refCheck.referenceDiagnostics || [];
       const referenceMismatchCount = referenceDiagnostics.filter((ref) => ref.warnings?.includes("mime_mismatch")).length;
       logEvent("generate", "request", {
         requestId,
         client,
-        provider: "oauth",
+        provider: activeProvider,
         quality,
         model: imageModel,
-        size,
+        size: effectiveSize,
         moderation,
         n: count,
         refs: refCheck.refs.length,
@@ -135,10 +130,11 @@ export function registerGenerateRoutes(app, ctx) {
         let lastErr;
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
           try {
-            const r = await generateViaOAuth(
+            const r = await generateViaResponses(
+              activeProvider,
               prompt,
               quality,
-              size,
+              effectiveSize,
               moderation,
               refCheck.refDetails || refCheck.refs,
               requestId,
@@ -179,11 +175,11 @@ export function registerGenerateRoutes(app, ctx) {
             revisedPrompt: r.value.revisedPrompt || null,
             promptMode: normalizedPromptMode,
             quality,
-            size,
+            size: effectiveSize,
             format,
             moderation,
             model: imageModel,
-            provider: "oauth",
+            provider: activeProvider,
             createdAt: Date.now(),
             usage: r.value.usage || null,
             webSearchCalls: r.value.webSearchCalls || 0,
@@ -251,10 +247,10 @@ export function registerGenerateRoutes(app, ctx) {
       const firstRevised = images[0]?.revisedPrompt || null;
       const extra = {
         usage: totalUsage,
-        provider: "oauth",
+        provider: activeProvider,
         webSearchCalls: totalWebSearchCalls,
         quality,
-        size,
+        size: effectiveSize,
         moderation,
         model: imageModel,
         warnings: qualityWarnings,

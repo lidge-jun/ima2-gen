@@ -10,8 +10,8 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
-import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModels.js";
-import { generateViaOAuth, editViaOAuth } from "../lib/oauthProxy.js";
+import { resolveProviderOptions } from "../lib/providerOptions.js";
+import { generateViaResponses, editViaResponses } from "../lib/responsesImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { logEvent, logError } from "../lib/logger.js";
 
@@ -100,34 +100,33 @@ export function registerNodeRoutes(app, ctx) {
       } = body;
       const { provider = "oauth" } = body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
-      const modelCheck = normalizeImageModel(ctx, rawModel);
-      if (modelCheck.error) {
-        finishStatus = "error";
-        finishHttpStatus = modelCheck.status;
-        finishErrorCode = modelCheck.code;
-        return res.status(modelCheck.status).json({
-          error: { code: modelCheck.code, message: modelCheck.error },
-          parentNodeId,
-        });
-      }
-      const imageModel = modelCheck.model;
-      const reasoningCheck = normalizeReasoningEffort(ctx, rawReasoningEffort);
-      if (reasoningCheck.error) {
-        finishStatus = "error";
-        finishHttpStatus = reasoningCheck.status;
-        finishErrorCode = reasoningCheck.code;
-        return res.status(reasoningCheck.status).json({
-          error: { code: reasoningCheck.code, message: reasoningCheck.error },
-          parentNodeId,
-        });
-      }
-      const reasoningEffort = reasoningCheck.effort;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
       const contextMode = ["parent-plus-refs", "parent-only", "ancestry"].includes(rawContextMode)
         ? rawContextMode
         : "parent-plus-refs";
       const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "on";
-      const webSearchEnabled = body.webSearchEnabled !== false && searchMode !== "off";
+      const providerOptions = resolveProviderOptions(ctx, {
+        provider,
+        rawModel,
+        rawReasoningEffort,
+        rawSize: size,
+        rawWebSearchEnabled: body.webSearchEnabled,
+        searchMode,
+      });
+      if (providerOptions.error) {
+        finishStatus = "error";
+        finishHttpStatus = providerOptions.status;
+        finishErrorCode = providerOptions.code;
+        return res.status(providerOptions.status).json({
+          error: { code: providerOptions.code, message: providerOptions.error },
+          parentNodeId,
+        });
+      }
+      const imageModel = providerOptions.model;
+      const reasoningEffort = providerOptions.reasoningEffort;
+      const effectiveSize = providerOptions.size;
+      const webSearchEnabled = providerOptions.webSearchEnabled;
+      const activeProvider = providerOptions.provider;
       if (contextMode === "ancestry") {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -138,15 +137,6 @@ export function registerNodeRoutes(app, ctx) {
         });
       }
 
-      if (provider === "api") {
-        finishStatus = "error";
-        finishHttpStatus = 403;
-        finishErrorCode = "APIKEY_DISABLED";
-        return res.status(403).json({
-          error: { code: "APIKEY_DISABLED", message: "API key provider is disabled. Use OAuth." },
-          parentNodeId,
-        });
-      }
       if (!prompt || typeof prompt !== "string") {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -200,7 +190,7 @@ export function registerNodeRoutes(app, ctx) {
         clientNodeId,
         quality,
         model: imageModel,
-        size,
+        size: effectiveSize,
         moderation,
         refs: refsForRequest.length,
         referenceBytes: referencePayload.referenceBytes,
@@ -240,7 +230,7 @@ export function registerNodeRoutes(app, ctx) {
             model: imageModel,
             moderation,
             quality,
-            size,
+            size: effectiveSize,
             refs: refsForRequest.length,
             inputImageCount,
             parentImagePresent,
@@ -249,17 +239,18 @@ export function registerNodeRoutes(app, ctx) {
             webSearchEnabled,
           });
           const r = parentB64
-            ? await editViaOAuth(prompt, parentB64, quality, size, moderation, normalizedPromptMode, ctx, requestId, {
+            ? await editViaResponses(activeProvider, prompt, parentB64, quality, effectiveSize, moderation, normalizedPromptMode, ctx, requestId, {
                 model: imageModel,
                 references: refsForRequest,
                 searchMode,
                 reasoningEffort,
                 webSearchEnabled,
               })
-            : await generateViaOAuth(
+            : await generateViaResponses(
+                activeProvider,
                 prompt,
                 quality,
-                size,
+                effectiveSize,
                 moderation,
                 refsForRequest,
                 requestId,
@@ -359,7 +350,7 @@ export function registerNodeRoutes(app, ctx) {
         userPrompt: prompt,
         revisedPrompt,
         promptMode: normalizedPromptMode,
-        options: { quality, size, format, moderation },
+        options: { quality, size: effectiveSize, format, moderation },
         model: imageModel,
         createdAt: Date.now(),
         createdAtIso: new Date().toISOString(),
@@ -369,12 +360,12 @@ export function registerNodeRoutes(app, ctx) {
         webSearchEnabled,
         contextMode,
         searchMode,
-        provider: "oauth",
+        provider: activeProvider,
         kind: parentB64 ? "edit" : "generate",
         requestId,
         refsCount: refsForRequest.length,
         quality,
-        size,
+        size: effectiveSize,
         format,
         moderation,
       };
@@ -407,9 +398,9 @@ export function registerNodeRoutes(app, ctx) {
         usage,
         webSearchCalls,
         webSearchEnabled,
-        provider: "oauth",
+        provider: activeProvider,
         model: imageModel,
-        size,
+        size: effectiveSize,
         moderation,
         refsCount: refsForRequest.length,
         contextMode,

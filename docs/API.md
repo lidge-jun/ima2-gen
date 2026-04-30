@@ -10,18 +10,20 @@ http://localhost:3333
 
 ## Provider Policy
 
-Image generation is OAuth-only in the current build.
+Image generation supports both OAuth and API-key providers.
 
-- `provider: "oauth"` is the supported generation path.
-- `provider: "api"` returns `403` with `APIKEY_DISABLED` for image generation, edit, and node generation.
-- API keys may still be used by auxiliary developer paths such as billing checks or style-sheet extraction.
+- `provider: "oauth"` uses the local Codex OAuth proxy.
+- `provider: "api"` uses the OpenAI Responses API with the hosted `image_generation` tool.
+- API-key generation covers classic generate, edit, mask-guided edit, multimode, and node generation.
+- If `provider: "api"` is requested without an API key, routes fail before upstream with `401` and `API_KEY_REQUIRED`.
+- Mask edits are mask/selection guided edits, not pixel-perfect inpaint guarantees.
 
 ## Health And Status
 
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/health` | Server health, version, paths, provider policy |
-| `GET` | `/api/providers` | Provider availability; API-key generation is disabled |
+| `GET` | `/api/providers` | Provider availability and runtime ports |
 | `GET` | `/api/oauth/status` | OAuth proxy status and visible models |
 | `GET` | `/api/billing` | Billing/status probe, including API key source when configured |
 
@@ -106,7 +108,7 @@ Recommended model: `gpt-5.4`. Current app default: `gpt-5.4-mini`. `gpt-5.5` is 
 
 Image edit / image-to-image generation.
 
-The request includes a prompt and image payload. Like `/api/generate`, this route rejects `provider: "api"` unless API-key image generation is intentionally implemented in code.
+The request includes a prompt and image payload. `provider: "api"` sends the prompt and image through the shared Responses image adapter. Optional masks are forwarded as mask guidance, not a pixel-perfect edit guarantee.
 
 ### `POST /api/node/generate`
 
@@ -198,13 +200,14 @@ X-Ima2-Tab-Id
 | `PATCH` | `/api/sessions/:id/style-sheet/enabled` | Toggle style sheet usage |
 | `POST` | `/api/sessions/:id/style-sheet/extract` | Extract style fields from prompt/reference |
 
-Style-sheet extraction can require an API key/openai client. This does not reopen API-key image generation.
+Style-sheet extraction can require an API key/openai client. Image generation also supports `provider: "api"` through the shared Responses API image adapter when an API key is configured.
 
 ## Common Error Codes
 
 | Code | Meaning |
 |---|---|
-| `APIKEY_DISABLED` | API-key image generation is disabled |
+| `API_KEY_REQUIRED` | `provider: "api"` was requested without a configured API key |
+| `APIKEY_DISABLED` | Legacy/deprecated hard-block code from older builds |
 | `INVALID_IMAGE_MODEL` | Model name is unknown or unsupported |
 | `IMAGE_MODEL_UNSUPPORTED` | Model exists but cannot use image generation |
 | `INVALID_REQUEST` | Upstream request parameters are invalid; raw provider details may be included as `upstreamCode`, `upstreamType`, and `upstreamParam` |

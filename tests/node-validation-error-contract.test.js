@@ -71,7 +71,8 @@ test("/api/node/generate JSON returns INVALID_REQUEST with status", async () => 
     assert.equal(body.status, 400);
     assert.equal(body.error.code, "INVALID_REQUEST");
     assert.equal(body.upstreamCode, "invalid_value");
-    assert.equal(body.error.message, invalidSizeBody.error.message);
+    assert.equal(body.error.message, "OpenAI rejected the image request parameters.");
+    assert.doesNotMatch(JSON.stringify(body), /foo\.bar/);
     assert.equal(getUpstreamHits(), 1);
   });
 });

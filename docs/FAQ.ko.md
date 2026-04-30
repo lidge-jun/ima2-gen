@@ -12,7 +12,7 @@ English version: [FAQ.md](FAQ.md)
 |---|---|
 | 서버에 연결되지 않음 | `ima2 serve`를 켠 뒤 `ima2 ping`을 실행합니다. |
 | OAuth 로그인이 안 됨 | `npx @openai/codex login`을 실행하고 `ima2 serve`를 다시 시작합니다. |
-| API key generation disabled | 이미지 생성은 OAuth로 사용합니다. API 키는 일부 보조 기능에서만 쓰입니다. |
+| API key provider가 `API_KEY_REQUIRED`를 반환함 | API 키를 설정하거나 OAuth 공급자로 다시 전환합니다. |
 | 업데이트 후 예전 이미지가 안 보임 | `ima2 doctor`를 실행한 뒤 [예전 이미지 복구 안내](RECOVER_OLD_IMAGES.md)를 확인합니다. |
 | `gpt-5.5`만 실패함 | Codex CLI를 업데이트하고, 안정 대안으로 `gpt-5.4`를 사용합니다. |
 | 레퍼런스 업로드 실패 | JPEG/PNG로 변환하고 해상도를 낮춰 보세요. 레퍼런스는 최대 5장입니다. |
@@ -70,13 +70,13 @@ npm install -g ima2-gen@latest
 
 ### OpenAI API 키가 필요한가요?
 
-이미지 생성에는 필요하지 않습니다. 기본 생성 경로는 로컬 Codex/ChatGPT OAuth 세션을 사용합니다.
+기본 생성 경로에는 필요하지 않습니다. 기본 경로는 로컬 Codex/ChatGPT OAuth 세션을 사용합니다.
 
-설정 화면에서 API 키가 감지될 수는 있습니다. 하지만 이미지 생성 엔드포인트는 `provider: "api"`를 받으면 `APIKEY_DISABLED`로 거절합니다. API 키는 billing 확인이나 style-sheet 추출 같은 보조 기능에만 쓰일 수 있습니다.
+API 키를 설정하면 이미지 생성 엔드포인트도 `provider: "api"`로 Responses API `image_generation` 도구를 사용할 수 있습니다.
 
-### 설정 화면의 "Configured but disabled"는 무슨 뜻인가요?
+### 설정 화면의 "API key provider available"은 무슨 뜻인가요?
 
-env/config에 API 키가 있지만, 현재 빌드에서 API-key 이미지 생성은 비활성화되어 있다는 뜻입니다. 이미지는 OAuth로 생성하세요.
+`ima2-gen`이 유효한 API 키를 찾았다는 뜻입니다. API-Key 모드는 생성, 편집, 멀티모드, 노드 출력을 지원합니다. 키가 없으면 `provider: "api"` 요청은 upstream 호출 전에 `API_KEY_REQUIRED`로 실패합니다.
 
 ### Codex CLI에 이미 로그인되어 있으면 자동으로 잡히나요?
 

@@ -1,4 +1,4 @@
-import type { ImageModel } from "../types";
+import type { ImageModel, Provider } from "../types";
 
 export type NodeGenerateRequest = {
   parentNodeId: string | null;
@@ -9,7 +9,7 @@ export type NodeGenerateRequest = {
   moderation: "low" | "auto";
   model?: ImageModel;
   reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh";
-  provider?: "oauth";
+  provider?: Provider;
   mode?: "auto" | "direct";
   contextMode?: "parent-plus-refs" | "parent-only" | "ancestry";
   searchMode?: "off" | "auto" | "on";
@@ -30,7 +30,7 @@ export type NodeGenerateResponse = {
   elapsed: number;
   usage?: { total_tokens?: number } & Record<string, unknown>;
   webSearchCalls: number;
-  provider: "oauth";
+  provider: Provider;
   moderation?: string;
   model?: string | null;
   size?: string | null;

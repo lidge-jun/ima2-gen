@@ -213,7 +213,7 @@ export async function startServer(overrides: any = {}) {
   ctx.serverActualPort = getServerPort(server) || ctx.config.server.port;
   ctx.serverUrl = `http://${runtimeHostUrl(ctx.config.server.host)}:${ctx.serverActualPort}`;
   console.log(`Image Gen running at ${ctx.serverUrl}`);
-  console.log(`Provider policy: OAuth only (API key hard-disabled). OAuth proxy port ${ctx.oauthPort}.`);
+  console.log(`Provider policy: OAuth and API-key Responses providers. OAuth proxy port ${ctx.oauthPort}.`);
   advertise(ctx);
   try {
     const s = ensureDefaultSession();

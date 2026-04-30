@@ -34,12 +34,12 @@ graph TD
 | Item | Current value |
 |---|---|
 | package name | `ima2-gen` |
-| version | `1.1.5` |
+| version | `1.1.8` |
 | type | `module` |
 | bin | `ima2` -> `./bin/ima2.js` |
 | package engine | `node >=20` |
-| publish files | `bin/`, `lib/`, `routes/`, `ui/dist/`, `docs/`, `assets/`, `server.js`, `config.js`, `.env.example`, `README.md` |
-| major dependencies | `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `ulid` |
+| publish files | `bin/`, `lib/`, `routes/`, `ui/dist/`, `docs/`, `assets/`, `assets/card-news/templates/`, `integrations/comfyui/ima2_gen_bridge/*`, `server.ts`, `server.js`, `config.ts`, `config.js`, `.env.example`, `README.md` |
+| major dependencies | `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `trash`, `ulid` |
 
 README may still mention a different Node baseline. The operational baseline is the current `engines.node` field in `package.json`.
 
@@ -49,16 +49,20 @@ README may still mention a different Node baseline. The operational baseline is 
 |---|---|---|
 | `npm start` | `node bin/ima2.js serve` | Start the server like a user would |
 | `npm run dev` | `node scripts/dev.mjs` | Build UI, then run watched server |
-| `npm run dev:server` | `node --watch server.js` | Watch only the server |
+| `npm run dev:server` | `tsx watch server.ts` | Watch the TypeScript server source directly |
 | `npm run ui:install` | `cd ui && npm install` | Install UI dependencies |
 | `npm run ui:dev` | `cd ui && npm run dev` | Vite dev server |
 | `npm run ui:build` | `cd ui && npm run build` | TypeScript build and Vite build |
 | `npm run build` | `npm run ui:build` | Build UI bundle before publish |
+| `npm run build:server` | `tsc -p tsconfig.build.json` | Emit committed `*.js` runtime artifacts for `server`, `routes/`, `lib/`, `config` |
+| `npm run build:cli` | `tsc -p tsconfig.bin.json && node scripts/fix-shebangs.mjs` | Emit committed CLI runtime artifacts for `bin/` and reinstate shebangs |
+| `npm run typecheck` | `tsc -p tsconfig.typecheck.json --noEmit` | Source-level type check for the migrated TypeScript surface |
 | `npm test` | `node scripts/run-tests.mjs` | Run `tests/*.test.js` with `node:test` |
 | `npm run setup` | `node bin/ima2.js setup` | Configure provider |
 | `npm run lint:pkg` | package metadata check | Validate package fields and publish file list |
 | `npm run test:package-install` | temp tarball install smoke | Installs packed package and checks `ima2 doctor`, `/api/health`, and `/api/storage/status` |
-| `prepublishOnly` | `npm test && npm run build && npm run test:package-install && npm run lint:pkg` | Full pre-publish gate: tests, UI build, tarball install smoke, and package metadata lint |
+| `prepack` | `typecheck && build:server && build:cli && ui:build` | Refresh all committed runtime artifacts (server, CLI, UI) before tarball |
+| `prepublishOnly` | `typecheck && ui:build && build:server && build:cli && lint:pkg && test:package-install` | Full pre-publish gate: type check, builds, package metadata lint, and tarball install smoke. Note: `npm test` is no longer in this chain — run it explicitly before publish. |
 
 `release:*` scripts include npm publish and git push. Agents must not run them unless the user explicitly asks.
 
@@ -70,8 +74,8 @@ README may still mention a different Node baseline. The operational baseline is 
 | `~/.ima2/server.json` | Running server runtime advertisement | Used by CLI/Vite discovery; includes top-level backend URL plus nested backend/OAuth configured and actual ports |
 | `image_gen/.ima2/config.json` | Legacy config location | New CLI prefers the home config |
 | `~/.ima2/generated/` | Image files and sidecar metadata | Runtime output; survives npm global updates. Startup migration scans legacy package `generated/` folders across npm, npx, pnpm, Yarn, Bun, nvm/fnm, asdf/mise, Volta, and common macOS/Linux/Windows global layouts |
-| `~/.ima2/generated/.trash/` | Soft-deleted assets | Restore and purge policy target |
-| SQLite DB | Session graph storage | Managed through `lib/db.js` and `lib/sessionStore.js` |
+| `~/.ima2/generated/.trash/` | Legacy in-package soft-deleted assets folder | Soft-delete now uses the OS trash via the `trash` dep (`lib/systemTrash.ts`); this folder remains for legacy rows pending purge |
+| SQLite DB | Session graph storage | Managed through `lib/db.ts` and `lib/sessionStore.ts` |
 | `ui/dist/` | Active UI bundle served by server | Build output, not source |
 
 `ima2 doctor` includes a Storage section with the current gallery path, legacy-source counts, and recovery-guide pointer. The browser gallery also calls `/api/storage/status` and can open the current generated folder through `/api/storage/open-generated-dir`; that endpoint accepts no arbitrary path.
@@ -121,7 +125,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_STATIC_MAX_AGE` | Static asset Cache-Control max-age |
 | `VITE_IMA2_DEV` | UI build-time dev flag; pairs with `VITE_IMA2_CARD_NEWS=1` to expose the dev-only card-news workspace in the bundle |
 
-Generation and edit endpoints currently hard-block `provider: "api"`. Even with an API key, image generation is OAuth-centered.
+Generation and edit endpoints support both OAuth and API-key providers. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path.
 
 Runtime port fallback is intentional. If a preferred backend or OAuth proxy port is occupied, the server records the actual bound URL in `~/.ima2/server.json` and health/status responses. CLI clients and split Vite dev proxy resolution should consume that actual URL instead of reconstructing `localhost:${configuredPort}`.
 
@@ -139,7 +143,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 |---|---|---|
 | Full test suite | `npm test` | `scripts/run-tests.mjs` runs `tests/*.test.js` |
 | UI build | `npm run build` | `ui/dist` is updated |
-| Dev server | `npm run dev` | UI is built, then `node --watch server.js` starts with verbose diagnostics |
+| Dev server | `npm run dev` | UI is built, then `tsx watch server.ts` starts with verbose diagnostics |
 | Package sanity | `npm run lint:pkg` | Required `files[]`, `bin`, and version fields are checked |
 | Package smoke | `npm pack --dry-run --json` | Verifies the publish manifest includes release-critical files |
 | Package install smoke | `npm run test:package-install` | Installs the tarball in a temp project and checks `doctor`, `/api/health`, and `/api/storage/status` |
@@ -173,6 +177,7 @@ Logs intentionally use counts rather than sensitive values: `promptChars`, `refs
 - 2026-04-25: Updated logging operations for dependency-free levels, request IDs, and API-only middleware.
 - 2026-04-26: Documented actual runtime port fallback, CLI/Vite discovery, and image model default override.
 - 2026-04-28: Bumped package metadata to ima2-gen 1.1.5, added `sharp` as a major dependency, recorded the full `prepublishOnly` chain, and expanded the environment variable surface to cover dev/card-news flags, generated/trash directory overrides, SQLite path, OAuth timeouts, style-sheet limits, body/reference/metadata limits, graph guardrails, and Vite dev flags.
+- 2026-04-30: Bumped package metadata to ima2-gen 1.1.8 — added `trash` as a major dependency for OS-trash soft delete (`lib/systemTrash.ts`), expanded the publish files list with `assets/card-news/templates/`, `integrations/comfyui/ima2_gen_bridge/*`, and TypeScript-source pairs (`server.ts`, `config.ts`), introduced the `prepack` artifact-refresh chain, added `build:server`, `build:cli`, `typecheck` scripts, switched `dev:server` to `tsx watch server.ts`, and removed `npm test` from the `prepublishOnly` chain (run tests explicitly before publish).
 
 Previous document: `[[05-node-mode]]`
 

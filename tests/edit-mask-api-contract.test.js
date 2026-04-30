@@ -24,8 +24,14 @@ describe("edit mask API contract", () => {
     assert.doesNotMatch(route, /rawMask[\s\S]{0,120}logEvent/);
   });
 
-  it("keeps unsupported mask provider behavior explicit", () => {
+  it("routes validated masks through the Responses adapter as guided edits", () => {
+    const route = readSource("routes/edit.ts");
+    const adapter = readSource("lib/responsesImageAdapter.ts");
     const oauth = readSource("lib/oauthProxy.ts");
+    assert.match(route, /editViaResponses/);
+    assert.match(route, /mask: maskCheck\.mask/);
+    assert.match(adapter, /mask guide/);
+    assert.match(adapter, /input_image/);
     assert.match(oauth, /options\.mask/);
     assert.match(oauth, /EDIT_MASK_NOT_SUPPORTED/);
     assert.match(oauth, /mask_unsupported/);

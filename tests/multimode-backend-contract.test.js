@@ -18,12 +18,13 @@ describe("multimode backend contract", () => {
     assert.match(index, /registerMultimodeRoutes/);
     assert.match(route, /app\.post\("\/api\/generate\/multimode"/);
     assert.match(route, /normalizeMaxImages/);
-    assert.match(route, /generateMultimodeViaOAuth/);
+    assert.match(route, /generateMultimodeViaResponses/);
     assert.match(classic, /Promise\.allSettled\(Array\.from\(\{ length: count \}, generateOne\)\)/);
   });
 
   it("uses a strict prompt wrapper and collects multiple image_generation_call outputs", () => {
     const oauth = readSource("lib/oauthProxy.ts");
+    const adapter = readSource("lib/responsesImageAdapter.ts");
 
     assert.match(oauth, /export function buildMultimodeSequencePrompt/);
     assert.match(oauth, /You MUST create up to N separate image_generation_call outputs/);
@@ -32,13 +33,13 @@ describe("multimode backend contract", () => {
     assert.match(oauth, /Do not create a contact sheet/);
     assert.match(oauth, /Do not create a storyboard sheet/);
     assert.match(oauth, /Do not put multiple panels inside one image/);
-    assert.match(oauth, /async function readMultimodeImageStream/);
-    assert.match(oauth, /const images = \[\]/);
-    assert.match(oauth, /images\.push\(/);
-    assert.match(oauth, /extraIgnored/);
-    assert.match(oauth, /buildImageTools\(webSearchEnabled/);
-    assert.match(oauth, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
-    assert.match(oauth, /tool_choice: "required"/);
+    assert.match(adapter, /async function parseStream/);
+    assert.match(adapter, /const images = \[\]/);
+    assert.match(adapter, /images\.push\(/);
+    assert.match(adapter, /extraIgnored/);
+    assert.match(adapter, /function tools\(webSearchEnabled/);
+    assert.match(adapter, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
+    assert.match(adapter, /tool_choice: "required"/);
   });
 
   it("persists sequence metadata and surfaces it through history", () => {

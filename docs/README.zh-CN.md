@@ -50,15 +50,15 @@ ima2 serve
 - **Mobile shell**：小屏幕使用 app bar、compose sheet 和 compact settings toggle。
 - **Observable jobs**：用 request ID 追踪进行中和最近完成的任务。
 
-## 图像生成只走 OAuth
+## 图像生成支持 OAuth 和 API key
 
-当前图像生成通过本地 Codex/ChatGPT OAuth 路径执行。
+默认图像生成通过本地 Codex/ChatGPT OAuth 路径执行。
 
-即使 env/config 里有 API key，它也只可能用于 billing 检查等辅助功能。生成接口收到 `provider: "api"` 时会返回 `APIKEY_DISABLED`。
+如果 env/config 里有 API key，生成接口可以通过 `provider: "api"` 使用 Responses API 的 `image_generation` tool。
 
-如果设置页显示 **Configured but disabled**，意思是检测到了 API key，但图像生成仍然使用 OAuth。
+如果设置页显示 **API key provider available**，意思是检测到了 API key，并且可用于生成、编辑、multimode 和 node 请求。
 
-![显示 OAuth active 与 API key disabled 状态的设置页](../assets/screenshots/settings-oauth-generation.png)
+![显示 OAuth active 与 API key provider available 状态的设置页](../assets/screenshots/settings-oauth-generation.png)
 
 ## 模型建议
 
@@ -199,8 +199,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 **在代理/VPN 网络下反复出现 `fetch failed`**
 请先确认本地 OAuth proxy 可以访问。如果你的网络需要代理，请在代理客户端里开启 TUN/TURN 类似的转发模式，然后重试 `npx openai-oauth --port 10531`。如果仍然失败，请在运行 `ima2 serve` 或 `openai-oauth` 的同一个终端里设置 `HTTP_PROXY` 和 `HTTPS_PROXY`。
 
-**生成图片时返回 `APIKEY_DISABLED`**
-当前 build 需要使用 OAuth 生成。API-key image generation 是有意关闭的。
+**生成图片时返回 `API_KEY_REQUIRED`**
+`provider: "api"` 请求没有可用 API key。请配置 API key，或切换到 OAuth provider。
 
 **大参考图上传失败**
 JPEG/PNG 会在上传前自动压缩。如果仍然失败，请转成更低分辨率的 JPEG/PNG。HEIC/HEIF 不支持浏览器路径。

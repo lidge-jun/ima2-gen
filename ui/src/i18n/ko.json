@@ -178,7 +178,8 @@
     "remaining": "${remaining} 남음",
     "thisMonth": "이번 달 ${amount}",
     "oauthFree": "OAuth 무료 사용 가능",
-    "apiDisabled": "API 키 비활성화됨 (OAuth 전용)",
+    "apiDisabled": "API 키 사용 가능",
+    "apiReady": "API 키 사용 가능",
     "oauthMode": "OAuth 모드"
   },
   "history": {
@@ -636,12 +637,14 @@
     "account": {
       "primaryEyebrow": "현재 공급자",
       "oauthTitle": "OAuth 사용 중",
-      "oauthBody": "현재 생성은 Codex OAuth 세션으로 실행됩니다. 이 빌드에서는 API-Key 생성 모드가 비활성화되어 있습니다.",
+      "oauthBody": "OAuth 생성은 Codex OAuth 세션으로 실행됩니다. 유효한 키가 설정되어 있으면 API-Key 모드로 전환할 수 있습니다.",
       "apiSourceEnv": "OPENAI_API_KEY 감지됨",
       "apiSourceConfig": "config.json API 키 감지됨",
-      "apiTitle": "Configured but disabled",
-      "apiBody": "env/config에서 API 키를 찾았지만, 지금 ima2-gen은 OAuth 전용으로 동작합니다. 이 상태 표시를 숨기고 싶을 때만 키를 제거하세요.",
-      "apiDisabled": "비활성화",
+      "apiTitle": "API 키 공급자 사용 가능",
+      "apiBody": "ima2-gen은 이 API 키로 Responses API 기반 생성, 편집, 멀티모드, 노드 요청을 처리할 수 있습니다.",
+      "apiDisabled": "사용 불가",
+      "apiReady": "준비됨",
+      "apiUnavailable": "사용 불가",
       "apiUnknown": "상태 불명"
     },
     "imageModel": {
@@ -747,7 +750,7 @@
     },
     "authApiKeyInvalid": {
       "title": "API 키 인증 실패",
-      "body": "키가 잘못됐거나 한도/조직 권한 문제예요. 본 앱은 API-Key 모드가 비활성화되어 있어 OAuth(ChatGPT 로그인)로 전환하는 편이 좋아요.",
+      "body": "키가 없거나 잘못됐거나, 한도/조직 권한 문제가 있을 수 있어요. OAuth로 전환하거나 설정된 API 키를 갱신해 주세요.",
       "cta": "확인"
     },
     "networkFailed": {
@@ -766,8 +769,8 @@
       "cta": "입력 수정"
     },
     "apikeyDisabled": {
-      "title": "API-Key 모드가 비활성화되어 있어요",
-      "body": "본 앱은 OAuth(ChatGPT 로그인) 전용으로 동작합니다. 공급자를 OAuth로 전환해 주세요.",
+      "title": "API-Key 모드를 사용할 수 없어요",
+      "body": "이 빌드는 API-Key 생성을 지원하지만 현재 요청에서 설정된 키를 사용할 수 없었습니다. OAuth로 전환하거나 API 키를 갱신해 주세요.",
       "cta": "확인"
     }
   },

@@ -250,6 +250,20 @@ export const config = {
     ),
     validReasoningEfforts: new Set(["none", "low", "medium", "high", "xhigh"]),
   },
+  apiProvider: {
+    defaultImageModel: pickStr(
+      env.IMA2_API_IMAGE_MODEL_DEFAULT,
+      fileCfg.apiProvider?.defaultImageModel,
+      "gpt-5.4-mini",
+    ),
+    defaultReasoningEffort: pickStr(
+      env.IMA2_API_REASONING_EFFORT,
+      fileCfg.apiProvider?.defaultReasoningEffort,
+      "low",
+    ),
+    defaultSize: pickStr(env.IMA2_API_IMAGE_SIZE, fileCfg.apiProvider?.defaultSize, "1024x1024"),
+    allowWebSearch: pickBool(env.IMA2_API_ALLOW_WEB_SEARCH, fileCfg.apiProvider?.allowWebSearch, true),
+  },
   log: {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
     pretty: env.NODE_ENV !== "production",

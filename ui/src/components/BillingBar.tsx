@@ -34,8 +34,8 @@ export function BillingBar() {
     text = t("billing.oauthFree");
     color = "var(--green)";
   } else if (data.apiKeyValid) {
-    text = t("billing.apiDisabled");
-    color = "var(--text-dim)";
+    text = t("billing.apiReady");
+    color = "var(--green)";
   } else {
     text = t("billing.oauthMode");
     color = "var(--text-dim)";

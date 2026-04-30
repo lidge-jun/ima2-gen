@@ -12,7 +12,7 @@ This matters because README and older devlog entries still contain traces of the
 
 Start UI work at `App.tsx` to understand how classic canvas and node canvas diverge. General server calls are in `ui/src/lib/api.ts`; node generation JSON/SSE calls are in `ui/src/lib/nodeApi.ts` and re-exported through `api.ts`. State is centralized in `ui/src/store/useAppStore.ts`. For screen-level structure, start with `Sidebar`, `Canvas`, `NodeCanvas`, `RightPanel`, and `GalleryModal`.
 
-Snapshot note, 2026-04-29: mobile UI now has dedicated components (`MobileAppBar`, `MobileComposeSheet`, `MobileSettingsToggle`) and hooks (`useIsMobile`, `useVisualViewportInset`). Canvas Mode UI is split under `ui/src/components/canvas-mode/` and lazy-loaded from the default viewer path; background cleanup preview work has stale-render cancellation/debounce guards while final apply/export paths preserve natural image dimensions. There is no separate `ui/src/lib/imageMetadataClient.ts`; metadata restore calls live in `ui/src/lib/api.ts`.
+Snapshot note, 2026-04-30: mobile UI has dedicated components (`MobileAppBar`, `MobileComposeSheet`, `MobileSettingsToggle`) and hooks (`useIsMobile`, `useVisualViewportInset`). Canvas Mode UI has been split out of a single component (`refactor(ui): split canvas mode workspace`, commit 11bc214) into `ui/src/components/canvas-mode/` (~3300 lines across 23 files), with `CanvasModeWorkspace.tsx` (498) as the shell, `CanvasToolbar.tsx` (468) for tools, and `useCanvasBackgroundCleanup.ts` (454) for the dual-mask cleanup flow. Background cleanup preview work has stale-render cancellation/debounce guards while final apply/export paths preserve natural image dimensions. Multimode sequence preview (`MultimodeSequencePreview`), web-search/reasoning-effort controls (`WebSearchToggle`, `ReasoningEffortSelect`), trash undo (`TrashUndoToast`), and history strip (`HistoryStrip` + layout toggle) are all part of the active component surface. There is no separate `ui/src/lib/imageMetadataClient.ts`; metadata restore calls live in `ui/src/lib/api.ts`.
 
 ---
 
@@ -30,7 +30,7 @@ graph TD
     APP --> MODAL["GalleryModal"]
     STORE --> API["ui/src/lib/api.ts"]
     API --> NODEAPI["ui/src/lib/nodeApi.ts"]
-    API --> SERVER["server.js /api"]
+    API --> SERVER["server.ts /api"]
     NODEAPI --> SERVER
 ```
 
@@ -75,7 +75,7 @@ The image model preference is stored in `localStorage` as `ima2.imageModel`. Sid
 
 Visible metadata should carry the selected model too. Current result metadata, hydrated history items, and ready node status labels use the server-returned or sidecar-restored `model` so UI debugging matches backend logs. The visible metadata uses compact aliases to preserve elapsed time: model aliases are `5.4m`/`5.4`/`5.5`, and quality aliases are `l`/`m`/`h`.
 
-`useAppStore.ts` is now 3374 lines and concentrates most cross-cutting state (classic, node, history, prompt library, metadata restore, settings, toasts). The card-news store is intentionally separated into `cardNewsStore.ts` (416 lines) so the dev-only feature does not bloat the main bundle path or persistence layer.
+`useAppStore.ts` is now 3555 lines and concentrates most cross-cutting state (classic, node, history, prompt library, metadata restore, multimode sequence, canvas annotations and versions, web-search and reasoning-effort settings, settings, toasts). The card-news store is intentionally separated into `cardNewsStore.ts` (416 lines) so the dev-only feature does not bloat the main bundle path or persistence layer.
 
 ## API Client
 
@@ -123,13 +123,13 @@ Node edges are the source of truth for parentage. `ui/src/lib/nodeGraph.ts` deri
 
 Node generation sends an explicit context/search policy. The default request is `contextMode: "parent-plus-refs"` and `searchMode: "off"`, so a child edit uses only the immediate parent image plus the node's explicit reference chips. Full ancestry is not silently inferred. If edit search becomes a product option, the UI must turn `searchMode` on intentionally.
 
-Error handling is centralized. API helpers preserve `err.code` where the server sends `{ error: { code, message } }`; node helpers also preserve `err.status` from JSON or SSE error payloads. `handleError()` maps stable codes to either a toast or persistent `ErrorCard`. The card is reserved for actionable failures such as invalid request parameters, OAuth expiry, moderation refusal, upstream 5xx, network/proxy failure, and API-key-disabled policy.
+Error handling is centralized. API helpers preserve `err.code` where the server sends `{ error: { code, message } }`; node helpers also preserve `err.status` from JSON or SSE error payloads. `handleError()` maps stable codes to either a toast or persistent `ErrorCard`. The card is reserved for actionable failures such as invalid request parameters, OAuth expiry, API-key authentication problems, moderation refusal, upstream 5xx, and network/proxy failure.
 
 ## Style And Layout
 
 | File | Current signal | Caution |
 |---|---|---|
-| `ui/src/index.css` | 5250 lines | Large structural changes can easily create CSS drift across classic, node, prompt-library, prompt-import dialog, gallery, and card-news surfaces |
+| `ui/src/index.css` | 5780 lines | Large structural changes can easily create CSS drift across classic, node, canvas-mode, prompt-library, prompt-import dialog, gallery, mobile shell, and card-news surfaces |
 | `ui/src/components/*.tsx` | 5263 lines (excluding `card-news/` subtree) | Component class names and CSS are tightly coupled |
 | `ui/src/components/card-news/*.tsx` | Dev-only subtree | Do not touch from non-card-news work; gated behind `VITE_IMA2_CARD_NEWS=1` / `VITE_IMA2_DEV=1` |
 | `ui/dist/` | Build output | Do not edit directly |
@@ -162,6 +162,7 @@ Error handling is centralized. API helpers preserve `err.code` where the server 
 - 2026-04-28: Documented PR2 curated source search inside `PromptImportDialog`, including indexed search/refresh helpers and commit-compatible candidate flow.
 - 2026-04-28: Documented PR3 GitHub folder browse through `PromptImportFolderSection`, selected-file preview, and folder list/preview API helpers.
 - 2026-04-28: Documented PR4 GitHub discovery through `PromptImportDiscoverySection`; discovery candidates stay separate from prompt candidates and cannot be committed directly.
+- 2026-04-30: Documented the Canvas Mode workspace split (`refactor(ui): split canvas mode workspace`, #11bc214) into `ui/src/components/canvas-mode/` (~3300 lines, 23 files), refreshed `useAppStore.ts` to 3555 and `index.css` to 5780, and called out multimode preview, web-search/reasoning-effort controls, trash undo, and the history strip as active surfaces.
 
 Previous document: `[[03-server-api]]`
 
