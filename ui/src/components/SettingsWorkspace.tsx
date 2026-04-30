@@ -8,6 +8,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { HistoryStripLayoutToggle } from "./HistoryStripLayoutToggle";
 import { useAppStore } from "../store/useAppStore";
+import type { GalleryScope } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import type { SettingsSection } from "../types";
 
@@ -53,6 +54,8 @@ export function SettingsWorkspace() {
   const active = useAppStore((s) => s.activeSettingsSection);
   const setActive = useAppStore((s) => s.setActiveSettingsSection);
   const closeSettings = useAppStore((s) => s.closeSettings);
+  const galleryDefaultScope = useAppStore((s) => s.galleryDefaultScope);
+  const setGalleryDefaultScope = useAppStore((s) => s.setGalleryDefaultScope);
   const workspaceRef = useRef<HTMLElement | null>(null);
   const unlockTimerRef = useRef<number | null>(null);
   const isProgrammaticScroll = useRef(false);
@@ -210,6 +213,24 @@ export function SettingsWorkspace() {
                 </div>
                 <div className="settings-row__control">
                   <WebSearchToggle />
+                </div>
+              </article>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.gallery.defaultScopeTitle")}</h4>
+                  <p>{t("settings.gallery.defaultScopeBody")}</p>
+                </div>
+                <div className="settings-row__control">
+                  <select
+                    value={galleryDefaultScope}
+                    onChange={(e) =>
+                      setGalleryDefaultScope(e.target.value as GalleryScope)
+                    }
+                    aria-label={t("settings.gallery.defaultScopeTitle")}
+                  >
+                    <option value="current-session">{t("gallery.scope.current")}</option>
+                    <option value="all">{t("gallery.scope.all")}</option>
+                  </select>
                 </div>
               </article>
             </SettingsSectionBlock>

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { useAppStore } from "../store/useAppStore";
+import { selectCurrentSessionId, useAppStore } from "../store/useAppStore";
 import { useCardNewsStore } from "../store/cardNewsStore";
 import type { GenerateItem } from "../types";
 import {
@@ -38,6 +38,9 @@ export function GalleryModal() {
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const showToast = useAppStore((s) => s.showToast);
   const toggleGalleryFavorite = useAppStore((s) => s.toggleGalleryFavorite);
+  const galleryScope = useAppStore((s) => s.galleryScope);
+  const setGalleryScope = useAppStore((s) => s.setGalleryScope);
+  const currentSessionId = useAppStore(selectCurrentSessionId);
 
   const [query, setQuery] = useState("");
   const [groupBy, setGroupBy] = useState<"date" | "session">("date");
@@ -105,7 +108,10 @@ export function GalleryModal() {
     let cancelled = false;
     (async () => {
       try {
-        const page = await getHistoryGrouped({ limit: 500 });
+        const page = await getHistoryGrouped({
+          limit: 500,
+          sessionId: galleryScope === "current-session" ? currentSessionId : undefined,
+        });
         if (cancelled) return;
         const toItem = (h: (typeof page.loose)[number]): GenerateItem => {
           const k = h.kind;
@@ -152,7 +158,7 @@ export function GalleryModal() {
     return () => {
       cancelled = true;
     };
-  }, [open, groupBy]);
+  }, [open, groupBy, galleryScope, currentSessionId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase().normalize("NFC");
@@ -368,6 +374,27 @@ export function GalleryModal() {
                 {t("gallery.sortBySession")}
               </button>
             </div>
+            <div className="gallery__scope" role="tablist" aria-label={t("gallery.scopeAria")}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={galleryScope === "current-session"}
+                className={galleryScope === "current-session" ? "active" : ""}
+                onClick={() => setGalleryScope("current-session")}
+                disabled={!currentSessionId}
+              >
+                {t("gallery.scope.current")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={galleryScope === "all"}
+                className={galleryScope === "all" ? "active" : ""}
+                onClick={() => setGalleryScope("all")}
+              >
+                {t("gallery.scope.all")}
+              </button>
+            </div>
           </div>
           <input
             type="text"
@@ -456,7 +483,18 @@ export function GalleryModal() {
               )}
               {visibleSessionGroups.length === 0 && visibleLoose.length === 0 && (
                 <div className="gallery__empty">
-                  {favoritesOnly ? t("gallery.emptyFavorites") : t("gallery.emptySessions")}
+                  {favoritesOnly ? (
+                    t("gallery.emptyFavorites")
+                  ) : galleryScope === "current-session" ? (
+                    <>
+                      <p>{t("gallery.empty.currentSession")}</p>
+                      <button type="button" onClick={() => setGalleryScope("all")}>
+                        {t("gallery.scope.all")}
+                      </button>
+                    </>
+                  ) : (
+                    t("gallery.emptySessions")
+                  )}
                 </div>
               )}
             </>

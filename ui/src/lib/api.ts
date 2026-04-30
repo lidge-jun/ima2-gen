@@ -329,7 +329,7 @@ export function getHistory(
 }
 
 export function getHistoryGrouped(
-  params: { limit?: number; cursor?: HistoryCursor } = {},
+  params: { limit?: number; cursor?: HistoryCursor; sessionId?: string | null } = {},
 ): Promise<HistoryGroupedPage> {
   const qs = new URLSearchParams();
   qs.set("groupBy", "session");
@@ -338,6 +338,7 @@ export function getHistoryGrouped(
     qs.set("before", String(params.cursor.before));
     qs.set("beforeFilename", params.cursor.beforeFilename);
   }
+  if (params.sessionId) qs.set("sessionId", params.sessionId);
   return jsonFetchWithBrowserId(`/api/history?${qs.toString()}`);
 }
 

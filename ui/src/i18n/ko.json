@@ -351,7 +351,15 @@
     "favoriteTitle": "즐겨찾기 추가",
     "unfavoriteTitle": "즐겨찾기 해제",
     "favoriteAria": "즐겨찾기 추가",
-    "unfavoriteAria": "즐겨찾기 해제"
+    "unfavoriteAria": "즐겨찾기 해제",
+    "scopeAria": "갤러리 범위",
+    "scope": {
+      "current": "현재 세션",
+      "all": "전체 이미지"
+    },
+    "empty": {
+      "currentSession": "이번 세션에는 아직 이미지가 없습니다."
+    }
   },
   "node": {
     "empty": "비어 있음",
@@ -670,6 +678,10 @@
       "body": "실존 인물, 브랜드, 제품, 장소, 최신 이벤트를 생성 전에 실시간 검색해서 반영합니다.",
       "on": "검색 켬",
       "off": "검색 끔"
+    },
+    "gallery": {
+      "defaultScopeTitle": "기본 갤러리 보기",
+      "defaultScopeBody": "갤러리를 열 때 처음 보여줄 범위를 선택합니다."
     },
     "appearance": {
       "themeTitle": "테마",

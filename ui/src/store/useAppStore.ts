@@ -77,6 +77,8 @@ import {
 import {
   ACTIVE_SESSION_ID_STORAGE_KEY,
   CANVAS_EXPORT_BG_KEY,
+  GALLERY_DEFAULT_SCOPE_STORAGE_KEY,
+  GALLERY_SCOPE_STORAGE_KEY,
   GENERATION_DEFAULTS_STORAGE_KEY,
   GRAPH_TAB_ID_KEY,
   HISTORY_STRIP_LAYOUT_STORAGE_KEY,
@@ -128,6 +130,8 @@ import {
   type GalleryShortcutAction,
 } from "../lib/galleryShortcuts";
 
+export type GalleryScope = "current-session" | "all";
+
 function loadRightPanelOpen(): boolean {
   try {
     const raw = localStorage.getItem(RIGHT_PANEL_OPEN_STORAGE_KEY);
@@ -172,6 +176,14 @@ function loadHistoryStripLayout(): HistoryStripLayout {
     if (raw === "rail" || raw === "horizontal" || raw === "sidebar") return raw;
   } catch {}
   return "rail";
+}
+
+function loadGalleryScope(key: string): GalleryScope {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === "current-session" || raw === "all") return raw;
+  } catch {}
+  return "current-session";
 }
 
 function loadCanvasExportBackground(): { mode: CanvasExportBackground; matteColor: HexColor } {
@@ -699,6 +711,10 @@ type AppState = {
   galleryOpen: boolean;
   openGallery: () => void;
   closeGallery: () => void;
+  galleryScope: GalleryScope;
+  galleryDefaultScope: GalleryScope;
+  setGalleryScope: (scope: GalleryScope) => void;
+  setGalleryDefaultScope: (scope: GalleryScope) => void;
 
   settingsOpen: boolean;
   activeSettingsSection: SettingsSection;
@@ -1500,8 +1516,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   openComposeSheet: () => set({ composeSheetOpen: true }),
   closeComposeSheet: () => set({ composeSheetOpen: false }),
   galleryOpen: false,
-  openGallery: () => set({ galleryOpen: true }),
+  openGallery: () =>
+    set((s) => ({ galleryOpen: true, galleryScope: s.galleryDefaultScope })),
   closeGallery: () => set({ galleryOpen: false }),
+  galleryScope: loadGalleryScope(GALLERY_SCOPE_STORAGE_KEY),
+  galleryDefaultScope: loadGalleryScope(GALLERY_DEFAULT_SCOPE_STORAGE_KEY),
+  setGalleryScope: (scope) => {
+    try {
+      localStorage.setItem(GALLERY_SCOPE_STORAGE_KEY, scope);
+    } catch {}
+    set({ galleryScope: scope });
+  },
+  setGalleryDefaultScope: (scope) => {
+    try {
+      localStorage.setItem(GALLERY_DEFAULT_SCOPE_STORAGE_KEY, scope);
+      localStorage.setItem(GALLERY_SCOPE_STORAGE_KEY, scope);
+    } catch {}
+    set({ galleryDefaultScope: scope, galleryScope: scope });
+  },
 
   imageModel: loadImageModel(),
   reasoningEffort: loadReasoningEffort(),
@@ -3567,4 +3599,11 @@ async function addHistory(
     currentImage: withThumb,
     unseenGeneratedCount: get().unseenGeneratedCount + 1,
   });
+}
+
+export function selectCurrentSessionId(state: AppState): string | null {
+  for (const item of state.history) {
+    if (item.sessionId) return item.sessionId;
+  }
+  return null;
 }

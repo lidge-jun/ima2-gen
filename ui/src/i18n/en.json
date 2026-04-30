@@ -351,7 +351,15 @@
     "favoriteTitle": "Add to favorites",
     "unfavoriteTitle": "Remove from favorites",
     "favoriteAria": "Add to favorites",
-    "unfavoriteAria": "Remove from favorites"
+    "unfavoriteAria": "Remove from favorites",
+    "scopeAria": "Gallery scope",
+    "scope": {
+      "current": "Current session",
+      "all": "All images"
+    },
+    "empty": {
+      "currentSession": "No images in this session yet."
+    }
   },
   "node": {
     "empty": "Empty",
@@ -670,6 +678,10 @@
       "body": "Use live search before generation for real people, brands, products, places, and recent events.",
       "on": "Search on",
       "off": "Search off"
+    },
+    "gallery": {
+      "defaultScopeTitle": "Default gallery view",
+      "defaultScopeBody": "Choose what the gallery shows when you open it."
     },
     "appearance": {
       "themeTitle": "Theme",
