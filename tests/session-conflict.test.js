@@ -11,7 +11,9 @@ const sessionRoutesPath = join(__dirname, "..", "routes", "sessions.ts");
 const enPath = join(__dirname, "..", "ui", "src", "i18n", "en.json");
 const koPath = join(__dirname, "..", "ui", "src", "i18n", "ko.json");
 
+const registryPath = join(__dirname, "..", "ui", "src", "store", "persistenceRegistry.ts");
 const storeSrc = await readFile(storePath, "utf8");
+const registrySrc = await readFile(registryPath, "utf8");
 const appSrc = await readFile(appPath, "utf8");
 const apiSrc = await readFile(apiPath, "utf8");
 const routeSrc = await readFile(sessionRoutesPath, "utf8");
@@ -19,7 +21,8 @@ const en = JSON.parse(await readFile(enPath, "utf8"));
 const ko = JSON.parse(await readFile(koPath, "utf8"));
 
 assert.ok(
-  storeSrc.includes('localStorage.getItem("ima2.activeSessionId")'),
+  storeSrc.includes("localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY)") &&
+    registrySrc.includes('"ima2.activeSessionId"'),
   "active graph session should be persisted per browser",
 );
 assert.ok(

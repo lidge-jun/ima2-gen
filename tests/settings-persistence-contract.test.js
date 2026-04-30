@@ -24,7 +24,7 @@ test("known critical keys are present", () => {
     "ima2.generationDefaults",
     "ima2.imageModel",
     "ima2.reasoningEffort",
-    "ima2.webSearch",
+    "ima2.webSearchEnabled",
     "ima2.activeSessionId",
   ]) assert.ok(declared.has(k), `missing ${k}`);
 });

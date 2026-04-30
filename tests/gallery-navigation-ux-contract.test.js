@@ -108,6 +108,7 @@ describe("gallery navigation UX contract", () => {
     const settings = readSource("ui/src/components/SettingsWorkspace.tsx");
     const toggle = readSource("ui/src/components/HistoryStripLayoutToggle.tsx");
     const store = readSource("ui/src/store/useAppStore.ts");
+    const registry = readSource("ui/src/store/persistenceRegistry.ts");
     const types = readSource("ui/src/types.ts");
     const ko = readSource("ui/src/i18n/ko.json");
     const en = readSource("ui/src/i18n/en.json");
@@ -165,7 +166,7 @@ describe("gallery navigation UX contract", () => {
     assert.match(types, /export type HistoryStripLayout = "rail" \| "horizontal" \| "sidebar"/);
     assert.match(store, /historyStripLayout:\s*HistoryStripLayout/);
     assert.match(store, /loadHistoryStripLayout/);
-    assert.match(store, /ima2\.historyStripLayout/);
+    assert.match(store + registry, /ima2\.historyStripLayout/);
     assert.match(store, /setHistoryStripLayout/);
     assert.match(historyStrip, /useRef<Record<string,\s*HTMLImageElement \| null>>/);
     assert.match(historyStrip, /historyStripLayout/);

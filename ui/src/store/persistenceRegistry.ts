@@ -7,11 +7,11 @@ export const PERSISTED_KEYS = [
   "ima2:theme",
   "ima2:themeFamily",
   // canvas
-  "ima2.canvasExportBg",
+  "ima2.canvas.exportBackground.v1",
   // generation singletons
   "ima2.imageModel",
   "ima2.reasoningEffort",
-  "ima2.webSearch",
+  "ima2.webSearchEnabled",
   // generation defaults blob (provider/quality/size/format/moderation/count/...)
   "ima2.generationDefaults",
   // runtime
@@ -59,10 +59,10 @@ export const PERSISTED_REGISTRY: Record<
   "ima2.historyStripLayout": { domain: "layout", shape: "string", resetSafe: true },
   "ima2:theme": { domain: "theme", shape: "string", resetSafe: true },
   "ima2:themeFamily": { domain: "theme", shape: "string", resetSafe: true },
-  "ima2.canvasExportBg": { domain: "canvas", shape: "json:{mode,matteColor}", resetSafe: true },
+  "ima2.canvas.exportBackground.v1": { domain: "canvas", shape: "json:{mode,matteColor}", resetSafe: true },
   "ima2.imageModel": { domain: "generation", shape: "string", resetSafe: true },
   "ima2.reasoningEffort": { domain: "generation", shape: "string", resetSafe: true },
-  "ima2.webSearch": { domain: "generation", shape: "string:boolean", resetSafe: true },
+  "ima2.webSearchEnabled": { domain: "generation", shape: "string:boolean", resetSafe: true },
   "ima2.generationDefaults": { domain: "generation", shape: "json:GenerationDefaults", resetSafe: true },
   "ima2.inFlight": { domain: "runtime", shape: "json:array", resetSafe: true },
   "ima2.selectedFilename": { domain: "runtime", shape: "string", resetSafe: true },
