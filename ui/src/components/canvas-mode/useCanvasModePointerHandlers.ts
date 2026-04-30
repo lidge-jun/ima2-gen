@@ -6,7 +6,7 @@ import {
   hitTestAnnotation,
   normalizeSelectionBox,
 } from "../../lib/canvas/hitTest";
-import type { NormalizedPoint } from "../../types/canvas";
+import type { CanvasBackgroundCleanupTool, NormalizedPoint } from "../../types/canvas";
 
 interface UseCanvasModePointerHandlersArgs {
   canvasOpen: boolean;
@@ -15,11 +15,16 @@ interface UseCanvasModePointerHandlersArgs {
   canvasPanY: number;
   spaceHeld: boolean;
   canDragViewportWithSelect: boolean;
-  isBackgroundCleanupPickingSeed: boolean;
+  isBackgroundCleanupActive: boolean;
+  cleanupTool: CanvasBackgroundCleanupTool;
   annotationFrameRef: RefObject<HTMLDivElement | null>;
   annotations: any;
   setCanvasPan: (x: number, y: number) => void;
-  addBackgroundCleanupSeed: (point: NormalizedPoint) => void;
+  addBackgroundCleanupClick: (point: NormalizedPoint) => void;
+  startBackgroundCleanupBrushStroke: (point: NormalizedPoint) => void;
+  updateBackgroundCleanupBrushStroke: (point: NormalizedPoint) => void;
+  endBackgroundCleanupBrushStroke: () => void;
+  setCleanupBrushCursor: (point: NormalizedPoint | null) => void;
 }
 
 export function useCanvasModePointerHandlers({
@@ -29,11 +34,16 @@ export function useCanvasModePointerHandlers({
   canvasPanY,
   spaceHeld,
   canDragViewportWithSelect,
-  isBackgroundCleanupPickingSeed,
+  isBackgroundCleanupActive,
+  cleanupTool,
   annotationFrameRef,
   annotations,
   setCanvasPan,
-  addBackgroundCleanupSeed,
+  addBackgroundCleanupClick,
+  startBackgroundCleanupBrushStroke,
+  updateBackgroundCleanupBrushStroke,
+  endBackgroundCleanupBrushStroke,
+  setCleanupBrushCursor,
 }: UseCanvasModePointerHandlersArgs) {
   const selectionDragRef = useRef<{
     mode: "move" | "box" | null;
@@ -75,8 +85,12 @@ export function useCanvasModePointerHandlers({
     }
     event.preventDefault();
     const point = screenToNormalized(event, annotationFrameRef.current);
-    if (isBackgroundCleanupPickingSeed) {
-      addBackgroundCleanupSeed(point);
+    if (isBackgroundCleanupActive) {
+      if (cleanupTool === "click") addBackgroundCleanupClick(point);
+      else {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        startBackgroundCleanupBrushStroke(point);
+      }
       return;
     }
     if (annotations.activeTool === "select") {
@@ -144,6 +158,11 @@ export function useCanvasModePointerHandlers({
       return;
     }
     const point = screenToNormalized(event, annotationFrameRef.current);
+    if (isBackgroundCleanupActive) {
+      if (cleanupTool === "brush") updateBackgroundCleanupBrushStroke(point);
+      else setCleanupBrushCursor(point);
+      return;
+    }
     if (annotations.activeTool === "select") {
       if (selectionDragRef.current.mode === "move" && selectionDragRef.current.lastPoint) {
         const delta = {
@@ -189,6 +208,10 @@ export function useCanvasModePointerHandlers({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    if (isBackgroundCleanupActive) {
+      if (cleanupTool === "brush") endBackgroundCleanupBrushStroke();
+      return;
+    }
     if (annotations.activeTool === "select") {
       if (selectionDragRef.current.mode === "move" && selectionDragRef.current.didMove) {
         annotations.commitSelectedMove();
@@ -223,11 +246,16 @@ export function useCanvasModePointerHandlers({
     setViewportPanActive(false);
   };
 
+  const handleAnnotationPointerLeave = (): void => {
+    if (isBackgroundCleanupActive) setCleanupBrushCursor(null);
+  };
+
   return {
     viewportPanActive,
     resetPointerSession,
     handleAnnotationPointerDown,
     handleAnnotationPointerMove,
     handleAnnotationPointerUp,
+    handleAnnotationPointerLeave,
   };
 }

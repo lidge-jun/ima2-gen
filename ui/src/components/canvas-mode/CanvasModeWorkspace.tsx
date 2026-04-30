@@ -22,7 +22,8 @@ import {
 } from "../../lib/api";
 import { useCanvasAnnotations } from "../../hooks/useCanvasAnnotations";
 import { CanvasModeStage } from "./CanvasModeStage";
-import { CanvasToolbar } from "./CanvasToolbar";
+import { CanvasBackgroundCleanupLayer } from "./CanvasBackgroundCleanupLayer";
+import { CanvasModeFloatingToolbar } from "./CanvasModeFloatingToolbar";
 import { CanvasModeTopbar } from "./CanvasModeTopbar";
 import { CanvasViewportMiniMap } from "./CanvasViewportMiniMap";
 import {
@@ -127,13 +128,13 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
   const {
     imageHasAlpha,
     backgroundCleanupSeeds,
-    backgroundCleanupTolerance,
     backgroundCleanupPreview,
     backgroundCleanupMaskOverlay,
-    backgroundCleanupStats,
-    isBackgroundCleanupPickingSeed,
-    isBackgroundCleanupPreviewing,
-    isBackgroundCleanupApplying,
+    backgroundCleanupBrushStrokes,
+    cleanupTool,
+    cleanupBrushRadius,
+    cleanupBrushCursor,
+    isBackgroundCleanupActive,
   } = backgroundCleanup;
   const imageSrc = backgroundCleanup.backgroundCleanupPreview?.dataUrl ?? baseImageSrc;
 
@@ -305,6 +306,8 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     currentImage,
     annotations,
     undoBackgroundCleanup: backgroundCleanup.undoBackgroundCleanup,
+    redoBackgroundCleanup: backgroundCleanup.redoBackgroundCleanup,
+    handleBackgroundCleanupEscape: backgroundCleanup.handleBackgroundCleanupEscape,
     handleCloseCanvas,
     selectHistoryShortcutTarget,
     trashHistoryItem,
@@ -318,13 +321,14 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     canvasOpen &&
     canvasZoom > 1.01 &&
     annotations.activeTool === "select" &&
-    !isBackgroundCleanupPickingSeed;
+    !isBackgroundCleanupActive;
   const {
     viewportPanActive,
     resetPointerSession,
     handleAnnotationPointerDown,
     handleAnnotationPointerMove,
     handleAnnotationPointerUp,
+    handleAnnotationPointerLeave,
   } = useCanvasModePointerHandlers({
     canvasOpen,
     canvasZoom,
@@ -332,11 +336,16 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     canvasPanY,
     spaceHeld,
     canDragViewportWithSelect,
-    isBackgroundCleanupPickingSeed,
+    isBackgroundCleanupActive,
+    cleanupTool,
     annotationFrameRef,
     annotations,
     setCanvasPan,
-    addBackgroundCleanupSeed: backgroundCleanup.addBackgroundCleanupSeed,
+    addBackgroundCleanupClick: backgroundCleanup.addBackgroundCleanupClick,
+    startBackgroundCleanupBrushStroke: backgroundCleanup.startBackgroundCleanupBrushStroke,
+    updateBackgroundCleanupBrushStroke: backgroundCleanup.updateBackgroundCleanupBrushStroke,
+    endBackgroundCleanupBrushStroke: backgroundCleanup.endBackgroundCleanupBrushStroke,
+    setCleanupBrushCursor: backgroundCleanup.setCleanupBrushCursor,
   });
 
   return (
@@ -385,7 +394,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
             frameClassName={`canvas-annotation-frame${
               (imageHasAlpha || backgroundCleanupPreview) && canvasOpen ? " canvas-annotation-frame--alpha" : ""
             }${
-              isBackgroundCleanupPickingSeed && canvasOpen ? " canvas-annotation-frame--cleanup-picking" : ""
+              isBackgroundCleanupActive && canvasOpen ? " canvas-annotation-frame--cleanup-picking" : ""
             }${
               backgroundCleanupMaskOverlay && canvasOpen ? " canvas-annotation-frame--cleanup-mask" : ""
             }`}
@@ -395,7 +404,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
                 : spaceHeld || canDragViewportWithSelect
                   ? "grab"
                   : canvasOpen
-                    ? isBackgroundCleanupPickingSeed
+                    ? isBackgroundCleanupActive
                       ? "crosshair"
                       : annotations.activeTool === "select"
                       ? "default"
@@ -416,11 +425,21 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
             alt={t("canvas.resultAlt")}
             canvasOpen={canvasOpen}
             maskOverlayUrl={backgroundCleanupMaskOverlay?.dataUrl ?? null}
+            cleanupLayer={(
+              <CanvasBackgroundCleanupLayer
+                seeds={backgroundCleanupSeeds}
+                brushStrokes={backgroundCleanupBrushStrokes}
+                brushCursor={cleanupBrushCursor}
+                brushRadius={cleanupBrushRadius}
+                active={isBackgroundCleanupActive}
+              />
+            )}
             annotations={annotations}
             onOpenCanvas={openCanvas}
             onPointerDown={handleAnnotationPointerDown}
             onPointerMove={handleAnnotationPointerMove}
             onPointerUp={handleAnnotationPointerUp}
+            onPointerLeave={handleAnnotationPointerLeave}
           />
           {canvasOpen && imageSrc ? (
             <CanvasViewportMiniMap
@@ -433,48 +452,19 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
             />
           ) : null}
           {canvasOpen && (
-            <>
-              <CanvasToolbar
-                activeTool={annotations.activeTool}
-                eraserMode={annotations.eraserMode}
-                onEraserModeChange={annotations.setEraserMode}
-                style={{ color: annotations.toolColor, strokeWidth: annotations.strokeWidth }}
-                onStyleChange={annotations.setStyle}
-                hasExportableContent={annotations.hasAnnotations}
-                onToolChange={annotations.setTool}
-                onClear={annotations.clear}
-                onApply={() => void handleApplyCanvas()}
-                onExport={() => void handleExportCanvas()}
-                onUndo={annotations.undo}
-                onRedo={annotations.redo}
-                canUndo={annotations.canUndo}
-                canRedo={annotations.canRedo}
-                onDeleteSelected={annotations.deleteSelected}
-                selectedCount={annotations.selectedIds.length}
-                onEditWithMask={() => void handleEditWithMask()}
-                canEditWithMask={annotations.boxes.length > 0}
-                isEditingWithMask={isEditingWithMask}
-                isApplying={isApplying}
-                isExporting={isExporting}
-                exportBackground={exportBackground}
-                exportMatteColor={exportMatteColor}
-                onExportBackgroundChange={setExportBackground}
-                onExportMatteColorChange={setExportMatteColor}
-                cleanupTolerance={backgroundCleanupTolerance}
-                cleanupSeedCount={backgroundCleanupSeeds.length}
-                cleanupStats={backgroundCleanupStats}
-                cleanupHasPreview={Boolean(backgroundCleanupPreview)}
-                isCleanupPickingSeed={isBackgroundCleanupPickingSeed}
-                isCleanupPreviewing={isBackgroundCleanupPreviewing}
-                isCleanupApplying={isBackgroundCleanupApplying}
-                onCleanupAutoSample={backgroundCleanup.handleBackgroundCleanupAutoSample}
-                onCleanupPickSeed={backgroundCleanup.handleBackgroundCleanupPickSeed}
-                onCleanupToleranceChange={backgroundCleanup.handleBackgroundCleanupToleranceChange}
-                onCleanupPreview={() => void backgroundCleanup.runBackgroundCleanupPreview()}
-                onCleanupApply={() => void backgroundCleanup.handleBackgroundCleanupApply()}
-                onCleanupReset={backgroundCleanup.handleBackgroundCleanupReset}
-              />
-            </>
+            <CanvasModeFloatingToolbar
+              annotations={annotations}
+              backgroundCleanup={backgroundCleanup}
+              backgroundCleanupPreview={backgroundCleanupPreview}
+              canvasState={{ exportBackground, exportMatteColor, isApplying, isExporting, isEditingWithMask }}
+              actions={{
+                handleApplyCanvas,
+                handleExportCanvas,
+                handleEditWithMask,
+                setExportBackground,
+                setExportMatteColor,
+              }}
+            />
           )}
           {canvasOpen && canvasSaveState !== "idle" ? (
             <div className={`canvas-save-state canvas-save-state--${canvasSaveState}`}>

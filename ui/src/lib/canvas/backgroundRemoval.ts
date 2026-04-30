@@ -1,4 +1,9 @@
 import type { NormalizedPoint } from "../../types/canvas";
+import {
+  applyRemoveMaskToImageData,
+  createCleanupMask,
+  type CleanupMask,
+} from "./backgroundCleanupMasks";
 import { blobToDataUrl } from "./maskRenderer";
 
 const DEFAULT_SEEDS: NormalizedPoint[] = [
@@ -123,15 +128,47 @@ export function removeContiguousBackground(
   seeds: NormalizedPoint[],
   tolerance: number,
 ): BackgroundRemovalResult {
-  const { width, height, data } = input;
-  const output = new Uint8ClampedArray(data);
+  const mask = floodFillMask(input, seeds, tolerance);
+  const imageData = new ImageData(new Uint8ClampedArray(input.data), input.width, input.height);
+  const output = applyRemoveMaskToImageData(imageData, mask);
+  const removedPixels = mask.data.reduce((total, value) => total + (value > 0 ? 1 : 0), 0);
+  return {
+    imageData: { width: input.width, height: input.height, data: output.data },
+    stats: {
+      width: input.width,
+      height: input.height,
+      removedPixels,
+      removedPercent: mask.data.length > 0 ? removedPixels / mask.data.length : 0,
+    },
+  };
+}
+
+export function floodFillMask(
+  input: BackgroundRemovalImageData,
+  seeds: NormalizedPoint[],
+  tolerance: number,
+): CleanupMask {
+  const mask = createCleanupMask(input.width, input.height);
+  floodFillMaskInto(mask, input, seeds, tolerance);
+  return mask;
+}
+
+export function floodFillMaskInto(
+  mask: CleanupMask,
+  input: BackgroundRemovalImageData,
+  seeds: NormalizedPoint[],
+  tolerance: number,
+): void {
+  if (mask.width !== input.width || mask.height !== input.height) {
+    throw new Error("cleanup_mask_size_mismatch");
+  }
+  const { width, height } = input;
   const totalPixels = width * height;
   const visited = new Uint8Array(totalPixels);
   const stack = new Int32Array(totalPixels);
   const colors = sampleSeedColors(input, seeds);
   const safeTolerance = clampByte(tolerance);
   let top = 0;
-  let removedPixels = 0;
 
   for (const seed of seeds.length > 0 ? seeds : DEFAULT_SEEDS) {
     top = pushIfCandidate(
@@ -147,12 +184,7 @@ export function removeContiguousBackground(
 
   while (top > 0) {
     const index = stack[--top];
-    const offset = index * 4;
-    if ((output[offset + 3] ?? 0) !== 0) {
-      output[offset + 3] = 0;
-      removedPixels += 1;
-    }
-
+    mask.data[index] = 255;
     const x = index % width;
     if (x > 0) top = pushIfCandidate(index - 1, input, stack, visited, top, colors, safeTolerance);
     if (x < width - 1) top = pushIfCandidate(index + 1, input, stack, visited, top, colors, safeTolerance);
@@ -161,14 +193,22 @@ export function removeContiguousBackground(
       top = pushIfCandidate(index + width, input, stack, visited, top, colors, safeTolerance);
     }
   }
+}
 
+export function renderResultFromMask(
+  input: BackgroundRemovalImageData,
+  mask: CleanupMask,
+): BackgroundRemovalResult {
+  const source = new ImageData(new Uint8ClampedArray(input.data), input.width, input.height);
+  const output = applyRemoveMaskToImageData(source, mask);
+  const removedPixels = mask.data.reduce((total, value) => total + (value > 0 ? 1 : 0), 0);
   return {
-    imageData: { width, height, data: output },
+    imageData: { width: input.width, height: input.height, data: output.data },
     stats: {
-      width,
-      height,
+      width: input.width,
+      height: input.height,
       removedPixels,
-      removedPercent: totalPixels > 0 ? removedPixels / totalPixels : 0,
+      removedPercent: mask.data.length > 0 ? removedPixels / mask.data.length : 0,
     },
   };
 }
@@ -238,6 +278,28 @@ export async function renderBackgroundRemovalPreview({
   }
 }
 
+export async function renderBackgroundCleanupPreviewFromMask({
+  imageElement,
+  mask,
+}: {
+  imageElement: HTMLImageElement;
+  mask: CleanupMask;
+}): Promise<BackgroundRemovalRenderResult> {
+  try {
+    const { canvas, context, width, height } = drawSourceImage(imageElement);
+    const imageData = context.getImageData(0, 0, width, height);
+    const result = renderResultFromMask({ width, height, data: imageData.data }, mask);
+    const cleaned = context.createImageData(width, height);
+    cleaned.data.set(result.imageData.data);
+    context.putImageData(cleaned, 0, 0);
+    const blob = await canvasToPngBlob(canvas);
+    return { blob, dataUrl: await blobToDataUrl(blob), stats: result.stats };
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error("background_cleanup_failed");
+  }
+}
+
 export async function renderBackgroundRemovalMaskOverlay({
   imageElement,
   seeds,
@@ -273,6 +335,52 @@ export async function renderBackgroundRemovalMaskOverlay({
     return {
       dataUrl: await blobToDataUrl(blob),
       stats: result.stats,
+    };
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error("background_cleanup_failed");
+  }
+}
+
+export async function renderBackgroundCleanupOverlayFromMask({
+  imageElement,
+  mask,
+}: {
+  imageElement: HTMLImageElement;
+  mask: CleanupMask;
+}): Promise<BackgroundRemovalOverlayResult> {
+  try {
+    const { width, height } = drawSourceImage(imageElement, BACKGROUND_REMOVAL_OVERLAY_MAX_DIMENSION);
+    const overlayCanvas = document.createElement("canvas");
+    overlayCanvas.width = width;
+    overlayCanvas.height = height;
+    const overlayContext = overlayCanvas.getContext("2d");
+    if (!overlayContext) throw new Error("background_cleanup_context_failed");
+    const overlay = overlayContext.createImageData(width, height);
+    let removedPixels = 0;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const sourceX = Math.min(mask.width - 1, Math.floor((x / width) * mask.width));
+        const sourceY = Math.min(mask.height - 1, Math.floor((y / height) * mask.height));
+        if ((mask.data[sourceY * mask.width + sourceX] ?? 0) === 0) continue;
+        const offset = (y * width + x) * 4;
+        overlay.data[offset] = 168;
+        overlay.data[offset + 1] = 85;
+        overlay.data[offset + 2] = 247;
+        overlay.data[offset + 3] = 150;
+        removedPixels += 1;
+      }
+    }
+    overlayContext.putImageData(overlay, 0, 0);
+    const blob = await canvasToPngBlob(overlayCanvas);
+    return {
+      dataUrl: await blobToDataUrl(blob),
+      stats: {
+        width: mask.width,
+        height: mask.height,
+        removedPixels: mask.data.reduce((total, value) => total + (value > 0 ? 1 : 0), 0),
+        removedPercent: mask.data.length > 0 ? removedPixels / (width * height) : 0,
+      },
     };
   } catch (error) {
     if (error instanceof Error) throw error;

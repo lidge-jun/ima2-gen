@@ -1,4 +1,4 @@
-import type { CSSProperties, PointerEventHandler, RefObject } from "react";
+import type { CSSProperties, PointerEventHandler, ReactNode, RefObject } from "react";
 import { CanvasAnnotationLayer } from "./CanvasAnnotationLayer";
 import { CanvasMemoOverlay } from "./CanvasMemoOverlay";
 
@@ -13,11 +13,13 @@ interface CanvasModeStageProps {
   alt: string;
   canvasOpen: boolean;
   maskOverlayUrl: string | null;
+  cleanupLayer?: ReactNode;
   annotations: any;
   onOpenCanvas: () => void;
   onPointerDown: PointerEventHandler<HTMLDivElement>;
   onPointerMove: PointerEventHandler<HTMLDivElement>;
   onPointerUp: PointerEventHandler<HTMLDivElement>;
+  onPointerLeave?: PointerEventHandler<HTMLDivElement>;
 }
 
 export function CanvasModeStage({
@@ -31,11 +33,13 @@ export function CanvasModeStage({
   alt,
   canvasOpen,
   maskOverlayUrl,
+  cleanupLayer,
   annotations,
   onOpenCanvas,
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerLeave,
 }: CanvasModeStageProps) {
   return (
     <div
@@ -45,6 +49,7 @@ export function CanvasModeStage({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onPointerLeave={onPointerLeave}
       style={frameStyle}
     >
       <img
@@ -66,6 +71,7 @@ export function CanvasModeStage({
           aria-hidden="true"
         />
       ) : null}
+      {canvasOpen ? cleanupLayer : null}
       {canvasOpen && (
         <>
           <CanvasAnnotationLayer

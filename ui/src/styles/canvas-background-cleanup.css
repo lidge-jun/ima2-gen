@@ -184,7 +184,8 @@
 
 .canvas-toolbar__cleanup-row,
 .canvas-toolbar__cleanup-actions,
-.canvas-toolbar__cleanup-slider {
+.canvas-toolbar__cleanup-slider,
+.canvas-toolbar__segmented-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -212,7 +213,8 @@
 }
 
 .canvas-toolbar__cleanup-slider span,
-.canvas-toolbar__cleanup-slider output {
+.canvas-toolbar__cleanup-slider output,
+.canvas-toolbar__segmented-label {
   min-width: 34px;
   font-size: 11px;
   font-weight: 650;
@@ -258,4 +260,75 @@
 
 .canvas-toolbar__cleanup-status--active {
   color: #d8b4fe;
+}
+
+.canvas-toolbar__segmented-row {
+  margin-bottom: 8px;
+}
+
+.canvas-toolbar__segmented {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.canvas-toolbar__segmented-button {
+  min-height: 26px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.canvas-toolbar__segmented-button[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.canvas-toolbar__segmented-button[data-value="remove"][aria-pressed="true"] {
+  background: rgba(255, 87, 87, 0.25);
+}
+
+.canvas-toolbar__segmented-button[data-value="preserve"][aria-pressed="true"] {
+  background: rgba(64, 210, 125, 0.24);
+}
+
+.canvas-cleanup-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.canvas-cleanup-overlay__stroke {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.74;
+}
+
+.canvas-cleanup-overlay__stroke--remove {
+  stroke: rgba(255, 74, 74, 0.95);
+}
+
+.canvas-cleanup-overlay__stroke--preserve {
+  stroke: rgba(58, 214, 119, 0.95);
+}
+
+.canvas-cleanup-cursor {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.4;
+  pointer-events: none;
 }

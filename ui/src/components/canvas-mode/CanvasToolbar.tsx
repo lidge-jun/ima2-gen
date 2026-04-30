@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type {
   CanvasAnnotationStyle,
+  CanvasBackgroundCleanupIntent,
+  CanvasBackgroundCleanupTool,
   CanvasEraserMode,
   CanvasExportBackground,
   CanvasTool,
@@ -47,10 +49,17 @@ interface CanvasToolbarProps {
   cleanupStats?: BackgroundRemovalStats | null;
   cleanupHasPreview?: boolean;
   isCleanupPickingSeed?: boolean;
+  isCleanupActive?: boolean;
+  cleanupIntent?: CanvasBackgroundCleanupIntent;
+  cleanupTool?: CanvasBackgroundCleanupTool;
+  cleanupBrushRadius?: number;
   isCleanupPreviewing?: boolean;
   isCleanupApplying?: boolean;
   onCleanupAutoSample?: () => void;
   onCleanupPickSeed?: () => void;
+  onCleanupIntentChange?: (intent: CanvasBackgroundCleanupIntent) => void;
+  onCleanupToolChange?: (tool: CanvasBackgroundCleanupTool) => void;
+  onCleanupBrushRadiusChange?: (value: number) => void;
   onCleanupToleranceChange?: (value: number) => void;
   onCleanupPreview?: () => void;
   onCleanupApply?: () => void;
@@ -89,10 +98,17 @@ export function CanvasToolbar({
   cleanupStats = null,
   cleanupHasPreview = false,
   isCleanupPickingSeed = false,
+  isCleanupActive = false,
+  cleanupIntent = "remove",
+  cleanupTool = "click",
+  cleanupBrushRadius = 0.018,
   isCleanupPreviewing = false,
   isCleanupApplying = false,
   onCleanupAutoSample,
   onCleanupPickSeed,
+  onCleanupIntentChange,
+  onCleanupToolChange,
+  onCleanupBrushRadiusChange,
   onCleanupToleranceChange,
   onCleanupPreview,
   onCleanupApply,
@@ -270,6 +286,9 @@ export function CanvasToolbar({
       ) : null}
       {onCleanupAutoSample &&
       onCleanupPickSeed &&
+      onCleanupIntentChange &&
+      onCleanupToolChange &&
+      onCleanupBrushRadiusChange &&
       onCleanupToleranceChange &&
       onCleanupPreview &&
       onCleanupApply &&
@@ -280,12 +299,18 @@ export function CanvasToolbar({
           stats={cleanupStats}
           hasPreview={cleanupHasPreview}
           isPickingSeed={isCleanupPickingSeed}
+          intent={cleanupIntent}
+          tool={cleanupTool}
+          brushRadius={cleanupBrushRadius}
           isPreviewing={isCleanupPreviewing}
           isApplying={isCleanupApplying}
-          keepOpen={isCleanupPickingSeed}
+          keepOpen={isCleanupActive}
           disabled={isApplying || isExporting}
           onAutoSample={onCleanupAutoSample}
           onPickSeed={onCleanupPickSeed}
+          onIntentChange={onCleanupIntentChange}
+          onToolChange={onCleanupToolChange}
+          onBrushRadiusChange={onCleanupBrushRadiusChange}
           onToleranceChange={onCleanupToleranceChange}
           onPreview={onCleanupPreview}
           onApply={onCleanupApply}

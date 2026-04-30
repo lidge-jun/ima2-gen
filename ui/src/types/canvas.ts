@@ -7,6 +7,27 @@ export interface NormalizedPoint {
   y: number;
 }
 
+export type CanvasBackgroundCleanupIntent = "remove" | "preserve";
+
+export type CanvasBackgroundCleanupTool = "click" | "brush";
+
+export type CanvasBackgroundCleanupClickEngine =
+  | "flat-flood-fill"
+  | "semantic-slimsam"
+  | "hosted-provider";
+
+export interface CanvasBackgroundCleanupSeed {
+  point: NormalizedPoint;
+  intent: CanvasBackgroundCleanupIntent;
+}
+
+export interface CanvasBackgroundCleanupBrushStroke {
+  id: string;
+  intent: CanvasBackgroundCleanupIntent;
+  points: NormalizedPoint[];
+  radius: number;
+}
+
 export interface DrawingPath {
   id: string;
   tool: "pen" | "arrow";

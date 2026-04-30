@@ -8,6 +8,8 @@ interface UseCanvasModeShortcutsArgs {
   currentImage: GenerateItem | null;
   annotations: any;
   undoBackgroundCleanup: () => boolean;
+  redoBackgroundCleanup: () => boolean;
+  handleBackgroundCleanupEscape: () => boolean;
   handleCloseCanvas: () => Promise<void>;
   selectHistoryShortcutTarget: (action: "previous" | "next" | "first" | "last") => void;
   trashHistoryItem: (item: GenerateItem) => Promise<void> | void;
@@ -24,6 +26,8 @@ export function useCanvasModeShortcuts({
   currentImage,
   annotations,
   undoBackgroundCleanup,
+  redoBackgroundCleanup,
+  handleBackgroundCleanupEscape,
   handleCloseCanvas,
   selectHistoryShortcutTarget,
   trashHistoryItem,
@@ -90,6 +94,7 @@ export function useCanvasModeShortcuts({
       }
       if (event.key === "Escape") {
         event.preventDefault();
+        if (handleBackgroundCleanupEscape()) return;
         void handleCloseCanvas();
         return;
       }
@@ -107,6 +112,7 @@ export function useCanvasModeShortcuts({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
         if (event.shiftKey) {
+          if (redoBackgroundCleanup()) return;
           annotations.redo();
           return;
         }
@@ -123,8 +129,10 @@ export function useCanvasModeShortcuts({
     annotations.undo,
     canvasOpen,
     handleCloseCanvas,
+    handleBackgroundCleanupEscape,
     isCreatingBlankCanvas,
     onCreateBlankCanvas,
+    redoBackgroundCleanup,
     undoBackgroundCleanup,
   ]);
 
@@ -148,6 +156,7 @@ export function useCanvasModeShortcuts({
     if (canvasOpen && event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
+      if (handleBackgroundCleanupEscape()) return;
       void handleCloseCanvas();
       return;
     }

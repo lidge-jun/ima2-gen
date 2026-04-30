@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { BackgroundRemovalStats } from "../../lib/canvas/backgroundRemoval";
+import type {
+  CanvasBackgroundCleanupIntent,
+  CanvasBackgroundCleanupTool,
+} from "../../types/canvas";
 import { useI18n } from "../../i18n";
+import { SegmentedControl } from "./SegmentedControl";
 
 interface CanvasBackgroundCleanupPanelProps {
   seedCount: number;
@@ -8,12 +13,18 @@ interface CanvasBackgroundCleanupPanelProps {
   stats: BackgroundRemovalStats | null;
   hasPreview: boolean;
   isPickingSeed: boolean;
+  intent: CanvasBackgroundCleanupIntent;
+  tool: CanvasBackgroundCleanupTool;
+  brushRadius: number;
   isPreviewing: boolean;
   isApplying: boolean;
   keepOpen?: boolean;
   disabled?: boolean;
   onAutoSample: () => void;
   onPickSeed: () => void;
+  onIntentChange: (intent: CanvasBackgroundCleanupIntent) => void;
+  onToolChange: (tool: CanvasBackgroundCleanupTool) => void;
+  onBrushRadiusChange: (value: number) => void;
   onToleranceChange: (value: number) => void;
   onPreview: () => void;
   onApply: () => void;
@@ -26,12 +37,18 @@ export function CanvasBackgroundCleanupPanel({
   stats,
   hasPreview,
   isPickingSeed,
+  intent,
+  tool,
+  brushRadius,
   isPreviewing,
   isApplying,
   keepOpen,
   disabled,
   onAutoSample,
   onPickSeed,
+  onIntentChange,
+  onToolChange,
+  onBrushRadiusChange,
   onToleranceChange,
   onPreview,
   onApply,
@@ -41,6 +58,7 @@ export function CanvasBackgroundCleanupPanel({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const removed = stats ? Math.round(stats.removedPercent * 1000) / 10 : 0;
+  const active = isPickingSeed || tool === "brush";
 
   useEffect(() => {
     if (!open) return undefined;
@@ -73,6 +91,24 @@ export function CanvasBackgroundCleanupPanel({
               {t("canvas.toolbar.cleanupSeedCount", { n: seedCount })}
             </span>
           </div>
+          <SegmentedControl
+            label={t("canvas.toolbar.cleanupMark")}
+            value={intent}
+            options={[
+              { value: "remove", label: t("canvas.toolbar.cleanupRemove") },
+              { value: "preserve", label: t("canvas.toolbar.cleanupPreserve") },
+            ]}
+            onChange={onIntentChange}
+          />
+          <SegmentedControl
+            label={t("canvas.toolbar.cleanupInput")}
+            value={tool}
+            options={[
+              { value: "click", label: t("canvas.toolbar.cleanupClick") },
+              { value: "brush", label: t("canvas.toolbar.cleanupBrush") },
+            ]}
+            onChange={onToolChange}
+          />
           <label className="canvas-toolbar__cleanup-slider">
             <span>{t("canvas.toolbar.cleanupTolerance")}</span>
             <input
@@ -84,6 +120,20 @@ export function CanvasBackgroundCleanupPanel({
             />
             <output>{tolerance}</output>
           </label>
+          {tool === "brush" ? (
+            <label className="canvas-toolbar__cleanup-slider">
+              <span>{t("canvas.toolbar.cleanupBrushSize")}</span>
+              <input
+                type="range"
+                min="0.006"
+                max="0.06"
+                step="0.002"
+                value={brushRadius}
+                onChange={(event) => onBrushRadiusChange(Number(event.target.value))}
+              />
+              <output>{Math.round(brushRadius * 1000)}</output>
+            </label>
+          ) : null}
           <div className="canvas-toolbar__cleanup-actions">
             <button type="button" onClick={onAutoSample}>
               {t("canvas.toolbar.cleanupAutoSample")}
@@ -93,7 +143,7 @@ export function CanvasBackgroundCleanupPanel({
               className={isPickingSeed ? "active" : ""}
               onClick={onPickSeed}
             >
-              {isPickingSeed ? t("canvas.toolbar.cleanupPickingSeed") : t("canvas.toolbar.cleanupPickSeed")}
+              {active ? t("canvas.toolbar.cleanupActive") : t("canvas.toolbar.cleanupPickSeed")}
             </button>
           </div>
           <div className="canvas-toolbar__cleanup-actions">
@@ -107,9 +157,9 @@ export function CanvasBackgroundCleanupPanel({
               {t("canvas.toolbar.cleanupReset")}
             </button>
           </div>
-          {isPickingSeed ? (
+          {active ? (
             <div className="canvas-toolbar__cleanup-status canvas-toolbar__cleanup-status--active">
-              {t("canvas.toolbar.cleanupPickHint")}
+              {tool === "brush" ? t("canvas.toolbar.cleanupBrushHint") : t("canvas.toolbar.cleanupPickHint")}
             </div>
           ) : stats && !hasPreview ? (
             <div className="canvas-toolbar__cleanup-status canvas-toolbar__cleanup-status--active">
