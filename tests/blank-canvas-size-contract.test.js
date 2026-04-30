@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const HOOK = readFileSync(resolve(ROOT, "ui/src/hooks/useCreateBlankCanvas.ts"), "utf8");
@@ -34,7 +35,7 @@ describe("blank canvas size honors right-sidebar size selection", () => {
       `;
       const file = resolve(tempDir, "stub.mjs");
       writeFileSync(file, stub);
-      const mod = await import(`${file}?cachebust=${Date.now()}`);
+      const mod = await import(`${pathToFileURL(file).href}?cachebust=${Date.now()}`);
       const { resolveBlankCanvasSize } = mod;
       assert.deepEqual(resolveBlankCanvasSize("1024x1024"), { width: 1024, height: 1024 });
       assert.deepEqual(resolveBlankCanvasSize("1536x1024"), { width: 1536, height: 1024 });
