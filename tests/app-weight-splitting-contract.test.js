@@ -105,7 +105,8 @@ test("canvas mode workspace is lazy-loaded through the feature boundary", () => 
     /CanvasModeShell|CanvasToolbar|CanvasAnnotationLayer|CanvasMemoOverlay|CanvasViewportMiniMap|CanvasZoomControl/,
   );
 
-  assert.match(workspace, /import \{ CanvasToolbar \} from "\.\/CanvasToolbar";/);
+  assert.match(workspace, /import \{ CanvasModeFloatingToolbar \} from "\.\/CanvasModeFloatingToolbar";/);
+  assert.match(readSource("ui/src/components/canvas-mode/CanvasModeFloatingToolbar.tsx"), /import \{ CanvasToolbar \} from "\.\/CanvasToolbar";/);
   assert.doesNotMatch(workspace, /lazy\(\(\) =>\s*import\("\.\/Canvas/);
   assert.doesNotMatch(workspace, /CanvasModeShell/);
 });

@@ -25,9 +25,12 @@ describe("canvas edit mask flow contract", () => {
   });
 
   it("wires toolbar mask edit affordance without changing default viewer policy", () => {
-    const canvas = readSource("ui/src/components/canvas-mode/CanvasModeWorkspace.tsx");
+    const canvas = [
+      "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
+      "ui/src/components/canvas-mode/CanvasModeFloatingToolbar.tsx",
+    ].map(readSource).join("\n");
     const toolbar = readSource("ui/src/components/canvas-mode/CanvasToolbar.tsx");
-    assert.match(canvas, /onEditWithMask=\{\(\) => void handleEditWithMask\(\)\}/);
+    assert.match(canvas, /onEditWithMask=\{\(\) => void actions\.handleEditWithMask\(\)\}/);
     assert.match(canvas, /canEditWithMask=\{annotations\.boxes\.length > 0\}/);
     assert.match(canvas, /<ResultActions imageOverride=\{canvasOpen \? canvasDisplayImage : null\} \/>/);
     assert.match(toolbar, /onEditWithMask/);

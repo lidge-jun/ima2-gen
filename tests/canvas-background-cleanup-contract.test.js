@@ -25,7 +25,7 @@ const en = JSON.parse(readFileSync(join(root, "ui/src/i18n/en.json"), "utf8"));
 const ko = JSON.parse(readFileSync(join(root, "ui/src/i18n/ko.json"), "utf8"));
 
 function extractBackgroundPickBranch() {
-  const match = canvas.match(/if \(isBackgroundCleanupPickingSeed\) \{[\s\S]*?return;\r?\n    \}/);
+  const match = canvas.match(/if \(isBackgroundCleanupActive\) \{[\s\S]*?return;\r?\n    \}/);
   assert.ok(match, "Canvas should keep an explicit background-pick pointer branch");
   return match[0];
 }
@@ -44,8 +44,8 @@ test("background cleanup uses contiguous flood fill from seed pixels", () => {
 });
 
 test("background cleanup preserves foreground pixels and emits transparent PNG preview", () => {
-  assert.match(backgroundRemoval, /const output = new Uint8ClampedArray\(data\)/);
-  assert.match(backgroundRemoval, /output\[offset \+ 3\] = 0/);
+  assert.match(backgroundRemoval, /applyRemoveMaskToImageData/);
+  assert.match(backgroundRemoval, /imageData:\s*\{ width: input\.width, height: input\.height, data: output\.data \}/);
   assert.match(backgroundRemoval, /canvas\.toBlob/);
   assert.match(backgroundRemoval, /"image\/png"/);
   assert.match(backgroundRemoval, /blobToDataUrl/);
@@ -61,17 +61,17 @@ test("Canvas wires cleanup preview, seed picking, and apply-as-new-version", () 
   assert.match(canvas, /backgroundCleanupTolerance/);
   assert.match(canvas, /backgroundCleanupPreview/);
   assert.match(canvas, /backgroundCleanupMaskOverlay/);
-  assert.match(canvas, /undoRef/);
+  assert.match(canvas, /historyRef/);
   assert.match(canvas, /renderSeqRef/);
   assert.match(canvas, /toleranceTimerRef/);
   assert.match(canvas, /pushUndo/);
   assert.match(canvas, /undoBackgroundCleanup/);
   assert.match(canvas, /isBackgroundCleanupPickingSeed/);
-  assert.match(canvas, /renderBackgroundRemovalPreview/);
-  assert.match(canvas, /renderBackgroundRemovalMaskOverlay/);
+  assert.match(canvas, /renderBackgroundCleanupPreviewFromMask/);
+  assert.match(canvas, /renderBackgroundCleanupOverlayFromMask/);
   assert.match(canvas, /imageSrc = backgroundCleanup\.backgroundCleanupPreview\?\.dataUrl \?\? baseImageSrc/);
   assert.match(canvas, /canvas-background-cleanup-mask/);
-  assert.doesNotMatch(canvas, /canvas-background-cleanup-seed/);
+  assert.match(canvas, /CanvasBackgroundCleanupLayer/);
   assert.match(canvas, /canvas-annotation-frame--cleanup-picking/);
   assert.match(canvas, /undoBackgroundCleanup\(\)/);
   assert.match(canvas, /handleBackgroundCleanupApply/);
@@ -84,7 +84,7 @@ test("cleanup renders ignore stale async results and debounce tolerance overlays
   assert.match(canvas, /renderSeqRef\.current !== renderSeq/);
   assert.match(canvas, /window\.clearTimeout\(toleranceTimerRef\.current\)/);
   assert.match(canvas, /window\.setTimeout\(\(\) => \{/);
-  assert.match(canvas, /runBackgroundCleanupMaskOverlay\(seeds, value\)/);
+  assert.match(canvas, /rebuildMasks\(backgroundCleanupSeeds, backgroundCleanupBrushStrokes, value\)/);
 });
 
 test("cleanup apply recomputes from the natural image instead of reusing preview blobs", () => {
@@ -92,7 +92,7 @@ test("cleanup apply recomputes from the natural image instead of reusing preview
   assert.ok(applyMatch, "Canvas should keep a dedicated background cleanup apply handler");
   const applyBody = applyMatch[0];
 
-  assert.match(applyBody, /renderBackgroundRemovalPreview\(\{/);
+  assert.match(applyBody, /renderBackgroundCleanupPreviewFromMask\(\{/);
   assert.match(applyBody, /imageElement: imageElementRef\.current/);
   assert.match(applyBody, /getCornerBackgroundRemovalSeeds\(\)/);
   assert.doesNotMatch(applyBody, /backgroundCleanupPreview \?\?/);
@@ -117,9 +117,9 @@ test("alpha detection caches per image element and source dimensions", () => {
 
 test("Background pick mode keeps its cursor active after a click", () => {
   const pickBranch = extractBackgroundPickBranch();
-  assert.match(pickBranch, /addBackgroundCleanupSeed\(point\)/);
+  assert.match(pickBranch, /addBackgroundCleanupClick\(point\)/);
   assert.match(canvas, /setBackgroundCleanupSeeds\(nextSeeds\)/);
-  assert.match(canvas, /void runBackgroundCleanupMaskOverlay\(nextSeeds\)/);
+  assert.match(canvas, /void rebuildMasks\(nextSeeds, backgroundCleanupBrushStrokes, backgroundCleanupTolerance\)/);
   assert.doesNotMatch(pickBranch, /setIsBackgroundCleanupPickingSeed\(false\)/);
 });
 
@@ -135,6 +135,8 @@ test("Toolbar exposes a dedicated cleanup panel without provider coupling", () =
   assert.match(panel, /cleanupMaskHint/);
   assert.match(panel, /cleanupTolerance/);
   assert.match(panel, /cleanupSeedCount/);
+  assert.match(panel, /cleanupMark/);
+  assert.match(panel, /cleanupInput/);
   assert.doesNotMatch(backgroundRemoval + toolbar + panel, /remove\.bg|SAM3|Roboflow|provider/i);
 });
 
@@ -142,7 +144,7 @@ test("Cleanup styles and locale keys are present", () => {
   assert.match(main, /canvas-background-cleanup\.css/);
   assert.match(css, /\.canvas-toolbar__cleanup-panel/);
   assert.match(css, /\.canvas-background-cleanup-mask/);
-  assert.doesNotMatch(css, /\.canvas-background-cleanup-seed/);
+  assert.doesNotMatch(css, /\.canvas-cleanup-overlay__seed/);
   assert.match(css, /cursor:\s*crosshair !important/);
   assert.doesNotMatch(css, /cursor:\s*cell !important/);
   assert.match(css, /\.canvas-annotation-frame--cleanup-picking/);
@@ -151,6 +153,9 @@ test("Cleanup styles and locale keys are present", () => {
     assert.equal(typeof locale.canvas.toolbar.cleanup, "string");
     assert.equal(typeof locale.canvas.toolbar.cleanupTolerance, "string");
     assert.equal(typeof locale.canvas.toolbar.cleanupAutoSample, "string");
+    assert.equal(typeof locale.canvas.toolbar.cleanupMark, "string");
+    assert.equal(typeof locale.canvas.toolbar.cleanupPreserve, "string");
+    assert.equal(typeof locale.canvas.toolbar.cleanupBrush, "string");
     assert.equal(typeof locale.canvas.toolbar.cleanupPickSeed, "string");
     assert.equal(typeof locale.canvas.toolbar.cleanupPreview, "string");
     assert.equal(typeof locale.canvas.toolbar.cleanupApply, "string");

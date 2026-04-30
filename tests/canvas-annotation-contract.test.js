@@ -49,6 +49,7 @@ describe("canvas annotation contract", () => {
     const source = [
       "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
       "ui/src/components/canvas-mode/CanvasModeStage.tsx",
+      "ui/src/components/canvas-mode/CanvasModeFloatingToolbar.tsx",
     ].map(readSource).join("\n");
     assert.match(source, /CanvasToolbar/);
     assert.match(source, /CanvasAnnotationLayer/);
@@ -64,6 +65,7 @@ describe("canvas annotation contract", () => {
     const source = [
       "ui/src/components/canvas-mode/CanvasModeWorkspace.tsx",
       "ui/src/components/canvas-mode/CanvasModeStage.tsx",
+      "ui/src/components/canvas-mode/CanvasModeFloatingToolbar.tsx",
     ].map(readSource).join("\n");
     const frameIndex = source.indexOf("canvas-annotation-frame");
     const layerIndex = source.indexOf("<CanvasAnnotationLayer", frameIndex);
