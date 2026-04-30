@@ -865,7 +865,16 @@ export async function generateMultimodeViaOAuth(
 
 export async function editViaOAuth(prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: any = {}, requestId = null, options: any = {}) {
   await waitForOAuthReady(ctx);
-  if (typeof options.mask === "string" && options.mask.length > 0) {
+  const maskPresent = typeof options.mask === "string" && options.mask.length > 0;
+  if (maskPresent && !ctx.config?.oauth?.maskedEditEnabled) {
+    logEvent("oauth-edit", "mask_unsupported", { requestId, maskPresent: true });
+    const err: any = new Error("Masked edit is not supported by the current OAuth image provider");
+    err.status = 400;
+    err.code = "EDIT_MASK_NOT_SUPPORTED";
+    throw err;
+  }
+  if (maskPresent) {
+    // TODO(#31): enable upstream mask payload after STEP-0 verification
     logEvent("oauth-edit", "mask_unsupported", { requestId, maskPresent: true });
     const err: any = new Error("Masked edit is not supported by the current OAuth image provider");
     err.status = 400;

@@ -187,6 +187,12 @@ export const config = {
       400 * 1000,
     ),
     restartDelayMs: pickInt(env.IMA2_OAUTH_RESTART_DELAY_MS, fileCfg.oauth?.restartDelayMs, 5000),
+    // Provider-backed masked edit is off until upstream STEP-0 verification is recorded.
+    maskedEditEnabled: pickBool(
+      env.IMA2_OAUTH_MASKED_EDIT_ENABLED,
+      fileCfg.oauth?.maskedEditEnabled,
+      false,
+    ),
     researchSuffix: pickStr(
       env.IMA2_RESEARCH_SUFFIX,
       fileCfg.oauth?.researchSuffix,
