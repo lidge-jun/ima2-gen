@@ -97,6 +97,8 @@ Oracle browser `gpt-5-pro`의 2026-04-29 감사 결과 기준으로, TypeScript 
 | `_plan/0.09.43-prompt-composer-resize` | `_fin/260428_0.09.43-prompt-composer-resize` | prompt textarea 기본 50vh + 30-70vh 사용자 리사이즈 + localStorage persist 구현. GitHub Issue #23 충족, `npm test`(353/353), `npm run ui:build` 통과. |
 | `_plan/typescript-migration` | `_fin/260429_typescript-migration` | #24 기능적 TS migration이 `main`에 merge/push되었고, `npm run typecheck`, `npm test`(539/539), server/CLI/UI build, package smoke가 통과했다. strict-only cleanup은 #24 관찰 추적으로 남긴다. |
 | `_plan/0.26-app-weight-reduction` | `_fin/260429_app-weight-reduction` | #36 app weight reduction 완료. sourcemap/package diet, frontend lazy split, Canvas Mode `./canvas-mode` lazy boundary, Phase C runtime safeguards, `npm test`, UI build, `prepublishOnly` 통과. |
+| `_plan/260429_issue45-cli-feature-parity` | `_fin/260429_issue45-cli-feature-parity` | `9698fc1`로 CLI feature parity가 main에 반영되고 GitHub #45가 CLOSED. `bin/ima2.ts` command dispatch와 `bin/commands/*.ts`, `tests/cli-commands.test.js`에서 command/test coverage를 확인했다. |
+| `_plan/260429_canvas_continue_prompt_block` | `_fin/260429_canvas_continue_prompt_block` | `9dc98a7` 이후 Canvas Continue Here prompt-chip wiring이 코드에 존재한다. `ui/src/components/ResultActions.tsx`의 `CANVAS_MODE_PROMPT_ID`/`insertPromptToComposer`와 `tests/canvas-apply-merged-contract.test.js`, `tests/prompt-library-ui-contract.test.js` assertions를 확인했다. |
 
 ## 다음 작업 원칙
 
@@ -142,3 +144,4 @@ Oracle browser `gpt-5-pro`의 2026-04-29 감사 결과 기준으로, TypeScript 
 - 2026-04-29: TypeScript migration folder를 `_fin/260429_typescript-migration`으로 이동. #24는 기능적 완료 이후 strict-only cleanup/JS runtime artifact 전략을 관찰 추적하는 이슈로 유지한다.
 - 2026-04-29: 사용자 스크린샷 기반 `260429_prompt_import_search_ux` planning lane 추가. Prompt import dialog 검색 결과가 하단에 밀리고 체크박스/불러오기/후보 프리뷰가 불명확한 문제를 전용 UX 개선 slice로 분리했다.
 - 2026-04-29: `0.26-app-weight-reduction`을 #36 closeout으로 `_fin/260429_app-weight-reduction`에 보관. 다음 post-TS 구현 순서는 #37 mobile settings workspace부터 시작한다.
+- 2026-04-30: audit 기준 `260429_issue45-cli-feature-parity`와 `260429_canvas_continue_prompt_block`을 완료로 판정해 `_fin/`으로 이동했다. #39/#47/#46 관련 나머지 scope는 `_plan`에 유지한다.
