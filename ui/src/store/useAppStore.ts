@@ -1,3 +1,7 @@
+// All localStorage keys this store touches MUST be listed in
+// ./persistenceRegistry.ts. The contract test
+// tests/settings-persistence-contract.test.js enforces this invariant.
+// Legacy generation-controls contract: GENERATION_DEFAULTS_STORAGE_KEY = "ima2.generationDefaults".
 import { create } from "zustand";
 import type { CanvasExportBackground, HexColor } from "../types/canvas";
 import type {
@@ -60,19 +64,32 @@ import {
 } from "../lib/size";
 import {
   DEFAULT_IMAGE_MODEL,
-  IMAGE_MODEL_STORAGE_KEY,
   isImageModel,
 } from "../lib/imageModels";
 import {
   DEFAULT_REASONING_EFFORT,
-  REASONING_EFFORT_STORAGE_KEY,
   isReasoningEffort,
   type ReasoningEffort,
 } from "../lib/reasoning";
 import {
   DEFAULT_WEB_SEARCH_ENABLED,
-  WEB_SEARCH_STORAGE_KEY,
 } from "../lib/webSearch";
+import {
+  ACTIVE_SESSION_ID_STORAGE_KEY,
+  CANVAS_EXPORT_BG_KEY,
+  GENERATION_DEFAULTS_STORAGE_KEY,
+  GRAPH_TAB_ID_KEY,
+  HISTORY_STRIP_LAYOUT_STORAGE_KEY,
+  IMAGE_MODEL_STORAGE_KEY,
+  IN_FLIGHT_STORAGE_KEY,
+  REASONING_EFFORT_STORAGE_KEY,
+  RIGHT_PANEL_OPEN_STORAGE_KEY,
+  SELECTED_FILENAME_STORAGE_KEY,
+  THEME_FAMILY_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  UI_MODE_STORAGE_KEY,
+  WEB_SEARCH_STORAGE_KEY,
+} from "./persistenceRegistry";
 import { newClientNodeId, type ClientNodeId } from "../lib/graph";
 import {
   deriveParentServerNodeIds,
@@ -113,7 +130,7 @@ import {
 
 function loadRightPanelOpen(): boolean {
   try {
-    const raw = localStorage.getItem("ima2.rightPanelOpen");
+    const raw = localStorage.getItem(RIGHT_PANEL_OPEN_STORAGE_KEY);
     if (raw === null) return true;
     return JSON.parse(raw) === true;
   } catch {
@@ -123,7 +140,7 @@ function loadRightPanelOpen(): boolean {
 
 function loadUIMode(): UIMode {
   try {
-    const raw = localStorage.getItem("ima2.uiMode");
+    const raw = localStorage.getItem(UI_MODE_STORAGE_KEY);
     if (raw === "card-news") return ENABLE_CARD_NEWS_MODE ? raw : "classic";
     if (raw === "node") return ENABLE_NODE_MODE ? raw : "classic";
     if (raw === "classic") return raw;
@@ -133,7 +150,7 @@ function loadUIMode(): UIMode {
 
 function loadThemePreference(): ThemePreference {
   try {
-    const raw = localStorage.getItem("ima2:theme");
+    const raw = localStorage.getItem(THEME_STORAGE_KEY);
     if (raw === "system" || raw === "dark" || raw === "light") return raw;
   } catch {}
   return "system";
@@ -141,7 +158,7 @@ function loadThemePreference(): ThemePreference {
 
 function loadThemeFamily(): ThemeFamily {
   try {
-    const raw = localStorage.getItem("ima2:themeFamily");
+    const raw = localStorage.getItem(THEME_FAMILY_STORAGE_KEY);
     if (raw && (THEME_FAMILIES as readonly string[]).includes(raw)) {
       return raw as ThemeFamily;
     }
@@ -151,13 +168,11 @@ function loadThemeFamily(): ThemeFamily {
 
 function loadHistoryStripLayout(): HistoryStripLayout {
   try {
-    const raw = localStorage.getItem("ima2.historyStripLayout");
+    const raw = localStorage.getItem(HISTORY_STRIP_LAYOUT_STORAGE_KEY);
     if (raw === "rail" || raw === "horizontal" || raw === "sidebar") return raw;
   } catch {}
   return "rail";
 }
-
-const CANVAS_EXPORT_BG_KEY = "ima2.canvas.exportBackground.v1";
 
 function loadCanvasExportBackground(): { mode: CanvasExportBackground; matteColor: HexColor } {
   if (typeof window === "undefined") return { mode: "alpha", matteColor: "#ffffff" };
@@ -227,8 +242,6 @@ function saveWebSearchEnabled(enabled: boolean): void {
     localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(enabled));
   } catch {}
 }
-
-const GENERATION_DEFAULTS_STORAGE_KEY = "ima2.generationDefaults";
 
 function resolveThemePreference(theme: ThemePreference): ResolvedTheme {
   if (theme === "dark" || theme === "light") return theme;
@@ -314,7 +327,7 @@ function terminalJobError(job: ServerTerminalJob): Error & { code?: string; stat
 
 function loadInFlight(): PersistedInFlight[] {
   try {
-    const raw = localStorage.getItem("ima2.inFlight");
+    const raw = localStorage.getItem(IN_FLIGHT_STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
@@ -342,7 +355,7 @@ function loadInFlight(): PersistedInFlight[] {
 
 function saveInFlight(list: PersistedInFlight[]): void {
   try {
-    localStorage.setItem("ima2.inFlight", JSON.stringify(list));
+    localStorage.setItem(IN_FLIGHT_STORAGE_KEY, JSON.stringify(list));
   } catch (err) {
     // Quota exceeded or storage disabled. Notify the user once per tab.
     const w = window as unknown as { __ima2QuotaWarned?: boolean };
@@ -358,7 +371,7 @@ function saveInFlight(list: PersistedInFlight[]): void {
 
 function loadSelectedFilename(): string | null {
   try {
-    const raw = localStorage.getItem("ima2.selectedFilename");
+    const raw = localStorage.getItem(SELECTED_FILENAME_STORAGE_KEY);
     return typeof raw === "string" && raw.length > 0 ? raw : null;
   } catch {
     return null;
@@ -367,14 +380,14 @@ function loadSelectedFilename(): string | null {
 
 function saveSelectedFilename(filename: string | null): void {
   try {
-    if (filename) localStorage.setItem("ima2.selectedFilename", filename);
-    else localStorage.removeItem("ima2.selectedFilename");
+    if (filename) localStorage.setItem(SELECTED_FILENAME_STORAGE_KEY, filename);
+    else localStorage.removeItem(SELECTED_FILENAME_STORAGE_KEY);
   } catch {}
 }
 
 function loadActiveSessionId(): string | null {
   try {
-    const raw = localStorage.getItem("ima2.activeSessionId");
+    const raw = localStorage.getItem(ACTIVE_SESSION_ID_STORAGE_KEY);
     return typeof raw === "string" && raw.length > 0 ? raw : null;
   } catch {
     return null;
@@ -383,8 +396,8 @@ function loadActiveSessionId(): string | null {
 
 function saveActiveSessionId(id: string | null): void {
   try {
-    if (id) localStorage.setItem("ima2.activeSessionId", id);
-    else localStorage.removeItem("ima2.activeSessionId");
+    if (id) localStorage.setItem(ACTIVE_SESSION_ID_STORAGE_KEY, id);
+    else localStorage.removeItem(ACTIVE_SESSION_ID_STORAGE_KEY);
   } catch {}
 }
 
@@ -1233,7 +1246,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (w.__ima2InflightTimer) return;
     const tick = async () => {
       const cur = get().inFlight;
-      if (cur.length === 0) {
+      // Polling backoff: when there are no local jobs to track AND no active
+      // generations counter, stop the interval entirely. Polling is restarted
+      // from generation entry points (startGeneration / reconcileInflight).
+      if (cur.length === 0 && get().activeGenerations === 0) {
         if (w.__ima2InflightTimer) {
           clearInterval(w.__ima2InflightTimer);
           w.__ima2InflightTimer = undefined;
@@ -1476,7 +1492,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => {
       const next = !s.rightPanelOpen;
       try {
-        localStorage.setItem("ima2.rightPanelOpen", JSON.stringify(next));
+        localStorage.setItem(RIGHT_PANEL_OPEN_STORAGE_KEY, JSON.stringify(next));
       } catch {}
       return { rightPanelOpen: next };
     }),
@@ -1509,7 +1525,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       m === "card-news" && !ENABLE_CARD_NEWS_MODE ? "classic" :
         m === "node" && !ENABLE_NODE_MODE ? "classic" :
           m;
-    try { localStorage.setItem("ima2.uiMode", next); } catch {}
+    try { localStorage.setItem(UI_MODE_STORAGE_KEY, next); } catch {}
     set({ uiMode: next });
   },
 
@@ -1519,19 +1535,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   historyStripLayout: loadHistoryStripLayout(),
   setTheme: (theme) => {
     try {
-      localStorage.setItem("ima2:theme", theme);
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch {}
     set({ theme, resolvedTheme: resolveThemePreference(theme) });
   },
   setThemeFamily: (family) => {
     try {
-      localStorage.setItem("ima2:themeFamily", family);
+      localStorage.setItem(THEME_FAMILY_STORAGE_KEY, family);
     } catch {}
     set({ themeFamily: family });
   },
   setHistoryStripLayout: (layout) => {
     try {
-      localStorage.setItem("ima2.historyStripLayout", layout);
+      localStorage.setItem(HISTORY_STRIP_LAYOUT_STORAGE_KEY, layout);
     } catch {}
     set({ historyStripLayout: layout });
   },
@@ -3247,7 +3263,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
 // ── Graph autosave (module-level debounce) ──
 const SAVE_DEBOUNCE_MS = 800;
-const GRAPH_TAB_ID_KEY = "ima2.graphTabId";
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let isSavingGraph = false;
 let needsGraphSave = false;

@@ -106,6 +106,28 @@ describe("generation controls custom plus UX contract", () => {
     assert.match(store, /saveGenerationDefaultsPatch\(\{ insertedPrompts \}\);/);
   });
 
+  it("generation defaults survive reload simulation", () => {
+    const src = readSource("ui/src/store/useAppStore.ts");
+
+    for (const f of [
+      "provider",
+      "quality",
+      "sizePreset",
+      "customW",
+      "customH",
+      "format",
+      "moderation",
+      "count",
+      "multimode",
+      "multimodeMaxImages",
+      "promptMode",
+      "prompt",
+      "insertedPrompts",
+    ]) {
+      assert.match(src, new RegExp(`\\bparsed\\.${f}\\b`), `loadGenerationDefaults missing ${f}`);
+    }
+  });
+
   it("updates 3840 constraints across cost, i18n, and contracts", () => {
     const cost = readSource("ui/src/lib/cost.ts");
     const sizeLib = readSource("ui/src/lib/size.ts");

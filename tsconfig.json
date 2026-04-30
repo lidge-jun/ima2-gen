@@ -6,8 +6,6 @@
     "lib": ["ES2022"],
     "types": ["node"],
 
-    "allowJs": true,
-    "checkJs": false,
     "noEmit": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
@@ -17,6 +15,7 @@
     "strictNullChecks": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
@@ -25,13 +24,10 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "server.js",
-    "config.js",
-    "lib/**/*.js",
+    "server.ts",
+    "config.ts",
     "lib/**/*.ts",
-    "routes/**/*.js",
     "routes/**/*.ts",
-    "bin/**/*.js",
     "bin/**/*.ts",
     "types/**/*.ts",
     "types/**/*.d.ts"
@@ -42,7 +38,6 @@
     "tests",
     "scripts",
     "integrations",
-    "**/*.test.js",
     "**/*.test.ts"
   ]
 }

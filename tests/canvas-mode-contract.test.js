@@ -57,6 +57,9 @@ describe("canvas-mode contract", () => {
     const ko = readSource("ui/src/i18n/ko.json");
     assert.match(canvas, /useCreateBlankCanvas/);
     assert.match(hook, /createBlankCanvasFile/);
+    assert.match(hook, /getResolvedSize/);
+    assert.match(hook, /resolveBlankCanvasSize\(getResolvedSize\(\)\)/);
+    assert.match(hook, /await createBlankCanvasFile\(size\)/);
     assert.match(hook, /await importLocalImageToHistory\(file\)/);
     assert.match(hook, /if \(item\) openCanvas\(\)/);
     assert.match(canvas, /\) : !currentImage \? \(/);
@@ -66,6 +69,9 @@ describe("canvas-mode contract", () => {
     assert.match(helper, /ctx\.fillStyle = "#ffffff"/);
     assert.match(helper, /canvas\.toBlob/);
     assert.match(helper, /new File\(\[blob\], BLANK_CANVAS_FILENAME/);
+    assert.match(helper, /createBlankCanvasFile\(size\?: BlankCanvasSize\)/);
+    assert.match(helper, /canvas\.width = width/);
+    assert.match(helper, /canvas\.height = height/);
     assert.match(css, /\.canvas__blank-entry/);
     assert.match(css, /\.canvas__blank-sheet/);
     assert.match(css, /\.canvas__blank-copy/);
