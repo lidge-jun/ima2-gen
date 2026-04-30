@@ -8,9 +8,9 @@ aliases: [ima2 structure hub, ima2 architecture, image_gen structure]
 
 `ima2-gen` is a combined image-generation CLI and web UI. Users start the local server with `ima2 serve`, then generate or edit images through either the browser UI or CLI commands. This folder documents that runtime path as a small architecture reference set.
 
-This hub matters because the codebase has several active centers of gravity. `server.js` now bootstraps the app and delegates most API surfaces to `routes/*`, including `generate`, `edit`, `multimode`, `nodes`, `sessions`, `history`, `health`, `storage`, `metadata`, `annotations`, `canvasVersions`, `comfy`, `prompts`, `promptImport`, and the dev-gated `cardNews`. `lib/*` owns storage, OAuth, logging, sessions, inflight state, migration helpers, image metadata embed/restore, prompt library SQLite, reference compression, ComfyUI bridge helpers, and card-news planner/template stores. `bin/` owns the CLI automation surface. `ui/src/` owns the React UI, the React Flow node mode, Canvas Mode, mobile shell, the prompt library panel, and the dev-only card-news workspace. Without a structure guide, even a small API change can make it unclear whether CLI, UI, tests, or devlog docs also need to move.
+This hub matters because the codebase has several active centers of gravity. `server.ts` (with paired runtime `server.js`) bootstraps the app and delegates most API surfaces to `routes/*`, including `generate`, `edit`, `multimode`, `nodes`, `sessions`, `history`, `imageImport`, `health`, `storage`, `metadata`, `annotations`, `canvasVersions`, `comfy`, `prompts`, `promptImport`, and the dev-gated `cardNews`. `lib/*` owns storage, OAuth, logging, sessions, inflight state, migration helpers, image metadata embed/restore, prompt library SQLite, reference compression, ComfyUI bridge helpers, canvas version store, system-trash soft-delete, PNG-info parsing, and card-news planner/template stores. `bin/` owns the CLI automation surface, now near-complete parity with the server API (#45). `ui/src/` owns the React UI, the React Flow node mode, Canvas Mode (split under `ui/src/components/canvas-mode/`), mobile shell, the prompt library panel, and the dev-only card-news workspace. Without a structure guide, even a small API change can make it unclear whether CLI, UI, tests, or devlog docs also need to move.
 
-Snapshot note, 2026-04-29: server source migration is mid-flight. Route source files are `routes/*.ts`; many `lib/*` modules have paired `.ts` source and `.js` runtime files. Treat the `.ts` files as source of truth, but do not remove the paired runtime `.js` path until the TypeScript migration plan is complete and CI proves the build path.
+Snapshot note, 2026-04-30: TypeScript migration is functionally complete and merged to `main` (archived under `devlog/_fin/260429_typescript-migration`). Route, lib, server, config, and bin source files are now `*.ts`; paired `*.js` files coexist as committed build/runtime artifacts (see `tsconfig.build.json`, `tsconfig.bin.json`, and `prepack`). Treat the `.ts` files as source of truth and only edit the `.js` paths through the build, never by hand.
 
 Start here when onboarding. Read the system overview, then open `[[01-file-function-map]]` for concrete file locations. Use `[[02-command-reference]]` for CLI work, `[[03-server-api]]` for server changes, `[[04-frontend-architecture]]` and `[[05-node-mode]]` for UI work, `[[06-infra-operations]]` for build/auth/runtime operations, and `[[07-devlog-map]]` for roadmap and archive interpretation.
 
@@ -22,7 +22,7 @@ This documentation is based on local code and local devlog files, not external w
 
 ```mermaid
 graph LR
-    CLI["bin/ima2.js<br/>CLI dispatcher"] --> API["server.js<br/>Express bootstrap"]
+    CLI["bin/ima2.ts<br/>CLI dispatcher"] --> API["server.ts<br/>Express bootstrap"]
     CMDS["bin/commands/*<br/>client commands"] --> API
     WEB["ui/dist<br/>served app"] --> API
     SRC["ui/src<br/>React source"] --> WEB
@@ -54,8 +54,8 @@ The runtime path is intentionally direct. CLI commands and the browser call `/ap
 |---|---|---|
 | `00-structure-hub.md` | Entry point, doc relationships, QA flow | A doc is added, removed, renamed, or re-scoped. |
 | `01-file-function-map.md` | File tree, line counts, responsibilities, tests | Files move, large modules split, or line counts change. |
-| `02-command-reference.md` | CLI commands, options, server discovery, exit codes | `bin/ima2.js`, `bin/commands/*`, or `bin/lib/*` changes. |
-| `03-server-api.md` | `/api/*` endpoints and request/response contracts | `server.js`, store helpers, or API tests change. |
+| `02-command-reference.md` | CLI commands, options, server discovery, exit codes | `bin/ima2.ts`, `bin/commands/*`, or `bin/lib/*` changes. |
+| `03-server-api.md` | `/api/*` endpoints and request/response contracts | `server.ts`, route modules, store helpers, or API tests change. |
 | `04-frontend-architecture.md` | React UI, components, store, i18n | `ui/src/*`, `ui/package.json`, or CSS changes. |
 | `05-node-mode.md` | Graph UI, node API, sessions, pending states | `NodeCanvas`, `ImageNode`, `/api/node/*`, or session logic changes. |
 | `06-infra-operations.md` | Auth, OAuth proxy, config, build/test/release | `package.json`, scripts, env, CI, or runtime storage changes. |
@@ -89,6 +89,7 @@ The runtime path is intentionally direct. CLI commands and the browser call `/ap
 - 2026-04-25: Updated the hub after route decomposition, home-directory storage migration, and 0.09 closeout audit.
 - 2026-04-26: Refreshed the docs around CLI parity, runtime port fallback, and public classic/node product scope.
 - 2026-04-28: Updated hub for image metadata embed/restore, prompt library, dev-only card-news workspace, expanded route surface (`metadata`, `prompts`, `cardNews`), and `ima2-gen@1.1.5`.
+- 2026-04-30: Refreshed all eight docs after the TypeScript migration closeout, CLI feature-parity #45 (`feat(cli): full feature parity with server API`), Canvas Mode workspace split (`refactor(ui): split canvas mode workspace`), Canvas dual-mask cleanup, OS-trash soft-delete, blank-canvas/escape close hardening, and `ima2-gen@1.1.8`. Re-aligned line counts, route inventory, and CLI command list to the working tree.
 
 Previous document: none
 

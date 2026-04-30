@@ -7,7 +7,7 @@
 
 - Shipped: `549ad8f feat(mobile): add mobile UI shell with app bar, compose sheet, and settings toggle` gives the shared mobile shell this work depends on.
 - Remains: node/card-news-specific mobile CSS and test coverage are still open; keep this folder in `_plan`.
-**Parent:** [0.09.45 PLAN.md](../260428_0.09.45-mobile-ui-overhaul/PLAN.md)
+**Parent:** [0.09.45 PLAN.md](./PHASE-45-ui-overhaul.md)
 **Closes:** Final follow-up to #33; addresses INVESTIGATION.md gap G7.
 
 ---

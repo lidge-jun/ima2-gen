@@ -7,7 +7,7 @@
 
 - Shipped: `549ad8f feat(mobile): add mobile UI shell with app bar, compose sheet, and settings toggle` covers the first app-bar/compose shell.
 - Remains: #38 is still OPEN for the clearer mobile generate/compose flow; keep this folder in `_plan`.
-**Parent:** [0.09.45 PLAN.md](../260428_0.09.45-mobile-ui-overhaul/PLAN.md)
+**Parent:** [0.09.45 PLAN.md](./PHASE-45-ui-overhaul.md)
 **Closes:** Follow-up to #33; addresses INVESTIGATION.md gaps G3, G4, partial G8.
 
 ---

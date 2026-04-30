@@ -157,3 +157,28 @@ Add a source-level contract test that locks the reload behavior:
 - Change generation request lifecycle semantics.
 - Commit or push.
 ```
+
+---
+
+## STATUS 2026-04-30 — Partially shipped
+
+Shipped commit on `main`:
+
+- `74b8b57` `fix(inflight): avoid stale reload spinners` — primary fix for
+  the user-visible "stale spinner after reload" symptom; on reload the
+  client now reconciles `ima2.inFlight` against `/api/inflight` server
+  truth and drops orphan rows whose request id is unknown to the server.
+
+### Remaining work
+
+1. Extended terminal TTL — server should retain terminal job records long
+   enough to cover a reload that happens during the result toast window
+   (currently a 5s grace; make it configurable, ~30s).
+2. Polling guard — when only server-side active jobs remain (no local
+   `inFlight` rows) the polling interval should back off to keep CPU low
+   on idle tabs.
+3. Race-condition test — add a `tests/inflight-reload-race.test.js` that
+   simulates a reload mid-generation and asserts the client neither shows
+   a stale spinner nor drops a real in-flight job.
+
+When (1) (2) (3) land, this folder graduates to `_fin/`.

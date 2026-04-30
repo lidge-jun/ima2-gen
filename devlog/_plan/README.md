@@ -16,26 +16,49 @@ aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 
 ---
 
+## Naming Standard
+
+`_plan/` 직속의 모든 active 폴더(`_legacy/`, `_future/`, `README.md` 제외)는 다음 두 패턴 중 하나를 따른다.
+
+- `YYMMDD_issue<NN>-<kebab-slug>` — 단일 GitHub 이슈가 canonical scope일 때.
+- `YYMMDD_<kebab-slug>` — 단일 이슈가 없는 경우(다중 이슈 triage map, deferred 모음, 탐색적 리서치).
+
+규칙:
+
+- `YYMMDD` = 폴더가 처음 작성된 날짜. 기존에 날짜가 있으면 보존하고, legacy version-prefixed(`0.09.41-*`, `0.20-*`, `0.99_*`) 폴더는 git first-commit 또는 내부 문서의 `Date:`를 사용한다. 알 수 없으면 `260430` fallback.
+- `<kebab-slug>` = lowercase, hyphen-only, 최대 ~6 단어.
+- 날짜 prefix와 slug 사이는 underscore, slug 내부는 hyphen만.
+
+Deferred / 미래 항목은 `_plan/`이 아니라 `devlog/_future/`에 둔다. 단일 이슈가 없는 1차 partial 구현 로그는 가능한 경우 한 폴더(`<date>_issue<NN>-...-logs/`)로 합친다.
+
+---
+
 ## 현재 active lane
 
 | 순서 | 경로 | 상태 | 역할 |
 |---:|---|---|---|
-| 1 | `260428_0.09.45-mobile-ui-overhaul/` | partial | #33 1차 모바일 RightPanel/settings drawer. 실기기 피드백상 설정 정보구조는 #37로 후속 분리. |
-| 2 | `260428_0.09.46-mobile-classic-layout/` | partial | 모바일 app bar / compose sheet. `appbar.compose` 직관성 문제는 #38로 후속 분리. |
-| 3 | `260428_0.09.47-mobile-overlays/` | partial | 모바일 overlay/settings nav. SettingsWorkspace는 #37에서 다시 정리. |
-| 4 | `260428_0.09.48-mobile-node-cardnews/` | partial | Node/Card News 모바일 대응. CSS/test coverage가 남아 active로 유지. |
-| 5 | `260429_community_ux_split/` | triaged | #33/#34를 #37~#43으로 분할한 UX triage map. |
-| 6 | `0.25-canvas-intelligence/` | planned | 투명배경화, Illustrator식 raster vectorization, SAM3/Magic Layers식 layer extraction + PPTX reconstruction. |
-| 7 | `260429_issue37-mobile-settings-workspace/` | planned/post-TS | GitHub #37. 모바일 SettingsWorkspace IA 재설계. |
-| 8 | `260429_issue38-mobile-generate-flow/` | planned/post-TS | GitHub #38. 모바일 생성/compose entry 명확화. |
-| 9 | `260429_issue41-generation-activity-log/` | planned/post-TS | GitHub #41. generation 실패/진행 상태 passive feedback. |
-| 10 | `260429_issue39-gallery-delete-semantics/` | planned/post-TS | GitHub #39. Del/Shift+Del soft/permanent delete 의미 정리. |
-| 11 | `260429_issue40-viewer-lightbox/` | planned/post-TS | GitHub #40. 이미지 inspection lightbox. |
-| 12 | `260429_issue43-settings-persistence-audit/` | planned/post-TS | GitHub #43. desktop/mobile persisted settings parity. |
-| 13 | `260429_issue42-gallery-current-session-default/` | planned/post-TS | GitHub #42. Gallery current-session default + All Images toggle. |
-| 14 | `260429_prompt_import_search_ux/` | planned | Prompt import dialog 검색 UX 개선. 검색 결과가 하단에 밀리는 문제, 불명확한 체크박스, 불러오기 CTA/프리뷰 부족을 정리한다. |
-| 15 | `0.09.41-censorship-bypass/` | research | GPT Image 2 moderation false-positive 우회 전략 연구. |
-| 16 | `0.99_future/` | deferred | security hardening, containerization 등 원격/배포 전략 확정 후 처리. |
+| 1 | `260428_issue33-mobile-overhaul-logs/` | partial | #33 1차 모바일 overhaul 통합 로그(0.09.45/46/47/48). 후속은 #37/#38. |
+| 2 | `260429_community-ux-split-triage/` | triaged | #33/#34를 #37~#43으로 분할한 UX triage map (단일 이슈 없음). |
+| 3 | `260429_issue37-mobile-settings-workspace/` | planned/post-TS | GitHub #37. 모바일 SettingsWorkspace IA 재설계. |
+| 4 | `260429_issue38-mobile-generate-flow/` | planned/post-TS | GitHub #38. 모바일 생성/compose entry 명확화. |
+| 5 | `260429_issue39-gallery-delete-semantics/` | planned/post-TS | GitHub #39. Del/Shift+Del soft/permanent delete 의미 정리. |
+| 6 | `260429_issue40-viewer-lightbox/` | planned/post-TS | GitHub #40. 이미지 inspection lightbox. |
+| 7 | `260429_issue41-generation-activity-log/` | planned/post-TS | GitHub #41. generation 실패/진행 상태 passive feedback. |
+| 8 | `260429_issue42-gallery-current-session-default/` | planned/post-TS | GitHub #42. Gallery current-session default + All Images toggle. |
+| 9 | `260429_issue43-settings-persistence-audit/` | planned/post-TS | GitHub #43. desktop/mobile persisted settings parity. |
+| 10 | `260429_issue47-inflight-reload-reconcile/` | active | GitHub #47. Inflight reload reconcile. |
+| 11 | `260429_issue48-prompt-import-search-ux/` | planned | GitHub #48. Prompt import dialog 검색 결과 workspace 개선. |
+| 12 | `260430_issue24-typescript-strict-cleanup/` | observe | GitHub #24. TS strict-only cleanup 관찰 추적. |
+| 13 | `260430_issue27-canvas-svg-export/` | planned | GitHub #27. Canvas annotation SVG/vector 내보내기. |
+| 14 | `260430_issue28-canvas-pptx-export/` | planned | GitHub #28. Canvas LayerDocument → PPTX reconstruction. |
+| 15 | `260430_issue31-provider-masked-edit/` | planned | GitHub #31. Provider-backed masked edit gating. |
+| 16 | `260430_issue49-api-provider-responses/` | planned | GitHub #49. `provider:"api"` Responses image_generation backend 재오픈. |
+| 17 | `260426_card-news-smoke-qa-harness/` | research | Card News dev-only smoke/QA reference. 단일 이슈 없음. |
+| 18 | `260428_censorship-bypass-research/` | research | GPT Image 2 moderation false-positive 우회 전략 연구. |
+
+> 2026-04-30 이동: `260429_issue46-blank-canvas-paint-to-ai/`는 size-aware blank canvas 패치(`#46`) 완료 후 `_fin/`으로 이동.
+
+> Deferred(`0.09.19-security-hardening`, `0.09.20-containerization`)는 `devlog/_future/0.99_future-deferred-ops/`로 이동했다.
 
 ## Post-TS implementation order
 
@@ -44,13 +67,13 @@ Oracle browser `gpt-5-pro`의 2026-04-29 감사 결과 기준으로, TypeScript 
 1. `260429_issue37-mobile-settings-workspace/`: 모바일 settings IA P0.
 2. `260429_issue38-mobile-generate-flow/`: 모바일 generate/compose P1.
 3. `260429_issue41-generation-activity-log/`: generation passive failure feedback P1.
-4. `0.25-canvas-intelligence/31-provider-masked-edit/`: provider capability gate가 있는 #31.
+4. `260430_issue31-provider-masked-edit/`: provider capability gate가 있는 #31.
 5. `260429_issue39-gallery-delete-semantics/`: Gallery soft/permanent delete semantics.
 6. `260429_issue40-viewer-lightbox/`: viewer inspection lightbox.
 7. `260429_issue43-settings-persistence-audit/`: mobile/desktop settings persistence audit.
 8. `260429_issue42-gallery-current-session-default/`: current-session Gallery default.
-9. `0.25-canvas-intelligence/27-logo-vector-package/`: Illustrator식 raster-to-vector asset package.
-10. `0.25-canvas-intelligence/28-layerdocument-pptx-reconstruction/`: LayerDocument -> PPTX reconstruction.
+9. `260430_issue27-canvas-svg-export/`: Illustrator식 raster-to-vector asset package.
+10. `260430_issue28-canvas-pptx-export/`: LayerDocument -> PPTX reconstruction.
 
 ## Stale assumptions corrected
 
@@ -105,7 +128,7 @@ Oracle browser `gpt-5-pro`의 2026-04-29 감사 결과 기준으로, TypeScript 
 - [ ] 완료된 안정화 폴더는 `_plan`에 다시 끌어오지 않는다. 증거 확인은 `_fin/260425_*` archive를 본다.
 - [ ] `0.09.17`과 `0.09.18`은 0.10 전 관측성 품질을 높이는 active ops로 본다.
 - [ ] `0.09.20-cli-backend-parity`는 `0.09.20.2`부터 이어간다. 다음 범위는 `storage status/open`, `runtime`, `oauth`, `billing` CLI command이다.
-- [ ] 보안 하드닝과 컨테이너화는 `0.99_future`에서 보관한다. 원격 접속/배포 전략 확정 전에는 실행하지 않는다.
+- [ ] 보안 하드닝과 컨테이너화는 `devlog/_future/0.99_future-deferred-ops/`에 보관한다. 원격 접속/배포 전략 확정 전에는 실행하지 않는다.
 - [ ] `0.10`은 Classic 우선의 preset/compare 워크벤치로 시작한다.
 - [ ] `0.12`는 backend always-on research 상태를 인정하고, 남은 일은 FE 토글/표시/사용자 경고로 좁힌다.
 - [ ] 오래된 `_legacy/phase-*` 문서는 active backlog로 끌어오지 않는다. 필요한 아이디어만 `0.10`이나 별도 새 plan으로 재작성한다.
@@ -145,3 +168,4 @@ Oracle browser `gpt-5-pro`의 2026-04-29 감사 결과 기준으로, TypeScript 
 - 2026-04-29: 사용자 스크린샷 기반 `260429_prompt_import_search_ux` planning lane 추가. Prompt import dialog 검색 결과가 하단에 밀리고 체크박스/불러오기/후보 프리뷰가 불명확한 문제를 전용 UX 개선 slice로 분리했다.
 - 2026-04-29: `0.26-app-weight-reduction`을 #36 closeout으로 `_fin/260429_app-weight-reduction`에 보관. 다음 post-TS 구현 순서는 #37 mobile settings workspace부터 시작한다.
 - 2026-04-30: audit 기준 `260429_issue45-cli-feature-parity`와 `260429_canvas_continue_prompt_block`을 완료로 판정해 `_fin/`으로 이동했다. #39/#47/#46 관련 나머지 scope는 `_plan`에 유지한다.
+- 2026-04-30: `_plan/` naming standard pass. (1) 신규 표준 정의: `YYMMDD_issue<NN>-<kebab-slug>` 또는 `YYMMDD_<kebab-slug>`. (2) 두 신규 GitHub 이슈 `#48` (prompt import search workspace), `#49` (provider:"api" Responses backend) 발급 후 폴더에 매핑. (3) `0.09.41-censorship-bypass` → `260428_censorship-bypass-research` (research, 이슈 없음). (4) `0.20-card-news` → `260426_card-news-smoke-qa-harness` (dev-only QA reference, 이슈 없음). (5) `0.99_future` → `devlog/_future/0.99_future-deferred-ops/` (deferred bucket을 `_plan/` 밖으로 이동). (6) `260428_0.09.45/46/47/48-*` 4개 폴더를 `260428_issue33-mobile-overhaul-logs/`로 통합 (PHASE-NN subdoc). (7) `260429_blank_canvas_paint_to_ai` → `260429_issue46-blank-canvas-paint-to-ai`. (8) `260429_community_ux_split` → `260429_community-ux-split-triage`. (9) `260429_prompt_import_search_ux` → `260429_issue48-prompt-import-search-ux`. (10) `260430_api-provider-responses` → `260430_issue49-api-provider-responses`.

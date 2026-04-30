@@ -15,9 +15,9 @@
 4 plans / 1 PR. Each version (0.09.45 / .46 / .47 / .48) gets its own folder + PLAN.md for devlog hygiene, but all four ship in a single branch / single PR. Commits stay version-prefixed for revert granularity.
 
 - 0.09.45 (this) = primary, closes #33.
-- [0.09.46 Mobile classic layout](../260428_0.09.46-mobile-classic-layout/PLAN.md) — sidebar/history/composer
-- [0.09.47 Mobile overlays](../260428_0.09.47-mobile-overlays/PLAN.md) — modals + settings nav
-- [0.09.48 Mobile node + card-news](../260428_0.09.48-mobile-node-cardnews/PLAN.md) — node + card-news mobile
+- [0.09.46 Mobile classic layout](./PHASE-46-classic-layout.md) — sidebar/history/composer
+- [0.09.47 Mobile overlays](./PHASE-47-overlays.md) — modals + settings nav
+- [0.09.48 Mobile node + card-news](./PHASE-48-node-cardnews.md) — node + card-news mobile
 
 ## Resolved owner questions
 1. **Phase split** — ✅ 4-way file split, one PR.

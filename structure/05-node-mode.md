@@ -10,7 +10,7 @@ Node mode extends `ima2-gen` from a single-image generator into a graph-based im
 
 This mode matters because it is the likely center of future workflows. Classic UI revolves around one prompt and a list of image results. Node mode can represent lineage, retries, comparisons, and research-style branching as a graph. That connects API contracts, store state, session DB, and asset lifecycle.
 
-To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.ts` owns `/api/node/generate`, while `routes/sessions.ts` and `lib/sessionStore.ts` persist graph state. The current migration keeps paired `.js` runtime files for many `lib/*` modules, so verify both source and runtime paths when touching Node Mode backend code.
+To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.ts` owns `/api/node/generate`, while `routes/sessions.ts` and `lib/sessionStore.ts` persist graph state. After the TypeScript migration close (#24), treat `.ts` files as source of truth; the paired `.js` files in `lib/`, `routes/`, and `bin/` are committed runtime artifacts.
 
 ---
 
@@ -204,6 +204,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-26: Marked node selection batch, edge disconnect, single-node regen/variation, and child node references as implemented in the change checklist after archival to `_fin/260426_*`.
 - 2026-04-27: Documented four-direction React Flow handles, handle-id session persistence, and the reconnect fix after edge disconnect.
 - 2026-04-28: Refreshed cross-references after the 1.1.5 prompt library, image metadata, and dev-only card-news additions; node-mode contracts in this document remain unchanged.
+- 2026-04-30: Updated wording around the TypeScript migration close (#24); node-mode contracts in this document remain unchanged.
 
 Previous document: `[[04-frontend-architecture]]`
 

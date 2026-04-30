@@ -10,7 +10,7 @@ aliases: [ima2 devlog map, image_gen roadmap, devlog map]
 
 This map matters because plans from multiple eras coexist. `_plan/README.md` is the current source of truth for active lanes; there is no current `devlog/_plan/unified-roadmap.md` file. Completed implementation records live under `_fin/`, including the old 0.09 stabilization work, card-news, prompt-library import, ComfyUI bridge, Canvas Mode core phases, and recent Gallery/Canvas navigation fixes. Structure docs should follow the current code and active roadmap rather than stale plan folders.
 
-For planning work, read `_plan/README.md` first. As of 2026-04-29 the TypeScript migration gate has been merged to `main` and archived under `_fin/260429_typescript-migration`; GitHub #24 remains open only as observation tracking for strict-only cleanup and JS runtime artifact strategy. App Weight Reduction #36 is archived under `_fin/260429_app-weight-reduction` after package/code-splitting/runtime closeout. The active lane is now centered on post-TS mobile/community UX plans (#37-#43), Canvas Intelligence issue subplans (#31/#27/#28), censorship-bypass research, and deferred future ops. Completed or duplicate plan folders should move out of `_plan` promptly.
+For planning work, read `_plan/README.md` first. As of 2026-04-30 the TypeScript migration gate has been merged to `main` and archived under `_fin/260429_typescript-migration`; GitHub #24 remains open only as observation tracking for strict-only cleanup and JS runtime artifact strategy. App Weight Reduction #36 is archived under `_fin/260429_app-weight-reduction` after package/code-splitting/runtime closeout. CLI feature-parity #45 (commit 9698fc1) is shipped. After the 2026-04-30 naming-standard pass, the active lane is centered on Canvas Mode follow-ons (`260429_issue46-blank-canvas-paint-to-ai/`), inflight reload reconcile (#47), prompt import search UX (#48), post-TS mobile/community UX plans (`260428_issue33-mobile-overhaul-logs/`, `260429_community-ux-split-triage/`, #37-#43), Canvas Intelligence issue subplans (`260430_issue27/28/31`), the `provider:"api"` Responses backend (#49), the `260428_censorship-bypass-research` reference, and deferred future ops moved to `devlog/_future/0.99_future-deferred-ops/`.
 
 ---
 
@@ -21,11 +21,11 @@ graph TD
     DEV["devlog"] --> PLAN["_plan<br/>active and legacy plans"]
     DEV --> FIN["_fin<br/>completed work"]
     DEV --> SPIKES["_spikes<br/>exploration notes"]
-    PLAN --> MOBILE["0.09.45..0.09.48<br/>mobile UX references"]
+    PLAN --> MOBILE["260428_issue33-mobile-overhaul-logs<br/>mobile UX 1차 logs"]
     PLAN --> UX["260429 issue37..43<br/>post-TS UX plans"]
-    PLAN --> INTEL["0.25 canvas intelligence<br/>#31/#27/#28 subplans"]
-    PLAN --> RESEARCH["0.09.41<br/>censorship research"]
-    PLAN --> FUTURE["0.99_future<br/>deferred ops"]
+    PLAN --> INTEL["260430 issue27/28/31/49<br/>canvas intelligence + api provider"]
+    PLAN --> RESEARCH["260428_censorship-bypass-research<br/>research only"]
+    PLAN --> FUTURE["devlog/_future/0.99_future-deferred-ops<br/>deferred ops"]
     PLAN --> ROAD["README<br/>current direction"]
     PLAN --> LEGACY["_legacy<br/>old phase plans"]
     FIN --> TS_DONE["260429 typescript migration<br/>merged to main"]
@@ -37,27 +37,35 @@ graph TD
 | Document | Status | How to use it |
 |---|---|---|
 | `devlog/_plan/README.md` | current | Active lane, completed moves, and next-work rules |
-| `devlog/_plan/260428_0.09.45-mobile-ui-overhaul/` | partial | #33 first mobile drawer pass; follow-up #37 covers remaining settings IA. |
-| `devlog/_plan/260428_0.09.46-mobile-classic-layout/` | partial | Mobile app bar / compose sheet; follow-up #38 covers unclear Compose entry. |
-| `devlog/_plan/260428_0.09.47-mobile-overlays/` | partial | Mobile overlays/settings nav; not complete enough to archive. |
-| `devlog/_plan/260428_0.09.48-mobile-node-cardnews/` | partial | Node/Card News mobile coverage; CSS/tests still need work. |
-| `devlog/_plan/0.09.41-censorship-bypass/` | research | Censorship/safety bypass research. |
-| `devlog/_plan/260429_community_ux_split/` | triaged | #33/#34 split map into #37~#43. |
+| `devlog/_plan/260426_card-news-smoke-qa-harness/` | research | Card News dev-only smoke/QA reference (no single issue). |
+| `devlog/_plan/260428_censorship-bypass-research/` | research | Censorship/safety bypass research (no issue). |
+| `devlog/_plan/260428_issue33-mobile-overhaul-logs/` | partial | Consolidated #33 1차 mobile overhaul logs (PHASE-45/46/47/48); follow-ups #37/#38. |
+| `devlog/_plan/260429_community-ux-split-triage/` | triaged | #33/#34 split map into #37~#43 (no single issue). |
 | `devlog/_plan/260429_issue37-mobile-settings-workspace/` | planned/post-TS | #37 mobile settings IA. |
 | `devlog/_plan/260429_issue38-mobile-generate-flow/` | planned/post-TS | #38 mobile generation/compose flow. |
-| `devlog/_plan/260429_issue41-generation-activity-log/` | planned/post-TS | #41 generation passive failure feedback/activity log. |
 | `devlog/_plan/260429_issue39-gallery-delete-semantics/` | planned/post-TS | #39 soft/permanent delete semantics. |
 | `devlog/_plan/260429_issue40-viewer-lightbox/` | planned/post-TS | #40 viewer lightbox. |
-| `devlog/_plan/260429_issue43-settings-persistence-audit/` | planned/post-TS | #43 persisted settings audit. |
+| `devlog/_plan/260429_issue41-generation-activity-log/` | planned/post-TS | #41 generation passive failure feedback/activity log. |
 | `devlog/_plan/260429_issue42-gallery-current-session-default/` | planned/post-TS | #42 current-session Gallery default. |
-| `devlog/_plan/0.25-canvas-intelligence/` | planned | Transparent background removal, raster vectorization, layer/PPTX reconstruction. |
-| `devlog/_plan/0.25-canvas-intelligence/31-provider-masked-edit/` | planned/post-TS | #31 provider-backed masked edit capability gate. |
-| `devlog/_plan/0.25-canvas-intelligence/27-logo-vector-package/` | planned/post-TS | #27 Illustrator-style raster-to-vector asset package. |
-| `devlog/_plan/0.25-canvas-intelligence/28-layerdocument-pptx-reconstruction/` | planned/post-TS | #28 LayerDocument to PPTX reconstruction. |
-| `devlog/_fin/260429_app-weight-reduction/` | archived | #36 app weight reduction closeout: package diet, frontend lazy split, Canvas Mode feature boundary, and Phase C runtime safeguards verified. |
-| `devlog/_plan/0.99_future/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal |
-| `devlog/_plan/0.99_future/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal |
+| `devlog/_plan/260429_issue43-settings-persistence-audit/` | planned/post-TS | #43 persisted settings audit. |
+| `devlog/_plan/260429_issue46-blank-canvas-paint-to-ai/` | planned | #46 Canvas Mode blank canvas Paint-to-AI entry. |
+| `devlog/_plan/260429_issue47-inflight-reload-reconcile/` | active | #47 inflight reload reconcile plan. |
+| `devlog/_plan/260429_issue48-prompt-import-search-ux/` | planned | #48 prompt import search UX workspace improvements. |
+| `devlog/_plan/260430_issue24-typescript-strict-cleanup/` | observe | #24 TS strict-only cleanup observation. |
+| `devlog/_plan/260430_issue27-canvas-svg-export/` | planned | #27 Canvas annotation SVG/vector export. |
+| `devlog/_plan/260430_issue28-canvas-pptx-export/` | planned | #28 Canvas LayerDocument → PPTX reconstruction. |
+| `devlog/_plan/260430_issue31-provider-masked-edit/` | planned | #31 provider-backed masked edit capability gate. |
+| `devlog/_plan/260430_issue49-api-provider-responses/` | planned | #49 `provider:"api"` Responses image_generation backend. |
+| `devlog/_future/0.99_future-deferred-ops/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal |
+| `devlog/_future/0.99_future-deferred-ops/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal |
+| `devlog/_fin/260428_0.09.42-/` | archived | 0.09.42 closeout. |
+| `devlog/_fin/260428_0.09.43-/` | archived | 0.09.43 closeout. |
+| `devlog/_fin/260428_0.09.49-/` | archived | 0.09.49 closeout. |
+| `devlog/_fin/0.20-card-news/` | archived (slice) | Card News slice archive (smoke/QA reference at `_plan/260426_card-news-smoke-qa-harness/`). |
+| `devlog/_fin/260428_0.23-prompt-library-/` | archived | Prompt library closeout. |
+| `devlog/_fin/260428_1.1.5-windows-open-folder-fix/` | archived | Windows open-folder fix landed in 1.1.5. |
 | `devlog/_fin/260429_typescript-migration/` | archived/observe | #24 functional TypeScript migration merged to `main`; remaining strict-only cleanup is issue observation tracking, not an active folder. |
+| `devlog/_fin/260429_app-weight-reduction/` | archived | #36 app weight reduction closeout: package diet, frontend lazy split, Canvas Mode feature boundary, and Phase C runtime safeguards verified. |
 | `devlog/_fin/260429_gallery_canvas_arrow_navigation_leak/` | archived | #35 Gallery/Canvas hidden canvasVersion navigation fix. |
 | `devlog/_fin/260426_0.22-gallery-navigation-ux/` | archived | Gallery navigation UX closeout |
 | `devlog/_fin/260427_0.09.33-upstream-validation-errors/` | archived | Upstream validation error normalization to `INVALID_REQUEST` with preserved diagnostics |
@@ -168,6 +176,8 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-29: Added Oracle browser `gpt-5-pro` post-TypeScript roadmap split. Created post-TS plan entries for #37-#43 and Canvas Intelligence subplans for #31/#27/#28, while leaving TypeScript migration untouched as the current gate.
 - 2026-04-29: Moved TypeScript migration to `_fin/260429_typescript-migration` after merge to `main`; #24 remains observation tracking for strict-only cleanup and JS runtime artifact strategy. `0.26-app-weight-reduction` stayed active until the later #36 post-TS verification closeout.
 - 2026-04-29: Archived `0.26-app-weight-reduction` into `_fin/260429_app-weight-reduction` after Phase C closeout verification. Next post-TS active implementation lane is #37 mobile settings workspace.
+- 2026-04-30: Refreshed the active lane to match the working tree — added `0.20-card-news`, `0.24-canvas-mode`, `260429_blank_canvas_paint_to_ai`, `260429_canvas_continue_prompt_block`, `260429_prompt_import_search_ux`, `260429_issue45-cli-feature-parity`, and `260429_issue47-inflight-reload-reconcile`. Recorded the new `_fin` archives for `260428_0.09.42-`, `260428_0.09.43-`, `260428_0.09.49-`, `260428_0.20-card-news-`, `260428_0.23-prompt-library-`, and `260428_1.1.5-windows-open-folder-fix`. CLI feature-parity #45 (commit 9698fc1) is shipped; Canvas Mode workspace split (#11bc214) lives under the active `0.24-canvas-mode/` plan.
+- 2026-04-30 (naming-standard pass): renamed `_plan/` folders to the `YYMMDD_issue<NN>-<slug>` / `YYMMDD_<slug>` standard. `0.09.41-censorship-bypass` → `260428_censorship-bypass-research`. `0.20-card-news` → `260426_card-news-smoke-qa-harness`. `0.99_future` moved out to `devlog/_future/0.99_future-deferred-ops/`. The four `260428_0.09.45..0.09.48-*` folders consolidated into `260428_issue33-mobile-overhaul-logs/` (PHASE-NN subdocs). `260429_blank_canvas_paint_to_ai` → `260429_issue46-blank-canvas-paint-to-ai`. `260429_community_ux_split` → `260429_community-ux-split-triage`. New issues #48 and #49 filed for `260429_issue48-prompt-import-search-ux` and `260430_issue49-api-provider-responses` respectively.
 
 Previous document: `[[06-infra-operations]]`
 

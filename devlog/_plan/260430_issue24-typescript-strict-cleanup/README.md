@@ -28,3 +28,30 @@ Strict-mode cleanup work that does NOT need a separate PRD; it follows
 `_fin/260429_typescript-migration/phase-7-cleanup-strict.md`. No new diff-level
 plan is required here. Open a new issue if a strict-mode change requires its
 own PRD.
+
+## STATUS 2026-04-30 (15:33 KST) — Safe sub-portion shipped, full strict deferred
+
+### Shipped this pass
+
+- `tsconfig.json`:
+  - Removed `allowJs`, `checkJs`, `allowSyntheticDefaultImports`-no-op state.
+  - `include` tightened from `.{js,ts}` globs to `.ts`-only.
+  - `noImplicitOverride: true` flipped (0 errors).
+- `tsconfig.bin.json` / `tsconfig.build.json`: already `.ts`-only and `allowJs: false` — no change required.
+- `package.json#prepublishOnly`: already starts with `npm run typecheck` — no change required.
+
+### Verification
+- `npm run typecheck` PASS
+- `npm run build:server` PASS
+- `npm run build:cli` PASS
+
+### Deferred — needs its own subticket
+
+Flipping `strict: true` (with `strictNullChecks` + `noImplicitAny`) surfaces **1370 type errors** across `lib/`, `routes/`, `bin/`, `server.ts`, `config.ts`. That is not a "small fix" — it is a multi-day cleanup pass. Phase-7 strict flip stays parked here and should land as a dedicated subticket (e.g. `#24` Phase-7a/b/c) so each strict flag can be flipped, fixed, and shipped independently.
+
+Recommended order when resuming:
+1. `noImplicitOverride: true` ✅ done
+2. `strictNullChecks: true` (largest single bucket)
+3. `noImplicitAny: true`
+4. `noUncheckedIndexedAccess: true` (do last; usually produces the most noise)
+5. Final `strict: true` flag on, after the four above are clean.
