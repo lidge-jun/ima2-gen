@@ -10,10 +10,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
 
-    "strict": false,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "useUnknownInCatchVariables": true,
