@@ -218,7 +218,7 @@ function commitCandidates(candidates, folderId, limits) {
 }
 
 export function registerPromptImportRoutes(app, ctx) {
-  app.get("/api/prompts/import/curated-sources", async (req, res) => {
+  app.get("/api/prompts/import/curated-sources", async (_req, res) => {
     try {
       res.json(await getPromptImportSources(ctx));
     } catch (error) {

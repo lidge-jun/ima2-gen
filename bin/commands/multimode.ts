@@ -1,4 +1,3 @@
-import { writeFile } from "fs/promises";
 import { parseArgs } from "../lib/args.js";
 import { resolveServer } from "../lib/client.js";
 import { streamSse } from "../lib/sse.js";

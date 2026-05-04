@@ -9,7 +9,7 @@ function generateId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function registerPromptRoutes(app, ctx) {
+export function registerPromptRoutes(app, _ctx) {
   // ── Prompts ───────────────────────────────────────────────────────────────
 
   app.get("/api/prompts", async (req, res) => {
@@ -229,7 +229,7 @@ export function registerPromptRoutes(app, ctx) {
     }
   });
 
-  app.get("/api/prompts/export", async (req, res) => {
+  app.get("/api/prompts/export", async (_req, res) => {
     try {
       const db = getPromptsDb();
       const prompts = db.prepare("SELECT * FROM prompts WHERE folder_id != '__trash__'").all();
@@ -257,7 +257,7 @@ export function registerPromptRoutes(app, ctx) {
 
   // ── Folders ───────────────────────────────────────────────────────────────
 
-  app.get("/api/prompts/folders", async (req, res) => {
+  app.get("/api/prompts/folders", async (_req, res) => {
     try {
       const db = getPromptsDb();
       const rows = db.prepare("SELECT * FROM prompt_folders WHERE id NOT IN ('__root__', '__trash__') ORDER BY name COLLATE NOCASE").all();

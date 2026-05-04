@@ -87,7 +87,7 @@ export function isAbortError(err) {
   return err?.name === "AbortError" || err?.code === "ABORT_ERR";
 }
 
-export function throwOAuthTimeoutError(err, { timeoutMs, requestId, scope }) {
+export function throwOAuthTimeoutError(err, { timeoutMs: _timeoutMs, requestId: _requestId, scope }) {
   throw makeOAuthError("OAuth image generation timed out", {
     code: "OAUTH_IMAGE_TIMEOUT",
     status: 504,

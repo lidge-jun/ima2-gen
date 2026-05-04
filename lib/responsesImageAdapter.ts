@@ -59,7 +59,7 @@ function safeUpstreamClientMessage(upstream, status) {
   return "OpenAI rejected the image request.";
 }
 
-async function getEndpoint(ctx, provider, scope) {
+async function getEndpoint(ctx, provider, _scope) {
   if (provider === "api") {
     if (!ctx?.apiKey) {
       throw makeError("API key is required for API provider image generation", {

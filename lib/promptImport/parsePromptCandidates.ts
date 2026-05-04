@@ -93,6 +93,7 @@ function parseMarkdown(text, options) {
   const withoutFences = source
     .split("\n")
     .filter((line, index, lines) => {
+      void line;
       const offset = lines.slice(0, index).join("\n").length + (index > 0 ? 1 : 0);
       return !ranges.some(([start, end]) => offset >= start && offset < end);
     })

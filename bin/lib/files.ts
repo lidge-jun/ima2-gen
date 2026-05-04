@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname, extname, basename, join } from "node:path";
+import { dirname, extname } from "node:path";
 
 const MIME = {
   png: "image/png",
