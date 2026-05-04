@@ -7,7 +7,13 @@ import { errInfo } from "../errInfo.js";
 const FALLBACK_REASONING_EFFORT = "none";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
 
-export function resolveReasoningEffort(ctx: RouteRuntimeContext | undefined, options: any = {}) {
+export interface OAuthRuntimeOptions {
+  reasoningEffort?: unknown;
+  webSearchEnabled?: unknown;
+  searchMode?: unknown;
+}
+
+export function resolveReasoningEffort(ctx: RouteRuntimeContext | undefined, options: OAuthRuntimeOptions = {}) {
   const fromOptions = typeof options.reasoningEffort === "string" ? options.reasoningEffort : null;
   const fromCtx = typeof ctx?.config?.imageModels?.reasoningEffort === "string"
     ? ctx.config.imageModels.reasoningEffort
@@ -16,7 +22,7 @@ export function resolveReasoningEffort(ctx: RouteRuntimeContext | undefined, opt
   return VALID_REASONING_EFFORTS.has(candidate) ? candidate : FALLBACK_REASONING_EFFORT;
 }
 
-export function resolveWebSearchEnabled(options: any = {}) {
+export function resolveWebSearchEnabled(options: OAuthRuntimeOptions = {}) {
   return options.webSearchEnabled !== false && options.searchMode !== "off";
 }
 

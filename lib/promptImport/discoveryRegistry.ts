@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { promptImportError } from "./errors.js";
+import { requireRuntimeContext } from "../runtimeContext.js";
 import type { CuratedSourceLike, PromptImportCtx } from "./types.js";
 
 const REGISTRY_VERSION = 1;
@@ -176,7 +177,8 @@ function reviewedSourceId(candidate: DiscoveryCandidateRecord): string {
   return `discovered-${candidate.fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
 }
 
-export async function readDiscoveryRegistry(ctx: PromptImportCtx): Promise<DiscoveryRegistry> {
+export async function readDiscoveryRegistry(ctxIn: PromptImportCtx): Promise<DiscoveryRegistry> {
+  const ctx = requireRuntimeContext(ctxIn);
   try {
     const parsed = JSON.parse(await readFile(registryFile(ctx), "utf8")) as DiscoveryRegistry;
     if (parsed.version !== REGISTRY_VERSION) return emptyRegistry();
@@ -190,7 +192,8 @@ export async function readDiscoveryRegistry(ctx: PromptImportCtx): Promise<Disco
   }
 }
 
-export async function writeDiscoveryRegistry(ctx: PromptImportCtx, registry: DiscoveryRegistry): Promise<void> {
+export async function writeDiscoveryRegistry(ctxIn: PromptImportCtx, registry: DiscoveryRegistry): Promise<void> {
+  const ctx = requireRuntimeContext(ctxIn);
   const file = registryFile(ctx);
   await mkdir(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -202,7 +205,8 @@ interface ListFilters {
   status?: string;
 }
 
-export async function listDiscoveryCandidates(ctx: PromptImportCtx, filters: ListFilters = {}): Promise<PublicCandidate[]> {
+export async function listDiscoveryCandidates(ctxIn: PromptImportCtx, filters: ListFilters = {}): Promise<PublicCandidate[]> {
+  const ctx = requireRuntimeContext(ctxIn);
   const registry = await readDiscoveryRegistry(ctx);
   const status = typeof filters.status === "string" ? filters.status : null;
   return Object.values(registry.candidates)
@@ -211,7 +215,8 @@ export async function listDiscoveryCandidates(ctx: PromptImportCtx, filters: Lis
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.fullName.localeCompare(b.fullName));
 }
 
-export async function upsertDiscoveryCandidates(ctx: PromptImportCtx, candidates: DiscoveryCandidateRecord[]): Promise<PublicCandidate[]> {
+export async function upsertDiscoveryCandidates(ctxIn: PromptImportCtx, candidates: DiscoveryCandidateRecord[]): Promise<PublicCandidate[]> {
+  const ctx = requireRuntimeContext(ctxIn);
   const registry = await readDiscoveryRegistry(ctx);
   const now = new Date().toISOString();
   for (const candidate of candidates) {
@@ -254,7 +259,8 @@ export function reviewedSourceFromCandidate(candidate: DiscoveryCandidateRecord)
   };
 }
 
-export async function reviewDiscoveryCandidate(ctx: PromptImportCtx, payload: ReviewPayload) {
+export async function reviewDiscoveryCandidate(ctxIn: PromptImportCtx, payload: ReviewPayload) {
+  const ctx = requireRuntimeContext(ctxIn);
   const configLimits = (ctx.config?.limits ?? {}) as Record<string, number>;
   const limits: ReviewLimits = {
     maxRepoIndexFiles: configLimits.promptImportMaxRepoIndexFiles ?? 0,

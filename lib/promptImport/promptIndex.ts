@@ -7,6 +7,7 @@ import { parsePromptCandidates } from "./parsePromptCandidates.js";
 import { extractGptImageHints } from "./gptImageHints.js";
 import { rankPromptCandidates } from "./rankPromptCandidates.js";
 import { errInfo } from "../errInfo.js";
+import { requireRuntimeContext } from "../runtimeContext.js";
 import {
   getDefaultReviewedDiscoverySources,
   getReviewedDiscoverySource,
@@ -270,7 +271,8 @@ async function ensureSearchCache(ctx: PromptImportCtx) {
   return { cache, warnings };
 }
 
-export async function refreshCuratedSource(ctx: PromptImportCtx, sourceId: string) {
+export async function refreshCuratedSource(ctxIn: PromptImportCtx, sourceId: string) {
+  const ctx = requireRuntimeContext(ctxIn);
   const cache = await readCache(ctx);
   const result = await indexSource(ctx, sourceId);
   if (result.entry) {
@@ -291,7 +293,8 @@ interface SearchCuratedPromptsOptions {
   limit?: number;
 }
 
-export async function searchCuratedPrompts(ctx: PromptImportCtx, { q = "", sourceIds, limit }: SearchCuratedPromptsOptions = {}) {
+export async function searchCuratedPrompts(ctxIn: PromptImportCtx, { q = "", sourceIds, limit }: SearchCuratedPromptsOptions = {}) {
+  const ctx = requireRuntimeContext(ctxIn);
   const { cache, warnings } = await ensureSearchCache(ctx);
   const limits = limitsFromCtx(ctx);
   const defaultSources = [
@@ -316,7 +319,8 @@ export async function searchCuratedPrompts(ctx: PromptImportCtx, { q = "", sourc
   return { results, sources, warnings };
 }
 
-export async function getPromptImportSources(ctx: PromptImportCtx | null) {
+export async function getPromptImportSources(ctxIn: PromptImportCtx | null) {
+  const ctx = ctxIn ? requireRuntimeContext(ctxIn) : null;
   const reviewed = ctx ? await listReviewedDiscoverySources(ctx) : [];
   return { sources: [...listCuratedSources(), ...reviewed] };
 }

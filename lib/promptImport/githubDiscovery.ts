@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
 import { upsertDiscoveryCandidates } from "./discoveryRegistry.js";
+import { requireRuntimeContext } from "../runtimeContext.js";
 import type { DiscoveryRepo, PromptImportCtx } from "./types.js";
 
 import { errInfo } from "../errInfo.js";
@@ -267,7 +268,8 @@ async function searchOneQuery(ctx: PromptImportCtx, query: string, perPage: numb
   }
 }
 
-export async function searchGitHubDiscovery(ctx: PromptImportCtx, options: DiscoverySearchOptions = {}) {
+export async function searchGitHubDiscovery(ctxIn: PromptImportCtx, options: DiscoverySearchOptions = {}) {
+  const ctx = requireRuntimeContext(ctxIn);
   const limits = discoveryLimits(ctx);
   const queryLimit = Math.min(Number(options.maxQueries) || limits.maxQueries, limits.maxQueries);
   const queries = buildDiscoveryQueries({
