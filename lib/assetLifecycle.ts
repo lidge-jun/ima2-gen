@@ -29,14 +29,14 @@ function resolveInGenerated(rootDir, relPath) {
   return target;
 }
 
-function nodesReferencingFilename(filename) {
+function nodesReferencingFilename(filename): Array<{ sessionId: string; id: string; data: string }> {
   // The client stores imageUrl as `/generated/<encoded filename>` in node data JSON.
   // We scan all sessions' nodes for substring match on the decoded and encoded forms.
   const db = getDb();
   const encoded = encodeURIComponent(filename);
   const rows = db
     .prepare("SELECT session_id AS sessionId, id, data FROM nodes WHERE data LIKE ? OR data LIKE ?")
-    .all(`%${filename}%`, `%${encoded}%`);
+    .all(`%${filename}%`, `%${encoded}%`) as Array<{ sessionId: string; id: string; data: string }>;
   return rows;
 }
 
@@ -44,7 +44,7 @@ function markNodesAssetMissing(filename) {
   const db = getDb();
   const rows = nodesReferencingFilename(filename);
   if (rows.length === 0) return { sessionsTouched: 0, nodesTouched: 0 };
-  const touchedSessions = new Set();
+  const touchedSessions = new Set<string>();
   const update = db.prepare("UPDATE nodes SET data = ? WHERE session_id = ? AND id = ?");
   const bumpSession = db.prepare("UPDATE sessions SET graph_version = graph_version + 1, updated_at = ? WHERE id = ?");
   const tx = db.transaction(() => {

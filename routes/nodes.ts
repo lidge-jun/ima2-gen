@@ -16,8 +16,8 @@ import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../li
 import { logEvent, logError } from "../lib/logger.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-function validateModeration(ctx: RouteRuntimeContext, moderation) {
+import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
+function validateModeration(ctx: RuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
@@ -57,7 +57,8 @@ function dataUrlFromB64(format, b64) {
   return `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`;
 }
 
-export function registerNodeRoutes(app, ctx: RouteRuntimeContext) {
+export function registerNodeRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.post("/api/node/generate", async (req, res) => {
     const body = req.body || {};
     const streamResponse = wantsSse(req);
@@ -148,17 +149,18 @@ export function registerNodeRoutes(app, ctx: RouteRuntimeContext) {
           parentNodeId,
         });
       }
-      const refCheck = validateAndNormalizeRefs(references);
-      if (refCheck.error) {
+      const refCheckResult = validateAndNormalizeRefs(references);
+      if (refCheckResult.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
-        finishErrorCode = refCheck.code;
+        finishErrorCode = refCheckResult.code;
         return res.status(400).json({
-          error: { code: refCheck.code, message: refCheck.error },
-          code: refCheck.code,
+          error: { code: refCheckResult.code, message: refCheckResult.error },
+          code: refCheckResult.code,
           parentNodeId,
         });
       }
+      const refCheck = refCheckResult as Extract<typeof refCheckResult, { refs: string[] }>;
       const moderationCheck = validateModeration(ctx, moderation);
       if (moderationCheck.error) {
         finishStatus = "error";
@@ -171,7 +173,7 @@ export function registerNodeRoutes(app, ctx: RouteRuntimeContext) {
       }
 
       const startTime = Date.now();
-      let parentB64 = null;
+      let parentB64: string | null = null;
       if (parentNodeId) {
         parentB64 = await loadNodeB64(ctx.rootDir, `${parentNodeId}.png`, ctx.config.storage.generatedDir);
       } else if (typeof externalSrc === "string" && externalSrc.length > 0) {
@@ -217,7 +219,7 @@ export function registerNodeRoutes(app, ctx: RouteRuntimeContext) {
         writeSse(res, "phase", { requestId, phase: "streaming" });
       }
 
-      let b64, usage, webSearchCalls = 0, revisedPrompt = null;
+      let b64, usage, webSearchCalls = 0, revisedPrompt: string | null = null;
       const MAX_RETRIES = 1;
       let lastErr;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

@@ -63,6 +63,6 @@ test("migration records schema version 4", () => {
   const row = db
     .getDb()
     .prepare("SELECT value FROM _meta WHERE key = 'schema_version'")
-    .get();
-  assert.equal(row.value, "4");
+    .get() as { value: string } | undefined;
+  assert.equal(row?.value, "4");
 });

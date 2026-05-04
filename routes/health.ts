@@ -1,8 +1,9 @@
 import { listJobs, listTerminalJobs, finishJob } from "../lib/inflight.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-export function registerHealthRoutes(app, ctx: RouteRuntimeContext) {
+import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
+export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   const runtimePorts = () => ({
     backend: {
       configuredPort: Number(ctx.serverConfiguredPort || ctx.config.server.port),

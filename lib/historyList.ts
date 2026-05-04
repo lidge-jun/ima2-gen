@@ -5,7 +5,7 @@ import { readEmbeddedImageMetadataFromFile } from "./imageMetadataStore.js";
 
 import { errInfo } from "./errInfo.js";
 async function listImageFiles(baseDir) {
-  const out = [];
+  const out: Array<{ full: string; rel: string; name: string }> = [];
 
   async function walk(dir, depth) {
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
@@ -109,7 +109,7 @@ async function readImageMetadata(full, rel) {
 async function listCardNewsSetRows(baseDir) {
   const root = join(baseDir, "cardnews");
   const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
-  const rows = [];
+  const rows: any[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     try {

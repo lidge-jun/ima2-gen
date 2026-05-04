@@ -6,9 +6,9 @@ import { readTemplateBaseB64 } from "./cardNewsTemplateStore.js";
 import { writeCardNewsManifest, writeCardSidecar } from "./cardNewsManifestStore.js";
 
 import { errInfo } from "./errInfo.js";
-function formatRenderedTextInstruction(textFields = []) {
+function formatRenderedTextInstruction(textFields: any[] = []) {
   const visible = (Array.isArray(textFields) ? textFields : [])
-    .filter((field) => field?.renderMode === "in-image" && field.text);
+    .filter((field: any) => field?.renderMode === "in-image" && field.text);
   if (!visible.length) {
     return [
       "Do not render readable text unless explicitly listed.",
@@ -17,7 +17,7 @@ function formatRenderedTextInstruction(textFields = []) {
   }
   return [
     "Render only the following readable text items exactly as written:",
-    ...visible.map((field) => {
+    ...visible.map((field: any) => {
       const slot = field.slotId ? ` in slot ${field.slotId}` : "";
       return `- ${field.kind} at ${field.placement}${slot}: "${field.text}"`;
     }),
@@ -77,8 +77,8 @@ export async function generateCardNewsSet(ctx, input, options: any = {}) {
     const sidecarFilename = `${baseFilename}.json`;
     const requestId = input.requestId || `${setId}_${baseFilename}`;
     const prompt = assemblePrompt(template, card);
-    let result = null;
-    let error = null;
+    let result: { b64?: string; revisedPrompt?: string } | null = null;
+    let error: { code: string; message: string } | null = null;
     if (typeof options.onCardStart === "function") {
       await options.onCardStart({ ...card, cardOrder, cardId: card.id || `card_${cardOrder}` });
     }

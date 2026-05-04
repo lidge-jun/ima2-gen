@@ -3,7 +3,7 @@ import { mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
 import { config } from "../config.js";
 
-let db = null;
+let db: Database.Database | null = null;
 
 export function getDbPath() {
   return config.storage.dbPath;
@@ -78,9 +78,9 @@ function migrate(database) {
     CREATE INDEX IF NOT EXISTS idx_inflight_session ON inflight(session_id);
   `);
 
-  const sessionColumns = database
+  const sessionColumns = (database
     .prepare("PRAGMA table_info(sessions)")
-    .all()
+    .all() as Array<{ name: string }>)
     .map((row) => row.name);
   if (!sessionColumns.includes("graph_version")) {
     database.exec(
@@ -148,7 +148,7 @@ function migrate(database) {
       ('__trash__', '__root__', '__trash__');
   `);
 
-  const row = database.prepare("SELECT value FROM _meta WHERE key = 'schema_version'").get();
+  const row = database.prepare("SELECT value FROM _meta WHERE key = 'schema_version'").get() as { value?: string } | undefined;
   if (!row) {
     database.prepare("INSERT INTO _meta (key, value) VALUES ('schema_version', '4')").run();
   } else if (row.value !== "4") {

@@ -42,7 +42,7 @@ export function extractGptImageHints(text) {
   const taskHints = matches(value, TASK_HINTS);
   const sizeHints = matches(value, SIZE_HINTS);
   const qualityHints = matches(value, QUALITY_HINTS);
-  const warnings = [];
+  const warnings: string[] = [];
 
   if (/\btransparent|alpha channel|no background|cutout\b/i.test(value)) {
     warnings.push("transparent-unsupported-gpt-image-2");

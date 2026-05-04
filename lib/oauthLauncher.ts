@@ -1,13 +1,14 @@
 import { spawnBin } from "../bin/lib/platform.js";
 import { config } from "../config.js";
 import { parseLocalhostPortFromUrl, parseOAuthReadyUrl } from "./runtimePorts.js";
+import type { ChildProcess } from "node:child_process";
 
 export function startOAuthProxy(options: any = {}) {
   const oauthPort = options.oauthPort ?? config.oauth.proxyPort;
   const restartDelayMs = options.restartDelayMs ?? config.oauth.restartDelayMs;
-  let currentChild = null;
+  let currentChild: ChildProcess | null = null;
   let stopping = false;
-  let restartTimer = null;
+  let restartTimer: NodeJS.Timeout | null = null;
 
   const spawnProxy = () => {
     console.log(`Starting openai-oauth on port ${oauthPort}...`);
@@ -17,7 +18,7 @@ export function startOAuthProxy(options: any = {}) {
     });
     currentChild = child;
 
-    child.stdout.on("data", (d) => {
+    child.stdout?.on("data", (d) => {
       const msg = d.toString().trim();
       if (!msg) return;
       console.log(`[oauth] ${msg}`);
@@ -32,7 +33,7 @@ export function startOAuthProxy(options: any = {}) {
       }
     });
 
-    child.stderr.on("data", (d) => {
+    child.stderr?.on("data", (d) => {
       const msg = d.toString().trim();
       if (msg && !msg.includes("npm warn")) console.error(`[oauth] ${msg}`);
     });
@@ -52,10 +53,10 @@ export function startOAuthProxy(options: any = {}) {
     get child() {
       return currentChild;
     },
-    kill(signal = "SIGTERM") {
+    kill(signal: NodeJS.Signals = "SIGTERM") {
       this.stop(signal);
     },
-    stop(signal = "SIGTERM") {
+    stop(signal: NodeJS.Signals = "SIGTERM") {
       stopping = true;
       if (restartTimer) clearTimeout(restartTimer);
       try { currentChild?.kill(signal); } catch {}

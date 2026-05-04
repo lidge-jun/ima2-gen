@@ -29,14 +29,14 @@ export function extractPartialImage(data) {
   return { b64, index, eventType: data.type };
 }
 
-export async function readImageStream(res, { requestId = null, scope = "oauth", onPartialImage = null } = {}) {
+export async function readImageStream(res, { requestId = null, scope = "oauth", onPartialImage = null as ((p: any) => void) | null } = {}) {
   /** @type {Record<string, number>} */
   const eventTypes = {};
   let parseSkipCount = 0;
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let imageB64 = null;
+  let imageB64: string | null = null;
   let usage = null;
   let webSearchCalls = 0;
   let eventCount = 0;
@@ -73,7 +73,8 @@ export async function readImageStream(res, { requestId = null, scope = "oauth", 
         }
         if (data.type === "response.output_item.done" && data.item?.type === "image_generation_call") {
           if (data.item.result) {
-            imageB64 = data.item.result;
+            const imageB64Local: string = data.item.result;
+            imageB64 = imageB64Local;
             logEvent(scope, "image", { requestId, imageChars: imageB64.length });
             if (requestId) setJobPhase(requestId, "decoding");
           }
@@ -115,7 +116,7 @@ export async function readImageStream(res, { requestId = null, scope = "oauth", 
 
 export async function readMultimodeImageStream(
   res,
-  { requestId = null, maxImages = 1, scope = "oauth-multimode", onPartialImage = null } = {},
+  { requestId = null, maxImages = 1, scope = "oauth-multimode", onPartialImage = null as ((p: any) => void) | null } = {},
 ) {
   /** @type {Record<string, number>} */
   const eventTypes = {};
@@ -123,7 +124,7 @@ export async function readMultimodeImageStream(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  const images = [];
+  const images: Array<{ b64: any; revisedPrompt: any; index?: any }> = [];
   let usage = null;
   let webSearchCalls = 0;
   let eventCount = 0;

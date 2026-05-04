@@ -115,7 +115,7 @@ export async function extractStyleSheet(openai, { prompt, referenceDataUrl }) {
 // Kept short so it doesn't blow the 4K prompt window on long user prompts.
 export function renderStyleSheetPrefix(sheet) {
   if (!sheet) return "";
-  const parts = [];
+  const parts: string[] = [];
   if (sheet.medium) parts.push(`Medium: ${sheet.medium}.`);
   if (sheet.palette?.length) parts.push(`Palette: ${sheet.palette.join(", ")}.`);
   if (sheet.composition) parts.push(`Composition: ${sheet.composition}.`);

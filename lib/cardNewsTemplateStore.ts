@@ -109,7 +109,7 @@ function registryEntry(templateId) {
 }
 
 function validateTemplateAuthoring(template) {
-  const problems = [];
+  const problems: string[] = [];
   if (typeof template.name !== "string" || !template.name.trim()) problems.push("name");
   if (typeof template.size !== "string" || !OUTPUT_SIZE_RE.test(template.size)) problems.push("size");
   if (typeof template.stylePrompt !== "string" || !template.stylePrompt.trim()) problems.push("stylePrompt");
@@ -167,7 +167,7 @@ async function readTemplate(ctx, templateId) {
 }
 
 export async function listImageTemplates(ctx) {
-  const templates = [];
+  const templates: any[] = [];
   for (const entry of IMAGE_TEMPLATE_REGISTRY) {
     templates.push(publicTemplate(await readTemplate(ctx, entry.id)));
   }

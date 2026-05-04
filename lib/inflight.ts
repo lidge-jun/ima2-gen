@@ -113,8 +113,8 @@ function reapTerminalJobs() {
 export function listJobs(filters: any = {}) {
   purgeStaleJobs();
   const { kind, sessionId } = filters;
-  const clauses = [];
-  const params = [];
+  const clauses: string[] = [];
+  const params: unknown[] = [];
   if (kind) {
     clauses.push("kind = ?");
     params.push(kind);

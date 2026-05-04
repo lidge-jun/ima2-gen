@@ -61,7 +61,7 @@ export function createOAuthGenerationTimeout(ctx: RouteRuntimeContext = {}, requ
 }
 
 export async function waitForOAuthReady(ctx: RouteRuntimeContext = {}) {
-  if (!ctx || !Object.prototype.hasOwnProperty.call(ctx, "oauthReadyState")) return;
+  if (!ctx || ctx.oauthReadyState === undefined) return;
   const initialState = ctx.oauthReadyState;
   if (initialState === "ready" || initialState === "disabled") return;
   if (initialState === "failed") {

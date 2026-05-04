@@ -5,8 +5,9 @@ import { logError, logEvent } from "../lib/logger.js";
 import { getDb } from "../lib/db.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-export function registerHistoryRoutes(app, ctx: RouteRuntimeContext) {
+import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
+export function registerHistoryRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.get("/api/history", async (req, res) => {
     try {
       const limitRaw = parseInt(req.query.limit);
@@ -24,10 +25,10 @@ export function registerHistoryRoutes(app, ctx: RouteRuntimeContext) {
       const rows = await listHistoryRows(ctx.config.storage.generatedDir);
 
       // Enrich with favorite status
-      let favoriteSet = new Set();
+      let favoriteSet = new Set<string>();
       if (browserId) {
         const db = getDb();
-        const favRows = db.prepare("SELECT filename FROM gallery_favorites WHERE browser_id = ?").all(browserId);
+        const favRows = db.prepare("SELECT filename FROM gallery_favorites WHERE browser_id = ?").all(browserId) as Array<{ filename: string }>;
         favoriteSet = new Set(favRows.map((r) => r.filename));
       }
 
@@ -52,8 +53,8 @@ export function registerHistoryRoutes(app, ctx: RouteRuntimeContext) {
         : null;
 
       if (groupBy === "session") {
-        const groups = new Map();
-        const loose = [];
+        const groups = new Map<string, { sessionId: any; items: any[]; lastUsedAt: any }>();
+        const loose: any[] = [];
         for (const row of page) {
           if (row.sessionId) {
             let group = groups.get(row.sessionId);

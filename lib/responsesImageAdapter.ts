@@ -4,7 +4,7 @@ import { classifyUpstreamError, classifyUpstreamErrorCode } from "./errorClassif
 import { compressReferenceB64ForOAuth } from "./referenceImageCompress.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { errInfo } from "./errInfo.js";
-import type { RouteRuntimeContext } from "./runtimeContext.js";
+import { type RouteRuntimeContext, requireRuntimeContext } from "./runtimeContext.js";
 import {
   AUTO_PROMPT_FIDELITY_SUFFIX,
   DIRECT_PROMPT_FIDELITY_SUFFIX,
@@ -17,6 +17,8 @@ import {
   buildUserTextPrompt,
   waitForOAuthReady,
 } from "./oauthProxy.js";
+
+interface ParsedImage { b64: string; revisedPrompt: string | null; }
 
 function makeError(message, { status = 500, code = "RESPONSES_IMAGE_ERROR", cause, ...rest }: any = {}) {
   const err: any = new Error(message);
@@ -127,8 +129,8 @@ function extractPartialImage(data) {
 async function parseStream(res, { requestId, scope, maxImages = 1, onPartialImage = null }: any = {}) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  const images = [];
-  const eventTypes = {};
+  const images: ParsedImage[] = [];
+  const eventTypes: Record<string, number> = {};
   let buffer = "";
   let usage = null;
   let webSearchCalls = 0;
@@ -180,7 +182,7 @@ async function parseStream(res, { requestId, scope, maxImages = 1, onPartialImag
 
 async function parseJson(res, maxImages) {
   const json: any = await res.json();
-  const images = [];
+  const images: ParsedImage[] = [];
   let webSearchCalls = 0;
   for (const item of json.output || []) {
     if (item.type === "image_generation_call" && item.result && images.length < maxImages) {
@@ -202,7 +204,7 @@ async function postResponses({ ctx, provider, scope, payload, requestId, maxImag
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers,
+      headers: headers as any,
       signal: controller.signal,
       body: JSON.stringify(payload),
     });
@@ -242,7 +244,8 @@ async function postResponses({ ctx, provider, scope, payload, requestId, maxImag
   }
 }
 
-export async function generateViaResponses(provider, prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto", ctx: RouteRuntimeContext = {}, options: any = {}) {
+export async function generateViaResponses(provider, prompt, quality, size, moderation = "low", references: any[] = [], requestId = null, mode = "auto", ctxRaw: RouteRuntimeContext = {}, options: any = {}) {
+  const ctx = requireRuntimeContext(ctxRaw);
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const referenceInputs = references.map(normalizeRef);
   const userContent = referenceInputs.length
@@ -272,7 +275,8 @@ export async function generateViaResponses(provider, prompt, quality, size, mode
   return { b64: image.b64, usage: result.usage, webSearchCalls: result.webSearchCalls, revisedPrompt: image.revisedPrompt };
 }
 
-export async function generateMultimodeViaResponses(provider, prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto", ctx: RouteRuntimeContext = {}, options: any = {}) {
+export async function generateMultimodeViaResponses(provider, prompt, quality, size, moderation = "low", references: any[] = [], requestId = null, mode = "auto", ctxRaw: RouteRuntimeContext = {}, options: any = {}) {
+  const ctx = requireRuntimeContext(ctxRaw);
   const maxImages = Math.min(8, Math.max(1, Math.trunc(Number(options.maxImages) || 1)));
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const userText = buildMultimodeSequencePrompt(
@@ -307,7 +311,8 @@ export async function generateMultimodeViaResponses(provider, prompt, quality, s
   });
 }
 
-export async function editViaResponses(provider, prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: RouteRuntimeContext = {}, requestId = null, options: any = {}) {
+export async function editViaResponses(provider, prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctxRaw: RouteRuntimeContext = {}, requestId = null, options: any = {}) {
+  const ctx = requireRuntimeContext(ctxRaw);
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const imageForRequest = await compressReferenceB64ForOAuth(imageB64, {
     maxB64Bytes: ctx.config?.limits?.maxRefB64Bytes,

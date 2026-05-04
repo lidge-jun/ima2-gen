@@ -61,14 +61,14 @@ async function writeCache(ctx, cache) {
   await rename(tmp, file);
 }
 
-function sourceTags(source, fileSource) {
+function sourceTags(source, fileSource): string[] {
   return [
     ...fileSource.tags,
     `source:${source.id}`,
     `license:${source.licenseSpdx}`,
     `trust:${source.trustTier}`,
     source.requiresAttribution ? "attribution-required" : null,
-  ].filter(Boolean);
+  ].filter(Boolean) as string[];
 }
 
 function indexedCandidate({ candidate, source, fileSource, fileIndex, index }) {
@@ -115,9 +115,9 @@ async function indexSource(ctx, sourceId) {
   }
 
   const limits = limitsFromCtx(ctx);
-  const warnings = [];
-  const files = [];
-  const candidates = [];
+  const warnings: string[] = [];
+  const files: any[] = [];
+  const candidates: any[] = [];
   const allowedPaths = source.allowedPaths.slice(0, limits.maxRepoIndexFiles);
 
   for (const path of allowedPaths) {
@@ -189,7 +189,7 @@ async function ensureSearchCache(ctx) {
     ...await getDefaultReviewedDiscoverySources(ctx),
   ];
   let changed = false;
-  const warnings = [];
+  const warnings: string[] = [];
 
   for (const source of sources) {
     if (isFresh(cache.sources[source.id], limits.ttlMs)) continue;

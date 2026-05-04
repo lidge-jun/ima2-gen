@@ -37,9 +37,9 @@ export function detectImageMimeFromB64(b64) {
   return null;
 }
 
-export function safeReferenceDiagnostics(refDetails = []) {
+export function safeReferenceDiagnostics(refDetails: any[] = []) {
   if (!Array.isArray(refDetails)) return [];
-  return refDetails.map((ref) => ({
+  return refDetails.map((ref: any) => ({
     index: ref.index,
     declaredMime: ref.declaredMime || null,
     detectedMime: ref.detectedMime || null,
@@ -69,18 +69,33 @@ export function summarizeReferencePayload(references) {
   };
 }
 
+type RefDetail = {
+  index: number;
+  b64: string;
+  declaredMime: string | null;
+  detectedMime: string | null;
+  b64Chars: number;
+  approxBytes: number;
+  source: string;
+  warnings: string[];
+};
+
+type RefsValidationResult =
+  | { error: string; code: string; refs?: undefined; refDetails?: undefined; referenceDiagnostics?: undefined }
+  | { error?: undefined; code?: undefined; refs: string[]; refDetails: RefDetail[]; referenceDiagnostics: ReturnType<typeof safeReferenceDiagnostics> };
+
 export function validateAndNormalizeRefs(references, {
   maxCount = config.limits.maxRefCount,
   maxB64Bytes = config.limits.maxRefB64Bytes,
-} = {}) {
+} = {}): RefsValidationResult {
   if (!Array.isArray(references)) {
     return { error: "references must be an array", code: "REF_NOT_ARRAY" };
   }
   if (references.length > maxCount) {
     return { error: `references may not exceed ${maxCount} items`, code: "REF_TOO_MANY" };
   }
-  const out = [];
-  const refDetails = [];
+  const out: string[] = [];
+  const refDetails: RefDetail[] = [];
   for (let i = 0; i < references.length; i++) {
     const r = references[i];
     if (typeof r !== "string") {
@@ -97,7 +112,7 @@ export function validateAndNormalizeRefs(references, {
       return { error: `references[${i}] is not valid base64`, code: "REF_NOT_BASE64" };
     }
     const detectedMime = detectImageMimeFromB64(b64);
-    const warnings = [];
+    const warnings: string[] = [];
     if (declaredMime && detectedMime && declaredMime !== detectedMime) {
       warnings.push("mime_mismatch");
     }

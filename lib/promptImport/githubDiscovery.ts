@@ -78,8 +78,8 @@ export function scoreDiscoveryRepository(repo, context: any = {}) {
   const nameText = `${repo.full_name || ""} ${repo.description || ""} ${(repo.topics || []).join(" ")}`.toLowerCase();
   const pushedAt = repo.pushed_at ? Date.parse(repo.pushed_at) : 0;
   const daysSincePush = pushedAt ? (Date.now() - pushedAt) / 86_400_000 : Number.POSITIVE_INFINITY;
-  const scoreReasons = [];
-  const warnings = [];
+  const scoreReasons: string[] = [];
+  const warnings: string[] = [];
   let score = 0;
 
   const stars = Number(repo.stargazers_count || 0);
@@ -220,8 +220,8 @@ export async function searchGitHubDiscovery(ctx, options: any = {}) {
   });
   const requestedLimit = Math.min(Number(options.limit) || limits.limit, limits.limit);
   const perQuery = Math.max(1, Math.ceil(requestedLimit / queries.length));
-  const warnings = [];
-  let rateLimit = null;
+  const warnings: string[] = [];
+  let rateLimit: { limit: number | null; remaining: number | null; resetAt: string | null } | null = null;
   const byRepo = new Map();
 
   for (const query of queries) {

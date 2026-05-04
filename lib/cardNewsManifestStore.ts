@@ -77,7 +77,7 @@ export async function readCardNewsManifest(ctx, setId) {
 export async function listCardNewsSets(ctx) {
   const root = join(ctx.config.storage.generatedDir, "cardnews");
   const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
-  const sets = [];
+  const sets: any[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     try {

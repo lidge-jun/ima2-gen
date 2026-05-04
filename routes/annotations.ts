@@ -46,7 +46,7 @@ export function registerAnnotationRoutes(app, _ctx: RouteRuntimeContext) {
 
       const row = getDb()
         .prepare("SELECT payload FROM image_annotations WHERE browser_id = ? AND filename = ?")
-        .get(browserId, filename);
+        .get(browserId, filename) as { payload: string } | undefined;
       const annotations = row ? JSON.parse(row.payload) : null;
       res.json({ annotations });
     } catch (e) {

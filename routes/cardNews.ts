@@ -14,7 +14,7 @@ import {
 import { listCardNewsSets, readCardNewsManifest, readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
 function sendError(res, err) {
   const status = err.status || 500;
   res.status(status).json({
@@ -25,7 +25,7 @@ function sendError(res, err) {
   });
 }
 
-function runCardNewsJob(ctx: RouteRuntimeContext, jobId, plan) {
+function runCardNewsJob(ctx: RuntimeContext, jobId, plan) {
   setImmediate(async () => {
     try {
       updateCardNewsJob(jobId, { status: "running" });
@@ -60,7 +60,8 @@ function runCardNewsJob(ctx: RouteRuntimeContext, jobId, plan) {
   });
 }
 
-export function registerCardNewsRoutes(app, ctx: RouteRuntimeContext) {
+export function registerCardNewsRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.get("/api/cardnews/image-templates", async (_req, res) => {
     try {
       res.json({ templates: await listImageTemplates(ctx) });

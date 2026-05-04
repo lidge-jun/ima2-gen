@@ -318,7 +318,7 @@ export async function generateMultimodeViaOAuth(
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("text/event-stream")) {
       const json: any = await res.json();
-      const images = [];
+      const images: Array<{ b64: any; revisedPrompt: any }> = [];
       for (const item of json.output || []) {
         if (item.type === "image_generation_call" && item.result && images.length < maxImages) {
           images.push({

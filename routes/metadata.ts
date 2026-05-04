@@ -5,7 +5,7 @@ import {
   normalizeImageMetadataFormat,
   readEmbeddedImageMetadata,
 } from "../lib/imageMetadataStore.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 
 const MIME_FORMATS = {
   "image/png": "png",
@@ -20,7 +20,8 @@ function parseDataUrl(dataUrl) {
   return { mime: match[1].toLowerCase(), rawB64: match[2] };
 }
 
-export function registerMetadataRoutes(app, ctx: RouteRuntimeContext) {
+export function registerMetadataRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.post("/api/metadata/read", async (req, res) => {
     try {
       const parsed = parseDataUrl(req.body?.dataUrl);

@@ -1,8 +1,9 @@
 import { inspectGeneratedStorage } from "../lib/storageMigration.js";
 import { openDirectory } from "../lib/openDirectory.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 
-export function registerStorageRoutes(app, ctx: RouteRuntimeContext) {
+export function registerStorageRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.get("/api/storage/status", async (_req, res) => {
     const status = await inspectGeneratedStorage(ctx);
     res.json({

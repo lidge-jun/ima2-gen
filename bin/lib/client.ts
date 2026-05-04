@@ -34,7 +34,7 @@ export async function resolveServer({ serverFlag }: any = {}) {
     err.code = "SERVER_UNREACHABLE";
     throw err;
   }
-  const candidates = [];
+  const candidates: string[] = [];
   if (process.env.IMA2_SERVER) candidates.push(process.env.IMA2_SERVER.replace(/\/$/, ""));
   const adv = readAdvertise();
   if (adv?.backend?.url) candidates.push(String(adv.backend.url).replace(/\/$/, ""));
@@ -42,7 +42,7 @@ export async function resolveServer({ serverFlag }: any = {}) {
   if (adv?.port) candidates.push(`http://localhost:${adv.port}`);
   candidates.push(`http://localhost:${DEFAULT_PORT}`);
 
-  const seen = new Set();
+  const seen = new Set<string>();
   const uniq = candidates.filter((c) => !seen.has(c) && seen.add(c));
 
   for (const base of uniq) {

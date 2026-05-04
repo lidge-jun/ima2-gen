@@ -22,7 +22,7 @@ export function registerPromptRoutes(app, _ctx: RouteRuntimeContext) {
       const favoritesOnly = req.query.favoritesOnly === "1" || req.query.favoritesOnly === "true";
 
       let where = "WHERE 1=1";
-      const params = [];
+      const params: unknown[] = [];
 
       if (folderId) {
         where += " AND p.folder_id = ?";
@@ -109,8 +109,8 @@ export function registerPromptRoutes(app, _ctx: RouteRuntimeContext) {
     try {
       const db = getPromptsDb();
       const { name, text, tags, folderId, mode } = req.body || {};
-      const sets = [];
-      const params = [];
+      const sets: string[] = [];
+      const params: unknown[] = [];
 
       if (typeof name === "string") { sets.push("name = ?"); params.push(name); }
       if (typeof text === "string") { sets.push("text = ?"); params.push(text); }
@@ -154,7 +154,7 @@ export function registerPromptRoutes(app, _ctx: RouteRuntimeContext) {
   app.post("/api/prompts/:id/favorite", async (req, res) => {
     try {
       const db = getPromptsDb();
-      const row = db.prepare("SELECT is_favorite FROM prompts WHERE id = ?").get(req.params.id);
+      const row = db.prepare("SELECT is_favorite FROM prompts WHERE id = ?").get(req.params.id) as { is_favorite?: number } | undefined;
       if (!row) return res.status(404).json({ error: "Not found" });
 
       const newVal = row.is_favorite ? 0 : 1;
@@ -241,14 +241,14 @@ export function registerPromptRoutes(app, _ctx: RouteRuntimeContext) {
   app.get("/api/prompts/export", async (_req, res) => {
     try {
       const db = getPromptsDb();
-      const prompts = db.prepare("SELECT * FROM prompts WHERE folder_id != '__trash__'").all();
-      const folders = db.prepare("SELECT * FROM prompt_folders WHERE id NOT IN ('__root__', '__trash__')").all();
+      const prompts = db.prepare("SELECT * FROM prompts WHERE folder_id != '__trash__'").all() as any[];
+      const folders = db.prepare("SELECT * FROM prompt_folders WHERE id NOT IN ('__root__', '__trash__')").all() as any[];
 
       res.json({
         version: 1,
         exportedAt: new Date().toISOString(),
-        folders: folders.map((f) => ({ id: f.id, name: f.name, parentId: f.parent_id })),
-        prompts: prompts.map((p) => ({
+        folders: folders.map((f: any) => ({ id: f.id, name: f.name, parentId: f.parent_id })),
+        prompts: prompts.map((p: any) => ({
           id: p.id,
           name: p.name,
           text: p.text,
@@ -315,8 +315,8 @@ export function registerPromptRoutes(app, _ctx: RouteRuntimeContext) {
     try {
       const db = getPromptsDb();
       const { name, parentId } = req.body || {};
-      const sets = [];
-      const params = [];
+      const sets: string[] = [];
+      const params: unknown[] = [];
 
       if (typeof name === "string" && name.trim()) { sets.push("name = ?"); params.push(name.trim()); }
       if (typeof parentId === "string") { sets.push("parent_id = ?"); params.push(parentId); }

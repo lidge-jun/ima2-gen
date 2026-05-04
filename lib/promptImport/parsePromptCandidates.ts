@@ -76,7 +76,7 @@ function parseMarkdown(text, options) {
   const source = stripFrontmatter(text).slice(0, options.limits.maxSourceCharsScanned);
   const fencePattern = /```([A-Za-z0-9_-]*)\n([\s\S]*?)```/g;
   const acceptedFenceLanguages = new Set(["", "prompt", "text", "markdown", "md"]);
-  const ranges = [];
+  const ranges: Array<[number, number]> = [];
 
   for (const match of source.matchAll(fencePattern)) {
     const language = (match[1] || "").toLowerCase();
@@ -135,7 +135,7 @@ function parsePlainText(text, options) {
   }
 }
 
-export function parsePromptCandidates({ text, filename, source, tags = [], limits }) {
+export function parsePromptCandidates({ text, filename, source, tags = [] as string[], limits }) {
   const candidates = [];
   const extension = (filename.split(".").pop() || "").toLowerCase();
   const baseName = titleFromFilename(filename);

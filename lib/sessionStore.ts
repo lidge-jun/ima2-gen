@@ -15,18 +15,29 @@ export function createSession({ title = "Untitled" } = {}) {
   return { id, title, createdAt: t, updatedAt: t, graphVersion: 0 };
 }
 
+type SessionRow = {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  graphVersion: number;
+};
+type NodeRow = { id: string; x: number; y: number; data: string };
+type EdgeRow = { id: string; source: string; target: string; data: string };
+type StyleSheetRow = { styleSheet: string | null; styleSheetEnabled: number | null };
+
 export function listSessions() {
   const db = getDb();
   const rows = db
     .prepare(
       "SELECT id, title, created_at AS createdAt, updated_at AS updatedAt, graph_version AS graphVersion FROM sessions ORDER BY updated_at DESC",
     )
-    .all();
+    .all() as SessionRow[];
   return rows.map((r) => ({
     ...r,
-    nodeCount: db
+    nodeCount: (db
       .prepare("SELECT COUNT(*) AS c FROM nodes WHERE session_id = ?")
-      .get(r.id).c,
+      .get(r.id) as { c: number } | undefined)?.c ?? 0,
   }));
 }
 
@@ -36,15 +47,15 @@ export function getSession(id) {
     .prepare(
       "SELECT id, title, created_at AS createdAt, updated_at AS updatedAt, graph_version AS graphVersion FROM sessions WHERE id = ?",
     )
-    .get(id);
+    .get(id) as SessionRow | undefined;
   if (!session) return null;
-  const nodes = db
+  const nodes = (db
     .prepare("SELECT id, x, y, data FROM nodes WHERE session_id = ?")
-    .all(id)
+    .all(id) as NodeRow[])
     .map((n) => ({ id: n.id, x: n.x, y: n.y, data: safeParse(n.data) }));
-  const edges = db
+  const edges = (db
     .prepare("SELECT id, source, target, data FROM edges WHERE session_id = ?")
-    .all(id)
+    .all(id) as EdgeRow[])
     .map((e) => ({
       id: e.id,
       source: e.source,
@@ -54,13 +65,13 @@ export function getSession(id) {
   return { ...session, nodes, edges };
 }
 
-export function getSessionTitleMap(ids = []) {
+export function getSessionTitleMap(ids: string[] = []) {
   const cleanIds = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
-  if (cleanIds.length === 0) return new Map();
+  if (cleanIds.length === 0) return new Map<string, string>();
   const placeholders = cleanIds.map(() => "?").join(", ");
   const rows = getDb()
     .prepare(`SELECT id, title FROM sessions WHERE id IN (${placeholders})`)
-    .all(...cleanIds);
+    .all(...cleanIds) as Array<{ id: string; title: string }>;
   return new Map(rows.map((row) => [row.id, row.title]));
 }
 
@@ -139,7 +150,7 @@ function normalizeGraphPayload(nodes, edges) {
   return { nodes: normalizedNodes, edges: cleanEdges };
 }
 
-export function saveGraph(sessionId, { nodes = [], edges = [], expectedVersion = null }) {
+export function saveGraph(sessionId, { nodes = [] as any[], edges = [] as any[], expectedVersion = null as number | null }) {
   const db = getDb();
   const sessionExists = db
     .prepare("SELECT 1 FROM sessions WHERE id = ?")
@@ -153,7 +164,7 @@ export function saveGraph(sessionId, { nodes = [], edges = [], expectedVersion =
 
   const versionRow = db
     .prepare("SELECT graph_version AS graphVersion FROM sessions WHERE id = ?")
-    .get(sessionId);
+    .get(sessionId) as { graphVersion?: number } | undefined;
   const currentVersion = versionRow?.graphVersion ?? 0;
   if (
     typeof expectedVersion === "number" &&
@@ -209,9 +220,9 @@ export function saveGraph(sessionId, { nodes = [], edges = [], expectedVersion =
       sessionId,
     );
 
-    return db
+    return (db
       .prepare("SELECT graph_version AS graphVersion FROM sessions WHERE id = ?")
-      .get(sessionId).graphVersion;
+      .get(sessionId) as { graphVersion: number }).graphVersion;
   });
 
   const nextVersion = tx();
@@ -239,7 +250,7 @@ export function getStyleSheet(sessionId) {
     .prepare(
       "SELECT style_sheet AS styleSheet, style_sheet_enabled AS styleSheetEnabled FROM sessions WHERE id = ?",
     )
-    .get(sessionId);
+    .get(sessionId) as StyleSheetRow | undefined;
   if (!row) return null;
   let parsed = null;
   if (row.styleSheet) {

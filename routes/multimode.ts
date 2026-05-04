@@ -11,13 +11,13 @@ import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
 function sendSse(res, event, data) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function validateModeration(ctx: RouteRuntimeContext, moderation) {
+function validateModeration(ctx: RuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
@@ -34,7 +34,8 @@ function sequenceStatus(returned, requested) {
   return "complete";
 }
 
-export function registerMultimodeRoutes(app, ctx: RouteRuntimeContext) {
+export function registerMultimodeRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.post("/api/generate/multimode", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";
@@ -98,14 +99,15 @@ export function registerMultimodeRoutes(app, ctx: RouteRuntimeContext) {
         sendSse(res, "error", { error: moderationCheck.error, code: finishErrorCode, status: 400, requestId });
         return;
       }
-      const refCheck = validateAndNormalizeRefs(references);
-      if (refCheck.error) {
+      const refCheckResult = validateAndNormalizeRefs(references);
+      if (refCheckResult.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
-        finishErrorCode = refCheck.code;
-        sendSse(res, "error", { error: refCheck.error, code: refCheck.code, status: 400, requestId });
+        finishErrorCode = refCheckResult.code;
+        sendSse(res, "error", { error: refCheckResult.error, code: refCheckResult.code, status: 400, requestId });
         return;
       }
+      const refCheck = refCheckResult as Extract<typeof refCheckResult, { refs: string[] }>;
       const referencePayload = summarizeReferencePayload(references);
 
       startJob({
@@ -172,9 +174,9 @@ export function registerMultimodeRoutes(app, ctx: RouteRuntimeContext) {
       const returned = generated.images.length;
       const status = sequenceStatus(returned, maxImages);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      const images = [];
+      const images: any[] = [];
 
-      for (const [index, image] of generated.images.entries()) {
+      for (const [index, image] of generated.images.entries() as IterableIterator<[number, any]>) {
         const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
         const filename = `${Date.now()}_${rand}_multimode_${index}.${format}`;
         const meta = {

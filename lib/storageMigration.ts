@@ -135,7 +135,7 @@ export async function inspectGeneratedStorage(ctx, options: any = {}) {
   try {
     const candidates = options.legacyDirs || await getLegacyGeneratedCandidates(ctx, env);
     const targetFileCount = await countFiles(targetDir);
-    const legacySources = [];
+    const legacySources: Array<{ path: any; fileCount: number }> = [];
 
     for (const candidate of candidates) {
       if (isSameOrInside(candidate, targetDir) || isSameOrInside(targetDir, candidate)) continue;
@@ -201,7 +201,7 @@ export async function inspectGeneratedStorage(ctx, options: any = {}) {
 }
 
 async function expandOneLevelCandidates(patterns) {
-  const candidates = [];
+  const candidates: string[] = [];
   for (const [baseDir, segments] of patterns) {
     if (!baseDir) continue;
     candidates.push(...await expandOneLevelPattern(baseDir, segments));

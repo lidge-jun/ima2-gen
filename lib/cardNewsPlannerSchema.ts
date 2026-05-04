@@ -189,7 +189,7 @@ function validateTextField(field, path, errors) {
 }
 
 export function validatePlannerOutput(output, roleTemplate) {
-  const errors = [];
+  const errors: string[] = [];
   if (!output || typeof output !== "object" || Array.isArray(output)) {
     return { ok: false, repaired: false, errors: ["output must be an object"] };
   }

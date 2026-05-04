@@ -89,7 +89,7 @@ export function normalizeGenerationFailure(lastErr, options: any = {}) {
   }
   // Empty response with metadata → likely a technical limitation (unsupported size/quality/model)
   if (typeof lastErr?.eventCount === "number") {
-    const meta = [];
+    const meta: string[] = [];
     if (lastErr.size) meta.push(`size=${lastErr.size}`);
     if (lastErr.quality) meta.push(`quality=${lastErr.quality}`);
     if (lastErr.model) meta.push(`model=${lastErr.model}`);

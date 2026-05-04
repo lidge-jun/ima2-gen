@@ -22,9 +22,9 @@ import {
   listDiscoveryCandidates,
   reviewDiscoveryCandidate,
 } from "../lib/promptImport/discoveryRegistry.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
 
-function promptImportLimits(ctx: RouteRuntimeContext) {
+function promptImportLimits(ctx: RuntimeContext) {
   return {
     maxFileBytesForPreview: ctx.config.limits.promptImportMaxFileBytes,
     maxPromptCandidatesPerFile: ctx.config.limits.promptImportMaxCandidatesPerFile,
@@ -77,7 +77,7 @@ function normalizeLocalSource(source) {
   };
 }
 
-async function buildPreview(req, ctx: RouteRuntimeContext) {
+async function buildPreview(req, ctx: RuntimeContext) {
   const body = req.body || {};
   const rawSource = body.source || body;
   const kind = rawSource.kind === "github" ? "github" : "local";
@@ -124,18 +124,18 @@ function normalizeFolderInput(body) {
   return normalizeGitHubFolderSource(input);
 }
 
-async function buildFolderFiles(req, ctx: RouteRuntimeContext) {
+async function buildFolderFiles(req, ctx: RuntimeContext) {
   const limits = promptImportLimits(ctx);
   const source = normalizeFolderInput(req.body || {});
   return fetchGitHubFolderFiles(source, limits);
 }
 
-async function buildFolderPreview(req, ctx: RouteRuntimeContext) {
+async function buildFolderPreview(req, ctx: RuntimeContext) {
   const limits = promptImportLimits(ctx);
   const source = normalizeFolderInput(req.body || {});
   const paths = Array.isArray(req.body?.paths) ? req.body.paths : [];
   const selected = await fetchSelectedGitHubFolderFiles(source, paths, limits);
-  const candidates = [];
+  const candidates: any[] = [];
   const warnings = [...selected.warnings];
 
   for (const file of selected.files) {
@@ -165,7 +165,7 @@ async function buildFolderPreview(req, ctx: RouteRuntimeContext) {
   }
   return {
     source,
-    files: selected.files.map(({ text, contentHash, ...file }) => file),
+    files: selected.files.map(({ text: _t, contentHash: _h, ...file }: any) => file),
     candidates: candidates.slice(0, limits.maxPromptCandidatesPerImport),
     warnings,
   };
@@ -218,7 +218,8 @@ function commitCandidates(candidates, folderId, limits) {
   return result;
 }
 
-export function registerPromptImportRoutes(app, ctx: RouteRuntimeContext) {
+export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.get("/api/prompts/import/curated-sources", async (_req, res) => {
     try {
       res.json(await getPromptImportSources(ctx));

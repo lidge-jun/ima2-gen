@@ -10,8 +10,8 @@ import { logEvent, logError } from "../lib/logger.js";
 import { hasPngAlphaChannel, parsePngInfo } from "../lib/pngInfo.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-function validateModeration(ctx: RouteRuntimeContext, moderation) {
+import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
+function validateModeration(ctx: RuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
@@ -46,7 +46,7 @@ function validateEditMask(imageB64, mask) {
     return { error: "mask must be a PNG data URL or base64 string", code: "INVALID_EDIT_MASK" };
   }
   const maskCheck = decodePngDataUrl(mask, "INVALID_EDIT_MASK_BASE64", "INVALID_EDIT_MASK_PNG");
-  if (maskCheck.error) return maskCheck;
+  if (maskCheck.error || !maskCheck.buffer || !maskCheck.info) return maskCheck;
   if (maskCheck.buffer.length > MAX_EDIT_MASK_BYTES) {
     return { error: "mask is too large", code: "EDIT_MASK_TOO_LARGE" };
   }
@@ -54,14 +54,15 @@ function validateEditMask(imageB64, mask) {
     return { error: "mask PNG must include an alpha channel", code: "EDIT_MASK_NO_ALPHA" };
   }
   const imageCheck = decodePngDataUrl(imageB64, "INVALID_EDIT_IMAGE_BASE64", "INVALID_EDIT_IMAGE_PNG");
-  if (imageCheck.error) return imageCheck;
+  if (imageCheck.error || !imageCheck.info) return imageCheck;
   if (imageCheck.info.width !== maskCheck.info.width || imageCheck.info.height !== maskCheck.info.height) {
     return { error: "mask dimensions must match image dimensions", code: "EDIT_MASK_DIMENSION_MISMATCH" };
   }
   return { mask: maskCheck.b64, maskBytes: maskCheck.buffer.length };
 }
 
-export function registerEditRoutes(app, ctx: RouteRuntimeContext) {
+export function registerEditRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.post("/api/edit", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";

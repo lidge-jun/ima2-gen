@@ -62,7 +62,7 @@ function buildApiUrl({ owner, repo, ref, path }) {
   return `https://${GITHUB_API_HOST}/repos/${owner}/${repo}/contents${suffix}?ref=${encodeURIComponent(ref)}`;
 }
 
-function folderTags(source) {
+function folderTags(source): string[] {
   return ["github", `repo:${source.owner}/${source.repo}`, `ref:${source.ref}`, `folder:${source.path || "/"}`];
 }
 
@@ -109,7 +109,7 @@ function makeSource({ owner, repo, ref, path, fromTreeUrl = false, ambiguousTree
     path,
     htmlUrl: `https://${GITHUB_HOST}/${owner}/${repo}/tree/${encodeURIComponent(ref)}${path ? `/${path}` : ""}`,
     apiUrl: buildApiUrl({ owner, repo, ref, path }),
-    tags: [],
+    tags: [] as string[],
     fromTreeUrl,
     ambiguousTree,
   };
@@ -222,11 +222,11 @@ export async function fetchGitHubFolderFiles(source, limits) {
     throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "GitHub source is not a folder", 422);
   }
 
-  const warnings = [];
+  const warnings: string[] = [];
   if (fetched.json.length > limits.maxFolderFiles) {
     warnings.push(`folder-raw-too-large:${fetched.json.length}`);
   }
-  const files = [];
+  const files: any[] = [];
   for (const item of fetched.json) {
     const normalized = normalizeItem(source, item);
     if (normalized.warning) warnings.push(normalized.warning);
@@ -256,14 +256,15 @@ export async function fetchSelectedGitHubFolderFiles(source, selectedPaths, limi
   }
 
   const listing = await fetchGitHubFolderFiles(source, limits);
-  const allowed = new Map(listing.files.map((file) => [file.path, file]));
+  const allowed = new Map<string, any>(listing.files.map((file: any) => [file.path, file]));
   const paths = selected.map((path) => assertSelectedPath(source, path, allowed));
-  const warnings = [...listing.warnings];
-  const files = [];
-  let firstError = null;
+  const warnings: string[] = [...listing.warnings];
+  const files: any[] = [];
+  let firstError: unknown = null;
 
   for (const path of paths) {
     const file = allowed.get(path);
+    if (!file) continue;
     try {
       const fetched = await fetchRawFile(file.downloadUrl, limits);
       files.push({ ...file, text: fetched.text, contentHash: fetched.contentHash });

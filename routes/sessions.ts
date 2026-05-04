@@ -13,7 +13,7 @@ import { extractStyleSheet } from "../lib/styleSheet.js";
 import { logError, logEvent } from "../lib/logger.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 function safeJsonChars(value) {
   try {
     return JSON.stringify(value ?? null).length;
@@ -22,7 +22,8 @@ function safeJsonChars(value) {
   }
 }
 
-export function registerSessionRoutes(app, ctx: RouteRuntimeContext) {
+export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.get("/api/sessions", (_req, res) => {
     try {
       res.json({ sessions: listSessions() });

@@ -1,7 +1,7 @@
 import type OpenAI from "openai";
-import type { config as runtimeConfig } from "../config.js";
+import { config as runtimeConfigDefault } from "../config.js";
 
-export type AppConfig = typeof runtimeConfig;
+export type AppConfig = typeof runtimeConfigDefault;
 export type ApiKeySource = "env" | "oauth" | "config" | "none" | undefined;
 export type OAuthReadyState = "starting" | "ready" | "failed" | "disabled" | undefined;
 
@@ -34,6 +34,40 @@ export type RuntimeContextOverrides = Partial<RuntimeContext>;
 export type RouteRuntimeContext =
   & Omit<Partial<RuntimeContext>, "config">
   & { config?: { [K in keyof AppConfig]?: Partial<AppConfig[K]> } };
+
+/** Normalize a possibly-Partial RouteRuntimeContext into a strict RuntimeContext.
+ *
+ *  - Production routes/lib receive a fully-populated ctx at runtime, so missing
+ *    fields here only happen in tests that pass minimal fixtures.
+ *  - Missing config nests fall back to the real `runtimeConfig` import so deep
+ *    consumers (storage paths, ports) keep working under tests.
+ *
+ *  Use this at the top of any function that crosses from `RouteRuntimeContext`
+ *  into deep typed code. Per GPT Pro's P05 review: RouteRuntimeContext stays
+ *  boundary-only; deep lib code should operate on strict RuntimeContext. */
+export function requireRuntimeContext(ctx: RouteRuntimeContext | undefined): RuntimeContext {
+  const baseConfig: AppConfig = (ctx?.config && Object.keys(ctx.config).length > 0
+    ? (ctx.config as AppConfig)
+    : runtimeConfigDefault);
+  return {
+    apiKey: ctx?.apiKey,
+    apiKeySource: ctx?.apiKeySource,
+    config: baseConfig,
+    hasApiKey: ctx?.hasApiKey ?? false,
+    oauthActualPort: ctx?.oauthActualPort,
+    oauthPort: ctx?.oauthPort ?? baseConfig.oauth?.proxyPort ?? 11782,
+    oauthReadyPromise: ctx?.oauthReadyPromise ?? null,
+    oauthReadyState: ctx?.oauthReadyState,
+    oauthUrl: ctx?.oauthUrl ?? `http://127.0.0.1:${baseConfig.oauth?.proxyPort ?? 11782}`,
+    openai: ctx?.openai ?? null,
+    packageVersion: ctx?.packageVersion ?? "0.0.0",
+    rootDir: ctx?.rootDir ?? process.cwd(),
+    serverActualPort: ctx?.serverActualPort,
+    serverConfiguredPort: ctx?.serverConfiguredPort ?? baseConfig.server?.port ?? 11783,
+    serverUrl: ctx?.serverUrl ?? `http://localhost:${ctx?.serverActualPort ?? baseConfig.server?.port ?? 11783}`,
+    startedAt: ctx?.startedAt ?? Date.now(),
+  };
+}
 
 /** Stub-friendly default for tests. Do NOT use in production boot paths. */
 export function createTestRuntimeContext(over: RuntimeContextOverrides = {}): RuntimeContext {

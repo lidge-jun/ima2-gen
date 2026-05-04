@@ -51,7 +51,7 @@ describe("multimode backend contract", () => {
     assert.match(oauth, /Do not create a storyboard sheet/);
     assert.match(oauth, /Do not put multiple panels inside one image/);
     assert.match(adapter, /async function parseStream/);
-    assert.match(adapter, /const images = \[\]/);
+    assert.match(adapter, /const images: ParsedImage\[\] = \[\]/);
     assert.match(adapter, /images\.push\(/);
     assert.match(adapter, /extraIgnored/);
     assert.match(adapter, /function tools\(webSearchEnabled/);

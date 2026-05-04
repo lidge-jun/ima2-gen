@@ -12,15 +12,16 @@ import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
-import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-function validateModeration(ctx: RouteRuntimeContext, moderation) {
+import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
+function validateModeration(ctx: RuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
   return { moderation };
 }
 
-export function registerGenerateRoutes(app, ctx: RouteRuntimeContext) {
+export function registerGenerateRoutes(app, ctxRaw: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxRaw);
   app.post("/api/generate", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";
@@ -90,13 +91,14 @@ export function registerGenerateRoutes(app, ctx: RouteRuntimeContext) {
         },
       });
 
-      const refCheck = validateAndNormalizeRefs(references);
-      if (refCheck.error) {
+      const refCheckResult = validateAndNormalizeRefs(references);
+      if (refCheckResult.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
-        finishErrorCode = refCheck.code;
-        return res.status(400).json({ error: refCheck.error, code: refCheck.code });
+        finishErrorCode = refCheckResult.code;
+        return res.status(400).json({ error: refCheckResult.error, code: refCheckResult.code });
       }
+      const refCheck = refCheckResult as Extract<typeof refCheckResult, { refs: string[] }>;
 
       const client = req.get("x-ima2-client") || "ui";
       const referenceDiagnostics = refCheck.referenceDiagnostics || [];
@@ -160,8 +162,8 @@ export function registerGenerateRoutes(app, ctx: RouteRuntimeContext) {
       };
 
       const results = await Promise.allSettled(Array.from({ length: count }, generateOne));
-      const images = [];
-      let totalUsage = null;
+      const images: Array<{ image: string; filename: string; revisedPrompt: any }> = [];
+      let totalUsage: Record<string, number> | null = null;
       let totalWebSearchCalls = 0;
       for (const r of results) {
         if (r.status === "fulfilled" && r.value.b64) {
@@ -209,9 +211,12 @@ export function registerGenerateRoutes(app, ctx: RouteRuntimeContext) {
           });
           if (r.value.usage) {
             if (!totalUsage) totalUsage = { ...r.value.usage };
-            else Object.keys(r.value.usage).forEach((k) => {
-              if (typeof r.value.usage[k] === "number") totalUsage[k] = (totalUsage[k] || 0) + r.value.usage[k];
-            });
+            else {
+              const tu = totalUsage;
+              Object.keys(r.value.usage).forEach((k) => {
+                if (typeof r.value.usage[k] === "number") tu[k] = (tu[k] || 0) + r.value.usage[k];
+              });
+            }
           }
           if (typeof r.value.webSearchCalls === "number") totalWebSearchCalls += r.value.webSearchCalls;
         } else if (r.status === "rejected") {
