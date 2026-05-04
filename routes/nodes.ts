@@ -12,7 +12,7 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { resolveProviderOptions } from "../lib/providerOptions.js";
 import { generateViaResponses, editViaResponses } from "../lib/responsesImageAdapter.js";
-import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
+import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "../lib/generationErrors.js";
 import { logEvent, logError } from "../lib/logger.js";
 
 import { errInfo } from "../lib/errInfo.js";
@@ -285,7 +285,7 @@ export function registerNodeRoutes(app, ctxRaw: RouteRuntimeContext) {
           lastErr = new Error("Empty response (safety refusal)");
         } catch (e) {
           lastErr = e;
-          if (isNonRetryableGenerationError(e)) break;
+          if (isNonRetryableGenerationError(e as UpstreamErr | null | undefined)) break;
         }
         if (attempt < MAX_RETRIES) {
           logEvent("node", "retry", {

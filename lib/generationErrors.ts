@@ -14,48 +14,74 @@ const PASSTHROUGH_CODES = new Set([
 
 const SAFETY_CODES = new Set(["SAFETY_REFUSAL", "MODERATION_REFUSED", "moderation_blocked"]);
 
-function has4kSize(size) {
+function has4kSize(size: unknown) {
   if (typeof size !== "string") return false;
-  const [w, h] = size.split("x").map((part) => Number(part));
+  const [w, h] = size.split("x").map((part: string) => Number(part));
   return Number.isFinite(w) && Number.isFinite(h) && Math.max(w, h) >= 3840;
 }
 
-function diagnosticReasonFrom(err) {
+export interface UpstreamErr {
+  diagnosticReason?: string;
+  referenceMismatchCount?: number;
+  size?: string;
+  upstreamCode?: string;
+  upstreamType?: string;
+  upstreamParam?: string;
+  code?: string;
+  message?: string;
+  status?: number;
+  cause?: unknown;
+  eventType?: string;
+  eventCount?: number;
+  eventTypes?: unknown;
+  quality?: string;
+  model?: string;
+  refsCount?: number;
+  inputImageCount?: number;
+  referenceDiagnostics?: unknown;
+  retryKind?: string;
+  referencesDroppedOnRetry?: boolean;
+  developerPromptDroppedOnRetry?: boolean;
+  name?: string;
+  stack?: string;
+}
+
+function diagnosticReasonFrom(err: UpstreamErr | null | undefined) {
   if (typeof err?.diagnosticReason === "string" && err.diagnosticReason) return err.diagnosticReason;
   if (Number(err?.referenceMismatchCount) > 0) return "reference_mime_mismatch_candidate";
   if (has4kSize(err?.size)) return "experimental_4k_empty_response";
   return null;
 }
 
-export function errorCodeFrom(err) {
+export function errorCodeFrom(err: UpstreamErr | null | undefined): string {
   if (!err) return "UNKNOWN";
   const upstreamCode = classifyUpstreamErrorCode(err.upstreamCode);
   if (upstreamCode !== "UNKNOWN") return upstreamCode;
   const upstreamType = classifyUpstreamErrorCode(err.upstreamType);
   if (upstreamType !== "UNKNOWN") return upstreamType;
   // Known app-level codes pass through directly (before message heuristic)
-  if (PASSTHROUGH_CODES.has(err.code) || SAFETY_CODES.has(err.code)) return err.code;
+  if (PASSTHROUGH_CODES.has(err.code as string) || SAFETY_CODES.has(err.code as string)) return err.code as string;
   const rawCode = classifyUpstreamErrorCode(err.code);
   if (rawCode !== "UNKNOWN") return rawCode;
   const direct = classifyUpstreamError(err.message);
   if (direct !== "UNKNOWN") return direct;
   const status = Number(err.status);
-  if (Number.isFinite(status) && status >= 400 && status < 500 && !SAFETY_CODES.has(err.code)) {
+  if (Number.isFinite(status) && status >= 400 && status < 500 && !SAFETY_CODES.has(err.code as string)) {
     return "INVALID_REQUEST";
   }
   if (typeof err.code === "string" && err.code) return err.code;
-  if (err.cause) return errorCodeFrom(err.cause);
+  if (err.cause) return errorCodeFrom(err.cause as UpstreamErr);
   return "UNKNOWN";
 }
 
-export function isNonRetryableGenerationError(err) {
+export function isNonRetryableGenerationError(err: UpstreamErr | null | undefined) {
   const code = errorCodeFrom(err);
   if (SAFETY_CODES.has(code)) return false;
   const status = Number(err?.status);
   return code === "INVALID_REQUEST" || code === "OAUTH_IMAGE_TIMEOUT" || (Number.isFinite(status) && status >= 400 && status < 500);
 }
 
-export function statusForErrorCode(code, fallback = 500) {
+export function statusForErrorCode(code: string, fallback = 500) {
   if (code === "OAUTH_UNAVAILABLE" || code === "NETWORK_FAILED") return 503;
   if (code === "AUTH_CHATGPT_EXPIRED" || code === "AUTH_API_KEY_INVALID") return 401;
   if (code === "API_KEY_REQUIRED") return 401;
@@ -66,7 +92,7 @@ export function statusForErrorCode(code, fallback = 500) {
   return fallback;
 }
 
-export function normalizeGenerationFailure(lastErr, options: any = {}) {
+export function normalizeGenerationFailure(lastErr: UpstreamErr | null | undefined, options: any = {}) {
   const code = errorCodeFrom(lastErr);
   if (PASSTHROUGH_CODES.has(code)) {
     const err: any = new Error(lastErr?.message || options.proxyMessage || "OAuth proxy/network failure");

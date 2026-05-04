@@ -6,7 +6,7 @@ import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { resolveProviderOptions } from "../lib/providerOptions.js";
 import { generateViaResponses } from "../lib/responsesImageAdapter.js";
-import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
+import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "../lib/generationErrors.js";
 import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
@@ -150,7 +150,7 @@ export function registerGenerateRoutes(app, ctxRaw: RouteRuntimeContext) {
             lastErr = new Error("Empty response (safety refusal)");
           } catch (e) {
             lastErr = e;
-            if (isNonRetryableGenerationError(e)) break;
+            if (isNonRetryableGenerationError(e as UpstreamErr | null | undefined)) break;
           }
           if (attempt < MAX_RETRIES) {
             logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });

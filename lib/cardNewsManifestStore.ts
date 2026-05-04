@@ -1,24 +1,60 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { requireRuntimeContext, type RouteRuntimeContext } from "./runtimeContext.js";
 
 import { errInfo } from "./errInfo.js";
-export async function writeCardNewsManifest(generatedDir, manifest) {
+
+interface CardNewsManifest {
+  setId: string;
+  title?: string;
+  topic?: string;
+  imageTemplateId?: string;
+  roleTemplateId?: string;
+  size?: string;
+  generationStrategy?: string;
+  cardCount?: number;
+  createdAt?: number;
+  sessionId?: string | null;
+  cards?: ManifestCard[];
+  [key: string]: unknown;
+}
+
+interface ManifestCard {
+  cardId?: string;
+  id?: string;
+  cardOrder?: number;
+  order?: number;
+  role?: string;
+  headline?: string;
+  body?: string;
+  visualPrompt?: string;
+  textFields?: unknown;
+  references?: unknown;
+  locked?: boolean;
+  status?: string;
+  error?: string | { message?: string } | null;
+  imageFilename?: string | null;
+  url?: string;
+  [key: string]: unknown;
+}
+
+export async function writeCardNewsManifest(generatedDir: string, manifest: CardNewsManifest) {
   const dir = join(generatedDir, "cardnews", manifest.setId);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));
   return { dir, manifestFilename: "manifest.json" };
 }
 
-export async function writeCardSidecar(dir, filename, sidecar) {
+export async function writeCardSidecar(dir: string, filename: string, sidecar: unknown) {
   await writeFile(join(dir, filename), JSON.stringify(sidecar, null, 2));
 }
 
-function cardUrl(setId, imageFilename) {
+function cardUrl(setId: string, imageFilename: string | null | undefined) {
   if (!imageFilename) return undefined;
   return `/generated/cardnews/${encodeURIComponent(setId)}/${encodeURIComponent(imageFilename)}`;
 }
 
-function assertSafeSetId(setId) {
+function assertSafeSetId(setId: unknown): string {
   if (typeof setId === "string" && /^[a-zA-Z0-9_-]{3,120}$/.test(setId)) return setId;
   const err: any = new Error("Card News set not found");
   err.status = 404;
@@ -26,7 +62,7 @@ function assertSafeSetId(setId) {
   throw err;
 }
 
-function manifestToPlan(manifest) {
+function manifestToPlan(manifest: CardNewsManifest) {
   return {
     setId: manifest.setId,
     title: manifest.title || "Untitled card news",
@@ -46,25 +82,28 @@ function manifestToPlan(manifest) {
       references: card.references || [],
       locked: !!card.locked,
       status: card.status || "generated",
-      error: card.error?.message || card.error || undefined,
+      error: (typeof card.error === "object" && card.error && "message" in card.error
+        ? card.error.message
+        : (typeof card.error === "string" ? card.error : undefined)),
       imageFilename: card.imageFilename || undefined,
       url: card.url || cardUrl(manifest.setId, card.imageFilename),
     })),
   };
 }
 
-export async function readCardNewsSetPlan(ctx, setId) {
-  return manifestToPlan(await readCardNewsManifest(ctx, setId));
+export async function readCardNewsSetPlan(ctxIn: RouteRuntimeContext, setId: string) {
+  return manifestToPlan(await readCardNewsManifest(ctxIn, setId));
 }
 
-export async function readCardNewsManifest(ctx, setId) {
+export async function readCardNewsManifest(ctxIn: RouteRuntimeContext, setId: string): Promise<CardNewsManifest> {
+  const ctx = requireRuntimeContext(ctxIn);
   const safeSetId = assertSafeSetId(setId);
   try {
     const raw = await readFile(
       join(ctx.config.storage.generatedDir, "cardnews", safeSetId, "manifest.json"),
       "utf8",
     );
-    return JSON.parse(raw);
+    return JSON.parse(raw) as CardNewsManifest;
   } catch (err: any) {
     if (err.code === "CARD_NEWS_SET_NOT_FOUND") throw err;
     const notFound: any = new Error("Card News set not found");
@@ -74,7 +113,8 @@ export async function readCardNewsManifest(ctx, setId) {
   }
 }
 
-export async function listCardNewsSets(ctx) {
+export async function listCardNewsSets(ctxIn: RouteRuntimeContext) {
+  const ctx = requireRuntimeContext(ctxIn);
   const root = join(ctx.config.storage.generatedDir, "cardnews");
   const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
   const sets: any[] = [];
@@ -82,7 +122,7 @@ export async function listCardNewsSets(ctx) {
     if (!entry.isDirectory()) continue;
     try {
       const raw = await readFile(join(root, entry.name, "manifest.json"), "utf8");
-      const manifest = JSON.parse(raw);
+      const manifest = JSON.parse(raw) as CardNewsManifest;
       const first = (manifest.cards || []).find((card) => card.imageFilename);
       sets.push({
         setId: manifest.setId || entry.name,

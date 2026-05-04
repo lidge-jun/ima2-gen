@@ -1,11 +1,13 @@
+import type { RouteRuntimeContext } from "./runtimeContext.js";
+
 const FALLBACK_IMAGE_MODEL = "gpt-5.4-mini";
 const VALID_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]);
 const UNSUPPORTED_IMAGE_MODELS = new Set(["gpt-5.3-codex-spark"]);
 const FALLBACK_REASONING_EFFORT = "none";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
 
-export function normalizeReasoningEffort(ctx, rawEffort) {
-  const configured = ctx?.config?.imageModels;
+export function normalizeReasoningEffort(ctx: RouteRuntimeContext | null | undefined, rawEffort: unknown) {
+  const configured = (ctx?.config as { imageModels?: { reasoningEffort?: string; validReasoningEfforts?: Set<string> } } | undefined)?.imageModels;
   const fallback = configured?.reasoningEffort ?? FALLBACK_REASONING_EFFORT;
   const valid = configured?.validReasoningEfforts ?? VALID_REASONING_EFFORTS;
 
@@ -22,8 +24,8 @@ export function normalizeReasoningEffort(ctx, rawEffort) {
   return { effort: rawEffort };
 }
 
-export function normalizeImageModel(ctx, rawModel) {
-  const configured = ctx?.config?.imageModels;
+export function normalizeImageModel(ctx: RouteRuntimeContext | null | undefined, rawModel: unknown) {
+  const configured = (ctx?.config as { imageModels?: { default?: string; valid?: Set<string>; unsupported?: Set<string> } } | undefined)?.imageModels;
   const fallback = configured?.default ?? FALLBACK_IMAGE_MODEL;
   const valid = configured?.valid ?? VALID_IMAGE_MODELS;
   const unsupported = configured?.unsupported ?? UNSUPPORTED_IMAGE_MODELS;

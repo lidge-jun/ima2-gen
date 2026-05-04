@@ -2,13 +2,113 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ulid } from "ulid";
 import { generateViaOAuth } from "./oauthProxy.js";
+import type { OAuthReferenceRef } from "./oauthProxy/references.js";
 import { readTemplateBaseB64 } from "./cardNewsTemplateStore.js";
 import { writeCardNewsManifest, writeCardSidecar } from "./cardNewsManifestStore.js";
+import { requireRuntimeContext, type RouteRuntimeContext } from "./runtimeContext.js";
 
 import { errInfo } from "./errInfo.js";
-function formatRenderedTextInstruction(textFields: any[] = []) {
+
+interface CardTextField {
+  renderMode?: string;
+  text?: string;
+  kind?: string;
+  placement?: string;
+  slotId?: string;
+  [key: string]: unknown;
+}
+
+interface CardInput {
+  id?: string;
+  cardOrder?: number;
+  order?: number;
+  role?: string;
+  headline?: string;
+  body?: string;
+  visualPrompt?: string;
+  textFields?: CardTextField[] | unknown;
+  references?: unknown[];
+  locked?: boolean;
+  [key: string]: unknown;
+}
+
+interface CardTemplate {
+  stylePrompt?: string;
+  negativePrompt?: string;
+  size?: string;
+  [key: string]: unknown;
+}
+
+interface GenerateCardSetInput {
+  setId?: string;
+  cards?: CardInput[];
+  imageTemplateId?: string;
+  quality?: string;
+  size?: string;
+  moderation?: string;
+  model?: string;
+  concurrency?: number | string;
+  requestId?: string;
+  promptMode?: string;
+  sessionId?: string | null;
+  title?: string;
+  roleTemplateId?: string;
+  [key: string]: unknown;
+}
+
+export interface CardSidecar {
+  kind: string;
+  setId: string;
+  sessionId: string | null;
+  requestId: string;
+  cardId: string;
+  cardOrder: number;
+  title: string;
+  role: string;
+  headline: string;
+  body: string;
+  textFields: CardTextField[] | unknown[];
+  imageTemplateId: string;
+  generationStrategy: string;
+  templateBase: string;
+  prompt: string;
+  visualPrompt: string;
+  imageFilename: string | null;
+  sidecarFilename: string;
+  locked: boolean;
+  status: string;
+  error: { code: string; message: string } | null;
+  createdAt: number;
+  generatedAt: number | null;
+  revisedPrompt: string | null;
+  [key: string]: unknown;
+}
+
+export interface CardStart {
+  cardOrder: number;
+  cardId: string;
+  [key: string]: unknown;
+}
+
+interface GenerateCardSetOptions {
+  generateFn?: (
+    prompt: string,
+    quality: string,
+    size: string,
+    moderation?: string,
+    references?: OAuthReferenceRef[],
+    requestId?: string | null,
+    mode?: string,
+    ctx?: RouteRuntimeContext,
+    options?: any,
+  ) => Promise<{ b64: string; revisedPrompt?: string | null; usage?: unknown; webSearchCalls?: number }>;
+  onCardStart?: (card: CardStart) => void | Promise<void>;
+  onCardDone?: (sidecar: CardSidecar) => void | Promise<void>;
+}
+
+function formatRenderedTextInstruction(textFields: CardTextField[] = []) {
   const visible = (Array.isArray(textFields) ? textFields : [])
-    .filter((field: any) => field?.renderMode === "in-image" && field.text);
+    .filter((field: CardTextField) => field?.renderMode === "in-image" && field.text);
   if (!visible.length) {
     return [
       "Do not render readable text unless explicitly listed.",
@@ -17,7 +117,7 @@ function formatRenderedTextInstruction(textFields: any[] = []) {
   }
   return [
     "Render only the following readable text items exactly as written:",
-    ...visible.map((field: any) => {
+    ...visible.map((field: CardTextField) => {
       const slot = field.slotId ? ` in slot ${field.slotId}` : "";
       return `- ${field.kind} at ${field.placement}${slot}: "${field.text}"`;
     }),
@@ -26,29 +126,30 @@ function formatRenderedTextInstruction(textFields: any[] = []) {
   ].join("\n");
 }
 
-export function assemblePrompt(template, card) {
+export function assemblePrompt(template: CardTemplate, card: CardInput) {
   return [
     template.stylePrompt,
     card.visualPrompt,
-    formatRenderedTextInstruction(card.textFields),
+    formatRenderedTextInstruction(Array.isArray(card.textFields) ? card.textFields as CardTextField[] : []),
     template.negativePrompt ? `Avoid: ${template.negativePrompt}` : "",
   ].filter(Boolean).join("\n");
 }
 
-async function mapLimit(items, limit, fn) {
-  const out = new Array(items.length);
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
   let next = 0;
   async function worker() {
     while (next < items.length) {
       const i = next++;
-      out[i] = await fn(items[i], i);
+      out[i] = await fn(items[i] as T, i);
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return out;
 }
 
-export async function generateCardNewsSet(ctx, input, options: any = {}) {
+export async function generateCardNewsSet(ctxIn: RouteRuntimeContext, input: GenerateCardSetInput, options: GenerateCardSetOptions = {}) {
+  const ctx = requireRuntimeContext(ctxIn);
   const setId = input.setId || `cs_${ulid()}`;
   const cards = Array.isArray(input.cards) ? input.cards : [];
   const cardsToGenerate = cards.filter((card) => !card.locked);
@@ -70,14 +171,14 @@ export async function generateCardNewsSet(ctx, input, options: any = {}) {
   const model = input.model || ctx.config.imageModels.default;
   const generateFn = options.generateFn || generateViaOAuth;
 
-  const generatedCards = await mapLimit(cardsToGenerate, Number(input.concurrency) || 2, async (card, index) => {
+  const generatedCards = await mapLimit(cardsToGenerate, Number(input.concurrency) || 2, async (card: CardInput, index: number) => {
     const cardOrder = Number(card.cardOrder || card.order || index + 1);
     const baseFilename = `card-${String(cardOrder).padStart(2, "0")}`;
     const imageFilename = `${baseFilename}.png`;
     const sidecarFilename = `${baseFilename}.json`;
     const requestId = input.requestId || `${setId}_${baseFilename}`;
     const prompt = assemblePrompt(template, card);
-    let result: { b64?: string; revisedPrompt?: string } | null = null;
+    let result: { b64?: string; revisedPrompt?: string | null } | null = null;
     let error: { code: string; message: string } | null = null;
     if (typeof options.onCardStart === "function") {
       await options.onCardStart({ ...card, cardOrder, cardId: card.id || `card_${cardOrder}` });
@@ -88,7 +189,7 @@ export async function generateCardNewsSet(ctx, input, options: any = {}) {
         quality,
         size,
         moderation,
-        [templateB64, ...(Array.isArray(card.references) ? card.references : [])],
+        [templateB64, ...(Array.isArray(card.references) ? (card.references as string[]) : [])],
         requestId,
         input.promptMode || "direct",
         ctx,

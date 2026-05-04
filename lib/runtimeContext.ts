@@ -37,36 +37,73 @@ export type RouteRuntimeContext =
 
 /** Normalize a possibly-Partial RouteRuntimeContext into a strict RuntimeContext.
  *
- *  - Production routes/lib receive a fully-populated ctx at runtime, so missing
- *    fields here only happen in tests that pass minimal fixtures.
- *  - Missing config nests fall back to the real `runtimeConfig` import so deep
- *    consumers (storage paths, ports) keep working under tests.
+ *  IMPORTANT: This MUTATES `ctx` in place and returns the same object (object
+ *  identity preserved). The runtime mutates fields on the original ctx after
+ *  route registration — e.g. `markOAuthReady()` flips `oauthReadyState`,
+ *  `startServer()` sets `serverActualPort` once the listener binds. Snapshotting
+ *  here would break those updates because deep code (like `waitForOAuthReady`)
+ *  re-reads `ctx.oauthReadyState`.
+ *
+ *  - Live fields (oauthReadyState, oauthReadyPromise, serverActualPort, openai,
+ *    apiKey, ...) keep their original references via in-place fill.
+ *  - Missing config nests are merged from `runtimeConfigDefault` per top-level
+ *    key, so partial fixtures (e.g. `{ config: { storage: {...} } }`) still see
+ *    real `oauth`/`ids`/`limits` defaults at deep call sites.
  *
  *  Use this at the top of any function that crosses from `RouteRuntimeContext`
  *  into deep typed code. Per GPT Pro's P05 review: RouteRuntimeContext stays
  *  boundary-only; deep lib code should operate on strict RuntimeContext. */
 export function requireRuntimeContext(ctx: RouteRuntimeContext | undefined): RuntimeContext {
-  const baseConfig: AppConfig = (ctx?.config && Object.keys(ctx.config).length > 0
-    ? (ctx.config as AppConfig)
-    : runtimeConfigDefault);
-  return {
-    apiKey: ctx?.apiKey,
-    apiKeySource: ctx?.apiKeySource,
-    config: baseConfig,
-    hasApiKey: ctx?.hasApiKey ?? false,
-    oauthActualPort: ctx?.oauthActualPort,
-    oauthPort: ctx?.oauthPort ?? baseConfig.oauth?.proxyPort ?? 11782,
-    oauthReadyPromise: ctx?.oauthReadyPromise ?? null,
-    oauthReadyState: ctx?.oauthReadyState,
-    oauthUrl: ctx?.oauthUrl ?? `http://127.0.0.1:${baseConfig.oauth?.proxyPort ?? 11782}`,
-    openai: ctx?.openai ?? null,
-    packageVersion: ctx?.packageVersion ?? "0.0.0",
-    rootDir: ctx?.rootDir ?? process.cwd(),
-    serverActualPort: ctx?.serverActualPort,
-    serverConfiguredPort: ctx?.serverConfiguredPort ?? baseConfig.server?.port ?? 11783,
-    serverUrl: ctx?.serverUrl ?? `http://localhost:${ctx?.serverActualPort ?? baseConfig.server?.port ?? 11783}`,
-    startedAt: ctx?.startedAt ?? Date.now(),
-  };
+  const target = (ctx ?? {}) as RouteRuntimeContext & Record<string, unknown>;
+  target.config = mergeRuntimeConfig(target.config);
+  if (target.apiKey === undefined && Object.prototype.hasOwnProperty.call(target, "apiKey") === false) {
+    target.apiKey = undefined;
+  }
+  if (target.hasApiKey === undefined) target.hasApiKey = false;
+  if (target.oauthPort === undefined) {
+    target.oauthPort = (target.config as AppConfig).oauth?.proxyPort ?? 11782;
+  }
+  if (target.oauthReadyPromise === undefined) target.oauthReadyPromise = null;
+  if (target.oauthUrl === undefined) {
+    target.oauthUrl = `http://127.0.0.1:${(target.config as AppConfig).oauth?.proxyPort ?? target.oauthPort ?? 11782}`;
+  }
+  if (target.openai === undefined) target.openai = null;
+  if (target.packageVersion === undefined) target.packageVersion = "0.0.0";
+  if (target.rootDir === undefined) target.rootDir = process.cwd();
+  if (target.serverConfiguredPort === undefined) {
+    target.serverConfiguredPort = (target.config as AppConfig).server?.port ?? 11783;
+  }
+  if (target.serverUrl === undefined) {
+    const port = target.serverActualPort ?? target.serverConfiguredPort ?? 11783;
+    target.serverUrl = `http://localhost:${port}`;
+  }
+  if (target.startedAt === undefined) target.startedAt = Date.now();
+  return target as unknown as RuntimeContext;
+}
+
+/** Per-top-level-key merge: caller's nested config keys win, missing nests
+ *  fall back to `runtimeConfigDefault`. Avoids deep-clone snapshotting so
+ *  callers can still observe live-mutated config values if they exist. */
+function mergeRuntimeConfig(
+  partial: RouteRuntimeContext["config"] | undefined,
+): AppConfig {
+  if (!partial) return runtimeConfigDefault;
+  const merged: Record<string, unknown> = {};
+  for (const k of Object.keys(runtimeConfigDefault) as Array<keyof AppConfig>) {
+    const fromPartial = (partial as Record<string, unknown>)[k as string];
+    if (fromPartial && typeof fromPartial === "object") {
+      merged[k as string] = {
+        ...(runtimeConfigDefault[k] as object),
+        ...(fromPartial as object),
+      };
+    } else {
+      merged[k as string] = runtimeConfigDefault[k];
+    }
+  }
+  for (const k of Object.keys(partial)) {
+    if (!(k in merged)) merged[k] = (partial as Record<string, unknown>)[k];
+  }
+  return merged as AppConfig;
 }
 
 /** Stub-friendly default for tests. Do NOT use in production boot paths. */

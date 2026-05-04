@@ -10,11 +10,54 @@ import { logEvent } from "./logger.js";
 // metadata durable lets the UI reconcile requestIds and eventually prune stale
 // work without losing the recovery breadcrumb.
 
-const terminalJobs = new Map(); // requestId -> terminal snapshot, active-only API stays default
+interface InflightRow {
+  request_id: string;
+  kind: string;
+  prompt?: string | null;
+  meta?: string | null;
+  session_id?: string | null;
+  parent_node_id?: string | null;
+  client_node_id?: string | null;
+  started_at: number;
+  phase?: string | null;
+  phase_at?: number | null;
+}
+
+interface InflightJob {
+  requestId: string;
+  kind: string;
+  prompt: string;
+  meta: Record<string, unknown>;
+  startedAt: number;
+  phase: string;
+  phaseAt: number;
+}
+
+interface TerminalJob {
+  requestId: string;
+  kind: string;
+  status: string;
+  startedAt: number;
+  finishedAt: number;
+  durationMs: number;
+  phase: string;
+  phaseAt: number;
+  httpStatus?: number | undefined;
+  errorCode?: string | undefined;
+  prompt?: string | null;
+  meta: Record<string, unknown>;
+}
+
+const terminalJobs = new Map<string, TerminalJob>(); // requestId -> terminal snapshot, active-only API stays default
 
 // Phases: "queued" → "streaming" (upstream connection open, waiting for image)
 //                 → "decoding" (b64 received, writing to disk)
-export function startJob({ requestId, kind, prompt, meta = {} }) {
+export function startJob({ requestId, kind, prompt, meta = {} }: {
+  requestId: string;
+  kind: string;
+  prompt?: string | null;
+  meta?: Record<string, unknown>;
+}) {
   if (!requestId) return;
   const startedAt = Date.now();
   const normalizedPrompt = typeof prompt === "string" ? prompt.slice(0, 500) : "";
@@ -58,7 +101,7 @@ export function startJob({ requestId, kind, prompt, meta = {} }) {
   });
 }
 
-export function setJobPhase(requestId, phase) {
+export function setJobPhase(requestId: string | null | undefined, phase: string) {
   if (!requestId) return;
   const j = getJob(requestId);
   if (!j) return;
@@ -68,7 +111,7 @@ export function setJobPhase(requestId, phase) {
   logEvent("inflight", "phase", { requestId, kind: j.kind, phase });
 }
 
-export function finishJob(requestId, options: any = {}) {
+export function finishJob(requestId: string | null | undefined, options: any = {}) {
   if (!requestId) return;
   const j = getJob(requestId);
   if (j) {
@@ -127,7 +170,7 @@ export function listJobs(filters: any = {}) {
   return getDb()
     .prepare(`SELECT * FROM inflight${where} ORDER BY started_at ASC`)
     .all(...params)
-    .map(rowToJob);
+    .map((row) => rowToJob(row as InflightRow));
 }
 
 export function listTerminalJobs(filters: any = {}) {
@@ -153,14 +196,14 @@ export function purgeStaleJobs(now = Date.now()) {
     .run(now - config.inflight.ttlMs);
 }
 
-function getJob(requestId) {
+function getJob(requestId: string): InflightJob | null {
   const row = getDb()
     .prepare("SELECT * FROM inflight WHERE request_id = ?")
-    .get(requestId);
+    .get(requestId) as InflightRow | undefined;
   return row ? rowToJob(row) : null;
 }
 
-function rowToJob(row) {
+function rowToJob(row: InflightRow): InflightJob {
   const meta = normalizeMeta(parseMeta(row.meta));
   const sessionId = stringOrNull(row.session_id) ?? stringOrNull(meta.sessionId);
   const parentNodeId =
@@ -183,22 +226,22 @@ function rowToJob(row) {
   };
 }
 
-function parseMeta(raw) {
+function parseMeta(raw: unknown): Record<string, unknown> {
   if (typeof raw !== "string" || !raw) return {};
   try {
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
+      ? (parsed as Record<string, unknown>)
       : {};
   } catch {
     return {};
   }
 }
 
-function normalizeMeta(meta) {
-  return meta && typeof meta === "object" && !Array.isArray(meta) ? meta : {};
+function normalizeMeta(meta: unknown): Record<string, unknown> {
+  return meta && typeof meta === "object" && !Array.isArray(meta) ? (meta as Record<string, unknown>) : {};
 }
 
-function stringOrNull(value) {
+function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
