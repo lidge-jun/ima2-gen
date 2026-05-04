@@ -1,4 +1,20 @@
-function tokenize(value) {
+import type { PromptCandidate } from "./types.js";
+
+interface RankablePromptCandidate extends Partial<PromptCandidate> {
+  id: string;
+  name: string;
+  text: string;
+  sourceFileId?: string;
+  score?: number;
+}
+
+interface RankPromptCandidatesOptions {
+  candidates: RankablePromptCandidate[];
+  query: string;
+  limit?: number;
+}
+
+function tokenize(value: unknown): string[] {
   return String(value || "")
     .toLowerCase()
     .split(/[^a-z0-9가-힣-]+/i)
@@ -6,12 +22,12 @@ function tokenize(value) {
     .filter(Boolean);
 }
 
-function includesAny(values, terms) {
+function includesAny(values: unknown[], terms: string[]): boolean {
   const haystack = values.map((value) => String(value || "").toLowerCase());
   return terms.some((term) => haystack.some((value) => value.includes(term)));
 }
 
-export function rankPromptCandidates({ candidates, query, limit }) {
+export function rankPromptCandidates({ candidates, query, limit }: RankPromptCandidatesOptions): RankablePromptCandidate[] {
   const terms = tokenize(query);
   const boundedLimit = Math.max(1, Math.min(Number(limit) || 50, 100));
   const ranked = candidates.map((candidate) => {
@@ -19,7 +35,7 @@ export function rankPromptCandidates({ candidates, query, limit }) {
     const name = String(candidate.name || "").toLowerCase();
     const tags = Array.isArray(candidate.tags) ? candidate.tags : [];
     const hints = candidate.scoreHints || {};
-    const hintValues = [
+    const hintValues: unknown[] = [
       ...(hints.modelHints || []),
       ...(hints.generationSurfaceHints || []),
       ...(hints.taskHints || []),
@@ -43,7 +59,7 @@ export function rankPromptCandidates({ candidates, query, limit }) {
   });
 
   return ranked
-    .filter((candidate) => terms.length === 0 || candidate.score > 0)
-    .sort((a, b) => b.score - a.score || String(a.name).localeCompare(String(b.name)))
+    .filter((candidate) => terms.length === 0 || (candidate.score ?? 0) > 0)
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || String(a.name).localeCompare(String(b.name)))
     .slice(0, boundedLimit);
 }

@@ -12,23 +12,25 @@ export const COMFY_ERROR = {
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
 class ComfyBridgeError extends Error {
-  constructor(code, message, status) {
+  code: string;
+  status: number;
+  constructor(code: string, message: string, status: number) {
     super(message);
     this.name = "ComfyBridgeError";
-    (this as any).code = code;
-    (this as any).status = status;
+    this.code = code;
+    this.status = status;
   }
 }
 
-function bridgeError(code, message, status) {
+function bridgeError(code: string, message: string, status: number) {
   return new ComfyBridgeError(code, message, status);
 }
 
-export function isComfyBridgeError(error) {
+export function isComfyBridgeError(error: unknown): error is ComfyBridgeError {
   return error instanceof ComfyBridgeError;
 }
 
-export function normalizeComfyOrigin(rawUrl) {
+export function normalizeComfyOrigin(rawUrl: unknown): string {
   if (typeof rawUrl !== "string" || !rawUrl.trim()) {
     throw bridgeError(COMFY_ERROR.URL_NOT_LOCAL, "ComfyUI URL is not configured.", 400);
   }
@@ -65,7 +67,7 @@ export function normalizeComfyOrigin(rawUrl) {
   return url.origin;
 }
 
-function hasEncodedSeparator(filename) {
+function hasEncodedSeparator(filename: string): boolean {
   try {
     const decoded = decodeURIComponent(filename);
     return decoded.includes("/") || decoded.includes("\\");
@@ -74,7 +76,7 @@ function hasEncodedSeparator(filename) {
   }
 }
 
-function validateFilename(filename) {
+function validateFilename(filename: unknown): string {
   if (typeof filename !== "string" || !filename.trim()) {
     throw bridgeError(COMFY_ERROR.IMAGE_INVALID, "A generated filename is required.", 400);
   }
@@ -92,12 +94,14 @@ function validateFilename(filename) {
   return filename;
 }
 
-function isInsideDirectory(parent, candidate) {
+function isInsideDirectory(parent: string, candidate: string): boolean {
   const rel = relative(parent, candidate);
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
-function sniffImage(buffer) {
+interface ImageType { ext: string; mime: string; }
+
+function sniffImage(buffer: Buffer): ImageType {
   if (
     buffer.length >= 8 &&
     buffer[0] === 0x89 &&
@@ -124,13 +128,27 @@ function sniffImage(buffer) {
   throw bridgeError(COMFY_ERROR.IMAGE_INVALID, "Generated file is not a supported image.", 400);
 }
 
-function sanitizeBaseName(filename) {
+function sanitizeBaseName(filename: string): string {
   const raw = basename(filename, extname(filename));
   const safe = raw.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
   return safe || "image";
 }
 
-async function readGeneratedImage(ctx, filename) {
+interface ComfyCtx {
+  config: {
+    storage: { generatedDir: string };
+    comfy: { defaultUrl: string; uploadTimeoutMs: number; maxUploadBytes: number };
+  };
+}
+
+interface GeneratedImage {
+  buffer: Buffer;
+  imageType: ImageType;
+  sourceFilename: string;
+  uploadFilename: string;
+}
+
+async function readGeneratedImage(ctx: ComfyCtx, filename: unknown): Promise<GeneratedImage> {
   const safeFilename = validateFilename(filename);
   const generatedDir = await realpath(ctx.config.storage.generatedDir);
   const candidatePath = join(ctx.config.storage.generatedDir, safeFilename);
@@ -165,12 +183,12 @@ async function readGeneratedImage(ctx, filename) {
   };
 }
 
-async function postToComfy(origin, image, timeoutMs, fetchImpl = fetch) {
+async function postToComfy(origin: string, image: GeneratedImage, timeoutMs: number, fetchImpl: typeof fetch = fetch): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const form = new FormData();
-    form.append("image", new Blob([image.buffer], { type: image.imageType.mime }), image.uploadFilename);
+    form.append("image", new Blob([new Uint8Array(image.buffer)], { type: image.imageType.mime }), image.uploadFilename);
     form.append("type", "input");
     const res = await fetchImpl(`${origin}/upload/image`, {
       method: "POST",
@@ -184,7 +202,7 @@ async function postToComfy(origin, image, timeoutMs, fetchImpl = fetch) {
     if (!res.ok) {
       throw bridgeError(COMFY_ERROR.UPLOAD_FAILED, "Could not upload image to ComfyUI.", 502);
     }
-    const data: any = await res.json().catch(() => null);
+    const data = await res.json().catch(() => null) as { name?: unknown } | null;
     if (!data || typeof data.name !== "string" || !data.name.trim()) {
       throw bridgeError(COMFY_ERROR.UPLOAD_FAILED, "Could not upload image to ComfyUI.", 502);
     }
@@ -197,7 +215,10 @@ async function postToComfy(origin, image, timeoutMs, fetchImpl = fetch) {
   }
 }
 
-export async function exportImageToComfy(ctx, input, options: any = {}) {
+interface ExportInput { filename: unknown; }
+interface ExportOptions { comfyUrl?: string; fetchImpl?: (input: any, init?: any) => Promise<any>; }
+
+export async function exportImageToComfy(ctx: ComfyCtx, input: ExportInput, options: ExportOptions = {}) {
   const origin = normalizeComfyOrigin(options.comfyUrl ?? ctx.config.comfy.defaultUrl);
   const image = await readGeneratedImage(ctx, input.filename);
   const uploadedFilename = await postToComfy(

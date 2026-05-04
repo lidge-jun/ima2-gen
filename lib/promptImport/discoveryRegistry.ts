@@ -1,20 +1,70 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { promptImportError } from "./errors.js";
+import type { CuratedSourceLike, PromptImportCtx } from "./types.js";
 
 const REGISTRY_VERSION = 1;
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]+$/;
 const SUPPORTED_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 
-function registryFile(ctx) {
-  return ctx.config.storage.promptImportDiscoveryRegistryFile;
+interface DiscoveryCandidateRecord {
+  id: string;
+  repo: string;
+  owner?: string;
+  name?: string;
+  fullName: string;
+  htmlUrl?: string | null;
+  description?: string;
+  defaultBranch?: string;
+  stars?: number;
+  forks?: number;
+  openIssues?: number;
+  updatedAt?: string | null;
+  pushedAt?: string | null;
+  licenseSpdx?: string;
+  topics?: string[];
+  language?: string | null;
+  score?: number;
+  scoreReasons?: string[];
+  warnings?: string[];
+  status?: string;
+  query?: string;
+  discoveredAt?: string;
+  allowedPaths?: string[];
+  reviewedAt?: string | null;
+  reviewNotes?: string;
+  approvedSource?: CuratedSourceLike | null;
+  defaultSearch?: boolean;
 }
 
-function emptyRegistry() {
+interface DiscoveryRegistry {
+  version: number;
+  updatedAt: string | null;
+  candidates: Record<string, DiscoveryCandidateRecord>;
+}
+
+interface ReviewLimits {
+  maxRepoIndexFiles: number;
+}
+
+interface ReviewPayload {
+  repo?: unknown;
+  status?: unknown;
+  allowedPaths?: unknown;
+  defaultSearch?: unknown;
+  reviewNotes?: unknown;
+}
+
+function registryFile(ctx: PromptImportCtx): string {
+  const storage = (ctx.config as { storage?: { promptImportDiscoveryRegistryFile?: string } } | undefined)?.storage;
+  return storage?.promptImportDiscoveryRegistryFile ?? "";
+}
+
+function emptyRegistry(): DiscoveryRegistry {
   return { version: REGISTRY_VERSION, updatedAt: null, candidates: {} };
 }
 
-function normalizeRepoFullName(repo) {
+function normalizeRepoFullName(repo: unknown): string {
   const value = String(repo || "").trim();
   const parts = value.split("/");
   if (parts.length !== 2 || !OWNER_REPO_RE.test(parts[0]) || !OWNER_REPO_RE.test(parts[1])) {
@@ -23,12 +73,12 @@ function normalizeRepoFullName(repo) {
   return `${parts[0]}/${parts[1]}`;
 }
 
-function extensionForPath(path) {
+function extensionForPath(path: string): string {
   const match = /\.([A-Za-z0-9]+)$/.exec(path);
   return match?.[1]?.toLowerCase() ?? "";
 }
 
-function assertAllowedPath(path) {
+function assertAllowedPath(path: unknown): string {
   const value = String(path || "").trim();
   if (!value) {
     throw promptImportError("GITHUB_DISCOVERY_REVIEW_INVALID", "Allowed path is required");
@@ -53,7 +103,7 @@ function assertAllowedPath(path) {
   return clean;
 }
 
-function normalizeAllowedPaths(paths, limits) {
+function normalizeAllowedPaths(paths: unknown, limits: ReviewLimits): string[] {
   if (paths === undefined) return [];
   if (!Array.isArray(paths)) {
     throw promptImportError("GITHUB_DISCOVERY_REVIEW_INVALID", "allowedPaths must be an array");
@@ -64,7 +114,35 @@ function normalizeAllowedPaths(paths, limits) {
   return [...new Set(paths.map(assertAllowedPath))];
 }
 
-function publicCandidate(candidate) {
+interface PublicCandidate {
+  id: string;
+  repo: string;
+  owner: string | undefined;
+  name: string | undefined;
+  fullName: string;
+  htmlUrl: string | null | undefined;
+  description: string | undefined;
+  defaultBranch: string | undefined;
+  stars: number | undefined;
+  forks: number | undefined;
+  openIssues: number | undefined;
+  updatedAt: string | null | undefined;
+  pushedAt: string | null | undefined;
+  licenseSpdx: string | undefined;
+  topics: string[];
+  language: string | null | undefined;
+  score: number | undefined;
+  scoreReasons: string[];
+  warnings: string[];
+  status: string;
+  query: string | undefined;
+  discoveredAt: string | undefined;
+  reviewedAt: string | null;
+  reviewNotes: string;
+  approvedSource: CuratedSourceLike | null;
+}
+
+function publicCandidate(candidate: DiscoveryCandidateRecord): PublicCandidate {
   return {
     id: candidate.id,
     repo: candidate.repo,
@@ -94,13 +172,13 @@ function publicCandidate(candidate) {
   };
 }
 
-function reviewedSourceId(candidate) {
+function reviewedSourceId(candidate: DiscoveryCandidateRecord): string {
   return `discovered-${candidate.fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
 }
 
-export async function readDiscoveryRegistry(ctx) {
+export async function readDiscoveryRegistry(ctx: PromptImportCtx): Promise<DiscoveryRegistry> {
   try {
-    const parsed = JSON.parse(await readFile(registryFile(ctx), "utf8"));
+    const parsed = JSON.parse(await readFile(registryFile(ctx), "utf8")) as DiscoveryRegistry;
     if (parsed.version !== REGISTRY_VERSION) return emptyRegistry();
     return {
       version: REGISTRY_VERSION,
@@ -112,7 +190,7 @@ export async function readDiscoveryRegistry(ctx) {
   }
 }
 
-export async function writeDiscoveryRegistry(ctx, registry) {
+export async function writeDiscoveryRegistry(ctx: PromptImportCtx, registry: DiscoveryRegistry): Promise<void> {
   const file = registryFile(ctx);
   await mkdir(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -120,16 +198,20 @@ export async function writeDiscoveryRegistry(ctx, registry) {
   await rename(tmp, file);
 }
 
-export async function listDiscoveryCandidates(ctx, filters: any = {}) {
+interface ListFilters {
+  status?: string;
+}
+
+export async function listDiscoveryCandidates(ctx: PromptImportCtx, filters: ListFilters = {}): Promise<PublicCandidate[]> {
   const registry = await readDiscoveryRegistry(ctx);
   const status = typeof filters.status === "string" ? filters.status : null;
   return Object.values(registry.candidates)
-    .filter((candidate: any) => !status || candidate.status === status)
+    .filter((candidate) => !status || candidate.status === status)
     .map(publicCandidate)
-    .sort((a, b) => b.score - a.score || a.fullName.localeCompare(b.fullName));
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.fullName.localeCompare(b.fullName));
 }
 
-export async function upsertDiscoveryCandidates(ctx, candidates) {
+export async function upsertDiscoveryCandidates(ctx: PromptImportCtx, candidates: DiscoveryCandidateRecord[]): Promise<PublicCandidate[]> {
   const registry = await readDiscoveryRegistry(ctx);
   const now = new Date().toISOString();
   for (const candidate of candidates) {
@@ -149,7 +231,7 @@ export async function upsertDiscoveryCandidates(ctx, candidates) {
   return Object.values(registry.candidates).map(publicCandidate);
 }
 
-export function reviewedSourceFromCandidate(candidate) {
+export function reviewedSourceFromCandidate(candidate: DiscoveryCandidateRecord): CuratedSourceLike {
   const [owner, name] = String(candidate.fullName || candidate.repo).split("/");
   const allowedPaths = Array.isArray(candidate.allowedPaths) ? candidate.allowedPaths : [];
   return {
@@ -167,14 +249,15 @@ export function reviewedSourceFromCandidate(candidate) {
     trustTier: "reviewed",
     lastVerifiedAt: candidate.reviewedAt || null,
     notes: candidate.reviewNotes || candidate.description || "Reviewed GitHub discovery source.",
-    searchSeeds: [candidate.name, candidate.description, ...(candidate.topics || [])].filter(Boolean).slice(0, 8),
+    searchSeeds: [candidate.name, candidate.description, ...(candidate.topics || [])].filter(Boolean).slice(0, 8) as string[],
     defaultSearch: Boolean(candidate.defaultSearch && allowedPaths.length > 0 && !String(candidate.defaultBranch || "").includes("/")),
   };
 }
 
-export async function reviewDiscoveryCandidate(ctx, payload) {
-  const limits = {
-    maxRepoIndexFiles: ctx.config.limits.promptImportMaxRepoIndexFiles,
+export async function reviewDiscoveryCandidate(ctx: PromptImportCtx, payload: ReviewPayload) {
+  const configLimits = (ctx.config?.limits ?? {}) as Record<string, number>;
+  const limits: ReviewLimits = {
+    maxRepoIndexFiles: configLimits.promptImportMaxRepoIndexFiles ?? 0,
   };
   const repo = normalizeRepoFullName(payload?.repo);
   const status = String(payload?.status || "");
@@ -202,7 +285,7 @@ export async function reviewDiscoveryCandidate(ctx, payload) {
     warnings.push("discovery-requires-paths");
   }
 
-  const reviewed = {
+  const reviewed: DiscoveryCandidateRecord = {
     ...candidate,
     allowedPaths,
     status,
@@ -213,24 +296,28 @@ export async function reviewDiscoveryCandidate(ctx, payload) {
   };
   reviewed.approvedSource = status === "approved" ? reviewedSourceFromCandidate(reviewed) : null;
   registry.candidates[repo] = reviewed;
-  registry.updatedAt = reviewed.reviewedAt;
+  registry.updatedAt = reviewed.reviewedAt ?? null;
   await writeDiscoveryRegistry(ctx, registry);
   return { candidate: publicCandidate(reviewed), source: reviewed.approvedSource, warnings: reviewed.warnings };
 }
 
-export async function listReviewedDiscoverySources(ctx, { defaultSearchOnly = false } = {}) {
+interface ListReviewedOptions {
+  defaultSearchOnly?: boolean;
+}
+
+export async function listReviewedDiscoverySources(ctx: PromptImportCtx, { defaultSearchOnly = false }: ListReviewedOptions = {}): Promise<CuratedSourceLike[]> {
   const registry = await readDiscoveryRegistry(ctx);
   return Object.values(registry.candidates)
-    .filter((candidate: any) => candidate.status === "approved" && candidate.approvedSource)
-    .map((candidate: any) => candidate.approvedSource)
+    .filter((candidate) => candidate.status === "approved" && candidate.approvedSource)
+    .map((candidate) => candidate.approvedSource as CuratedSourceLike)
     .filter((source) => !defaultSearchOnly || source.defaultSearch);
 }
 
-export async function getReviewedDiscoverySource(ctx, sourceId) {
+export async function getReviewedDiscoverySource(ctx: PromptImportCtx, sourceId: string): Promise<CuratedSourceLike | null> {
   const sources = await listReviewedDiscoverySources(ctx);
   return sources.find((source) => source.id === sourceId) || null;
 }
 
-export async function getDefaultReviewedDiscoverySources(ctx) {
+export async function getDefaultReviewedDiscoverySources(ctx: PromptImportCtx): Promise<CuratedSourceLike[]> {
   return listReviewedDiscoverySources(ctx, { defaultSearchOnly: true });
 }

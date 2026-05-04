@@ -14,7 +14,8 @@
     "config.ts",
     "lib/**/*.ts",
     "routes/**/*.ts",
-    "types/**/*.ts"
+    "types/**/*.ts",
+    "types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
@@ -23,7 +24,6 @@
     "scripts",
     "integrations",
     "bin",
-    "**/*.test.ts",
-    "**/*.d.ts"
+    "**/*.test.ts"
   ]
 }

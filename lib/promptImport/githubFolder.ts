@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
+import type { PromptImportLimits } from "./types.js";
 
 import { errInfo } from "../errInfo.js";
 const GITHUB_HOST = "github.com";
@@ -8,7 +9,40 @@ const RAW_HOST = "raw.githubusercontent.com";
 const SUPPORTED_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]+$/;
 
-function safeDecode(value) {
+export interface GitHubFolderSource {
+  kind: "github-folder";
+  owner: string;
+  repo: string;
+  ref: string;
+  path: string;
+  htmlUrl: string;
+  apiUrl: string;
+  tags: string[];
+  fromTreeUrl: boolean;
+  ambiguousTree: boolean;
+}
+
+export interface GitHubFolderFile {
+  name: string;
+  path: string;
+  extension: string;
+  sizeBytes: number;
+  htmlUrl: string;
+  downloadUrl: string;
+  selected: boolean;
+  warnings: string[];
+}
+
+interface GitHubFolderItemRaw {
+  type?: unknown;
+  path?: unknown;
+  name?: unknown;
+  size?: unknown;
+  html_url?: unknown;
+  download_url?: unknown;
+}
+
+function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
   } catch {
@@ -16,7 +50,7 @@ function safeDecode(value) {
   }
 }
 
-function safePath(path) {
+function safePath(path: unknown): string {
   const raw = String(path || "").trim();
   const lower = raw.toLowerCase();
   if (raw.includes("\0") || lower.includes("%00")) {
@@ -32,23 +66,23 @@ function safePath(path) {
   return decoded.replace(/^\/+|\/+$/g, "");
 }
 
-function assertOwnerRepo(owner, repo) {
+function assertOwnerRepo(owner: string | undefined, repo: string | undefined): void {
   if (!OWNER_REPO_RE.test(owner || "") || !OWNER_REPO_RE.test(repo || "")) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "Invalid GitHub owner or repository");
   }
 }
 
-function extensionForPath(path) {
+function extensionForPath(path: string): string {
   const match = /\.([A-Za-z0-9]+)$/.exec(path);
   return match?.[1]?.toLowerCase() ?? "";
 }
 
-function supportedExtension(path) {
+function supportedExtension(path: string): string {
   const extension = extensionForPath(path);
   return SUPPORTED_EXTENSIONS.has(extension) ? extension : "";
 }
 
-function encodeApiPath(path) {
+function encodeApiPath(path: string): string {
   return path
     .split("/")
     .filter(Boolean)
@@ -56,17 +90,24 @@ function encodeApiPath(path) {
     .join("/");
 }
 
-function buildApiUrl({ owner, repo, ref, path }) {
+interface BuildApiUrlInput {
+  owner: string;
+  repo: string;
+  ref: string;
+  path: string;
+}
+
+function buildApiUrl({ owner, repo, ref, path }: BuildApiUrlInput): string {
   const encodedPath = encodeApiPath(path);
   const suffix = encodedPath ? `/${encodedPath}` : "";
   return `https://${GITHUB_API_HOST}/repos/${owner}/${repo}/contents${suffix}?ref=${encodeURIComponent(ref)}`;
 }
 
-function folderTags(source): string[] {
+function folderTags(source: GitHubFolderSource): string[] {
   return ["github", `repo:${source.owner}/${source.repo}`, `ref:${source.ref}`, `folder:${source.path || "/"}`];
 }
 
-function fromUrl(input) {
+function fromUrl(input: string): GitHubFolderSource | null {
   let url;
   try {
     url = new URL(input);
@@ -86,7 +127,7 @@ function fromUrl(input) {
   return makeSource({ owner, repo, ref, path, fromTreeUrl: true, ambiguousTree: path.includes("/") });
 }
 
-function fromShorthand(input) {
+function fromShorthand(input: string): GitHubFolderSource {
   const match = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:@([^:]+))?:(.*)$/.exec(input);
   if (!match) {
     throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Enter a GitHub folder URL or owner/repo:path/", 422);
@@ -100,7 +141,16 @@ function fromShorthand(input) {
   return makeSource({ owner, repo, ref, path: safePath(rawPath) });
 }
 
-function makeSource({ owner, repo, ref, path, fromTreeUrl = false, ambiguousTree = false }) {
+interface MakeSourceInput {
+  owner: string;
+  repo: string;
+  ref: string;
+  path: string;
+  fromTreeUrl?: boolean;
+  ambiguousTree?: boolean;
+}
+
+function makeSource({ owner, repo, ref, path, fromTreeUrl = false, ambiguousTree = false }: MakeSourceInput): GitHubFolderSource {
   return {
     kind: "github-folder",
     owner,
@@ -109,13 +159,13 @@ function makeSource({ owner, repo, ref, path, fromTreeUrl = false, ambiguousTree
     path,
     htmlUrl: `https://${GITHUB_HOST}/${owner}/${repo}/tree/${encodeURIComponent(ref)}${path ? `/${path}` : ""}`,
     apiUrl: buildApiUrl({ owner, repo, ref, path }),
-    tags: [] as string[],
+    tags: [],
     fromTreeUrl,
     ambiguousTree,
   };
 }
 
-function assertGithubApiUrl(rawUrl) {
+function assertGithubApiUrl(rawUrl: string): void {
   let url;
   try {
     url = new URL(rawUrl);
@@ -127,7 +177,7 @@ function assertGithubApiUrl(rawUrl) {
   }
 }
 
-function assertRawDownloadUrl(rawUrl) {
+function assertRawDownloadUrl(rawUrl: string): void {
   let url;
   try {
     url = new URL(rawUrl);
@@ -143,16 +193,22 @@ function assertRawDownloadUrl(rawUrl) {
   }
 }
 
-function normalizeItem(source, item) {
+interface NormalizeItemResult {
+  warning?: string;
+  file?: GitHubFolderFile;
+}
+
+function normalizeItem(source: GitHubFolderSource, item: unknown): NormalizeItemResult {
   if (!item || typeof item !== "object") return { warning: "invalid-item" };
-  const type = typeof item.type === "string" ? item.type : "";
-  const path = safePath(item.path || "");
-  const name = typeof item.name === "string" ? item.name : path.split("/").pop();
+  const raw = item as GitHubFolderItemRaw;
+  const type = typeof raw.type === "string" ? raw.type : "";
+  const path = safePath(raw.path);
+  const name = typeof raw.name === "string" ? raw.name : (path.split("/").pop() || "");
   const extension = supportedExtension(path);
   if (type !== "file") return { warning: `${path || name}: folder-deferred` };
   if (!extension) return { warning: `${path || name}: unsupported-extension` };
   if (!insideFolder(source.path, path)) return { warning: `${path || name}: outside-folder` };
-  if (typeof item.download_url !== "string" || !item.download_url) {
+  if (typeof raw.download_url !== "string" || !raw.download_url) {
     return { warning: `${path || name}: missing-download-url` };
   }
   return {
@@ -160,21 +216,26 @@ function normalizeItem(source, item) {
       name,
       path,
       extension,
-      sizeBytes: Number(item.size || 0),
-      htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-      downloadUrl: item.download_url,
+      sizeBytes: Number(raw.size || 0),
+      htmlUrl: typeof raw.html_url === "string" ? raw.html_url : "",
+      downloadUrl: raw.download_url,
       selected: false,
       warnings: [],
     },
   };
 }
 
-function insideFolder(folderPath, filePath) {
+function insideFolder(folderPath: string, filePath: string): boolean {
   if (!folderPath) return true;
   return filePath === folderPath || filePath.startsWith(`${folderPath}/`);
 }
 
-async function fetchJson(url, limits) {
+interface FetchJsonResult {
+  notFound?: boolean;
+  json?: unknown;
+}
+
+async function fetchJson(url: string, limits: PromptImportLimits): Promise<FetchJsonResult> {
   assertGithubApiUrl(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);
@@ -200,7 +261,7 @@ async function fetchJson(url, limits) {
   }
 }
 
-export function normalizeGitHubFolderSource(input) {
+export function normalizeGitHubFolderSource(input: unknown): GitHubFolderSource {
   const trimmed = typeof input === "string" ? input.trim() : "";
   if (!trimmed) {
     throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "GitHub folder source is required", 400);
@@ -210,7 +271,13 @@ export function normalizeGitHubFolderSource(input) {
   return source;
 }
 
-export async function fetchGitHubFolderFiles(source, limits) {
+interface FolderFetchResult {
+  source: GitHubFolderSource;
+  files: GitHubFolderFile[];
+  warnings: string[];
+}
+
+export async function fetchGitHubFolderFiles(source: GitHubFolderSource, limits: PromptImportLimits): Promise<FolderFetchResult> {
   const fetched = await fetchJson(source.apiUrl, limits);
   if (fetched.notFound && source.ambiguousTree) {
     throw promptImportError("AMBIGUOUS_GITHUB_REF", "GitHub tree URL is ambiguous; slash branches are not resolved in PR3", 422);
@@ -223,22 +290,23 @@ export async function fetchGitHubFolderFiles(source, limits) {
   }
 
   const warnings: string[] = [];
-  if (fetched.json.length > limits.maxFolderFiles) {
+  const maxFolderFiles = limits.maxFolderFiles ?? Infinity;
+  if (fetched.json.length > maxFolderFiles) {
     warnings.push(`folder-raw-too-large:${fetched.json.length}`);
   }
-  const files: any[] = [];
+  const files: GitHubFolderFile[] = [];
   for (const item of fetched.json) {
     const normalized = normalizeItem(source, item);
     if (normalized.warning) warnings.push(normalized.warning);
     if (normalized.file) files.push(normalized.file);
   }
-  if (files.length > limits.maxFolderFiles) {
+  if (files.length > maxFolderFiles) {
     warnings.push(`folder-too-large:${files.length}`);
   }
-  return { source, files: files.slice(0, limits.maxFolderFiles), warnings };
+  return { source, files: files.slice(0, maxFolderFiles), warnings };
 }
 
-function assertSelectedPath(source, rawPath, allowed) {
+function assertSelectedPath(source: GitHubFolderSource, rawPath: unknown, allowed: Map<string, GitHubFolderFile>): string {
   const path = safePath(rawPath);
   if (!path || !supportedExtension(path) || !insideFolder(source.path, path) || !allowed.has(path)) {
     throw promptImportError("GITHUB_FOLDER_SELECTION_EMPTY", `Selected file is not in the listed folder: ${path}`, 422);
@@ -246,20 +314,31 @@ function assertSelectedPath(source, rawPath, allowed) {
   return path;
 }
 
-export async function fetchSelectedGitHubFolderFiles(source, selectedPaths, limits) {
+export interface SelectedGitHubFolderFile extends GitHubFolderFile {
+  text: string;
+  contentHash: string;
+}
+
+interface SelectedFolderResult {
+  source: GitHubFolderSource;
+  files: SelectedGitHubFolderFile[];
+  warnings: string[];
+}
+
+export async function fetchSelectedGitHubFolderFiles(source: GitHubFolderSource, selectedPaths: unknown, limits: PromptImportLimits): Promise<SelectedFolderResult> {
   const selected = Array.isArray(selectedPaths) ? selectedPaths : [];
   if (selected.length === 0) {
     throw promptImportError("GITHUB_FOLDER_SELECTION_EMPTY", "Select at least one folder file to preview", 422);
   }
-  if (selected.length > limits.maxFolderPreviewFiles) {
+  if (selected.length > (limits.maxFolderPreviewFiles ?? Infinity)) {
     throw promptImportError("GITHUB_FOLDER_SELECTION_TOO_LARGE", "Too many folder files selected", 413);
   }
 
   const listing = await fetchGitHubFolderFiles(source, limits);
-  const allowed = new Map<string, any>(listing.files.map((file: any) => [file.path, file]));
+  const allowed = new Map<string, GitHubFolderFile>(listing.files.map((file) => [file.path, file]));
   const paths = selected.map((path) => assertSelectedPath(source, path, allowed));
   const warnings: string[] = [...listing.warnings];
-  const files: any[] = [];
+  const files: SelectedGitHubFolderFile[] = [];
   let firstError: unknown = null;
 
   for (const path of paths) {
@@ -278,7 +357,12 @@ export async function fetchSelectedGitHubFolderFiles(source, selectedPaths, limi
   return { source, files, warnings };
 }
 
-async function fetchRawFile(rawUrl, limits) {
+interface RawFileResult {
+  text: string;
+  contentHash: string;
+}
+
+async function fetchRawFile(rawUrl: string, limits: PromptImportLimits): Promise<RawFileResult> {
   assertRawDownloadUrl(rawUrl);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);

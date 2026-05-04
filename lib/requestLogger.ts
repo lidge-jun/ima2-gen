@@ -1,19 +1,20 @@
 import { randomUUID } from "crypto";
+import type { Request, Response, NextFunction } from "express";
 import { logEvent } from "./logger.js";
 
 const REQUEST_ID_RE = /^[A-Za-z0-9._:-]{1,128}$/;
 const IGNORED_LOG_PATHS = new Set(["/api/health", "/api/inflight"]);
 
-export function normalizeRequestId(value) {
+export function normalizeRequestId(value: unknown) {
   return typeof value === "string" && REQUEST_ID_RE.test(value) ? value : `req_${randomUUID()}`;
 }
 
-function requestPath(req) {
+function requestPath(req: Request) {
   return String(req.originalUrl || req.url || "").split("?")[0] || "/";
 }
 
 export function createRequestLogger() {
-  return function requestLogger(req, res, next) {
+  return function requestLogger(req: Request, res: Response, next: NextFunction) {
     const path = requestPath(req);
     if (!path.startsWith("/api/")) return next();
 

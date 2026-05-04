@@ -12,40 +12,90 @@ import {
   getReviewedDiscoverySource,
   listReviewedDiscoverySources,
 } from "./discoveryRegistry.js";
+import type {
+  CuratedSourceLike,
+  GitHubFileSource,
+  PromptCandidate,
+  PromptImportCtx,
+  PromptImportLimits,
+} from "./types.js";
 
 const INDEX_VERSION = 1;
 const EXTRACTOR_VERSION = 2;
 
-function limitsFromCtx(ctx) {
+interface IndexedFile {
+  sourceFileId: string;
+  owner: string | undefined;
+  repo: string;
+  ref: string;
+  path: string;
+  extension: string;
+  contentHash: string;
+  etag: string | null;
+  sizeBytes: number;
+  licenseSpdx: string;
+  htmlUrl: string;
+  indexedAt: string;
+  lastFetchStatus: string;
+  promptCandidateCount: number;
+  extractorVersion: number;
+}
+
+interface IndexedCandidate extends PromptCandidate {
+  candidateId: string;
+}
+
+interface CacheEntry {
+  source: CuratedSourceLike;
+  files: IndexedFile[];
+  candidates: IndexedCandidate[];
+  refreshedAt: number;
+}
+
+interface IndexCache {
+  version: number;
+  sources: Record<string, CacheEntry>;
+}
+
+interface IndexLimits extends PromptImportLimits {
+  searchLimit: number;
+  ttlMs: number;
+}
+
+function limitsFromCtx(ctx: PromptImportCtx): IndexLimits {
+  const limits = (ctx.config?.limits ?? {}) as Record<string, number>;
   return {
-    maxFileBytesForPreview: ctx.config.limits.promptImportMaxFileBytes,
-    maxPromptCandidatesPerFile: ctx.config.limits.promptImportMaxCandidatesPerFile,
-    maxPromptCandidatesPerImport: ctx.config.limits.promptImportMaxCandidatesPerImport,
-    fetchTimeoutMs: ctx.config.limits.promptImportFetchTimeoutMs,
-    maxCandidateChars: ctx.config.limits.promptImportMaxCandidateChars,
-    minCandidateChars: ctx.config.limits.promptImportMinCandidateChars,
-    maxSourceCharsScanned: ctx.config.limits.promptImportMaxSourceCharsScanned,
-    maxRepoIndexFiles: ctx.config.limits.promptImportMaxRepoIndexFiles,
-    searchLimit: ctx.config.limits.promptImportCuratedSearchLimit,
-    ttlMs: ctx.config.limits.promptImportIndexCacheTtlMs,
+    maxFileBytesForPreview: limits.promptImportMaxFileBytes,
+    maxPromptCandidatesPerFile: limits.promptImportMaxCandidatesPerFile,
+    maxPromptCandidatesPerImport: limits.promptImportMaxCandidatesPerImport,
+    fetchTimeoutMs: limits.promptImportFetchTimeoutMs,
+    maxCandidateChars: limits.promptImportMaxCandidateChars,
+    minCandidateChars: limits.promptImportMinCandidateChars,
+    maxSourceCharsScanned: limits.promptImportMaxSourceCharsScanned,
+    maxRepoIndexFiles: limits.promptImportMaxRepoIndexFiles,
+    maxFolderFiles: limits.promptImportMaxFolderFiles ?? 0,
+    maxFolderPreviewFiles: limits.promptImportMaxFolderPreviewFiles ?? 0,
+    searchLimit: limits.promptImportCuratedSearchLimit,
+    ttlMs: limits.promptImportIndexCacheTtlMs,
   };
 }
 
-function cacheFile(ctx) {
-  return ctx.config.storage.promptImportIndexCacheFile;
+function cacheFile(ctx: PromptImportCtx): string {
+  const storage = (ctx.config as { storage?: { promptImportIndexCacheFile?: string } } | undefined)?.storage;
+  return storage?.promptImportIndexCacheFile ?? "";
 }
 
-function sourceFileId(source, path) {
+function sourceFileId(source: CuratedSourceLike, path: string): string {
   return `github:${source.repo}@${source.defaultRef}:${path}`;
 }
 
-function hashId(...parts) {
+function hashId(...parts: string[]): string {
   return createHash("sha256").update(parts.join("\0")).digest("hex");
 }
 
-async function readCache(ctx) {
+async function readCache(ctx: PromptImportCtx): Promise<IndexCache> {
   try {
-    const parsed = JSON.parse(await readFile(cacheFile(ctx), "utf8"));
+    const parsed = JSON.parse(await readFile(cacheFile(ctx), "utf8")) as IndexCache;
     if (parsed.version !== INDEX_VERSION) return { version: INDEX_VERSION, sources: {} };
     return { version: INDEX_VERSION, sources: parsed.sources || {} };
   } catch {
@@ -53,7 +103,7 @@ async function readCache(ctx) {
   }
 }
 
-async function writeCache(ctx, cache) {
+async function writeCache(ctx: PromptImportCtx, cache: IndexCache): Promise<void> {
   const file = cacheFile(ctx);
   await mkdir(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -61,9 +111,9 @@ async function writeCache(ctx, cache) {
   await rename(tmp, file);
 }
 
-function sourceTags(source, fileSource): string[] {
+function sourceTags(source: CuratedSourceLike, fileSource: GitHubFileSource): string[] {
   return [
-    ...fileSource.tags,
+    ...(fileSource.tags ?? []),
     `source:${source.id}`,
     `license:${source.licenseSpdx}`,
     `trust:${source.trustTier}`,
@@ -71,7 +121,15 @@ function sourceTags(source, fileSource): string[] {
   ].filter(Boolean) as string[];
 }
 
-function indexedCandidate({ candidate, source, fileSource, fileIndex, index }) {
+interface IndexedCandidateInput {
+  candidate: PromptCandidate;
+  source: CuratedSourceLike;
+  fileSource: GitHubFileSource;
+  fileIndex: IndexedFile;
+  index: number;
+}
+
+function indexedCandidate({ candidate, source, fileSource, fileIndex, index }: IndexedCandidateInput): IndexedCandidate {
   const scoreHints = extractGptImageHints(candidate.text);
   const headingPath = candidate.headingPath || candidate.name || "";
   const candidateId = hashId(fileIndex.sourceFileId, fileIndex.contentHash, headingPath, String(candidate.ordinal || index + 1));
@@ -84,7 +142,7 @@ function indexedCandidate({ candidate, source, fileSource, fileIndex, index }) {
     text: candidate.text,
     textPreview: candidate.textPreview || candidate.text.slice(0, 220),
     tags,
-    warnings: [...new Set([...(candidate.warnings || []), ...scoreHints.warnings])],
+    warnings: [...new Set([...(candidate.warnings || []), ...(scoreHints.warnings ?? [])])],
     source: {
       kind: "github",
       owner: source.owner,
@@ -102,8 +160,16 @@ function indexedCandidate({ candidate, source, fileSource, fileIndex, index }) {
   };
 }
 
-async function indexSource(ctx, sourceId) {
-  const source = getCuratedSource(sourceId) || await getReviewedDiscoverySource(ctx, sourceId);
+interface IndexSourceResult {
+  source: CuratedSourceLike | null | undefined;
+  indexedFiles: number;
+  candidateCount: number;
+  warnings: string[];
+  entry?: CacheEntry;
+}
+
+async function indexSource(ctx: PromptImportCtx, sourceId: string): Promise<IndexSourceResult> {
+  const source = (getCuratedSource(sourceId) as CuratedSourceLike | undefined) || await getReviewedDiscoverySource(ctx, sourceId);
   if (!source || source.trustTier === "manual-review") {
     return { source, indexedFiles: 0, candidateCount: 0, warnings: ["curated-source-unavailable"] };
   }
@@ -116,31 +182,31 @@ async function indexSource(ctx, sourceId) {
 
   const limits = limitsFromCtx(ctx);
   const warnings: string[] = [];
-  const files: any[] = [];
-  const candidates: any[] = [];
+  const files: IndexedFile[] = [];
+  const candidates: IndexedCandidate[] = [];
   const allowedPaths = source.allowedPaths.slice(0, limits.maxRepoIndexFiles);
 
   for (const path of allowedPaths) {
     try {
       const fileSource = buildGitHubRawFileSource({
-        owner: source.owner,
-        repo: source.name,
+        owner: source.owner ?? "",
+        repo: source.name ?? source.repo,
         ref: source.defaultRef,
         path,
       });
       const fetched = await fetchGitHubSource(fileSource, limits);
-      const fileIndex = {
+      const fileIndex: IndexedFile = {
         sourceFileId: sourceFileId(source, path),
         owner: source.owner,
-        repo: source.name,
+        repo: source.name ?? source.repo,
         ref: source.defaultRef,
         path,
-        extension: fileSource.extension,
+        extension: fileSource.extension ?? "",
         contentHash: fetched.contentHash,
         etag: fetched.etag,
         sizeBytes: fetched.sizeBytes,
         licenseSpdx: source.licenseSpdx,
-        htmlUrl: fileSource.htmlUrl,
+        htmlUrl: fileSource.htmlUrl ?? "",
         indexedAt: new Date().toISOString(),
         lastFetchStatus: "ok",
         promptCandidateCount: 0,
@@ -177,15 +243,15 @@ async function indexSource(ctx, sourceId) {
   };
 }
 
-function isFresh(entry, ttlMs) {
-  return entry?.refreshedAt && Date.now() - entry.refreshedAt < ttlMs;
+function isFresh(entry: CacheEntry | undefined, ttlMs: number): boolean {
+  return Boolean(entry?.refreshedAt && Date.now() - entry.refreshedAt < ttlMs);
 }
 
-async function ensureSearchCache(ctx) {
+async function ensureSearchCache(ctx: PromptImportCtx) {
   const cache = await readCache(ctx);
   const limits = limitsFromCtx(ctx);
   const sources = [
-    ...getDefaultSearchSources(),
+    ...getDefaultSearchSources() as CuratedSourceLike[],
     ...await getDefaultReviewedDiscoverySources(ctx),
   ];
   let changed = false;
@@ -204,7 +270,7 @@ async function ensureSearchCache(ctx) {
   return { cache, warnings };
 }
 
-export async function refreshCuratedSource(ctx, sourceId) {
+export async function refreshCuratedSource(ctx: PromptImportCtx, sourceId: string) {
   const cache = await readCache(ctx);
   const result = await indexSource(ctx, sourceId);
   if (result.entry) {
@@ -219,19 +285,25 @@ export async function refreshCuratedSource(ctx, sourceId) {
   };
 }
 
-export async function searchCuratedPrompts(ctx, { q = "", sourceIds, limit }: any = {}) {
+interface SearchCuratedPromptsOptions {
+  q?: string;
+  sourceIds?: string[];
+  limit?: number;
+}
+
+export async function searchCuratedPrompts(ctx: PromptImportCtx, { q = "", sourceIds, limit }: SearchCuratedPromptsOptions = {}) {
   const { cache, warnings } = await ensureSearchCache(ctx);
   const limits = limitsFromCtx(ctx);
   const defaultSources = [
-    ...getDefaultSearchSources(),
+    ...getDefaultSearchSources() as CuratedSourceLike[],
     ...await getDefaultReviewedDiscoverySources(ctx),
   ];
   const allowedIds = Array.isArray(sourceIds) && sourceIds.length
     ? new Set(sourceIds)
     : new Set(defaultSources.map((source) => source.id));
   const candidates = Object.values(cache.sources)
-    .filter((entry: any) => allowedIds.has(entry.source.id))
-    .flatMap((entry: any) => entry.candidates || []);
+    .filter((entry) => allowedIds.has(entry.source.id))
+    .flatMap((entry) => entry.candidates || []);
   const results = rankPromptCandidates({
     candidates,
     query: q,
@@ -244,7 +316,7 @@ export async function searchCuratedPrompts(ctx, { q = "", sourceIds, limit }: an
   return { results, sources, warnings };
 }
 
-export async function getPromptImportSources(ctx) {
+export async function getPromptImportSources(ctx: PromptImportCtx | null) {
   const reviewed = ctx ? await listReviewedDiscoverySources(ctx) : [];
   return { sources: [...listCuratedSources(), ...reviewed] };
 }

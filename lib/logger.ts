@@ -33,10 +33,19 @@ const SECRET_KEYS = new Set([
 
 const ALLOWED_PROMPT_METRICS = new Set(["promptChars", "promptMode"]);
 
-let activeLevel = "info";
-let activeSink = console;
+type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
+type LogSink = {
+  log?: (line: string) => void;
+  debug?: (line: string) => void;
+  info?: (line: string) => void;
+  warn?: (line: string) => void;
+  error?: (line: string) => void;
+};
 
-function shouldRedactKey(key) {
+let activeLevel: LogLevel = "info";
+let activeSink: LogSink = console;
+
+function shouldRedactKey(key: string) {
   if (ALLOWED_PROMPT_METRICS.has(key)) return false;
   if (SECRET_KEYS.has(key)) return true;
   const lower = key.toLowerCase();
@@ -53,7 +62,7 @@ function shouldRedactKey(key) {
   );
 }
 
-function sanitizeValue(value) {
+function sanitizeValue(value: unknown): unknown {
   if (value == null) return value;
   if (value instanceof Error) return sanitizeError(value);
   if (Array.isArray(value)) return `[array:${value.length}]`;
@@ -70,32 +79,33 @@ function sanitizeValue(value) {
   return value;
 }
 
-export function sanitizeError(err) {
+export function sanitizeError(err: unknown) {
   if (!err) return { message: "Unknown error" };
+  const e = err as { name?: string; code?: string; status?: number; message?: string };
   return {
-    name: err.name || "Error",
-    code: err.code || undefined,
-    status: err.status || undefined,
-    message: sanitizeValue(err.message || "Unknown error"),
+    name: e.name || "Error",
+    code: e.code || undefined,
+    status: e.status || undefined,
+    message: sanitizeValue(e.message || "Unknown error"),
   };
 }
 
-export function sanitizeFields(fields = {}) {
-  const out = {};
+export function sanitizeFields(fields: Record<string, unknown> = {}) {
+  const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(fields)) {
     out[key] = shouldRedactKey(key) ? REDACTED : sanitizeValue(value);
   }
   return out;
 }
 
-function formatValue(value) {
+function formatValue(value: unknown): string | undefined {
   if (value === undefined) return undefined;
   if (value === null) return "null";
   if (typeof value === "boolean" || typeof value === "number") return String(value);
   return JSON.stringify(String(value));
 }
 
-export function formatLog(scope, event, fields = {}) {
+export function formatLog(scope: string, event: string, fields: Record<string, unknown> = {}) {
   const safeFields = sanitizeFields(fields);
   const parts = Object.entries(safeFields)
     .map(([key, value]) => {
@@ -106,39 +116,40 @@ export function formatLog(scope, event, fields = {}) {
   return `[${scope}.${event}]${parts.length ? ` ${parts.join(" ")}` : ""}`;
 }
 
-export function normalizeLogLevel(level) {
-  return typeof level === "string" && Object.hasOwn(LOG_LEVELS, level) ? level : "info";
+export function normalizeLogLevel(level: unknown): LogLevel {
+  return typeof level === "string" && Object.hasOwn(LOG_LEVELS, level) ? (level as LogLevel) : "info";
 }
 
-export function configureLogger(options: any = {}) {
+export function configureLogger(options: { level?: unknown; sink?: LogSink } = {}) {
   activeLevel = normalizeLogLevel(options.level);
   activeSink = options.sink || console;
 }
 
-export function shouldLog(level) {
+export function shouldLog(level: unknown) {
   const normalized = normalizeLogLevel(level);
   return LOG_LEVELS[normalized] >= LOG_LEVELS[activeLevel] && activeLevel !== "silent";
 }
 
-function writeLog(level, line) {
+function writeLog(level: LogLevel, line: string) {
   if (!shouldLog(level)) return;
-  const writer = activeSink[level] || activeSink.log || console.log;
+  const sink = activeSink as Record<string, ((line: string) => void) | undefined>;
+  const writer = sink[level] || sink.log || console.log;
   writer.call(activeSink, line);
 }
 
-export function logDebug(scope, event, fields = {}) {
+export function logDebug(scope: string, event: string, fields: Record<string, unknown> = {}) {
   writeLog("debug", formatLog(scope, event, fields));
 }
 
-export function logEvent(scope, event, fields = {}) {
+export function logEvent(scope: string, event: string, fields: Record<string, unknown> = {}) {
   writeLog("info", formatLog(scope, event, fields));
 }
 
-export function logWarn(scope, event, fields = {}) {
+export function logWarn(scope: string, event: string, fields: Record<string, unknown> = {}) {
   writeLog("warn", formatLog(scope, event, fields));
 }
 
-export function logError(scope, event, err, fields = {}) {
+export function logError(scope: string, event: string, err: unknown, fields: Record<string, unknown> = {}) {
   const safe = sanitizeError(err);
   writeLog("error", formatLog(scope, event, {
     ...fields,

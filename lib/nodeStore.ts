@@ -8,7 +8,15 @@ export function newNodeId() {
   return "n_" + randomBytes(config.ids.nodeHexBytes).toString("hex");
 }
 
-export async function saveNode(rootDir, { nodeId, b64, meta, ext = "png", generatedDir = config.storage.generatedDir }) {
+interface SaveNodeOptions {
+  nodeId: string;
+  b64: string;
+  meta: Record<string, unknown>;
+  ext?: string;
+  generatedDir?: string;
+}
+
+export async function saveNode(rootDir: string, { nodeId, b64, meta, ext = "png", generatedDir = config.storage.generatedDir }: SaveNodeOptions) {
   void rootDir;
   const filename = `${nodeId}.${ext}`;
   await mkdir(generatedDir, { recursive: true });
@@ -19,7 +27,7 @@ export async function saveNode(rootDir, { nodeId, b64, meta, ext = "png", genera
     format: meta?.format || ext,
   };
   const rawBuffer = Buffer.from(b64, "base64");
-  const embedded: any = await embedImageMetadataBestEffort(rawBuffer, ext, imageMeta);
+  const embedded = await embedImageMetadataBestEffort(rawBuffer, ext, imageMeta) as { embedded: boolean; warning?: string; buffer: Buffer };
   if (!embedded.embedded) {
     console.warn("[nodeStore] metadata embed skipped:", embedded.warning);
   }
@@ -28,10 +36,10 @@ export async function saveNode(rootDir, { nodeId, b64, meta, ext = "png", genera
   return { filename };
 }
 
-export async function loadNodeB64(rootDir, filename, generatedDir = config.storage.generatedDir) {
+export async function loadNodeB64(rootDir: string, filename: string, generatedDir = config.storage.generatedDir) {
   const p = resolveGeneratedPath(rootDir, filename, generatedDir);
   try { await access(p); } catch {
-    const err: any = new Error(`Node file not found: ${filename}`);
+    const err = new Error(`Node file not found: ${filename}`) as Error & { code?: string; status?: number };
     err.code = "NODE_NOT_FOUND";
     err.status = 404;
     throw err;
@@ -40,7 +48,7 @@ export async function loadNodeB64(rootDir, filename, generatedDir = config.stora
   return buf.toString("base64");
 }
 
-export async function loadNodeMeta(rootDir, nodeId, ext = "png", generatedDir = config.storage.generatedDir) {
+export async function loadNodeMeta(rootDir: string, nodeId: string, ext = "png", generatedDir = config.storage.generatedDir) {
   void rootDir;
   try {
     return JSON.parse(await readFile(join(generatedDir, `${nodeId}.${ext}.json`), "utf-8"));
@@ -49,10 +57,10 @@ export async function loadNodeMeta(rootDir, nodeId, ext = "png", generatedDir = 
   }
 }
 
-export async function loadAssetB64(rootDir, externalSrc, generatedDir = config.storage.generatedDir) {
+export async function loadAssetB64(rootDir: string, externalSrc: string, generatedDir = config.storage.generatedDir) {
   const p = resolveGeneratedPath(rootDir, externalSrc, generatedDir);
   try { await access(p); } catch {
-    const err: any = new Error(`Asset file not found: ${externalSrc}`);
+    const err = new Error(`Asset file not found: ${externalSrc}`) as Error & { code?: string; status?: number };
     err.code = "NODE_NOT_FOUND";
     err.status = 404;
     throw err;
@@ -61,10 +69,10 @@ export async function loadAssetB64(rootDir, externalSrc, generatedDir = config.s
   return buf.toString("base64");
 }
 
-function resolveGeneratedPath(rootDir, relPath, generatedDir = config.storage.generatedDir) {
+function resolveGeneratedPath(rootDir: string, relPath: string, generatedDir = config.storage.generatedDir) {
   void rootDir;
   if (typeof relPath !== "string" || relPath.length === 0) {
-    const err: any = new Error("Asset path is required");
+    const err = new Error("Asset path is required") as Error & { code?: string; status?: number };
     err.code = "NODE_SOURCE_INVALID";
     err.status = 400;
     throw err;
@@ -72,7 +80,7 @@ function resolveGeneratedPath(rootDir, relPath, generatedDir = config.storage.ge
   const baseDir = resolve(generatedDir);
   const target = resolve(baseDir, relPath);
   if (target !== baseDir && !target.startsWith(baseDir + sep)) {
-    const err: any = new Error(`Asset path escapes generated/: ${relPath}`);
+    const err = new Error(`Asset path escapes generated/: ${relPath}`) as Error & { code?: string; status?: number };
     err.code = "NODE_SOURCE_INVALID";
     err.status = 400;
     throw err;

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
 import { upsertDiscoveryCandidates } from "./discoveryRegistry.js";
+import type { DiscoveryRepo, PromptImportCtx } from "./types.js";
 
 import { errInfo } from "../errInfo.js";
 const GITHUB_API_HOST = "api.github.com";
@@ -13,22 +14,72 @@ const DEFAULT_DISCOVERY_SEEDS = [
   "reference image prompt",
 ];
 
-function tokenize(value) {
+interface DiscoveryRateLimit {
+  limit: number | null;
+  remaining: number | null;
+  resetAt: string | null;
+}
+
+interface DiscoveryCandidate {
+  id: string;
+  repo: string;
+  owner: string | undefined;
+  name: string | undefined;
+  fullName: string;
+  htmlUrl: string | null | undefined;
+  description: string;
+  defaultBranch: string;
+  stars: number;
+  forks: number;
+  openIssues: number;
+  updatedAt: string | null | undefined;
+  pushedAt: string | null | undefined;
+  licenseSpdx: string;
+  topics: string[];
+  language: string | null | undefined;
+  score: number;
+  scoreReasons: string[];
+  warnings: string[];
+  status: string;
+  query: string;
+  discoveredAt: string;
+}
+
+interface DiscoveryContext {
+  query?: string;
+  seeds?: string[];
+}
+
+interface DiscoveryQueryOptions {
+  q?: string;
+  seeds?: string[];
+  limit?: number;
+}
+
+interface DiscoverySearchOptions {
+  q?: string;
+  seeds?: string[];
+  limit?: number;
+  maxQueries?: number;
+}
+
+function tokenize(value: unknown): string[] {
   return String(value || "")
     .toLowerCase()
     .split(/[^a-z0-9가-힣-]+/i)
     .filter(Boolean);
 }
 
-function discoveryLimits(ctx) {
+function discoveryLimits(ctx: PromptImportCtx) {
+  const limits = ctx.config?.limits as Record<string, number> | undefined;
   return {
-    limit: ctx.config.limits.promptImportDiscoverySearchLimit,
-    maxQueries: ctx.config.limits.promptImportDiscoveryMaxQueries,
-    fetchTimeoutMs: ctx.config.limits.promptImportFetchTimeoutMs,
+    limit: limits?.promptImportDiscoverySearchLimit ?? 0,
+    maxQueries: limits?.promptImportDiscoveryMaxQueries ?? 0,
+    fetchTimeoutMs: limits?.promptImportFetchTimeoutMs ?? 0,
   };
 }
 
-function validateGitHubApiUrl(rawUrl) {
+function validateGitHubApiUrl(rawUrl: string): void {
   let url;
   try {
     url = new URL(rawUrl);
@@ -40,7 +91,7 @@ function validateGitHubApiUrl(rawUrl) {
   }
 }
 
-function rateLimitFromHeaders(headers) {
+function rateLimitFromHeaders(headers: Headers): DiscoveryRateLimit {
   const remaining = Number(headers.get("x-ratelimit-remaining") || Number.NaN);
   const reset = Number(headers.get("x-ratelimit-reset") || Number.NaN);
   const limit = Number(headers.get("x-ratelimit-limit") || Number.NaN);
@@ -51,18 +102,19 @@ function rateLimitFromHeaders(headers) {
   };
 }
 
-function searchHeaders(ctx) {
-  const headers: any = {
+function searchHeaders(ctx: PromptImportCtx): Record<string, string> {
+  const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "ima2-prompt-import-discovery",
   };
-  const token = ctx.config.github?.token;
+  const github = (ctx.config as { github?: { token?: string } } | undefined)?.github;
+  const token = github?.token;
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
-export function buildDiscoveryQueries({ q = "", seeds = [], limit = 5 }: any = {}) {
+export function buildDiscoveryQueries({ q = "", seeds = [], limit = 5 }: DiscoveryQueryOptions = {}): string[] {
   const raw = [q, ...seeds, ...DEFAULT_DISCOVERY_SEEDS]
     .map((item) => String(item || "").trim())
     .filter(Boolean);
@@ -73,7 +125,7 @@ export function buildDiscoveryQueries({ q = "", seeds = [], limit = 5 }: any = {
   return unique.slice(0, Math.max(1, Number(limit) || 1));
 }
 
-export function scoreDiscoveryRepository(repo, context: any = {}) {
+export function scoreDiscoveryRepository(repo: DiscoveryRepo, context: DiscoveryContext = {}) {
   const terms = tokenize([context.query, ...(context.seeds || [])].join(" "));
   const nameText = `${repo.full_name || ""} ${repo.description || ""} ${(repo.topics || []).join(" ")}`.toLowerCase();
   const pushedAt = repo.pushed_at ? Date.parse(repo.pushed_at) : 0;
@@ -141,7 +193,7 @@ export function scoreDiscoveryRepository(repo, context: any = {}) {
   return { score, scoreReasons: [...new Set(scoreReasons)], warnings: [...new Set(warnings)] };
 }
 
-export function normalizeDiscoveryCandidate(repo, context: any = {}) {
+export function normalizeDiscoveryCandidate(repo: DiscoveryRepo, context: DiscoveryContext = {}): DiscoveryCandidate {
   const fullName = String(repo.full_name || "").trim();
   const [owner, name] = fullName.split("/");
   const scored = scoreDiscoveryRepository(repo, context);
@@ -171,11 +223,16 @@ export function normalizeDiscoveryCandidate(repo, context: any = {}) {
   };
 }
 
-export function discoveryCacheKey(input) {
+export function discoveryCacheKey(input: unknown): string {
   return createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 
-async function searchOneQuery(ctx, query, perPage) {
+interface SearchOneQueryResult {
+  items: DiscoveryRepo[];
+  rateLimit: DiscoveryRateLimit;
+}
+
+async function searchOneQuery(ctx: PromptImportCtx, query: string, perPage: number): Promise<SearchOneQueryResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), discoveryLimits(ctx).fetchTimeoutMs);
   const url = new URL("https://api.github.com/search/repositories");
@@ -196,7 +253,7 @@ async function searchOneQuery(ctx, query, perPage) {
     if (!response.ok) {
       throw promptImportError("GITHUB_DISCOVERY_FAILED", `GitHub discovery failed with ${response.status}`, 422);
     }
-    const data: any = await response.json();
+    const data = (await response.json()) as { items?: DiscoveryRepo[] };
     const items = Array.isArray(data.items) ? data.items : [];
     return { items, rateLimit };
   } catch (error) {
@@ -210,7 +267,7 @@ async function searchOneQuery(ctx, query, perPage) {
   }
 }
 
-export async function searchGitHubDiscovery(ctx, options: any = {}) {
+export async function searchGitHubDiscovery(ctx: PromptImportCtx, options: DiscoverySearchOptions = {}) {
   const limits = discoveryLimits(ctx);
   const queryLimit = Math.min(Number(options.maxQueries) || limits.maxQueries, limits.maxQueries);
   const queries = buildDiscoveryQueries({
@@ -221,8 +278,8 @@ export async function searchGitHubDiscovery(ctx, options: any = {}) {
   const requestedLimit = Math.min(Number(options.limit) || limits.limit, limits.limit);
   const perQuery = Math.max(1, Math.ceil(requestedLimit / queries.length));
   const warnings: string[] = [];
-  let rateLimit: { limit: number | null; remaining: number | null; resetAt: string | null } | null = null;
-  const byRepo = new Map();
+  let rateLimit: DiscoveryRateLimit | null = null;
+  const byRepo = new Map<string, DiscoveryCandidate>();
 
   for (const query of queries) {
     const result = await searchOneQuery(ctx, query, perQuery);

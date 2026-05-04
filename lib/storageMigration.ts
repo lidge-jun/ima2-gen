@@ -5,17 +5,19 @@ import { homedir } from "node:os";
 const PACKAGE_NAME = "ima2-gen";
 const RECOVERY_DOCS_PATH = "docs/RECOVER_OLD_IMAGES.md";
 
-function addStats(a, b) {
+interface CopyStats { copied: number; skippedExisting: number; }
+
+function addStats(a: CopyStats, b: CopyStats): CopyStats {
   return {
     copied: a.copied + b.copied,
     skippedExisting: a.skippedExisting + b.skippedExisting,
   };
 }
 
-async function copyMissingTree(srcDir, dstDir) {
+async function copyMissingTree(srcDir: string, dstDir: string): Promise<CopyStats> {
   await mkdir(dstDir, { recursive: true });
   const entries = await readdir(srcDir, { withFileTypes: true });
-  let stats = { copied: 0, skippedExisting: 0 };
+  let stats: CopyStats = { copied: 0, skippedExisting: 0 };
   for (const entry of entries) {
     const src = join(srcDir, entry.name);
     const dst = join(dstDir, entry.name);
@@ -27,22 +29,38 @@ async function copyMissingTree(srcDir, dstDir) {
     try {
       await copyFile(src, dst, constants.COPYFILE_EXCL);
       stats.copied += 1;
-    } catch (err: any) {
-      if (err?.code !== "EEXIST") throw err;
+    } catch (err) {
+      if ((err as { code?: string })?.code !== "EEXIST") throw err;
       stats.skippedExisting += 1;
     }
   }
   return stats;
 }
 
-function isSameOrInside(child, parent) {
+function isSameOrInside(child: string, parent: string): boolean {
   const a = resolve(child);
   const b = resolve(parent);
   return a === b || a.startsWith(b + sep);
 }
 
-export async function migrateGeneratedStorage(ctx, options: any = {}) {
-  const targetDir = ctx.config.storage.generatedDir;
+interface StorageCtx {
+  rootDir?: string;
+  config?: { storage?: { generatedDir?: string } };
+}
+
+function resolveTargetDir(ctx: StorageCtx): string {
+  return ctx.config?.storage?.generatedDir ?? join(ctx.rootDir ?? process.cwd(), "generated");
+}
+
+type EnvLike = NodeJS.ProcessEnv;
+
+interface MigrateOptions {
+  legacyDirs?: string[];
+  env?: EnvLike;
+}
+
+export async function migrateGeneratedStorage(ctx: StorageCtx, options: MigrateOptions = {}) {
+  const targetDir = resolveTargetDir(ctx);
   const candidates = options.legacyDirs || await getLegacyGeneratedCandidates(ctx, options.env);
   const result = {
     copied: 0,
@@ -63,20 +81,21 @@ export async function migrateGeneratedStorage(ctx, options: any = {}) {
         const copyStats = await copyMissingTree(legacyDir, targetDir);
         result.copied += copyStats.copied;
         result.skippedExisting += copyStats.skippedExisting;
-      } catch (err: any) {
-        if (err?.code !== "ENOENT") {
-          console.warn("[storage] generated asset migration source skipped:", legacyDir, err.message);
+      } catch (err) {
+        const e = err as { code?: string; message?: string };
+        if (e?.code !== "ENOENT") {
+          console.warn("[storage] generated asset migration source skipped:", legacyDir, e.message);
         }
       }
     }
     if (result.copied > 0) console.log(`[storage] migrated ${result.copied} generated assets to ${targetDir}`);
-  } catch (err: any) {
-    console.warn("[storage] generated asset migration skipped:", err.message);
+  } catch (err) {
+    console.warn("[storage] generated asset migration skipped:", (err as { message?: string })?.message);
   }
   return result;
 }
 
-export async function getLegacyGeneratedCandidates(ctx, env = process.env) {
+export async function getLegacyGeneratedCandidates(ctx: StorageCtx, env: EnvLike = process.env): Promise<string[]> {
   const home = env.IMA2_TEST_HOME || homedir();
   const execPath = env.IMA2_TEST_EXEC_PATH || process.execPath;
   const argv1 = env.IMA2_TEST_ARGV1 || process.argv[1] || "";
@@ -90,7 +109,7 @@ export async function getLegacyGeneratedCandidates(ctx, env = process.env) {
   const nvmHome = env.NVM_HOME || join(appData, "nvm");
 
   const candidates = [
-    join(ctx.rootDir, "generated"),
+    join(ctx.rootDir ?? process.cwd(), "generated"),
     join(appData, "npm", "node_modules", PACKAGE_NAME, "generated"),
     join(home, ".npm-global", "lib", "node_modules", PACKAGE_NAME, "generated"),
     join(home, ".nvm", "versions", "node", process.version, "lib", "node_modules", PACKAGE_NAME, "generated"),
@@ -129,13 +148,13 @@ export async function getLegacyGeneratedCandidates(ctx, env = process.env) {
   return uniqueResolvedCandidates(candidates);
 }
 
-export async function inspectGeneratedStorage(ctx, options: any = {}) {
+export async function inspectGeneratedStorage(ctx: StorageCtx, options: MigrateOptions = {}) {
   const env = options.env || process.env;
-  const targetDir = ctx.config.storage.generatedDir;
+  const targetDir = resolveTargetDir(ctx);
   try {
     const candidates = options.legacyDirs || await getLegacyGeneratedCandidates(ctx, env);
     const targetFileCount = await countFiles(targetDir);
-    const legacySources: Array<{ path: any; fileCount: number }> = [];
+    const legacySources: Array<{ path: string; fileCount: number }> = [];
 
     for (const candidate of candidates) {
       if (isSameOrInside(candidate, targetDir) || isSameOrInside(targetDir, candidate)) continue;
@@ -144,9 +163,10 @@ export async function inspectGeneratedStorage(ctx, options: any = {}) {
         if (!candidateStat.isDirectory()) continue;
         const fileCount = await countFiles(candidate);
         if (fileCount > 0) legacySources.push({ path: candidate, fileCount });
-      } catch (err: any) {
-        if (err?.code !== "ENOENT") {
-          console.warn("[storage] legacy candidate inspect skipped:", candidate, err.message);
+      } catch (err) {
+        const e = err as { code?: string; message?: string };
+        if (e?.code !== "ENOENT") {
+          console.warn("[storage] legacy candidate inspect skipped:", candidate, e.message);
         }
       }
     }
@@ -176,7 +196,8 @@ export async function inspectGeneratedStorage(ctx, options: any = {}) {
       recoveryDocsPath: RECOVERY_DOCS_PATH,
       doctorCommand: "ima2 doctor",
     };
-  } catch (err: any) {
+  } catch (err) {
+    const e = err as { message?: string };
     return {
       ok: false,
       targetDir,
@@ -195,12 +216,14 @@ export async function inspectGeneratedStorage(ctx, options: any = {}) {
       messageKind: "unknown",
       recoveryDocsPath: RECOVERY_DOCS_PATH,
       doctorCommand: "ima2 doctor",
-      error: err?.message || String(err),
+      error: e?.message || String(err),
     };
   }
 }
 
-async function expandOneLevelCandidates(patterns) {
+type ExpandPattern = [string, string[]];
+
+async function expandOneLevelCandidates(patterns: ExpandPattern[]): Promise<string[]> {
   const candidates: string[] = [];
   for (const [baseDir, segments] of patterns) {
     if (!baseDir) continue;
@@ -209,7 +232,7 @@ async function expandOneLevelCandidates(patterns) {
   return candidates;
 }
 
-async function expandOneLevelPattern(baseDir, segments) {
+async function expandOneLevelPattern(baseDir: string, segments: string[]): Promise<string[]> {
   const wildcardIndex = segments.indexOf("*");
   if (wildcardIndex < 0) return [join(baseDir, ...segments)];
 
@@ -221,14 +244,15 @@ async function expandOneLevelPattern(baseDir, segments) {
     return entries
       .filter((entry) => entry.isDirectory())
       .map((entry) => join(wildcardBase, entry.name, ...after));
-  } catch (err: any) {
-    if (err?.code === "ENOENT") return [];
-    console.warn("[storage] legacy candidate scan skipped:", wildcardBase, err.message);
+  } catch (err) {
+    const e = err as { code?: string; message?: string };
+    if (e?.code === "ENOENT") return [];
+    console.warn("[storage] legacy candidate scan skipped:", wildcardBase, e.message);
     return [];
   }
 }
 
-async function countFiles(dir) {
+async function countFiles(dir: string): Promise<number> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     let count = 0;
@@ -239,13 +263,13 @@ async function countFiles(dir) {
       else if (entry.isFile()) count += 1;
     }
     return count;
-  } catch (err: any) {
-    if (err?.code === "ENOENT") return 0;
+  } catch (err) {
+    if ((err as { code?: string })?.code === "ENOENT") return 0;
     throw err;
   }
 }
 
-async function isDirectory(dir) {
+async function isDirectory(dir: string): Promise<boolean> {
   try {
     return (await stat(dir)).isDirectory();
   } catch {
@@ -253,11 +277,11 @@ async function isDirectory(dir) {
   }
 }
 
-function uniqueResolvedCandidates(candidates) {
+function uniqueResolvedCandidates(candidates: string[]): string[] {
   return Array.from(new Set(candidates.filter(Boolean).map((p) => resolve(p))));
 }
 
-function labelPath(targetPath, env = process.env) {
+function labelPath(targetPath: string, env: EnvLike = process.env): string {
   const home = env.IMA2_TEST_HOME || homedir();
   const resolved = resolve(targetPath);
   const resolvedHome = resolve(home);
@@ -266,7 +290,9 @@ function labelPath(targetPath, env = process.env) {
   return resolved;
 }
 
-function getGlobalPrefixCandidates({ env, execPath, argv1 }) {
+interface PrefixOpts { env: EnvLike; execPath: string; argv1: string; }
+
+function getGlobalPrefixCandidates({ env, execPath, argv1 }: PrefixOpts): string[] {
   const prefixes: Set<string> = new Set();
   if (env.npm_config_prefix) prefixes.add(env.npm_config_prefix);
   if (isAbsolute(argv1)) prefixes.add(dirname(dirname(argv1)));
@@ -277,7 +303,7 @@ function getGlobalPrefixCandidates({ env, execPath, argv1 }) {
   return Array.from(prefixes);
 }
 
-function addHomebrewPrefix(prefixes, execPath) {
+function addHomebrewPrefix(prefixes: Set<string>, execPath: string): void {
   const marker = `${sep}Cellar${sep}node`;
   const idx = execPath.indexOf(marker);
   if (idx > 0) prefixes.add(execPath.slice(0, idx));

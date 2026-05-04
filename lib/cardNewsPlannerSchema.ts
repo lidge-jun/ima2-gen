@@ -74,18 +74,73 @@ export const CARD_NEWS_PLANNER_SCHEMA = {
   },
 };
 
-function asText(value, fallback = "") {
+interface TextFieldRecord {
+  id?: unknown;
+  kind?: unknown;
+  text?: unknown;
+  renderMode?: unknown;
+  placement?: unknown;
+  slotId?: unknown;
+  hierarchy?: unknown;
+  maxChars?: unknown;
+  language?: unknown;
+  source?: unknown;
+}
+
+interface NormalizedTextField {
+  id: string;
+  kind: string;
+  text: string;
+  renderMode: string;
+  placement: string;
+  slotId: string | null;
+  hierarchy: string;
+  maxChars: number | null;
+  language: string | null;
+  source: string;
+}
+
+interface CardRecord {
+  order?: unknown;
+  role?: unknown;
+  headline?: unknown;
+  body?: unknown;
+  visualPrompt?: unknown;
+  textFields?: unknown;
+  references?: unknown;
+  locked?: unknown;
+}
+
+interface RoleEntry {
+  role: string;
+  promptHint?: string;
+}
+
+interface RoleTemplate {
+  roles: RoleEntry[];
+}
+
+interface BriefInput {
+  topic?: string;
+  title?: string;
+  audience?: string;
+  goal?: string;
+  contentBrief?: string;
+  roleTemplate?: RoleTemplate;
+}
+
+function asText(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-function detectBriefLanguage(input: any = {}) {
+function detectBriefLanguage(input: BriefInput = {}): "ko" | "en" | "und" {
   const text = [input.topic, input.audience, input.goal, input.contentBrief].filter(Boolean).join(" ");
   if (/[가-힣]/.test(text)) return "ko";
   if (/[A-Za-z]/.test(text)) return "en";
   return "und";
 }
 
-function fallbackCopy(input: any = {}, kind = "body") {
+function fallbackCopy(input: BriefInput = {}, kind = "body"): string {
   const lang = detectBriefLanguage(input);
   const topic = asText(input.topic, asText(input.title, "Card news"));
   const goal = asText(input.goal, topic);
@@ -96,30 +151,31 @@ function fallbackCopy(input: any = {}, kind = "body") {
   return brief || topic;
 }
 
-function normalizeTextField(field, index) {
+function normalizeTextField(field: unknown, index: number): NormalizedTextField | null {
   if (!field || typeof field !== "object") return null;
-  const text = asText(field.text);
+  const f = field as TextFieldRecord;
+  const text = asText(f.text);
   if (!text) return null;
   return {
-    id: asText(field.id, `tf_${index + 1}`),
-    kind: CARD_NEWS_TEXT_KINDS.includes(field.kind) ? field.kind : "body",
+    id: asText(f.id, `tf_${index + 1}`),
+    kind: typeof f.kind === "string" && CARD_NEWS_TEXT_KINDS.includes(f.kind) ? f.kind : "body",
     text,
-    renderMode: CARD_NEWS_RENDER_MODES.includes(field.renderMode) ? field.renderMode : "in-image",
-    placement: CARD_NEWS_PLACEMENTS.includes(field.placement) ? field.placement : "free",
-    slotId: typeof field.slotId === "string" && field.slotId.trim() ? field.slotId.trim() : null,
-    hierarchy: CARD_NEWS_HIERARCHIES.includes(field.hierarchy) ? field.hierarchy : "supporting",
-    maxChars: Number.isInteger(field.maxChars) ? field.maxChars : null,
-    language: typeof field.language === "string" && field.language.trim() ? field.language.trim() : null,
-    source: CARD_NEWS_TEXT_SOURCES.includes(field.source) ? field.source : "planner",
+    renderMode: typeof f.renderMode === "string" && CARD_NEWS_RENDER_MODES.includes(f.renderMode) ? f.renderMode : "in-image",
+    placement: typeof f.placement === "string" && CARD_NEWS_PLACEMENTS.includes(f.placement) ? f.placement : "free",
+    slotId: typeof f.slotId === "string" && f.slotId.trim() ? f.slotId.trim() : null,
+    hierarchy: typeof f.hierarchy === "string" && CARD_NEWS_HIERARCHIES.includes(f.hierarchy) ? f.hierarchy : "supporting",
+    maxChars: Number.isInteger(f.maxChars) ? (f.maxChars as number) : null,
+    language: typeof f.language === "string" && f.language.trim() ? f.language.trim() : null,
+    source: typeof f.source === "string" && CARD_NEWS_TEXT_SOURCES.includes(f.source) ? f.source : "planner",
   };
 }
 
-function normalizeTextFields(value) {
+function normalizeTextFields(value: unknown): NormalizedTextField[] {
   if (!Array.isArray(value)) return [];
-  return value.map(normalizeTextField).filter(Boolean);
+  return value.map((item, idx) => normalizeTextField(item, idx)).filter((field): field is NormalizedTextField => field !== null);
 }
 
-function stripExactVisibleText(visualPrompt, textFields) {
+function stripExactVisibleText(visualPrompt: unknown, textFields: NormalizedTextField[]): string {
   let next = asText(visualPrompt);
   for (const field of textFields) {
     const text = asText(field.text);
@@ -130,7 +186,7 @@ function stripExactVisibleText(visualPrompt, textFields) {
   return next.trim();
 }
 
-function normalizeCard(card, role, index, input) {
+function normalizeCard(card: CardRecord | null | undefined, role: RoleEntry, index: number, input: BriefInput) {
   const topic = asText(input.topic, "Card news");
   const textFields = normalizeTextFields(card?.textFields);
   return {
@@ -144,65 +200,71 @@ function normalizeCard(card, role, index, input) {
     ),
     textFields,
     references: Array.isArray(card?.references)
-      ? card.references.filter((ref) => typeof ref === "string")
+      ? (card.references as unknown[]).filter((ref): ref is string => typeof ref === "string")
       : [],
     locked: false,
   };
 }
 
-export function repairPlannerOutput(output, input: any = {}) {
+export function repairPlannerOutput(output: unknown, input: BriefInput = {}) {
   const roles = input.roleTemplate?.roles || [];
+  const outputCards = (output && typeof output === "object" && Array.isArray((output as { cards?: unknown }).cards))
+    ? (output as { cards: CardRecord[] }).cards
+    : null;
   const cards = roles.map((role, index) => {
-    const original = Array.isArray(output?.cards) ? output.cards[index] : null;
+    const original = outputCards ? outputCards[index] : null;
     return normalizeCard(original, role, index, input);
   });
+  const out = (output ?? {}) as Record<string, unknown>;
   return {
     ok: true,
     repaired: true,
-    errors: [],
+    errors: [] as string[],
     plan: {
-      title: asText(output?.title, asText(input.topic, "Untitled card news")),
-      topic: asText(output?.topic, asText(input.topic, "Untitled card news")),
-      audience: asText(output?.audience, asText(input.audience)),
-      goal: asText(output?.goal, asText(input.goal)),
+      title: asText(out.title, asText(input.topic, "Untitled card news")),
+      topic: asText(out.topic, asText(input.topic, "Untitled card news")),
+      audience: asText(out.audience, asText(input.audience)),
+      goal: asText(out.goal, asText(input.goal)),
       cards,
     },
   };
 }
 
-function validateTextField(field, path, errors) {
+function validateTextField(field: unknown, path: string, errors: string[]): void {
   if (!field || typeof field !== "object") {
     errors.push(`${path} must be object`);
     return;
   }
-  if (typeof field.id !== "string") errors.push(`${path}.id must be string`);
-  if (!CARD_NEWS_TEXT_KINDS.includes(field.kind)) errors.push(`${path}.kind invalid`);
-  if (typeof field.text !== "string") errors.push(`${path}.text must be string`);
-  if (typeof field.text === "string" && !field.text.trim()) errors.push(`${path}.text must not be empty`);
-  if (!CARD_NEWS_RENDER_MODES.includes(field.renderMode)) errors.push(`${path}.renderMode invalid`);
-  if (!CARD_NEWS_PLACEMENTS.includes(field.placement)) errors.push(`${path}.placement invalid`);
-  if (!(typeof field.slotId === "string" || field.slotId === null)) errors.push(`${path}.slotId invalid`);
-  if (!CARD_NEWS_HIERARCHIES.includes(field.hierarchy)) errors.push(`${path}.hierarchy invalid`);
-  if (!(Number.isInteger(field.maxChars) || field.maxChars === null)) errors.push(`${path}.maxChars invalid`);
-  if (!(typeof field.language === "string" || field.language === null)) errors.push(`${path}.language invalid`);
-  if (!CARD_NEWS_TEXT_SOURCES.includes(field.source)) errors.push(`${path}.source invalid`);
+  const f = field as TextFieldRecord;
+  if (typeof f.id !== "string") errors.push(`${path}.id must be string`);
+  if (typeof f.kind !== "string" || !CARD_NEWS_TEXT_KINDS.includes(f.kind)) errors.push(`${path}.kind invalid`);
+  if (typeof f.text !== "string") errors.push(`${path}.text must be string`);
+  if (typeof f.text === "string" && !f.text.trim()) errors.push(`${path}.text must not be empty`);
+  if (typeof f.renderMode !== "string" || !CARD_NEWS_RENDER_MODES.includes(f.renderMode)) errors.push(`${path}.renderMode invalid`);
+  if (typeof f.placement !== "string" || !CARD_NEWS_PLACEMENTS.includes(f.placement)) errors.push(`${path}.placement invalid`);
+  if (!(typeof f.slotId === "string" || f.slotId === null)) errors.push(`${path}.slotId invalid`);
+  if (typeof f.hierarchy !== "string" || !CARD_NEWS_HIERARCHIES.includes(f.hierarchy)) errors.push(`${path}.hierarchy invalid`);
+  if (!(Number.isInteger(f.maxChars) || f.maxChars === null)) errors.push(`${path}.maxChars invalid`);
+  if (!(typeof f.language === "string" || f.language === null)) errors.push(`${path}.language invalid`);
+  if (typeof f.source !== "string" || !CARD_NEWS_TEXT_SOURCES.includes(f.source)) errors.push(`${path}.source invalid`);
 }
 
-export function validatePlannerOutput(output, roleTemplate) {
+export function validatePlannerOutput(output: unknown, roleTemplate: RoleTemplate | null | undefined) {
   const errors: string[] = [];
   if (!output || typeof output !== "object" || Array.isArray(output)) {
     return { ok: false, repaired: false, errors: ["output must be an object"] };
   }
-  if (typeof output.title !== "string") errors.push("title must be a string");
-  if (typeof output.topic !== "string") errors.push("topic must be a string");
-  if (!Array.isArray(output.cards)) errors.push("cards must be an array");
+  const out = output as { title?: unknown; topic?: unknown; cards?: unknown; audience?: unknown; goal?: unknown };
+  if (typeof out.title !== "string") errors.push("title must be a string");
+  if (typeof out.topic !== "string") errors.push("topic must be a string");
+  if (!Array.isArray(out.cards)) errors.push("cards must be an array");
 
   const roles = roleTemplate?.roles || [];
-  if (Array.isArray(output.cards) && output.cards.length !== roles.length) {
+  if (Array.isArray(out.cards) && out.cards.length !== roles.length) {
     errors.push("cards length must match role template");
   }
 
-  const cards = Array.isArray(output.cards) ? output.cards : [];
+  const cards: CardRecord[] = Array.isArray(out.cards) ? (out.cards as CardRecord[]) : [];
   cards.forEach((card, index) => {
     const expected = roles[index];
     if (!card || typeof card !== "object") {
@@ -211,14 +273,14 @@ export function validatePlannerOutput(output, roleTemplate) {
     }
     if (card.order !== index + 1) errors.push(`card ${index + 1} order mismatch`);
     if (expected && card.role !== expected.role) errors.push(`card ${index + 1} role mismatch`);
-    for (const key of ["headline", "body", "visualPrompt"]) {
+    for (const key of ["headline", "body", "visualPrompt"] as const) {
       if (typeof card[key] !== "string") errors.push(`card ${index + 1} ${key} must be string`);
     }
     if (!Array.isArray(card.textFields)) errors.push(`card ${index + 1} textFields must be array`);
     if (Array.isArray(card.textFields)) {
       card.textFields.forEach((field, fieldIndex) =>
         validateTextField(field, `card ${index + 1} textFields ${fieldIndex + 1}`, errors));
-      for (const field of card.textFields) {
+      for (const field of card.textFields as TextFieldRecord[]) {
         if (
           field?.renderMode === "in-image" &&
           typeof field.text === "string" &&
@@ -238,20 +300,20 @@ export function validatePlannerOutput(output, roleTemplate) {
   return {
     ok: true,
     repaired: false,
-    errors: [],
+    errors: [] as string[],
     plan: {
-      title: output.title.trim(),
-      topic: output.topic.trim(),
-      audience: asText(output.audience),
-      goal: asText(output.goal),
+      title: (out.title as string).trim(),
+      topic: (out.topic as string).trim(),
+      audience: asText(out.audience),
+      goal: asText(out.goal),
       cards: cards.map((card) => ({
-        order: card.order,
-        role: card.role,
-        headline: card.headline.trim(),
-        body: card.body.trim(),
-        visualPrompt: card.visualPrompt.trim(),
+        order: card.order as number,
+        role: card.role as string,
+        headline: (card.headline as string).trim(),
+        body: (card.body as string).trim(),
+        visualPrompt: (card.visualPrompt as string).trim(),
         textFields: normalizeTextFields(card.textFields),
-        references: card.references.filter((ref) => typeof ref === "string"),
+        references: (card.references as unknown[]).filter((ref): ref is string => typeof ref === "string"),
         locked: false,
       })),
     },

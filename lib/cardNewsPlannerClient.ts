@@ -2,25 +2,65 @@ import { config } from "../config.js";
 import { CARD_NEWS_PLANNER_SCHEMA } from "./cardNewsPlannerSchema.js";
 import { logEvent } from "./logger.js";
 
-function plannerError(message, code, status = 502) {
-  const err: any = new Error(message);
+type PlannerError = Error & {
+  code?: string;
+  status?: number;
+  upstreamStatus?: number;
+  upstreamBodyChars?: number;
+};
+
+interface PlannerMessage {
+  role: string;
+  content: unknown;
+}
+
+interface PlannerRequestOptions {
+  oauthUrl: string;
+  model: string;
+  messages: PlannerMessage[];
+  timeoutMs: number;
+  structured?: boolean;
+  reasoningEffort?: string;
+}
+
+interface PlannerInput {
+  messages: PlannerMessage[];
+}
+
+interface PlannerCallOptions {
+  oauthUrl?: string;
+  model?: string;
+  timeoutMs?: number;
+  reasoningEffort?: string;
+}
+
+function plannerError(message: string, code: string, status = 502): PlannerError {
+  const err = new Error(message) as PlannerError;
   err.code = code;
   err.status = status;
   return err;
 }
 
-function extractText(json) {
-  if (typeof json.output_text === "string") return json.output_text;
-  for (const item of json.output || []) {
-    for (const content of item.content || []) {
-      if (typeof content.text === "string") return content.text;
-      if (typeof content.value === "string") return content.value;
+function extractText(json: unknown): string {
+  if (!json || typeof json !== "object") return "";
+  const obj = json as Record<string, unknown>;
+  if (typeof obj.output_text === "string") return obj.output_text;
+  const output = Array.isArray(obj.output) ? (obj.output as unknown[]) : [];
+  for (const item of output) {
+    if (!item || typeof item !== "object") continue;
+    const contents = (item as Record<string, unknown>).content;
+    if (!Array.isArray(contents)) continue;
+    for (const content of contents as unknown[]) {
+      if (!content || typeof content !== "object") continue;
+      const c = content as Record<string, unknown>;
+      if (typeof c.text === "string") return c.text;
+      if (typeof c.value === "string") return c.value;
     }
   }
   return "";
 }
 
-async function requestJson({ oauthUrl, model, messages, timeoutMs, structured, reasoningEffort }) {
+async function requestJson({ oauthUrl, model, messages, timeoutMs, structured, reasoningEffort }: PlannerRequestOptions): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -51,19 +91,19 @@ async function requestJson({ oauthUrl, model, messages, timeoutMs, structured, r
     logEvent("card-news-planner", "response", { model, status: res.status, structured });
     if (!res.ok) {
       const text = await res.text();
-      const err: any = plannerError("Planner upstream failed", "PLANNER_UPSTREAM_FAILED", 502);
+      const err = plannerError("Planner upstream failed", "PLANNER_UPSTREAM_FAILED", 502);
       err.upstreamStatus = res.status;
       err.upstreamBodyChars = text.length;
       throw err;
     }
-    const json = await res.json();
+    const json: unknown = await res.json();
     return extractText(json);
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function requestChatJson({ oauthUrl, model, messages, timeoutMs }) {
+async function requestChatJson({ oauthUrl, model, messages, timeoutMs }: Omit<PlannerRequestOptions, "structured" | "reasoningEffort">): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -80,19 +120,19 @@ async function requestChatJson({ oauthUrl, model, messages, timeoutMs }) {
     logEvent("card-news-planner", "chat_response", { model, status: res.status });
     if (!res.ok) {
       const text = await res.text();
-      const err: any = plannerError("Planner upstream failed", "PLANNER_UPSTREAM_FAILED", 502);
+      const err = plannerError("Planner upstream failed", "PLANNER_UPSTREAM_FAILED", 502);
       err.upstreamStatus = res.status;
       err.upstreamBodyChars = text.length;
       throw err;
     }
-    const json: any = await res.json();
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     return json.choices?.[0]?.message?.content || "";
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function requestCardNewsPlannerJson(input, options: any = {}) {
+export async function requestCardNewsPlannerJson(input: PlannerInput, options: PlannerCallOptions = {}) {
   const oauthUrl = options.oauthUrl || `http://127.0.0.1:${config.oauth.proxyPort}`;
   const model = options.model || config.cardNewsPlanner.model;
   const timeoutMs = options.timeoutMs || config.cardNewsPlanner.timeoutMs;
@@ -101,8 +141,9 @@ export async function requestCardNewsPlannerJson(input, options: any = {}) {
   let mode = "structured-output";
   try {
     text = await requestJson({ oauthUrl, model, messages: input.messages, timeoutMs, structured: true, reasoningEffort });
-  } catch (err: any) {
-    if (err.code !== "PLANNER_UPSTREAM_FAILED") throw err;
+  } catch (err) {
+    const code = (err as { code?: unknown })?.code;
+    if (code !== "PLANNER_UPSTREAM_FAILED") throw err;
     mode = "json-mode";
     text = await requestChatJson({ oauthUrl, model, messages: input.messages, timeoutMs });
   }

@@ -210,11 +210,12 @@ export function registerGenerateRoutes(app, ctxRaw: RouteRuntimeContext) {
             revisedPrompt: r.value.revisedPrompt || null,
           });
           if (r.value.usage) {
-            if (!totalUsage) totalUsage = { ...r.value.usage };
+            const usageValue = r.value.usage;
+            if (!totalUsage) totalUsage = { ...usageValue };
             else {
               const tu = totalUsage;
-              Object.keys(r.value.usage).forEach((k) => {
-                if (typeof r.value.usage[k] === "number") tu[k] = (tu[k] || 0) + r.value.usage[k];
+              Object.keys(usageValue).forEach((k) => {
+                if (typeof usageValue[k] === "number") tu[k] = (tu[k] || 0) + usageValue[k];
               });
             }
           }

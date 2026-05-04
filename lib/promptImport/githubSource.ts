@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
+import type { GitHubFileSource, PromptImportLimits } from "./types.js";
 
 import { errInfo } from "../errInfo.js";
 const ALLOWED_HOSTS = new Set(["github.com", "raw.githubusercontent.com"]);
 const SUPPORTED_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]+$/;
 
-function safeDecode(value) {
+function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
   } catch {
@@ -14,7 +15,7 @@ function safeDecode(value) {
   }
 }
 
-function assertCleanPath(path) {
+function assertCleanPath(path: string): string {
   const lower = path.toLowerCase();
   if (path.includes("\0") || lower.includes("%00")) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub path contains a null byte");
@@ -29,12 +30,12 @@ function assertCleanPath(path) {
   return decoded.replace(/^\/+/, "");
 }
 
-function extensionForPath(path) {
+function extensionForPath(path: string): string {
   const match = /\.([A-Za-z0-9]+)$/.exec(path);
   return match?.[1]?.toLowerCase() ?? "";
 }
 
-function assertSupportedFilePath(path) {
+function assertSupportedFilePath(path: string): string {
   const ext = extensionForPath(path);
   if (!ext) {
     throw promptImportError("FOLDER_IMPORT_DEFERRED", "Folder import is planned for a later version", 422);
@@ -45,13 +46,13 @@ function assertSupportedFilePath(path) {
   return ext;
 }
 
-function assertOwnerRepo(owner, repo) {
+function assertOwnerRepo(owner: string | undefined, repo: string | undefined): void {
   if (!OWNER_REPO_RE.test(owner || "") || !OWNER_REPO_RE.test(repo || "")) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "Invalid GitHub owner or repository");
   }
 }
 
-function normalizeUrlInput(input) {
+function normalizeUrlInput(input: string): GitHubFileSource | null {
   let url;
   try {
     url = new URL(input);
@@ -110,7 +111,7 @@ function normalizeUrlInput(input) {
   };
 }
 
-function normalizeShorthand(input) {
+function normalizeShorthand(input: string): GitHubFileSource {
   const match = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:@([^:]+))?:(.+)$/.exec(input);
   if (!match) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "Enter a GitHub file URL or owner/repo:path");
@@ -136,7 +137,14 @@ function normalizeShorthand(input) {
   };
 }
 
-export function buildGitHubRawFileSource({ owner, repo, ref = "main", path }) {
+interface BuildRawSourceInput {
+  owner: string;
+  repo: string;
+  ref?: string;
+  path: string;
+}
+
+export function buildGitHubRawFileSource({ owner, repo, ref = "main", path }: BuildRawSourceInput): GitHubFileSource {
   assertOwnerRepo(owner, repo);
   const cleanRef = safeDecode(String(ref || "main").trim());
   if (!cleanRef || cleanRef.includes("/")) {
@@ -157,7 +165,7 @@ export function buildGitHubRawFileSource({ owner, repo, ref = "main", path }) {
   };
 }
 
-function validateFinalFetchUrl(rawUrl) {
+function validateFinalFetchUrl(rawUrl: string): void {
   let url;
   try {
     url = new URL(rawUrl);
@@ -187,7 +195,7 @@ function validateFinalFetchUrl(rawUrl) {
   assertSupportedFilePath(finalPath);
 }
 
-export function normalizeGitHubSource(input) {
+export function normalizeGitHubSource(input: unknown): GitHubFileSource {
   const trimmed = typeof input === "string" ? input.trim() : "";
   if (!trimmed) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub source is required");
@@ -195,7 +203,15 @@ export function normalizeGitHubSource(input) {
   return normalizeUrlInput(trimmed) ?? normalizeShorthand(trimmed);
 }
 
-export async function fetchGitHubSource(source, limits) {
+interface GitHubFetchResult {
+  text: string;
+  finalUrl: string;
+  etag: string | null;
+  sizeBytes: number;
+  contentHash: string;
+}
+
+export async function fetchGitHubSource(source: GitHubFileSource, limits: PromptImportLimits): Promise<GitHubFetchResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);
   try {
@@ -231,11 +247,11 @@ export async function fetchGitHubSource(source, limits) {
   }
 }
 
-export async function fetchGitHubSourceText(source, limits) {
+export async function fetchGitHubSourceText(source: GitHubFileSource, limits: PromptImportLimits): Promise<string> {
   const result = await fetchGitHubSource(source, limits);
   return result.text;
 }
 
-export function isSupportedPromptFileName(filename) {
+export function isSupportedPromptFileName(filename: string): boolean {
   return SUPPORTED_EXTENSIONS.has(extensionForPath(filename || ""));
 }

@@ -5,22 +5,74 @@ import { buildCardNewsPlannerMessages } from "./cardNewsPlannerPrompt.js";
 import { requestCardNewsPlannerJson } from "./cardNewsPlannerClient.js";
 import { repairPlannerOutput, validatePlannerOutput } from "./cardNewsPlannerSchema.js";
 import { waitForOAuthReady } from "./oauthProxy.js";
+import type { RouteRuntimeContext } from "./runtimeContext.js";
 
 import { errInfo } from "./errInfo.js";
-function compactText(value, fallback) {
+
+interface RoleEntry {
+  role: string;
+  required: boolean;
+  promptHint: string;
+  preferredSlots: string[];
+}
+
+interface RoleTemplate {
+  id: string;
+  name: string;
+  defaultCount: number;
+  roles: RoleEntry[];
+}
+
+interface CardNewsBriefInput {
+  setId?: string;
+  topic?: string;
+  title?: string;
+  audience?: string;
+  goal?: string;
+  contentBrief?: string;
+  imageTemplateId?: string;
+  roleTemplateId?: string;
+  size?: string;
+}
+
+interface BriefForBody {
+  audience?: string;
+  goal?: string;
+  content?: string;
+}
+
+interface PlannerCardOutput {
+  role: string;
+  headline: string;
+  body: string;
+  visualPrompt: string;
+  textFields?: unknown;
+  references?: unknown[];
+  order?: number;
+}
+
+interface PlannerOutput {
+  title: string;
+  topic: string;
+  audience?: string;
+  goal?: string;
+  cards: PlannerCardOutput[];
+}
+
+function compactText(value: unknown, fallback: string): string {
   const text = typeof value === "string" ? value.trim() : "";
   return text || fallback;
 }
 
-function detectBriefLanguage(input) {
+function detectBriefLanguage(input: CardNewsBriefInput): "ko" | "en" | "und" {
   const text = [input.topic, input.audience, input.goal, input.contentBrief].filter(Boolean).join(" ");
   if (/[가-힣]/.test(text)) return "ko";
   if (/[A-Za-z]/.test(text)) return "en";
   return "und";
 }
 
-function fallbackLabel(role, lang) {
-  const ko = {
+function fallbackLabel(role: string, lang: string): string {
+  const ko: Record<string, string> = {
     cta: "다음 행동",
     problem: "왜 중요한가",
     insight: "핵심 인사이트",
@@ -28,7 +80,7 @@ function fallbackLabel(role, lang) {
     data: "숫자로 확인",
     summary: "요약",
   };
-  const en = {
+  const en: Record<string, string> = {
     cta: "Next action",
     problem: "Why it matters",
     insight: "Key insight",
@@ -41,13 +93,13 @@ function fallbackLabel(role, lang) {
   return "";
 }
 
-function headlineFor(role, topic, lang) {
+function headlineFor(role: string, topic: string, lang: string): string {
   const label = compactText(topic, "Card news");
   if (role === "cover" || role === "hook") return label;
   return fallbackLabel(role, lang) || label;
 }
 
-function bodyFor(role, brief, lang) {
+function bodyFor(role: string, brief: BriefForBody, lang: string): string {
   const content = compactText(brief.content, "");
   if (content) return content;
   const target = compactText(brief.audience, lang === "ko" ? "독자" : "reader");
@@ -64,11 +116,11 @@ function bodyFor(role, brief, lang) {
   return `Present ${goal} for this card.`;
 }
 
-function normalizeTextFields(fields) {
+function normalizeTextFields(fields: unknown): unknown[] {
   return Array.isArray(fields) ? fields : [];
 }
 
-function toCardNewsPlan(plannerOutput, input, roleTemplate) {
+function toCardNewsPlan(plannerOutput: PlannerOutput, input: CardNewsBriefInput, roleTemplate: RoleTemplate) {
   const topic = compactText(plannerOutput.topic, compactText(input.topic, input.title || "Untitled card news"));
   return {
     setId: input.setId || `cs_${ulid()}`,
@@ -98,17 +150,17 @@ function toCardNewsPlan(plannerOutput, input, roleTemplate) {
   };
 }
 
-export function createDeterministicCardNewsDraft(input: any = {}) {
-  const roleTemplate = getRoleTemplate(input.roleTemplateId);
+export function createDeterministicCardNewsDraft(input: CardNewsBriefInput = {}) {
+  const roleTemplate = getRoleTemplate(input.roleTemplateId) as RoleTemplate;
   const topic = compactText(input.topic, input.title || "Untitled card news");
   const title = compactText(input.title, topic);
-  const brief = {
+  const brief: BriefForBody = {
     audience: input.audience,
     goal: input.goal,
     content: input.contentBrief,
   };
   const lang = detectBriefLanguage(input);
-  const output = {
+  const output: PlannerOutput = {
     title,
     topic,
     audience: compactText(input.audience, ""),
@@ -121,27 +173,29 @@ export function createDeterministicCardNewsDraft(input: any = {}) {
       visualPrompt: `${role.promptHint}, ${topic}`,
       textFields: [],
       references: [],
-      locked: false,
     })),
   };
   return toCardNewsPlan(output, input, roleTemplate);
 }
 
-function plannerError(message, code, status) {
-  const err: any = new Error(message);
+type PlannerError = Error & { code?: string; status?: number };
+
+function plannerError(message: string, code: string, status: number): PlannerError {
+  const err = new Error(message) as PlannerError;
   err.code = code;
   err.status = status;
   return err;
 }
 
-export async function createCardNewsDraft(ctxOrInput: any = {}, maybeInput: any = {}) {
-  const hasCtx = !!ctxOrInput?.config;
-  const ctx = hasCtx ? ctxOrInput : null;
-  const input = hasCtx ? maybeInput : ctxOrInput;
-  const roleTemplate = getRoleTemplate(input.roleTemplateId);
+export async function createCardNewsDraft(ctxOrInput: RouteRuntimeContext | CardNewsBriefInput = {} as CardNewsBriefInput, maybeInput: CardNewsBriefInput = {}) {
+  const hasCtx = Boolean((ctxOrInput as RouteRuntimeContext | undefined)?.config);
+  const ctx = hasCtx ? (ctxOrInput as RouteRuntimeContext) : null;
+  const input = hasCtx ? maybeInput : (ctxOrInput as CardNewsBriefInput);
+  const roleTemplate = getRoleTemplate(input.roleTemplateId) as RoleTemplate;
 
   if (!ctx) return createDeterministicCardNewsDraft(input);
-  if (!ctx.config.cardNewsPlanner?.enabled) {
+  const planner = (ctx.config as { cardNewsPlanner?: { enabled?: boolean; model?: string; timeoutMs?: number; deterministicFallback?: boolean } } | undefined)?.cardNewsPlanner;
+  if (!planner?.enabled) {
     return {
       plan: createDeterministicCardNewsDraft(input),
       planner: { mode: "deterministic-fallback", model: "none", repaired: false },
@@ -153,25 +207,25 @@ export async function createCardNewsDraft(ctxOrInput: any = {}, maybeInput: any 
     await waitForOAuthReady(ctx);
     const messages = buildCardNewsPlannerMessages({ ...input, roleTemplate, imageTemplate });
     const raw = await requestCardNewsPlannerJson({ messages }, {
-      oauthUrl: ctx.oauthUrl,
-      model: ctx.config.cardNewsPlanner.model,
-      timeoutMs: ctx.config.cardNewsPlanner.timeoutMs,
+      oauthUrl: (ctx as RouteRuntimeContext & { oauthUrl?: string }).oauthUrl,
+      model: planner.model,
+      timeoutMs: planner.timeoutMs,
     });
     let result = validatePlannerOutput(raw.output, roleTemplate);
     if (!result.ok) result = repairPlannerOutput(raw.output, { ...input, roleTemplate });
     if (!result.ok) throw plannerError("Planner schema invalid", "PLANNER_SCHEMA_INVALID", 422);
     return {
-      plan: toCardNewsPlan(result.plan, input, roleTemplate),
+      plan: toCardNewsPlan(result.plan as PlannerOutput, input, roleTemplate),
       planner: { mode: raw.mode, model: raw.model, repaired: result.repaired },
     };
   } catch (e) {
     const err = errInfo(e);
-    if (ctx.config.cardNewsPlanner.deterministicFallback) {
+    if (planner.deterministicFallback) {
       return {
         plan: createDeterministicCardNewsDraft(input),
         planner: {
           mode: "deterministic-fallback",
-          model: ctx.config.cardNewsPlanner.model,
+          model: planner.model,
           repaired: true,
         },
       };

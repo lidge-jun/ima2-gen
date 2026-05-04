@@ -37,7 +37,16 @@ async function encodeJpegWithinBudget(input: Buffer, {
   return null;
 }
 
-export async function compressReferenceB64ForOAuth(imageB64, options: any = {}) {
+interface CompressOptions {
+  maxB64Bytes?: number;
+  maxEdge?: number;
+  qualityLadder?: number[];
+  fallbackMaxEdge?: number;
+  fallbackQualityLadder?: number[];
+  force?: boolean;
+}
+
+export async function compressReferenceB64ForOAuth(imageB64: string | undefined | null, options: CompressOptions = {}) {
   const rawB64 = stripDataUrlPrefix(imageB64);
   const maxB64Bytes = options.maxB64Bytes ?? DEFAULT_MAX_B64_BYTES;
   const maxEdge = options.maxEdge ?? DEFAULT_MAX_EDGE;
@@ -68,7 +77,7 @@ export async function compressReferenceB64ForOAuth(imageB64, options: any = {}) 
     return { ...fallback, inputBytes, outputBytes: fallback.b64.length };
   }
 
-  const err: any = new Error(`Reference image remains above ${maxB64Bytes} base64 bytes after compression`);
+  const err = new Error(`Reference image remains above ${maxB64Bytes} base64 bytes after compression`) as Error & { code?: string; status?: number };
   err.code = "REF_TOO_LARGE";
   err.status = 400;
   throw err;

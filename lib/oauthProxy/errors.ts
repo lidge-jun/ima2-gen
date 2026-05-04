@@ -1,8 +1,32 @@
 import { logEvent } from "../logger.js";
 import { classifyUpstreamError, classifyUpstreamErrorCode } from "../errorClassify.js";
 
+interface MakeOAuthErrorOptions {
+  status?: number;
+  code?: string;
+  upstreamBodyChars?: number;
+  upstreamCode?: string | null;
+  upstreamType?: string | null;
+  upstreamParam?: string | null;
+  eventType?: string;
+  eventCount?: number;
+  cause?: unknown;
+}
+
+interface OAuthError extends Error {
+  code: string;
+  status?: number;
+  upstreamBodyChars?: number;
+  upstreamCode?: string | null;
+  upstreamType?: string | null;
+  upstreamParam?: string | null;
+  eventType?: string;
+  eventCount?: number;
+  cause?: unknown;
+}
+
 export function makeOAuthError(
-  message,
+  message: string,
   {
     status,
     code = "OAUTH_UPSTREAM_ERROR",
@@ -13,9 +37,9 @@ export function makeOAuthError(
     eventType,
     eventCount,
     cause,
-  }: any = {},
-) {
-  const err: any = new Error(message);
+  }: MakeOAuthErrorOptions = {},
+): OAuthError {
+  const err = new Error(message) as OAuthError;
   err.code = code;
   if (status) err.status = status;
   if (typeof upstreamBodyChars === "number") err.upstreamBodyChars = upstreamBodyChars;
@@ -28,7 +52,7 @@ export function makeOAuthError(
   return err;
 }
 
-export function parseOpenAIErrorBody(text) {
+export function parseOpenAIErrorBody(text: string) {
   try {
     const parsed = JSON.parse(text);
     const error = parsed?.error;
@@ -46,7 +70,7 @@ export function parseOpenAIErrorBody(text) {
   }
 }
 
-export function normalizedOAuthCode(upstreamError) {
+export function normalizedOAuthCode(upstreamError: { code?: string | null; type?: string | null; message?: string | null } | null | undefined) {
   const byCode = classifyUpstreamErrorCode(upstreamError?.code);
   if (byCode !== "UNKNOWN") return byCode;
   const byType = classifyUpstreamErrorCode(upstreamError?.type);
@@ -56,7 +80,13 @@ export function normalizedOAuthCode(upstreamError) {
   return "OAUTH_UPSTREAM_ERROR";
 }
 
-export function throwOAuthHttpError(res, text, { requestId, scope, fallbackMessage }) {
+interface ThrowOAuthHttpErrorOptions {
+  requestId: string | null;
+  scope?: string;
+  fallbackMessage: string;
+}
+
+export function throwOAuthHttpError(res: { status: number }, text: string, { requestId, scope, fallbackMessage }: ThrowOAuthHttpErrorOptions) {
   const upstream = parseOpenAIErrorBody(text);
   const isClientError = res.status >= 400 && res.status < 500;
   if (isClientError && upstream?.message) {
@@ -83,11 +113,12 @@ export function throwOAuthHttpError(res, text, { requestId, scope, fallbackMessa
   });
 }
 
-export function isAbortError(err) {
-  return err?.name === "AbortError" || err?.code === "ABORT_ERR";
+export function isAbortError(err: unknown) {
+  const e = err as { name?: string; code?: string } | null | undefined;
+  return e?.name === "AbortError" || e?.code === "ABORT_ERR";
 }
 
-export function throwOAuthTimeoutError(err, { timeoutMs: _timeoutMs, requestId: _requestId, scope }) {
+export function throwOAuthTimeoutError(err: unknown, { timeoutMs: _timeoutMs, requestId: _requestId, scope }: { timeoutMs?: number; requestId?: string | null; scope?: string }) {
   throw makeOAuthError("OAuth image generation timed out", {
     code: "OAUTH_IMAGE_TIMEOUT",
     status: 504,

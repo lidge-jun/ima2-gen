@@ -20,8 +20,22 @@ import {
 
 interface ParsedImage { b64: string; revisedPrompt: string | null; }
 
-function makeError(message, { status = 500, code = "RESPONSES_IMAGE_ERROR", cause, ...rest }: any = {}) {
-  const err: any = new Error(message);
+interface MakeErrorOptions {
+  status?: number;
+  code?: string;
+  cause?: unknown;
+  [key: string]: unknown;
+}
+
+interface ResponsesError extends Error {
+  status: number;
+  code: string;
+  cause?: unknown;
+  [key: string]: unknown;
+}
+
+function makeError(message: string, { status = 500, code = "RESPONSES_IMAGE_ERROR", cause, ...rest }: MakeErrorOptions = {}): ResponsesError {
+  const err = new Error(message) as ResponsesError;
   err.status = status;
   err.code = code;
   if (cause) err.cause = cause;
@@ -29,7 +43,14 @@ function makeError(message, { status = 500, code = "RESPONSES_IMAGE_ERROR", caus
   return err;
 }
 
-function parseOpenAIErrorBody(text) {
+interface UpstreamError {
+  message: string;
+  code: string | null;
+  type: string | null;
+  param: string | null;
+}
+
+function parseOpenAIErrorBody(text: string): UpstreamError | null {
   try {
     const parsed = JSON.parse(text);
     const error = parsed?.error || {};
@@ -44,7 +65,7 @@ function parseOpenAIErrorBody(text) {
   }
 }
 
-function normalizedCode(upstream) {
+function normalizedCode(upstream: UpstreamError | null | undefined) {
   const byCode = classifyUpstreamErrorCode(upstream?.code);
   if (byCode !== "UNKNOWN") return byCode;
   const byType = classifyUpstreamErrorCode(upstream?.type);
@@ -53,7 +74,7 @@ function normalizedCode(upstream) {
   return byMessage !== "UNKNOWN" ? byMessage : "RESPONSES_IMAGE_ERROR";
 }
 
-function safeUpstreamClientMessage(upstream, status) {
+function safeUpstreamClientMessage(upstream: UpstreamError | null | undefined, status: number) {
   const code = normalizedCode(upstream);
   if (code === "AUTH_API_KEY_INVALID") return "API key is invalid or unavailable.";
   if (code === "MODERATION_REFUSED") return "OpenAI refused the image request for safety reasons.";
@@ -63,7 +84,7 @@ function safeUpstreamClientMessage(upstream, status) {
   return "OpenAI rejected the image request.";
 }
 
-async function getEndpoint(ctx, provider, _scope) {
+async function getEndpoint(ctx: RouteRuntimeContext, provider: string | undefined, _scope: string) {
   if (provider === "api") {
     if (!ctx?.apiKey) {
       throw makeError("API key is required for API provider image generation", {
@@ -88,28 +109,37 @@ async function getEndpoint(ctx, provider, _scope) {
   };
 }
 
-function tools(webSearchEnabled, imageOptions) {
+interface ImageGenOptions {
+  quality?: string;
+  size?: string;
+  moderation?: string;
+  partial_images?: number;
+}
+
+function tools(webSearchEnabled: boolean, imageOptions: ImageGenOptions) {
   return [
     ...(webSearchEnabled ? [{ type: "web_search" }] : []),
     { type: "image_generation", ...imageOptions },
   ];
 }
 
-function normalizeRef(ref) {
+type ReferenceRef = string | { b64?: string; detectedMime?: string | null; declaredMime?: string | null };
+
+function normalizeRef(ref: ReferenceRef) {
   const b64 = typeof ref === "string" ? ref : ref?.b64;
   const detectedMime = typeof ref === "object" && ref?.detectedMime
     ? ref.detectedMime
     : detectImageMimeFromB64(b64);
   const declaredMime = typeof ref === "object" ? ref?.declaredMime : null;
-  const mime = ["image/png", "image/jpeg", "image/webp"].includes(detectedMime)
+  const mime = ["image/png", "image/jpeg", "image/webp"].includes(detectedMime as string)
     ? detectedMime
-    : ["image/png", "image/jpeg", "image/webp"].includes(declaredMime)
+    : ["image/png", "image/jpeg", "image/webp"].includes(declaredMime as string)
       ? declaredMime
       : "image/png";
   return { type: "input_image", image_url: `data:${mime};base64,${b64}` };
 }
 
-function extractSseData(block) {
+function extractSseData(block: string) {
   let eventData = "";
   for (const line of block.split("\n")) {
     if (line.startsWith("data: ")) eventData += line.slice(6);
@@ -117,7 +147,18 @@ function extractSseData(block) {
   return eventData;
 }
 
-function extractPartialImage(data) {
+interface SseData {
+  type?: string;
+  item?: { type?: string; partial_image?: string; image?: string; result?: string; index?: number; revised_prompt?: string };
+  partial_image?: string;
+  image?: string;
+  result?: string;
+  index?: number;
+  response?: { usage?: Record<string, number>; tool_usage?: { web_search?: { num_requests?: number } } };
+  error?: { code?: string };
+}
+
+function extractPartialImage(data: SseData) {
   if (typeof data?.type !== "string" || !data.type.includes("partial")) return null;
   const item = data.item || {};
   const b64 = data.partial_image || data.image || data.result || item.partial_image || item.image || item.result;
@@ -126,13 +167,20 @@ function extractPartialImage(data) {
   return { b64, index };
 }
 
-async function parseStream(res, { requestId, scope, maxImages = 1, onPartialImage = null }: any = {}) {
-  const reader = res.body.getReader();
+interface ParseStreamOptions {
+  requestId?: string | null;
+  scope: string;
+  maxImages?: number;
+  onPartialImage?: ((partial: { b64: string; index: number | null | undefined }) => void) | null;
+}
+
+async function parseStream(res: Response, { requestId, scope, maxImages = 1, onPartialImage = null }: ParseStreamOptions) {
+  const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   const images: ParsedImage[] = [];
   const eventTypes: Record<string, number> = {};
   let buffer = "";
-  let usage = null;
+  let usage: Record<string, number> | null = null;
   let webSearchCalls = 0;
   let eventCount = 0;
   let extraIgnored = 0;
@@ -146,7 +194,7 @@ async function parseStream(res, { requestId, scope, maxImages = 1, onPartialImag
       buffer = buffer.slice(boundary + 2);
       const eventData = extractSseData(block);
       if (!eventData || eventData === "[DONE]") continue;
-      let data;
+      let data: SseData;
       try { data = JSON.parse(eventData); } catch { continue; }
       eventCount++;
       eventTypes[data.type || "_unknown"] = (eventTypes[data.type || "_unknown"] || 0) + 1;
@@ -180,8 +228,8 @@ async function parseStream(res, { requestId, scope, maxImages = 1, onPartialImag
   return { images, usage, webSearchCalls, eventCount, eventTypes, extraIgnored };
 }
 
-async function parseJson(res, maxImages) {
-  const json: any = await res.json();
+async function parseJson(res: Response, maxImages: number) {
+  const json = await res.json() as { output?: Array<{ type?: string; result?: string; revised_prompt?: string }>; usage?: Record<string, number> };
   const images: ParsedImage[] = [];
   let webSearchCalls = 0;
   for (const item of json.output || []) {
@@ -196,7 +244,17 @@ async function parseJson(res, maxImages) {
   return { images, usage: json.usage || null, webSearchCalls, eventCount: 0, eventTypes: {}, extraIgnored: 0 };
 }
 
-async function postResponses({ ctx, provider, scope, payload, requestId, maxImages = 1, onPartialImage = null }) {
+interface PostResponsesArgs {
+  ctx: RouteRuntimeContext;
+  provider: string | undefined;
+  scope: string;
+  payload: unknown;
+  requestId?: string | null;
+  maxImages?: number;
+  onPartialImage?: ((partial: { b64: string; index: number | null | undefined }) => void) | null;
+}
+
+async function postResponses({ ctx, provider, scope, payload, requestId, maxImages = 1, onPartialImage = null }: PostResponsesArgs) {
   const { url, headers } = await getEndpoint(ctx, provider, scope);
   const timeoutMs = ctx?.config?.oauth?.generationTimeoutMs || 400 * 1000;
   const controller = new AbortController();
@@ -204,7 +262,7 @@ async function postResponses({ ctx, provider, scope, payload, requestId, maxImag
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: headers as any,
+      headers: headers as Record<string, string>,
       signal: controller.signal,
       body: JSON.stringify(payload),
     });
@@ -244,7 +302,19 @@ async function postResponses({ ctx, provider, scope, payload, requestId, maxImag
   }
 }
 
-export async function generateViaResponses(provider, prompt, quality, size, moderation = "low", references: any[] = [], requestId = null, mode = "auto", ctxRaw: RouteRuntimeContext = {}, options: any = {}) {
+interface GenerateOptions {
+  webSearchEnabled?: boolean;
+  searchMode?: string;
+  onPartialImage?: ((partial: { b64: string; index: number | null | undefined }) => void) | null;
+  model?: string;
+  partialImages?: number;
+  reasoningEffort?: string;
+  maxImages?: number;
+  references?: ReferenceRef[];
+  mask?: string;
+}
+
+export async function generateViaResponses(provider: string | undefined, prompt: string | undefined, quality: string | undefined, size: string | undefined, moderation: string = "low", references: ReferenceRef[] = [], requestId: string | null = null, mode: string = "auto", ctxRaw: RouteRuntimeContext = {}, options: GenerateOptions = {}) {
   const ctx = requireRuntimeContext(ctxRaw);
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const referenceInputs = references.map(normalizeRef);
@@ -275,7 +345,7 @@ export async function generateViaResponses(provider, prompt, quality, size, mode
   return { b64: image.b64, usage: result.usage, webSearchCalls: result.webSearchCalls, revisedPrompt: image.revisedPrompt };
 }
 
-export async function generateMultimodeViaResponses(provider, prompt, quality, size, moderation = "low", references: any[] = [], requestId = null, mode = "auto", ctxRaw: RouteRuntimeContext = {}, options: any = {}) {
+export async function generateMultimodeViaResponses(provider: string | undefined, prompt: string | undefined, quality: string | undefined, size: string | undefined, moderation: string = "low", references: ReferenceRef[] = [], requestId: string | null = null, mode: string = "auto", ctxRaw: RouteRuntimeContext = {}, options: GenerateOptions = {}) {
   const ctx = requireRuntimeContext(ctxRaw);
   const maxImages = Math.min(8, Math.max(1, Math.trunc(Number(options.maxImages) || 1)));
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
@@ -311,14 +381,14 @@ export async function generateMultimodeViaResponses(provider, prompt, quality, s
   });
 }
 
-export async function editViaResponses(provider, prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctxRaw: RouteRuntimeContext = {}, requestId = null, options: any = {}) {
+export async function editViaResponses(provider: string | undefined, prompt: string | undefined, imageB64: string | undefined, quality: string | undefined, size: string | undefined, moderation: string = "low", mode: string = "auto", ctxRaw: RouteRuntimeContext = {}, requestId: string | null = null, options: GenerateOptions = {}) {
   const ctx = requireRuntimeContext(ctxRaw);
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const imageForRequest = await compressReferenceB64ForOAuth(imageB64, {
     maxB64Bytes: ctx.config?.limits?.maxRefB64Bytes,
     force: true,
   });
-  const referenceImages = await Promise.all((Array.isArray(options.references) ? options.references : []).map((ref) =>
+  const referenceImages = await Promise.all((Array.isArray(options.references) ? options.references : []).map((ref: ReferenceRef) =>
     compressReferenceB64ForOAuth(typeof ref === "string" ? ref : ref?.b64, {
       maxB64Bytes: ctx.config?.limits?.maxRefB64Bytes,
       force: true,

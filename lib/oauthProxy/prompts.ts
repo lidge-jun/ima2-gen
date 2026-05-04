@@ -64,7 +64,7 @@ export const MULTIMODE_NO_SEARCH_DEVELOPER_PROMPT =
   "You are generating a multimode image sequence. The selected value N is maxImages. You MUST create up to N separate image_generation_call outputs. Return separate image_generation_call outputs, one per stage, up to N. Invoke the image_generation tool separately once per stage. Each stage must be a separate generated image result. Do not satisfy this request with one image. Never collapse multiple stages into one image, collage, grid, contact sheet, storyboard sheet, or multi-panel single image. If you cannot complete all stages, return as many separate image_generation_call outputs as possible. Stop after N image_generation_call outputs. Never respond with plain text only.\n\n" +
   SAFETY_INTENT_POLICY;
 
-export function buildUserTextPrompt(userPrompt, mode, options = {}) {
+export function buildUserTextPrompt(userPrompt: string | undefined, mode: string, options: Record<string, unknown> = {}) {
   if (mode === "direct") {
     return `Generate an image with this exact prompt, no modifications: ${userPrompt}${DIRECT_PROMPT_FIDELITY_SUFFIX}`;
   }
@@ -72,7 +72,7 @@ export function buildUserTextPrompt(userPrompt, mode, options = {}) {
   return `Generate an image: ${userPrompt}${researchSuffix}${AUTO_PROMPT_FIDELITY_SUFFIX}`;
 }
 
-export function buildMultimodeSequencePrompt(userPrompt, maxImages, options = {}) {
+export function buildMultimodeSequencePrompt(userPrompt: string, maxImages: number, options: Record<string, unknown> = {}) {
   const n = Math.min(8, Math.max(1, Math.trunc(Number(maxImages) || 1)));
   const researchInstruction = resolveWebSearchEnabled(options)
     ? [`If factual visual accuracy is required and the prompt/context is not already sufficient, use at least one concise web_search call for references before generating. If the prompt is already visually sufficient, do not search or add clarifiers; pass the user's prompt through for each stage.`]
@@ -95,7 +95,7 @@ export function buildMultimodeSequencePrompt(userPrompt, maxImages, options = {}
   ].join("\n");
 }
 
-export function buildEditTextPrompt(userPrompt, mode, options = {}) {
+export function buildEditTextPrompt(userPrompt: string | undefined, mode: string, options: Record<string, unknown> = {}) {
   if (mode === "direct") {
     return `Edit this image with this exact prompt, no modifications: ${userPrompt}${DIRECT_PROMPT_FIDELITY_SUFFIX}`;
   }
@@ -103,6 +103,6 @@ export function buildEditTextPrompt(userPrompt, mode, options = {}) {
   return `Edit this image: ${userPrompt}${researchSuffix}${AUTO_PROMPT_FIDELITY_SUFFIX}`;
 }
 
-export function buildEditResearchTextPrompt(userPrompt, mode) {
+export function buildEditResearchTextPrompt(userPrompt: string, mode: string) {
   return buildEditTextPrompt(userPrompt, mode);
 }
