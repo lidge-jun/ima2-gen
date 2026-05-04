@@ -32,16 +32,18 @@ const QUALITY_HINTS = [
   ["final", /\bfinal|production[- ]ready\b/i],
 ];
 
-function matches(text, patterns) {
-  return patterns.filter(([, pattern]) => pattern.test(text)).map(([name]) => name);
+type HintTuple = [string, RegExp];
+
+function matches(text: string, patterns: HintTuple[]): string[] {
+  return patterns.filter(([, pattern]: HintTuple) => pattern.test(text)).map(([name]: HintTuple) => name);
 }
 
-export function extractGptImageHints(text) {
+export function extractGptImageHints(text: unknown) {
   const value = String(text || "");
-  const modelHints = matches(value, MODEL_HINTS);
-  const taskHints = matches(value, TASK_HINTS);
-  const sizeHints = matches(value, SIZE_HINTS);
-  const qualityHints = matches(value, QUALITY_HINTS);
+  const modelHints = matches(value, MODEL_HINTS as HintTuple[]);
+  const taskHints = matches(value, TASK_HINTS as HintTuple[]);
+  const sizeHints = matches(value, SIZE_HINTS as HintTuple[]);
+  const qualityHints = matches(value, QUALITY_HINTS as HintTuple[]);
   const warnings: string[] = [];
 
   if (/\btransparent|alpha channel|no background|cutout\b/i.test(value)) {

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 
 import { errInfo } from "./errInfo.js";
-export async function openDirectory(dir, options: any = {}) {
+export async function openDirectory(dir: string, options: any = {}) {
   await mkdir(dir, { recursive: true });
   const platform = options.platform || process.platform;
   const spawnImpl = options.spawnImpl || spawn;
@@ -21,15 +21,15 @@ export async function openDirectory(dir, options: any = {}) {
         windowsHide: !isWin,
       });
       let settled = false;
-      const done = (result) => {
+      const done = (result: { ok: boolean; error?: string }) => {
         if (settled) return;
         settled = true;
         resolve(result);
       };
-      child.on("error", (err) => {
+      child.on("error", (err: Error) => {
         done({ ok: false, error: err.message || String(err) });
       });
-      child.on("exit", (code) => {
+      child.on("exit", (code: number | null) => {
         if (platform === "win32") {
           done({ ok: true });
           return;

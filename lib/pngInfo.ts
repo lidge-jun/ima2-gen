@@ -1,7 +1,7 @@
 const PNG_SIGNATURE_HEX = "89504e470d0a1a0a";
 const IHDR_TYPE = "IHDR";
 
-export function parsePngInfo(buffer) {
+export function parsePngInfo(buffer: Buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 33) {
     return { error: "INVALID_PNG" };
   }
@@ -21,6 +21,6 @@ export function parsePngInfo(buffer) {
   };
 }
 
-export function hasPngAlphaChannel(info) {
+export function hasPngAlphaChannel(info: { colorType?: number } | null | undefined) {
   return info?.colorType === 4 || info?.colorType === 6;
 }

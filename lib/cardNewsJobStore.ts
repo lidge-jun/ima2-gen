@@ -1,9 +1,44 @@
 import { ulid } from "ulid";
 
-const jobs = new Map();
+interface CardNewsCard {
+  id: string;
+  order: number;
+  status: string;
+  textFields: unknown[];
+  locked?: boolean;
+  error?: string | { message?: string } | undefined;
+  [key: string]: unknown;
+}
+
+interface CardNewsPlanCard {
+  id: string;
+  order: number;
+  locked?: boolean;
+  textFields?: unknown;
+  [key: string]: unknown;
+}
+
+interface CardNewsPlan {
+  setId: string;
+  cards?: CardNewsPlanCard[];
+  [key: string]: unknown;
+}
+
+interface CardNewsJob {
+  jobId: string;
+  setId: string;
+  status: string;
+  plan: CardNewsPlan;
+  cards: CardNewsCard[];
+  createdAt: number;
+  updatedAt: number;
+  error?: string;
+}
+
+const jobs = new Map<string, CardNewsJob>();
 const TTL_MS = 30 * 60 * 1000;
 
-function summarize(job) {
+function summarize(job: CardNewsJob) {
   const generated = job.cards.filter((card) => card.status === "generated").length;
   const errors = job.cards.filter((card) => card.status === "error").length;
   return {
@@ -18,7 +53,7 @@ function summarize(job) {
   };
 }
 
-function statusFromCards(cards) {
+function statusFromCards(cards: CardNewsCard[]) {
   const active = cards.some((card) => card.status === "queued" || card.status === "generating");
   if (active) return "running";
   const errors = cards.some((card) => card.status === "error");
@@ -28,14 +63,14 @@ function statusFromCards(cards) {
   return "done";
 }
 
-export function createCardNewsJob(plan) {
+export function createCardNewsJob(plan: CardNewsPlan) {
   const now = Date.now();
-  const job = {
+  const job: CardNewsJob = {
     jobId: `cj_${ulid()}`,
     setId: plan.setId,
     status: "queued",
     plan,
-    cards: (plan.cards || []).map((card) => ({
+    cards: (plan.cards || []).map((card): CardNewsCard => ({
       id: card.id,
       order: card.order,
       status: card.locked ? "skipped" : "queued",
@@ -48,20 +83,20 @@ export function createCardNewsJob(plan) {
   return summarize(job);
 }
 
-export function getCardNewsJob(jobId) {
+export function getCardNewsJob(jobId: string) {
   const job = jobs.get(jobId);
   if (!job) return null;
   return summarize(job);
 }
 
-export function updateCardNewsJob(jobId, patch) {
+export function updateCardNewsJob(jobId: string, patch: Partial<CardNewsJob>) {
   const job = jobs.get(jobId);
   if (!job) return null;
   Object.assign(job, patch, { updatedAt: Date.now() });
   return summarize(job);
 }
 
-export function updateCardNewsJobCard(jobId, cardId, patch) {
+export function updateCardNewsJobCard(jobId: string, cardId: string, patch: Partial<CardNewsCard>) {
   const job = jobs.get(jobId);
   if (!job) return null;
   job.cards = job.cards.map((card) => (
@@ -76,7 +111,7 @@ export function updateCardNewsJobCard(jobId, cardId, patch) {
   return summarize(job);
 }
 
-export function finishCardNewsJob(jobId) {
+export function finishCardNewsJob(jobId: string) {
   const job = jobs.get(jobId);
   if (!job) return null;
   job.status = statusFromCards(job.cards);
@@ -84,11 +119,11 @@ export function finishCardNewsJob(jobId) {
   return summarize(job);
 }
 
-export function getCardNewsJobPlan(jobId) {
+export function getCardNewsJobPlan(jobId: string) {
   return jobs.get(jobId)?.plan || null;
 }
 
-export function retryCardNewsJob(jobId, cardIds) {
+export function retryCardNewsJob(jobId: string, cardIds: string[] | null | undefined) {
   const job = jobs.get(jobId);
   if (!job) return null;
   const wanted = new Set(cardIds || []);

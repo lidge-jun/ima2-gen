@@ -18,6 +18,7 @@ import {
   buildUserTextPrompt,
 } from "./prompts.js";
 import { normalizeReferenceForOAuth } from "./references.js";
+import type { OAuthReferenceRef } from "./references.js";
 import {
   buildImageTools,
   createOAuthGenerationTimeout,
@@ -34,13 +35,13 @@ import { config } from "../../config.js";
 const RESEARCH_SUFFIX = config.oauth.researchSuffix;
 
 export async function generateViaOAuth(
-  prompt,
-  quality,
-  size,
-  moderation = "low",
-  references = [],
-  requestId = null,
-  mode = "auto",
+  prompt: string,
+  quality: string,
+  size: string,
+  moderation: string = "low",
+  references: OAuthReferenceRef[] = [],
+  requestId: string | null = null,
+  mode: string = "auto",
   ctx: RouteRuntimeContext = {},
   options: any = {},
 ) {
@@ -228,13 +229,13 @@ export async function generateViaOAuth(
 }
 
 export async function generateMultimodeViaOAuth(
-  prompt,
-  quality,
-  size,
-  moderation = "low",
-  references = [],
-  requestId = null,
-  mode = "auto",
+  prompt: string,
+  quality: string,
+  size: string,
+  moderation: string = "low",
+  references: OAuthReferenceRef[] = [],
+  requestId: string | null = null,
+  mode: string = "auto",
   ctx: RouteRuntimeContext = {},
   options: any = {},
 ) {
@@ -361,7 +362,7 @@ export async function generateMultimodeViaOAuth(
   }
 }
 
-export async function editViaOAuth(prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: RouteRuntimeContext = {}, requestId = null, options: any = {}) {
+export async function editViaOAuth(prompt: string, imageB64: string, quality: string, size: string, moderation: string = "low", mode: string = "auto", ctx: RouteRuntimeContext = {}, requestId: string | null = null, options: any = {}) {
   await waitForOAuthReady(ctx);
   const maskPresent = typeof options.mask === "string" && options.mask.length > 0;
   if (maskPresent && !ctx.config?.oauth?.maskedEditEnabled) {
@@ -389,7 +390,7 @@ export async function editViaOAuth(prompt, imageB64, quality, size, moderation =
   });
   const references = Array.isArray(options.references) ? options.references : [];
   const referenceImagesForRequest = await Promise.all(
-    references.map((ref) =>
+    references.map((ref: OAuthReferenceRef) =>
       compressReferenceB64ForOAuth(typeof ref === "string" ? ref : ref?.b64, {
         maxB64Bytes: ctx.config?.limits?.maxRefB64Bytes,
         force: true,

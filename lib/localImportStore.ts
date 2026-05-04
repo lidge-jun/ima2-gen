@@ -1,3 +1,4 @@
+import type { RuntimeContext } from "./runtimeContext.js";
 import { mkdir, writeFile } from "fs/promises";
 import { basename, join, normalize } from "path";
 import { randomBytes } from "crypto";
@@ -8,7 +9,7 @@ const JPEG_SIGNATURE_HEX = "ffd8ff";
 const WEBP_RIFF_HEAD = "52494646";
 const WEBP_VP_TAIL = "57454250";
 
-function detectFormat(buffer) {
+function detectFormat(buffer: Buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
   const head8 = buffer.subarray(0, 8).toString("hex");
   if (head8 === PNG_SIGNATURE_HEX) return "png";
@@ -22,7 +23,7 @@ function detectFormat(buffer) {
   return null;
 }
 
-function ensureInsideGeneratedDir(generatedDir, filename) {
+function ensureInsideGeneratedDir(generatedDir: string, filename: string) {
   const full = normalize(join(generatedDir, filename));
   const root = normalize(generatedDir);
   if (!full.startsWith(root)) {
@@ -34,19 +35,19 @@ function ensureInsideGeneratedDir(generatedDir, filename) {
   return full;
 }
 
-function makeImportedFilename(format) {
+function makeImportedFilename(format: string) {
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
   const rand = randomBytes(3).toString("hex");
   return `imported-${stamp}-${rand}.${format}`;
 }
 
-function safeOriginalName(input) {
+function safeOriginalName(input: unknown) {
   if (typeof input !== "string" || !input) return null;
   const trimmed = input.slice(0, 200);
   return basename(trimmed);
 }
 
-export async function createLocalImport(ctx, { buffer, originalFilename }) {
+export async function createLocalImport(ctx: RuntimeContext, { buffer, originalFilename }: { buffer: Buffer; originalFilename?: string | null }) {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
     const err: any = new Error("Image body is required");
     err.status = 400;

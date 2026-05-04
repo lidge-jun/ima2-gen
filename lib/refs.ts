@@ -6,7 +6,7 @@ import { config } from "../config.js";
 const BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
 const DATA_URL_RE = /^data:([^;,]+);base64,/i;
 
-function approxBase64Bytes(b64) {
+function approxBase64Bytes(b64: string) {
   try {
     return Buffer.from(b64, "base64").length;
   } catch {
@@ -14,8 +14,9 @@ function approxBase64Bytes(b64) {
   }
 }
 
-export function detectImageMimeFromB64(b64) {
-  let buf;
+export function detectImageMimeFromB64(b64: string | null | undefined) {
+  if (!b64) return null;
+  let buf: Buffer;
   try {
     buf = Buffer.from(b64, "base64");
   } catch {
@@ -50,7 +51,7 @@ export function safeReferenceDiagnostics(refDetails: any[] = []) {
   }));
 }
 
-export function summarizeReferencePayload(references) {
+export function summarizeReferencePayload(references: unknown) {
   if (!Array.isArray(references)) {
     return { refsCount: 0, referenceBytes: 0, referenceB64Chars: 0 };
   }
@@ -84,7 +85,7 @@ type RefsValidationResult =
   | { error: string; code: string; refs?: undefined; refDetails?: undefined; referenceDiagnostics?: undefined }
   | { error?: undefined; code?: undefined; refs: string[]; refDetails: RefDetail[]; referenceDiagnostics: ReturnType<typeof safeReferenceDiagnostics> };
 
-export function validateAndNormalizeRefs(references, {
+export function validateAndNormalizeRefs(references: unknown, {
   maxCount = config.limits.maxRefCount,
   maxB64Bytes = config.limits.maxRefB64Bytes,
 } = {}): RefsValidationResult {

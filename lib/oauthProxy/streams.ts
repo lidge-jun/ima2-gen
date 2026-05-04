@@ -3,7 +3,7 @@ import { logEvent } from "../logger.js";
 import { makeOAuthError } from "./errors.js";
 
 import { errInfo } from "../errInfo.js";
-export function extractSseData(block) {
+export function extractSseData(block: string): string {
   let eventData = "";
   for (const line of block.split("\n")) {
     if (line.startsWith("data: ")) eventData += line.slice(6);
@@ -11,8 +11,29 @@ export function extractSseData(block) {
   return eventData;
 }
 
-export function extractPartialImage(data) {
-  if (typeof data?.type !== "string" || !data.type.includes("partial")) return null;
+interface SseImageData {
+  type?: string;
+  partial_image?: string;
+  image?: string;
+  result?: string;
+  index?: number;
+  item?: {
+    type?: string;
+    partial_image?: string;
+    image?: string;
+    result?: string;
+    revised_prompt?: string;
+    index?: number;
+  };
+  error?: { code?: string };
+  response?: {
+    usage?: unknown;
+    tool_usage?: { web_search?: { num_requests?: number } };
+  };
+}
+
+export function extractPartialImage(data: SseImageData | null | undefined) {
+  if (!data || typeof data?.type !== "string" || !data.type.includes("partial")) return null;
   const item = data.item || {};
   const b64 =
     data.partial_image ||
@@ -29,18 +50,18 @@ export function extractPartialImage(data) {
   return { b64, index, eventType: data.type };
 }
 
-export async function readImageStream(res, { requestId = null, scope = "oauth", onPartialImage = null as ((p: any) => void) | null } = {}) {
-  /** @type {Record<string, number>} */
-  const eventTypes = {};
+export async function readImageStream(res: Response, { requestId = null, scope = "oauth", onPartialImage = null as ((p: any) => void) | null }: { requestId?: string | null; scope?: string; onPartialImage?: ((p: any) => void) | null } = {}) {
+  const eventTypes: Record<string, number> = {};
   let parseSkipCount = 0;
+  if (!res.body) throw makeOAuthError("OAuth response missing body", { code: "OAUTH_NO_BODY" });
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let imageB64: string | null = null;
-  let usage = null;
+  let usage: unknown = null;
   let webSearchCalls = 0;
   let eventCount = 0;
-  let revisedPrompt = null;
+  let revisedPrompt: string | null = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -55,7 +76,7 @@ export async function readImageStream(res, { requestId = null, scope = "oauth", 
       if (!eventData || eventData === "[DONE]") continue;
 
       try {
-        const data = JSON.parse(eventData);
+        const data = JSON.parse(eventData) as SseImageData;
         eventCount++;
         const t = typeof data.type === "string" ? data.type : "_unknown";
         eventTypes[t] = (eventTypes[t] || 0) + 1;
@@ -115,17 +136,17 @@ export async function readImageStream(res, { requestId = null, scope = "oauth", 
 }
 
 export async function readMultimodeImageStream(
-  res,
-  { requestId = null, maxImages = 1, scope = "oauth-multimode", onPartialImage = null as ((p: any) => void) | null } = {},
+  res: Response,
+  { requestId = null, maxImages = 1, scope = "oauth-multimode", onPartialImage = null as ((p: any) => void) | null }: { requestId?: string | null; maxImages?: number; scope?: string; onPartialImage?: ((p: any) => void) | null } = {},
 ) {
-  /** @type {Record<string, number>} */
-  const eventTypes = {};
+  const eventTypes: Record<string, number> = {};
   let parseSkipCount = 0;
+  if (!res.body) throw makeOAuthError("OAuth response missing body", { code: "OAUTH_NO_BODY" });
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  const images: Array<{ b64: any; revisedPrompt: any; index?: any }> = [];
-  let usage = null;
+  const images: Array<{ b64: string; revisedPrompt: string | null; index?: number }> = [];
+  let usage: unknown = null;
   let webSearchCalls = 0;
   let eventCount = 0;
   const limit = Math.min(8, Math.max(1, Math.trunc(Number(maxImages) || 1)));
@@ -144,7 +165,7 @@ export async function readMultimodeImageStream(
       if (!eventData || eventData === "[DONE]") continue;
 
       try {
-        const data = JSON.parse(eventData);
+        const data = JSON.parse(eventData) as SseImageData;
         eventCount++;
         const t = typeof data.type === "string" ? data.type : "_unknown";
         eventTypes[t] = (eventTypes[t] || 0) + 1;

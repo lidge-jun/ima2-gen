@@ -22,7 +22,7 @@ const INVALID_REQUEST_CODES = new Set([
  * @param {string | undefined | null} code
  * @returns {ImaErrorCode}
  */
-export function classifyUpstreamErrorCode(code) {
+export function classifyUpstreamErrorCode(code: string | undefined | null) {
   const s = String(code || "").toLowerCase();
   if (!s) return "UNKNOWN";
   if (INVALID_REQUEST_CODES.has(s)) return "INVALID_REQUEST";
@@ -37,7 +37,7 @@ export function classifyUpstreamErrorCode(code) {
  * @param {string | undefined | null} msg
  * @returns {ImaErrorCode}
  */
-export function classifyUpstreamError(msg) {
+export function classifyUpstreamError(msg: string | undefined | null) {
   const s = String(msg || "").toLowerCase();
   if (!s) return "UNKNOWN";
 

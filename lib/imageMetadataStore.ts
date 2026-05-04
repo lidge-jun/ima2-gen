@@ -4,17 +4,17 @@ import { buildIma2MetadataPayload, buildIma2Xmp, parseIma2Xmp } from "./imageMet
 
 const SUPPORTED_FORMATS = new Set(["png", "jpeg", "jpg", "webp"]);
 
-export function normalizeImageMetadataFormat(format) {
+export function normalizeImageMetadataFormat(format: unknown) {
   const normalized = String(format || "").toLowerCase();
   if (normalized === "jpg") return "jpeg";
   return normalized;
 }
 
-export function isSupportedMetadataFormat(format) {
+export function isSupportedMetadataFormat(format: unknown) {
   return SUPPORTED_FORMATS.has(String(format || "").toLowerCase());
 }
 
-export async function embedImageMetadata(buffer, format, metadata, context = {}) {
+export async function embedImageMetadata(buffer: Buffer, format: unknown, metadata: unknown, context: any = {}) {
   const normalizedFormat = normalizeImageMetadataFormat(format);
   if (!isSupportedMetadataFormat(normalizedFormat)) {
     const err: any = new Error(`Unsupported image metadata format: ${format}`);
@@ -30,7 +30,7 @@ export async function embedImageMetadata(buffer, format, metadata, context = {})
   return { buffer: next, embedded: true, metadata: payload };
 }
 
-export async function embedImageMetadataBestEffort(buffer, format, metadata, context = {}) {
+export async function embedImageMetadataBestEffort(buffer: Buffer, format: unknown, metadata: unknown, context: any = {}) {
   try {
     return await embedImageMetadata(buffer, format, metadata, context);
   } catch (error: any) {
@@ -43,7 +43,7 @@ export async function embedImageMetadataBestEffort(buffer, format, metadata, con
   }
 }
 
-export async function readEmbeddedImageMetadata(buffer) {
+export async function readEmbeddedImageMetadata(buffer: Buffer) {
   const meta = await sharp(buffer, { failOn: "none" }).metadata();
   const xmpString = meta.xmpAsString || (meta.xmp ? meta.xmp.toString("utf8") : "");
   const xmp = parseIma2Xmp(xmpString);
@@ -62,6 +62,6 @@ export async function readEmbeddedImageMetadata(buffer) {
   };
 }
 
-export async function readEmbeddedImageMetadataFromFile(path) {
+export async function readEmbeddedImageMetadataFromFile(path: string) {
   return readEmbeddedImageMetadata(await readFile(path));
 }

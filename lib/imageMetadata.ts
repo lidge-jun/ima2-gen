@@ -3,20 +3,20 @@ export const IMA2_XMP_NAMESPACE = "https://github.com/lidge-jun/ima2-gen/ns/1.0/
 export const IMA2_XMP_PROPERTY = "GenerationMetadata";
 export const MAX_EMBEDDED_METADATA_CHARS = 64 * 1024;
 
-function isPlainObject(value) {
+function isPlainObject(value: unknown) {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
-function stringOrNull(value, max = 4000) {
+function stringOrNull(value: unknown, max = 4000) {
   if (typeof value !== "string") return null;
   return value.slice(0, max);
 }
 
-function numberOrNull(value) {
-  return Number.isFinite(value) ? value : null;
+function numberOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function xmlEscape(value) {
+function xmlEscape(value: unknown) {
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
@@ -24,7 +24,7 @@ function xmlEscape(value) {
     .replace(/>/g, "&gt;");
 }
 
-function xmlUnescape(value) {
+function xmlUnescape(value: unknown) {
   return String(value)
     .replace(/&quot;/g, "\"")
     .replace(/&lt;/g, "<")
@@ -71,7 +71,7 @@ export function normalizeEmbeddedMetadata(value: any) {
   return buildIma2MetadataPayload(value, { version: value.version });
 }
 
-export function buildIma2Xmp(metadataPayload) {
+export function buildIma2Xmp(metadataPayload: unknown) {
   const normalized = normalizeEmbeddedMetadata(metadataPayload);
   if (!normalized) {
     const err: any = new Error("Invalid ima2 metadata payload");
@@ -96,7 +96,7 @@ export function buildIma2Xmp(metadataPayload) {
   ].join("");
 }
 
-export function parseIma2Xmp(xmpString) {
+export function parseIma2Xmp(xmpString: unknown) {
   if (typeof xmpString !== "string" || xmpString.length === 0) return null;
   const attrPattern = new RegExp(`ima2:${IMA2_XMP_PROPERTY}="([^"]*)"`);
   const attrMatch = attrPattern.exec(xmpString);

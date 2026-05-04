@@ -6,19 +6,19 @@ const DEFAULT_QUALITY_LADDER = [85, 75, 65, 55];
 const FALLBACK_MAX_EDGE = 2048;
 const FALLBACK_QUALITY_LADDER = [75, 65, 55];
 
-function stripDataUrlPrefix(value) {
+function stripDataUrlPrefix(value: unknown) {
   return String(value || "").replace(/^data:[^;]+;base64,/, "");
 }
 
-function toBase64(buffer) {
+function toBase64(buffer: Buffer) {
   return buffer.toString("base64");
 }
 
-async function encodeJpegWithinBudget(input, {
+async function encodeJpegWithinBudget(input: Buffer, {
   maxB64Bytes,
   maxEdge,
   qualityLadder,
-}) {
+}: { maxB64Bytes: number; maxEdge: number; qualityLadder: number[] }) {
   for (const quality of qualityLadder) {
     const out = await sharp(input, { failOn: "none" })
       .rotate()

@@ -9,7 +9,7 @@ export const VALID_IMAGE_QUALITIES = new Set(["low", "medium", "high"]);
  * @param {{ provider?: string, quality?: string }} input
  * @returns {{ quality: string, warnings: Array<{code:string,field:string,normalizedTo:string,reason:string}> }}
  */
-export function normalizeOAuthParams(input) {
+export function normalizeOAuthParams(input: { provider?: string; quality?: string } | null | undefined) {
   const requested = typeof input?.quality === "string" ? input.quality : DEFAULT_IMAGE_QUALITY;
 
   if (VALID_IMAGE_QUALITIES.has(requested)) {

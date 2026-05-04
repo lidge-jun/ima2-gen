@@ -101,7 +101,9 @@ const CURATED_SOURCES = [
   },
 ];
 
-function publicSource(source) {
+type CuratedSource = (typeof CURATED_SOURCES)[number];
+
+function publicSource(source: CuratedSource) {
   return {
     id: source.id,
     repo: source.repo,
@@ -129,7 +131,7 @@ export function listCuratedSources({ includeManualReview = true, defaultSearchOn
     .map(publicSource);
 }
 
-export function getCuratedSource(sourceId) {
+export function getCuratedSource(sourceId: string) {
   const source = CURATED_SOURCES.find((item) => item.id === sourceId);
   return source ? publicSource(source) : null;
 }

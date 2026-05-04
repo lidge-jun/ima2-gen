@@ -22,7 +22,7 @@ export function getDb() {
   return db;
 }
 
-function migrate(database) {
+function migrate(database: Database.Database) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS _meta (
       key   TEXT PRIMARY KEY,

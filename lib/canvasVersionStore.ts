@@ -3,10 +3,50 @@ import { constants } from "fs";
 import { basename, join, normalize, parse } from "path";
 import { randomBytes } from "crypto";
 import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
+import type { RuntimeContext } from "./runtimeContext.js";
+
+interface CanvasMeta {
+  kind: string;
+  provider: string;
+  format: string;
+  prompt: string | null | undefined;
+  userPrompt: string | null | undefined;
+  promptMode: string;
+  createdAt: number;
+  canvasMergedAt: number;
+  canvasVersion: boolean;
+  canvasSourceFilename: string | null;
+  canvasEditableFilename: string;
+  size?: string | null;
+  quality?: string | null;
+  model?: string | null;
+  moderation?: string | null;
+  revisedPrompt?: string | null;
+}
+
+interface StoredGeneratedMeta {
+  prompt?: string | null;
+  userPrompt?: string | null;
+  promptMode?: string | null;
+  provider?: string | null;
+  quality?: string | null;
+  size?: string | null;
+  model?: string | null;
+  moderation?: string | null;
+  createdAt?: number;
+  canvasMergedAt?: number;
+  canvasSourceFilename?: string | null;
+}
+
+interface CanvasInput {
+  buffer: unknown;
+  sourceFilename?: string | null;
+  prompt?: string | null;
+}
 
 const PNG_SIGNATURE = "89504e470d0a1a0a";
 
-function assertPngBuffer(buffer) {
+function assertPngBuffer(buffer: unknown): asserts buffer is Buffer {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
     const err: any = new Error("PNG body is required");
     err.status = 400;
@@ -21,7 +61,7 @@ function assertPngBuffer(buffer) {
   }
 }
 
-function assertSafeFilename(filename) {
+function assertSafeFilename(filename: string) {
   if (
     typeof filename !== "string" ||
     filename.length === 0 ||
@@ -36,12 +76,12 @@ function assertSafeFilename(filename) {
   }
 }
 
-function safeSourceBase(sourceFilename) {
+function safeSourceBase(sourceFilename: string | null | undefined) {
   const parsed = parse(basename(String(sourceFilename || "image")));
   return parsed.name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "image";
 }
 
-function ensureInsideGeneratedDir(generatedDir, filename) {
+function ensureInsideGeneratedDir(generatedDir: string, filename: string) {
   const full = normalize(join(generatedDir, filename));
   const root = normalize(generatedDir);
   if (!full.startsWith(root)) {
@@ -53,13 +93,13 @@ function ensureInsideGeneratedDir(generatedDir, filename) {
   return full;
 }
 
-function makeCanvasFilename(sourceFilename) {
+function makeCanvasFilename(sourceFilename: string | null | undefined) {
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
   const rand = randomBytes(3).toString("hex");
   return `canvas-${safeSourceBase(sourceFilename)}-${stamp}-${rand}.png`;
 }
 
-async function writeCanvasPng(ctx, filename, buffer, meta) {
+async function writeCanvasPng(ctx: RuntimeContext, filename: string, buffer: Buffer, meta: CanvasMeta) {
   await mkdir(ctx.config.storage.generatedDir, { recursive: true });
   const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, filename);
   const embedded = await embedImageMetadataBestEffort(buffer, "png", meta, {
@@ -69,21 +109,21 @@ async function writeCanvasPng(ctx, filename, buffer, meta) {
   await writeFile(`${full}.json`, JSON.stringify(meta)).catch(() => {});
 }
 
-async function readGeneratedMetadata(ctx, filename) {
+async function readGeneratedMetadata(ctx: RuntimeContext, filename: string | null | undefined): Promise<StoredGeneratedMeta | null> {
   if (!filename) return null;
   try {
     const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, basename(filename));
-    return JSON.parse(await readFile(`${full}.json`, "utf8"));
+    return JSON.parse(await readFile(`${full}.json`, "utf8")) as StoredGeneratedMeta;
   } catch {
     return null;
   }
 }
 
-function firstString(...values) {
+function firstString(...values: Array<string | null | undefined>) {
   return values.find((value) => typeof value === "string" && value.trim().length > 0) ?? null;
 }
 
-function toGenerateItem(filename, meta) {
+function toGenerateItem(filename: string, meta: CanvasMeta) {
   const url = `/generated/${encodeURIComponent(filename)}`;
   return {
     image: url,
@@ -110,7 +150,7 @@ function toGenerateItem(filename, meta) {
   };
 }
 
-export async function createCanvasVersion(ctx, input) {
+export async function createCanvasVersion(ctx: RuntimeContext, input: CanvasInput) {
   assertPngBuffer(input.buffer);
   const sourceFilename = basename(String(input.sourceFilename || ""));
   if (!sourceFilename) {
@@ -140,7 +180,7 @@ export async function createCanvasVersion(ctx, input) {
   return toGenerateItem(filename, meta);
 }
 
-export async function updateCanvasVersion(ctx, filename, input) {
+export async function updateCanvasVersion(ctx: RuntimeContext, filename: string, input: CanvasInput) {
   assertSafeFilename(filename);
   assertPngBuffer(input.buffer);
   const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, filename);

@@ -1,6 +1,7 @@
+import type { RuntimeContext } from "./runtimeContext.js";
 import { normalizeImageModel, normalizeReasoningEffort } from "./imageModels.js";
 
-export function resolveProviderOptions(ctx, {
+export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   provider = "oauth",
   rawModel,
   rawReasoningEffort,
@@ -9,7 +10,7 @@ export function resolveProviderOptions(ctx, {
   searchMode = "on",
 }: any = {}) {
   const activeProvider = provider === "api" ? "api" : "oauth";
-  const apiConfig = ctx?.config?.apiProvider || {};
+  const apiConfig: { defaultImageModel?: string; defaultReasoningEffort?: string; defaultSize?: string; allowWebSearch?: boolean } = (ctx?.config as { apiProvider?: any })?.apiProvider || {};
   const modelInput = activeProvider === "api"
     ? (rawModel || apiConfig.defaultImageModel || "gpt-5.4-mini")
     : rawModel;

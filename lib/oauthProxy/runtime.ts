@@ -7,7 +7,7 @@ import { errInfo } from "../errInfo.js";
 const FALLBACK_REASONING_EFFORT = "none";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
 
-export function resolveReasoningEffort(ctx, options: any = {}) {
+export function resolveReasoningEffort(ctx: RouteRuntimeContext | undefined, options: any = {}) {
   const fromOptions = typeof options.reasoningEffort === "string" ? options.reasoningEffort : null;
   const fromCtx = typeof ctx?.config?.imageModels?.reasoningEffort === "string"
     ? ctx.config.imageModels.reasoningEffort
@@ -20,7 +20,7 @@ export function resolveWebSearchEnabled(options: any = {}) {
   return options.webSearchEnabled !== false && options.searchMode !== "off";
 }
 
-export function buildImageTools(webSearchEnabled, imageOptions) {
+export function buildImageTools(webSearchEnabled: boolean, imageOptions: Record<string, unknown>) {
   return [
     ...(webSearchEnabled ? [{ type: "web_search" }] : []),
     { type: "image_generation", ...imageOptions },
@@ -35,14 +35,14 @@ export function getOAuthGenerationTimeoutMs(ctx: RouteRuntimeContext = {}) {
   return ctx.config?.oauth?.generationTimeoutMs ?? config.oauth.generationTimeoutMs ?? 400 * 1000;
 }
 
-export function createOAuthGenerationTimeout(ctx: RouteRuntimeContext = {}, requestId = null, scope = "oauth") {
+export function createOAuthGenerationTimeout(ctx: RouteRuntimeContext = {}, requestId: string | null = null, scope: string = "oauth") {
   const timeoutMs = getOAuthGenerationTimeoutMs(ctx);
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     return {
-      signal: undefined,
+      signal: undefined as AbortSignal | undefined,
       timeoutMs,
       clear: () => {},
-      isTimeoutError: () => false,
+      isTimeoutError: (_err: unknown) => false,
     };
   }
   const controller = new AbortController();
@@ -53,10 +53,10 @@ export function createOAuthGenerationTimeout(ctx: RouteRuntimeContext = {}, requ
     controller.abort();
   }, timeoutMs);
   return {
-    signal: controller.signal,
+    signal: controller.signal as AbortSignal | undefined,
     timeoutMs,
     clear: () => clearTimeout(timer),
-    isTimeoutError: (err) => timedOut && isAbortError(err),
+    isTimeoutError: (err: unknown) => timedOut && isAbortError(err),
   };
 }
 
@@ -80,7 +80,7 @@ export async function waitForOAuthReady(ctx: RouteRuntimeContext = {}) {
   }
 }
 
-export async function fetchOAuth(url, init, { requestId, scope }: any = {}) {
+export async function fetchOAuth(url: string, init: RequestInit, { requestId, scope }: { requestId?: string | null; scope?: string } = {}) {
   try {
     return await fetch(url, init);
   } catch (e) {
@@ -95,9 +95,9 @@ export async function fetchOAuth(url, init, { requestId, scope }: any = {}) {
   }
 }
 
-export function summarizeEventTypes(eventTypes = {}) {
+export function summarizeEventTypes(eventTypes: Record<string, unknown> = {}) {
   const entries = Object.entries(eventTypes || {});
-  const countFor = (needle) =>
+  const countFor = (needle: string) =>
     entries.reduce((sum, [key, value]) => sum + (key.includes(needle) && Number.isFinite(value) ? (value as number) : 0), 0);
   return {
     eventTypeCount: entries.length,

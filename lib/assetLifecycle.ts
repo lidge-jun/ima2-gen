@@ -4,7 +4,7 @@ import { resolve, sep } from "path";
 import { moveToSystemTrash } from "./systemTrash.js";
 import { config } from "../config.js";
 
-function resolveInGenerated(rootDir, relPath) {
+function resolveInGenerated(rootDir: string, relPath: string): string {
   void rootDir;
   if (typeof relPath !== "string" || relPath.length === 0) {
     const err: any = new Error("filename required");
@@ -29,7 +29,7 @@ function resolveInGenerated(rootDir, relPath) {
   return target;
 }
 
-function nodesReferencingFilename(filename): Array<{ sessionId: string; id: string; data: string }> {
+function nodesReferencingFilename(filename: string): Array<{ sessionId: string; id: string; data: string }> {
   // The client stores imageUrl as `/generated/<encoded filename>` in node data JSON.
   // We scan all sessions' nodes for substring match on the decoded and encoded forms.
   const db = getDb();
@@ -40,7 +40,7 @@ function nodesReferencingFilename(filename): Array<{ sessionId: string; id: stri
   return rows;
 }
 
-function markNodesAssetMissing(filename) {
+function markNodesAssetMissing(filename: string) {
   const db = getDb();
   const rows = nodesReferencingFilename(filename);
   if (rows.length === 0) return { sessionsTouched: 0, nodesTouched: 0 };
@@ -66,7 +66,7 @@ function markNodesAssetMissing(filename) {
   return { sessionsTouched: touchedSessions.size, nodesTouched: rows.length };
 }
 
-export async function trashAsset(rootDir, filename) {
+export async function trashAsset(rootDir: string, filename: string) {
   const src = resolveInGenerated(rootDir, filename);
   try {
     await access(src);
@@ -105,7 +105,7 @@ export async function trashAsset(rootDir, filename) {
   };
 }
 
-export async function deleteAssetPermanent(rootDir, filename) {
+export async function deleteAssetPermanent(rootDir: string, filename: string) {
   const src = resolveInGenerated(rootDir, filename);
   try {
     await access(src);
@@ -126,7 +126,7 @@ export async function deleteAssetPermanent(rootDir, filename) {
   };
 }
 
-export async function restoreAsset(rootDir, trashId, originalFilename) {
+export async function restoreAsset(rootDir: string, trashId: string, originalFilename: string) {
   void rootDir;
   const trashDir = resolve(config.storage.trashDir);
   const src = resolve(trashDir, trashId);
