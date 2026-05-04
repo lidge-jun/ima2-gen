@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 const testDir = "tests";
 const files = readdirSync(testDir)
-  .filter((f) => f.endsWith(".test.js"))
+  .filter((f) => /\.test\.[cm]?[jt]s$/.test(f))
   .map((f) => join(testDir, f))
   .sort();
 

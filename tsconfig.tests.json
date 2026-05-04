@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": [
+    "tests/**/*.test.js",
+    "tests/**/*.test.ts",
+    "tests/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "ui/node_modules",
+    "integrations"
+  ]
+}

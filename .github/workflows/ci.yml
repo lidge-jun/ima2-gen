@@ -30,6 +30,10 @@ jobs:
         run: npm --prefix ui install --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
+      - name: Typecheck tests
+        run: npm run typecheck:tests
+      - name: Test inventory
+        run: npm run test:inventory
       - name: Build server (tsc emit)
         run: npm run build:server
       - name: Build cli (tsc emit)
