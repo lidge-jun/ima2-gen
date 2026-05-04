@@ -1,6 +1,7 @@
 import { config } from "../../config.js";
 import { logEvent } from "../logger.js";
 import { isAbortError, makeOAuthError } from "./errors.js";
+import type { RouteRuntimeContext } from "../runtimeContext.js";
 
 import { errInfo } from "../errInfo.js";
 const FALLBACK_REASONING_EFFORT = "none";
@@ -26,15 +27,15 @@ export function buildImageTools(webSearchEnabled, imageOptions) {
   ];
 }
 
-export function getOAuthUrl(ctx: any = {}) {
+export function getOAuthUrl(ctx: RouteRuntimeContext = {}) {
   return ctx.oauthUrl || `http://127.0.0.1:${config.oauth.proxyPort}`;
 }
 
-export function getOAuthGenerationTimeoutMs(ctx: any = {}) {
+export function getOAuthGenerationTimeoutMs(ctx: RouteRuntimeContext = {}) {
   return ctx.config?.oauth?.generationTimeoutMs ?? config.oauth.generationTimeoutMs ?? 400 * 1000;
 }
 
-export function createOAuthGenerationTimeout(ctx: any = {}, requestId = null, scope = "oauth") {
+export function createOAuthGenerationTimeout(ctx: RouteRuntimeContext = {}, requestId = null, scope = "oauth") {
   const timeoutMs = getOAuthGenerationTimeoutMs(ctx);
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     return {
@@ -59,10 +60,11 @@ export function createOAuthGenerationTimeout(ctx: any = {}, requestId = null, sc
   };
 }
 
-export async function waitForOAuthReady(ctx: any = {}) {
+export async function waitForOAuthReady(ctx: RouteRuntimeContext = {}) {
   if (!ctx || !Object.prototype.hasOwnProperty.call(ctx, "oauthReadyState")) return;
-  if (ctx.oauthReadyState === "ready" || ctx.oauthReadyState === "disabled") return;
-  if (ctx.oauthReadyState === "failed") {
+  const initialState = ctx.oauthReadyState;
+  if (initialState === "ready" || initialState === "disabled") return;
+  if (initialState === "failed") {
     throw makeOAuthError("OAuth proxy is unavailable", { code: "OAUTH_UNAVAILABLE", status: 503 });
   }
   const timeoutMs = ctx.config?.oauth?.statusTimeoutMs ?? config.oauth.statusTimeoutMs;
@@ -72,7 +74,8 @@ export async function waitForOAuthReady(ctx: any = {}) {
       new Promise((resolve) => setTimeout(resolve, timeoutMs)),
     ]);
   }
-  if (ctx.oauthReadyState !== "ready" && ctx.oauthReadyState !== "disabled") {
+  const finalState = ctx.oauthReadyState;
+  if (finalState !== "ready" && finalState !== "disabled") {
     throw makeOAuthError("OAuth proxy is not ready yet", { code: "OAUTH_UNAVAILABLE", status: 503 });
   }
 }

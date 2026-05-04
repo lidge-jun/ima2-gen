@@ -2,6 +2,7 @@ import { setJobPhase } from "../inflight.js";
 import { logEvent } from "../logger.js";
 import { compressReferenceB64ForOAuth } from "../referenceImageCompress.js";
 import { safeReferenceDiagnostics } from "../refs.js";
+import type { RouteRuntimeContext } from "../runtimeContext.js";
 import { throwOAuthHttpError, throwOAuthTimeoutError } from "./errors.js";
 import {
   AUTO_PROMPT_FIDELITY_SUFFIX,
@@ -40,7 +41,7 @@ export async function generateViaOAuth(
   references = [],
   requestId = null,
   mode = "auto",
-  ctx: any = {},
+  ctx: RouteRuntimeContext = {},
   options: any = {},
 ) {
   await waitForOAuthReady(ctx);
@@ -234,7 +235,7 @@ export async function generateMultimodeViaOAuth(
   references = [],
   requestId = null,
   mode = "auto",
-  ctx: any = {},
+  ctx: RouteRuntimeContext = {},
   options: any = {},
 ) {
   await waitForOAuthReady(ctx);
@@ -360,7 +361,7 @@ export async function generateMultimodeViaOAuth(
   }
 }
 
-export async function editViaOAuth(prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: any = {}, requestId = null, options: any = {}) {
+export async function editViaOAuth(prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: RouteRuntimeContext = {}, requestId = null, options: any = {}) {
   await waitForOAuthReady(ctx);
   const maskPresent = typeof options.mask === "string" && options.mask.length > 0;
   if (maskPresent && !ctx.config?.oauth?.maskedEditEnabled) {

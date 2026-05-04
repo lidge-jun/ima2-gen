@@ -2,6 +2,7 @@ import express from "express";
 import { createLocalImport } from "../lib/localImportStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 function decodeHeader(value) {
   if (typeof value !== "string" || !value) return null;
   try {
@@ -11,7 +12,7 @@ function decodeHeader(value) {
   }
 }
 
-export function registerImageImportRoutes(app, ctx) {
+export function registerImageImportRoutes(app, ctx: RouteRuntimeContext) {
   const rawImage = express.raw({
     type: ["image/png", "image/jpeg", "image/webp"],
     limit: ctx.config.server.bodyLimit,

@@ -1,6 +1,7 @@
 import { getDb } from "../lib/db.js";
 
 import { errInfo } from "../lib/errInfo.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 const MAX_ANNOTATION_PAYLOAD_CHARS = 256 * 1024;
 
 function getBrowserId(req) {
@@ -35,7 +36,7 @@ function normalizePayload(value) {
   return { payload: normalized, text };
 }
 
-export function registerAnnotationRoutes(app, _ctx?: any) {
+export function registerAnnotationRoutes(app, _ctx: RouteRuntimeContext) {
   app.get("/api/annotations/:filename", (req, res) => {
     try {
       const browserId = getBrowserId(req);

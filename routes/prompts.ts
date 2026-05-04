@@ -2,6 +2,7 @@ import { logError, logEvent } from "../lib/logger.js";
 import { getDb } from "../lib/db.js";
 
 import { errInfo } from "../lib/errInfo.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 function getPromptsDb() {
   return getDb();
 }
@@ -10,7 +11,7 @@ function generateId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function registerPromptRoutes(app, _ctx) {
+export function registerPromptRoutes(app, _ctx: RouteRuntimeContext) {
   // ── Prompts ───────────────────────────────────────────────────────────────
 
   app.get("/api/prompts", async (req, res) => {

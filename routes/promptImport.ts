@@ -22,8 +22,9 @@ import {
   listDiscoveryCandidates,
   reviewDiscoveryCandidate,
 } from "../lib/promptImport/discoveryRegistry.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 
-function promptImportLimits(ctx) {
+function promptImportLimits(ctx: RouteRuntimeContext) {
   return {
     maxFileBytesForPreview: ctx.config.limits.promptImportMaxFileBytes,
     maxPromptCandidatesPerFile: ctx.config.limits.promptImportMaxCandidatesPerFile,
@@ -76,7 +77,7 @@ function normalizeLocalSource(source) {
   };
 }
 
-async function buildPreview(req, ctx) {
+async function buildPreview(req, ctx: RouteRuntimeContext) {
   const body = req.body || {};
   const rawSource = body.source || body;
   const kind = rawSource.kind === "github" ? "github" : "local";
@@ -123,13 +124,13 @@ function normalizeFolderInput(body) {
   return normalizeGitHubFolderSource(input);
 }
 
-async function buildFolderFiles(req, ctx) {
+async function buildFolderFiles(req, ctx: RouteRuntimeContext) {
   const limits = promptImportLimits(ctx);
   const source = normalizeFolderInput(req.body || {});
   return fetchGitHubFolderFiles(source, limits);
 }
 
-async function buildFolderPreview(req, ctx) {
+async function buildFolderPreview(req, ctx: RouteRuntimeContext) {
   const limits = promptImportLimits(ctx);
   const source = normalizeFolderInput(req.body || {});
   const paths = Array.isArray(req.body?.paths) ? req.body.paths : [];
@@ -217,7 +218,7 @@ function commitCandidates(candidates, folderId, limits) {
   return result;
 }
 
-export function registerPromptImportRoutes(app, ctx) {
+export function registerPromptImportRoutes(app, ctx: RouteRuntimeContext) {
   app.get("/api/prompts/import/curated-sources", async (_req, res) => {
     try {
       res.json(await getPromptImportSources(ctx));

@@ -1,6 +1,7 @@
 import { inspectGeneratedStorage } from "../../lib/storageMigration.js";
+import type { RouteRuntimeContext } from "../../lib/runtimeContext.js";
 
-export async function buildStorageDoctorLines(ctx) {
+export async function buildStorageDoctorLines(ctx: RouteRuntimeContext) {
   const status = await inspectGeneratedStorage(ctx);
   const lines = [
     "  Storage",

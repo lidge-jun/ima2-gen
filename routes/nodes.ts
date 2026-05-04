@@ -16,7 +16,8 @@ import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../li
 import { logEvent, logError } from "../lib/logger.js";
 
 import { errInfo } from "../lib/errInfo.js";
-function validateModeration(ctx, moderation) {
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+function validateModeration(ctx: RouteRuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
@@ -56,7 +57,7 @@ function dataUrlFromB64(format, b64) {
   return `data:image/${format === "jpeg" ? "jpeg" : format};base64,${b64}`;
 }
 
-export function registerNodeRoutes(app, ctx) {
+export function registerNodeRoutes(app, ctx: RouteRuntimeContext) {
   app.post("/api/node/generate", async (req, res) => {
     const body = req.body || {};
     const streamResponse = wantsSse(req);

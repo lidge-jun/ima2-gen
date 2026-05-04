@@ -1,4 +1,5 @@
 import { exportImageToComfy, isComfyBridgeError } from "../lib/comfyBridge.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 
 const ALLOWED_BODY_KEYS = new Set(["filename"]);
 
@@ -15,7 +16,7 @@ function errorPayload(code, message) {
   };
 }
 
-export function registerComfyRoutes(app, ctx) {
+export function registerComfyRoutes(app, ctx: RouteRuntimeContext) {
   app.post("/api/comfy/export-image", async (req, res) => {
     try {
       if (!hasExactBodyShape(req.body)) {

@@ -4,6 +4,7 @@ import { classifyUpstreamError, classifyUpstreamErrorCode } from "./errorClassif
 import { compressReferenceB64ForOAuth } from "./referenceImageCompress.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { errInfo } from "./errInfo.js";
+import type { RouteRuntimeContext } from "./runtimeContext.js";
 import {
   AUTO_PROMPT_FIDELITY_SUFFIX,
   DIRECT_PROMPT_FIDELITY_SUFFIX,
@@ -241,7 +242,7 @@ async function postResponses({ ctx, provider, scope, payload, requestId, maxImag
   }
 }
 
-export async function generateViaResponses(provider, prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto", ctx: any = {}, options: any = {}) {
+export async function generateViaResponses(provider, prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto", ctx: RouteRuntimeContext = {}, options: any = {}) {
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const referenceInputs = references.map(normalizeRef);
   const userContent = referenceInputs.length
@@ -271,7 +272,7 @@ export async function generateViaResponses(provider, prompt, quality, size, mode
   return { b64: image.b64, usage: result.usage, webSearchCalls: result.webSearchCalls, revisedPrompt: image.revisedPrompt };
 }
 
-export async function generateMultimodeViaResponses(provider, prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto", ctx: any = {}, options: any = {}) {
+export async function generateMultimodeViaResponses(provider, prompt, quality, size, moderation = "low", references = [], requestId = null, mode = "auto", ctx: RouteRuntimeContext = {}, options: any = {}) {
   const maxImages = Math.min(8, Math.max(1, Math.trunc(Number(options.maxImages) || 1)));
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const userText = buildMultimodeSequencePrompt(
@@ -306,7 +307,7 @@ export async function generateMultimodeViaResponses(provider, prompt, quality, s
   });
 }
 
-export async function editViaResponses(provider, prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: any = {}, requestId = null, options: any = {}) {
+export async function editViaResponses(provider, prompt, imageB64, quality, size, moderation = "low", mode = "auto", ctx: RouteRuntimeContext = {}, requestId = null, options: any = {}) {
   const webSearchEnabled = options.webSearchEnabled !== false && options.searchMode !== "off";
   const imageForRequest = await compressReferenceB64ForOAuth(imageB64, {
     maxB64Bytes: ctx.config?.limits?.maxRefB64Bytes,

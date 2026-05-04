@@ -3,10 +3,11 @@ import assert from "node:assert";
 import express from "express";
 import { request } from "node:http";
 import { registerHealthRoutes } from "../routes/health.ts";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.ts";
 
 const originalFetch = globalThis.fetch;
 
-function makeCtx(overrides = {}) {
+function makeCtx(overrides: Partial<RouteRuntimeContext> = {}): RouteRuntimeContext {
   return {
     hasApiKey: false,
     apiKey: null,

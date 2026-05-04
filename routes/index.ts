@@ -14,8 +14,9 @@ import { registerAnnotationRoutes } from "./annotations.js";
 import { registerCanvasVersionRoutes } from "./canvasVersions.js";
 import { registerComfyRoutes } from "./comfy.js";
 import { registerImageImportRoutes } from "./imageImport.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 
-export function configureRoutes(app, ctx) {
+export function configureRoutes(app, ctx: RouteRuntimeContext) {
   registerHealthRoutes(app, ctx);
   registerStorageRoutes(app, ctx);
   registerMetadataRoutes(app, ctx);

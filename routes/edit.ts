@@ -10,7 +10,8 @@ import { logEvent, logError } from "../lib/logger.js";
 import { hasPngAlphaChannel, parsePngInfo } from "../lib/pngInfo.js";
 
 import { errInfo } from "../lib/errInfo.js";
-function validateModeration(ctx, moderation) {
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+function validateModeration(ctx: RouteRuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
@@ -60,7 +61,7 @@ function validateEditMask(imageB64, mask) {
   return { mask: maskCheck.b64, maskBytes: maskCheck.buffer.length };
 }
 
-export function registerEditRoutes(app, ctx) {
+export function registerEditRoutes(app, ctx: RouteRuntimeContext) {
   app.post("/api/edit", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";

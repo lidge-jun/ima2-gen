@@ -5,7 +5,8 @@ import { logError, logEvent } from "../lib/logger.js";
 import { getDb } from "../lib/db.js";
 
 import { errInfo } from "../lib/errInfo.js";
-export function registerHistoryRoutes(app, ctx) {
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+export function registerHistoryRoutes(app, ctx: RouteRuntimeContext) {
   app.get("/api/history", async (req, res) => {
     try {
       const limitRaw = parseInt(req.query.limit);

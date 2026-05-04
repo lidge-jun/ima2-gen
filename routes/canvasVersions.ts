@@ -2,6 +2,7 @@ import express from "express";
 import { createCanvasVersion, updateCanvasVersion } from "../lib/canvasVersionStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 function decodeHeader(value) {
   if (typeof value !== "string" || !value) return null;
   try {
@@ -19,7 +20,7 @@ function getPrompt(req) {
   return decodeHeader(req.headers["x-ima2-canvas-prompt"]);
 }
 
-export function registerCanvasVersionRoutes(app, ctx) {
+export function registerCanvasVersionRoutes(app, ctx: RouteRuntimeContext) {
   const rawPng = express.raw({ type: "image/png", limit: ctx.config.server.bodyLimit });
 
   app.post("/api/canvas-versions", rawPng, async (req, res) => {

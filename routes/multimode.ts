@@ -11,12 +11,13 @@ import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 function sendSse(res, event, data) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function validateModeration(ctx, moderation) {
+function validateModeration(ctx: RouteRuntimeContext, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
@@ -33,7 +34,7 @@ function sequenceStatus(returned, requested) {
   return "complete";
 }
 
-export function registerMultimodeRoutes(app, ctx) {
+export function registerMultimodeRoutes(app, ctx: RouteRuntimeContext) {
   app.post("/api/generate/multimode", async (req, res) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";
