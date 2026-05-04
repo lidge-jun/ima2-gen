@@ -1,8 +1,9 @@
+import type { Express, Request, Response } from "express";
 import { listJobs, listTerminalJobs, finishJob } from "../lib/inflight.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
-export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
+export function registerHealthRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
   const runtimePorts = () => ({
     backend: {
@@ -18,7 +19,7 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
     },
   });
 
-  app.get("/api/providers", (_req, res) => {
+  app.get("/api/providers", (_req: Request, res: Response) => {
     res.json({
       apiKey: Boolean(ctx.hasApiKey),
       oauth: true,
@@ -31,7 +32,7 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
     });
   });
 
-  app.get("/api/health", (_req, res) => {
+  app.get("/api/health", (_req: Request, res: Response) => {
     res.json({
       ok: true,
       version: ctx.packageVersion,
@@ -44,7 +45,7 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
     });
   });
 
-  app.get("/api/oauth/status", async (_req, res) => {
+  app.get("/api/oauth/status", async (_req: Request, res: Response) => {
     if (ctx.oauthReadyState === "starting") {
       return res.json({ status: "starting", runtime: runtimePorts() });
     }
@@ -56,7 +57,7 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
         signal: AbortSignal.timeout(ctx.config.oauth.statusTimeoutMs),
       });
       if (r.ok) {
-        const data: any = await r.json();
+        const data = (await r.json()) as { data?: Array<{ id: string }> };
         res.json({ status: "ready", models: data.data?.map((m) => m.id) || [], runtime: runtimePorts() });
       } else {
         res.json({ status: "auth_required", runtime: runtimePorts() });
@@ -66,7 +67,7 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.get("/api/inflight", (req, res) => {
+  app.get("/api/inflight", (req: Request, res: Response) => {
     const kind =
       typeof req.query.kind === "string" && req.query.kind.length > 0
         ? req.query.kind
@@ -85,12 +86,12 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
     });
   });
 
-  app.delete("/api/inflight/:requestId", (req, res) => {
+  app.delete("/api/inflight/:requestId", (req: Request<{ requestId: string }>, res: Response) => {
     finishJob(req.params.requestId, { canceled: true });
     res.status(204).end();
   });
 
-  app.get("/api/billing", async (_req, res) => {
+  app.get("/api/billing", async (_req: Request, res: Response) => {
     if (!ctx.hasApiKey) {
       return res.json({ oauth: true, apiKeyValid: false, apiKeySource: "none" });
     }
@@ -105,7 +106,7 @@ export function registerHealthRoutes(app, ctxRaw: RouteRuntimeContext) {
         fetch("https://api.openai.com/v1/models", { headers }),
       ]);
 
-      const billing: any = { apiKeySource: ctx.apiKeySource ?? "env" };
+      const billing: Record<string, unknown> = { apiKeySource: ctx.apiKeySource ?? "env" };
       if (subRes.status === "fulfilled" && subRes.value.ok) billing.costs = await subRes.value.json();
       if (usageRes.status === "fulfilled" && usageRes.value.ok) billing.credits = await usageRes.value.json();
       billing.apiKeyValid = modelsRes.status === "fulfilled" && modelsRes.value.ok === true;

@@ -11,7 +11,7 @@
     "verbatimModuleSyntax": false,
 
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "noUnusedLocals": true,

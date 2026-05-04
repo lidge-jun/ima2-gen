@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import type { Response } from "express";
 import { readFile } from "fs/promises";
 import {
   existsSync,
@@ -20,11 +21,20 @@ import { createRequestLogger } from "./lib/requestLogger.js";
 import { configureRoutes } from "./routes/index.js";
 import { config } from "./config.js";
 import { getServerPort, listenWithPortFallback } from "./lib/runtimePorts.js";
+import type { RuntimeContext, RuntimeContextOverrides, ApiKeySource } from "./lib/runtimeContext.js";
 
 import { errInfo } from "./lib/errInfo.js";
+
+type BootRuntimeContext = RuntimeContext & {
+  markOAuthReady: (info?: { url?: string; port?: number }) => void;
+  markOAuthFailed: () => void;
+};
+
+type ApiKeyLoadResult = { apiKey: string | null; apiKeySource: ApiKeySource };
+
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
-async function loadApiKey() {
+async function loadApiKey(): Promise<ApiKeyLoadResult> {
   if (process.env.OPENAI_API_KEY) {
     return { apiKey: process.env.OPENAI_API_KEY, apiKeySource: "env" };
   }
@@ -35,28 +45,28 @@ async function loadApiKey() {
   for (const cfgPath of candidates) {
     if (!existsSync(cfgPath)) continue;
     try {
-      const cfg = JSON.parse(await readFile(cfgPath, "utf-8"));
+      const cfg = JSON.parse(await readFile(cfgPath, "utf-8")) as { apiKey?: string };
       if (cfg.apiKey) return { apiKey: cfg.apiKey, apiKeySource: "config" };
     } catch {}
   }
   return { apiKey: null, apiKeySource: "none" };
 }
 
-async function createOpenAI(apiKey) {
+async function createOpenAI(apiKey: string | null | undefined) {
   if (!apiKey) return null;
   const OpenAI = (await import("openai")).default;
   return new OpenAI({ apiKey });
 }
 
-function readPackageVersion() {
+function readPackageVersion(): string {
   try {
-    return JSON.parse(fsReadFileSync(join(rootDir, "package.json"), "utf-8")).version;
+    return (JSON.parse(fsReadFileSync(join(rootDir, "package.json"), "utf-8")) as { version?: string }).version ?? "0.0.0";
   } catch {
     return "0.0.0";
   }
 }
 
-function setUiStaticHeaders(res, filePath) {
+function setUiStaticHeaders(res: Response, filePath: string) {
   const normalized = filePath.replace(/\\/g, "/");
   if (normalized.endsWith("/index.html")) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -67,7 +77,7 @@ function setUiStaticHeaders(res, filePath) {
   }
 }
 
-export function buildApp(ctx) {
+export function buildApp(ctx: RuntimeContext) {
   const app = express();
   configureLogger({ level: ctx.config.log.level });
   app.use(createRequestLogger());
@@ -86,12 +96,12 @@ export function buildApp(ctx) {
   return app;
 }
 
-function runtimeHostUrl(host) {
+function runtimeHostUrl(host: string | undefined): string {
   if (!host || host === "0.0.0.0" || host === "::") return "localhost";
   return host;
 }
 
-function advertise(ctx) {
+function advertise(ctx: RuntimeContext) {
   try {
     mkdirSync(dirname(ctx.config.storage.advertiseFile), { recursive: true });
     writeFileSync(
@@ -121,15 +131,21 @@ function advertise(ctx) {
   }
 }
 
-function unadvertise(ctx) {
+function unadvertise(ctx: RuntimeContext) {
   try {
     if (!existsSync(ctx.config.storage.advertiseFile)) return;
-    const cur = JSON.parse(fsReadFileSync(ctx.config.storage.advertiseFile, "utf-8"));
+    const cur = JSON.parse(fsReadFileSync(ctx.config.storage.advertiseFile, "utf-8")) as { pid?: number };
     if (cur.pid === process.pid) unlinkSync(ctx.config.storage.advertiseFile);
   } catch {}
 }
 
-export async function createRuntimeContext(overrides: any = {}) {
+type StartServerOverrides = RuntimeContextOverrides & {
+  startedAt?: number;
+  packageVersion?: string;
+  oauthChild?: { stop?: () => void; kill?: () => void } | null;
+};
+
+export async function createRuntimeContext(overrides: StartServerOverrides = {}): Promise<BootRuntimeContext> {
   const loadedKey =
     overrides.apiKey !== undefined
       ? {
@@ -140,42 +156,43 @@ export async function createRuntimeContext(overrides: any = {}) {
   const apiKey = loadedKey.apiKey;
   const openai = overrides.openai ?? await createOpenAI(apiKey);
   const oauthPort = config.oauth.proxyPort;
-  const ctx: any = {
+  let resolveOAuthReady: (value: string | null) => void = () => {};
+  const oauthReadyPromise = new Promise<string | null>((resolve) => {
+    resolveOAuthReady = resolve;
+  });
+  const ctx: BootRuntimeContext = {
     rootDir,
     config,
     serverConfiguredPort: config.server.port,
-    serverActualPort: null,
+    serverActualPort: undefined,
     serverUrl: `http://${runtimeHostUrl(config.server.host)}:${config.server.port}`,
     oauthPort,
     oauthActualPort: oauthPort,
     oauthUrl: `http://127.0.0.1:${oauthPort}`,
     oauthReadyState: config.oauth.autoStart ? "starting" : "disabled",
     hasApiKey: !!apiKey,
-    apiKey,
-    apiKeySource: loadedKey.apiKeySource,
+    apiKey: apiKey ?? undefined,
+    apiKeySource: loadedKey.apiKeySource as ApiKeySource,
     openai,
     startedAt: overrides.startedAt ?? Date.now(),
     packageVersion: overrides.packageVersion ?? readPackageVersion(),
-  };
-  let resolveOAuthReady;
-  ctx.oauthReadyPromise = new Promise((resolve) => {
-    resolveOAuthReady = resolve;
-  });
-  ctx.markOAuthReady = ({ url, port }: any = {}) => {
-    if (url) ctx.oauthUrl = url;
-    if (port) ctx.oauthActualPort = port;
-    ctx.oauthReadyState = "ready";
-    resolveOAuthReady(ctx.oauthUrl);
-  };
-  ctx.markOAuthFailed = () => {
-    ctx.oauthReadyState = "failed";
-    resolveOAuthReady(null);
+    oauthReadyPromise: oauthReadyPromise as unknown as Promise<void>,
+    markOAuthReady: ({ url, port }: { url?: string; port?: number } = {}) => {
+      if (url) ctx.oauthUrl = url;
+      if (port) ctx.oauthActualPort = port;
+      ctx.oauthReadyState = "ready";
+      resolveOAuthReady(ctx.oauthUrl);
+    },
+    markOAuthFailed: () => {
+      ctx.oauthReadyState = "failed";
+      resolveOAuthReady(null);
+    },
   };
   if (!config.oauth.autoStart) ctx.markOAuthReady({ url: ctx.oauthUrl, port: ctx.oauthPort });
   return ctx;
 }
 
-export async function startServer(overrides: any = {}) {
+export async function startServer(overrides: StartServerOverrides = {}) {
   const ctx = await createRuntimeContext(overrides);
   await migrateGeneratedStorage(ctx);
   purgeStaleJobs();
@@ -188,7 +205,7 @@ export async function startServer(overrides: any = {}) {
         : startOAuthProxy({
             oauthPort: ctx.oauthPort,
             restartDelayMs: ctx.config.oauth.restartDelayMs,
-            onReady: ({ url, port }) => {
+            onReady: ({ url, port }: { url: string; port: number }) => {
               ctx.markOAuthReady({ url, port });
               advertise(ctx);
             },
@@ -205,10 +222,10 @@ export async function startServer(overrides: any = {}) {
   });
   process.on("exit", () => unadvertise(ctx));
 
-  const server: any = await listenWithPortFallback(app, ctx.config.server.port, {
+  const server = await listenWithPortFallback(app, ctx.config.server.port, {
     host: ctx.config.server.host,
     label: "server",
-    onFallback: ({ requestedPort, actualPort }) => {
+    onFallback: ({ requestedPort, actualPort }: { requestedPort: number; actualPort: number }) => {
       console.log(`[server.port] requested=${requestedPort} actual=${actualPort} reason=EADDRINUSE`);
     },
   });
@@ -225,7 +242,7 @@ export async function startServer(overrides: any = {}) {
     console.error("[db] bootstrap failed:", err.message);
   }
 
-  server.on("error", (err) => {
+  server.on("error", (err: NodeJS.ErrnoException) => {
     console.error("[server] Failed to start:", err?.message || err);
     process.exit(1);
   });

@@ -9,7 +9,8 @@
     "allowImportingTsExtensions": true,
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "noImplicitAny": false
   },
   "include": [
     "tests/**/*.test.js",

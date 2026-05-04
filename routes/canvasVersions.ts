@@ -1,9 +1,9 @@
-import express from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { createCanvasVersion, updateCanvasVersion } from "../lib/canvasVersionStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
-function decodeHeader(value) {
+function decodeHeader(value: unknown): string | null {
   if (typeof value !== "string" || !value) return null;
   try {
     return decodeURIComponent(value);
@@ -12,19 +12,19 @@ function decodeHeader(value) {
   }
 }
 
-function getRequestBuffer(req) {
+function getRequestBuffer(req: Request): Buffer {
   return Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
 }
 
-function getPrompt(req) {
+function getPrompt(req: Request): string | null {
   return decodeHeader(req.headers["x-ima2-canvas-prompt"]);
 }
 
-export function registerCanvasVersionRoutes(app, ctxRaw: RouteRuntimeContext) {
+export function registerCanvasVersionRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
   const rawPng = express.raw({ type: "image/png", limit: ctx.config.server.bodyLimit });
 
-  app.post("/api/canvas-versions", rawPng, async (req, res) => {
+  app.post("/api/canvas-versions", rawPng, async (req: Request, res: Response) => {
     try {
       const sourceFilename =
         typeof req.query.sourceFilename === "string"
@@ -45,7 +45,7 @@ export function registerCanvasVersionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.put("/api/canvas-versions/:filename", rawPng, async (req, res) => {
+  app.put("/api/canvas-versions/:filename", rawPng, async (req: Request<{ filename: string }>, res: Response) => {
     try {
       const filename = decodeURIComponent(req.params.filename);
       const sourceFilename =

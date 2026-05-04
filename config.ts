@@ -41,23 +41,25 @@ function loadConfigJson() {
 }
 const fileCfg = loadConfigJson();
 
-function firstDefined(...vals) {
+type Pickable = string | number | boolean | undefined;
+
+function firstDefined(...vals: Pickable[]): Pickable {
   return vals.find((v) => v !== undefined && v !== "");
 }
-function pickInt(envVal, fileVal, fallback) {
+function pickInt(envVal: Pickable, fileVal: Pickable, fallback: number): number {
   const candidate = firstDefined(envVal, fileVal);
   if (candidate === undefined) return fallback;
   const n = Number(candidate);
   return Number.isFinite(n) ? n : fallback;
 }
-function pickPositiveInt(envVal, fileVal, fallback) {
+function pickPositiveInt(envVal: Pickable, fileVal: Pickable, fallback: number): number {
   const n = pickInt(envVal, fileVal, fallback);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
-function pickStr(envVal, fileVal, fallback) {
-  return firstDefined(envVal, fileVal) ?? fallback;
+function pickStr(envVal: Pickable, fileVal: Pickable, fallback: string): string {
+  return (firstDefined(envVal, fileVal) ?? fallback) as string;
 }
-function pickBool(envVal, fileVal, fallback) {
+function pickBool(envVal: Pickable, fileVal: Pickable, fallback: boolean): boolean {
   const v = firstDefined(envVal, fileVal);
   if (v === undefined) return fallback;
   if (typeof v === "boolean") return v;

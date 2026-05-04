@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import type { Express, Request, Response } from "express";
 import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
@@ -12,31 +13,36 @@ import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
-function sendSse(res, event, data) {
+function sendSse(res: Response, event: string, data: unknown) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function validateModeration(ctx: RuntimeContext, moderation) {
+function validateModeration(ctx: RuntimeContext, moderation: unknown) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
   return { moderation };
 }
 
-function normalizeMaxImages(value) {
+function normalizeMaxImages(value: unknown): number {
   return Math.min(8, Math.max(1, Math.trunc(Number(value) || 1)));
 }
 
-function sequenceStatus(returned, requested) {
+function sequenceStatus(returned: number, requested: number): "empty" | "partial" | "complete" {
   if (returned <= 0) return "empty";
   if (returned < requested) return "partial";
   return "complete";
 }
 
-export function registerMultimodeRoutes(app, ctxRaw: RouteRuntimeContext) {
+interface MultimodeImage {
+  b64: string;
+  revisedPrompt?: string | null;
+}
+
+export function registerMultimodeRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
-  app.post("/api/generate/multimode", async (req, res) => {
+  app.post("/api/generate/multimode", async (req: Request, res: Response) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";
     let finishHttpStatus = 200;
@@ -140,8 +146,8 @@ export function registerMultimodeRoutes(app, ctxRaw: RouteRuntimeContext) {
       });
 
       const startTime = Date.now();
-      const mimeMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
-      const mime = mimeMap[format] || "image/png";
+      const mimeMap: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
+      const mime = mimeMap[String(format)] || "image/png";
       const sequenceId = `seq_${Date.now().toString(36)}_${randomBytes(4).toString("hex")}`;
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
 
@@ -174,9 +180,18 @@ export function registerMultimodeRoutes(app, ctxRaw: RouteRuntimeContext) {
       const returned = generated.images.length;
       const status = sequenceStatus(returned, maxImages);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      const images: any[] = [];
+      const images: Array<{
+        image: string;
+        filename: string;
+        revisedPrompt: string | null;
+        sequenceId: string;
+        sequenceIndex: number;
+        sequenceTotalRequested: number;
+        sequenceTotalReturned: number;
+        sequenceStatus: ReturnType<typeof sequenceStatus>;
+      }> = [];
 
-      for (const [index, image] of generated.images.entries() as IterableIterator<[number, any]>) {
+      for (const [index, image] of generated.images.entries() as IterableIterator<[number, MultimodeImage]>) {
         const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
         const filename = `${Date.now()}_${rand}_multimode_${index}.${format}`;
         const meta = {

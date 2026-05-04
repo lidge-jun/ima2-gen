@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import type { Express, Request, Response } from "express";
 import { summarizeReferencePayload, validateAndNormalizeRefs } from "../lib/refs.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
@@ -13,16 +14,16 @@ import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
-function validateModeration(ctx: RuntimeContext, moderation) {
+function validateModeration(ctx: RuntimeContext, moderation: unknown) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
   }
   return { moderation };
 }
 
-export function registerGenerateRoutes(app, ctxRaw: RouteRuntimeContext) {
+export function registerGenerateRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
-  app.post("/api/generate", async (req, res) => {
+  app.post("/api/generate", async (req: Request, res: Response) => {
     const requestId = typeof req.body?.requestId === "string" ? req.body.requestId : req.id;
     let finishStatus = "completed";
     let finishHttpStatus;
@@ -125,13 +126,13 @@ export function registerGenerateRoutes(app, ctxRaw: RouteRuntimeContext) {
       });
       const startTime = Date.now();
 
-      const mimeMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
-      const mime = mimeMap[format] || "image/png";
+      const mimeMap: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
+      const mime = mimeMap[String(format)] || "image/png";
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
 
       const generateOne = async () => {
         const MAX_RETRIES = 1;
-        let lastErr;
+        let lastErr: unknown;
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
           try {
             const r = await generateViaResponses(
@@ -153,10 +154,13 @@ export function registerGenerateRoutes(app, ctxRaw: RouteRuntimeContext) {
             if (isNonRetryableGenerationError(e as UpstreamErr | null | undefined)) break;
           }
           if (attempt < MAX_RETRIES) {
-            logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: lastErr?.code });
+            const errCode = (lastErr && typeof lastErr === "object" && "code" in lastErr)
+              ? (lastErr as { code?: unknown }).code
+              : undefined;
+            logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: errCode });
           }
         }
-        throw normalizeGenerationFailure(lastErr, {
+        throw normalizeGenerationFailure(lastErr as UpstreamErr | null | undefined, {
           safetyMessage: "Content generation refused after retries",
         });
       };

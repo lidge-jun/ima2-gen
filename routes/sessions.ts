@@ -1,3 +1,4 @@
+import type { Express, Request, Response } from "express";
 import {
   createSession,
   listSessions,
@@ -14,7 +15,7 @@ import { logError, logEvent } from "../lib/logger.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
-function safeJsonChars(value) {
+function safeJsonChars(value: unknown): number {
   try {
     return JSON.stringify(value ?? null).length;
   } catch {
@@ -22,9 +23,11 @@ function safeJsonChars(value) {
   }
 }
 
-export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
+type IdParams = { id: string };
+
+export function registerSessionRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
-  app.get("/api/sessions", (_req, res) => {
+  app.get("/api/sessions", (_req: Request, res: Response) => {
     try {
       res.json({ sessions: listSessions() });
     } catch (e) {
@@ -33,9 +36,11 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/sessions", (req, res) => {
+  app.post("/api/sessions", (req: Request, res: Response) => {
     try {
-      const title = (req.body?.title || "Untitled").slice(0, 200);
+      const body = (req.body ?? {}) as { title?: unknown };
+      const titleRaw = typeof body.title === "string" ? body.title : "Untitled";
+      const title = (titleRaw || "Untitled").slice(0, 200);
       const session = createSession({ title });
       logEvent("session", "create", {
         sessionId: session.id,
@@ -48,7 +53,7 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.get("/api/sessions/:id", (req, res) => {
+  app.get("/api/sessions/:id", (req: Request<IdParams>, res: Response) => {
     try {
       const session = getSession(req.params.id);
       if (!session) {
@@ -63,9 +68,10 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.patch("/api/sessions/:id", (req, res) => {
+  app.patch("/api/sessions/:id", (req: Request<IdParams>, res: Response) => {
     try {
-      const title = req.body?.title;
+      const body = (req.body ?? {}) as { title?: unknown };
+      const title = body.title;
       if (typeof title !== "string" || !title.trim()) {
         return res.status(400).json({
           error: { code: "INVALID_TITLE", message: "Title required" },
@@ -88,7 +94,7 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.delete("/api/sessions/:id", (req, res) => {
+  app.delete("/api/sessions/:id", (req: Request<IdParams>, res: Response) => {
     try {
       const ok = deleteSession(req.params.id);
       if (!ok) {
@@ -104,7 +110,7 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.get("/api/sessions/:id/style-sheet", (req, res) => {
+  app.get("/api/sessions/:id/style-sheet", (req: Request<IdParams>, res: Response) => {
     try {
       const data = getStyleSheet(req.params.id);
       if (!data) {
@@ -125,9 +131,10 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.put("/api/sessions/:id/style-sheet", (req, res) => {
+  app.put("/api/sessions/:id/style-sheet", (req: Request<IdParams>, res: Response) => {
     try {
-      const { styleSheet, enabled } = req.body || {};
+      const body = (req.body ?? {}) as { styleSheet?: unknown; enabled?: unknown };
+      const { styleSheet, enabled } = body;
       if (styleSheet !== null && (typeof styleSheet !== "object" || Array.isArray(styleSheet))) {
         return res.status(400).json({
           error: { code: "INVALID_SHEET", message: "styleSheet must be an object or null" },
@@ -158,9 +165,10 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.patch("/api/sessions/:id/style-sheet/enabled", (req, res) => {
+  app.patch("/api/sessions/:id/style-sheet/enabled", (req: Request<IdParams>, res: Response) => {
     try {
-      const { enabled } = req.body || {};
+      const body = (req.body ?? {}) as { enabled?: unknown };
+      const { enabled } = body;
       if (typeof enabled !== "boolean") {
         return res.status(400).json({
           error: { code: "INVALID_ENABLED", message: "enabled must be boolean" },
@@ -183,7 +191,7 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/sessions/:id/style-sheet/extract", async (req, res) => {
+  app.post("/api/sessions/:id/style-sheet/extract", async (req: Request<IdParams>, res: Response) => {
     try {
       if (!ctx.openai) {
         return res.status(400).json({
@@ -193,7 +201,8 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
           },
         });
       }
-      const { prompt, referenceDataUrl } = req.body || {};
+      const body = (req.body ?? {}) as { prompt?: unknown; referenceDataUrl?: unknown };
+      const { prompt, referenceDataUrl } = body;
       if (typeof prompt !== "string" || !prompt.trim()) {
         return res.status(400).json({
           error: { code: "STYLE_SHEET_BAD_INPUT", message: "prompt required" },
@@ -238,9 +247,10 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.put("/api/sessions/:id/graph", (req, res) => {
+  app.put("/api/sessions/:id/graph", (req: Request<IdParams>, res: Response) => {
     try {
-      const { nodes, edges } = req.body || {};
+      const body = (req.body ?? {}) as { nodes?: unknown; edges?: unknown };
+      const { nodes, edges } = body;
       const rawIfMatch = req.get("If-Match");
       if (!Array.isArray(nodes) || !Array.isArray(edges)) {
         return res.status(400).json({
@@ -284,9 +294,10 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
       const err = errInfo(e);
       const ext = (err.raw && typeof err.raw === "object" ? err.raw as Record<string, unknown> : {});
       const code = err.code || "DB_ERROR";
-      const payload: any = { error: { code, message: err.message } };
+      const payload: { error: { code: string; message: string }; currentVersion?: number } = { error: { code, message: err.message } };
       if (typeof ext.currentVersion === "number") payload.currentVersion = ext.currentVersion;
       if (code === "GRAPH_VERSION_CONFLICT") {
+        const reqBody = (req.body ?? {}) as { nodes?: unknown; edges?: unknown };
         logEvent("session", "graph_conflict", {
           sessionId: req.params.id,
           saveId: req.get("X-Ima2-Graph-Save-Id") || null,
@@ -294,8 +305,8 @@ export function registerSessionRoutes(app, ctxRaw: RouteRuntimeContext) {
           tabId: req.get("X-Ima2-Tab-Id") || null,
           expectedVersion: Number(String(req.get("If-Match") || "").replace(/"/g, "")),
           currentVersion: ext.currentVersion ?? null,
-          nodes: Array.isArray(req.body?.nodes) ? req.body.nodes.length : null,
-          edges: Array.isArray(req.body?.edges) ? req.body.edges.length : null,
+          nodes: Array.isArray(reqBody.nodes) ? reqBody.nodes.length : null,
+          edges: Array.isArray(reqBody.edges) ? reqBody.edges.length : null,
         });
       } else {
         logError("session", "graph_error", err.raw, { sessionId: req.params.id, code });

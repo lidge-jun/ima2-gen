@@ -1,3 +1,4 @@
+import type { Express, Request, Response } from "express";
 import { getDb } from "../lib/db.js";
 import { logError, logEvent } from "../lib/logger.js";
 import { isPromptImportError, promptImportError } from "../lib/promptImport/errors.js";
@@ -23,6 +24,26 @@ import {
   reviewDiscoveryCandidate,
 } from "../lib/promptImport/discoveryRegistry.js";
 import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
+import type { GitHubFileSource } from "../lib/promptImport/types.js";
+
+interface LocalSource {
+  kind: "local";
+  filename: string;
+  extension: string;
+  text: string;
+  tags: string[];
+}
+
+type ParsedSource = LocalSource | (GitHubFileSource & { kind?: string; filename?: string });
+
+type ImportLimits = ReturnType<typeof promptImportLimits>;
+
+interface CandidateLike {
+  text?: string;
+  name?: string;
+  tags?: unknown;
+  mode?: string;
+}
 
 function promptImportLimits(ctx: RuntimeContext) {
   return {
@@ -43,10 +64,11 @@ function promptImportLimits(ctx: RuntimeContext) {
   };
 }
 
-function sendPromptImportError(res, error) {
-  const status = isPromptImportError(error) ? error.status : 500;
-  const code = isPromptImportError(error) ? error.code : "PROMPT_IMPORT_FAILED";
-  const message = error?.message || "Prompt import failed";
+function sendPromptImportError(res: Response, error: unknown) {
+  const errAsAny = (error ?? {}) as { code?: unknown; status?: unknown; message?: unknown };
+  const status = isPromptImportError(error) && typeof errAsAny.status === "number" ? errAsAny.status : 500;
+  const code = isPromptImportError(error) && typeof errAsAny.code === "string" ? errAsAny.code : "PROMPT_IMPORT_FAILED";
+  const message = typeof errAsAny.message === "string" ? errAsAny.message : "Prompt import failed";
   res.status(status).json({ error: { code, message } });
 }
 
@@ -54,12 +76,15 @@ function generateId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function sourceFilename(source) {
-  if (source.kind === "local") return source.filename;
-  return source.path.split("/").pop();
+function sourceFilename(source: ParsedSource): string {
+  if (source.kind === "local" && "filename" in source && typeof source.filename === "string") return source.filename;
+  const gh = source as GitHubFileSource & { filename?: string };
+  if (typeof gh.filename === "string" && gh.filename) return gh.filename;
+  if (typeof gh.path === "string" && gh.path) return gh.path.split("/").pop() ?? "";
+  return "";
 }
 
-function normalizeLocalSource(source) {
+function normalizeLocalSource(source: { filename?: unknown; text?: unknown }): LocalSource {
   const filename = typeof source?.filename === "string" ? source.filename.trim() : "";
   const text = typeof source?.text === "string" ? source.text : "";
   if (!filename || !isSupportedPromptFileName(filename)) {
@@ -68,22 +93,23 @@ function normalizeLocalSource(source) {
   if (!text.trim()) {
     throw promptImportError("PROMPT_IMPORT_EMPTY", "Prompt source is empty", 422);
   }
+  const ext = (filename.split(".").pop() ?? "").toLowerCase();
   return {
     kind: "local",
     filename,
-    extension: filename.split(".").pop().toLowerCase(),
+    extension: ext,
     text,
-    tags: [`file:${filename}`, `ext:${filename.split(".").pop().toLowerCase()}`],
+    tags: [`file:${filename}`, `ext:${ext}`],
   };
 }
 
-async function buildPreview(req, ctx: RuntimeContext) {
-  const body = req.body || {};
-  const rawSource = body.source || body;
+async function buildPreview(req: Request, ctx: RuntimeContext) {
+  const body = (req.body ?? {}) as { source?: { kind?: string; input?: unknown } & Record<string, unknown> } & Record<string, unknown>;
+  const rawSource = (body.source ?? body) as { kind?: string; input?: unknown; filename?: unknown; text?: unknown };
   const kind = rawSource.kind === "github" ? "github" : "local";
   const limits = promptImportLimits(ctx);
-  let source;
-  let text;
+  let source: ParsedSource;
+  let text: string;
 
   if (kind === "github") {
     source = normalizeGitHubSource(rawSource.input);
@@ -101,13 +127,13 @@ async function buildPreview(req, ctx: RuntimeContext) {
     text,
     filename: sourceFilename(source),
     source: {
-      kind: source.kind,
-      owner: source.owner,
-      repo: source.repo,
-      ref: source.ref,
-      path: source.path,
-      htmlUrl: source.htmlUrl,
-      filename: source.filename,
+      kind: source.kind ?? "github",
+      owner: (source as GitHubFileSource).owner,
+      repo: (source as GitHubFileSource).repo,
+      ref: (source as GitHubFileSource).ref,
+      path: (source as GitHubFileSource).path,
+      htmlUrl: (source as GitHubFileSource).htmlUrl,
+      filename: (source as ParsedSource).filename,
     },
     tags: source.tags,
     limits,
@@ -119,23 +145,24 @@ async function buildPreview(req, ctx: RuntimeContext) {
   return { source, candidates, warnings: [] };
 }
 
-function normalizeFolderInput(body) {
+function normalizeFolderInput(body: { source?: { input?: unknown }; input?: unknown }) {
   const input = typeof body?.source?.input === "string" ? body.source.input : body?.input;
   return normalizeGitHubFolderSource(input);
 }
 
-async function buildFolderFiles(req, ctx: RuntimeContext) {
+async function buildFolderFiles(req: Request, ctx: RuntimeContext) {
   const limits = promptImportLimits(ctx);
-  const source = normalizeFolderInput(req.body || {});
+  const source = normalizeFolderInput((req.body ?? {}) as { source?: { input?: unknown }; input?: unknown });
   return fetchGitHubFolderFiles(source, limits);
 }
 
-async function buildFolderPreview(req, ctx: RuntimeContext) {
+async function buildFolderPreview(req: Request, ctx: RuntimeContext) {
   const limits = promptImportLimits(ctx);
-  const source = normalizeFolderInput(req.body || {});
-  const paths = Array.isArray(req.body?.paths) ? req.body.paths : [];
+  const body = (req.body ?? {}) as { source?: { input?: unknown }; input?: unknown; paths?: unknown };
+  const source = normalizeFolderInput(body);
+  const paths = Array.isArray(body.paths) ? (body.paths as string[]) : [];
   const selected = await fetchSelectedGitHubFolderFiles(source, paths, limits);
-  const candidates: any[] = [];
+  const candidates: ReturnType<typeof parsePromptCandidates> = [];
   const warnings = [...selected.warnings];
 
   for (const file of selected.files) {
@@ -153,7 +180,7 @@ async function buildFolderPreview(req, ctx: RuntimeContext) {
         path: file.path,
         htmlUrl: file.htmlUrl,
       },
-      tags: [...source.tags, `file:${file.name}`, `ext:${file.extension}`],
+      tags: [...(source.tags ?? []), `file:${file.name}`, `ext:${file.extension}`],
       limits,
     });
     if (parsed.length === 0) warnings.push(`${file.path}: no prompt candidates`);
@@ -165,13 +192,13 @@ async function buildFolderPreview(req, ctx: RuntimeContext) {
   }
   return {
     source,
-    files: selected.files.map(({ text: _t, contentHash: _h, ...file }: any) => file),
+    files: selected.files.map(({ text: _t, contentHash: _h, ...file }) => file),
     candidates: candidates.slice(0, limits.maxPromptCandidatesPerImport),
     warnings,
   };
 }
 
-function assertCommitCandidateText(text, limits) {
+function assertCommitCandidateText(text: string, limits: ImportLimits) {
   if (text.length < limits.minCandidateChars) {
     throw promptImportError("PROMPT_IMPORT_EMPTY", "Prompt candidate is too short", 422);
   }
@@ -180,7 +207,7 @@ function assertCommitCandidateText(text, limits) {
   }
 }
 
-function commitCandidates(candidates, folderId, limits) {
+function commitCandidates(candidates: CandidateLike[], folderId: unknown, limits: ImportLimits) {
   const db = getDb();
   const result = { foldersCreated: 0, promptsImported: 0, duplicatesSkipped: 0 };
   const now = Math.floor(Date.now() / 1000);
@@ -218,9 +245,9 @@ function commitCandidates(candidates, folderId, limits) {
   return result;
 }
 
-export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
+export function registerPromptImportRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
-  app.get("/api/prompts/import/curated-sources", async (_req, res) => {
+  app.get("/api/prompts/import/curated-sources", async (_req: Request, res: Response) => {
     try {
       res.json(await getPromptImportSources(ctx));
     } catch (error) {
@@ -229,10 +256,11 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.get("/api/prompts/import/discovery", async (req, res) => {
+  app.get("/api/prompts/import/discovery", async (req: Request, res: Response) => {
     try {
+      const status = req.query?.status;
       const candidates = await listDiscoveryCandidates(ctx, {
-        status: typeof req.query?.status === "string" ? req.query.status : undefined,
+        status: typeof status === "string" ? status : undefined,
       });
       res.json({ candidates, warnings: [] });
     } catch (error) {
@@ -241,17 +269,18 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/discovery-search", async (req, res) => {
+  app.post("/api/prompts/import/discovery-search", async (req: Request, res: Response) => {
     try {
       const limits = promptImportLimits(ctx);
-      const seeds = Array.isArray(req.body?.seeds) ? req.body.seeds : [];
+      const body = (req.body ?? {}) as { seeds?: unknown; q?: unknown; limit?: unknown };
+      const seeds = Array.isArray(body.seeds) ? (body.seeds as string[]) : [];
       if (seeds.length > limits.discoveryMaxQueries) {
         throw promptImportError("GITHUB_DISCOVERY_TOO_MANY_QUERIES", "Too many discovery queries", 413);
       }
       const result = await searchGitHubDiscovery(ctx, {
-        q: req.body?.q,
+        q: typeof body.q === "string" ? body.q : undefined,
         seeds,
-        limit: req.body?.limit,
+        limit: typeof body.limit === "number" ? body.limit : undefined,
         maxQueries: limits.discoveryMaxQueries,
       });
       res.json(result);
@@ -261,15 +290,10 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/discovery-review", async (req, res) => {
+  app.post("/api/prompts/import/discovery-review", async (req: Request, res: Response) => {
     try {
-      const result = await reviewDiscoveryCandidate(ctx, {
-        repo: req.body?.repo,
-        status: req.body?.status,
-        reviewNotes: req.body?.reviewNotes,
-        allowedPaths: req.body?.allowedPaths,
-        defaultSearch: req.body?.defaultSearch,
-      });
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const result = await reviewDiscoveryCandidate(ctx, body as Parameters<typeof reviewDiscoveryCandidate>[1]);
       res.json(result);
     } catch (error) {
       logError("promptImport", "discovery_review_error", error);
@@ -277,13 +301,10 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/curated-search", async (req, res) => {
+  app.post("/api/prompts/import/curated-search", async (req: Request, res: Response) => {
     try {
-      const result = await searchCuratedPrompts(ctx, {
-        q: req.body?.q,
-        sourceIds: req.body?.sourceIds,
-        limit: req.body?.limit,
-      });
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const result = await searchCuratedPrompts(ctx, body as Parameters<typeof searchCuratedPrompts>[1]);
       res.json(result);
     } catch (error) {
       logError("promptImport", "curated_search_error", error);
@@ -291,9 +312,10 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/curated-refresh", async (req, res) => {
+  app.post("/api/prompts/import/curated-refresh", async (req: Request, res: Response) => {
     try {
-      const sourceId = typeof req.body?.sourceId === "string" ? req.body.sourceId : "";
+      const body = (req.body ?? {}) as { sourceId?: unknown };
+      const sourceId = typeof body.sourceId === "string" ? body.sourceId : "";
       if (!sourceId) {
         throw promptImportError("INVALID_GITHUB_SOURCE", "Curated source is required", 400);
       }
@@ -305,7 +327,7 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/folder-files", async (req, res) => {
+  app.post("/api/prompts/import/folder-files", async (req: Request, res: Response) => {
     try {
       const result = await buildFolderFiles(req, ctx);
       res.json(result);
@@ -315,7 +337,7 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/folder-preview", async (req, res) => {
+  app.post("/api/prompts/import/folder-preview", async (req: Request, res: Response) => {
     try {
       const result = await buildFolderPreview(req, ctx);
       res.json(result);
@@ -325,7 +347,7 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/preview", async (req, res) => {
+  app.post("/api/prompts/import/preview", async (req: Request, res: Response) => {
     try {
       const preview = await buildPreview(req, ctx);
       res.json(preview);
@@ -335,17 +357,18 @@ export function registerPromptImportRoutes(app, ctxRaw: RouteRuntimeContext) {
     }
   });
 
-  app.post("/api/prompts/import/commit", async (req, res) => {
+  app.post("/api/prompts/import/commit", async (req: Request, res: Response) => {
     try {
       const limits = promptImportLimits(ctx);
-      const candidates = Array.isArray(req.body?.candidates) ? req.body.candidates : [];
+      const body = (req.body ?? {}) as { candidates?: unknown; folderId?: unknown };
+      const candidates = Array.isArray(body.candidates) ? (body.candidates as CandidateLike[]) : [];
       if (candidates.length === 0) {
         throw promptImportError("PROMPT_IMPORT_EMPTY", "Select at least one prompt to import", 422);
       }
       if (candidates.length > limits.maxPromptCandidatesPerImport) {
         throw promptImportError("PROMPT_IMPORT_TOO_MANY_CANDIDATES", "Too many prompt candidates", 413);
       }
-      const result = commitCandidates(candidates, req.body?.folderId, limits);
+      const result = commitCandidates(candidates, body.folderId, limits);
       logEvent("promptImport", "committed", result);
       res.json(result);
     } catch (error) {
