@@ -12,26 +12,36 @@ concurrency:
 
 jobs:
   test:
-    name: test (${{ matrix.os }})
+    name: test (${{ matrix.os }}, node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        node: ['22', '24']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node }}
       - name: Install root deps
         run: npm ci
       - name: Install ui deps
         run: npm --prefix ui install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build server (tsc emit)
+        run: npm run build:server
+      - name: Build cli (tsc emit)
+        run: npm run build:cli
       - name: Build ui
         run: npm --prefix ui run build
       - name: Run tests
         run: npm test
         timeout-minutes: 3
       - name: Lint package.json
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: npm run lint:pkg
+      - name: Package install smoke
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: npm run test:package-install
