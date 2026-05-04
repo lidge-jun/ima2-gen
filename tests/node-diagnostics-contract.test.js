@@ -2,7 +2,21 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const oauth = readFileSync("lib/oauthProxy.ts", "utf-8");
+// NOTE: lib/oauthProxy.ts was split into lib/oauthProxy/*.ts behind a 1-line
+// facade. The `oauth` constant below concatenates all split sources so the
+// existing regex assertions continue to match.
+const OAUTH_PROXY_SOURCES = [
+  "lib/oauthProxy.ts",
+  "lib/oauthProxy/types.ts",
+  "lib/oauthProxy/prompts.ts",
+  "lib/oauthProxy/references.ts",
+  "lib/oauthProxy/errors.ts",
+  "lib/oauthProxy/runtime.ts",
+  "lib/oauthProxy/streams.ts",
+  "lib/oauthProxy/generators.ts",
+  "lib/oauthProxy/index.ts",
+];
+const oauth = OAUTH_PROXY_SOURCES.map((p) => readFileSync(p, "utf-8")).join("\n");
 const nodes = readFileSync("routes/nodes.ts", "utf-8");
 
 describe("node diagnostics contract", () => {

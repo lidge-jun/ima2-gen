@@ -1,0 +1,104 @@
+import { config } from "../../config.js";
+import { logEvent } from "../logger.js";
+import { isAbortError, makeOAuthError } from "./errors.js";
+
+const FALLBACK_REASONING_EFFORT = "none";
+const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
+
+export function resolveReasoningEffort(ctx, options: any = {}) {
+  const fromOptions = typeof options.reasoningEffort === "string" ? options.reasoningEffort : null;
+  const fromCtx = typeof ctx?.config?.imageModels?.reasoningEffort === "string"
+    ? ctx.config.imageModels.reasoningEffort
+    : null;
+  const candidate = fromOptions || fromCtx || FALLBACK_REASONING_EFFORT;
+  return VALID_REASONING_EFFORTS.has(candidate) ? candidate : FALLBACK_REASONING_EFFORT;
+}
+
+export function resolveWebSearchEnabled(options: any = {}) {
+  return options.webSearchEnabled !== false && options.searchMode !== "off";
+}
+
+export function buildImageTools(webSearchEnabled, imageOptions) {
+  return [
+    ...(webSearchEnabled ? [{ type: "web_search" }] : []),
+    { type: "image_generation", ...imageOptions },
+  ];
+}
+
+export function getOAuthUrl(ctx: any = {}) {
+  return ctx.oauthUrl || `http://127.0.0.1:${config.oauth.proxyPort}`;
+}
+
+export function getOAuthGenerationTimeoutMs(ctx: any = {}) {
+  return ctx.config?.oauth?.generationTimeoutMs ?? config.oauth.generationTimeoutMs ?? 400 * 1000;
+}
+
+export function createOAuthGenerationTimeout(ctx: any = {}, requestId = null, scope = "oauth") {
+  const timeoutMs = getOAuthGenerationTimeoutMs(ctx);
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return {
+      signal: undefined,
+      timeoutMs,
+      clear: () => {},
+      isTimeoutError: () => false,
+    };
+  }
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    logEvent(scope, "timeout", { requestId, timeoutMs });
+    controller.abort();
+  }, timeoutMs);
+  return {
+    signal: controller.signal,
+    timeoutMs,
+    clear: () => clearTimeout(timer),
+    isTimeoutError: (err) => timedOut && isAbortError(err),
+  };
+}
+
+export async function waitForOAuthReady(ctx: any = {}) {
+  if (!ctx || !Object.prototype.hasOwnProperty.call(ctx, "oauthReadyState")) return;
+  if (ctx.oauthReadyState === "ready" || ctx.oauthReadyState === "disabled") return;
+  if (ctx.oauthReadyState === "failed") {
+    throw makeOAuthError("OAuth proxy is unavailable", { code: "OAUTH_UNAVAILABLE", status: 503 });
+  }
+  const timeoutMs = ctx.config?.oauth?.statusTimeoutMs ?? config.oauth.statusTimeoutMs;
+  if (ctx.oauthReadyPromise) {
+    await Promise.race([
+      ctx.oauthReadyPromise,
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  }
+  if (ctx.oauthReadyState !== "ready" && ctx.oauthReadyState !== "disabled") {
+    throw makeOAuthError("OAuth proxy is not ready yet", { code: "OAUTH_UNAVAILABLE", status: 503 });
+  }
+}
+
+export async function fetchOAuth(url, init, { requestId, scope }: any = {}) {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (isAbortError(err)) throw err;
+    logEvent(scope || "oauth", "proxy_unavailable", { requestId, message: err?.message });
+    throw makeOAuthError("OAuth proxy is unavailable", {
+      code: "OAUTH_UNAVAILABLE",
+      status: 503,
+      cause: err,
+    });
+  }
+}
+
+export function summarizeEventTypes(eventTypes = {}) {
+  const entries = Object.entries(eventTypes || {});
+  const countFor = (needle) =>
+    entries.reduce((sum, [key, value]) => sum + (key.includes(needle) && Number.isFinite(value) ? (value as number) : 0), 0);
+  return {
+    eventTypeCount: entries.length,
+    eventTypeKeys: entries.slice(0, 12).map(([key]) => key).join(","),
+    imageEventCount: countFor("image"),
+    partialEventCount: countFor("partial"),
+    completedEventCount: countFor("completed"),
+  };
+}
