@@ -39,7 +39,7 @@ function loadConfig() {
   return {};
 }
 
-function saveConfig(config) {
+function saveConfig(config: Record<string, unknown>) {
   mkdirSync(CONFIG_DIR, { recursive: true });
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 }
@@ -130,7 +130,7 @@ async function setup() {
   return config;
 }
 
-async function serve(serveArgs = []) {
+async function serve(serveArgs: string[] = []) {
   try {
     await maybePromptGithubStar();
   } catch (e) {

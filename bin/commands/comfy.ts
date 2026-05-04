@@ -18,7 +18,7 @@ const FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function exportSub(argv) {
+async function exportSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -28,8 +28,8 @@ async function exportSub(argv) {
   const resp: any = await request(server.base, "/api/comfy/export-image", {
     method: "POST",
     body: { filename },
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
-  const target = args.out || `${filename}.workflow.json`;
+  }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
+  const target = String(args.out || `${filename}.workflow.json`);
   if (!args.force) {
     try {
       await access(target);
@@ -45,7 +45,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   export: exportSub,
 };
 
-export default async function comfyCmd(argv) {
+export default async function comfyCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

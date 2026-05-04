@@ -1,4 +1,4 @@
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { streamSse } from "../lib/sse.js";
 import { fileToDataUri, dataUriToFile, defaultOutName } from "../lib/files.js";
@@ -39,31 +39,31 @@ const SHOW_FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-async function generateSub(argv) {
+async function generateSub(argv: string[]) {
   const args = parseArgs(argv, { flags: GEN_FLAGS });
   if (args.help) { out(HELP); return; }
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
-  const refs = args.ref || [];
+  const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh"]);
-  if (args["reasoning-effort"] && !VALID_REASONING.has(args["reasoning-effort"])) {
+  if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {
     die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh");
   }
   if (args["web-search"] && args["no-web-search"]) {
     die(2, "--web-search and --no-web-search are mutually exclusive");
   }
-  const references = await Promise.all(refs.map((p) => fileToDataUri(p)));
+  const references = await Promise.all(refs.map((p: string) => fileToDataUri(p)));
   const server = await getServer(args);
   const body: any = {
     prompt,
     quality: args.quality,
     size: args.size,
-    n: Math.max(1, Math.min(8, parseInt(args.count) || 1)),
+    n: Math.max(1, Math.min(8, parseInt(String(args.count)) || 1)),
     references,
     moderation: args.moderation,
     sessionId: args.session,
@@ -78,8 +78,8 @@ async function generateSub(argv) {
     const resp: any = await request(server.base, "/api/node/generate", {
       method: "POST",
       body,
-      timeoutMs: (parseInt(args.timeout) || 600) * 1000,
-    }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+      timeoutMs: (parseInt(String(args.timeout)) || 600) * 1000,
+    }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
     if (args.json) { json(resp); return; }
     out(color.green("✓ node ") + (resp?.node?.id || "(no id)"));
     return;
@@ -121,8 +121,8 @@ async function generateSub(argv) {
   for (let i = 0; i < images.length; i++) {
     const im = images[i];
     if (!im.image) continue;
-    const target = args.out && i === 0
-      ? args.out
+    const target: string = args.out && i === 0
+      ? String(args.out)
       : `${config.storage.generatedDir}/${defaultOutName(i, images.length)}`;
     await dataUriToFile(im.image, target);
     savedPaths.push(target);
@@ -134,12 +134,12 @@ async function generateSub(argv) {
   }
 }
 
-async function showSub(argv) {
+async function showSub(argv: string[]) {
   const args = parseArgs(argv, { flags: SHOW_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "nodeId required");
   const server = await getServer(args);
-  const resp = await request(server.base, `/api/node/${encodeURIComponent(id)}`).catch((e) => die(exitCodeForError(e), e.message));
+  const resp = await request(server.base, `/api/node/${encodeURIComponent(id)}`).catch((e: unknown) => { const err = e as { message?: string }; die(exitCodeForError(e), err.message); });
   json(resp);
 }
 
@@ -148,7 +148,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   show: showSub,
 };
 
-export default async function nodeCmd(argv) {
+export default async function nodeCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

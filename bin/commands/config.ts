@@ -156,11 +156,11 @@ function displayPath(p: string): string {
   return home && p.startsWith(home) ? p.replace(home, "~") : p;
 }
 
-async function pathSub(_argv) {
+async function pathSub(_argv: string[]) {
   out(CONFIG_FILE);
 }
 
-async function lsSub(argv) {
+async function lsSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   if (args.effective) {
     const eff = buildEffectiveConfig();
@@ -173,7 +173,7 @@ async function lsSub(argv) {
   }
 }
 
-async function getSub(argv) {
+async function getSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const key = args.positional[0];
   if (!key) die(2, "key required. Usage: config get <dotted.key>");
@@ -188,7 +188,7 @@ async function getSub(argv) {
   }
 }
 
-async function setSub(argv) {
+async function setSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const [key, rawValue] = args.positional;
   if (!key || rawValue === undefined) die(2, "usage: config set <key> <value>");
@@ -227,7 +227,7 @@ async function setSub(argv) {
   out(color.dim("note: server must be restarted to pick up config changes (run `ima2 serve`)"));
 }
 
-async function rmSub(argv) {
+async function rmSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const key = args.positional[0];
   if (!key) die(2, "key required. Usage: config rm <key>");
@@ -256,7 +256,7 @@ const SUB: Record<string, Sub> = {
   rm:   rmSub,
 };
 
-export default async function configCmd(argv) {
+export default async function configCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

@@ -17,7 +17,7 @@ const HELP = `
   Mark an in-flight job as canceled in the local ima2 server registry.
 `;
 
-export default async function cancelCmd(argv) {
+export default async function cancelCmd(argv: string[]) {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
 

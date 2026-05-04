@@ -9,7 +9,7 @@ export const isWin = process.platform === "win32";
 export const isMac = process.platform === "darwin";
 export const isLinux = !isWin && !isMac;
 
-let _wslCached = null;
+let _wslCached: boolean | null = null;
 export function isWsl() {
   if (_wslCached !== null) return _wslCached;
   if (!isLinux) return (_wslCached = false);
@@ -30,14 +30,14 @@ export function hasDesktopSession() {
  * On Windows, npm global shims are .cmd files; spawn() without shell:true
  * cannot resolve them and fails with ENOENT.
  */
-export function resolveBin(name) {
+export function resolveBin(name: string) {
   return isWin ? `${name}.cmd` : name;
 }
 
 /**
  * spawn() wrapper that works for npm/npx/any PATH-resolved exe on Windows.
  */
-export function spawnBin(name, args, opts = {}) {
+export function spawnBin(name: string, args: string[], opts: Parameters<typeof spawn>[2] = {}) {
   if (isWin) {
     // Node 24 on Windows can throw EINVAL when spawning PATH-resolved .cmd
     // shims directly with piped stdio. Routing through cmd.exe avoids that.
@@ -54,7 +54,7 @@ export function spawnBin(name, args, opts = {}) {
  * Returns { ok: boolean, error?: string }.
  * Handles WSL (via powershell.exe) and refuses on headless Linux without DISPLAY.
  */
-export function openUrl(url) {
+export function openUrl(url: string): { ok: boolean; error?: string } {
   try {
     if (isMac) {
       execSync(`open ${JSON.stringify(url)}`, { stdio: "ignore" });
@@ -82,8 +82,8 @@ export function openUrl(url) {
  * (Ctrl+Break) are the observable signals. We still register SIGTERM so that
  * Node-internal `child.kill("SIGTERM")` calls work in tests.
  */
-export function onShutdown(handler) {
-  const signals = isWin
+export function onShutdown(handler: (signal: NodeJS.Signals) => void) {
+  const signals: NodeJS.Signals[] = isWin
     ? ["SIGINT", "SIGTERM", "SIGBREAK"]
     : ["SIGINT", "SIGTERM", "SIGHUP"];
   for (const sig of signals) {

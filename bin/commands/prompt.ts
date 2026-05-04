@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "fs/promises";
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { readStdin } from "../lib/files.js";
 import { out, die, color, json, exitCodeForError, table } from "../lib/output.js";
@@ -57,20 +57,21 @@ const COMMON_FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-function handle(e) {
-  die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`);
+function handle(e: unknown) {
+  const err = e as { message?: string; code?: string };
+  die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`);
 }
 
 async function readLine(): Promise<string> {
   return new Promise((resolve) => {
     let buf = "";
     process.stdin.setEncoding("utf-8");
-    const onData = (chunk) => {
+    const onData = (chunk: Buffer | string) => {
       buf += chunk;
       const nl = buf.indexOf("\n");
       if (nl !== -1) {
@@ -84,8 +85,9 @@ async function readLine(): Promise<string> {
   });
 }
 
-async function resolveText(value): Promise<string | null> {
+async function resolveText(value: unknown): Promise<string | null> {
   if (!value) return null;
+  if (typeof value !== "string") return null;
   if (value === "-") return await readStdin();
   if (value.startsWith("@")) return await readFile(value.slice(1), "utf-8");
   return value;
@@ -93,12 +95,12 @@ async function resolveText(value): Promise<string | null> {
 
 // ---------- core ----------
 
-async function lsSub(argv) {
+async function lsSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const server = await getServer(args);
   const qs = new URLSearchParams();
-  if (args.folder) qs.set("folderId", args.folder);
-  if (args.search) qs.set("search", args.search);
+  if (args.folder) qs.set("folderId", String(args.folder));
+  if (args.search) qs.set("search", String(args.search));
   if (args.favorites) qs.set("favoritesOnly", "1");
   const path = qs.toString() ? `/api/prompts?${qs.toString()}` : "/api/prompts";
   const resp: any = await request(server.base, path).catch(handle);
@@ -109,15 +111,15 @@ async function lsSub(argv) {
     { key: "id", label: "ID" },
     { key: "name", label: "NAME" },
     { key: "folder_id", label: "FOLDER" },
-    { key: "is_favorite", label: "★", format: (v) => v ? "★" : "" },
-    { key: "text", label: "TEXT", format: (v) => {
+    { key: "is_favorite", label: "★", format: (v: unknown) => v ? "★" : "" },
+    { key: "text", label: "TEXT", format: (v: unknown) => {
       const s = String(v || "").replace(/\s+/g, " ");
       return s.length > 48 ? s.slice(0, 45) + "…" : s;
     } },
   ]);
 }
 
-async function showSub(argv) {
+async function showSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "prompt id required");
@@ -126,14 +128,14 @@ async function showSub(argv) {
   json(resp);
 }
 
-async function createSub(argv) {
+async function createSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const text = await resolveText(args.text);
   if (!text) die(2, "--text <value|@file|-> required");
   const body: any = { text };
   if (args.name) body.name = args.name;
   if (args.folder) body.folderId = args.folder;
-  if (args.tag?.length) body.tags = args.tag;
+  if (args.tag && Array.isArray(args.tag) && args.tag.length) body.tags = args.tag;
   if (args.mode) body.mode = args.mode;
   const server = await getServer(args);
   const resp = await request(server.base, "/api/prompts", { method: "POST", body }).catch(handle);
@@ -141,7 +143,7 @@ async function createSub(argv) {
   out(color.green("✓ ") + ((resp as any).id || (resp as any).prompt?.id || "(no id)"));
 }
 
-async function editSub(argv) {
+async function editSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "prompt id required");
@@ -149,7 +151,7 @@ async function editSub(argv) {
   if (args.name !== undefined) body.name = args.name;
   if (args.text !== undefined) body.text = await resolveText(args.text);
   if (args.folder !== undefined) body.folderId = args.folder;
-  if (args.tag?.length) body.tags = args.tag;
+  if (args.tag && Array.isArray(args.tag) && args.tag.length) body.tags = args.tag;
   if (args.mode !== undefined) body.mode = args.mode;
   if (Object.keys(body).length === 0) die(2, "no fields to update");
   const server = await getServer(args);
@@ -160,7 +162,7 @@ async function editSub(argv) {
   out(color.green("✓ updated"));
 }
 
-async function rmSub(argv) {
+async function rmSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "prompt id required");
@@ -175,7 +177,7 @@ async function rmSub(argv) {
   out(color.green("✓ deleted"));
 }
 
-async function favoriteSub(argv) {
+async function favoriteSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "prompt id required");
@@ -187,14 +189,14 @@ async function favoriteSub(argv) {
   out(color.green(resp?.isFavorite ? "✓ favorited" : "✓ unfavorited"));
 }
 
-async function exportSub(argv) {
+async function exportSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const server = await getServer(args);
   const resp = await request(server.base, "/api/prompts/export").catch(handle);
   const text = JSON.stringify(resp, null, 2);
   if (args.out) {
-    await writeFile(args.out, text);
-    out(color.green("✓ ") + args.out);
+    await writeFile(String(args.out), text);
+    out(color.green("✓ ") + String(args.out));
   } else {
     process.stdout.write(text + "\n");
   }
@@ -202,7 +204,7 @@ async function exportSub(argv) {
 
 // ---------- folders ----------
 
-async function folderSub(argv) {
+async function folderSub(argv: string[]) {
   const action = argv[0];
   const rest = argv.slice(1);
   if (action === "ls") return folderLs(rest);
@@ -212,7 +214,7 @@ async function folderSub(argv) {
   die(2, "usage: prompt folder <ls|create|rename|rm> ...");
 }
 
-async function folderLs(argv) {
+async function folderLs(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const server = await getServer(args);
   const resp: any = await request(server.base, "/api/prompts/folders").catch(handle);
@@ -225,7 +227,7 @@ async function folderLs(argv) {
   ]);
 }
 
-async function folderCreate(argv) {
+async function folderCreate(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const name = args.positional.join(" ").trim();
   if (!name) die(2, "folder name required");
@@ -237,7 +239,7 @@ async function folderCreate(argv) {
   out(color.green("✓ ") + ((resp as any).id || (resp as any).folder?.id || "(no id)"));
 }
 
-async function folderRename(argv) {
+async function folderRename(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const [id, ...rest] = args.positional;
   const name = rest.join(" ").trim();
@@ -249,7 +251,7 @@ async function folderRename(argv) {
   out(color.green("✓ renamed"));
 }
 
-async function folderRm(argv) {
+async function folderRm(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "folder id required");
@@ -260,7 +262,7 @@ async function folderRm(argv) {
     if (!/^y(es)?$/i.test(ans.trim())) { out("(canceled)"); return; }
   }
   // CLI alias: --strategy delete → server's deleteItems; default → moveToRoot
-  const cliStrategy = (args.strategy || "").toLowerCase();
+  const cliStrategy = String(args.strategy || "").toLowerCase();
   const serverStrategy = cliStrategy === "delete" || cliStrategy === "deleteitems"
     ? "deleteItems"
     : "moveToRoot";
@@ -274,7 +276,7 @@ async function folderRm(argv) {
 
 // ---------- import ----------
 
-async function importSub(argv) {
+async function importSub(argv: string[]) {
   const action = argv[0];
   const rest = argv.slice(1);
   if (action === "sources") return importSources(rest);
@@ -285,7 +287,7 @@ async function importSub(argv) {
   die(2, "usage: prompt import <sources|refresh|curated|discovery|folder> ...");
 }
 
-async function importSources(argv) {
+async function importSources(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const server = await getServer(args);
   const [curated, discovery] = await Promise.all([
@@ -300,7 +302,7 @@ async function importSources(argv) {
   out(JSON.stringify(discovery, null, 2));
 }
 
-async function importRefresh(argv) {
+async function importRefresh(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   if (!args.source) die(2, "--source <id> required");
   const server = await getServer(args);
@@ -311,11 +313,11 @@ async function importRefresh(argv) {
   out(color.green("✓ refreshed"));
 }
 
-async function importCurated(argv) {
+async function importCurated(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   if (!args.source) die(2, "--source <id> required (run `prompt import sources`)");
   const server = await getServer(args);
-  const limit = args.limit ? parseInt(args.limit) : undefined;
+  const limit = args.limit ? parseInt(String(args.limit)) : undefined;
   const search: any = await request(server.base, "/api/prompts/import/curated-search", {
     method: "POST",
     body: {
@@ -336,14 +338,14 @@ async function importCurated(argv) {
   out(color.green(`✓ imported ${commit.imported || candidates.length}`));
 }
 
-async function importDiscovery(argv) {
+async function importDiscovery(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const q = args.q || args.query;
   if (!q) die(2, "-q <query> required for discovery import");
-  const seeds = args.seed || [];
+  const seeds = (Array.isArray(args.seed) ? args.seed : []) as string[];
   if (!seeds.length) die(2, "--seed <repo>... required (at least 1)");
   const server = await getServer(args);
-  const limit = args.limit ? parseInt(args.limit) : undefined;
+  const limit = args.limit ? parseInt(String(args.limit)) : undefined;
   const search: any = await request(server.base, "/api/prompts/import/discovery-search", {
     method: "POST",
     body: { q, seeds, ...(limit ? { limit } : {}) },
@@ -361,7 +363,7 @@ async function importDiscovery(argv) {
   out(color.green(`✓ imported ${commit.imported || candidates.length}`));
 }
 
-async function importFolder(argv) {
+async function importFolder(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const path = args.positional[0];
   if (!path) die(2, "usage: prompt import folder <path>");
@@ -377,7 +379,7 @@ async function importFolder(argv) {
     body: {
       source: { input: path }, input: path,
       files: filesResp.files,
-      paths: (filesResp.files || []).map((f) => f.path).filter(Boolean),
+      paths: (filesResp.files || []).map((f: { path?: string }) => f.path).filter(Boolean),
     },
   }).catch(handle);
   const candidates = previewResp.candidates || [];
@@ -412,7 +414,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   import: importSub,
 };
 
-export default async function promptCmd(argv) {
+export default async function promptCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

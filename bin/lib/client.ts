@@ -15,7 +15,7 @@ function readAdvertise() {
   }
 }
 
-async function probe(base, timeoutMs = 600) {
+async function probe(base: string, timeoutMs = 600) {
   try {
     const r = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(timeoutMs) });
     if (!r.ok) return null;
@@ -54,7 +54,7 @@ export async function resolveServer({ serverFlag }: any = {}) {
   throw err;
 }
 
-export async function request(base, path, {
+export async function request(base: string, path: string, {
   method = "GET",
   body,
   headers: extraHeaders,
@@ -86,11 +86,24 @@ export async function request(base, path, {
   return json;
 }
 
-export function normalizeGenerate(resp) {
+interface RawImageItem {
+  image?: string;
+  filename?: string | null;
+}
+interface RawGenerateResponse {
+  image?: string;
+  images?: RawImageItem[];
+  filename?: string | null;
+  elapsed?: number | string | null;
+  requestId?: string | null;
+  [key: string]: unknown;
+}
+
+export function normalizeGenerate(resp: RawGenerateResponse | null | undefined) {
   if (!resp) return { images: [], elapsed: null, requestId: null };
   if (Array.isArray(resp.images)) {
     return {
-      images: resp.images.map((it) => ({ image: it.image, filename: it.filename })),
+      images: resp.images.map((it: RawImageItem) => ({ image: it.image, filename: it.filename })),
       elapsed: resp.elapsed ?? null,
       requestId: resp.requestId ?? null,
     };
@@ -106,4 +119,4 @@ export function normalizeGenerate(resp) {
 }
 
 export let CLI_VERSION = "dev";
-export function setCliVersion(v) { CLI_VERSION = v; }
+export function setCliVersion(v: string) { CLI_VERSION = v; }

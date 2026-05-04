@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import { extname, basename } from "path";
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { getCliBrowserId } from "../lib/browser-id.js";
@@ -29,20 +29,21 @@ const COMMON_FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-function handle(e) {
-  die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`);
+function handle(e: unknown) {
+  const err = e as { message?: string; code?: string };
+  die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`);
 }
 
 async function readLine(): Promise<string> {
   return new Promise((resolve) => {
     let buf = "";
     process.stdin.setEncoding("utf-8");
-    const onData = (chunk) => {
+    const onData = (chunk: Buffer | string) => {
       buf += chunk;
       const nl = buf.indexOf("\n");
       if (nl !== -1) {
@@ -56,7 +57,7 @@ async function readLine(): Promise<string> {
   });
 }
 
-async function rmSub(argv) {
+async function rmSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -76,7 +77,7 @@ async function rmSub(argv) {
   if (resp?.trashId) out(color.dim(`  trashId: ${resp.trashId}`));
 }
 
-async function restoreSub(argv) {
+async function restoreSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -91,7 +92,7 @@ async function restoreSub(argv) {
   out(color.green("✓ restored"));
 }
 
-async function favoriteSub(argv) {
+async function favoriteSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -106,7 +107,7 @@ async function favoriteSub(argv) {
   out(color.green(resp.isFavorite ? "✓ favorited" : "✓ unfavorited"));
 }
 
-async function importSub(argv) {
+async function importSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const filepath = args.positional[0];
   if (!filepath) die(2, "filename required");
@@ -136,7 +137,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   import: importSub,
 };
 
-export default async function historyCmd(argv) {
+export default async function historyCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

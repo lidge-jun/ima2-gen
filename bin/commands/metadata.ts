@@ -18,7 +18,7 @@ const HELP = `
   POSTs { dataUrl } to /api/metadata/read.
 `;
 
-export default async function metadataCmd(argv) {
+export default async function metadataCmd(argv: string[]) {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
   const file = args.positional[0];
@@ -30,7 +30,10 @@ export default async function metadataCmd(argv) {
   const resp = await request(server.base, "/api/metadata/read", {
     method: "POST",
     body: { dataUrl },
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+  }).catch((e: unknown) => {
+    const err = e as { message?: string; code?: string };
+    die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`);
+  });
   if (args.json) { json(resp); }
   else out(JSON.stringify(resp, null, 2));
 }

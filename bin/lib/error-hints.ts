@@ -1,4 +1,4 @@
-const HINTS = {
+const HINTS: Record<string, string> = {
   SERVER_UNREACHABLE: "Start `ima2 serve`, or pass `--server <url>`.",
   APIKEY_DISABLED: "API-key generation is supported in current builds; switch providers or update the configured API key.",
   IMAGE_MODEL_UNSUPPORTED:
@@ -13,11 +13,11 @@ const HINTS = {
   REF_NOT_BASE64: "Reference payload is invalid. Use a normal PNG/JPEG/WebP file.",
 };
 
-export function hintForErrorCode(code) {
+export function hintForErrorCode(code: string | null | undefined): string | null {
   return code ? HINTS[code] || null : null;
 }
 
-export function formatErrorWithHint(message, code) {
+export function formatErrorWithHint(message: string, code: string | null | undefined): string {
   const hint = hintForErrorCode(code);
   return hint ? `${message}\nHint: ${hint}` : message;
 }

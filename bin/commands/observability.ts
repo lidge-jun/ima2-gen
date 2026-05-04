@@ -1,4 +1,4 @@
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, color, json, table, exitCodeForError } from "../lib/output.js";
 
@@ -32,12 +32,12 @@ const FLAGS = {
   help:     { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-async function storageStatusSub(argv) {
+async function storageStatusSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const server = await getServer(args);
   const resp = await request(server.base, "/api/storage/status")
@@ -46,7 +46,7 @@ async function storageStatusSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function storageOpenSub(argv) {
+async function storageOpenSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const server = await getServer(args);
   await request(server.base, "/api/storage/open-generated-dir", { method: "POST" })
@@ -54,7 +54,7 @@ async function storageOpenSub(argv) {
   out(color.green("✓ ") + "opened generated directory");
 }
 
-async function billingSub(argv) {
+async function billingSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const server = await getServer(args);
   const resp = await request(server.base, "/api/billing")
@@ -63,7 +63,7 @@ async function billingSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function providersSub(argv) {
+async function providersSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const server = await getServer(args);
   const resp = await request(server.base, "/api/providers")
@@ -72,7 +72,7 @@ async function providersSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function oauthStatusSub(argv) {
+async function oauthStatusSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const server = await getServer(args);
   const resp = await request(server.base, "/api/oauth/status")
@@ -81,16 +81,16 @@ async function oauthStatusSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function inflightLsSub(argv) {
+async function inflightLsSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const server = await getServer(args);
   const qs = new URLSearchParams();
-  if (args.kind) qs.set("kind", args.kind);
-  if (args.session) qs.set("sessionId", args.session);
+  if (args.kind) qs.set("kind", String(args.kind));
+  if (args.session) qs.set("sessionId", String(args.session));
   if (args.terminal) qs.set("includeTerminal", "1");
   const path = `/api/inflight${qs.toString() ? `?${qs}` : ""}`;
   const resp = await request(server.base, path)
-    .catch((e) => die(exitCodeForError(e), e.message));
+    .catch((e: unknown) => { const err = e as { message?: string }; die(exitCodeForError(e), err.message); });
   const jobs = resp.jobs || resp.items || [];
   const terminalJobs = resp.terminalJobs || [];
   if (args.json) {
@@ -105,11 +105,11 @@ async function inflightLsSub(argv) {
   if (jobs.length > 0) {
     out(color.bold("Active jobs"));
     table(jobs, [
-      { key: "requestId", label: "ID", format: (v) => String(v || "").slice(0, 10) },
+      { key: "requestId", label: "ID", format: (v: unknown) => String(v || "").slice(0, 10) },
       { key: "kind",      label: "KIND" },
       { key: "phase",     label: "PHASE" },
-      { key: "startedAt", label: "AGE", format: (v) => v ? `${Math.round((now - v) / 1000)}s` : "" },
-      { key: "prompt",    label: "PROMPT", format: (v) => {
+      { key: "startedAt", label: "AGE", format: (v: unknown) => v ? `${Math.round((now - Number(v)) / 1000)}s` : "" },
+      { key: "prompt",    label: "PROMPT", format: (v: unknown) => {
         const s = String(v || "").replace(/\s+/g, " ");
         return s.length > 40 ? s.slice(0, 37) + "…" : s;
       } },
@@ -119,11 +119,11 @@ async function inflightLsSub(argv) {
     if (jobs.length > 0) out("");
     out(color.bold("Terminal jobs"));
     table(terminalJobs, [
-      { key: "requestId",  label: "ID",     format: (v) => String(v || "").slice(0, 10) },
+      { key: "requestId",  label: "ID",     format: (v: unknown) => String(v || "").slice(0, 10) },
       { key: "kind",       label: "KIND" },
       { key: "status",     label: "STATUS" },
-      { key: "finishedAt", label: "AGE", format: (v) => v ? `${Math.round((now - v) / 1000)}s` : "" },
-      { key: "prompt",     label: "PROMPT", format: (v) => {
+      { key: "finishedAt", label: "AGE", format: (v: unknown) => v ? `${Math.round((now - Number(v)) / 1000)}s` : "" },
+      { key: "prompt",     label: "PROMPT", format: (v: unknown) => {
         const s = String(v || "").replace(/\s+/g, " ");
         return s.length > 40 ? s.slice(0, 37) + "…" : s;
       } },
@@ -131,18 +131,18 @@ async function inflightLsSub(argv) {
   }
 }
 
-async function inflightRmSub(argv) {
+async function inflightRmSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const requestId = args.positional[0];
   if (!requestId) die(2, "requestId required");
   const server = await getServer(args);
   await request(server.base, `/api/inflight/${encodeURIComponent(requestId)}`, { method: "DELETE" })
-    .catch((e) => die(exitCodeForError(e), e.message));
+    .catch((e: unknown) => { const err = e as { message?: string }; die(exitCodeForError(e), err.message); });
   if (args.json) { json({ ok: true, requestId }); return; }
   out(color.green("✓ ") + `removed ${requestId}`);
 }
 
-export default async function observabilityCmd(argv) {
+export default async function observabilityCmd(argv: string[]) {
   const domain = argv[0];
   const rest = argv.slice(1);
   if (!domain || domain === "--help" || domain === "-h") { out(HELP); return; }

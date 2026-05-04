@@ -14,7 +14,7 @@ const SPEC = {
   },
 };
 
-export default async function psCmd(argv) {
+export default async function psCmd(argv: string[]) {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out("ima2 ps [--kind classic|node] [--session id] [--terminal] [--json]"); return; }
 
@@ -27,8 +27,8 @@ export default async function psCmd(argv) {
   }
 
   const qs = new URLSearchParams();
-  if (args.kind) qs.set("kind", args.kind);
-  if (args.session) qs.set("sessionId", args.session);
+  if (args.kind) qs.set("kind", String(args.kind));
+  if (args.session) qs.set("sessionId", String(args.session));
   if (args.terminal) qs.set("includeTerminal", "1");
   const path = `/api/inflight${qs.toString() ? `?${qs}` : ""}`;
   let resp;
@@ -54,11 +54,11 @@ export default async function psCmd(argv) {
   if (jobs.length > 0) {
     out(color.bold("Active jobs"));
     table(jobs, [
-      { key: "requestId", label: "ID", format: (v) => String(v || "").slice(0, 10) },
+      { key: "requestId", label: "ID", format: (v: unknown) => String(v || "").slice(0, 10) },
       { key: "kind", label: "KIND" },
       { key: "phase", label: "PHASE" },
-      { key: "startedAt", label: "AGE", format: (v) => v ? `${Math.round((now - v) / 1000)}s` : "" },
-      { key: "prompt", label: "PROMPT", format: (v) => {
+      { key: "startedAt", label: "AGE", format: (v: unknown) => v ? `${Math.round((now - Number(v)) / 1000)}s` : "" },
+      { key: "prompt", label: "PROMPT", format: (v: unknown) => {
         const s = String(v || "").replace(/\s+/g, " ");
         return s.length > 40 ? s.slice(0, 37) + "…" : s;
       } },
@@ -68,11 +68,11 @@ export default async function psCmd(argv) {
     if (jobs.length > 0) out("");
     out(color.bold("Terminal jobs"));
     table(terminalJobs, [
-      { key: "requestId", label: "ID", format: (v) => String(v || "").slice(0, 10) },
+      { key: "requestId", label: "ID", format: (v: unknown) => String(v || "").slice(0, 10) },
       { key: "kind", label: "KIND" },
       { key: "status", label: "STATUS" },
-      { key: "finishedAt", label: "AGE", format: (v) => v ? `${Math.round((now - v) / 1000)}s` : "" },
-      { key: "prompt", label: "PROMPT", format: (v) => {
+      { key: "finishedAt", label: "AGE", format: (v: unknown) => v ? `${Math.round((now - Number(v)) / 1000)}s` : "" },
+      { key: "prompt", label: "PROMPT", format: (v: unknown) => {
         const s = String(v || "").replace(/\s+/g, " ");
         return s.length > 40 ? s.slice(0, 37) + "…" : s;
       } },

@@ -66,7 +66,7 @@ const HELP = `
     cat prompt.txt | ima2 gen --stdin -n 2 -d ./out
 `;
 
-export default async function genCmd(argv) {
+export default async function genCmd(argv: string[]) {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
 
@@ -77,23 +77,23 @@ export default async function genCmd(argv) {
   }
   if (!prompt) die(2, "prompt is required (positional or via --stdin)");
 
-  const refs = args.ref || [];
+  const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
   if (refs.length > 5) die(2, "max 5 --ref attachments");
-  if (!VALID_MODES.has(args.mode)) die(2, "--mode must be one of: auto, direct");
-  if (!VALID_MODERATION.has(args.moderation)) die(2, "--moderation must be one of: auto, low");
-  if (args.model && !KNOWN_IMAGE_MODELS.has(args.model)) {
+  if (!VALID_MODES.has(String(args.mode))) die(2, "--mode must be one of: auto, direct");
+  if (!VALID_MODERATION.has(String(args.moderation))) die(2, "--moderation must be one of: auto, low");
+  if (args.model && !KNOWN_IMAGE_MODELS.has(String(args.model))) {
     die(2, "--model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.3-codex-spark");
   }
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh"]);
-  if (args["reasoning-effort"] && !VALID_REASONING.has(args["reasoning-effort"])) {
+  if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {
     die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh");
   }
   if (args["web-search"] && args["no-web-search"]) {
     die(2, "--web-search and --no-web-search are mutually exclusive");
   }
 
-  const n = Math.max(1, Math.min(8, parseInt(args.count) || 1));
-  const timeoutMs = (parseInt(args.timeout) || 180) * 1000;
+  const n = Math.max(1, Math.min(8, parseInt(String(args.count)) || 1));
+  const timeoutMs = (parseInt(String(args.timeout)) || 180) * 1000;
 
   let server;
   try {
@@ -104,7 +104,7 @@ export default async function genCmd(argv) {
     dieWithError(e);
   }
 
-  const references = await Promise.all(refs.map((p) => fileToDataUri(p)));
+  const references = await Promise.all(refs.map((p: string) => fileToDataUri(p)));
 
   const body: any = {
     prompt,
@@ -135,7 +135,7 @@ export default async function genCmd(argv) {
 
   // --no-save path
   if (args["no-save"]) {
-    const totalBytes = norm.images.reduce((s, im) => s + im.image.length, 0);
+    const totalBytes = norm.images.reduce((s: number, im) => s + (im.image?.length ?? 0), 0);
     if (process.stdout.isTTY && totalBytes > 2 * 1024 * 1024 && !args.force) {
       die(2, "refusing to print >2MB of b64 to TTY; use --force or drop --no-save");
     }
@@ -144,16 +144,16 @@ export default async function genCmd(argv) {
   }
 
   // Save path
-  const outDir = args["out-dir"] || null;
-  const explicitOut = args.out || null;
+  const outDir = args["out-dir"] ? String(args["out-dir"]) : null;
+  const explicitOut = args.out ? String(args.out) : null;
   if (explicitOut && norm.images.length > 1) {
     die(2, "--out only supports a single image; use --out-dir for n>1");
   }
 
-  const savedPaths = [];
+  const savedPaths: string[] = [];
   for (let i = 0; i < norm.images.length; i++) {
     const im = norm.images[i];
-    let target;
+    let target: string;
     if (explicitOut) {
       target = explicitOut;
     } else if (outDir) {
@@ -161,7 +161,7 @@ export default async function genCmd(argv) {
     } else {
       target = `${config.storage.generatedDir}/${defaultOutName(i, norm.images.length)}`;
     }
-    await dataUriToFile(im.image, target);
+    await dataUriToFile(String(im.image), target);
     savedPaths.push(target);
   }
 

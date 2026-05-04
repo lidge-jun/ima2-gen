@@ -47,14 +47,14 @@ const HELP = `
         --timeout <sec>                 Default: 600
 `;
 
-export default async function multimodeCmd(argv) {
+export default async function multimodeCmd(argv: string[]) {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
 
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh"]);
-  if (args["reasoning-effort"] && !VALID_REASONING.has(args["reasoning-effort"])) {
+  if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {
     die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh");
   }
   if (args["web-search"] && args["no-web-search"]) {
@@ -65,7 +65,7 @@ export default async function multimodeCmd(argv) {
   try { server = await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 
-  const maxImages = Math.max(1, Math.min(8, parseInt(args["max-images"]) || 4));
+  const maxImages = Math.max(1, Math.min(8, parseInt(String(args["max-images"])) || 4));
   const body: any = {
     prompt,
     quality: args.quality,
@@ -116,8 +116,8 @@ export default async function multimodeCmd(argv) {
   }
 
   // Save images
-  const outDir = args["out-dir"] || null;
-  const explicitOut = args.out || null;
+  const outDir = args["out-dir"] ? String(args["out-dir"]) : null;
+  const explicitOut = args.out ? String(args.out) : null;
   if (explicitOut && images.length > 1) {
     if (!args.json) out(color.yellow(`(received ${images.length} images, --out only saves first)`));
   }

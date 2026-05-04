@@ -1,4 +1,4 @@
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { config as runtimeConfig } from "../../config.js";
@@ -43,18 +43,19 @@ function ensureCardNewsEnabled() {
   }
 }
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-function parseData(raw: string | undefined): any {
+function parseData(raw: unknown): any {
   if (!raw) return {};
+  if (typeof raw !== "string") return {};
   try { return JSON.parse(raw); }
   catch { die(2, `--data must be valid JSON`); }
 }
 
-async function templatesSub(argv) {
+async function templatesSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   if (args.help) { out(HELP); return; }
   ensureCardNewsEnabled();
@@ -72,7 +73,7 @@ async function templatesSub(argv) {
   out(JSON.stringify(roleTemplates, null, 2));
 }
 
-async function templatePreviewSub(argv) {
+async function templatePreviewSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const templateId = args.positional[0];
   if (!templateId) die(2, "templateId required");
@@ -84,7 +85,7 @@ async function templatePreviewSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function setsSub(argv) {
+async function setsSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   ensureCardNewsEnabled();
   const server = await getServer(args);
@@ -94,7 +95,7 @@ async function setsSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function setShowSub(argv) {
+async function setShowSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const setId = args.positional[0];
   if (!setId) die(2, "setId required");
@@ -106,7 +107,7 @@ async function setShowSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function setManifestSub(argv) {
+async function setManifestSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const setId = args.positional[0];
   if (!setId) die(2, "setId required");
@@ -118,7 +119,7 @@ async function setManifestSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function draftSub(argv) {
+async function draftSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   ensureCardNewsEnabled();
   const server = await getServer(args);
@@ -129,7 +130,7 @@ async function draftSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function generateSub(argv) {
+async function generateSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   ensureCardNewsEnabled();
   const server = await getServer(args);
@@ -140,7 +141,7 @@ async function generateSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function jobCreateSub(argv) {
+async function jobCreateSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   ensureCardNewsEnabled();
   const server = await getServer(args);
@@ -151,7 +152,7 @@ async function jobCreateSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function jobShowSub(argv) {
+async function jobShowSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const jobId = args.positional[0];
   if (!jobId) die(2, "jobId required");
@@ -163,14 +164,14 @@ async function jobShowSub(argv) {
   out(JSON.stringify(resp, null, 2));
 }
 
-async function jobRetrySub(argv) {
+async function jobRetrySub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const jobId = args.positional[0];
   if (!jobId) die(2, "jobId required");
   ensureCardNewsEnabled();
   const server = await getServer(args);
   const body: any = {};
-  if (args.cards) body.cardIds = args.cards.split(",").map((s) => s.trim()).filter(Boolean);
+  if (args.cards) body.cardIds = String(args.cards).split(",").map((s: string) => s.trim()).filter(Boolean);
   const resp = await request(server.base, `/api/cardnews/jobs/${encodeURIComponent(jobId)}/retry`, { method: "POST", body })
     .catch((e) => die(exitCodeForError(e), e.message));
   if (args.json) { json(resp); return; }
@@ -178,7 +179,7 @@ async function jobRetrySub(argv) {
   if (resp && typeof resp === "object" && Object.keys(resp).length > 0) out(JSON.stringify(resp, null, 2));
 }
 
-async function cardRegenerateSub(argv) {
+async function cardRegenerateSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const cardId = args.positional[0];
   if (!cardId) die(2, "cardId required");
@@ -192,7 +193,7 @@ async function cardRegenerateSub(argv) {
   if (resp && typeof resp === "object" && Object.keys(resp).length > 0) out(JSON.stringify(resp, null, 2));
 }
 
-async function exportSub(argv) {
+async function exportSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   ensureCardNewsEnabled();
   const server = await getServer(args);
@@ -206,7 +207,7 @@ async function exportSub(argv) {
 
 type Sub = (argv: any[]) => Promise<void>;
 
-export default async function cardnewsCmd(argv) {
+export default async function cardnewsCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
 

@@ -56,7 +56,7 @@ export function starRepo(spawnSyncFn = spawnSync) {
   return { ok: true };
 }
 
-async function askYesNo(question) {
+async function askYesNo(question: string) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
     const answer = (await rl.question(question)).trim().toLowerCase();

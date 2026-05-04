@@ -1,5 +1,5 @@
 import { readFile } from "fs/promises";
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, color, json, exitCodeForError, table } from "../lib/output.js";
 
@@ -34,12 +34,12 @@ const COMMON_FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-async function lsSub(argv) {
+async function lsSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const server = await getServer(args);
   const resp = await request(server.base, "/api/sessions").catch(handle);
@@ -49,11 +49,11 @@ async function lsSub(argv) {
   table(sessions, [
     { key: "id", label: "ID" },
     { key: "title", label: "TITLE" },
-    { key: "createdAt", label: "WHEN", format: (v) => v ? new Date(v).toISOString().slice(0, 19) : "" },
+    { key: "createdAt", label: "WHEN", format: (v: unknown) => v ? new Date(v as string | number).toISOString().slice(0, 19) : "" },
   ]);
 }
 
-async function showSub(argv) {
+async function showSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "session id required");
@@ -67,7 +67,7 @@ async function showSub(argv) {
   if (s.styleSheet) out(color.dim("  styleSheet: ") + (s.styleSheet.enabled ? "enabled" : "disabled"));
 }
 
-async function createSub(argv) {
+async function createSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const title = args.positional.join(" ").trim();
   if (!title) die(2, "title required");
@@ -80,7 +80,7 @@ async function createSub(argv) {
   out(color.green("✓ ") + (resp.session?.id || "(no id returned)"));
 }
 
-async function rmSub(argv) {
+async function rmSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "session id required");
@@ -95,7 +95,7 @@ async function rmSub(argv) {
   out(color.green("✓ deleted"));
 }
 
-async function renameSub(argv) {
+async function renameSub(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const [id, ...rest] = args.positional;
   const title = rest.join(" ").trim();
@@ -108,7 +108,7 @@ async function renameSub(argv) {
   out(color.green("✓ renamed"));
 }
 
-async function graphSub(argv) {
+async function graphSub(argv: string[]) {
   const action = argv[0];
   const rest = argv.slice(1);
   if (action === "save") return graphSave(rest);
@@ -116,7 +116,7 @@ async function graphSub(argv) {
   die(2, "usage: session graph <save|load> ...");
 }
 
-async function graphSave(argv) {
+async function graphSave(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const [id, file] = args.positional;
   if (!id || !file) die(2, "usage: session graph save <id> <file>");
@@ -147,7 +147,7 @@ async function graphSave(argv) {
   }
 }
 
-async function graphLoad(argv) {
+async function graphLoad(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "usage: session graph load <id>");
@@ -158,14 +158,14 @@ async function graphLoad(argv) {
   const text = JSON.stringify(graph, null, 2);
   if (args.out) {
     const { writeFile } = await import("fs/promises");
-    await writeFile(args.out, text);
-    out(color.green("✓ ") + args.out);
+    await writeFile(String(args.out), text);
+    out(color.green("✓ ") + String(args.out));
   } else {
     process.stdout.write(text + "\n");
   }
 }
 
-async function styleSheetSub(argv) {
+async function styleSheetSub(argv: string[]) {
   const action = argv[0];
   const rest = argv.slice(1);
   if (action === "get") return ssGet(rest);
@@ -176,7 +176,7 @@ async function styleSheetSub(argv) {
   die(2, "usage: session style-sheet <get|put|enable|disable|extract> ...");
 }
 
-async function ssGet(argv) {
+async function ssGet(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "session id required");
@@ -185,7 +185,7 @@ async function ssGet(argv) {
   json(resp);
 }
 
-async function ssPut(argv) {
+async function ssPut(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const [id, file] = args.positional;
   if (!id || !file) die(2, "usage: session style-sheet put <id> <file>");
@@ -200,7 +200,7 @@ async function ssPut(argv) {
   out(color.green("✓ style-sheet updated"));
 }
 
-async function ssEnable(argv, enabled) {
+async function ssEnable(argv: string[], enabled: boolean) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "session id required");
@@ -212,7 +212,7 @@ async function ssEnable(argv, enabled) {
   out(color.green(enabled ? "✓ enabled" : "✓ disabled"));
 }
 
-async function ssExtract(argv) {
+async function ssExtract(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const id = args.positional[0];
   if (!id) die(2, "session id required");
@@ -224,15 +224,16 @@ async function ssExtract(argv) {
   json(resp);
 }
 
-function handle(e) {
-  die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`);
+function handle(e: unknown) {
+  const err = e as { message?: string; code?: string };
+  die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`);
 }
 
 async function readLine(): Promise<string> {
   return new Promise((resolve) => {
     let buf = "";
     process.stdin.setEncoding("utf-8");
-    const onData = (chunk) => {
+    const onData = (chunk: Buffer | string) => {
       buf += chunk;
       const nl = buf.indexOf("\n");
       if (nl !== -1) {
@@ -256,7 +257,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   "style-sheet": styleSheetSub,
 };
 
-export default async function sessionCmd(argv) {
+export default async function sessionCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

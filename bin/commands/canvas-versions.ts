@@ -1,5 +1,5 @@
 import { readFile } from "fs/promises";
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 
@@ -22,19 +22,19 @@ const FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-function buildHeaders(args) {
+function buildHeaders(args: ParsedArgs) {
   const h: Record<string, string> = { "Content-Type": "image/png" };
-  if (args.source) h["X-Ima2-Canvas-Source-Filename"] = args.source;
-  if (args.prompt) h["X-Ima2-Canvas-Prompt"] = args.prompt;
+  if (args.source) h["X-Ima2-Canvas-Source-Filename"] = String(args.source);
+  if (args.prompt) h["X-Ima2-Canvas-Prompt"] = String(args.prompt);
   return h;
 }
 
-async function saveSub(argv) {
+async function saveSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const file = args.positional[0];
   if (!file) die(2, "image file required");
@@ -45,12 +45,12 @@ async function saveSub(argv) {
     body: buf,
     raw: true,
     headers: buildHeaders(args),
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+  }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
   if (args.json) { json(resp); return; }
   out(color.green("✓ saved canvas version"));
 }
 
-async function updateSub(argv) {
+async function updateSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const [filename, file] = args.positional;
   if (!filename || !file) die(2, "usage: canvas-versions update <filename> <imagefile>");
@@ -61,7 +61,7 @@ async function updateSub(argv) {
     body: buf,
     raw: true,
     headers: buildHeaders(args),
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+  }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
   if (args.json) { json(resp); return; }
   out(color.green("✓ updated"));
 }
@@ -71,7 +71,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   update: updateSub,
 };
 
-export default async function canvasVersionsCmd(argv) {
+export default async function canvasVersionsCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

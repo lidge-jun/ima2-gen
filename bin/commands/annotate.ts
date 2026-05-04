@@ -1,5 +1,5 @@
 import { readFile } from "fs/promises";
-import { parseArgs } from "../lib/args.js";
+import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { readStdin } from "../lib/files.js";
 import { out, die, color, json, exitCodeForError } from "../lib/output.js";
@@ -22,14 +22,15 @@ const FLAGS = {
   help: { short: "h", type: "boolean" },
 };
 
-async function getServer(args) {
+async function getServer(args: ParsedArgs) {
   try { return await resolveServer({ serverFlag: args.server }); }
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-async function resolveBody(value): Promise<any> {
+async function resolveBody(value: unknown): Promise<any> {
   if (!value) return null;
-  let text;
+  if (typeof value !== "string") return null;
+  let text: string;
   if (value === "-") text = await readStdin();
   else if (value.startsWith("@")) text = await readFile(value.slice(1), "utf-8");
   else text = value;
@@ -41,7 +42,7 @@ async function readLine(): Promise<string> {
   return new Promise((resolve) => {
     let buf = "";
     process.stdin.setEncoding("utf-8");
-    const onData = (chunk) => {
+    const onData = (chunk: Buffer | string) => {
       buf += chunk;
       const nl = buf.indexOf("\n");
       if (nl !== -1) {
@@ -55,7 +56,7 @@ async function readLine(): Promise<string> {
   });
 }
 
-async function getSub(argv) {
+async function getSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -63,11 +64,11 @@ async function getSub(argv) {
   const browserId = getCliBrowserId();
   const resp = await request(server.base, `/api/annotations/${encodeURIComponent(filename)}`, {
     headers: { "X-Ima2-Browser-Id": browserId },
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+  }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
   json(resp);
 }
 
-async function setSub(argv) {
+async function setSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -79,12 +80,12 @@ async function setSub(argv) {
     method: "PUT",
     body,
     headers: { "X-Ima2-Browser-Id": browserId },
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+  }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
   if (args.json) { json(resp); return; }
   out(color.green("✓ annotation saved"));
 }
 
-async function rmSub(argv) {
+async function rmSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   const filename = args.positional[0];
   if (!filename) die(2, "filename required");
@@ -99,7 +100,7 @@ async function rmSub(argv) {
   await request(server.base, `/api/annotations/${encodeURIComponent(filename)}`, {
     method: "DELETE",
     headers: { "X-Ima2-Browser-Id": browserId },
-  }).catch((e) => die(exitCodeForError(e), `${e.message}${e.code ? ` (${e.code})` : ""}`));
+  }).catch((e: unknown) => { const err = e as { message?: string; code?: string }; die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`); });
   out(color.green("✓ deleted"));
 }
 
@@ -109,7 +110,7 @@ const SUB: Record<string, (argv: any[]) => Promise<void>> = {
   rm: rmSub,
 };
 
-export default async function annotateCmd(argv) {
+export default async function annotateCmd(argv: string[]) {
   const sub = argv[0];
   if (!sub || sub === "--help" || sub === "-h") { out(HELP); return; }
   const handler = SUB[sub];

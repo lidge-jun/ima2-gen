@@ -16,7 +16,7 @@ const SPEC = {
   },
 };
 
-export default async function showCmd(argv) {
+export default async function showCmd(argv: string[]) {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out("ima2 show <filename> [--json] [--reveal] [--metadata]"); return; }
   const name = args.positional[0];
@@ -32,8 +32,8 @@ export default async function showCmd(argv) {
   catch (e) {
     const err = errInfo(e); die(exitCodeForError(e), err.message); }
 
-  const items = resp.items || resp.history || [];
-  const item = items.find((it) => it.filename === name || (it.filename && it.filename.endsWith(name)));
+  const items: Record<string, any>[] = resp.items || resp.history || [];
+  const item = items.find((it: Record<string, any>) => it.filename === name || (it.filename && it.filename.endsWith(name)));
   if (!item) die(1, `not found: ${name}`);
 
   let metadata: any = null;

@@ -1,7 +1,26 @@
 // Tiny argv parser — no dependencies.
 // Supports: --long, --long=val, --long val, -s, -s val, repeatable flags, positional, --.
 
-export function parseArgs(argv, spec: any = {}): any {
+export type FlagValue = string | string[] | boolean | undefined;
+
+export interface FlagDef {
+  type?: "string" | "boolean";
+  short?: string;
+  default?: string | boolean;
+  repeatable?: boolean;
+}
+
+export interface ParseSpec {
+  flags?: Record<string, FlagDef>;
+}
+
+export interface ParsedArgs {
+  positional: string[];
+  _unknown: string[];
+  [key: string]: FlagValue;
+}
+
+export function parseArgs(argv: string[], spec: any = {}): ParsedArgs {
   const shortMap: any = {};
   for (const [name, def] of Object.entries<any>(spec.flags || {})) {
     if (def.short) shortMap[def.short] = name;
