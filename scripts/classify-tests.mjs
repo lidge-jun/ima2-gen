@@ -52,7 +52,8 @@ const output = [
 ].join("\n");
 
 if (check) {
-  if (!existsSync(outPath) || readFileSync(outPath, "utf8") !== output) {
+  const existing = existsSync(outPath) ? readFileSync(outPath, "utf8").replace(/\r\n/g, "\n") : null;
+  if (existing !== output) {
     console.error(`${outPath} is stale. Run: node scripts/classify-tests.mjs`);
     process.exit(1);
   }
