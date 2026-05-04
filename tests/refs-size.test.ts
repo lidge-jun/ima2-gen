@@ -59,7 +59,7 @@ test("reference diagnostics preserve declared and detected MIME without exposing
   assert.equal(r.refDetails[0].declaredMime, "image/png");
   assert.equal(r.refDetails[0].detectedMime, "image/jpeg");
   assert.deepEqual(r.refDetails[0].warnings, ["mime_mismatch"]);
-  assert.equal(r.referenceDiagnostics[0].b64, undefined);
+  assert.equal((r.referenceDiagnostics[0] as { b64?: unknown }).b64, undefined);
   assert.equal(r.referenceDiagnostics[0].detectedMime, "image/jpeg");
 });
 

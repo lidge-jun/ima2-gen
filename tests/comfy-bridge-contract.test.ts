@@ -14,7 +14,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
 const JPG = Buffer.from([0xff, 0xd8, 0xff, 0x00]);
 const WEBP = Buffer.from("RIFFxxxxWEBP", "ascii");
 
-function makeCtx(generatedDir, overrides = {}) {
+function makeCtx(generatedDir, overrides: { comfy?: Record<string, unknown> } = {}) {
   return {
     rootDir: process.cwd(),
     config: {
@@ -42,11 +42,11 @@ async function withTempDir(fn) {
 
 async function listen(handler) {
   const server = createServer(handler);
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const addr = server.address();
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const addr = server.address() as import("node:net").AddressInfo;
   return {
     url: `http://127.0.0.1:${addr.port}`,
-    close: () => new Promise((resolve) => server.close(resolve)),
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
 }
 
@@ -174,8 +174,8 @@ test("public route accepts only filename and returns stable envelopes", async ()
   app.use(express.json());
   registerComfyRoutes(app, makeCtx(dir));
   const server = createServer(app);
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const base = `http://127.0.0.1:${(server.address() as import("node:net").AddressInfo).port}`;
   try {
     for (const extra of ["comfyUrl", "subfolder", "overwrite", "prompt", "workflow", "client_id", "extra_data", "path"]) {
       const res = await postJson(`${base}/api/comfy/export-image`, {
@@ -187,7 +187,7 @@ test("public route accepts only filename and returns stable envelopes", async ()
       assert.equal(res.body.error.code, "COMFY_IMAGE_INVALID");
     }
   } finally {
-    await new Promise((resolve) => server.close(resolve));
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 }));
 

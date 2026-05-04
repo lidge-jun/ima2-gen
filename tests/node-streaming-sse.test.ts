@@ -82,10 +82,10 @@ describe("Node route SSE streaming", () => {
   });
 
   after(async () => {
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       appServer.close((err) => (err ? reject(err) : resolve()));
     });
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       oauthServer.close((err) => (err ? reject(err) : resolve()));
     });
     await rm(rootDir, { recursive: true, force: true });

@@ -11,7 +11,7 @@ import {
 } from "../lib/runtimePorts.ts";
 
 function occupy(port) {
-  return new Promise((resolve) => {
+  return new Promise<import("node:net").Server>((resolve) => {
     const server = createServer().listen(port, "127.0.0.1", () => resolve(server));
   });
 }
@@ -36,9 +36,9 @@ test("listenWithPortFallback binds the next available port", async () => {
       host: "127.0.0.1",
       maxAttempts: 2,
       label: "test-server",
-    });
+    }) as import("node:http").Server;
     assert.equal(getServerPort(server), base + 1);
-    await new Promise((resolve) => server.close(resolve));
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   } finally {
     await new Promise((resolve) => blocker.close(resolve));
   }

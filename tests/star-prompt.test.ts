@@ -25,7 +25,7 @@ describe("star prompt", () => {
     let seenArgs = [];
     let seenOptions;
 
-    const result = starRepo((command, args, options) => {
+    const result = starRepo(((command, args, options) => {
       seenCommand = command;
       seenArgs = args;
       seenOptions = options;
@@ -34,7 +34,7 @@ describe("star prompt", () => {
         stdout: "",
         stderr: "",
       };
-    });
+    }) as unknown as typeof import("node:child_process").spawnSync);
 
     assert.deepStrictEqual(result, { ok: true });
     assert.strictEqual(seenCommand, "gh");

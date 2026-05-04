@@ -16,7 +16,7 @@
     "build": "npm run ui:build",
     "test": "node scripts/run-tests.mjs",
     "test:package-install": "node --test tests/package-install-smoke.mjs",
-    "test:inventory": "node scripts/classify-tests.mjs --check",
+    "test:inventory": "node scripts/classify-tests.mjs --check --fail-js-runtime",
     "setup": "node bin/ima2.js setup",
     "prepack": "npm run ui:build && npm run build:server && npm run build:cli",
     "prepublishOnly": "npm run typecheck && npm run typecheck:tests && npm run test:inventory && npm run ui:build && npm run build:server && npm run build:cli && npm run lint:pkg && npm run test:package-install",

@@ -7,7 +7,13 @@ import {
 } from "../lib/generationErrors.ts";
 
 test("upstream 4xx validation errors normalize to INVALID_REQUEST", () => {
-  const err = new Error("Invalid size '512x512'. Requested resolution is below the current minimum pixel budget.");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("Invalid size '512x512'. Requested resolution is below the current minimum pixel budget.");
   err.status = 400;
   err.code = "OAUTH_UPSTREAM_ERROR";
   err.upstreamCode = "invalid_value";
@@ -25,7 +31,13 @@ test("upstream 4xx validation errors normalize to INVALID_REQUEST", () => {
 });
 
 test("explicit safety refusals remain safety refusals", () => {
-  const err = new Error("moderation refused");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("moderation refused");
   err.status = 422;
   err.code = "MODERATION_REFUSED";
 
@@ -36,7 +48,13 @@ test("explicit safety refusals remain safety refusals", () => {
 });
 
 test("OAUTH_UPSTREAM_ERROR is passthrough, not SAFETY_REFUSAL", () => {
-  const err = new Error("OAuth proxy returned 502");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("OAuth proxy returned 502");
   err.status = 502;
   err.code = "OAUTH_UPSTREAM_ERROR";
 
@@ -46,7 +64,13 @@ test("OAUTH_UPSTREAM_ERROR is passthrough, not SAFETY_REFUSAL", () => {
 });
 
 test("OAuth image timeout is passthrough and non-retryable", () => {
-  const err = new Error("OAuth image generation timed out");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("OAuth image generation timed out");
   err.status = 504;
   err.code = "OAUTH_IMAGE_TIMEOUT";
 
@@ -60,7 +84,13 @@ test("OAuth image timeout is passthrough and non-retryable", () => {
 });
 
 test("empty response with metadata maps to EMPTY_RESPONSE", () => {
-  const err = new Error("No image data received");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("No image data received");
   err.eventCount = 3;
   err.size = "3840x2160";
   err.quality = "medium";
@@ -76,7 +106,13 @@ test("empty response with metadata maps to EMPTY_RESPONSE", () => {
 });
 
 test("empty response with reference mismatch preserves diagnostic metadata", () => {
-  const err = new Error("No image data received");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("No image data received");
   err.eventCount = 2;
   err.size = "2048x1152";
   err.referenceMismatchCount = 1;
@@ -100,7 +136,13 @@ test("empty response with reference mismatch preserves diagnostic metadata", () 
 });
 
 test("unrecognized errors map to UNKNOWN, not SAFETY_REFUSAL", () => {
-  const err = new Error("something went wrong");
+  const err: Error & {
+    status?: number; code?: string;
+    upstreamCode?: string; upstreamType?: string; upstreamParam?: string;
+    eventCount?: number; size?: string; quality?: string; model?: string;
+    referenceMismatchCount?: number; referenceDiagnostics?: unknown;
+    retryKind?: string; referencesDroppedOnRetry?: boolean;
+  } = new Error("something went wrong");
   err.status = 500;
   err.code = "SOME_RANDOM_CODE";
 

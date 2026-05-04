@@ -70,14 +70,15 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
   registerEditRoutes(app, ctx);
   registerMultimodeRoutes(app, ctx);
   registerNodeRoutes(app, ctx);
-  const server = await new Promise((resolve) => {
+  const server = await new Promise<import("node:http").Server>((resolve) => {
     const s = app.listen(0, "127.0.0.1", () => resolve(s));
   });
-  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const addr = server.address() as import("node:net").AddressInfo;
+  const baseUrl = `http://127.0.0.1:${addr.port}`;
   try {
     await fn({ baseUrl, generatedDir });
   } finally {
-    await new Promise((resolve) => server.close(resolve));
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(rootDir, { recursive: true, force: true });
   }
 }

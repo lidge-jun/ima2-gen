@@ -91,7 +91,7 @@ describe("prompt discovery contract", () => {
     const ctx = await testCtx();
     let requestedUrl = "";
     let authHeader = "";
-    globalThis.fetch = async (url, init) => {
+    globalThis.fetch = (async (url, init) => {
       requestedUrl = String(url);
       authHeader = init.headers.Authorization;
       return {
@@ -101,7 +101,7 @@ describe("prompt discovery contract", () => {
         headers: new Headers({ "x-ratelimit-remaining": "9", "x-ratelimit-limit": "10" }),
         json: async () => ({ items: [repo()] }),
       };
-    };
+    }) as unknown as typeof fetch;
     const result = await searchGitHubDiscovery(ctx, { q: "gpt-image-2 prompt", seeds: [], limit: 1 });
     assert.match(requestedUrl, /^https:\/\/api\.github\.com\/search\/repositories/);
     assert.equal(authHeader, "Bearer ghp_secret");
@@ -111,22 +111,22 @@ describe("prompt discovery contract", () => {
 
   it("maps rate limits and rejects redirected discovery fetches", async () => {
     const ctx = await testCtx();
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: false,
       status: 403,
       url: "https://api.github.com/search/repositories",
       headers: new Headers({ "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1770000000" }),
       json: async () => ({}),
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(() => searchGitHubDiscovery(ctx, { q: "prompt" }), /rate limit/);
 
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       status: 200,
       url: "https://api.github.com.evil.test/search/repositories",
       headers: new Headers(),
       json: async () => ({ items: [] }),
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(() => searchGitHubDiscovery(ctx, { q: "prompt" }), /unsupported host/);
   });
 

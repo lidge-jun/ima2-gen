@@ -96,12 +96,12 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("lists supported files from GitHub Contents API without recursive crawl", async () => {
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       status: 200,
       url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
       json: async () => folderItems(),
-    });
+    })) as unknown as typeof fetch;
     const source = normalizeGitHubFolderSource("o/r:prompts/");
     const result = await fetchGitHubFolderFiles(source, limits);
     assert.equal(result.files.length, 1);
@@ -111,23 +111,23 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("rejects non-folder responses and ambiguous tree URL failures", async () => {
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       status: 200,
       url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
       json: async () => ({ type: "file" }),
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits),
       /not a folder/,
     );
 
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: false,
       status: 404,
       url: "https://api.github.com/repos/o/r/contents/foo/prompts?ref=feature",
       json: async () => ({}),
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchGitHubFolderFiles(normalizeGitHubFolderSource("https://github.com/o/r/tree/feature/foo/prompts"), limits),
       /ambiguous/,
@@ -135,7 +135,7 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("previews only selected paths returned by the server-side folder listing", async () => {
-    globalThis.fetch = async (url) => {
+    globalThis.fetch = (async (url) => {
       if (String(url).includes("api.github.com")) {
         return {
           ok: true,
@@ -153,7 +153,7 @@ describe("prompt import GitHub folder contract", () => {
           "Create a cinematic gpt-image-2 typography poster with readable headline, strict grid, and product-safe layout.",
         ).buffer,
       };
-    };
+    }) as unknown as typeof fetch;
     const source = normalizeGitHubFolderSource("o/r:prompts/");
     const result = await fetchSelectedGitHubFolderFiles(source, ["prompts/poster.md"], limits);
     assert.equal(result.files.length, 1);
@@ -175,21 +175,21 @@ describe("prompt import GitHub folder contract", () => {
       html_url: "https://github.com/o/r/blob/main/prompts/one.md",
       download_url: index === 0 ? "https://raw.githubusercontent.com/o/r/main/prompts/one.md" : null,
     }));
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       status: 200,
       url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
       json: async () => rawHeavy,
-    });
+    })) as unknown as typeof fetch;
     const result = await fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits);
     assert.ok(result.warnings.some((warning) => warning.startsWith("folder-raw-too-large:")));
 
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       status: 200,
       url: "https://api.github.com.evil.test/repos/o/r/contents/prompts?ref=main",
       json: async () => folderItems(),
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits),
       /unsupported host/,
@@ -197,7 +197,7 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("rejects redirected raw file downloads outside the raw GitHub host", async () => {
-    globalThis.fetch = async (url) => {
+    globalThis.fetch = (async (url) => {
       if (String(url).includes("api.github.com")) {
         return {
           ok: true,
@@ -213,7 +213,7 @@ describe("prompt import GitHub folder contract", () => {
         headers: new Headers(),
         arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
       };
-    };
+    }) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchSelectedGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), ["prompts/poster.md"], limits),
       /download host is unsupported/,

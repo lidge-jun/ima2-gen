@@ -68,7 +68,7 @@ describe("image metadata XMP", () => {
   it("rejects unsupported embed formats with a stable code", async () => {
     await assert.rejects(
       () => embedImageMetadata(Buffer.from("not an image"), "gif", baseMeta),
-      (error) => error.code === "IMAGE_METADATA_UNSUPPORTED_FORMAT",
+      (error) => (error as { code?: string }).code === "IMAGE_METADATA_UNSUPPORTED_FORMAT",
     );
   });
 });

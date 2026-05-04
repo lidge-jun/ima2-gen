@@ -21,6 +21,26 @@ import { configureRoutes } from "../routes/index.ts";
 const rootDir = process.cwd();
 const PNG_B64 = Buffer.from("generated-card").toString("base64");
 
+type CardLike = {
+  id?: string;
+  role?: string;
+  status?: string;
+  url?: string;
+  textFields?: unknown[];
+  visualPrompt?: string;
+  locked?: boolean;
+  [key: string]: unknown;
+};
+type AnyDraft = {
+  setId?: string;
+  generationStrategy?: string;
+  cards?: CardLike[];
+  plan?: { cards: CardLike[]; setId?: string; generationStrategy?: string; [k: string]: unknown };
+  planner?: { mode: string; model: unknown; repaired: boolean };
+  [key: string]: unknown;
+};
+const asDraft = (d: unknown): AnyDraft => d as AnyDraft;
+
 function readPngSize(buf) {
   return {
     width: buf.readUInt32BE(16),
@@ -28,7 +48,20 @@ function readPngSize(buf) {
   };
 }
 
-function makeCtx(generatedDir, cardNews = true) {
+type CtxLike = {
+  rootDir: string;
+  oauthUrl?: string;
+  config: {
+    features: { cardNews: boolean };
+    storage: { generatedDir: string; staticMaxAge: string };
+    server: { bodyLimit: string };
+    oauth: { validModeration: Set<string> };
+    imageModels: { default: string };
+    cardNewsPlanner: { enabled: boolean; model: string; timeoutMs: number; deterministicFallback: boolean };
+  };
+};
+
+function makeCtx(generatedDir, cardNews = true): CtxLike {
   return {
     rootDir,
     config: {
@@ -43,13 +76,13 @@ function makeCtx(generatedDir, cardNews = true) {
 }
 
 async function listen(app) {
-  const server = await new Promise((resolve) => {
+  const server = await new Promise<import("node:http").Server>((resolve) => {
     const s = app.listen(0, "127.0.0.1", () => resolve(s));
   });
-  const { port } = server.address();
+  const { port } = server.address() as import("node:net").AddressInfo;
   return {
     baseUrl: `http://127.0.0.1:${port}`,
-    close: () => new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
+    close: () => new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve()))),
   };
 }
 
@@ -65,11 +98,11 @@ describe("Card News 0.20 dev MVP contract", () => {
     const promptSource = await readFile(join(rootDir, "lib", "cardNewsPlannerPrompt.ts"), "utf8");
     const clientSource = await readFile(join(rootDir, "lib", "cardNewsPlannerClient.ts"), "utf8");
     const schemaSource = await readFile(join(rootDir, "lib", "cardNewsPlannerSchema.ts"), "utf8");
-    const draft = await createCardNewsDraft(makeCtx("/tmp/ima2-card-news-planner"), {
+    const draft = asDraft(await createCardNewsDraft(makeCtx("/tmp/ima2-card-news-planner"), {
       topic: "JSON output",
       roleTemplateId: "short-3",
       imageTemplateId: "academy-lesson-square",
-    });
+    }));
 
     assert.doesNotMatch(promptSource, /image_generation/);
     assert.match(promptSource, /JSON/);
@@ -156,15 +189,15 @@ describe("Card News 0.20 dev MVP contract", () => {
           roleTemplateId: "short-3",
           imageTemplateId: "academy-lesson-square",
         }),
-        (err) => err.code === "PLANNER_UPSTREAM_FAILED",
+        (err) => (err as { code?: string }).code === "PLANNER_UPSTREAM_FAILED",
       );
 
       ctx.config.cardNewsPlanner.deterministicFallback = true;
-      const draft = await createCardNewsDraft(ctx, {
+      const draft = asDraft(await createCardNewsDraft(ctx, {
         topic: "fallback",
         roleTemplateId: "short-3",
         imageTemplateId: "academy-lesson-square",
-      });
+      }));
       assert.equal(draft.planner.mode, "deterministic-fallback");
       assert.equal(draft.plan.cards.length, 3);
     } finally {
@@ -192,7 +225,7 @@ describe("Card News 0.20 dev MVP contract", () => {
           roleTemplateId: "short-3",
           imageTemplateId: "academy-lesson-square",
         }),
-        (err) => err.code === "PLANNER_INVALID_JSON",
+        (err) => (err as { code?: string }).code === "PLANNER_INVALID_JSON",
       );
     } finally {
       await upstream.close();
@@ -223,18 +256,18 @@ describe("Card News 0.20 dev MVP contract", () => {
 
     await assert.rejects(
       () => getImageTemplate(ctx, "../escape"),
-      (err) => err.code === "CARD_NEWS_BAD_TEMPLATE_ID",
+      (err) => (err as { code?: string }).code === "CARD_NEWS_BAD_TEMPLATE_ID",
     );
   });
 
   it("creates a JSON-first mid-5 draft without generating images", async () => {
-    const plan = await createCardNewsDraft({
+    const plan = asDraft(await createCardNewsDraft({
       topic: "중간고사 역전 플랜",
       audience: "학부모",
       goal: "상담 신청",
       roleTemplateId: "mid-5",
       imageTemplateId: "academy-lesson-square",
-    });
+    }));
 
     assert.equal(plan.generationStrategy, "parallel-template-i2i");
     assert.equal(plan.cards.length, 5);
@@ -247,7 +280,7 @@ describe("Card News 0.20 dev MVP contract", () => {
     const generatedDir = join(root, "generated");
     const ctx = makeCtx(generatedDir);
     const calls = [];
-    const plan = await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" });
+    const plan = asDraft(await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" }));
     plan.cards[0] = {
       ...plan.cards[0],
       textFields: [{
@@ -321,7 +354,7 @@ describe("Card News 0.20 dev MVP contract", () => {
     const root = await mkdtemp(join(tmpdir(), "ima2-card-news-error-"));
     const generatedDir = join(root, "generated");
     const ctx = makeCtx(generatedDir);
-    const plan = await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" });
+    const plan = asDraft(await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" }));
     let callIndex = 0;
 
     const result = await generateCardNewsSet(ctx, {
@@ -331,7 +364,7 @@ describe("Card News 0.20 dev MVP contract", () => {
       generateFn: async () => {
         callIndex += 1;
         if (callIndex === 2) {
-          const err = new Error("upstream rejected card");
+          const err: Error & { code?: string } = new Error("upstream rejected card");
           err.code = "UPSTREAM_400";
           throw err;
         }
@@ -360,7 +393,7 @@ describe("Card News 0.20 dev MVP contract", () => {
       assert.equal(setRow.sessionId, "s_card_news");
       assert.equal(Array.isArray(setRow.cards), true);
       assert.ok(cardRow);
-      assert.equal(cardRow.sidecarFilename, undefined);
+      assert.equal((cardRow as { sidecarFilename?: unknown }).sidecarFilename, undefined);
       assert.equal(cardRow.cardId, "card_1");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -431,7 +464,7 @@ describe("Card News 0.20 dev MVP contract", () => {
     const generatedDir = join(root, "generated");
     const ctx = makeCtx(generatedDir);
     const calls = [];
-    const plan = await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" });
+    const plan = asDraft(await createCardNewsDraft({ roleTemplateId: "short-3", imageTemplateId: "academy-lesson-square" }));
 
     const result = await generateCardNewsSet(ctx, {
       ...plan,

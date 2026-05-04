@@ -10,8 +10,8 @@ test("OAuth non-ok responses do not expose raw upstream body in logs or errors",
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: { message: privateText } }));
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const port = (server.address() as import("node:net").AddressInfo).port;
   const logs = [];
   const originalLog = console.log;
   console.log = (...args) => logs.push(args.join(" "));
@@ -22,10 +22,10 @@ test("OAuth non-ok responses do not expose raw upstream body in logs or errors",
         oauthUrl: `http://127.0.0.1:${port}`,
       }),
       (err) => {
-        assert.equal(err.message, "OAuth proxy returned 500");
-        assert.equal(err.status, 500);
-        assert.equal(err.code, "OAUTH_UPSTREAM_ERROR");
-        assert.ok(!err.message.includes(privateText));
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).message, "OAuth proxy returned 500");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).status, 500);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).code, "OAUTH_UPSTREAM_ERROR");
+        assert.ok(!(err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).message.includes(privateText));
         return true;
       },
     );
@@ -49,8 +49,8 @@ test("OAuth 400 validation JSON preserves actionable metadata", async () => {
     res.writeHead(400, { "Content-Type": "application/json" });
     res.end(JSON.stringify(upstream));
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const port = (server.address() as import("node:net").AddressInfo).port;
 
   try {
     await assert.rejects(
@@ -58,12 +58,12 @@ test("OAuth 400 validation JSON preserves actionable metadata", async () => {
         oauthUrl: `http://127.0.0.1:${port}`,
       }),
       (err) => {
-        assert.equal(err.message, upstream.error.message);
-        assert.equal(err.status, 400);
-        assert.equal(err.code, "INVALID_REQUEST");
-        assert.equal(err.upstreamCode, "invalid_value");
-        assert.equal(err.upstreamType, "invalid_request_error");
-        assert.equal(err.upstreamParam, "tools[0].size");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).message, upstream.error.message);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).status, 400);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).code, "INVALID_REQUEST");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).upstreamCode, "invalid_value");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).upstreamType, "invalid_request_error");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).upstreamParam, "tools[0].size");
         return true;
       },
     );
@@ -83,8 +83,8 @@ test("generateViaOAuth labels reference inputs with detected MIME", async () => 
       res.end(JSON.stringify({ error: { message: "stop", type: "invalid_request_error", code: "invalid_value" } }));
     });
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const port = (server.address() as import("node:net").AddressInfo).port;
   const jpegB64 = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
 
   try {
@@ -108,8 +108,8 @@ test("editViaOAuth no-image stream preserves empty response metadata", async () 
     res.writeHead(200, { "Content-Type": "text/event-stream" });
     res.end("data: {\"type\":\"response.completed\"}\n\n");
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const port = (server.address() as import("node:net").AddressInfo).port;
   const png = await sharp({
     create: {
       width: 32,
@@ -125,12 +125,12 @@ test("editViaOAuth no-image stream preserves empty response metadata", async () 
         oauthUrl: `http://127.0.0.1:${port}`,
       }, "req_edit_empty"),
       (err) => {
-        assert.equal(err.eventCount, 1);
-        assert.equal(err.size, "3840x2160");
-        assert.equal(err.quality, "medium");
-        assert.equal(err.refsCount, 0);
-        assert.equal(err.inputImageCount, 1);
-        assert.equal(err.parentImagePresent, true);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).eventCount, 1);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).size, "3840x2160");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).quality, "medium");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).refsCount, 0);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).inputImageCount, 1);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).parentImagePresent, true);
         return true;
       },
     );
@@ -144,8 +144,8 @@ test("generateViaOAuth times out a stalled image stream", async () => {
     res.writeHead(200, { "Content-Type": "text/event-stream" });
     res.write("data: {\"type\":\"response.created\"}\n\n");
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const port = (server.address() as import("node:net").AddressInfo).port;
 
   try {
     await assert.rejects(
@@ -154,9 +154,9 @@ test("generateViaOAuth times out a stalled image stream", async () => {
         config: { oauth: { generationTimeoutMs: 25 } },
       }),
       (err) => {
-        assert.equal(err.message, "OAuth image generation timed out");
-        assert.equal(err.status, 504);
-        assert.equal(err.code, "OAUTH_IMAGE_TIMEOUT");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).message, "OAuth image generation timed out");
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).status, 504);
+        assert.equal((err as { message?: string; status?: number; code?: string; upstreamCode?: string; upstreamType?: string; upstreamParam?: string; eventCount?: number; size?: string; quality?: string; refsCount?: number; inputImageCount?: number; parentImagePresent?: boolean }).code, "OAUTH_IMAGE_TIMEOUT");
         return true;
       },
     );

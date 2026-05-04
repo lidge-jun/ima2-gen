@@ -21,7 +21,7 @@ test("logger redacts secrets, raw prompts, base64-ish fields, and bodies", () =>
     imageB64: "aGVsbG8=",
     references: ["aGVsbG8="],
     body: { raw: true },
-  });
+  }) as Record<string, unknown>;
 
   assert.equal(safe.requestId, "req_1");
   assert.equal(safe.prompt, "[redacted]");

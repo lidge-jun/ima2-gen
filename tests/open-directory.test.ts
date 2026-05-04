@@ -6,11 +6,15 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { openDirectory } from "../lib/openDirectory.ts";
 
-function fakeChild() {
-  const child = new EventEmitter();
+type FakeChild = EventEmitter & { unref: () => void };
+
+function fakeChild(): FakeChild {
+  const child = new EventEmitter() as FakeChild;
   child.unref = () => {};
   return child;
 }
+
+type OpenResult = { ok: boolean; error?: string };
 
 test("openDirectory chooses platform-specific commands", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ima2-open-"));
@@ -46,7 +50,7 @@ test("openDirectory reports spawn errors and early nonzero exits", async () => {
         queueMicrotask(() => child.emit("error", new Error("missing xdg-open")));
         return child;
       },
-    });
+    }) as OpenResult;
     assert.equal(spawnError.ok, false);
     assert.match(spawnError.error, /missing xdg-open/);
 
@@ -58,7 +62,7 @@ test("openDirectory reports spawn errors and early nonzero exits", async () => {
         queueMicrotask(() => child.emit("exit", 3));
         return child;
       },
-    });
+    }) as OpenResult;
     assert.equal(exitError.ok, false);
     assert.match(exitError.error, /xdg-open exited with code 3/);
   } finally {

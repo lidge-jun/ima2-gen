@@ -27,7 +27,7 @@ describe("Node route reference handling", () => {
   });
 
   after(async () => {
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
     });
   });

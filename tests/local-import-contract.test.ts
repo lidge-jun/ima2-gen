@@ -20,7 +20,7 @@ async function startApp(generatedDir) {
   });
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
-  const { port } = server.address();
+  const { port } = server.address() as import("node:net").AddressInfo;
   return { server, port };
 }
 

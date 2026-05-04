@@ -42,15 +42,15 @@ describe("node route image model validation", () => {
         storage: { generatedDir: process.cwd() },
       },
     });
-    await new Promise((resolve) => {
-      server = app.listen(0, "127.0.0.1", resolve);
+    await new Promise<void>((resolve) => {
+      server = app.listen(0, "127.0.0.1", () => resolve());
     });
     const address = server.address();
     baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
   after(async () => {
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
     });
   });

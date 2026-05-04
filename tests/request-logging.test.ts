@@ -18,10 +18,10 @@ function makeApp(lines) {
   app.use(createRequestLogger());
   app.use(express.json());
   app.get("/api/test", (req, res) => {
-    res.json({ ok: true, requestId: req.id });
+    res.json({ ok: true, requestId: (req as Express.Request & { id?: string }).id });
   });
   app.post("/api/echo", (req, res) => {
-    res.json({ ok: true, requestId: req.id });
+    res.json({ ok: true, requestId: (req as Express.Request & { id?: string }).id });
   });
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true });
@@ -32,12 +32,15 @@ function makeApp(lines) {
   return app;
 }
 
-async function hit(app, { method = "GET", path = "/api/test", headers = {}, body } = {}) {
+type HitOptions = { method?: string; path?: string; headers?: Record<string, string>; body?: unknown };
+type HitResult = { status: number | undefined; headers: import("node:http").IncomingHttpHeaders; body: unknown };
+
+async function hit(app, { method = "GET", path = "/api/test", headers = {}, body }: HitOptions = {}): Promise<HitResult> {
   const server = app.listen(0);
-  await new Promise((resolve) => server.once("listening", resolve));
-  const port = server.address().port;
+  await new Promise<void>((resolve) => server.once("listening", () => resolve()));
+  const port = (server.address() as import("node:net").AddressInfo).port;
   try {
-    return await new Promise((resolve, reject) => {
+    return await new Promise<HitResult>((resolve, reject) => {
       const req = request(
         {
           hostname: "127.0.0.1",
@@ -73,7 +76,7 @@ async function hit(app, { method = "GET", path = "/api/test", headers = {}, body
     });
   } finally {
     server.closeAllConnections?.();
-    await new Promise((resolve) => server.close(resolve));
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 }
 
@@ -93,7 +96,7 @@ describe("request logger", () => {
 
     assert.equal(res.status, 200);
     assert.equal(res.headers["x-request-id"], "req.custom-1");
-    assert.equal(res.body.requestId, "req.custom-1");
+    assert.equal(res.body && (res.body as Record<string, unknown>).requestId, "req.custom-1");
     assert.equal(lines.length, 2);
     assert.match(lines[0], /^\[http\.request\]/);
     assert.match(lines[0], /requestId="req.custom-1"/);

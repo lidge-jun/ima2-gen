@@ -64,34 +64,34 @@ describe("prompt import GitHub contract", () => {
   });
 
   it("enforces final redirect host and byte caps while fetching GitHub text", async () => {
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       url: "https://github.com.evil.com/file.md",
       headers: new Headers(),
       arrayBuffer: async () => new TextEncoder().encode("prompt").buffer,
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /redirected to an unsupported host/,
     );
 
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       url: "https://raw.githubusercontent.com/o/r/main/a.md",
       headers: new Headers({ "content-length": String(limits.maxFileBytesForPreview + 1) }),
       arrayBuffer: async () => new ArrayBuffer(0),
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /too large/,
     );
 
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       url: "https://github.com/o/r/tree/main/prompts",
       headers: new Headers(),
       arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
-    });
+    })) as unknown as typeof fetch;
     await assert.rejects(
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /non-file page/,
@@ -99,23 +99,23 @@ describe("prompt import GitHub contract", () => {
   });
 
   it("exposes metadata fetch while preserving text-only fetch behavior", async () => {
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       url: "https://raw.githubusercontent.com/o/r/main/a.md",
       headers: new Headers({ etag: "\"abc\"" }),
       arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
-    });
+    })) as unknown as typeof fetch;
     const result = await fetchGitHubSource({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits);
     assert.equal(result.etag, "\"abc\"");
     assert.equal(typeof result.contentHash, "string");
     assert.equal(result.sizeBytes > 0, true);
 
-    globalThis.fetch = async () => ({
+    globalThis.fetch = (async () => ({
       ok: true,
       url: "https://raw.githubusercontent.com/o/r/main/a.md",
       headers: new Headers(),
       arrayBuffer: async () => new TextEncoder().encode("another valid prompt body that is long enough to parse").buffer,
-    });
+    })) as unknown as typeof fetch;
     const text = await fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits);
     assert.match(text, /another valid prompt body/);
   });
