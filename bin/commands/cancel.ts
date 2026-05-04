@@ -2,6 +2,7 @@ import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, dieWithError, color, json } from "../lib/output.js";
 
+import { errInfo } from "../../lib/errInfo.js";
 const SPEC = {
   flags: {
     json: { type: "boolean" },
@@ -26,7 +27,8 @@ export default async function cancelCmd(argv) {
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
   catch (e) {
-    if (args.json) json({ ok: false, requestId, error: e.message, code: e.code, status: e.status });
+    const err = errInfo(e);
+    if (args.json) json({ ok: false, requestId, error: err.message, code: err.code, status: err.status });
     dieWithError(e);
   }
 
@@ -36,7 +38,8 @@ export default async function cancelCmd(argv) {
       timeoutMs: 30_000,
     });
   } catch (e) {
-    if (args.json) json({ ok: false, requestId, error: e.message, code: e.code, status: e.status });
+    const err = errInfo(e);
+    if (args.json) json({ ok: false, requestId, error: err.message, code: err.code, status: err.status });
     dieWithError(e);
   }
 

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
 
+import { errInfo } from "../errInfo.js";
 const GITHUB_HOST = "github.com";
 const GITHUB_API_HOST = "api.github.com";
 const RAW_HOST = "raw.githubusercontent.com";
@@ -189,7 +190,8 @@ async function fetchJson(url, limits) {
     }
     return { json: await response.json() };
   } catch (error) {
-    if (error?.name === "AbortError") {
+    const err = errInfo(error);
+    if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub folder fetch timed out", 504);
     }
     throw error;
@@ -266,8 +268,9 @@ export async function fetchSelectedGitHubFolderFiles(source, selectedPaths, limi
       const fetched = await fetchRawFile(file.downloadUrl, limits);
       files.push({ ...file, text: fetched.text, contentHash: fetched.contentHash });
     } catch (error) {
+      const err = errInfo(error);
       if (!firstError) firstError = error;
-      warnings.push(`${path}: ${error?.message || "file fetch failed"}`);
+      warnings.push(`${path}: ${err.message || "file fetch failed"}`);
     }
   }
   if (files.length === 0 && firstError) throw firstError;
@@ -298,7 +301,8 @@ async function fetchRawFile(rawUrl, limits) {
       contentHash: createHash("sha256").update(Buffer.from(buffer)).digest("hex"),
     };
   } catch (error) {
-    if (error?.name === "AbortError") {
+    const err = errInfo(error);
+    if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub folder file fetch timed out", 504);
     }
     throw error;

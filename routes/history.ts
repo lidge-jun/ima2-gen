@@ -4,6 +4,7 @@ import { getSessionTitleMap } from "../lib/sessionStore.js";
 import { logError, logEvent } from "../lib/logger.js";
 import { getDb } from "../lib/db.js";
 
+import { errInfo } from "../lib/errInfo.js";
 export function registerHistoryRoutes(app, ctx) {
   app.get("/api/history", async (req, res) => {
     try {
@@ -82,8 +83,9 @@ export function registerHistoryRoutes(app, ctx) {
       }
 
       res.json({ items: page, total: rows.length, nextCursor });
-    } catch (err) {
-      logError("history", "error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("history", "error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -93,7 +95,8 @@ export function registerHistoryRoutes(app, ctx) {
       const filename = decodeURIComponent(req.params.filename);
       const result = await deleteAssetPermanent(ctx.rootDir, filename);
       res.json(result);
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({ error: err.message, code: err.code });
     }
   });
@@ -103,7 +106,8 @@ export function registerHistoryRoutes(app, ctx) {
       const filename = decodeURIComponent(req.params.filename);
       const result = await trashAsset(ctx.rootDir, filename);
       res.json(result);
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({ error: err.message, code: err.code });
     }
   });
@@ -115,7 +119,8 @@ export function registerHistoryRoutes(app, ctx) {
       if (!trashId) return res.status(400).json({ error: "trashId required" });
       const result = await restoreAsset(ctx.rootDir, trashId, filename);
       res.json(result);
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({ error: err.message });
     }
   });
@@ -145,8 +150,9 @@ export function registerHistoryRoutes(app, ctx) {
         ).run(id, browserId, filename, Math.floor(Date.now() / 1000));
         res.json({ isFavorite: true });
       }
-    } catch (err) {
-      logError("history", "favorite_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("history", "favorite_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });

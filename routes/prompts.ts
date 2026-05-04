@@ -1,6 +1,7 @@
 import { logError, logEvent } from "../lib/logger.js";
 import { getDb } from "../lib/db.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function getPromptsDb() {
   return getDb();
 }
@@ -54,8 +55,9 @@ export function registerPromptRoutes(app, _ctx) {
         .all();
 
       res.json({ prompts: prompts.map(normalizePrompt), folders: folders.map(normalizeFolder) });
-    } catch (err) {
-      logError("prompts", "list_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "list_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -82,8 +84,9 @@ export function registerPromptRoutes(app, _ctx) {
 
       logEvent("prompts", "created", { id, folder_id });
       res.status(201).json({ prompt: normalizePrompt(db.prepare("SELECT * FROM prompts WHERE id = ?").get(id)) });
-    } catch (err) {
-      logError("prompts", "create_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "create_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -94,8 +97,9 @@ export function registerPromptRoutes(app, _ctx) {
       const row = db.prepare("SELECT * FROM prompts WHERE id = ?").get(req.params.id);
       if (!row) return res.status(404).json({ error: "Not found" });
       res.json({ prompt: normalizePrompt(row) });
-    } catch (err) {
-      logError("prompts", "get_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "get_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -123,8 +127,9 @@ export function registerPromptRoutes(app, _ctx) {
 
       const row = db.prepare("SELECT * FROM prompts WHERE id = ?").get(req.params.id);
       res.json({ prompt: normalizePrompt(row) });
-    } catch (err) {
-      logError("prompts", "patch_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "patch_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -138,8 +143,9 @@ export function registerPromptRoutes(app, _ctx) {
       );
       logEvent("prompts", "soft_deleted", { id: req.params.id });
       res.json({ ok: true });
-    } catch (err) {
-      logError("prompts", "delete_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "delete_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -159,8 +165,9 @@ export function registerPromptRoutes(app, _ctx) {
       );
 
       res.json({ isFavorite: !!newVal, favoritedAt: newVal ? now : null });
-    } catch (err) {
-      logError("prompts", "favorite_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "favorite_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -223,8 +230,9 @@ export function registerPromptRoutes(app, _ctx) {
 
       logEvent("prompts", "imported", result);
       res.json(result);
-    } catch (err) {
-      logError("prompts", "import_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "import_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -249,8 +257,9 @@ export function registerPromptRoutes(app, _ctx) {
           isFavorite: !!p.is_favorite,
         })),
       });
-    } catch (err) {
-      logError("prompts", "export_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "export_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -262,8 +271,9 @@ export function registerPromptRoutes(app, _ctx) {
       const db = getPromptsDb();
       const rows = db.prepare("SELECT * FROM prompt_folders WHERE id NOT IN ('__root__', '__trash__') ORDER BY name COLLATE NOCASE").all();
       res.json({ folders: rows.map(normalizeFolder) });
-    } catch (err) {
-      logError("prompts", "folders_list_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "folders_list_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -284,16 +294,18 @@ export function registerPromptRoutes(app, _ctx) {
         db.prepare(
           "INSERT INTO prompt_folders (id, parent_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
         ).run(id, parent_id, name.trim(), now, now);
-      } catch (err) {
+      } catch (e) {
+        const err = errInfo(e);
         if (err.message && err.message.includes("UNIQUE constraint failed")) {
           return res.status(409).json({ error: "Folder name already exists in this parent" });
         }
-        throw err;
+        throw err.raw;
       }
 
       res.status(201).json({ folder: normalizeFolder(db.prepare("SELECT * FROM prompt_folders WHERE id = ?").get(id)) });
-    } catch (err) {
-      logError("prompts", "folder_create_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "folder_create_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -315,17 +327,19 @@ export function registerPromptRoutes(app, _ctx) {
 
       try {
         db.prepare(`UPDATE prompt_folders SET ${sets.join(", ")} WHERE id = ?`).run(...params);
-      } catch (err) {
+      } catch (e) {
+        const err = errInfo(e);
         if (err.message && err.message.includes("UNIQUE constraint failed")) {
           return res.status(409).json({ error: "Folder name already exists in this parent" });
         }
-        throw err;
+        throw err.raw;
       }
 
       const row = db.prepare("SELECT * FROM prompt_folders WHERE id = ?").get(req.params.id);
       res.json({ folder: normalizeFolder(row) });
-    } catch (err) {
-      logError("prompts", "folder_patch_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "folder_patch_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });
@@ -344,8 +358,9 @@ export function registerPromptRoutes(app, _ctx) {
       db.prepare("DELETE FROM prompt_folders WHERE id = ?").run(req.params.id);
       logEvent("prompts", "folder_deleted", { id: req.params.id, strategy });
       res.json({ ok: true });
-    } catch (err) {
-      logError("prompts", "folder_delete_error", err);
+    } catch (e) {
+      const err = errInfo(e);
+      logError("prompts", "folder_delete_error", err.raw);
       res.status(500).json({ error: err.message });
     }
   });

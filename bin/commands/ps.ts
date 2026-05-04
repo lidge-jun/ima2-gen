@@ -2,6 +2,7 @@ import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, dieWithError, color, json, table } from "../lib/output.js";
 
+import { errInfo } from "../../lib/errInfo.js";
 const SPEC = {
   flags: {
     kind:    { type: "string" },
@@ -20,7 +21,8 @@ export default async function psCmd(argv) {
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
   catch (e) {
-    if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
+    const err = errInfo(e);
+    if (args.json) json({ ok: false, error: err.message, code: err.code, status: err.status });
     dieWithError(e);
   }
 
@@ -32,7 +34,8 @@ export default async function psCmd(argv) {
   let resp;
   try { resp = await request(server.base, path); }
   catch (e) {
-    if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
+    const err = errInfo(e);
+    if (args.json) json({ ok: false, error: err.message, code: err.code, status: err.status });
     dieWithError(e);
   }
 

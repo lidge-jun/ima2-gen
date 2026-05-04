@@ -11,6 +11,7 @@ import { buildStorageDoctorLines } from "./lib/storage-doctor.js";
 import { detectCodexAuth } from "../lib/codexDetect.js";
 import { config as runtimeConfig } from "../config.js";
 
+import { errInfo } from "../lib/errInfo.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const requireFromRoot = createRequire(join(ROOT, "package.json"));
@@ -132,8 +133,9 @@ async function setup() {
 async function serve(serveArgs = []) {
   try {
     await maybePromptGithubStar();
-  } catch (err) {
-    console.error(`[ima2] Star prompt skipped: ${err?.message || err}`);
+  } catch (e) {
+    const err = errInfo(e);
+    console.error(`[ima2] Star prompt skipped: ${err.message || err.raw}`);
   }
 
   let config = loadConfig();

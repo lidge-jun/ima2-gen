@@ -10,6 +10,7 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function sendSse(res, event, data) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -252,20 +253,22 @@ export function registerMultimodeRoutes(app, ctx) {
         status,
         elapsedMs: Date.now() - startTime,
       });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
+      const ext = (err.raw && typeof err.raw === "object" ? err.raw as Record<string, unknown> : {});
       const fallbackCode = err.code || classifyUpstreamError(err.message);
       finishStatus = "error";
       finishHttpStatus = err.status || 500;
       finishErrorCode = fallbackCode || "MULTIMODE_GENERATE_FAILED";
-      logError("multimode", "error", err, { requestId, code: finishErrorCode });
+      logError("multimode", "error", err.raw, { requestId, code: finishErrorCode });
       sendSse(res, "error", {
         error: err.message,
         code: finishErrorCode,
         status: finishHttpStatus,
         requestId,
-        upstreamCode: err.upstreamCode || null,
-        upstreamType: err.upstreamType || null,
-        upstreamParam: err.upstreamParam || null,
+        upstreamCode: ext.upstreamCode || null,
+        upstreamType: ext.upstreamType || null,
+        upstreamParam: ext.upstreamParam || null,
       });
     } finally {
       finishJob(requestId, {

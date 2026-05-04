@@ -1,6 +1,7 @@
 import express from "express";
 import { createCanvasVersion, updateCanvasVersion } from "../lib/canvasVersionStore.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function decodeHeader(value) {
   if (typeof value !== "string" || !value) return null;
   try {
@@ -33,7 +34,8 @@ export function registerCanvasVersionRoutes(app, ctx) {
         buffer: getRequestBuffer(req),
       });
       res.status(201).json({ item });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({
         error: err.message,
         code: err.code || "CANVAS_VERSION_SAVE_FAILED",
@@ -54,7 +56,8 @@ export function registerCanvasVersionRoutes(app, ctx) {
         buffer: getRequestBuffer(req),
       });
       res.json({ item });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({
         error: err.message,
         code: err.code || "CANVAS_VERSION_SAVE_FAILED",

@@ -1,5 +1,6 @@
 import { listJobs, listTerminalJobs, finishJob } from "../lib/inflight.js";
 
+import { errInfo } from "../lib/errInfo.js";
 export function registerHealthRoutes(app, ctx) {
   const runtimePorts = () => ({
     backend: {
@@ -107,7 +108,8 @@ export function registerHealthRoutes(app, ctx) {
       if (usageRes.status === "fulfilled" && usageRes.value.ok) billing.credits = await usageRes.value.json();
       billing.apiKeyValid = modelsRes.status === "fulfilled" && modelsRes.value.ok === true;
       res.json(billing);
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: err.message, apiKeyValid: false });
     }
   });

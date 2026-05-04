@@ -21,6 +21,7 @@ import { configureRoutes } from "./routes/index.js";
 import { config } from "./config.js";
 import { getServerPort, listenWithPortFallback } from "./lib/runtimePorts.js";
 
+import { errInfo } from "./lib/errInfo.js";
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 async function loadApiKey() {
@@ -115,7 +116,8 @@ function advertise(ctx) {
       }),
     );
   } catch (e) {
-    console.warn("[advertise] skipped:", e.message);
+    const err = errInfo(e);
+    console.warn("[advertise] skipped:", err.message);
   }
 }
 
@@ -218,7 +220,8 @@ export async function startServer(overrides: any = {}) {
   try {
     const s = ensureDefaultSession();
     console.log(`[db] default session: ${s.id} (${s.title})`);
-  } catch (err) {
+  } catch (e) {
+    const err = errInfo(e);
     console.error("[db] bootstrap failed:", err.message);
   }
 

@@ -4,6 +4,7 @@ import { fileToDataUri, dataUriToFile, defaultOutName } from "../lib/files.js";
 import { out, die, dieWithError, color, json } from "../lib/output.js";
 import { config } from "../../config.js";
 
+import { errInfo } from "../../lib/errInfo.js";
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
 const KNOWN_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex-spark"]);
@@ -69,7 +70,8 @@ export default async function editCmd(argv) {
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
   catch (e) {
-    if (args.json) json({ ok: false, error: e.message, code: e.code, status: e.status });
+    const err = errInfo(e);
+    if (args.json) json({ ok: false, error: err.message, code: err.code, status: err.status });
     dieWithError(e);
   }
 
@@ -98,7 +100,8 @@ export default async function editCmd(argv) {
       timeoutMs,
     });
   } catch (e) {
-    if (args.json) json({ ok: false, error: e.message, code: e.code });
+    const err = errInfo(e);
+    if (args.json) json({ ok: false, error: err.message, code: err.code });
     dieWithError(e);
   }
 

@@ -4,6 +4,7 @@
 import { spawn, execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
+import { errInfo } from "../../lib/errInfo.js";
 export const isWin = process.platform === "win32";
 export const isMac = process.platform === "darwin";
 export const isLinux = !isWin && !isMac;
@@ -70,7 +71,8 @@ export function openUrl(url) {
     }
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e.message || String(e) };
+    const err = errInfo(e);
+    return { ok: false, error: err.message || String(e) };
   }
 }
 

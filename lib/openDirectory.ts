@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 
+import { errInfo } from "./errInfo.js";
 export async function openDirectory(dir, options: any = {}) {
   await mkdir(dir, { recursive: true });
   const platform = options.platform || process.platform;
@@ -38,8 +39,9 @@ export async function openDirectory(dir, options: any = {}) {
       });
       child.unref?.();
       setTimeout(() => done({ ok: true }), settleMs).unref?.();
-    } catch (err) {
-      resolve({ ok: false, error: err?.message || String(err) });
+    } catch (e) {
+      const err = errInfo(e);
+      resolve({ ok: false, error: err.message || String(err.raw) });
     }
   });
 }

@@ -3,6 +3,7 @@ import { dirname, join } from "path";
 import { config } from "../config.js";
 import { readEmbeddedImageMetadataFromFile } from "./imageMetadataStore.js";
 
+import { errInfo } from "./errInfo.js";
 async function listImageFiles(baseDir) {
   const out = [];
 
@@ -85,7 +86,8 @@ async function readImageSidecar(full, rel) {
     try {
       return JSON.parse(await readFile(candidate, "utf-8"));
     } catch (e) {
-      if (e.code !== "ENOENT") console.warn("[history] sidecar parse fail:", rel, e.message);
+      const err = errInfo(e);
+      if (err.code !== "ENOENT") console.warn("[history] sidecar parse fail:", rel, err.message);
     }
   }
   return null;
@@ -98,7 +100,8 @@ async function readImageMetadata(full, rel) {
     const embedded = await readEmbeddedImageMetadataFromFile(full);
     return embedded.metadata;
   } catch (e) {
-    if (e.code !== "ENOENT") console.warn("[history] embedded metadata read fail:", rel, e.message);
+    const err = errInfo(e);
+    if (err.code !== "ENOENT") console.warn("[history] embedded metadata read fail:", rel, err.message);
     return null;
   }
 }
@@ -157,7 +160,8 @@ async function listCardNewsSetRows(baseDir) {
         dir: dirname(manifestPath),
       });
     } catch (e) {
-      if (e.code !== "ENOENT") console.warn("[history] card-news manifest parse fail:", entry.name, e.message);
+      const err = errInfo(e);
+      if (err.code !== "ENOENT") console.warn("[history] card-news manifest parse fail:", entry.name, err.message);
     }
   }
   return rows;

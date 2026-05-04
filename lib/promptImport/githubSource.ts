@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
 
+import { errInfo } from "../errInfo.js";
 const ALLOWED_HOSTS = new Set(["github.com", "raw.githubusercontent.com"]);
 const SUPPORTED_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]+$/;
@@ -220,7 +221,8 @@ export async function fetchGitHubSource(source, limits) {
       contentHash: createHash("sha256").update(Buffer.from(buffer)).digest("hex"),
     };
   } catch (error) {
-    if (error?.name === "AbortError") {
+    const err = errInfo(error);
+    if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub fetch timed out", 504);
     }
     throw error;

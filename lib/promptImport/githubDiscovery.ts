@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { promptImportError } from "./errors.js";
 import { upsertDiscoveryCandidates } from "./discoveryRegistry.js";
 
+import { errInfo } from "../errInfo.js";
 const GITHUB_API_HOST = "api.github.com";
 const DEFAULT_DISCOVERY_SEEDS = [
   "gpt-image-2 prompt",
@@ -199,7 +200,8 @@ async function searchOneQuery(ctx, query, perPage) {
     const items = Array.isArray(data.items) ? data.items : [];
     return { items, rateLimit };
   } catch (error) {
-    if (error?.name === "AbortError") {
+    const err = errInfo(error);
+    if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub discovery timed out", 504);
     }
     throw error;

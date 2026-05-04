@@ -13,6 +13,7 @@ import {
 } from "../lib/cardNewsJobStore.js";
 import { listCardNewsSets, readCardNewsManifest, readCardNewsSetPlan } from "../lib/cardNewsManifestStore.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function sendError(res, err) {
   const status = err.status || 500;
   res.status(status).json({
@@ -48,7 +49,8 @@ function runCardNewsJob(ctx, jobId, plan) {
         },
       });
       finishCardNewsJob(jobId);
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       updateCardNewsJob(jobId, {
         status: "error",
         error: err.message || "Card News job failed",

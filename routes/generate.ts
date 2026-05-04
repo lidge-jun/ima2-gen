@@ -11,6 +11,7 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { embedImageMetadataBestEffort } from "../lib/imageMetadataStore.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
@@ -279,22 +280,24 @@ export function registerGenerateRoutes(app, ctx) {
         });
         res.json({ images, elapsed, count: images.length, requestId, ...extra });
       }
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
+      const ext = (err.raw && typeof err.raw === "object" ? err.raw as Record<string, unknown> : {});
       const fallbackCode = err.code || classifyUpstreamError(err.message);
       finishStatus = "error";
       finishHttpStatus = err.status || 500;
       finishErrorCode = fallbackCode || "GENERATE_FAILED";
-      logError("generate", "error", err, { requestId, code: finishErrorCode });
+      logError("generate", "error", err.raw, { requestId, code: finishErrorCode });
       res.status(err.status || 500).json({
         error: err.message,
         code: fallbackCode,
-        upstreamCode: err.upstreamCode || null,
-        upstreamType: err.upstreamType || null,
-        upstreamParam: err.upstreamParam || null,
-        diagnosticReason: err.diagnosticReason || null,
-        retryKind: err.retryKind || null,
-        referencesDroppedOnRetry: err.referencesDroppedOnRetry ?? null,
-        errorEventCount: err.eventCount ?? null,
+        upstreamCode: ext.upstreamCode || null,
+        upstreamType: ext.upstreamType || null,
+        upstreamParam: ext.upstreamParam || null,
+        diagnosticReason: ext.diagnosticReason || null,
+        retryKind: ext.retryKind || null,
+        referencesDroppedOnRetry: ext.referencesDroppedOnRetry ?? null,
+        errorEventCount: ext.eventCount ?? null,
         requestId,
       });
     } finally {

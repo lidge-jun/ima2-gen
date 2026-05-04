@@ -3,6 +3,7 @@ import { logEvent } from "./logger.js";
 import { classifyUpstreamError, classifyUpstreamErrorCode } from "./errorClassify.js";
 import { compressReferenceB64ForOAuth } from "./referenceImageCompress.js";
 import { detectImageMimeFromB64 } from "./refs.js";
+import { errInfo } from "./errInfo.js";
 import {
   AUTO_PROMPT_FIDELITY_SUFFIX,
   DIRECT_PROMPT_FIDELITY_SUFFIX,
@@ -229,11 +230,12 @@ async function postResponses({ ctx, provider, scope, payload, requestId, maxImag
     return contentType.includes("text/event-stream")
       ? await parseStream(res, { requestId, scope, maxImages, onPartialImage })
       : await parseJson(res, maxImages);
-  } catch (err) {
-    if (err?.name === "AbortError") {
-      throw makeError("Responses image generation timed out", { status: 504, code: "RESPONSES_IMAGE_TIMEOUT", cause: err });
+  } catch (e) {
+    const err = errInfo(e);
+    if (err.name === "AbortError") {
+      throw makeError("Responses image generation timed out", { status: 504, code: "RESPONSES_IMAGE_TIMEOUT", cause: err.raw });
     }
-    throw err;
+    throw err.raw;
   } finally {
     clearTimeout(timer);
   }

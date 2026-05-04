@@ -6,6 +6,7 @@ import { buildGitHubRawFileSource, fetchGitHubSource } from "./githubSource.js";
 import { parsePromptCandidates } from "./parsePromptCandidates.js";
 import { extractGptImageHints } from "./gptImageHints.js";
 import { rankPromptCandidates } from "./rankPromptCandidates.js";
+import { errInfo } from "../errInfo.js";
 import {
   getDefaultReviewedDiscoverySources,
   getReviewedDiscoverySource,
@@ -157,7 +158,8 @@ async function indexSource(ctx, sourceId) {
       files.push(fileIndex);
       candidates.push(...indexed);
     } catch (error) {
-      warnings.push(`${path}: ${error?.message || "index failed"}`);
+      const err = errInfo(error);
+      warnings.push(`${path}: ${err.message || "index failed"}`);
     }
   }
 

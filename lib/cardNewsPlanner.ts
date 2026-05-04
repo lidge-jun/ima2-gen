@@ -6,6 +6,7 @@ import { requestCardNewsPlannerJson } from "./cardNewsPlannerClient.js";
 import { repairPlannerOutput, validatePlannerOutput } from "./cardNewsPlannerSchema.js";
 import { waitForOAuthReady } from "./oauthProxy.js";
 
+import { errInfo } from "./errInfo.js";
 function compactText(value, fallback) {
   const text = typeof value === "string" ? value.trim() : "";
   return text || fallback;
@@ -163,7 +164,8 @@ export async function createCardNewsDraft(ctxOrInput: any = {}, maybeInput: any 
       plan: toCardNewsPlan(result.plan, input, roleTemplate),
       planner: { mode: raw.mode, model: raw.model, repaired: result.repaired },
     };
-  } catch (err) {
+  } catch (e) {
+    const err = errInfo(e);
     if (ctx.config.cardNewsPlanner.deterministicFallback) {
       return {
         plan: createDeterministicCardNewsDraft(input),
@@ -174,7 +176,7 @@ export async function createCardNewsDraft(ctxOrInput: any = {}, maybeInput: any 
         },
       };
     }
-    if (err.code) throw err;
+    if (err.code) throw err.raw;
     throw plannerError(err.message || "Planner unavailable", "PLANNER_UNAVAILABLE", 503);
   }
 }

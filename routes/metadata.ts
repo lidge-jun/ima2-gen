@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { errInfo } from "../lib/errInfo.js";
 import {
   isSupportedMetadataFormat,
   normalizeImageMetadataFormat,
@@ -61,10 +62,11 @@ export function registerMetadataRoutes(app, ctx) {
         warnings: result.warnings,
       });
     } catch (error) {
+      const err = errInfo(error);
       return res.status(400).json({
         ok: false,
-        code: error?.code || "IMAGE_METADATA_INVALID",
-        error: error?.message || "Could not read image metadata.",
+        code: err.code || "IMAGE_METADATA_INVALID",
+        error: err.message || "Could not read image metadata.",
       });
     }
   });

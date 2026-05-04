@@ -2,6 +2,7 @@ import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
 import { out, die, color, json, table, exitCodeForError } from "../lib/output.js";
 
+import { errInfo } from "../../lib/errInfo.js";
 const SPEC = {
   flags: {
     count:  { short: "n", type: "string", default: "20" },
@@ -22,7 +23,8 @@ export default async function lsCmd(argv) {
 
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    const err = errInfo(e); die(exitCodeForError(e), err.message); }
 
   const limit = parseInt(args.count) || 20;
   const qs = new URLSearchParams();
@@ -31,7 +33,8 @@ export default async function lsCmd(argv) {
   const path = `/api/history?${qs.toString()}`;
   let resp;
   try { resp = await request(server.base, path); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    const err = errInfo(e); die(exitCodeForError(e), err.message); }
 
   let items = (resp.items || resp.history || []);
   if (args.favorites) items = items.filter((it) => it.isFavorite === true);

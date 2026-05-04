@@ -2,6 +2,7 @@ import { config } from "../../config.js";
 import { logEvent } from "../logger.js";
 import { isAbortError, makeOAuthError } from "./errors.js";
 
+import { errInfo } from "../errInfo.js";
 const FALLBACK_REASONING_EFFORT = "none";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh"]);
 
@@ -79,13 +80,14 @@ export async function waitForOAuthReady(ctx: any = {}) {
 export async function fetchOAuth(url, init, { requestId, scope }: any = {}) {
   try {
     return await fetch(url, init);
-  } catch (err) {
-    if (isAbortError(err)) throw err;
-    logEvent(scope || "oauth", "proxy_unavailable", { requestId, message: err?.message });
+  } catch (e) {
+    const err = errInfo(e);
+    if (isAbortError(err.raw)) throw err.raw;
+    logEvent(scope || "oauth", "proxy_unavailable", { requestId, message: err.message });
     throw makeOAuthError("OAuth proxy is unavailable", {
       code: "OAUTH_UNAVAILABLE",
       status: 503,
-      cause: err,
+      cause: err.raw,
     });
   }
 }

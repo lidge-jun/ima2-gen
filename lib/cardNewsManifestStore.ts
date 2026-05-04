@@ -1,6 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { errInfo } from "./errInfo.js";
 export async function writeCardNewsManifest(generatedDir, manifest) {
   const dir = join(generatedDir, "cardnews", manifest.setId);
   await mkdir(dir, { recursive: true });
@@ -103,7 +104,8 @@ export async function listCardNewsSets(ctx) {
           url: cardUrl(manifest.setId || entry.name, card.imageFilename),
         })),
       });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       console.warn("[card-news] set manifest read failed", entry.name, err.message);
     }
   }

@@ -2,6 +2,7 @@ import { setJobPhase } from "../inflight.js";
 import { logEvent } from "../logger.js";
 import { makeOAuthError } from "./errors.js";
 
+import { errInfo } from "../errInfo.js";
 export function extractSseData(block) {
   let eventData = "";
   for (const line of block.split("\n")) {
@@ -98,7 +99,8 @@ export async function readImageStream(res, { requestId = null, scope = "oauth", 
           });
         }
       } catch (e) {
-        if (e.message && !e.message.startsWith("Unexpected")) throw e;
+        const err = errInfo(e);
+        if (err.message && !err.message.startsWith("Unexpected")) throw e;
         parseSkipCount++;
       }
     }
@@ -193,7 +195,8 @@ export async function readMultimodeImageStream(
           });
         }
       } catch (e) {
-        if (e.message && !e.message.startsWith("Unexpected")) throw e;
+        const err = errInfo(e);
+        if (err.message && !err.message.startsWith("Unexpected")) throw e;
         parseSkipCount++;
       }
     }

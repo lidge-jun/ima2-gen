@@ -15,6 +15,7 @@ import { generateViaResponses, editViaResponses } from "../lib/responsesImageAda
 import { isNonRetryableGenerationError, normalizeGenerationFailure } from "../lib/generationErrors.js";
 import { logEvent, logError } from "../lib/logger.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
@@ -416,16 +417,18 @@ export function registerNodeRoutes(app, ctx) {
       } else {
         res.json(payload);
       }
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
+      const ext = (err.raw && typeof err.raw === "object" ? err.raw as Record<string, unknown> : {});
       const code = err.code || classifyUpstreamError(err.message) || "NODE_GEN_FAILED";
       finishStatus = "error";
       finishHttpStatus = err.status || 500;
       finishErrorCode = code;
-      logError("node", "error", err, { requestId, code, parentNodeId, sessionId, clientNodeId });
+      logError("node", "error", err.raw, { requestId, code, parentNodeId, sessionId, clientNodeId });
       writeNodeError(res, err.status || 500, code, err.message, parentNodeId, {
-        upstreamCode: err.upstreamCode || null,
-        upstreamType: err.upstreamType || null,
-        upstreamParam: err.upstreamParam || null,
+        upstreamCode: ext.upstreamCode || null,
+        upstreamType: ext.upstreamType || null,
+        upstreamParam: ext.upstreamParam || null,
       });
     } finally {
       finishJob(requestId, {
@@ -446,7 +449,8 @@ export function registerNodeRoutes(app, ctx) {
       }
       const ext = meta?.options?.format || meta?.format || "png";
       res.json({ nodeId, meta, url: `/generated/${nodeId}.${ext}` });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({
         error: { code: err.code || "NODE_FETCH_FAILED", message: err.message },
       });

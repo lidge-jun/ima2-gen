@@ -1,5 +1,6 @@
 import { getDb } from "../lib/db.js";
 
+import { errInfo } from "../lib/errInfo.js";
 const MAX_ANNOTATION_PAYLOAD_CHARS = 256 * 1024;
 
 function getBrowserId(req) {
@@ -47,7 +48,8 @@ export function registerAnnotationRoutes(app, _ctx?: any) {
         .get(browserId, filename);
       const annotations = row ? JSON.parse(row.payload) : null;
       res.json({ annotations });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: err.message });
     }
   });
@@ -72,7 +74,8 @@ export function registerAnnotationRoutes(app, _ctx?: any) {
           updated_at = unixepoch()
       `).run(id, browserId, filename, normalized.text);
       res.json({ ok: true });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: err.message });
     }
   });
@@ -88,7 +91,8 @@ export function registerAnnotationRoutes(app, _ctx?: any) {
         .prepare("DELETE FROM image_annotations WHERE browser_id = ? AND filename = ?")
         .run(browserId, filename);
       res.json({ ok: true });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: err.message });
     }
   });

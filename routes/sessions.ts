@@ -12,6 +12,7 @@ import {
 import { extractStyleSheet } from "../lib/styleSheet.js";
 import { logError, logEvent } from "../lib/logger.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function safeJsonChars(value) {
   try {
     return JSON.stringify(value ?? null).length;
@@ -24,7 +25,8 @@ export function registerSessionRoutes(app, ctx) {
   app.get("/api/sessions", (_req, res) => {
     try {
       res.json({ sessions: listSessions() });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -38,7 +40,8 @@ export function registerSessionRoutes(app, ctx) {
         titleChars: session.title.length,
       });
       res.status(201).json({ session });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -52,7 +55,8 @@ export function registerSessionRoutes(app, ctx) {
         });
       }
       res.json({ session });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -76,7 +80,8 @@ export function registerSessionRoutes(app, ctx) {
         titleChars: title.slice(0, 200).length,
       });
       res.json({ ok: true });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -91,7 +96,8 @@ export function registerSessionRoutes(app, ctx) {
       }
       logEvent("session", "delete", { sessionId: req.params.id });
       res.json({ ok: true });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -111,7 +117,8 @@ export function registerSessionRoutes(app, ctx) {
         sheetChars: safeJsonChars(data.styleSheet),
       });
       res.json(data);
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -143,7 +150,8 @@ export function registerSessionRoutes(app, ctx) {
         sheetChars: safeJsonChars(styleSheet),
       });
       res.json({ ok: true });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -167,7 +175,8 @@ export function registerSessionRoutes(app, ctx) {
         enabled,
       });
       res.json({ ok: true, enabled });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(500).json({ error: { code: "DB_ERROR", message: err.message } });
     }
   });
@@ -213,7 +222,8 @@ export function registerSessionRoutes(app, ctx) {
         sheetChars: safeJsonChars(sheet),
       });
       res.json({ styleSheet: sheet });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       const code = err.code || "STYLE_SHEET_ERROR";
       const status =
         code === "STYLE_SHEET_NO_KEY" || code === "STYLE_SHEET_BAD_INPUT"
@@ -221,7 +231,7 @@ export function registerSessionRoutes(app, ctx) {
           : code === "STYLE_SHEET_EMPTY" || code === "STYLE_SHEET_PARSE" || code === "STYLE_SHEET_SHAPE"
             ? 422
             : 500;
-      logError("session", "stylesheet_extract_error", err, { sessionId: req.params.id, code });
+      logError("session", "stylesheet_extract_error", err.raw, { sessionId: req.params.id, code });
       res.status(status).json({ error: { code, message: err.message } });
     }
   });
@@ -268,10 +278,12 @@ export function registerSessionRoutes(app, ctx) {
         graphVersion: result.graphVersion,
       });
       res.json({ ok: true, nodes: nodes.length, edges: edges.length, graphVersion: result.graphVersion });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
+      const ext = (err.raw && typeof err.raw === "object" ? err.raw as Record<string, unknown> : {});
       const code = err.code || "DB_ERROR";
       const payload: any = { error: { code, message: err.message } };
-      if (typeof err.currentVersion === "number") payload.currentVersion = err.currentVersion;
+      if (typeof ext.currentVersion === "number") payload.currentVersion = ext.currentVersion;
       if (code === "GRAPH_VERSION_CONFLICT") {
         logEvent("session", "graph_conflict", {
           sessionId: req.params.id,
@@ -279,12 +291,12 @@ export function registerSessionRoutes(app, ctx) {
           saveReason: req.get("X-Ima2-Graph-Save-Reason") || null,
           tabId: req.get("X-Ima2-Tab-Id") || null,
           expectedVersion: Number(String(req.get("If-Match") || "").replace(/"/g, "")),
-          currentVersion: err.currentVersion ?? null,
+          currentVersion: ext.currentVersion ?? null,
           nodes: Array.isArray(req.body?.nodes) ? req.body.nodes.length : null,
           edges: Array.isArray(req.body?.edges) ? req.body.edges.length : null,
         });
       } else {
-        logError("session", "graph_error", err, { sessionId: req.params.id, code });
+        logError("session", "graph_error", err.raw, { sessionId: req.params.id, code });
       }
       res.status(err.status || 500).json(payload);
     }

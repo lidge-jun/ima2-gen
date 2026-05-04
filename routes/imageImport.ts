@@ -1,6 +1,7 @@
 import express from "express";
 import { createLocalImport } from "../lib/localImportStore.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function decodeHeader(value) {
   if (typeof value !== "string" || !value) return null;
   try {
@@ -23,7 +24,8 @@ export function registerImageImportRoutes(app, ctx) {
         originalFilename: decodeHeader(req.headers["x-ima2-original-filename"]),
       });
       res.status(201).json({ item });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       res.status(err.status || 500).json({
         error: err.message,
         code: err.code || "IMPORT_FAILED",

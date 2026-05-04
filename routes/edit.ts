@@ -9,6 +9,7 @@ import { startJob, finishJob } from "../lib/inflight.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { hasPngAlphaChannel, parsePngInfo } from "../lib/pngInfo.js";
 
+import { errInfo } from "../lib/errInfo.js";
 function validateModeration(ctx, moderation) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
@@ -211,12 +212,13 @@ export function registerEditRoutes(app, ctx) {
         webSearchCalls,
         webSearchEnabled,
       });
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       const fallbackCode = err.code || classifyUpstreamError(err.message);
       finishStatus = "error";
       finishHttpStatus = err.status || 500;
       finishErrorCode = fallbackCode || "EDIT_FAILED";
-      logError("edit", "error", err, { requestId, code: finishErrorCode });
+      logError("edit", "error", err.raw, { requestId, code: finishErrorCode });
       res.status(err.status || 500).json({ error: err.message, code: fallbackCode });
     } finally {
       finishJob(requestId, {

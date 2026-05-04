@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { errInfo } from "./errInfo.js";
 const HOME = homedir();
 
 export function codexAuthPaths() {
@@ -40,10 +41,11 @@ export function codexLoginStatus(timeoutMs = 2000) {
         windowsHide: true,
       });
       return "authed";
-    } catch (err) {
-      if (err && err.code === "ENOENT") continue;
+    } catch (e) {
+      const err = errInfo(e);
+      if (err.raw && err.code === "ENOENT") continue;
       // non-zero exit = binary exists but not authed
-      if (err && typeof err.status === "number") return "unauthed";
+      if (err.raw && typeof err.status === "number") return "unauthed";
     }
   }
   return "missing";

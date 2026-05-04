@@ -5,6 +5,7 @@ import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { fileToDataUri } from "../lib/files.js";
 import { config } from "../../config.js";
 
+import { errInfo } from "../../lib/errInfo.js";
 const SPEC = {
   flags: {
     json:   { type: "boolean" },
@@ -23,11 +24,13 @@ export default async function showCmd(argv) {
 
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    const err = errInfo(e); die(exitCodeForError(e), err.message); }
 
   let resp;
   try { resp = await request(server.base, "/api/history"); }
-  catch (e) { die(exitCodeForError(e), e.message); }
+  catch (e) {
+    const err = errInfo(e); die(exitCodeForError(e), err.message); }
 
   const items = resp.items || resp.history || [];
   const item = items.find((it) => it.filename === name || (it.filename && it.filename.endsWith(name)));

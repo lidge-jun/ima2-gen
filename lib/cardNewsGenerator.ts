@@ -5,6 +5,7 @@ import { generateViaOAuth } from "./oauthProxy.js";
 import { readTemplateBaseB64 } from "./cardNewsTemplateStore.js";
 import { writeCardNewsManifest, writeCardSidecar } from "./cardNewsManifestStore.js";
 
+import { errInfo } from "./errInfo.js";
 function formatRenderedTextInstruction(textFields = []) {
   const visible = (Array.isArray(textFields) ? textFields : [])
     .filter((field) => field?.renderMode === "in-image" && field.text);
@@ -98,7 +99,8 @@ export async function generateCardNewsSet(ctx, input, options: any = {}) {
       } else {
         await writeFile(join(dir, imageFilename), Buffer.from(result.b64, "base64"));
       }
-    } catch (err) {
+    } catch (e) {
+      const err = errInfo(e);
       error = { code: err.code || "CARD_NEWS_CARD_FAILED", message: err.message || "Card generation failed" };
     }
     const sidecar = {
