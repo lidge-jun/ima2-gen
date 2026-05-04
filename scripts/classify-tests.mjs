@@ -8,7 +8,9 @@
 //                       (used after Phase 2 to lock the conversion in).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
+
+const join = (...parts) => parts.join("/");
 
 const check = process.argv.includes("--check");
 const failJsRuntime = process.argv.includes("--fail-js-runtime");
