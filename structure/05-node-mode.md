@@ -90,7 +90,9 @@ Root node generation requests use `postNodeGenerateStream()` and ask the server 
 
 Each node request writes `requestId` into the node sidecar and `/api/history`. Recovery uses `pendingRequestId ?? recoveryRequestId` first, then falls back to `(sessionId, clientNodeId, createdAt)`. This avoids accidentally attaching an older retry result after reload or HMR. Active inflight jobs are persisted in SQLite so a server restart or UI reload can still expose enough metadata for the UI to reconcile instead of relying only on process memory.
 
-Pending and reconciling cards use a transform-only rotating border glow. Reduced-motion users keep the static glow without rotation.
+Concurrent generate calls on the same `clientNodeId` are deduped by an in-flight lock (commit 73f228e + `tests/node-generation-lock-contract.test.js`): the second caller does not double-fire upstream — it observes the same in-flight job and reuses the result on completion. This protects against double-clicks on the node action bar and accidental keyboard-repeat triggers from producing duplicate sidecar/history rows.
+
+Pending and reconciling cards use a transform-only rotating border glow. Reduced-motion users keep the static glow without rotation. The node action bar wraps onto a second line when a card is too narrow to fit all action buttons (commit ef1e60f) so primary actions stay reachable on mobile/zoomed-out canvases.
 
 ## Selection Batch Generation
 
@@ -205,6 +207,7 @@ Node sidecar metadata and `/api/history` rows expose `refsCount`, a numeric coun
 - 2026-04-27: Documented four-direction React Flow handles, handle-id session persistence, and the reconnect fix after edge disconnect.
 - 2026-04-28: Refreshed cross-references after the 1.1.5 prompt library, image metadata, and dev-only card-news additions; node-mode contracts in this document remain unchanged.
 - 2026-04-30: Updated wording around the TypeScript migration close (#24); node-mode contracts in this document remain unchanged.
+- 2026-05-06: Documented `/api/node/generate` concurrent-call dedupe (commit 73f228e + `tests/node-generation-lock-contract.test.js`) and node action-bar wrap on narrow cards (commit ef1e60f). Other node-mode contracts remain unchanged.
 
 Previous document: `[[04-frontend-architecture]]`
 

@@ -53,7 +53,7 @@ persists, reboot and run the update before starting ima2 again.
 - **Node mode**: branch a good image into multiple directions without losing the original.
 - **Multimode batches**: launch several Classic outputs from one prompt, watch slot-by-slot progress, and continue from the best result.
 - **Canvas Mode**: zoom, pan, annotate, erase, clean backgrounds, keep transparent previews, and export either alpha or matte-backed versions.
-- **Local gallery**: keep generated assets on your machine with session-aware history.
+- **Local gallery**: keep generated assets on your machine with session-aware history. By default the gallery shows the current session and an All Images toggle reveals the full history; the default scope is sticky across sessions.
 - **Reference images**: drag, drop, paste, and attach up to 5 references; large images are compressed before upload.
 - **Prompt library imports**: import local prompt packs, GitHub folders, and curated GPT-image prompt hints into the built-in prompt library.
 - **Mobile shell**: use the app bar, compose sheet, and compact settings toggle on smaller screens.
@@ -196,6 +196,11 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_LOG_LEVEL` | `warn` | Normal serve defaults to `warn`; dev mode defaults to `debug`; supports `debug`, `info`, `warn`, `error`, or `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `30000` | Recent terminal job retention for debug views |
 | `OPENAI_API_KEY` | — | API key for the `provider: "api"` Responses API image path and auxiliary API-key features |
+| `IMA2_API_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Default image model for `provider: "api"` |
+| `IMA2_API_REASONING_EFFORT` | `low` | Default reasoning effort for `provider: "api"` |
+| `IMA2_API_IMAGE_SIZE` | `1024x1024` | Default size for `provider: "api"` |
+| `IMA2_API_ALLOW_WEB_SEARCH` | `true` | Toggle web search for `provider: "api"` |
+| `IMA2_OAUTH_MASKED_EDIT_ENABLED` | `false` | Opt-in feature flag for masked-edit requests on the OAuth path (#31, groundwork only) |
 
 ### Logging modes
 

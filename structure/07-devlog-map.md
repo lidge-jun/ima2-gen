@@ -46,16 +46,18 @@ graph TD
 | `devlog/_plan/260429_issue39-gallery-delete-semantics/` | planned/post-TS | #39 soft/permanent delete semantics. |
 | `devlog/_plan/260429_issue40-viewer-lightbox/` | planned/post-TS | #40 viewer lightbox. |
 | `devlog/_plan/260429_issue41-generation-activity-log/` | planned/post-TS | #41 generation passive failure feedback/activity log. |
-| `devlog/_plan/260429_issue42-gallery-current-session-default/` | planned/post-TS | #42 current-session Gallery default. |
-| `devlog/_plan/260429_issue43-settings-persistence-audit/` | planned/post-TS | #43 persisted settings audit. |
+| `devlog/_plan/260429_issue42-gallery-current-session-default/` | shipped 2026-05-06 | #42 current-session Gallery default with All Images toggle (commit bbf9b08). |
+| `devlog/_plan/260429_issue43-settings-persistence-audit/` | shipped 2026-05-06 | #43 persisted settings audit; landed `ui/src/store/persistenceRegistry.ts` (commit 246696d) and persistence harden (commit 5e3aed3). |
 | `devlog/_plan/260429_issue46-blank-canvas-paint-to-ai/` | planned | #46 Canvas Mode blank canvas Paint-to-AI entry. |
 | `devlog/_plan/260429_issue47-inflight-reload-reconcile/` | active | #47 inflight reload reconcile plan. |
 | `devlog/_plan/260429_issue48-prompt-import-search-ux/` | planned | #48 prompt import search UX workspace improvements. |
-| `devlog/_plan/260430_issue24-typescript-strict-cleanup/` | observe | #24 TS strict-only cleanup observation. |
+| `devlog/_plan/260430_issue24-typescript-strict-cleanup/` | shipped via #50 | #24 TS strict-only cleanup; follow-up landed in 7367333 (split `lib/oauthProxy.ts` into `lib/oauthProxy/*`, added `lib/runtimeContext.ts` etc.). |
 | `devlog/_plan/260430_issue27-canvas-svg-export/` | planned | #27 Canvas annotation SVG/vector export. |
 | `devlog/_plan/260430_issue28-canvas-pptx-export/` | planned | #28 Canvas LayerDocument → PPTX reconstruction. |
-| `devlog/_plan/260430_issue31-provider-masked-edit/` | planned | #31 provider-backed masked edit capability gate. |
-| `devlog/_plan/260430_issue49-api-provider-responses/` | planned | #49 `provider:"api"` Responses image_generation backend. |
+| `devlog/_plan/260430_issue31-provider-masked-edit/` | groundwork shipped | #31 provider-backed masked edit; feature flag `IMA2_OAUTH_MASKED_EDIT_ENABLED` landed in commit c7e75c0 (off by default). |
+| `devlog/_plan/260430_issue49-api-provider-responses/` | shipped 2026-05-06 | #49 `provider:"api"` Responses image_generation backend (commit b8205fe + `lib/responsesImageAdapter.ts`); parity locked by `tests/api-provider-parity.test.ts`. |
+| `devlog/_plan/260503_error-toast-stack/` | shipped 2026-05-06 | Error toast stacking at the bottom-right with per-toast dismissal (commit 78cb6d4). |
+| `devlog/_plan/typescript-strict-and-runtime-migration/` | reference | TS strict + runtime migration plan tree (P00–P09). #50 (7367333) is the follow-up that landed P03/P04/P07. |
 | `devlog/_future/0.99_future-deferred-ops/0.09.19-security-hardening/PRD.md` | deferred | Opt-in security hardening proposal |
 | `devlog/_future/0.99_future-deferred-ops/0.09.20-containerization/PRD.md` | deferred | Docker/containerization proposal |
 | `devlog/_fin/260428_0.09.42-/` | archived | 0.09.42 closeout. |
@@ -178,6 +180,7 @@ Structure docs do not replace devlog. They normalize devlog decisions against th
 - 2026-04-29: Archived `0.26-app-weight-reduction` into `_fin/260429_app-weight-reduction` after Phase C closeout verification. Next post-TS active implementation lane is #37 mobile settings workspace.
 - 2026-04-30: Refreshed the active lane to match the working tree — added `0.20-card-news`, `0.24-canvas-mode`, `260429_blank_canvas_paint_to_ai`, `260429_canvas_continue_prompt_block`, `260429_prompt_import_search_ux`, `260429_issue45-cli-feature-parity`, and `260429_issue47-inflight-reload-reconcile`. Recorded the new `_fin` archives for `260428_0.09.42-`, `260428_0.09.43-`, `260428_0.09.49-`, `260428_0.20-card-news-`, `260428_0.23-prompt-library-`, and `260428_1.1.5-windows-open-folder-fix`. CLI feature-parity #45 (commit 9698fc1) is shipped; Canvas Mode workspace split (#11bc214) lives under the active `0.24-canvas-mode/` plan.
 - 2026-04-30 (naming-standard pass): renamed `_plan/` folders to the `YYMMDD_issue<NN>-<slug>` / `YYMMDD_<slug>` standard. `0.09.41-censorship-bypass` → `260428_censorship-bypass-research`. `0.20-card-news` → `260426_card-news-smoke-qa-harness`. `0.99_future` moved out to `devlog/_future/0.99_future-deferred-ops/`. The four `260428_0.09.45..0.09.48-*` folders consolidated into `260428_issue33-mobile-overhaul-logs/` (PHASE-NN subdocs). `260429_blank_canvas_paint_to_ai` → `260429_issue46-blank-canvas-paint-to-ai`. `260429_community_ux_split` → `260429_community-ux-split-triage`. New issues #48 and #49 filed for `260429_issue48-prompt-import-search-ux` and `260430_issue49-api-provider-responses` respectively.
+- 2026-05-06: Added `_plan/260503_error-toast-stack/` (shipped 2026-05-06, commit 78cb6d4). Marked #42 (`260429_issue42-gallery-current-session-default`), #43 (`260429_issue43-settings-persistence-audit`), and #49 (`260430_issue49-api-provider-responses`) as shipped, and #31 (`260430_issue31-provider-masked-edit`) as groundwork-shipped behind the `IMA2_OAUTH_MASKED_EDIT_ENABLED` flag. Noted that `_plan/260430_issue24-typescript-strict-cleanup/` shipped via PR #50 (commit 7367333) — split `lib/oauthProxy.ts` into `lib/oauthProxy/*` and added `lib/runtimeContext.ts` / `lib/responsesImageAdapter.ts` / `lib/providerOptions.ts` / `lib/errInfo.ts`. v1.1.9 (commit 6e82357) and v1.1.10 (commit 8855ef0) released.
 
 Previous document: `[[06-infra-operations]]`
 

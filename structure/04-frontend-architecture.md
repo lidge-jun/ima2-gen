@@ -14,6 +14,8 @@ Start UI work at `App.tsx` to understand how classic canvas and node canvas dive
 
 Snapshot note, 2026-04-30: mobile UI has dedicated components (`MobileAppBar`, `MobileComposeSheet`, `MobileSettingsToggle`) and hooks (`useIsMobile`, `useVisualViewportInset`). Canvas Mode UI has been split out of a single component (`refactor(ui): split canvas mode workspace`, commit 11bc214) into `ui/src/components/canvas-mode/` (~3300 lines across 23 files), with `CanvasModeWorkspace.tsx` (498) as the shell, `CanvasToolbar.tsx` (468) for tools, and `useCanvasBackgroundCleanup.ts` (454) for the dual-mask cleanup flow. Background cleanup preview work has stale-render cancellation/debounce guards while final apply/export paths preserve natural image dimensions. Multimode sequence preview (`MultimodeSequencePreview`), web-search/reasoning-effort controls (`WebSearchToggle`, `ReasoningEffortSelect`), trash undo (`TrashUndoToast`), and history strip (`HistoryStrip` + layout toggle) are all part of the active component surface. There is no separate `ui/src/lib/imageMetadataClient.ts`; metadata restore calls live in `ui/src/lib/api.ts`.
 
+Snapshot note, 2026-05-06: gallery now defaults to the current session with an "All Images" toggle (#42, commit bbf9b08). The store exposes `galleryScope: "current-session" | "all"`, `galleryDefaultScope`, and matching setters; opening the gallery resets `galleryScope` to `galleryDefaultScope` so the default is sticky across sessions. All `ima2.*` localStorage key names — including `ima2.galleryScope` and `ima2.galleryDefaultScope` — are now centralized in `ui/src/store/persistenceRegistry.ts` (#43, commit 246696d), preventing drift between hydration helpers and setters; settings/canvas persistence hardening (commit 5e3aed3) consumes the same registry. Error toasts now stack at the bottom-right with per-toast dismissal instead of replacing each other (commit 78cb6d4 + `tests/toast-stack-contract.test.js`); `Toast.tsx` is the renderer and the store keeps an array of error entries. Mobile compose/settings flows received UX polish (commits ad78853 / c812598) with an explicit mobile generate entry (`tests/mobile-generate-entry-contract.test.js`). Reasoning-effort controls are disabled for image-only models (commit 18b9123). `useAppStore.ts` grew to 3715 lines.
+
 ---
 
 ## Render Flow
@@ -61,21 +63,21 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 |---|---|---|
 | Generation options | `useAppStore.ts` | Provider, quality, size, format, moderation, image model, count |
 | Prompt/reference | `useAppStore.ts` | Prompt, reference images, add/remove/clear helpers |
-| Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery, favorite toggle |
+| Classic history | `useAppStore.ts` plus `/api/history` | Current image, history, gallery scope (`current-session` / `all`), gallery default scope, favorite toggle |
 | Inflight | `useAppStore.ts` plus `/api/inflight` | localStorage-backed pending jobs and polling |
 | Node graph | `useAppStore.ts` plus sessions API | Nodes, edges, graphVersion, session actions, style sheet |
 | Prompt library | `useAppStore.ts` plus `/api/prompts/*` | Open/close, current folder, search query, favorite filter, in-flight loading |
 | Metadata restore | `useAppStore.ts` plus `/api/metadata/read` | Pending dropped image, parsed metadata, restore confirmation flow |
 | Card-news (dev-only) | `ui/src/store/cardNewsStore.ts` plus `/api/cardnews/*` | Topic/draft/template selection, manifest, jobs, regenerate/export state |
 | Settings workspace | `useAppStore.ts` | `settingsOpen` and active settings section |
-| UI preferences | `localStorage` | Right panel state, UI mode, selected filename, locale, theme, custom-size slots, dev mode flag |
-| Error surface | `useAppStore.ts` plus `ErrorCard.tsx` | `errorCard` state for actionable errors; toast remains for small errors |
+| UI preferences | `localStorage` via `ui/src/store/persistenceRegistry.ts` | Right panel state, UI mode, selected filename, locale, theme, custom-size slots, dev mode flag, gallery scope/default scope, settings persistence — all key names live in `persistenceRegistry.ts` (#43) |
+| Error surface | `useAppStore.ts` plus `ErrorCard.tsx`, `Toast.tsx` | `errorCard` state for actionable errors; toasts are stacked at the bottom-right with per-toast dismissal (commit 78cb6d4) |
 
 The image model preference is stored in `localStorage` as `ima2.imageModel`. Sidebar compact labels (`5.4m`, `5.4`, `5.5`) and Settings full labels (`GPT-5.4 Mini`, `GPT-5.4`, `GPT-5.5`) both read/write the same store field, so the next classic or node request sends the selected `model` instead of falling back to the default. The sidebar selector is intentionally tiny: the closed state shows only the compact label, opens a custom menu on click, and closes on outside click or Escape.
 
 Visible metadata should carry the selected model too. Current result metadata, hydrated history items, and ready node status labels use the server-returned or sidecar-restored `model` so UI debugging matches backend logs. The visible metadata uses compact aliases to preserve elapsed time: model aliases are `5.4m`/`5.4`/`5.5`, and quality aliases are `l`/`m`/`h`.
 
-`useAppStore.ts` is now 3555 lines and concentrates most cross-cutting state (classic, node, history, prompt library, metadata restore, multimode sequence, canvas annotations and versions, web-search and reasoning-effort settings, settings, toasts). The card-news store is intentionally separated into `cardNewsStore.ts` (416 lines) so the dev-only feature does not bloat the main bundle path or persistence layer.
+`useAppStore.ts` is now 3715 lines and concentrates most cross-cutting state (classic, node, history, gallery scope, prompt library, metadata restore, multimode sequence, canvas annotations and versions, web-search and reasoning-effort settings, settings, stacked toasts). The card-news store is intentionally separated into `cardNewsStore.ts` (416 lines) so the dev-only feature does not bloat the main bundle path or persistence layer. All `ima2.*` localStorage key names are sourced from `ui/src/store/persistenceRegistry.ts` (74 lines, #43) so hydration helpers, setters, and contract tests stay aligned.
 
 ## API Client
 
@@ -163,6 +165,7 @@ Error handling is centralized. API helpers preserve `err.code` where the server 
 - 2026-04-28: Documented PR3 GitHub folder browse through `PromptImportFolderSection`, selected-file preview, and folder list/preview API helpers.
 - 2026-04-28: Documented PR4 GitHub discovery through `PromptImportDiscoverySection`; discovery candidates stay separate from prompt candidates and cannot be committed directly.
 - 2026-04-30: Documented the Canvas Mode workspace split (`refactor(ui): split canvas mode workspace`, #11bc214) into `ui/src/components/canvas-mode/` (~3300 lines, 23 files), refreshed `useAppStore.ts` to 3555 and `index.css` to 5780, and called out multimode preview, web-search/reasoning-effort controls, trash undo, and the history strip as active surfaces.
+- 2026-05-06: Added gallery scope state (#42 — `current-session` default with All Images toggle, sticky default), the `persistenceRegistry.ts` single source of truth for `ima2.*` localStorage keys (#43), error-toast stacking with per-toast dismissal (commit 78cb6d4), mobile compose/settings polish (commits ad78853 / c812598) plus the mobile generate entry contract, and the reasoning-effort disable for image-only models (commit 18b9123). Bumped `useAppStore.ts` to 3715.
 
 Previous document: `[[03-server-api]]`
 

@@ -129,7 +129,20 @@ routes/
 | `lib/storageMigration.ts` | 284 | Legacy generated-folder scan and migration support |
 | `lib/runtimePorts.ts` | 93 | Port probing, fallback binding, and OAuth ready URL parsing |
 | `lib/oauthLauncher.ts` | 64 | OAuth proxy child process startup and actual ready-port capture |
-| `lib/oauthProxy.ts` | 986 | OAuth Responses proxy helpers, generate/edit/multimode streaming, web-search and reasoning-effort plumbing, upstream 4xx parsing, optional edit search, safe stream diagnostics |
+| `lib/oauthProxy.ts` | 3 | Re-export shim for the `lib/oauthProxy/` subtree (kept for callers that imported the original module path) |
+| `lib/oauthProxy/index.ts` | n/a | Public surface — re-exports generators, streams, prompts, references, runtime, and shared types |
+| `lib/oauthProxy/generators.ts` | n/a | Generate/edit/multimode OAuth Responses request builders, masked-edit guard (`maskedEditEnabled`), upstream 4xx parsing |
+| `lib/oauthProxy/streams.ts` | n/a | SSE/event-stream helpers and safe stream diagnostics |
+| `lib/oauthProxy/prompts.ts` | n/a | Prompt assembly with injected `SAFETY_INTENT_POLICY` from `lib/promptSafetyPolicy.ts` |
+| `lib/oauthProxy/references.ts` | n/a | Reference image preparation and validation for the OAuth path |
+| `lib/oauthProxy/runtime.ts` | n/a | OAuth runtime context and request execution |
+| `lib/oauthProxy/errors.ts` | n/a | OAuth-specific error codes and normalization |
+| `lib/oauthProxy/types.ts` | n/a | Shared OAuth proxy types (re-exported from `index`) |
+| `lib/promptSafetyPolicy.ts` | 5 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
+| `lib/responsesImageAdapter.ts` | n/a | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node (#49) |
+| `lib/providerOptions.ts` | n/a | Per-provider option assembly (model, size, reasoning effort, web search) |
+| `lib/runtimeContext.ts` | n/a | Per-request runtime context plumbing for routes and lib helpers |
+| `lib/errInfo.ts` | n/a | Error info shape and helpers shared across routes/lib |
 | `lib/oauthNormalize.ts` | 30 | Upstream OAuth response field normalization |
 | `lib/openDirectory.ts` | 45 | Cross-platform open of the generated directory (used by `/api/storage/open-generated-dir`) |
 | `lib/refs.ts` | 117 | Reference image validation, count/size limits |
@@ -168,7 +181,8 @@ routes/
 | Entry | `ui/src/main.tsx` | 10 | React mount |
 | Types | `ui/src/types.ts` | 206 | Provider, quality, size, image model, theme family, embedded metadata, response types, web-search, reasoning effort, multimode |
 | Canvas types | `ui/src/types/canvas.ts` | n/a | Canvas Mode shared types (annotations, versions, masks, brushes) |
-| Store | `ui/src/store/useAppStore.ts` | 3555 | Zustand state for classic, node, sessions, history, in-flight jobs, errors, storage, themes, custom size, node batch selection, directional edge handles, edge disconnect, node references, node regeneration, prompt library, metadata restore, web-search/reasoning-effort settings, multimode sequence, canvas annotations and versions |
+| Store | `ui/src/store/useAppStore.ts` | 3715 | Zustand state for classic, node, sessions, history, in-flight jobs, errors (stacked), storage, themes, custom size, node batch selection, directional edge handles, edge disconnect, node references, node regeneration, prompt library, metadata restore, web-search/reasoning-effort settings, multimode sequence, canvas annotations and versions, gallery scope (`current-session` / `all`) and gallery default scope (#42) |
+| Persistence registry | `ui/src/store/persistenceRegistry.ts` | 74 | Single source of truth for `ima2.*` localStorage key names — covers gallery scope, gallery default scope, settings, and theme keys; prevents drift between hydration helpers and setters (#43) |
 | Card-news store | `ui/src/store/cardNewsStore.ts` | 416 | Card-news plan, role/image template selection, planner draft, job polling, regenerate actions |
 | Mode/dev gates | `ui/src/lib/devMode.ts` | 10 | `IS_DEV_UI`, `ENABLE_NODE_MODE`, `ENABLE_CARD_NEWS_MODE` build-time flags |
 | API client | `ui/src/lib/api.ts` | 992 | Browser-side REST client: generate, edit, multimode, history, sessions, storage, prompts, prompt folders, prompt import preview/commit, curated search, GitHub folder browse/preview, image metadata read, annotations, canvas versions, comfy export |
@@ -257,7 +271,7 @@ routes/
 
 ## Test Map
 
-The `tests/` directory now contains roughly 114 `*.test.js` / `*.test.mjs` files (plus a handful of `*-contract.test.js` and harness `.mjs` files). The table below highlights representative contracts only — for the authoritative list, run `ls tests/`. New since the previous snapshot include canvas-mode contracts (annotation, blank canvas, brush, dual-mask cleanup, escape close, exporter, hit test, import-export, masks, merge), `comfy-bridge.test.js`, multimode-* contracts, gallery shortcut tests, `inflight-reload-reconcile.test.js`, `local-import-contract.test.js`, `png-info-contract.test.js`, `web-search-toggle-contract.test.js`, `settings-workspace-layout-contract.test.js`, `history-permanent-delete.test.js`, and `app-weight-splitting.test.js`.
+The `tests/` directory now contains roughly 125 `*.test.js` / `*.test.mjs` / `*.test.ts` files (plus a handful of `*-contract.test.js` and harness `.mjs` files). The table below highlights representative contracts only — for the authoritative list, run `ls tests/`. New since the previous snapshot include `api-provider-parity.test.ts` (#49 — API-key Responses parity for generate/edit/multimode/node), `oauth-masked-edit-contract.test.js` (#31 masked-edit feature flag groundwork), `gallery-session-scope-contract.test.js` and `gallery-shortcuts-visible-domain-contract.test.js` (#42), `settings-persistence-contract.test.js` (#43 + persistence harden), `toast-stack-contract.test.js` (stacked error toasts), `node-generation-lock-contract.test.js` (concurrent-generate dedupe), `mobile-generate-entry-contract.test.js` (mobile compose), `prompt-import-search-ux-contract.test.js`, `inflight-reload-reconcile-contract.test.js` and `inflight-reload-race.test.js` (#47), plus the canvas-mode contract suite carried forward from the previous snapshot.
 
 | Test | Lines | Contract covered |
 |---|---:|---|
@@ -368,6 +382,7 @@ The `tests/` directory now contains roughly 114 `*.test.js` / `*.test.mjs` files
 - 2026-04-28: Added PR2 curated prompt source registry, file-based prompt index/cache, gpt-image-2 hint extraction, curated search/refresh endpoints, and updated prompt import UI ownership.
 - 2026-04-28: Added prompt library (`routes/prompts.js`, `lib/db.js` migrations, prompt UI), image metadata embed/restore (`lib/imageMetadata*.js`, `routes/metadata.js`), card-news cluster (`routes/cardNews.js`, `lib/cardNews*.js`, `ui/src/components/card-news/*`, `ui/src/store/cardNewsStore.ts`), and refreshed line counts/test map for ima2-gen 1.1.5.
 - 2026-04-30: Closed out the TypeScript migration — switched core/route/lib/bin tables from `.js` to `.ts` source paths and updated line counts. Added `routes/multimode.ts`, `routes/annotations.ts`, `routes/canvasVersions.ts`, `routes/comfy.ts`, `lib/canvasVersionStore.ts`, `lib/comfyBridge.ts`, `lib/pngInfo.ts`, `lib/systemTrash.ts`, `bin/lib/sse.ts`, `bin/lib/browser-id.ts`. Documented the CLI feature-parity #45 surface (annotate, canvas-versions, cardnews, comfy, config, history, inflight, metadata, multimode, node, oauth, prompt, providers, session, storage, billing). Added the `ui/src/components/canvas-mode/*` subtree (~3300 lines), mobile shell components, multimode preview, web-search/reasoning controls, and `ui/src/lib/canvas/*`. Bumped `useAppStore.ts` to 3555, `index.css` to 5780, `lib/oauthProxy.ts` to 986, `lib/api.ts` to 992, hooks total to 882, i18n to 1811. Refreshed test map intro to reflect ~114 tests with new canvas-mode/multimode/import/comfy contracts.
+- 2026-05-06: Replaced the monolithic `lib/oauthProxy.ts` row with the `lib/oauthProxy/*` subtree (`generators`, `streams`, `prompts`, `references`, `runtime`, `errors`, `types`, `index`); kept `lib/oauthProxy.ts` as a re-export shim. Added `lib/promptSafetyPolicy.ts`, `lib/responsesImageAdapter.ts`, `lib/providerOptions.ts`, `lib/runtimeContext.ts`, `lib/errInfo.ts`. Added `ui/src/store/persistenceRegistry.ts` as the single source of truth for `ima2.*` localStorage keys (#43) and bumped `ui/src/store/useAppStore.ts` to 3715 lines to cover gallery scope (#42). Refreshed the test-map intro to ~125 entries listing `api-provider-parity`, `oauth-masked-edit`, `gallery-session-scope`, `gallery-shortcuts-visible-domain`, `settings-persistence`, `toast-stack`, `node-generation-lock`, `mobile-generate-entry`, `prompt-import-search-ux`, and the inflight-reload pair (#47).
 
 Previous document: `[[00-structure-hub]]`
 

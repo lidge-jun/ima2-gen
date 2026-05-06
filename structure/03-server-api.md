@@ -68,7 +68,11 @@ Runtime responses expose configured and actual ports separately. The backend can
 
 Image generation model selection is explicit. If omitted, the server defaults to `gpt-5.4-mini`. Supported image models are `gpt-5.4-mini`, `gpt-5.4`, and `gpt-5.5`. `gpt-5.3-codex-spark` can appear in OAuth model status, but it does not support the `image_generation` tool, so generation endpoints reject it with `IMAGE_MODEL_UNSUPPORTED` before calling OAuth.
 
-For `provider: "api"`, missing options use `config.apiProvider` defaults: `gpt-5.4-mini`, `low` reasoning effort, `1024x1024`, and web search enabled. Validated request options still pass through. Masked edits are sent as mask/selection guidance; callers should not treat them as pixel-perfect inpainting.
+For `provider: "api"`, missing options use `config.apiProvider` defaults: `gpt-5.4-mini`, `low` reasoning effort, `1024x1024`, and web search enabled. These defaults are overridable via `apiProvider.*` config or the `IMA2_API_IMAGE_MODEL_DEFAULT`, `IMA2_API_REASONING_EFFORT`, `IMA2_API_IMAGE_SIZE`, and `IMA2_API_ALLOW_WEB_SEARCH` env vars (see `06-infra-operations`). Validated request options still pass through. The API-key path uses `lib/responsesImageAdapter.ts` to mirror the OAuth Responses payload, including reasoning-effort, web-search, and reference-image plumbing — `tests/api-provider-parity.test.ts` (#49) locks the parity contract for generate/edit/multimode/node.
+
+Masked edits are sent as mask/selection guidance; callers should not treat them as pixel-perfect inpainting. The OAuth path additionally honours a feature flag, `config.oauth.maskedEditEnabled` (env: `IMA2_OAUTH_MASKED_EDIT_ENABLED`, default off) — when a mask is present and the flag is disabled, `lib/oauthProxy/generators.ts` rejects the request before calling upstream so masked edits stay opt-in until #31 ships in full. `tests/oauth-masked-edit-contract.test.js` covers the flag.
+
+Prompt assembly for the OAuth path injects a short safety intent policy (`SAFETY_INTENT_POLICY` from `lib/promptSafetyPolicy.ts`) into the `lib/oauthProxy/prompts.ts` builder for generate/edit/multimode. The same constant is reused by the API-key Responses adapter so both providers send the same intent guardrails.
 
 ## History And Asset Lifecycle
 
@@ -279,6 +283,7 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - 2026-04-28: Added session style-sheet endpoints, `/api/history/favorite`, `/api/metadata/read`, prompt library CRUD/folders/import/export, and dev-gated card-news API surface for ima2-gen 1.1.5.
 - 2026-04-30: Added `DELETE /api/history/:filename/permanent`, switched all `lib/*` and `routes/*` references to `.ts` source paths after the TypeScript migration close, and clarified that soft-delete now routes through `lib/systemTrash.ts` (OS trash) instead of `.trash/`.
 - 2026-04-28: Added PR2 prompt import curated-source, curated-search, and curated-refresh API contracts plus file-cache and tag-based attribution notes.
+- 2026-05-06: Documented API-key Responses parity for generate/edit/multimode/node (#49) via `lib/responsesImageAdapter.ts` and the `IMA2_API_*` env defaults; documented the `IMA2_OAUTH_MASKED_EDIT_ENABLED` feature flag and its `lib/oauthProxy/generators.ts` guard for #31; documented prompt safety intent policy injection from `lib/promptSafetyPolicy.ts` into `lib/oauthProxy/prompts.ts` and the API-key adapter.
 
 Previous document: `[[02-command-reference]]`
 
