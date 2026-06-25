@@ -4,6 +4,7 @@ import { useI18n } from "../i18n";
 import { exportImageToComfy } from "../lib/api";
 import { isVideoItem, extractFirstFrame, extractMidFrame, extractLastFrame } from "../lib/videoMedia";
 import { continueFromItem, continueFromItemAsUrl } from "../lib/continueFromItem";
+import { ResultMetadataModal } from "./ResultMetadataModal";
 import type { GenerateItem } from "../types";
 
 interface ResultActionsProps {
@@ -39,6 +40,7 @@ export function ResultActions({
   const openCanvas = useAppStore((s) => s.openCanvas);
   const [comfyExporting, setComfyExporting] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [metadataOpen, setMetadataOpen] = useState(false);
 
   const actionImage = imageOverride ?? currentImage;
   if (!actionImage) return null;
@@ -135,6 +137,11 @@ export function ResultActions({
     if (!actionImage.prompt) return;
     void navigator.clipboard.writeText(actionImage.prompt);
     showToast(t("toast.promptCopied"));
+  };
+
+  const copyMetadataValue = (value: string) => {
+    void navigator.clipboard.writeText(value);
+    showToast(t("toast.metadataCopied"));
   };
 
   const newFromHere = async () => {
@@ -287,6 +294,14 @@ export function ResultActions({
       >
         {t("result.firstNode")}
       </button>
+      <button
+        type="button"
+        className="action-btn"
+        onClick={() => setMetadataOpen(true)}
+        title={t("result.infoTitle")}
+      >
+        {t("result.info")}
+      </button>
       {!canvasOpen && (
         <button
           type="button"
@@ -334,6 +349,13 @@ export function ResultActions({
             </div>
           </details>
         </>
+      )}
+      {metadataOpen && (
+        <ResultMetadataModal
+          item={actionImage}
+          onClose={() => setMetadataOpen(false)}
+          onCopy={copyMetadataValue}
+        />
       )}
     </div>
   );

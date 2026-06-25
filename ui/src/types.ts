@@ -99,6 +99,7 @@ export type GenerateItem = {
   createdAt?: number;
   sessionId?: string | null;
   nodeId?: string | null;
+  parentNodeId?: string | null;
   clientNodeId?: string | null;
   requestId?: string | null;
   kind?: "classic" | "edit" | "generate" | "card-news-card" | "card-news-set" | "imported" | "agent" | null;
@@ -116,6 +117,7 @@ export type GenerateItem = {
     status?: string;
   }>;
   refsCount?: number;
+  webSearchCalls?: number;
   isFavorite?: boolean;
   sequenceId?: string | null;
   sequenceIndex?: number | null;
