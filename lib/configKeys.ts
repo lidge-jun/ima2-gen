@@ -3,6 +3,7 @@ export const AUTH_CONFIG_KEYS = new Set(["provider", "apiKey"]);
 export const WRITABLE_CONFIG_KEYS = new Set([
   "imageModels.default",
   "imageModels.reasoningEffort",
+  "apiProvider.baseUrl",
   "apiProvider.defaultImageModel",
   "apiProvider.defaultReasoningEffort",
   "log.level",
@@ -37,6 +38,7 @@ export const WRITABLE_CONFIG_KEYS = new Set([
 export const KEY_TO_ENV: Record<string, string> = {
   "imageModels.default": "IMA2_IMAGE_MODEL_DEFAULT",
   "imageModels.reasoningEffort": "IMA2_REASONING_EFFORT",
+  "apiProvider.baseUrl": "OPENAI_BASE_URL",
   "apiProvider.defaultImageModel": "IMA2_API_IMAGE_MODEL_DEFAULT",
   "apiProvider.defaultReasoningEffort": "IMA2_API_REASONING_EFFORT",
   "log.level": "IMA2_LOG_LEVEL",

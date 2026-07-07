@@ -29,6 +29,22 @@ function emptyCompletedStreamResponse() {
   }), { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
+function oneImageCompletedStreamResponse() {
+  const encoder = new TextEncoder();
+  const image = Buffer.from("generated image").toString("base64");
+  return new Response(new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+        type: "response.output_item.done",
+        item: { type: "image_generation_call", result: image },
+      })}\n\n`));
+      controller.enqueue(encoder.encode('data: {"type":"response.completed","response":{"output":[]}}\n\n'));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  }), { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
 test("Responses adapter does not echo OAuth URL credentials on fetch failures", async () => {
   await assert.rejects(
     () => generateViaResponses(
@@ -74,6 +90,76 @@ test("Responses adapter rejects malformed API keys without echoing token materia
       return true;
     },
   );
+});
+
+test("Responses adapter sends API provider requests to the configured Responses base URL", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (url) => {
+    calls.push(String(url));
+    return oneImageCompletedStreamResponse();
+  }) as typeof fetch;
+  try {
+    await generateViaResponses(
+      "api",
+      "cat",
+      "low",
+      "1024x1024",
+      "low",
+      [],
+      null,
+      "auto",
+      testContext({
+        apiKey: "sk-test",
+        config: {
+          ...config,
+          apiProvider: {
+            ...config.apiProvider,
+            baseUrl: "https://proxy.example.com/v1/",
+          },
+        },
+      }),
+      { webSearchEnabled: false },
+    );
+    assert.deepEqual(calls, ["https://proxy.example.com/v1/responses"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Responses adapter does not duplicate /responses when API base URL includes it", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (url) => {
+    calls.push(String(url));
+    return oneImageCompletedStreamResponse();
+  }) as typeof fetch;
+  try {
+    await generateViaResponses(
+      "api",
+      "cat",
+      "low",
+      "1024x1024",
+      "low",
+      [],
+      null,
+      "auto",
+      testContext({
+        apiKey: "sk-test",
+        config: {
+          ...config,
+          apiProvider: {
+            ...config.apiProvider,
+            baseUrl: "https://proxy.example.com/v1/responses",
+          },
+        },
+      }),
+      { webSearchEnabled: false },
+    );
+    assert.deepEqual(calls, ["https://proxy.example.com/v1/responses"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("Responses adapter wraps coded fetch failures without echoing token material", async () => {

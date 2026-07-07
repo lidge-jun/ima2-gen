@@ -3,6 +3,14 @@ import { abortJob, listJobs, listTerminalJobs } from "../lib/inflight.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
+
+const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+
+function endpointFromBaseUrl(baseUrl: string | undefined, path: string) {
+  const base = (baseUrl || DEFAULT_OPENAI_BASE_URL).trim().replace(/\/+$/, "");
+  return base.endsWith(path) ? base : `${base}${path}`;
+}
+
 export function registerHealthRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
   const runtimePorts = () => ({
@@ -108,7 +116,7 @@ export function registerHealthRoutes(app: Express, ctxRaw: RouteRuntimeContext) 
       const [subRes, usageRes, modelsRes] = await Promise.allSettled([
         fetch(`https://api.openai.com/v1/organization/costs?start_time=${start}&end_time=${end}&bucket_width=1d&limit=31`, { headers, signal: billingSignal }),
         fetch("https://api.openai.com/dashboard/billing/credit_grants", { headers, signal: billingSignal }),
-        fetch("https://api.openai.com/v1/models", { headers, signal: billingSignal }),
+        fetch(endpointFromBaseUrl(ctx.config.apiProvider.baseUrl, "/models"), { headers, signal: billingSignal }),
       ]);
 
       const billing: Record<string, unknown> = { apiKeySource: ctx.apiKeySource ?? "env" };

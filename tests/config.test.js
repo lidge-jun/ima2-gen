@@ -4,8 +4,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -30,6 +32,7 @@ function loadConfig(env = {}) {
           unsupported: [...c.imageModels.unsupported],
         },
         storage: c.storage,
+        apiProvider: c.apiProvider,
         ids: c.ids,
         inflight: c.inflight,
         trash: c.trash,
@@ -84,6 +87,11 @@ test("config exposes default shape", () => {
   assert.equal(c.cardNewsPlanner.model, "gpt-5.4-mini");
   assert.equal(c.cardNewsPlanner.timeoutMs, 60000);
   assert.equal(c.cardNewsPlanner.deterministicFallback, false);
+  assert.equal(c.apiProvider.baseUrl, "https://api.openai.com/v1");
+  assert.equal(c.apiProvider.defaultImageModel, "gpt-image-2");
+  assert.equal(c.apiProvider.defaultReasoningEffort, "low");
+  assert.equal(c.apiProvider.defaultSize, "1024x1024");
+  assert.equal(c.apiProvider.allowWebSearch, true);
   assert.equal(c.comfy.defaultUrl, "http://127.0.0.1:8188");
   assert.equal(c.comfy.uploadTimeoutMs, 30000);
   assert.equal(c.comfy.maxUploadBytes, 50 * 1024 * 1024);
@@ -106,6 +114,51 @@ test("env overrides win", () => {
   assert.equal(c.limits.maxRefCount, 7);
   assert.equal(c.oauth.autoStart, false);
   assert.equal(c.server.bodyLimit, "10mb");
+});
+
+test("api provider base URL honors env aliases", () => {
+  const openaiBase = loadConfig({
+    OPENAI_BASE_URL: "https://proxy.example.com/v1",
+    OPENAI_API_BASE_URL: "https://ignored.example.com/v1",
+    IMA2_OPENAI_BASE_URL: "https://also-ignored.example.com/v1",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-api-base-openai",
+  });
+  assert.equal(openaiBase.apiProvider.baseUrl, "https://proxy.example.com/v1");
+
+  const openaiApiBase = loadConfig({
+    OPENAI_BASE_URL: "",
+    OPENAI_API_BASE_URL: "https://api-alias.example.com/v1",
+    IMA2_OPENAI_BASE_URL: "https://ignored.example.com/v1",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-api-base-openai-api",
+  });
+  assert.equal(openaiApiBase.apiProvider.baseUrl, "https://api-alias.example.com/v1");
+
+  const ima2Alias = loadConfig({
+    OPENAI_BASE_URL: "",
+    OPENAI_API_BASE_URL: "",
+    IMA2_OPENAI_BASE_URL: "https://ima2-alias.example.com/v1",
+    IMA2_CONFIG_DIR: "/tmp/ima2-test-api-base-ima2",
+  });
+  assert.equal(ima2Alias.apiProvider.baseUrl, "https://ima2-alias.example.com/v1");
+});
+
+test("api provider base URL can come from config json", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ima2-test-api-base-file-"));
+  writeFileSync(join(dir, "config.json"), JSON.stringify({
+    apiProvider: {
+      baseUrl: "https://file-config.example.com/v1",
+      defaultImageModel: "file-config-image-model",
+    },
+  }));
+
+  const c = loadConfig({
+    OPENAI_BASE_URL: "",
+    OPENAI_API_BASE_URL: "",
+    IMA2_OPENAI_BASE_URL: "",
+    IMA2_CONFIG_DIR: dir,
+  });
+  assert.equal(c.apiProvider.baseUrl, "https://file-config.example.com/v1");
+  assert.equal(c.apiProvider.defaultImageModel, "file-config-image-model");
 });
 
 test("comfy bridge config env overrides and invalid numeric fallbacks", () => {

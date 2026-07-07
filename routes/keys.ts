@@ -3,6 +3,8 @@ import { readFile, writeFile, rename } from "node:fs/promises";
 import type { RuntimeContext } from "../lib/runtimeContext.js";
 import { initVertexAuth, clearVertexAuth } from "../lib/vertexAuth.js";
 
+const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+
 // Atomic + 0600 config write: temp file then rename, so a crash or concurrent
 // save can't corrupt config.json (which may hold API keys). Rename also forces
 // 0600 perms even if a looser-perm config pre-existed.
@@ -21,7 +23,7 @@ const KEY_PREFIX_MAP: Record<KeyProvider, string[]> = {
 };
 
 const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
-  openai: "https://api.openai.com/v1/models",
+  openai: `${DEFAULT_OPENAI_BASE_URL}/models`,
   xai: "https://api.x.ai/v1/models",
   gemini: "https://generativelanguage.googleapis.com/v1beta/models",
 };
@@ -39,6 +41,54 @@ function isKeyProvider(v: string): v is KeyProvider {
 function maskKey(key: string): string {
   if (key.length <= 10) return "***";
   return `${key.slice(0, 4)}..${key.slice(-2)}`;
+}
+
+type OpenAiBaseUrlCheck =
+  | { ok: true; value: string }
+  | { ok: false; error: string; code: "INVALID_OPENAI_BASE_URL"; status: 400 };
+
+function normalizeOpenAiBaseUrl(raw: unknown): OpenAiBaseUrlCheck {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return {
+      ok: false,
+      error: "OpenAI base URL is required",
+      code: "INVALID_OPENAI_BASE_URL",
+      status: 400,
+    };
+  }
+  const value = raw.trim().replace(/\/+$/, "");
+  if (value.length > 2048 || /[\u0000-\u001f\u007f]/.test(value)) {
+    return {
+      ok: false,
+      error: "OpenAI base URL is invalid",
+      code: "INVALID_OPENAI_BASE_URL",
+      status: 400,
+    };
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("unsupported protocol");
+    }
+  } catch {
+    return {
+      ok: false,
+      error: "OpenAI base URL must be an http(s) URL",
+      code: "INVALID_OPENAI_BASE_URL",
+      status: 400,
+    };
+  }
+  return { ok: true, value };
+}
+
+function endpointFromBaseUrl(baseUrl: string | undefined, path: string) {
+  const base = (baseUrl || DEFAULT_OPENAI_BASE_URL).trim().replace(/\/+$/, "");
+  return base.endsWith(path) ? base : `${base}${path}`;
+}
+
+function validateUrlForProvider(ctx: RuntimeContext, provider: KeyProvider) {
+  if (provider === "openai") return endpointFromBaseUrl(ctx.config.apiProvider.baseUrl, "/models");
+  return VALIDATE_URL_MAP[provider];
 }
 
 function keySourceForProvider(ctx: RuntimeContext, provider: KeyProvider): { key: string | undefined; source: string } {
@@ -60,6 +110,12 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
         maskedKey: key ? maskKey(key) : null,
       };
     }
+    const baseUrl = ctx.config.apiProvider.baseUrl || DEFAULT_OPENAI_BASE_URL;
+    status.openaiBaseUrl = {
+      value: baseUrl,
+      defaultValue: DEFAULT_OPENAI_BASE_URL,
+      custom: baseUrl !== DEFAULT_OPENAI_BASE_URL,
+    };
     const vertexJson = ctx.vertexServiceAccountJson;
     const vertexSource = vertexJson
       ? (process.env.VERTEX_SERVICE_ACCOUNT_JSON ? "env" : "config")
@@ -73,6 +129,64 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
     status.geminiAuthMode = (ctx as any).geminiAuthMode
       || (vertexJson && !ctx.geminiApiKey ? "vertex" : "apikey");
     res.json(status);
+  });
+
+  app.get("/api/config/api-provider", (_req: Request, res: Response) => {
+    const baseUrl = ctx.config.apiProvider.baseUrl || DEFAULT_OPENAI_BASE_URL;
+    return res.json({
+      ok: true,
+      baseUrl,
+      defaultBaseUrl: DEFAULT_OPENAI_BASE_URL,
+      customBaseUrl: baseUrl !== DEFAULT_OPENAI_BASE_URL,
+    });
+  });
+
+  app.put("/api/config/api-provider/base-url", async (req: Request, res: Response) => {
+    const check = normalizeOpenAiBaseUrl((req.body as { baseUrl?: unknown })?.baseUrl);
+    if (check.ok === false) {
+      return res.status(check.status).json({ ok: false, error: check.error, code: check.code });
+    }
+    const baseUrl = check.value;
+
+    const cfgPath = ctx.config.storage.configFile;
+    let existing: Record<string, unknown> = {};
+    try {
+      existing = JSON.parse(await readFile(cfgPath, "utf-8"));
+    } catch { /* new file */ }
+    const apiProvider = typeof existing.apiProvider === "object" && existing.apiProvider !== null
+      ? { ...(existing.apiProvider as Record<string, unknown>) }
+      : {};
+    apiProvider.baseUrl = baseUrl;
+    existing.apiProvider = apiProvider;
+    await writeConfigAtomic(cfgPath, existing);
+
+    ctx.config.apiProvider.baseUrl = baseUrl;
+    return res.json({
+      ok: true,
+      baseUrl,
+      custom: baseUrl !== DEFAULT_OPENAI_BASE_URL,
+    });
+  });
+
+  app.delete("/api/config/api-provider/base-url", async (_req: Request, res: Response) => {
+    const cfgPath = ctx.config.storage.configFile;
+    let existing: Record<string, unknown> = {};
+    try {
+      existing = JSON.parse(await readFile(cfgPath, "utf-8"));
+    } catch { /* new file */ }
+    const apiProvider = typeof existing.apiProvider === "object" && existing.apiProvider !== null
+      ? { ...(existing.apiProvider as Record<string, unknown>) }
+      : {};
+    delete apiProvider.baseUrl;
+    existing.apiProvider = apiProvider;
+    await writeConfigAtomic(cfgPath, existing);
+
+    ctx.config.apiProvider.baseUrl = DEFAULT_OPENAI_BASE_URL;
+    return res.json({
+      ok: true,
+      baseUrl: DEFAULT_OPENAI_BASE_URL,
+      custom: false,
+    });
   });
 
   // Persist the Gemini auth mode chosen in the settings dropdown, so reopening
@@ -194,7 +308,7 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
 
     // Validate against provider API
     try {
-      const url = VALIDATE_URL_MAP[provider];
+      const url = validateUrlForProvider(ctx, provider);
       const opts: RequestInit = { signal: AbortSignal.timeout(10_000) };
       if (provider === "gemini") {
         opts.headers = { "x-goog-api-key": trimmed };
@@ -230,7 +344,7 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).hasApiKey = true;
       try {
         const OpenAI = (await import("openai")).default;
-        (ctx as any).openai = new OpenAI({ apiKey: trimmed });
+        (ctx as any).openai = new OpenAI({ apiKey: trimmed, baseURL: ctx.config.apiProvider.baseUrl });
       } catch { /* ignore */ }
     } else if (provider === "xai") {
       (ctx as any).xaiApiKey = trimmed;

@@ -59,6 +59,7 @@ export function buildIma2Capabilities({
         reasoningEffort: appConfig.apiProvider.defaultReasoningEffort,
         size: appConfig.apiProvider.defaultSize,
         webSearchEnabled: appConfig.apiProvider.allowWebSearch,
+        customBaseUrl: appConfig.apiProvider.baseUrl !== "https://api.openai.com/v1",
       },
       grok: {
         model: appConfig.grokProvider.defaultImageModel,

@@ -270,10 +270,15 @@ export const config = {
     validReasoningEfforts: new Set(["none", "low", "medium", "high", "xhigh"]),
   },
   apiProvider: {
+    baseUrl: pickStr(
+      firstDefined(env.OPENAI_BASE_URL, env.OPENAI_API_BASE_URL, env.IMA2_OPENAI_BASE_URL),
+      fileCfg.apiProvider?.baseUrl,
+      "https://api.openai.com/v1",
+    ),
     defaultImageModel: pickStr(
       env.IMA2_API_IMAGE_MODEL_DEFAULT,
       fileCfg.apiProvider?.defaultImageModel,
-      "gpt-5.4-mini",
+      "gpt-image-2",
     ),
     defaultReasoningEffort: pickStr(
       env.IMA2_API_REASONING_EFFORT,

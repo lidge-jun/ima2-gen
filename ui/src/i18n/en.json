@@ -1055,6 +1055,21 @@
         "label": "GPT API Key (OpenAI)",
         "placeholder": "Paste your OpenAI API key (sk-...)"
       },
+      "openaiBaseUrl": {
+        "label": "OpenAI API Endpoint",
+        "body": "Used only by provider: api for OpenAI-compatible Responses API requests.",
+        "placeholder": "https://api.openai.com/v1",
+        "hint": "Use the gateway's /v1 base URL. Do not include /responses.",
+        "defaultSource": "Official OpenAI endpoint",
+        "customSource": "Custom API endpoint",
+        "reset": "Reset",
+        "saveFailed": "Failed to save API endpoint",
+        "resetFailed": "Failed to reset API endpoint",
+        "status": {
+          "default": "Default",
+          "custom": "Custom"
+        }
+      },
       "xai": {
         "label": "Grok API Key (xAI)",
         "placeholder": "Paste your xAI API key (xai-...)"

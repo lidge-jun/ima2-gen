@@ -256,8 +256,9 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_LOG_LEVEL` | `info` | Normal serve defaults to `info`; dev mode defaults to `debug`; supports `debug`, `info`, `warn`, `error`, or `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `300000` | Recent terminal job retention for debug views |
 | `OPENAI_API_KEY` | — | API key for the `provider: "api"` Responses API image path and auxiliary API-key features |
+| `OPENAI_BASE_URL` / `OPENAI_API_BASE_URL` / `IMA2_OPENAI_BASE_URL` | `https://api.openai.com/v1` | Base URL for `provider: "api"` OpenAI-compatible Responses API requests |
 | `XAI_API_KEY` | — | API key for `provider: "grok-api"` direct xAI Images API path |
-| `IMA2_API_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Default image model for `provider: "api"` |
+| `IMA2_API_IMAGE_MODEL_DEFAULT` | `gpt-image-2` | Default image model for `provider: "api"` |
 | `IMA2_API_REASONING_EFFORT` | `low` | Default reasoning effort for `provider: "api"` |
 | `IMA2_API_IMAGE_SIZE` | `1024x1024` | Default size for `provider: "api"` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | `true` | Toggle web search for `provider: "api"` |
@@ -273,6 +274,10 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `VERTEX_SERVICE_ACCOUNT_JSON` | — | Google service account JSON for Vertex AI auth with `provider: "gemini-api"`; takes priority over `GEMINI_API_KEY` when both are set |
 | `IMA2_AGY_BIN` | `agy` on PATH | Explicit path to the Antigravity CLI binary for `provider: "agy"` |
 | `IMA2_MAX_PARALLEL` | `24` | Server-wide parallel generation cap |
+
+`OPENAI_BASE_URL` only affects `provider: "api"` requests. The default GPT OAuth path still uses the local OAuth proxy and is not changed by this setting.
+
+OpenAI-compatible gateways must support `POST /v1/responses` and the hosted `image_generation` tool. If a gateway only supports `/v1/images/generations`, `/v1/images/edits`, or `/v1/chat/completions`, changing the base URL is not enough; it needs a separate Images API adapter.
 
 ### Logging modes
 

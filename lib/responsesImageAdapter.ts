@@ -116,6 +116,17 @@ function safeBaseUrl(value: string) {
   }
 }
 
+function normalizeBaseUrl(value: string | undefined) {
+  const fallback = "https://api.openai.com/v1";
+  const raw = typeof value === "string" && value.trim() ? value.trim() : fallback;
+  return raw.replace(/\/+$/, "");
+}
+
+function responsesEndpointFromBaseUrl(value: string | undefined) {
+  const base = normalizeBaseUrl(value);
+  return base.endsWith("/responses") ? base : `${base}/responses`;
+}
+
 function apiAuthorizationHeader(apiKey: string | undefined) {
   const key = typeof apiKey === "string" ? apiKey.trim() : "";
   if (!key) {
@@ -144,7 +155,7 @@ function isKnownResponsesError(value: unknown) {
 async function getEndpoint(ctx: RouteRuntimeContext, provider: string | undefined, _scope: string) {
   if (provider === "api") {
     return {
-      url: "https://api.openai.com/v1/responses",
+      url: responsesEndpointFromBaseUrl(ctx?.config?.apiProvider?.baseUrl as string | undefined),
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",

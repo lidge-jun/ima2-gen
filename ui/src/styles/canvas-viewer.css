@@ -306,6 +306,10 @@
   font-size: 0.9em;
 }
 
+.api-base-url-input {
+  letter-spacing: 0;
+}
+
 .api-key-input:focus {
   border-color: var(--accent);
   outline: none;
@@ -342,4 +346,3 @@
   color: var(--red);
   border-color: var(--red);
 }
-

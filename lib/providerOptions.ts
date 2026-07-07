@@ -1,6 +1,23 @@
 import type { RuntimeContext } from "./runtimeContext.js";
 import { normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel } from "./imageModels.js";
 
+function normalizeApiImageModel(rawModel: unknown, fallback: string) {
+  if (typeof rawModel !== "string" || rawModel.trim().length === 0) {
+    return { model: fallback };
+  }
+
+  const model = rawModel.trim();
+  if (model.length > 128 || /[\u0000-\u001f\u007f]/.test(model)) {
+    return {
+      error: "Invalid API image model",
+      code: "INVALID_API_IMAGE_MODEL",
+      status: 400,
+    };
+  }
+
+  return { model };
+}
+
 export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   provider = "oauth",
   rawModel,
@@ -61,10 +78,10 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
 
   const activeProvider = provider === "api" ? "api" : "oauth";
   const apiConfig: { defaultImageModel?: string; defaultReasoningEffort?: string; defaultSize?: string; allowWebSearch?: boolean } = (ctx?.config as { apiProvider?: any })?.apiProvider || {};
-  const modelInput = activeProvider === "api"
-    ? (rawModel || apiConfig.defaultImageModel || "gpt-5.4-mini")
-    : rawModel;
-  const modelCheck = normalizeImageModel(ctx, modelInput);
+  const apiModelFallback = apiConfig.defaultImageModel || "gpt-image-2";
+  const modelCheck = activeProvider === "api"
+    ? normalizeApiImageModel(rawModel || apiModelFallback, apiModelFallback)
+    : normalizeImageModel(ctx, rawModel);
   if (modelCheck.error) return { error: modelCheck.error, code: modelCheck.code, status: modelCheck.status };
 
   const reasoningInput = activeProvider === "api"

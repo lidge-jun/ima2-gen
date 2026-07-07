@@ -108,4 +108,32 @@ describe("/api/billing apiKeySource", () => {
     assert.strictEqual(res.body.apiKeySource, "config");
     assert.strictEqual(res.body.apiKeyValid, true);
   });
+
+  it("checks custom API provider base URL when validating API-key availability", async () => {
+    const urls: string[] = [];
+    globalThis.fetch = (async (url) => {
+      urls.push(String(url));
+      return {
+        ok: String(url) === "https://yunwu.example/v1/models",
+        json: async () => ({}),
+      };
+    }) as unknown as typeof fetch;
+    const app = express();
+    registerHealthRoutes(app, makeCtx({
+      hasApiKey: true,
+      apiKey: "test",
+      apiKeySource: "config",
+      config: {
+        oauth: { statusTimeoutMs: 50 },
+        apiProvider: { baseUrl: "https://yunwu.example/v1" },
+      },
+    }));
+
+    const res = await getJson(app, "/api/billing");
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.apiKeySource, "config");
+    assert.strictEqual(res.body.apiKeyValid, true);
+    assert.ok(urls.includes("https://yunwu.example/v1/models"));
+  });
 });

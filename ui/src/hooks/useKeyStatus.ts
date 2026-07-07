@@ -9,6 +9,11 @@ interface KeyStatusEntry {
 
 export type KeyStatus = Record<"openai" | "xai" | "gemini" | "vertex", KeyStatusEntry> & {
   geminiAuthMode?: "apikey" | "vertex";
+  openaiBaseUrl?: {
+    value: string;
+    defaultValue: string;
+    custom: boolean;
+  };
 };
 
 export function useKeyStatus() {

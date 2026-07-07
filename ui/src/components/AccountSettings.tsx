@@ -4,6 +4,7 @@ import { useGrokStatus } from "../hooks/useGrokStatus";
 import { useOAuthStatus } from "../hooks/useOAuthStatus";
 import { useAgyStatus } from "../hooks/useAgyStatus";
 import { useI18n } from "../i18n";
+import { ApiBaseUrlInput } from "./ApiBaseUrlInput";
 import { ApiKeyInput } from "./ApiKeyInput";
 import { GeminiKeySection } from "./GeminiKeySection";
 import { useKeyStatus } from "../hooks/useKeyStatus";
@@ -122,6 +123,14 @@ export function AccountSettings() {
           </button>
           {keysOpen && (
             <div className="settings-accordion__body">
+              {keyStatus.openaiBaseUrl && (
+                <ApiBaseUrlInput
+                  value={keyStatus.openaiBaseUrl.value}
+                  defaultValue={keyStatus.openaiBaseUrl.defaultValue}
+                  custom={keyStatus.openaiBaseUrl.custom}
+                  onSaved={mutateKeys}
+                />
+              )}
               <ApiKeyInput
                 provider="openai"
                 label={t("settings.apiKeys.openai.label")}

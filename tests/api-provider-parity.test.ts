@@ -59,6 +59,7 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
     apiKey,
     config: {
       ...config,
+      apiProvider: { ...config.apiProvider, baseUrl: "https://api.openai.com/v1" },
       storage: { ...config.storage, generatedDir },
       log: { ...config.log, level: "silent" },
     },

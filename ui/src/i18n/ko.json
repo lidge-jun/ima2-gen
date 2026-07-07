@@ -1055,6 +1055,21 @@
         "label": "GPT API Key (OpenAI)",
         "placeholder": "OpenAI API 키 붙여넣기 (sk-...)"
       },
+      "openaiBaseUrl": {
+        "label": "OpenAI API Endpoint",
+        "body": "provider: api 의 OpenAI-compatible Responses API 요청에만 사용됩니다.",
+        "placeholder": "https://api.openai.com/v1",
+        "hint": "게이트웨이의 /v1 base URL을 입력하세요. /responses 는 포함하지 마세요.",
+        "defaultSource": "공식 OpenAI endpoint",
+        "customSource": "사용자 지정 API endpoint",
+        "reset": "초기화",
+        "saveFailed": "API endpoint 저장 실패",
+        "resetFailed": "API endpoint 초기화 실패",
+        "status": {
+          "default": "기본값",
+          "custom": "사용자 지정"
+        }
+      },
       "xai": {
         "label": "Grok API Key (xAI)",
         "placeholder": "xAI API 키 붙여넣기 (xai-...)"
