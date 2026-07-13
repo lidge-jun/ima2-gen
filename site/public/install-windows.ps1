@@ -99,7 +99,7 @@ Ok "Node $(node --version), npm $npmVersion"
 # Pre-clean: force-remove stale locks from previous versions
 $npmGlobal = (npm prefix -g 2>$null)
 if ($npmGlobal) {
-    $lockCandidate = Join-Path $npmGlobal 'node_modules' '.package-lock.json'
+    $lockCandidate = Join-Path (Join-Path $npmGlobal 'node_modules') '.package-lock.json'
     if (Test-Path $lockCandidate) {
         try {
             Remove-Item $lockCandidate -Force -ErrorAction SilentlyContinue
@@ -112,16 +112,41 @@ $installArgs = @('install', '-g', 'ima2-gen')
 if ($npmMajor -ge 12) {
     $installArgs += '--allow-scripts=ima2-gen,better-sqlite3,sharp'
 }
-$output = & npm @installArgs 2>&1
-if ($LASTEXITCODE -ne 0) {
+
+function Invoke-Npm {
+    param([string[]]$Arguments)
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # PowerShell 5.1 promotes native stderr (including npm warnings) to
+        # ErrorRecord objects. Keep those in the captured output so warnings
+        # do not abort the installer before npm's exit code is checked.
+        $ErrorActionPreference = 'Continue'
+        $result = & npm @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    [pscustomobject]@{
+        Output   = @($result)
+        ExitCode = $exitCode
+    }
+}
+
+$installResult = Invoke-Npm $installArgs
+$output = $installResult.Output
+if ($installResult.ExitCode -ne 0) {
     $outputStr = $output -join "`n"
     if ($outputStr -match 'EBUSY|EPERM|resource busy') {
         Warn 'File lock detected. Killing all node processes and retrying…'
         Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
         Start-Sleep -Seconds 3
         npm cache clean --force 2>$null
-        $output = & npm @installArgs 2>&1
-        if ($LASTEXITCODE -ne 0) {
+        $installResult = Invoke-Npm $installArgs
+        $output = $installResult.Output
+        if ($installResult.ExitCode -ne 0) {
             Write-Host ($output -join "`n")
             Fail 'Install still failed after cleanup. Reboot, then run this script again before starting ima2.'
         }
