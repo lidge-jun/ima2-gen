@@ -10,6 +10,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   "grok-api": "Grok API",
   agy: "Antigravity",
   "gemini-api": "Gemini API",
+  atlascloud: "Atlas Cloud",
 };
 
 export function HomePromptComposer() {

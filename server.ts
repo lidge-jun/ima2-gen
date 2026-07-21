@@ -96,6 +96,24 @@ async function loadGeminiApiKey(): Promise<ApiKeyLoadResult> {
   return { apiKey: null, apiKeySource: "none" };
 }
 
+async function loadAtlasCloudApiKey(): Promise<ApiKeyLoadResult> {
+  if (process.env.ATLASCLOUD_API_KEY) {
+    return { apiKey: process.env.ATLASCLOUD_API_KEY, apiKeySource: "env" };
+  }
+  const candidates = [
+    config.storage.configFile,
+    join(rootDir, ".ima2", "config.json"),
+  ];
+  for (const cfgPath of candidates) {
+    if (!existsSync(cfgPath)) continue;
+    try {
+      const cfg = JSON.parse(await readFile(cfgPath, "utf-8")) as { atlasCloudApiKey?: string };
+      if (cfg.atlasCloudApiKey) return { apiKey: cfg.atlasCloudApiKey, apiKeySource: "config" };
+    } catch {}
+  }
+  return { apiKey: null, apiKeySource: "none" };
+}
+
 type VertexKeyLoadResult = { json: string | null; projectId: string | null; source: ApiKeySource };
 
 async function loadVertexKey(): Promise<VertexKeyLoadResult> {
@@ -304,6 +322,7 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
       : await loadApiKey();
   const loadedXaiKey = await loadXaiApiKey();
   const loadedGeminiKey = await loadGeminiApiKey();
+  const loadedAtlasCloudKey = await loadAtlasCloudApiKey();
   const loadedVertexKey = await loadVertexKey();
   const geminiAuthMode = await loadGeminiAuthMode();
   const apiKey = loadedKey.apiKey;
@@ -339,6 +358,9 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
     geminiApiKey: loadedGeminiKey.apiKey ?? undefined,
     geminiApiKeySource: loadedGeminiKey.apiKeySource as ApiKeySource,
     hasGeminiApiKey: !!loadedGeminiKey.apiKey,
+    atlasCloudApiKey: loadedAtlasCloudKey.apiKey ?? undefined,
+    atlasCloudApiKeySource: loadedAtlasCloudKey.apiKeySource as ApiKeySource,
+    hasAtlasCloudApiKey: !!loadedAtlasCloudKey.apiKey,
     vertexServiceAccountJson: loadedVertexKey.json ?? undefined,
     vertexProjectId: loadedVertexKey.projectId ?? undefined,
     hasVertexKey: !!loadedVertexKey.json,

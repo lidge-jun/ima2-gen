@@ -45,9 +45,9 @@ const HELP = `
     -o, --out <file>                    First image (implies --max-images 1)
     -d, --out-dir <dir>                 Output dir for multiple images
         --json
-        --model <gpt-5.5|gpt-5.4|gpt-5.4-mini|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|grok-imagine-image|grok-imagine-image-quality|nano-banana-2|nano-banana-pro>
-        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api>
-                                      Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini)
+        --model <gpt-5.5|gpt-5.4|gpt-5.4-mini|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|grok-imagine-image|grok-imagine-image-quality|nano-banana-2|nano-banana-pro|openai/gpt-image-2/text-to-image|openai/gpt-image-2/edit>
+        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud>
+                                      Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini; atlascloud = Atlas Cloud)
         --mode <auto|direct>            Prompt handling mode. Default: auto
         --ref <file>                    Attach reference image (repeatable, max ${MAX_REFERENCE_COUNT})
         --reasoning-effort <none|low|medium|high|xhigh|max>
@@ -64,11 +64,11 @@ export default async function multimodeCmd(argv: string[]) {
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
 
-  const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api"]);
+  const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud"]);
   const VALID_MODES = new Set(["auto", "direct"]);
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
   if (args.provider && !VALID_PROVIDERS.has(String(args.provider))) {
-    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api");
+    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud");
   }
   if (!VALID_MODES.has(String(args.mode))) die(2, "--mode must be one of: auto, direct");
   if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {

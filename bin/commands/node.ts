@@ -11,11 +11,11 @@ const HELP = `
   ima2 node <subcommand> [options]
 
   Subcommands:
-    generate <prompt...> [--parent <nodeId>] [--ref <file>...] [--provider <auto|oauth|api|grok|grok-api|agy|gemini-api>] [--no-stream] [...gen-style flags]
+    generate <prompt...> [--parent <nodeId>] [--ref <file>...] [--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud>] [--no-stream] [...gen-style flags]
     show <nodeId> [--json]
 
   Generate options:
-        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api>  Provider for this request
+        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud>  Provider for this request
 `;
 
 const GEN_FLAGS = {
@@ -56,10 +56,10 @@ async function generateSub(argv: string[]) {
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
   const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
-  const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api"]);
+  const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud"]);
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
   if (args.provider && !VALID_PROVIDERS.has(String(args.provider))) {
-    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api");
+    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud");
   }
   if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {
     die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh, max");

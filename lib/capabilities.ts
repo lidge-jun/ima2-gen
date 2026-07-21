@@ -8,7 +8,7 @@ import type { AppConfig } from "./runtimeContext.js";
 type CapabilitySource = "local" | "server";
 
 const VALID_MODES = ["auto", "direct"] as const;
-const VALID_PROVIDERS = ["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api"] as const;
+const VALID_PROVIDERS = ["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud"] as const;
 const AGENT_COMMANDS = [
   "skill",
   "capabilities",
@@ -71,6 +71,7 @@ export function buildIma2Capabilities({
         unsupported: toArray(appConfig.imageModels.unsupported),
         grokSupported: ["grok-imagine-image", "grok-imagine-image-quality"],
         geminiSupported: ["nano-banana-2", "nano-banana-pro"],
+        atlasCloudSupported: ["openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit"],
       },
       videoModels: {
         supported: ["grok-imagine-video", "grok-imagine-video-1.5"],

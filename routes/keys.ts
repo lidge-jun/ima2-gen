@@ -33,28 +33,31 @@ async function updateConfigFile(
   });
 }
 
-type KeyProvider = "openai" | "xai" | "gemini";
+type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud";
 
 const KEY_PREFIX_MAP: Record<KeyProvider, string[]> = {
   openai: ["sk-"],
   xai: ["xai-"],
   gemini: ["AI"],
+  atlascloud: ["apikey-"],
 };
 
 const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
   openai: "https://api.openai.com/v1/models",
   xai: "https://api.x.ai/v1/models",
   gemini: "https://generativelanguage.googleapis.com/v1beta/models",
+  atlascloud: "https://api.atlascloud.ai/api/v1/models",
 };
 
 const CONFIG_KEY_MAP: Record<KeyProvider, string> = {
   openai: "apiKey",
   xai: "xaiApiKey",
   gemini: "geminiApiKey",
+  atlascloud: "atlasCloudApiKey",
 };
 
 function isKeyProvider(v: string): v is KeyProvider {
-  return v === "openai" || v === "xai" || v === "gemini";
+  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud";
 }
 
 function maskKey(key: string): string {
@@ -66,13 +69,14 @@ function keySourceForProvider(ctx: RuntimeContext, provider: KeyProvider): { key
   if (provider === "openai") return { key: ctx.apiKey, source: ctx.apiKeySource || "none" };
   if (provider === "xai") return { key: ctx.xaiApiKey, source: ctx.xaiApiKeySource || "none" };
   if (provider === "gemini") return { key: ctx.geminiApiKey, source: ctx.geminiApiKeySource || "none" };
+  if (provider === "atlascloud") return { key: ctx.atlasCloudApiKey, source: ctx.atlasCloudApiKeySource || "none" };
   return { key: undefined, source: "none" };
 }
 
 export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
   app.get("/api/keys/status", (_req: Request, res: Response) => {
     const status: Record<string, unknown> = {};
-    for (const provider of ["openai", "xai", "gemini"] as const) {
+    for (const provider of ["openai", "xai", "gemini", "atlascloud"] as const) {
       const { key, source } = keySourceForProvider(ctx, provider);
       status[provider] = {
         configured: !!key,
@@ -246,6 +250,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).geminiApiKeySource = "config";
       (ctx as any).hasGeminiApiKey = true;
       (ctx as any).geminiAuthMode = "apikey";
+    } else if (provider === "atlascloud") {
+      (ctx as any).atlasCloudApiKey = trimmed;
+      (ctx as any).atlasCloudApiKeySource = "config";
+      (ctx as any).hasAtlasCloudApiKey = true;
     }
 
     return res.json({ ok: true, provider, source: "config", valid: true });
@@ -279,6 +287,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).geminiApiKey = undefined;
       (ctx as any).geminiApiKeySource = "none";
       (ctx as any).hasGeminiApiKey = false;
+    } else if (provider === "atlascloud") {
+      (ctx as any).atlasCloudApiKey = undefined;
+      (ctx as any).atlasCloudApiKeySource = "none";
+      (ctx as any).hasAtlasCloudApiKey = false;
     }
 
     return res.json({ ok: true, provider, removed: true });

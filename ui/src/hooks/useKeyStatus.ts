@@ -7,7 +7,7 @@ interface KeyStatusEntry {
   maskedKey: string | null;
 }
 
-export type KeyStatus = Record<"openai" | "xai" | "gemini" | "vertex", KeyStatusEntry> & {
+export type KeyStatus = Record<"openai" | "xai" | "gemini" | "atlascloud" | "vertex", KeyStatusEntry> & {
   geminiAuthMode?: "apikey" | "vertex";
 };
 

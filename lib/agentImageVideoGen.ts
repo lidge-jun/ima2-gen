@@ -11,6 +11,7 @@ import { resolveProviderOptions } from "./providerOptions.js";
 import { generateViaResponses } from "./responsesImageAdapter.js";
 import { generateViaGrok, type GrokReferenceImage } from "./grokImageAdapter.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
+import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateVideoViaGrok, type GrokVideoGenerateResult } from "./grokVideoAdapter.js";
 import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE } from "./imageModels.js";
 import { parseVideoParams } from "./agentGenerationPlanner.js";
@@ -90,6 +91,15 @@ async function generateAgentImage(
         requestId,
         signal: options.signal ?? undefined,
       })
+    : activeProvider === "atlascloud"
+    ? await generateViaAtlasCloud(`${manifest}\n\nUser request:\n${prompt}`, ctx, {
+        model: effectiveModel,
+        size: providerOptions.size,
+        quality: options.quality ?? "medium",
+        requestId,
+        signal: options.signal ?? undefined,
+        references: await loadAgentCurrentImageReferences(ctx, sessionId, options.sourceImagePolicy ?? "none"),
+      })
     : activeProvider === "grok"
     ? await generateViaGrok(`${manifest}\n\nUser request:\n${prompt}`, ctx, {
         model: effectiveModel,
@@ -116,7 +126,7 @@ async function generateAgentImage(
           signal: options.signal,
         },
       );
-  const format = activeProvider === "grok" || activeProvider === "agy"
+  const format = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "atlascloud"
     ? imageFormatFromMime(("mime" in response ? response.mime : undefined) || detectImageMimeFromB64(response.b64) || "image/jpeg")
     : options.format ?? "png";
   const image = await persistAgentImage(ctx, sessionId, prompt, format, requestId, response, {

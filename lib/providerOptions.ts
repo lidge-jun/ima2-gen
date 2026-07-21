@@ -1,5 +1,5 @@
 import type { RuntimeContext } from "./runtimeContext.js";
-import { normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel } from "./imageModels.js";
+import { normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel, normalizeAtlasCloudImageModel } from "./imageModels.js";
 
 export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   provider = "oauth",
@@ -25,6 +25,18 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
     return {
       provider: "gemini-api" as const,
       model: geminiModelCheck.model,
+      reasoningEffort: "none",
+      size: rawSize || "1024x1024",
+      webSearchEnabled: false,
+    };
+  }
+
+  if (provider === "atlascloud") {
+    const atlasModelCheck = normalizeAtlasCloudImageModel(rawModel || "openai/gpt-image-2/text-to-image");
+    if (atlasModelCheck.error) return { error: atlasModelCheck.error, code: atlasModelCheck.code, status: atlasModelCheck.status };
+    return {
+      provider: "atlascloud" as const,
+      model: atlasModelCheck.model,
       reasoningEffort: "none",
       size: rawSize || "1024x1024",
       webSearchEnabled: false,

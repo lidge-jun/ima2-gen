@@ -11,6 +11,11 @@ const VALID_GROK_IMAGE_MODELS = new Set(["grok-imagine-image", "grok-imagine-ima
 
 const GEMINI_API_FALLBACK_IMAGE_MODEL = "nano-banana-2";
 const VALID_GEMINI_API_MODELS = new Set(["nano-banana-2", "nano-banana-pro"]);
+const ATLASCLOUD_FALLBACK_IMAGE_MODEL = "openai/gpt-image-2/text-to-image";
+const VALID_ATLASCLOUD_IMAGE_MODELS = new Set([
+  "openai/gpt-image-2/text-to-image",
+  "openai/gpt-image-2/edit",
+]);
 
 export function normalizeReasoningEffort(ctx: RouteRuntimeContext | null | undefined, rawEffort: unknown) {
   const configured = (ctx?.config as { imageModels?: { reasoningEffort?: string; validReasoningEfforts?: Set<string> } } | undefined)?.imageModels;
@@ -81,6 +86,20 @@ export function normalizeGeminiApiModel(rawModel: unknown) {
     return {
       error: `Gemini API image model must be one of: ${[...VALID_GEMINI_API_MODELS].join(", ")}`,
       code: "INVALID_GEMINI_API_IMAGE_MODEL" as const,
+      status: 400 as const,
+    };
+  }
+  return { model: rawModel };
+}
+
+export function normalizeAtlasCloudImageModel(rawModel: unknown) {
+  if (typeof rawModel !== "string" || rawModel.length === 0) {
+    return { model: ATLASCLOUD_FALLBACK_IMAGE_MODEL };
+  }
+  if (!VALID_ATLASCLOUD_IMAGE_MODELS.has(rawModel)) {
+    return {
+      error: `Atlas Cloud image model must be one of: ${[...VALID_ATLASCLOUD_IMAGE_MODELS].join(", ")}`,
+      code: "INVALID_ATLASCLOUD_IMAGE_MODEL" as const,
       status: 400 as const,
     };
   }

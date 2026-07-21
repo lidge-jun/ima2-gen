@@ -319,7 +319,7 @@ export function isModeration(value: unknown): value is Moderation {
 }
 
 export function isProvider(value: unknown): value is Provider {
-  return value === "oauth" || value === "api" || value === "grok" || value === "grok-api" || value === "agy" || value === "gemini-api";
+  return value === "oauth" || value === "api" || value === "grok" || value === "grok-api" || value === "agy" || value === "gemini-api" || value === "atlascloud";
 }
 
 export function isPromptMode(value: unknown): value is "auto" | "direct" {

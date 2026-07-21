@@ -48,6 +48,7 @@ export function useProviderAvailability(): Record<Provider, ProviderAvailability
 
   const xaiKeyOk = keyStatus?.xai?.valid === true;
   const geminiKeyOk = keyStatus?.gemini?.valid === true || keyStatus?.vertex?.valid === true;
+  const atlasCloudKeyOk = keyStatus?.atlascloud?.valid === true;
 
   return {
     oauth: { ok: oauthReady, reason: oauthReason, hint: oauthHint },
@@ -71,6 +72,10 @@ export function useProviderAvailability(): Record<Provider, ProviderAvailability
     "gemini-api": {
       ok: geminiKeyOk,
       reason: geminiKeyOk ? "" : t("provider.geminiApiKeyRequired"),
+    },
+    atlascloud: {
+      ok: atlasCloudKeyOk,
+      reason: atlasCloudKeyOk ? "" : t("provider.atlasCloudApiKeyRequired"),
     },
   };
 }
@@ -105,6 +110,12 @@ const GRID: { header: string; cells: CellDef[] }[] = [
     cells: [
       { value: "agy", label: "agy" },
       { value: "gemini-api", label: "API" },
+    ],
+  },
+  {
+    header: "Atlas",
+    cells: [
+      { value: "atlascloud", label: "API" },
     ],
   },
 ];

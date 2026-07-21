@@ -31,6 +31,9 @@ export interface RuntimeContext {
   geminiApiKey: string | undefined;
   geminiApiKeySource: ApiKeySource;
   hasGeminiApiKey: boolean;
+  atlasCloudApiKey: string | undefined;
+  atlasCloudApiKeySource: ApiKeySource;
+  hasAtlasCloudApiKey: boolean;
   vertexServiceAccountJson: string | undefined;
   vertexProjectId: string | undefined;
   hasVertexKey: boolean;
@@ -106,6 +109,9 @@ export function requireRuntimeContext(ctx: RouteRuntimeContext | undefined): Run
   if (target.geminiApiKey === undefined && !Object.prototype.hasOwnProperty.call(target, 'geminiApiKey')) target.geminiApiKey = undefined;
   if (target.hasGeminiApiKey === undefined) target.hasGeminiApiKey = false;
   if (target.geminiApiKeySource === undefined) target.geminiApiKeySource = undefined;
+  if (target.atlasCloudApiKey === undefined && !Object.prototype.hasOwnProperty.call(target, 'atlasCloudApiKey')) target.atlasCloudApiKey = undefined;
+  if (target.hasAtlasCloudApiKey === undefined) target.hasAtlasCloudApiKey = false;
+  if (target.atlasCloudApiKeySource === undefined) target.atlasCloudApiKeySource = undefined;
   if (target.vertexServiceAccountJson === undefined && !Object.prototype.hasOwnProperty.call(target, 'vertexServiceAccountJson')) target.vertexServiceAccountJson = undefined;
   if (target.vertexProjectId === undefined) target.vertexProjectId = undefined;
   if (target.hasVertexKey === undefined) target.hasVertexKey = false;
@@ -166,6 +172,9 @@ export function createTestRuntimeContext(over: RuntimeContextOverrides = {}): Ru
     geminiApiKey: undefined,
     geminiApiKeySource: undefined,
     hasGeminiApiKey: false,
+    atlasCloudApiKey: undefined,
+    atlasCloudApiKeySource: undefined,
+    hasAtlasCloudApiKey: false,
     vertexServiceAccountJson: undefined,
     vertexProjectId: undefined,
     hasVertexKey: false,

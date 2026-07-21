@@ -12,6 +12,7 @@ import { generateMultimodeViaResponses } from "./responsesImageAdapter.js";
 import { generateMultimodeViaGrok } from "./grokMultimodeAdapter.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
+import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, INFLIGHT_RETRY_AFTER_SECONDS } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
 import { logEvent, logError } from "./logger.js";
@@ -199,7 +200,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       logEvent("multimode", "request", { requestId, quality, model: imageModel, size: effectiveSize, moderation, maxImages, refs: refCheck.refs.length, referenceBytes: referencePayload.referenceBytes, promptChars: typeof prompt === "string" ? prompt.length : 0, webSearchEnabled, });
       const startTime = Date.now();
       const mimeMap: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
-      const mmFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" ? "jpeg" : String(format);
+      const mmFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? "jpeg" : String(format);
       const mime = mimeMap[mmFormat] || "image/png";
       const sequenceId = `seq_${Date.now().toString(36)}_${randomBytes(4).toString("hex")}`;
       routeMaxImages = maxImages;
@@ -219,10 +220,10 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       const persistAndSendImage = async ( image: MultimodeImage, index: number, totalReturned: number, status: ReturnType<typeof sequenceStatus>, ) => {
         if (persistedIndexes.has(index)) return;
         throwIfJobCanceled(requestId);
-        const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api"
+        const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud"
           ? (image.mime || detectImageMimeFromB64(image.b64) || mime)
           : mime;
-        const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" ? imageFormatFromMime(resultMime) : mmFormat;
+        const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? imageFormatFromMime(resultMime) : mmFormat;
         const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
         const filename = `${Date.now()}_${rand}_multimode_${index}.${resultFormat}`;
         const createdAt = Date.now();
@@ -300,6 +301,20 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           references: refCheck.refDetails,
           signal: cancelController.signal,
           requestId,
+        });
+        generated = {
+          images: [{ b64: r.b64, revisedPrompt: r.revisedPrompt }],
+          usage: r.usage,
+          webSearchCalls: r.webSearchCalls,
+        };
+      } else if (activeProvider === "atlascloud") {
+        const r = await generateViaAtlasCloud(prompt, requireRuntimeContext(ctx), {
+          model: imageModel,
+          size: effectiveSize,
+          quality: routeQuality,
+          signal: cancelController.signal,
+          requestId,
+          references: refCheck.refDetails,
         });
         generated = {
           images: [{ b64: r.b64, revisedPrompt: r.revisedPrompt }],

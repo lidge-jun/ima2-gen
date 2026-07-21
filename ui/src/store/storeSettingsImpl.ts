@@ -1,6 +1,6 @@
 import type { Provider, Quality, SizePreset, Format, Moderation, ImageModel, Count } from "../types";
 import type { ReasoningEffort } from "../lib/reasoning";
-import { DEFAULT_IMAGE_MODEL, isGrokImageModel, isGeminiImageModel, normalizeVideoModelValue } from "../lib/imageModels";
+import { DEFAULT_IMAGE_MODEL, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, normalizeVideoModelValue } from "../lib/imageModels";
 import { parseRequestedCustomSide } from "../lib/size";
 import { getEffectiveVideoSourceCount } from "../lib/videoSourceCount";
 import {
@@ -29,7 +29,11 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
     const geminiModel = provider === "gemini-api" ? "nano-banana-pro" : "nano-banana-2";
     saveImageModel(geminiModel);
     set({ provider, imageModel: geminiModel });
-  } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel))) {
+  } else if (provider === "atlascloud" && !isAtlasCloudImageModel(currentModel)) {
+    const atlasModel = "openai/gpt-image-2/text-to-image";
+    saveImageModel(atlasModel);
+    set({ provider, imageModel: atlasModel });
+  } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel))) {
     set({ provider, imageModel: DEFAULT_IMAGE_MODEL });
     saveImageModel(DEFAULT_IMAGE_MODEL);
   } else {
@@ -93,7 +97,12 @@ export function setImageModelImpl(imageModel: ImageModel, set: StoreSet, get: St
     }
     return;
   }
-  if (get().provider === "grok" || get().provider === "agy" || get().provider === "gemini-api") {
+  if (isAtlasCloudImageModel(imageModel)) {
+    saveGenerationDefaultsPatch({ provider: "atlascloud" });
+    set({ provider: "atlascloud", imageModel });
+    return;
+  }
+  if (get().provider === "grok" || get().provider === "agy" || get().provider === "gemini-api" || get().provider === "atlascloud") {
     saveGenerationDefaultsPatch({ provider: "oauth" });
     set({ provider: "oauth", imageModel });
     return;

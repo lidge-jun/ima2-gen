@@ -180,6 +180,15 @@ export function AccountSettings() {
                 configured={keyStatus.xai?.configured ?? false}
                 onSaved={mutateKeys}
               />
+              <ApiKeyInput
+                provider="atlascloud"
+                label={t("settings.apiKeys.atlascloud.label")}
+                placeholder={t("settings.apiKeys.atlascloud.placeholder")}
+                maskedKey={keyStatus.atlascloud?.maskedKey ?? null}
+                source={keyStatus.atlascloud?.source ?? "none"}
+                configured={keyStatus.atlascloud?.configured ?? false}
+                onSaved={mutateKeys}
+              />
               <GeminiKeySection
                 keyStatus={keyStatus}
                 onSaved={mutateKeys}

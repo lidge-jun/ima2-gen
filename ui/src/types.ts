@@ -1,14 +1,15 @@
 export type UIMode = "classic" | "node" | "card-news" | "agent" | "assets" | "home";
 export type SettingsSection = "providers" | "workspace" | "general";
 export type HistoryStripLayout = "rail" | "horizontal" | "sidebar";
-export type Provider = "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api";
+export type Provider = "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api" | "atlascloud";
 export type Quality = "low" | "medium" | "high";
 export type Format = "png" | "jpeg" | "webp";
 export type Moderation = "low" | "auto";
 export type OpenAIImageModel = "gpt-5.5" | "gpt-5.4" | "gpt-5.4-mini" | "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna";
 export type GrokImageModel = "grok-imagine-image" | "grok-imagine-image-quality";
 export type GeminiImageModel = "nano-banana-2" | "nano-banana-pro";
-export type ImageModel = OpenAIImageModel | GrokImageModel | GeminiImageModel;
+export type AtlasCloudImageModel = "openai/gpt-image-2/text-to-image" | "openai/gpt-image-2/edit";
+export type ImageModel = OpenAIImageModel | GrokImageModel | GeminiImageModel | AtlasCloudImageModel;
 export type VideoModel = "grok-imagine-video" | "grok-imagine-video-1.5" | "grok-imagine-video-1.5-preview";
 export type VideoResolutionUI = "480p" | "720p" | "1080p";
 export type UnsupportedImageModel = "gpt-5.3-codex-spark";

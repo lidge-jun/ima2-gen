@@ -636,6 +636,7 @@
     "unavailableSr": "(unavailable)",
     "xaiApiKeyRequired": "xAI API key required",
     "geminiApiKeyRequired": "Gemini API key required",
+    "atlasCloudApiKeyRequired": "Atlas Cloud API key required",
     "comingSoon": "Coming soon",
     "agyCompatTitle": "Gemini (agy)",
     "agyCompatBody": "1024x1024 fixed, JPEG output, max 3 refs. No quality/size control.",
@@ -1094,6 +1095,8 @@
       "nanoBanana2": "Nano Banana 2",
       "nanoBanana2Api": "Nano Banana 2",
       "nanoBananaPro": "Nano Banana Pro",
+      "atlasCloudGptImage2": "Atlas Cloud GPT Image 2",
+      "atlasCloudGptImage2Edit": "Atlas Cloud GPT Image 2 Edit",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — unsupported for images",
       "unsupportedHelp": "Grok models use xAI's Images API through the bundled local proxy. GPT models use OpenAI Responses image generation."
@@ -1113,6 +1116,10 @@
       "gemini": {
         "label": "Gemini (Google)",
         "placeholder": "Paste your Gemini API key (AI...)"
+      },
+      "atlascloud": {
+        "label": "Atlas Cloud",
+        "placeholder": "Paste your Atlas Cloud API key (apikey-...)"
       },
       "vertex": {
         "label": "Vertex AI (Service Account)",

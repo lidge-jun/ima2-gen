@@ -11,6 +11,7 @@ import { generateViaResponses, editViaResponses } from "./responsesImageAdapter.
 import { generateViaGrok } from "./grokImageAdapter.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
+import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { logEvent, logError } from "./logger.js";
 import { errInfo } from "./errInfo.js";
@@ -135,6 +136,18 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
           parentNodeId,
         });
       }
+      if (activeProvider === "atlascloud" && inputImageCount > 10) {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        return res.status(400).json({
+          error: {
+            code: "ATLASCLOUD_REF_TOO_MANY",
+            message: "Atlas Cloud image editing supports up to 10 reference images.",
+          },
+          code: "ATLASCLOUD_REF_TOO_MANY",
+          parentNodeId,
+        });
+      }
       const started = startJob({
         requestId,
         kind: "node",
@@ -208,7 +221,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       }
       let b64: string | undefined, usage: unknown, webSearchCalls = 0, revisedPrompt: string | null = null;
       const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-      let resultFormat: "png" | "jpeg" | "webp" = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" ? "jpeg" : format as "png" | "jpeg" | "webp";
+      let resultFormat: "png" | "jpeg" | "webp" = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? "jpeg" : format as "png" | "jpeg" | "webp";
       const maxAttempts = inputImageCount > 0 ? 1 : 2;
       let lastErr: UpstreamErr | null = null;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -248,6 +261,17 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
                   : undefined,
                 signal: cancelController.signal,
                 requestId,
+              })
+            : activeProvider === "atlascloud"
+            ? await generateViaAtlasCloud(parentB64 ? `Edit this image: ${prompt}` : prompt, requireRuntimeContext(ctx), {
+                model: effectiveImageModel,
+                size: effectiveSize,
+                quality,
+                signal: cancelController.signal,
+                requestId,
+                references: parentB64
+                  ? [{ b64: parentB64, declaredMime: null, detectedMime: null }, ...((refCheck.refDetails || []) as any[])]
+                  : refCheck.refDetails,
               })
             : activeProvider === "grok" || activeProvider === "grok-api"
             ? await generateViaGrok(prompt, ctx, {
@@ -299,7 +323,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
             usage = r.usage;
             webSearchCalls = r.webSearchCalls || 0;
             revisedPrompt = r.revisedPrompt || null;
-            if (activeProvider === "grok" || activeProvider === "grok-api" || activeProvider === "gemini-api") {
+            if (activeProvider === "grok" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud") {
               resultFormat = imageFormatFromMime(("mime" in r ? r.mime : undefined) || detectImageMimeFromB64(r.b64) || "image/jpeg");
             }
             break;
