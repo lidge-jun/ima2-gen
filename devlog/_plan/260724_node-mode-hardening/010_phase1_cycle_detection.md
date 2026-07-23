@@ -80,8 +80,19 @@ function graphHasCycle(nodes, edges): boolean { /* indegree Kahn; visited < node
 
 `validateBatchDependencies` 반환을 확장하지 않고 별도 함수 추가:
 `findCycleNodeIds(nodes, edges, selectedIds): string[]` — topo 방문 후 잔여 노드 반환.
-`runNodeBatchImpl`(storeNodeGenImpl.ts)에서 blocked 검사 다음에 호출, 비어있지 않으면
-`t("nodeBatch.cycleBlocked", { count })` 토스트 후 return.
+
+### MODIFY ui/src/store/storeNodeGenImpl.ts (round2 fold-back #1)
+
+`runNodeBatchImpl`: `import { findCycleNodeIds } from "../lib/nodeBatch"` 추가,
+`validateBatchDependencies` blocked 검사 **직후**에
+
+```ts
+const cycleIds = findCycleNodeIds(get().graphNodes, get().graphEdges, selectedIds);
+if (cycleIds.length > 0) {
+  get().showToast(t("nodeBatch.cycleBlocked", { count: cycleIds.length }), true);
+  return;
+}
+```
 
 ### MODIFY ui/src/components/node-canvas/useNodeStudioController.ts
 
@@ -92,13 +103,18 @@ function graphHasCycle(nodes, edges): boolean { /* indegree Kahn; visited < node
 
 드래그 **중** 검증을 실제로 배선한다 — 현재는 `onConnect`(제스처 완료 후)만 존재.
 
-- `useNodeConnectionController`에 `isValidConnection(connection): boolean` 콜백 추가:
-  source/target 포트를 `resolveNodePort`로 해석해 `canConnectPorts` (사이클 검사
-  포함) verdict의 `allowed`를 반환. 포트 미해석 시 false.
+- **순수 검증기 export** (round2 fold-back #2): `ui/src/lib/nodeCompatibility.ts`에
+  `isValidFlowConnection(connection, nodes, edges): boolean` 순수 함수 추가 —
+  `resolveNodePort`(nodePortCatalog)로 양단 해석 후 `canConnectPorts` 결과의
+  `allowed` 반환, 포트 미해석 시 false. (nodePortCatalog import는 단방향이라
+  순환 없음 — nodePortCatalog가 nodeCompatibility 타입만 import하므로 이 함수는
+  별도 파일 `ui/src/lib/nodeConnectionValidation.ts`(<40줄)에 둔다.)
+- `useNodeConnectionController`의 `isValidConnection` 콜백은 이 순수 함수를
+  현재 nodes/edges로 바인딩한 thin wrapper.
 - `NodeCanvas.tsx`의 `<ReactFlow ...>`에 `isValidConnection={studio.isValidConnection}`
   prop 배선 (React Flow 공식 API — 드래그 중 invalid edge 프리뷰 차단).
-- 활성화 테스트: CY-05 — `isValidConnection`이 사이클 연결 후보에 false,
-  정상 후보에 true를 반환 (controller 순수 로직 단위로 검증).
+- 활성화 테스트: CY-05 — hook 렌더 없이 **순수 함수 `isValidFlowConnection`을 직접**
+  테스트: 사이클 연결 후보 false, 정상 후보 true, 미해석 핸들 false.
 
 ### MODIFY ui/src/i18n/en.json + ko.json
 
