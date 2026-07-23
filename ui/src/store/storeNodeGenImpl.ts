@@ -7,6 +7,7 @@ import {
 import {
   getDirectUnselectedChildren,
   getUnselectedDownstreamIds,
+  findCycleNodeIds,
   nodeHasImage,
   topologicalSortSelected,
   validateBatchDependencies,
@@ -380,6 +381,11 @@ export async function runNodeBatchImpl(
   const blocked = validateBatchDependencies(get().graphNodes, get().graphEdges, selectedIds);
   if (blocked.length > 0) {
     get().showToast(t("nodeBatch.parentRequired", { count: blocked.length }), true);
+    return;
+  }
+  const cycleIds = findCycleNodeIds(get().graphNodes, get().graphEdges, selectedIds);
+  if (cycleIds.length > 0) {
+    get().showToast(t("nodeBatch.cycleBlocked", { count: cycleIds.length }), true);
     return;
   }
   const orderedIds = topologicalSortSelected(get().graphNodes, get().graphEdges, selectedIds);

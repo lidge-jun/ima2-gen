@@ -94,6 +94,7 @@ function NodeCanvasInner() {
             onEdgesChange={onEdgesChange}
             onConnect={studio.onConnect}
             onConnectEnd={studio.onConnectEnd}
+            isValidConnection={studio.isValidConnection}
             onDragOver={studio.onDragOver}
             onDrop={studio.onDropElement}
             onNodesDelete={onNodesDelete}

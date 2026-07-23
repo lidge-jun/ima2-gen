@@ -97,3 +97,39 @@ export function validateBatchDependencies(
   return blocked;
 }
 
+/**
+ * Selected nodes that cannot be topologically ordered because they sit on a
+ * cycle (within the selected subgraph). Empty for acyclic selections
+ * (010_phase1, W1 batch guard).
+ */
+export function findCycleNodeIds(
+  nodes: BatchNode[],
+  edges: BatchEdge[],
+  selectedIds: Iterable<string>,
+): string[] {
+  const selected = new Set(selectedIds);
+  const existing = new Set(nodes.map((n) => n.id));
+  const indegree = new Map<string, number>();
+  const outgoing = new Map<string, string[]>();
+  for (const id of selected) {
+    if (!existing.has(id)) continue;
+    indegree.set(id, 0);
+    outgoing.set(id, []);
+  }
+  for (const edge of edges) {
+    if (!indegree.has(edge.source) || !indegree.has(edge.target)) continue;
+    outgoing.get(edge.source)?.push(edge.target);
+    indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1);
+  }
+  const queue = [...indegree.keys()].filter((id) => (indegree.get(id) ?? 0) === 0);
+  const visited = new Set<string>();
+  for (let i = 0; i < queue.length; i++) {
+    visited.add(queue[i]);
+    for (const next of outgoing.get(queue[i]) ?? []) {
+      const left = (indegree.get(next) ?? 0) - 1;
+      indegree.set(next, left);
+      if (left === 0) queue.push(next);
+    }
+  }
+  return [...indegree.keys()].filter((id) => !visited.has(id));
+}

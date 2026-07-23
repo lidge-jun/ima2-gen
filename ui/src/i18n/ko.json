@@ -623,13 +623,15 @@
     "stopQueued": "현재 노드가 끝나면 남은 작업을 중단합니다.",
     "failed": "{done}/{total} 완료 후 중단되었습니다.",
     "finished": "{done}/{total} 노드 작업 완료",
-    "staleBecauseParentChanged": "상위 노드가 재생성되어 다시 확인이 필요합니다."
+    "staleBecauseParentChanged": "상위 노드가 재생성되어 다시 확인이 필요합니다.",
+    "cycleBlocked": "선택한 노드 {count}개가 순환 고리를 이루고 있어 실행할 수 없습니다."
   },
   "edge": {
     "disconnect": "끊기",
     "disconnectTitle": "선택한 연결선 끊기",
     "disconnected": "연결선을 끊었습니다.",
-    "parentConflict": "한 노드에는 부모 연결을 하나만 둘 수 있습니다."
+    "parentConflict": "한 노드에는 부모 연결을 하나만 둘 수 있습니다.",
+    "cycleBlocked": "이 연결은 순환 고리를 만들기 때문에 연결할 수 없습니다."
   },
   "provider": {
     "authTitle": "공급자",
@@ -1943,7 +1945,8 @@
       "cardinality": "이 입력에는 이미 연결된 노드가 있어요.",
       "selfEdge": "노드는 자기 자신에 연결할 수 없어요.",
       "duplicateEdge": "이미 같은 연결이 있어요.",
-      "unknownPort": "이 포트는 연결에 사용할 수 없어요."
+      "unknownPort": "이 포트는 연결에 사용할 수 없어요.",
+      "cycle": "이 연결은 순환 고리를 만들기 때문에 연결할 수 없습니다."
     }
   },
   "sprite": {

@@ -1,4 +1,5 @@
 import type { GraphEdge, GraphNode } from "../store/storeTypes";
+import { wouldCreateCycle } from "./nodeGraph";
 
 export type NodePortType =
   | "prompt"
@@ -23,7 +24,7 @@ export interface PortDescriptor {
 
 export interface CompatibilityResult {
   allowed: boolean;
-  reason?: "SAME_DIRECTION" | "TYPE_MISMATCH" | "CARDINALITY" | "SELF_EDGE" | "DUPLICATE_EDGE";
+  reason?: "SAME_DIRECTION" | "TYPE_MISMATCH" | "CARDINALITY" | "SELF_EDGE" | "DUPLICATE_EDGE" | "CYCLE";
 }
 
 export interface GraphSnapshot {
@@ -85,6 +86,9 @@ export function canConnectPorts(
   if (hasDuplicateEdge(source, target, graph.edges)) return { allowed: false, reason: "DUPLICATE_EDGE" };
   if (!canConnectPortTypes(source.type, target.type)) {
     return { allowed: false, reason: "TYPE_MISMATCH" };
+  }
+  if (wouldCreateCycle(graph.edges, source.nodeId, target.nodeId)) {
+    return { allowed: false, reason: "CYCLE" };
   }
   if (!target.acceptsMany && hasExistingInput(target, graph.edges)) {
     return { allowed: false, reason: "CARDINALITY" };

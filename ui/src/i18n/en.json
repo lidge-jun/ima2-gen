@@ -623,13 +623,15 @@
     "stopQueued": "The current node will finish, then the remaining queue will stop.",
     "failed": "Stopped after {done}/{total} node(s).",
     "finished": "Finished {done}/{total} node(s).",
-    "staleBecauseParentChanged": "An upstream node was regenerated; refresh this node when needed."
+    "staleBecauseParentChanged": "An upstream node was regenerated; refresh this node when needed.",
+    "cycleBlocked": "Cannot run: {count} selected node(s) form a loop."
   },
   "edge": {
     "disconnect": "Disconnect",
     "disconnectTitle": "Disconnect selected edge",
     "disconnected": "Connection removed.",
-    "parentConflict": "A node can only have one parent connection."
+    "parentConflict": "A node can only have one parent connection.",
+    "cycleBlocked": "That connection would create a loop."
   },
   "provider": {
     "authTitle": "Provider",
@@ -1943,7 +1945,8 @@
       "cardinality": "That input already has a connection.",
       "selfEdge": "A node cannot connect to itself.",
       "duplicateEdge": "That connection already exists.",
-      "unknownPort": "This port is not available for connections."
+      "unknownPort": "This port is not available for connections.",
+      "cycle": "That connection would create a loop."
     }
   },
   "sprite": {

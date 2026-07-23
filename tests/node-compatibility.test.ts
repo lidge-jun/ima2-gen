@@ -21,6 +21,8 @@ describe("node palette compatibility contracts", () => {
   it("NC-08 rejects self edges", () => assert.equal(canConnectPorts(port("same", "prompt", "output"), port("same", "prompt", "input"), emptyGraph).reason, "SELF_EDGE"));
   it("NC-09 rejects duplicate edges", () => assert.equal(canConnectPorts(port("a", "prompt", "output"), port("b", "prompt", "input"), { ...emptyGraph, edges: [{ source: "a", target: "b", sourceHandle: "a-output", targetHandle: "b-input" }] }).reason, "DUPLICATE_EDGE"));
   it("NC-10 rejects a second connection to an occupied input", () => assert.equal(canConnectPorts(port("a", "prompt", "output"), port("b", "prompt", "input"), { ...emptyGraph, edges: [{ source: "other", target: "b", targetHandle: "b-input" }] }).reason, "CARDINALITY"));
+  it("NC-11 rejects a connection that would close a cycle", () => assert.equal(canConnectPorts(port("c", "image", "output"), port("a", "image", "input"), { ...emptyGraph, edges: [{ source: "a", target: "b" }, { source: "b", target: "c" }] }).reason, "CYCLE"));
+  it("NC-12 allows a connection between unrelated nodes in the same graph", () => assert.equal(canConnectPorts(port("c", "image", "output"), port("d", "image", "input"), { ...emptyGraph, edges: [{ source: "a", target: "b" }, { source: "b", target: "c" }] }).allowed, true));
 });
 
 describe("node branching contracts", () => {

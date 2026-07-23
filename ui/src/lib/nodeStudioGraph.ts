@@ -1,7 +1,7 @@
 import type { AssetItem, GraphEdge, GraphNode, ImageNodeData } from "../store/storeTypes";
 import { useAppStore } from "../store/useAppStore";
 import { newClientNodeId } from "./graph";
-import { deriveParentServerNodeIds } from "./nodeGraph";
+import { deriveParentServerNodeIds, graphHasCycle } from "./nodeGraph";
 import type { BranchGraphOutput } from "./nodeBranching";
 import type { NodeTemplateGraphDto } from "./api-node-templates";
 import type { PortDescriptor } from "./nodeCompatibility";
@@ -79,6 +79,7 @@ function validSnapshot(nodes: readonly GraphNode[], edges: readonly GraphEdge[])
   if (nodeIds.size !== nodes.length) return false;
   if (new Set(edges.map((edge) => edge.id)).size !== edges.length) return false;
   if (edges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) return false;
+  if (graphHasCycle(nodes, edges)) return false;
   return nodes.every((node) =>
     node.type !== "elementReferenceNode" || record(node.data).nodeType === "element-reference",
   );

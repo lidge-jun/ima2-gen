@@ -19,6 +19,7 @@ const COMPATIBILITY_REASON_KEYS: Record<CompatibilityReason, string> = {
   CARDINALITY: "nodeStudio.compatibility.cardinality",
   SELF_EDGE: "nodeStudio.compatibility.selfEdge",
   DUPLICATE_EDGE: "nodeStudio.compatibility.duplicateEdge",
+  CYCLE: "nodeStudio.compatibility.cycle",
   UNKNOWN_PORT: "nodeStudio.compatibility.unknownPort",
 };
 

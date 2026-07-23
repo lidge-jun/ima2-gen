@@ -4,6 +4,7 @@ import { newClientNodeId, type ClientNodeId } from "../lib/graph";
 import {
   deriveParentServerNodeIds,
   wouldCreateMultipleIncomingEdge,
+  wouldCreateCycle,
 } from "../lib/nodeGraph";
 import { getNextChildPosition, getNextRootPosition } from "../lib/nodeLayout";
 import { clearNodeRefs as clearStoredNodeRefs } from "../lib/nodeRefStorage";
@@ -416,6 +417,10 @@ export function connectNodesImpl(
   if (existing) return;
   if (wouldCreateMultipleIncomingEdge(get().graphEdges, sourceClientId, targetClientId)) {
     get().showToast(t("edge.parentConflict"), true);
+    return;
+  }
+  if (wouldCreateCycle(get().graphEdges, sourceClientId, targetClientId)) {
+    get().showToast(t("edge.cycleBlocked"), true);
     return;
   }
   const source = get().graphNodes.find((n) => n.id === sourceClientId);

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import type { Connection, OnConnectEnd } from "@xyflow/react";
 import { canConnectPorts, type CompatibilityResult, type PortDescriptor } from "../../lib/nodeCompatibility";
+import { isValidFlowConnection, type FlowConnectionLike } from "../../lib/nodeConnectionValidation";
 import { resolveNodePort } from "../../lib/nodePortCatalog";
 import { buildPaletteInsertion, commitGraphSnapshot } from "../../lib/nodeStudioGraph";
 import type { GraphEdge, GraphNode } from "../../store/useAppStore";
@@ -28,6 +29,10 @@ function clientPoint(event: MouseEvent | TouchEvent): { clientX: number; clientY
 
 export function useNodeConnectionController(options: Options) {
   const [palette, setPalette] = useState<PaletteState>(null);
+  const isValidConnection = useCallback(
+    (connection: FlowConnectionLike) => isValidFlowConnection(connection, options.nodes, options.edges),
+    [options],
+  );
   const onConnect = useCallback((connection: Connection) => {
     const sourceNode = options.nodes.find((node) => node.id === connection.source);
     const targetNode = options.nodes.find((node) => node.id === connection.target);
@@ -52,5 +57,5 @@ export function useNodeConnectionController(options: Options) {
     if (!commitGraphSnapshot({ ...next, reason: "palette" })) { options.surfaceReason("UNKNOWN_PORT"); return; }
     setPalette(null); options.restoreFocus();
   }, [options, palette]);
-  return { palette, setPalette, onConnect, onConnectEnd, insertCommand };
+  return { palette, setPalette, onConnect, onConnectEnd, insertCommand, isValidConnection };
 }

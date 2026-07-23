@@ -23,6 +23,7 @@ export function compatibilityReasonMessage(
     case "CARDINALITY": return "That input already has a connection.";
     case "SELF_EDGE": return "A node cannot connect to itself.";
     case "DUPLICATE_EDGE": return "That connection already exists.";
+    case "CYCLE": return "That connection would create a loop.";
     default: return "This port is not available for connections.";
   }
 }
