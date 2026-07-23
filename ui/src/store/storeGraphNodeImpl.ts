@@ -52,6 +52,7 @@ function getOppositeTargetHandle(sourceHandle?: string | null): string | null {
 
 export function addRootNodeImpl(set: StoreSet, get: StoreGet): ClientNodeId {
   const clientId = newClientNodeId();
+  get().recordGraphHistory("add-root");
   const node: GraphNode = {
     id: clientId,
     type: "imageNode",
@@ -78,6 +79,7 @@ export function createRootNodeFromHistoryItemImpl(
   get: StoreGet,
 ): ClientNodeId {
   const clientId = newClientNodeId();
+  get().recordGraphHistory("add-root-from-history");
   const node: GraphNode = {
     id: clientId,
     type: "imageNode",
@@ -112,6 +114,7 @@ export function addChildNodeImpl(
 ): ClientNodeId {
   const parent = get().graphNodes.find((n) => n.id === parentClientId);
   if (!parent) return parentClientId;
+  get().recordGraphHistory("add-child");
   const clientId = newClientNodeId();
   const node: GraphNode = {
     id: clientId,
@@ -171,6 +174,7 @@ export function addSiblingNodeImpl(
 ): ClientNodeId {
   const source = get().graphNodes.find((n) => n.id === sourceClientId);
   if (!source) return sourceClientId;
+  get().recordGraphHistory("add-sibling");
 
   const incomingEdge = get().graphEdges.find((e) => e.target === sourceClientId);
   if (!incomingEdge) {
@@ -239,6 +243,7 @@ export function addChildNodeAtImpl(
 ): ClientNodeId {
   const parent = get().graphNodes.find((n) => n.id === parentClientId);
   if (!parent) return parentClientId;
+  get().recordGraphHistory("add-child-at");
   const clientId = newClientNodeId();
   const normalizedSourceHandle =
     normalizeNodeHandleId(sourceHandle, "source") ?? DEFAULT_CHILD_SOURCE_HANDLE;
@@ -280,6 +285,7 @@ export function duplicateBranchRootImpl(
 ): ClientNodeId {
   const source = get().graphNodes.find((n) => n.id === sourceClientId);
   if (!source) return sourceClientId;
+  get().recordGraphHistory("duplicate-branch");
   const clientId = newClientNodeId();
   const node: GraphNode = {
     id: clientId,
@@ -338,6 +344,8 @@ export function deleteNodeImpl(
   get: StoreGet,
 ): void {
   const doomed = get().graphNodes.find((n) => n.id === clientId);
+  if (!doomed) return;
+  get().recordGraphHistory("delete-node");
   const reqId = doomed?.data?.pendingRequestId;
   if (reqId) void cancelInflight(reqId);
   clearStoredNodeRefs(get().activeSessionId, clientId);
@@ -356,6 +364,8 @@ export function deleteNodesImpl(
   get: StoreGet,
 ): void {
   const idSet = new Set(clientIds);
+  if (idSet.size === 0) return;
+  get().recordGraphHistory("delete-nodes");
   for (const clientId of idSet) clearStoredNodeRefs(get().activeSessionId, clientId);
   for (const n of get().graphNodes) {
     if (idSet.has(n.id) && n.data?.pendingRequestId) {
@@ -380,6 +390,7 @@ export function disconnectEdgesImpl(
   if (edgeIdSet.size === 0) return;
   const removedEdges = get().graphEdges.filter((edge) => edgeIdSet.has(edge.id));
   if (removedEdges.length === 0) return;
+  get().recordGraphHistory("disconnect-edges");
   const nextEdges = get().graphEdges.filter((edge) => !edgeIdSet.has(edge.id));
   const removedTargets = new Set(removedEdges.map((edge) => edge.target));
   const nextNodes = get().graphNodes.map((node) => {
@@ -425,6 +436,7 @@ export function connectNodesImpl(
   }
   const source = get().graphNodes.find((n) => n.id === sourceClientId);
   if (!source) return;
+  get().recordGraphHistory("connect-nodes");
   const graphEdges = [
     ...get().graphEdges,
     {

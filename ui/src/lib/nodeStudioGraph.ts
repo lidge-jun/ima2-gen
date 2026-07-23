@@ -91,6 +91,9 @@ export function commitGraphSnapshot(input: {
   reason: GraphCommitReason;
 }): boolean {
   if (!validSnapshot(input.nodes, input.edges)) return false;
+  // Record history only for accepted candidates, immediately before the
+  // state mutation (030, wp3 — rejected commits leave history untouched).
+  useAppStore.getState().recordGraphHistory(`commit-${input.reason}`);
   const graphNodes = deriveParentServerNodeIds(input.nodes, input.edges);
   useAppStore.setState({ graphNodes, graphEdges: input.edges });
   useAppStore.getState().scheduleGraphSave();

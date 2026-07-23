@@ -291,7 +291,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Entry | `ui/src/main.tsx` | 46 | React mount |
 | Types | `ui/src/types.ts` | 266 | Provider, quality, size, image model, embedded metadata, response types, web-search, reasoning effort, multimode |
 | Canvas types | `ui/src/types/canvas.ts` | 98 | Canvas Mode shared types (annotations, versions, masks, brushes) |
-| Store | `ui/src/store/useAppStore.ts` | 606 | Zustand facade; classic/node/video/multimode/inflight/history/asset-gen logic split into `ui/src/store/store*Impl.ts` modules |
+| Store | `ui/src/store/useAppStore.ts` | 653 | Zustand facade; classic/node/video/multimode/inflight/history/asset-gen logic split into `ui/src/store/store*Impl.ts` modules |
 | Persistence registry | `ui/src/store/persistenceRegistry.ts` | 84 | Single source of truth for `ima2.*` localStorage key names — covers gallery scope, gallery default scope, and settings keys (theme keys removed in Phase 010); prevents drift between hydration helpers and setters (#43) |
 | Card-news store | `ui/src/store/cardNewsStore.ts` | 417 | Card-news plan, role/image template selection, planner draft, job polling, regenerate actions |
 | Mode/dev gates | `ui/src/lib/devMode.ts` | 16 | `IS_DEV_UI`, `ENABLE_NODE_MODE`, `ENABLE_CARD_NEWS_MODE` build-time flags |
@@ -303,6 +303,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Node batch | `ui/src/lib/nodeBatch.ts` | 159 | Sequential batch generation queue, cycle-selection guard (`findCycleNodeIds`), and stale-downstream rewiring |
 | Node connection validation | `ui/src/lib/nodeConnectionValidation.ts` | 32 | Pure drag-time `isValidConnection` validator for React Flow (port resolution + compatibility incl. cycle guard) |
 | Node error info | `ui/src/lib/nodeErrorInfo.ts` | 46 | Structured inline node-card error state: ImaErrorCode → retry/auth/fix-input action mapping |
+| Node history | `ui/src/lib/nodeHistory.ts` | 102 | Graph undo/redo snapshot ring (structuredClone isolation, pending-protection merge, 30-entry bound) |
 | Node layout | `ui/src/lib/nodeLayout.ts` | 30 | Position-based child node placement |
 | Node ref storage | `ui/src/lib/nodeRefStorage.ts` | 55 | Browser-local node reference persistence outside SQLite graph payloads |
 | Custom size slots | `ui/src/lib/customSizeSlots.ts` | 63 | User-defined custom size slot persistence |

@@ -2044,5 +2044,9 @@
       "GENERATION_CANCELED": "Generation was canceled.",
       "generic": "Sprite generation failed."
     }
+  },
+  "graph": {
+    "undone": "Undid the last graph change.",
+    "redone": "Redid the graph change."
   }
 }

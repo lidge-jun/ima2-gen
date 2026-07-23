@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, type KeyboardEvent, type RefObject } fr
 import { useReactFlow } from "@xyflow/react";
 import { NODE_STUDIO_COMMANDS } from "../../lib/nodeStudioCatalog";
 import type { CompatibilityResult } from "../../lib/nodeCompatibility";
-import { paletteAnchor, shouldOpenNodePalette } from "../../lib/nodeStudioKeyboard";
+import { graphHistoryChord, paletteAnchor, shouldOpenNodePalette } from "../../lib/nodeStudioKeyboard";
 import { useAppStore } from "../../store/useAppStore";
 import { useI18n } from "../../i18n";
 import type { NodeTemplateSummary } from "./NodeTemplatePicker";
@@ -28,6 +28,7 @@ export function useNodeStudioController(wrapperRef: RefObject<HTMLElement | null
   const nodes = useAppStore((state) => state.graphNodes); const edges = useAppStore((state) => state.graphEdges);
   const sessions = useAppStore((state) => state.sessions); const activeSessionId = useAppStore((state) => state.activeSessionId);
   const switchSession = useAppStore((state) => state.switchSession); const connectNodes = useAppStore((state) => state.connectNodes);
+  const undoGraph = useAppStore((state) => state.undoGraph); const redoGraph = useAppStore((state) => state.redoGraph);
   const showToast = useAppStore((state) => state.showToast); const { fitView, screenToFlowPosition } = useReactFlow();
   const [status, setStatus] = useState("");
   const restoreFocus = useCallback(() => requestAnimationFrame(() => wrapperRef.current?.focus()), [wrapperRef]);
@@ -45,10 +46,19 @@ export function useNodeStudioController(wrapperRef: RefObject<HTMLElement | null
     connection.setPalette(null); template.setTemplateOpen(false); branch.setBranchOpen(false); restoreFocus();
   }, [branch.setBranchOpen, connection.setPalette, restoreFocus, template.setTemplateOpen]);
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
+    const chord = graphHistoryChord(event);
+    if (chord) {
+      const handled = chord === "undo" ? undoGraph() : redoGraph();
+      if (handled) {
+        event.preventDefault();
+        showToast(t(chord === "undo" ? "graph.undone" : "graph.redone"));
+      }
+      return;
+    }
     if (event.key === "Escape" && (connection.palette || template.templateOpen || branch.branchOpen)) { event.preventDefault(); closeOverlays(); return; }
     if (!shouldOpenNodePalette(event, wrapperRef.current, nodes.length === 0)) return;
     event.preventDefault(); connection.setPalette({ anchor: paletteAnchor(wrapperRef.current) });
-  }, [branch.branchOpen, closeOverlays, connection.palette, connection.setPalette, nodes.length, template.templateOpen, wrapperRef]);
+  }, [branch.branchOpen, closeOverlays, connection.palette, connection.setPalette, nodes.length, redoGraph, showToast, t, template.templateOpen, undoGraph, wrapperRef]);
   const resumeRecent = useCallback(async () => {
     if (!recent) return;
     try { await switchSession(recent.id); } catch { showToast(t("nodeStudio.empty.resumeError"), true); }

@@ -64,6 +64,8 @@ export async function switchSessionImpl(
       activeSessionGraphVersion: graphVersion,
       graphNodes,
       graphEdges,
+      graphHistoryPast: [],
+      graphHistoryFuture: [],
       sessionLoading: false,
     });
     saveActiveSessionId(id);
@@ -143,6 +145,8 @@ export async function createAndSwitchSessionImpl(
       activeSessionGraphVersion: session.graphVersion,
       graphNodes: [],
       graphEdges: [],
+      graphHistoryPast: [],
+      graphHistoryFuture: [],
     });
     saveActiveSessionId(session.id);
   } catch (err) {

@@ -19,6 +19,19 @@ export function shouldOpenNodePalette(
   return event.key === "/" || event.key === " " && graphEmpty;
 }
 
+/**
+ * Graph undo/redo chord detection (030): mod+z / mod+shift+z on the canvas,
+ * never inside editable targets (prompt textareas keep native undo).
+ */
+export function graphHistoryChord(
+  event: KeyboardEvent<HTMLElement>,
+): "undo" | "redo" | null {
+  if (isEditable(event.target)) return null;
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return null;
+  if (event.key !== "z" && event.key !== "Z") return null;
+  return event.shiftKey ? "redo" : "undo";
+}
+
 export function paletteAnchor(wrapper: HTMLElement | null): { clientX: number; clientY: number } {
   const rect = wrapper?.getBoundingClientRect();
   return rect

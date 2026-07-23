@@ -38,6 +38,8 @@ import {
   flushGraphSaveImpl,
   addHistory,
 } from "./storeGraphSave";
+import { makeSnapshot, mergeAfterRestore, popRedo, popUndo, pushHistory } from "../lib/nodeHistory";
+import { deriveParentServerNodeIds } from "../lib/nodeGraph";
 import {
   runGenerateNodeInPlaceImpl,
   runNodeBatchImpl,
@@ -401,6 +403,51 @@ trashPending: null,
 
   graphNodes: [],
   graphEdges: [],
+  graphHistoryPast: [],
+  graphHistoryFuture: [],
+  recordGraphHistory: (label) => {
+    const s = get();
+    set({
+      graphHistoryPast: pushHistory(s.graphHistoryPast, makeSnapshot(s.graphNodes, s.graphEdges, label)),
+      graphHistoryFuture: [],
+    });
+  },
+  undoGraph: () => {
+    const s = get();
+    const shift = popUndo(
+      s.graphHistoryPast,
+      makeSnapshot(s.graphNodes, s.graphEdges, "current"),
+      s.graphHistoryFuture,
+    );
+    if (!shift) return false;
+    const merged = mergeAfterRestore(shift.restored, s.graphNodes);
+    set({
+      graphNodes: deriveParentServerNodeIds(merged.nodes, merged.edges),
+      graphEdges: merged.edges,
+      graphHistoryPast: shift.past,
+      graphHistoryFuture: shift.future,
+    });
+    get().scheduleGraphSave();
+    return true;
+  },
+  redoGraph: () => {
+    const s = get();
+    const shift = popRedo(
+      s.graphHistoryPast,
+      makeSnapshot(s.graphNodes, s.graphEdges, "current"),
+      s.graphHistoryFuture,
+    );
+    if (!shift) return false;
+    const merged = mergeAfterRestore(shift.restored, s.graphNodes);
+    set({
+      graphNodes: deriveParentServerNodeIds(merged.nodes, merged.edges),
+      graphEdges: merged.edges,
+      graphHistoryPast: shift.past,
+      graphHistoryFuture: shift.future,
+    });
+    get().scheduleGraphSave();
+    return true;
+  },
   setGraphNodes: (graphNodes) => setGraphNodesImpl(graphNodes, set, get),
   setGraphEdges: (graphEdges) => setGraphEdgesImpl(graphEdges, set, get),
   disconnectEdge: (edgeId) => {

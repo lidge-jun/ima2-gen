@@ -151,6 +151,8 @@ export type ImageNodeData = {
 export type GraphNode = FlowNode<ImageNodeData>;
 export type GraphEdge = FlowEdge;
 
+export type GraphHistoryEntry = import("../lib/nodeHistory").GraphSnapshotEntry;
+
 export type ToastEntry = { message: string; error: boolean; id: number; createdAt: number };
 export type ToastState = ToastEntry | null;
 export type ErrorCardEntry = { code: ImaErrorCode; fallbackMessage?: string; id: number; createdAt: number };
@@ -408,6 +410,11 @@ export type AppState = PresetState & ReferenceTraySlice & {
   graphEdges: GraphEdge[];
   setGraphNodes: (n: GraphNode[]) => void;
   setGraphEdges: (e: GraphEdge[]) => void;
+  graphHistoryPast: GraphHistoryEntry[];
+  graphHistoryFuture: GraphHistoryEntry[];
+  recordGraphHistory: (label: string) => void;
+  undoGraph: () => boolean;
+  redoGraph: () => boolean;
   nodeSelectionMode: boolean;
   nodeBatchRunning: boolean;
   nodeBatchStopping: boolean;
