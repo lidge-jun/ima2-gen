@@ -67,7 +67,20 @@ export function mergeAfterRestore(snapshot, current): { nodes, edges }  // pendi
 ### MODIFY ui/src/store/useAppStore.ts
 
 세 액션 구현 배선 (nodeHistory 순수 함수 호출 + `scheduleGraphSave`).
-세션 전환(switchSession) 시 히스토리 클리어.
+세션 전환 시 히스토리 클리어 (wp3 감사 블로커 #1 — 두 경로 모두):
+`switchSessionImpl`은 `apiGetSession` 성공 후 그래프 교체 `set(...)`에 함께 클리어
+(flushGraphSave 실패로 전환이 막히면 undo 보존), `createAndSwitchSessionImpl`도
+그래프 교체 시 클리어.
+
+**스냅샷 격리 (wp3 감사 블로커 #2):** 히스토리 엔트리는 기록 시점에
+`structuredClone`으로 nodes/edges를 복제한다 — store 객체 참조 보유 금지.
+`errorInfo`는 일반 노드 데이터로 스냅샷에 포함·복원한다. pending 병합은
+pending/recovery 필드만 현재 상태 우선이고 non-pending 노드의 역사적 errorInfo는
+스냅샷 값을 따른다. GH-08: 중첩 필드(referenceImages/video/errorInfo) identity
+격리 회귀 테스트. GH-09: 비동기 후속(map by id — addChild 프레임 추출,
+duplicate ref 압축)이 undo로 제거된 노드에 no-op인지 레이스 테스트.
+키보드는 onKeyDown 최상단 mod-key 분기, editable 가드 유지, 처리 시에만
+preventDefault (감사 확인 사항).
 
 ### MODIFY ui/src/lib/nodeStudioKeyboard.ts + NodeCanvas.tsx
 
