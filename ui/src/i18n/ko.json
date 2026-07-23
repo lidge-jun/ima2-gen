@@ -605,7 +605,11 @@
     "nodeRefsUsedWithParent": "부모 이미지와 함께 참조로 사용됩니다.",
     "classicRefsParkedTitle": "클래식 참조 이미지가 보관 중입니다",
     "classicRefsParkedBody": "이 이미지는 클래식 작성창용이라 노드 모드 생성에는 사용되지 않습니다.",
-    "clearParkedRefs": "보관된 참조 비우기"
+    "clearParkedRefs": "보관된 참조 비우기",
+    "retry": "재시도",
+    "retryTitle": "이 노드의 생성을 다시 시도합니다",
+    "errorAuthCta": "계정 또는 API 키를 확인한 뒤 다시 생성해 주세요.",
+    "errorFixCta": "프롬프트나 참조 이미지를 고친 뒤 다시 생성해 주세요."
   },
   "nodeBatch": {
     "selectionOn": "선택중",
@@ -624,7 +628,8 @@
     "failed": "{done}/{total} 완료 후 중단되었습니다.",
     "finished": "{done}/{total} 노드 작업 완료",
     "staleBecauseParentChanged": "상위 노드가 재생성되어 다시 확인이 필요합니다.",
-    "cycleBlocked": "선택한 노드 {count}개가 순환 고리를 이루고 있어 실행할 수 없습니다."
+    "cycleBlocked": "선택한 노드 {count}개가 순환 고리를 이루고 있어 실행할 수 없습니다.",
+    "partialFinished": "{total}개 중 {done}개 완료 — 실패 {failed}개, 건너뜀 {skipped}개."
   },
   "edge": {
     "disconnect": "끊기",

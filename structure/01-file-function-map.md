@@ -300,8 +300,9 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Node API client | `ui/src/lib/nodeApi.ts` | 159 | Node generation JSON/SSE client and node error status propagation |
 | Node graph helpers | `ui/src/lib/nodeGraph.ts` | 98 | Visual-edge parent derivation, incoming-edge conflict, and cycle-detection helpers (`wouldCreateCycle`, `graphHasCycle`) |
 | Node selection | `ui/src/lib/nodeSelection.ts` | 65 | Component-based selection toggling utilities |
-| Node batch | `ui/src/lib/nodeBatch.ts` | 136 | Sequential batch generation queue, cycle-selection guard (`findCycleNodeIds`), and stale-downstream rewiring |
+| Node batch | `ui/src/lib/nodeBatch.ts` | 159 | Sequential batch generation queue, cycle-selection guard (`findCycleNodeIds`), and stale-downstream rewiring |
 | Node connection validation | `ui/src/lib/nodeConnectionValidation.ts` | 32 | Pure drag-time `isValidConnection` validator for React Flow (port resolution + compatibility incl. cycle guard) |
+| Node error info | `ui/src/lib/nodeErrorInfo.ts` | 46 | Structured inline node-card error state: ImaErrorCode → retry/auth/fix-input action mapping |
 | Node layout | `ui/src/lib/nodeLayout.ts` | 30 | Position-based child node placement |
 | Node ref storage | `ui/src/lib/nodeRefStorage.ts` | 55 | Browser-local node reference persistence outside SQLite graph payloads |
 | Custom size slots | `ui/src/lib/customSizeSlots.ts` | 63 | User-defined custom size slot persistence |

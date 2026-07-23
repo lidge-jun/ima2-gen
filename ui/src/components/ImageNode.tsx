@@ -193,12 +193,13 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           ? t("node.assetMissingWithError", { error: d.error })
           : t("node.assetMissing");
       case "error":
-        return t("node.error", { error: d.error ?? t("node.errorUnknown") });
+        return t("node.error", { error: d.errorInfo?.message ?? d.error ?? t("node.errorUnknown") });
       default:
         return "";
     }
   };
   const statusLabel = computeStatusLabel();
+  const errorAction = d.status === "error" ? d.errorInfo?.action ?? "retry" : null;
 
   return (
     <div
@@ -305,7 +306,27 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
         />
       </div>
       <div className="image-node__footer nodrag">
-        <span className="image-node__status" title={statusLabel}>{statusLabel}</span>
+        <span
+          className="image-node__status"
+          title={d.errorInfo?.code ? `${statusLabel} [${d.errorInfo.code}]` : statusLabel}
+        >
+          {statusLabel}
+        </span>
+        {errorAction === "retry" ? (
+          <button
+            type="button"
+            className="image-node__retry"
+            onClick={onRegenerateInPlace}
+            disabled={isBusy}
+            title={t("node.retryTitle")}
+          >
+            {t("node.retry")}
+          </button>
+        ) : errorAction === "auth" ? (
+          <span className="image-node__error-cta">{t("node.errorAuthCta")}</span>
+        ) : errorAction === "fix-input" ? (
+          <span className="image-node__error-cta">{t("node.errorFixCta")}</span>
+        ) : null}
         <div className="image-node__actions">
           <div style={{ position: "relative" }}>
             <button

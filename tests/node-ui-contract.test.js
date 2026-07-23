@@ -17,7 +17,8 @@ describe("node UI compact metadata contract", () => {
     const statusRule = /\.image-node__status\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
     const actionsRule = /\.image-node__actions\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
 
-    assert.match(component, /className="image-node__status" title=\{statusLabel\}/);
+    assert.match(component, /className="image-node__status"/);
+    assert.match(component, /title=\{d\.errorInfo\?\.code \? `\$\{statusLabel\} \[\$\{d\.errorInfo\.code\}\]` : statusLabel\}/);
     assert.match(statusRule, /overflow:\s*hidden/);
     assert.match(statusRule, /text-overflow:\s*ellipsis/);
     assert.match(statusRule, /white-space:\s*nowrap/);

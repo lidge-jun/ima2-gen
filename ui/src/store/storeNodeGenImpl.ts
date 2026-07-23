@@ -7,6 +7,7 @@ import {
 import {
   getDirectUnselectedChildren,
   getUnselectedDownstreamIds,
+  collectDownstream,
   findCycleNodeIds,
   nodeHasImage,
   topologicalSortSelected,
@@ -14,6 +15,7 @@ import {
   type NodeBatchMode,
 } from "../lib/nodeBatch";
 import { handleError } from "../lib/errorHandler";
+import { buildNodeErrorInfo } from "../lib/nodeErrorInfo";
 import { effectiveReferenceLimit } from "../lib/referenceLimits";
 import { t } from "../i18n";
 import {
@@ -189,6 +191,7 @@ export async function runGenerateNodeInPlaceImpl(
               pendingStartedAt: startedAt,
               partialImageUrl: null,
               error: undefined,
+              errorInfo: null,
               size,
             },
           }
@@ -286,6 +289,7 @@ export async function runGenerateNodeInPlaceImpl(
               webSearchCalls: res.webSearchCalls,
               model: res.model ?? null,
               size: res.size ?? null,
+              errorInfo: null,
             },
           };
         }),
@@ -315,6 +319,7 @@ export async function runGenerateNodeInPlaceImpl(
                     pendingStartedAt: null,
                     partialImageUrl: null,
                     error: undefined,
+                    errorInfo: null,
                   },
                 }
               : n,
@@ -339,6 +344,7 @@ export async function runGenerateNodeInPlaceImpl(
                   pendingStartedAt: null,
                   partialImageUrl: null,
                   error: msg,
+                  errorInfo: buildNodeErrorInfo(err),
                 },
               }
             : n,
@@ -411,9 +417,16 @@ export async function runNodeBatchImpl(
   set({ nodeBatchRunning: true, nodeBatchStopping: false });
   const latestServerNodeIdByClientId = new Map<string, string>();
   let completed = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  const skipIds = new Set<string>();
   try {
     for (const candidateId of candidates) {
       if (get().nodeBatchStopping) break;
+      if (skipIds.has(candidateId)) {
+        skippedCount += 1;
+        continue;
+      }
       const incoming = get().graphEdges.find((e) => e.target === candidateId);
       const parentOverride = incoming
         ? latestServerNodeIdByClientId.get(incoming.source)
@@ -430,15 +443,27 @@ export async function runNodeBatchImpl(
             suppressToast: true,
           });
       if (!nodeId) {
-        get().showToast(t("nodeBatch.failed", { done: completed, total: candidates.length }), true);
-        break;
+        // Partial failure (020, wp2): skip everything downstream of the
+        // failed node but keep independent candidates running.
+        failedCount += 1;
+        for (const id of collectDownstream(get().graphEdges, candidateId)) skipIds.add(id);
+        continue;
       }
       completed += 1;
       latestServerNodeIdByClientId.set(candidateId, nodeId);
       const directChildren = getDirectUnselectedChildren(get().graphEdges, candidateId, selectedSet);
+      // Selected direct children too (020, wp2 audit blocker #2): the video
+      // batch path resolves lineage from the stored parentServerNodeId, so
+      // propagate the fresh server id to every direct child.
+      const selectedDirectChildren = get().graphEdges
+        .filter((e) => e.source === candidateId && selectedSet.has(e.target))
+        .map((e) => e.target);
       const downstream = new Set(getUnselectedDownstreamIds(get().graphEdges, selectedSet));
       set({
         graphNodes: get().graphNodes.map((n) => {
+          if (selectedDirectChildren.includes(n.id)) {
+            return { ...n, data: { ...n.data, parentServerNodeId: nodeId } };
+          }
           if (!downstream.has(n.id)) return n;
           return {
             ...n,
@@ -454,7 +479,19 @@ export async function runNodeBatchImpl(
         }),
       });
     }
-    get().showToast(t("nodeBatch.finished", { done: completed, total: candidates.length }));
+    if (failedCount > 0) {
+      get().showToast(
+        t("nodeBatch.partialFinished", {
+          done: completed,
+          failed: failedCount,
+          skipped: skippedCount,
+          total: candidates.length,
+        }),
+        true,
+      );
+    } else {
+      get().showToast(t("nodeBatch.finished", { done: completed, total: candidates.length }));
+    }
     get().scheduleGraphSave();
   } finally {
     set({ nodeBatchRunning: false, nodeBatchStopping: false });

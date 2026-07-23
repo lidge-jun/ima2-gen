@@ -605,7 +605,11 @@
     "nodeRefsUsedWithParent": "Used together with the parent image.",
     "classicRefsParkedTitle": "Classic references are parked",
     "classicRefsParkedBody": "These images belong to the classic composer and are inactive in node mode.",
-    "clearParkedRefs": "Clear parked references"
+    "clearParkedRefs": "Clear parked references",
+    "retry": "Retry",
+    "retryTitle": "Retry this node's generation",
+    "errorAuthCta": "Check your account or API key, then generate again.",
+    "errorFixCta": "Adjust the prompt or references, then generate again."
   },
   "nodeBatch": {
     "selectionOn": "Selecting",
@@ -624,7 +628,8 @@
     "failed": "Stopped after {done}/{total} node(s).",
     "finished": "Finished {done}/{total} node(s).",
     "staleBecauseParentChanged": "An upstream node was regenerated; refresh this node when needed.",
-    "cycleBlocked": "Cannot run: {count} selected node(s) form a loop."
+    "cycleBlocked": "Cannot run: {count} selected node(s) form a loop.",
+    "partialFinished": "Finished {done}/{total} — {failed} failed, {skipped} skipped."
   },
   "edge": {
     "disconnect": "Disconnect",

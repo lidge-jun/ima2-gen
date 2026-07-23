@@ -70,6 +70,29 @@ export function getUnselectedDownstreamIds(
   return [...out];
 }
 
+/**
+ * Every node reachable downstream of rootId, regardless of selection
+ * (020, wp2 — partial-failure skip set).
+ */
+export function collectDownstream(edges: BatchEdge[], rootId: string): string[] {
+  const children = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = children.get(edge.source) ?? [];
+    list.push(edge.target);
+    children.set(edge.source, list);
+  }
+  const out = new Set<string>();
+  const queue = [rootId];
+  for (let i = 0; i < queue.length; i++) {
+    for (const child of children.get(queue[i]) ?? []) {
+      if (out.has(child)) continue;
+      out.add(child);
+      queue.push(child);
+    }
+  }
+  return [...out];
+}
+
 export function getDirectUnselectedChildren(
   edges: BatchEdge[],
   parentId: string,

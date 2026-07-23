@@ -134,6 +134,8 @@ export type ImageNodeData = {
   pendingStartedAt?: number | null;
   partialImageUrl?: string | null;
   error?: string;
+  /** Structured error state for the inline node card (020, wp2). */
+  errorInfo?: import("../lib/nodeErrorInfo").NodeErrorInfo | null;
   elapsed?: number;
   reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   webSearchCalls?: number;
