@@ -34,15 +34,21 @@ export type NodeErrorInfo = {
 
 ### NEW ui/src/lib/nodeErrorInfo.ts (<50줄)
 
-`buildNodeErrorInfo(err: unknown): NodeErrorInfo` — err에서 `.code`/`.errorCode`를
-추출해 `ImaErrorCode`로 정규화. **retryability/CTA는 새 수동 리스트를 만들지 않고
-기존 레지스트리 `ui/src/lib/errorCodes.ts`의 error-spec/CTA 해석을 재사용**한다
-(감사 fold-back #3): 스펙에 CTA·분류가 이미 있으면 그것을
-`nodeRetryActionKey(info): "retry" | "auth" | "fix-input"`로 매핑하고, 레지스트리에
-없는 코드만 보수적 기본값(retryable=true, "retry")을 적용한다. 새 코드가 잘못된
-액션을 조용히 받는 것을 막기 위해 매핑 테이블은 `ImaErrorCode` 유니언에 대해
-exhaustive하게 타입 체크되도록 작성한다 (`satisfies Record<ImaErrorCode, ...>` 또는
-명시 default + 테스트 커버).
+`buildNodeErrorInfo(err: unknown): NodeErrorInfo` — `resolveErrorSpec`(errorCodes.ts)
+으로 `.code`/`.errorCode`/message를 정규화. **CTA-only 매핑은 불건전** (wp2 감사
+블로커 #1): 글로벌 ErrorCard의 CTA와 인라인 노드 액션은 다르다. 확정 매핑 규칙
+(코드 수준 exhaustive, `satisfies Record<ImaErrorCode, ...>`):
+
+- `auth` (retryable=false): spec.cta==="reauth" ∪ {AUTH_API_KEY_INVALID,
+  APIKEY_DISABLED, AGY_QUOTA_EXHAUSTED} — 계정/키/쿼터 조치 유도.
+- `retry` (retryable=true): spec.cta==="retry" ∪ spec.cta==="reload" ∪
+  {EMPTY_RESPONSE, DB_ERROR, UNKNOWN} — 노드 로컬 복구는 reload가 아니라 재시도.
+- `fix-input` (retryable=false): 나머지 dismiss 계열 — REF_*, MODERATION_REFUSED,
+  SAFETY_REFUSAL, INVALID_REQUEST, INVALID_MODERATION,
+  OAUTH_IMAGE_CAPABILITY_UNAVAILABLE 등 입력/기능 한계.
+
+테스트는 34개 `ImaErrorCode` 전 멤버를 이 표에 대해 전수 검증하고 `.errorCode`
+정규화 경로도 커버한다.
 
 ### MODIFY ui/src/store/storeNodeGenImpl.ts
 
@@ -51,23 +57,32 @@ exhaustive하게 타입 체크되도록 작성한다 (`satisfies Record<ImaError
 - `runNodeBatchImpl` 부분 실패:
 
 ```ts
-// break 대신:
-const failedIds = new Set<string>();
-...
+// break 대신 (wp2 감사 블로커 #3 반영 — failed/skipped 분리 집계):
+let failedCount = 0;
+let skippedCount = 0;
+const skipIds = new Set<string>();
+// 루프 선두: if (skipIds.has(candidateId)) { skippedCount += 1; continue; }
 if (!nodeId) {
-  failedIds.add(candidateId);
-  // 실패 노드의 downstream 후보를 스킵 집합에 추가
-  for (const id of getUnselectedDownstreamIds(...)) — 아님: 선택된 downstream도 스킵해야 하므로
-  const downstreamOfFailed = collectDownstream(get().graphEdges, candidateId); // helper (nodeBatch.ts)
-  downstreamOfFailed.forEach((id) => failedIds.add(id));
-  continue;   // 독립 후보는 계속
+  failedCount += 1;
+  for (const id of collectDownstream(get().graphEdges, candidateId)) skipIds.add(id);
+  continue;   // 독립 후보는 계속. 개별 nodeBatch.failed 토스트는 제거 —
+              // 종료 시 partial 요약 1회만.
 }
-// 루프 전 후보 필터: if (failedIds.has(candidateId)) { skipped += 1; continue; }
-// 종료 토스트: 실패>0이면 t("nodeBatch.partialFinished", { done, failed, skipped, total })
+// 종료: failedCount>0 ? t("nodeBatch.partialFinished", { done, failed: failedCount, skipped: skippedCount, total })
+//                     : t("nodeBatch.finished", ...)
+// nodeBatchStopping break는 유지 (stop 요청 시 partial 요약으로 종료).
 ```
 
 `collectDownstream(edges, rootId): string[]`은 nodeBatch.ts에 순수 함수로 추가
 (getUnselectedDownstreamIds와 달리 선택 여부 무관 전체 도달 집합).
+
+**비디오 배치 경로 (wp2 감사 블로커 #2):** `runVideoGenerate(candidateId)`는
+`parentServerNodeIdOverride`를 받지 않아 방금 생성된 부모의 fresh serverNodeId를
+쓸 수 없다. continue-on-error 도입 전, 각 성공 직후의 기존 stale-marking 블록이
+direct children의 `parentServerNodeId`를 이미 갱신하므로(directChildren 분기),
+**선택된 직계 자식에도 같은 갱신을 적용**하는 라인을 추가해 비디오 경로가 저장된
+parentServerNodeId 조회만으로 fresh 부모를 보게 한다. BP-04: A→C 선택 비디오
+배치에서 C가 A의 새 serverNodeId를 참조함을 검증.
 
 ### MODIFY ui/src/components/ImageNode.tsx
 
@@ -98,7 +113,9 @@ error 상태 footer에 액션 버튼 렌더:
 - BP-01 `collectDownstream`: 체인/다이아몬드에서 도달 집합 정확.
 - BP-02 (activation) 부분 실패 시나리오: 후보 [A(실패), B(독립), C(A의 child)]에서
   B는 실행되고 C는 스킵됨 — 모킹 스토어로 실행 순서/스킵 관찰.
+  + stop-after-failure 변형: 실패 후 nodeBatchStopping 시 partial 요약으로 종료.
 - BP-03 종료 토스트가 done/failed/skipped 카운트를 전달.
+- BP-04 비디오 배치 parent 전파 (블로커 #2).
 
 ## Accept criteria (활성화 시나리오)
 
