@@ -43,6 +43,17 @@ mcp-recover-route 5/5) 후 `_fin/` 이동. 같은 날짜의
 `260719_node22-mcp-timer-unref/`, `260719_windows-ci-matrix-repair/`는 별도
 closeout 예정으로 `_plan`에 남는다.
 
+2026-07-25 archival sweep (`_fin/260725_devlog_archival/000_archival_record.md`
+에 유닛별 증거): `260718_260718-runway-mcp-loss-hardening/`(mcpRecover 라우트
+랜딩 + 7/23 라이브 recover 검증), `260719_node22-mcp-timer-unref/`(`ac7ed6c`),
+`260719_windows-ci-matrix-repair/`(`778336c`·`d066ab3`·`fdc8759`),
+`260722_higgsfield-hardening/`(전 WP 랜딩, 업스트림 BLOCKED는 042에 기록),
+`260723_docker-pr115-release301/`(v3.0.1 closeout),
+`260723_release-train-3.0.0/`(v3.0.0 퍼블리시),
+`260724_node-mode-hardening/`(3 phase 전부 랜딩),
+`260725_structured_filename/`(`08796ac` 스쿼시 머지, PR #116 supersede)를
+`_fin/`으로 이동. lane 1~3은 active로 유지.
+
 Deferred (`_plan/_future/`): `260715_icon_pipeline/`,
 `260430_issue27-canvas-svg-export/`,
 `260430_issue28-canvas-pptx-export/`, `260430_issue31-provider-masked-edit/`,
