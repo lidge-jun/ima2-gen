@@ -5,7 +5,8 @@
     "delete": "삭제",
     "close": "닫기",
     "saving": "저장 중...",
-    "loading": "불러오는 중..."
+    "loading": "불러오는 중...",
+    "dismiss": "알림 닫기"
   },
   "appBar": {
     "modeImage": "이미지",

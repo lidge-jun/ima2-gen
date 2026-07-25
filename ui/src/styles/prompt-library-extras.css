@@ -144,6 +144,29 @@
   padding: 0;
   line-height: 1;
 }
+/* The star is an SVG (FavoriteStarIcon), so it needs an explicit box and stroke/fill
+   treatment; font-size no longer sizes it. Outline when off, filled when on. */
+.prompt-library-row__star svg,
+.prompt-detail-modal__favorite svg,
+.prompt-library-panel__filter-toggle svg {
+  width: 14px;
+  height: 14px;
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+.prompt-library-row__star--on svg,
+.prompt-detail-modal__favorite--on svg,
+.prompt-library-panel__filter-toggle.active svg {
+  fill: currentColor;
+}
+.prompt-detail-modal__favorite,
+.prompt-library-panel__filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 .prompt-library-row__star--on {
   color: #f59e0b;
 }

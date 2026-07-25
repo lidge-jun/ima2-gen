@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "../i18n";
 import type { PromptItem } from "../lib/api";
+import { FavoriteStarIcon } from "./controls";
 import { PromptDetailModal } from "./PromptDetailModal";
 
 export function PromptLibraryRow({
@@ -47,8 +48,9 @@ export function PromptLibraryRow({
               onToggleFavorite();
             }}
             aria-label={prompt.isFavorite ? t("promptLibrary.unfavorite") : t("promptLibrary.favorite")}
+            aria-pressed={prompt.isFavorite}
           >
-            {prompt.isFavorite ? "★" : "☆"}
+            <FavoriteStarIcon />
           </button>
           <span className="prompt-library-row__chevron">›</span>
         </div>

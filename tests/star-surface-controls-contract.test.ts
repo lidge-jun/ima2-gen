@@ -25,7 +25,13 @@ describe("shared star surface controls", () => {
     assert.match(control, /aria-pressed=\{active\}/);
     assert.match(control, /aria-busy=\{busy \|\| undefined\}/);
     assert.match(control, /disabled=\{busy\}/);
-    assert.match(control, /<svg[\s\S]*aria-hidden="true"[\s\S]*focusable="false"/);
+    // The artwork moved into FavoriteStarIcon so the overlay button and the inline
+    // list/dialog toggles cannot drift into two different stars. The requirement is
+    // still "one decorative SVG, never a text glyph" — assert it where it now lives.
+    assert.match(control, /<FavoriteStarIcon \/>/);
+    const icon = read("ui/src/components/controls/FavoriteStarIcon.tsx");
+    assert.match(icon, /<svg[\s\S]*aria-hidden="true"[\s\S]*focusable="false"/);
+    assert.doesNotMatch(icon, /[★☆]/);
     assert.match(control, /onPointerDown=\{stopPointer\}/);
     assert.match(control, /onDoubleClick=\{stopMouse\}/);
     assert.match(control, /onKeyDown=\{stopKey\}/);

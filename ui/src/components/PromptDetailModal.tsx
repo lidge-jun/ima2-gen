@@ -1,6 +1,7 @@
 import { useI18n } from "../i18n";
 import { useModalFocus } from "../hooks/useModalFocus";
 import type { PromptItem } from "../lib/api";
+import { FavoriteStarIcon } from "./controls";
 
 export function PromptDetailModal({
   prompt,
@@ -79,8 +80,10 @@ export function PromptDetailModal({
           <button
             className={`prompt-detail-modal__favorite${prompt.isFavorite ? " prompt-detail-modal__favorite--on" : ""}`}
             onClick={onToggleFavorite}
+            aria-pressed={prompt.isFavorite}
           >
-            {prompt.isFavorite ? "★ " + t("promptLibrary.unfavorite") : "☆ " + t("promptLibrary.favorite")}
+            <FavoriteStarIcon />
+            {prompt.isFavorite ? t("promptLibrary.unfavorite") : t("promptLibrary.favorite")}
           </button>
           <button className="prompt-detail-modal__delete" onClick={onDelete}>
             {t("common.delete")}

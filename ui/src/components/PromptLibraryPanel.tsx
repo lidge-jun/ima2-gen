@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { FavoriteStarIcon } from "./controls";
 import { PromptLibraryRow } from "./PromptLibraryRow";
 import { SavePromptPopover } from "./SavePromptPopover";
 
@@ -111,7 +112,7 @@ export function PromptLibraryPanel({ variant = "overlay", forceOpen = false, onR
             title={t("promptLibrary.favorites")}
             onClick={() => setFavoritesOnly((v) => !v)}
           >
-            <span aria-hidden="true">★</span>
+            <FavoriteStarIcon />
             <span>{t("promptLibrary.favorites")}</span>
           </button>
         </div>

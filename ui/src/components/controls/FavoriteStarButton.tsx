@@ -1,4 +1,5 @@
 import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
+import { FavoriteStarIcon } from "./FavoriteStarIcon";
 
 type FavoriteStarButtonProps = {
   active: boolean;
@@ -42,9 +43,7 @@ export function FavoriteStarButton({
         void onToggle();
       }}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="m12 2.75 2.78 5.63 6.22.9-4.5 4.39 1.06 6.2L12 16.94 6.44 19.87l1.06-6.2L3 9.28l6.22-.9L12 2.75Z" />
-      </svg>
+      <FavoriteStarIcon />
     </button>
   );
 }

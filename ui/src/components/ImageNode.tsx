@@ -335,8 +335,20 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
               disabled={!d.prompt?.trim()}
               title={t("promptLibrary.saveTitle")}
               aria-label={t("promptLibrary.saveTitle")}
+              aria-haspopup="dialog"
+              aria-expanded={saveOpen}
             >
-              ☆
+              {/* Bookmark, not a star: this opens the save-prompt popover. A favorite
+                  star here would claim an action the button does not perform. */}
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="15" height="15">
+                <path
+                  d="M6.5 3.75h11a.75.75 0 0 1 .75.75v15.03a.5.5 0 0 1-.77.42L12 16.4l-5.48 3.55a.5.5 0 0 1-.77-.42V4.5a.75.75 0 0 1 .75-.75Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
             {saveOpen && (
               <SavePromptPopover
