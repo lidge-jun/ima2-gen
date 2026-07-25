@@ -15,7 +15,12 @@ export function AgentSessionSpinner({ summary }: Props) {
       : t("agent.sessionError");
 
   return (
-    <span className={`agent-session-spinner agent-session-spinner--${summary.status}`} aria-label={label} title={label}>
+    <span
+      className={`agent-session-spinner agent-session-spinner--${summary.status}`}
+      data-motion-essential
+      aria-label={label}
+      title={label}
+    >
       <span aria-hidden="true" />
       {summary.queuedCount > 0 ? <em>{summary.queuedCount}</em> : null}
     </span>

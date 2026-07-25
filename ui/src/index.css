@@ -136,6 +136,23 @@ body::after {
   border-radius: 2px;
 }
 
+/* Global reduced-motion safety net (WP2). Individual stylesheets still declare their
+   own, more specific rules; this only catches surfaces that forget to.
+
+   Generation spinners are exempt via [data-motion-essential]: they carry state, not
+   decoration. Freezing them would make "running" and "stalled" look identical. Those
+   elements must also expose a textual status so motion is never the only signal. */
+@media (prefers-reduced-motion: reduce) {
+  *:not([data-motion-essential]):not([data-motion-essential] *),
+  *:not([data-motion-essential]):not([data-motion-essential] *)::before,
+  *:not([data-motion-essential]):not([data-motion-essential] *)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @import "./styles/themes.css";
 @import "./styles/controls.css";
 @import "./styles/nav-rail.css";

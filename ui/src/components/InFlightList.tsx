@@ -77,7 +77,7 @@ function CompactRow({ f, phaseLabels, videoProgress, cancelInFlightJob, t }: Sha
       >
         ×
       </button>
-      <span className="in-flight-spinner" aria-hidden="true" />
+      <span className="in-flight-spinner" aria-hidden="true" data-motion-essential />
     </li>
   );
 }
@@ -141,6 +141,7 @@ function ProgressTrack({ progressPercent, phaseLabel, t }: {
     <span
       className={`in-flight-progress${progressPercent == null ? " in-flight-progress--indeterminate" : ""}`}
       role="progressbar"
+      data-motion-essential
       aria-label={progressPercent == null ? phaseLabel : t("inflight.progressAria", { n: progressPercent })}
       aria-valuemin={progressPercent == null ? undefined : 0}
       aria-valuemax={progressPercent == null ? undefined : 100}

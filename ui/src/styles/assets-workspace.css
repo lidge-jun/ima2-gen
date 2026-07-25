@@ -1,22 +1,22 @@
 .app[data-ui-mode="assets"] { grid-template-columns: var(--nav-rail-w) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100dvh; overflow: hidden; }
 .app[data-ui-mode="assets"] > .sidebar { display: none; }
-.assets-workspace { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; height: 100dvh; display: grid; grid-template-columns: 220px minmax(0, 1fr); background: var(--bg); color: var(--text); overflow: hidden; }
-.assets-workspace--detail-open { grid-template-columns: 220px minmax(0, 1fr) 360px; }
+.assets-workspace { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; height: 100dvh; display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); background: var(--bg); color: var(--text); overflow: hidden; }
+.assets-workspace--detail-open { grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(280px, 360px); }
 .assets-folders { min-width: 0; padding: 18px 10px; border-right: 1px solid var(--hairline-soft); background: var(--surface); overflow-y: auto; }
 .assets-folders__heading { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 10px; color: var(--text-dim); font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; }
 .assets-folders button, .assets-tag-filter button, .assets-tile button, .assets-load-more { border: 0; background: transparent; color: inherit; cursor: pointer; }
-.assets-folders__heading button { width: 28px; height: 28px; border-radius: 7px; font-size: 18px; }
+.assets-folders__heading button { width: 44px; height: 44px; border-radius: 7px; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; }
 .assets-folders__heading button:hover, .assets-folder-row__actions button:hover { background: var(--control-hover); }
 .assets-folders__rows { display: grid; gap: 2px; }
 .assets-folder-all, .assets-folder-row__name { min-width: 0; width: 100%; padding: 7px 8px; border-radius: 7px !important; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.assets-folder-row { position: relative; display: flex; align-items: center; padding-left: calc(var(--folder-depth) * 14px); }
+.assets-folder-row { position: relative; display: flex; align-items: center; min-height: 44px; padding-left: calc(var(--folder-depth) * 14px); }
 .assets-folder-row__name.is-active, .assets-folder-all.is-active { color: var(--accent-bright); background: var(--accent-soft); }
 .assets-folder-elements { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
 .assets-folder-elements__glyph { flex: none; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border, rgba(255,255,255,0.16)); border-radius: 5px; font-size: 11px; font-weight: 650; color: var(--text-dim); }
 .assets-folder-elements.is-active .assets-folder-elements__glyph { color: var(--accent-bright); border-color: var(--accent); }
 .assets-folder-row__actions { position: absolute; right: 3px; display: none; align-items: center; background: var(--surface); }
 .assets-folder-row:hover .assets-folder-row__actions, .assets-folder-row:focus-within .assets-folder-row__actions { display: flex; }
-.assets-folder-row__actions button { width: 25px; height: 25px; border-radius: 6px; color: var(--text-dim); }
+.assets-folder-row__actions button { width: 44px; height: 44px; border-radius: 6px; color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center; }
 .assets-folder-row__actions .is-danger, .assets-tile__delete.is-danger { color: var(--danger, #ff6262); }
 .assets-folder-row__actions button.is-armed { width: auto; padding: 0 8px; font-size: 11px; font-weight: 650; border: 1px solid var(--danger, #ff6262); }
 .assets-folder-input { width: 100%; min-width: 0; padding: 6px 7px; border: 1px solid var(--accent); border-radius: 7px; background: var(--control-bg); color: var(--text); }
@@ -68,7 +68,7 @@
 .assets-empty__cta:hover { background: var(--accent-bright); }
 .assets-workspace__detail-backdrop { display: none; }
 .assets-workspace__detail { position: relative; min-width: 0; border-left: 1px solid var(--hairline-soft); background: var(--surface); overflow-y: auto; }
-.assets-workspace__detail-close { position: absolute; z-index: 1; top: 12px; right: 12px; width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 7px; background: var(--control-bg); color: var(--text-dim); cursor: pointer; }
+.assets-workspace__detail-close { position: absolute; z-index: 1; top: 12px; right: 12px; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 7px; background: var(--control-bg); color: var(--text-dim); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .assets-workspace__detail-close:hover { color: var(--text); background: var(--control-hover); }
 .assets-workspace__detail-empty { padding: 56px 22px 22px; }
 .assets-workspace__detail-empty h2 { margin: 0 0 8px; font-size: 16px; }
@@ -90,9 +90,11 @@
   .assets-workspace { grid-column: 1; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
   .assets-workspace__detail-backdrop { position: fixed; z-index: 29; inset: 0; display: block; border: 0; background: color-mix(in srgb, var(--bg) 55%, transparent); }
   .assets-workspace__detail { position: fixed; z-index: 30; inset: auto 0 0; max-height: min(78dvh, 620px); border-top: 1px solid var(--hairline-soft); border-left: 0; box-shadow: 0 -18px 40px color-mix(in srgb, var(--bg) 60%, transparent); }
-  .assets-workspace__detail-close { width: 44px; height: 44px; }
   .assets-folders { padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--hairline-soft); overflow: hidden; }
   .assets-folders__heading { display: flex; padding: 0 0 6px; }
+  /* Restated inside the mobile block on purpose: tests/assets-workspace-polish-contract
+     pins the mobile touch-target guarantee here, so a future desktop-only refactor
+     cannot silently shrink these below 44px. */
   .assets-folders__heading button { width: 44px; height: 44px; }
   .assets-folders__rows { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-inline: contain; padding-bottom: 4px; }
   .assets-folder-all, .assets-folder-row__name { width: auto; flex: none; min-height: 44px; padding: 7px 10px; background: var(--surface-2) !important; }
@@ -102,7 +104,7 @@
   .assets-folder-input { min-height: 44px; }
   .assets-folder-input--new { min-width: 150px; }
   .assets-toolbar { padding: 14px 14px 10px; }
-  .assets-toolbar__controls { grid-template-columns: minmax(0, 1fr) 120px; }
+  .assets-toolbar__controls { grid-template-columns: minmax(0, 1fr); }
   .assets-grid-scroll { padding: 12px 14px 28px; }
 }
 

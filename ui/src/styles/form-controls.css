@@ -73,6 +73,9 @@
 
 .size-picker {
   gap: 6px;
+  /* This control renders inside both the right panel and the mobile compose sheet, so
+     the real constraint is the container width, not the viewport. */
+  container-type: inline-size;
 }
 
 .size-picker__quick-row,
@@ -89,6 +92,12 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   margin-top: 8px;
+}
+
+@container (max-width: 320px) {
+  .size-picker__ratio-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .size-picker__ratio,
