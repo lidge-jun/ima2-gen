@@ -49,28 +49,51 @@ test("dialog surfaces do not register their own Escape listener", () => {
 });
 
 test("gallery tablists support roving tabindex and arrow keys", () => {
-  const src = readFileSync("ui/src/components/GalleryModal.tsx", "utf8");
-  const tablists = src.match(/role="tablist"/g) ?? [];
-  const handlers = src.match(/onKeyDown=\{onTablistKeyDown\}/g) ?? [];
-  assert.equal(
-    handlers.length,
-    tablists.length,
-    "every role=tablist container needs the arrow-key handler",
-  );
-  const tabs = src.match(/role="tab"/g) ?? [];
-  const roving = src.match(/tabIndex=\{[^}]*\? 0 : -1\}/g) ?? [];
-  assert.equal(roving.length, tabs.length, "every role=tab needs a roving tabIndex");
+  const tabs = readFileSync("ui/src/components/gallery/GalleryFilterTabs.tsx", "utf8");
+  assert.match(tabs, /role="tablist"/);
+  assert.match(tabs, /role="tab"/);
+  assert.match(tabs, /useTablistKeys/, "the tablist must wire arrow/Home/End navigation");
+  assert.match(tabs, /tabIndex=\{tab\.value === rovingValue \? 0 : -1\}/, "roving tabindex required");
+  // The gallery must not hand-roll tablists that bypass the shared keyboard contract.
+  const gallery = readFileSync("ui/src/components/GalleryModal.tsx", "utf8");
+  assert.doesNotMatch(gallery, /role="tablist"/, "gallery tablists must use GalleryFilterTabs");
 });
 
-test("in-flight progress is exposed as a live region", () => {
+test("a disabled tab never leaves its tablist without a focusable entry", () => {
+  const tabs = readFileSync("ui/src/components/gallery/GalleryFilterTabs.tsx", "utf8");
+  // The scope tablist can have its selected tab disabled (no active session). Deriving
+  // the roving index from selection alone would put every tab at -1 and make the group
+  // unreachable by keyboard, so it falls through to the first enabled tab.
+  assert.match(
+    tabs,
+    /selected && !selected\.disabled[\s\S]*?tabs\.find\(\(tab\) => !tab\.disabled\)/,
+    "roving index must fall back to the first enabled tab",
+  );
+  const gallery = readFileSync("ui/src/components/GalleryModal.tsx", "utf8");
+  assert.match(gallery, /disabled: !currentSessionId/, "scope tab stays disabled without a session");
+});
+
+test("gallery keeps an explicit initial focus target", () => {
+  const src = readFileSync("ui/src/components/GalleryModal.tsx", "utf8");
+  // useModalFocus focuses the first focusable element, which is a filter tab. Without an
+  // explicit marker the search field silently loses the focus it used to take.
+  assert.match(src, /data-modal-initial-focus/, "gallery must mark its initial focus target");
+  assert.doesNotMatch(
+    src,
+    /\n\s+autoFocus\n/,
+    "autoFocus competes with the hook's initial focus; use data-modal-initial-focus",
+  );
+});
+
+test("in-flight progress is announced by progressbar semantics, not a list live region", () => {
   const src = readFileSync("ui/src/components/InFlightList.tsx", "utf8");
-  const lists = src.match(/className=\{?[`"]in-flight-list/g) ?? [];
-  const live = src.match(/aria-live="polite"/g) ?? [];
-  assert.ok(lists.length > 0, "expected in-flight list markup");
-  assert.equal(live.length, lists.length, "every in-flight list must be a live region");
-  // aria-atomic would re-announce the whole list on each tick; with up to 12 parallel
-  // jobs that floods the screen reader.
-  assert.doesNotMatch(src, /aria-atomic="true"/);
+  // Each row already exposes role="progressbar" with aria-valuenow/aria-label, so the
+  // per-job state is announced on change. Wrapping the list in aria-live on top of that
+  // double-announces every tick — with up to 12 parallel jobs it floods the screen
+  // reader. This contract is owned by tests/inflight-popup-polish-contract.test.js and
+  // is restated here so the modal/a11y sweep cannot silently reintroduce the overlap.
+  assert.match(src, /role="progressbar"/, "progress rows must expose progressbar semantics");
+  assert.doesNotMatch(src, /aria-live/, "the list itself must not duplicate live output");
 });
 
 test("gallery session loading is announced", () => {

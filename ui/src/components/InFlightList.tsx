@@ -44,7 +44,7 @@ type SharedListProps = {
 
 function CompactList(props: SharedListProps) {
   return (
-    <ul className="in-flight-list" aria-live="polite" aria-relevant="additions text">
+    <ul className="in-flight-list">
       {props.jobs.map((f) => <CompactRow key={f.id} f={f} {...props} />)}
     </ul>
   );
@@ -90,12 +90,7 @@ function RichList(props: SharedListProps & { variant: "popup" | "inline"; panelI
       ? props.videoProgress
       : null;
   return (
-    <ul
-      id={props.panelId}
-      className={`in-flight-list in-flight-list--${props.variant}`}
-      aria-live="polite"
-      aria-relevant="additions text"
-    >
+    <ul id={props.panelId} className={`in-flight-list in-flight-list--${props.variant}`}>
       {props.jobs.map((f) => (
         <RichRow key={f.id} f={f} determinateVideoId={determinateVideoId} validVideoProgress={validVideoProgress} {...props} />
       ))}

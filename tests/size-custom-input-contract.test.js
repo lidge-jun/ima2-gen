@@ -169,8 +169,12 @@ describe("custom size input contract", () => {
     assert.match(modal, /aria-modal="true"/);
     assert.match(modal, /aria-labelledby="custom-size-confirm-title"/);
     assert.match(modal, /aria-describedby="custom-size-confirm-body"/);
-    assert.match(modal, /if \(e\.key === "Escape"\) cancel\(\)/);
-    assert.match(modal, /cancelRef\.current\?\.focus\(\)/);
+    // Escape-to-cancel and initial focus on the cancel button are still required, but
+    // they are now delegated to the shared useModalFocus hook, which additionally traps
+    // Tab and restores focus to the opener. Assert the behaviour, not the old inline
+    // implementation (see devlog/_plan/260726_zero-backlog-frontend-qa/010_a11y_foundation.md).
+    assert.match(modal, /useModalFocus<HTMLDivElement>\(Boolean\(pending\), cancel\)/);
+    assert.match(modal, /data-modal-initial-focus/);
     assert.match(backdropRule, /z-index:\s*230/);
   });
 

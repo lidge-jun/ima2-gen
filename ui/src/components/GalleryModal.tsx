@@ -11,8 +11,8 @@ import { dateBucket } from "../lib/galleryUtils";
 import { getGalleryItemKey, isGalleryVisibleItem, uniqueGalleryItems } from "../lib/galleryNavigation";
 import { useI18n } from "../i18n";
 import { useModalFocus } from "../hooks/useModalFocus";
-import { useTablistKeys } from "../hooks/useTablistKeys";
 import { useCardNewsActions } from "./gallery/useCardNewsActions";
+import { GalleryFilterTabs } from "./gallery/GalleryFilterTabs";
 import { CardNewsGalleryTile } from "./CardNewsGalleryTile";
 import { GalleryImageTile } from "./GalleryImageTile";
 import { GalleryDateGrid } from "./gallery/GalleryDateGrid";
@@ -120,7 +120,6 @@ export function GalleryModal() {
   // Escape, focus trapping and focus restore all live in useModalFocus; registering a
   // second Escape listener here would close the dialog twice.
   const dialogRef = useModalFocus<HTMLDivElement>(open, close);
-  const onTablistKeyDown = useTablistKeys<HTMLDivElement>();
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -441,96 +440,44 @@ export function GalleryModal() {
               {t("gallery.total", { n: totalVisible })}
               {query || favoritesOnly ? t("gallery.totalFiltered", { n: galleryHistory.length }) : ""}
             </div>
-            <div
+            <GalleryFilterTabs
               className="gallery__favorite-filter"
-              role="tablist"
-              aria-label={t("gallery.favoriteFilterAria")}
-              onKeyDown={onTablistKeyDown}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!favoritesOnly}
-                tabIndex={!favoritesOnly ? 0 : -1}
-                className={!favoritesOnly ? "active" : ""}
-                onClick={() => setFavoritesOnly(false)}
-              >
-                {t("gallery.filterAll")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={favoritesOnly}
-                tabIndex={favoritesOnly ? 0 : -1}
-                className={favoritesOnly ? "active" : ""}
-                onClick={() => setFavoritesOnly(true)}
-              >
-                {t("gallery.filterFavorites")}
-              </button>
-            </div>
-            <div
+              ariaLabel={t("gallery.favoriteFilterAria")}
+              value={favoritesOnly ? "favorites" : "all"}
+              onChange={(next) => setFavoritesOnly(next === "favorites")}
+              tabs={[
+                { value: "all", label: t("gallery.filterAll") },
+                { value: "favorites", label: t("gallery.filterFavorites") },
+              ]}
+            />
+            <GalleryFilterTabs
               className="gallery__group-toggle"
-              role="tablist"
-              aria-label={t("gallery.sortByAria")}
-              onKeyDown={onTablistKeyDown}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={groupBy === "date"}
-                tabIndex={groupBy === "date" ? 0 : -1}
-                className={groupBy === "date" ? "active" : ""}
-                onClick={() => setGroupBy("date")}
-              >
-                {t("gallery.sortByDate")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={groupBy === "session"}
-                tabIndex={groupBy === "session" ? 0 : -1}
-                className={groupBy === "session" ? "active" : ""}
-                onClick={() => setGroupBy("session")}
-              >
-                {t("gallery.sortBySession")}
-              </button>
-            </div>
-            <div
+              ariaLabel={t("gallery.sortByAria")}
+              value={groupBy}
+              onChange={setGroupBy}
+              tabs={[
+                { value: "date", label: t("gallery.sortByDate") },
+                { value: "session", label: t("gallery.sortBySession") },
+              ]}
+            />
+            <GalleryFilterTabs
               className="gallery__scope"
-              role="tablist"
-              aria-label={t("gallery.scopeAria")}
-              onKeyDown={onTablistKeyDown}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={galleryScope === "current-session"}
-                tabIndex={galleryScope === "current-session" ? 0 : -1}
-                className={galleryScope === "current-session" ? "active" : ""}
-                onClick={() => setGalleryScope("current-session")}
-                disabled={!currentSessionId}
-              >
-                {t("gallery.scope.current")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={galleryScope === "all"}
-                tabIndex={galleryScope === "all" ? 0 : -1}
-                className={galleryScope === "all" ? "active" : ""}
-                onClick={() => setGalleryScope("all")}
-              >
-                {t("gallery.scope.all")}
-              </button>
-            </div>
+              ariaLabel={t("gallery.scopeAria")}
+              value={galleryScope}
+              onChange={setGalleryScope}
+              tabs={[
+                { value: "current-session", label: t("gallery.scope.current"), disabled: !currentSessionId },
+                { value: "all", label: t("gallery.scope.all") },
+              ]}
+            />
           </div>
           <input
             type="text"
             className="gallery__search"
+            {...(showSessions ? {} : { "data-modal-initial-focus": true })}
             placeholder={showSessions ? t("gallery.searchDisabledPlaceholder") : t("gallery.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            autoFocus
             disabled={showSessions}
           />
           <button
