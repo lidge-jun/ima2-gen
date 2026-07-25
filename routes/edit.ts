@@ -1,7 +1,7 @@
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir } from "fs/promises";
 import { safeWriteSidecar } from "../lib/atomicWrite.js";
 import { join } from "path";
-import { randomBytes } from "crypto";
+import { buildFilename, writeFileUnique } from "../lib/filename.js";
 import type { Express, Request, Response } from "express";
 import { detectImageMimeFromB64 } from "../lib/refs.js";
 import { generateImageThumbnailFromBuffer } from "../lib/imageThumb.js";
@@ -311,12 +311,21 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         ? (resultMimeFromProvider || detectImageMimeFromB64(resultB64) || "image/png")
         : "image/png";
       const editExt = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? imageFormatFromMime(editMime) : "png";
-      const filename = `${Date.now()}_${randomBytes(ctx.config.ids.generatedHexBytes).toString("hex")}.${editExt}`;
       const editBuffer = Buffer.from(resultB64, "base64");
-      const editFilePath = join(ctx.config.storage.generatedDir, filename);
-      await writeFile(editFilePath, editBuffer);
-      generateImageThumbnailFromBuffer(editBuffer, editFilePath).catch(() => {});
       const createdAt = Date.now();
+      const filename = await writeFileUnique(
+        ctx.config.storage.generatedDir,
+        buildFilename({
+          model: (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high" ? "grok-imagine-image-quality" : (imageModel || activeProvider),
+          size: effectiveSize,
+          createdAt,
+          prompt,
+          ext: editExt,
+        }),
+        editBuffer,
+      );
+      const editFilePath = join(ctx.config.storage.generatedDir, filename);
+      generateImageThumbnailFromBuffer(editBuffer, editFilePath).catch(() => {});
       const meta = {
         prompt,
         userPrompt: prompt,

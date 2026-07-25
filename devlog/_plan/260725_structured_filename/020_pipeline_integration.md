@@ -28,18 +28,24 @@ buffer (`embedded.buffer` at lib/generatePipeline.ts:465,
 lib/multimodePipeline.ts:309, lib/agentImageVideoGen.ts:200); edit already has
 `editBuffer` before the call (routes/edit.ts:315).
 
-Filename/sidecar contract (audit round 3, chosen option): EMBEDDED (XMP)
+Filename/sidecar contract (audit round 3, refined at WP2b P): EMBEDDED (XMP)
 metadata intentionally OMITS the filename — it is serialized inside
 `embedImageMetadata` (lib/imageMetadataStore.ts:24) before the collision
-resolution can know the final name. Only the sidecar carries it:
-`const sidecarMeta = { ...meta, filename }` created AFTER the atomic write,
-used for sidecar persistence. The inferred meta objects are never mutated
-(no `meta.filename =` — TS2339, lib/generatePipeline.ts:434,
-lib/multimodePipeline.ts:277). Existing sidecar writes already consume the
-resolved `filename` variable — verified at lib/generatePipeline.ts:471,
-lib/multimodePipeline.ts:312, lib/agentImageVideoGen.ts:203,
-routes/edit.ts:316. `noUnusedLocals` (tsconfig.json:14) makes the import
-removals mandatory.
+resolution can know the final name. Verified at WP2b P: NONE of the four
+meta objects carries a `filename` field at all (classic :434, multimode :277,
+agent :187, edit :320) — sidecars persist `meta` as-is and only the sidecar
+PATH (`<filePath>.json`) derives from the resolved name. Therefore NO
+sidecarMeta copy and NO meta mutation is needed: resolve the name with
+`writeFileUnique`, then derive filePath/sidecar path/thumbnail from the
+returned name exactly as the code does today. `noUnusedLocals`
+(tsconfig.json:14) makes the import removals mandatory.
+
+Agent model (WP2b P verification): the caller already computes
+`effectiveModel` (grok high-quality override, atlas/grok paths at
+lib/agentImageVideoGen.ts:85-87) and passes it as `generation.model` — so the
+agent lane needs NO effectiveFilenameModel; `generation.model` is already the
+actual model. Agent also has two separate `Date.now()` calls (meta :196,
+return :217) — hoist one `createdAt` for both.
 
 Effective model rule (audit round 2): the grok quality-model override applies
 to BOTH `grok` and `grok-api` — classic lib/generatePipeline.ts:286, multimode
@@ -64,11 +70,11 @@ Before:
 const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
 const filename = `${Date.now()}_${rand}_${images.length}.${resultFormat}`;
 const createdAt = Date.now();
-// ... meta (filename field) -> embed -> await writeFile(join(generatedDir, filename), embedded.buffer);
+// ... meta -> embed -> await writeFile(join(generatedDir, filename), embedded.buffer);
 ```
 
-After (name built early for meta, written after embedding, filename field
-assigned from the RESOLVED name):
+After (baseName built early, written after embedding, paths derived from the
+RESOLVED name):
 
 ```ts
 const createdAt = Date.now();
@@ -86,11 +92,10 @@ const filename = await writeFileUnique(
   baseName,
   embedded.buffer,
 );
-const sidecarMeta = { ...meta, filename }; // sidecar-only; embedded XMP omits filename
 ```
 
 (Metadata embedding/output lives at lib/generatePipeline.ts:449-471; the old
-bare `writeFile` is removed; the sidecar write switches to `sidecarMeta`.
+bare `writeFile` is removed; sidecar path derives from the resolved name.
 `writeFile` import at :1 dropped if unused.)
 
 ### `lib/multimodePipeline.ts` (~:273-312)
@@ -122,7 +127,6 @@ const filename = await writeFileUnique(
   baseName,
   embedded.buffer,
 );
-const sidecarMeta = { ...meta, filename }; // sidecar-only
 ```
 
 ### `lib/agentImageVideoGen.ts` (`persistAgentImage`, :175-205) — image only
@@ -144,8 +148,7 @@ const createdAt = Date.now();
 const baseName = buildFilename({ model: generation.model, size, createdAt, prompt, ext: format });
 // ... meta constructed -> metadata embedded (embedded.buffer at :200) ->
 const filename = await writeFileUnique(ctx.config.storage.generatedDir, baseName, embedded.buffer);
-const sidecarMeta = { ...meta, filename }; // sidecar-only
-// sidecar + returned item reuse the same createdAt and resolved filename
+// sidecar path + returned item reuse the same createdAt and resolved filename
 ```
 
 (Agent resolves `providerOptions.size` at :71 and sends it to providers at

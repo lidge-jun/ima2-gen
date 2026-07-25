@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile } from "fs/promises";
 import { safeWriteSidecar, atomicWriteJson } from "./atomicWrite.js";
 import { isAbsolute, join } from "path";
 import { randomBytes } from "crypto";
+import { buildFilename, writeFileUnique } from "./filename.js";
 import type { Request, Response } from "express";
 import { detectImageMimeFromB64, summarizeReferencePayload, validateAndNormalizeRefs } from "./refs.js";
 import { generateImageThumbnailFromBuffer } from "./imageThumb.js";
@@ -424,9 +425,15 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
               webSearchDroppedOnRetry: retryValue.webSearchDroppedOnRetry ?? null,
             };
           }
-          const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
-          const filename = `${Date.now()}_${rand}_${images.length}.${resultFormat}`;
           const createdAt = Date.now();
+          const baseName = buildFilename({
+            model: (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high" ? "grok-imagine-image-quality" : imageModel,
+            size: effectiveSize,
+            createdAt,
+            prompt,
+            ext: resultFormat,
+            index: images.length,
+          });
           const valueWithProviderUrl = r.value as typeof r.value & { providerUrl?: unknown };
           const providerUrl = typeof valueWithProviderUrl.providerUrl === "string"
             ? valueWithProviderUrl.providerUrl
@@ -466,10 +473,10 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             version: ctx.packageVersion,
           });
           if (!embedded.embedded) {
-            logEvent("generate", "metadata_embed_skipped", { requestId, filename, code: embedded.code, warning: embedded.warning, });
+            logEvent("generate", "metadata_embed_skipped", { requestId, filename: baseName, code: embedded.code, warning: embedded.warning, });
           }
+          const filename = await writeFileUnique(ctx.config.storage.generatedDir, baseName, embedded.buffer);
           const filePath = join(ctx.config.storage.generatedDir, filename);
-          await writeFile(filePath, embedded.buffer);
           await safeWriteSidecar(filePath + ".json", meta);
           generateImageThumbnailFromBuffer(embedded.buffer, filePath).catch(() => {});
           invalidateHistoryIndex();

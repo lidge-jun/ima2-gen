@@ -3,6 +3,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { atomicWriteJson } from "./atomicWrite.js";
 import { join } from "node:path";
 import { ulid } from "ulid";
+import { buildFilename, writeFileUnique } from "./filename.js";
 import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
 import { invalidateHistoryIndex } from "./historyIndex.js";
 import { logEvent } from "./logger.js";
@@ -129,7 +130,7 @@ async function generateAgentImage(
   const format = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "atlascloud"
     ? imageFormatFromMime(("mime" in response ? response.mime : undefined) || detectImageMimeFromB64(response.b64) || "image/jpeg")
     : options.format ?? "png";
-  const image = await persistAgentImage(ctx, sessionId, prompt, format, requestId, response, {
+  const image = await persistAgentImage(ctx, sessionId, prompt, format, providerOptions.size, requestId, response, {
     provider: String(activeProvider),
     model: String(effectiveModel),
   });
@@ -177,13 +178,14 @@ async function persistAgentImage(
   sessionId: string,
   prompt: string,
   format: string,
+  size: string,
   requestId: string,
   response: { b64: string; revisedPrompt?: string | null; usage?: unknown; webSearchCalls?: number },
   generation: { provider: string; model: string },
 ) {
   await mkdir(ctx.config.storage.generatedDir, { recursive: true });
-  const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
-  const filename = `${Date.now()}_${rand}_agent.${format}`;
+  const createdAt = Date.now();
+  const baseName = buildFilename({ model: generation.model, size, createdAt, prompt, ext: format });
   const meta = {
     kind: "agent",
     requestId,
@@ -193,15 +195,15 @@ async function persistAgentImage(
     revisedPrompt: response.revisedPrompt ?? null,
     provider: generation.provider,
     model: generation.model,
-    createdAt: Date.now(),
+    createdAt,
     usage: response.usage ?? null,
     webSearchCalls: response.webSearchCalls ?? 0,
   };
   const embedded = await embedImageMetadataBestEffort(Buffer.from(response.b64, "base64"), format, meta, {
     version: ctx.packageVersion,
   });
+  const filename = await writeFileUnique(ctx.config.storage.generatedDir, baseName, embedded.buffer);
   const filePath = join(ctx.config.storage.generatedDir, filename);
-  await writeFile(filePath, embedded.buffer);
   try {
     await atomicWriteJson(`${filePath}.json`, meta);
   } catch (err) {
@@ -216,7 +218,7 @@ async function persistAgentImage(
     url: `/generated/${filename}`,
     prompt,
     revisedPrompt: response.revisedPrompt ?? null,
-    createdAt: Date.now(),
+    createdAt,
   });
 }
 

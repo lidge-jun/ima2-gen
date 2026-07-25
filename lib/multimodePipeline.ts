@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile } from "fs/promises";
 import { safeWriteSidecar } from "./atomicWrite.js";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import { buildFilename, writeFileUnique } from "./filename.js";
 import type { Request, Response } from "express";
 import { detectImageMimeFromB64, summarizeReferencePayload, validateAndNormalizeRefs } from "./refs.js";
 import { generateImageThumbnailFromBuffer } from "./imageThumb.js";
@@ -271,9 +272,15 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           ? (image.mime || detectImageMimeFromB64(image.b64) || mime)
           : mime;
         const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? imageFormatFromMime(resultMime) : mmFormat;
-        const rand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
-        const filename = `${Date.now()}_${rand}_multimode_${index}.${resultFormat}`;
         const createdAt = Date.now();
+        const baseName = buildFilename({
+          model: (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high" ? "grok-imagine-image-quality" : imageModel,
+          size: effectiveSize,
+          createdAt,
+          prompt,
+          ext: resultFormat,
+          index,
+        });
         const meta = {
           kind: "multimode-image",
           generationStrategy: "one-call-text-sequence",
@@ -309,8 +316,8 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         const embedded = await embedImageMetadataBestEffort(rawBuffer, resultFormat, meta, {
           version: ctx.packageVersion,
         });
+        const filename = await writeFileUnique(ctx.config.storage.generatedDir, baseName, embedded.buffer);
         const mmFilePath = join(ctx.config.storage.generatedDir, filename);
-        await writeFile(mmFilePath, embedded.buffer);
         await safeWriteSidecar(mmFilePath + ".json", meta);
         generateImageThumbnailFromBuffer(embedded.buffer, mmFilePath).catch(() => {});
         invalidateHistoryIndex();
