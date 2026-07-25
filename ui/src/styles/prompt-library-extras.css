@@ -183,7 +183,7 @@
   align-items: center;
   justify-content: space-between;
 }
-.prompt-detail-modal__header h4 {
+.prompt-detail-modal__title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;

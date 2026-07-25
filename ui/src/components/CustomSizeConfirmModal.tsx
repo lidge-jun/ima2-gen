@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { useModalFocus } from "../hooks/useModalFocus";
 import type { CustomSizeAdjustmentReason } from "../lib/size";
 
 function reasonKey(reasons: CustomSizeAdjustmentReason[]): string {
@@ -16,18 +16,10 @@ export function CustomSizeConfirmModal() {
   const pending = useAppStore((s) => s.customSizeConfirm);
   const confirm = useAppStore((s) => s.confirmCustomSizeAdjustment);
   const cancel = useAppStore((s) => s.cancelCustomSizeAdjustment);
-  const cancelRef = useRef<HTMLButtonElement>(null);
   const { t } = useI18n();
-
-  useEffect(() => {
-    if (!pending) return;
-    cancelRef.current?.focus();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [cancel, pending]);
+  // Escape, focus trapping and focus restore come from the shared hook; the cancel
+  // button keeps first focus via data-modal-initial-focus.
+  const dialogRef = useModalFocus<HTMLDivElement>(Boolean(pending), cancel);
 
   if (!pending) return null;
 
@@ -37,11 +29,13 @@ export function CustomSizeConfirmModal() {
   return (
     <div className="modal-backdrop custom-size-confirm-backdrop" role="presentation">
       <div
+        ref={dialogRef}
         className="modal custom-size-confirm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="custom-size-confirm-title"
         aria-describedby="custom-size-confirm-body"
+        tabIndex={-1}
       >
         <div id="custom-size-confirm-title" className="modal__title">
           {t("sizeConfirm.title")}
@@ -64,8 +58,8 @@ export function CustomSizeConfirmModal() {
         </div>
         <div className="modal__actions">
           <button
-            ref={cancelRef}
             type="button"
+            data-modal-initial-focus
             className="modal__btn modal__btn--secondary"
             onClick={cancel}
           >

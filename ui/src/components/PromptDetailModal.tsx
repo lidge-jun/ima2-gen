@@ -1,4 +1,5 @@
 import { useI18n } from "../i18n";
+import { useModalFocus } from "../hooks/useModalFocus";
 import type { PromptItem } from "../lib/api";
 
 export function PromptDetailModal({
@@ -17,6 +18,7 @@ export function PromptDetailModal({
   onToggleFavorite: () => void;
 }) {
   const { t } = useI18n();
+  const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
 
   const handleCopy = async () => {
     try {
@@ -27,11 +29,20 @@ export function PromptDetailModal({
   };
 
   return (
-    <div className="prompt-detail-modal" onClick={onClose}>
-      <div className="prompt-detail-modal__backdrop" />
-      <div className="prompt-detail-modal__content" onClick={(e) => e.stopPropagation()}>
+    <div className="prompt-detail-modal" role="presentation">
+      <div className="prompt-detail-modal__backdrop" onClick={onClose} />
+      <div
+        ref={dialogRef}
+        className="prompt-detail-modal__content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prompt-detail-title"
+        tabIndex={-1}
+      >
         <div className="prompt-detail-modal__header">
-          <h4>{prompt.name || t("promptLibrary.untitled")}</h4>
+          <h2 id="prompt-detail-title" className="prompt-detail-modal__title">
+            {prompt.name || t("promptLibrary.untitled")}
+          </h2>
           <button className="prompt-detail-modal__close" onClick={onClose} aria-label={t("common.close")}>
             ×
           </button>

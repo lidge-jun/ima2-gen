@@ -10,6 +10,8 @@ import {
 import { dateBucket } from "../lib/galleryUtils";
 import { getGalleryItemKey, isGalleryVisibleItem, uniqueGalleryItems } from "../lib/galleryNavigation";
 import { useI18n } from "../i18n";
+import { useModalFocus } from "../hooks/useModalFocus";
+import { useTablistKeys } from "../hooks/useTablistKeys";
 import { useCardNewsActions } from "./gallery/useCardNewsActions";
 import { CardNewsGalleryTile } from "./CardNewsGalleryTile";
 import { GalleryImageTile } from "./GalleryImageTile";
@@ -115,14 +117,10 @@ export function GalleryModal() {
   }, []);
   const lazyTiles = useLazyGalleryTiles(scrollElement);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
+  // Escape, focus trapping and focus restore all live in useModalFocus; registering a
+  // second Escape listener here would close the dialog twice.
+  const dialogRef = useModalFocus<HTMLDivElement>(open, close);
+  const onTablistKeyDown = useTablistKeys<HTMLDivElement>();
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -428,10 +426,12 @@ export function GalleryModal() {
   return (
     <div className="gallery-backdrop" onClick={close} role="presentation">
       <div
+        ref={dialogRef}
         className="gallery"
         role="dialog"
         aria-modal="true"
         aria-label={t("gallery.ariaLabel")}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="gallery__header">
@@ -441,11 +441,17 @@ export function GalleryModal() {
               {t("gallery.total", { n: totalVisible })}
               {query || favoritesOnly ? t("gallery.totalFiltered", { n: galleryHistory.length }) : ""}
             </div>
-            <div className="gallery__favorite-filter" role="tablist" aria-label={t("gallery.favoriteFilterAria")}>
+            <div
+              className="gallery__favorite-filter"
+              role="tablist"
+              aria-label={t("gallery.favoriteFilterAria")}
+              onKeyDown={onTablistKeyDown}
+            >
               <button
                 type="button"
                 role="tab"
                 aria-selected={!favoritesOnly}
+                tabIndex={!favoritesOnly ? 0 : -1}
                 className={!favoritesOnly ? "active" : ""}
                 onClick={() => setFavoritesOnly(false)}
               >
@@ -455,17 +461,24 @@ export function GalleryModal() {
                 type="button"
                 role="tab"
                 aria-selected={favoritesOnly}
+                tabIndex={favoritesOnly ? 0 : -1}
                 className={favoritesOnly ? "active" : ""}
                 onClick={() => setFavoritesOnly(true)}
               >
                 {t("gallery.filterFavorites")}
               </button>
             </div>
-            <div className="gallery__group-toggle" role="tablist" aria-label={t("gallery.sortByAria")}>
+            <div
+              className="gallery__group-toggle"
+              role="tablist"
+              aria-label={t("gallery.sortByAria")}
+              onKeyDown={onTablistKeyDown}
+            >
               <button
                 type="button"
                 role="tab"
                 aria-selected={groupBy === "date"}
+                tabIndex={groupBy === "date" ? 0 : -1}
                 className={groupBy === "date" ? "active" : ""}
                 onClick={() => setGroupBy("date")}
               >
@@ -475,17 +488,24 @@ export function GalleryModal() {
                 type="button"
                 role="tab"
                 aria-selected={groupBy === "session"}
+                tabIndex={groupBy === "session" ? 0 : -1}
                 className={groupBy === "session" ? "active" : ""}
                 onClick={() => setGroupBy("session")}
               >
                 {t("gallery.sortBySession")}
               </button>
             </div>
-            <div className="gallery__scope" role="tablist" aria-label={t("gallery.scopeAria")}>
+            <div
+              className="gallery__scope"
+              role="tablist"
+              aria-label={t("gallery.scopeAria")}
+              onKeyDown={onTablistKeyDown}
+            >
               <button
                 type="button"
                 role="tab"
                 aria-selected={galleryScope === "current-session"}
+                tabIndex={galleryScope === "current-session" ? 0 : -1}
                 className={galleryScope === "current-session" ? "active" : ""}
                 onClick={() => setGalleryScope("current-session")}
                 disabled={!currentSessionId}
@@ -496,6 +516,7 @@ export function GalleryModal() {
                 type="button"
                 role="tab"
                 aria-selected={galleryScope === "all"}
+                tabIndex={galleryScope === "all" ? 0 : -1}
                 className={galleryScope === "all" ? "active" : ""}
                 onClick={() => setGalleryScope("all")}
               >
@@ -541,7 +562,9 @@ export function GalleryModal() {
         >
           {showSessions ? (
             sessionGroupsLoading ? (
-              <div className="gallery__empty">{t("gallery.sessionLoading")}</div>
+              <div className="gallery__empty" role="status" aria-live="polite">
+                {t("gallery.sessionLoading")}
+              </div>
             ) : sessionGroupsError ? (
               <div className="gallery__empty" role="alert">
                 <span>{t("gallery.sessionLoadFailed")}</span>
