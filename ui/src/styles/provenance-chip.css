@@ -1,0 +1,53 @@
+/* Provenance chip: which model produced a result and how it was derived.
+
+   This is information, not decoration, so it never gets aria-hidden. On thumbnails it
+   sits over the image, which means it needs an opaque backing — text shadow alone does
+   not hold contrast against arbitrary generated imagery. */
+.provenance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 60%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.provenance-chip--md {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.provenance-chip__model {
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.provenance-chip__derivation {
+  flex: none;
+  padding-left: 5px;
+  border-left: 1px solid color-mix(in srgb, var(--border-strong) 45%, transparent);
+}
+
+.provenance-chip__model:only-child,
+.provenance-chip__derivation:only-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* Tile overlay placement: bottom-left, out of the way of the favorite star. */
+.gallery__tile-wrap .provenance-chip {
+  position: absolute;
+  z-index: 4;
+  right: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+}

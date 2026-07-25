@@ -164,6 +164,7 @@ body::after {
 @import "./styles/progress-composer.css";
 @import "./styles/gallery-modal.css";
 @import "./styles/provider-controls.css";
+@import "./styles/provenance-chip.css";
 @import "./styles/element-mention.css";
 @import "./styles/toast-modal.css";
 @import "./styles/responsive-layout.css";

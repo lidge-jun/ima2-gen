@@ -7,6 +7,8 @@ import { VideoThumbPlaceholder } from "./VideoThumbPlaceholder";
 import { CHAINING_ACTIONS, executeChaining, type ChainingActionId } from "../lib/resultChaining";
 import { useAppStore } from "../store/useAppStore";
 import { FavoriteStarButton } from "./controls";
+import { ProvenanceChip } from "./ProvenanceChip";
+import { buildProvenanceView } from "../lib/provenance";
 
 type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -173,6 +175,7 @@ export function GalleryImageTile({ item, active, itemRef, onSelect, onDelete, on
           ×
         </button>
       )}
+      <ProvenanceChip view={buildProvenanceView(item)} />
     </div>
   );
 }

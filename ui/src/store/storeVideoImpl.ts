@@ -164,7 +164,9 @@ export async function runVideoGenerateImpl(
                   pendingPhase: null,
                   pendingStartedAt: null,
                   elapsed: result.elapsed ?? undefined,
-                  model: null,
+                  // The server reports the model it actually ran; prefer that over the
+                  // requested one so a provider fallback is visible rather than hidden.
+                  model: result.effectiveModel ?? result.requestedModel ?? node.data.model ?? null,
                   videoContinuity: result.videoContinuity ?? parentVideoContinuity,
                   video: {
                     ...(result.video as Record<string, unknown> ?? {}),

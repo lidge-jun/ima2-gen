@@ -5,6 +5,7 @@ import { useI18n } from "../i18n";
 import { getImageModelShortLabel } from "../lib/imageModels";
 import { formatReasoningLabel } from "../lib/reasoning";
 import { isVideoUrl } from "../lib/videoMedia";
+import { buildProvenanceView } from "../lib/provenance";
 import { SavePromptPopover } from "./SavePromptPopover";
 
 const MAX_NODE_REFS = 5;
@@ -17,6 +18,23 @@ const NODE_HANDLE_POSITIONS = [
   { id: "bottom", position: Position.Bottom },
   { id: "left", position: Position.Left },
 ] as const;
+
+/**
+ * The node status line already carries elapsed time, video params and the model, so
+ * provenance contributes just the derivation kind rather than a separate chip.
+ */
+function derivationOf(
+  d: ImageNodeData,
+  t: (key: string) => string,
+): string | null {
+  const view = buildProvenanceView({
+    model: d.model,
+    provider: d.provider,
+    mediaType: isVideoUrl(d.imageUrl) ? "video" : "image",
+    videoContinuity: d.videoContinuity,
+  });
+  return view.derivation ? t(`provenance.${view.derivation}`) : null;
+}
 
 function getPreviewWidth(size?: string | null): number {
   const match = /^(\d+)x(\d+)$/.exec(size ?? "");
@@ -182,7 +200,12 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
           d.video?.resolution ?? null,
           d.video?.aspectRatio ?? null,
           formatReasoningLabel(d.reasoningEffort),
-          getImageModelShortLabel(d.model, (d as any).provider),
+          // `provider` is a declared field on ImageNodeData, so the old escape-hatch
+          // cast here was hiding a type that already existed.
+          getImageModelShortLabel(d.model, d.provider),
+          // How this node was derived (i2v / v2v / ...). The model label above only
+          // works again because the video path stopped writing `model: null`.
+          derivationOf(d, t),
         ].filter(Boolean).join(" · ");
       case "stale":
         return d.error

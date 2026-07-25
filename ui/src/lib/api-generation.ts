@@ -277,6 +277,15 @@ export type VideoGenerateDone = {
   providerUrl?: string | null;
   videoSeries?: { topic?: string; chainIndex?: number } | null;
   videoContinuity?: import("../types").VideoContinuityLineage | null;
+  /**
+   * The server reports the model it actually ran (`effectiveModel`) alongside what was
+   * asked for (`requestedModel`); they differ when a fallback kicks in. Both were
+   * missing from this type, which is why the node path had nothing to store and fell
+   * back to `model: null` — see routes/video.ts done payload.
+   */
+  requestedModel?: string | null;
+  effectiveModel?: string | null;
+  modelFallback?: boolean;
 };
 
 export async function postVideoGenerateStream(

@@ -152,6 +152,31 @@ export function ProvenanceChip({ view, size = "sm" }: {
 | `AgentImagePane` | filename/prompt 아래 | md |
 | `AgentResultThumb` | 시각 chip 없음, `aria-label`에만 추가 | — |
 
+### B 단계 확인 결과 — Agent 표면 제외 (2026-07-26)
+
+계획은 `AgentImageHandle`에 model/provider가 있는지 B에서 확인하라고 했다. 확인 결과
+**없다.** 타입(`ui/src/components/agent/agentTypes.ts:122-132`)에도 없고, 더 근본적으로
+저장 스키마에도 없다 — `lib/agentStore.ts:226`의 INSERT 컬럼은
+`(id, session_id, filename, url, thumb_url, prompt, revised_prompt, width, height, created_at)`
+가 전부다.
+
+따라서 Agent 두 표면은 이번 사이클에서 **제외**한다. 표시할 데이터가 없는데 컴포넌트만
+얹으면 항상 빈 chip이 렌더된다. 채우려면 DB 스키마 마이그레이션 + 기존 행 백필이
+필요하고, 그건 이 WP의 범위(UI 표시)를 넘는다.
+
+이번 사이클의 실제 통합 대상은 세 곳이다.
+
+| 컴포넌트 | 데이터 출처 | 상태 |
+|---|---|---|
+| `GalleryImageTile` | `GenerateItem` (sidecar 복원) | 통합 |
+| `GalleryModal` 상세 | `GenerateItem` | 통합 |
+| `ImageNode` | 노드 데이터 | 통합 (model 회귀 수정 포함) |
+| `AgentImagePane` | — | **제외: 스키마에 필드 없음** |
+| `AgentResultThumb` | — | **제외: 같은 이유** |
+
+이슈 #90을 닫을 때 이 사실을 코멘트에 남긴다. "UI만 하면 된다"는 이슈 본문의 전제가
+Agent 경로에서는 성립하지 않는다.
+
 `AgentResultThumb`은 작은 썸네일 버튼이다(`ui/src/components/agent/AgentResultThumb.tsx:21-36`). 여기에 chip을 얹으면 이미지가
 가려진다. 대신 접근 가능한 이름을 확장한다:
 

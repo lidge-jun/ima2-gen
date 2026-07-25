@@ -2049,5 +2049,12 @@
   "graph": {
     "undone": "Undid the last graph change.",
     "redone": "Redid the graph change."
+  },
+  "provenance": {
+    "t2i": "Text → Image",
+    "i2i": "Image edit",
+    "t2v": "Text → Video",
+    "i2v": "Image → Video",
+    "v2v": "Video continuation"
   }
 }
