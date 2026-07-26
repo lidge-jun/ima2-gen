@@ -19,7 +19,7 @@ export function CardDeckRail() {
   if (!plan) return null;
 
   return (
-    <div className="card-news-deck" aria-label="Card deck" onWheel={handleHorizontalWheel}>
+    <div className="card-news-deck" aria-label={t("common.cardDeck")} onWheel={handleHorizontalWheel}>
       {plan.cards.map((card) => (
         <button
           type="button"

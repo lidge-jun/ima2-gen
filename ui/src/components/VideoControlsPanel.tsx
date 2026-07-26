@@ -117,7 +117,7 @@ export function VideoControlsPanel() {
       </div>
       {summary ? (
         <div className="provider-compat-note" role="note">
-          <strong>Continuity</strong>
+          <strong>{t("common.continuity")}</strong>
           <span>{summary}</span>
         </div>
       ) : null}
@@ -174,7 +174,7 @@ export function VideoControlsPanel() {
         </div>
       )}
       <details className="provider-compat-details" style={{ marginTop: 8 }}>
-        <summary>Active prompt</summary>
+        <summary>{t("common.activePrompt")}</summary>
         <p>{ACTIVE_VIDEO_PROMPT_GUIDANCE}</p>
       </details>
     </div>

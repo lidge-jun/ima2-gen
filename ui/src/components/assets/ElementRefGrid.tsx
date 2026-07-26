@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useI18n } from "../../i18n";
 
 export interface ElementRefDraft {
   id: string;
@@ -16,6 +17,7 @@ type Props = {
 const UNDO_MS = 5000;
 
 export function ElementRefGrid({ refs, onChange, maxRefs = 6 }: Props) {
+  const { t } = useI18n();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [duplicateId, setDuplicateId] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ ref: ElementRefDraft; index: number } | null>(null);
@@ -68,7 +70,7 @@ export function ElementRefGrid({ refs, onChange, maxRefs = 6 }: Props) {
 
   return <section className="element-ref-grid" aria-labelledby="element-refs-title">
     <div className="element-detail__section-heading">
-      <div><h3 id="element-refs-title">Reference images</h3><p>Drag to set order. The first image is the representative thumbnail.</p></div>
+      <div><h3 id="element-refs-title">{t("element.refsTitle")}</h3><p>{t("element.refsHelp")}</p></div>
       <span>{refs.length} / {maxRefs}</span>
     </div>
     <div className="element-ref-grid__items">
@@ -81,13 +83,13 @@ export function ElementRefGrid({ refs, onChange, maxRefs = 6 }: Props) {
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => dropOn(event, index)}
       >
-        <div className="element-ref-card__image"><img src={ref.previewUrl || ref.path} alt={ref.alt || `Reference ${index + 1}`} />{index === 0 ? <span>Representative</span> : null}</div>
+        <div className="element-ref-card__image"><img src={ref.previewUrl || ref.path} alt={ref.alt || t("element.refAlt", { n: index + 1 })} />{index === 0 ? <span>{t("element.refPrimary")}</span> : null}</div>
         <div className="element-ref-card__controls">
-          <label>Label<input value={ref.alt} maxLength={80} placeholder="Front, side, material…" onChange={(event) => updateAlt(index, event.target.value)} /></label>
-          <div><button type="button" disabled={index === 0} onClick={() => move(index, index - 1)} aria-label={`Move reference ${index + 1} up`}>↑</button><button type="button" disabled={index === refs.length - 1} onClick={() => move(index, index + 1)} aria-label={`Move reference ${index + 1} down`}>↓</button><button type="button" className="is-danger" disabled={refs.length <= 1} onClick={() => remove(index)} aria-label={`Remove reference ${index + 1}`}>Remove</button></div>
+          <label>{t("element.refLabel")}<input value={ref.alt} maxLength={80} placeholder={t("element.refLabelPlaceholder")} onChange={(event) => updateAlt(index, event.target.value)} /></label>
+          <div><button type="button" disabled={index === 0} onClick={() => move(index, index - 1)} aria-label={t("element.refMoveUp", { n: index + 1 })}>↑</button><button type="button" disabled={index === refs.length - 1} onClick={() => move(index, index + 1)} aria-label={t("element.refMoveDown", { n: index + 1 })}>↓</button><button type="button" className="is-danger" disabled={refs.length <= 1} onClick={() => remove(index)} aria-label={t("element.refRemove")}>{t("element.refRemove")}</button></div>
         </div>
       </div>)}
     </div>
-    {undo ? <div className="element-ref-grid__undo" role="status"><span>Reference removed.</span><button type="button" onClick={restore}>Undo</button></div> : null}
+    {undo ? <div className="element-ref-grid__undo" role="status"><span>{t("element.refRemoved")}</span><button type="button" onClick={restore}>{t("element.refUndo")}</button></div> : null}
   </section>;
 }

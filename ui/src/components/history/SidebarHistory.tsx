@@ -12,9 +12,10 @@ import { SidebarHistorySequenceCard } from "./SidebarHistorySequenceCard";
 const COLLAPSED_STORAGE_KEY = "ima2.sidebarHistoryCollapsed";
 
 function SidebarSkeletonCard() {
+  const { t } = useI18n();
   return (
     <div className="sidebar-history__item">
-      <div className="sidebar-history__thumb sidebar-history__thumb--skeleton" aria-label="Generating..." />
+      <div className="sidebar-history__thumb sidebar-history__thumb--skeleton" aria-label={t("common.generating")} />
     </div>
   );
 }

@@ -57,7 +57,7 @@ export function SavePromptPopover({
           <textarea
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
-            placeholder="Enter prompt..."
+            placeholder={t("common.enterPrompt")}
             rows={4}
             autoFocus
           />

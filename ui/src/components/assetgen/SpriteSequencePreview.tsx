@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { normalizeSpriteTransform, spriteTransformMatrix } from "../../lib/spriteTransform";
 import type { SpriteFrameRect, SpriteFrameTransform } from "../../types/spriteAtlas";
+import { useI18n } from "../../i18n";
 
 type Props = {
   atlasUrl: string;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function SpriteSequencePreview({ atlasUrl, frames, cell, transforms, currentFrame, showGrid }: Props) {
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
@@ -67,5 +69,5 @@ export function SpriteSequencePreview({ atlasUrl, frames, cell, transforms, curr
     return () => canvas.removeEventListener("sprite-atlas-ready", render);
   }, [cell.height, cell.width, currentFrame, frames, showGrid, transforms]);
 
-  return <canvas ref={canvasRef} className="sprite-curator__canvas" aria-label="Sprite animation preview" />;
+  return <canvas ref={canvasRef} className="sprite-curator__canvas" aria-label={t("common.spritePreview")} />;
 }

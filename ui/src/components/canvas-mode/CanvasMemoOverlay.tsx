@@ -1,5 +1,6 @@
 import type { PointerEvent } from "react";
 import type { CanvasMemo } from "../../types/canvas";
+import { useI18n } from "../../i18n";
 
 interface CanvasMemoOverlayProps {
   memos: CanvasMemo[];
@@ -22,6 +23,7 @@ export function CanvasMemoOverlay({
   onFocus,
   onCommit,
 }: CanvasMemoOverlayProps) {
+  const { t } = useI18n();
   return (
     <div className="canvas-memo-overlay">
       {memos.map((memo) => (
@@ -41,7 +43,7 @@ export function CanvasMemoOverlay({
             onCommit?.();
             if (memo.text.trim() === "") onDelete(memo.id);
           }}
-          aria-label="Canvas memo"
+          aria-label={t("common.canvasMemo")}
         />
       ))}
     </div>

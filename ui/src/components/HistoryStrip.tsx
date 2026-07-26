@@ -12,11 +12,12 @@ import {
 import { VideoThumbPlaceholder } from "./VideoThumbPlaceholder";
 
 function SkeletonThumb({ id }: { id: string }) {
+  const { t } = useI18n();
   return (
     <div
       key={id}
       className="history-thumb history-thumb--skeleton"
-      aria-label="Generating..."
+      aria-label={t("common.generating")}
     />
   );
 }
@@ -47,12 +48,13 @@ function CollectionThumb({
   const previewId = useAppStore((s) => s.multimodePreviewFlightId);
   const active = previewId === `history:${sequenceId}`;
   const slots = images.slice(0, 4);
+  const { t } = useI18n();
   return (
     <button
       type="button"
       className={`history-thumb history-thumb--collection${active ? " active" : ""}`}
       onClick={() => showHistorySequence(sequenceId)}
-      aria-label={`${images.length} image collection`}
+      aria-label={t("common.imageCollection", { n: images.length })}
     >
       {slots.map((img, i) => {
         const isVid = !img.thumb && (isVideoUrl(img.url) || isVideoUrl(img.image));
