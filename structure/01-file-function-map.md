@@ -158,6 +158,7 @@ routes/
 | `lib/historyList.ts` | 200 | History reconstruction from generated assets, sidecars, embedded XMP metadata fallback, session-aware rows |
 | `lib/videoContinuity.ts` | 192 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
 | `lib/videoFrameExtract.ts` | 100 | Generated-dir-safe MP4 validation and ffmpeg frame extraction for video frame/analyze/continue workflows |
+| `lib/videoGenerationRequest.ts` | 155 | Shared generate-request contract: mode inference, mutually-exclusive source guard, and duration/resolution/aspect defaults for UI, CLI, agent, and route |
 | `lib/grokVideoAdapter.ts` | 490 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
 | `lib/localImportStore.ts` | 115 | Validates raw PNG/JPEG/WebP body, writes timestamped `imported-*` to generated/, embeds XMP metadata, returns GenerateItem-shaped row |
 | `lib/storageMigration.ts` | 311 | Legacy generated-folder scan and migration support |
@@ -280,7 +281,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `lib/agentToolManifest.ts` | 31 | Tool metadata for `/api/agent/tools` |
 | `lib/agentPlannerModel.ts` | 201 | Planner model selection |
 | `lib/agentGenerationPlanner.ts` | 353 | Generation plan assembly |
-| `lib/agentImageVideoGen.ts` | 389 | Image/video generation caller for agent turns |
+| `lib/agentImageVideoGen.ts` | 406 | Image/video generation caller for agent turns |
 | `lib/agentQuestionResponder.ts` | 274 | `/question` responder |
 
 ## UI File Map

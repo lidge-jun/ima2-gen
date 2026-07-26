@@ -17,6 +17,10 @@ import { generateVideoViaGrok, type GrokVideoGenerateResult } from "./grokVideoA
 import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE } from "./imageModels.js";
 import { parseVideoParams } from "./agentGenerationPlanner.js";
 import {
+  isVideoGenerationError,
+  normalizeVideoGenerationRequest,
+} from "./videoGenerationRequest.js";
+import {
   appendAgentTurn,
   getAgentImages,
   getAgentSession,
@@ -253,11 +257,24 @@ export async function runAgentVideoGeneration(
 
   // LLM-planned params win; the prompt regex remains the fallback extractor.
   const parsedParams = parseVideoParams(prompt);
-  const videoParams = {
+  // Route the agent through the same normalizer the HTTP surface uses, so defaults and
+  // validation cannot drift between "generate from chat" and "generate from the app".
+  const normalized = normalizeVideoGenerationRequest({
+    prompt,
+    mode,
+    sourceImage,
     duration: options.videoParams?.duration ?? parsedParams.duration,
     resolution: options.videoParams?.resolution ?? parsedParams.resolution,
     aspectRatio: options.videoParams?.aspectRatio ?? parsedParams.aspectRatio,
-  };
+    requestId,
+  });
+  if (isVideoGenerationError(normalized)) {
+    throw Object.assign(new Error(normalized.error), {
+      status: normalized.status,
+      code: normalized.code,
+    });
+  }
+  const videoParams = normalized.request;
   const videoModel = videoParams.resolution === "1080p"
     ? GROK_VIDEO_MODEL_15
     : GROK_VIDEO_MODEL_BASE;
@@ -265,11 +282,11 @@ export async function runAgentVideoGeneration(
   options.onProgressStage?.("requesting");
   const result = await generateVideoViaGrok(prompt, ctx, {
     model: videoModel,
-    mode,
+    mode: videoParams.mode === "reference-to-video" ? "text-to-video" : videoParams.mode,
     sourceImage,
-    duration: videoParams.duration ?? 5,
-    resolution: videoParams.resolution ?? "480p",
-    aspectRatio: (videoParams.aspectRatio ?? "auto") as "auto" | "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3",
+    duration: videoParams.duration,
+    resolution: videoParams.resolution,
+    aspectRatio: videoParams.aspectRatio as "auto" | "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3",
     requestId,
     signal: options.signal ?? undefined,
     plannerModel: isAgentGrokPlannerModel(options.model) ? options.model : undefined,
