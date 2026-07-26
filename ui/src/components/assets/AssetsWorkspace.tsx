@@ -6,6 +6,7 @@ import type { GenerateItem } from "../../types";
 import { clearAllAssets as apiClearAll, getAssetById } from "../../lib/api-assets";
 import { assetToPreviewItem } from "../../lib/assetPreview";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { EditIcon } from "../controls";
 import { Select, type SelectItem } from "../controls/Select";
 import { AssetMediaLightbox } from "../assetgen/AssetMediaLightbox";
 import { KeyingPanel } from "../assetgen/KeyingPanel";
@@ -232,7 +233,7 @@ function AssetMetaDetail({ asset, onRename }: { asset: AssetItem; onRename: (nam
         ) : (
           <><h2>{asset.name}</h2><button type="button" className="assets-workspace__detail-rename"
             aria-label={t("assets.renameAsset")} title={t("assets.renameAsset")}
-            onClick={() => setEditing(true)}>✎</button></>
+            onClick={() => setEditing(true)}><EditIcon /></button></>
         )}
       </div>
       <dl>

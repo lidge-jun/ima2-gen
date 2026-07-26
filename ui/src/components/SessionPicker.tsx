@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+import { EditIcon } from "./controls";
 
 export function SessionPicker() {
   const { t } = useI18n();
@@ -51,7 +52,7 @@ export function SessionPicker() {
           title={t("session.renameTitle")}
           disabled={!active}
         >
-          ✎
+          <EditIcon />
         </button>
       </div>
       {open && (

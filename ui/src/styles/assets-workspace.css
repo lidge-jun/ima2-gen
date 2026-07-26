@@ -77,7 +77,7 @@
 .assets-workspace__detail-meta h2 { margin: 0 0 12px; font-size: 16px; overflow-wrap: anywhere; }
 .assets-workspace__detail-title { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
 .assets-workspace__detail-title h2 { flex: 1; min-width: 0; margin: 0; }
-.assets-workspace__detail-rename { flex: none; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--text-dim); cursor: pointer; }
+.assets-workspace__detail-rename { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--text-dim); cursor: pointer; }
 .assets-workspace__detail-rename:hover { background: var(--control-hover); color: var(--text); }
 .assets-workspace__detail-rename:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .assets-workspace__detail-name-input { flex: 1; }

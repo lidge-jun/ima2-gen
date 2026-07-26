@@ -287,11 +287,15 @@
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink, #0b0b0f);
-  font-size: 12px;
-  font-weight: 800;
   opacity: 0;
   transform: scale(0.8);
   transition: opacity 140ms ease, transform 140ms ease;
+}
+
+/* The mark is an SVG (CheckIcon); font-size no longer sizes it. */
+.home-preset-card__check svg {
+  width: 13px;
+  height: 13px;
 }
 
 .home-preset-card.is-selected .home-preset-card__check { opacity: 1; transform: scale(1); }

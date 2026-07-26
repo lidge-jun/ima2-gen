@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
 import type { AssetFolder } from "../../store/storeTypes";
+import { EditIcon } from "../controls";
 
 type FolderRowProps = { folder: AssetFolder; depth: number };
 
@@ -45,7 +46,7 @@ function FolderRow({ folder, depth }: FolderRowProps) {
           onClick={() => setFilters({ folderId: folder.id, kind: null })}>{folder.name}</button>
       )}
       {!editing && <span className="assets-folder-row__actions">
-        <button type="button" aria-label={t("assets.renameFolder")} onClick={() => setEditing(true)}>✎</button>
+        <button type="button" aria-label={t("assets.renameFolder")} onClick={() => setEditing(true)}><EditIcon /></button>
         <button type="button" aria-label={deleteArmed ? t("assets.confirmDelete") : t("assets.deleteFolder")}
           className={deleteArmed ? "is-danger is-armed" : ""} onClick={() => void handleDelete()}>{deleteArmed ? t("assets.confirmDelete") : "×"}</button>
       </span>}

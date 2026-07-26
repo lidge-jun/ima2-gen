@@ -3,7 +3,7 @@ import type { PresetCategory } from "../../../../lib/presetCompiler";
 import { getAllPresets, getPresetsByCategory } from "../../lib/presets";
 import { useAppStore } from "../../store/useAppStore";
 import { useI18n } from "../../i18n";
-import { Segmented, type SegmentedItem } from "../controls";
+import { CheckIcon, Segmented, type SegmentedItem } from "../controls";
 
 type CategoryFilter = PresetCategory | "all";
 
@@ -74,7 +74,7 @@ export function PresetGrid() {
                 <span className="home-preset-card__name">{preset.name}</span>
                 <span className="home-preset-card__category">{preset.category.replace("-", " ")}</span>
               </span>
-              <span className="home-preset-card__check" aria-hidden="true">✓</span>
+              <span className="home-preset-card__check"><CheckIcon /></span>
             </button>
           );
         })}

@@ -4,3 +4,5 @@ export { Toggle } from "./Toggle";
 export { Chip, ChipRow } from "./Chip";
 export { FavoriteStarButton } from "./FavoriteStarButton";
 export { FavoriteStarIcon } from "./FavoriteStarIcon";
+export { EditIcon } from "./EditIcon";
+export { CheckIcon } from "./CheckIcon";

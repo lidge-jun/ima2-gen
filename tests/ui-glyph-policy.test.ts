@@ -10,6 +10,9 @@ import { join, sep } from "node:path";
 // (ImageNode's glyph turned out to be a save trigger, not a favorite toggle).
 
 const DINGBAT_STARS = /[\u2605\u2606\u2726-\u2734]/u;
+// Pencil/check dingbats used as affordances. `×` (U+00D7) is excluded on purpose: it is
+// the established close mark across this codebase and reads correctly in every font.
+const DINGBAT_ACTIONS = /[\u270E\u2713\u2714\u2717\u2718]/u;
 
 function componentFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -24,6 +27,32 @@ test("no dingbat star glyphs are used as UI icons", () => {
     DINGBAT_STARS.test(readFileSync(file, "utf8")),
   );
   assert.deepEqual(offenders, [], `dingbat glyphs found in: ${offenders.join(", ")}`);
+});
+
+test("no pencil or check dingbats stand in for action icons", () => {
+  // A text glyph renders at a different weight per font fallback and a screen reader
+  // announces it as "lower right pencil" instead of the action.
+  const offenders = componentFiles("ui/src/components")
+    .filter((file) => DINGBAT_ACTIONS.test(readFileSync(file, "utf8")))
+    .map((file) => file.split(sep).join("/"));
+  assert.deepEqual(offenders, [], `dingbat action glyphs found in: ${offenders.join(", ")}`);
+});
+
+test("edit and check marks come from one shared icon each", () => {
+  const files = componentFiles("ui/src/components");
+  for (const [name, marker] of [
+    ["EditIcon", "M4 20h4l10-10a2.5 2.5 0"],
+    ["CheckIcon", "m5 12.5 4.5 4.5L19 7"],
+  ] as const) {
+    const owners = files
+      .filter((file) => readFileSync(file, "utf8").includes(marker))
+      .map((file) => file.split(sep).join("/"));
+    assert.deepEqual(
+      owners,
+      [`ui/src/components/controls/${name}.tsx`],
+      `${name} artwork must have exactly one definition`,
+    );
+  }
 });
 
 test("the favorite star artwork has exactly one definition", () => {
