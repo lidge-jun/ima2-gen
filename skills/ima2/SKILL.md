@@ -721,6 +721,12 @@ continuity with `ima2 video continue`, Classic "Continue here", gallery video
 drag, or Node parent-video generation. Those flows use the previous generated
 video's last frame plus its stored `revisedPrompt` lineage.
 
+> **Continuation is last-frame image-to-video, not true video-to-video.** Only a single
+> still frame carries over — motion, trajectory and camera movement are not preserved.
+> Expect the next clip to start from that pose rather than to inherit momentum. Frames
+> are pulled server-side with ffmpeg when the source is a generated file, falling back
+> to in-browser canvas capture when ffmpeg is unavailable.
+
 ```bash
 ima2 video "episode 1: morning routine" --topic "daily-vlog"
 ima2 video "episode 2: commute" --model grok/grok-imagine-video --topic "daily-vlog"

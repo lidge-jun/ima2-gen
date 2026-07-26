@@ -5,7 +5,8 @@ import {
   deriveVideoModeUI,
   clampVideoDurationUI,
 } from "../lib/imageModels";
-import { isVideoUrl, extractLastFrame } from "../lib/videoMedia";
+import { isVideoUrl } from "../lib/videoMedia";
+import { frameExtraction } from "../lib/frameExtraction";
 import {
   ACTIVE_VIDEO_PROMPT_GUIDANCE,
   buildVideoContinuityFromItem,
@@ -73,16 +74,24 @@ export async function runVideoGenerateImpl(
     if (parentNode?.data.imageUrl) {
       if (isVideoUrl(parentNode.data.imageUrl)) {
         try {
-          parentVideoFrameRef = await extractLastFrame(parentNode.data.imageUrl);
+          // This caller knows the generated filename (it derives `continueFromVideo`
+          // from the same URL below), so it can take the server ffmpeg path. ffmpeg
+          // picks a real frame from the tail; the browser's `duration - 0.1` seek can
+          // land on a black fade-out frame.
+          const parentFilename = parentNode.data.imageUrl.replace(/^\/generated\//, "");
+          parentVideoFrameRef = (await frameExtraction.extractFrame(
+            { kind: "generated", filename: parentFilename },
+            "last",
+          )).dataUrl;
           parentVideoContinuity = parentNode.data.videoContinuity ?? buildVideoContinuityFromItem({
-            filename: parentNode.data.imageUrl.replace(/^\/generated\//, ""),
+            filename: parentFilename,
             prompt: parentNode.data.prompt,
             userPrompt: parentNode.data.prompt,
             revisedPrompt: parentNode.data.prompt,
             createdAt: Date.now(),
             videoContinuity: null,
           });
-          continueFromVideo = parentNode.data.imageUrl.replace(/^\/generated\//, "");
+          continueFromVideo = parentFilename;
         } catch {
           get().showToast(t("video.continuationFallbackT2V"), true);
         }
