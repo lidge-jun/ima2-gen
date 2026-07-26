@@ -3,6 +3,10 @@
 Date: 2026-05-30
 Branch: `feat/grok-video-i2v`
 
+> Historical snapshot: this plan records the 2026-05-30 implementation target.
+> The current runtime defaults are `grok-4.5` for planning and
+> `grok-imagine-video-1.5` for video generation; see `config.ts` and `docs/API.md`.
+
 ## Goal
 
 Add Grok video generation to ima2-gen as a first-class generation surface beside

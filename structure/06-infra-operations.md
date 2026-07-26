@@ -108,18 +108,19 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_MCP_SNAPSHOT_DIR` | Sanitized MCP tool snapshot directory override |
 | `IMA2_ADVERTISE_FILE` | Overrides runtime discovery file path |
 | `VITE_IMA2_API_TARGET` / `IMA2_DEV_API_TARGET` | Split Vite dev API proxy target override |
-| `IMA2_IMAGE_MODEL_DEFAULT` | Server fallback image model, default `gpt-5.4-mini` |
+| `IMA2_IMAGE_MODEL_DEFAULT` | Server fallback image model, default `gpt-5.6-luna` |
 | `IMA2_REASONING_EFFORT` | Server OAuth/default reasoning effort, default `medium` |
-| `IMA2_API_IMAGE_MODEL_DEFAULT` | Default image model for `provider: "api"` (Responses path), default `gpt-5.4-mini` |
+| `IMA2_API_IMAGE_MODEL_DEFAULT` | Default image model for `provider: "api"` (Responses path), default `gpt-5.6-luna` |
 | `IMA2_API_REASONING_EFFORT` | Default reasoning effort for `provider: "api"`, default `low` |
 | `IMA2_API_IMAGE_SIZE` | Default size for `provider: "api"`, default `1024x1024` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | Toggle web search for `provider: "api"`, default `true` |
 | `IMA2_GROK_PROXY_HOST` | Bundled progrok bind host, default `127.0.0.1` |
 | `IMA2_GROK_PROXY_PORT` | Bundled progrok preferred port, default `18645` |
 | `IMA2_NO_GROK_PROXY` | Disable the embedded progrok proxy; use only when managing the proxy manually |
-| `IMA2_GROK_PLANNER_MODEL` | Search/planner model for `provider: "grok"` classic generation, default `grok-4.3` |
+| `IMA2_GROK_PLANNER_MODEL` | Search/planner model for `provider: "grok"` classic generation, default `grok-4.5`; `grok-4.3` remains a compatibility override |
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | Timeout for each Grok search/planner call before the image API call, default `60000` |
-| `IMA2_GROK_IMAGE_MODEL_DEFAULT` | Default xAI image model for `provider: "grok"`, default `grok-imagine-image` |
+| `IMA2_GROK_IMAGE_MODEL_DEFAULT` | Default xAI image model for `provider: "grok"`, default `grok-imagine-image-quality` |
+| `IMA2_GROK_VIDEO_MODEL_DEFAULT` | Default xAI video model for `provider: "grok"`, default `grok-imagine-video-1.5` |
 | `IMA2_GROK_GENERATION_TIMEOUT_MS` | Timeout for final Grok image generation/edit calls, default `120000` |
 | `IMA2_GROK_STATUS_TIMEOUT_MS` | Timeout for `/api/grok/status` model probes, default `3000` |
 | `IMA2_OAUTH_MASKED_EDIT_ENABLED` | Feature flag (#31) gating masked-edit requests on the OAuth path; default off — when off, `lib/oauthProxy/generators.ts` rejects requests carrying a mask before calling upstream |
@@ -130,7 +131,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_DEV` | Master dev gate; enables verbose logs and turns on `config.features.cardNews` |
 | `IMA2_CARD_NEWS` | Server feature flag for the dev-only card-news API surface; either this or `IMA2_DEV=1` mounts `routes/cardNews.js` |
 | `IMA2_CARD_NEWS_PLANNER` | Optional flag to enable LLM-backed card-news planning |
-| `IMA2_CARD_NEWS_PLANNER_MODEL` | Model used when the card-news planner is enabled |
+| `IMA2_CARD_NEWS_PLANNER_MODEL` | Model used when the card-news planner is enabled, default `gpt-5.6-luna` |
 | `IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS` | Card-news planner request timeout |
 | `IMA2_CARD_NEWS_PLANNER_FALLBACK` | Switch for falling back to the deterministic planner when the LLM planner fails |
 | `IMA2_GENERATED_DIR` / `IMA2_GENERATED_DIRNAME` | Override the generated images directory (absolute path or directory name under `~/.ima2`) |
@@ -152,11 +153,11 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_NO_OAUTH_PROXY` | Disable the embedded OAuth proxy |
 | `IMA2_RESEARCH_SUFFIX` | Optional suffix appended when research mode is on |
 | `IMA2_STYLE_SHEET_MAX_PREFIX` | Max characters of a session style sheet injected into the next prompt |
-| `IMA2_STYLE_MODEL` | Model used by `/api/sessions/:id/style-sheet/extract` |
+| `IMA2_STYLE_MODEL` | Model used by `/api/sessions/:id/style-sheet/extract`, default `gpt-5.6-luna` |
 | `IMA2_STATIC_MAX_AGE` | Static asset Cache-Control max-age |
 | `VITE_IMA2_DEV` | UI build-time dev flag; pairs with `VITE_IMA2_CARD_NEWS=1` to expose the dev-only card-news workspace in the bundle |
 
-Generation and edit endpoints support OAuth, API-key, and Grok providers. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path. `provider: "grok"` uses bundled progrok; classic, Node, and Agent generation perform mandatory xAI Web Search and then a `grok-4.3` custom-tool planner call before executing xAI Images API. If Grok generation includes references, a Node parent image, or an Agent current image, those images are sent into the planner and the final image call uses xAI `/v1/images/edits` with the same references instead of the text-only generation endpoint. Grok Node requests are capped at three total input images, and Agent Grok turns force web search on because the planner depends on it.
+Generation and edit endpoints support OAuth, API-key, and Grok providers. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path. `provider: "grok"` uses bundled progrok; classic, Node, and Agent generation perform mandatory xAI Web Search and then a `grok-4.5` custom-tool planner call before executing xAI Images API. If Grok generation includes references, a Node parent image, or an Agent current image, those images are sent into the planner and the final image call uses xAI `/v1/images/edits` with the same references instead of the text-only generation endpoint. Grok Node requests are capped at three total input images, and Agent Grok turns force web search on because the planner depends on it.
 
 Runtime port fallback is intentional. If a preferred backend or OAuth proxy port is occupied, the server records the actual bound URL in `~/.ima2/server.json` and health/status responses. CLI clients and split Vite dev proxy resolution should consume that actual URL instead of reconstructing `localhost:${configuredPort}`.
 

@@ -56,7 +56,7 @@ export function PromptComposerToolbar({ canAddMore, onAttach }: PromptComposerTo
           className={`composer__tool${videoModelSelected ? " composer__tool--on" : ""}`}
           onClick={() => {
             if (videoModelSelected) {
-              setImageModel("gpt-5.5" as any);
+              setImageModel("gpt-5.6-luna");
             } else {
               selectVideoModel("grok-imagine-video-1.5");
             }

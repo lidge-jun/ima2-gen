@@ -3,6 +3,9 @@
 Date: 2026-05-30
 Branch: `feat/grok-video-i2v`
 
+> Historical snapshot: this research records the 2026-05-30 upstream surface.
+> For current defaults, use `config.ts`, `docs/API.md`, and the latest xAI model docs.
+
 ## Official xAI Video Spec
 
 Sources checked:

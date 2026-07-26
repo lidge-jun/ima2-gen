@@ -1,5 +1,5 @@
-export const VALID_PROMPT_BUILDER_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]);
-export const DEFAULT_PROMPT_BUILDER_MODEL = "gpt-5.5";
+export const VALID_PROMPT_BUILDER_MODELS = new Set(["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]);
+export const DEFAULT_PROMPT_BUILDER_MODEL = "gpt-5.6-luna";
 export const MAX_MESSAGES = 24;
 export const MAX_MESSAGE_CHARS = 16_000;
 export const MAX_ATTACHMENTS = 6;

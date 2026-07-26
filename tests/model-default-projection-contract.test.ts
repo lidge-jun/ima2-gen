@@ -6,6 +6,8 @@ import {
   DEFAULT_GROK_PLANNER_MODEL,
   GROK_PLANNER_MODELS,
 } from "../config.ts";
+import { DEFAULT_IMAGE_MODEL, IMAGE_MODEL_OPTIONS } from "../ui/src/lib/imageModels.ts";
+import { AGENT_LLM_MODEL_OPTIONS, getAgentLlmModelOption } from "../ui/src/lib/agentModelOptions.ts";
 
 function readSource(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -40,5 +42,36 @@ describe("current model defaults: runtime contract", () => {
   it("derives API model projections from runtime configuration", () => {
     assert.match(readSource("routes/models.ts"), /video:\s*ctx\.config\.grokProvider\.defaultVideoModel/);
     assert.match(readSource("routes/capabilities.ts"), /GROK_PLANNER_MODELS/);
+  });
+
+  it("orders active UI model pickers from current defaults to compatibility choices", () => {
+    assert.equal(DEFAULT_IMAGE_MODEL, "gpt-5.6-luna");
+    assert.deepEqual(
+      IMAGE_MODEL_OPTIONS.slice(0, 6).map((option) => option.value),
+      ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini"],
+    );
+    assert.deepEqual(
+      AGENT_LLM_MODEL_OPTIONS.filter((option) => option.provider === "grok").map((option) => option.value),
+      ["grok-4.5", "grok-4.3"],
+    );
+    assert.equal(getAgentLlmModelOption({ provider: "grok", model: "unknown" }).value, "grok-4.5");
+    assert.equal(getAgentLlmModelOption({ provider: "grok", model: "grok-4.3" }).value, "grok-4.3");
+  });
+
+  it("projects current defaults into UI stores and public documentation", () => {
+    for (const path of [
+      "ui/src/store/promptBuilderStore.ts",
+      "ui/src/components/prompt-builder/PromptBuilderModelMenu.tsx",
+      "README.md",
+      "docs/API.md",
+      "docs/CLI.md",
+      "site/src/pages/docs/reference/config.astro",
+      "site/src/pages/ko/docs/reference/config.astro",
+      "structure/03-server-api.md",
+      "structure/06-infra-operations.md",
+    ]) {
+      const source = readSource(path);
+      assert.match(source, /gpt-5\.6-luna|grok-4\.5|grok-imagine-video-1\.5/, `${path} missing a current model projection`);
+    }
   });
 });

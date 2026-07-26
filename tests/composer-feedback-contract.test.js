@@ -112,6 +112,7 @@ test("extracted toolbar preserves controls, state, and storyboard contracts", ()
   assert.match(toolbar, /<WebSearchToggle variant="compact" \/>/);
   assert.match(toolbar, /<SavePromptPopover/);
   assert.match(toolbar, /continueFromItem\(currentImage\)/);
+  assert.match(toolbar, /setImageModel\("gpt-5\.6-luna"\)/);
 });
 
 test("mention ownership remains in PromptComposer", () => {

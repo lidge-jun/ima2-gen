@@ -121,14 +121,13 @@ Use the **Switch Account** button in Settings > QuotaCard for the provider. This
 
 ### Which model should I use?
 
-Start with `gpt-5.4` for the safest balanced workflow.
+The app starts with `gpt-5.6-luna`; choose another model only when you need an explicit compatibility or account-specific override.
 
-- `gpt-5.4`: recommended balanced choice.
-- `gpt-5.4-mini`: current app default and faster draft model.
-- `gpt-5.5`: strongest quality option when supported.
-- `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna`: newest GPT-5.6 rollout tiers;
+- `gpt-5.6-luna`: current app default.
+- `gpt-5.6-sol` / `gpt-5.6-terra`: current GPT-5.6 alternatives;
   availability depends on your OAuth account access, so upstream may reject them
   until the rollout reaches you.
+- `gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini`: supported compatibility choices.
 
 ### Why does `gpt-5.5` fail when other models work?
 

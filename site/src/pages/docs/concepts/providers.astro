@@ -23,7 +23,7 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   <ul>
     <li><code>provider: "oauth"</code> — uses the local Codex OAuth proxy. The default path; no API key needed.</li>
     <li><code>provider: "api"</code> — calls the OpenAI Responses API with the hosted <code>image_generation</code> tool. Requires <code>OPENAI_API_KEY</code>.</li>
-    <li><code>provider: "grok"</code> — starts bundled <code>progrok</code>, runs mandatory xAI Web Search and a planner pass (default <code>grok-4.3</code>, configurable in settings or via <code>--planner-model</code>), then calls xAI Images API.</li>
+    <li><code>provider: "grok"</code> — starts bundled <code>progrok</code>, runs mandatory xAI Web Search and a planner pass (default <code>grok-4.5</code>, configurable in settings or via <code>--planner-model</code>), then calls xAI Images API. Grok 4.3 remains an explicit compatibility override.</li>
     <li><code>provider: "grok-api"</code> — same xAI pipeline as <code>grok</code> but uses a direct <code>XAI_API_KEY</code> instead of the OAuth proxy.</li>
     <li><code>provider: "gemini-api"</code> — calls the Google Gemini image API directly. Supports two models (<code>nano-banana-2</code> and <code>nano-banana-pro</code>), aspect ratio and resolution controls, and two auth modes: a <code>GEMINI_API_KEY</code> or a Vertex AI service-account JSON (<code>VERTEX_SERVICE_ACCOUNT_JSON</code>). When both are configured, Vertex AI takes priority unless overridden by the last-saved auth mode. Cost varies by model and resolution (see Gemini API section below).</li>
     <li><code>provider: "agy"</code> — spawns the Antigravity CLI (<code>agy -p</code>) to generate via Google Gemini (<code>nano-banana-2</code>). Fixed 1024×1024 JPEG output, max 3 refs. Free (no token cost).</li>
@@ -47,19 +47,21 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
 
   <h2>Models</h2>
   <p>
-    The app defaults to <code>gpt-5.4-mini</code> for fast local iteration. Switch to
-    <code>gpt-5.4</code> for the safest balanced workflow.
+    The app defaults to <code>gpt-5.6-luna</code> for image generation and Prompt Builder planning.
+    Older supported models remain explicit compatibility choices.
   </p>
   <table>
     <thead><tr><th>Model</th><th>Use</th></tr></thead>
     <tbody>
-      <tr><td><code>gpt-5.4-mini</code></td><td>Current default. Faster draft model.</td></tr>
+      <tr><td><code>gpt-5.6-luna</code></td><td>Current image and Prompt Builder default.</td></tr>
+      <tr><td><code>gpt-5.6-terra</code> / <code>gpt-5.6-sol</code></td><td>Current GPT-5.6 alternatives when available.</td></tr>
+      <tr><td><code>gpt-5.4-mini</code></td><td>Compatibility model.</td></tr>
       <tr><td><code>gpt-5.4</code></td><td>Recommended balanced choice.</td></tr>
       <tr><td><code>gpt-5.5</code></td><td>Strongest quality when your Codex CLI/OAuth backend supports it. May use more quota or need an updated Codex CLI.</td></tr>
-      <tr><td><code>grok-imagine-image</code></td><td>Default Grok image model ("Grok" / Fast in the UI).</td></tr>
-      <tr><td><code>grok-imagine-image-quality</code></td><td>Higher quality Grok image model ("Grok+" / Best in the UI).</td></tr>
-      <tr><td><code>grok-imagine-video</code></td><td>Default Grok video model (T2V/I2V). Shown as "Grok V / Fast" in the video model picker.</td></tr>
-      <tr><td><code>grok-imagine-video-1.5</code></td><td>Canonical Grok Video 1.5 model for single-image/frame I2V, including 1080p when supported. The old <code>grok-imagine-video-1.5-preview</code> value is accepted as an alias.</td></tr>
+      <tr><td><code>grok-imagine-image</code></td><td>Compatible fast Grok image model.</td></tr>
+      <tr><td><code>grok-imagine-image-quality</code></td><td>Default Grok image model ("Grok+" / Best in the UI).</td></tr>
+      <tr><td><code>grok-imagine-video</code></td><td>Base model for Ref2V, edit, and extension compatibility paths.</td></tr>
+      <tr><td><code>grok-imagine-video-1.5</code></td><td>Default Grok video model for prompt-only T2V and single-image/frame I2V, including 1080p when supported.</td></tr>
       <tr><td><code>nano-banana-2</code></td><td>Gemini Flash image model (maps to <code>gemini-3.1-flash-image</code>). Used by both <code>gemini-api</code> and <code>agy</code> providers.</td></tr>
       <tr><td><code>nano-banana-pro</code></td><td>Gemini Pro image model (maps to <code>gemini-3-pro-image</code>). Available on the <code>gemini-api</code> provider only.</td></tr>
     </tbody>
@@ -119,9 +121,9 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   <h2>Grok pipeline</h2>
   <p>
     Grok Classic, Node, and Agent requests run a three-step pipeline: mandatory xAI Web Search,
-    planner pass (default <code>grok-4.3</code>, overridable via
+    planner pass (default <code>grok-4.5</code>, overridable via
     <code>IMA2_GROK_PLANNER_MODEL</code>, settings UI, or <code>--planner-model</code> on video
-    commands) with an English final image prompt, then xAI image creation.
+    commands) with an English final image prompt, then xAI image creation. Grok 4.3 remains available as a compatibility override.
     Text-only requests use <code>/v1/images/generations</code>; requests with reference images,
     a Node parent image, or an Agent current image use <code>/v1/images/edits</code> so image-to-image
     context is preserved. Grok accepts up to three total input images in this path.
@@ -151,8 +153,8 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   </p>
   <h2>Grok video</h2>
   <p>
-    Grok video generation uses <code>grok-imagine-video</code> (default, "Grok V / Fast") or
-    canonical <code>grok-imagine-video-1.5</code> ("Grok V1.5"). A two-button video model
+    Grok video generation defaults to canonical <code>grok-imagine-video-1.5</code> ("Grok V1.5").
+    The base <code>grok-imagine-video</code> model remains available for Ref2V, edit, and extension. A two-button video model
     picker at the top of the video controls panel lets you switch between them. Three modes are
     auto-detected from reference count: text-to-video (0 refs), image-to-video (1 ref), and
     reference-to-video (2–7 refs, max 10s). Controls include duration (1–15s), resolution
@@ -162,8 +164,8 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
     base-model only. Choose the planner model in video settings or pass
     <code>--planner-model</code> on CLI video commands.
     The endpoint <code>POST /api/video/generate</code> streams SSE events: planning → submitted →
-    progress → done. From the CLI: <code>ima2 video "prompt" --model grok/grok-imagine-video --duration 5 --resolution 720p</code>
-    (or set a persistent target once with <code>ima2 defaults set video grok/grok-imagine-video</code>).
+    progress → done. From the CLI: <code>ima2 video "prompt" --model grok/grok-imagine-video-1.5 --duration 5 --resolution 720p</code>
+    (or set a persistent target once with <code>ima2 defaults set video grok/grok-imagine-video-1.5</code>).
   </p>
 
   <h2>MCP lanes (Runway, Higgsfield)</h2>
@@ -182,7 +184,7 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   <table>
     <thead><tr><th>Variable</th><th>Default</th></tr></thead>
     <tbody>
-      <tr><td><code>IMA2_API_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.4-mini</code></td></tr>
+      <tr><td><code>IMA2_API_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td></tr>
       <tr><td><code>IMA2_API_REASONING_EFFORT</code></td><td><code>low</code></td></tr>
       <tr><td><code>IMA2_API_IMAGE_SIZE</code></td><td><code>1024x1024</code></td></tr>
       <tr><td><code>IMA2_API_ALLOW_WEB_SEARCH</code></td><td><code>true</code></td></tr>

@@ -44,7 +44,7 @@ To generate from the CLI, inspect the live lane catalog and choose explicit imag
 ```bash
 ima2 models
 ima2 defaults set image oauth/gpt-5.6-luna
-ima2 defaults set video grok/grok-imagine-video
+ima2 defaults set video grok/grok-imagine-video-1.5
 ima2 gen "a clean product photo of a red guitar pedal"
 ima2 video "a cat playing piano" --duration 5 --resolution 720p
 ima2 video "animate this scene" --ref photo.png --duration 10
@@ -152,28 +152,28 @@ Image generation can run through the local Codex/ChatGPT OAuth path, a configure
 
 - `provider: "oauth"` uses the local Codex OAuth proxy.
 - `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool.
-- `provider: "grok"` starts bundled `progrok` on `127.0.0.1:18645`, runs mandatory xAI Web Search plus a planner pass (default: `grok-4.3`, configurable in settings or via `--planner-model`), then calls xAI Images API through the local proxy.
+- `provider: "grok"` starts bundled `progrok` on `127.0.0.1:18645`, runs mandatory xAI Web Search plus a planner pass (default: `grok-4.5`, configurable in settings or via `--planner-model`), then calls xAI Images API through the local proxy. `grok-4.3` remains available as an explicit compatibility override.
 - `provider: "grok-api"` calls the xAI Images API directly with `XAI_API_KEY` (no bundled progrok OAuth proxy).
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool (model: `nano-banana-2`). Output is fixed at 1024×1024 JPEG, max 3 reference images. No web search, quality, or size controls.
 - `provider: "gemini-api"` calls the Google Generative Language API directly. Supports two models: `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Auth is via `GEMINI_API_KEY` env var, web UI key management, or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON`). When both an API key and Vertex credentials are configured, Vertex takes priority. Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K); these controls are only honored on the direct API path — the Vertex AI endpoint ignores aspect/size because it does not accept the `response_format` field. Per-model cost differs: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
 - API-key generation supports classic generate, edit, mask-guided edit, multimode, and node generation.
 - Grok generation supports Classic, Node, and Agent flows. If a Classic reference, Node parent image, or Agent current image is present, ima2 switches the final Grok call to xAI image edit so image-to-image context is preserved.
 
-If no provider is specified, the app keeps the current GPT OAuth/default behavior. API-key generation defaults to `gpt-5.4-mini`, `low` reasoning, and `1024x1024` unless the request passes validated model, reasoning, size, or web-search options. Grok defaults to `grok-imagine-image`; `quality: "high"` promotes the final image call to `grok-imagine-image-quality`.
+If no provider is specified, the app keeps the current GPT OAuth/default behavior. GPT OAuth and API-key generation default to `gpt-5.6-luna`; the API-key path also defaults to `low` reasoning and `1024x1024` unless the request passes validated options. Grok image generation defaults to `grok-imagine-image-quality`.
 
 Grok image generation exposes a model picker (`grok-imagine-image` / `grok-imagine-image-quality`) and a size picker (aspect ratio + 1k/2k resolution). The Settings page prefers the Grok Build weekly credits percentage and reset time from `GET /v1/billing?format=credits`; if that source is unavailable, it falls back to the legacy monthly billing window and `$used/$limit`. A **Switch Account** button starts a device-code OAuth flow (`POST /api/auth/switch`) for re-authenticating without leaving the app.
 
-Grok video generation uses `grok-imagine-video` (default) or canonical `grok-imagine-video-1.5`; the legacy `grok-imagine-video-1.5-preview` string is accepted as an alias. Three modes are auto-detected from reference count: text-to-video (0 refs), image-to-video (1 ref), and reference-to-video (2-7 refs, max 10s duration). 1080p is available for `grok-imagine-video-1.5` prompt-only text-to-video and single image/frame image-to-video; prompt-only 1.5 uses the internal white-canvas I2V shim before the upstream request. 1.5 does not add `reference_images` Ref2V, V2V edit, or extension support, so those paths remain base-model only. Video controls include duration (1-15s), resolution (480p, 720p, 1080p when supported), and aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto).
+Grok video generation defaults to canonical `grok-imagine-video-1.5`; `grok-imagine-video` remains available for base-model-only Ref2V, V2V edit, and extension paths, and the legacy `grok-imagine-video-1.5-preview` string is accepted as an alias. Three modes are auto-detected from reference count: text-to-video (0 refs), image-to-video (1 ref), and reference-to-video (2-7 refs, max 10s duration). 1080p is available for `grok-imagine-video-1.5` prompt-only text-to-video and single image/frame image-to-video; prompt-only 1.5 uses the internal white-canvas I2V shim before the upstream request. Video controls include duration (1-15s), resolution (480p, 720p, 1080p when supported), and aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto).
 
 ![Settings workspace showing GPT OAuth active and API key provider available.](assets/screenshots/settings-oauth-generation.png)
 
 ## Model Guidance
 
-The app defaults to **`gpt-5.4-mini`** for fast local iteration. Switch to **`gpt-5.4`** when you want the safest balanced image workflow.
+The app defaults to **`gpt-5.6-luna`** for image generation and Prompt Builder planning. Older supported models remain explicit compatibility choices.
 
-- `gpt-5.4` — recommended balanced choice.
-- `gpt-5.4-mini` — current default and faster draft model.
-- `gpt-5.5` — strongest quality option when your Codex CLI/OAuth backend supports it. It may use more quota, expose different tool capabilities, or require updating Codex CLI before it works reliably.
+- `gpt-5.6-luna` — current image and Prompt Builder default.
+- `gpt-5.6-terra` / `gpt-5.6-sol` — current GPT-5.6 alternatives when your account exposes them.
+- `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini` — supported compatibility choices.
 
 The app also exposes quality (`low`, `medium`, `high`) and moderation (`auto`, `low`) controls.
 
@@ -274,8 +274,8 @@ ima2 models --kind image
 ima2 gen "poster" --model oauth/gpt-5.6-luna --reasoning-effort high
 ima2 edit input.png --prompt "make it rainy" --web-search
 ima2 multimode "two cats playing" -n 2
-ima2 video "a cat playing piano" --model grok/grok-imagine-video --duration 5 --resolution 720p
-ima2 video "animate this" --model grok/grok-imagine-video --ref photo.png --aspect-ratio 16:9
+ima2 video "a cat playing piano" --model grok/grok-imagine-video-1.5 --duration 5 --resolution 720p
+ima2 video "animate this" --model grok/grok-imagine-video-1.5 --ref photo.png --aspect-ratio 16:9
 ima2 inflight ls --terminal
 ima2 config set imageModels.reasoningEffort high
 ```
@@ -299,23 +299,24 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_CONFIG_DIR` | `~/.ima2` | Config and SQLite location |
 | `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | Runtime discovery file |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
-| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Server fallback image model |
+| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | Server fallback image model |
 | `IMA2_REASONING_EFFORT` | `medium` | Default reasoning effort for the default (GPT OAuth) path; one of `none`, `low`, `medium`, `high`, `xhigh` |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable the auto-started OAuth proxy |
 | `IMA2_LOG_LEVEL` | `info` | Normal serve defaults to `info`; dev mode defaults to `debug`; supports `debug`, `info`, `warn`, `error`, or `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `300000` | Recent terminal job retention for debug views |
 | `OPENAI_API_KEY` | — | API key for the `provider: "api"` Responses API image path and auxiliary API-key features |
 | `XAI_API_KEY` | — | API key for `provider: "grok-api"` direct xAI Images API path |
-| `IMA2_API_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Default image model for `provider: "api"` |
+| `IMA2_API_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | Default image model for `provider: "api"` |
 | `IMA2_API_REASONING_EFFORT` | `low` | Default reasoning effort for `provider: "api"` |
 | `IMA2_API_IMAGE_SIZE` | `1024x1024` | Default size for `provider: "api"` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | `true` | Toggle web search for `provider: "api"` |
 | `IMA2_GROK_PROXY_HOST` | `127.0.0.1` | Host for the bundled progrok proxy |
 | `IMA2_GROK_PROXY_PORT` | `18645` | Port for the bundled progrok proxy |
 | `IMA2_NO_GROK_PROXY` | — | Set `1` to disable automatic progrok startup |
-| `IMA2_GROK_PLANNER_MODEL` | `grok-4.3` | Grok search/planner model (also configurable via settings UI or `--planner-model` CLI flag) |
+| `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok search/planner model (also configurable via settings UI or `--planner-model` CLI flag) |
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | `60000` | Timeout for Grok search and planner calls |
-| `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image` | Default final Grok image model |
+| `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` | Default final Grok image model |
+| `IMA2_GROK_VIDEO_MODEL_DEFAULT` | `grok-imagine-video-1.5` | Default Grok video model |
 | `IMA2_GROK_GENERATION_TIMEOUT_MS` | `120000` | Timeout for the final Grok Images API call |
 | `IMA2_OAUTH_MASKED_EDIT_ENABLED` | `false` | Opt-in feature flag for masked-edit requests on the OAuth path (#31, groundwork only) |
 | `GEMINI_API_KEY` | — | API key for `provider: "gemini-api"` direct Generative Language API path |

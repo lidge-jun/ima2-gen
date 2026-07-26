@@ -82,7 +82,7 @@ Provider override semantics:
 
 - `api` forces the API-key Responses path and requires a configured API key.
 - `oauth` forces the local OAuth proxy path.
-- `grok` uses the bundled progrok xAI proxy (`127.0.0.1:18645`). Classic generation first runs mandatory xAI Web Search through Responses API, then asks `grok-4.3` to call ima2's local `generate_image` tool, then ima2 executes xAI `/v1/images/generations`. If `--ref` images are attached, the final step uses xAI `/v1/images/edits` instead so image-to-image/reference context is preserved. Models: `grok-imagine-image`, `grok-imagine-image-quality`. Size is mapped to xAI `aspect_ratio` and `resolution`; the UI web-search toggle is OpenAI-provider-only because Grok search is always on in this path.
+- `grok` uses the bundled progrok xAI proxy (`127.0.0.1:18645`). Classic generation first runs mandatory xAI Web Search through Responses API, then asks `grok-4.5` to call ima2's local `generate_image` tool, then ima2 executes xAI `/v1/images/generations`. `grok-4.3` remains available as an explicit compatibility override. If `--ref` images are attached, the final step uses xAI `/v1/images/edits` instead so image-to-image/reference context is preserved. Models: `grok-imagine-image`, `grok-imagine-image-quality`. Size is mapped to xAI `aspect_ratio` and `resolution`; the UI web-search toggle is OpenAI-provider-only because Grok search is always on in this path.
 - `agy` spawns the Antigravity CLI to generate via Google Gemini (`nano-banana-2`). Fixed 1024×1024 JPEG output, max 3 refs. No web search, quality, size, or mask controls. If `agy` is not on the server process PATH, ima2 also checks common user-local installs such as `~/.local/bin/agy`; set `IMA2_AGY_BIN=/absolute/path/to/agy` to force a specific binary.
 - `gemini-api` calls the Google Generative Language API directly. Models: `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Use `--model nano-banana-2` or `--model nano-banana-pro` to select. Supports `--size` for aspect ratio and resolution (512px–4K) on the direct API path; Vertex AI ignores aspect/size. Requires `GEMINI_API_KEY` or a Vertex AI service account (`VERTEX_SERVICE_ACCOUNT_JSON`). Switching from `agy` or `gemini-api` provider auto-selects the corresponding Gemini model; switching away resets to the GPT default.
 - `atlascloud` calls Atlas Cloud's Media API directly. Models: `openai/gpt-image-2/text-to-image` for text-to-image and `openai/gpt-image-2/edit` when references are attached. Requires `ATLASCLOUD_API_KEY`; web search, reasoning, mask, and video controls are ignored.
@@ -102,7 +102,7 @@ keeps the requested size in local metadata, but sends `aspect_ratio` such as
 because xAI currently exposes `1k` and `2k` resolution controls.
 
 For Grok classic generation with `--ref`, ima2 sends up to three references into
-the `grok-4.3` planner as image inputs, asks the planner for an English final
+the `grok-4.5` planner as image inputs, asks the planner for an English final
 image prompt, then sends the same references to xAI image editing. More than
 three Grok references are rejected with `GROK_REF_TOO_MANY`, matching xAI's
 documented multi-image editing limit.
@@ -146,7 +146,7 @@ Multimode-specific flags include `--max-images <1..24>` by default (configurable
 | `ima2 video extend <prompt> --video <value> [--duration 6]` | Extend an existing video from its last frame |
 | `ima2 video continue <prompt> --video <generated-file>` | Generate a new clip from a generated video's last frame with branch-local `revisedPrompt` lineage |
 | `ima2 video frame <generated-file> [--last] [-o frame.png]` | Extract a PNG frame from a generated `.mp4` |
-| `ima2 video analyze <generated-file>` | Analyze first/last frames from a generated `.mp4` with Grok 4.3 vision |
+| `ima2 video analyze <generated-file>` | Analyze first/last frames with the configured planner model (Grok 4.5 by default) |
 
 Video generate flags:
 
@@ -156,7 +156,7 @@ Video generate flags:
 | `--resolution <480p\|720p\|1080p>` | Video resolution (default: 480p). 1080p requires `--model grok-imagine-video-1.5`; prompt-only 1.5 uses the internal white-canvas I2V shim |
 | `--aspect-ratio <ratio\|auto>` | 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto (default: auto) |
 | `--model <name>` | `grok-imagine-video` or `grok-imagine-video-1.5`; `grok-imagine-video-1.5-preview` is accepted as a compatibility alias |
-| `--planner-model <name>` | Grok planner override (default: `grok-4.3`; also in settings UI and `IMA2_GROK_PLANNER_MODEL`) |
+| `--planner-model <name>` | Grok planner override (default: `grok-4.5`; `grok-4.3` remains compatible; also in settings UI and `IMA2_GROK_PLANNER_MODEL`) |
 | `--storyboard` | Enable storyboard mode — maintains character/scene continuity across sequential clips |
 | `--ref <file>` | Attach source/reference image (repeatable, max 7) |
 | `-o, --out <file>` | Output file path |
@@ -207,11 +207,11 @@ Video mode is auto-detected from `--ref` count:
 SSE events: `planning` → `submitted` → `progress` (0–100%) → `done` or `error`.
 
 ```bash
-ima2 defaults set video grok/grok-imagine-video   # once; bare calls fail closed without it
+ima2 defaults set video grok/grok-imagine-video-1.5   # once; bare calls fail closed without it
 ima2 video "a cat playing piano"
 ima2 video "animate this" --ref photo.png --duration 10
 ima2 video "animate this in high detail" --ref photo.png --model grok-imagine-video-1.5 --resolution 1080p
-ima2 video "cinematic" --model grok/grok-imagine-video --resolution 720p --aspect-ratio 16:9 -o out.mp4
+ima2 video "cinematic" --model grok/grok-imagine-video-1.5 --resolution 720p --aspect-ratio 16:9 -o out.mp4
 ima2 video "product reveal, slow dolly-in" --model runway/veo-3.1 --duration 8
 ima2 video "style transfer" --ref a.png --ref b.png --ref c.png --model grok-imagine-video
 ima2 video edit "make the lighting warm sunset" --video 1780226256355_50252101.mp4 -o edited.mp4

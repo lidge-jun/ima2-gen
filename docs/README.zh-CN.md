@@ -107,7 +107,7 @@ Web UI 通过单个 `GET /api/events` Server-Sent Events 连接接收所有生�
 
 如果设置页显示 **API key provider available**，意思是检测到了 API key，并且可用于生成、编辑、multimode 和 node 请求。
 
-Grok 视频使用 `grok-imagine-video`（默认）或正式名 `grok-imagine-video-1.5`；旧的 `grok-imagine-video-1.5-preview` 字符串仍作为兼容 alias 接受。根据参考图数量自动选择 T2V(0)、I2V(1)、Ref2V(2-7，最长 10 秒)。1080p 仅在 `grok-imagine-video-1.5` 单图/单帧 I2V 时可用。1.5 不新增 Ref2V、V2V edit 或 extension 支持，这些路径仍仅使用默认模型。支持 duration(1-15s)、resolution(480p/720p/受支持时 1080p) 和 aspect ratio。
+Grok 视频默认使用正式名 `grok-imagine-video-1.5`；`grok-imagine-video` 保留用于 Ref2V、V2V edit 和 extension 兼容路径，旧的 `grok-imagine-video-1.5-preview` 字符串仍作为兼容 alias 接受。根据参考图数量自动选择 T2V(0)、I2V(1)、Ref2V(2-7，最长 10 秒)。1080p 可用于 `grok-imagine-video-1.5` 的 prompt-only T2V 和单图/单帧 I2V。支持 duration(1-15s)、resolution(480p/720p/受支持时 1080p) 和 aspect ratio。
 
 设置页的 QuotaCard 显示 Grok billing `$used/$limit` 进度条和 **Switch Account** 按钮（`POST /api/auth/switch`）。
 
@@ -115,11 +115,11 @@ Grok 视频使用 `grok-imagine-video`（默认）或正式名 `grok-imagine-vid
 
 ## 模型建议
 
-应用默认使用适合快速本地迭代的 **`gpt-5.4-mini`**。如果想要更稳定、均衡的结果，建议切换到 **`gpt-5.4`**。
+图像生成与 Prompt Builder 默认使用 **`gpt-5.6-luna`**；旧模型保留为兼容选项。
 
-- `gpt-5.4` — 推荐的均衡选择。
-- `gpt-5.4-mini` — 当前应用默认值，适合快速草稿。
-- `gpt-5.5` — 在支持的环境中是质量最高的选择。但它可能消耗更多额度，也可能需要更新 Codex CLI，或依赖账号/后端路径是否开放对应的图像 capability。
+- `gpt-5.6-luna` — 当前图像与 Prompt Builder 默认值。
+- `gpt-5.6-terra` / `gpt-5.6-sol` — 账号支持时可用的 GPT-5.6 选项。
+- `gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` — 兼容选项。
 
 Quality 支持 `low`, `medium`, `high`；moderation 支持 `auto`, `low`。
 
@@ -225,7 +225,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_CONFIG_DIR` | `~/.ima2` | Config 和 SQLite 位置 |
 | `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | 运行时 server discovery 文件 |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | 生成图片目录 |
-| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Server fallback 图像模型 |
+| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | Server fallback 图像模型 |
 | `IMA2_NO_OAUTH_PROXY` | — | 设为 `1` 时关闭 OAuth proxy 自动启动 |
 | `IMA2_LOG_LEVEL` | `info` | 普通 `serve` 默认为 `info`，dev mode 默认为 `debug`；支持 `debug`, `info`, `warn`, `error`, `silent` |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `300000` | 调试用 recent job 保留时间 |

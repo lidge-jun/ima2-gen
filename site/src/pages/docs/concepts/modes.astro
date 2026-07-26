@@ -48,16 +48,16 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   <h2>Video</h2>
   <p>
     Generate short videos from text, a single image, or multiple reference images via Grok video
-    models (<code>grok-imagine-video</code>, canonical <code>grok-imagine-video-1.5</code>;
-    preview is an accepted alias). Mode is auto-detected: 0 refs → text-to-video, 1 ref →
+    models (default <code>grok-imagine-video-1.5</code>; base <code>grok-imagine-video</code>
+    remains for compatibility paths and preview is an accepted alias). Mode is auto-detected: 0 refs → text-to-video, 1 ref →
     image-to-video, 2–7 refs → reference-to-video (max 10s). Controls include duration
     (1–15s), resolution (480p, 720p, and 1080p for 1.5 single-image/frame I2V), and aspect ratio. The
     CLI streams SSE progress events; the UI shows planning → generating → X% progress in the
     in-flight queue.
   </p>
   <p>
-    A Grok planner (default <code>grok-4.3</code>, overridable in video settings or via
-    <code>--planner-model</code>) rewrites prompts with web-search context before generation.
+    A Grok planner (default <code>grok-4.5</code>, overridable in video settings or via
+    <code>--planner-model</code>; Grok 4.3 remains a compatibility override) rewrites prompts with web-search context before generation.
     For multi-character scenes, planners identify speakers by visual appearance — clothing,
     physique, position, and props — rather than names, so dialogue attribution stays consistent
     across clips.

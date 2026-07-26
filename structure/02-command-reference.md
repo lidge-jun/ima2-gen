@@ -105,7 +105,7 @@ The CLI surface was expanded to near-feature-parity with the server API in #45 (
 | `--stdin` | false | Read extra prompt text from stdin |
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Override server discovery |
-| `--model <id>` | server default | Image model: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
+| `--model <id>` | `gpt-5.6-luna` | Image model: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
 | `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
@@ -115,7 +115,7 @@ The CLI surface was expanded to near-feature-parity with the server API in #45 (
 
 Web-search note: `--web-search` and `--no-web-search` set the request-level `webSearchEnabled` field. For `provider: "api"`, the request still respects the global API-provider gate (`IMA2_API_ALLOW_WEB_SEARCH` / `apiProvider.allowWebSearch`); a globally disabled API web-search setting cannot be re-enabled by one CLI call.
 
-Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the bundled progrok xAI path, and `auto` preserves route default behavior. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.3` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
+Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the bundled progrok xAI path, and `auto` preserves route default behavior. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.5` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
 
 ## `video` Options
 
@@ -126,7 +126,7 @@ Provider override semantics: `api` forces the API-key Responses path, `oauth` fo
 | `ima2 video edit <prompt> --video <value>` | xAI native V2V edit; base video model only |
 | `ima2 video extend <prompt> --video <value>` | xAI native extension; returns original+extension combined |
 | `ima2 video frame <generated-file>` | Extract a PNG frame from a generated `.mp4` |
-| `ima2 video analyze <generated-file>` | Analyze first/last frames through Grok 4.3 vision |
+| `ima2 video analyze <generated-file>` | Analyze first/last frames through the configured planner model (Grok 4.5 default) |
 
 Video prompts cannot be blank. Agents should include visual flow, motion flow,
 sound/no-music, dialogue/no-dialogue, and the ending frame. `continue` differs
@@ -134,10 +134,10 @@ from `extend`: `continue` persists `videoContinuity` lineage metadata and starts
 a fresh generated clip from the last frame; `extend` calls xAI's native
 extension endpoint.
 
-Video model contract, 2026-06-29: `grok-imagine-video-1.5` is the canonical
-1.5 model name; `grok-imagine-video-1.5-preview` is accepted as an alias. `1080p`
-is valid only for 1.5 image-to-video with one image/frame source. Prompt-only
-T2V, Ref2V/multi-ref, edit, and extension remain base-model or 480p/720p paths.
+Video model contract, 2026-07-26: `grok-imagine-video-1.5` is the canonical
+generation default; `grok-imagine-video-1.5-preview` is accepted as an alias.
+`1080p` is valid for 1.5 prompt-only T2V through the canvas shim and for I2V
+with one image/frame source. Ref2V/multi-ref, edit, and extension remain base-model paths.
 
 ## `edit` Options
 
@@ -150,7 +150,7 @@ T2V, Ref2V/multi-ref, edit, and extension remain base-model or 480p/720p paths.
 | `--json` | false | Print machine-readable JSON |
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Target server URL |
-| `--model <id>` | server default | Image model: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
+| `--model <id>` | `gpt-5.6-luna` | Image model: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
 | `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |

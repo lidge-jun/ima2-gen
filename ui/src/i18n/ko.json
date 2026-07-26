@@ -321,7 +321,7 @@
     "reasoning": "추론",
     "webSearch": "웹 검색",
     "grokApi": "Grok API",
-    "grokApiBody": "번들된 progrok에서 필수 검색 → grok-4.3 이미지+텍스트 tool planning(영어 프롬프트) → xAI Images API 순서로 실행됩니다. 첨부 레퍼런스는 xAI 이미지 편집으로 보내 i2i 맥락을 보존합니다.",
+    "grokApiBody": "번들 progrok에서 필수 검색 → Grok 4.5 이미지·텍스트 도구 기획(영어 프롬프트) → xAI Images API 순서로 실행합니다. 첨부 레퍼런스는 xAI 이미지 편집으로 보내 i2i 맥락을 유지합니다.",
     "openAccount": "계정 설정 열기"
   },
   "generate": {
@@ -681,7 +681,7 @@
     "grokClassicOnly": "이 화면에서는 Grok 이미지 생성을 사용할 수 없습니다.",
     "grokClassicOnlyHint": "Grok이 켜진 생성 화면에서 사용하세요.",
     "grokCompatTitle": "Grok 이미지 API",
-    "grokCompatBody": "ima2 serve가 번들된 progrok 프록시(127.0.0.1:18645)를 관리합니다. Grok은 검색을 항상 사용한 뒤 첨부 레퍼런스를 grok-4.3 planner에 함께 보내고, xAI 이미지 편집으로 유지하며, 크기는 xAI aspect ratio/resolution으로 매핑됩니다. 출력 포맷, 모더레이션, 추론은 OpenAI 공급자에서만 설정됩니다.",
+    "grokCompatBody": "ima2 serve가 번들 progrok 프록시(127.0.0.1:18645)를 관리합니다. Grok은 항상 먼저 검색하고 첨부 레퍼런스를 Grok 4.5 플래너에 함께 보냅니다. 레퍼런스는 xAI 이미지 편집 경로에서 유지되며, 크기는 xAI aspect ratio/resolution으로 매핑됩니다. 출력 포맷·모더레이션·추론은 OpenAI 공급자에서만 설정합니다.",
     "settingsBody": "앞으로 생성 요청에 사용할 공급자를 선택합니다.",
     "availableTitle": "{name} 사용 가능",
     "availableAria": "{name}: 사용 가능",
@@ -1323,7 +1323,7 @@
     },
     "grokPlanner": {
       "title": "Grok planner 모델",
-      "body": "검색과 이미지/비디오 프롬프트 기획에 사용하는 모델입니다. grok-4.3이 기본값이며 I2V/Ref2V 기획 시 이미지 입력을 지원합니다."
+      "body": "검색과 이미지·비디오 프롬프트를 기획하는 모델입니다. 기본값은 Grok 4.5이며 I2V·Ref2V 기획에서 이미지 입력을 지원합니다. Grok 4.3은 호환 선택지로 남아 있습니다."
     },
     "gallery": {
       "defaultScopeTitle": "기본 갤러리 보기",

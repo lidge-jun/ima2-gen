@@ -76,7 +76,7 @@ export const usePromptBuilderStore = create<PromptBuilderState>()((set, get) => 
   messages: [],
   scope: { kind: "draft" },
   draft: "",
-  model: "gpt-5.5",
+  model: "gpt-5.6-luna",
   loading: false,
   attachments: [],
   error: null,

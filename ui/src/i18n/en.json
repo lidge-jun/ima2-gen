@@ -321,7 +321,7 @@
     "reasoning": "Reasoning",
     "webSearch": "Web search",
     "grokApi": "Grok API",
-    "grokApiBody": "Runs through bundled progrok: mandatory search, grok-4.3 image+text tool planning in English, then xAI Images API. Attached references use xAI image editing so i2i context is preserved.",
+    "grokApiBody": "Runs through bundled progrok: mandatory search, Grok 4.5 image-and-text tool planning in English, then xAI Images API. Attached references use xAI image editing so i2i context is preserved.",
     "openAccount": "Open account settings"
   },
   "generate": {
@@ -681,7 +681,7 @@
     "grokClassicOnly": "Grok image generation is not available in this surface.",
     "grokClassicOnlyHint": "Use a generation surface with Grok enabled.",
     "grokCompatTitle": "Grok image API",
-    "grokCompatBody": "ima2 serve manages the bundled progrok proxy at 127.0.0.1:18645. Grok always searches before image generation, sends attached references into the grok-4.3 planner, keeps them through xAI image editing, and maps size to xAI aspect ratio/resolution. Output format, moderation, and reasoning are OpenAI-provider settings only.",
+    "grokCompatBody": "ima2 serve manages the bundled progrok proxy at 127.0.0.1:18645. Grok always searches before image generation, sends attached references into the Grok 4.5 planner, keeps them through xAI image editing, and maps size to xAI aspect ratio/resolution. Output format, moderation, and reasoning are OpenAI-provider settings only.",
     "settingsBody": "Choose which provider future generation requests use.",
     "availableTitle": "{name} available",
     "availableAria": "{name}: available",
@@ -1323,7 +1323,7 @@
     },
     "grokPlanner": {
       "title": "Grok planner model",
-      "body": "The model used for search and image/video prompt planning. grok-4.3 is the default and supports image input for I2V/Ref2V planning."
+      "body": "The model used for search and image/video prompt planning. Grok 4.5 is the default and supports image input for I2V/Ref2V planning; Grok 4.3 remains available as a compatibility override."
     },
     "gallery": {
       "defaultScopeTitle": "Default gallery view",

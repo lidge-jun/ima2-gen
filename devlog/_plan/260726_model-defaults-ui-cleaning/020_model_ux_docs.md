@@ -7,6 +7,9 @@
 - `ui/src/lib/agentModelOptions.ts`
   - Grok group에 `grok-4.5`/short `4.5`를 4.3 앞에 추가.
   - 기존 `grok-4.3`은 explicit compatibility option으로 유지.
+- `ui/src/lib/imageModels.ts`
+  - 공용 OpenAI 선택 목록을 Luna -> Terra -> Sol -> 5.5 -> 5.4 -> 5.4 mini 순으로 정렬.
+  - 저장된 이전 모델과 모든 호환 option은 유지.
 - `ui/src/store/promptBuilderStore.ts`
   - default `gpt-5.5` -> `gpt-5.6-luna`.
   - union은 기존 모델을 모두 유지.
@@ -15,6 +18,8 @@
 - `lib/promptBuilder/constants.ts`
   - `DEFAULT_PROMPT_BUILDER_MODEL` -> `gpt-5.6-luna`.
   - valid set은 호환 모델 유지.
+- `lib/promptBuilder/requestSchema.ts`
+  - 오류 문구도 같은 latest-first valid set에서 파생해 목록 드리프트를 막는다.
 - `ui/src/components/composer/PromptComposerToolbar.tsx`
   - reset/default action의 `gpt-5.5` literal을 Luna로 교체.
 
@@ -58,6 +63,9 @@ Before/after:
 
 - `tests/gpt56-rollout-contract.test.ts`: UI·config·prompt builder default가 Luna.
 - `tests/agent-mode-right-sidebar-contract.test.js`: 4.5 option과 Agent constant.
+- `tests/grok-planner-config-route.test.ts`: GET 기본/정렬과 4.3 PATCH 호환,
+  invalid 400을 실제 라우트로 실행.
+- `tests/prompt-builder-contract.test.ts`: Luna 기본, 5.5 호환, latest-first 오류를 실행.
 - docs regex contract가 있는 `tests/cli-feature-parity-contract.test.js` 포함.
 - NEW `tests/model-default-projection-contract.test.ts`:
   `config.ts`, `routes/models.ts`, `routes/capabilities.ts`,

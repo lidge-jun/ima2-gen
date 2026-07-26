@@ -30,22 +30,23 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
       <tr><td><code>IMA2_CONFIG_DIR</code></td><td><code>~/.ima2</code></td><td>설정과 SQLite 위치.</td></tr>
       <tr><td><code>IMA2_ADVERTISE_FILE</code></td><td><code>~/.ima2/server.json</code></td><td>런타임 탐색 파일.</td></tr>
       <tr><td><code>IMA2_GENERATED_DIR</code></td><td><code>~/.ima2/generated</code></td><td>생성 이미지 디렉터리.</td></tr>
-      <tr><td><code>IMA2_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.4-mini</code></td><td>서버 폴백 이미지 모델.</td></tr>
+      <tr><td><code>IMA2_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td><td>서버 폴백 이미지 모델.</td></tr>
       <tr><td><code>IMA2_REASONING_EFFORT</code></td><td><code>medium</code></td><td>기본(OAuth) 경로의 reasoning effort 기본값; none·low·medium·high·xhigh 중 하나.</td></tr>
       <tr><td><code>IMA2_NO_OAUTH_PROXY</code></td><td>—</td><td><code>1</code>로 설정하면 자동 시작 OAuth 프록시 비활성화.</td></tr>
       <tr><td><code>IMA2_LOG_LEVEL</code></td><td><code>info</code></td><td>serve는 info, dev는 debug 기본; debug·info·warn·error·silent 지원.</td></tr>
       <tr><td><code>IMA2_INFLIGHT_TERMINAL_TTL_MS</code></td><td><code>300000</code></td><td>디버그 뷰용 최근 종료 작업 보존 시간.</td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td>—</td><td>API 프로바이더 Responses 경로 및 보조 기능용 API key.</td></tr>
-      <tr><td><code>IMA2_API_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.4-mini</code></td><td>API 경로의 기본 이미지 모델.</td></tr>
+      <tr><td><code>IMA2_API_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td><td>API 경로의 기본 이미지 모델.</td></tr>
       <tr><td><code>IMA2_API_REASONING_EFFORT</code></td><td><code>low</code></td><td>API 경로의 기본 reasoning effort.</td></tr>
       <tr><td><code>IMA2_API_IMAGE_SIZE</code></td><td><code>1024x1024</code></td><td>API 경로의 기본 크기.</td></tr>
       <tr><td><code>IMA2_API_ALLOW_WEB_SEARCH</code></td><td><code>true</code></td><td>API 경로의 웹 검색 토글.</td></tr>
       <tr><td><code>IMA2_GROK_PROXY_HOST</code></td><td><code>127.0.0.1</code></td><td>번들 progrok 바인드 호스트.</td></tr>
       <tr><td><code>IMA2_GROK_PROXY_PORT</code></td><td><code>18645</code></td><td>번들 progrok 포트.</td></tr>
       <tr><td><code>IMA2_NO_GROK_PROXY</code></td><td>—</td><td><code>1</code>로 설정하면 번들 progrok 자동 시작 비활성화.</td></tr>
-      <tr><td><code>IMA2_GROK_PLANNER_MODEL</code></td><td><code>grok-4.3</code></td><td>Grok 플래너 모델. 설정 UI 또는 <code>--planner-model</code> CLI 플래그로도 변경 가능.</td></tr>
+      <tr><td><code>IMA2_GROK_PLANNER_MODEL</code></td><td><code>grok-4.5</code></td><td>Grok 플래너 모델. Grok 4.3은 호환 선택지로 유지합니다.</td></tr>
       <tr><td><code>IMA2_GROK_PLANNER_TIMEOUT_MS</code></td><td><code>60000</code></td><td>각 Grok search/planner 단계 timeout.</td></tr>
-      <tr><td><code>IMA2_GROK_IMAGE_MODEL_DEFAULT</code></td><td><code>grok-imagine-image</code></td><td>Grok 이미지 호출 기본 xAI image 모델.</td></tr>
+      <tr><td><code>IMA2_GROK_IMAGE_MODEL_DEFAULT</code></td><td><code>grok-imagine-image-quality</code></td><td>Grok 이미지 호출 기본 xAI image 모델.</td></tr>
+      <tr><td><code>IMA2_GROK_VIDEO_MODEL_DEFAULT</code></td><td><code>grok-imagine-video-1.5</code></td><td>Grok 생성 경로의 기본 xAI 비디오 모델.</td></tr>
       <tr><td><code>IMA2_GROK_GENERATION_TIMEOUT_MS</code></td><td><code>120000</code></td><td>최종 Grok 이미지 생성/edit 호출 timeout.</td></tr>
       <tr><td><code>IMA2_GROK_STATUS_TIMEOUT_MS</code></td><td><code>3000</code></td><td><code>/api/grok/status</code> 모델 probe timeout.</td></tr>
       <tr><td><code>IMA2_OAUTH_MASKED_EDIT_ENABLED</code></td><td><code>false</code></td><td>OAuth 경로의 masked-edit 옵트인 플래그 (#31, 기반 작업만).</td></tr>
@@ -62,7 +63,7 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
   <pre><code>imageModels.default              imageModels.reasoningEffort
 apiProvider.defaultImageModel    apiProvider.defaultReasoningEffort
 grokProvider.plannerModel        grokProvider.plannerTimeoutMs
-grokProvider.defaultImageModel
+grokProvider.defaultImageModel  grokProvider.defaultVideoModel
 log.level                        features.cardNews
 server.port  server.host  server.bodyLimit
 oauth.proxyPort  limits.maxRefCount  limits.maxParallel

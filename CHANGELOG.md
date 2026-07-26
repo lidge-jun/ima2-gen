@@ -30,7 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **GPT-5.6 rollout** — `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` accepted as OAuth image models across server validators, prompt builder, CLI, and UI pickers; reasoning ladder gains `max` after `xhigh`. Defaults unchanged (`gpt-5.4-mini`).
+- **Current model defaults** — Grok search, image/video planning, and frame analysis now default to `grok-4.5` while retaining `grok-4.3` as an explicit compatibility override. GPT image generation, stylesheet analysis, Card News planning, and Prompt Builder default to `gpt-5.6-luna`; Grok video model discovery projects `grok-imagine-video-1.5` from runtime config.
+- **GPT-5.6 rollout** — `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` accepted as OAuth image models across server validators, prompt builder, CLI, and UI pickers; reasoning ladder gains `max` after `xhigh`.
 - **Verified OIDC release contract** — a release commit must pass the `preview` channel before the same SHA can be tagged and published to `latest`; GitHub Release creation and branch synchronization happen only after npm dist-tag, `gitHead`, integrity, and provenance read-back succeeds.
 - **Tested-artifact evidence** — `publish.yml` packs once, install-smokes that exact tarball, records SHA-512 in `release-manifest.json`, emits a CycloneDX SBOM, and gives OIDC permission only to the job that publishes the downloaded artifact.
 - **Signed provenance recovery** — stable full reruns use a verify-only job, failed-job reruns guard against republishing an immutable version, and finalization recovers the original publish attempt from cryptographically verified npm Sigstore provenance instead of relying on recent successful-run listings.

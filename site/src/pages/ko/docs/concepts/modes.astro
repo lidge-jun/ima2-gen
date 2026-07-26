@@ -47,14 +47,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
   <h2>Video</h2>
   <p>
     텍스트, 단일 이미지, 또는 여러 레퍼런스 이미지에서 짧은 비디오를 생성합니다. Grok 비디오 모델
-    (<code>grok-imagine-video</code>, 정식 <code>grok-imagine-video-1.5</code>; preview는 alias)을 사용합니다.
+    (기본 <code>grok-imagine-video-1.5</code>; base <code>grok-imagine-video</code>와 preview는 호환 경로)을 사용합니다.
     모드는 자동 감지됩니다: 0개 ref → text-to-video, 1개 ref → image-to-video, 2–7개 ref →
     reference-to-video (최대 10초). 컨트롤: 길이(1–15초), 해상도(480p, 720p, 1.5 단일 이미지/프레임 I2V의 1080p), 화면비. CLI는 SSE
     progress 이벤트를 스트리밍하고, UI는 in-flight 큐에서 planning → generating → X% 진행을
     표시합니다.
   </p>
   <p>
-    Grok 플래너(기본 <code>grok-4.3</code>, 비디오 설정 또는 <code>--planner-model</code>로 변경)가
+    Grok 플래너(기본 <code>grok-4.5</code>, 비디오 설정 또는 <code>--planner-model</code>로 변경, Grok 4.3은 호환 선택지)가
     웹 검색 맥락과 함께 프롬프트를 재작성한 뒤 생성합니다. 다인물 장면에서는 플래너가 이름 대신
     외형(의상, 체형, 위치, 소품)으로 화자를 식별해 클립 간 대사 귀속을 일관되게 유지합니다.
   </p>

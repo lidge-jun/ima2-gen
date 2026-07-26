@@ -62,15 +62,15 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     <code>-q low|medium|high</code>, <code>-n &lt;count&gt;</code>, and <code>-o &lt;file&gt;</code>.
     Generate-mode <code>video</code> accepts <code>--provider &lt;grok|grok-api|runway|higgsfield&gt;</code>.
     Grok video commands also accept <code>--planner-model &lt;name&gt;</code> (default
-    <code>grok-4.3</code>) and <code>--storyboard</code> for character/scene continuity across
+    <code>grok-4.5</code>; Grok 4.3 remains a compatibility override) and <code>--storyboard</code> for character/scene continuity across
     sequential clips.
   </p>
   <p><code>ima2 grok login</code> uses the manual-paste login flow by default.</p>
   <pre><code>ima2 gen "a poster of a samurai cat" --model api/gpt-5.4 --reasoning-effort high
 ima2 grok login
 ima2 gen "a cinematic neon city" --model grok/grok-imagine-image-quality
-ima2 video "a cat playing piano" --model grok/grok-imagine-video --duration 5 --resolution 720p
-ima2 video "animate this scene" --model grok/grok-imagine-video --ref scene.png --planner-model grok-4.3 --storyboard
+ima2 video "a cat playing piano" --model grok/grok-imagine-video-1.5 --duration 5 --resolution 720p
+ima2 video "animate this scene" --model grok/grok-imagine-video-1.5 --ref scene.png --planner-model grok-4.5 --storyboard
 ima2 edit input.png --prompt "make it rainy" --provider oauth --web-search
 ima2 multimode "two cats playing" --max-images 2 --ref cat.png --mode direct</code></pre>
 

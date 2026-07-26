@@ -53,14 +53,14 @@ const genBody = `{
       <tr><td><code>POST /api/video/edit</code></td><td>Grok 비디오-투-비디오 편집. 결과 MP4를 generated artifact로 저장.</td></tr>
       <tr><td><code>POST /api/video/extend</code></td><td>기존 MP4의 마지막 프레임에서 이어붙이기.</td></tr>
       <tr><td><code>GET /api/video/frame</code></td><td>generated MP4에서 PNG 프레임 추출.</td></tr>
-      <tr><td><code>POST /api/video/analyze</code></td><td>generated MP4의 첫/마지막 프레임을 Grok 4.3 vision으로 분석.</td></tr>
+      <tr><td><code>POST /api/video/analyze</code></td><td>생성 MP4의 첫·마지막 프레임을 설정된 플래너 모델(기본 Grok 4.5)로 분석.</td></tr>
     </tbody>
   </table>
   <h4>POST /api/generate — 요청 바디</h4>
   <pre><code>{genBody}</code></pre>
   <p>
     품질: low, medium, high. Moderation: auto, low. Provider: auto, oauth, api, grok, grok-api, agy, gemini-api.
-    권장 OpenAI 모델은 <code>gpt-5.4</code>; 앱 기본값은 <code>gpt-5.4-mini</code>입니다.
+    앱 기본 OpenAI 모델은 <code>gpt-5.6-luna</code>입니다.
     Grok 모델은 <code>grok-imagine-image</code>와 <code>grok-imagine-image-quality</code>입니다.
     Gemini 모델은 <code>nano-banana-2</code>(Flash)와 <code>nano-banana-pro</code>(Pro)입니다.
     웹 UI는 <code>GET /api/events</code> (SSE 멀티플렉싱)로 모든 생성 진행 이벤트를 받습니다:
@@ -71,14 +71,14 @@ const genBody = `{
   </p>
   <div class="docs-callout docs-callout-info">
     <strong>비디오 생성.</strong> <code>POST /api/video/generate</code> (SSE)는 Grok을 통해 비디오를
-    생성합니다. 모델: <code>grok-imagine-video</code>, 정식
-    <code>grok-imagine-video-1.5</code>; <code>grok-imagine-video-1.5-preview</code>는 호환
+    생성합니다. 기본 모델은 정식 <code>grok-imagine-video-1.5</code>이며,
+    <code>grok-imagine-video</code>는 호환 경로에 남고 <code>grok-imagine-video-1.5-preview</code>는 호환
     alias로만 받습니다. 모드: text-to-video, image-to-video, reference-to-video (2–7개 ref).
-    <code>1080p</code>는 1.5 단일 이미지/프레임 I2V에서만 사용할 수 있고 Ref2V, V2V edit,
+    <code>1080p</code>는 1.5 프롬프트 전용 T2V의 캔버스 shim과 단일 이미지/프레임 I2V에서 사용할 수 있고 Ref2V, V2V edit,
     extension은 기본 모델 경로로 유지됩니다. CLI:
     <code>ima2 video</code>. 확장 표면은 <code>ima2 video edit</code>,
     <code>ima2 video extend</code>, <code>ima2 video frame</code>, <code>ima2 video analyze</code>입니다.
-    요청 본문은 <code>plannerModel</code>(기본 <code>grok-4.3</code>)와 순차 클립 연속성용
+    요청 본문은 <code>plannerModel</code>(기본 <code>grok-4.5</code>, Grok 4.3은 호환 선택지)와 순차 클립 연속성용
     <code>storyboard</code>를 받습니다. frame/analyze는 generated MP4 파일을 대상으로 하며 analyze는
     임의 원격 URL을 거부합니다.
   </div>

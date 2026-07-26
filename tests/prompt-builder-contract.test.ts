@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { normalizeModel } from "../lib/promptBuilder/requestSchema.ts";
 
 function readSource(path: string): string {
   return readFileSync(path, "utf-8");
@@ -38,6 +39,15 @@ describe("prompt builder backend contract", () => {
     assert.match(schema, /PROMPT_BUILDER_BAD_MESSAGES/);
     assert.match(schema, /PROMPT_BUILDER_EMPTY_MESSAGE/);
     assert.match(schema, /normalizeAttachments/);
+  });
+
+  it("defaults to Luna and keeps explicit compatibility models", () => {
+    assert.equal(normalizeModel(undefined), "gpt-5.6-luna");
+    assert.equal(normalizeModel("gpt-5.5"), "gpt-5.5");
+    assert.throws(
+      () => normalizeModel("gpt-5.6-nova"),
+      /gpt-5\.6-luna, gpt-5\.6-terra, gpt-5\.6-sol, gpt-5\.5, gpt-5\.4, gpt-5\.4-mini/,
+    );
   });
 
   it("attachments module caps count and size", () => {

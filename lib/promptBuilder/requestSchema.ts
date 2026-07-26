@@ -12,7 +12,7 @@ export function normalizeModel(raw: unknown): string {
   if (typeof raw !== "string" || raw.trim().length === 0) return DEFAULT_PROMPT_BUILDER_MODEL;
   if (!VALID_PROMPT_BUILDER_MODELS.has(raw)) {
     throw promptBuilderError(
-      "model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna",
+      `model must be one of: ${[...VALID_PROMPT_BUILDER_MODELS].join(", ")}`,
       "PROMPT_BUILDER_BAD_MODEL",
     );
   }

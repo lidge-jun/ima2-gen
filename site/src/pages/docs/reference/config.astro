@@ -30,22 +30,23 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
       <tr><td><code>IMA2_CONFIG_DIR</code></td><td><code>~/.ima2</code></td><td>Config and SQLite location.</td></tr>
       <tr><td><code>IMA2_ADVERTISE_FILE</code></td><td><code>~/.ima2/server.json</code></td><td>Runtime discovery file.</td></tr>
       <tr><td><code>IMA2_GENERATED_DIR</code></td><td><code>~/.ima2/generated</code></td><td>Generated image directory.</td></tr>
-      <tr><td><code>IMA2_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.4-mini</code></td><td>Server fallback image model.</td></tr>
+      <tr><td><code>IMA2_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td><td>Server fallback image model.</td></tr>
       <tr><td><code>IMA2_REASONING_EFFORT</code></td><td><code>medium</code></td><td>Default reasoning effort for the default (OAuth) path; one of none, low, medium, high, xhigh.</td></tr>
       <tr><td><code>IMA2_NO_OAUTH_PROXY</code></td><td>—</td><td>Set <code>1</code> to disable the auto-started OAuth proxy.</td></tr>
       <tr><td><code>IMA2_LOG_LEVEL</code></td><td><code>info</code></td><td>serve defaults to info, dev to debug; accepts debug, info, warn, error, silent.</td></tr>
       <tr><td><code>IMA2_INFLIGHT_TERMINAL_TTL_MS</code></td><td><code>300000</code></td><td>Recent terminal job retention for debug views.</td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td>—</td><td>API key for the API-provider Responses path and auxiliary features.</td></tr>
-      <tr><td><code>IMA2_API_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.4-mini</code></td><td>Default image model for the API path.</td></tr>
+      <tr><td><code>IMA2_API_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td><td>Default image model for the API path.</td></tr>
       <tr><td><code>IMA2_API_REASONING_EFFORT</code></td><td><code>low</code></td><td>Default reasoning effort for the API path.</td></tr>
       <tr><td><code>IMA2_API_IMAGE_SIZE</code></td><td><code>1024x1024</code></td><td>Default size for the API path.</td></tr>
       <tr><td><code>IMA2_API_ALLOW_WEB_SEARCH</code></td><td><code>true</code></td><td>Toggle web search for the API path.</td></tr>
       <tr><td><code>IMA2_GROK_PROXY_HOST</code></td><td><code>127.0.0.1</code></td><td>Bundled progrok bind host.</td></tr>
       <tr><td><code>IMA2_GROK_PROXY_PORT</code></td><td><code>18645</code></td><td>Bundled progrok port.</td></tr>
       <tr><td><code>IMA2_NO_GROK_PROXY</code></td><td>—</td><td>Set <code>1</code> to disable auto-starting bundled progrok.</td></tr>
-      <tr><td><code>IMA2_GROK_PLANNER_MODEL</code></td><td><code>grok-4.3</code></td><td>xAI search/planner model. Also configurable via settings UI or <code>--planner-model</code> CLI flag.</td></tr>
+      <tr><td><code>IMA2_GROK_PLANNER_MODEL</code></td><td><code>grok-4.5</code></td><td>xAI search/planner model. Grok 4.3 remains an explicit compatibility override.</td></tr>
       <tr><td><code>IMA2_GROK_PLANNER_TIMEOUT_MS</code></td><td><code>60000</code></td><td>Timeout for each Grok search/planner step.</td></tr>
-      <tr><td><code>IMA2_GROK_IMAGE_MODEL_DEFAULT</code></td><td><code>grok-imagine-image</code></td><td>Default xAI image model for Grok image calls.</td></tr>
+      <tr><td><code>IMA2_GROK_IMAGE_MODEL_DEFAULT</code></td><td><code>grok-imagine-image-quality</code></td><td>Default xAI image model for Grok image calls.</td></tr>
+      <tr><td><code>IMA2_GROK_VIDEO_MODEL_DEFAULT</code></td><td><code>grok-imagine-video-1.5</code></td><td>Default xAI video model for Grok generation.</td></tr>
       <tr><td><code>IMA2_GROK_GENERATION_TIMEOUT_MS</code></td><td><code>120000</code></td><td>Timeout for final Grok image generation/edit calls.</td></tr>
       <tr><td><code>IMA2_GROK_STATUS_TIMEOUT_MS</code></td><td><code>3000</code></td><td>Timeout for <code>/api/grok/status</code> model probes.</td></tr>
       <tr><td><code>GEMINI_API_KEY</code></td><td>—</td><td>API key for the <code>gemini-api</code> provider direct path.</td></tr>
@@ -65,7 +66,7 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
   <pre><code>imageModels.default              imageModels.reasoningEffort
 apiProvider.defaultImageModel    apiProvider.defaultReasoningEffort
 grokProvider.plannerModel        grokProvider.plannerTimeoutMs
-grokProvider.defaultImageModel
+grokProvider.defaultImageModel  grokProvider.defaultVideoModel
 log.level                        features.cardNews
 server.port  server.host  server.bodyLimit
 oauth.proxyPort  limits.maxRefCount  limits.maxParallel

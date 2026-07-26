@@ -107,7 +107,7 @@ API key が env/config に存在する場合、生成エンドポイントで `p
 
 Settings に **API key provider available** と表示される場合、API key が検出され、生成・編集・multimode・node request に使用できるという意味です。
 
-Grok 動画は `grok-imagine-video`（既定）または正式名 `grok-imagine-video-1.5` を使用します。従来の `grok-imagine-video-1.5-preview` は互換 alias として受け付けます。参照数に応じて T2V(0)、I2V(1)、Ref2V(2-7、最大10秒)が自動選択され、1080p は `grok-imagine-video-1.5` の単一画像/フレーム I2V でのみ有効です。1.5 は Ref2V、V2V edit、extension を追加サポートしないため、それらは既定モデルのみです。duration(1-15s)、resolution(480p/720p/対応時 1080p)、aspect ratio を設定できます。
+Grok 動画の既定値は正式名 `grok-imagine-video-1.5` です。`grok-imagine-video` は Ref2V、V2V edit、extension の互換パスで引き続き使用し、従来の `grok-imagine-video-1.5-preview` も互換 alias として受け付けます。参照数に応じて T2V(0)、I2V(1)、Ref2V(2-7、最大10秒)が自動選択され、1080p は `grok-imagine-video-1.5` の prompt-only T2V と単一画像/フレーム I2V で有効です。duration(1-15s)、resolution(480p/720p/対応時 1080p)、aspect ratio を設定できます。
 
 設定画面の QuotaCard に Grok billing `$used/$limit` バーと **Switch Account** ボタン（`POST /api/auth/switch`）が表示されます。
 
@@ -115,11 +115,11 @@ Grok 動画は `grok-imagine-video`（既定）または正式名 `grok-imagine-
 
 ## モデルの選び方
 
-アプリの既定値は、高速なローカルでの試行錯誤に適した **`gpt-5.4-mini`** です。安定したバランスを重視するなら **`gpt-5.4`** に切り替えることをおすすめします。
+画像生成と Prompt Builder の既定値は **`gpt-5.6-luna`** です。旧モデルは互換オプションとして残ります。
 
-- `gpt-5.4` — 推奨のバランス型モデル。
-- `gpt-5.4-mini` — 現在のアプリ既定値で、素早いドラフト作成に向いています。
-- `gpt-5.5` — 対応環境では最も高品質な出力が得られる選択肢です。ただし使用量の消費が大きくなる場合があり、Codex CLI の更新やアカウント/バックエンド側の image capability が必要になることがあります。
+- `gpt-5.6-luna` — 現在の画像・Prompt Builder 既定値。
+- `gpt-5.6-terra` / `gpt-5.6-sol` — アカウントで利用できる GPT-5.6 オプション。
+- `gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` — 互換オプション。
 
 Quality は `low`, `medium`, `high`、moderation は `auto`, `low` をサポートします。
 
@@ -225,7 +225,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_CONFIG_DIR` | `~/.ima2` | Config and SQLite location |
 | `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | Runtime discovery file |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
-| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | Server fallback image model |
+| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | Server fallback image model |
 | `IMA2_NO_OAUTH_PROXY` | — | `1` で OAuth proxy の自動起動を無効化 |
 | `IMA2_LOG_LEVEL` | `info` | 通常の `serve` は `info`、dev mode は `debug`。`debug`, `info`, `warn`, `error`, `silent` をサポート |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `300000` | デバッグ用の recent job retention |

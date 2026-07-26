@@ -119,14 +119,14 @@ v1.1.22부터 Ctrl+C가 DB, 소켓, 자식 프로세스를 깨끗하게 정리�
 
 - `provider: "oauth"`는 로컬 Codex OAuth 프록시를 사용합니다.
 - `provider: "api"`는 OpenAI Responses API의 `image_generation` 도구를 사용합니다.
-- `provider: "grok"`는 번들 `progrok`을 `127.0.0.1:18645`에서 띄우고, xAI Web Search와 플래너(기본: `grok-4.3`, 설정 또는 `--planner-model`로 변경 가능)를 거친 뒤 xAI Images API를 호출합니다.
+- `provider: "grok"`는 번들 `progrok`을 `127.0.0.1:18645`에서 띄우고, xAI Web Search와 플래너(기본: `grok-4.5`, 설정 또는 `--planner-model`로 변경 가능)를 거친 뒤 xAI Images API를 호출합니다. `grok-4.3`은 호환 선택지로 유지합니다.
 - `provider: "grok-api"`는 `XAI_API_KEY`로 xAI Images API를 직접 호출합니다 (progrok OAuth 없음).
 - `provider: "agy"`는 로컬 Antigravity CLI(`agy -p`)로 Gemini `nano-banana-2` 이미지를 생성합니다 (`IMA2_AGY_BIN`).
 - `provider: "gemini-api"`는 Google Generative Language API 또는 Vertex AI를 사용합니다 (`GEMINI_API_KEY` / `VERTEX_SERVICE_ACCOUNT_JSON`; 둘 다 있으면 Vertex 우선).
 
-Grok은 Classic, Node, Agent 흐름을 지원합니다. Classic 레퍼런스, Node 부모 이미지, Agent 현재 이미지가 있으면 최종 Grok 호출은 xAI image edit 경로로 전환되어 image-to-image 맥락을 유지합니다. 기본 모델은 `grok-imagine-image`이고, `quality: "high"`에서는 `grok-imagine-image-quality`를 사용합니다.
+Grok은 Classic, Node, Agent 흐름을 지원합니다. Classic 레퍼런스, Node 부모 이미지, Agent 현재 이미지가 있으면 최종 Grok 호출은 xAI image edit 경로로 전환되어 image-to-image 맥락을 유지합니다. 기본 이미지 모델은 `grok-imagine-image-quality`입니다.
 
-Grok video는 `grok-imagine-video`(기본) 또는 정식 `grok-imagine-video-1.5`를 사용합니다. 기존 `grok-imagine-video-1.5-preview` 문자열은 호환 alias로 계속 받습니다. 레퍼런스 수에 따라 T2V(0), I2V(1), Ref2V(2-7, 최대 10초)가 자동 선택되며, 1080p는 `grok-imagine-video-1.5` 프롬프트 전용 T2V와 단일 이미지/프레임 I2V에서 활성화됩니다. 프롬프트 전용 1.5 T2V는 upstream 요청 전에 내부 흰 캔버스 I2V shim을 사용합니다. 1.5는 Ref2V, V2V edit, extension 지원을 추가하지 않으므로 해당 경로는 기본 모델만 사용합니다. duration(1-15s), resolution(480p/720p/지원 시 1080p), aspect ratio 컨트롤을 제공합니다.
+Grok video 기본값은 정식 `grok-imagine-video-1.5`입니다. `grok-imagine-video`는 Ref2V, V2V edit, extension 호환 경로에서 계속 쓰며, 기존 `grok-imagine-video-1.5-preview` 문자열도 호환 alias로 받습니다. 레퍼런스 수에 따라 T2V(0), I2V(1), Ref2V(2-7, 최대 10초)가 자동 선택되며, 1080p는 `grok-imagine-video-1.5` 프롬프트 전용 T2V와 단일 이미지/프레임 I2V에서 활성화됩니다. 프롬프트 전용 1.5 T2V는 upstream 요청 전에 내부 흰 캔버스 I2V shim을 사용합니다. duration(1-15s), resolution(480p/720p/지원 시 1080p), aspect ratio 컨트롤을 제공합니다.
 
 설정 화면의 QuotaCard에 Grok billing `$used/$limit` 바와 **Switch Account** 버튼(`POST /api/auth/switch`)이 표시됩니다.
 
@@ -134,11 +134,11 @@ Grok video는 `grok-imagine-video`(기본) 또는 정식 `grok-imagine-video-1.5
 
 ## 모델 안내
 
-앱 기본값은 빠른 로컬 작업(테스트)에 맞춘 **`gpt-5.4-mini`**입니다. 안정적인 균형을 원하면 **`gpt-5.4`**로 전환하는 것을 권장합니다.
+이미지 생성과 Prompt Builder의 앱 기본값은 **`gpt-5.6-luna`**입니다. 이전 모델은 호환 선택지로 남아 있습니다.
 
-- `gpt-5.4` — 추천 균형 선택지.
-- `gpt-5.4-mini` — 현재 앱 기본값이며 빠른 초안에 적합합니다.
-- `gpt-5.5` — 지원되는 환경에서는 가장 강한 품질 선택지입니다. 다만 더 많은 할당량을 쓸 수 있고, Codex CLI 업데이트가 필요하거나 계정/백엔드별 이미지 capability가 다를 수 있습니다.
+- `gpt-5.6-luna` — 현재 이미지·Prompt Builder 기본값.
+- `gpt-5.6-terra` / `gpt-5.6-sol` — 계정에서 지원할 때 고를 수 있는 GPT-5.6 대안.
+- `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini` — 호환 선택지.
 
 품질은 `low`, `medium`, `high`, 모더레이션은 `auto`, `low`를 지원합니다.
 
@@ -248,13 +248,14 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_CONFIG_DIR` | `~/.ima2` | config와 SQLite 저장 위치 |
 | `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | 실행 중 서버 discovery 파일 |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | 생성 이미지 저장 위치 |
-| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.4-mini` | 서버 fallback 이미지 모델 |
+| `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | 서버 fallback 이미지 모델 |
 | `IMA2_NO_OAUTH_PROXY` | — | `1`이면 OAuth 프록시 자동 시작 비활성화 |
 | `IMA2_GROK_PROXY_HOST` | `127.0.0.1` | 번들 progrok 프록시 host |
 | `IMA2_GROK_PROXY_PORT` | `18645` | 번들 progrok 프록시 port |
 | `IMA2_NO_GROK_PROXY` | — | `1`이면 progrok 자동 시작 비활성화 |
-| `IMA2_GROK_PLANNER_MODEL` | `grok-4.3` | Grok 플래너 모델 (설정 UI 또는 `--planner-model` CLI 플래그로도 변경 가능) |
-| `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image` | 기본 Grok 이미지 모델 |
+| `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok 플래너 모델 (설정 UI 또는 `--planner-model` CLI 플래그로도 변경 가능) |
+| `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` | 기본 Grok 이미지 모델 |
+| `IMA2_GROK_VIDEO_MODEL_DEFAULT` | `grok-imagine-video-1.5` | 기본 Grok 비디오 모델 |
 | `IMA2_LOG_LEVEL` | `info` | 일반 `serve`는 `info`, dev 모드는 `debug`. `debug`, `info`, `warn`, `error`, `silent` 지원 |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `300000` | 디버그용 최근 작업 보존 시간 (5분) |
 | `OPENAI_API_KEY` | — | `provider: "api"` Responses 이미지 경로와 보조 기능용 API 키 |

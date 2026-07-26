@@ -14,7 +14,7 @@ Image generation supports OAuth, API-key, Grok, and Gemini (`agy` and `gemini-ap
 
 - `provider: "oauth"` uses the local Codex OAuth proxy.
 - `provider: "api"` uses the OpenAI Responses API with the hosted `image_generation` tool.
-- `provider: "grok"` uses the bundled progrok xAI proxy. Classic, Node, and Agent generation run mandatory xAI Web Search through `/v1/responses`, then run a `grok-4.3` planner call with a forced local `generate_image` function, then ima2 executes xAI `/v1/images/generations`. If reference images, a Node parent image, or an Agent current image are attached, the final step switches to xAI `/v1/images/edits` so image-to-image context is preserved.
+- `provider: "grok"` uses the bundled progrok xAI proxy. Classic, Node, and Agent generation run mandatory xAI Web Search through `/v1/responses`, then run a `grok-4.5` planner call with a forced local `generate_image` function, then ima2 executes xAI `/v1/images/generations`. `grok-4.3` remains available as an explicit compatibility override. If reference images, a Node parent image, or an Agent current image are attached, the final step switches to xAI `/v1/images/edits` so image-to-image context is preserved.
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool. Model is `nano-banana-2`. Output is fixed at 1024×1024 JPEG. Max 3 reference images (i2i). No web search, quality, size, or mask controls. Multimode returns a single image. Video is unsupported (`AGY_VIDEO_UNSUPPORTED`).
 - `provider: "grok-api"` uses a direct xAI API key instead of the bundled progrok OAuth proxy. Same pipeline as `grok` (Web Search → planner → `/v1/images/generations`), same aspect ratio and resolution options. Requires an xAI API key configured via the web UI key management or `XAI_API_KEY` env var. Also supports video generation.
 - `provider: "gemini-api"` calls the Google Generative Language API directly (or Vertex AI with a service account JSON). Supports models `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K) on both auth paths — the direct API path sends `generation_config.response_format.image` (snake_case) while the Vertex AI endpoint (`aiplatform.googleapis.com`) sends `generationConfig.imageConfig` (camelCase). With `size: "auto"` the image config is omitted entirely and the model decides ratio/size. Auth: `GEMINI_API_KEY` env var, web UI key management (`/api/keys/gemini`), or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON` or `/api/keys/vertex`). When both Vertex credentials and an API key are configured, Vertex takes priority. The chosen auth mode (`apikey` or `vertex`) persists to `~/.ima2/config.json` as `geminiAuthMode` and is restored on server startup. Per-model cost: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
@@ -216,7 +216,7 @@ generations maintain character and scene continuity for multi-shot video product
 Current app default: `gpt-5.6-luna`. `gpt-5.5` and the other supported GPT image models remain available when callers explicitly select them.
 
 When `provider` is `"grok"`, supported models are `grok-imagine-image` and
-`grok-imagine-image-quality`. The server uses `grok-4.3` as the search/planner
+`grok-imagine-image-quality`. The server uses `grok-4.5` as the search/planner
 model by default (`IMA2_GROK_PLANNER_MODEL`) and times the mandatory search and
 planner steps separately from the image call (`IMA2_GROK_PLANNER_TIMEOUT_MS`).
 For `n > 1`, search and planning run once and the planned prompt is reused for
@@ -224,7 +224,7 @@ the image requests. Successful Grok classic generations report one mandatory
 web-search call in metadata.
 
 If `references` are present on a Grok classic request, ima2 still performs the
-mandatory search and `grok-4.3` planning phases. The planner receives the
+mandatory search and `grok-4.5` planning phases. The planner receives the
 reference images as multimodal `image_url` inputs, and its forced
 `generate_image.prompt` argument is instructed to be English-only except for
 exact visible text requested by the user. The final image call then uses xAI
@@ -295,7 +295,7 @@ Body fields:
 
 When `parentNodeId` is present, the server loads the stored parent node image and uses the edit path. Node-local references are allowed on both root and child/edit nodes; for child/edit nodes the parent image is sent first, then references, then the text prompt.
 
-With `provider: "grok"`, Node Mode uses the same xAI search + `grok-4.3` planner + Images API pipeline as classic generation. A parent node image, `externalSrc`, or extra references are passed to the planner and then to xAI `/v1/images/edits`; otherwise the final call uses `/v1/images/generations`. Grok Node requests are capped at three total input images, counting the parent/current image plus references, and return `GROK_REF_TOO_MANY` before upstream when that limit is exceeded. `quality: "high"` promotes the final image model to `grok-imagine-image-quality`.
+With `provider: "grok"`, Node Mode uses the same xAI search + `grok-4.5` planner + Images API pipeline as classic generation. A parent node image, `externalSrc`, or extra references are passed to the planner and then to xAI `/v1/images/edits`; otherwise the final call uses `/v1/images/generations`. Grok Node requests are capped at three total input images, counting the parent/current image plus references, and return `GROK_REF_TOO_MANY` before upstream when that limit is exceeded. `quality: "high"` promotes the final image model to `grok-imagine-image-quality`.
 
 The route can stream Server-Sent Events when the client sends `Accept: text/event-stream`. Possible events include `phase`, `partial`, `done`, and `error`. Alternatively, send `{ "async": true, "requestId": "req_xxx" }` in the body to receive `202 { requestId }` immediately and follow progress on `GET /api/events` (see Events section).
 
@@ -406,7 +406,7 @@ Generate a video via the Grok video provider. Returns Server-Sent Events on the 
 | `referenceFilenames` | string[] | — | Existing generated files for reference-to-video |
 | `continueFromVideo` | string | — | Generated `.mp4` parent; server extracts its last frame and rebuilds lineage from sidecar |
 | `continuityLineage` | object | — | Optional client hint; used only when `continueFromVideo` is absent |
-| `plannerModel` | string | `grok-4.3` | Grok video planner model override (also via settings UI or `IMA2_GROK_PLANNER_MODEL`) |
+| `plannerModel` | string | `grok-4.5` | Grok video planner model override; `grok-4.3` remains compatible (also via settings UI or `IMA2_GROK_PLANNER_MODEL`) |
 | `storyboard` | boolean | `false` | Enable storyboard mode — maintains character/scene continuity across sequential clips |
 
 Blank prompts return `PROMPT_REQUIRED` with a `guidance` string. The active
@@ -456,9 +456,9 @@ Grok prompt surfaces used by video APIs:
 
 | Surface | Model | Responsibility |
 |---|---|---|
-| Video planner | `grok-4.3` (override via `plannerModel`) | Converts user prompt, search context, refs, and optional continuity lineage into the final English video prompt. It must structure core subject, action/motion, camera/composition, environment/style, dialogue/audio, ending-frame handoff, and constraints. Multi-character dialogue uses appearance-based speaker identification. |
+| Video planner | `grok-4.5` (override via `plannerModel`) | Converts user prompt, search context, refs, and optional continuity lineage into the final English video prompt. It must structure core subject, action/motion, camera/composition, environment/style, dialogue/audio, ending-frame handoff, and constraints. Multi-character dialogue uses appearance-based speaker identification. |
 | Video generation | xAI video model | Receives the planner prompt plus `sourceImage` or `referenceImages` when present. |
-| Video analysis | `grok-4.3` | Reads first/last frame images from `/api/video/analyze` and returns recreation/continuation guidance. |
+| Video analysis | `grok-4.5` | Reads first/last frame images from `/api/video/analyze` and returns recreation/continuation guidance. |
 
 **SSE events**:
 
@@ -547,7 +547,7 @@ Extract a PNG frame from a generated `.mp4` file.
 
 ### `POST /api/video/analyze`
 
-Analyze first and last frames from a generated `.mp4` using Grok 4.3 image understanding. This does not upload the video as temporal video; it extracts two PNG frames and asks the vision model to infer likely motion.
+Analyze first and last frames from a generated `.mp4` using the configured planner model (`grok-4.5` by default). This does not upload the video as temporal video; it extracts two PNG frames and asks the vision model to infer likely motion.
 
 ```json
 {
