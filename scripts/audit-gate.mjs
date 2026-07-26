@@ -27,6 +27,22 @@ const LEVELS = ["info", "low", "moderate", "high", "critical"];
 const RETRIES = 3;
 const RETRY_DELAY_MS = 3000;
 
+/**
+ * A tally is only trustworthy when every severity is a real, non-negative integer.
+ *
+ * `Number("garbage") || 0` and `Number(undefined) || 0` both collapse to 0, so a
+ * malformed or truncated tally would read as "no vulnerabilities". Arrays pass a naive
+ * `typeof === "object"` check and count as zero for the same reason. Reject all of it
+ * rather than reporting a clean tree that was never actually measured.
+ */
+export function isCountableTally(tally) {
+  if (!tally || typeof tally !== "object" || Array.isArray(tally)) return false;
+  return LEVELS.every((level) => {
+    const value = tally[level];
+    return typeof value === "number" && Number.isInteger(value) && value >= 0;
+  });
+}
+
 export function parseArgs(argv) {
   const args = { prefix: null, auditLevel: "high", omit: [] };
   for (let i = 0; i < argv.length; i += 1) {
@@ -62,11 +78,10 @@ export function classifyAuditResult({ status, stdout, stderr }) {
     /audit endpoint returned an error|invalid json response body|ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up|503 Service Unavailable|registry error/i
       .test(errText + raw);
 
-  // Only a report we can actually COUNT is accepted. `metadata.vulnerabilities` is the
-  // severity tally the threshold check reads; a payload carrying `vulnerabilities`
-  // without that tally would silently count as zero and pass a critical finding, so it
-  // falls through to `unknown` and fails closed.
-  if (report?.metadata?.vulnerabilities && typeof report.metadata.vulnerabilities === "object") {
+  // Only a report we can actually COUNT is accepted. A payload whose tally is missing,
+  // malformed, or non-numeric would silently count as zero and pass a critical finding,
+  // so it falls through to `unknown` and fails closed.
+  if (isCountableTally(report?.metadata?.vulnerabilities)) {
     return { kind: "report", report };
   }
   if (looksLikeTransport || (report && report.message && !report.metadata)) {
@@ -81,10 +96,12 @@ export function classifyAuditResult({ status, stdout, stderr }) {
 
 /** Count findings at or above the threshold; below-threshold noise must not fail the gate. */
 export function countAtOrAbove(report, auditLevel) {
-  const counts = report?.metadata?.vulnerabilities ?? {};
   const floor = LEVELS.indexOf(auditLevel);
   if (floor < 0) throw new Error(`unknown audit level: ${auditLevel}`);
-  return LEVELS.slice(floor).reduce((total, level) => total + (Number(counts[level]) || 0), 0);
+  const counts = report?.metadata?.vulnerabilities;
+  // Refuse to answer rather than answering zero for a tally we cannot trust.
+  if (!isCountableTally(counts)) throw new Error("audit report has no countable vulnerability tally");
+  return LEVELS.slice(floor).reduce((total, level) => total + counts[level], 0);
 }
 
 function runAudit({ prefix, auditLevel, omit }) {

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { classifyAuditResult, countAtOrAbove, parseArgs } from "../scripts/audit-gate.mjs";
+import { classifyAuditResult, countAtOrAbove, isCountableTally, parseArgs } from "../scripts/audit-gate.mjs";
 
 // WP-A: `npm audit` exits 1 both when it finds a vulnerability and when the registry
 // fails to answer. Conflating those turns an upstream outage into a red build and
@@ -94,6 +94,41 @@ test("a clean exit without a parseable report is not treated as a clean tree", (
   assert.equal(classifyAuditResult({ status: 0, stdout: "not json", stderr: "" }).kind, "unknown");
 });
 
+test("a malformed tally is refused instead of counting as zero", () => {
+  // Verified against npm 11.18.0: a real report always fills every severity plus
+  // `total` (`{"info":0,"low":0,"moderate":0,"high":0,"critical":0,"total":0}`), so
+  // requiring all five never rejects a genuine report.
+  // `Number("garbage") || 0` collapses to 0, so a corrupted tally would read as a clean
+  // tree. Every severity must be a real non-negative integer or the gate refuses to answer.
+  const malformed: unknown[] = [
+    { info: 0, low: 0, moderate: 0, high: "garbage", critical: 0 },
+    { info: 0, low: 0, moderate: 0, high: -2, critical: 0 },
+    { info: 0, low: 0, moderate: 0, high: 1.5, critical: 0 },
+    { info: 0, low: 0, moderate: 0, critical: 0 }, // `high` missing entirely
+    [],
+    null,
+    "nope",
+  ];
+  for (const tally of malformed) {
+    assert.equal(isCountableTally(tally), false, `${JSON.stringify(tally)} must not be countable`);
+    assert.equal(
+      classifyAuditResult({ status: 1, stdout: JSON.stringify({ metadata: { vulnerabilities: tally } }), stderr: "" }).kind,
+      "unknown",
+      `${JSON.stringify(tally)} must fail closed`,
+    );
+    assert.throws(
+      () => countAtOrAbove({ metadata: { vulnerabilities: tally } }, "high"),
+      /countable/,
+      `${JSON.stringify(tally)} must not be silently counted`,
+    );
+  }
+
+  // A well-formed tally still works.
+  assert.equal(isCountableTally({ info: 0, low: 1, moderate: 0, high: 2, critical: 0 }), true);
+  // npm's own extra `total` key must not break acceptance.
+  assert.equal(isCountableTally({ info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0 }), true);
+});
+
 // --- end-to-end exit-status checks -------------------------------------------------
 // The classifier being right is not enough: the gate must actually exit non-zero. These
 // run the real script against a stub `npm` on PATH.
@@ -120,7 +155,7 @@ const stubFor = (payload: unknown, exitCode: number) =>
 
 test("the gate exits non-zero when the report contains high findings", () => {
   const result = runGateWithStubNpm(
-    stubFor({ metadata: { vulnerabilities: { low: 0, moderate: 0, high: 2, critical: 0 } } }, 1),
+    stubFor({ metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 2, critical: 0 } } }, 1),
   );
   assert.equal(result.status, 1, "a high finding must fail the build");
   assert.match(result.stderr, /2 high\+ vulnerabilit/);
@@ -128,7 +163,7 @@ test("the gate exits non-zero when the report contains high findings", () => {
 
 test("the gate exits zero for a clean report", () => {
   const result = runGateWithStubNpm(
-    stubFor({ metadata: { vulnerabilities: { low: 3, moderate: 1, high: 0, critical: 0 } } }, 0),
+    stubFor({ metadata: { vulnerabilities: { info: 0, low: 3, moderate: 1, high: 0, critical: 0 } } }, 0),
   );
   assert.equal(result.status, 0, "below-threshold findings must not fail the build");
   assert.match(result.stdout, /no high\+ vulnerabilities/);
@@ -137,6 +172,13 @@ test("the gate exits zero for a clean report", () => {
 test("the gate exits non-zero when it cannot read a tally", () => {
   const result = runGateWithStubNpm(stubFor({ vulnerabilities: { pkg: { severity: "critical" } } }, 1));
   assert.equal(result.status, 1, "an uncountable report must fail closed");
+});
+
+test("the gate exits non-zero for a malformed severity tally", () => {
+  const result = runGateWithStubNpm(
+    stubFor({ metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: "3", critical: 0 } } }, 1),
+  );
+  assert.equal(result.status, 1, "a string severity count must not read as zero");
 });
 
 test("the gate survives a registry outage without failing the build", () => {
