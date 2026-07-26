@@ -18,6 +18,7 @@ import {
 import { normalizeGrokVideoModel, VALID_GROK_VIDEO_MODELS } from "../lib/imageModels.js";
 import { parsePngInfo } from "../lib/pngInfo.js";
 import { config } from "../config.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -151,6 +152,7 @@ describe("Grok video adapter", () => {
     });
     const system = String(payload.messages[0].content);
     const userText = String((payload.messages[1].content as any[])[0].text);
+    assert.equal(payload.model, DEFAULT_GROK_PLANNER_MODEL);
     assert.match(system, /MULTI-CHARACTER DIALOGUE/);
     assert.match(system, /ENDING FRAME \/ CONTINUATION CUT PLANNING/);
     assert.match(system, /no background music/);

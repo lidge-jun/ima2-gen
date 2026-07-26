@@ -81,7 +81,10 @@ async function withApp(
         valid: new Set(["gpt-5.6-luna", "gpt-5.6-sol"]),
       },
       apiProvider: { defaultImageModel: "gpt-5.6-sol" },
-      grokProvider: { defaultImageModel: "grok-imagine-image-quality" },
+      grokProvider: {
+        defaultImageModel: "grok-imagine-image-quality",
+        defaultVideoModel: "grok-imagine-video-1.5",
+      },
       mcp: { enabledProviders: ["runway", "higgsfield"] },
     },
   };
@@ -127,7 +130,7 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
     assert.equal(body.lanes.api.defaults.image, "gpt-5.6-sol");
     assert.deepEqual(body.lanes.grok.defaults, {
       image: "grok-imagine-image-quality",
-      video: "grok-imagine-video",
+      video: "grok-imagine-video-1.5",
     });
     assert.equal(body.lanes.runway.defaults.image, "nano-banana-pro");
     assert.equal(body.lanes.runway.defaults.video, "seedance-2");

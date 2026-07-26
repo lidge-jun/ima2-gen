@@ -187,7 +187,7 @@ describe("Agent Mode runtime contract", () => {
     });
   });
 
-  it("generates through Grok planned Images API when Agent provider is grok", async () => {
+  it("generates through current and compatibility Grok planner models when Agent provider is grok", async () => {
     const finalImage = await pngB64();
     const calls: Array<{ url: string; body: any }> = [];
     globalThis.fetch = async (url, init) => {
@@ -223,7 +223,9 @@ describe("Agent Mode runtime contract", () => {
       });
     };
 
-    await withApp(async (baseUrl) => {
+    for (const plannerModel of ["grok-4.5", "grok-4.3"]) {
+      calls.length = 0;
+      await withApp(async (baseUrl) => {
       const created = await createSession(baseUrl);
       const res = await fetch(`${baseUrl}/api/agent/sessions/${created.selectedSessionId}/turns`, {
         method: "POST",
@@ -231,7 +233,7 @@ describe("Agent Mode runtime contract", () => {
         body: JSON.stringify({
           prompt: "make a Grok agent poster",
           provider: "grok",
-          model: "grok-4.3",
+          model: plannerModel,
           quality: "high",
           webSearchEnabled: false,
         }),
@@ -248,10 +250,12 @@ describe("Agent Mode runtime contract", () => {
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/chat/completions")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/generations")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/edits")).length, 0);
+      assert.equal(calls.find((call) => call.url.endsWith("/v1/chat/completions"))?.body.model, plannerModel);
       assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model, "grok-imagine-image-quality");
-      assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model === "grok-4.3", false);
+      assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model === plannerModel, false);
       assert.match(calls.find((call) => call.url.endsWith("/v1/chat/completions"))?.body.messages[1].content[0].text, /English only/);
-    });
+      });
+    }
   });
 
   it("routes Agent 1080p I2V video through Grok Video 1.5 and records sidecar metadata", async () => {

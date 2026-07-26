@@ -2,6 +2,7 @@ import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { mapSizeToGrokImageParams } from "./grokSizeMapper.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { getGrokProxyUrl } from "./grokRuntime.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 export interface GrokImageResponse {
   data: Array<{
@@ -93,7 +94,7 @@ export function grokStageError(stage: "search" | "planner", message: string, sta
 export function getPlannerConfig(ctx: RouteRuntimeContext): { model: string; timeoutMs: number } {
   const grokCfg = (ctx.config as any).grokProvider || {};
   return {
-    model: grokCfg.plannerModel || "grok-4.3",
+    model: grokCfg.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
     timeoutMs: grokCfg.plannerTimeoutMs || 60_000,
   };
 }

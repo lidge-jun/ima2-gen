@@ -14,6 +14,17 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
+export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.5";
+export const GROK_PLANNER_MODELS = [
+    DEFAULT_GROK_PLANNER_MODEL,
+    "grok-4.3",
+    "gpt-5.6-luna",
+    "gpt-5.6-terra",
+    "gpt-5.6-sol",
+    "gpt-5.5",
+    "gpt-5.4",
+    "gpt-5.4-mini",
+];
 const env = process.env;
 const packageRoot = dirname(fileURLToPath(import.meta.url));
 const configDir = env.IMA2_CONFIG_DIR || join(homedir(), ".ima2");
@@ -161,7 +172,7 @@ export const config = {
     },
     styleSheet: {
         maxPrefix: pickInt(env.IMA2_STYLE_SHEET_MAX_PREFIX, fileCfg.styleSheet?.maxPrefix, 4000),
-        model: pickStr(env.IMA2_STYLE_MODEL, fileCfg.styleSheet?.model, "gpt-5.4-mini"),
+        model: pickStr(env.IMA2_STYLE_MODEL, fileCfg.styleSheet?.model, "gpt-5.6-luna"),
     },
     imageModels: {
         default: pickStr(env.IMA2_IMAGE_MODEL_DEFAULT, fileCfg.imageModels?.default, "gpt-5.6-luna"),
@@ -181,7 +192,7 @@ export const config = {
         proxyHost: pickStr(env.IMA2_GROK_PROXY_HOST, fileCfg.grokProvider?.proxyHost, "127.0.0.1"),
         autoStart: !pickBool(env.IMA2_NO_GROK_PROXY, fileCfg.grokProvider?.disableAutoStart, false),
         restartDelayMs: pickInt(env.IMA2_GROK_RESTART_DELAY_MS, fileCfg.grokProvider?.restartDelayMs, 2000),
-        plannerModel: pickStr(env.IMA2_GROK_PLANNER_MODEL, fileCfg.grokProvider?.plannerModel, "grok-4.3"),
+        plannerModel: pickStr(env.IMA2_GROK_PLANNER_MODEL, fileCfg.grokProvider?.plannerModel, DEFAULT_GROK_PLANNER_MODEL),
         plannerTimeoutMs: pickInt(env.IMA2_GROK_PLANNER_TIMEOUT_MS, fileCfg.grokProvider?.plannerTimeoutMs, 60_000),
         defaultImageModel: pickStr(env.IMA2_GROK_IMAGE_MODEL_DEFAULT, fileCfg.grokProvider?.defaultImageModel, "grok-imagine-image-quality"),
         generationTimeoutMs: pickInt(env.IMA2_GROK_GENERATION_TIMEOUT_MS, fileCfg.grokProvider?.generationTimeoutMs, 120_000),
@@ -201,7 +212,7 @@ export const config = {
     },
     cardNewsPlanner: {
         enabled: pickBool(env.IMA2_CARD_NEWS_PLANNER, fileCfg.cardNewsPlanner?.enabled, true),
-        model: pickStr(env.IMA2_CARD_NEWS_PLANNER_MODEL, fileCfg.cardNewsPlanner?.model, "gpt-5.4-mini"),
+        model: pickStr(env.IMA2_CARD_NEWS_PLANNER_MODEL, fileCfg.cardNewsPlanner?.model, "gpt-5.6-luna"),
         timeoutMs: pickInt(env.IMA2_CARD_NEWS_PLANNER_TIMEOUT_MS, fileCfg.cardNewsPlanner?.timeoutMs, 60_000),
         deterministicFallback: pickBool(env.IMA2_CARD_NEWS_PLANNER_FALLBACK, fileCfg.cardNewsPlanner?.deterministicFallback, false),
     },

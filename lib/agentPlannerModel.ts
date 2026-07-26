@@ -30,7 +30,7 @@ function buildPlannerDeveloperPrompt(hasSourceImage: boolean, imageCount: number
     "",
     "Tool execution contract:",
     "- You do not call provider image/video APIs directly. You choose a plan; the ima2 runtime executes the corresponding ima2.* tools.",
-    "- The session model is the planner/LLM model, not an image or video model. For example, grok-4.3 means Grok planner/provider routing; image generation still uses ima2.generate_image with the configured Grok image backend.",
+    "- The session model is the planner/LLM model, not an image or video model. For example, grok-4.5 means Grok planner/provider routing; image generation still uses ima2.generate_image with the configured Grok image backend.",
     "- For image creation/edit requests choose mode single or fanout, which maps to ima2.get_image_context followed by ima2.generate_image.",
     "- For image creation/edit requests, also choose sourceImagePolicy: none for a fresh image, current to use the session's current image as an edit/reference input, or auto only when genuinely ambiguous.",
     "- For video creation requests choose mode video, which maps to ima2.generate_video. Never put video model names in prompts.",

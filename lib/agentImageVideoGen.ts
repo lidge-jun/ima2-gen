@@ -13,6 +13,7 @@ import { generateViaResponses } from "./responsesImageAdapter.js";
 import { generateViaGrok, type GrokReferenceImage } from "./grokImageAdapter.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 import { generateVideoViaGrok, type GrokVideoGenerateResult } from "./grokVideoAdapter.js";
 import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE } from "./imageModels.js";
 import { parseVideoParams } from "./agentGenerationPlanner.js";
@@ -31,7 +32,7 @@ import { errInfo } from "./errInfo.js";
 import { type RuntimeContext } from "./runtimeContext.js";
 import { type AgentRunOptions, forceImagePrompt, isTextOnlyResult, textOnlyError, notFound } from "./agentRuntime.js";
 
-const AGENT_GROK_PLANNER_MODEL = "grok-4.3";
+const AGENT_GROK_PLANNER_MODELS = new Set([DEFAULT_GROK_PLANNER_MODEL, "grok-4.3"]);
 
 export async function generateAgentImageWithRetry(
   ctx: RuntimeContext,
@@ -329,8 +330,8 @@ export async function runAgentVideoGeneration(
   return { assistantTurn, imageIds: [video.id], webFindingIds: [] };
 }
 
-function isAgentGrokPlannerModel(model: string | null | undefined): model is typeof AGENT_GROK_PLANNER_MODEL {
-  return model === AGENT_GROK_PLANNER_MODEL;
+function isAgentGrokPlannerModel(model: string | null | undefined): model is string {
+  return typeof model === "string" && AGENT_GROK_PLANNER_MODELS.has(model);
 }
 
 async function persistAgentVideo(

@@ -8,6 +8,7 @@ import {
 } from "../lib/grokImageAdapter.js";
 import { generateMultimodeViaGrok } from "../lib/grokMultimodeAdapter.js";
 import { config } from "../config.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -43,6 +44,16 @@ function plannerUserText(payload: ReturnType<typeof buildGrokPlannerPayload>): s
 }
 
 describe("Grok planner adapter", () => {
+  it("uses the current planner by default while preserving explicit compatibility overrides", () => {
+    const sizeParams = { aspect_ratio: "1:1", resolution: "1k" } as const;
+    assert.equal(
+      buildGrokPlannerPayload("default", "grok-imagine-image-quality", "1024x1024", sizeParams).model,
+      DEFAULT_GROK_PLANNER_MODEL,
+    );
+    assert.equal(buildGrokSearchPayload("default").model, DEFAULT_GROK_PLANNER_MODEL);
+    assert.equal(buildGrokSearchPayload("compat", "grok-4.3").model, "grok-4.3");
+  });
+
   it("builds a forced generate_image tool call payload", () => {
     const payload = buildGrokPlannerPayload(
       "make a poster",

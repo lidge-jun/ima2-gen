@@ -126,7 +126,7 @@ function grokLane(ctx: RuntimeContext): ModelLaneDto {
     : { status: "disconnected", reason: "Grok proxy not configured" };
   return lane(state, {
     image: ctx.config.grokProvider.defaultImageModel,
-    video: GROK_VIDEO_MODEL_BASE,
+    video: ctx.config.grokProvider.defaultVideoModel,
   }, {
     image: entries(["grok-imagine-image", "grok-imagine-image-quality"]),
     video: entries([GROK_VIDEO_MODEL_BASE, GROK_VIDEO_MODEL_15], videoCapabilities()),

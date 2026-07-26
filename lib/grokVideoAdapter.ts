@@ -15,6 +15,7 @@ import {
   validateVideoResolutionForRequest,
 } from "./imageModels.js";
 import { formatVideoContinuityForPlanner, type VideoContinuityLineage } from "./videoContinuity.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 export { downloadVideo } from "./grokVideoDownload.js";
 
@@ -109,7 +110,7 @@ function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
     startTimeoutMs: g.videoStartTimeoutMs || 60_000,
     pollIntervalMs: g.videoPollIntervalMs || 5_000,
     totalTimeoutMs: g.videoTimeoutMs || 900_000,
-    plannerModel: g.plannerModel || "grok-4.3",
+    plannerModel: g.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
     plannerTimeoutMs: g.plannerTimeoutMs || 60_000,
   };
 }
@@ -202,7 +203,7 @@ export function buildGrokVideoPlannerPayload(
     }
   }
   return {
-    model: opts.plannerModel || "grok-4.3",
+    model: opts.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
     stream: false,
     parallel_tool_calls: false,
     messages: [

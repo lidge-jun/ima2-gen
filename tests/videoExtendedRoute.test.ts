@@ -96,7 +96,7 @@ function makeProxy(opts: { operation?: "edit" | "extend"; blocked?: boolean; blo
   return server;
 }
 
-async function videoApp(generatedDir: string, proxyPort: number) {
+async function videoApp(generatedDir: string, proxyPort: number, plannerModel?: string) {
   const app = express();
   app.use(express.json({ limit: "20mb" }));
   registerVideoExtendedRoutes(app, {
@@ -110,6 +110,7 @@ async function videoApp(generatedDir: string, proxyPort: number) {
         ...config.grokProvider,
         proxyHost: "127.0.0.1",
         proxyPort,
+        ...(plannerModel ? { plannerModel } : {}),
         videoPollIntervalMs: 1,
         videoStartTimeoutMs: 5000,
         videoTimeoutMs: 30000,
@@ -340,7 +341,7 @@ test("/api/video/analyze extracts first/last frames and sends input_image payloa
   const mp4 = join(generatedDir, "clip.mp4");
   try {
     await makeTinyMp4(mp4);
-    const { server, url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+    const { server, url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port), "grok-4.3");
     try {
     const res = await fetch(`${url}/api/video/analyze`, {
       method: "POST",
@@ -351,6 +352,7 @@ test("/api/video/analyze extracts first/last frames and sends input_image payloa
     assert.equal(res.status, 200);
     assert.equal(data.analysis, "first and last frame analysis");
     assert.equal(data.method, "first-last-frame");
+    assert.equal(data.model, "grok-4.3");
     assert.equal(responseBody.model, "grok-4.3");
     const content = responseBody.input[0].content;
     assert.equal(content.filter((item: any) => item.type === "input_image").length, 2);

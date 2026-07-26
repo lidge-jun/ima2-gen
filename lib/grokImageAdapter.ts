@@ -3,6 +3,7 @@ import { SAFETY_INTENT_POLICY } from "./promptSafetyPolicy.js";
 import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { mapSizeToGrokImageParams, type GrokImageSizeParams } from "./grokSizeMapper.js";
 import { detectImageMimeFromB64 } from "./refs.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 import {
   grokError,
   grokStageError,
@@ -42,7 +43,7 @@ export function buildGrokPlannerPayload(
   model: string,
   size: string | undefined,
   sizeParams: GrokImageSizeParams,
-  plannerModel = "grok-4.3",
+  plannerModel = DEFAULT_GROK_PLANNER_MODEL,
   searchSummary = "",
   references: GrokReferenceImage[] | number = 0,
   backgroundConstraint = "",
@@ -195,7 +196,7 @@ export function buildGrokPlannerPayload(
   };
 }
 
-export function buildGrokSearchPayload(prompt: string, plannerModel = "grok-4.3") {
+export function buildGrokSearchPayload(prompt: string, plannerModel = DEFAULT_GROK_PLANNER_MODEL) {
   return {
     model: plannerModel,
     stream: false,

@@ -112,7 +112,8 @@ describe("Agent Mode right sidebar contract", () => {
     assert.doesNotMatch(model, /isGrokImageModel\(settings\.model\)/);
     assert.doesNotMatch(model, /provider === "grok"/);
     assert.doesNotMatch(css, /\.agent-provider-options/);
-    assert.match(agentGen, /AGENT_GROK_PLANNER_MODEL = "grok-4\.3"/);
+    assert.match(agentGen, /import \{ DEFAULT_GROK_PLANNER_MODEL \} from "\.\.\/config\.js"/);
+    assert.match(agentGen, /AGENT_GROK_PLANNER_MODELS = new Set\(\[DEFAULT_GROK_PLANNER_MODEL, "grok-4\.3"\]\)/);
     assert.match(agentGen, /rawModel: grokPlannerModel \? undefined : options\.model/);
     assert.match(agentGen, /plannerModel: grokPlannerModel/);
     assert.match(grokAdapter, /plannerModel\?: string/);

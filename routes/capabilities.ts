@@ -1,8 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { buildIma2Capabilities } from "../lib/capabilities.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
-
-const GROK_PLANNER_MODELS = ["grok-4.3", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
+import { GROK_PLANNER_MODELS } from "../config.js";
 
 export function registerCapabilitiesRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
@@ -24,7 +23,7 @@ export function registerCapabilitiesRoutes(app: Express, ctxRaw: RouteRuntimeCon
 
   app.patch("/api/config/grok-planner", (req: Request, res: Response) => {
     const model = req.body?.model;
-    if (typeof model !== "string" || !GROK_PLANNER_MODELS.includes(model)) {
+    if (typeof model !== "string" || !GROK_PLANNER_MODELS.some((option) => option === model)) {
       res.status(400).json({ error: `Invalid model. Options: ${GROK_PLANNER_MODELS.join(", ")}` });
       return;
     }

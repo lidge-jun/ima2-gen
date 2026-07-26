@@ -21,6 +21,7 @@ import { deriveChildVideoLineage, normalizeVideoLineage } from "../lib/videoLine
 import { getMotionFragment, MOTION_PRESETS } from "../lib/videoMotionPresets.js";
 import { errInfo } from "../lib/errInfo.js";
 import { codedVideoError as codedError, emitPhase, envDeadline, extractError, requestSignal, requirePrompt, retryableData } from "../lib/videoExtendedHelpers.js";
+import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 type ParentMetadata = {
   provider?: unknown; model?: unknown;
@@ -431,7 +432,7 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
     }
   });
 
-  // --- Video Analysis (Grok 4.3 Vision) ---
+  // --- Video Analysis (configured Grok planner vision model) ---
   app.post("/api/video/analyze", async (req: Request, res: Response) => {
     try {
       const signal = requestSignal(req, res, envDeadline("IMA2_VIDEO_ANALYZE_TIMEOUT_MS", 2 * 60_000));
@@ -450,12 +451,13 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
         await extractVideoFrame(input, lastFrame, "last");
         const first = (await readFile(firstFrame)).toString("base64");
         const last = (await readFile(lastFrame)).toString("base64");
+        const plannerModel = ctx.config.grokProvider.plannerModel || DEFAULT_GROK_PLANNER_MODEL;
         const { url, headers } = videoProxyUrl(ctx, "/v1/responses");
         const apiRes = await fetch(url, {
           method: "POST",
           headers,
           body: JSON.stringify({
-            model: "grok-4.3",
+            model: plannerModel,
             input: [{
               role: "user",
               content: [
@@ -472,7 +474,7 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
         const text = extractOutputText(data);
         if (!text) return res.status(502).json({ error: "No analysis text in response" });
         logEvent("video", "analyze:done", { videoUrl, chars: text.length });
-        res.json({ analysis: text, model: "grok-4.3", method: "first-last-frame" });
+        res.json({ analysis: text, model: plannerModel, method: "first-last-frame" });
       } finally {
         await unlink(firstFrame).catch(() => {});
         await unlink(lastFrame).catch(() => {});
