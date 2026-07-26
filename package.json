@@ -1,6 +1,6 @@
 {
   "name": "ima2-gen",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "packageManager": "npm@11.18.0",
   "description": "Local OAuth image generation studio with classic and node workflows",
   "type": "module",
