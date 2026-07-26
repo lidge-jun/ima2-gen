@@ -158,7 +158,7 @@ routes/
 | `lib/historyList.ts` | 200 | History reconstruction from generated assets, sidecars, embedded XMP metadata fallback, session-aware rows |
 | `lib/videoContinuity.ts` | 192 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
 | `lib/videoFrameExtract.ts` | 100 | Generated-dir-safe MP4 validation and ffmpeg frame extraction for video frame/analyze/continue workflows |
-| `lib/videoGenerationRequest.ts` | 155 | Shared generate-request contract: mode inference, mutually-exclusive source guard, and duration/resolution/aspect defaults for UI, CLI, agent, and route |
+| `lib/videoGenerationRequest.ts` | 163 | Shared generate-request contract: mode inference, mutually-exclusive source guard, and duration/resolution/aspect defaults for UI, CLI, agent, and route |
 | `lib/grokVideoAdapter.ts` | 490 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
 | `lib/localImportStore.ts` | 115 | Validates raw PNG/JPEG/WebP body, writes timestamped `imported-*` to generated/, embeds XMP metadata, returns GenerateItem-shaped row |
 | `lib/storageMigration.ts` | 311 | Legacy generated-folder scan and migration support |
@@ -215,6 +215,7 @@ routes/
 | `lib/agyImageAdapter.ts` | 397 | Antigravity CLI image-generation provider adapter |
 | `lib/apiCachePolicy.ts` | 12 | API response cache-control policy helpers |
 | `lib/assetsStore.ts` | 533 | Generated asset indexing, lookup, and persistence helpers |
+| `lib/assetRef.ts` | 57 | Asset-id-first reference resolution with legacy filename fallback and `via` provenance for generate requests |
 | `lib/atomicWrite.ts` | 16 | Atomic file-write helper |
 | `lib/capabilities.ts` | 139 | Runtime provider and feature capability resolution |
 | `lib/characterBindings.ts` | 112 | Character provider binding validation, refs preservation guard, and drift detection |

@@ -22,6 +22,12 @@ export type VideoGenerationRequest = {
   mode: VideoGenerationMode;
   sourceImage?: string;
   sourceFilename?: string;
+  /**
+   * Stable reference to the source asset. Preferred over `sourceFilename`, which stops
+   * identifying anything once the file is moved or renamed. Both may be present during
+   * migration; the resolver takes the id first (lib/assetRef.ts).
+   */
+  sourceAssetId?: string;
   referenceImages?: string[];
   referenceFilenames?: string[];
   continueFromVideo?: string;
@@ -76,10 +82,11 @@ export function isVideoGenerationError(
 export function deriveVideoMode(input: {
   sourceImage?: unknown;
   sourceFilename?: unknown;
+  sourceAssetId?: unknown;
   referenceImages?: unknown;
   referenceFilenames?: unknown;
 }): VideoGenerationMode {
-  if (input.sourceImage || input.sourceFilename) return "image-to-video";
+  if (input.sourceImage || input.sourceFilename || input.sourceAssetId) return "image-to-video";
   const refs =
     (Array.isArray(input.referenceImages) ? input.referenceImages.length : 0)
     + (Array.isArray(input.referenceFilenames) ? input.referenceFilenames.length : 0);
@@ -140,6 +147,7 @@ export function normalizeVideoGenerationRequest(
       ...(input.model ? { model: input.model } : {}),
       ...(input.sourceImage ? { sourceImage: input.sourceImage } : {}),
       ...(input.sourceFilename ? { sourceFilename: input.sourceFilename } : {}),
+      ...(input.sourceAssetId ? { sourceAssetId: input.sourceAssetId } : {}),
       ...(input.referenceImages?.length ? { referenceImages: input.referenceImages } : {}),
       ...(input.referenceFilenames?.length ? { referenceFilenames: input.referenceFilenames } : {}),
       ...(input.continueFromVideo ? { continueFromVideo: input.continueFromVideo } : {}),
