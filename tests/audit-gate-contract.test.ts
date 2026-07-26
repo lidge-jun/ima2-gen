@@ -1,5 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { classifyAuditResult, countAtOrAbove, parseArgs } from "../scripts/audit-gate.mjs";
 
 // WP-A: `npm audit` exits 1 both when it finds a vulnerability and when the registry
@@ -70,6 +74,77 @@ test("an unrecognized failure fails closed rather than passing silently", () => 
   // Silence here would be the worst outcome: a broken gate that always reports success.
   const result = classifyAuditResult({ status: 1, stdout: "totally unexpected", stderr: "boom" });
   assert.equal(result.kind, "unknown");
+});
+
+test("a report without a countable tally is not accepted as clean", () => {
+  // `vulnerabilities` without `metadata.vulnerabilities` would count as zero and let a
+  // critical finding through. It must fail closed instead.
+  const result = classifyAuditResult({
+    status: 1,
+    stdout: JSON.stringify({ vulnerabilities: { "bad-pkg": { severity: "critical" } } }),
+    stderr: "",
+  });
+  assert.equal(result.kind, "unknown", "an uncountable report must not pass the gate");
+});
+
+test("a clean exit without a parseable report is not treated as a clean tree", () => {
+  // npm exiting 0 with no usable output means nothing was verified. Calling that
+  // "no vulnerabilities" turns "could not check" into "everything is fine".
+  assert.equal(classifyAuditResult({ status: 0, stdout: "", stderr: "" }).kind, "unknown");
+  assert.equal(classifyAuditResult({ status: 0, stdout: "not json", stderr: "" }).kind, "unknown");
+});
+
+// --- end-to-end exit-status checks -------------------------------------------------
+// The classifier being right is not enough: the gate must actually exit non-zero. These
+// run the real script against a stub `npm` on PATH.
+
+function runGateWithStubNpm(stub: string): { status: number | null; stdout: string; stderr: string } {
+  const dir = mkdtempSync(join(tmpdir(), "ima2-audit-gate-"));
+  try {
+    const npmPath = join(dir, "npm");
+    writeFileSync(npmPath, stub, { mode: 0o755 });
+    chmodSync(npmPath, 0o755);
+    const result = spawnSync(
+      process.execPath,
+      ["scripts/audit-gate.mjs", "--audit-level", "high"],
+      { encoding: "utf8", env: { ...process.env, PATH: `${dir}:${process.env.PATH ?? ""}` } },
+    );
+    return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const stubFor = (payload: unknown, exitCode: number) =>
+  `#!/bin/sh\ncat <<'JSON'\n${JSON.stringify(payload)}\nJSON\nexit ${exitCode}\n`;
+
+test("the gate exits non-zero when the report contains high findings", () => {
+  const result = runGateWithStubNpm(
+    stubFor({ metadata: { vulnerabilities: { low: 0, moderate: 0, high: 2, critical: 0 } } }, 1),
+  );
+  assert.equal(result.status, 1, "a high finding must fail the build");
+  assert.match(result.stderr, /2 high\+ vulnerabilit/);
+});
+
+test("the gate exits zero for a clean report", () => {
+  const result = runGateWithStubNpm(
+    stubFor({ metadata: { vulnerabilities: { low: 3, moderate: 1, high: 0, critical: 0 } } }, 0),
+  );
+  assert.equal(result.status, 0, "below-threshold findings must not fail the build");
+  assert.match(result.stdout, /no high\+ vulnerabilities/);
+});
+
+test("the gate exits non-zero when it cannot read a tally", () => {
+  const result = runGateWithStubNpm(stubFor({ vulnerabilities: { pkg: { severity: "critical" } } }, 1));
+  assert.equal(result.status, 1, "an uncountable report must fail closed");
+});
+
+test("the gate survives a registry outage without failing the build", () => {
+  const stub = `#!/bin/sh\necho 'npm error audit endpoint returned an error' >&2\nexit 1\n`;
+  const result = runGateWithStubNpm(stub);
+  assert.equal(result.status, 0, "an upstream outage must not turn every push red");
+  assert.match(result.stderr + result.stdout, /SKIPPED/);
+  assert.match(result.stderr + result.stdout, /NOT verified/, "the skip must be stated loudly");
 });
 
 test("threshold arithmetic covers every severity at or above the level", () => {

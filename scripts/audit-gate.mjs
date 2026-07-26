@@ -62,15 +62,20 @@ export function classifyAuditResult({ status, stdout, stderr }) {
     /audit endpoint returned an error|invalid json response body|ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up|503 Service Unavailable|registry error/i
       .test(errText + raw);
 
-  // A real report always carries the vulnerability tables. A payload with only
-  // `message` is npm relaying a transport failure.
-  if (report && (report.metadata?.vulnerabilities || report.vulnerabilities)) {
+  // Only a report we can actually COUNT is accepted. `metadata.vulnerabilities` is the
+  // severity tally the threshold check reads; a payload carrying `vulnerabilities`
+  // without that tally would silently count as zero and pass a critical finding, so it
+  // falls through to `unknown` and fails closed.
+  if (report?.metadata?.vulnerabilities && typeof report.metadata.vulnerabilities === "object") {
     return { kind: "report", report };
   }
   if (looksLikeTransport || (report && report.message && !report.metadata)) {
     return { kind: "infrastructure", detail: report?.message ?? errText.trim().split("\n")[0] ?? "" };
   }
-  if (status === 0) return { kind: "report", report: report ?? { metadata: { vulnerabilities: {} } } };
+  // A clean exit is NOT proof of a clean tree. If npm exited 0 without a parseable
+  // tally, nothing was verified — inventing an empty report here would turn "we could
+  // not check" into "everything is fine".
+  void status;
   return { kind: "unknown", detail: errText.trim() || raw.slice(0, 400) };
 }
 
