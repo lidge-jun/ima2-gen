@@ -98,6 +98,10 @@ gh run list --branch dev --limit 3 --json databaseId,status,conclusion,headSha,u
   overflow 0. 캡처는 `evidence/settings-model-menu-1440.png`,
   `agent-model-menu-1440.png`, `prompt-builder-menu-1440.png`,
   `element-mention-menu-1440.png`.
+- GitHub closeout: closeout commit `2599cafe62b1a222445866e61f2c9edfd61e65ae`
+  를 `origin/dev`에 push했고 local/remote SHA가 일치했다. CI run
+  `30199788794`는 같은 SHA에서 4 matrix 모두 success였다. 재확인한 open issue
+  0, open PR 0.
 
 | CR | capturedEvidence |
 |---|---|
@@ -108,7 +112,7 @@ gh run list --branch dev --limit 3 --json databaseId,status,conclusion,headSha,u
 | CR4 | Home empty·text-wrap·한국어 문구·glyph/i18n 계약과 5 viewport 렌더 PASS |
 | CR5 | shared Select keyboard/portal/grouped height/44px/tablist 계약과 렌더 PASS |
 | CR6 | 전체 로컬 gate와 5 viewport render fresh pass |
-| CR7 | push·CI·issue/PR·archive는 아래 GitHub/archive 실행 후 같은 문서에 기록 |
+| CR7 | `_fin` 병합, `2599caf` origin/dev parity, CI `30199788794` success, issue 0, PR 0 |
 
 ## archive
 
