@@ -62,6 +62,11 @@ type ElementMentionChipsProps = {
   items: readonly TrayItem[];
   assets: readonly AssetItem[] | null;
   missingElementIds: readonly string[];
+  selectedLabel: string;
+  unavailableLabel: string;
+  kindLabel(kind: ElementMentionKind): string;
+  mentionLabel(name: string, kind: string, missing: boolean): string;
+  removeLabel(name: string): string;
   onRemove(elementId: string): void;
 };
 
@@ -73,10 +78,20 @@ export function ElementMentionChips(props: ElementMentionChipsProps) {
   );
   if (models.length === 0) return null;
   return (
-    <ChipRow ariaLabel="Selected elements">
-      {models.map((model) => (
-        <ElementMentionChip key={model.elementId} {...model} onRemove={props.onRemove} />
-      ))}
+    <ChipRow ariaLabel={props.selectedLabel}>
+      {models.map((model) => {
+        const kindLabel = props.kindLabel(model.kind);
+        return (
+          <ElementMentionChip
+            key={model.elementId}
+            {...model}
+            ariaLabel={props.mentionLabel(model.name, kindLabel, model.missing)}
+            unavailableLabel={props.unavailableLabel}
+            removeLabel={props.removeLabel(model.name)}
+            onRemove={props.onRemove}
+          />
+        );
+      })}
     </ChipRow>
   );
 }

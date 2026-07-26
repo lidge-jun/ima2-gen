@@ -78,7 +78,12 @@ test("EM-02 query range filters localized names and tags with an empty state", (
   assert.match(menu, /query\.trim\(\)\.toLocaleLowerCase\(\)/);
   assert.match(menu, /\[element\.name, \.\.\.\(element\.tags \?\? \[\]\)\]/);
   assert.match(menu, /value\.toLocaleLowerCase\(\)\.includes\(normalized\)/);
-  assert.match(menu, /element-mention-menu__empty[\s\S]*No matching elements/);
+  assert.match(menu, /ariaLabel/);
+  assert.match(menu, /emptyLabel/);
+  assert.match(menu, /kindLabel\(element\.kind\)/);
+  assert.match(menu, /element-mention-menu__empty[\s\S]*\{emptyLabel\}/);
+  assert.match(composer, /ariaLabel=\{t\("common\.elementSuggestions"\)\}/);
+  assert.match(composer, /emptyLabel=\{t\("common\.noMatchingElements"\)\}/);
 });
 
 test("EM-03 email and non-boundary @ characters do not trigger", () => {
@@ -186,7 +191,8 @@ test("EM-09 missing elements remain visible and block composer generation", () =
   });
   assert.match(chipRow, /name: asset\?\.name \?\? item\.source\.nameAtInsertion/);
   assert.match(chip, /is-missing/);
-  assert.match(chip, /aria-label="Element unavailable"/);
+  assert.match(chip, /aria-label=\{unavailableLabel\}/);
+  assert.match(composer, /unavailableLabel=\{t\("common\.elementUnavailable"\)\}/);
   assert.match(chip, /element-mention-chip__thumbnail/);
   assert.match(chip, /element-mention-chip__name/);
   assert.match(composer, /if \(missingElementIds\.length > 0\) return;[\s\S]*void generate\(\)/);
@@ -217,7 +223,8 @@ test("EM-11 each chip removes only its stable element ID", () => {
   assert.match(composer, /onRemove=\{\(elementId\) => elementSelection\.removeElementId\?\.\(elementId\)\}/);
   assert.match(elementCatalog, /export function removeTrayElementImpl[\s\S]*retireTrayTags\(state\.retiredTags, \[removed\]\)/);
   assert.match(referenceStore, /export \{ removeTrayElementImpl \} from "\.\.\/lib\/elementCatalog"/);
-  assert.match(chip, /type="button"[\s\S]*aria-label=\{`Remove \$\{name\} element`\}/);
+  assert.match(chip, /element-mention-chip__remove[\s\S]*aria-label=\{removeLabel\}/);
+  assert.match(composer, /removeLabel=\{\(name\) => t\("element\.removeAria", \{ name \}\)\}/);
   // Executable: simulate missing, then actually remove the element and assert
   // the missing marker clears (Euler false-confidence fix).
   syncElementCatalogImpl([], store.set, store.get);

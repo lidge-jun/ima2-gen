@@ -371,6 +371,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
       {canvasOpen && (
         <CanvasModeTopbar
           zoom={canvasZoom}
+          modeLabel={t("canvas.modeTitle")}
           closeLabel={t("canvas.close")}
           blankCanvasLabel={t("canvas.blank.title")}
           blankCanvasAriaLabel={`${creatingBlankCanvas ? t("canvas.blank.creating") : t("canvas.blank.create")} (Shift+B)`}

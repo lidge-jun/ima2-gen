@@ -72,6 +72,12 @@ describe("assets workspace polish contract", () => {
     assert.doesNotMatch(workspace, /setUIMode\("asset-gen"\)/);
   });
 
+  it("balances workspace headings and empty-state copy", () => {
+    assert.match(css, /\.assets-toolbar__title h1\s*\{[^}]*text-wrap:\s*balance/);
+    assert.match(css, /\.assets-empty h2\s*\{[^}]*text-wrap:\s*balance/);
+    assert.match(css, /\.assets-empty p\s*\{[^}]*text-wrap:\s*pretty/);
+  });
+
   it("preserves the 010 literal i18n calls without adding wp6 dictionary keys", () => {
     assert.match(workspace, /t\("assets\.detailAria", \{ name: selectedAsset\.name \}\)/);
     assert.match(workspace, /showToast\(t\("assets\.testSheetsUnavailable"\), true\)/);

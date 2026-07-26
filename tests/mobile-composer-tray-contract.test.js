@@ -8,6 +8,8 @@ const read = (path) => readFileSync(path, "utf8");
 const sheet = read("ui/src/components/MobileComposeSheet.tsx");
 const inflightBadge = read("ui/src/components/composer/InFlightBadge.tsx");
 const homeComposer = read("ui/src/components/home/HomePromptComposer.tsx");
+const homeWorkspace = read("ui/src/components/home/HomeWorkspace.tsx");
+const homeRecent = read("ui/src/components/home/HomeRecentRow.tsx");
 const responsiveCss = read("ui/src/styles/responsive-layout.css");
 const homeCss = read("ui/src/styles/home-workspace.css");
 const navRailCss = read("ui/src/styles/nav-rail.css");
@@ -59,6 +61,15 @@ test("home exposes a compact read-only reference strip", () => {
   assert.doesNotMatch(homeComposer, /removeTrayItem/, "home must not edit shared tray references");
   assert.match(homeCss, /\.home-prompt__reference-strip\s*\{/);
   assert.match(homeCss, /\.home-prompt__reference-thumb\s*\{[\s\S]*?width:\s*32px[\s\S]*?height:\s*32px/);
+});
+
+test("home keeps the recent region visible for empty and populated histories", () => {
+  assert.match(homeWorkspace, /<div className="home-workspace__recent">/);
+  assert.doesNotMatch(homeWorkspace, /hasHistory/);
+  assert.match(homeRecent, /recent\.length === 0/);
+  assert.match(homeRecent, /className="home-recent-empty" role="status">\{t\("history\.emptyRecent"\)\}/);
+  assert.match(homeRecent, /className="home-recent-row" role="list"/);
+  assert.match(homeCss, /\.home-recent-empty\s*\{[^}]*var\(--surface\)[^}]*var\(--text-muted\)/s);
 });
 
 test("new tray visibility and mobile disclosure copy stays localized", () => {

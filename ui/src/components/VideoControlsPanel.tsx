@@ -122,9 +122,9 @@ export function VideoControlsPanel() {
         </div>
       ) : null}
       {cameraPresets.length > 0 && (
-        <ChipRow ariaLabel="Selected camera motion presets">
+        <ChipRow ariaLabel={t("video.selectedCameraPresets")}>
           {cameraPresets.map((preset) => (
-            <Chip key={preset.id} onRemove={() => removePreset(preset.id)}>
+            <Chip key={preset.id} onRemove={() => removePreset(preset.id)} removeLabel={t("common.removeNamed", { name: preset.name })}>
               {preset.name}
             </Chip>
           ))}

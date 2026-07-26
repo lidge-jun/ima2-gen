@@ -10,6 +10,7 @@
     "generating": "Generating…",
     "imageCollection": "{n} image collection",
     "remove": "Remove",
+    "removeNamed": "Remove {name}",
     "elementSuggestions": "Element suggestions",
     "noMatchingElements": "No matching elements",
     "enterPrompt": "Enter prompt…",
@@ -360,6 +361,7 @@
     "collapseRecentShort": "Hide",
     "expandRecentShort": "Show",
     "emptyRecent": "Generated images will appear here.",
+    "generatingCollection": "Generating {count} images…",
     "selectRecent": "Select generated image",
     "deleteImageAria": "Delete image from history",
     "deleteSequenceAria": "Delete {count}-image sequence",
@@ -408,12 +410,14 @@
     "dropHere": "Drop to attach as reference (up to {max})"
   },
   "canvas": {
+    "modeTitle": "Canvas Mode",
     "resultAlt": "result",
     "imageViewerAria": "Generated image viewer. Use left and right arrow keys to move between images.",
     "tokens": "{n} tokens",
     "open": "Open Canvas",
     "openAria": "Open image in canvas mode",
     "dragToComposer": "Drag to composer as reference",
+    "dragHint": "Drag",
     "annotationInstructionsChip": "Canvas notes",
     "close": "Close Canvas",
     "blank": {
@@ -1147,6 +1151,7 @@
     }
   },
   "video": {
+    "selectedCameraPresets": "Selected camera motion presets",
     "plannerModelTitle": "Planner Model",
     "reasoningEffortTitle": "Reasoning Effort",
     "modeLabel": "Video mode",
@@ -1240,7 +1245,17 @@
       "codexNotLoggedIn": "Not logged in",
       "fetchError": "Could not load quota",
       "noData": "No usage data",
-      "grokUsageLink": "View Grok usage →"
+      "grokUsageLink": "View Grok usage →",
+      "switchAccount": "Switch {provider} account",
+      "startingLogin": "Starting login…",
+      "enterCode": "Enter this code in the opened tab:",
+      "retry": "Retry",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "waitingApproval": "Waiting for approval…",
+      "switchComplete": "Account switched. Refreshing…",
+      "switchFailed": "Account switch failed",
+      "tryAgain": "Try again"
     },
     "imageModel": {
       "title": "Image model",
@@ -1289,9 +1304,13 @@
         "authModeVertex": "Vertex JSON"
       },
       "save": "Save",
-      "saved": "Saved ✓",
+      "saved": "Saved",
       "saving": "Validating...",
       "remove": "Remove",
+      "saveFailed": "Could not save the key",
+      "networkError": "Network error. Try again.",
+      "removeFailed": "Could not remove the key",
+      "configuredReplace": "configured — click to replace",
       "status": {
         "valid": "Valid",
         "notConfigured": "Not configured"
@@ -1714,6 +1733,10 @@
     "flipX": "Flip horizontally",
     "sequence": "Sequence — play and bake order",
     "candidates": "Candidate pool",
+    "frameAria": "Frame {n}, {rail}",
+    "addFrame": "Add",
+    "removeFrame": "Remove",
+    "deleteFrame": "Delete frame {n}",
     "save": "Save curation",
     "bake": "Bake atlas",
     "contactSheet": "Contact sheet",
@@ -2088,6 +2111,11 @@
     "kindProduct": "Product",
     "kindStyle": "Style",
     "kindScene": "Scene",
+    "kindReference": "Reference",
+    "selected": "Selected elements",
+    "mentionAria": "{name}, {kind} element",
+    "unavailableAria": "{name}, unavailable element",
+    "removeAria": "Remove {name} element",
     "helpCharacter": "A person or recurring subject.",
     "helpProduct": "A product with consistent design details.",
     "helpStyle": "A visual language, material, or treatment.",

@@ -85,6 +85,13 @@ describe("Asset Gen keyed preview contract", () => {
     assert.match(css, /@media \(max-width: 480px\)/);
   });
 
+  it("balances Asset Gen headings and bounds empty copy", () => {
+    const css = read("ui/src/styles/assetgen-workspace.css");
+    assert.match(css, /\.assetgen-form h1\s*\{[^}]*text-wrap:\s*balance/s);
+    assert.match(css, /\.assetgen-form__lede\s*\{[^}]*text-wrap:\s*balance/s);
+    assert.match(css, /\.assetgen-empty p\s*\{[^}]*max-width:\s*40ch[^}]*text-wrap:\s*balance/s);
+  });
+
   it("carries comparison labels in both locales", () => {
     const locales = ["en", "ko"].map((locale) => JSON.parse(read(`ui/src/i18n/${locale}.json`)));
     for (const locale of locales) {

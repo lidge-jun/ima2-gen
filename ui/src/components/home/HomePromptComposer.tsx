@@ -61,6 +61,7 @@ export function HomePromptComposer() {
               key={preset.id}
               selected
               onRemove={() => removePreset(preset.id)}
+              removeLabel={t("common.removeNamed", { name: preset.name })}
               title={preset.category}
             >
               {preset.name}

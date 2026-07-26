@@ -23,6 +23,9 @@ type ElementMentionMenuProps = {
   caret: number;
   query: string;
   elements: readonly ElementMentionOption[];
+  ariaLabel: string;
+  emptyLabel: string;
+  kindLabel(kind: ElementMentionKind): string;
   onSelect(element: ElementMentionOption): void;
   onClose(): void;
   onActiveChange?(index: number): void;
@@ -64,7 +67,7 @@ function calculatePosition(textarea: HTMLTextAreaElement, caret: number): Mentio
 
 function isMobile(): boolean { return window.matchMedia("(max-width: 640px)").matches; }
 
-export function ElementMentionMenu({ open, textareaRef, caret, query, elements, onSelect, onClose, onActiveChange }: ElementMentionMenuProps) {
+export function ElementMentionMenu({ open, textareaRef, caret, query, elements, ariaLabel, emptyLabel, kindLabel, onSelect, onClose, onActiveChange }: ElementMentionMenuProps) {
   const listId = useId();
   const [activeIndex, setActiveIndex] = useState(0);
   const [position, setPosition] = useState<MentionMenuPosition | null>(null);
@@ -112,12 +115,12 @@ export function ElementMentionMenu({ open, textareaRef, caret, query, elements, 
   useEffect(() => { listRef.current?.querySelector<HTMLElement>(".is-active")?.scrollIntoView({ block: "nearest" }); }, [activeIndex]);
 
   if (!open || !position || typeof document === "undefined") return null;
-  const content = <section className={`element-mention-menu${mobile ? " is-mobile" : ""}`} style={mobile ? undefined : { left: position.left, top: position.top, maxHeight: position.maxHeight }} aria-label="Element suggestions">
+  const content = <section className={`element-mention-menu${mobile ? " is-mobile" : ""}`} style={mobile ? undefined : { left: position.left, top: position.top, maxHeight: position.maxHeight }} aria-label={ariaLabel}>
     <ul id={listId} className="element-mention-menu__list" role="listbox" ref={listRef}>
       {visibleElements.length ? visibleElements.map((element, index) => <li key={element.id} id={`${listId}-${element.id}`} role="option" aria-selected={index === activeIndex} className={`element-mention-menu__option${index === activeIndex ? " is-active" : ""}`} onPointerEnter={() => setActive(index)} onMouseDown={(event) => { event.preventDefault(); onSelect(element); }}>
         {element.thumbnail ? <img src={element.thumbnail} alt="" className="element-mention-menu__thumbnail" /> : <span className="element-mention-menu__thumbnail is-empty" aria-hidden="true" />}
-        <span className="element-mention-menu__copy"><strong>{element.name}</strong><small>{element.kind}</small></span>
-      </li>) : <li className="element-mention-menu__empty" role="presentation">No matching elements</li>}
+        <span className="element-mention-menu__copy"><strong>{element.name}</strong><small>{kindLabel(element.kind)}</small></span>
+      </li>) : <li className="element-mention-menu__empty" role="presentation">{emptyLabel}</li>}
     </ul>
   </section>;
   return createPortal(content, document.body);

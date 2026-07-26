@@ -19,7 +19,9 @@ function componentFiles(dir: string): string[] {
 }
 
 /** Attributes that reach the user directly: screen readers, tooltips, empty fields. */
-const USER_FACING_ATTRS = /\b(?:aria-label|placeholder|title)="([A-Z][^"]{2,})"/g;
+const USER_FACING_ATTRS = /\b(?:aria-label|ariaLabel|placeholder|title)="([A-Z][^"]{2,})"/g;
+const TEMPLATE_ARIA = /\baria-label=\{`([A-Z][^`]*)`\}/g;
+const JSX_TEXT = /<[a-z][^>]*>\s*([A-Z][A-Za-z ]{2,})\s*<\//g;
 
 /**
  * Not every capitalized attribute is prose. File paths, filenames and code samples read
@@ -79,11 +81,17 @@ test("element panels are translated rather than hardcoded English", () => {
 test("no component hardcodes a user-facing English attribute", () => {
   const offenders: string[] = [];
   for (const file of componentFiles("ui/src/components")) {
-    if (PURE_MODULES.includes(file.split(sep).join("/"))) continue;
     const src = readFileSync(file, "utf8");
     for (const match of src.matchAll(USER_FACING_ATTRS)) {
       if (!isTranslatable(match[1])) continue;
       offenders.push(`${file.split(sep).join("/")}: ${match[0]}`);
+    }
+    for (const match of src.matchAll(TEMPLATE_ARIA)) {
+      offenders.push(`${file.split(sep).join("/")}: ${match[0]}`);
+    }
+    for (const match of src.matchAll(JSX_TEXT)) {
+      if (["Runway", "Higgsfield", "ESC", "MCP"].includes(match[1].trim())) continue;
+      offenders.push(`${file.split(sep).join("/")}: >${match[1].trim()}<`);
     }
   }
   assert.deepEqual(offenders, [], `hardcoded user-facing strings:\n${offenders.join("\n")}`);
@@ -100,6 +108,25 @@ test("the pure-module exemption stays honest", () => {
       `${path} now imports i18n — drop it from PURE_MODULES`,
     );
   }
+});
+
+test("pure mention and chip modules receive user-facing labels through props", () => {
+  const menu = readFileSync("ui/src/components/ElementMentionMenu.tsx", "utf8");
+  assert.match(menu, /ariaLabel: string/);
+  assert.match(menu, /emptyLabel: string/);
+  assert.match(menu, /kindLabel\(kind: ElementMentionKind\): string/);
+  assert.doesNotMatch(menu, /Element suggestions|No matching elements/);
+
+  const mention = readFileSync("ui/src/components/ElementMentionChip.tsx", "utf8");
+  assert.match(mention, /ariaLabel: string/);
+  assert.match(mention, /unavailableLabel: string/);
+  assert.match(mention, /removeLabel: string/);
+  assert.doesNotMatch(mention, /Character|Product|Reference|Remove /);
+
+  const chip = readFileSync("ui/src/components/controls/Chip.tsx", "utf8");
+  assert.match(chip, /removeLabel\?: string/);
+  assert.match(chip, /aria-label=\{removeLabel\}/);
+  assert.doesNotMatch(chip, /aria-label="Remove"/);
 });
 
 test("Korean labels are actually Korean, not passthrough English", () => {

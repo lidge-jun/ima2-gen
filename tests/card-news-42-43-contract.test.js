@@ -43,6 +43,9 @@ describe("Card News 42/43 editor and reopen contract", () => {
     assert.match(stage, /cardNews\.selectTextField/);
     assert.match(stage, /card-news-empty__deck/);
     assert.match(stage, /card-news-empty__copy/);
+    assert.match(css, /\.card-news-empty__copy h2\s*\{[^}]*text-wrap:\s*balance/s);
+    assert.match(css, /\.card-news-stage__header > div\s*\{[^}]*min-width:\s*0/s);
+    assert.match(css, /\.card-news-stage__header h2\s*\{[^}]*overflow-wrap:\s*break-word[^}]*text-wrap:\s*balance/s);
     assert.match(inspector, /selectedTextFieldId === field\.id/);
     assert.match(inspector, /onSelect=\{\(\) => selectTextField\(field\.id\)\}/);
     assert.match(inspector, /card-news-advanced-prompt/);

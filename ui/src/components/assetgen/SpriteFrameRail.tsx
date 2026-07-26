@@ -1,5 +1,6 @@
 import type { DragEvent, KeyboardEvent } from "react";
 import type { SpriteFrameView } from "../../types/spriteAtlas";
+import { useI18n } from "../../i18n";
 
 type Props = {
   kind: "sequence" | "candidates";
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function SpriteFrameRail(props: Props) {
+  const { t } = useI18n();
   const destination = props.kind === "sequence" ? "candidates" : "sequence";
   const drop = (event: DragEvent, beforeFrameIndex: number | null) => {
     event.preventDefault();
@@ -30,7 +32,7 @@ export function SpriteFrameRail(props: Props) {
     }
   };
   return (
-    <section className="sprite-rail" aria-label={props.kind === "sequence" ? "Animation sequence" : "Candidate pool"}>
+    <section className="sprite-rail" aria-label={t(`assetGen.${props.kind}`)}>
       <div className="sprite-rail__track" role="listbox" onDragOver={(e) => e.preventDefault()} onDrop={(e) => drop(e, null)}>
         {props.frames.map((frame, position) => (
           <div className="sprite-rail__item" key={frame.index}>
@@ -39,7 +41,7 @@ export function SpriteFrameRail(props: Props) {
               className="sprite-rail__frame"
               role="option"
               aria-selected={props.activeFrameIndex === frame.index}
-              aria-label={`Frame ${frame.index + 1}, ${props.kind}`}
+              aria-label={t("assetGen.frameAria", { n: frame.index + 1, rail: t(`assetGen.${props.kind}`) })}
               draggable
               onDragStart={(event) => {
                 event.dataTransfer.setData("application/x-sprite-frame", String(frame.index));
@@ -64,9 +66,9 @@ export function SpriteFrameRail(props: Props) {
             </button>
             <span className="sprite-rail__actions">
               <button type="button" onClick={() => props.onMove(frame.index, destination)}>
-                {destination === "sequence" ? "Add" : "Remove"}
+                {destination === "sequence" ? t("assetGen.addFrame") : t("assetGen.removeFrame")}
               </button>
-              <button type="button" aria-label={`Delete frame ${frame.index + 1}`} onClick={() => props.onDelete(frame.index)}>×</button>
+              <button type="button" aria-label={t("assetGen.deleteFrame", { n: frame.index + 1 })} onClick={() => props.onDelete(frame.index)}>×</button>
             </span>
           </div>
         ))}

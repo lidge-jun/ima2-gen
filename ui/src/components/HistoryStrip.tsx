@@ -23,12 +23,13 @@ function SkeletonThumb({ id }: { id: string }) {
 }
 
 function CollectionSkeleton({ id, count }: { id: string; count: number }) {
+  const { t } = useI18n();
   const slots = Math.min(count, 4);
   return (
     <div
       key={`coll-${id}`}
       className="history-thumb history-thumb--collection-skeleton"
-      aria-label={`Generating ${count} images...`}
+      aria-label={t("history.generatingCollection", { count })}
     >
       {Array.from({ length: slots }, (_, i) => (
         <div key={i} className="collection-mini collection-mini--skeleton" />

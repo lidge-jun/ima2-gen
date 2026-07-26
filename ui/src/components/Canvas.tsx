@@ -253,7 +253,7 @@ export function Canvas() {
                   title={t("canvas.dragToComposer")}
                   aria-label={t("canvas.dragToComposer")}
                 >
-                  DRAG
+                  {t("canvas.dragHint")}
                 </div>
               </>
             ) : (
@@ -283,7 +283,7 @@ export function Canvas() {
                   title={t("canvas.dragToComposer")}
                   aria-label={t("canvas.dragToComposer")}
                 >
-                  DRAG
+                  {t("canvas.dragHint")}
                 </div>
               </>
             )}

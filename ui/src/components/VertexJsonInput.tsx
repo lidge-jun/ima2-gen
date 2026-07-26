@@ -32,7 +32,7 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
       });
       const data = await res.json();
       if (!data.ok) {
-        setError(data.error || "Failed to save");
+        setError(data.error || t("settings.apiKeys.saveFailed"));
       } else {
         setJson("");
         setEditing(false);
@@ -40,21 +40,27 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
         onSaved();
         setTimeout(() => setSuccess(false), 3000);
       }
-    } catch (e: any) {
-      setError(e.message || "Network error");
+    } catch {
+      setError(t("settings.apiKeys.networkError"));
     } finally {
       setSaving(false);
     }
-  }, [json, dirty, onSaved]);
+  }, [json, dirty, onSaved, t]);
 
   const handleDelete = useCallback(async () => {
     try {
-      await fetch("/api/keys/vertex", { method: "DELETE" });
+      const response = await fetch("/api/keys/vertex", { method: "DELETE" });
+      if (!response.ok) {
+        setError(t("settings.apiKeys.removeFailed"));
+        return;
+      }
       setJson("");
       setEditing(false);
       onSaved();
-    } catch { /* ignore */ }
-  }, [onSaved]);
+    } catch {
+      setError(t("settings.apiKeys.networkError"));
+    }
+  }, [onSaved, t]);
 
   const handleFocus = useCallback(() => {
     if (configured && !isEnv) {
@@ -79,7 +85,7 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
       {showMasked ? (
         <textarea
           className="vertex-json-textarea is-masked"
-          value="●●● (configured — click to replace)"
+          value={`●●● (${t("settings.apiKeys.configuredReplace")})`}
           readOnly
           onFocus={handleFocus}
           onClick={handleFocus}

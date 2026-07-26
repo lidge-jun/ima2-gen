@@ -355,12 +355,12 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
       )}
 
       {selectedPresetIds.length > 0 && (
-        <ChipRow ariaLabel="Selected presets">
+        <ChipRow ariaLabel={t("home.selectedPresets")}>
           {selectedPresetIds.map((id) => {
             const preset = getPresetById(id);
             if (!preset) return null;
             return (
-              <Chip key={id} onRemove={() => removePreset(id)}>
+              <Chip key={id} onRemove={() => removePreset(id)} removeLabel={t("common.removeNamed", { name: preset.name })}>
                 {preset.name}
               </Chip>
             );
@@ -372,6 +372,13 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
         items={trayItems}
         assets={elementCatalog}
         missingElementIds={missingElementIds}
+        selectedLabel={t("element.selected")}
+        unavailableLabel={t("common.elementUnavailable")}
+        kindLabel={(kind) => t(`element.kind${kind[0].toUpperCase()}${kind.slice(1)}`)}
+        mentionLabel={(name, kind, missing) => missing
+          ? t("element.unavailableAria", { name })
+          : t("element.mentionAria", { name, kind })}
+        removeLabel={(name) => t("element.removeAria", { name })}
         onRemove={(elementId) => elementSelection.removeElementId?.(elementId)}
       />
 
@@ -439,6 +446,9 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
             };
           }),
         ]}
+        ariaLabel={t("common.elementSuggestions")}
+        emptyLabel={t("common.noMatchingElements")}
+        kindLabel={(kind) => t(`element.kind${kind[0].toUpperCase()}${kind.slice(1)}`)}
         onSelect={(element) => {
           const existing = findElementTrayItem(useAppStore.getState().trayItems, element.id);
           if (element.id.startsWith(TRAY_MENTION_PREFIX)) {

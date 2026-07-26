@@ -6,17 +6,12 @@ export interface ElementMentionChipProps {
   kind?: ElementMentionKind;
   thumbnail?: string;
   missing?: boolean;
+  ariaLabel: string;
+  unavailableLabel: string;
+  removeLabel: string;
   onRemove(elementId: string): void;
   onOpen?(elementId: string): void;
 }
-
-const kindLabels: Record<ElementMentionKind, string> = {
-  character: "Character",
-  product: "Product",
-  style: "Style",
-  scene: "Scene",
-  reference: "Reference",
-};
 
 function KindIcon({ kind = "character" }: { kind?: ElementMentionKind }) {
   const paths: Record<ElementMentionKind, string> = {
@@ -29,16 +24,15 @@ function KindIcon({ kind = "character" }: { kind?: ElementMentionKind }) {
   return <svg className="element-mention-chip__kind" viewBox="0 0 16 16" aria-hidden="true"><path d={paths[kind]} /></svg>;
 }
 
-export function ElementMentionChip({ elementId, name, kind, thumbnail, missing, onRemove, onOpen }: ElementMentionChipProps) {
-  const label = missing ? `${name}, unavailable element` : `${name}, ${kindLabels[kind ?? "character"]} element`;
+export function ElementMentionChip({ elementId, name, kind, thumbnail, missing, ariaLabel, unavailableLabel, removeLabel, onRemove, onOpen }: ElementMentionChipProps) {
   return (
     <span className={`element-mention-chip${missing ? " is-missing" : ""}`} data-element-id={elementId}>
-      <button type="button" className="element-mention-chip__body" onClick={() => onOpen?.(elementId)} aria-label={label}>
+      <button type="button" className="element-mention-chip__body" onClick={() => onOpen?.(elementId)} aria-label={ariaLabel}>
         {thumbnail ? <img className="element-mention-chip__thumbnail" src={thumbnail} alt="" /> : <span className="element-mention-chip__thumbnail is-empty" aria-hidden="true" />}
-        {missing ? <span className="element-mention-chip__warning" aria-label="Element unavailable">!</span> : <KindIcon kind={kind} />}
+        {missing ? <span className="element-mention-chip__warning" aria-label={unavailableLabel}>!</span> : <KindIcon kind={kind} />}
         <span className="element-mention-chip__name">{name}</span>
       </button>
-      <button type="button" className="element-mention-chip__remove" onClick={() => onRemove(elementId)} aria-label={`Remove ${name} element`}>
+      <button type="button" className="element-mention-chip__remove" onClick={() => onRemove(elementId)} aria-label={removeLabel}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8m0-8-8 8" /></svg>
       </button>
     </span>

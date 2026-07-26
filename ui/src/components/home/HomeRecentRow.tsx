@@ -7,7 +7,9 @@ export function HomeRecentRow() {
   const { t } = useI18n();
   const recent = history.slice(0, 8);
 
-  if (recent.length === 0) return null;
+  if (recent.length === 0) {
+    return <p className="home-recent-empty" role="status">{t("history.emptyRecent")}</p>;
+  }
 
   return (
     <div className="home-recent-row" role="list" aria-label={t("home.recentTitle")}>

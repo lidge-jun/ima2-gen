@@ -4,6 +4,7 @@ type ChipProps = {
   selected?: boolean;
   onSelect?: () => void;
   onRemove?: () => void;
+  removeLabel?: string;
   disabled?: boolean;
   className?: string;
   children: ReactNode;
@@ -14,7 +15,7 @@ type ChipProps = {
  * Chip — selectable pill (Phase 020 kit). Foundation for preset chips (060)
  * and @mention element chips (070); in 020 it ships as the shared primitive.
  */
-export function Chip({ selected, onSelect, onRemove, disabled, className, children, title }: ChipProps) {
+export function Chip({ selected, onSelect, onRemove, removeLabel, disabled, className, children, title }: ChipProps) {
   return (
     <span
       className={`ctl-chip${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}${
@@ -35,7 +36,7 @@ export function Chip({ selected, onSelect, onRemove, disabled, className, childr
         <button
           type="button"
           className="ctl-chip__remove"
-          aria-label="Remove"
+          aria-label={removeLabel}
           disabled={disabled}
           onClick={onRemove}
         >

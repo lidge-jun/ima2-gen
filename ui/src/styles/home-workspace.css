@@ -69,6 +69,17 @@
 
 .home-workspace__recent > h2 { margin-bottom: 18px; }
 
+.home-recent-empty {
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--glass-line, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
 .home-prompt {
   padding: clamp(20px, 3vw, 32px);
   border: 1px solid var(--glass-line, var(--border));

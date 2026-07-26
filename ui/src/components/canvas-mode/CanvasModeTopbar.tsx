@@ -2,6 +2,7 @@ import { CanvasZoomControl } from "./CanvasZoomControl";
 
 interface CanvasModeTopbarProps {
   zoom: number;
+  modeLabel: string;
   closeLabel: string;
   blankCanvasLabel: string;
   blankCanvasAriaLabel: string;
@@ -17,6 +18,7 @@ interface CanvasModeTopbarProps {
 
 export function CanvasModeTopbar({
   zoom,
+  modeLabel,
   closeLabel,
   blankCanvasLabel,
   blankCanvasAriaLabel,
@@ -32,7 +34,7 @@ export function CanvasModeTopbar({
   return (
     <div className="canvas-mode-topbar">
       <div className="canvas-mode-topbar__stack">
-        <span className="canvas-mode-topbar__label">Canvas Mode</span>
+        <span className="canvas-mode-topbar__label">{modeLabel}</span>
         <CanvasZoomControl
           zoom={zoom}
           onZoomIn={onZoomIn}

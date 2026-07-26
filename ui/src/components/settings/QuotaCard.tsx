@@ -59,6 +59,7 @@ function QuotaBar({ window: w }: { window: QuotaWindow }) {
 }
 
 function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "codex"; onComplete: () => void }) {
+  const { t } = useI18n();
   const [state, setState] = useState<SwitchState>({ phase: "idle" });
   const [copied, setCopied] = useState(false);
   const switching = useRef(false);
@@ -74,7 +75,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
         body: JSON.stringify({ provider }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Request failed" })) as { error?: string };
+        const err = await res.json().catch(() => ({ error: t("settings.quota.switchFailed") })) as { error?: string };
         setState({ phase: "error", error: err.error || `HTTP ${res.status}` });
         return;
       }
@@ -119,7 +120,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
         style={{ width: "100%", marginTop: "6px" }}
         onClick={startSwitch}
       >
-        Switch {provider === "grok" ? "Grok" : "Codex"} Account
+        {t("settings.quota.switchAccount", { provider: provider === "grok" ? "Grok" : "Codex" })}
       </button>
     );
   }
@@ -127,7 +128,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
   if (state.phase === "starting") {
     return (
       <div className="quota-card__hint" style={{ textAlign: "center", marginTop: "6px" }}>
-        Starting login...
+        {t("settings.quota.startingLogin")}
       </div>
     );
   }
@@ -136,7 +137,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
     return (
       <div style={{ marginTop: "6px", padding: "8px", background: "var(--surface, #f5f5f5)", borderRadius: "6px", fontSize: "12px" }}>
         <div style={{ textAlign: "center", marginBottom: "4px" }}>
-          Enter this code in the opened tab:
+          {t("settings.quota.enterCode")}
         </div>
         <div style={{ textAlign: "center", fontSize: "18px", fontWeight: 700, fontFamily: "monospace", letterSpacing: "2px", margin: "6px 0" }}>
           {state.userCode}
@@ -149,7 +150,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
               style={{ flex: 1, fontSize: "11px" }}
               onClick={() => { switching.current = false; startSwitch(); }}
             >
-              Retry
+              {t("settings.quota.retry")}
             </button>
             <button
               type="button"
@@ -162,12 +163,12 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
                 });
               }}
             >
-              {copied ? "Copied!" : "Copy link"}
+              {copied ? t("settings.quota.copied") : t("settings.quota.copyLink")}
             </button>
           </div>
         )}
         <div style={{ textAlign: "center", color: "var(--text-dim, #888)", fontSize: "11px" }}>
-          Waiting for approval...
+          {t("settings.quota.waitingApproval")}
         </div>
       </div>
     );
@@ -176,26 +177,30 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
   if (state.phase === "complete") {
     return (
       <div className="quota-card__hint" style={{ textAlign: "center", marginTop: "6px", color: "var(--success, #22c55e)" }}>
-        Account switched! Refreshing...
+        {t("settings.quota.switchComplete")}
       </div>
     );
   }
 
-  return (
-    <div style={{ marginTop: "6px" }}>
-      <div className="quota-card__hint" style={{ color: "var(--error, #e53935)", marginBottom: "4px" }}>
-        {state.error || "Switch failed"}
+  if (state.phase === "error") {
+    return (
+      <div style={{ marginTop: "6px" }}>
+        <div className="quota-card__hint" style={{ color: "var(--error, #e53935)", marginBottom: "4px" }}>
+          {state.error || t("settings.quota.switchFailed")}
+        </div>
+        <button
+          type="button"
+          className="settings-action-btn"
+          style={{ width: "100%", fontSize: "11px" }}
+          onClick={() => { switching.current = false; setState({ phase: "idle" }); }}
+        >
+          {t("settings.quota.tryAgain")}
+        </button>
       </div>
-      <button
-        type="button"
-        className="settings-action-btn"
-        style={{ width: "100%", fontSize: "11px" }}
-        onClick={() => { switching.current = false; setState({ phase: "idle" }); }}
-      >
-        Try again
-      </button>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
 
 /** Shared quota fetch — call once in the parent and pass results down. */
@@ -284,7 +289,7 @@ export function GrokQuota({ data, loading, onRefresh }: QuotaBlockProps) {
       ) : hasGrokWindows ? (
         grok!.windows.map((w) => <QuotaBar key={w.label} window={w} />)
       ) : grok?.authenticated === false ? (
-        <span className="quota-card__hint">Not logged in</span>
+        <span className="quota-card__hint">{t("settings.quota.codexNotLoggedIn")}</span>
       ) : (
         <a
           href="https://grok.com/?_s=usage"

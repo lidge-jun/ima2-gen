@@ -284,12 +284,14 @@
   margin: 0;
   font-size: 22px;
   line-height: 1.16;
+  text-wrap: balance;
 }
 .card-news-empty__copy p {
   margin: 0;
   color: var(--text-dim);
   font-size: 13px;
   line-height: 1.45;
+  text-wrap: balance;
 }
 .card-news-stage {
   grid-template-rows: auto auto 1fr auto;
@@ -301,15 +303,20 @@
   gap: 16px;
   margin-bottom: 14px;
 }
+.card-news-stage__header > div { min-width: 0; }
 .card-news-stage__header h2 {
   margin: 0;
   font-size: 18px;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 .card-news-stage__header p,
 .card-news-stage__header span {
   margin: 4px 0 0;
   color: var(--text-dim);
   font-size: 12px;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 .card-news-preview {
   position: relative;

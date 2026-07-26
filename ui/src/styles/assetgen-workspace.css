@@ -2,8 +2,8 @@
 .app[data-ui-mode="asset-gen"] > .sidebar { display: none; }
 .assetgen-workspace { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; height: 100dvh; display: grid; grid-template-columns: 320px minmax(0, 1fr); background: var(--bg); color: var(--text); overflow: hidden; }
 .assetgen-form { min-width: 0; padding: 20px 18px; border-right: 1px solid var(--hairline-soft); background: var(--surface); overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-.assetgen-form h1 { margin: 0; font-size: 18px; }
-.assetgen-form__lede { margin: 0; color: var(--text-dim); font-size: 12px; }
+.assetgen-form h1 { margin: 0; font-size: 18px; text-wrap: balance; }
+.assetgen-form__lede { margin: 0; color: var(--text-dim); font-size: 12px; text-wrap: balance; }
 .assetgen-field { display: flex; flex-direction: column; gap: 6px; }
 .assetgen-field__label { color: var(--text-dim); font-size: 12px; font-weight: 650; }
 .assetgen-field__hint { margin: 0; color: var(--text-dim); font-size: 11px; }
@@ -28,8 +28,8 @@
 .assetgen-rail__tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .assetgen-rail__name { display: block; padding: 4px 6px; color: var(--text-dim); font-size: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .assetgen-empty { display: grid; place-content: center; height: 100%; text-align: center; color: var(--text-dim); }
-.assetgen-empty h2 { margin: 0 0 6px; color: var(--text); font-size: 16px; }
-.assetgen-empty p { margin: 0; font-size: 13px; }
+.assetgen-empty h2 { margin: 0 0 6px; color: var(--text); font-size: 16px; text-wrap: balance; }
+.assetgen-empty p { max-width: 40ch; margin: 0; font-size: 13px; text-wrap: balance; }
 .assetgen-empty__cta { justify-self: center; margin-top: 14px; padding: 9px 16px; border: 0; border-radius: 9px; background: var(--accent); color: var(--accent-ink, #0b0b0f); font-weight: 650; font-size: 13px; cursor: pointer; }
 .assetgen-empty__cta:hover { background: var(--accent-bright); }
 .assetgen-saved-hint { margin: 0 0 12px; color: var(--text-muted); font-size: 12px; }

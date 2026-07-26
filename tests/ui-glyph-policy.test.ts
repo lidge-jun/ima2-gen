@@ -38,6 +38,17 @@ test("no pencil or check dingbats stand in for action icons", () => {
   assert.deepEqual(offenders, [], `dingbat action glyphs found in: ${offenders.join(", ")}`);
 });
 
+test("locale copy and CSS content do not smuggle action dingbats back into the UI", () => {
+  const files = ["ui/src/i18n/en.json", "ui/src/i18n/ko.json"];
+  const cssFiles = readdirSync("ui/src/styles")
+    .filter((entry) => entry.endsWith(".css"))
+    .map((entry) => join("ui/src/styles", entry));
+  const offenders = [...files, ...cssFiles]
+    .filter((file) => DINGBAT_STARS.test(readFileSync(file, "utf8")) || DINGBAT_ACTIONS.test(readFileSync(file, "utf8")))
+    .map((file) => file.split(sep).join("/"));
+  assert.deepEqual(offenders, [], `locale/CSS dingbat glyphs found in: ${offenders.join(", ")}`);
+});
+
 test("edit and check marks come from one shared icon each", () => {
   const files = componentFiles("ui/src/components");
   for (const [name, marker] of [
