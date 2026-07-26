@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 // WP3 (devlog/_plan/260726_zero-backlog-frontend-qa/030_icon_copy_cleanup.md):
 // text glyphs must not stand in for UI icons. They render differently per font, and a
@@ -29,7 +29,10 @@ test("no dingbat star glyphs are used as UI icons", () => {
 test("the favorite star artwork has exactly one definition", () => {
   const files = componentFiles("ui/src/components");
   const starPath = "m12 2.75 2.78 5.63";
-  const owners = files.filter((file) => readFileSync(file, "utf8").includes(starPath));
+  // Compare with forward slashes: `join` yields backslashes on Windows.
+  const owners = files
+    .filter((file) => readFileSync(file, "utf8").includes(starPath))
+    .map((file) => file.split(sep).join("/"));
   assert.deepEqual(
     owners,
     ["ui/src/components/controls/FavoriteStarIcon.tsx"],

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { classifyAuditResult, countAtOrAbove, isCountableTally, parseArgs } from "../scripts/audit-gate.mjs";
@@ -131,18 +131,21 @@ test("a malformed tally is refused instead of counting as zero", () => {
 
 // --- end-to-end exit-status checks -------------------------------------------------
 // The classifier being right is not enough: the gate must actually exit non-zero. These
-// run the real script against a stub `npm` on PATH.
+// run the real script against a stub `npm`.
+//
+// The stub is injected through IMA2_AUDIT_NPM rather than PATH: a shell-script `npm` on
+// PATH is not executable on Windows, and `npm.cmd` shims differ per runner. Passing an
+// explicit interpreter+script keeps this identical on every OS the CI matrix covers.
 
-function runGateWithStubNpm(stub: string): { status: number | null; stdout: string; stderr: string } {
+function runGateWithStubNpm(stubBody: string): { status: number | null; stdout: string; stderr: string } {
   const dir = mkdtempSync(join(tmpdir(), "ima2-audit-gate-"));
   try {
-    const npmPath = join(dir, "npm");
-    writeFileSync(npmPath, stub, { mode: 0o755 });
-    chmodSync(npmPath, 0o755);
+    const stubPath = join(dir, "npm-stub.mjs");
+    writeFileSync(stubPath, stubBody);
     const result = spawnSync(
       process.execPath,
       ["scripts/audit-gate.mjs", "--audit-level", "high"],
-      { encoding: "utf8", env: { ...process.env, PATH: `${dir}:${process.env.PATH ?? ""}` } },
+      { encoding: "utf8", env: { ...process.env, IMA2_AUDIT_NPM: stubPath } },
     );
     return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
   } finally {
@@ -151,7 +154,7 @@ function runGateWithStubNpm(stub: string): { status: number | null; stdout: stri
 }
 
 const stubFor = (payload: unknown, exitCode: number) =>
-  `#!/bin/sh\ncat <<'JSON'\n${JSON.stringify(payload)}\nJSON\nexit ${exitCode}\n`;
+  `process.stdout.write(${JSON.stringify(JSON.stringify(payload))});\nprocess.exit(${exitCode});\n`;
 
 test("the gate exits non-zero when the report contains high findings", () => {
   const result = runGateWithStubNpm(
@@ -182,7 +185,8 @@ test("the gate exits non-zero for a malformed severity tally", () => {
 });
 
 test("the gate survives a registry outage without failing the build", () => {
-  const stub = `#!/bin/sh\necho 'npm error audit endpoint returned an error' >&2\nexit 1\n`;
+  const stub =
+    `process.stderr.write("npm error audit endpoint returned an error\\n");\nprocess.exit(1);\n`;
   const result = runGateWithStubNpm(stub);
   assert.equal(result.status, 0, "an upstream outage must not turn every push red");
   assert.match(result.stderr + result.stdout, /SKIPPED/);

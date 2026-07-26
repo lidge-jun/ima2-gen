@@ -108,7 +108,19 @@ function runAudit({ prefix, auditLevel, omit }) {
   const argv = ["audit", "--audit-level", auditLevel, "--json"];
   for (const value of omit) argv.push("--omit", value);
   if (prefix) argv.unshift("--prefix", prefix);
-  return spawnSync("npm", argv, { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+
+  // Tests substitute a stub through IMA2_AUDIT_NPM. Injecting an explicit script keeps
+  // the e2e checks OS-independent: a shell-script `npm` on PATH is not executable on
+  // Windows, and `npm.cmd` shims differ per runner.
+  const stub = process.env.IMA2_AUDIT_NPM;
+  if (stub) {
+    return spawnSync(process.execPath, [stub, ...argv], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+  }
+  return spawnSync("npm", argv, {
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+    shell: process.platform === "win32", // npm is a .cmd shim on Windows
+  });
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
