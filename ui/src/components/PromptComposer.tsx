@@ -18,23 +18,16 @@ import type { AssetItem } from "../store/storeTypes";
 import { addTrayElementImpl, syncElementCatalogImpl } from "../store/storeReferenceImpl";
 import { findElementTrayItem } from "../lib/elementCatalog";
 import type { TrayItem } from "../lib/referenceTray";
-type PromptComposerProps = {
-  variant?: "sidebar" | "bottom";
-};
+type PromptComposerProps = { variant?: "sidebar" | "bottom" };
 type ElementSelectionState = {
-  addElementId?: (id: string) => void;
-  removeElementId?: (id: string) => void;
-  elementCatalog?: AssetItem[] | null;
-  missingElementIds?: string[];
-  addElementFromMention?: (asset: AssetItem) => TrayItem | null;
-  syncElementCatalog?: (records: AssetItem[]) => void;
+  addElementId?: (id: string) => void; removeElementId?: (id: string) => void;
+  elementCatalog?: AssetItem[] | null; missingElementIds?: string[];
+  addElementFromMention?: (asset: AssetItem) => TrayItem | null; syncElementCatalog?: (records: AssetItem[]) => void;
 };
 type InternalRefDragItem = VideoReferenceDragPayload;
 const TRAY_MENTION_PREFIX = "tray:";
 
-function mentionKey(mention: MentionQuery): string {
-  return `${mention.start}:${mention.end}:${mention.query}`;
-}
+function mentionKey(mention: MentionQuery): string { return `${mention.start}:${mention.end}:${mention.query}`; }
 function addElementFromMention(asset: AssetItem): TrayItem | null {
   const state = useAppStore.getState() as ReturnType<typeof useAppStore.getState> & ElementSelectionState;
   return state.addElementFromMention
@@ -46,10 +39,7 @@ function syncElementCatalog(records: AssetItem[]): void {
   if (state.syncElementCatalog) state.syncElementCatalog(records);
   else syncElementCatalogImpl(records, useAppStore.setState, useAppStore.getState);
 }
-function parseCssPixelValue(value: string): number | null {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
+function parseCssPixelValue(value: string): number | null { const parsed = Number.parseFloat(value); return Number.isFinite(parsed) && parsed > 0 ? parsed : null; }
 export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const prompt = useAppStore((s) => s.prompt);
   const setPrompt = useAppStore((s) => s.setPrompt);

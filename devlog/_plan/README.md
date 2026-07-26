@@ -65,6 +65,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 - `_future/260529_issue80-batch-comparison-matrix/` — `d8bb7c6`로 코어 구현
 - `_future/260602_storyboard-planner-skill/` — 4라운드 중 3라운드 기랜딩 확인 후 이슈 close
 - `260726_zero-backlog-frontend-qa/` — 이 사이클의 계획·증거 유닛 (12 work-phase 완료)
+- `260726_model-defaults-ui-cleaning/` — Grok 4.5·Luna 기본값과 UI 클리닝, 전체 게이트·렌더 증거
 
 ## 이전 기록
 

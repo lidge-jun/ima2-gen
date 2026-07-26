@@ -7,6 +7,7 @@ const read = (path) => readFileSync(path, "utf8");
 const composer = read("ui/src/components/PromptComposer.tsx");
 const paste = read("ui/src/components/composer/usePromptPaste.ts");
 const mentionChip = read("ui/src/components/ElementMentionChip.tsx");
+const mentionChips = read("ui/src/components/composer/ElementMentionChips.tsx");
 const en = JSON.parse(read("ui/src/i18n/en.json"));
 const ko = JSON.parse(read("ui/src/i18n/ko.json"));
 
@@ -71,7 +72,15 @@ test("mention chip supports the reference kind label and icon", () => {
   );
   assert.match(
     mentionChip,
-    /const kindLabels: Record<ElementMentionKind, string> = \{[\s\S]*?reference: "Reference"/,
+    /ariaLabel: string;/,
+  );
+  assert.match(
+    mentionChip,
+    /unavailableLabel: string;/,
+  );
+  assert.match(
+    mentionChips,
+    /kindLabel\(kind: ElementMentionKind\): string;/,
   );
   assert.match(
     mentionChip,

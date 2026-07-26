@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-07-17
+updated: 2026-07-26
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -36,19 +36,9 @@ architecture and audit records are not kept as loose top-level duplicates.
 
 Files in `_plan/` are work-in-progress. They use the format `YYMMDD_<topic>` to aid chronological sorting. Each plan typically maps to a GitHub issue or a standalone initiative.
 
-As of 2026-07-17, `_plan/` holds only genuinely-active units. The authoritative table is
-`devlog/_plan/README.md` §현재 Active Lane:
-
-| Unit | Focus |
-|------|-------|
-| `260515_fork-prompting-modularization-research` | Prompt Builder/composer/workspace-profile implementation remains; `_plan` is canonical despite a stale same-name archive copy. |
-| `260712_higgsfield-ux-studio` | 070/080 tracked delivery, manual QA/performance evidence, 090 closeout and future split. |
-| `260715_assetgen_ux_overhaul` | Keying/click-erase delivery plus image-grounded acceptance and remaining UX scope. |
-| `260715_icon_pipeline` | Future `ima2 icon` CLI implementation handoff. |
-| `260715_spritegen-adoption` | Local implementation exists; contract/i18n/browser/closeout/release gates remain. |
-| `260715_subscription-mcp-providers` | Active parent for Tier2 verification, transport policy and expansion; nested restart recovery is complete. |
-| `260716_cli-entry-routing` | WP4 character persistence and WP5 derivative diversity remain after WP1~3. |
-| `260716_composer-tray` | 080 star-control delivery, browser evidence and parent closeout remain. |
+As of 2026-07-26, `_plan/` has no active delivery lane. The authoritative table is
+`devlog/_plan/README.md` §현재 Active Lane; only external-blocked follow-ups and
+`_future` handoffs remain outside `_fin`.
 
 Deferred items live in `_plan/_future/` (canvas exports, masked edit, batch
 matrix, storyboard planner skill).
@@ -78,6 +68,7 @@ When an initiative is fully shipped and merged, its plan folder moves to `_fin/`
 | `260716_mcp-model-presets` | Capability-aware MCP preset projection and validation |
 | `260716_mcp-model-surface-ui` | Provider/model selectors, Settings MCP controls, Higgsfield browse surface and preset UI |
 | `260717_ux_refinement` | i18n, mobile focus, composer feedback, MCP states, inflight popup, Assets and Element `@` UX polish |
+| `260726_model-defaults-ui-cleaning` | Grok 4.5 and GPT-5.6 Luna defaults, public docs synchronization, empty/i18n cleanup, shared dropdown and responsive control hardening |
 
 Snapshot note, 2026-06-28: WP6 docs code-grounding complete — `devlog/_fin/260628_wp6_docs_code_grounding/`; automated line-count refresh + API/CLI contract tests landed on `dev` (`6383fc4`..`183a78a`).
 
@@ -107,6 +98,10 @@ Snapshot note, 2026-07-17: the loose SSE architecture and risk-summary files at 
 `devlog/` root were byte-identical to the copies already preserved in
 `devlog/_fin/260608_sse-multiplexing/`. The root duplicates were removed and archive
 cross-references were normalized to the completed unit.
+
+Snapshot note, 2026-07-26: `260726_model-defaults-ui-cleaning` moved to `_fin`
+after full local gates and five-viewport render evidence. The active-lane table
+is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 ## Cross-References
 

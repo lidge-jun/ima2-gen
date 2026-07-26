@@ -1693,7 +1693,13 @@
     "savedLink": "에셋 탭에서 보기",
     "railTitle": "프로젝트 에셋",
     "railEmpty": "이 프로젝트에 저장된 에셋이 아직 없습니다.",
-    "railError": "프로젝트 에셋을 불러오지 못했습니다."
+    "railError": "프로젝트 에셋을 불러오지 못했습니다.",
+    "sequence": "시퀀스",
+    "candidates": "후보 보관함",
+    "frameAria": "{rail}의 {n}번 프레임",
+    "addFrame": "추가",
+    "removeFrame": "빼기",
+    "deleteFrame": "{n}번 프레임 삭제"
   },
   "project": {
     "select": "프로젝트",

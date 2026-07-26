@@ -1693,7 +1693,13 @@
     "savedLink": "View in Assets",
     "railTitle": "Project assets",
     "railEmpty": "No saved assets in this project yet.",
-    "railError": "Could not load project assets."
+    "railError": "Could not load project assets.",
+    "sequence": "Sequence",
+    "candidates": "Candidates",
+    "frameAria": "Frame {n}, {rail}",
+    "addFrame": "Add",
+    "removeFrame": "Remove",
+    "deleteFrame": "Delete frame {n}"
   },
   "project": {
     "select": "Project",

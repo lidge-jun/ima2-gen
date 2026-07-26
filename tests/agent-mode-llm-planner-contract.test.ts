@@ -171,7 +171,7 @@ describe("Agent Mode LLM planner contract", () => {
     const developerPrompt = (calls[0].body.input as Array<{ content: string }>)[0].content;
     assert.match(developerPrompt, /Tool execution contract:/);
     assert.match(developerPrompt, /session model is the planner\/LLM model, not an image or video model/);
-    assert.match(developerPrompt, /grok-4\.3 means Grok planner\/provider routing/);
+    assert.match(developerPrompt, /grok-4\.5 means Grok planner\/provider routing/);
     assert.match(developerPrompt, /ima2\.generate_image/);
     assert.match(developerPrompt, /ima2\.get_generation_errors/);
     assert.match(developerPrompt, /sourceImagePolicy/);
