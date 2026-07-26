@@ -80,10 +80,10 @@ jobs:
         run: npm run lint:pkg
       - name: Audit root production dependencies
         if: matrix.os == 'ubuntu-latest' && matrix.npm == '11.18.0'
-        run: npm audit --audit-level=high --omit=dev
+        run: node scripts/audit-gate.mjs --audit-level high --omit dev
       - name: Audit UI build dependencies
         if: matrix.os == 'ubuntu-latest' && matrix.npm == '11.18.0'
-        run: npm --prefix ui audit --audit-level=high
+        run: node scripts/audit-gate.mjs --prefix ui --audit-level high
       - name: Package install smoke
         run: npm run test:package-install
         timeout-minutes: 15
