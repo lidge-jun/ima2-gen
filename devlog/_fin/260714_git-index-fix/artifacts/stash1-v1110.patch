@@ -1,0 +1,119 @@
+# stash@{1} 'WIP on main: 8855ef0 chore: release v1.1.10' — stash commit e47a0e5430ff1fe167b65cb3800dbd0e765d8b4a, base 8855ef0 (legacy)
+diff --git a/tests/node-ui-contract.test.js b/tests/node-ui-contract.test.js
+index a5e31dbe..224d228e 100644
+--- a/tests/node-ui-contract.test.js
++++ b/tests/node-ui-contract.test.js
+@@ -172,6 +172,19 @@ describe("node UI compact metadata contract", () => {
+     assert.match(store, /status:\s*"ready"/);
+   });
+ 
++  it("adds completed node generation to history and current image immediately", () => {
++    const store = readSource("ui/src/store/useAppStore.ts");
++
++    assert.match(store, /function nodeResponseToHistoryItem\(/);
++    assert.match(store, /await addHistory\(\s*nodeResponseToHistoryItem\(res,/);
++    assert.match(store, /shouldApply:\s*\(\) => get\(\)\.activeSessionId === requestSessionId/);
++    assert.match(store, /sessionId:\s*options\.sessionId/);
++    assert.match(store, /nodeId:\s*res\.nodeId/);
++    assert.match(store, /clientNodeId:\s*options\.clientNodeId/);
++    assert.match(store, /requestId:\s*options\.requestId/);
++    assert.match(store, /currentImage:\s*withThumb/);
++  });
++
+   it("uses handle-aware edge ids for node connections", () => {
+     const store = readSource("ui/src/store/useAppStore.ts");
+ 
+diff --git a/ui/src/store/useAppStore.ts b/ui/src/store/useAppStore.ts
+index 5cc1d34c..01c34c4f 100644
+--- a/ui/src/store/useAppStore.ts
++++ b/ui/src/store/useAppStore.ts
+@@ -54,6 +54,7 @@ import {
+   type SessionSummary,
+   type SessionFull,
+   type SessionGraphEdge,
++  type NodeGenerateResponse,
+ } from "../lib/api";
+ import { compressImage, readFileAsDataURL } from "../lib/image";
+ import { compressToBase64, isHeic, hasAlphaChannel } from "../lib/compress";
+@@ -477,6 +478,47 @@ function mapHistoryItem(it: Awaited<ReturnType<typeof getHistory>>["items"][numb
+   };
+ }
+ 
++function nodeResponseToHistoryItem(
++  res: NodeGenerateResponse,
++  options: {
++    prompt: string;
++    quality: Quality;
++    format: Format;
++    moderation: Moderation;
++    sessionId: string | null;
++    clientNodeId: ClientNodeId;
++    parentNodeId: string | null;
++    requestId: string;
++    fallbackSize: string;
++  },
++): GenerateItem {
++  return {
++    image: res.image,
++    url: res.url,
++    thumb: res.url,
++    filename: res.filename,
++    prompt: options.prompt,
++    userPrompt: options.prompt,
++    revisedPrompt: res.revisedPrompt ?? null,
++    promptMode: res.promptMode ?? null,
++    quality: options.quality,
++    size: res.size ?? options.fallbackSize,
++    format: options.format,
++    moderation: res.moderation ?? options.moderation,
++    model: res.model ?? null,
++    usage: res.usage,
++    elapsed: res.elapsed,
++    provider: res.provider,
++    sessionId: options.sessionId,
++    nodeId: res.nodeId,
++    clientNodeId: options.clientNodeId,
++    requestId: options.requestId,
++    kind: options.parentNodeId ? "edit" : "generate",
++    refsCount: res.refsCount ?? 0,
++    createdAt: Date.now(),
++  };
++}
++
+ function stripDataUrlPrefix(dataUrl: string): string {
+   return dataUrl.replace(/^data:[^;]+;base64,/, "");
+ }
+@@ -2374,6 +2416,22 @@ export const useAppStore = create<AppState>((set, get) => ({
+           }),
+         });
+         graphMutated = true;
++        await addHistory(
++          nodeResponseToHistoryItem(res, {
++            prompt,
++            quality: s.quality,
++            format: s.format,
++            moderation: s.moderation,
++            sessionId: requestSessionId,
++            clientNodeId: clientId,
++            parentNodeId: effectiveParentServerNodeId,
++            requestId: flightId,
++            fallbackSize: size,
++          }),
++          set,
++          get,
++          { shouldApply: () => get().activeSessionId === requestSessionId },
++        );
+         if (!options.suppressToast) {
+           get().showToast(t("toast.nodeCreated", { id: res.nodeId.slice(0, 8), elapsed: res.elapsed }));
+         }
+@@ -3629,8 +3687,10 @@ async function addHistory(
+   item: GenerateItem,
+   set: (p: Partial<AppState>) => void,
+   get: () => AppState,
++  options: { shouldApply?: () => boolean } = {},
+ ): Promise<void> {
+   const thumb = await compressImage(item.image).catch(() => item.image);
++  if (options.shouldApply && !options.shouldApply()) return;
+   const url = item.filename ? `/generated/${item.filename}` : item.image;
+   const withThumb: GenerateItem = {
+     ...item,

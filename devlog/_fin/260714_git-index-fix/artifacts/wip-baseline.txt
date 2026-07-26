@@ -1,0 +1,48 @@
+ M routes/generate.js
+ M routes/index.js
+ M skills/ima2-front/SKILL.md
+ M skills/ima2-front/references/a11y-patterns.md
+ M skills/ima2-front/references/aesthetics.md
+ M skills/ima2-front/references/anti-slop.md
+ M skills/ima2-front/references/color-system.md
+ M skills/ima2-front/references/crud-ui.md
+ M skills/ima2-front/references/dropdown-layer.md
+ M skills/ima2-front/references/layout-discipline.md
+ M skills/ima2-front/references/liquid-glass.md
+ M skills/ima2-front/references/logo-sections.md
+ M skills/ima2-front/references/motion.md
+ M skills/ima2-front/references/performance-budget.md
+ M skills/ima2-front/references/preflight-full.md
+ M skills/ima2-front/references/product-density.md
+ M skills/ima2-front/references/reference-capture.md
+ M skills/ima2-front/references/soft-3d-asset-gates.md
+ M skills/ima2-front/references/stacks/astro.md
+ M skills/ima2-front/references/stacks/mobile-native.md
+ M skills/ima2-front/references/stacks/react.md
+ M skills/ima2-front/references/stacks/svelte.md
+ M skills/ima2-front/references/theme-switching.md
+ M skills/ima2-front/references/top-bar.md
+ M skills/ima2-front/references/typography-wrapping.md
+ M skills/ima2-front/references/ux-writing-ko.md
+ M skills/ima2-front/references/visual-verification.md
+ M skills/ima2-uiux/SKILL.md
+ M skills/ima2-uiux/references/color-system.md
+ M skills/ima2-uiux/references/design-isms.md
+ M skills/ima2-uiux/references/form-patterns.md
+ M skills/ima2-uiux/references/intent-discovery-ladder.md
+ M skills/ima2-uiux/references/layout-macrostructures.md
+ M skills/ima2-uiux/references/logo-trust-sections.md
+ M skills/ima2-uiux/references/mobile-native-ux.md
+ M skills/ima2-uiux/references/product-personalities.md
+ M skills/ima2-uiux/references/responsive-nav.md
+ M skills/ima2-uiux/references/typography-line-breaks.md
+ M skills/ima2-uiux/references/ux-preflight.md
+ M skills/ima2-uiux/references/visual-hierarchy.md
+ M tests/cli-video-command-contract.test.js
+ M ui/src/components/home/HomePromptComposer.tsx
+ M ui/src/store/storeHelpers.ts
+?? skills/ima2-front/references/section-level-sourcing.md
+?? skills/ima2-uiux/references/compositional-patterns.md
+?? skills/ima2-uiux/references/design-award-sources.md
+?? skills/ima2-uiux/references/design-trends.md
+?? tests/video-inflight-kind-contract.test.js

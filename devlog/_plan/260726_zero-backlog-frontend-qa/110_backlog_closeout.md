@@ -154,3 +154,36 @@ open issue 0 / open PR 0이고, `_future`는 그 대상이 아니다. `_plan/REA
 
 IN: 이슈 코멘트/클로즈, devlog 이동, README 갱신, closeout 문서.
 OUT: 신규 이슈 생성, 원격 push, 릴리스, `_future` 강제 정리.
+
+---
+
+## 실행 결과 (2026-07-26)
+
+### 이슈 처분 — 9건 전부 close
+
+| 이슈 | 처분 | 근거 커밋 |
+|---:|---|---|
+| #27 Canvas SVG export | 구현 | `f0815f5` |
+| #28 Canvas PPTX export | 구현 | `f0815f5` |
+| #31 masked edit | BLOCKED close (재개 조건 기록) | — |
+| #80 comparison matrix | 코어 구현, UI 잔여 명시 | `d8bb7c6` |
+| #84 video pipeline | 구현(범위 축소) | `ef16de2` |
+| #85 asset ID model | 구현(범위 축소) | `85d4f8d` |
+| #88 frame extraction | 구현 | `60c65f1` |
+| #90 provenance chip | 구현 + 회귀 수정 | `229d4d7` |
+| #98 storyboard planner | 3/4 라운드 기랜딩 확인 후 close | — |
+
+`gh issue list --state open` → 0건, `gh pr list --state open` → 0건.
+
+### devlog 아카이브
+
+`_plan` 직속 3개 lane과 `_future` 5개 유닛을 closeout 문서와 함께 `_fin`으로
+이동했다. `_future`에 남긴 2개(`260715_icon_pipeline`,
+`260719_higgsfield-open-ledger.md`)는 대응 이슈가 없고 구현 착수도 없어
+정직하게 유지한다 — 숫자를 맞추려고 옮기면 정리가 아니라 은폐가 된다.
+
+### 남은 외부 차단
+
+`_plan/README.md`에 표로 기록: MCP Tier 2(비용 승인), provider expansion,
+Runway edit_video 라이브(한도), editVideo CLI, masked edit(계약 미검증).
+전부 코드로 해결되지 않고 외부 승인이나 제공자 상태 회복이 선행 조건이다.
