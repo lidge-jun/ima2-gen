@@ -475,7 +475,13 @@
       "style": "스타일",
       "color": "색상",
       "strokeWidth": "선 굵기",
-      "clear": "모두 지우기"
+      "clear": "모두 지우기",
+      "exportFormat": "내보내기 형식",
+      "exportAs": {
+        "png": "PNG 이미지",
+        "svg": "SVG 벡터",
+        "pptx": "PowerPoint 슬라이드"
+      }
     },
     "version": {
       "saving": "캔버스 버전 저장 중...",

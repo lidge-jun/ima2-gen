@@ -26,7 +26,8 @@ describe("canvas export contract", () => {
     assert.match(source, /exportCanvasImage/);
     assert.match(source, /renderMergedCanvasImage/);
     assert.match(source, /makeCanvasExportFilename/);
-    assert.match(source, /canvas-export-\$\{stamp\}\$\{suffix\}\.png/);
+    // Extension is a parameter since SVG/PPTX export landed (WP5); PNG remains default.
+    assert.match(source, /canvas-export-\$\{stamp\}\$\{suffix\}\.\$\{options\.format \?\? "png"\}/);
   });
 
   it("downloads blobs through object URLs with cleanup", () => {

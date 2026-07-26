@@ -16,8 +16,9 @@ import {
 import { buildMemoEditInstructions } from "../../lib/canvas/memoPrompt";
 import {
   downloadCanvasBlob,
-  exportCanvasImage,
+  exportCanvasAs,
   makeCanvasExportFilename,
+  type CanvasExportFormat,
 } from "../../lib/canvas/exportRenderer";
 import { objectKeyMatches } from "../../lib/canvas/objectKeys";
 import { useAppStore } from "../../store/useAppStore";
@@ -226,21 +227,25 @@ export function useCanvasModeSession({
     resetCanvasSession();
   };
 
-  const handleExportCanvas = async (): Promise<void> => {
+  const handleExportCanvas = async (format: CanvasExportFormat = "png"): Promise<void> => {
     if (!imageElementRef.current || !currentImage) return;
     setIsExporting(true);
     try {
       const matte = exportBackground === "matte";
-      const blob = await exportCanvasImage({
-        imageElement: imageElementRef.current,
-        paths: annotations.paths,
-        boxes: annotations.boxes,
-        memos: annotations.memos,
-        background: matte
-          ? { mode: "matte", color: exportMatteColor }
-          : { mode: "alpha" },
-      });
-      downloadCanvasBlob(blob, makeCanvasExportFilename({ matte }));
+      const blob = await exportCanvasAs(
+        format,
+        {
+          imageElement: imageElementRef.current,
+          paths: annotations.paths,
+          boxes: annotations.boxes,
+          memos: annotations.memos,
+          background: matte
+            ? { mode: "matte", color: exportMatteColor }
+            : { mode: "alpha" },
+        },
+        { paths: annotations.paths, boxes: annotations.boxes, memos: annotations.memos },
+      );
+      downloadCanvasBlob(blob, makeCanvasExportFilename({ matte, format }));
     } catch {
       showToast(t("canvas.toolbar.exportFailed"), true);
     } finally {

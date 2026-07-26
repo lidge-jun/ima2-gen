@@ -475,7 +475,13 @@
       "style": "Style",
       "color": "Color",
       "strokeWidth": "Stroke width",
-      "clear": "Clear all"
+      "clear": "Clear all",
+      "exportFormat": "Export format",
+      "exportAs": {
+        "png": "PNG image",
+        "svg": "SVG vector",
+        "pptx": "PowerPoint slide"
+      }
     },
     "version": {
       "saving": "Saving canvas version...",

@@ -12,6 +12,8 @@ import type { BackgroundRemovalStats } from "../../lib/canvas/backgroundRemoval"
 import { useI18n } from "../../i18n";
 import { CanvasBackgroundControl } from "./CanvasBackgroundControl";
 import { CanvasBackgroundCleanupPanel } from "./CanvasBackgroundCleanupPanel";
+import { CanvasExportMenu } from "./CanvasExportMenu";
+import type { CanvasExportFormat } from "../../lib/canvas/exportRenderer";
 import { CanvasStylePopover } from "./CanvasStylePopover";
 import { CanvasToolPicker } from "./CanvasToolPicker";
 
@@ -29,7 +31,7 @@ interface CanvasToolbarProps {
   onClear: () => void;
   onApply?: () => void;
   onRevertAnnotations?: () => void;
-  onExport?: () => void;
+  onExport?: (format: CanvasExportFormat) => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -332,18 +334,11 @@ export function CanvasToolbar({
         />
       ) : null}
       {onExport ? (
-        <button
-          type="button"
-          className={`canvas-toolbar__button${
-            isExporting ? " canvas-toolbar__button--busy" : ""
-          }`}
-          onClick={onExport}
-          disabled={!canExport || isExporting}
-          aria-label={t("canvas.toolbar.export")}
-          title={t("canvas.toolbar.export")}
-        >
-          <DownloadIcon />
-        </button>
+        <CanvasExportMenu
+          onExport={onExport}
+          disabled={!canExport}
+          isExporting={Boolean(isExporting)}
+        />
       ) : null}
       <button
         type="button"
@@ -428,16 +423,6 @@ function ApplyIcon() {
   return (
     <svg className="canvas-toolbar__icon" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 12.5 10 17 19 7" />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg className="canvas-toolbar__icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 4v11" />
-      <path d="m8 11 4 4 4-4" />
-      <path d="M5 20h14" />
     </svg>
   );
 }

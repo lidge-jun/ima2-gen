@@ -1,5 +1,6 @@
 import { CanvasToolbar } from "./CanvasToolbar";
 import type { CanvasExportBackground, HexColor } from "../../types/canvas";
+import type { CanvasExportFormat } from "../../lib/canvas/exportRenderer";
 
 interface CanvasModeFloatingToolbarProps {
   annotations: any;
@@ -16,7 +17,7 @@ interface CanvasModeFloatingToolbarProps {
   actions: {
     handleApplyCanvas: () => Promise<void>;
     handleRevertAnnotations: () => Promise<void>;
-    handleExportCanvas: () => Promise<void>;
+    handleExportCanvas: (format?: CanvasExportFormat) => Promise<void>;
     handleEditWithMask: () => Promise<void>;
     setExportBackground: (mode: CanvasExportBackground) => void;
     setExportMatteColor: (color: HexColor) => void;
@@ -44,7 +45,7 @@ export function CanvasModeFloatingToolbar({
       onRevertAnnotations={canvasState.canRevertAnnotations
         ? () => void actions.handleRevertAnnotations()
         : undefined}
-      onExport={() => void actions.handleExportCanvas()}
+      onExport={(format) => void actions.handleExportCanvas(format)}
       onUndo={annotations.undo}
       onRedo={annotations.redo}
       canUndo={annotations.canUndo}

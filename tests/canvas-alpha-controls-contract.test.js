@@ -41,7 +41,9 @@ test("Merge renderer accepts background option", () => {
 });
 
 test("Export filename appends -flat for matte mode", () => {
-  assert.match(exportR, /canvas-export-\$\{stamp\}\$\{suffix\}\.png/);
+  // The extension became a parameter when SVG/PPTX export landed (WP5); the matte
+  // suffix contract is unchanged and PNG stays the default.
+  assert.match(exportR, /canvas-export-\$\{stamp\}\$\{suffix\}\.\$\{options\.format \?\? "png"\}/);
   assert.match(exportR, /options\.matte\s*\?\s*"-flat"\s*:\s*""/);
 });
 
@@ -53,7 +55,7 @@ test("Canvas detects image alpha and toggles modifier class", () => {
 test("Canvas wires export background option into export call", () => {
   assert.match(canvas, /exportBackground === "matte"/);
   assert.match(canvas, /background:\s*matte/);
-  assert.match(canvas, /makeCanvasExportFilename\(\{ matte \}\)/);
+  assert.match(canvas, /makeCanvasExportFilename\(\{ matte, format \}\)/);
 });
 
 test("Toolbar BackgroundControl rendered before Export", () => {

@@ -18,8 +18,29 @@ interface ActiveBox {
   current: NormalizedPoint;
 }
 
-function toCanvasPoint(point: NormalizedPoint, size: ImageSize): { x: number; y: number } {
+export function toCanvasPoint(point: NormalizedPoint, size: ImageSize): { x: number; y: number } {
   return { x: point.x * size.width, y: point.y * size.height };
+}
+
+/**
+ * Arrow-head geometry, shared by the canvas renderer and the SVG exporter.
+ *
+ * Kept separate from drawing so both output formats compute the identical triangle —
+ * duplicating the trigonometry is how PNG and SVG exports drift apart.
+ */
+export function arrowHeadPoints(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  lineWidth: number,
+): Array<{ x: number; y: number }> {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const length = Math.max(12, lineWidth * 4);
+  const spread = Math.PI / 7;
+  return [
+    { x: to.x, y: to.y },
+    { x: to.x - length * Math.cos(angle - spread), y: to.y - length * Math.sin(angle - spread) },
+    { x: to.x - length * Math.cos(angle + spread), y: to.y - length * Math.sin(angle + spread) },
+  ];
 }
 
 export function renderAnnotationPath(
@@ -185,16 +206,13 @@ function drawArrowHead(
   color: string,
   lineWidth: number,
 ): void {
-  const angle = Math.atan2(to.y - from.y, to.x - from.x);
-  const length = Math.max(12, lineWidth * 4);
-  const spread = Math.PI / 7;
-
+  const [tip, left, right] = arrowHeadPoints(from, to, lineWidth);
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.moveTo(to.x, to.y);
-  ctx.lineTo(to.x - length * Math.cos(angle - spread), to.y - length * Math.sin(angle - spread));
-  ctx.lineTo(to.x - length * Math.cos(angle + spread), to.y - length * Math.sin(angle + spread));
+  ctx.moveTo(tip.x, tip.y);
+  ctx.lineTo(left.x, left.y);
+  ctx.lineTo(right.x, right.y);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
