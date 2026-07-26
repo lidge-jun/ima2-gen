@@ -24,10 +24,10 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260726_zero-backlog-frontend-qa/` | 진행 중 — 12 work-phase 중 11 완료. 마지막 closeout 사이클 |
+| 없음 | 2026-07-26 zero-backlog 사이클 종료 후 active lane 없음 |
 
 2026-07-26 zero-backlog 사이클로 GitHub open issue와 open PR이 **0건**이 됐고,
-직전까지 active였던 lane 3개를 모두 `_fin`으로 옮겼다.
+직전까지 active였던 lane 3개와 이 사이클 자체를 모두 `_fin`으로 옮겼다.
 
 ## 외부 차단으로 미완료인 항목
 
@@ -64,6 +64,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 - `_future/260430_issue31-provider-masked-edit/` — BLOCKED 근거 기록 후 이슈 close
 - `_future/260529_issue80-batch-comparison-matrix/` — `d8bb7c6`로 코어 구현
 - `_future/260602_storyboard-planner-skill/` — 4라운드 중 3라운드 기랜딩 확인 후 이슈 close
+- `260726_zero-backlog-frontend-qa/` — 이 사이클의 계획·증거 유닛 (12 work-phase 완료)
 
 ## 이전 기록
 

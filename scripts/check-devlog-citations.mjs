@@ -10,7 +10,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const DEFAULT_DIRS = ["devlog/_plan/260726_zero-backlog-frontend-qa"];
+const DEFAULT_DIRS = ["devlog/_fin/260726_zero-backlog-frontend-qa"];
 
 // A citation that starts with a colon, e.g. a bare line reference inside backticks.
 const BARE_LINE = /`:\d/;
