@@ -1,7 +1,7 @@
 /* Phase 020 control kit — Select / Toggle / Chip. Segmented reuses the
    legacy .option-* classnames (restyled in form-controls.css). */
 
-/* ---- Select (glass listbox) ---- */
+/* ---- Select (solid listbox) ---- */
 .ctl-select {
   position: relative;
   min-width: 0;
@@ -24,6 +24,10 @@
 .ctl-select__trigger.is-open {
   background: var(--control-hover);
   border-color: var(--hairline);
+}
+.ctl-select__trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 .ctl-select__value {
   flex: 1;
@@ -58,11 +62,9 @@
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  background: var(--surface);
   border: 1px solid var(--glass-line);
   border-radius: calc(var(--radius) - 2px);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 12px 32px var(--shadow-strong);
 }
 .ctl-select__item {
@@ -70,8 +72,9 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  min-height: 44px;
   padding: 6px 8px;
-  border-radius: 5px;
+  border-radius: calc(var(--radius) - 5px);
   font-size: 12.5px;
   color: var(--text-dim);
   cursor: pointer;

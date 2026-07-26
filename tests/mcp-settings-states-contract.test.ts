@@ -59,6 +59,24 @@ describe("MCP settings state contracts (F10-F13)", () => {
     assert.doesNotMatch(source, /const isEmpty = flat\.every/);
   });
 
+  it("keeps portaled Selects inside narrow viewports and skips disabled edge options", () => {
+    const source = readSource("ui/src/components/controls/Select.tsx");
+
+    assert.match(source, /const availableWidth = Math\.max\(0, window\.innerWidth - gutter \* 2\)/);
+    assert.match(source, /const width = Math\.min\(300, availableWidth, Math\.max\(190, rect\.width\)\)/);
+    assert.match(source, /const maxLeft = Math\.max\(gutter, window\.innerWidth - width - gutter\)/);
+    assert.match(source, /const above = rect\.top - gutter/);
+    assert.match(source, /const direction = below >= 160 \|\| below >= above \? "down" : "up"/);
+    assert.match(source, /const availableHeight = Math\.max\(0, direction === "down" \? below : above\)/);
+    assert.match(source, /const maxHeight = Math\.min\(420, availableHeight\)/);
+    assert.match(source, /const renderedHeight = listRef\.current\?\.scrollHeight \?\? estimatedHeight/);
+    assert.match(source, /const height = Math\.min\(renderedHeight, maxHeight\)/);
+    assert.match(source, /Math\.max\(gutter, rect\.top - height - 4\)/);
+    assert.match(source, /enabledEdgeIndex\(flat, "first", activeIndex\)/);
+    assert.match(source, /enabledEdgeIndex\(flat, "last", activeIndex\)/);
+    assert.match(source, /if \(!items\[index\]\?\.disabled\) return index/);
+  });
+
   it("mirrors every MCP selection button active state through aria-pressed", () => {
     const generation = readSource("ui/src/components/settings/McpGenerationControls.tsx");
     const presets = readSource("ui/src/components/settings/McpModelPresetControls.tsx");

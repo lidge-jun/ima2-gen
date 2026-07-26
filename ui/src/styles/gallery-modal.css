@@ -183,9 +183,7 @@
   background: var(--surface);
 }
 .gallery__storage-bar--notice {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 58%),
-    var(--surface);
+  background: var(--surface);
 }
 .gallery__storage-copy {
   min-width: 0;
@@ -359,7 +357,7 @@
   width: 100%;
   height: 100%;
   display: block;
-  background: linear-gradient(135deg, #141414 0%, #1f1f1f 100%);
+  background: var(--surface-2);
   border-radius: inherit;
 }
 .sidebar-history__thumb--video {

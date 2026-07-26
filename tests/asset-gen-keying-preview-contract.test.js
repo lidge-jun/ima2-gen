@@ -92,6 +92,22 @@ describe("Asset Gen keyed preview contract", () => {
     assert.match(css, /\.assetgen-empty p\s*\{[^}]*max-width:\s*40ch[^}]*text-wrap:\s*balance/s);
   });
 
+  it("keeps workflow tabs separated, touch-safe, and keyboard reachable", () => {
+    const workspace = read("ui/src/components/assetgen/AssetGenWorkspace.tsx");
+    const css = read("ui/src/styles/sprite-recipe.css");
+
+    assert.match(workspace, /styles\/sprite-recipe\.css/);
+    assert.match(workspace, /useTablistKeys<HTMLDivElement>\(\)/);
+    assert.match(workspace, /onKeyDown=\{onWorkflowTabKeyDown\}/);
+    assert.equal((workspace.match(/tabIndex=\{workflow ===/g) ?? []).length, 2);
+    assert.match(css, /\.assetgen-workflow-tabs\s*\{[^}]*gap:\s*6px/s);
+    assert.match(css, /\.assetgen-workflow-tabs button,[\s\S]*?min-height:\s*44px/);
+    assert.match(css, /\.assetgen-workflow-tabs button\[aria-selected="true"\]/);
+    assert.match(css, /\.assetgen-workflow-tabs button:focus-visible/);
+    assert.match(css, /@media \(max-width: 480px\)[\s\S]*?width:\s*100%;/);
+    assert.match(css, /@media \(max-width: 480px\)[\s\S]*?flex:\s*1 1 0;/);
+  });
+
   it("carries comparison labels in both locales", () => {
     const locales = ["en", "ko"].map((locale) => JSON.parse(read(`ui/src/i18n/${locale}.json`)));
     for (const locale of locales) {

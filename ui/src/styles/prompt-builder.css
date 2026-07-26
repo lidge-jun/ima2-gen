@@ -8,9 +8,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 58%, transparent), transparent 80%),
-    var(--surface);
+  background: var(--surface);
   box-shadow: 0 18px 60px var(--shadow-strong);
   overflow: hidden;
 }
@@ -109,8 +107,8 @@
 
 .prompt-builder__scope-remove:hover,
 .prompt-builder__scope-remove:focus-visible {
-  border-color: color-mix(in srgb, #ff4d4d 70%, var(--border));
-  color: #ff6b6b;
+  border-color: color-mix(in srgb, var(--red) 70%, var(--border));
+  color: var(--red);
 }
 
 .prompt-builder__header-actions {
@@ -120,74 +118,17 @@
   flex: 0 0 auto;
 }
 .prompt-builder__model-picker {
-  position: relative;
   flex: 0 0 auto;
-}
-.prompt-builder__model-trigger {
   min-width: 116px;
   max-width: 132px;
+}
+.prompt-builder__model-picker .ctl-select__trigger {
   min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 9px;
   background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
   font-size: 12px;
   font-weight: 760;
-  cursor: pointer;
-}
-.prompt-builder__model-trigger:hover,
-.prompt-builder__model-trigger:focus-visible {
-  border-color: var(--border-strong);
-}
-.prompt-builder__model-trigger span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.prompt-builder__model-chevron {
-  width: 12px;
-  height: 12px;
-  flex: 0 0 auto;
-  color: var(--text-dim);
-}
-.prompt-builder__model-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  min-width: 132px;
-  padding: 5px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-2) 94%, black);
-  box-shadow: 0 16px 36px var(--shadow-strong);
-}
-.prompt-builder__model-option {
-  width: 100%;
-  min-height: 30px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--text-dim);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 720;
-  text-align: left;
-  cursor: pointer;
-}
-.prompt-builder__model-option:hover,
-.prompt-builder__model-option:focus-visible,
-.prompt-builder__model-option.active {
-  background: var(--control-bg);
-  color: var(--text);
 }
 .prompt-builder__messages {
   min-height: 0;
@@ -211,9 +152,7 @@
   align-items: center;
   gap: 9px;
   border-style: solid;
-  background:
-    radial-gradient(circle at 18% 50%, color-mix(in srgb, var(--accent-soft) 38%, transparent), transparent 36%),
-    color-mix(in srgb, var(--surface-2) 70%, transparent);
+  background: var(--control-bg);
   color: var(--text-dim);
 }
 .prompt-builder__thinking-dots {

@@ -111,9 +111,7 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 90% 0%, rgba(122, 215, 255, 0.055), transparent 34%),
-    radial-gradient(circle at 4% 84%, rgba(255, 90, 223, 0.035), transparent 30%);
+  background: radial-gradient(circle at 90% 0%, rgba(122, 215, 255, 0.055), transparent 34%);
 }
 body::after {
   content: "";

@@ -9,6 +9,8 @@ import { BackgroundPresetPicker } from "./BackgroundPresetPicker";
 import { AssetGenModelPicker } from "./AssetGenModelPicker";
 import { ProjectSelect } from "./ProjectSelect";
 import { KeyingPanel } from "./KeyingPanel";
+import { useTablistKeys } from "../../hooks/useTablistKeys";
+import "../../styles/sprite-recipe.css";
 const SpriteRecipeWorkspace = lazy(() => import("./SpriteRecipeWorkspace").then((module) => ({ default: module.SpriteRecipeWorkspace })));
 
 export function AssetGenWorkspace() {
@@ -35,6 +37,7 @@ export function AssetGenWorkspace() {
   const setUIMode = useAppStore((s) => s.setUIMode);
   const workflow = useAppStore((s) => s.assetGenWorkflow);
   const setWorkflow = useAppStore((s) => s.setAssetGenWorkflow);
+  const onWorkflowTabKeyDown = useTablistKeys<HTMLDivElement>();
   const [previewItem, setPreviewItem] = useState<GenerateItem | null>(null);
   const [railSelectedId, setRailSelectedId] = useState<string | null>(null);
   const closePreview = useCallback(() => { setPreviewItem(null); setRailSelectedId(null); }, []);
@@ -51,7 +54,33 @@ export function AssetGenWorkspace() {
   const effectiveKind = kind === "video" && !videoAllowed ? "image" : kind;
   const canGenerate = prompt.trim().length > 0;
 
-  const workflowTabs = <div className="assetgen-workflow-tabs" role="tablist" aria-label={t("sprite.tabs.label")}><button type="button" role="tab" aria-selected={workflow === "generate"} onClick={() => setWorkflow("generate")}>{t("sprite.tabs.generate")}</button><button type="button" role="tab" aria-selected={workflow === "sprite"} onClick={() => setWorkflow("sprite")}>{t("sprite.tabs.sprite")}</button></div>;
+  const workflowTabs = (
+    <div
+      className="assetgen-workflow-tabs"
+      role="tablist"
+      aria-label={t("sprite.tabs.label")}
+      onKeyDown={onWorkflowTabKeyDown}
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={workflow === "generate"}
+        tabIndex={workflow === "generate" ? 0 : -1}
+        onClick={() => setWorkflow("generate")}
+      >
+        {t("sprite.tabs.generate")}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={workflow === "sprite"}
+        tabIndex={workflow === "sprite" ? 0 : -1}
+        onClick={() => setWorkflow("sprite")}
+      >
+        {t("sprite.tabs.sprite")}
+      </button>
+    </div>
+  );
   if (workflow === "sprite") return <section className="assetgen-workspace" aria-labelledby="assetgen-title"><aside className="assetgen-form"><h1 id="assetgen-title">{t("sprite.title")}</h1><p className="assetgen-form__lede">{t("sprite.lede")}</p>{workflowTabs}</aside><main className="assetgen-results"><Suspense fallback={<p role="status">{t("sprite.loading")}</p>}><SpriteRecipeWorkspace /></Suspense></main></section>;
 
   return (

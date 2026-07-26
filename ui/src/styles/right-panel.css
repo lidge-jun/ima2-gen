@@ -483,11 +483,12 @@
   padding: 4px;
   gap: 2px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: calc(var(--radius) - 2px);
   background: var(--surface);
   box-shadow: 0 12px 26px var(--shadow-soft);
 }
 .result-actions__menu-item {
+  min-height: 44px;
   padding: 9px 12px;
   border: 0;
   border-radius: 6px;
@@ -497,6 +498,10 @@
   font-size: 12px;
   cursor: pointer;
   text-align: left;
+}
+.result-actions__menu-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
 }
 .result-actions__menu-item:hover {
   background: var(--surface-2);

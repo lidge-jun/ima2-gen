@@ -44,6 +44,39 @@ describe("prompt studio UI contract", () => {
     assert.ok(lineCount("ui/src/styles/prompt-builder-messages.css") < 500);
   });
 
+  it("uses the shared portaled Select for the Luna-first prompt builder model menu", () => {
+    const menu = readSource("ui/src/components/prompt-builder/PromptBuilderModelMenu.tsx");
+    const css = readSource("ui/src/styles/prompt-builder.css");
+
+    assert.match(menu, /Select<PromptBuilderModel>/);
+    assert.match(menu, /portal/);
+    assert.match(menu, /\["gpt-5\.6-luna", "gpt-5\.6-terra", "gpt-5\.6-sol"/);
+    assert.doesNotMatch(menu, /useState|role="listbox"|prompt-builder__model-option/);
+    assert.match(css, /\.prompt-builder__model-picker \.ctl-select__trigger/);
+    assert.doesNotMatch(css, /\.prompt-builder__model-(?:trigger|menu|option)/);
+  });
+
+  it("keeps functional panels solid while preserving semantic media gradients", () => {
+    const controls = readSource("ui/src/styles/controls.css");
+    const mentions = readSource("ui/src/styles/element-mention.css");
+    const builder = readSource("ui/src/styles/prompt-builder.css");
+    const gallery = readSource("ui/src/styles/gallery-modal.css");
+    const actions = readSource("ui/src/styles/right-panel.css");
+    const assets = readSource("ui/src/styles/assetgen-workspace.css");
+
+    assert.match(controls, /\.ctl-select__list\s*\{[\s\S]*?background:\s*var\(--surface\)/);
+    assert.doesNotMatch(controls, /\.ctl-select__list\s*\{[\s\S]*?backdrop-filter/);
+    assert.match(controls, /\.ctl-select__item\s*\{[\s\S]*?min-height:\s*44px/);
+    assert.match(mentions, /\.element-mention-menu\s*\{[\s\S]*?background:\s*var\(--surface\)/);
+    assert.doesNotMatch(mentions, /backdrop-filter/);
+    assert.doesNotMatch(builder, /linear-gradient|radial-gradient/);
+    assert.match(gallery, /\.gallery__storage-bar--notice\s*\{\s*background:\s*var\(--surface\)/);
+    assert.match(gallery, /\.gallery__caption\s*\{[\s\S]*?linear-gradient/);
+    assert.match(actions, /\.result-actions__menu-item\s*\{[\s\S]*?min-height:\s*44px/);
+    assert.match(actions, /\.result-actions__menu-item:focus-visible/);
+    assert.match(assets, /repeating-conic-gradient/);
+  });
+
   it("stores builder output after the main prompt and exposes block movement controls", () => {
     const store = readSource("ui/src/store/useAppStore.ts");
     const composer = readSource("ui/src/components/PromptComposer.tsx");

@@ -62,8 +62,23 @@ const flattenGroups = <V extends string>(
   return { flat: [...fallback], rendered: [{ items: fallback }] };
 };
 
+const enabledEdgeIndex = <V extends string>(
+  items: ReadonlyArray<SelectItem<V>>,
+  edge: "first" | "last",
+  fallback: number,
+): number => {
+  if (edge === "first") {
+    const index = items.findIndex((item) => !item.disabled);
+    return index >= 0 ? index : fallback;
+  }
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    if (!items[index]?.disabled) return index;
+  }
+  return fallback;
+};
+
 /**
- * Select — glass dropdown listbox (Phase 020 kit). Replaces native <select>
+ * Select — solid dropdown listbox (Phase 020 kit). Replaces native <select>
  * where item metadata (sub text) matters. Full keyboard support:
  * Enter/Space/ArrowDown open, Arrow keys move, Enter selects, Escape closes.
  * Supports grouped options and portal rendering for clipped containers (020).
@@ -144,14 +159,25 @@ export function Select<V extends string>({
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
       const gutter = 12;
-      const width = Math.min(300, Math.max(190, rect.width, 190));
-      const left = Math.min(Math.max(gutter, rect.left), window.innerWidth - width - gutter);
+      const availableWidth = Math.max(0, window.innerWidth - gutter * 2);
+      const width = Math.min(300, availableWidth, Math.max(190, rect.width));
+      const maxLeft = Math.max(gutter, window.innerWidth - width - gutter);
+      const left = Math.min(Math.max(gutter, rect.left), maxLeft);
       const below = window.innerHeight - rect.bottom - gutter;
+      const above = rect.top - gutter;
+      const direction = below >= 160 || below >= above ? "down" : "up";
+      const availableHeight = Math.max(0, direction === "down" ? below : above);
+      const maxHeight = Math.min(420, availableHeight);
+      const estimatedHeight = 8 + flat.length * 44;
+      const renderedHeight = listRef.current?.scrollHeight ?? estimatedHeight;
+      const height = Math.min(renderedHeight, maxHeight);
       setMenuPos({
-        top: rect.bottom + 4,
+        top: direction === "down"
+          ? rect.bottom + 4
+          : Math.max(gutter, rect.top - height - 4),
         left,
         width,
-        maxHeight: Math.max(160, Math.min(420, below)),
+        maxHeight,
       });
     }
     const close = () => setOpen(false);
@@ -218,10 +244,10 @@ export function Select<V extends string>({
       move(-1);
     } else if (event.key === "Home") {
       event.preventDefault();
-      setActiveIndex(0);
+      setActiveIndex(enabledEdgeIndex(flat, "first", activeIndex));
     } else if (event.key === "End") {
       event.preventDefault();
-      setActiveIndex(flat.length - 1);
+      setActiveIndex(enabledEdgeIndex(flat, "last", activeIndex));
     } else if (event.key === "Enter" || event.key === " ") {
       // Space participates in typeahead when a buffer is live (APG).
       if (event.key === " " && Date.now() - typeaheadRef.current.at <= 1000 && typeaheadRef.current.buffer) {
