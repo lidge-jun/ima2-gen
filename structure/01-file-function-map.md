@@ -138,7 +138,9 @@ routes/
 | `bin/lib/files.ts` | 40 | Data URI file conversion and output naming |
 | `bin/lib/output.ts` | 121 | Terminal output, JSON, exit-code mapping, natural-exit (no process.exit — Windows safe) |
 | `bin/lib/error-hints.ts` | 24 | CLI error hint formatting |
-| `bin/lib/star-prompt.ts` | 98 | CLI GitHub star prompt helper |
+| `bin/lib/star-prompt.ts` | 130 | CLI GitHub star prompt helper |
+| `bin/lib/interactive-confirm.ts` | 129 | Inline yes/no selector (arrow keys, `y`/`n`, Enter) with a typed fallback |
+| `bin/lib/agent-driven.ts` | 35 | Agent/CI harness detection so consent prompts defer to the user |
 | `bin/lib/storage-doctor.ts` | 40 | CLI storage doctor formatting |
 | `bin/lib/sse.ts` | 175 | CLI SSE response stream helper |
 | `bin/lib/browser-id.ts` | 17 | CLI browser-id header helper |
