@@ -123,16 +123,16 @@ describe("star prompt", () => {
     const { PassThrough } = await import("node:stream");
 
     const ask = async (keys, defaultYes = true) => {
-      const input = new PassThrough();
+      const input = new PassThrough() as unknown as NodeJS.ReadStream & { isRaw: boolean };
       input.isRaw = false;
-      input.setRawMode = (mode) => { input.isRaw = mode; return input; };
-      const output = new PassThrough();
-      const painted = [];
+      input.setRawMode = ((mode: boolean) => { input.isRaw = mode; return input; }) as NodeJS.ReadStream["setRawMode"];
+      const output = new PassThrough() as unknown as NodeJS.WriteStream;
+      const painted: string[] = [];
       const write = output.write.bind(output);
-      output.write = (chunk, ...rest) => {
+      output.write = ((chunk: string | Uint8Array, ...rest: unknown[]) => {
         painted.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
-        return write(chunk, ...rest);
-      };
+        return write(chunk as string, ...(rest as []));
+      }) as NodeJS.WriteStream["write"];
 
       const pending = interactiveConfirm({ question: "Star it?", defaultYes, input, output });
       for (const key of keys) input.write(key);
