@@ -120,6 +120,24 @@ async function loadAtlasCloudApiKey(): Promise<ApiKeyLoadResult> {
   return { apiKey: null, apiKeySource: "none" };
 }
 
+async function loadMinimaxApiKey(): Promise<ApiKeyLoadResult> {
+  if (process.env.MINIMAX_API_KEY) {
+    return { apiKey: process.env.MINIMAX_API_KEY, apiKeySource: "env" };
+  }
+  const candidates = [
+    config.storage.configFile,
+    join(rootDir, ".ima2", "config.json"),
+  ];
+  for (const cfgPath of candidates) {
+    if (!existsSync(cfgPath)) continue;
+    try {
+      const cfg = JSON.parse(await readFile(cfgPath, "utf-8")) as { minimaxApiKey?: string };
+      if (cfg.minimaxApiKey) return { apiKey: cfg.minimaxApiKey, apiKeySource: "config" };
+    } catch {}
+  }
+  return { apiKey: null, apiKeySource: "none" };
+}
+
 type VertexKeyLoadResult = { json: string | null; projectId: string | null; source: ApiKeySource };
 
 async function loadVertexKey(): Promise<VertexKeyLoadResult> {
@@ -335,6 +353,7 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
   const loadedXaiKey = await loadXaiApiKey();
   const loadedGeminiKey = await loadGeminiApiKey();
   const loadedAtlasCloudKey = await loadAtlasCloudApiKey();
+  const loadedMinimaxKey = await loadMinimaxApiKey();
   const loadedVertexKey = await loadVertexKey();
   const geminiAuthMode = await loadGeminiAuthMode();
   const apiKey = loadedKey.apiKey;
@@ -373,6 +392,9 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
     atlasCloudApiKey: loadedAtlasCloudKey.apiKey ?? undefined,
     atlasCloudApiKeySource: loadedAtlasCloudKey.apiKeySource as ApiKeySource,
     hasAtlasCloudApiKey: !!loadedAtlasCloudKey.apiKey,
+    minimaxApiKey: loadedMinimaxKey.apiKey ?? undefined,
+    minimaxApiKeySource: loadedMinimaxKey.apiKeySource as ApiKeySource,
+    hasMinimaxApiKey: !!loadedMinimaxKey.apiKey,
     vertexServiceAccountJson: loadedVertexKey.json ?? undefined,
     vertexProjectId: loadedVertexKey.projectId ?? undefined,
     hasVertexKey: !!loadedVertexKey.json,

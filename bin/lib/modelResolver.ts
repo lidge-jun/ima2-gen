@@ -1,6 +1,6 @@
 import { canonicalizeImageModel } from "./model-aliases.js";
 
-export type Lane = "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api" | "atlascloud" | "runway" | "higgsfield";
+export type Lane = "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api" | "atlascloud" | "minimax" | "runway" | "higgsfield";
 export type LaneStatus = "ready" | "locked" | "disconnected" | "key-missing";
 
 export interface ModelEntry {
@@ -23,7 +23,7 @@ export type ResolveResult =
   | { ok: false; code: string; message: string; extra?: Record<string, unknown> };
 
 const LANES: readonly Lane[] = [
-  "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "runway", "higgsfield",
+  "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "runway", "higgsfield",
 ];
 
 function failure(code: string, message: string, extra?: Record<string, unknown>): ResolveResult {

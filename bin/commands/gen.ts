@@ -64,7 +64,7 @@ const HELP = `
         --server <url>                      Override server URL
         --model <model|lane/model>          Bare IDs must be unique across lanes
                                             Core aliases: luna, sol, terra, spark
-        --provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|runway|higgsfield>
+        --provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|runway|higgsfield>
                                             'auto' was removed; choose a lane explicitly
         --mode <auto|direct>                Core lanes only. Default: auto
         --moderation <auto|low>             Core lanes only. Default: low

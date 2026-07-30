@@ -33,13 +33,14 @@ async function updateConfigFile(
   });
 }
 
-type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud";
+type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud" | "minimax";
 
 const KEY_PREFIX_MAP: Record<KeyProvider, string[]> = {
   openai: ["sk-"],
   xai: ["xai-"],
   gemini: ["AI"],
   atlascloud: ["apikey-"],
+  minimax: [],
 };
 
 const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
@@ -47,6 +48,7 @@ const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
   xai: "https://api.x.ai/v1/models",
   gemini: "https://generativelanguage.googleapis.com/v1beta/models",
   atlascloud: "https://api.atlascloud.ai/api/v1/models",
+  minimax: "https://api.minimax.io/v1/image_generation",
 };
 
 const CONFIG_KEY_MAP: Record<KeyProvider, string> = {
@@ -54,10 +56,11 @@ const CONFIG_KEY_MAP: Record<KeyProvider, string> = {
   xai: "xaiApiKey",
   gemini: "geminiApiKey",
   atlascloud: "atlasCloudApiKey",
+  minimax: "minimaxApiKey",
 };
 
 function isKeyProvider(v: string): v is KeyProvider {
-  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud";
+  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud" || v === "minimax";
 }
 
 function maskKey(key: string): string {
@@ -70,13 +73,14 @@ function keySourceForProvider(ctx: RuntimeContext, provider: KeyProvider): { key
   if (provider === "xai") return { key: ctx.xaiApiKey, source: ctx.xaiApiKeySource || "none" };
   if (provider === "gemini") return { key: ctx.geminiApiKey, source: ctx.geminiApiKeySource || "none" };
   if (provider === "atlascloud") return { key: ctx.atlasCloudApiKey, source: ctx.atlasCloudApiKeySource || "none" };
+  if (provider === "minimax") return { key: ctx.minimaxApiKey, source: ctx.minimaxApiKeySource || "none" };
   return { key: undefined, source: "none" };
 }
 
 export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
   app.get("/api/keys/status", (_req: Request, res: Response) => {
     const status: Record<string, unknown> = {};
-    for (const provider of ["openai", "xai", "gemini", "atlascloud"] as const) {
+    for (const provider of ["openai", "xai", "gemini", "atlascloud", "minimax"] as const) {
       const { key, source } = keySourceForProvider(ctx, provider);
       status[provider] = {
         configured: !!key,
@@ -194,12 +198,13 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       return res.status(400).json({ ok: false, error: "API key too large", code: "KEY_TOO_LARGE" });
     }
 
-    // Format check
-    const validPrefix = KEY_PREFIX_MAP[provider].some((p) => trimmed.startsWith(p));
+    // Format check (providers with an empty prefix list accept any non-empty key)
+    const prefixes = KEY_PREFIX_MAP[provider];
+    const validPrefix = prefixes.length === 0 || prefixes.some((p) => trimmed.startsWith(p));
     if (!validPrefix) {
       return res.status(400).json({
         ok: false,
-        error: `Invalid key format for ${provider}: expected prefix ${KEY_PREFIX_MAP[provider].join(" or ")}`,
+        error: `Invalid key format for ${provider}: expected prefix ${prefixes.join(" or ")}`,
         code: "INVALID_KEY_FORMAT",
       });
     }
@@ -212,6 +217,19 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
         opts.headers = { "x-goog-api-key": trimmed };
         const validateRes = await fetch(url, opts);
         if (!validateRes.ok) throw new Error(`HTTP ${validateRes.status}`);
+      } else if (provider === "minimax") {
+        // The image-generation endpoint requires a JSON body; a valid key
+        // returns an input-validation error (not an auth error), while an
+        // invalid key returns 401/2049. Probe with a minimal body.
+        opts.method = "POST";
+        opts.headers = { Authorization: `Bearer ${trimmed}`, "Content-Type": "application/json" };
+        opts.body = JSON.stringify({ model: "image-01", prompt: "ima2 key check" });
+        const validateRes = await fetch(url, opts);
+        const code = await validateRes.json().catch(() => ({} as any)).then((j: any) => j?.base_resp?.status_code);
+        // 1004/2049 = auth failed; 2013 = invalid input (key is valid).
+        if (code === 1004 || code === 2049 || validateRes.status === 401) {
+          throw new Error(`HTTP ${validateRes.status}`);
+        }
       } else {
         opts.headers = { Authorization: `Bearer ${trimmed}` };
         const validateRes = await fetch(url, opts);
@@ -254,6 +272,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).atlasCloudApiKey = trimmed;
       (ctx as any).atlasCloudApiKeySource = "config";
       (ctx as any).hasAtlasCloudApiKey = true;
+    } else if (provider === "minimax") {
+      (ctx as any).minimaxApiKey = trimmed;
+      (ctx as any).minimaxApiKeySource = "config";
+      (ctx as any).hasMinimaxApiKey = true;
     }
 
     return res.json({ ok: true, provider, source: "config", valid: true });
@@ -291,6 +313,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).atlasCloudApiKey = undefined;
       (ctx as any).atlasCloudApiKeySource = "none";
       (ctx as any).hasAtlasCloudApiKey = false;
+    } else if (provider === "minimax") {
+      (ctx as any).minimaxApiKey = undefined;
+      (ctx as any).minimaxApiKeySource = "none";
+      (ctx as any).hasMinimaxApiKey = false;
     }
 
     return res.json({ ok: true, provider, removed: true });
