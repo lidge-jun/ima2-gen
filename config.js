@@ -203,6 +203,16 @@ export const config = {
         videoTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_TIMEOUT_MS, fileCfg.grokProvider?.videoTimeoutMs, 900_000),
         videoDownloadTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_DOWNLOAD_TIMEOUT_MS, fileCfg.grokProvider?.videoDownloadTimeoutMs, 120_000),
     },
+    // Direct MiniMax image-generation provider (text-to-image / image-to-image).
+    // Region selects the global (.io) or China (.minimaxi.com) OpenAI-compatible
+    // base URL; the regional fields are shared with the MiniMax text endpoints.
+    minimaxProvider: {
+        defaultImageModel: pickStr(env.IMA2_MINIMAX_IMAGE_MODEL_DEFAULT, fileCfg.minimaxProvider?.defaultImageModel, "image-01"),
+        region: pickStr(env.IMA2_MINIMAX_REGION, fileCfg.minimaxProvider?.region, "global_en"),
+        globalBaseUrl: pickStr(env.IMA2_MINIMAX_GLOBAL_BASE_URL, fileCfg.minimaxProvider?.globalBaseUrl, "https://api.minimax.io/v1"),
+        cnBaseUrl: pickStr(env.IMA2_MINIMAX_CN_BASE_URL, fileCfg.minimaxProvider?.cnBaseUrl, "https://api.minimaxi.com/v1"),
+        generationTimeoutMs: pickInt(env.IMA2_MINIMAX_GENERATION_TIMEOUT_MS, fileCfg.minimaxProvider?.generationTimeoutMs, 120_000),
+    },
     log: {
         level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
         pretty: env.NODE_ENV !== "production",

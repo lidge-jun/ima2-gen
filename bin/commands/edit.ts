@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { errInfo } from "../../lib/errInfo.js";
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
-const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud"]);
+const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax"]);
 const KNOWN_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.3-codex-spark", "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-2", "nano-banana-pro"]);
 
 const SPEC = {
@@ -47,7 +47,7 @@ const HELP = `
         --json
         --model <gpt-5.5|gpt-5.4|gpt-5.4-mini|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark|grok-imagine-image|grok-imagine-image-quality|nano-banana-2|nano-banana-pro>  Default: gpt-5.6-luna
                                       Aliases: luna, sol, terra, spark
-        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud>
+        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>
                                       Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini)
         --mode <auto|direct>       Prompt handling mode. Default: auto
         --moderation <auto|low>    Default: low
@@ -67,7 +67,7 @@ export default async function editCmd(argv: string[]) {
   if (!VALID_MODES.has(String(args.mode))) die(2, "--mode must be one of: auto, direct");
   if (!VALID_MODERATION.has(String(args.moderation))) die(2, "--moderation must be one of: auto, low");
   if (args.provider && !VALID_PROVIDERS.has(String(args.provider))) {
-    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud");
+    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud, minimax");
   }
   const model = canonicalizeImageModel(args.model);
   if (model && !KNOWN_IMAGE_MODELS.has(model)) {

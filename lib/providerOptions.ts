@@ -1,6 +1,6 @@
 import type { RuntimeContext } from "./runtimeContext.js";
 import { ATLASCLOUD_TEXT_TO_IMAGE_MODEL } from "./atlasCloudImageAdapter.js";
-import { FALLBACK_IMAGE_MODEL, normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel } from "./imageModels.js";
+import { FALLBACK_IMAGE_MODEL, normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel, normalizeMinimaxImageModel } from "./imageModels.js";
 
 export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   provider = "oauth",
@@ -36,6 +36,20 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
     return {
       provider: "atlascloud" as const,
       model: rawModel || ATLASCLOUD_TEXT_TO_IMAGE_MODEL,
+      reasoningEffort: "none",
+      size: rawSize || "1024x1024",
+      webSearchEnabled: false,
+    };
+  }
+
+  if (provider === "minimax") {
+    const minimaxCfg: { defaultImageModel?: string } = (ctx?.config as any)?.minimaxProvider || {};
+    const modelInput = rawModel || minimaxCfg.defaultImageModel;
+    const minimaxModelCheck = normalizeMinimaxImageModel(modelInput);
+    if (minimaxModelCheck.error) return { error: minimaxModelCheck.error, code: minimaxModelCheck.code, status: minimaxModelCheck.status };
+    return {
+      provider: "minimax" as const,
+      model: minimaxModelCheck.model,
       reasoningEffort: "none",
       size: rawSize || "1024x1024",
       webSearchEnabled: false,

@@ -107,7 +107,7 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
     const body = await response.json() as ModelsBody;
     assert.equal(body.ok, true);
     assert.deepEqual(Object.keys(body.lanes), [
-      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "runway", "higgsfield",
+      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "runway", "higgsfield",
     ]);
 
     assert.equal(body.lanes.oauth.status, "ready");
@@ -121,6 +121,10 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
     assert.equal(body.lanes.atlascloud.status, "key-missing");
     assert.deepEqual(body.lanes.atlascloud.models.image.map((model) => model.id), [
       "openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit",
+    ]);
+    assert.equal(body.lanes.minimax.status, "key-missing");
+    assert.deepEqual(body.lanes.minimax.models.image.map((model) => model.id), [
+      "image-01", "image-01-live",
     ]);
     assert.equal(body.lanes.runway.status, "disconnected");
     assert.equal(body.lanes.higgsfield.status, "disconnected");

@@ -35,6 +35,9 @@ export interface RuntimeContext {
   atlasCloudApiKey: string | undefined;
   atlasCloudApiKeySource: ApiKeySource;
   hasAtlasCloudApiKey: boolean;
+  minimaxApiKey: string | undefined;
+  minimaxApiKeySource: ApiKeySource;
+  hasMinimaxApiKey: boolean;
   vertexServiceAccountJson: string | undefined;
   vertexProjectId: string | undefined;
   hasVertexKey: boolean;
@@ -115,6 +118,9 @@ export function requireRuntimeContext(ctx: RouteRuntimeContext | undefined): Run
   if (target.atlasCloudApiKey === undefined && !Object.prototype.hasOwnProperty.call(target, 'atlasCloudApiKey')) target.atlasCloudApiKey = undefined;
   if (target.hasAtlasCloudApiKey === undefined) target.hasAtlasCloudApiKey = false;
   if (target.atlasCloudApiKeySource === undefined) target.atlasCloudApiKeySource = undefined;
+  if (target.minimaxApiKey === undefined && !Object.prototype.hasOwnProperty.call(target, 'minimaxApiKey')) target.minimaxApiKey = undefined;
+  if (target.hasMinimaxApiKey === undefined) target.hasMinimaxApiKey = false;
+  if (target.minimaxApiKeySource === undefined) target.minimaxApiKeySource = undefined;
   if (target.vertexServiceAccountJson === undefined && !Object.prototype.hasOwnProperty.call(target, 'vertexServiceAccountJson')) target.vertexServiceAccountJson = undefined;
   if (target.vertexProjectId === undefined) target.vertexProjectId = undefined;
   if (target.hasVertexKey === undefined) target.hasVertexKey = false;
@@ -178,6 +184,9 @@ export function createTestRuntimeContext(over: RuntimeContextOverrides = {}): Ru
     atlasCloudApiKey: undefined,
     atlasCloudApiKeySource: undefined,
     hasAtlasCloudApiKey: false,
+    minimaxApiKey: undefined,
+    minimaxApiKeySource: undefined,
+    hasMinimaxApiKey: false,
     vertexServiceAccountJson: undefined,
     vertexProjectId: undefined,
     hasVertexKey: false,

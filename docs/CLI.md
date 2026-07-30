@@ -73,10 +73,10 @@ Since 3.0.0, `ima2 gen` and generate-mode `ima2 video` are **fail-closed**: they
 target through the lane catalog (`GET /api/models`) and exit 2 with `NO_DEFAULT_MODEL` when no
 `--model <lane>/<model>`, `--provider <lane>`, or persisted `ima2 defaults set image|video`
 target applies. Their `--provider` accepts explicit lanes only
-(`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|runway|higgsfield`); `--provider auto` exits 2 with
+(`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|runway|higgsfield`); `--provider auto` exits 2 with
 `PROVIDER_AUTO_REMOVED`. Inspect lanes and models with `ima2 models [--kind image|video] [--lane <lane>] [--json]`.
 
-`edit`, `multimode`, and `node generate` keep the legacy surface for now: `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud>`, `--reasoning-effort {none\|low\|medium\|high\|xhigh\|max}`, `--web-search` / `--no-web-search`, `--model`, `--mode`, `--moderation`, `--ref <file>` (repeatable, up to 5 where supported), `-q low|medium|high`, `-n <count>`, `-o <file>`.
+`edit`, `multimode`, and `node generate` keep the legacy surface for now: `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>`, `--reasoning-effort {none\|low\|medium\|high\|xhigh\|max}`, `--web-search` / `--no-web-search`, `--model`, `--mode`, `--moderation`, `--ref <file>` (repeatable, up to 5 where supported), `-q low|medium|high`, `-n <count>`, `-o <file>`.
 
 Provider override semantics:
 
@@ -86,6 +86,7 @@ Provider override semantics:
 - `agy` spawns the Antigravity CLI to generate via Google Gemini (`nano-banana-2`). Fixed 1024×1024 JPEG output, max 3 refs. No web search, quality, size, or mask controls. If `agy` is not on the server process PATH, ima2 also checks common user-local installs such as `~/.local/bin/agy`; set `IMA2_AGY_BIN=/absolute/path/to/agy` to force a specific binary.
 - `gemini-api` calls the Google Generative Language API directly. Models: `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Use `--model nano-banana-2` or `--model nano-banana-pro` to select. Supports `--size` for aspect ratio and resolution (512px–4K) on the direct API path; Vertex AI ignores aspect/size. Requires `GEMINI_API_KEY` or a Vertex AI service account (`VERTEX_SERVICE_ACCOUNT_JSON`). Switching from `agy` or `gemini-api` provider auto-selects the corresponding Gemini model; switching away resets to the GPT default.
 - `atlascloud` calls Atlas Cloud's Media API directly. Models: `openai/gpt-image-2/text-to-image` for text-to-image and `openai/gpt-image-2/edit` when references are attached. Requires `ATLASCLOUD_API_KEY`; web search, reasoning, mask, and video controls are ignored.
+- `minimax` calls the MiniMax image-generation API directly at `POST /v1/image_generation`. Models: `image-01` for text-to-image and `image-01-live` when a reference image is attached (mapped to the `subject_reference` field). Region selects the global (`https://api.minimax.io/v1`, default) or China (`https://api.minimaxi.com/v1`, `IMA2_MINIMAX_REGION=cn_zh`) base URL. `--size` maps to the closest supported `aspect_ratio`; responses are returned as URLs or base64. Requires `MINIMAX_API_KEY`; web search, reasoning, mask, and video controls are ignored, and image-to-image supports at most one subject reference.
 - `runway` / `higgsfield` (gen/video only) route through the MCP async pipeline (`POST /api/mcp/generate` + SSE wait). Runway requires an MCP connection; Higgsfield stays catalog-only (`locked`) until a paid plan. MCP lanes accept `-n 1` only, gallery filenames for `--ref`, and reject core-only flags with `FLAG_NOT_SUPPORTED`.
 - `auto` preserves route default behavior and currently resolves to GPT OAuth unless server routing changes (edit/multimode/node only; removed from gen/video in 3.0.0).
 
@@ -135,7 +136,7 @@ mockup`.
 For dense or critical text, keep the text large and explicit. Exact placement,
 small text, and pixel-perfect typography can still need iteration or post-editing.
 
-Multimode-specific flags include `--max-images <1..24>` by default (configurable through `IMA2_MAX_GENERATED_IMAGES`), `--ref <file>` (repeatable, max 5), `--mode <auto|direct>`, `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud>`, and `--show-partial`. `ima2 edit --mask` remains intentionally deferred to #31 because current mask plumbing is guided edit rather than guaranteed true masked/inpaint semantics.
+Multimode-specific flags include `--max-images <1..24>` by default (configurable through `IMA2_MAX_GENERATED_IMAGES`), `--ref <file>` (repeatable, max 5), `--mode <auto|direct>`, `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>`, and `--show-partial`. `ima2 edit --mask` remains intentionally deferred to #31 because current mask plumbing is guided edit rather than guaranteed true masked/inpaint semantics.
 
 ## Video
 
