@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { shouldDismissOnScroll } from "../../lib/portalDismiss";
 
 export type SelectItem<V extends string> = {
   value: V;
@@ -181,11 +182,18 @@ export function Select<V extends string>({
       });
     }
     const close = () => setOpen(false);
+    const closeOnScroll = (event: Event) => {
+      // Issue #119: the capture-phase listener also sees scrolls raised inside
+      // the portaled list, which is itself a scroll container. Only outside
+      // scrolls detach the fixed panel from its trigger.
+      if (!shouldDismissOnScroll(event, listRef.current)) return;
+      setOpen(false);
+    };
     window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", closeOnScroll, true);
     return () => {
       window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", closeOnScroll, true);
     };
   }, [portal, open]);
 

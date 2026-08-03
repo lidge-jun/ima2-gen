@@ -150,7 +150,10 @@ describe("MCP provider UI contract", () => {
     assert.match(kit, /groups\?: ReadonlyArray<SelectGroup<V>>/);
     assert.match(kit, /createPortal\(list, document\.body\)/);
     assert.match(kit, /listRef\.current\?\.contains\(target\)/);
-    assert.match(kit, /window\.addEventListener\("scroll", close, true\)/);
+    // Issue #119: the capture-phase scroll listener stays, but it now runs a
+    // guarded handler so scrolling the portaled list itself does not dismiss it.
+    assert.match(kit, /window\.addEventListener\("scroll", closeOnScroll, true\)/);
+    assert.match(kit, /shouldDismissOnScroll\(event, listRef\.current\)/);
     assert.match(kit, /triggerRef\.current\?\.focus\(\)/);
   });
 
