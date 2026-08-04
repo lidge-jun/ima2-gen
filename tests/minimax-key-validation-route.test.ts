@@ -122,6 +122,15 @@ const rejectionCases: Array<{ name: string; respond: () => Response }> = [
     name: "200 without a model list",
     respond: () => Response.json({ object: "list" }),
   },
+  {
+    // Type drift is not permission to store the key.
+    name: "200 carrying a string error status_code",
+    respond: () => Response.json({ data: [], base_resp: { status_code: "1008" } }),
+  },
+  {
+    name: "200 with an unreadable status_code",
+    respond: () => Response.json({ data: [], base_resp: { status_code: {} } }),
+  },
 ];
 
 for (const testCase of rejectionCases) {

@@ -249,8 +249,13 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
           throw new Error("unexpected model list response");
         }
         const baseResp = parsed.base_resp as { status_code?: unknown } | undefined;
-        if (typeof baseResp?.status_code === "number" && baseResp.status_code !== 0) {
-          throw new Error(`MiniMax status ${baseResp.status_code}`);
+        // Accept only an explicit success code. A non-numeric status_code is
+        // type drift, not permission to store the key.
+        if (baseResp && baseResp.status_code !== undefined) {
+          const status = Number(baseResp.status_code);
+          if (!Number.isFinite(status) || status !== 0) {
+            throw new Error(`MiniMax status ${String(baseResp.status_code)}`);
+          }
         }
       } else {
         opts.headers = { Authorization: `Bearer ${trimmed}` };

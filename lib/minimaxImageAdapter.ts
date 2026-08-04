@@ -84,6 +84,14 @@ function validateMinimaxImageBytes(b64: string, headerMime?: string | null): str
   if (!b64) {
     throw minimaxError("MiniMax returned an empty image payload", 502, "MINIMAX_IMAGE_INVALID");
   }
+  // base64 inflates by 4/3, so this bounds the decoded size without decoding.
+  if (b64.length > MAX_IMAGE_DOWNLOAD_BYTES * 1.4) {
+    throw minimaxError(
+      "MiniMax image payload exceeds 50MB limit",
+      502,
+      "MINIMAX_IMAGE_DOWNLOAD_TOO_LARGE",
+    );
+  }
   const detected = detectImageMimeFromB64(b64);
   if (detected && ALLOWED_IMAGE_MIMES.has(detected)) return detected;
   const header = headerMime?.split(";")[0]?.trim();

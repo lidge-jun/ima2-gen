@@ -392,3 +392,18 @@ test("minimax adapter rejects inline base64 that is not an image", async () => {
     (err: any) => err?.code === "MINIMAX_IMAGE_INVALID",
   );
 });
+
+test("minimax adapter rejects an oversized inline base64 payload", async () => {
+  // MiniMax could ignore response_format:"url" and inline a huge payload; the
+  // URL path is capped, so the inline path has to be capped too.
+  const huge = PNG_B64 + "A".repeat(80 * 1024 * 1024);
+  globalThis.fetch = (async () => Response.json({
+    data: { image_base64: [huge] },
+    base_resp: { status_code: 0, status_msg: "success" },
+  })) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_IMAGE_DOWNLOAD_TOO_LARGE",
+  );
+});
