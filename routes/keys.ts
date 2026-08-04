@@ -48,8 +48,26 @@ const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
   xai: "https://api.x.ai/v1/models",
   gemini: "https://generativelanguage.googleapis.com/v1beta/models",
   atlascloud: "https://api.atlascloud.ai/api/v1/models",
-  minimax: "https://api.minimax.io/v1/image_generation",
+  // Fallback only. The MiniMax branch resolves a region-aware URL at call time
+  // via resolveMinimaxValidateUrl so a cn_zh workspace validates against the CN host.
+  minimax: "https://api.minimax.io/v1/models",
 };
+
+// Same region rule as lib/minimaxImageAdapter.ts resolveBaseUrl.
+function resolveMinimaxValidateUrl(ctx: RuntimeContext): string {
+  const cfg = ctx.config.minimaxProvider;
+  const base = cfg.region === "cn_zh" ? cfg.cnBaseUrl : cfg.globalBaseUrl;
+  return `${base.replace(/\/$/, "")}/models`;
+}
+
+async function readJsonOrNull(res: globalThis.Response): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed = await res.json();
+    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
 
 const CONFIG_KEY_MAP: Record<KeyProvider, string> = {
   openai: "apiKey",
@@ -218,17 +236,21 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
         const validateRes = await fetch(url, opts);
         if (!validateRes.ok) throw new Error(`HTTP ${validateRes.status}`);
       } else if (provider === "minimax") {
-        // The image-generation endpoint requires a JSON body; a valid key
-        // returns an input-validation error (not an auth error), while an
-        // invalid key returns 401/2049. Probe with a minimal body.
-        opts.method = "POST";
-        opts.headers = { Authorization: `Bearer ${trimmed}`, "Content-Type": "application/json" };
-        opts.body = JSON.stringify({ model: "image-01", prompt: "ima2 key check" });
-        const validateRes = await fetch(url, opts);
-        const code = await validateRes.json().catch(() => ({} as any)).then((j: any) => j?.base_resp?.status_code);
-        // 1004/2049 = auth failed; 2013 = invalid input (key is valid).
-        if (code === 1004 || code === 2049 || validateRes.status === 401) {
-          throw new Error(`HTTP ${validateRes.status}`);
+        // List models instead of generating one: listing costs nothing, while
+        // probing the image endpoint would bill a real image on every save.
+        opts.method = "GET";
+        opts.headers = { Authorization: `Bearer ${trimmed}` };
+        const validateRes = await fetch(resolveMinimaxValidateUrl(ctx), opts);
+        if (!validateRes.ok) throw new Error(`HTTP ${validateRes.status}`);
+        // Fail closed: a 2xx alone is not proof, because MiniMax also reports
+        // errors inside a 200 body. Require the documented list shape.
+        const parsed = await readJsonOrNull(validateRes);
+        if (!parsed || !Array.isArray(parsed.data)) {
+          throw new Error("unexpected model list response");
+        }
+        const baseResp = parsed.base_resp as { status_code?: unknown } | undefined;
+        if (typeof baseResp?.status_code === "number" && baseResp.status_code !== 0) {
+          throw new Error(`MiniMax status ${baseResp.status_code}`);
         }
       } else {
         opts.headers = { Authorization: `Bearer ${trimmed}` };

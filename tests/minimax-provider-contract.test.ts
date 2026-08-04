@@ -6,6 +6,13 @@ import { createTestRuntimeContext } from "../lib/runtimeContext.ts";
 
 const originalFetch = globalThis.fetch;
 
+// Real magic bytes: the adapter validates payloads against the detected image
+// signature, so placeholder text would (correctly) be rejected as non-image.
+const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00]);
+const PNG_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
+const JPEG_B64 = JPEG_BYTES.toString("base64");
+const PNG_B64 = PNG_BYTES.toString("base64");
+
 test.afterEach(() => {
   globalThis.fetch = originalFetch;
 });
@@ -74,7 +81,7 @@ test("minimax adapter submits a text-to-image request and parses a url response"
       });
     }
     if (url === "https://cdn.example/out.jpg") {
-      return new Response(Buffer.from("fake image"), { headers: { "content-type": "image/jpeg" } });
+      return new Response(JPEG_BYTES, { headers: { "content-type": "image/jpeg" } });
     }
     throw new Error(`unexpected fetch ${url}`);
   }) as typeof fetch;
@@ -93,12 +100,12 @@ test("minimax adapter submits a text-to-image request and parses a url response"
     response_format: "url",
     aspect_ratio: "1:1",
   });
-  assert.equal(result.b64, Buffer.from("fake image").toString("base64"));
+  assert.equal(result.b64, JPEG_B64);
   assert.equal(result.mime, "image/jpeg");
   assert.equal(result.providerUrl, "https://cdn.example/out.jpg");
 });
 
-test("minimax adapter maps references to subject_reference and uses the live model", async () => {
+test("minimax adapter maps references to subject_reference and keeps the requested model", async () => {
   const calls: Array<{ body?: any }> = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -106,7 +113,7 @@ test("minimax adapter maps references to subject_reference and uses the live mod
     if (url === "https://api.minimax.io/v1/image_generation") {
       calls.push({ body });
       return Response.json({
-        data: { image_base64: ["b3V0"] },
+        data: { image_base64: [PNG_B64] },
         metadata: { success_count: 1, failed_count: 0 },
         base_resp: { status_code: 0, status_msg: "success" },
       });
@@ -115,14 +122,18 @@ test("minimax adapter maps references to subject_reference and uses the live mod
   }) as typeof fetch;
 
   const result = await generateViaMinimax("same character", minimaxCtx(), {
+    model: MINIMAX_TEXT_TO_IMAGE_MODEL,
     references: [{ b64: Buffer.from("ref").toString("base64"), declaredMime: "image/png" }],
   });
 
-  assert.equal(calls[0].body.model, MINIMAX_IMAGE_TO_IMAGE_MODEL);
+  // image-01 accepts subject_reference, so attaching one must not silently
+  // swap the model the user picked (the stored provenance would then lie).
+  assert.equal(calls[0].body.model, MINIMAX_TEXT_TO_IMAGE_MODEL);
+  assert.equal(result.effectiveModel, MINIMAX_TEXT_TO_IMAGE_MODEL);
   assert.ok(Array.isArray(calls[0].body.subject_reference));
   assert.equal(calls[0].body.subject_reference[0].type, "character");
   assert.match(calls[0].body.subject_reference[0].image_file, /^data:image\/png;base64,/);
-  assert.equal(result.b64, "b3V0");
+  assert.equal(result.b64, PNG_B64);
 });
 
 test("minimax adapter routes to the China base url for the cn_zh region", async () => {
@@ -132,7 +143,7 @@ test("minimax adapter routes to the China base url for the cn_zh region", async 
     urls.push(url);
     if (url === "https://api.minimaxi.com/v1/image_generation") {
       return Response.json({
-        data: { image_base64: ["b3V0"] },
+        data: { image_base64: [PNG_B64] },
         metadata: { success_count: 1, failed_count: 0 },
         base_resp: { status_code: 0, status_msg: "success" },
       });
@@ -192,5 +203,192 @@ test("minimax adapter surfaces upstream base_resp auth failures", async () => {
   await assert.rejects(
     () => generateViaMinimax("city skyline", minimaxCtx()),
     (err: any) => err?.code === "MINIMAX_AUTH_FAILED" && err?.status === 401,
+  );
+});
+
+// ── Repair coverage: each case drives the branch it guards ────────────────
+
+test("minimax adapter keeps image-01-live when a reference is attached", async () => {
+  const calls: Array<{ body?: any }> = [];
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = init?.body && typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+    calls.push({ body });
+    return Response.json({
+      data: { image_base64: [PNG_B64] },
+      base_resp: { status_code: 0, status_msg: "success" },
+    });
+  }) as typeof fetch;
+
+  const result = await generateViaMinimax("same character", minimaxCtx(), {
+    model: MINIMAX_IMAGE_TO_IMAGE_MODEL,
+    references: [{ b64: Buffer.from("ref").toString("base64"), declaredMime: "image/png" }],
+  });
+
+  assert.equal(calls[0].body.model, MINIMAX_IMAGE_TO_IMAGE_MODEL);
+  assert.equal(result.effectiveModel, MINIMAX_IMAGE_TO_IMAGE_MODEL);
+});
+
+test("minimax adapter rejects image-01-live without a reference outside China", async () => {
+  globalThis.fetch = (async () => {
+    throw new Error("must not reach the API");
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx(), { model: MINIMAX_IMAGE_TO_IMAGE_MODEL }),
+    (err: any) => err?.code === "MINIMAX_MODEL_REQUIRES_REFERENCE" && err?.status === 400,
+  );
+});
+
+test("minimax adapter allows image-01-live text-to-image in the cn_zh region", async () => {
+  const calls: Array<{ url: string }> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push({ url: String(input) });
+    return Response.json({
+      data: { image_base64: [PNG_B64] },
+      base_resp: { status_code: 0, status_msg: "success" },
+    });
+  }) as typeof fetch;
+
+  const cnCtx = minimaxCtx({
+    config: {
+      minimaxProvider: {
+        defaultImageModel: "image-01",
+        region: "cn_zh",
+        globalBaseUrl: "https://api.minimax.io/v1",
+        cnBaseUrl: "https://api.minimaxi.com/v1",
+        generationTimeoutMs: 120_000,
+      },
+    },
+  });
+  const result = await generateViaMinimax("city skyline", cnCtx, {
+    model: MINIMAX_IMAGE_TO_IMAGE_MODEL,
+  });
+
+  assert.equal(calls[0].url, "https://api.minimaxi.com/v1/image_generation");
+  assert.equal(result.effectiveModel, MINIMAX_IMAGE_TO_IMAGE_MODEL);
+});
+
+test("minimax adapter maps a request timeout to 504, not a network failure", async () => {
+  globalThis.fetch = (async () => {
+    // AbortSignal.timeout() rejects with TimeoutError, not AbortError.
+    throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "GENERATION_TIMEOUT" && err?.status === 504,
+  );
+});
+
+test("minimax adapter reads string safety counters as a content block", async () => {
+  globalThis.fetch = (async () => Response.json({
+    data: {},
+    // MiniMax documents these counters as strings in its response samples.
+    metadata: { success_count: "0", failed_count: "1" },
+    base_resp: { status_code: 0, status_msg: "success" },
+  })) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("blocked prompt", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_SAFETY_BLOCKED" && err?.status === 400,
+  );
+});
+
+test("minimax adapter rejects a download that declares more than 50MB", async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/image_generation")) {
+      return Response.json({
+        data: { image_urls: ["https://cdn.example/huge.png"] },
+        base_resp: { status_code: 0, status_msg: "success" },
+      });
+    }
+    return new Response(PNG_BYTES, {
+      headers: { "content-type": "image/png", "content-length": String(64 * 1024 * 1024) },
+    });
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_IMAGE_DOWNLOAD_TOO_LARGE",
+  );
+});
+
+test("minimax adapter caps a stream that lies about its length", async () => {
+  const chunk = new Uint8Array(1024 * 1024);
+  chunk.set(PNG_BYTES);
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/image_generation")) {
+      return Response.json({
+        data: { image_urls: ["https://cdn.example/endless.png"] },
+        base_resp: { status_code: 0, status_msg: "success" },
+      });
+    }
+    // No content-length: the cap has to hold while the bytes arrive.
+    return new Response(
+      new ReadableStream({
+        pull(controller) {
+          controller.enqueue(chunk);
+        },
+      }),
+      { headers: { "content-type": "image/png" } },
+    );
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_IMAGE_DOWNLOAD_TOO_LARGE",
+  );
+});
+
+test("minimax adapter rejects a non-HTTP provider url", async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/image_generation")) {
+      return Response.json({
+        data: { image_urls: ["file:///etc/passwd"] },
+        base_resp: { status_code: 0, status_msg: "success" },
+      });
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_IMAGE_DOWNLOAD_FAILED",
+  );
+});
+
+test("minimax adapter rejects a downloaded body that is not an image", async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/image_generation")) {
+      return Response.json({
+        data: { image_urls: ["https://cdn.example/error.html"] },
+        base_resp: { status_code: 0, status_msg: "success" },
+      });
+    }
+    // A CDN error page served with a lying image content-type.
+    return new Response(Buffer.from("<html>gateway error</html>"), {
+      headers: { "content-type": "image/png" },
+    });
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_IMAGE_INVALID" && err?.status === 502,
+  );
+});
+
+test("minimax adapter rejects inline base64 that is not an image", async () => {
+  globalThis.fetch = (async () => Response.json({
+    data: { image_base64: [Buffer.from("<html>nope</html>").toString("base64")] },
+    base_resp: { status_code: 0, status_msg: "success" },
+  })) as typeof fetch;
+
+  await assert.rejects(
+    () => generateViaMinimax("city skyline", minimaxCtx()),
+    (err: any) => err?.code === "MINIMAX_IMAGE_INVALID",
   );
 });
