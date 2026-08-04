@@ -7,6 +7,7 @@ export type ImaErrorCode =
   | "REF_NOT_BASE64"
   | "REF_EMPTY"
   | "REF_TOO_MANY"
+  | "MINIMAX_MODEL_REQUIRES_REFERENCE"
   | "MODERATION_REFUSED"
   | "SAFETY_REFUSAL"
   | "EMPTY_RESPONSE"
@@ -54,6 +55,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   REF_NOT_BASE64: { surface: "toast", toastKey: "toast.refNotBase64" },
   REF_EMPTY: { surface: "toast", toastKey: "toast.refEmpty" },
   REF_TOO_MANY: { surface: "toast", toastKey: "toast.refLimitExceeded" },
+  MINIMAX_MODEL_REQUIRES_REFERENCE: { surface: "toast", toastKey: "toast.minimaxModelRequiresReference" },
   MODERATION_REFUSED: { surface: "card", cardKey: "errorCard.moderationRefused", cta: "dismiss" },
   SAFETY_REFUSAL: { surface: "card", cardKey: "errorCard.moderationRefused", cta: "dismiss" },
   EMPTY_RESPONSE: { surface: "card", cardKey: "errorCard.emptyResponse", cta: "dismiss" },

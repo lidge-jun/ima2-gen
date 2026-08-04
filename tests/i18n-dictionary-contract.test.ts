@@ -70,6 +70,7 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "settings.imageModel.grokImagineQuality", "settings.imageModel.grokImagine",
     "settings.imageModel.nanoBanana2", "settings.imageModel.nanoBanana2Api",
     "settings.imageModel.nanoBananaPro", "settings.imageModel.gpt53CodexSpark",
+    "settings.imageModel.minimaxImage01", "settings.imageModel.minimaxImage01Live",
     "settings.videoModel.grokImagine", "settings.videoModel.grokImagine15",
     "settings.reasoning.none", "settings.reasoning.low", "settings.reasoning.medium",
     "settings.reasoning.high", "settings.reasoning.xhigh", "settings.reasoning.max",
@@ -85,6 +86,7 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "settings.imageModel.grokImagineQuality", "settings.imageModel.grokImagine",
     "settings.imageModel.nanoBanana2", "settings.imageModel.nanoBanana2Api",
     "settings.imageModel.nanoBananaPro",
+    "settings.imageModel.minimaxImage01", "settings.imageModel.minimaxImage01Live",
   ]],
   // REASONING_EFFORT_OPTIONS fullLabelKey literals in ui/src/lib/reasoning.ts.
   ["ui/src/components/ReasoningEffortSelect.tsx :: option.fullLabelKey", reasoningKeys()],
@@ -157,6 +159,7 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
   ["ui/src/lib/errorHandler.ts :: spec.toastKey", [
     "toast.refTooLarge", "toast.refNotBase64", "toast.refEmpty",
     "toast.refLimitExceeded", "toast.generateFailed",
+    "toast.minimaxModelRequiresReference",
   ]],
   // toastKey's local complete/partial literals in storeGenImpl.ts.
   ["ui/src/store/storeGenImpl.ts :: toastKey", ["multimode.complete", "multimode.partial"]],

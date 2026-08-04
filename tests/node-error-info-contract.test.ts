@@ -14,6 +14,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   REF_NOT_BASE64: "fix-input",
   REF_EMPTY: "fix-input",
   REF_TOO_MANY: "fix-input",
+  MINIMAX_MODEL_REQUIRES_REFERENCE: "fix-input",
   MODERATION_REFUSED: "fix-input",
   SAFETY_REFUSAL: "fix-input",
   EMPTY_RESPONSE: "retry",

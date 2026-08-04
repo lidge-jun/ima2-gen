@@ -24,6 +24,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   agy: "Antigravity Gemini CLI",
   "gemini-api": "Gemini API / Vertex",
   atlascloud: "Atlas Cloud API",
+  minimax: "MiniMax API",
 };
 
 function present(value: unknown): value is string | number | boolean {

@@ -44,6 +44,7 @@
     "localImportInvalid": "PNG, JPEG, WebP만 지원해요",
     "localStorageFull": "로컬 저장소가 가득 차서 최근 상태가 저장되지 않을 수 있습니다.",
     "refLimitExceeded": "참조 이미지는 최대 5장까지 추가할 수 있습니다. 초과한 이미지는 제외되었습니다.",
+    "minimaxModelRequiresReference": "image-01-live는 중국 리전 밖에서 참조 이미지가 필요합니다. 참조를 추가하거나 image-01로 바꾸세요.",
     "refLimitTrayFull": "참조 트레이가 가득 찼습니다({max}개). 트레이의 X로 항목을 지우면 더 첨부할 수 있어요 — 지운 @태그는 @로 다시 멘션할 수 있습니다.",
     "refLimitPartial": "총 {total}개 중 {added}개만 추가됐습니다(한도 {max}개).",
     "refOverProviderLimit": "이 공급자는 참조 이미지를 최대 {max}장까지 지원합니다. {excess}장을 제거해야 생성할 수 있습니다.",
@@ -695,6 +696,7 @@
     "xaiApiKeyRequired": "xAI API 키 필요",
     "geminiApiKeyRequired": "Gemini API 키 필요",
     "atlasCloudApiKeyRequired": "Atlas Cloud API 키 필요",
+    "minimaxApiKeyRequired": "MiniMax API 키 필요",
     "comingSoon": "준비 중",
     "agyCompatTitle": "Gemini (agy)",
     "agyCompatBody": "1024x1024 고정, JPEG 출력, 최대 3개 참조. 품질/크기 조절 없음.",
@@ -1273,6 +1275,8 @@
       "nanoBananaPro": "나노 바나나 Pro",
       "atlasCloudGptImage2": "Atlas Cloud GPT Image 2",
       "atlasCloudGptImage2Edit": "Atlas Cloud GPT Image 2 Edit",
+      "minimaxImage01": "MiniMax image-01",
+      "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 이미지 생성 미지원",
       "unsupportedHelp": "Grok 모델은 번들된 로컬 프록시를 통해 xAI Images API를 사용합니다. GPT 모델은 OpenAI Responses 이미지 생성을 사용합니다."
@@ -1296,6 +1300,10 @@
       "atlascloud": {
         "label": "Atlas Cloud",
         "placeholder": "Atlas Cloud API 키 붙여넣기 (apikey-...)"
+      },
+      "minimax": {
+        "label": "MiniMax",
+        "placeholder": "MiniMax API 키 붙여넣기"
       },
       "vertex": {
         "label": "Vertex AI (서비스 계정)",

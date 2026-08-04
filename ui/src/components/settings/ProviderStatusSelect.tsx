@@ -25,6 +25,7 @@ const CORE_ENTRIES: ReadonlyArray<CoreEntry> = [
   { value: "agy", provider: "Gemini", method: "agy" },
   { value: "gemini-api", provider: "Gemini", method: "API" },
   { value: "atlascloud", provider: "Atlas Cloud", method: "API" },
+  { value: "minimax", provider: "MiniMax", method: "API" },
 ];
 
 function displayProviderId(id: string): string {

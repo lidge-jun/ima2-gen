@@ -189,6 +189,15 @@ export function AccountSettings() {
                 configured={keyStatus.atlascloud?.configured ?? false}
                 onSaved={mutateKeys}
               />
+              <ApiKeyInput
+                provider="minimax"
+                label={t("settings.apiKeys.minimax.label")}
+                placeholder={t("settings.apiKeys.minimax.placeholder")}
+                maskedKey={keyStatus.minimax?.maskedKey ?? null}
+                source={keyStatus.minimax?.source ?? "none"}
+                configured={keyStatus.minimax?.configured ?? false}
+                onSaved={mutateKeys}
+              />
               <GeminiKeySection
                 keyStatus={keyStatus}
                 onSaved={mutateKeys}
