@@ -44,6 +44,7 @@
     "localImportInvalid": "Only PNG, JPEG, or WebP is supported",
     "localStorageFull": "Local storage is full — recent state may not persist.",
     "refLimitExceeded": "References are capped at 5. Extra images were dropped.",
+    "minimaxModelRequiresReference": "image-01-live needs a reference image outside China. Attach one, or switch to image-01.",
     "refLimitTrayFull": "Reference tray is full ({max}). Remove an item with its X to attach more — deleted @tags can be re-mentioned with @.",
     "refLimitPartial": "Only {added} of {total} images were added (limit {max}).",
     "refOverProviderLimit": "This provider accepts up to {max} reference images. Remove {excess} to generate.",
@@ -695,6 +696,7 @@
     "xaiApiKeyRequired": "xAI API key required",
     "geminiApiKeyRequired": "Gemini API key required",
     "atlasCloudApiKeyRequired": "Atlas Cloud API key required",
+    "minimaxApiKeyRequired": "MiniMax API key required",
     "comingSoon": "Coming soon",
     "agyCompatTitle": "Gemini (agy)",
     "agyCompatBody": "1024x1024 fixed, JPEG output, max 3 refs. No quality/size control.",
@@ -1273,6 +1275,8 @@
       "nanoBananaPro": "Nano Banana Pro",
       "atlasCloudGptImage2": "Atlas Cloud GPT Image 2",
       "atlasCloudGptImage2Edit": "Atlas Cloud GPT Image 2 Edit",
+      "minimaxImage01": "MiniMax image-01",
+      "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — unsupported for images",
       "unsupportedHelp": "Grok models use xAI's Images API through the bundled local proxy. GPT models use OpenAI Responses image generation."
@@ -1296,6 +1300,10 @@
       "atlascloud": {
         "label": "Atlas Cloud",
         "placeholder": "Paste your Atlas Cloud API key (apikey-...)"
+      },
+      "minimax": {
+        "label": "MiniMax",
+        "placeholder": "Paste your MiniMax API key"
       },
       "vertex": {
         "label": "Vertex AI (Service Account)",

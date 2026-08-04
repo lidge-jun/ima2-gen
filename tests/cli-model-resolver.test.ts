@@ -34,6 +34,10 @@ function makeCatalog(): ModelCatalog {
         { image: [{ id: "openai/gpt-image-2/text-to-image" }] },
         { image: "openai/gpt-image-2/text-to-image" },
       ),
+      minimax: ready(
+        { image: [{ id: "image-01" }] },
+        { image: "image-01" },
+      ),
       runway: ready(
         { image: [{ id: "gen-4" }], video: [{ id: "veo-3.1" }] },
         { image: "gen-4", video: "veo-3.1" },

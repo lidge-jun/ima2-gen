@@ -6,6 +6,10 @@ import {
   ATLASCLOUD_TEXT_TO_IMAGE_MODEL,
 } from "../lib/atlasCloudImageAdapter.js";
 import {
+  MINIMAX_IMAGE_TO_IMAGE_MODEL,
+  MINIMAX_TEXT_TO_IMAGE_MODEL,
+} from "../lib/minimaxImageAdapter.js";
+import {
   GROK_VIDEO_MODEL_15,
   GROK_VIDEO_MODEL_BASE,
   MAX_VIDEO_DURATION,
@@ -34,7 +38,7 @@ import {
 export type ModelLaneStatus = "ready" | "locked" | "disconnected" | "key-missing";
 export type ModelLaneId =
   | "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api"
-  | "atlascloud" | "runway" | "higgsfield";
+  | "atlascloud" | "minimax" | "runway" | "higgsfield";
 
 export interface ModelLaneDto {
   status: ModelLaneStatus;
@@ -169,6 +173,15 @@ function atlasCloudLane(ctx: RuntimeContext): ModelLaneDto {
   });
 }
 
+function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
+  const state: LaneState = ctx.minimaxApiKey
+    ? { status: "ready" }
+    : { status: "key-missing", reason: "MiniMax API key missing" };
+  return lane(state, { image: MINIMAX_TEXT_TO_IMAGE_MODEL }, {
+    image: entries([MINIMAX_TEXT_TO_IMAGE_MODEL, MINIMAX_IMAGE_TO_IMAGE_MODEL]), video: [],
+  });
+}
+
 function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
   const gptModels = entries(ctx.config.imageModels.valid);
   return {
@@ -179,6 +192,7 @@ function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
     agy: agyLane(agyInstalled),
     "gemini-api": geminiLane(ctx),
     atlascloud: atlasCloudLane(ctx),
+    minimax: minimaxLane(ctx),
   };
 }
 

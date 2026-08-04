@@ -138,7 +138,7 @@ function startCodexDeviceCode(): Promise<{ sessionId: string; userCode: string; 
     // Don't hand other providers' secrets to the codex child — it only needs
     // PATH/HOME/codex config to run the ChatGPT device-code login.
     const childEnv = { ...process.env };
-    for (const k of ["OPENAI_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "VERTEX_SERVICE_ACCOUNT_JSON"]) {
+    for (const k of ["OPENAI_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "VERTEX_SERVICE_ACCOUNT_JSON", "ATLASCLOUD_API_KEY", "MINIMAX_API_KEY"]) {
       delete childEnv[k];
     }
     const codex = packageCliCommand(

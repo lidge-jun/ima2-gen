@@ -16,6 +16,8 @@ const VALID_ATLASCLOUD_IMAGE_MODELS = new Set([
   "openai/gpt-image-2/text-to-image",
   "openai/gpt-image-2/edit",
 ]);
+const MINIMAX_FALLBACK_IMAGE_MODEL = "image-01";
+const VALID_MINIMAX_IMAGE_MODELS = new Set(["image-01", "image-01-live"]);
 
 export function normalizeReasoningEffort(ctx: RouteRuntimeContext | null | undefined, rawEffort: unknown) {
   const configured = (ctx?.config as { imageModels?: { reasoningEffort?: string; validReasoningEfforts?: Set<string> } } | undefined)?.imageModels;
@@ -100,6 +102,20 @@ export function normalizeAtlasCloudImageModel(rawModel: unknown) {
     return {
       error: `Atlas Cloud image model must be one of: ${[...VALID_ATLASCLOUD_IMAGE_MODELS].join(", ")}`,
       code: "INVALID_ATLASCLOUD_IMAGE_MODEL" as const,
+      status: 400 as const,
+    };
+  }
+  return { model: rawModel };
+}
+
+export function normalizeMinimaxImageModel(rawModel: unknown) {
+  if (typeof rawModel !== "string" || rawModel.length === 0) {
+    return { model: MINIMAX_FALLBACK_IMAGE_MODEL };
+  }
+  if (!VALID_MINIMAX_IMAGE_MODELS.has(rawModel)) {
+    return {
+      error: `MiniMax image model must be one of: ${[...VALID_MINIMAX_IMAGE_MODELS].join(", ")}`,
+      code: "INVALID_MINIMAX_IMAGE_MODEL" as const,
       status: 400 as const,
     };
   }

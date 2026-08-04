@@ -33,13 +33,14 @@ async function updateConfigFile(
   });
 }
 
-type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud";
+type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud" | "minimax";
 
 const KEY_PREFIX_MAP: Record<KeyProvider, string[]> = {
   openai: ["sk-"],
   xai: ["xai-"],
   gemini: ["AI"],
   atlascloud: ["apikey-"],
+  minimax: [],
 };
 
 const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
@@ -47,17 +48,37 @@ const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
   xai: "https://api.x.ai/v1/models",
   gemini: "https://generativelanguage.googleapis.com/v1beta/models",
   atlascloud: "https://api.atlascloud.ai/api/v1/models",
+  // Fallback only. The MiniMax branch resolves a region-aware URL at call time
+  // via resolveMinimaxValidateUrl so a cn_zh workspace validates against the CN host.
+  minimax: "https://api.minimax.io/v1/models",
 };
+
+// Same region rule as lib/minimaxImageAdapter.ts resolveBaseUrl.
+function resolveMinimaxValidateUrl(ctx: RuntimeContext): string {
+  const cfg = ctx.config.minimaxProvider;
+  const base = cfg.region === "cn_zh" ? cfg.cnBaseUrl : cfg.globalBaseUrl;
+  return `${base.replace(/\/$/, "")}/models`;
+}
+
+async function readJsonOrNull(res: globalThis.Response): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed = await res.json();
+    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
 
 const CONFIG_KEY_MAP: Record<KeyProvider, string> = {
   openai: "apiKey",
   xai: "xaiApiKey",
   gemini: "geminiApiKey",
   atlascloud: "atlasCloudApiKey",
+  minimax: "minimaxApiKey",
 };
 
 function isKeyProvider(v: string): v is KeyProvider {
-  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud";
+  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud" || v === "minimax";
 }
 
 function maskKey(key: string): string {
@@ -70,13 +91,14 @@ function keySourceForProvider(ctx: RuntimeContext, provider: KeyProvider): { key
   if (provider === "xai") return { key: ctx.xaiApiKey, source: ctx.xaiApiKeySource || "none" };
   if (provider === "gemini") return { key: ctx.geminiApiKey, source: ctx.geminiApiKeySource || "none" };
   if (provider === "atlascloud") return { key: ctx.atlasCloudApiKey, source: ctx.atlasCloudApiKeySource || "none" };
+  if (provider === "minimax") return { key: ctx.minimaxApiKey, source: ctx.minimaxApiKeySource || "none" };
   return { key: undefined, source: "none" };
 }
 
 export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
   app.get("/api/keys/status", (_req: Request, res: Response) => {
     const status: Record<string, unknown> = {};
-    for (const provider of ["openai", "xai", "gemini", "atlascloud"] as const) {
+    for (const provider of ["openai", "xai", "gemini", "atlascloud", "minimax"] as const) {
       const { key, source } = keySourceForProvider(ctx, provider);
       status[provider] = {
         configured: !!key,
@@ -194,12 +216,13 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       return res.status(400).json({ ok: false, error: "API key too large", code: "KEY_TOO_LARGE" });
     }
 
-    // Format check
-    const validPrefix = KEY_PREFIX_MAP[provider].some((p) => trimmed.startsWith(p));
+    // Format check (providers with an empty prefix list accept any non-empty key)
+    const prefixes = KEY_PREFIX_MAP[provider];
+    const validPrefix = prefixes.length === 0 || prefixes.some((p) => trimmed.startsWith(p));
     if (!validPrefix) {
       return res.status(400).json({
         ok: false,
-        error: `Invalid key format for ${provider}: expected prefix ${KEY_PREFIX_MAP[provider].join(" or ")}`,
+        error: `Invalid key format for ${provider}: expected prefix ${prefixes.join(" or ")}`,
         code: "INVALID_KEY_FORMAT",
       });
     }
@@ -212,6 +235,28 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
         opts.headers = { "x-goog-api-key": trimmed };
         const validateRes = await fetch(url, opts);
         if (!validateRes.ok) throw new Error(`HTTP ${validateRes.status}`);
+      } else if (provider === "minimax") {
+        // List models instead of generating one: listing costs nothing, while
+        // probing the image endpoint would bill a real image on every save.
+        opts.method = "GET";
+        opts.headers = { Authorization: `Bearer ${trimmed}` };
+        const validateRes = await fetch(resolveMinimaxValidateUrl(ctx), opts);
+        if (!validateRes.ok) throw new Error(`HTTP ${validateRes.status}`);
+        // Fail closed: a 2xx alone is not proof, because MiniMax also reports
+        // errors inside a 200 body. Require the documented list shape.
+        const parsed = await readJsonOrNull(validateRes);
+        if (!parsed || !Array.isArray(parsed.data)) {
+          throw new Error("unexpected model list response");
+        }
+        const baseResp = parsed.base_resp as { status_code?: unknown } | undefined;
+        // Accept only an explicit success code. A non-numeric status_code is
+        // type drift, not permission to store the key.
+        if (baseResp && baseResp.status_code !== undefined) {
+          const status = Number(baseResp.status_code);
+          if (!Number.isFinite(status) || status !== 0) {
+            throw new Error(`MiniMax status ${String(baseResp.status_code)}`);
+          }
+        }
       } else {
         opts.headers = { Authorization: `Bearer ${trimmed}` };
         const validateRes = await fetch(url, opts);
@@ -254,6 +299,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).atlasCloudApiKey = trimmed;
       (ctx as any).atlasCloudApiKeySource = "config";
       (ctx as any).hasAtlasCloudApiKey = true;
+    } else if (provider === "minimax") {
+      (ctx as any).minimaxApiKey = trimmed;
+      (ctx as any).minimaxApiKeySource = "config";
+      (ctx as any).hasMinimaxApiKey = true;
     }
 
     return res.json({ ok: true, provider, source: "config", valid: true });
@@ -291,6 +340,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).atlasCloudApiKey = undefined;
       (ctx as any).atlasCloudApiKeySource = "none";
       (ctx as any).hasAtlasCloudApiKey = false;
+    } else if (provider === "minimax") {
+      (ctx as any).minimaxApiKey = undefined;
+      (ctx as any).minimaxApiKeySource = "none";
+      (ctx as any).hasMinimaxApiKey = false;
     }
 
     return res.json({ ok: true, provider, removed: true });

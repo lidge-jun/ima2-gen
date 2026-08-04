@@ -5,10 +5,12 @@
 // - routes/mcpMedia.ts: MCP lane takes up to 3 references [{filename, tag}];
 //   direct attachments ride POST /api/mcp/temp-references (batch upload into
 //   generated storage), so the tray cap is 3 (composer-tray 010 A5).
+// - lib/minimaxImageAdapter.ts: MiniMax takes a single subject_reference
 // - gpt oauth/api: server capabilities.limits.maxRefCount (referenceLimit)
 import type { Provider } from "../types";
 
 export const GROK_FAMILY_IMAGE_REF_LIMIT = 3;
+export const MINIMAX_IMAGE_REF_LIMIT = 1;
 export const GROK_VIDEO_REF_LIMIT = 7;
 export const MCP_REFERENCE_LIMIT = 3;
 
@@ -22,6 +24,9 @@ export function effectiveReferenceLimit(input: {
 }): number {
   if (input.mcpProvider) return MCP_REFERENCE_LIMIT;
   if (input.videoModelSelected) return Math.min(input.serverLimit, GROK_VIDEO_REF_LIMIT);
+  if (input.provider === "minimax") {
+    return Math.min(input.serverLimit, MINIMAX_IMAGE_REF_LIMIT);
+  }
   if (LIMITED_IMAGE_PROVIDERS.has(input.provider)) {
     return Math.min(input.serverLimit, GROK_FAMILY_IMAGE_REF_LIMIT);
   }

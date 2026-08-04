@@ -30,6 +30,7 @@ const CORE_PROVIDER_OPTIONS: ReadonlyArray<{ value: Provider; label: string }> =
   { value: "agy", label: "agy" },
   { value: "gemini-api", label: "Gem API" },
   { value: "atlascloud", label: "Atlas" },
+  { value: "minimax", label: "MiniMax" },
 ];
 
 const MCP_PREFIX = "mcp:";

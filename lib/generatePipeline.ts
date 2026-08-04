@@ -15,6 +15,7 @@ import { generateViaGrok, planGrokImage } from "./grokImageAdapter.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
+import { generateViaMinimax } from "./minimaxImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, setJobPhase, INFLIGHT_RETRY_AFTER_SECONDS, } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
@@ -215,6 +216,13 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           requestId,
         });
       }
+      if (activeProvider === "minimax" && providerRefCount > 1) {
+        return fail(400, {
+          error: "MiniMax image editing supports up to 1 subject reference",
+          code: "MINIMAX_REF_TOO_MANY",
+          requestId,
+        });
+      }
       const started = startJob({
         requestId,
         kind: "classic",
@@ -280,7 +288,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       });
       const startTime = Date.now();
       const mimeMap: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
-      const effectiveFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? "jpeg" : String(format);
+      const effectiveFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : String(format);
       const mime = mimeMap[effectiveFormat] || "image/png";
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
       const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
@@ -323,6 +331,17 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             model: imageModel,
             size: effectiveSize,
             quality,
+            signal: cancelController.signal,
+            requestId,
+            references: refCheck.refDetails,
+          });
+          throwIfJobCanceled(requestId);
+          return r;
+        }
+        if (activeProvider === "minimax") {
+          const r = await generateViaMinimax(generationPrompt, requireRuntimeContext(ctx), {
+            model: imageModel,
+            size: effectiveSize,
             signal: cancelController.signal,
             requestId,
             references: refCheck.refDetails,
@@ -401,10 +420,10 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         if (r.status === "fulfilled" && r.value.b64) {
           throwIfJobCanceled(requestId);
           const valueWithMime = r.value as typeof r.value & { mime?: string };
-          const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud"
+          const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax"
             ? (valueWithMime.mime || detectImageMimeFromB64(r.value.b64) || mime)
             : mime;
-          const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" ? imageFormatFromMime(resultMime) : effectiveFormat;
+          const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(resultMime) : effectiveFormat;
           const retryValue = r.value as typeof r.value & {
             retryKind?: string;
             initialEventCount?: number;
