@@ -125,9 +125,18 @@ function readExceptionsFile(path = EXCEPTIONS_PATH) {
 /**
  * Splits findings at or above the threshold into excluded and remaining.
  *
- * Matching is per advisory AND per scope, walking `via` for the GHSA url that npm
- * reports. A package that is only vulnerable *through* an excluded advisory (npm lists
- * the parent separately with a string `via`) is excluded with it; anything else counts.
+ * Matching is per advisory AND per scope. A finding is excluded only when EVERY entry in
+ * its `via` is fully understood and allowed:
+ *
+ * - an advisory object must carry a GHSA url that is on the list
+ * - a string entry names another vulnerable package, which must itself be excluded
+ * - anything else (an object with no url, an unexpected shape) makes the finding
+ *   un-interpretable, so it counts
+ *
+ * Skipping entries we cannot read would be the whole bug: a `via` of
+ * `[{excepted advisory}, "some-other-vulnerable-package"]` would drop the string and
+ * report the package as fully excused. Resolution therefore iterates to a fixed point,
+ * because string entries can only be judged once their target is settled.
  */
 export function partitionFindings(report, auditLevel, exceptions, scope) {
   const floor = LEVELS.indexOf(auditLevel);
@@ -138,26 +147,58 @@ export function partitionFindings(report, auditLevel, exceptions, scope) {
   const vulns = report?.vulnerabilities;
   if (!vulns || typeof vulns !== "object") throw new Error("audit report has no per-advisory detail to match exceptions against");
 
+  const findings = Object.entries(vulns).filter(([, vuln]) => atOrAbove.has(vuln?.severity));
   const excludedNames = new Set();
-  const remaining = [];
-  // Two passes: settle direct advisory matches first, then packages that are only
-  // vulnerable through an already-excluded dependency.
-  for (const [name, vuln] of Object.entries(vulns)) {
-    if (!atOrAbove.has(vuln?.severity)) continue;
-    const ids = (Array.isArray(vuln.via) ? vuln.via : [])
-      .filter((via) => via && typeof via === "object" && typeof via.url === "string")
-      .map((via) => via.url.split("/").pop());
-    if (ids.length > 0 && ids.every((id) => allowed.has(id))) excludedNames.add(name);
-  }
-  for (const [name, vuln] of Object.entries(vulns)) {
-    if (!atOrAbove.has(vuln?.severity) || excludedNames.has(name)) continue;
-    const via = Array.isArray(vuln.via) ? vuln.via : [];
-    const parents = via.filter((entry) => typeof entry === "string");
-    if (via.length > 0 && parents.length === via.length && parents.every((parent) => excludedNames.has(parent))) {
-      excludedNames.add(name);
-      continue;
+
+  // `package` is not decoration: an entry naming a package that does not actually carry
+  // its advisory is a stale or mistyped exception, and a wrong exception must be visible
+  // rather than silently inert.
+  const advisoryOwners = new Map();
+  for (const [name, vuln] of findings) {
+    for (const entry of Array.isArray(vuln.via) ? vuln.via : []) {
+      if (entry && typeof entry === "object" && typeof entry.url === "string") {
+        advisoryOwners.set(entry.url.split("/").pop(), name);
+      }
     }
-    remaining.push(name);
+  }
+  for (const entry of scoped) {
+    const owner = advisoryOwners.get(entry.ghsa);
+    if (owner && owner !== entry.package) {
+      throw new Error(`exception ${entry.ghsa} names package ${entry.package} but the advisory belongs to ${owner}`);
+    }
+  }
+
+  /** Excusable only when every `via` entry is both understood and allowed. */
+  const isFullyExcused = (vuln) => {
+    const via = Array.isArray(vuln.via) ? vuln.via : null;
+    if (!via || via.length === 0) return false;
+    return via.every((entry) => {
+      if (typeof entry === "string") return excludedNames.has(entry);
+      if (!entry || typeof entry !== "object" || typeof entry.url !== "string") return false;
+      return allowed.has(entry.url.split("/").pop());
+    });
+  };
+
+  // Fixed point: a string `via` can only be judged after its target is settled.
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const [name, vuln] of findings) {
+      if (excludedNames.has(name)) continue;
+      if (isFullyExcused(vuln)) {
+        excludedNames.add(name);
+        changed = true;
+      }
+    }
+  }
+
+  const remaining = findings.map(([name]) => name).filter((name) => !excludedNames.has(name));
+
+  // The tally is what decides pass/fail elsewhere, so the per-advisory list must account
+  // for all of it. A report whose detail is thinner than its own count is not something
+  // exceptions may be applied to.
+  const counted = countAtOrAbove(report, auditLevel);
+  if (excludedNames.size + remaining.length !== counted) {
+    throw new Error(`audit report lists ${excludedNames.size + remaining.length} ${auditLevel}+ findings but its tally says ${counted}`);
   }
   return { excluded: [...excludedNames], remaining };
 }

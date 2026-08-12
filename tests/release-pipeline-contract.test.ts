@@ -242,6 +242,14 @@ describe("package install policy contract", () => {
     assert.match(cut, /export function assertPreviewProof/);
     assert.doesNotMatch(cut, /npm publish/);
 
+    // Guards release.sh had before it promoted anything must survive the move to CI.
+    assert.match(release, /npm run verify:release/, "the candidate must be verified before it is pushed");
+    const verifyIndex = release.indexOf("npm run verify:release");
+    assert.ok(verifyIndex < release.indexOf('git push origin "HEAD:refs/heads/main"'), "verification must precede the main push");
+    assert.match(release, /release-cut\.mjs assert-clean/);
+    assert.match(release, /release-contract\.mjs assert-toolchain/);
+    assert.match(release, /release-cut\.mjs assert-remotes-unmoved/);
+
     for (const path of ["scripts/install-mac.sh", "scripts/install-linux.sh", "scripts/install-windows.ps1"]) {
       const installer = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
       assert.match(installer, /allow-scripts=ima2-gen,better-sqlite3,sharp/);
@@ -269,20 +277,41 @@ describe("package install policy contract", () => {
     assert.match(assertPreviewProof({ ...proven, previewVersion: "3.0.5-preview.1" }).join(), /not a 3\.0\.6 candidate/);
     // A missing preview build must never read as a proof.
     assert.equal(assertPreviewProof({ ...proven, previewVersion: null, previewGitHead: null }).length, 2);
+
+    const { assertRemotesUnmoved } = await import("../scripts/release-cut.mjs");
+    assert.deepEqual(assertRemotesUnmoved({ sha: "abc", main: "abc", preview: "abc" }), []);
+    // Someone merging to main while the preview build was being proven must block the tag,
+    // because the tag would then certify a SHA that main no longer points at.
+    assert.match(assertRemotesUnmoved({ sha: "abc", main: "def", preview: "abc" }).join(), /origin\/main moved to def/);
+    assert.match(assertRemotesUnmoved({ sha: "abc", main: "abc", preview: "def" }).join(), /origin\/preview is def/);
   });
 
-  it("waits on the dispatched publish run, not on whatever ran last", async () => {
+  it("waits on the run it dispatched, not on a concurrent one", async () => {
     const { pickRun } = await import("../scripts/wait-publish-run.mjs");
-    const startedAt = Date.parse("2026-08-12T12:00:00Z");
+    const startedAtMs = Date.parse("2026-08-12T12:00:00Z");
+    const publishRef = "refs/heads/preview";
+    const publishSha = "abc123";
+    const inputs: Record<number, { publish_ref: string; publish_sha: string } | null> = {
+      1: { publish_ref: publishRef, publish_sha: publishSha },   // push event, must lose
+      2: { publish_ref: publishRef, publish_sha: publishSha },   // too old
+      3: { publish_ref: publishRef, publish_sha: "othersha" },   // a concurrent release
+      4: { publish_ref: publishRef, publish_sha: publishSha },   // ours
+      5: null,                                                   // inputs unreadable
+    };
     const runs = [
       { databaseId: 1, event: "push", createdAt: "2026-08-12T12:05:00Z" },
       { databaseId: 2, event: "workflow_dispatch", createdAt: "2026-08-12T11:00:00Z" },
       { databaseId: 3, event: "workflow_dispatch", createdAt: "2026-08-12T12:02:00Z" },
-      { databaseId: 4, event: "workflow_dispatch", createdAt: "2026-08-12T12:09:00Z" },
+      { databaseId: 4, event: "workflow_dispatch", createdAt: "2026-08-12T12:04:00Z" },
+      { databaseId: 5, event: "workflow_dispatch", createdAt: "2026-08-12T12:03:00Z" },
     ];
-    // A push run and an older dispatch must both be ignored, or an unrelated success
-    // would be reported as this release's.
-    assert.equal(pickRun(runs, startedAt)?.databaseId, 3);
-    assert.equal(pickRun([runs[0], runs[1]], startedAt), undefined);
+    const options = { startedAtMs, publishRef, publishSha, inputsOf: (run: { databaseId: number }) => inputs[run.databaseId] };
+
+    // Run 3 is newer than ours in nothing but luck: it belongs to another release, so
+    // matching on time alone would have adopted it.
+    assert.equal(pickRun(runs, options)?.databaseId, 4);
+    // A run whose inputs cannot be read is never a match.
+    assert.equal(pickRun([runs[4]], options), undefined);
+    assert.equal(pickRun([runs[0], runs[1], runs[2]], options), undefined);
   });
 });

@@ -11,8 +11,8 @@
       "ghsa": "GHSA-w3rx-r6r6-pgpr",
       "package": "image-size",
       "scope": "ui",
-      "reason": "Unreachable: image-size is pptxgenjs' Node-only path and Vite tree-shakes it out of the browser bundle. No fixed version exists — the advisory range is '*' and 2.0.2 is the newest release.",
-      "evidence": "grep -c 'image-size\\|imageSize' ui/dist/assets/pptxgen.es-*.js -> 0; grep -oE 'icns|readUInt32BE' on the same bundle -> no match; npm view image-size dist-tags -> { latest: '2.0.2', legacy: '1.2.1' }; overrides to ^2.0.2 was tried and audit stayed red. devlog/_plan/260812_navrail_grok_autotag/040_closeout.md",
+      "reason": "Unreachable: image-size is pptxgenjs' Node-only path and Vite tree-shakes it out of the browser bundle. No fixed version exists — the advisory covers <=2.0.2 and 2.0.2 is the newest release, so npm reports the package range as '*'.",
+      "evidence": "pptxgenjs@4.0.1 browser map sets image-size to false; grep -c 'image-size|imageSize' ui/dist/assets/pptxgen.es-*.js -> 0; grep -oE 'icns|readUInt32BE|jxl|heif' on the same bundle -> no match; npm view image-size dist-tags -> { latest: '2.0.2', legacy: '1.2.1' }; an overrides bump to ^2.0.2 was applied and audit stayed red. devlog/_plan/260812_navrail_grok_autotag/040_closeout.md",
       "expires": "2026-11-12"
     },
     {

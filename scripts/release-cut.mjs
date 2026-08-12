@@ -134,9 +134,44 @@ function previewProof(version, sha) {
   console.log(`[release] preview proof verified for v${version}@${sha}`);
 }
 
+/**
+ * Release verification must not have rewritten tracked output. release.sh made the same
+ * check: a build that regenerates a committed artifact means the commit about to be
+ * promoted does not match what was verified.
+ */
+function assertClean() {
+  const dirty = git(["status", "--porcelain", "--untracked-files=normal"]);
+  if (dirty) fail([`release verification changed tracked output; commit generated artifacts and retry:\n${dirty}`]);
+  console.log("[release] worktree is clean after verification");
+}
+
+/**
+ * release.sh re-read the remotes after the preview publish and refused to tag if anything
+ * had moved underneath it. Same guard here: preview must still be the release SHA, and
+ * main must not have advanced past it while the preview build was being proven.
+ */
+export function assertRemotesUnmoved({ sha, main, preview }) {
+  const problems = [];
+  if (preview !== sha) problems.push(`origin/preview is ${preview}, expected the release ${sha}`);
+  if (main !== sha) problems.push(`origin/main moved to ${main} during preview verification, expected ${sha}`);
+  return problems;
+}
+
+function remotesUnmoved(sha) {
+  const problems = assertRemotesUnmoved({
+    sha,
+    main: git(["rev-parse", "origin/main"]),
+    preview: git(["rev-parse", "origin/preview"]),
+  });
+  if (problems.length) fail(problems);
+  console.log(`[release] remotes still point at ${sha}`);
+}
+
 const COMMANDS = {
   preflight: () => preflight(),
   commit: (args) => commit(args[0] || "patch"),
+  "assert-clean": () => assertClean(),
+  "assert-remotes-unmoved": (args) => remotesUnmoved(args[0]),
   "assert-preview-proof": (args) => previewProof(args[0], args[1]),
 };
 
@@ -145,7 +180,7 @@ if (isMain) {
   const [command, ...args] = process.argv.slice(2);
   try {
     const run = COMMANDS[command];
-    if (!run) throw new Error("usage: release-cut.mjs preflight | commit <bump> | assert-preview-proof <version> <sha>");
+    if (!run) throw new Error("usage: release-cut.mjs preflight | commit <bump> | assert-clean | assert-remotes-unmoved <sha> | assert-preview-proof <version> <sha>");
     run(args);
   } catch (error) {
     console.error(`[release-cut] ${error.message}`);

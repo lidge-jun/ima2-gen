@@ -54,6 +54,8 @@ jobs:
         run: git fetch origin main dev preview --tags
       - name: Assert the release baseline
         run: node scripts/release-cut.mjs preflight
+      - name: Assert the pinned release toolchain
+        run: node scripts/release-contract.mjs assert-toolchain
       - run: npm ci
       - run: npm --prefix ui ci --no-audit --no-fund
       - id: commit
@@ -61,6 +63,14 @@ jobs:
         env:
           BUMP: ${{ inputs.bump }}
         run: node scripts/release-cut.mjs commit "$BUMP"
+      # release.sh verified BEFORE promoting anything. publish.yml runs the same gate, but
+      # only after the push — by then a bad commit is already on main. Verify first so a
+      # failing release leaves the remote untouched.
+      - name: Verify the release candidate before promoting it
+        run: npm run verify:release
+        timeout-minutes: 45
+      - name: Refuse a candidate whose verification changed tracked output
+        run: node scripts/release-cut.mjs assert-clean
       - name: Push the version commit to main
         run: git push origin "HEAD:refs/heads/main"
       - name: Promote the exact SHA to preview
@@ -75,7 +85,7 @@ jobs:
       - name: Wait for the preview publish to finish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/wait-publish-run.mjs "${{ steps.commit.outputs.sha }}"
+        run: node scripts/wait-publish-run.mjs refs/heads/preview "${{ steps.commit.outputs.sha }}"
       - name: Require the npm preview proof before tagging
         run: >-
           node scripts/release-cut.mjs assert-preview-proof
@@ -101,6 +111,8 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - name: Fetch release branches and tags
         run: git fetch origin main dev preview --tags
+      - name: Refuse to tag if the remotes moved during preview verification
+        run: node scripts/release-cut.mjs assert-remotes-unmoved "${{ needs.cut.outputs.sha }}"
       - name: Re-check the preview proof at tag time
         run: >-
           node scripts/release-cut.mjs assert-preview-proof
@@ -128,7 +140,7 @@ jobs:
       - name: Wait for the stable publish to finish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/wait-publish-run.mjs "${{ needs.cut.outputs.sha }}"
+        run: node scripts/wait-publish-run.mjs "refs/tags/v${{ needs.cut.outputs.version }}" "${{ needs.cut.outputs.sha }}"
       - name: Write the release summary
         run: |
           {

@@ -279,7 +279,12 @@ const UI_REPORT = {
     },
     pptxgenjs: { severity: "high", via: ["image-size"] },
   },
+  metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 2, critical: 0 } },
 };
+
+function reportOf(vulnerabilities: Record<string, unknown>, high: number) {
+  return { vulnerabilities, metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high, critical: 0 } } };
+}
 
 test("excluding every advisory of a package also clears the parent that depends on it", () => {
   const both = [exception(), exception({ ghsa: "GHSA-5p2g-fcmc-qvqq" })];
@@ -304,6 +309,39 @@ test("an exception does not leak across scopes", () => {
 
 test("a report without per-advisory detail fails closed instead of excluding blindly", () => {
   assert.throws(() => partitionFindings({ metadata: {} }, "high", [exception()], "ui"), /no per-advisory detail/);
+});
+
+// Regression: an earlier version filtered `via` down to entries it understood and then
+// checked only those, so a mixed array quietly excused an unexcepted vulnerability.
+test("a via entry the gate cannot fully read never excuses the finding", () => {
+  const excepted = "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr";
+
+  const mixed = reportOf({
+    "image-size": { severity: "high", via: [{ url: excepted }, "other"] },
+    other: { severity: "high", via: [{ url: "https://github.com/advisories/GHSA-zzzz-zzzz-zzzz" }] },
+  }, 2);
+  assert.deepEqual(partitionFindings(mixed, "high", [exception()], "ui").remaining.sort(), ["image-size", "other"]);
+
+  const urlless = reportOf({ "image-size": { severity: "high", via: [{ url: excepted }, { source: 999 }] } }, 1);
+  assert.deepEqual(partitionFindings(urlless, "high", [exception()], "ui").remaining, ["image-size"]);
+
+  const emptyVia = reportOf({ "image-size": { severity: "high", via: [] } }, 1);
+  assert.deepEqual(partitionFindings(emptyVia, "high", [exception()], "ui").remaining, ["image-size"]);
+});
+
+test("a report whose detail does not account for its own tally fails closed", () => {
+  // The tally is what decides pass/fail, so a thinner detail list must not be excused.
+  const understated = reportOf({ "image-size": UI_REPORT.vulnerabilities["image-size"] }, 2);
+  const both = [exception(), exception({ ghsa: "GHSA-5p2g-fcmc-qvqq" })];
+  assert.throws(() => partitionFindings(understated, "high", both, "ui"), /tally says 2/);
+});
+
+test("an exception naming the wrong package is an error, not a silent no-op", () => {
+  const both = [exception({ package: "pptxgenjs" }), exception({ ghsa: "GHSA-5p2g-fcmc-qvqq" })];
+  assert.throws(
+    () => partitionFindings(UI_REPORT, "high", both, "ui"),
+    /names package pptxgenjs but the advisory belongs to image-size/,
+  );
 });
 
 test("the shipped exception file is well-formed and every active entry is justified", () => {
