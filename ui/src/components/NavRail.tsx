@@ -194,9 +194,9 @@ export function NavRail() {
       onClick={() => navigate(item)}
       aria-label={t(item.labelKey)}
       aria-current={isActive(item) ? "page" : undefined}
-      title={t(item.labelKey)}
     >
       <item.icon />
+      <span className="nav-rail__label" aria-hidden="true">{t(item.labelKey)}</span>
     </button>
   );
 

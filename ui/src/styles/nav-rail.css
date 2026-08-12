@@ -10,7 +10,9 @@
   background: var(--bg);
   border-right: 1px solid var(--hairline-soft);
   z-index: 100;
-  overflow: hidden;
+  /* The hover label rides outside the 52px rail, so this must not clip. The rail has no
+     vertical scroll of its own (7 items in 100dvh). */
+  overflow: visible;
 }
 
 .nav-rail__top,
@@ -22,6 +24,7 @@
 }
 
 .nav-rail__btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,6 +44,37 @@
 .nav-rail__btn.is-active {
   color: var(--accent-bright);
   background: var(--accent-soft);
+}
+
+/* An icon-only rail hides its meaning behind the browser's ~500ms `title` delay, which
+   keyboard users never see at all. The label flies out beside the button instead of
+   widening the rail: --nav-rail-w (themes.css) is a grid column in six workspaces, so a
+   wider rail would reflow the whole app. `.nav-rail` carries z-index 100 as a grid item,
+   which is what lifts this above the sibling sidebar. */
+.nav-rail__label {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  translate: -4px -50%;
+  z-index: 150;
+  padding: 5px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  box-shadow: 0 6px 20px var(--shadow-soft);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, translate 0.12s ease;
+}
+
+.nav-rail__btn:hover .nav-rail__label,
+.nav-rail__btn:focus-visible .nav-rail__label {
+  opacity: 1;
+  translate: 0 -50%;
 }
 
 /* ── Mobile: bottom tab bar ── */
@@ -67,9 +101,31 @@
   z-index: 160;
 }
 
+/* Touch has no hover, so the tab bar shows its labels permanently. min-width/min-height
+   keep the 44px touch target that the old fixed 44x44 box guaranteed. */
 .nav-rail--mobile .nav-rail__btn {
-  width: 44px;
-  height: 44px;
+  flex-direction: column;
+  gap: 2px;
+  width: auto;
+  min-width: 44px;
+  height: auto;
+  min-height: 44px;
+  padding: 4px 6px;
+}
+
+.nav-rail--mobile .nav-rail__label {
+  position: static;
+  z-index: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font-size: 10px;
+  opacity: 1;
+  translate: none;
+  transition: none;
 }
 
 /* Desktop: hide on mobile */
