@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -164,17 +164,19 @@ describe("package install policy contract", () => {
     assert.equal(validateBundleParity({ bundleDependencies: ["progrok", "openai-oauth"] }, lock).length, 1);
   });
 
-  it("keeps executable local release scripts out of npm publish", () => {
+  it("keeps publishing inside the OIDC workflow", () => {
+    // The local release scripts are gone: release.yml owns the cut end to end.
     for (const path of ["scripts/release.sh", "scripts/release-preview.sh"]) {
-      const source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-      const executableLines = source.split("\n").filter((line) => !line.trim().startsWith("#"));
-      assert.ok(!executableLines.some((line) => /npm\s+publish/.test(line)), `${path} must not publish locally`);
-      if (process.platform !== "win32") {
-        assert.ok(statSync(new URL(`../${path}`, import.meta.url)).mode & 0o111, `${path} must remain executable`);
-      }
+      assert.equal(existsSync(new URL(`../${path}`, import.meta.url)), false, `${path} must not come back`);
     }
     const workflow = readFileSync(new URL("../.github/workflows/publish.yml", import.meta.url), "utf8");
-    assert.doesNotMatch(workflow, /workflow_dispatch|(?:^|\n)\s*release:\s*(?:\n|$)/);
+    // workflow_dispatch is how release.yml reaches this workflow, because a GITHUB_TOKEN
+    // push emits no event. It cannot widen what may be published: the ref is still
+    // classified, and classifyPublish accepts only preview or a matching v* tag.
+    assert.match(workflow, /workflow_dispatch:/);
+    assert.match(workflow, /publish_ref:/);
+    assert.match(workflow, /publish_sha:/);
+    assert.doesNotMatch(workflow, /(?:^|\n)on:[\s\S]{0,400}?(?:^|\n)\s{2}release:\s*(?:\n|$)/);
     assert.match(workflow, /branches:\s*\[preview\]/);
     assert.match(workflow, /tags:\s*\['v\*'\]/);
     assert.equal((workflow.match(/id-token:\s*write/g) || []).length, 1, "only publish job may mint OIDC tokens");
@@ -195,6 +197,16 @@ describe("package install policy contract", () => {
     assert.match(workflow, /channel == 'latest'/);
     assert.match(workflow, /permissions:[\s\S]*contents:\s*write[\s\S]*id-token:\s*write/);
 
+    // Every checkout and every contract call must target the ref being released, not the
+    // dispatch's default-branch checkout.
+    assert.match(workflow, /PUBLISH_REF: \$\{\{ inputs\.publish_ref \|\| github\.ref \}\}/);
+    assert.match(workflow, /PUBLISH_SHA: \$\{\{ inputs\.publish_sha \|\| github\.sha \}\}/);
+    assert.equal((workflow.match(/ref: \$\{\{ inputs\.publish_sha \|\| github\.sha \}\}/g) || []).length,
+      (workflow.match(/actions\/checkout@/g) || []).length,
+      "every checkout must pin the published sha");
+    assert.doesNotMatch(workflow, /\$GITHUB_SHA|\$GITHUB_REF/, "steps must use the effective PUBLISH_* values");
+    assert.match(workflow, /group: publish-\$\{\{ inputs\.publish_ref \|\| github\.ref \}\}/);
+
     const contract = readFileSync(new URL("../scripts/release-contract.mjs", import.meta.url), "utf8");
     assert.match(contract, /export async function ensureGithubRelease/);
     assert.match(contract, /command === "ensure-github-release"/);
@@ -203,22 +215,74 @@ describe("package install policy contract", () => {
     const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
     assert.match(manifest.scripts.prepublishOnly, /assert-publish-context/);
 
-    const release = readFileSync(new URL("../scripts/release.sh", import.meta.url), "utf8");
-    const commitIndex = release.indexOf("git commit -m");
-    const previewIndex = release.indexOf("./scripts/release-preview.sh");
-    const tagIndex = release.indexOf("git tag \"v$VERSION\"");
-    assert.ok(commitIndex >= 0 && commitIndex < previewIndex, "release commit must exist before preview");
-    assert.ok(previewIndex < tagIndex, "preview proof must finish before stable tag creation");
-    assert.match(release, /release\.sh finalize X\.Y\.Z/);
-    assert.match(release, /assert-toolchain/);
-    assert.match(release, /ensure-github-release/);
+    // The ordering invariant survived the move from release.sh into CI: the version
+    // commit precedes the preview promotion, and the stable tag follows the npm proof.
+    const release = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+    const preflightIndex = release.indexOf("release-cut.mjs preflight");
+    const commitIndex = release.indexOf("release-cut.mjs commit");
+    const previewIndex = release.indexOf("refs/heads/preview");
+    const proofIndex = release.indexOf("assert-preview-proof");
+    const tagIndex = release.indexOf("git tag");
+    assert.ok(preflightIndex >= 0 && preflightIndex < commitIndex, "the baseline guard must precede the version commit");
+    assert.ok(commitIndex < previewIndex, "the version commit must precede preview promotion");
+    assert.ok(previewIndex < proofIndex, "preview must be promoted before its proof is required");
+    assert.ok(proofIndex >= 0 && proofIndex < tagIndex, "preview proof must finish before stable tag creation");
+    // The cut never publishes and never mints OIDC: publish.yml keeps both.
+    assert.doesNotMatch(release, /npm publish/);
+    assert.doesNotMatch(release, /^\s+id-token:\s*write/m, "only publish.yml may request an OIDC token");
     assert.doesNotMatch(release, /gh release create/);
-    assert.doesNotMatch(release, /gh run list --workflow=publish\.yml --limit=30/);
+    assert.doesNotMatch(release, /uses:\s*[^\s]+@v\d/, "release actions must use immutable commit SHAs");
+    assert.match(release, /gh workflow run publish\.yml/);
+    assert.match(release, /git push --atomic origin/);
+
+    // The cut guards are pure functions so the policy is testable without a release.
+    const cut = readFileSync(new URL("../scripts/release-cut.mjs", import.meta.url), "utf8");
+    assert.match(cut, /export function assertBaseline/);
+    assert.match(cut, /export function assertCuttable/);
+    assert.match(cut, /export function assertPreviewProof/);
+    assert.doesNotMatch(cut, /npm publish/);
 
     for (const path of ["scripts/install-mac.sh", "scripts/install-linux.sh", "scripts/install-windows.ps1"]) {
       const installer = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
       assert.match(installer, /allow-scripts=ima2-gen,better-sqlite3,sharp/);
       assert.match(installer, /ima2 doctor/);
     }
+  });
+
+  it("refuses a cut whose baseline, version, or preview proof is not releasable", async () => {
+    const { assertBaseline, assertCuttable, assertPreviewProof } = await import("../scripts/release-cut.mjs");
+    const yes = () => true;
+
+    assert.deepEqual(assertBaseline({ head: "a", main: "a", dev: "a", preview: "a", contains: yes }), []);
+    assert.match(assertBaseline({ head: "a", main: "b", dev: "a", preview: "a", contains: yes }).join(), /origin\/main is b/);
+    // A main that does not contain dev would orphan merged work behind the tag.
+    assert.match(assertBaseline({ head: "a", main: "a", dev: "z", preview: "a", contains: () => false }).join(), /does not contain origin\/dev/);
+
+    assert.deepEqual(assertCuttable({ version: "3.0.6", publishedVersion: null, remoteTag: "" }), []);
+    assert.match(assertCuttable({ version: "3.0.6", publishedVersion: "3.0.6", remoteTag: "" }).join(), /already published/);
+    assert.match(assertCuttable({ version: "3.0.6", publishedVersion: null, remoteTag: "abc\trefs/tags/v3.0.6" }).join(), /already exists/);
+    assert.match(assertCuttable({ version: "3.0.6-rc.1", publishedVersion: null, remoteTag: "" }).join(), /stable X\.Y\.Z/);
+
+    const proven = { version: "3.0.6", sha: "abc", previewVersion: "3.0.6-preview.260812.1.1", previewGitHead: "abc" };
+    assert.deepEqual(assertPreviewProof(proven), []);
+    assert.match(assertPreviewProof({ ...proven, previewGitHead: "zzz" }).join(), /does not prove abc/);
+    assert.match(assertPreviewProof({ ...proven, previewVersion: "3.0.5-preview.1" }).join(), /not a 3\.0\.6 candidate/);
+    // A missing preview build must never read as a proof.
+    assert.equal(assertPreviewProof({ ...proven, previewVersion: null, previewGitHead: null }).length, 2);
+  });
+
+  it("waits on the dispatched publish run, not on whatever ran last", async () => {
+    const { pickRun } = await import("../scripts/wait-publish-run.mjs");
+    const startedAt = Date.parse("2026-08-12T12:00:00Z");
+    const runs = [
+      { databaseId: 1, event: "push", createdAt: "2026-08-12T12:05:00Z" },
+      { databaseId: 2, event: "workflow_dispatch", createdAt: "2026-08-12T11:00:00Z" },
+      { databaseId: 3, event: "workflow_dispatch", createdAt: "2026-08-12T12:02:00Z" },
+      { databaseId: 4, event: "workflow_dispatch", createdAt: "2026-08-12T12:09:00Z" },
+    ];
+    // A push run and an older dispatch must both be ignored, or an unrelated success
+    // would be reported as this release's.
+    assert.equal(pickRun(runs, startedAt)?.databaseId, 3);
+    assert.equal(pickRun([runs[0], runs[1]], startedAt), undefined);
   });
 });

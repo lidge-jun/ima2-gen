@@ -4,13 +4,38 @@ on:
   push:
     branches: [preview]
     tags: ['v*']
+  # release.yml re-triggers this after its own pushes. A GITHUB_TOKEN push emits no push
+  # event, so without a dispatch path a CI-minted tag would strand an unpublished version
+  # (the exact state the old release.sh warned about). The ref is still classified by
+  # scripts/release-contract.mjs, which accepts only refs/heads/preview or a v* tag whose
+  # name matches package.json — a dispatch cannot widen what may be published.
+  workflow_dispatch:
+    inputs:
+      publish_ref:
+        description: 'refs/heads/preview or refs/tags/vX.Y.Z'
+        required: true
+        type: string
+      publish_sha:
+        description: 'Commit the ref must point at'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+# One canonical ref/sha for the whole workflow. A push classifies its own event; a
+# dispatch from release.yml names the ref explicitly because the dispatch itself runs
+# on the default branch. scripts/release-contract.mjs still validates whatever lands here.
+env:
+  PUBLISH_REF: ${{ inputs.publish_ref || github.ref }}
+  PUBLISH_SHA: ${{ inputs.publish_sha || github.sha }}
+
+
 concurrency:
-  group: publish-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref == 'refs/heads/preview' }}
+  # A dispatch runs on the default branch, so keying on github.ref alone would put a
+  # preview run and a stable run in one group. Key on the ref actually being published.
+  group: publish-${{ inputs.publish_ref || github.ref }}
+  cancel-in-progress: ${{ (inputs.publish_ref || github.ref) == 'refs/heads/preview' }}
 
 jobs:
   prepare:
@@ -26,6 +51,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: '.node-version'
@@ -51,6 +77,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: '.node-version'
@@ -97,6 +124,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: '.node-version'
@@ -112,13 +140,13 @@ jobs:
           "${{ needs.prepare.outputs.version }}"
           "${{ needs.prepare.outputs.npm_tag }}"
           "${{ needs.prepare.outputs.source_ref }}"
-          "$GITHUB_SHA"
+          "$PUBLISH_SHA"
       - name: Create or refresh GitHub Release for already-published latest
         if: needs.prepare.outputs.channel == 'latest'
         run: >-
           node scripts/release-contract.mjs ensure-github-release
           "${{ needs.prepare.outputs.version }}"
-          "$GITHUB_SHA"
+          "$PUBLISH_SHA"
 
   windows-consumer:
     needs: [prepare, package]
@@ -138,6 +166,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node }}
@@ -169,6 +198,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: '.node-version'
@@ -189,7 +219,7 @@ jobs:
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
           echo "OIDC endpoint is available to the publish job"
       - name: Recheck live release refs
-        run: node scripts/release-contract.mjs assert-remote-ref "$GITHUB_REF" "$GITHUB_SHA"
+        run: node scripts/release-contract.mjs assert-remote-ref "$PUBLISH_REF" "$PUBLISH_SHA"
       - id: registry
         name: Guard immutable registry version
         run: >-
@@ -197,7 +227,7 @@ jobs:
           release-artifact/release-manifest.json
           "${{ needs.prepare.outputs.npm_tag }}"
           "${{ needs.prepare.outputs.source_ref }}"
-          "$GITHUB_SHA"
+          "$PUBLISH_SHA"
       - name: Publish tested tarball
         if: steps.registry.outputs.should_publish == 'true'
         run: |
@@ -209,7 +239,7 @@ jobs:
           release-artifact/release-manifest.json
           "${{ needs.prepare.outputs.npm_tag }}"
           "${{ needs.prepare.outputs.source_ref }}"
-          "$GITHUB_SHA"
+          "$PUBLISH_SHA"
         env:
           IMA2_EXPECT_CURRENT_PROVENANCE: ${{ steps.registry.outputs.should_publish }}
       - name: Write release proof summary
@@ -220,7 +250,7 @@ jobs:
             echo "### npm publish proof"
             echo "- channel: ${{ needs.prepare.outputs.channel }}"
             echo "- version: $VERSION"
-            echo "- source: $GITHUB_REF@$GITHUB_SHA"
+            echo "- source: $PUBLISH_REF@$PUBLISH_SHA"
             echo "- integrity: $INTEGRITY"
             echo "- workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -237,6 +267,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: '.node-version'
@@ -254,13 +285,13 @@ jobs:
         run: >-
           node scripts/release-contract.mjs ensure-github-release
           "${{ needs.prepare.outputs.version }}"
-          "$GITHUB_SHA"
+          "$PUBLISH_SHA"
           release-artifact
       - name: Write GitHub Release proof summary
         run: |
           {
             echo "### GitHub Release proof"
             echo "- tag: v${{ needs.prepare.outputs.version }}"
-            echo "- source: $GITHUB_REF@$GITHUB_SHA"
+            echo "- source: $PUBLISH_REF@$PUBLISH_SHA"
             echo "- workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } >> "$GITHUB_STEP_SUMMARY"

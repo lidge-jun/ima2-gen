@@ -1,0 +1,139 @@
+name: Release
+
+# Replaces scripts/release.sh. The cut runs here end to end:
+#   baseline -> version commit -> main -> preview -> preview publish proof
+#   -> stable tag (main+dev+tag atomically) -> stable publish
+#
+# publish.yml still owns publishing and stays the only holder of id-token: write. It is
+# reached by workflow_dispatch rather than by the pushes below, because a GITHUB_TOKEN
+# push emits no workflow event — without that dispatch a CI-minted tag would strand an
+# unpublished version, the exact failure release.sh:99 warned about.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Semver bump for the release'
+        required: true
+        default: patch
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    name: Cut the version commit and prove the preview build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      actions: write
+    outputs:
+      version: ${{ steps.commit.outputs.version }}
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Pin release npm
+        run: |
+          NPM_VERSION=$(node -p "require('./package.json').packageManager.split('@').pop()")
+          npm install -g "npm@$NPM_VERSION"
+          test "$(npm -v)" = "$NPM_VERSION"
+      - name: Fetch release branches and tags
+        run: git fetch origin main dev preview --tags
+      - name: Assert the release baseline
+        run: node scripts/release-cut.mjs preflight
+      - run: npm ci
+      - run: npm --prefix ui ci --no-audit --no-fund
+      - id: commit
+        name: Create the version commit
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: node scripts/release-cut.mjs commit "$BUMP"
+      - name: Push the version commit to main
+        run: git push origin "HEAD:refs/heads/main"
+      - name: Promote the exact SHA to preview
+        run: git push origin "${{ steps.commit.outputs.sha }}:refs/heads/preview"
+      - name: Publish the preview candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run publish.yml \
+            -f publish_ref=refs/heads/preview \
+            -f publish_sha=${{ steps.commit.outputs.sha }}
+      - name: Wait for the preview publish to finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/wait-publish-run.mjs "${{ steps.commit.outputs.sha }}"
+      - name: Require the npm preview proof before tagging
+        run: >-
+          node scripts/release-cut.mjs assert-preview-proof
+          "${{ steps.commit.outputs.version }}"
+          "${{ steps.commit.outputs.sha }}"
+
+  tag:
+    name: Mint the stable tag and publish
+    needs: cut
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.cut.outputs.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Fetch release branches and tags
+        run: git fetch origin main dev preview --tags
+      - name: Re-check the preview proof at tag time
+        run: >-
+          node scripts/release-cut.mjs assert-preview-proof
+          "${{ needs.cut.outputs.version }}"
+          "${{ needs.cut.outputs.sha }}"
+      - name: Create and atomically push main, dev, and the tag
+        env:
+          VERSION: ${{ needs.cut.outputs.version }}
+          SHA: ${{ needs.cut.outputs.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "v$VERSION" "$SHA"
+          git push --atomic origin \
+            "$SHA:refs/heads/main" \
+            "$SHA:refs/heads/dev" \
+            "refs/tags/v$VERSION:refs/tags/v$VERSION"
+      - name: Publish the stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run publish.yml \
+            -f publish_ref="refs/tags/v${{ needs.cut.outputs.version }}" \
+            -f publish_sha=${{ needs.cut.outputs.sha }}
+      - name: Wait for the stable publish to finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/wait-publish-run.mjs "${{ needs.cut.outputs.sha }}"
+      - name: Write the release summary
+        run: |
+          {
+            echo "### Release v${{ needs.cut.outputs.version }}"
+            echo "- sha: ${{ needs.cut.outputs.sha }}"
+            echo "- main, dev, preview, and the tag all point at that commit"
+            echo "- npm preview and latest were published by publish.yml"
+          } >> "$GITHUB_STEP_SUMMARY"

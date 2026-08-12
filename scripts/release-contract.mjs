@@ -59,12 +59,42 @@ function assertReleaseToolchain() {
   console.log(`[release-contract] toolchain node ${actualNode}, npm ${actualNpm}`);
 }
 
+/**
+ * The ref/sha/event actually being published.
+ *
+ * release.yml drives the cut and re-triggers publish.yml by dispatch, because a
+ * GITHUB_TOKEN push emits no push event. A dispatch runs on the default branch, so the
+ * event context describes the dispatch rather than the release — publish.yml passes the
+ * real values through PUBLISH_REF/PUBLISH_SHA.
+ *
+ * This only decides WHICH ref is inspected. classifyPublish still accepts nothing but
+ * refs/heads/preview or a v* tag matching package.json, and validateRemoteRefs still
+ * requires the live remotes to agree, so an override cannot publish something new.
+ */
+function publishRef() {
+  return process.env.PUBLISH_REF || process.env.GITHUB_REF;
+}
+
+function publishSha(run) {
+  return process.env.PUBLISH_SHA || process.env.GITHUB_SHA || run("git", ["rev-parse", "HEAD"]).stdout.trim();
+}
+
+/** A dispatch from release.yml is a push in contract terms: the same refs, the same gates. */
+function publishEventName() {
+  const event = process.env.GITHUB_EVENT_NAME;
+  if (event === "workflow_dispatch" && process.env.PUBLISH_REF) return "push";
+  return event;
+}
+
 function assertOidcPublishContext() {
   const workflowRef = process.env.GITHUB_WORKFLOW_REF || "";
   const expectedWorkflow = `${process.env.GITHUB_REPOSITORY || ""}/${WORKFLOW_PATH}@`;
+  // The workflow path check is the real boundary: only publish.yml may publish, whether
+  // it was reached by a push or by release.yml's dispatch.
+  const event = publishEventName();
   if (
     process.env.GITHUB_ACTIONS !== "true"
-    || process.env.GITHUB_EVENT_NAME !== "push"
+    || event !== "push"
     || !workflowRef.startsWith(expectedWorkflow)
     || !process.env.ACTIONS_ID_TOKEN_REQUEST_URL
   ) {
@@ -361,11 +391,12 @@ function assertRemoteRefCommand(ref, sha) {
 async function prepareCommand() {
   const manifest = readJson(resolve("package.json"));
   const latest = npmView(`${PACKAGE_NAME}@latest`, ["version", "gitHead"]);
-  const sha = process.env.GITHUB_SHA || run("git", ["rev-parse", "HEAD"]).stdout.trim();
+  const ref = publishRef();
+  const sha = publishSha(run);
   const tagsAtHead = run("git", ["tag", "--points-at", sha]).stdout.trim().split(/\s+/).filter(Boolean);
   const plan = classifyPublish({
-    eventName: process.env.GITHUB_EVENT_NAME,
-    ref: process.env.GITHUB_REF,
+    eventName: publishEventName(),
+    ref,
     sha,
     packageVersion: manifest.version,
     latestVersion: latest.version,
@@ -375,7 +406,7 @@ async function prepareCommand() {
     runAttempt: process.env.GITHUB_RUN_ATTEMPT,
   });
   if (plan.channel === "latest") {
-    validateRemoteRefs({ ref: process.env.GITHUB_REF, sha, refs: remoteRefMap(process.env.GITHUB_REF) });
+    validateRemoteRefs({ ref, sha, refs: remoteRefMap(ref) });
     await verifyPreviewProof(manifest.version, sha);
   } else {
     run("git", ["merge-base", "--is-ancestor", "origin/main", sha]);
@@ -386,7 +417,7 @@ async function prepareCommand() {
     channel: plan.channel,
     npm_tag: plan.npmTag,
     version: plan.version,
-    source_ref: process.env.GITHUB_REF,
+    source_ref: ref,
   });
   console.log(JSON.stringify(plan));
 }
@@ -396,7 +427,9 @@ function packCommand(outputDir) {
   const packagePath = resolve("package.json");
   const originalPackage = readFileSync(packagePath, "utf8");
   const manifest = JSON.parse(originalPackage);
-  const gitHead = process.env.GITHUB_SHA || run("git", ["rev-parse", "HEAD"]).stdout.trim();
+  // This gitHead is the provenance the stable tag later verifies, so it must be the SHA
+  // being released, not the dispatch's checkout.
+  const gitHead = publishSha(run);
   let entry;
   try {
     writeFileSync(packagePath, `${JSON.stringify({ ...manifest, gitHead }, null, 2)}\n`);
