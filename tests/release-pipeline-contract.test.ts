@@ -1,9 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   buildPreviewVersion,
   classifyPublish,
@@ -302,5 +304,15 @@ describe("package install policy contract", () => {
     assert.equal(pickRun([runs[0], runs[1]], mark), undefined);
     // Out-of-order listings must not change the answer.
     assert.equal(pickRun([...runs].reverse(), mark)?.databaseId, 102);
+  });
+
+  it("keeps build caches out of the index so verification cannot dirty the release", () => {
+    // A tracked .tsbuildinfo is rewritten by every UI build, so the release cut's
+    // post-verification clean check failed on it (run 31604716464). These files are
+    // already gitignored; being tracked as well was an accident.
+    const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+    const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" }).split("\n");
+    const caches = tracked.filter((path) => /\.tsbuildinfo$/.test(path));
+    assert.deepEqual(caches, [], `build caches must not be tracked: ${caches.join(", ")}`);
   });
 });
