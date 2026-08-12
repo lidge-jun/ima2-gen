@@ -1,10 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { classifyAuditResult, countAtOrAbove, isCountableTally, parseArgs } from "../scripts/audit-gate.mjs";
+import {
+  classifyAuditResult,
+  countAtOrAbove,
+  isCountableTally,
+  loadExceptions,
+  parseArgs,
+  partitionFindings,
+  validateException,
+} from "../scripts/audit-gate.mjs";
 
 // WP-A: `npm audit` exits 1 both when it finds a vulnerability and when the registry
 // fails to answer. Conflating those turns an upstream outage into a red build and
@@ -211,4 +219,103 @@ test("argument parsing supports the ui prefix and omit flags the CI uses", () =>
   const defaults = parseArgs([]);
   assert.equal(defaults.prefix, null);
   assert.equal(defaults.auditLevel, "high", "the gate must default to the strict level");
+});
+
+// An exception mechanism is only safe if it stays narrow. These pin the ways it must
+// refuse to widen: expiry, malformed entries, wrong scope, and new advisories.
+
+const NOW = new Date("2026-08-12T00:00:00Z");
+
+function exception(overrides: Record<string, unknown> = {}) {
+  return {
+    ghsa: "GHSA-w3rx-r6r6-pgpr",
+    package: "image-size",
+    scope: "ui",
+    reason: "unreachable in the browser bundle",
+    evidence: "grep of ui/dist shows 0 references",
+    expires: "2026-11-12",
+    ...overrides,
+  };
+}
+
+test("an exception must carry every field, a real GHSA id, and a future expiry", () => {
+  assert.deepEqual(validateException(exception(), NOW), []);
+
+  for (const field of ["ghsa", "package", "scope", "reason", "evidence", "expires"]) {
+    const problems = validateException(exception({ [field]: "" }), NOW);
+    assert.ok(problems.some((p) => p.includes(field)), `${field} must be required`);
+  }
+
+  assert.match(validateException(exception({ ghsa: "CVE-2025-1234" }), NOW).join(), /not a GHSA id/);
+  assert.match(validateException(exception({ expires: "someday" }), NOW).join(), /not a date/);
+  assert.match(validateException(exception({ expires: "2026-08-11" }), NOW).join(), /expired on/);
+  assert.deepEqual(validateException(null, NOW), ["entry is not an object"]);
+});
+
+test("an expired or malformed entry stops excluding instead of failing the file", () => {
+  const raw = JSON.stringify({
+    exceptions: [exception(), exception({ ghsa: "GHSA-5p2g-fcmc-qvqq", expires: "2020-01-01" }), { ghsa: "junk" }],
+  });
+  const { active, skipped } = loadExceptions(raw, NOW);
+  assert.equal(active.length, 1, "only the valid, unexpired entry stays active");
+  assert.equal(skipped.length, 2);
+  assert.match(skipped.map((s) => s.problems.join()).join(" "), /expired on/);
+});
+
+test("a missing file means no exceptions, and a broken file throws rather than reading as empty", () => {
+  assert.deepEqual(loadExceptions(null, NOW), { active: [], skipped: [] });
+  assert.throws(() => loadExceptions("{not json", NOW), /not valid JSON/);
+  assert.throws(() => loadExceptions(JSON.stringify({ nope: [] }), NOW), /`exceptions` array/);
+});
+
+const UI_REPORT = {
+  vulnerabilities: {
+    "image-size": {
+      severity: "high",
+      via: [
+        { source: 1138808, title: "ICNS parser DoS", url: "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr" },
+        { source: 1138809, title: "JXL/HEIF DoS", url: "https://github.com/advisories/GHSA-5p2g-fcmc-qvqq" },
+      ],
+    },
+    pptxgenjs: { severity: "high", via: ["image-size"] },
+  },
+};
+
+test("excluding every advisory of a package also clears the parent that depends on it", () => {
+  const both = [exception(), exception({ ghsa: "GHSA-5p2g-fcmc-qvqq" })];
+  const split = partitionFindings(UI_REPORT, "high", both, "ui");
+  assert.deepEqual(split.remaining, [], "nothing unexcepted should remain");
+  assert.deepEqual(split.excluded.sort(), ["image-size", "pptxgenjs"]);
+});
+
+test("a partially covered package still fails the gate", () => {
+  // Only one of image-size's two advisories is excepted: the package stays a finding,
+  // so a NEW advisory on an already-excepted package cannot slip through.
+  const split = partitionFindings(UI_REPORT, "high", [exception()], "ui");
+  assert.deepEqual(split.remaining.sort(), ["image-size", "pptxgenjs"]);
+  assert.deepEqual(split.excluded, []);
+});
+
+test("an exception does not leak across scopes", () => {
+  const rootScoped = [exception({ scope: "root" }), exception({ ghsa: "GHSA-5p2g-fcmc-qvqq", scope: "root" })];
+  const split = partitionFindings(UI_REPORT, "high", rootScoped, "ui");
+  assert.deepEqual(split.remaining.sort(), ["image-size", "pptxgenjs"], "root exceptions must not cover ui");
+});
+
+test("a report without per-advisory detail fails closed instead of excluding blindly", () => {
+  assert.throws(() => partitionFindings({ metadata: {} }, "high", [exception()], "ui"), /no per-advisory detail/);
+});
+
+test("the shipped exception file is well-formed and every active entry is justified", () => {
+  const raw = readFileSync(new URL("../scripts/audit-exceptions.json", import.meta.url), "utf8");
+  const { active, skipped } = loadExceptions(raw);
+  for (const entry of active) {
+    assert.ok(entry.evidence.length > 40, `${entry.ghsa} needs real evidence, not a placeholder`);
+    assert.ok(Date.parse(entry.expires) - Date.now() < 400 * 24 * 60 * 60 * 1000, `${entry.ghsa} expiry must stay within about a year`);
+  }
+  // Skipped entries are allowed (they simply stop excluding) but should never be a typo
+  // that someone believes is active, so surface them loudly if they exist.
+  for (const { entry, problems } of skipped) {
+    assert.ok(problems.every((p) => p.includes("expired")), `${entry?.ghsa}: ${problems.join("; ")}`);
+  }
 });

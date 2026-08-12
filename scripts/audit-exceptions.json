@@ -1,0 +1,27 @@
+{
+  "$comment": [
+    "Advisories the audit gate excludes, one entry per GHSA per scope.",
+    "Every field is mandatory and `expires` is enforced: an expired entry stops excluding",
+    "and the gate goes red again, so an exception cannot quietly become permanent.",
+    "Add an entry only with evidence that the code path is unreachable or the risk is",
+    "genuinely accepted; a new advisory on the same package is NOT covered."
+  ],
+  "exceptions": [
+    {
+      "ghsa": "GHSA-w3rx-r6r6-pgpr",
+      "package": "image-size",
+      "scope": "ui",
+      "reason": "Unreachable: image-size is pptxgenjs' Node-only path and Vite tree-shakes it out of the browser bundle. No fixed version exists — the advisory range is '*' and 2.0.2 is the newest release.",
+      "evidence": "grep -c 'image-size\\|imageSize' ui/dist/assets/pptxgen.es-*.js -> 0; grep -oE 'icns|readUInt32BE' on the same bundle -> no match; npm view image-size dist-tags -> { latest: '2.0.2', legacy: '1.2.1' }; overrides to ^2.0.2 was tried and audit stayed red. devlog/_plan/260812_navrail_grok_autotag/040_closeout.md",
+      "expires": "2026-11-12"
+    },
+    {
+      "ghsa": "GHSA-5p2g-fcmc-qvqq",
+      "package": "image-size",
+      "scope": "ui",
+      "reason": "Same unreachable dependency as GHSA-w3rx-r6r6-pgpr: JXL/HEIF parsers in the Node-only path that never reaches the browser bundle.",
+      "evidence": "See GHSA-w3rx-r6r6-pgpr above; both advisories resolve to the single image-size dependency of pptxgenjs@4.0.1.",
+      "expires": "2026-11-12"
+    }
+  ]
+}
