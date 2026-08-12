@@ -25,7 +25,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 | 경로 | 상태 |
 |---|---|
 | `260812_navrail_grok_autotag/` | 릴리스 활성화 미증명. `060_release_activation_residual.md` 참조 |
-| `260813_maturity_roadmap/` | 외부 성숙도 평가(58/80) 기반 패치 로드맵. 문서 단계 진행 중 |
+| `260813_maturity_roadmap/` | 외부 성숙도 평가(58/80) 기반 패치 로드맵. **문서 완료** — 16개 문서, 착수 대기 |
 
 GitHub open issue와 open PR은 여전히 **0건**이다(2026-08-13 확인). 그러나 열린
 이슈가 없다는 것과 릴리스가 건강하다는 것은 다른 문제다 — 현재 릴리스 컷과
