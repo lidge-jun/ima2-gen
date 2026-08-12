@@ -1,6 +1,6 @@
 ---
 created: 2026-04-23
-updated: 2026-07-26
+updated: 2026-08-13
 tags: [ima2-gen, devlog, roadmap]
 aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 ---
@@ -24,10 +24,12 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| 없음 | 2026-07-26 zero-backlog 사이클 종료 후 active lane 없음 |
+| `260812_navrail_grok_autotag/` | 릴리스 활성화 미증명. `060_release_activation_residual.md` 참조 |
+| `260813_maturity_roadmap/` | 외부 성숙도 평가(58/80) 기반 패치 로드맵. 문서 단계 진행 중 |
 
-2026-07-26 zero-backlog 사이클로 GitHub open issue와 open PR이 **0건**이 됐고,
-직전까지 active였던 lane 3개와 이 사이클 자체를 모두 `_fin`으로 옮겼다.
+GitHub open issue와 open PR은 여전히 **0건**이다(2026-08-13 확인). 그러나 열린
+이슈가 없다는 것과 릴리스가 건강하다는 것은 다른 문제다 — 현재 릴리스 컷과
+publish 워크플로가 둘 다 빨갛다.
 
 ## 외부 차단으로 미완료인 항목
 
@@ -51,6 +53,25 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 이 둘은 숫자를 맞추려고 `_fin`으로 옮기지 않았다. 대응 이슈가 없고 구현 착수도
 없어서, 옮기면 그건 정리가 아니라 은폐다.
+
+## 2026-08-13 아카이브 기록
+
+`_fin`으로 이동:
+
+- `260803_github_issue_pr_closeout/` — 이슈 #119 `CLOSED`(2026-08-04), PR #118
+  `CLOSED`(미머지, 메인테이너가 별도로 보수 반영). 확인 시점 기준 open issue 0건,
+  open PR 0건. MiniMax 보수 커밋이 현재 `dev`/`main`/`preview`(`ac1cace`)의 조상.
+
+`_plan`에 **남긴** 것:
+
+- `260812_navrail_grok_autotag/` — `050`이 WP0–WP3 전부 `DONE`이라고 적었지만
+  같은 문서가 `release.yml`을 실행한 적 없다고 밝혔고, 이후 실제 실행에서 release
+  run `31604716464`(tsbuildinfo drift)와 publish run `31605449399`(Windows
+  Node24/npm12 15분 타임아웃)가 모두 실패했다. 구현은 끝났고 활성화가 증명되지
+  않았다. 잔여는 `060_release_activation_residual.md`.
+
+이 판단은 독립 감사가 뒤집은 것이다. 처음 계획은 두 유닛을 모두 옮기는 것이었다.
+폴더 위치로 완료를 주장하는 것이 이 README가 금지하는 바로 그 행위다.
 
 ## 2026-07-26 아카이브 기록
 

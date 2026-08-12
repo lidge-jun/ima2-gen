@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-07-26
+updated: 2026-08-13
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -36,9 +36,12 @@ architecture and audit records are not kept as loose top-level duplicates.
 
 Files in `_plan/` are work-in-progress. They use the format `YYMMDD_<topic>` to aid chronological sorting. Each plan typically maps to a GitHub issue or a standalone initiative.
 
-As of 2026-07-26, `_plan/` has no active delivery lane. The authoritative table is
-`devlog/_plan/README.md` §현재 Active Lane; only external-blocked follow-ups and
-`_future` handoffs remain outside `_fin`.
+As of 2026-08-13, `_plan/` has two active lanes: `260812_navrail_grok_autotag/`
+(release automation shipped but never observed green — see its
+`060_release_activation_residual.md`) and `260813_maturity_roadmap/` (the patch
+roadmap derived from the external 58/80 maturity assessment). The authoritative
+table is `devlog/_plan/README.md` §현재 Active Lane; external-blocked follow-ups
+and `_future` handoffs also remain outside `_fin`.
 
 Deferred items live in `_plan/_future/` (canvas exports, masked edit, batch
 matrix, storyboard planner skill).
