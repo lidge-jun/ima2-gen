@@ -23,6 +23,7 @@ import {
   type GrokSearchResult,
   type GrokResponsesResponse,
 } from "./grokImageCore.js";
+import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
 export {
   grokError,
   imagePayload,
@@ -233,12 +234,13 @@ export async function searchGrokVisualContext(
 
   logEvent("grok", "search:start", { requestId: options.requestId, plannerModel, promptChars: prompt.length });
   try {
-    const res = await fetch(url, {
+    // Safe to replay: search produces no billable artifact, only a research summary.
+    const res = await grokFetchWithRetry(() => fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),
       signal: combinedSignal,
-    });
+    }), { signal: combinedSignal, label: "search" });
     clearTimeout(timer);
 
     if (!res.ok) {
@@ -327,12 +329,13 @@ export async function planGrokImage(
 
   logEvent("grok", "planner:start", { requestId: options.requestId, plannerModel, imageModel, size: options.size });
   try {
-    const res = await fetch(url, {
+    // Safe to replay: the planner produces no billable artifact, only a prompt.
+    const res = await grokFetchWithRetry(() => fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),
       signal: combinedSignal,
-    });
+    }), { signal: combinedSignal, label: "planner" });
     clearTimeout(timer);
 
     if (!res.ok) {

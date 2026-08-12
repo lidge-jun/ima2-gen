@@ -1,5 +1,6 @@
 import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { grokError } from "./grokImageAdapter.js";
+import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
 
 const MAX_VIDEO_DOWNLOAD_BYTES = 100 * 1024 * 1024;
 
@@ -27,7 +28,11 @@ export async function downloadVideo(ctx: RouteRuntimeContext, url: string, signa
     if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopback)) {
       throw grokError("Grok video download URL must be HTTPS", 502, "GROK_VIDEO_DOWNLOAD_FAILED");
     }
-    const res = await fetch(url, { signal: combinedSignal });
+    // Safe to replay: downloading a finished artifact creates nothing upstream.
+    const res = await grokFetchWithRetry(
+      () => fetch(url, { signal: combinedSignal }),
+      { signal: combinedSignal, label: "video-download" },
+    );
     if (!res.ok) throw grokError(`Grok video download failed: HTTP ${res.status}`, 502, "GROK_VIDEO_DOWNLOAD_FAILED");
     const contentLength = Number(res.headers.get("content-length") || "0");
     if (contentLength > MAX_VIDEO_DOWNLOAD_BYTES) {

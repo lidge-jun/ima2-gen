@@ -2,6 +2,7 @@ import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { mapSizeToGrokImageParams } from "./grokSizeMapper.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { getGrokProxyUrl } from "./grokRuntime.js";
+import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 export interface GrokImageResponse {
@@ -152,7 +153,11 @@ export async function downloadGrokImageUrl(
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
       throw grokError("Image download URL must be HTTP(S)", 502, "GROK_IMAGE_DOWNLOAD_FAILED");
     }
-    const res = await fetch(url, { signal: combined });
+    // Safe to replay: downloading a finished artifact creates nothing upstream.
+    const res = await grokFetchWithRetry(
+      () => fetch(url, { signal: combined }),
+      { signal: combined, label: "image-download" },
+    );
     if (!res.ok) throw grokError(`Image download failed: HTTP ${res.status}`, 502, "GROK_IMAGE_DOWNLOAD_FAILED");
     const contentLength = Number(res.headers.get("content-length") || "0");
     if (contentLength > MAX_IMAGE_DOWNLOAD_BYTES) {
@@ -191,6 +196,12 @@ export async function downloadGrokImageUrl(
   }
 }
 
+/**
+ * NOT wrapped in grokFetchWithRetry on purpose: a reset or 5xx here may follow an image the
+ * origin already generated and billed, and no idempotency key exists to deduplicate it.
+ * Retrying would charge twice.
+ * See devlog/_plan/260812_navrail_grok_autotag/020_grok_upstream_retry.md.
+ */
 export async function postGrokImages(
   ctx: RouteRuntimeContext,
   payload: Record<string, unknown>,

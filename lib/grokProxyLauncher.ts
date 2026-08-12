@@ -26,10 +26,25 @@ type GrokProxyOptions = {
   port?: number;
   progrokBinPath?: string;
   restartDelayMs?: number;
+  restartMaxAttempts?: number;
+  restartMaxDelayMs?: number;
+  restartHealthyMs?: number;
   onPortSelected?: (info: GrokProxyPortInfo) => void;
   onReady?: (info: GrokProxyReadyInfo) => void;
   onExit?: (info: { code: number | null }) => void;
 };
+
+/**
+ * Bounded exponential restart. Exported so the policy is testable without spawning a
+ * process: a fixed 2s retry loop spins forever on a permanently broken binary or port.
+ */
+export function restartPlan(
+  attempt: number,
+  opts: { baseMs: number; maxMs: number; maxAttempts: number },
+): { delayMs: number; giveUp: boolean } {
+  if (attempt >= opts.maxAttempts) return { delayMs: 0, giveUp: true };
+  return { delayMs: Math.min(opts.baseMs * (2 ** attempt), opts.maxMs), giveUp: false };
+}
 
 function parseListeningUrl(line: string): { url: string; port: number } | null {
   const match = String(line || "").match(/https?:\/\/(?:127\.0\.0\.1|localhost):(\d+)\/v1/i);
@@ -57,18 +72,38 @@ export async function startGrokProxy(options: GrokProxyOptions = {}) {
   const host = options.host ?? config.grokProvider.proxyHost;
   const requestedPort = options.port ?? config.grokProvider.proxyPort;
   const restartDelayMs = options.restartDelayMs ?? config.grokProvider.restartDelayMs;
+  const restartMaxAttempts = options.restartMaxAttempts ?? config.grokProvider.restartMaxAttempts;
+  const restartMaxDelayMs = options.restartMaxDelayMs ?? config.grokProvider.restartMaxDelayMs;
+  const restartHealthyMs = options.restartHealthyMs ?? config.grokProvider.restartHealthyMs;
   let currentChild: ChildProcess | null = null;
   let stopping = false;
   let restartTimer: NodeJS.Timeout | null = null;
   let authRequired = false;
+  let restartAttempt = 0;
+  let lastSpawnAt = 0;
 
   const scheduleRestart = () => {
+    // A child that stayed up for a while counts as a healthy start, so an occasional
+    // crash later does not inherit an exhausted budget.
+    if (lastSpawnAt && Date.now() - lastSpawnAt >= restartHealthyMs) restartAttempt = 0;
+    const plan = restartPlan(restartAttempt, {
+      baseMs: restartDelayMs,
+      maxMs: restartMaxDelayMs,
+      maxAttempts: restartMaxAttempts,
+    });
+    if (plan.giveUp) {
+      console.error(`[grok] progrok failed ${restartAttempt} times in a row; giving up. Fix the cause and restart ima2 serve to retry.`);
+      return;
+    }
+    restartAttempt += 1;
+    console.log(`[grok] restarting in ${Math.round(plan.delayMs / 1000)}s (attempt ${restartAttempt}/${restartMaxAttempts})...`);
     restartTimer = setTimeout(() => {
       void spawnProxy();
-    }, restartDelayMs);
+    }, plan.delayMs);
   };
 
   const spawnProxy = async () => {
+    let spawnSettled = false;
     let port: number;
     try {
       port = await findAvailablePort(requestedPort, { host });
@@ -76,7 +111,6 @@ export async function startGrokProxy(options: GrokProxyOptions = {}) {
       const e = err as Error & { message?: string };
       console.error(`[grok] failed to select progrok port: ${e.message || e}`);
       if (!stopping) {
-        console.log(`[grok] retrying port selection in ${Math.round(restartDelayMs / 1000)}s...`);
         scheduleRestart();
       }
       return;
@@ -95,10 +129,18 @@ export async function startGrokProxy(options: GrokProxyOptions = {}) {
     });
     currentChild = child;
     authRequired = false;
+    lastSpawnAt = Date.now();
 
+    // A missing or unlaunchable binary emits `error` (and `close`) without ever emitting
+    // `exit`, so the bounded restart must arm from here too — otherwise the backoff never
+    // runs on the very failure it targets.
     child.on("error", (err) => {
       console.error(`[grok] failed to start progrok proxy: ${err.message}`);
       if (currentChild === child) currentChild = null;
+      if (stopping || spawnSettled) return;
+      spawnSettled = true;
+      options.onExit?.({ code: null });
+      scheduleRestart();
     });
 
     child.stdout?.on("data", (d) => {
@@ -124,14 +166,15 @@ export async function startGrokProxy(options: GrokProxyOptions = {}) {
 
     child.on("exit", (code) => {
       if (currentChild === child) currentChild = null;
-      if (stopping) return;
+      if (stopping || spawnSettled) return;
+      spawnSettled = true;
       options.onExit?.({ code });
       if (authRequired && code !== 0) {
         console.error("[grok] Grok OAuth is not logged in. Run `ima2 grok login` to enable Grok images/video.");
         console.error("[grok] Continuing without auto-restarting the Grok proxy. GPT OAuth/API image generation can still run.");
         return;
       }
-      console.log(`[grok] exited with code ${code}, restarting in ${Math.round(restartDelayMs / 1000)}s...`);
+      console.log(`[grok] exited with code ${code}`);
       scheduleRestart();
     });
   };

@@ -192,6 +192,11 @@ export const config = {
         proxyHost: pickStr(env.IMA2_GROK_PROXY_HOST, fileCfg.grokProvider?.proxyHost, "127.0.0.1"),
         autoStart: !pickBool(env.IMA2_NO_GROK_PROXY, fileCfg.grokProvider?.disableAutoStart, false),
         restartDelayMs: pickInt(env.IMA2_GROK_RESTART_DELAY_MS, fileCfg.grokProvider?.restartDelayMs, 2000),
+        // 6 attempts at 2s doubling to a 60s cap is roughly two minutes: enough to ride out a
+        // transient port conflict, short of spinning forever on a broken binary.
+        restartMaxAttempts: pickInt(env.IMA2_GROK_RESTART_MAX_ATTEMPTS, fileCfg.grokProvider?.restartMaxAttempts, 6),
+        restartMaxDelayMs: pickInt(env.IMA2_GROK_RESTART_MAX_DELAY_MS, fileCfg.grokProvider?.restartMaxDelayMs, 60_000),
+        restartHealthyMs: pickInt(env.IMA2_GROK_RESTART_HEALTHY_MS, fileCfg.grokProvider?.restartHealthyMs, 60_000),
         plannerModel: pickStr(env.IMA2_GROK_PLANNER_MODEL, fileCfg.grokProvider?.plannerModel, DEFAULT_GROK_PLANNER_MODEL),
         plannerTimeoutMs: pickInt(env.IMA2_GROK_PLANNER_TIMEOUT_MS, fileCfg.grokProvider?.plannerTimeoutMs, 60_000),
         defaultImageModel: pickStr(env.IMA2_GROK_IMAGE_MODEL_DEFAULT, fileCfg.grokProvider?.defaultImageModel, "grok-imagine-image-quality"),
@@ -200,6 +205,7 @@ export const config = {
         defaultVideoModel: pickStr(env.IMA2_GROK_VIDEO_MODEL_DEFAULT, fileCfg.grokProvider?.defaultVideoModel, "grok-imagine-video-1.5"),
         videoStartTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_START_TIMEOUT_MS, fileCfg.grokProvider?.videoStartTimeoutMs, 60_000),
         videoPollIntervalMs: pickInt(env.IMA2_GROK_VIDEO_POLL_INTERVAL_MS, fileCfg.grokProvider?.videoPollIntervalMs, 5_000),
+        videoPollMaxConsecutiveErrors: pickInt(env.IMA2_GROK_VIDEO_POLL_MAX_ERRORS, fileCfg.grokProvider?.videoPollMaxConsecutiveErrors, 5),
         videoTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_TIMEOUT_MS, fileCfg.grokProvider?.videoTimeoutMs, 900_000),
         videoDownloadTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_DOWNLOAD_TIMEOUT_MS, fileCfg.grokProvider?.videoDownloadTimeoutMs, 120_000),
     },

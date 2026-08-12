@@ -1,14 +1,14 @@
 import { logEvent } from "./logger.js";
 import type { RouteRuntimeContext } from "./runtimeContext.js";
-import { getGrokProxyUrl } from "./grokRuntime.js";
 import { grokError, searchGrokVisualContext } from "./grokImageAdapter.js";
+import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { aspectToCanvas, generateWhiteCanvasB64 } from "./grokVideoCanvas.js";
 import { downloadVideo } from "./grokVideoDownload.js";
 import { buildGrokVideoPlannerSystemPrompt, formatDurationPacingGuidance, type VideoPlannerContext } from "./grokVideoPlannerPrompt.js";
 import type { VideoAspectRatio, VideoMode, VideoResolution } from "./imageModels.js";
 import {
-  GROK_FALLBACK_VIDEO_MODEL, GROK_VIDEO_MODEL_15,
+  GROK_VIDEO_MODEL_15,
   GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
   GROK_VIDEO_MODEL_BASE,
   MAX_REF2V_REFERENCES,
@@ -16,8 +16,25 @@ import {
 } from "./imageModels.js";
 import { formatVideoContinuityForPlanner, type VideoContinuityLineage } from "./videoContinuity.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
+import {
+  videoConfig,
+  videoEndpoint,
+  withTimeoutSignal,
+  type GrokVideoOptions,
+} from "./grokVideoShared.js";
+import { pollVideoUntilDone } from "./grokVideoPoll.js";
 
 export { downloadVideo } from "./grokVideoDownload.js";
+
+// routes/videoExtended.ts imports these from the adapter; keep that path working.
+export type {
+  GrokVideoEvent,
+  GrokVideoOptions,
+  GrokVideoPhase,
+  GrokVideoPollResult,
+} from "./grokVideoShared.js";
+export { normalizeVideoPoll } from "./grokVideoShared.js";
+export { isRecoverablePollError, pollVideoOnce, pollVideoUntilDone } from "./grokVideoPoll.js";
 
 export interface GrokVideoPlan {
   prompt: string;
@@ -26,28 +43,6 @@ export interface GrokVideoPlan {
   resolution: VideoResolution;
   aspectRatio: VideoAspectRatio;
   webSearchCalls: number;
-}
-
-export type GrokVideoPhase = "planning" | "submitted" | "progress";
-
-export interface GrokVideoEvent {
-  phase: GrokVideoPhase;
-  xaiVideoRequestId?: string;
-  requestedModel?: string;
-  effectiveModel?: string;
-  modelFallback?: { from: string; to: string } | null;
-  progress?: number;
-  stalled?: boolean;
-}
-
-export interface GrokVideoPollResult {
-  status: "pending" | "done" | "failed" | "expired";
-  progress?: number;
-  videoUrl?: string;
-  duration?: number | null;
-  respectModeration?: boolean;
-  usage?: Record<string, number> | null;
-  failedCode?: string;
 }
 
 export interface GrokVideoGenerateResult {
@@ -67,88 +62,8 @@ export interface GrokVideoGenerateResult {
   modelFallback: { from: string; to: string } | null;
 }
 
-export interface GrokVideoOptions {
-  model?: string;
-  mode?: VideoMode;
-  duration?: number;
-  resolution?: VideoResolution;
-  aspectRatio?: VideoAspectRatio;
-  sourceImage?: string;
-  sourceMime?: string | null;
-  referenceImages?: string[];
-  signal?: AbortSignal;
-  requestId?: string;
-  plannedPrompt?: string;
-  webSearchCalls?: number;
-  continuityLineage?: VideoContinuityLineage | null;
-  plannerModel?: string;
-  directApiKey?: string;
-  onEvent?: (ev: GrokVideoEvent) => void;
-  storyboardActive?: boolean;
-  backgroundConstraint?: string;
-}
-
-interface VideoConfig {
-  model: string;
-  startTimeoutMs: number;
-  pollIntervalMs: number;
-  totalTimeoutMs: number;
-  plannerModel: string;
-  plannerTimeoutMs: number;
-}
-
-const STALE_PROGRESS_MS = 180_000;
-
 function canonicalVideoModel(model: string): string {
   return model === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : model;
-}
-
-function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
-  const g = (ctx.config as any).grokProvider || {};
-  return {
-    model: g.defaultVideoModel || GROK_FALLBACK_VIDEO_MODEL,
-    startTimeoutMs: g.videoStartTimeoutMs || 60_000,
-    pollIntervalMs: g.videoPollIntervalMs || 5_000,
-    totalTimeoutMs: g.videoTimeoutMs || 900_000,
-    plannerModel: g.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
-    plannerTimeoutMs: g.plannerTimeoutMs || 60_000,
-  };
-}
-
-function videoEndpoint(ctx: RouteRuntimeContext, path: string, directApiKey?: string) {
-  if (directApiKey) {
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return {
-      url: `https://api.x.ai${normalizedPath}`,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${directApiKey}` },
-    };
-  }
-  return {
-    url: getGrokProxyUrl(ctx, path),
-    headers: { "Content-Type": "application/json", Authorization: "Bearer dummy" },
-  };
-}
-
-function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number) {
-  const timeoutController = new AbortController();
-  const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
-  const combinedSignal = signal ? AbortSignal.any([signal, timeoutController.signal]) : timeoutController.signal;
-  return { combinedSignal, timer };
-}
-
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(grokError("Generation canceled", 499, "GENERATION_CANCELED"));
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(grokError("Generation canceled", 499, "GENERATION_CANCELED"));
-      },
-      { once: true },
-    );
-  });
 }
 
 function sourceImageUrl(image: string, mime?: string | null): string {
@@ -156,14 +71,6 @@ function sourceImageUrl(image: string, mime?: string | null): string {
   const detected = mime || detectImageMimeFromB64(image) || "image/png";
   return `data:${detected};base64,${image}`;
 }
-
-const FAILED_CODE_MAP: Record<string, { code: string; status: number }> = {
-  invalid_argument: { code: "GROK_VIDEO_REQUEST_FAILED", status: 400 },
-  permission_denied: { code: "GROK_VIDEO_REQUEST_FAILED", status: 403 },
-  failed_precondition: { code: "GROK_VIDEO_REQUEST_FAILED", status: 412 },
-  service_unavailable: { code: "GROK_VIDEO_POLL_FAILED", status: 502 },
-  internal_error: { code: "GROK_VIDEO_FAILED", status: 502 },
-};
 
 export function buildGrokVideoPlannerPayload(
   prompt: string,
@@ -283,7 +190,11 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
   const { combinedSignal, timer } = withTimeoutSignal(options.signal, cfg.plannerTimeoutMs);
   logEvent("grok", "video:planner:start", { requestId: options.requestId, mode, duration, resolution });
   try {
-    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(payload), signal: combinedSignal });
+    // Safe to replay: the planner produces no billable artifact, only a prompt.
+    const res = await grokFetchWithRetry(
+      () => fetch(url, { method: "POST", headers, body: JSON.stringify(payload), signal: combinedSignal }),
+      { signal: combinedSignal, label: "video-planner" },
+    );
     clearTimeout(timer);
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -330,6 +241,9 @@ export async function startVideoRequest(ctx: RouteRuntimeContext, payload: Recor
   const { url, headers } = videoEndpoint(ctx, "/v1/videos/generations", options.directApiKey);
   const { combinedSignal, timer } = withTimeoutSignal(options.signal, cfg.startTimeoutMs);
   try {
+    // NOT wrapped in grokFetchWithRetry on purpose: a reset or 5xx here may follow a job
+    // the origin already accepted, and no idempotency key exists to deduplicate it.
+    // Retrying would create and bill a second video.
     const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(payload), signal: combinedSignal });
     clearTimeout(timer);
     if (!res.ok) {
@@ -348,71 +262,6 @@ export async function startVideoRequest(ctx: RouteRuntimeContext, payload: Recor
     }
     if (e.code && e.status) throw e;
     throw grokError(`Grok video start request failed: ${e.message}`, 502, "GROK_VIDEO_REQUEST_FAILED");
-  }
-}
-
-export function normalizeVideoPoll(data: any): GrokVideoPollResult {
-  const status = data?.status;
-  return {
-    status,
-    progress: typeof data?.progress === "number" ? data.progress : undefined,
-    videoUrl: data?.video?.url,
-    duration: data?.video?.duration ?? null,
-    respectModeration: data?.video?.respect_moderation,
-    usage: data?.usage ? { grok_cost_usd_ticks: data.usage.cost_in_usd_ticks ?? 0 } : null,
-    failedCode: data?.error?.code,
-  };
-}
-
-export async function pollVideoOnce(ctx: RouteRuntimeContext, requestId: string, signal?: AbortSignal, directApiKey?: string): Promise<GrokVideoPollResult> {
-  const cfg = videoConfig(ctx);
-  const { url, headers } = videoEndpoint(ctx, `/v1/videos/${requestId}`, directApiKey);
-  const { combinedSignal, timer } = withTimeoutSignal(signal, cfg.startTimeoutMs);
-  try {
-    const res = await fetch(url, { method: "GET", headers, signal: combinedSignal });
-    clearTimeout(timer);
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw grokError(`Grok video poll failed: ${text || `HTTP ${res.status}`}`, res.status >= 500 ? 502 : res.status, "GROK_VIDEO_POLL_FAILED");
-    }
-    const pollData = await res.json();
-    return normalizeVideoPoll(pollData);
-  } catch (e: any) {
-    clearTimeout(timer);
-    if (e.name === "AbortError") {
-      if (signal?.aborted) throw grokError("Generation canceled", 499, "GENERATION_CANCELED");
-      throw grokError("Grok video poll timed out", 504, "GROK_VIDEO_TIMEOUT");
-    }
-    if (e.code && e.status) throw e;
-    throw grokError(`Grok video poll request failed: ${e.message}`, 502, "GROK_VIDEO_POLL_FAILED");
-  }
-}
-
-function failedToError(poll: GrokVideoPollResult): Error {
-  if (poll.status === "expired") return grokError("Grok video job expired", 502, "GROK_VIDEO_EXPIRED");
-  const mapped = poll.failedCode ? FAILED_CODE_MAP[poll.failedCode] : undefined;
-  if (mapped) return grokError(`Grok video failed: ${poll.failedCode}`, mapped.status, mapped.code);
-  return grokError("Grok video generation failed", 502, "GROK_VIDEO_FAILED");
-}
-
-export async function pollVideoUntilDone(ctx: RouteRuntimeContext, requestId: string, options: GrokVideoOptions): Promise<GrokVideoPollResult> {
-  const cfg = videoConfig(ctx);
-  const deadline = Date.now() + cfg.totalTimeoutMs;
-  let lastProgress = -1;
-  let lastProgressAt = Date.now();
-  for (;;) {
-    if (Date.now() > deadline) throw grokError("Grok video poll budget exceeded", 504, "GROK_VIDEO_TIMEOUT");
-    const poll = await pollVideoOnce(ctx, requestId, options.signal, options.directApiKey);
-    if (poll.status === "done") return poll;
-    if (poll.status === "failed" || poll.status === "expired") throw failedToError(poll);
-    const progress = poll.progress ?? lastProgress;
-    if (progress !== lastProgress) {
-      lastProgress = progress;
-      lastProgressAt = Date.now();
-    }
-    const stalled = Date.now() - lastProgressAt > STALE_PROGRESS_MS;
-    options.onEvent?.({ phase: "progress", progress: poll.progress, stalled });
-    await sleep(cfg.pollIntervalMs, options.signal);
   }
 }
 
