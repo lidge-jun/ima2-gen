@@ -75,6 +75,11 @@ jobs:
         run: git push origin "HEAD:refs/heads/main"
       - name: Promote the exact SHA to preview
         run: git push origin "${{ steps.commit.outputs.sha }}:refs/heads/preview"
+      - id: preview_mark
+        name: Record the publish run high-water mark
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "id=$(node scripts/wait-publish-run.mjs latest-id)" >> "$GITHUB_OUTPUT"
       - name: Publish the preview candidate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,7 +90,7 @@ jobs:
       - name: Wait for the preview publish to finish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/wait-publish-run.mjs refs/heads/preview "${{ steps.commit.outputs.sha }}"
+        run: node scripts/wait-publish-run.mjs wait "${{ steps.preview_mark.outputs.id }}" "preview@${{ steps.commit.outputs.sha }}"
       - name: Require the npm preview proof before tagging
         run: >-
           node scripts/release-cut.mjs assert-preview-proof
@@ -130,6 +135,11 @@ jobs:
             "$SHA:refs/heads/main" \
             "$SHA:refs/heads/dev" \
             "refs/tags/v$VERSION:refs/tags/v$VERSION"
+      - id: stable_mark
+        name: Record the publish run high-water mark
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "id=$(node scripts/wait-publish-run.mjs latest-id)" >> "$GITHUB_OUTPUT"
       - name: Publish the stable release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -140,7 +150,7 @@ jobs:
       - name: Wait for the stable publish to finish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/wait-publish-run.mjs "refs/tags/v${{ needs.cut.outputs.version }}" "${{ needs.cut.outputs.sha }}"
+        run: node scripts/wait-publish-run.mjs wait "${{ steps.stable_mark.outputs.id }}" "v${{ needs.cut.outputs.version }}"
       - name: Write the release summary
         run: |
           {

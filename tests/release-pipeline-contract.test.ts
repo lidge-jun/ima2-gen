@@ -288,30 +288,19 @@ describe("package install policy contract", () => {
 
   it("waits on the run it dispatched, not on a concurrent one", async () => {
     const { pickRun } = await import("../scripts/wait-publish-run.mjs");
-    const startedAtMs = Date.parse("2026-08-12T12:00:00Z");
-    const publishRef = "refs/heads/preview";
-    const publishSha = "abc123";
-    const inputs: Record<number, { publish_ref: string; publish_sha: string } | null> = {
-      1: { publish_ref: publishRef, publish_sha: publishSha },   // push event, must lose
-      2: { publish_ref: publishRef, publish_sha: publishSha },   // too old
-      3: { publish_ref: publishRef, publish_sha: "othersha" },   // a concurrent release
-      4: { publish_ref: publishRef, publish_sha: publishSha },   // ours
-      5: null,                                                   // inputs unreadable
-    };
+    // The REST run object exposes no `inputs`, so correlation uses the pre-dispatch
+    // high-water mark: run ids increase, so the first dispatch above the mark is ours.
+    const mark = 100;
     const runs = [
-      { databaseId: 1, event: "push", createdAt: "2026-08-12T12:05:00Z" },
-      { databaseId: 2, event: "workflow_dispatch", createdAt: "2026-08-12T11:00:00Z" },
-      { databaseId: 3, event: "workflow_dispatch", createdAt: "2026-08-12T12:02:00Z" },
-      { databaseId: 4, event: "workflow_dispatch", createdAt: "2026-08-12T12:04:00Z" },
-      { databaseId: 5, event: "workflow_dispatch", createdAt: "2026-08-12T12:03:00Z" },
+      { databaseId: 99, event: "workflow_dispatch", createdAt: "2026-08-12T11:00:00Z" },  // before the mark
+      { databaseId: 101, event: "push", createdAt: "2026-08-12T12:01:00Z" },              // not a dispatch
+      { databaseId: 102, event: "workflow_dispatch", createdAt: "2026-08-12T12:02:00Z" }, // ours
+      { databaseId: 103, event: "workflow_dispatch", createdAt: "2026-08-12T12:03:00Z" }, // a later release
     ];
-    const options = { startedAtMs, publishRef, publishSha, inputsOf: (run: { databaseId: number }) => inputs[run.databaseId] };
-
-    // Run 3 is newer than ours in nothing but luck: it belongs to another release, so
-    // matching on time alone would have adopted it.
-    assert.equal(pickRun(runs, options)?.databaseId, 4);
-    // A run whose inputs cannot be read is never a match.
-    assert.equal(pickRun([runs[4]], options), undefined);
-    assert.equal(pickRun([runs[0], runs[1], runs[2]], options), undefined);
+    // Oldest above the mark, so a release that starts while we wait is not adopted.
+    assert.equal(pickRun(runs, mark)?.databaseId, 102);
+    assert.equal(pickRun([runs[0], runs[1]], mark), undefined);
+    // Out-of-order listings must not change the answer.
+    assert.equal(pickRun([...runs].reverse(), mark)?.databaseId, 102);
   });
 });
