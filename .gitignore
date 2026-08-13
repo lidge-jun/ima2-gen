@@ -26,7 +26,7 @@ __pycache__/
 /lib/**/*.js
 /routes/**/*.js
 /bin/ima2.js
-/bin/commands/*.js
+/bin/commands/**/*.js
 /bin/lib/*.js
 *.tgz
 

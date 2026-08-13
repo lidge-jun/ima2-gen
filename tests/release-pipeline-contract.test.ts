@@ -315,4 +315,22 @@ describe("package install policy contract", () => {
     const caches = tracked.filter((path) => /\.tsbuildinfo$/.test(path));
     assert.deepEqual(caches, [], `build caches must not be tracked: ${caches.join(", ")}`);
   });
+
+  it("keeps generated .js out of the index when its .ts source is tracked", () => {
+    // Tracked build output drifts from its tracked source and dirties the release
+    // verification worktree (run 31604716464 class of failure). ui/ and vendor/
+    // keep their own checked-in artifacts and are out of scope here.
+    const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+    const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+      .split("\n")
+      .filter(Boolean);
+    const trackedSet = new Set(tracked);
+    const paired = tracked.filter(
+      (path) =>
+        path.endsWith(".js") &&
+        !/^(ui\/|vendor\/|node_modules)/.test(path) &&
+        trackedSet.has(path.replace(/\.js$/, ".ts")),
+    );
+    assert.deepEqual(paired, [], `generated files must not be tracked: ${paired.join(", ")}`);
+  });
 });
