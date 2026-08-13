@@ -46,8 +46,13 @@ dispatch(bump)
 | `.github/workflows/release.yml` `inputs` | `dry_run: choice [true, canary, false], default: true` 추가. 세 모드는 아래 참조 |
 | `.github/workflows/release.yml` cut job | dry-run이면 원격 변경 단계(main push, preview push, publish dispatch, preview-proof)를 각각 `if`로 건너뛴다. preflight → commit(**로컬 커밋은 그대로 생성**) → `verify:release` → `assert-clean`까지는 정상 수행 |
 | `.github/workflows/release.yml` cut job `outputs` | `dry_run: ${{ inputs.dry_run }}` 출력 추가 |
-| `.github/workflows/release.yml` **tag job** | `if: needs.cut.outputs.dry_run != 'true'` **필수** — 아래 참조 |
+| `.github/workflows/release.yml` **tag job** | `if: needs.cut.outputs.dry_run == 'false'` **필수** — 아래 참조 |
 | `scripts/release-cut.mjs` | `commit`은 그대로 로컬 커밋을 만든다. dry-run에서도 커밋해야 `assert-clean`이 의미를 갖는다 |
+
+**조건은 `!= 'true'`가 아니라 `== 'false'`다 (구현 감사 1라운드 blocker 1).**
+`!= 'true'`로 쓰면 `canary`에서 식이 참이 되어 canary 실행이 `main`/`dev`/태그
+push와 stable 발행 dispatch까지 수행한다 — canary 계약(임시 candidate ref 외
+불변)의 정면 위반이다. 세 모드 전부를 계약 테스트로 고정한다.
 
 **`tag` job을 반드시 별도로 막아야 한다.** `cut` 안의 단계를 건너뛰는 것만으로는
 부족하다. `tag`는 `.github/workflows/release.yml:100`의 **독립 job**이고 조건이
@@ -107,9 +112,10 @@ npm에 남겨야 한다. **dry-run 10회가 같은 결정성을 발행 없이 �
 
 | 경로 | 동작 |
 |---|---|
-| `.github/workflows/ci.yml` | `workflow_dispatch`/`workflow_call` 트리거 추가 (SHA 입력) |
-| `.github/workflows/release.yml` cut job, **`main` push 이전** | 버전 커밋을 `refs/heads/release-candidate`로 push, 그 SHA로 `ci.yml` dispatch, 성공까지 대기. 실패면 `main`·`preview`가 움직이기 전에 멈춘다 |
+| `.github/workflows/ci.yml` | `workflow_dispatch`/`workflow_call` 트리거 추가 (SHA 입력). **checkout이 그 입력을 소비해야 한다** (구현 감사 1라운드 blocker 2): `actions/checkout`에 `ref: ${{ inputs.sha || github.sha }}`를 지정하고, 체크아웃 직후 `git rev-parse HEAD`가 입력의 **전체 40자** SHA와 같은지 단정한다. 입력만 추가하고 checkout을 안 고치면 dispatch가 기본 브랜치를 검사하고 초록을 반환한다 |
+| `.github/workflows/release.yml` cut job, **`main` push 이전** | 버전 커밋을 `refs/heads/release-candidate`로 push, 그 SHA로 `ci.yml` dispatch, 성공까지 대기. 실패면 `main`·`preview`가 움직이기 전에 멈춘다. dispatch는 반드시 `gh workflow run ci.yml --ref release-candidate -f sha=<전체 SHA>`로 한다 (구현 감사 2라운드 blocker 1): `--ref` 없이 입력만 넘기면 run이 기본 브랜치에 만들어져 run 메타데이터의 `headSha`가 후보 SHA가 아니게 되고, headSha 상관으로 기다리는 waiter가 영원히 못 찾는다. 대기 중 상관은 run의 `headSha == 후보 전체 SHA`와 checkout 직후 `git rev-parse HEAD` 단정 둘 다로 한다 |
 | `.github/workflows/release.yml` cut job, 성공 후 | candidate ref 정리 (성공·실패 양쪽에서) |
+| 같은 job, candidate push **전후** | stale ref 처리와 소유권 안전 정리 (구현 감사 1라운드 blocker 3 + 2라운드 blocker 2). push: 기존 원격 SHA를 관측한 뒤 `git push --force-with-lease=refs/heads/release-candidate:<관측값>`으로 원자적으로 대치한다 (무조건 삭제는 남의 ref를 지울 수 있다). 관측값이 없으면(없는 ref) empty-lease로 "없어야 함"을 단정한다. 정리 시: 원격 ref가 **이번 실행이 push한 SHA와 같을 때만** 삭제한다 — 누군가 수동으로 갈아 끼운 ref를 지우지 않기 위한 expected-SHA 리스다 |
 
 현재는 릴리스 job **안에서** 후보를 검증할 뿐, 그 SHA에 대한 독립 CI 성공 실행을
 조회하지 않는다. 자기 자신을 검증하는 것과 별도 워크플로가 검증한 기록을 확인하는
@@ -227,8 +233,12 @@ push하기 때문이다(`.github/workflows/release.yml` 74행과 126행). 그래
 - `c1c`: `dry_run=canary` 실행 후 `release-candidate` ref가 **남아 있지 않고**,
   세 브랜치와 dist-tag는 불변이다. 실행을 중도 취소해도 마찬가지다.
 - `c1b`: `npm run release:patch`가 여전히 **실제 릴리스를 수행한다.** 기본값
-  변경이 기존 명령을 no-op으로 만들지 않았음을 확인한다. 계약 테스트가
-  `package.json`의 release 스크립트에 명시적 `dry_run` 플래그가 있는지 검사한다.
+  변경이 기존 명령을 no-op으로 만들지 않았음을 확인한다. 계약 테스트는
+  다섯 스크립트의 **정확한 bump/dry_run 쌍**을 단정한다 (구현 감사 1라운드
+  blocker 4 — "dry_run 플래그 존재"만 검사하면 `release:patch`에
+  `dry_run=true`가 붙은 조용한 no-op도 통과한다): `release:dry`=(patch,true),
+  `release:canary`=(patch,canary), `release:patch`=(patch,false),
+  `release:minor`=(minor,false), `release:major`=(major,false).
 - `c2`: `dry_run=true`가 10회 연속 성공한다. 실패하면 결정성이 없는 것이다.
 - `c3`: `expected_sha`에 낡은 SHA를 주면 컷이 **버전 커밋 전에** 실패한다.
 - `c4`: 게이트는 **발행될 SHA 자신**의 CI 성공을 요구한다. 부모나 baseline으로

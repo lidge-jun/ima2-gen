@@ -31,9 +31,9 @@
     "lint:pkg": "node -e \"const p=require('./package.json'); const req=['name','version','bin']; for(const k of req){if(!p[k])throw new Error('missing '+k)} const mustInclude=['bin/**/*.js','lib/**/*.js','routes/**/*.js','skills/','integrations/comfyui/ima2_gen_bridge/__init__.py','integrations/comfyui/ima2_gen_bridge/nodes.py','integrations/comfyui/ima2_gen_bridge/README.md','assets/card-news/templates/','assets/mcp-snapshots/','vendor/','server.js','LICENSE']; for(const f of mustInclude){if(!p.files.includes(f))throw new Error('files[] must include '+f)}\"",
     "docs:refresh-line-counts": "node scripts/refresh-structure-line-counts.mjs",
     "publish:dry-run": "node scripts/publish-dry-run.mjs",
-    "release:patch": "gh workflow run release.yml -f bump=patch",
-    "release:minor": "gh workflow run release.yml -f bump=minor",
-    "release:major": "gh workflow run release.yml -f bump=major",
+    "release:patch": "gh workflow run release.yml -f bump=patch -f dry_run=false",
+    "release:minor": "gh workflow run release.yml -f bump=minor -f dry_run=false",
+    "release:major": "gh workflow run release.yml -f bump=major -f dry_run=false",
     "audit:gate": "node scripts/audit-gate.mjs --audit-level high --omit dev && node scripts/audit-gate.mjs --prefix ui --audit-level high",
     "verify:release:source": "npm run test:native-deps && npm run typecheck && npm run typecheck:tests && npm run test:inventory && npm run ui:build && npm run build:server && npm run build:cli && npm test && npm run lint:pkg && npm run test:install-policy && npm run audit:gate",
     "verify:release": "npm run verify:release:source && npm run test:package-install",
@@ -41,7 +41,9 @@
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "build:server": "tsc -p tsconfig.build.json",
     "build:cli": "tsc -p tsconfig.bin.json && node scripts/fix-shebangs.mjs",
-    "postinstall": "echo '\\n  [ima2] Gallery thumbnails will be auto-generated on next server start.\\n  Or run: ima2 backfill-thumbs\\n'"
+    "postinstall": "echo '\\n  [ima2] Gallery thumbnails will be auto-generated on next server start.\\n  Or run: ima2 backfill-thumbs\\n'",
+    "release:dry": "gh workflow run release.yml -f bump=patch -f dry_run=true",
+    "release:canary": "gh workflow run release.yml -f bump=patch -f dry_run=canary"
   },
   "keywords": [
     "openai",

@@ -19,6 +19,10 @@ import { npmInvocation } from "../scripts/npm-subprocess.mjs";
 
 const SHA = "a".repeat(40);
 
+function repoRoot() {
+  return dirname(dirname(fileURLToPath(import.meta.url)));
+}
+
 describe("release channel contract", () => {
   it("accepts only preview branch pushes and matching stable tag pushes", () => {
     const preview = classifyPublish({
@@ -332,5 +336,55 @@ describe("package install policy contract", () => {
         trackedSet.has(path.replace(/\.js$/, ".ts")),
     );
     assert.deepEqual(paired, [], `generated files must not be tracked: ${paired.join(", ")}`);
+  });
+
+  it("maps every release script to an explicit bump/dry_run pair", () => {
+    // c1b: a missing or wrong dry_run flag turns a release command into a silent
+    // no-op (or a dry dispatch into a real release). Assert exact strings.
+    const pkg = JSON.parse(readFileSync(join(repoRoot(), "package.json"), "utf8"));
+    assert.equal(pkg.scripts["release:dry"], "gh workflow run release.yml -f bump=patch -f dry_run=true");
+    assert.equal(pkg.scripts["release:canary"], "gh workflow run release.yml -f bump=patch -f dry_run=canary");
+    assert.equal(pkg.scripts["release:patch"], "gh workflow run release.yml -f bump=patch -f dry_run=false");
+    assert.equal(pkg.scripts["release:minor"], "gh workflow run release.yml -f bump=minor -f dry_run=false");
+    assert.equal(pkg.scripts["release:major"], "gh workflow run release.yml -f bump=major -f dry_run=false");
+  });
+
+  it("gates the tag job on a real release and keeps the candidate ref leased", () => {
+    const workflow = readFileSync(join(repoRoot(), ".github/workflows/release.yml"), "utf8");
+    // The most dangerous dry-run failure mode: tag has only `needs: cut`, so a
+    // missing or permissive job-level if performs a real release. It must be
+    // == 'false' (not != 'true') so canary cannot slip through.
+    assert.match(workflow, /if: needs\.cut\.outputs\.dry_run == 'false'/);
+    assert.doesNotMatch(workflow, /if: needs\.cut\.outputs\.dry_run != 'true'/);
+    // The workflow default must be the harmless mode.
+    assert.match(workflow, /dry_run:[\s\S]*?default: 'true'/);
+    // Candidate ref: leased replacement and owned cleanup.
+    assert.match(workflow, /--force-with-lease="refs\/heads\/release-candidate:/);
+    assert.match(workflow, /\[ "\$CURRENT" = "\$CANDIDATE_SHA" \]/);
+    // The CI gate must run before main moves.
+    const gateIndex = workflow.indexOf("Dispatch CI for the exact candidate SHA");
+    const mainPushIndex = workflow.indexOf("Push the version commit to main");
+    assert.ok(gateIndex > -1 && mainPushIndex > -1 && gateIndex < mainPushIndex);
+  });
+
+  it("ci.yml checks out the dispatched SHA and asserts it", () => {
+    const ci = readFileSync(join(repoRoot(), ".github/workflows/ci.yml"), "utf8");
+    assert.match(ci, /workflow_dispatch:[\s\S]*?sha:/);
+    assert.match(ci, /ref: \$\{\{ github\.event\.inputs\.sha \|\| github\.sha \}\}/);
+    assert.match(ci, /git rev-parse HEAD/);
+  });
+
+  it("ci gate correlates runs by full candidate SHA only", async () => {
+    const { pickRun, assertFullSha } = await import("../scripts/wait-ci-gate.mjs");
+    const sha = "b".repeat(40);
+    assert.throws(() => assertFullSha(sha.slice(0, 7)), /full 40-char SHA/);
+    const runs = [
+      { databaseId: 10, event: "workflow_dispatch", headSha: sha },           // before mark
+      { databaseId: 11, event: "push", headSha: sha },                        // not a dispatch
+      { databaseId: 12, event: "workflow_dispatch", headSha: "c".repeat(40) }, // different SHA
+      { databaseId: 13, event: "workflow_dispatch", headSha: sha },           // ours
+    ];
+    assert.equal(pickRun(runs, 10, sha)?.databaseId, 13);
+    assert.equal(pickRun(runs, 10, "d".repeat(40)), undefined);
   });
 });

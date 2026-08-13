@@ -17,6 +17,16 @@ on:
         default: patch
         type: choice
         options: [patch, minor, major]
+      dry_run:
+        description: 'true: verify only, no remote change; canary: also exercise the candidate CI gate; false: real release'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'canary', 'false']
+      expected_sha:
+        description: 'Optional full SHA the caller decided on; the cut refuses to start if origin/main moved past it'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -36,6 +46,7 @@ jobs:
     outputs:
       version: ${{ steps.commit.outputs.version }}
       sha: ${{ steps.commit.outputs.sha }}
+      dry_run: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -54,6 +65,16 @@ jobs:
         run: git fetch origin main dev preview --tags
       - name: Assert the release baseline
         run: node scripts/release-cut.mjs preflight
+      - name: Refuse to cut from a moved baseline
+        if: ${{ inputs.expected_sha != '' }}
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          ACTUAL=$(git rev-parse origin/main)
+          if [ "$EXPECTED_SHA" != "$ACTUAL" ]; then
+            echo "expected_sha $EXPECTED_SHA but origin/main is $ACTUAL"
+            exit 1
+          fi
       - name: Assert the pinned release toolchain
         run: node scripts/release-contract.mjs assert-toolchain
       - run: npm ci
@@ -71,16 +92,63 @@ jobs:
         timeout-minutes: 45
       - name: Refuse a candidate whose verification changed tracked output
         run: node scripts/release-cut.mjs assert-clean
+      # Exact-SHA CI gate (roadmap 030): the candidate must exist on the remote
+      # before CI can check it out, but main/preview must not move before the gate
+      # passes — so the candidate rides a dedicated ref that nothing else reads.
+      - name: Publish the candidate to its own ref
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          CANDIDATE_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          OLD=$(git ls-remote origin refs/heads/release-candidate | cut -f1)
+          git push --force-with-lease="refs/heads/release-candidate:${OLD:-}" origin \
+            "$CANDIDATE_SHA:refs/heads/release-candidate"
+      - id: ci_mark
+        name: Record the CI run high-water mark
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "id=$(node scripts/wait-ci-gate.mjs latest-id)" >> "$GITHUB_OUTPUT"
+      - name: Dispatch CI for the exact candidate SHA
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh workflow run ci.yml --ref release-candidate
+          -f sha=${{ steps.commit.outputs.sha }}
+      - name: Wait for the candidate CI gate
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/wait-ci-gate.mjs wait
+          "${{ steps.ci_mark.outputs.id }}"
+          "${{ steps.commit.outputs.sha }}"
+      - name: Clean up the candidate ref
+        if: ${{ always() && inputs.dry_run != 'true' }}
+        env:
+          CANDIDATE_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/release-candidate | cut -f1)
+          # Ownership lease: delete only the ref this run pushed, never one
+          # somebody else replaced it with.
+          if [ -n "$CANDIDATE_SHA" ] && [ "$CURRENT" = "$CANDIDATE_SHA" ]; then
+            git push origin :refs/heads/release-candidate
+          fi
       - name: Push the version commit to main
+        if: ${{ inputs.dry_run == 'false' }}
         run: git push origin "HEAD:refs/heads/main"
       - name: Promote the exact SHA to preview
+        if: ${{ inputs.dry_run == 'false' }}
         run: git push origin "${{ steps.commit.outputs.sha }}:refs/heads/preview"
       - id: preview_mark
         name: Record the publish run high-water mark
+        if: ${{ inputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: echo "id=$(node scripts/wait-publish-run.mjs latest-id)" >> "$GITHUB_OUTPUT"
       - name: Publish the preview candidate
+        if: ${{ inputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -88,10 +156,12 @@ jobs:
             -f publish_ref=refs/heads/preview \
             -f publish_sha=${{ steps.commit.outputs.sha }}
       - name: Wait for the preview publish to finish
+        if: ${{ inputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/wait-publish-run.mjs wait "${{ steps.preview_mark.outputs.id }}" "preview@${{ steps.commit.outputs.sha }}"
       - name: Require the npm preview proof before tagging
+        if: ${{ inputs.dry_run == 'false' }}
         run: >-
           node scripts/release-cut.mjs assert-preview-proof
           "${{ steps.commit.outputs.version }}"
@@ -100,6 +170,9 @@ jobs:
   tag:
     name: Mint the stable tag and publish
     needs: cut
+    # == 'false', not != 'true': canary must never tag, push main/dev, or
+    # dispatch the stable publish (roadmap 030 audit blocker).
+    if: needs.cut.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
