@@ -1,7 +1,12 @@
 import { useAppStore } from "../store/useAppStore";
 import { useI18n, SUPPORTED_LOCALES, type Locale } from "../i18n";
 
-const LABEL: Record<Locale, string> = { ko: "KO", en: "EN" };
+const LABEL: Record<Locale, string> = {
+  ko: "KO",
+  en: "EN",
+  "zh-Hant": "正體",
+  "zh-Hans": "简体",
+};
 
 export function LanguageToggle() {
   const { t, locale } = useI18n();

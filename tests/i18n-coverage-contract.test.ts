@@ -9,6 +9,8 @@ import { join, sep } from "node:path";
 
 const ko = JSON.parse(readFileSync("ui/src/i18n/ko.json", "utf8"));
 const en = JSON.parse(readFileSync("ui/src/i18n/en.json", "utf8"));
+const zhHant = JSON.parse(readFileSync("ui/src/i18n/zh-Hant.json", "utf8"));
+const zhHans = JSON.parse(readFileSync("ui/src/i18n/zh-Hans.json", "utf8"));
 
 function componentFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -48,19 +50,19 @@ const PURE_MODULES = [
   "ui/src/components/ElementMentionMenu.tsx",
 ];
 
-test("the two locale dictionaries stay structurally identical", () => {
+test("all locale dictionaries stay structurally identical", () => {
   const flatten = (obj: unknown, prefix = ""): string[] =>
     Object.entries(obj as Record<string, unknown>).flatMap(([key, value]) =>
       value && typeof value === "object" && !Array.isArray(value)
         ? flatten(value, `${prefix}${key}.`)
         : [`${prefix}${key}`],
     );
-  const koKeys = flatten(ko).sort();
   const enKeys = flatten(en).sort();
-  const missingInEn = koKeys.filter((k) => !enKeys.includes(k));
-  const missingInKo = enKeys.filter((k) => !koKeys.includes(k));
-  assert.deepEqual(missingInEn, [], "keys present in ko but missing in en");
-  assert.deepEqual(missingInKo, [], "keys present in en but missing in ko");
+  for (const [locale, dictionary] of [["ko", ko], ["zh-Hant", zhHant], ["zh-Hans", zhHans]] as const) {
+    const keys = flatten(dictionary).sort();
+    assert.deepEqual(keys.filter((k) => !enKeys.includes(k)), [], `keys present in ${locale} but missing in en`);
+    assert.deepEqual(enKeys.filter((k) => !keys.includes(k)), [], `keys present in en but missing in ${locale}`);
+  }
 });
 
 test("element panels are translated rather than hardcoded English", () => {
@@ -74,8 +76,9 @@ test("element panels are translated rather than hardcoded English", () => {
     assert.doesNotMatch(src, /aria-label="[A-Z]/, `${path} still has a hardcoded aria-label`);
     assert.doesNotMatch(src, /placeholder="[A-Z]/, `${path} still has a hardcoded placeholder`);
   }
-  assert.ok(ko.element?.notesHelp, "ko.element must exist");
-  assert.ok(en.element?.notesHelp, "en.element must exist");
+  for (const [locale, dictionary] of [["en", en], ["ko", ko], ["zh-Hant", zhHant], ["zh-Hans", zhHans]] as const) {
+    assert.ok(dictionary.element?.notesHelp, `${locale}.element must exist`);
+  }
 });
 
 test("no component hardcodes a user-facing English attribute", () => {

@@ -1392,7 +1392,9 @@
   "language": {
     "label": "Language",
     "ko": "한국어",
-    "en": "English"
+    "en": "English",
+    "zh-Hant": "正體中文",
+    "zh-Hans": "简体中文"
   },
   "errorCard": {
     "close": "Close",

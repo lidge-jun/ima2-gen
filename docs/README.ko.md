@@ -8,7 +8,7 @@
 >
 > 📖 **개발자 문서**: [문서 사이트](https://lidge-jun.github.io/ima2-gen/ko/docs) · [English](https://lidge-jun.github.io/ima2-gen/docs)
 >
-> **다른 언어로 읽기**: [English](../README.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
+> **다른 언어로 읽기**: [English](../README.md) · [日本語](README.ja.md) · [正體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md)
 
 `ima2-gen`은 무료 ChatGPT와 SuperGrok만으로 이미지와 영상을 만드는 로컬 AI 스튜디오입니다.
 
