@@ -24,6 +24,7 @@ import { publishJobEvent } from "./ssePublish.js";
 import { type NodeGenerateBody, asUpstream, wantsSse, writeNodeError, loadParentNodeB64, toGrokReferences, nodeErrorDetails, } from "./nodeHelpers.js";
 import { normalizeBodyRequestId, validateGenerationPrompt } from "./generationInputValidation.js";
 import { deriveReferenceLimit } from "./providers/derive.js";
+import { errorEnvelopeFields } from "./errors/envelope.js";
 export async function runNodeGeneration(req: Request, res: Response, ctx: RuntimeContext) {
     const body = (req.body ?? {}) as NodeGenerateBody;
     const promptError = validateGenerationPrompt(body.prompt);
@@ -517,8 +518,10 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       finishErrorCode = code;
       logError("node", "error", err.raw, { requestId, code, parentNodeId, sessionId, clientNodeId });
       writeNodeError(res, err.status || 500, code, err.message, parentNodeId, {
-        rawCode: ext.rawCode,
-        errorClass: ext.errorClass,
+        // Recover identity from the thrown object itself. Copying only
+        // pre-attached rawCode/errorClass left MiniMax 402 empty when the
+        // adapter throw skipped normalizeGenerationFailure.
+        ...errorEnvelopeFields(err.raw),
         upstreamCode: ext.upstreamCode || null,
         upstreamType: ext.upstreamType || null,
         upstreamParam: ext.upstreamParam || null,

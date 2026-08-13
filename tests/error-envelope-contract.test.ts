@@ -1,7 +1,7 @@
 import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -13,11 +13,17 @@ const { errorEnvelopeFields } = await import("../lib/errors/envelope.ts");
 const { upstreamErrorFields } = await import("../lib/routeHelpers.ts");
 const { writeNodeError, nodeErrorDetails } = await import("../lib/nodeHelpers.ts");
 const { normalizeGenerationFailure } = await import("../lib/generationErrors.ts");
-const { representativeItemError } = await import("../lib/grokMultimodeAdapter.ts");
+const { generateMultimodeViaGrok } = await import("../lib/grokMultimodeAdapter.ts");
 const { registerVideoExtendedRoutes } = await import("../routes/videoExtended.ts");
+const { registerVideoRoutes } = await import("../routes/video.ts");
+const { registerEditRoutes } = await import("../routes/edit.ts");
+const { registerMcpMediaRoutes } = await import("../routes/mcpMedia.ts");
 const { createAgentSession } = await import("../lib/agentStore.ts");
+const { tickAgentQueueWorker } = await import("../lib/agentQueueWorker.ts");
 const queue = await import("../lib/agentQueueStore.ts");
 const db = await import("../lib/db.ts");
+const { subscribe } = await import("../lib/eventBus.ts");
+const { config } = await import("../config.ts");
 
 after(() => {
   db.closeDb();
@@ -29,9 +35,13 @@ function source(path: string): string {
 }
 
 function providerError(code: string, status: number) {
-  return Object.assign(new Error("ordinary provider failure"), { code, status, rawCode: code, errorClass: errorEnvelopeFields({ code, status }).errorClass });
+  return Object.assign(new Error("ordinary provider failure"), {
+    code,
+    status,
+    rawCode: code,
+    errorClass: errorEnvelopeFields({ code, status }).errorClass,
+  });
 }
-
 
 async function withServer(app: express.Express, run: (baseUrl: string) => Promise<void>) {
   const server = await new Promise<import("node:http").Server>((resolve) => {
@@ -45,6 +55,30 @@ async function withServer(app: express.Express, run: (baseUrl: string) => Promis
   }
 }
 
+function parseSse(text: string) {
+  const events: Array<{ event: string; data: Record<string, unknown> }> = [];
+  for (const block of text.split("\n\n")) {
+    const ev = /event: (.+)/.exec(block);
+    const data = /data: (.+)/.exec(block);
+    if (ev && data) events.push({ event: ev[1].trim(), data: JSON.parse(data[1]) });
+  }
+  return events;
+}
+
+function waitForError(requestId: string, timeoutMs = 4000) {
+  return new Promise<Record<string, unknown>>((resolve, reject) => {
+    const timer = setTimeout(() => { stop(); reject(new Error(`timeout waiting error for ${requestId}`)); }, timeoutMs);
+    const stop = subscribe((ev) => {
+      if (ev.jobId === requestId && ev.event === "error") {
+        clearTimeout(timer);
+        stop();
+        resolve(ev.data);
+      }
+    });
+  });
+}
+
+const TINY_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 describe("062 error transport envelopes", () => {
   it("Classic SSE carries MiniMax fields without changing code", () => {
@@ -63,26 +97,70 @@ describe("062 error transport envelopes", () => {
       json(value: unknown) { body = value; return this; },
     } as unknown as express.Response;
     const err = providerError("MINIMAX_INSUFFICIENT_BALANCE", 402) as unknown as Record<string, unknown>;
-    // Go through nodeErrorDetails, which is what lib/nodeGeneration.ts actually
-    // passes to writeNodeError. Handing writeNodeError a pre-decorated object
-    // skipped the step where both fields were being dropped.
     const normalized = normalizeGenerationFailure(err as never) as unknown as Record<string, unknown>;
     assert.equal(normalized.code, "INVALID_REQUEST");
-    const details = nodeErrorDetails(normalized, err as never);
-    writeNodeError(res, 402, normalized.code as string, normalized.message as string, null, details);
+    writeNodeError(res, 402, normalized.code as string, normalized.message as string, null, nodeErrorDetails(normalized, err as never));
     const error = (body as { error: Record<string, unknown> }).error;
     assert.equal(error.code, "INVALID_REQUEST");
     assert.equal(error.rawCode, "MINIMAX_INSUFFICIENT_BALANCE");
     assert.equal(error.errorClass, "BILLING_REQUIRED");
   });
 
-  it("Video SSE call sites carry Grok 502 fields without changing code", () => {
-    assert.deepEqual(errorEnvelopeFields(providerError("GROK_VIDEO_REQUEST_FAILED", 502)), {
-      rawCode: "GROK_VIDEO_REQUEST_FAILED", errorClass: "NETWORK_FAILURE",
+  it("Node outer catch recovers fields from an undecorated adapter throw", () => {
+    let body: unknown;
+    const res = {
+      writableEnded: false, destroyed: false, headersSent: false,
+      status() { return this; },
+      json(value: unknown) { body = value; return this; },
+    } as unknown as express.Response;
+    const thrown = Object.assign(new Error("ordinary provider failure"), {
+      code: "MINIMAX_INSUFFICIENT_BALANCE",
+      status: 402,
     });
-    for (const path of ["routes/video.ts", "routes/videoExtended.ts"]) {
-      assert.match(source(path), /publish|dualEmitVideo/);
-      assert.match(source(path), /errorEnvelopeFields\((?:err\.raw|error)\)/);
+    writeNodeError(res, thrown.status, thrown.code, thrown.message, null, {
+      ...errorEnvelopeFields(thrown),
+    });
+    const error = (body as { error: Record<string, unknown> }).error;
+    assert.equal(error.code, "MINIMAX_INSUFFICIENT_BALANCE");
+    assert.equal(error.rawCode, "MINIMAX_INSUFFICIENT_BALANCE");
+    assert.equal(error.errorClass, "BILLING_REQUIRED");
+    assert.match(source("lib/nodeGeneration.ts"), /\.\.\.errorEnvelopeFields\(err\.raw\)/);
+  });
+
+  it("Video SSE dual-emit carries Grok 502 fields without changing code", async () => {
+    const originalFetch = globalThis.fetch;
+    const app = express();
+    app.use(express.json());
+    registerVideoRoutes(app, {
+      rootDir: process.cwd(),
+      packageVersion: "test",
+      config: {
+        ...config,
+        storage: { ...config.storage, generatedDir: TEST_DIR },
+        grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 1, videoPollIntervalMs: 1, videoStartTimeoutMs: 1000, videoTimeoutMs: 2000, plannerTimeoutMs: 1000 },
+        log: { ...config.log, level: "silent" },
+      },
+    });
+    try {
+      await withServer(app, async (baseUrl) => {
+        globalThis.fetch = async (url, init) => {
+          if (String(url).startsWith(baseUrl)) return originalFetch(url, init);
+          throw providerError("GROK_VIDEO_REQUEST_FAILED", 502);
+        };
+        const response = await originalFetch(`${baseUrl}/api/video/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: "animate", provider: "grok", duration: 1, resolution: "480p", requestId: "env-video-sse" }),
+        });
+        const events = parseSse(await response.text());
+        const error = events.find((event) => event.event === "error")?.data;
+        assert.ok(error, "video generate must emit an SSE error");
+        assert.equal(error.code, "GROK_VIDEO_REQUEST_FAILED");
+        assert.equal(error.rawCode, "GROK_VIDEO_REQUEST_FAILED");
+        assert.equal(error.errorClass, "NETWORK_FAILURE");
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 
@@ -108,71 +186,209 @@ describe("062 error transport envelopes", () => {
     }
   });
 
-  it("Multimode picks the last failure only when nothing was returned", () => {
-    // The policy is a pure function so it can be executed rather than
-    // regex-matched. Mixed causes have no principled winner, so the contract is
-    // "last failure", and any returned image means no error at all.
-    const rateLimited = providerError("GROK_RATE_LIMITED", 429);
-    const upstream = providerError("GROK_UPSTREAM_ERROR", 502);
-
-    assert.equal(representativeItemError([rateLimited, upstream], 0), upstream);
-    assert.equal(representativeItemError([upstream, rateLimited], 0), rateLimited);
-    assert.equal(representativeItemError([], 0), undefined);
-    // Partial success must stay a success: the run reports no error.
-    assert.equal(representativeItemError([rateLimited, upstream], 1), undefined);
-
-    // And the pipeline only consults it under returned === 0.
-    assert.match(source("lib/multimodePipeline.ts"), /if \(returned === 0\) \{[\s\S]{0,300}generated\.error/);
-    assert.deepEqual(errorEnvelopeFields(upstream), {
-      rawCode: "GROK_UPSTREAM_ERROR",
-      errorClass: "NETWORK_FAILURE",
+  it("Video extend event-bus carries Grok 502 fields", async () => {
+    writeFileSync(join(TEST_DIR, "root.mp4"), Buffer.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]));
+    writeFileSync(join(TEST_DIR, "root.mp4.json"), JSON.stringify({
+      kind: "video", provider: "grok", model: "grok-imagine-video",
+      userPrompt: "parent", video: { duration: 5, resolution: "480p", aspectRatio: "auto" },
+    }));
+    const app = express();
+    app.use(express.json());
+    registerVideoExtendedRoutes(app, {
+      rootDir: process.cwd(),
+      packageVersion: "test",
+      config: {
+        ...config,
+        storage: { ...config.storage, generatedDir: TEST_DIR },
+        grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 1 },
+        log: { ...config.log, level: "silent" },
+      },
+    }, {
+      extractFrame: async () => TINY_PNG,
+      generateVideo: async () => { throw providerError("GROK_VIDEO_REQUEST_FAILED", 502); },
+    });
+    await withServer(app, async (baseUrl) => {
+      const pending = waitForError("env-video-extend");
+      const response = await fetch(`${baseUrl}/api/video/extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceVideoId: "root.mp4", requestId: "env-video-extend", prompt: "continue" }),
+      });
+      assert.equal(response.status, 202);
+      const payload = await pending;
+      assert.equal(payload.code, "GROK_VIDEO_REQUEST_FAILED");
+      assert.equal(payload.rawCode, "GROK_VIDEO_REQUEST_FAILED");
+      assert.equal(payload.errorClass, "NETWORK_FAILURE");
     });
   });
 
-  it("MCP structured code wins over message parsing in every route", () => {
-    for (const path of ["routes/mcpMedia.ts", "routes/mcpRecover.ts", "routes/mcpMultishot.ts"]) {
-      const text = source(path);
-      assert.match(text, /structuredCode|const code = \(error as \{ code\?: unknown \}\)\?\.code/);
-      assert.match(text, /errorEnvelopeFields\(error\)/);
+  it("Multimode returns the last item failure from the adapter", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      const target = String(url);
+      if (target.endsWith("/v1/responses")) {
+        return Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: "brief" }] }] });
+      }
+      if (target.endsWith("/v1/chat/completions")) {
+        return Response.json({
+          choices: [{
+            message: {
+              tool_calls: [{
+                type: "function",
+                function: { name: "generate_image", arguments: JSON.stringify({ prompt: "planned", model: "grok-imagine-image-quality" }) },
+              }],
+            },
+          }],
+        });
+      }
+      throw providerError("GROK_UPSTREAM_ERROR", 502);
+    };
+    try {
+      const result = await generateMultimodeViaGrok("sequence", {
+        config: {
+          ...config,
+          grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 9, plannerTimeoutMs: 2000, generationTimeoutMs: 2000 },
+        },
+        packageVersion: "test",
+      } as never, { maxImages: 1, requestId: "env-multimode" });
+      assert.equal(result.images.length, 0);
+      const err = result.error as { code?: string; status?: number };
+      assert.equal(err.code, "GROK_UPSTREAM_ERROR");
+      assert.deepEqual(errorEnvelopeFields(result.error), {
+        rawCode: "GROK_UPSTREAM_ERROR",
+        errorClass: "NETWORK_FAILURE",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
     }
-    const err = providerError("MINIMAX_NETWORK_FAILED", 502);
-    assert.equal((err as Error & { code: string }).code, "MINIMAX_NETWORK_FAILED");
-    assert.equal(err.message.split(":")[0], "ordinary provider failure");
   });
 
-  it("Edit JSON carries Gemini fields without changing code", () => {
-    const err = providerError("GEMINI_API_RATE_LIMITED", 429);
-    const payload = { code: err.code, ...errorEnvelopeFields(err) };
-    assert.deepEqual(payload, { code: "GEMINI_API_RATE_LIMITED", rawCode: "GEMINI_API_RATE_LIMITED", errorClass: "RATE_LIMITED" });
-    assert.match(source("routes/edit.ts"), /\.\.\.errorEnvelopeFields\(err\.raw\)/);
+  it("MCP event payload prefers structured code over message parsing", async () => {
+    mkdirSync(join(TEST_DIR, "snapshots"), { recursive: true });
+    mkdirSync(join(TEST_DIR, "generated"), { recursive: true });
+    writeFileSync(join(TEST_DIR, "snapshots", "runway.json"), JSON.stringify({
+      provenance: { provider: "runway", endpoint: "https://mcp.runwayml.com/mcp", fetchedAt: "t", entitlementTag: "u", originalHash: "sha256:0", sanitizedHash: "sha256:0" },
+      tools: [{ name: "upscale_image" }],
+    }));
+    writeFileSync(join(TEST_DIR, "generated", "src-image.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const app = express();
+    app.use(express.json());
+    registerMcpMediaRoutes(app, {
+      config: {
+        storage: { generatedDir: join(TEST_DIR, "generated"), packageRoot: TEST_DIR },
+        ids: { generatedHexBytes: 4 },
+        mcp: { enabledProviders: ["runway"], tokenDir: TEST_DIR, snapshotDir: join(TEST_DIR, "snapshots") },
+      },
+      mcpConnectionManager: {
+        status: () => ({ provider: "runway", state: "connected", snapshotDiff: { drifted: [], missing: [], added: [] } }),
+        callTool: async () => { throw new Error("unused"); },
+      },
+    } as never, {
+      upload: async () => "https://runway.example/datasets/abc.png",
+      executePlan: async () => {
+        throw Object.assign(new Error("ordinary provider failure:ignored"), {
+          code: "MINIMAX_NETWORK_FAILED",
+          status: 502,
+        });
+      },
+    } as never);
+    await withServer(app, async (baseUrl) => {
+      const pending = waitForError("env-mcp");
+      const response = await fetch(`${baseUrl}/api/mcp/media-action`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "upscale-image", files: ["src-image.png"], requestId: "env-mcp" }),
+      });
+      assert.equal(response.status, 202);
+      const payload = await pending;
+      assert.equal(payload.code, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.rawCode, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.errorClass, "NETWORK_FAILURE");
+    });
   });
 
-  it("Agent queue stores Atlas 400 and 502 classes instead of deriving at read time", () => {
+  it("Edit JSON carries Gemini fields from the real route", async () => {
+    const originalFetch = globalThis.fetch;
+    const app = express();
+    app.use(express.json({ limit: "2mb" }));
+    registerEditRoutes(app, {
+      geminiApiKey: "test-key",
+      config: {
+        ...config,
+        storage: { ...config.storage, generatedDir: TEST_DIR },
+        log: { ...config.log, level: "silent" },
+      },
+      packageVersion: "test",
+    });
+    try {
+      await withServer(app, async (baseUrl) => {
+        globalThis.fetch = async (url, init) => {
+          if (String(url).startsWith(baseUrl)) return originalFetch(url, init);
+          return new Response("rate limited", { status: 429 });
+        };
+        const response = await originalFetch(`${baseUrl}/api/edit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: "edit", image: TINY_PNG, provider: "gemini-api" }),
+        });
+        const body = await response.json() as Record<string, unknown>;
+        assert.equal(body.code, "GEMINI_API_RATE_LIMITED");
+        assert.equal(body.rawCode, "GEMINI_API_RATE_LIMITED");
+        assert.equal(body.errorClass, "RATE_LIMITED");
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  async function waitForQueueStatus(id: string, status: string) {
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline) {
+      const item = queue.getAgentQueueItem(id);
+      if (item?.status === status) return item;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    throw new Error(`timed out waiting for ${id} to become ${status} (now ${queue.getAgentQueueItem(id)?.status})`);
+  }
+
+  it("Agent queue worker stores Atlas 400 and 502 classes", async () => {
+    const originalFetch = globalThis.fetch;
     const session = createAgentSession({ title: "error envelope" });
     const cases = [[400, "CAPABILITY_UNSUPPORTED"], [502, "NETWORK_FAILURE"]] as const;
-    for (const [status, expectedClass] of cases) {
-      const item = queue.createAgentQueueItem({ sessionId: session.id, prompt: `atlas ${status}` });
-      const claimed = queue.claimNextAgentQueueItem({ maxGlobalRunning: 10, maxSessionRunning: 10 });
-      assert.equal(claimed?.id, item.id);
-      // Build the failure exactly as lib/agentQueueWorker.ts does, and assert
-      // the worker source still spreads the fields — computing them here only
-      // would stay green if the worker stopped doing it.
-      const raw = { code: "ATLASCLOUD_GENERATE_FAILED", status };
-      queue.failAgentQueueItem(item.id, { code: raw.code, message: `failed ${status}`, ...errorEnvelopeFields(raw) });
-      const stored = db.getDb().prepare("SELECT error_code AS code, error_class AS errorClass FROM agent_queue_items WHERE id = ?").get(item.id);
-      assert.deepEqual(stored, { code: "ATLASCLOUD_GENERATE_FAILED", errorClass: expectedClass });
-      assert.equal(queue.getAgentQueueItem(item.id)?.errorClass, expectedClass);
+    try {
+      for (const [status, expectedClass] of cases) {
+        const item = queue.createAgentQueueItem({
+          sessionId: session.id,
+          prompt: `atlas ${status}`,
+          options: { provider: "atlascloud", generationStrategy: "manual" },
+        });
+        globalThis.fetch = async (url) => {
+          if (String(url).includes("/model/generateImage")) {
+            return new Response("failed", { status });
+          }
+          throw new Error(`unexpected fetch ${String(url)}`);
+        };
+        await tickAgentQueueWorker({
+          atlasCloudApiKey: "test-key",
+          config: {
+            storage: { generatedDir: TEST_DIR },
+            agentPlanner: { enabled: false },
+            log: { level: "silent" },
+          },
+          packageVersion: "test",
+        } as never);
+        const stored = await waitForQueueStatus(item.id, "failed");
+        assert.equal(stored.errorCode, "ATLASCLOUD_GENERATE_FAILED");
+        assert.equal(stored.errorClass, expectedClass);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
     }
-    assert.match(source("lib/agentQueueWorker.ts"), /\.\.\.errorEnvelopeFields\(err\.raw\)/);
 
-    // App-code failures must carry no class at all, and legacy rows that
-    // predate the column must omit the field rather than serialize null.
     const appItem = queue.createAgentQueueItem({ sessionId: session.id, prompt: "canceled" });
     queue.claimNextAgentQueueItem({ maxGlobalRunning: 10, maxSessionRunning: 10 });
     queue.failAgentQueueItem(appItem.id, { code: "timeout", message: "timeout" });
-    const appRow = queue.getAgentQueueItem(appItem.id)!;
-    assert.equal("errorClass" in appRow, false, "app-code failures must omit errorClass");
-    // The app-code row contributes no class, so only the two provider rows do.
+    assert.equal("errorClass" in queue.getAgentQueueItem(appItem.id)!, false);
     const classes = queue.getAgentGenerationErrors(session.id)
       .map((record) => record.errorClass)
       .filter((value): value is string => typeof value === "string")
