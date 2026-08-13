@@ -6,6 +6,7 @@ import type { UpstreamErr } from "./generationErrors.js";
 import type { RuntimeContext } from "./runtimeContext.js";
 import { writeSse } from "./routeHelpers.js";
 import { publish } from "./eventBus.js";
+import { errorEnvelopeFields } from "./errors/envelope.js";
 
 export interface NodeGenerateBody {
   prompt?: string;
@@ -50,11 +51,12 @@ export function writeNodeError(
   details: Record<string, unknown> = {},
   requestId?: string,
 ) {
+  const { rawCode: _rawCode, errorClass: _errorClass, ...payloadDetails } = details;
   const payload = {
-    error: { code, message },
+    error: { code, message, ...errorEnvelopeFields({ ...details, code, status }) },
     parentNodeId,
     status,
-    ...details,
+    ...payloadDetails,
   };
   if (requestId) publish(requestId, "error", payload);
   if (res.writableEnded || res.destroyed) return;

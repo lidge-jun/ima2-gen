@@ -14,6 +14,7 @@ import { runwayAdapter } from "../lib/mcp/adapters/runway.js";
 import { higgsfieldAdapter } from "../lib/mcp/adapters/higgsfield.js";
 import type { MediaProviderAdapter } from "../lib/mcp/providerAdapter.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { errorEnvelopeFields } from "../lib/errors/envelope.js";
 
 const ADAPTERS: Record<string, MediaProviderAdapter> = {
   runway: runwayAdapter,
@@ -26,7 +27,8 @@ export interface McpRecoverDeps {
 }
 
 function errorCode(error: unknown): string {
-  return String((error as Error)?.message ?? error).split(":")[0] || "MCP_RECOVER_FAILED";
+  const code = (error as { code?: unknown })?.code;
+  return (typeof code === "string" && code) || String((error as Error)?.message ?? error).split(":")[0] || "MCP_RECOVER_FAILED";
 }
 
 async function runRecoverJob(input: {
@@ -72,7 +74,7 @@ async function runRecoverJob(input: {
     const code = errorCode(error);
     void logMcpJobError(ctx.config.storage.generatedDir, { requestId, provider: adapter.provider, taskId }, error);
     finishJob(requestId, { status: "error", errorCode: code });
-    publishJobEvent(requestId, "error", { code, message: "MCP task recovery failed" });
+    publishJobEvent(requestId, "error", { code, message: "MCP task recovery failed", ...errorEnvelopeFields(error) });
   }
 }
 

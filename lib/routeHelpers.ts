@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import { type RuntimeContext } from "./runtimeContext.js";
+import { errorEnvelopeFields } from "./errors/envelope.js";
 
 export function validateModeration(ctx: RuntimeContext, moderation: unknown) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
@@ -30,6 +31,7 @@ export function dataUrlFromB64(format: string, b64: string) {
 
 export function upstreamErrorFields(src: Record<string, unknown>) {
   return {
+    ...errorEnvelopeFields(src),
     upstreamCode: src.upstreamCode || null,
     upstreamType: src.upstreamType || null,
     upstreamParam: src.upstreamParam || null,

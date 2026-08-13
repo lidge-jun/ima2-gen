@@ -25,6 +25,7 @@ import { parseMcpPresetRecord, type McpPresetValue } from "../lib/mcp/modelCapab
 import type { MediaProviderAdapter } from "../lib/mcp/providerAdapter.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 import { resolveCharacterBindingRefs } from "../lib/mcp/characterRefs.js";
+import { errorEnvelopeFields } from "../lib/errors/envelope.js";
 
 /** Test seams (production uses the real implementations). */
 export interface McpMediaDeps {
@@ -43,7 +44,8 @@ const ADAPTERS: Record<string, MediaProviderAdapter> = {
 };
 
 function errorCode(error: unknown): string {
-  return String((error as Error)?.message ?? error).split(":")[0] || "MCP_MEDIA_FAILED";
+  const code = (error as { code?: unknown })?.code;
+  return (typeof code === "string" && code) || String((error as Error)?.message ?? error).split(":")[0] || "MCP_MEDIA_FAILED";
 }
 
 /** Query-stripped origin+path — signed URLs are never logged or persisted. */
@@ -280,7 +282,7 @@ async function runMediaAction(input: {
     console.error(`[mcp-action ERROR] requestId=${requestId} operation=${input.operation} code=${code} message=${scrubValue(String((error as Error)?.message ?? "").slice(0, 500))} stack=${scrubValue(String((error as Error)?.stack ?? "").slice(0, 300))}`);
     void logMcpJobError(ctx.config.storage.generatedDir, { requestId, provider: "runway" }, error);
     finishJob(requestId, { status: "error", errorCode: code });
-    publishJobEvent(requestId, "error", { code, message: "media action failed" });
+    publishJobEvent(requestId, "error", { code, message: "media action failed", ...errorEnvelopeFields(error) });
   }
 }
 
@@ -608,6 +610,6 @@ async function runMcpMediaJob(input: {
       requestId, provider: adapter.provider, ...(taskId ? { taskId } : {}),
     }, error);
     finishJob(requestId, { status: "error", errorCode: code });
-    publishJobEvent(requestId, "error", { code, message: "MCP media generation failed" });
+    publishJobEvent(requestId, "error", { code, message: "MCP media generation failed", ...errorEnvelopeFields(error) });
   }
 }

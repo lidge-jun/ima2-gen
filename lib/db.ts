@@ -153,6 +153,7 @@ function migrate(database: Database.Database) {
 	      position         INTEGER NOT NULL DEFAULT 0,
 	      result_image_ids TEXT NOT NULL DEFAULT '[]',
 	      error_code       TEXT,
+	      error_class      TEXT,
 	      error_message    TEXT,
 	      progress_stage   TEXT,
 	      created_at       INTEGER NOT NULL,
@@ -211,6 +212,7 @@ function migrate(database: Database.Database) {
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "position", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "result_image_ids", "TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_code", "TEXT");
+  addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_class", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_message", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "progress_stage", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "started_at", "INTEGER");

@@ -15,6 +15,7 @@ import { uploadLocalMediaToRunway } from "../lib/mcp/adapters/runwayUpload.js";
 import { atomicWriteJson } from "../lib/atomicWrite.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 import { localMediaPath, IMAGE_INPUT_MAX_BYTES } from "./mcpMedia.js";
+import { errorEnvelopeFields } from "../lib/errors/envelope.js";
 
 export function registerMcpMultishotRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
@@ -100,12 +101,13 @@ export function registerMcpMultishotRoutes(app: Express, ctxRaw: RouteRuntimeCon
         doneExtra: { provider, workflow: "video.multishot" },
       });
     } catch (error) {
-      const code = String((error as Error)?.message ?? error).split(":")[0].slice(0, 80);
+      const structuredCode = (error as { code?: unknown })?.code;
+      const code = ((typeof structuredCode === "string" && structuredCode) || String((error as Error)?.message ?? error).split(":")[0]).slice(0, 80);
       // Secret-scrub (030): tool-error text can embed signed URLs/emails from the provider.
       console.error(`[mcp-multishot ERROR] requestId=${requestId} code=${code} message=${scrubValue(String((error as Error)?.message ?? "").slice(0, 300))}`);
       void logMcpJobError(ctx.config.storage.generatedDir, { requestId, provider }, error);
       finishJob(requestId, { status: "error", errorCode: code });
-      publishJobEvent(requestId, "error", { code, message: "multishot generation failed" });
+      publishJobEvent(requestId, "error", { code, message: "multishot generation failed", ...errorEnvelopeFields(error) });
     }
   });
 }

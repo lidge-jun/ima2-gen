@@ -517,6 +517,8 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       finishErrorCode = code;
       logError("node", "error", err.raw, { requestId, code, parentNodeId, sessionId, clientNodeId });
       writeNodeError(res, err.status || 500, code, err.message, parentNodeId, {
+        rawCode: ext.rawCode,
+        errorClass: ext.errorClass,
         upstreamCode: ext.upstreamCode || null,
         upstreamType: ext.upstreamType || null,
         upstreamParam: ext.upstreamParam || null,

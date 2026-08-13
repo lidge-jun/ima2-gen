@@ -25,6 +25,7 @@ import {
   type VideoContinuityLineage,
 } from "../lib/videoContinuity.js";
 import { extractGeneratedVideoFrameB64 } from "../lib/videoFrameExtract.js";
+import { errorEnvelopeFields } from "../lib/errors/envelope.js";
 import {
   normalizeGrokVideoModel,
   normalizeVideoResolution,
@@ -502,7 +503,7 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         finishHttpStatus = err.status || 500;
         finishErrorCode = err.code || "GROK_VIDEO_FAILED";
         logError("video", "error", err.raw, { requestId, code: finishErrorCode });
-        dualEmitVideo(res, requestId, "error", { error: err.message, code: finishErrorCode, status: finishHttpStatus, requestId });
+        dualEmitVideo(res, requestId, "error", { error: err.message, code: finishErrorCode, status: finishHttpStatus, requestId, ...errorEnvelopeFields(err.raw) });
       }
     } finally {
       if (jobOwned) finishJob(requestId, { canceled: finishCanceled, status: finishStatus, httpStatus: finishHttpStatus, errorCode: finishErrorCode, meta: finishMeta });

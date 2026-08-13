@@ -18,6 +18,7 @@ import { errInfo } from "./errInfo.js";
 import { finishJob, isStartJobFailure, setJobPhase, startJob } from "./inflight.js";
 import { logEvent } from "./logger.js";
 import type { RuntimeContext } from "./runtimeContext.js";
+import { errorEnvelopeFields } from "./errors/envelope.js";
 
 const DEFAULT_LIMITS: AgentQueueLimits = {
   maxGlobalRunning: 2,
@@ -178,7 +179,7 @@ async function runClaimedQueueItem(ctx: RuntimeContext, itemId: string) {
     }
     const err = errInfo(error);
     const timedOut = timeoutController.signal.aborted;
-    const failure = timedOut ? { code: "timeout", message: "timeout" } : { code: err.code, message: err.message };
+    const failure = timedOut ? { code: "timeout", message: "timeout" } : { code: err.code, message: err.message, ...errorEnvelopeFields(err.raw) };
     failAgentQueueItem(item.id, failure);
     // The chat pane must never fail silently — surface the failure as an
     // assistant error turn unless the runtime already recorded one.

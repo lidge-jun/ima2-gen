@@ -44,6 +44,7 @@ describe("Agent queue migration contract", () => {
       "position",
       "result_image_ids",
       "error_code",
+      "error_class",
       "error_message",
       "started_at",
       "finished_at",

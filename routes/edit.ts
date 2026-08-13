@@ -26,6 +26,7 @@ import { invalidateHistoryIndex } from "../lib/historyIndex.js";
 
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
+import { errorEnvelopeFields } from "../lib/errors/envelope.js";
 function validateModeration(ctx: RuntimeContext, moderation: unknown) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
@@ -183,14 +184,14 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         finishHttpStatus = 400;
         const code = activeProvider === "agy" ? "AGY_MASK_UNSUPPORTED" : activeProvider === "gemini-api" ? "GEMINI_API_MASK_UNSUPPORTED" : activeProvider === "atlascloud" ? "ATLASCLOUD_MASK_UNSUPPORTED" : activeProvider === "minimax" ? "MINIMAX_MASK_UNSUPPORTED" : "GROK_MASK_UNSUPPORTED";
         const label = activeProvider === "agy" ? "Agy" : activeProvider === "gemini-api" ? "Gemini API" : activeProvider === "atlascloud" ? "Atlas Cloud" : activeProvider === "minimax" ? "MiniMax" : "Grok";
-        return res.status(400).json({ error: `${label} provider does not support mask editing`, code });
+        return res.status(400).json({ error: `${label} provider does not support mask editing`, code, ...errorEnvelopeFields({ code, status: 400 }) });
       }
       const maskCheck: any = validateEditMask(imageB64, rawMask);
       if (maskCheck.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
         finishErrorCode = maskCheck.code;
-        return res.status(400).json({ error: maskCheck.error, code: maskCheck.code });
+        return res.status(400).json({ error: maskCheck.error, code: maskCheck.code, ...errorEnvelopeFields({ code: maskCheck.code, status: 400 }) });
       }
       const moderationCheck = validateModeration(ctx, moderation);
       if (moderationCheck.error) {
@@ -403,6 +404,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
           error: canceled.message,
           code: canceled.code,
           requestId,
+          ...errorEnvelopeFields(canceled),
         });
       }
       finishStatus = "error";
@@ -412,6 +414,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       res.status(err.status || 500).json({
         error: err.message,
         code: fallbackCode,
+        ...errorEnvelopeFields(err.raw),
         upstreamCode: ext.upstreamCode || null,
         upstreamType: ext.upstreamType || null,
         upstreamParam: ext.upstreamParam || null,

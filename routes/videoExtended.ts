@@ -22,6 +22,7 @@ import { getMotionFragment, MOTION_PRESETS } from "../lib/videoMotionPresets.js"
 import { errInfo } from "../lib/errInfo.js";
 import { codedVideoError as codedError, emitPhase, envDeadline, extractError, requestSignal, requirePrompt, retryableData } from "../lib/videoExtendedHelpers.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
+import { errorEnvelopeFields } from "../lib/errors/envelope.js";
 
 type ParentMetadata = {
   provider?: unknown; model?: unknown;
@@ -89,7 +90,7 @@ function sendError(res: Response, err: any): void {
     if (!res.headersSent) res.status(499).json({ error: "Request canceled", code: "REQUEST_CANCELED" });
     return;
   }
-  res.status(typeof err?.status === "number" ? err.status : 500).json({ error: err?.message || String(err) });
+  res.status(typeof err?.status === "number" ? err.status : 500).json({ error: err?.message || String(err), ...(typeof err?.code === "string" ? { code: err.code } : {}), ...errorEnvelopeFields(err) });
 }
 
 async function safeGeneratedFile(ctx: RuntimeContext, file: string, options: { requireMp4?: boolean } = {}): Promise<string> {
@@ -260,7 +261,7 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       const info = errInfo(error);
       const status = info.status ?? 500;
       const code = info.code ?? "VIDEO_EXTEND_FAILED";
-      const payload = { requestId, error: info.message, code, status, ...retryableData(error) };
+      const payload = { requestId, error: info.message, code, status, ...retryableData(error), ...errorEnvelopeFields(error) };
       publish(requestId, "error", payload);
       finishJob(requestId, { status: "error", httpStatus: status, errorCode: code, meta: { stage: "preflight" } });
       if (!res.headersSent) res.status(status).json(payload);
@@ -372,7 +373,7 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       } catch (error) {
         if (!isJobCanceled(requestId)) {
           const info = errInfo(error);
-          publish(requestId, "error", { requestId, error: info.message, code: info.code ?? "VIDEO_EXTEND_FAILED", status: info.status ?? 500, ...retryableData(error) });
+          publish(requestId, "error", { requestId, error: info.message, code: info.code ?? "VIDEO_EXTEND_FAILED", status: info.status ?? 500, ...retryableData(error), ...errorEnvelopeFields(error) });
           finishJob(requestId, { status: "error", httpStatus: info.status ?? 500, errorCode: info.code ?? "VIDEO_EXTEND_FAILED", meta: { stage } });
         }
       }

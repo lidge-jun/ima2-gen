@@ -23,6 +23,7 @@ type AgentQueueRow = {
   position: number;
   resultImageIds: string;
   errorCode: string | null;
+  errorClass: string | null;
   errorMessage: string | null;
   progressStage: AgentQueueItem["progressStage"];
   createdAt: number;
@@ -76,6 +77,7 @@ export function getAgentQueueItem(id: string) {
       position,
       result_image_ids AS resultImageIds,
       error_code AS errorCode,
+      error_class AS errorClass,
       error_message AS errorMessage,
       progress_stage AS progressStage,
       created_at AS createdAt,
@@ -101,6 +103,7 @@ export function listAgentQueueItems(sessionId?: string | null) {
       position,
       result_image_ids AS resultImageIds,
       error_code AS errorCode,
+      error_class AS errorClass,
       error_message AS errorMessage,
       progress_stage AS progressStage,
       created_at AS createdAt,
@@ -141,6 +144,7 @@ export function claimNextAgentQueueItem(limits: AgentQueueLimits) {
       position,
       result_image_ids AS resultImageIds,
       error_code AS errorCode,
+      error_class AS errorClass,
       error_message AS errorMessage,
       progress_stage AS progressStage,
       created_at AS createdAt,
@@ -156,7 +160,7 @@ export function claimNextAgentQueueItem(limits: AgentQueueLimits) {
     if (countRunningItems(row.sessionId) >= limits.maxSessionRunning) continue;
     const res = getDb().prepare(`
       UPDATE agent_queue_items
-      SET status = 'running', started_at = ?, progress_stage = NULL, error_code = NULL, error_message = NULL
+      SET status = 'running', started_at = ?, progress_stage = NULL, error_code = NULL, error_class = NULL, error_message = NULL
       WHERE id = ? AND status = 'queued'
     `).run(Date.now(), row.id);
     if (res.changes > 0) return getAgentQueueItem(row.id);
@@ -172,27 +176,29 @@ export function completeAgentQueueItem(id: string, imageIds: readonly string[]) 
         finished_at = ?,
         progress_stage = NULL,
         error_code = NULL,
+        error_class = NULL,
         error_message = NULL
     WHERE id = ? AND status = 'running'
   `).run(JSON.stringify([...imageIds]), Date.now(), id);
 }
 
-export function failAgentQueueItem(id: string, error: { code?: string | null; message: string }) {
+export function failAgentQueueItem(id: string, error: { code?: string | null; errorClass?: string | null; message: string }) {
   getDb().prepare(`
     UPDATE agent_queue_items
     SET status = 'failed',
         error_code = ?,
+        error_class = ?,
         error_message = ?,
         finished_at = ?,
         progress_stage = NULL
     WHERE id = ? AND status = 'running'
-  `).run(error.code ?? "AGENT_QUEUE_FAILED", error.message, Date.now(), id);
+  `).run(error.code ?? "AGENT_QUEUE_FAILED", error.errorClass ?? null, error.message, Date.now(), id);
 }
 
 export function cancelAgentQueueItem(id: string, reason = "Canceled by user") {
   const res = getDb().prepare(`
     UPDATE agent_queue_items
-    SET status = 'canceled', error_code = 'canceled', error_message = ?, finished_at = ?, progress_stage = NULL
+    SET status = 'canceled', error_code = 'canceled', error_class = NULL, error_message = ?, finished_at = ?, progress_stage = NULL
     WHERE id = ? AND status IN ('queued', 'running')
   `).run(reason, Date.now(), id);
   return res.changes > 0;
@@ -209,7 +215,7 @@ export function updateAgentQueueItemProgress(id: string, stage: AgentQueueItem["
 export function recoverRunningAgentQueueItems() {
   const res = getDb().prepare(`
     UPDATE agent_queue_items
-    SET status = 'failed', error_code = 'server_restart', error_message = 'server restarted mid-run',
+    SET status = 'failed', error_code = 'server_restart', error_class = NULL, error_message = 'server restarted mid-run',
         finished_at = ?, progress_stage = NULL
     WHERE status = 'running'
   `).run(Date.now());
@@ -228,12 +234,12 @@ export function updateAgentQueueItemPlan(id: string, plan: AgentGenerationPlan) 
 export function getAgentGenerationErrors(sessionId: string, limit = 10): AgentGenerationErrorRecord[] {
   const cap = Math.max(1, Math.min(20, Math.round(limit)));
   const queueRows = getDb().prepare(`
-    SELECT error_code AS code, error_message AS message, prompt, finished_at AS at
+    SELECT error_code AS code, error_class AS errorClass, error_message AS message, prompt, finished_at AS at
     FROM agent_queue_items
     WHERE session_id = ? AND status = 'failed'
     ORDER BY finished_at DESC
     LIMIT ?
-  `).all(sessionId, cap) as Array<{ code: string | null; message: string | null; prompt: string; at: number | null }>;
+  `).all(sessionId, cap) as Array<{ code: string | null; errorClass: string | null; message: string | null; prompt: string; at: number | null }>;
   const turnRows = getDb().prepare(`
     SELECT text, created_at AS at
     FROM agent_turns
@@ -245,6 +251,7 @@ export function getAgentGenerationErrors(sessionId: string, limit = 10): AgentGe
     ...queueRows.map((row) => ({
       scope: "queue" as const,
       code: row.code,
+      ...(row.errorClass ? { errorClass: row.errorClass } : {}),
       message: row.message ?? "Generation failed without a recorded message.",
       prompt: row.prompt,
       at: row.at ?? 0,
@@ -267,6 +274,7 @@ export function retryAgentQueueItem(id: string) {
         position = ?,
         result_image_ids = '[]',
         error_code = NULL,
+        error_class = NULL,
         error_message = NULL,
         progress_stage = NULL,
         started_at = NULL,
@@ -287,6 +295,7 @@ function queueItemFromRow(row: AgentQueueRow): AgentQueueItem {
     position: row.position,
     resultImageIds: parseStringArray(row.resultImageIds),
     errorCode: row.errorCode,
+    errorClass: row.errorClass,
     errorMessage: row.errorMessage,
     progressStage: row.progressStage ?? null,
     createdAt: row.createdAt,

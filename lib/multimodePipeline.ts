@@ -30,6 +30,7 @@ import { normalizeMaxImages, sequenceStatus, type MultimodeImage, type Multimode
 import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt } from "./generationInputValidation.js";
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
+import { errorEnvelopeFields } from "./errors/envelope.js";
 
 async function resolveMultimodeElements(
   elementIds: string[], references: string[], activeProvider: string, requestId: string | undefined,
@@ -339,7 +340,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         dualEmitMultimode(res, requestId, "image", item);
       };
       dualEmitMultimode(res, requestId, "phase", { phase: "streaming", requestId, sequenceId, maxImages });
-      let generated: { images: Array<{ b64: string; revisedPrompt?: string | null }>; usage: Record<string, number> | null; webSearchCalls?: number; extraIgnored?: number };
+      let generated: { images: Array<{ b64: string; revisedPrompt?: string | null }>; usage: Record<string, number> | null; webSearchCalls?: number; extraIgnored?: number; error?: unknown };
       if (activeProvider === "gemini-api") {
         const r = await generateViaGeminiApi(generationPrompt, requireRuntimeContext(ctx), {
           model: imageModel,
@@ -456,11 +457,12 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       const status = sequenceStatus(returned, maxImages);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       if (returned === 0) {
+        const representative = errInfo(generated.error);
         finishStatus = "error";
         finishHttpStatus = 422;
-        finishErrorCode = "EMPTY_RESPONSE";
+        finishErrorCode = representative.code || "EMPTY_RESPONSE";
         finishMeta = { sequenceId, filenames: [], imageCount: 0, maxImages, status, composerPrompt: routeComposerPrompt, composerInsertedPrompts: routeComposerInsertedPrompts };
-        dualEmitMultimode(res, requestId, "error", { error: "No image data returned from the multimode stream", code: finishErrorCode, status: finishHttpStatus, requestId, sequenceId, requested: maxImages, returned, });
+        dualEmitMultimode(res, requestId, "error", { error: "No image data returned from the multimode stream", code: finishErrorCode, status: finishHttpStatus, requestId, sequenceId, requested: maxImages, returned, ...errorEnvelopeFields(generated.error) });
         logEvent("multimode", "empty_response", { requestId, sequenceId, maxImages, elapsedMs: Date.now() - startTime });
         return;
       }
@@ -556,7 +558,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       finishHttpStatus = err.status || 500;
       finishErrorCode = fallbackCode || "MULTIMODE_GENERATE_FAILED";
       logError("multimode", "error", err.raw, { requestId, code: finishErrorCode });
-      dualEmitMultimode(res, requestId, "error", { error: err.message, code: finishErrorCode, status: finishHttpStatus, requestId, upstreamCode: ext.upstreamCode || null, upstreamType: ext.upstreamType || null, upstreamParam: ext.upstreamParam || null, });
+      dualEmitMultimode(res, requestId, "error", { error: err.message, code: finishErrorCode, status: finishHttpStatus, requestId, upstreamCode: ext.upstreamCode || null, upstreamType: ext.upstreamType || null, upstreamParam: ext.upstreamParam || null, ...errorEnvelopeFields(err.raw) });
     } finally {
       if (jobOwned) finishJob(requestId, {
         canceled: finishCanceled,

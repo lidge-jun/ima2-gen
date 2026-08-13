@@ -75,13 +75,13 @@ routes/
 | `server.ts` | 567 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
 | `config.ts` | 405 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 91 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
-| `routes/mcpMultishot.ts` | 112 | Multishot (multi-scene) video generation route via Runway MCP |
+| `routes/mcpMultishot.ts` | 114 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 34 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
 | `routes/generate.ts` | 13 | Classic generation API route wiring |
-| `routes/edit.ts` | 448 | Edit API, mask validation, cancellation, OAuth/API edit response save, provider/web-search/reasoning-effort plumbing |
+| `routes/edit.ts` | 451 | Edit API, mask validation, cancellation, OAuth/API edit response save, provider/web-search/reasoning-effort plumbing |
 | `routes/multimode.ts` | 10 | `POST /api/generate/multimode` route wiring |
-| `routes/video.ts` | 513 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
-| `routes/videoExtended.ts` | 488 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
+| `routes/video.ts` | 514 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
+| `routes/videoExtended.ts` | 489 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
 | `routes/nodes.ts` | 28 | Node generation and node fetch route wiring |
 | `routes/sessions.ts` | 318 | SQLite-backed session list/load/save/rename/delete, style-sheet get/put/enable/extract, graph save |
 | `routes/history.ts` | 234 | History list, cursor pagination, favorites-only filtering, grouped gallery, soft delete (OS trash), restore, gallery favorite toggle, permanent delete |
@@ -148,7 +148,7 @@ routes/
 | `lib/styleSheet.ts` | 140 | Session style-sheet extraction and prefix composition |
 | `lib/assetLifecycle.ts` | 175 | Soft delete (OS trash via `trash` dep), restore, node asset-missing marking |
 | `lib/systemTrash.ts` | 21 | Cross-platform OS-trash helper wrapping the `trash` dependency |
-| `lib/db.ts` | 354 | SQLite bootstrap and migrations: sessions, nodes, edges, inflight, prompts, prompt folders, canvas versions |
+| `lib/db.ts` | 356 | SQLite bootstrap and migrations: sessions, nodes, edges, inflight, prompts, prompt folders, canvas versions |
 | `lib/nodeStore.ts` | 92 | Node image and metadata load/save |
 | `lib/inflight.ts` | 376 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and short-lived terminal job snapshots |
 | `lib/logger.ts` | 162 | Safe structured logging, redaction, level filtering, and test sink helpers |
@@ -181,10 +181,10 @@ routes/
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
 | `lib/generatePipeline.ts` | 640 | Classic generation pipeline, provider retry, persistence, background-preset prompt shaping, and event publication |
 | `lib/backgroundPresets.ts` | 47 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
-| `lib/multimodePipeline.ts` | 571 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
+| `lib/multimodePipeline.ts` | 573 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
 | `lib/comparisonRunner.ts` | 111 | Per-cell generation orchestrator with bounded concurrency, isolated failures, single-cell retry, and two-level cancel |
-| `lib/nodeGeneration.ts` | 534 | Node provider routing, retry, persistence, and SSE publication |
+| `lib/nodeGeneration.ts` | 536 | Node provider routing, retry, persistence, and SSE publication |
 | `lib/nodeValidation.ts` | 44 | Node prompt, references, and moderation validation |
 | `lib/oauthProxy/streams.ts` | 233 | SSE/event-stream helpers and safe stream diagnostics |
 | `lib/oauthProxy/prompts.ts` | 158 | Prompt assembly with injected `SAFETY_INTENT_POLICY` from `lib/promptSafetyPolicy.ts` |
@@ -232,7 +232,7 @@ routes/
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
 | `lib/grokImageCore.ts` | 249 | Shared Grok image request and response handling |
-| `lib/grokMultimodeAdapter.ts` | 97 | Grok multimode generation provider adapter |
+| `lib/grokMultimodeAdapter.ts` | 100 | Grok multimode generation provider adapter |
 | `lib/grokProxyLauncher.ts` | 198 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
 | `lib/grokUpstreamRetry.ts` | 158 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
@@ -243,7 +243,7 @@ routes/
 | `lib/historyIndex.ts` | 57 | Generated-history index construction and lookup |
 | `lib/imageThumb.ts` | 44 | Image thumbnail generation helpers |
 | `lib/multimodeHelpers.ts` | 48 | Shared multimode generation helpers |
-| `lib/nodeHelpers.ts` | 100 | Node workflow graph and payload helpers |
+| `lib/nodeHelpers.ts` | 102 | Node workflow graph and payload helpers |
 | `lib/nodeTemplateSeeds.ts` | 84 | Built-in node workflow template seed definitions |
 | `lib/nodeTemplateStore.ts` | 127 | Node workflow template persistence and lookup |
 | `lib/presetCompiler.ts` | 67 | Named preset prompt compilation helpers |
@@ -252,7 +252,7 @@ routes/
 | `lib/responsesFallback.ts` | 161 | Responses API fallback routing helpers |
 | `lib/responsesParse.ts` | 453 | Responses API output parsing and normalization |
 | `lib/responsesTools.ts` | 29 | Responses API tool-call definitions and helpers |
-| `lib/routeHelpers.ts` | 56 | Shared Express route request/response helpers |
+| `lib/routeHelpers.ts` | 58 | Shared Express route request/response helpers |
 | `lib/storyboardPrefix.ts` | 29 | Storyboard prompt-prefix construction |
 | `lib/thumbBackfill.ts` | 79 | Generated-media thumbnail backfill helpers |
 | `lib/vertexAuth.ts` | 48 | Vertex AI authentication resolution helpers |
@@ -278,13 +278,13 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `lib/agentTypes.ts` | 176 | Shared Agent Mode types |
+| `lib/agentTypes.ts` | 178 | Shared Agent Mode types |
 | `lib/agentStore.ts` | 423 | SQLite session/turn persistence |
 | `lib/agentStoreRows.ts` | 137 | Row mapping helpers for agent store |
 | `lib/agentSettings.ts` | 77 | Per-session generation settings |
 | `lib/agentRuntime.ts` | 412 | Turn execution, tool dispatch, generation delegation |
-| `lib/agentQueueStore.ts` | 346 | Durable async queue persistence |
-| `lib/agentQueueWorker.ts` | 220 | Background queue worker |
+| `lib/agentQueueStore.ts` | 355 | Durable async queue persistence |
+| `lib/agentQueueWorker.ts` | 221 | Background queue worker |
 | `lib/agentCommandParser.ts` | 75 | Slash-command parsing |
 | `lib/agentToolManifest.ts` | 31 | Tool metadata for `/api/agent/tools` |
 | `lib/agentPlannerModel.ts` | 201 | Planner model selection |

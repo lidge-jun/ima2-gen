@@ -16,6 +16,7 @@ export interface GrokMultimodeResult {
   usage: Record<string, number> | null;
   webSearchCalls: number;
   extraIgnored: number;
+  error?: unknown;
 }
 
 export async function generateMultimodeViaGrok(
@@ -45,6 +46,7 @@ export async function generateMultimodeViaGrok(
   const images: Array<{ b64: string; revisedPrompt?: string; mime?: string; providerUrl?: string }> = [];
   let totalCost = 0;
   let totalWebSearchCalls = 0;
+  let lastError: unknown;
 
   logEvent("grok", "multimode:start", { requestId: options.requestId, model, maxImages, refs: references.length });
 
@@ -86,11 +88,12 @@ export async function generateMultimodeViaGrok(
     } catch (e: any) {
       if (e.code === "GENERATION_CANCELED") throw e;
       logEvent("grok", "multimode:item-error", { requestId: options.requestId, index: i, error: errInfo(e) });
+      lastError = e;
     }
   }
 
   logEvent("grok", "multimode:done", { requestId: options.requestId, model, returned: images.length, requested: maxImages, refs: references.length });
 
   const usage = totalCost > 0 ? { grok_cost_usd_ticks: totalCost } : null;
-  return { images, usage, webSearchCalls: totalWebSearchCalls, extraIgnored: 0 };
+  return { images, usage, webSearchCalls: totalWebSearchCalls, extraIgnored: 0, ...(lastError ? { error: lastError } : {}) };
 }

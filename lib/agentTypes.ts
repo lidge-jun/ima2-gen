@@ -68,6 +68,7 @@ export interface AgentQueueItem {
   position: number;
   resultImageIds: string[];
   errorCode?: string | null;
+  errorClass?: string | null;
   errorMessage?: string | null;
   createdAt: number;
   startedAt: number | null;
@@ -100,6 +101,7 @@ export interface AgentGenerationPlan {
 export interface AgentGenerationErrorRecord {
   scope: "queue" | "turn";
   code: string | null;
+  errorClass?: string | null;
   message: string;
   prompt?: string | null;
   at: number;
