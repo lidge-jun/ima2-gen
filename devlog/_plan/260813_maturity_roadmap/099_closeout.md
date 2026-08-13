@@ -1,9 +1,8 @@
 ---
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-14
 tags: [ima2-gen, devlog, closeout]
 ---
-
 # 099 — 클로즈아웃
 
 - 세션: `019ff6f2-542f-7e21-a3ba-22d4fcc0397e`
@@ -111,3 +110,46 @@ tags: [ima2-gen, devlog, closeout]
 | 149개 `.js` 테스트의 `.ts` 이전 | `002` C-08 |
 | Canvas·Video·Agent·MCP E2E 여정 | `080` 범위 밖 |
 | 성능 계측과 벤치마크 | `001`에서 이번 라운드 제외 |
+
+## 구현 클로즈아웃 (2026-08-14)
+
+- 세션: `019ffa3f-5cfb-7060-85ca-dd8230eac6a2`
+- 기준: `origin/dev` @ `09660557` (+ pending install-policy fix for Playwright `fsevents@2.3.2`)
+- `origin/main` / `origin/preview`: 여전히 `ac1cace` (3.0.5). 승격하지 않았다.
+- npm: `latest=3.0.5`, `preview=3.0.6-preview.260812.31603578657.1`. dist-tag 변경 없음.
+- 터미널 아웃컴: **DONE for code-only #122 phases**. **NOT a release.**
+
+### 구현된 phase
+
+| phase | issue | landing |
+|---|---|---|
+| 010 | #123 CLOSED | 2e914f80 |
+| 020 | #124 CLOSED | e62fd89d |
+| 030 코드 | #125 CLOSED | 18c1366f. dry-run dispatch는 승인 대기 |
+| 040 | #126 CLOSED | 9da23de9 |
+| 050 | #127 CLOSED | 1757dc86 / 546eb813 |
+| 061/062/063 | #128 CLOSED | aaf2e912 / 8dff256e / dfd492a5 |
+| 070 | #129 CLOSED | f73f95f0 / 0ebbb402 |
+| 080 | #130 CLOSED | 2e7ef9f3. local QA = agbrowse |
+| 085 | #131 CLOSED | a2809034 / 8449e79d |
+| 090 코드 | #132 CLOSED | 09660557. 설정 변경은 승인 대기 |
+
+### 배포 준비 — 아직 승인 필요
+
+| 항목 | 상태 |
+|---|---|
+| `gh workflow run release.yml` dry-run / canary / 실전 | 안 함 |
+| main / preview 승격 | 안 함. 둘 다 `ac1cace` |
+| npm publish / dist-tag | 안 함 |
+| Security Advisory / vulnerability alerts | 안 함 |
+| CODEOWNERS ruleset | 파일만 있음 |
+| CodeQL 첫 실행 결과 | 워크플로는 커밋됨. 결과는 CI가 남긴다 |
+
+### 로컬 게이트 (099)
+
+- `npm run typecheck` 0
+- `npm run typecheck:tests` 0
+- `npm test` 2198 pass / 0 fail / 2 skip (09660557)
+- `npm run test:install-policy` was red on CI and locally: ui Playwright pulled `fsevents@2.3.2`. Approval added in this closeout.
+
+#122 remains OPEN. 005 said 099 is not its own issue and cannot close the umbrella without a real release.

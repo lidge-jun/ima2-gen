@@ -1,6 +1,6 @@
 ---
 created: 2026-04-23
-updated: 2026-08-13
+updated: 2026-08-14
 tags: [ima2-gen, devlog, roadmap]
 aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 ---
@@ -25,11 +25,15 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 | 경로 | 상태 |
 |---|---|
 | `260812_navrail_grok_autotag/` | 릴리스 활성화 미증명. `060_release_activation_residual.md` 참조 |
-| `260813_maturity_roadmap/` | 외부 성숙도 평가(58/80) 기반 패치 로드맵. **문서 완료** — 16개 문서, 착수 대기 |
+| `260813_maturity_roadmap/` | #122 코드 phase 010–090 구현됨 (`origin/dev` `09660557`). 발행·설정 변경은 승인 대기. 099 기록은 decade 문서에 있음 |
 
 GitHub open issue와 open PR은 여전히 **0건**이다(2026-08-13 확인). 그러나 열린
 이슈가 없다는 것과 릴리스가 건강하다는 것은 다른 문제다 — 현재 릴리스 컷과
 publish 워크플로가 둘 다 빨갛다.
+
+2026-08-14: 성숙도 하위 이슈 #123–#132는 닫혔고 우산 #122만 열려 있다.
+`origin/main`과 `origin/preview`는 아직 `ac1cace`(3.0.5)다. dry-run
+dispatch와 실전 컷은 하지 않았다.
 
 ## 외부 차단으로 미완료인 항목
 
