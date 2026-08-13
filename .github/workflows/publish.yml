@@ -171,6 +171,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           registry-url: 'https://registry.npmjs.org'
+      - name: Subprocess deadline tree-kill contract (no npm ci; builtins only)
+        run: node --test tests/subprocess-deadline-contract.test.ts
       - name: Pin npm
         run: npm install -g npm@${{ matrix.npm }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4

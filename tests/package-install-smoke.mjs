@@ -237,7 +237,7 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
 
     const port = await freePort();
     const logs = { stdout: "", stderr: "" };
-    child = spawn(process.execPath, [cliPath, "serve"], {
+    child = spawn(process.execPath, [cliPath, "serve", "--force"], {
       cwd: packageRoot,
       env: {
         ...env,
@@ -278,7 +278,7 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
 
     const cardNewsPort = await freePort();
     const cardNewsLogs = { stdout: "", stderr: "" };
-    child = spawn(process.execPath, [cliPath, "serve"], {
+    child = spawn(process.execPath, [cliPath, "serve", "--force"], {
       cwd: packageRoot,
       env: {
         ...env,

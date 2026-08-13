@@ -1,16 +1,65 @@
+#!/usr/bin/env node
+// Global update smoke: installs the packed tarball over a registry baseline and
+// probes the installed CLI. Every subprocess has a deadline and a label so a
+// stall fails fast and names its culprit (run 31605449399 hung 15 minutes with
+// no per-child instrumentation — see devlog/_plan/260813_maturity_roadmap/020).
+//
+// Two execution mechanisms:
+//   - sync calls (no grandchildren): spawnSync + timeout via commandOptions()
+//   - tree-owning calls (grandchildren possible): scripts/subprocess-deadline.mjs
+
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { spawnNpmSync } from "./npm-subprocess.mjs";
+import { npmInvocation, spawnNpmSync } from "./npm-subprocess.mjs";
 import { parsePackOutput } from "./release-artifact-contract.mjs";
+import { runWithDeadline, deadlineError } from "./subprocess-deadline.mjs";
 
-function commandOptions(options = {}) {
+// Generous multiples of the observed success distribution (median 6:03,
+// max 8:16 for the whole step). Tighten only after the step logging shows the
+// real distribution. IMA2_SMOKE_TIMEOUT_MS overrides every deadline — that is
+// how the timeout path is activation-tested.
+export const DEADLINES = {
+  "npm-version": 60_000,
+  "npm-root": 60_000,
+  "shim-version": 60_000,
+  "baseline-install": 420_000,
+  "tarball-install": 300_000,
+  "pack": 900_000,
+  "codex-login-status": 120_000,
+  "ima2-status": 120_000,
+  "ima2-doctor": 120_000,
+};
+
+// Tree-owning steps (async runner) vs sync steps. The contract test pins this
+// split: moving a tree-owning call back to sync re-opens the orphan defect.
+export const ASYNC_LABELS = [
+  "pack",
+  "baseline-install",
+  "tarball-install",
+  "codex-login-status",
+  "ima2-status",
+  "ima2-doctor",
+];
+export const SYNC_LABELS = ["npm-version", "npm-root", "shim-version"];
+
+function deadlineFor(label) {
+  const override = Number(process.env.IMA2_SMOKE_TIMEOUT_MS);
+  if (Number.isFinite(override) && override > 0) return override;
+  const value = DEADLINES[label];
+  if (!value) throw new Error(`no deadline configured for smoke step: ${label}`);
+  return value;
+}
+
+export function commandOptions(options = {}) {
   return {
     encoding: "utf8",
+    timeout: deadlineFor(options.label || "npm-version"),
     ...options,
     env: {
       ...process.env,
@@ -21,6 +70,7 @@ function commandOptions(options = {}) {
 }
 
 function assertSuccess(result, label) {
+  if (result && result.timedOut) throw deadlineError(result, label);
   assert.equal(
     result.status,
     0,
@@ -29,37 +79,69 @@ function assertSuccess(result, label) {
   return result;
 }
 
+function logStart(label) {
+  console.log(`[smoke] ${label} start`);
+  return Date.now();
+}
+
+function logDone(label, started) {
+  console.log(`[smoke] ${label} done ${Date.now() - started}ms`);
+}
+
 function run(command, args, options = {}) {
-  return assertSuccess(spawnSync(command, args, commandOptions(options)), `${command} ${args.join(" ")}`);
+  const label = options.label || `${command} ${args.join(" ")}`;
+  const started = logStart(label);
+  const result = assertSuccess(spawnSync(command, args, commandOptions(options)), label);
+  logDone(label, started);
+  return result;
 }
 
 function runNpm(args, options = {}) {
-  return assertSuccess(spawnNpmSync(args, commandOptions(options)), `npm ${args.join(" ")}`);
+  const label = options.label || `npm ${args.join(" ")}`;
+  const started = logStart(label);
+  const result = assertSuccess(spawnNpmSync(args, commandOptions(options)), label);
+  logDone(label, started);
+  return result;
+}
+
+async function runTreeOwned(command, args, options = {}) {
+  const label = options.label || `${command} ${args.join(" ")}`;
+  const result = await runWithDeadline(command, args, {
+    ...options,
+    label,
+    deadlineMs: deadlineFor(label),
+  });
+  return assertSuccess(result, label);
 }
 
 function npmMajor() {
-  return Number(runNpm(["--version"]).stdout.trim().split(".")[0]);
+  return Number(runNpm(["--version"], { label: "npm-version" }).stdout.trim().split(".")[0]);
 }
 
-function installGlobal(prefix, spec) {
+async function installGlobal(prefix, spec, label) {
   const args = ["install", "--global", "--prefix", prefix, spec];
   if (npmMajor() >= 12) args.push("--allow-scripts=ima2-gen,better-sqlite3,sharp");
-  runNpm(args);
+  const invocation = npmInvocation(args);
+  await runTreeOwned(invocation.command, invocation.args, { label });
 }
 
-function candidateTarball(root) {
+async function candidateTarball(root) {
   if (process.env.IMA2_PACKAGE_TARBALL) {
     assert.equal(existsSync(process.env.IMA2_PACKAGE_TARBALL), true);
     return process.env.IMA2_PACKAGE_TARBALL;
   }
   const packDir = join(root, "pack");
   mkdirSync(packDir, { recursive: true });
-  const packed = runNpm(["pack", "--json", "--pack-destination", packDir], { cwd: process.cwd() });
+  const invocation = npmInvocation(["pack", "--json", "--pack-destination", packDir]);
+  const packed = await runTreeOwned(invocation.command, invocation.args, {
+    label: "pack",
+    cwd: process.cwd(),
+  });
   return join(packDir, parsePackOutput(packed.stdout).filename);
 }
 
 function assertPackagedZod(prefix) {
-  const globalRoot = runNpm(["root", "--global", "--prefix", prefix]).stdout.trim();
+  const globalRoot = runNpm(["root", "--global", "--prefix", prefix], { label: "npm-root" }).stdout.trim();
   const packageRoot = join(globalRoot, "ima2-gen");
   const installedRequire = createRequire(join(packageRoot, "package.json"));
   const zodRoot = realpathSync(join(packageRoot, "node_modules", "zod"));
@@ -75,12 +157,16 @@ function runGlobalShim(prefix, args, options = {}) {
   const shim = process.platform === "win32" ? join(prefix, "ima2.cmd") : join(prefix, "bin", "ima2");
   assert.equal(existsSync(shim), true, `global ima2 shim should exist: ${shim}`);
   return assertSuccess(
-    spawnSync(shim, args, commandOptions({ ...options, shell: process.platform === "win32" })),
+    spawnSync(
+      shim,
+      args,
+      commandOptions({ label: "shim-version", ...options, shell: process.platform === "win32" }),
+    ),
     `${shim} ${args.join(" ")}`,
   );
 }
 
-function main() {
+async function main() {
   const root = mkdtempSync(join(tmpdir(), "ima2-global-update-"));
   const prefix = join(root, "prefix");
   const home = join(root, "home");
@@ -92,16 +178,16 @@ function main() {
     mkdirSync(unrelatedCwd, { recursive: true });
     writeFileSync(join(config, "config.json"), JSON.stringify({ provider: "oauth" }));
 
-    const tarball = candidateTarball(root);
+    const tarball = await candidateTarball(root);
     const cleanPrefix = join(root, "clean-prefix");
-    installGlobal(cleanPrefix, tarball);
+    await installGlobal(cleanPrefix, tarball, "tarball-install");
     assertPackagedZod(cleanPrefix);
 
     const baseline = process.env.IMA2_UPDATE_BASELINE || "ima2-gen@latest";
-    installGlobal(prefix, baseline);
+    await installGlobal(prefix, baseline, "baseline-install");
     const baselineVersion = runGlobalShim(prefix, ["--version"], { cwd: unrelatedCwd }).stdout.trim();
 
-    installGlobal(prefix, tarball);
+    await installGlobal(prefix, tarball, "tarball-install");
     const packageRoot = assertPackagedZod(prefix);
     const cliPath = join(packageRoot, "bin", "ima2.js");
     const installed = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
@@ -121,17 +207,31 @@ function main() {
       IMA2_ADVERTISE_FILE: join(config, "server.json"),
       PATH: "",
     };
-    const codexStatus = spawnSync(process.execPath, [codexBin, "login", "status"], commandOptions({
+    // login status exits 1 when logged out; that is the expected probe result,
+    // so run it through the raw runner rather than the success-asserting one.
+    const codexStatus = await runWithDeadline(process.execPath, [codexBin, "login", "status"], {
+      label: "codex-login-status",
+      deadlineMs: deadlineFor("codex-login-status"),
       cwd: unrelatedCwd,
       env,
-    }));
-    assert.equal(codexStatus.error, undefined);
+    });
+    if (codexStatus.timedOut) throw deadlineError(codexStatus, "codex-login-status");
     assert.equal(codexStatus.status, 1);
     assert.match(`${codexStatus.stdout}\n${codexStatus.stderr}`, /Not logged in/i);
-    const status = run(process.execPath, [cliPath, "status"], { cwd: unrelatedCwd, env });
+    const status = await runTreeOwned(process.execPath, [cliPath, "status"], {
+      label: "ima2-status",
+      cwd: unrelatedCwd,
+      env,
+    });
     assert.doesNotMatch(status.stdout, /codex CLI not found/i);
     assert.match(status.stdout, /not logged in/i);
-    const doctor = spawnSync(process.execPath, [cliPath, "doctor"], commandOptions({ cwd: unrelatedCwd, env }));
+    const doctor = await runWithDeadline(process.execPath, [cliPath, "doctor"], {
+      label: "ima2-doctor",
+      deadlineMs: deadlineFor("ima2-doctor"),
+      cwd: unrelatedCwd,
+      env,
+    });
+    if (doctor.timedOut) throw deadlineError(doctor, "ima2-doctor");
     assert.equal(doctor.status, 1, "doctor should fail when OAuth is configured without a file-backed session");
     assert.match(doctor.stdout, /runtime dependencies resolvable/i);
     assert.match(doctor.stdout, /no file-backed Codex session/i);
@@ -144,4 +244,10 @@ function main() {
   }
 }
 
-main();
+const invokedAsScript = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedAsScript) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

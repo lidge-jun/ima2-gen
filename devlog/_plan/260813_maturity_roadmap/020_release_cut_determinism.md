@@ -78,12 +78,30 @@ spawnNpmSync(["--version"], { encoding: "utf8", timeout: 1 })
 | `scripts/subprocess-deadline.mjs` | 신규. async `spawn` + 자체 타이머 + 트리 정리(Windows `taskkill /T`, POSIX 프로세스 그룹 kill) |
 | `.github/workflows/publish.yml` `timeout-minutes` 값 | **변경 없음** — 아래 참조 |
 | `.github/workflows/publish.yml` `windows-consumer` job | 스코프 **안**. 손자 생존 계약 테스트를 실행하는 영구 단계 추가 |
-| `tests/package-global-update-smoke-contract.test.ts` | 신규. 모든 호출부의 timeout 지정과 label 오류를 고정 |
+| `tests/package-global-update-smoke-contract.test.ts` | 신규. sync 7개는 `commandOptions()`의 `timeout` 존재를, async 7개는 러너 호출의 deadline+label 설정을 고정하고, label 지목 오류를 검증 (`b1`의 이중 오라클) |
 | `tests/subprocess-deadline-contract.test.ts` | 신규. 손자 생존 음성 대조 |
 
-**`timeout-minutes: 15`를 그대로 두는 이유.** 하위 프로세스 deadline을 합이 15분을
-넘지 않게 잡으면 단계 상한은 안전망으로만 남는다. 상한을 먼저 올리면 계측이
-붙기도 전에 증상이 가려진다. 상한 조정은 계측이 실제 소요 분포를 보여준 **뒤**의
+### 추가 항목 (WP1 C phase에서 발견): package-install 스모크의 singleton 가드 민감성
+
+WP1 검증 중 `npm run test:package-install`이 실패했다. 원인은 회귀가 아니라
+환경이다: 개발 머신에 ima2 서버가 상주하면 `bin/ima2.ts:188`의 singleton 가드가
+`IMA2_PORT`를 보지 않고 serve를 거부한다. 스모크는 이미 free port를 할당해
+(`tests/package-install-smoke.mjs:237-245`) 의도적인 두 번째 인스턴스를 띄우므로
+가드의 보호 대상이 아니다.
+
+| 경로 | 동작 |
+|---|---|
+| `tests/package-install-smoke.mjs` serve spawn 인자 **두 곳** | `"serve"` → `"serve", "--force"` — 일반 서버(`tests/package-install-smoke.mjs:238`)와 Card News 서버(`tests/package-install-smoke.mjs:279`) 둘 다. 한 곳만 고치면 두 번째 spawn이 상주 서버에 걸린다 (구현 감사 1라운드 blocker 4) |
+
+효과: 로컬 개발 환경에서도 `test:package-install`이 결정적으로 통과한다.
+제품 동작(가드 자체)은 바꾸지 않는다 — 사용자 대상 기본 경로는 그대로다.
+
+**`timeout-minutes: 15`를 그대로 두는 이유 (구현 감사 1라운드 blocker 1로
+문장 교정).** 개별 deadline의 합(아래 표: CI 1,800s, 로컬 2,700s)은 15분을
+넘는다 — deadline은 합산이 아니라 **개별 지목**이 목적이고, 15분 상한은 정상
+실행(중앙 6:03)을 한참 위에 두는 집계 안전망이다. "합이 15분 이내"라는 초안
+문장은 아래 산수와 모순이었으므로 삭제한다. 상한을 먼저 올리면 계측이 붙기도
+전에 증상이 가려진다. 상한 조정은 계측이 실제 소요 분포를 보여준 **뒤**의
 판단이며, 이 phase의 작업이 아니다.
 
 ### 하위 프로세스별 deadline (제안값)
@@ -156,13 +174,13 @@ Windows에는 프로세스 그룹 신호가 없으므로 부모가 timeout으로
 
 | 실행 방식 | 대상 (총 14) |
 |---|---|
-| **async + 트리 소유** (8) | `npm install --global` ×3, `npm pack` ×1(로컬), `codex login status` ×1, `ima2 status` ×1, `ima2 doctor` ×1 |
+| **async + 트리 소유** (7 — CI는 로컬 전용 `npm pack`이 빠져 6) | `npm install --global` ×3, `npm pack` ×1(로컬), `codex login status` ×1, `ima2 status` ×1, `ima2 doctor` ×1 |
 | `spawnSync` + `timeout` (7 CI / 7 로컬) | `npm --version` ×3, `npm root --global` ×2, `ima2 --version` ×2 |
 
 초안은 "장시간·네트워크"로 갈랐고, 그러면 `codex login status`·`ima2 status`·
 `ima2 doctor`가 동기 쪽에 남는다. 이 셋은 Codex 하위 프로세스를 띄운다
 (`bin/ima2.ts:274`의 `showStatus`와 `bin/commands/doctor.ts:208`이
-`detectCodexAuth`를 부르고 그것이 `lib/codexDetect.ts:63`에서 자식을 실행한다).
+`detectCodexAuth`를 부르고 그것이 `lib/codexDetect.ts:73`에서 자식을 실행한다).
 짧다는 이유로 동기에 두면 **정확히 고치려던 고아 프로세스 결함이 그대로 남는다**
 (A phase 3라운드 감사 blocker 2).
 
@@ -175,16 +193,20 @@ macOS에서 프로세스 그룹 kill이 동작한다는 사실은 Windows 증거
 - IN: `scripts/package-global-update-smoke.mjs`, 신규
   `scripts/subprocess-deadline.mjs`, 신규 `tests/package-global-update-smoke-contract.test.ts`,
   신규 `tests/subprocess-deadline-contract.test.ts`,
-  `.github/workflows/publish.yml`의 `windows-consumer` job에 테스트 실행 단계 추가.
+  `.github/workflows/publish.yml`의 `windows-consumer` job에 테스트 실행 단계 추가,
+  `tests/package-install-smoke.mjs`의 serve spawn에 `--force` 추가 (위 "추가 항목").
 - OUT: `scripts/npm-subprocess.mjs`(**변경 불필요** — 이미 timeout을 전달한다),
   `.github/workflows/publish.yml`의 `timeout-minutes` **값** 변경, 릴리스 워크플로
   입력 추가(`030` 소유), 스모크가 검사하는 **내용**의 변경.
 
 ## 수용 기준
 
-- `b1`: **모든 14개 호출 지점**(CI 13 + 로컬 `npm pack` 1)이 `timeout`을 넘긴다.
-  헬퍼가 아니라 호출부가 검사 대상이다. 계약 테스트는 `commandOptions()` 결과에
-  `timeout`이 항상 존재하는지 확인한다.
+- `b1`: **모든 14개 호출 지점**(CI 13 + 로컬 `npm pack` 1)에 deadline이 있다.
+  헬퍼가 아니라 호출부가 검사 대상이다. 실행 방식이 둘이므로 단정도 둘로 나눈다
+  (구현 감사 1라운드 blocker 3): **sync 7개**는 `commandOptions()` 결과에
+  `timeout`이 항상 존재함을, **async 7개**는 러너 호출에 deadline과 label이
+  설정됨을 계약 테스트가 각각 확인한다. async 쪽에 `spawnSync`의 `timeout`을
+  억지로 요구하면 러너가 소유하는 타이머와 이중 계측이 된다.
 - `b2`: 정상 실행 로그에 각 단계의 label과 소요 ms가 남는다. 성공한 실행에서도
   분포를 볼 수 있어야 다음 판단이 가능하다.
 - `b3`: 하위 프로세스가 deadline을 넘기면 오류 메시지가 **label을 지목**한다.
@@ -203,6 +225,16 @@ macOS에서 프로세스 그룹 kill이 동작한다는 사실은 Windows 증거
   임시 단계로 1회만 보고 지우면 다음 회귀를 아무도 잡지 못한다
   (2라운드 감사 blocker 4).
 
+  단계 정의(구현 감사 2라운드 blocker 2): `windows-consumer`는 `npm ci`가
+  **없다**. 따라서 이 테스트는 Node 내장 모듈과 `scripts/subprocess-deadline.mjs`
+  같은 저장소 로컬 모듈만 import하는 무의존 파일이어야 하고, erasable-syntax
+  TS만 써서 Node 24 러너에서 `node --test
+  tests/subprocess-deadline-contract.test.ts`가 npm install 없이 바로
+  실행돼야 한다. 배치는 artifact 의존 스모크 이전, checkout/setup-node 직후다.
+`windows-consumer`는 Node 22/24 매트릭스이므로 이 단계는 두 버전 모두에서
+돈다 (publish.yml:157) — Node 22.18+부터 type stripping이 기본 활성이라
+별도 플래그 없이 실행 가능하다.
+
 ## 조건부 경로 활성화 시나리오 (C-ACTIVATION-GROUNDING-01)
 
 timeout 분기는 정상 실행에서 **절대 발화하지 않는다.** 따라서 "테스트가 다
@@ -214,12 +246,14 @@ timeout 분기는 정상 실행에서 **절대 발화하지 않는다.** 따라�
 | timeout 후 프로세스 트리 정리 | **손자를 만드는** 자식을 짧은 deadline으로 실행 (부모가 `node -e "spawn(...)"`으로 매달리는 손자를 띄운다) | 정리 후 **손자** PID가 살아 있지 않음. 직접 자식만 확인하면 이 경로를 검증한 것이 아니다 |
 | 비동기 kill 경로의 뿌리 생존 | 타이머 만료 시점에 자식 PID가 아직 살아 있는지 로그로 확인 | 살아 있어야 `/T` 열거가 성립한다. 죽어 있으면 설계가 초안으로 되돌아간 것 |
 | 단계별 로깅 | 정상 실행 | stdout에 `[smoke] baseline-install done 41234ms` 형태 라인이 단계 수만큼 |
-| 호출부의 timeout 지정 | `commandOptions()` 반환값을 직접 검사 | 모든 호출에 `timeout`이 존재 |
+| 호출부의 deadline 지정 | `commandOptions()` 반환값과 러너 호출 인자를 직접 검사 | sync 7개는 `timeout` 존재, async 7개는 runner deadline+label 존재 (`b1`과 같은 이중 오라클) |
 
 마지막 행에 **fake `spawnSync` 주입을 쓰지 않는다.** `scripts/npm-subprocess.mjs`는
 `node:child_process`를 정적 import하므로 주입 seam이 없다(2라운드 감사 지적).
 헬퍼의 전달 동작은 이미 실측으로 확인했으므로, 검사할 것은 **호출부가 값을
-주는지**뿐이고 그것은 `commandOptions()` 반환값으로 직접 볼 수 있다.
+주는지**뿐이다. sync 7개는 `commandOptions()` 반환값으로, async 7개는 러너
+호출 인자(deadline+label)로 직접 본다 (구현 감사 3라운드 blocker — 이중
+오라클과 문장을 일치시킴).
 
 ## verifier
 
