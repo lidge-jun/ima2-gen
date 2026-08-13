@@ -46,6 +46,18 @@ describe("070 doctor provider contract", () => {
     assert.ok(probe.indexOf("console.error(\"Warning: ima2 doctor image-probe") < probe.indexOf("runImageDoctorProbe"));
   });
 
+  it("verify-keys uses the Gemini header, not Bearer", async () => {
+    const seen: Array<{ url: string; headerKeys: string[] }> = [];
+    await verifyConfiguredKeys({ geminiApiKey: "AItest" }, (async (input, init) => {
+      const headers = (init?.headers || {}) as Record<string, string>;
+      seen.push({ url: String(input), headerKeys: Object.keys(headers) });
+      assert.equal(headers["x-goog-api-key"], "AItest");
+      assert.equal("Authorization" in headers, false);
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch);
+    assert.ok(seen.some((entry) => entry.url.includes("generativelanguage.googleapis.com")));
+  });
+
   it("verify-keys only calls resolved validateUrl values", async () => {
     const urls: string[] = [];
     const allowed = new Set(listedValidateUrls());

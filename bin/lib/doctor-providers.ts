@@ -121,9 +121,10 @@ export async function verifyConfiguredKeys(
       const value = firstEnv(credential.envVars) || configString(fileConfig, credential.configKey);
       if (!value) continue;
       try {
-        const response = await fetchImpl(url, {
-          headers: { Authorization: `Bearer ${value}` },
-        });
+        const headers: Record<string, string> = credential.keyVocabulary === "gemini"
+          ? { "x-goog-api-key": value }
+          : { Authorization: `Bearer ${value}` };
+        const response = await fetchImpl(url, { headers });
         if (response.ok) {
           lines.push({ lane: provider.id, kind: "pass", text: `${provider.id}: validateUrl ok` });
         } else {
