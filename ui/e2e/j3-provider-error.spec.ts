@@ -6,7 +6,7 @@ test("J3 provider errors do not collapse to unknown", async ({ page }) => {
   try {
     await seedBrowser(page, { dismissOnboarding: true });
     await page.goto(app.baseUrl);
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.locator("nav[aria-label='Main navigation']").getByRole("button", { name: "Create", exact: true }).click();
     await page.locator(".composer__textarea").fill("billing failure");
     await page.getByRole("button", { name: "Generate" }).click();
     await expect(page.getByText(/Billing required|잔액이 부족합니다/i)).toBeVisible({ timeout: 15_000 });

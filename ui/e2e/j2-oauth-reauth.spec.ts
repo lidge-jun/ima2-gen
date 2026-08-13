@@ -6,7 +6,7 @@ test("J2 auth failure exposes a reachable reauth action", async ({ page }) => {
   try {
     await seedBrowser(page, { provider: "oauth", dismissOnboarding: true });
     await page.goto(app.baseUrl);
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.locator("nav[aria-label='Main navigation']").getByRole("button", { name: "Create", exact: true }).click();
     await page.locator(".composer__textarea").fill("expired session");
     await page.getByRole("button", { name: "Generate" }).click();
     const cta = page.getByRole("button", { name: /Reload|새로고침|Sign in again|다시 로그인/i });

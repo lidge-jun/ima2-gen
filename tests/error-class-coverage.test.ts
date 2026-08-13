@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix, sep } from "node:path";
 import test from "node:test";
 import { GENERATION_ERROR_CLASSES } from "../lib/errors/classes.ts";
 import {
@@ -80,7 +80,7 @@ function dynamicSitesFromSource(): string[] {
   const sites: string[] = [];
   for (const file of ADAPTER_FILES) {
     for (const match of source(file).matchAll(DYNAMIC_CONSTRUCTION_PATTERN)) {
-      sites.push(`${file}:${match[1]}:${match[2]}`);
+      sites.push(`${posix.normalize(file.split(sep).join("/"))}:${match[1]}:${match[2]}`);
     }
   }
   return sites.sort();

@@ -14,7 +14,7 @@ test("J1 first run can skip onboarding, save a MiniMax key, and generate into th
     await page.getByRole("button", { name: "API Keys" }).click();
     await page.getByPlaceholder("Paste your MiniMax API key").fill("e2e-minimax-key");
     await page.getByRole("button", { name: "Save" }).first().click();
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.locator("nav[aria-label='Main navigation']").getByRole("button", { name: "Create", exact: true }).click();
     await page.locator(".composer__textarea").fill("a red cube");
     await page.getByRole("button", { name: "Generate" }).click();
     await expect(page.locator(".gallery__tile, .result-img, img[alt=result]").first()).toBeVisible({ timeout: 20_000 });
