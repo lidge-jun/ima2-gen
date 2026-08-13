@@ -87,6 +87,10 @@ export function toGrokReferences(parentB64: string | null, refs: Array<GrokRefer
 
 export function nodeErrorDetails(finalErr: Record<string, unknown>, lastErr: UpstreamErr | null) {
   return {
+    // The normalized error carries the provider identity that 061 attached;
+    // without copying it here the nested Node envelope loses both fields even
+    // though writeNodeError knows how to nest them.
+    ...errorEnvelopeFields(finalErr),
     upstreamCode: lastErr?.upstreamCode || lastErr?.code || null,
     upstreamType: lastErr?.upstreamType || null,
     upstreamParam: lastErr?.upstreamParam || null,

@@ -232,7 +232,7 @@ routes/
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
 | `lib/grokImageCore.ts` | 249 | Shared Grok image request and response handling |
-| `lib/grokMultimodeAdapter.ts` | 100 | Grok multimode generation provider adapter |
+| `lib/grokMultimodeAdapter.ts` | 115 | Grok multimode generation provider adapter |
 | `lib/grokProxyLauncher.ts` | 198 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
 | `lib/grokUpstreamRetry.ts` | 158 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
@@ -243,7 +243,7 @@ routes/
 | `lib/historyIndex.ts` | 57 | Generated-history index construction and lookup |
 | `lib/imageThumb.ts` | 44 | Image thumbnail generation helpers |
 | `lib/multimodeHelpers.ts` | 48 | Shared multimode generation helpers |
-| `lib/nodeHelpers.ts` | 102 | Node workflow graph and payload helpers |
+| `lib/nodeHelpers.ts` | 106 | Node workflow graph and payload helpers |
 | `lib/nodeTemplateSeeds.ts` | 84 | Built-in node workflow template seed definitions |
 | `lib/nodeTemplateStore.ts` | 127 | Node workflow template persistence and lookup |
 | `lib/presetCompiler.ts` | 67 | Named preset prompt compilation helpers |
@@ -283,7 +283,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `lib/agentStoreRows.ts` | 137 | Row mapping helpers for agent store |
 | `lib/agentSettings.ts` | 77 | Per-session generation settings |
 | `lib/agentRuntime.ts` | 412 | Turn execution, tool dispatch, generation delegation |
-| `lib/agentQueueStore.ts` | 355 | Durable async queue persistence |
+| `lib/agentQueueStore.ts` | 358 | Durable async queue persistence |
 | `lib/agentQueueWorker.ts` | 221 | Background queue worker |
 | `lib/agentCommandParser.ts` | 75 | Slash-command parsing |
 | `lib/agentToolManifest.ts` | 31 | Tool metadata for `/api/agent/tools` |

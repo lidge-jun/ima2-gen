@@ -295,7 +295,10 @@ function queueItemFromRow(row: AgentQueueRow): AgentQueueItem {
     position: row.position,
     resultImageIds: parseStringArray(row.resultImageIds),
     errorCode: row.errorCode,
-    errorClass: row.errorClass,
+    // Omit rather than emit null: legacy rows and app-code failures
+    // (cancellation, timeout) must carry no class at all, matching the rule
+    // that nothing invents a class for non-provider errors.
+    ...(row.errorClass ? { errorClass: row.errorClass } : {}),
     errorMessage: row.errorMessage,
     progressStage: row.progressStage ?? null,
     createdAt: row.createdAt,

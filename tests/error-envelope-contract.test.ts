@@ -11,7 +11,9 @@ process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
 
 const { errorEnvelopeFields } = await import("../lib/errors/envelope.ts");
 const { upstreamErrorFields } = await import("../lib/routeHelpers.ts");
-const { writeNodeError } = await import("../lib/nodeHelpers.ts");
+const { writeNodeError, nodeErrorDetails } = await import("../lib/nodeHelpers.ts");
+const { normalizeGenerationFailure } = await import("../lib/generationErrors.ts");
+const { representativeItemError } = await import("../lib/grokMultimodeAdapter.ts");
 const { registerVideoExtendedRoutes } = await import("../routes/videoExtended.ts");
 const { createAgentSession } = await import("../lib/agentStore.ts");
 const queue = await import("../lib/agentQueueStore.ts");
@@ -30,6 +32,7 @@ function providerError(code: string, status: number) {
   return Object.assign(new Error("ordinary provider failure"), { code, status, rawCode: code, errorClass: errorEnvelopeFields({ code, status }).errorClass });
 }
 
+
 async function withServer(app: express.Express, run: (baseUrl: string) => Promise<void>) {
   const server = await new Promise<import("node:http").Server>((resolve) => {
     const value = app.listen(0, "127.0.0.1", () => resolve(value));
@@ -41,6 +44,7 @@ async function withServer(app: express.Express, run: (baseUrl: string) => Promis
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 }
+
 
 describe("062 error transport envelopes", () => {
   it("Classic SSE carries MiniMax fields without changing code", () => {
@@ -59,7 +63,13 @@ describe("062 error transport envelopes", () => {
       json(value: unknown) { body = value; return this; },
     } as unknown as express.Response;
     const err = providerError("MINIMAX_INSUFFICIENT_BALANCE", 402) as unknown as Record<string, unknown>;
-    writeNodeError(res, 402, "INVALID_REQUEST", err.message as string, null, err);
+    // Go through nodeErrorDetails, which is what lib/nodeGeneration.ts actually
+    // passes to writeNodeError. Handing writeNodeError a pre-decorated object
+    // skipped the step where both fields were being dropped.
+    const normalized = normalizeGenerationFailure(err as never) as unknown as Record<string, unknown>;
+    assert.equal(normalized.code, "INVALID_REQUEST");
+    const details = nodeErrorDetails(normalized, err as never);
+    writeNodeError(res, 402, normalized.code as string, normalized.message as string, null, details);
     const error = (body as { error: Record<string, unknown> }).error;
     assert.equal(error.code, "INVALID_REQUEST");
     assert.equal(error.rawCode, "MINIMAX_INSUFFICIENT_BALANCE");
@@ -98,13 +108,25 @@ describe("062 error transport envelopes", () => {
     }
   });
 
-  it("Multimode preserves the last item failure as representative", () => {
-    const adapter = source("lib/grokMultimodeAdapter.ts");
-    const pipeline = source("lib/multimodePipeline.ts");
-    assert.match(adapter, /lastError = e/);
-    assert.match(adapter, /\{ error: lastError \}/);
-    assert.match(pipeline, /finishErrorCode = representative\.code \|\| "EMPTY_RESPONSE"/);
-    assert.match(pipeline, /errorEnvelopeFields\(generated\.error\)/);
+  it("Multimode picks the last failure only when nothing was returned", () => {
+    // The policy is a pure function so it can be executed rather than
+    // regex-matched. Mixed causes have no principled winner, so the contract is
+    // "last failure", and any returned image means no error at all.
+    const rateLimited = providerError("GROK_RATE_LIMITED", 429);
+    const upstream = providerError("GROK_UPSTREAM_ERROR", 502);
+
+    assert.equal(representativeItemError([rateLimited, upstream], 0), upstream);
+    assert.equal(representativeItemError([upstream, rateLimited], 0), rateLimited);
+    assert.equal(representativeItemError([], 0), undefined);
+    // Partial success must stay a success: the run reports no error.
+    assert.equal(representativeItemError([rateLimited, upstream], 1), undefined);
+
+    // And the pipeline only consults it under returned === 0.
+    assert.match(source("lib/multimodePipeline.ts"), /if \(returned === 0\) \{[\s\S]{0,300}generated\.error/);
+    assert.deepEqual(errorEnvelopeFields(upstream), {
+      rawCode: "GROK_UPSTREAM_ERROR",
+      errorClass: "NETWORK_FAILURE",
+    });
   });
 
   it("MCP structured code wins over message parsing in every route", () => {
@@ -132,13 +154,30 @@ describe("062 error transport envelopes", () => {
       const item = queue.createAgentQueueItem({ sessionId: session.id, prompt: `atlas ${status}` });
       const claimed = queue.claimNextAgentQueueItem({ maxGlobalRunning: 10, maxSessionRunning: 10 });
       assert.equal(claimed?.id, item.id);
-      const fields = errorEnvelopeFields({ code: "ATLASCLOUD_GENERATE_FAILED", status });
-      queue.failAgentQueueItem(item.id, { code: "ATLASCLOUD_GENERATE_FAILED", errorClass: fields.errorClass, message: `failed ${status}` });
+      // Build the failure exactly as lib/agentQueueWorker.ts does, and assert
+      // the worker source still spreads the fields — computing them here only
+      // would stay green if the worker stopped doing it.
+      const raw = { code: "ATLASCLOUD_GENERATE_FAILED", status };
+      queue.failAgentQueueItem(item.id, { code: raw.code, message: `failed ${status}`, ...errorEnvelopeFields(raw) });
       const stored = db.getDb().prepare("SELECT error_code AS code, error_class AS errorClass FROM agent_queue_items WHERE id = ?").get(item.id);
       assert.deepEqual(stored, { code: "ATLASCLOUD_GENERATE_FAILED", errorClass: expectedClass });
       assert.equal(queue.getAgentQueueItem(item.id)?.errorClass, expectedClass);
     }
-    assert.deepEqual(queue.getAgentGenerationErrors(session.id).map((record) => record.errorClass).sort(), ["CAPABILITY_UNSUPPORTED", "NETWORK_FAILURE"]);
+    assert.match(source("lib/agentQueueWorker.ts"), /\.\.\.errorEnvelopeFields\(err\.raw\)/);
+
+    // App-code failures must carry no class at all, and legacy rows that
+    // predate the column must omit the field rather than serialize null.
+    const appItem = queue.createAgentQueueItem({ sessionId: session.id, prompt: "canceled" });
+    queue.claimNextAgentQueueItem({ maxGlobalRunning: 10, maxSessionRunning: 10 });
+    queue.failAgentQueueItem(appItem.id, { code: "timeout", message: "timeout" });
+    const appRow = queue.getAgentQueueItem(appItem.id)!;
+    assert.equal("errorClass" in appRow, false, "app-code failures must omit errorClass");
+    // The app-code row contributes no class, so only the two provider rows do.
+    const classes = queue.getAgentGenerationErrors(session.id)
+      .map((record) => record.errorClass)
+      .filter((value): value is string => typeof value === "string")
+      .sort();
+    assert.deepEqual(classes, ["CAPABILITY_UNSUPPORTED", "NETWORK_FAILURE"]);
   });
 
   it("app codes never gain provider envelope fields", () => {

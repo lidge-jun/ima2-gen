@@ -19,6 +19,20 @@ export interface GrokMultimodeResult {
   error?: unknown;
 }
 
+/**
+ * Representative-error policy for a multimode run.
+ *
+ * Items are attempted in order and a mixed-cause run has no principled winner,
+ * so the last failure is chosen by construction. The result is only meaningful
+ * when every item failed: with any image returned the run is a success and
+ * callers must not report an error (lib/multimodePipeline.ts consults it solely
+ * under `returned === 0`).
+ */
+export function representativeItemError(errors: readonly unknown[], returnedImages: number): unknown {
+  if (returnedImages > 0) return undefined;
+  return errors.length > 0 ? errors[errors.length - 1] : undefined;
+}
+
 export async function generateMultimodeViaGrok(
   prompt: string,
   ctx: RouteRuntimeContext,
@@ -46,7 +60,7 @@ export async function generateMultimodeViaGrok(
   const images: Array<{ b64: string; revisedPrompt?: string; mime?: string; providerUrl?: string }> = [];
   let totalCost = 0;
   let totalWebSearchCalls = 0;
-  let lastError: unknown;
+  const itemErrors: unknown[] = [];
 
   logEvent("grok", "multimode:start", { requestId: options.requestId, model, maxImages, refs: references.length });
 
@@ -88,12 +102,13 @@ export async function generateMultimodeViaGrok(
     } catch (e: any) {
       if (e.code === "GENERATION_CANCELED") throw e;
       logEvent("grok", "multimode:item-error", { requestId: options.requestId, index: i, error: errInfo(e) });
-      lastError = e;
+      itemErrors.push(e);
     }
   }
 
   logEvent("grok", "multimode:done", { requestId: options.requestId, model, returned: images.length, requested: maxImages, refs: references.length });
 
   const usage = totalCost > 0 ? { grok_cost_usd_ticks: totalCost } : null;
-  return { images, usage, webSearchCalls: totalWebSearchCalls, extraIgnored: 0, ...(lastError ? { error: lastError } : {}) };
+  const representative = representativeItemError(itemErrors, images.length);
+  return { images, usage, webSearchCalls: totalWebSearchCalls, extraIgnored: 0, ...(representative !== undefined ? { error: representative } : {}) };
 }
