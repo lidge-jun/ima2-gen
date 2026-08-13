@@ -1,4 +1,5 @@
 import { classifyUpstreamError, classifyUpstreamErrorCode, classifyModerationStage } from "./errorClassify.js";
+import { providerErrorClass } from "./errors/providerMap.js";
 import { safeDiagnosticLabel } from "./responsesParse.js";
 import { RESPONSE_DIAGNOSTIC_CODES } from "./responsesErrors.js";
 
@@ -174,6 +175,23 @@ function copyEmptyResponseMetadata(target: any, source: UpstreamErr | null | und
   if (typeof source.fallbackImageResultCount === "number") target.fallbackImageResultCount = source.fallbackImageResultCount;
 }
 
+function decorateProviderFailure<T extends Error>(target: T, source: UpstreamErr | null | undefined): T {
+  const visited = new Set<unknown>();
+  let current: UpstreamErr | null | undefined = source;
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    const errorClass = providerErrorClass(current.code);
+    if (errorClass && typeof current.code === "string") {
+      Object.assign(target, { rawCode: current.code, errorClass });
+      break;
+    }
+    current = current.cause && typeof current.cause === "object"
+      ? current.cause as UpstreamErr
+      : undefined;
+  }
+  return target;
+}
+
 export function normalizeGenerationFailure(lastErr: UpstreamErr | null | undefined, options: any = {}) {
   const code = errorCodeFrom(lastErr);
   if (PASSTHROUGH_CODES.has(code)) {
@@ -186,7 +204,7 @@ export function normalizeGenerationFailure(lastErr: UpstreamErr | null | undefin
     if (lastErr?.upstreamParam) err.upstreamParam = safeDiagnosticLabel(lastErr.upstreamParam);
     if (lastErr?.eventType) err.eventType = lastErr.eventType;
     if (typeof lastErr?.eventCount === "number") err.eventCount = lastErr.eventCount;
-    return err;
+    return decorateProviderFailure(err, lastErr);
   }
   if (SAFETY_CODES.has(code)) {
     const stage = classifyModerationStage(lastErr?.message);
@@ -195,7 +213,7 @@ export function normalizeGenerationFailure(lastErr: UpstreamErr | null | undefin
     err.status = 422;
     err.moderationStage = stage;
     err.cause = lastErr;
-    return err;
+    return decorateProviderFailure(err, lastErr);
   }
   if (RESPONSE_DIAGNOSTIC_CODES.has(code)) {
     const err: any = new Error(lastErr?.message || "Image generation did not return image data");
@@ -208,7 +226,7 @@ export function normalizeGenerationFailure(lastErr: UpstreamErr | null | undefin
     if (lastErr?.eventType) err.eventType = lastErr.eventType;
     copyEmptyResponseMetadata(err, lastErr);
     err.diagnosticReason = diagnosticReasonFrom(lastErr) || code.toLowerCase();
-    return err;
+    return decorateProviderFailure(err, lastErr);
   }
   // Empty response with metadata → likely a technical limitation (unsupported size/quality/model)
   if (typeof lastErr?.eventCount === "number") {
@@ -231,12 +249,12 @@ export function normalizeGenerationFailure(lastErr: UpstreamErr | null | undefin
     copyEmptyResponseMetadata(err, lastErr);
     const diagnosticReason = diagnosticReasonFrom(lastErr);
     if (diagnosticReason) err.diagnosticReason = diagnosticReason;
-    return err;
+    return decorateProviderFailure(err, lastErr);
   }
   // Unrecognized errors → UNKNOWN (do not pretend they are safety refusals)
   const err: any = new Error(lastErr?.message || options.proxyMessage || "Image generation failed");
   err.code = "UNKNOWN";
   err.status = lastErr?.status || 500;
   err.cause = lastErr;
-  return err;
+  return decorateProviderFailure(err, lastErr);
 }
