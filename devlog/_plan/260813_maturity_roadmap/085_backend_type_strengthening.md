@@ -136,3 +136,10 @@ tags: [ima2-gen, devlog, phase, typescript]
 ## 재측정 (2026-08-13)
 
 둘 다 313 / 92 files. noUncheckedIndexedAccess만 159 / 55 files. as-ws baseline 1131.
+
+
+## 진행 (2026-08-14)
+
+- step1 landed: noUncheckedIndexedAccess enabled on origin/dev a2809034. 159->0. as-ws 1131->1132, bang 25->17.
+- step2 in working tree: exactOptionalPropertyTypes enabled locally, 155->103 remaining after optional-type widening. Not committed yet because RequestInit/MCP transport residuals remain.
+- i4 so far: no confirmed reachable runtime bug; all fixes were type narrowing/optional unions.
