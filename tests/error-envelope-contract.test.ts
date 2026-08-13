@@ -20,7 +20,6 @@ const { registerEditRoutes } = await import("../routes/edit.ts");
 const { registerMcpMediaRoutes } = await import("../routes/mcpMedia.ts");
 const { registerMcpRecoverRoutes } = await import("../routes/mcpRecover.ts");
 const { registerMcpMultishotRoutes } = await import("../routes/mcpMultishot.ts");
-const { registerNodeRoutes } = await import("../routes/nodes.ts");
 const { createAgentSession } = await import("../lib/agentStore.ts");
 const { tickAgentQueueWorker } = await import("../lib/agentQueueWorker.ts");
 const queue = await import("../lib/agentQueueStore.ts");
@@ -253,8 +252,11 @@ describe("062 error transport envelopes", () => {
         body: JSON.stringify({ sourceVideoId: "root.mp4", requestId: "env-video-preflight", prompt: "continue" }),
       });
       const body = await response.json() as Record<string, unknown>;
-      const payload = await pending.catch(() => body);
+      const payload = await pending;
       assert.equal(response.status, 502);
+      assert.equal(body.code, "GROK_VIDEO_REQUEST_FAILED");
+      assert.equal(body.rawCode, "GROK_VIDEO_REQUEST_FAILED");
+      assert.equal(body.errorClass, "NETWORK_FAILURE");
       assert.equal(payload.code, "GROK_VIDEO_REQUEST_FAILED");
       assert.equal(payload.rawCode, "GROK_VIDEO_REQUEST_FAILED");
       assert.equal(payload.errorClass, "NETWORK_FAILURE");
