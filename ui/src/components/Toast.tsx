@@ -85,9 +85,9 @@ export function Toast() {
       createdAt: toast.createdAt,
     })),
     ...errorCards.map((card) => {
-      const spec = errorCodes[card.code] ?? errorCodes.UNKNOWN;
-      const title = t(`${spec.cardKey ?? "errorCard.unknown"}.title`);
-      const body = t(`${spec.cardKey ?? "errorCard.unknown"}.body`);
+      const cardKey = card.cardKey ?? errorCodes[card.code]?.cardKey ?? "errorCard.unknown";
+      const title = t(`${cardKey}.title`);
+      const body = t(`${cardKey}.body`);
       return {
         kind: "error-card" as const,
         id: card.id,

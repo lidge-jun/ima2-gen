@@ -70,8 +70,10 @@ tags: [ima2-gen, devlog, phase, errors, ui]
 | `ui/src/components/Toast.tsx` | 저장된 `cardKey`로 문구를 고른다. `errorCodes[card.code]`로 재해석하지 않는다 |
 | `ui/src/i18n/ko.json`, `ui/src/i18n/en.json` | 클래스 문구 10세트 |
 | `ui/src/components/agent/agentTypes.ts` | `errorClass?: string` 또는 null |
+| `ui/src/lib/agentQueueError.ts` (신규) | 큐 행 문구 해석. 클래스가 있을 때만 사람 문구 |
 | `ui/src/components/agent/AgentQueueRow.tsx` | `resolveErrorSpec({ code: errorCode, errorClass, message: errorMessage })`로 문구를 고른다. 원본 코드는 details에 남긴다 |
 | `tests/error-ui-consumption.test.ts` (신규) | 아래 카나리 |
+| `tests/i18n-dictionary-contract.test.ts` | 새 cardKey/toastKey와 Agent 행 동적 t()를 레지스트리에 등록 |
 
 서버 파일은 OUT. `062` 봉투를 다시 열지 않는다.
 
@@ -104,7 +106,7 @@ tags: [ima2-gen, devlog, phase, errors, ui]
 | `node --import tsx --test tests/error-ui-consumption.test.ts` | u1–u4, u6. 이 파일이 변경 대상을 import한다 |
 | `cd ui && npm run build` | UI 타입/번들 |
 | `npm run typecheck:tests` | 신규 테스트 타입 |
-| `node --import tsx --test tests/minimax-ui-registration-contract.test.ts tests/frontend-sse-risk-contract.test.js` | 기존 UI/SSE 계약 |
+| `node --import tsx --test tests/minimax-ui-registration-contract.test.ts tests/frontend-sse-risk-contract.test.js tests/i18n-dictionary-contract.test.ts` | 기존 UI/SSE/i18n 계약 |
 
 `npm run typecheck`는 `ui/`와 `tests/`를 보지 않는다. 회귀 게이트로 쓰지 않는다. 전체 `npm test`는 C에서 한 번.
 

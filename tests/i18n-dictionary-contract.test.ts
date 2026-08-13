@@ -160,6 +160,19 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "toast.refTooLarge", "toast.refNotBase64", "toast.refEmpty",
     "toast.refLimitExceeded", "toast.generateFailed",
     "toast.minimaxModelRequiresReference",
+    "toast.errorClass.rateLimited", "toast.errorClass.providerTimeout",
+    "toast.errorClass.networkFailure", "toast.errorClass.contentRejected",
+    "toast.errorClass.capabilityUnsupported", "toast.errorClass.modelUnavailable",
+    "toast.errorClass.internalState",
+  ]],
+  ["ui/src/lib/agentQueueError.ts :: resolved.spec.toastKey", [
+    "toast.refTooLarge", "toast.refNotBase64", "toast.refEmpty",
+    "toast.refLimitExceeded", "toast.generateFailed",
+    "toast.minimaxModelRequiresReference",
+    "toast.errorClass.rateLimited", "toast.errorClass.providerTimeout",
+    "toast.errorClass.networkFailure", "toast.errorClass.contentRejected",
+    "toast.errorClass.capabilityUnsupported", "toast.errorClass.modelUnavailable",
+    "toast.errorClass.internalState",
   ]],
   // toastKey's local complete/partial literals in storeGenImpl.ts.
   ["ui/src/store/storeGenImpl.ts :: toastKey", ["multimode.complete", "multimode.partial"]],
@@ -173,15 +186,18 @@ const ERROR_CARD_ROOTS = [
   "errorCard.authApiKeyInvalid", "errorCard.networkFailed", "errorCard.oauthUnavailable",
   "errorCard.invalidRequest", "errorCard.apikeyDisabled", "errorCard.agyGenerationFailed",
   "errorCard.agyTimeout", "errorCard.agyProcessError", "errorCard.agyQuotaExhausted",
+  "errorCard.authClass", "errorCard.billingRequired",
 ] as const;
 
 // Toast.tsx has no static template head because cardKey precedes the literal suffix. Its finite
 // roots come from errorCodes.ts; keeping these exact signatures prevents a broad template escape.
 const DYNAMIC_T_TEMPLATES = new Map<string, readonly string[]>([
-  ["ui/src/components/Toast.tsx :: `${spec.cardKey ?? \"errorCard.unknown\"}.title`",
+  ["ui/src/components/Toast.tsx :: `${cardKey}.title`",
     ERROR_CARD_ROOTS.map((root) => `${root}.title`)],
-  ["ui/src/components/Toast.tsx :: `${spec.cardKey ?? \"errorCard.unknown\"}.body`",
+  ["ui/src/components/Toast.tsx :: `${cardKey}.body`",
     ERROR_CARD_ROOTS.map((root) => `${root}.body`)],
+  ["ui/src/lib/agentQueueError.ts :: `${resolved.spec.cardKey}.title`",
+    ERROR_CARD_ROOTS.map((root) => `${root}.title`)],
 ]);
 
 // These are genuine current source references without dictionary leaves. They remain visible and

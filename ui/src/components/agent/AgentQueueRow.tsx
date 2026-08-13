@@ -1,5 +1,6 @@
 import { useI18n } from "../../i18n";
 import { formatAgentQueueStatus, formatAgentQueueTime } from "../../lib/agentQueueFormatting";
+import { agentQueueErrorLabel, resolveAgentQueueError } from "../../lib/agentQueueError";
 import type { AgentQueueItem } from "./agentTypes";
 
 type Props = {
@@ -16,13 +17,14 @@ export function AgentQueueRow({ item, onCancel, onRetry }: Props) {
   const parallel = item.plan.plannedParallelism || item.options.parallelism;
   const statusDetail = formatAgentQueueStatus(item);
   const time = formatAgentQueueTime(item.createdAt, (value, unit) => t("agent.queueTimeAgo", { value, unit: t(`agent.queueTimeUnit.${unit}`) }));
+  const resolvedLabel = agentQueueErrorLabel(resolveAgentQueueError(item), t);
 
   return (
     <div className={`agent-queue-row agent-queue-row--${item.status}`}>
       <div className="agent-queue-row__main">
         <strong>{item.prompt}</strong>
         <span className={`agent-queue-row__badge agent-queue-row__badge--${item.status}`}>{t(`agent.queueStatus.${item.status}`)}</span>
-        <span>{[statusDetail, t("agent.queuePlanSummary", { variants, parallel }), time].filter(Boolean).join(" · ")}</span>
+        <span>{[statusDetail, resolvedLabel, t("agent.queuePlanSummary", { variants, parallel }), time].filter(Boolean).join(" · ")}</span>
         {item.plan.reason || item.errorCode || item.errorMessage ? (
           <details className="agent-queue-row__details">
             <summary>{t("agent.queueDetails")}</summary>

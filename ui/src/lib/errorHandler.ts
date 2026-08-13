@@ -8,13 +8,13 @@ import { t } from "../i18n";
 
 export type ErrorStore = {
   showToast: (message: string, error?: boolean) => void;
-  showErrorCard: (code: ImaErrorCode, params?: { fallbackMessage?: string }) => void;
+  showErrorCard: (code: ImaErrorCode, params?: { fallbackMessage?: string; cardKey?: string }) => void;
 };
 
 export function handleError(err: unknown, store: ErrorStore): { code: ImaErrorCode; message: string } {
   const { code, spec, message } = resolveErrorSpec(err);
   if (spec.surface === "card") {
-    store.showErrorCard(code, { fallbackMessage: message });
+    store.showErrorCard(code, { fallbackMessage: message, cardKey: spec.cardKey });
   } else {
     const toastMsg = spec.toastKey ? t(spec.toastKey) : message || t("toast.generateFailed");
     store.showToast(toastMsg, true);

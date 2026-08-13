@@ -12,14 +12,27 @@ export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> 
       typeof raw === "string"
         ? raw
         : raw?.message ?? `Request failed: ${res.status}`;
+    const body = data as {
+      code?: string;
+      rawCode?: string;
+      errorClass?: string;
+      error?: string | { code?: string; message?: string; rawCode?: string; errorClass?: string };
+    };
+    const nested = typeof body.error === "object" && body.error ? body.error : undefined;
     const err = new Error(message) as Error & {
       status?: number;
       code?: string;
+      rawCode?: string;
+      errorClass?: string;
       currentVersion?: number;
     };
     err.status = res.status;
-    if (typeof raw !== "string" && raw?.code) err.code = raw.code;
+    if (nested?.code) err.code = nested.code;
     else if (topCode) err.code = topCode;
+    const rawCode = nested?.rawCode ?? body.rawCode;
+    const errorClass = nested?.errorClass ?? body.errorClass;
+    if (typeof rawCode === "string") err.rawCode = rawCode;
+    if (typeof errorClass === "string") err.errorClass = errorClass;
     if (typeof data.currentVersion === "number") {
       err.currentVersion = data.currentVersion;
     }

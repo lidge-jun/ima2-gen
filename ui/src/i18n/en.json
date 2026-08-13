@@ -90,7 +90,16 @@
     "comfyExportInvalidImage": "This saved image cannot be sent to ComfyUI.",
     "comfyExportImageNotFound": "Saved image file was not found.",
     "comfyExportFailed": "Could not upload image to ComfyUI.",
-    "cancelFailed": "Could not cancel generation."
+    "cancelFailed": "Could not cancel generation.",
+    "errorClass": {
+      "rateLimited": "Too many requests. Please try again shortly.",
+      "providerTimeout": "The provider timed out. Please try again shortly.",
+      "networkFailure": "Could not reach the provider. Check the network, then try again.",
+      "contentRejected": "The provider rejected this prompt. Please revise it.",
+      "capabilityUnsupported": "This request is not supported by the current provider.",
+      "modelUnavailable": "The selected model is unavailable right now.",
+      "internalState": "Internal state is inconsistent. Reload the page."
+    }
   },
   "inflight": {
     "queued": "Queued",
@@ -1493,6 +1502,15 @@
       "title": "Gemini quota exhausted",
       "body": "You have exhausted your Gemini image generation capacity. Your quota will reset automatically — check the reset timer in the error details.",
       "cta": "OK"
+    },
+    "authClass": {
+      "title": "Sign-in required",
+      "body": "Provider authentication expired or the key was rejected. Sign in again from Settings.",
+      "cta": "Sign in again"
+    },
+    "billingRequired": {
+      "title": "Billing required",
+      "body": "This provider account has no remaining credit. Check the provider console, then try again."
     }
   },
   "promptLibrary": {

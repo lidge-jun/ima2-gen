@@ -1,4 +1,5 @@
 // 0.09.8 — ImaErrorCode registry + classifier.
+import { classSpec, isPriorityErrorClass } from "./errorClassSpecs";
 // Mirrors lib/errorClassify.js on the server. Frontend uses this to map
 // server error codes (or raw strings) to i18n keys + surface (toast vs card).
 
@@ -165,15 +166,56 @@ export function classifyModerationStage(msg: string): ModerationStage {
   return "unknown";
 }
 
+export type ResolvedErrorSpec = {
+  code: ImaErrorCode;
+  spec: ErrorSpec;
+  message: string;
+  rawCode?: string;
+  errorClass?: string;
+  moderationStage?: ModerationStage;
+};
+
 /** Resolve the spec for an arbitrary error-like value. */
-export function resolveErrorSpec(err: unknown): { code: ImaErrorCode; spec: ErrorSpec; message: string; moderationStage?: ModerationStage } {
-  const e = err as (Error & { code?: string; message?: string; moderationStage?: string }) | undefined;
-  const rawMessage = typeof e?.message === "string" ? e.message : String(err ?? "");
-  const rawCode = typeof e?.code === "string" ? e.code : "";
-  const code = (rawCode && rawCode in errorCodes ? (rawCode as ImaErrorCode) : classifyError(rawMessage));
-  const spec = errorCodes[code] ?? errorCodes.UNKNOWN;
+export function resolveErrorSpec(err: unknown): ResolvedErrorSpec {
+  const e = err as (Error & {
+    code?: string;
+    message?: string;
+    rawCode?: string;
+    errorClass?: string;
+    moderationStage?: string;
+  }) | Record<string, unknown> | undefined;
+  const rec = e && typeof e === "object" ? e as Record<string, unknown> : {};
+  const rawMessage = typeof rec.message === "string" ? rec.message : String(err ?? "");
+  const incomingCode = typeof rec.code === "string" ? rec.code : "";
+  const incomingRawCode = typeof rec.rawCode === "string" ? rec.rawCode : undefined;
+  const incomingClass = typeof rec.errorClass === "string" ? rec.errorClass : undefined;
+  const registered = incomingCode && incomingCode in errorCodes ? incomingCode as ImaErrorCode : undefined;
+  const priority = isPriorityErrorClass(incomingClass) ? classSpec(incomingClass) : undefined;
+  const fallbackClass = classSpec(incomingClass);
+  let code: ImaErrorCode;
+  let spec: ErrorSpec;
+  if (priority) {
+    code = registered ?? "UNKNOWN";
+    spec = priority;
+  } else if (registered) {
+    code = registered;
+    spec = errorCodes[registered];
+  } else if (fallbackClass) {
+    code = classifyError(rawMessage);
+    spec = fallbackClass;
+  } else {
+    code = classifyError(rawMessage);
+    spec = errorCodes[code] ?? errorCodes.UNKNOWN;
+  }
   const moderationStage = (code === "MODERATION_REFUSED" || code === "SAFETY_REFUSAL")
-    ? ((e?.moderationStage as ModerationStage) || classifyModerationStage(rawMessage))
+    ? ((typeof rec.moderationStage === "string" ? rec.moderationStage as ModerationStage : undefined) || classifyModerationStage(rawMessage))
     : undefined;
-  return { code, spec, message: rawMessage, moderationStage };
+  return {
+    code,
+    spec,
+    message: rawMessage,
+    ...(incomingRawCode ? { rawCode: incomingRawCode } : incomingCode && !registered ? { rawCode: incomingCode } : {}),
+    ...(incomingClass && (priority || fallbackClass) ? { errorClass: incomingClass } : {}),
+    ...(moderationStage ? { moderationStage } : {}),
+  };
 }
