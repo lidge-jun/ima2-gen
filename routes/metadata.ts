@@ -18,7 +18,10 @@ function parseDataUrl(dataUrl: unknown): { mime: string; rawB64: string } | null
   if (typeof dataUrl !== "string") return null;
   const match = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl);
   if (!match) return null;
-  return { mime: match[1].toLowerCase(), rawB64: match[2] };
+  const mime = match[1];
+  const rawB64 = match[2];
+  if (!mime || !rawB64) return null;
+  return { mime: mime.toLowerCase(), rawB64 };
 }
 
 export function registerMetadataRoutes(app: Express, ctxRaw: RouteRuntimeContext) {

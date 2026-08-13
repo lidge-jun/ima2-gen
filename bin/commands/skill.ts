@@ -149,11 +149,12 @@ function resolveRef(skillDir: string, refName: string): RefEntry | null {
   if (exact) return exact;
   const byBase = refs.filter((r) => {
     const parts = r.name.split("/");
-    return parts[parts.length - 1] === refName;
+    const last = parts[parts.length - 1];
+    return last === refName;
   });
-  if (byBase.length === 1) return byBase[0];
+  if (byBase.length === 1) return byBase[0] ?? null;
   const partial = refs.filter((r) => r.name.includes(refName));
-  if (partial.length === 1) return partial[0];
+  if (partial.length === 1) return partial[0] ?? null;
   return null;
 }
 
@@ -274,8 +275,9 @@ export default async function skillCmd(argv: string[]) {
   let wantRefs = false;
   let wantRef: string | null = null;
 
-  if (positional.length > 0 && positional[0] !== "path" && positional[0] !== "refs" && positional[0] !== "ref" && KNOWN_SKILLS[positional[0]]) {
-    skillName = positional[0];
+  const firstPos = positional[0];
+  if (positional.length > 0 && firstPos && firstPos !== "path" && firstPos !== "refs" && firstPos !== "ref" && KNOWN_SKILLS[firstPos]) {
+    skillName = firstPos;
     if (positional[1] === "path") wantPath = true;
     else if (positional[1] === "refs") wantRefs = true;
     else if (positional[1] === "ref" && positional[2]) wantRef = positional.slice(2).join("/");

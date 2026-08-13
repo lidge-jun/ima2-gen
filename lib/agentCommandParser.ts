@@ -29,7 +29,9 @@ export function parseAgentSlashCommand(input: string): AgentSlashCommand | null 
   const match = /^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/i.exec(raw);
   if (!match) return null;
 
-  const rawName = match[1].toLowerCase();
+  const captured = match[1];
+  if (!captured) return null;
+  const rawName = captured.toLowerCase();
   const name = COMMAND_ALIASES[rawName];
   if (!name) return null;
 

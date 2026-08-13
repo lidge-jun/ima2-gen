@@ -441,5 +441,5 @@ export async function editViaGrok(
   const downloaded = await downloadGrokImageUrl(editResultUrl, options.signal);
   const usage = result.usage ? { grok_cost_usd_ticks: result.usage.cost_in_usd_ticks ?? 0 } : null;
   logEvent("grok", "edit:done", { requestId: options.requestId, model, b64Len: downloaded.b64.length });
-  return { b64: downloaded.b64, providerUrl: editResultUrl, usage, webSearchCalls: 0, mime: downloaded.mime, revisedPrompt: result.data[0].revised_prompt || prompt };
+  return { b64: downloaded.b64, providerUrl: editResultUrl, usage, webSearchCalls: 0, mime: downloaded.mime, revisedPrompt: result.data[0]?.revised_prompt || prompt };
 }

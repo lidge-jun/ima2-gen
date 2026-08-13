@@ -391,7 +391,9 @@ async function mapWithLimit<T, R>(
     while (nextIndex < items.length) {
       const currentIndex = nextIndex;
       nextIndex += 1;
-      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+      const item = items[currentIndex];
+      if (item === undefined) continue;
+      results[currentIndex] = await mapper(item, currentIndex);
     }
   }));
   return results;

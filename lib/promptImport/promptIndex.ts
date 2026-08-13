@@ -66,18 +66,18 @@ interface IndexLimits extends PromptImportLimits {
 function limitsFromCtx(ctx: PromptImportCtx): IndexLimits {
   const limits = (ctx.config?.limits ?? {}) as Record<string, number>;
   return {
-    maxFileBytesForPreview: limits.promptImportMaxFileBytes,
-    maxPromptCandidatesPerFile: limits.promptImportMaxCandidatesPerFile,
-    maxPromptCandidatesPerImport: limits.promptImportMaxCandidatesPerImport,
-    fetchTimeoutMs: limits.promptImportFetchTimeoutMs,
-    maxCandidateChars: limits.promptImportMaxCandidateChars,
-    minCandidateChars: limits.promptImportMinCandidateChars,
-    maxSourceCharsScanned: limits.promptImportMaxSourceCharsScanned,
-    maxRepoIndexFiles: limits.promptImportMaxRepoIndexFiles,
+    maxFileBytesForPreview: limits.promptImportMaxFileBytes ?? 0,
+    maxPromptCandidatesPerFile: limits.promptImportMaxCandidatesPerFile ?? 0,
+    maxPromptCandidatesPerImport: limits.promptImportMaxCandidatesPerImport ?? 0,
+    fetchTimeoutMs: limits.promptImportFetchTimeoutMs ?? 0,
+    maxCandidateChars: limits.promptImportMaxCandidateChars ?? 0,
+    minCandidateChars: limits.promptImportMinCandidateChars ?? 0,
+    maxSourceCharsScanned: limits.promptImportMaxSourceCharsScanned ?? 0,
+    maxRepoIndexFiles: limits.promptImportMaxRepoIndexFiles ?? 0,
     maxFolderFiles: limits.promptImportMaxFolderFiles ?? 0,
     maxFolderPreviewFiles: limits.promptImportMaxFolderPreviewFiles ?? 0,
-    searchLimit: limits.promptImportCuratedSearchLimit,
-    ttlMs: limits.promptImportIndexCacheTtlMs,
+    searchLimit: limits.promptImportCuratedSearchLimit ?? 0,
+    ttlMs: limits.promptImportIndexCacheTtlMs ?? 0,
   };
 }
 

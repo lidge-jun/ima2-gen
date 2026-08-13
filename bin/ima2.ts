@@ -417,7 +417,7 @@ if (args.includes("-v") || args.includes("--version")) {
 }
 
 if ((!command || args.includes("-h") || args.includes("--help"))
-    && !["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs"].includes(command)) {
+    && command !== undefined && !["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs"].includes(command)) {
   showHelp();
   exitFlushed(command ? 0 : 1);
 }

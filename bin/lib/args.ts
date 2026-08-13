@@ -36,6 +36,7 @@ export function parseArgs(argv: string[], spec: any = {}): ParsedArgs {
   let doubleDashSeen = false;
   while (i < argv.length) {
     const a = argv[i];
+    if (a === undefined) break;
     if (doubleDashSeen) {
       out.positional.push(a);
       i++;

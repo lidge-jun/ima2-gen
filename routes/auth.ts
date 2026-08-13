@@ -50,7 +50,9 @@ function saveGrokTokens(tokens: Record<string, unknown>) {
   let email: string | undefined;
   if (typeof tokens.id_token === "string") {
     try {
-      const payload = JSON.parse(Buffer.from(tokens.id_token.split(".")[1], "base64url").toString());
+      const segment = tokens.id_token.split(".")[1];
+      if (!segment) throw new Error("missing jwt payload");
+      const payload = JSON.parse(Buffer.from(segment, "base64url").toString());
       email = payload.email;
     } catch { /* ignore */ }
   }
@@ -187,11 +189,13 @@ function startCodexDeviceCode(): Promise<{ sessionId: string; userCode: string; 
 
       if (urlMatch && codeMatch) {
         resolved = true;
-        session.userCode = codeMatch[1];
+        const userCode = codeMatch[1];
+        if (!userCode) return;
+        session.userCode = userCode;
         session.verificationUrl = urlMatch[0];
         resolve({
           sessionId: id,
-          userCode: codeMatch[1],
+          userCode,
           verificationUrl: urlMatch[0],
           expiresIn: 900,
         });

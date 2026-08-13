@@ -32,7 +32,7 @@ function findUploadId(result: Record<string, unknown>): string | null {
   const structured = structuredOf(result);
   if (typeof structured.uploadId === "string") return structured.uploadId;
   const match = collectResultText(result).match(/uploadId:?\s*`?([0-9a-f-]{36})/i);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /** Upload a validated local file; returns the Runway-hosted asset URL. */
@@ -57,7 +57,9 @@ export async function uploadLocalMediaToRunway(
 
   // Single-part upload: PUT the whole file to the first URL (fixture: parts[] is
   // required even for single-part uploads).
-  const target = new URL(uploadUrls[0]);
+  const firstUpload = uploadUrls[0];
+  if (!firstUpload) throw new Error("MCP_UPLOAD_INIT_INVALID");
+  const target = new URL(firstUpload);
   await assertPublicHttps(target);
   const response = await fetch(target, {
     method: "PUT",

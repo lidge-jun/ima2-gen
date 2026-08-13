@@ -168,7 +168,7 @@ async function pollOutputUrl(apiKey: string, id: string, signal?: AbortSignal): 
 
 async function downloadOutput(output: string, signal?: AbortSignal): Promise<{ b64: string; mime?: string; url?: string | null }> {
   const dataUri = output.match(/^data:([^;]+);base64,(.+)$/);
-  if (dataUri) return { b64: dataUri[2], mime: dataUri[1], url: null };
+  if (dataUri?.[1] && dataUri[2]) return { b64: dataUri[2], mime: dataUri[1], url: null };
   if (/^[A-Za-z0-9+/=]+$/.test(output) && output.length > 100) {
     return { b64: output, mime: "image/png", url: null };
   }

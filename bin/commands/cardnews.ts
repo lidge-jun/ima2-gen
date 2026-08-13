@@ -219,14 +219,14 @@ export default async function cardnewsCmd(argv: string[]) {
   if (sub === "set") {
     const s2 = argv[1];
     const SET_SUB: Record<string, Sub> = { show: setShowSub, manifest: setManifestSub };
-    const handler = SET_SUB[s2];
+    const handler = s2 ? SET_SUB[s2] : undefined;
     if (!handler) die(2, `unknown subcommand: set ${s2 || ""}\n${HELP}`);
     return handler(argv.slice(2));
   }
   if (sub === "job") {
     const s2 = argv[1];
     const JOB_SUB: Record<string, Sub> = { create: jobCreateSub, show: jobShowSub, retry: jobRetrySub };
-    const handler = JOB_SUB[s2];
+    const handler = s2 ? JOB_SUB[s2] : undefined;
     if (!handler) die(2, `unknown subcommand: job ${s2 || ""}\n${HELP}`);
     return handler(argv.slice(2));
   }

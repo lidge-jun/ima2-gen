@@ -49,7 +49,7 @@ export async function appendMcpJobLog(generatedDir: string, entry: McpJobLogEven
 export function logMcpJobError(generatedDir: string, entry: Omit<McpJobLogEvent, "event" | "cause">, error: unknown): Promise<void> {
   return appendMcpJobLog(generatedDir, {
     ...entry, event: "error",
-    code: scrubValue(String((error as Error)?.message ?? error).split(":")[0].slice(0, 80)),
+    code: scrubValue((String((error as Error)?.message ?? error).split(":")[0] ?? "").slice(0, 80)),
     ...(causeMessage(error) ? { cause: causeMessage(error) } : {}),
   });
 }

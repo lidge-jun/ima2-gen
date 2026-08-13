@@ -122,6 +122,7 @@ function normalizeShorthand(input: string): GitHubFileSource {
   if (ref.includes("/")) {
     throw promptImportError("AMBIGUOUS_GITHUB_REF", "Branches with slashes need GitHub API folder support planned for PR3");
   }
+  if (!rawPath) throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Enter a GitHub file URL or owner/repo:path");
   const path = assertCleanPath(rawPath.trim());
   const ext = assertSupportedFilePath(path);
   return {

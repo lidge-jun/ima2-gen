@@ -64,7 +64,11 @@ function decodeImage(dataUrl: string, index: number): { buffer: Buffer; extensio
     throw storeError("INVALID_MCP_TEMP_REFERENCE_DATA", `images[${index}] is not valid base64 image data`);
   }
   const normalizedB64 = parsed.refs[0];
-  const declaredMime = prefix[1].toLowerCase() as SupportedMime;
+  const declaredMimeRaw = prefix[1];
+  if (!normalizedB64 || !declaredMimeRaw) {
+    throw storeError("INVALID_MCP_TEMP_REFERENCE_DATA", `images[${index}] is not valid base64 image data`);
+  }
+  const declaredMime = declaredMimeRaw.toLowerCase() as SupportedMime;
   const buffer = Buffer.from(normalizedB64, "base64");
   if (buffer.length === 0 || buffer.length > MCP_TEMP_REFERENCE_MAX_BYTES) {
     throw storeError("INVALID_MCP_TEMP_REFERENCE_SIZE", `images[${index}] must be at most 50MB`);
@@ -115,6 +119,7 @@ export async function createMcpTempReferenceBatch(
     await mkdir(generatedDir, { recursive: true });
     for (let index = 0; index < images.length; index += 1) {
       const image = images[index];
+      if (!image) continue;
       const decoded = decodeImage(image.dataUrl, index);
       const filename = `tmpref_${batchId}_${index + 1}.${decoded.extension}`;
       const target = containedTarget(generatedDir, filename);

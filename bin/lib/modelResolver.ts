@@ -54,6 +54,7 @@ function resolveLaneModel(
   catalog: ModelCatalog,
 ): ResolveResult {
   const info = catalog.lanes[lane];
+  if (!info) return failure("UNKNOWN_LANE", `Unknown lane: ${lane}`);
   if (!modelExists(info, kind, model)) {
     const otherKind = kind === "image" ? "video" : "image";
     if (modelExists(info, otherKind, model)) {
@@ -130,7 +131,8 @@ function resolveBare(
       candidates: matches.map((lane) => `${lane}/${model}`),
     });
   }
-  if (matches.length === 1) return resolveLaneModel(kind, matches[0], model, catalog);
+  const only = matches[0];
+  if (matches.length === 1 && only) return resolveLaneModel(kind, only, model, catalog);
   if (provider) {
     const info = catalog.lanes[provider];
     const otherKind = kind === "image" ? "video" : "image";
@@ -161,7 +163,9 @@ export function resolveTarget(
       : resolveBare(kind, flags.model, provider ?? undefined, catalog);
   }
   if (provider) {
-    const model = catalog.lanes[provider].defaults[kind];
+    const laneInfo = catalog.lanes[provider];
+    if (!laneInfo) return failure("UNKNOWN_LANE", `Unknown lane: ${provider}`);
+    const model = laneInfo.defaults[kind];
     if (!model) return failure("NO_DEFAULT_MODEL", `${provider} has no default ${kind} model`);
     return resolveLaneModel(kind, provider, canonicalModel(kind, model), catalog);
   }

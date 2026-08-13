@@ -44,7 +44,8 @@ function parseSize(size: string): { w: number; h: number } | null {
 
 function aspectValue(aspect: string): number {
   const [w, h] = aspect.split(":").map(Number);
-  return Number.isFinite(h) && h !== 0 ? w / h : 1;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || !h || w === undefined) return 1;
+  return w / h;
 }
 
 function closestAspect(w: number, h: number): string {

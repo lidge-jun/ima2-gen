@@ -341,11 +341,11 @@ export function parseVideoParams(prompt: string): VideoParamsFromPrompt {
   const params: VideoParamsFromPrompt = {};
   const durMatch = DURATION_PATTERN.exec(prompt);
   if (durMatch) {
-    const d = parseInt(durMatch[1]);
+    const d = parseInt(durMatch[1] ?? "", 10);
     if (d >= 1 && d <= 15) params.duration = d;
   }
   const resMatch = RESOLUTION_PATTERN.exec(prompt);
-  if (resMatch) params.resolution = resMatch[1].toLowerCase() as "480p" | "720p" | "1080p";
+  if (resMatch?.[1]) params.resolution = resMatch[1].toLowerCase() as "480p" | "720p" | "1080p";
   const aspMatch = ASPECT_PATTERN.exec(prompt);
   if (aspMatch) params.aspectRatio = aspMatch[1];
   return params;

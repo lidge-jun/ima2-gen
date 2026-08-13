@@ -114,7 +114,9 @@ export async function runBounded<T>(
     while (cursor < values.length) {
       const index = cursor;
       cursor += 1;
-      await worker(values[index]);
+      const value = values[index];
+      if (value === undefined) continue;
+      await worker(value);
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, values.length) }, () => next()));

@@ -97,10 +97,10 @@ export function table<R extends Record<string, unknown>>(rows: R[], columns: Tab
     })),
   );
   const pad = (s: unknown, w: number) => String(s ?? "").padEnd(w);
-  out(color.dim(columns.map((c, i) => pad(c.label, widths[i])).join("  ")));
+  out(color.dim(columns.map((c, i) => pad(c.label, widths[i] ?? 0)).join("  ")));
   out(color.dim(widths.map((w) => "─".repeat(w)).join("  ")));
   for (const r of rows) {
-    out(columns.map((c, i) => pad(c.format ? c.format(r[c.key], r) : r[c.key], widths[i])).join("  "));
+    out(columns.map((c, i) => pad(c.format ? c.format(r[c.key], r) : r[c.key], widths[i] ?? 0)).join("  "));
   }
 }
 

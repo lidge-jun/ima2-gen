@@ -41,7 +41,7 @@ export function parseKeyframePreview(result: Record<string, unknown>): EditVideo
   if (Array.isArray(content)) {
     const text = content.map((entry) => (entry as { text?: string }).text ?? "").join("\n");
     const match = text.match(/Keyframe URL:\s*(https:\/\/\S+)/i);
-    if (match) return { keyframeUrl: match[1] };
+    if (match?.[1]) return { keyframeUrl: match[1] };
   }
   return null;
 }

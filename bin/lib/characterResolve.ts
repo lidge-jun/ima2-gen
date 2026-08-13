@@ -32,6 +32,7 @@ export async function resolveCharacterElement(serverBase: string, idOrName: stri
     };
   }
   const element = candidates[0];
+  if (!element) return { status: "not_found" };
   return {
     status: "ok",
     element: {

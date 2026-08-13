@@ -44,7 +44,10 @@ function missingRuntimeDeps() {
       return true;
     }
   }).map((dep) => dep.endsWith("/package.json") ? dep.slice(0, -"/package.json".length) : dep);
-  for (const [packageName, binName] of [["openai-oauth", "openai-oauth"], ["@openai/codex", "codex"]]) {
+  for (const pair of [["openai-oauth", "openai-oauth"], ["@openai/codex", "codex"]] as const) {
+    const packageName = pair[0];
+    const binName = pair[1];
+    if (!packageName || !binName) continue;
     try {
       resolvePackageBin(packageName, binName);
     } catch {
@@ -57,7 +60,8 @@ function missingRuntimeDeps() {
 function valueAfter(args: string[], name: string) {
   const index = args.indexOf(name);
   if (index === -1) return null;
-  return args[index + 1] || null;
+  const value = args[index + 1];
+  return value || null;
 }
 
 function showImageProbeHelp() {
@@ -137,7 +141,7 @@ async function standardDoctor(args: string[] = []) {
   let fail = 0;
 
   const nodeVersion = process.version;
-  const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0]);
+  const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0] ?? "0", 10);
   if (nodeMajor >= 20) {
     console.log(`  ✓ Node.js ${nodeVersion} (>= 20)`);
     ok++;

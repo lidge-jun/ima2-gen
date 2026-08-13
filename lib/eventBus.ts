@@ -60,13 +60,14 @@ export function subscribe(listener: (ev: BusEvent) => void): () => void {
 }
 
 export function replayOldestId(): number | null {
-  return ring.length > 0 ? ring[0].id : null;
+  return ring.length > 0 ? ring[0]?.id ?? null : null;
 }
 
 /** True when the ring has evicted events the client still expects from Last-Event-ID. */
 export function hasReplayGap(lastEventId: number): boolean {
   if (lastEventId <= 0 || ring.length === 0) return false;
-  const oldest = ring[0].id;
+  const oldest = ring[0]?.id;
+  if (oldest === undefined) return false;
   return lastEventId < oldest - 1;
 }
 

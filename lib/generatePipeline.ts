@@ -578,17 +578,18 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         webSearchEnabled,
         ...(firstRetryMeta || {}),
       };
-      if (count === 1) {
+      const firstImage = images[0];
+      if (count === 1 && firstImage) {
         finishHttpStatus = 200;
-        finishMeta = { filenames: [images[0].filename], imageCount: 1 };
-        logEvent("generate", "saved", { requestId, imageCount: 1, elapsedMs: Date.now() - startTime, filename: images[0].filename, });
+        finishMeta = { filenames: [firstImage.filename], imageCount: 1 };
+        logEvent("generate", "saved", { requestId, imageCount: 1, elapsedMs: Date.now() - startTime, filename: firstImage.filename, });
         succeed({
-          image: images[0].image,
+          image: firstImage.image,
           elapsed,
-          filename: images[0].filename,
+          filename: firstImage.filename,
           requestId,
-          providerUrl: images[0].providerUrl ?? null,
-          createdAt: images[0].createdAt,
+          providerUrl: firstImage.providerUrl ?? null,
+          createdAt: firstImage.createdAt,
           ...extra,
         });
       } else {

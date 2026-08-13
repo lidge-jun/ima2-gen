@@ -287,7 +287,8 @@ function mcpMediaInputs(args: ParsedArgs, context: VideoContext, roles: string[]
   const promotedIndex = !explicitStart && roles.includes("start_image")
     ? parsedRefs.findIndex((reference) => !reference.tag)
     : -1;
-  const promotedStart = promotedIndex >= 0 ? parsedRefs[promotedIndex].filename : undefined;
+  const promoted = promotedIndex >= 0 ? parsedRefs[promotedIndex] : undefined;
+  const promotedStart = promoted?.filename;
   const start = explicitStart ?? promotedStart;
   const references = promotedIndex >= 0
     ? parsedRefs.filter((_reference, index) => index !== promotedIndex)

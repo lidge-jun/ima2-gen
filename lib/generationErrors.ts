@@ -20,7 +20,7 @@ const SAFETY_CODES = new Set(["SAFETY_REFUSAL", "MODERATION_REFUSED", "moderatio
 function has4kSize(size: unknown) {
   if (typeof size !== "string") return false;
   const [w, h] = size.split("x").map((part: string) => Number(part));
-  return Number.isFinite(w) && Number.isFinite(h) && Math.max(w, h) >= 3840;
+  return Number.isFinite(w) && Number.isFinite(h) && w !== undefined && h !== undefined && Math.max(w, h) >= 3840;
 }
 
 export interface UpstreamErr {

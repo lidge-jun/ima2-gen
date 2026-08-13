@@ -53,7 +53,9 @@ async function runRecoverJob(input: {
     }
     setJobPhase(requestId, "downloading");
     publishJobEvent(requestId, "progress", { phase: "downloading" });
-    const download = await deps.download(poll.outputUrls[0], { kind, attempts: 5, baseDelayMs: 4_000 });
+    const outputUrl = poll.outputUrls[0];
+    if (!outputUrl) throw new Error("MCP_OUTPUT_URL_MISSING");
+    const download = await deps.download(outputUrl, { kind, attempts: 5, baseDelayMs: 4_000 });
     await commitMediaResult({
       ctx, deps, requestId, kind,
       tempPath: download.tempPath, cleanup: download.cleanup,

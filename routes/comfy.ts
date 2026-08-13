@@ -8,7 +8,8 @@ function hasExactBodyShape(body: unknown): body is { filename: string } {
   if (!body || typeof body !== "object" || Array.isArray(body)) return false;
   const obj = body as Record<string, unknown>;
   const keys = Object.keys(obj);
-  return keys.length === 1 && ALLOWED_BODY_KEYS.has(keys[0]) && typeof obj.filename === "string";
+  const onlyKey = keys[0];
+  return keys.length === 1 && !!onlyKey && ALLOWED_BODY_KEYS.has(onlyKey) && typeof obj.filename === "string";
 }
 
 function errorPayload(code: string, message: string) {

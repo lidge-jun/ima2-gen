@@ -87,7 +87,9 @@ export function registerMcpMultishotRoutes(app: Express, ctxRaw: RouteRuntimeCon
       });
       setJobPhase(requestId, "downloading");
       publishJobEvent(requestId, "progress", { phase: "downloading" });
-      const download = await downloadMediaResult(result.outputUrls[0], { kind: "video", attempts: 5, baseDelayMs: 4_000 });
+      const outputUrl = result.outputUrls[0];
+      if (!outputUrl) throw new Error("MCP_OUTPUT_URL_MISSING");
+      const download = await downloadMediaResult(outputUrl, { kind: "video", attempts: 5, baseDelayMs: 4_000 });
       await commitMediaResult({
         ctx, deps: { writeSidecar: atomicWriteJson }, requestId, kind: "video",
         tempPath: download.tempPath, cleanup: download.cleanup,
@@ -102,7 +104,7 @@ export function registerMcpMultishotRoutes(app: Express, ctxRaw: RouteRuntimeCon
       });
     } catch (error) {
       const structuredCode = (error as { code?: unknown })?.code;
-      const code = ((typeof structuredCode === "string" && structuredCode) || String((error as Error)?.message ?? error).split(":")[0]).slice(0, 80);
+      const code = ((typeof structuredCode === "string" && structuredCode) || (String((error as Error)?.message ?? error).split(":")[0] ?? "")).slice(0, 80);
       // Secret-scrub (030): tool-error text can embed signed URLs/emails from the provider.
       console.error(`[mcp-multishot ERROR] requestId=${requestId} code=${code} message=${scrubValue(String((error as Error)?.message ?? "").slice(0, 300))}`);
       void logMcpJobError(ctx.config.storage.generatedDir, { requestId, provider }, error);

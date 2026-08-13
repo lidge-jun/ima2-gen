@@ -247,7 +247,8 @@ function appendContentText(content: TextContentPart[] | undefined, parts: string
 }
 
 function combineSignals(signals: AbortSignal[]): AbortSignal {
-  if (signals.length === 1) return signals[0];
+  const only = signals[0];
+  if (signals.length === 1 && only) return only;
   const controller = new AbortController();
   for (const signal of signals) {
     if (signal.aborted) {

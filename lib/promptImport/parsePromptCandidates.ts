@@ -98,6 +98,7 @@ function parseMarkdown(text: string, options: ParseCommonOptions): void {
     const language = (match[1] || "").toLowerCase();
     if (!acceptedFenceLanguages.has(language)) continue;
     ranges.push([match.index ?? 0, (match.index ?? 0) + match[0].length]);
+    if (!match[2]) continue;
     pushCandidate(options.candidates, match[2], {
       ...options,
       name: `${options.baseName} ${options.candidates.length + 1}`,

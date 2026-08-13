@@ -183,7 +183,8 @@ function appendElementSlots(
 export function compileElements(input: CompileElementsInput): CompileElementsOutput {
   const elementIds = uniqueElementIds(input.elementIds);
   const missingElementIds = elementIds.filter((id) => !input.elements.has(id));
-  if (missingElementIds.length && input.missingPolicy !== "collect") throw new UnknownElementIdError(missingElementIds[0]);
+  const missingId = missingElementIds[0];
+  if (missingId && input.missingPolicy !== "collect") throw new UnknownElementIdError(missingId);
   const elements = elementIds.flatMap((id) => {
     const element = input.elements.get(id);
     return element ? [element] : [];

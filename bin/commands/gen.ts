@@ -287,11 +287,13 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
     if (context.explicitOut) target = context.explicitOut;
     else if (context.outDir) target = `${context.outDir}/${defaultOutName(i, norm.images.length)}`;
     else target = `${config.storage.generatedDir}/${defaultOutName(i, norm.images.length)}`;
-    await dataUriToFile(String(norm.images[i].image), target);
+    const image = norm.images[i];
+    if (!image) continue;
+    await dataUriToFile(String(image.image), target);
     paths.push(target);
   }
   if (args.json) json({ ok: true, requestId: norm.requestId, elapsed: norm.elapsed,
-    images: paths.map((path, index) => ({ path, filename: norm.images[index].filename })) });
+    images: paths.map((path, index) => ({ path, filename: norm.images[index]?.filename })) });
   else { for (const path of paths) out(color.green("✓ ") + path); if (norm.elapsed) out(color.dim(`elapsed ${norm.elapsed}s`)); }
 }
 

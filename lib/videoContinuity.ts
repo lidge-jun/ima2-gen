@@ -114,7 +114,7 @@ export function normalizeVideoContinuityLineage(value: unknown): VideoContinuity
     .filter((entry): entry is VideoContinuityEntry => Boolean(entry));
   if (entries.length === 0) return null;
   return {
-    lineageId: stringOrNull(raw.lineageId) ?? `lineage:${entries[0].id}`,
+    lineageId: stringOrNull(raw.lineageId) ?? `lineage:${entries[0]?.id ?? "unknown"}`,
     parentFilename: stringOrNull(raw.parentFilename),
     sourceFrame: "last",
     maxEntries: 4,
@@ -124,11 +124,12 @@ export function normalizeVideoContinuityLineage(value: unknown): VideoContinuity
 }
 
 export function trimLineageEntries(entries: VideoContinuityEntry[]): VideoContinuityEntry[] {
-  const kept = entries.length <= 4 ? entries : [entries[0], ...entries.slice(-3)];
+  const start = entries[0];
+  const kept = entries.length <= 4 || !start ? entries : [start, ...entries.slice(-3)];
   return kept.map((entry, index) => ({
     ...entry,
     ordinal: index + 1,
-    role: index === 0 ? "start" : index === kept.length - 1 ? entry.role : "ancestor",
+    role: index === 0 ? "start" : index === kept.length - 1 ? (entry?.role ?? "current") : "ancestor",
   }));
 }
 

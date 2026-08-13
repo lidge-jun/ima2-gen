@@ -94,6 +94,7 @@ export async function retryPromptOnlyJsonImage({
 
   for (let attempt = 1; attempt <= attemptPlans.length; attempt++) {
     const plan = attemptPlans[attempt - 1];
+    if (!plan) break;
     retryMeta = { ...baseMeta, ...plan };
     logEvent("oauth", "retry_attempt", { requestId, attempt, maxRetries: attemptPlans.length, ...retryMeta });
     const userText = buildUserTextPrompt(prompt, mode, { webSearchEnabled: false, size });

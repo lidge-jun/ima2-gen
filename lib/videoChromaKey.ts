@@ -65,11 +65,18 @@ export async function sampleVideoKeyColor(srcAbs: string): Promise<{ r: number; 
       for (let y = py; y < Math.min(py + patch, info.height); y++) {
         for (let x = px; x < Math.min(px + patch, info.width); x++) {
           const i = (y * info.width + x) * info.channels;
-          rs.push(data[i]); gs.push(data[i + 1]); bs.push(data[i + 2]);
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          if (r === undefined || g === undefined || b === undefined) continue;
+          rs.push(r); gs.push(g); bs.push(b);
         }
       }
     }
-    const median = (arr: number[]) => [...arr].sort((a, b) => a - b)[Math.floor(arr.length / 2)];
+    const median = (arr: number[]) => {
+      const sorted = [...arr].sort((a, b) => a - b);
+      return sorted[Math.floor(arr.length / 2)] ?? 0;
+    };
     return { r: median(rs), g: median(gs), b: median(bs) };
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});

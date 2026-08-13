@@ -15,12 +15,14 @@ async function enforceAndValidateGifControl(input: SpriteGifInput): Promise<numb
   const data = await readFile(input.outputPath); let controls = 0;
   for (let index = 0; index + 7 < data.length; index++) {
     if (data[index] !== 0x21 || data[index + 1] !== 0xf9 || data[index + 2] !== 0x04) continue;
-    data[index + 3] = (data[index + 3] & 0xe3) | (2 << 2) | 1; controls++;
+    const packed = data[index + 3];
+    if (packed === undefined) continue;
+    data[index + 3] = (packed & 0xe3) | (2 << 2) | 1; controls++;
   }
   if (!controls) throw Object.assign(new Error("GIF has no frame control extensions"), { code: "SPRITE_GIF_VALIDATION_FAILED", status: 500 });
   await writeFile(input.outputPath, data);
   const verified = await readFile(input.outputPath); let checked = 0;
-  for (let index = 0; index + 7 < verified.length; index++) if (verified[index] === 0x21 && verified[index + 1] === 0xf9 && verified[index + 2] === 0x04) { const packed = verified[index + 3]; if (((packed >> 2) & 7) !== 2 || (packed & 1) !== 1) throw Object.assign(new Error("GIF disposal/transparency validation failed"), { code: "SPRITE_GIF_VALIDATION_FAILED", status: 500 }); checked++; }
+  for (let index = 0; index + 7 < verified.length; index++) if (verified[index] === 0x21 && verified[index + 1] === 0xf9 && verified[index + 2] === 0x04) { const packed = verified[index + 3]; if (packed === undefined || ((packed >> 2) & 7) !== 2 || (packed & 1) !== 1) throw Object.assign(new Error("GIF disposal/transparency validation failed"), { code: "SPRITE_GIF_VALIDATION_FAILED", status: 500 }); checked++; }
   return checked;
 }
 

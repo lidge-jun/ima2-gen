@@ -68,7 +68,7 @@ function emptyRegistry(): DiscoveryRegistry {
 function normalizeRepoFullName(repo: unknown): string {
   const value = String(repo || "").trim();
   const parts = value.split("/");
-  if (parts.length !== 2 || !OWNER_REPO_RE.test(parts[0]) || !OWNER_REPO_RE.test(parts[1])) {
+  if (parts.length !== 2 || !parts[0] || !parts[1] || !OWNER_REPO_RE.test(parts[0]) || !OWNER_REPO_RE.test(parts[1])) {
     throw promptImportError("GITHUB_DISCOVERY_REVIEW_INVALID", "Review repo must be owner/repo");
   }
   return `${parts[0]}/${parts[1]}`;

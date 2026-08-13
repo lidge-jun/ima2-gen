@@ -70,11 +70,16 @@ export function setNestedKey(obj: Record<string, unknown>, dotKey: string, value
   let cur: Record<string, unknown> = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
+    if (part === undefined) return;
     const next = cur[part];
     if (next == null || typeof next !== "object" || Array.isArray(next)) cur[part] = {};
-    cur = cur[part] as Record<string, unknown>;
+    const child = cur[part];
+    if (child == null || typeof child !== "object" || Array.isArray(child)) return;
+    cur = child as Record<string, unknown>;
   }
-  cur[parts[parts.length - 1]] = value;
+  const last = parts[parts.length - 1];
+  if (last === undefined) return;
+  cur[last] = value;
 }
 
 export function deleteNestedKey(obj: Record<string, unknown>, dotKey: string): boolean {
@@ -82,11 +87,13 @@ export function deleteNestedKey(obj: Record<string, unknown>, dotKey: string): b
   let cur: unknown = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     if (cur == null || typeof cur !== "object") return false;
-    cur = (cur as Record<string, unknown>)[parts[i]];
+    const part = parts[i];
+    if (part === undefined) return false;
+    cur = (cur as Record<string, unknown>)[part];
   }
   if (cur == null || typeof cur !== "object") return false;
   const last = parts[parts.length - 1];
-  if (!(last in cur)) return false;
+  if (last === undefined || !(last in cur)) return false;
   delete (cur as Record<string, unknown>)[last];
   return true;
 }

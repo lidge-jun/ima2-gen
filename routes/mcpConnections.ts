@@ -14,7 +14,7 @@ function typedError(res: Response, status: number, code: string, message: string
 }
 
 function errorCode(error: unknown): string {
-  return String((error as Error)?.message ?? error).split(":")[0];
+  return String((error as Error)?.message ?? error).split(":")[0] ?? "UNKNOWN";
 }
 
 /** Connect/refresh success path (040): capture live tools -> snapshot ingest ->

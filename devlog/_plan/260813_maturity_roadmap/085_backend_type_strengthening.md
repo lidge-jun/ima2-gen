@@ -29,7 +29,7 @@ tags: [ima2-gen, devlog, phase, typescript]
 | 현재 (`strict`만) | **0** |
 | `noUncheckedIndexedAccess`만 | 159 |
 | `exactOptionalPropertyTypes`만 | 148 |
-| 둘 다 | **312** |
+| 둘 다 | **312** (2026-08-13 재측정 313) |
 
 159 + 148 = 307 < 312이므로 **5건은 두 플래그의 상호작용**에서 나온다. 하나씩
 켜도 나머지가 남는다는 뜻이고, 순차 도입이 가능하다는 근거이기도 하다.
@@ -54,12 +54,12 @@ tags: [ima2-gen, devlog, phase, typescript]
 | `lib/spriteAtlasCompose.ts` | 10 |
 | `lib/generatePipeline.ts` | 9 |
 
-컴파일 대상은 **300개 파일**이고, 312건의 오류는 그중 **91개 파일**에 흩어져
+컴파일 대상은 **300개 파일**이고, 312건의 오류는 그중 **91개 파일(재측정 92)**에 흩어져
 있다(`tsc --listFilesOnly` 및 오류 경로 유니크 카운트). 초안이 적은 "대상 파일
 296개"는 컴파일 대상과 영향 파일을 뒤섞은 수치였다(A phase 감사).
 
 가장 많이 걸린 파일이 12건이므로 **한 파일에 몰려 있지 않다**. 이것이 작업의
-성격을 결정한다: 국소 리팩터가 아니라 넓고 얕은 수정이며, 91개 파일을 배치로
+성격을 결정한다: 국소 리팩터가 아니라 넓고 얕은 수정이며, 91개 파일(재측정 92)을 배치로
 나눠야 리뷰가 가능하다.
 
 ## 순서: 한 번에 켜지 않는다
@@ -131,3 +131,8 @@ tags: [ima2-gen, devlog, phase, typescript]
 측정 절차를 남긴다. `./tsconfig.json`을 백업하고 플래그를 넣은 뒤
 `npx tsc --noEmit -p tsconfig.json`의 `error TS` 줄 수를 세고 원복했다.
 이 유닛의 어떤 문서보다 재현이 쉬운 숫자다.
+
+
+## 재측정 (2026-08-13)
+
+둘 다 313 / 92 files. noUncheckedIndexedAccess만 159 / 55 files. as-ws baseline 1131.

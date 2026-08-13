@@ -136,7 +136,7 @@ export function buildToolsList(entries: ToolContract[], liveByProvider: Record<s
       namespace: entry.namespace,
       availability,
       executable: Boolean(executionBindingFor(entry)) || entry.namespace === "ima2",
-      description: (entry.description || "").split("\n")[0].slice(0, 140),
+      description: ((entry.description || "").split("\n")[0] ?? "").slice(0, 140),
     };
   });
 }

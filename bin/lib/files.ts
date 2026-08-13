@@ -17,7 +17,7 @@ export async function fileToDataUri(path: string): Promise<string> {
 
 export async function dataUriToFile(dataUri: string, outPath: string): Promise<string> {
   const m = dataUri.match(/^data:([^;]+);base64,(.+)$/);
-  const raw = m ? m[2] : dataUri;
+  const raw = (m ? m[2] : dataUri) ?? "";
   await mkdir(dirname(outPath) || ".", { recursive: true });
   await writeFile(outPath, Buffer.from(raw, "base64"));
   return outPath;

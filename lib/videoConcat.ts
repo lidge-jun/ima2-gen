@@ -43,6 +43,7 @@ export async function concatVideos(inputPaths: string[], outputPath: string, opt
 
   const probes = await Promise.all(inputPaths.map((p) => probe(p, options.signal)));
   const first = probes[0];
+  if (!first) throw new Error("CONCAT_NORMALIZE_REQUIRED");
   if (probes.some((p) => p.codec !== first.codec || p.width !== first.width || p.height !== first.height)) {
     throw new Error("CONCAT_NORMALIZE_REQUIRED");
   }

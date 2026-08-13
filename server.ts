@@ -510,7 +510,7 @@ export async function startServer(overrides: StartServerOverrides = {}) {
   advertise(ctx);
   try {
     const s = ensureDefaultSession();
-    console.log(`[db] default session: ${s.id} (${s.title})`);
+    if (s) console.log(`[db] default session: ${s.id} (${s.title})`);
   } catch (e) {
     const err = errInfo(e);
     console.error("[db] bootstrap failed:", err.message);

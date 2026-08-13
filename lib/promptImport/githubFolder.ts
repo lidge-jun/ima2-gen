@@ -118,6 +118,9 @@ function fromUrl(input: string): GitHubFolderSource | null {
     throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Only github.com folder URLs are supported", 400);
   }
   const [owner, repo, marker, rawRef, ...pathParts] = url.pathname.split("/").filter(Boolean);
+  if (!owner || !repo) {
+    throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Only github.com folder URLs are supported", 400);
+  }
   assertOwnerRepo(owner, repo);
   if (marker !== "tree") {
     throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Enter a GitHub folder URL or owner/repo:path/", 422);
@@ -133,6 +136,9 @@ function fromShorthand(input: string): GitHubFolderSource {
     throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Enter a GitHub folder URL or owner/repo:path/", 422);
   }
   const [, owner, repo, rawRef, rawPath] = match;
+  if (!owner || !repo || rawPath === undefined) {
+    throw promptImportError("GITHUB_FOLDER_UNSUPPORTED", "Enter a GitHub folder URL or owner/repo:path/", 422);
+  }
   assertOwnerRepo(owner, repo);
   const ref = rawRef ? safeDecode(rawRef.trim()) : "main";
   if (ref.includes("/")) {

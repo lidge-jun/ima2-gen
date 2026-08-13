@@ -44,7 +44,9 @@ async function copyFilesToTarget(
 ): Promise<string[]> {
   const saved: string[] = [];
   for (let i = 0; i < filenames.length; i++) {
-    const name = basename(filenames[i]);
+    const current = filenames[i];
+    if (!current) continue;
+    const name = basename(current);
     const src = join(generatedDir, name);
     let dest: string;
     if (target.explicitOut && i === 0) {

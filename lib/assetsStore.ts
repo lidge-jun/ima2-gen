@@ -370,7 +370,7 @@ export function listAssets(query: ListAssetsQuery = {}): {
   const page = rows.slice(0, limit);
   const nextCursor =
     rows.length > limit && page.length > 0
-      ? encodeCursor(page[page.length - 1].createdAt, page[page.length - 1].id)
+      ? encodeCursor(page[page.length - 1]?.createdAt ?? 0, page[page.length - 1]?.id ?? "")
       : null;
   return { assets: page.map(toRecord), nextCursor };
 }

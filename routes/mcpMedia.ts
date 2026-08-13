@@ -211,6 +211,7 @@ async function runMediaAction(input: {
     // Native runway action: upload source -> action plan -> poll -> commit.
     const manager = ctx.mcpConnectionManager!;
     const source = input.resolvedFiles[0];
+    if (!source) throw new Error("missing source file");
     setJobPhase(requestId, "uploading");
     publishJobEvent(requestId, "progress", { phase: "uploading" });
     const ext = extname(source).toLowerCase();
@@ -261,11 +262,13 @@ async function runMediaAction(input: {
     setJobPhase(requestId, "downloading");
     publishJobEvent(requestId, "progress", { phase: "downloading" });
     const kind = input.operation === "image.upscale" ? "image" as const : "video" as const;
-    const download = await deps.download(result.outputUrls[0], { kind, attempts: 5, baseDelayMs: 4_000 });
+    const outputUrl = result.outputUrls[0];
+    if (!outputUrl) throw new Error("MCP_OUTPUT_URL_MISSING");
+    const download = await deps.download(outputUrl, { kind, attempts: 5, baseDelayMs: 4_000 });
     await commitMediaResult({
       ctx, deps, requestId, kind,
       tempPath: download.tempPath, cleanup: download.cleanup,
-      ext: extensionFor(kind, download.contentType, result.outputUrls[0]),
+      ext: extensionFor(kind, download.contentType, outputUrl),
       meta: {
         requestId, mediaType: kind, provider: input.provider, providerTransport: "mcp-streamable-http",
         providerTaskId: result.taskId, providerUrl: download.sanitizedUrl,
@@ -567,7 +570,7 @@ async function runMcpMediaJob(input: {
     taskId = result.taskId;
     void appendMcpJobLog(ctx.config.storage.generatedDir, {
       event: "taskId", requestId, provider: adapter.provider, taskId,
-      sanitizedUrl: stripQuery(result.outputUrls[0]) ?? undefined,
+      sanitizedUrl: stripQuery(result.outputUrls[0] ?? "") ?? undefined,
     });
 
     setJobPhase(requestId, "downloading");
@@ -576,7 +579,9 @@ async function runMcpMediaJob(input: {
       event: "succeeded", requestId, provider: adapter.provider,
       taskId: result.taskId, sanitizedUrl: stripQuery(result.outputUrls[0]) ?? undefined,
     });
-    const download = await deps.download(result.outputUrls[0], { kind, attempts: 5, baseDelayMs: 4_000 });
+    const generatedUrl = result.outputUrls[0];
+    if (!generatedUrl) throw new Error("MCP_OUTPUT_URL_MISSING");
+    const download = await deps.download(generatedUrl, { kind, attempts: 5, baseDelayMs: 4_000 });
     const referenceParents = [
       ...(input.localReferences ?? []).map((entry) => ({
         filename: basename(entry.path), role: "image-reference" as const, ...(entry.tag ? { tag: entry.tag } : {}),
@@ -589,7 +594,7 @@ async function runMcpMediaJob(input: {
       ctx, deps, requestId, kind,
       tempPath: download.tempPath,
       cleanup: download.cleanup,
-      ext: extensionFor(kind, download.contentType, result.outputUrls[0]),
+      ext: extensionFor(kind, download.contentType, generatedUrl),
       meta: {
         requestId, prompt, userPrompt: prompt, mediaType: kind,
         provider: adapter.provider, providerTransport: "mcp-streamable-http",

@@ -71,8 +71,10 @@ function parseAgyOutput(stdout: string): { artifactPath: string; ext: string } {
   const resultLine = lines.find((l) => l.startsWith("RESULT|"));
   if (resultLine) {
     const parts = resultLine.split("|");
-    if (parts.length >= 3) {
-      return { artifactPath: parts[1].trim(), ext: parts[2].trim() };
+    const artifactPath = parts[1];
+    const ext = parts[2];
+    if (parts.length >= 3 && artifactPath && ext) {
+      return { artifactPath: artifactPath.trim(), ext: ext.trim() };
     }
     throw agyError(`Malformed RESULT line: ${resultLine}`, 502, "AGY_MALFORMED_RESULT");
   }
@@ -256,6 +258,7 @@ async function writeRefsToTempFiles(refs: RefDetail[]): Promise<{ paths: string[
   const paths: string[] = [];
   for (let i = 0; i < refs.length; i++) {
     const ref = refs[i];
+    if (!ref) continue;
     const mime = ref.detectedMime || ref.declaredMime || detectImageMimeFromB64(ref.b64) || "image/png";
     const ext = MIME_TO_EXT[mime] || "png";
     const p = join(dir, `ref_${i}.${ext}`);

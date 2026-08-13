@@ -300,8 +300,10 @@ export async function generateViaMinimax(
       b64 = typeof imageBase64[0] === "string" ? imageBase64[0] : "";
       mime = validateMinimaxImageBytes(b64);
     } else if (imageUrls.length > 0) {
-      providerUrl = imageUrls[0];
-      const downloaded = await downloadMinimaxImage(providerUrl, combinedSignal);
+      const firstUrl = imageUrls[0];
+      if (!firstUrl) throw minimaxError("MiniMax returned no image payload", 502, "MINIMAX_EMPTY_IMAGE");
+      providerUrl = firstUrl;
+      const downloaded = await downloadMinimaxImage(firstUrl, combinedSignal);
       b64 = downloaded.b64;
       mime = downloaded.mime;
     }
