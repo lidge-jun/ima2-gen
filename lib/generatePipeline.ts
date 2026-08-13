@@ -412,7 +412,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         image: string;
         filename: string;
         revisedPrompt: any;
-        providerUrl?: string;
+        providerUrl?: string | undefined;
         createdAt: number;
       }> = [];
       let totalUsage: Record<string, number> | null = null;
@@ -427,13 +427,13 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             : mime;
           const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(resultMime) : effectiveFormat;
           const retryValue = r.value as typeof r.value & {
-            retryKind?: string;
-            initialEventCount?: number;
-            initialEventTypes?: unknown;
-            hadReferences?: boolean;
-            referencesDroppedOnRetry?: boolean;
-            developerPromptDroppedOnRetry?: boolean;
-            webSearchDroppedOnRetry?: boolean;
+            retryKind?: string | undefined;
+            initialEventCount?: number | undefined;
+            initialEventTypes?: unknown | undefined;
+            hadReferences?: boolean | undefined;
+            referencesDroppedOnRetry?: boolean | undefined;
+            developerPromptDroppedOnRetry?: boolean | undefined;
+            webSearchDroppedOnRetry?: boolean | undefined;
           };
           if (!firstRetryMeta && retryValue.retryKind) {
             firstRetryMeta = {

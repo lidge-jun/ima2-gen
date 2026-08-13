@@ -20,12 +20,12 @@ const VALID_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);
 const VALID_ASPECT_RATIOS = new Set(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"]);
 const MCP_VIDEO_TIMEOUT_MS = 12 * 60_000 + 120_000 + 30_000;
 
-type Parameter = { name: string; type: string; options?: unknown[]; min?: number; max?: number };
+type Parameter = { name: string; type: string; options?: unknown[] | undefined; min?: number | undefined; max?: number | undefined };
 type ModelCapabilities = { parameters: Parameter[]; aspectRatios: string[]; inputRoles: string[] };
 type ResolvedTarget = Extract<ResolveResult, { ok: true }>;
 type VideoContext = { server: { base: string }; catalog: ModelCatalog; target: ResolvedTarget; prompt: string };
 type CoreOptions = { duration: number; resolution: string; aspectRatio: string };
-type McpImageReference = { filename: string; tag?: string };
+type McpImageReference = { filename: string; tag?: string | undefined };
 
 const MCP_LANES = new Set(["runway", "higgsfield"]);
 
@@ -81,7 +81,7 @@ function resolveVideoTarget(args: ParsedArgs, catalog: ModelCatalog): ResolvedTa
     model,
     provider: args.provider ? String(args.provider) : undefined,
   }, catalog, loadCliDefaults());
-  if (!result.ok) fail({ json: Boolean(args.json), code: result.code, message: result.message, extra: result.extra });
+  if (!result.ok) fail({ json: Boolean(args.json), code: result.code, message: result.message, ...(result.extra ? { extra: result.extra } : {}) });
   return result;
 }
 
@@ -118,7 +118,7 @@ async function coreReferences(serverBase: string, refs: string[]): Promise<strin
     if (path === "@last") resolved = join(config.storage.generatedDir, resolved);
     return (await readFile(resolved)).toString("base64");
   })).catch((error: unknown) => {
-    const typed = error as { code?: string; message?: string };
+    const typed = error as { code?: string | undefined; message?: string | undefined };
     return die(typed.code === "HISTORY_EMPTY" ? 5 : 1, typed.message || String(error));
   });
 }
@@ -337,7 +337,7 @@ async function runMcpVideo(argv: string[], args: ParsedArgs, context: VideoConte
     if (args.json) json({ ok: true, requestId, filename: result.filename, url: result.url, ...(target ? { path: target } : {}) });
     else out(color.green("✓ ") + (target ?? `${context.server.base}${result.url}`));
   } catch (error) {
-    const typed = error as Error & { code?: string };
+    const typed = error as Error & { code?: string | undefined };
     fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: 1 });
   }
 }

@@ -57,10 +57,9 @@ describe("current image actions and readiness popup contract", () => {
     assert.match(actions, /Date\.now\(\) - actionImage\.createdAt < PROVIDER_URL_TTL_MS/);
     assert.match(actions, /Date\.now\(\) - actionImage\.createdAt >= PROVIDER_URL_TTL_MS/);
     assert.match(actions, /continueFromItemAsUrl/);
-    assert.match(route, /providerUrl: images\[0\]\.providerUrl \?\? null/);
+    assert.match(route, /providerUrl: firstImage\.providerUrl \?\? null/);
     assert.match(route, /\.\.\.\(providerUrl \? \{ providerUrl \} : \{\}\)/);
     assert.match(store, /providerUrl: res\.providerUrl \?\? null/);
     assert.match(store, /createdAt: res\.createdAt \?\? Date\.now\(\)/);
   });
 });
-

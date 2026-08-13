@@ -3,12 +3,12 @@ import { ulid } from "ulid";
 import { getDb } from "./db.js";
 import { nodeTemplateSeeds } from "./nodeTemplateSeeds.js";
 
-export type SerializedTemplateNode = { id: string; type?: string; position?: { x: number; y: number }; width?: number; height?: number; data?: Record<string, unknown>; [key: string]: unknown };
-export type SerializedTemplateEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null; label?: string; [key: string]: unknown };
-export interface NodeTemplateGraph { nodes: SerializedTemplateNode[]; edges: SerializedTemplateEdge[]; viewport?: { x: number; y: number; zoom: number }; diagnostics?: string[]; manifest?: { requiredPlaceholders: string[]; expectedTerminalResults: number } }
-export interface NodeTemplateRecord { id: string; name: string; description: string; source: "seed" | "user"; graph: NodeTemplateGraph; thumbnail?: string; tags: string[]; version: 1; createdAt: number; updatedAt: number }
+export type SerializedTemplateNode = { id: string; type?: string | undefined; position?: { x: number; y: number }; width?: number | undefined; height?: number | undefined; data?: Record<string, unknown>; [key: string]: unknown };
+export type SerializedTemplateEdge = { id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null; label?: string | undefined; [key: string]: unknown };
+export interface NodeTemplateGraph { nodes: SerializedTemplateNode[]; edges: SerializedTemplateEdge[]; viewport?: { x: number; y: number; zoom: number } | undefined; diagnostics?: string[] | undefined; manifest?: { requiredPlaceholders: string[]; expectedTerminalResults: number } | undefined }
+export interface NodeTemplateRecord { id: string; name: string; description: string; source: "seed" | "user"; graph: NodeTemplateGraph; thumbnail?: string | undefined; tags: string[]; version: 1; createdAt: number; updatedAt: number }
 export interface StripTemplateOptions { preservePrompt: boolean; preserveProvider: boolean }
-export type CreateNodeTemplateInput = { name: unknown; description?: unknown; graph: NodeTemplateGraph; thumbnail?: unknown; tags?: unknown; stripOptions?: StripTemplateOptions };
+export type CreateNodeTemplateInput = { name: unknown; description?: unknown | undefined; graph: NodeTemplateGraph; thumbnail?: unknown | undefined; tags?: unknown | undefined; stripOptions?: StripTemplateOptions | undefined };
 export type UpdateNodeTemplateInput = Partial<CreateNodeTemplateInput>;
 export interface NodeTemplateStore { list(): Promise<NodeTemplateRecord[]>; get(id: string): Promise<NodeTemplateRecord | null>; create(input: CreateNodeTemplateInput): Promise<NodeTemplateRecord>; update(id: string, patch: UpdateNodeTemplateInput): Promise<NodeTemplateRecord>; remove(id: string): Promise<void>; instantiate(id: string): Promise<NodeTemplateGraph> }
 

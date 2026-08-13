@@ -322,13 +322,13 @@ export function buildRunwayActionCall(action: RunwayMediaAction, inputs: EditVid
 
 /** Multishot video plan (wp5 053). */
 export function buildMultishotCall(input: {
-  storyPrompt?: string;
-  shots?: string[];
-  duration?: 5 | 10 | 15;
-  aspectRatio?: string;
-  resolution?: "720p" | "1080p";
-  sound?: boolean;
-  firstSceneImageUrl?: string;
+  storyPrompt?: string | undefined;
+  shots?: string[] | undefined;
+  duration?: 5 | 10 | 15 | undefined;
+  aspectRatio?: string | undefined;
+  resolution?: "720p" | "1080p" | undefined;
+  sound?: boolean | undefined;
+  firstSceneImageUrl?: string | undefined;
 }): ToolCallPlan {
   const mode = input.shots && input.shots.length > 0 ? "custom" : "auto";
   if (mode === "custom") {

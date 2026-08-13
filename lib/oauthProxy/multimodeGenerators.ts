@@ -194,7 +194,7 @@ export async function editViaOAuth(prompt: string, imageB64: string, quality: st
   const webSearchEnabled = resolveWebSearchEnabled(options);
   const textPrompt = buildEditTextPrompt(prompt, mode, { webSearchEnabled, size });
   const imageForRequest = await compressReferenceB64ForOAuth(imageB64, {
-    maxB64Bytes: ctx.config?.limits?.maxRefB64Bytes,
+    ...(ctx.config?.limits?.maxRefB64Bytes !== undefined ? { maxB64Bytes: ctx.config.limits.maxRefB64Bytes } : {}),
     force: true,
   });
   const references = Array.isArray(options.references) ? options.references : [];
@@ -231,7 +231,7 @@ export async function editViaOAuth(prompt: string, imageB64: string, quality: st
     const res = await fetchOAuth(`${oauthUrl}/v1/responses`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      signal: timeout.signal,
+      ...(timeout.signal ? { signal: timeout.signal } : {}),
       body: JSON.stringify({
         model,
         input: [

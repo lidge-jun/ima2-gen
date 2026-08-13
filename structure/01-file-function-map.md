@@ -75,7 +75,7 @@ routes/
 | `server.ts` | 567 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
 | `config.ts` | 405 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 91 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
-| `routes/mcpMultishot.ts` | 114 | Multishot (multi-scene) video generation route via Runway MCP |
+| `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 34 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
 | `routes/generate.ts` | 13 | Classic generation API route wiring |
 | `routes/edit.ts` | 451 | Edit API, mask validation, cancellation, OAuth/API edit response save, provider/web-search/reasoning-effort plumbing |
@@ -89,10 +89,10 @@ routes/
 | `routes/health.ts` | 125 | Providers, health, OAuth status, inflight list/cancel for classic/node/multimode jobs, billing |
 | `routes/mcpConnections.ts` | 164 | MCP provider list/status/connect/callback/refresh/disconnect/model routes; truthful state-to-HTTP mapping and secret-free responses |
 | `routes/storage.ts` | 48 | Gallery storage status and generated-folder open action |
-| `routes/metadata.ts` | 78 | `/api/metadata/read` for embedded XMP image metadata extraction |
+| `routes/metadata.ts` | 81 | `/api/metadata/read` for embedded XMP image metadata extraction |
 | `routes/annotations.ts` | 119 | `GET/PUT/DELETE /api/annotations/:filename` for canvas annotation overlays |
 | `routes/canvasVersions.ts` | 100 | `POST/PUT /api/canvas-versions` for canvas version snapshots |
-| `routes/comfy.ts` | 44 | `POST /api/comfy/export-image` ComfyUI bridge export |
+| `routes/comfy.ts` | 45 | `POST /api/comfy/export-image` ComfyUI bridge export |
 | `routes/prompts.ts` | 429 | Prompt library CRUD, favorites, import/export, and folder management |
 | `routes/promptImport.ts` | 380 | Prompt library preview/commit import API plus PR2 curated search, PR3 GitHub folder browse/preview, and PR4 discovery review endpoints |
 | `routes/cardNews.ts` | 213 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
@@ -101,12 +101,12 @@ routes/
 | `routes/agent.ts` | 325 | Agent Mode API — sessions, turns, durable queue, compact, manifest, tools (`/api/agent/*`); backed by `lib/agent*.ts`; no CLI wrapper |
 | `routes/promptBuilder.ts` | 38 | `POST /api/prompt-builder/chat` prompt-builder assistant (`lib/promptBuilder/client.ts`); wrapped by `ima2 prompt build` |
 | `routes/events.ts` | 90 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat |
-| `lib/eventBus.ts` | 83 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, `replaySince`, `hasReplayGap` |
+| `lib/eventBus.ts` | 84 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, `replaySince`, `hasReplayGap` |
 | `lib/ssePublish.ts` | 17 | `publishJobEvent` — terminal `done` suppression after cancel (cancel↔done race guard) |
 | `ui/src/lib/eventChannel.ts` | 156 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
 | `ui/src/lib/sseStreamError.ts` | 34 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
-| `bin/ima2.ts` | 522 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
-| `bin/commands/gen.ts` | 320 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
+| `bin/ima2.ts` | 526 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
+| `bin/commands/gen.ts` | 322 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
 | `bin/commands/edit.ts` | 168 | CLI image-edit client with provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, and output options |
 | `bin/commands/multimode.ts` | 212 | CLI multimode SSE client with provider override, references, prompt mode, incremental image save, timeout recovery, web-search, reasoning-effort, and session options |
 | `bin/commands/node.ts` | 173 | CLI node-mode generate/show client with references, provider override, parent node, web-search, reasoning-effort, and SSE support |
@@ -120,11 +120,11 @@ routes/
 | `bin/commands/cardnews.ts` | 250 | CLI dev-gated card-news client |
 | `bin/commands/config.ts` | 187 | CLI config get/set client |
 | `bin/commands/observability.ts` | 177 | Shared CLI handler for `storage`, `billing`, `providers`, `oauth`, and `inflight` aliases (`ima2.ts` routes those commands here) |
-| `bin/commands/doctor.ts` | 277 | CLI diagnostics: storage, OAuth, providers, image probe |
+| `bin/commands/doctor.ts` | 281 | CLI diagnostics: storage, OAuth, providers, image probe |
 | `bin/commands/grok.ts` | 91 | Grok OAuth login and status helpers |
 | `bin/commands/defaults.ts` | 268 | CLI default provider/model/size/reasoning-effort get/set |
 | `bin/commands/capabilities.ts` | 111 | CLI wrapper for `GET /api/capabilities` |
-| `bin/commands/skill.ts` | 400 | CLI packaged-skill reader: `skill [ls|<name>] [path] [--json]` over KNOWN_SKILLS (ima2/front/uiux) |
+| `bin/commands/skill.ts` | 402 | CLI packaged-skill reader: `skill [ls|<name>] [path] [--json]` over KNOWN_SKILLS (ima2/front/uiux) |
 | `bin/commands/backfillThumbs.ts` | 35 | Gallery thumbnail backfill command |
 | `bin/commands/cancel.ts` | 49 | Inflight cancel client |
 | `bin/commands/ls.ts` | 65 | History list client (legacy alias); supports session and server-side favorites filtering via `favoritesOnly=1` |
@@ -134,7 +134,7 @@ routes/
 | `bin/commands/ping.ts` | 32 | Server health probe client |
 | `bin/lib/client.ts` | 179 | Server discovery, HTTP request wrapper (connection: close, cleared timeouts), response normalization |
 | `bin/lib/platform.ts` | 129 | Browser-open and binary-resolution helpers |
-| `bin/lib/args.ts` | 93 | Dependency-free argv parser |
+| `bin/lib/args.ts` | 94 | Dependency-free argv parser |
 | `bin/lib/files.ts` | 40 | Data URI file conversion and output naming |
 | `bin/lib/output.ts` | 121 | Terminal output, JSON, exit-code mapping, natural-exit (no process.exit — Windows safe) |
 | `bin/lib/error-hints.ts` | 24 | CLI error hint formatting |
@@ -158,7 +158,7 @@ routes/
 | `lib/errorClassify.ts` | 110 | Upstream/OAuth error classifier for stable error codes, including provider validation errors |
 | `lib/generationErrors.ts` | 256 | Generation error normalization, retry classification, status mapping |
 | `lib/historyList.ts` | 200 | History reconstruction from generated assets, sidecars, embedded XMP metadata fallback, session-aware rows |
-| `lib/videoContinuity.ts` | 192 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
+| `lib/videoContinuity.ts` | 193 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
 | `lib/videoFrameExtract.ts` | 100 | Generated-dir-safe MP4 validation and ffmpeg frame extraction for video frame/analyze/continue workflows |
 | `lib/videoGenerationRequest.ts` | 163 | Shared generate-request contract: mode inference, mutually-exclusive source guard, and duration/resolution/aspect defaults for UI, CLI, agent, and route |
 | `lib/grokVideoAdapter.ts` | 340 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
@@ -169,8 +169,8 @@ routes/
 | `lib/runtimePorts.ts` | 106 | Port probing, fallback binding, and OAuth ready URL parsing |
 | `lib/mcp/tokenStore.ts` | 325 | Versioned 0600 MCP token records, endpoint/origin binding inspection, revision/tombstone CAS, and PID+nonce recovery lock |
 | `lib/mcp/oauthProvider.ts` | 150 | SDK OAuth provider, memory-only PKCE/state, bound credential persistence, scoped invalidation, and legacy binding migration |
-| `lib/mcp/connectionRuntime.ts` | 122 | MCP session/connection identity helpers, restore inspection, terminal/session-invalid error classification, and bounded concurrency |
-| `lib/mcp/connectionManager.ts` | 524 | Generation/epoch-safe connect, callback, refresh, disconnect, post-listen restore, budgeted auto-reconnect (3 consecutive drops without RPC), tool calls (with error content capture), and shutdown |
+| `lib/mcp/connectionRuntime.ts` | 124 | MCP session/connection identity helpers, restore inspection, terminal/session-invalid error classification, and bounded concurrency |
+| `lib/mcp/connectionManager.ts` | 536 | Generation/epoch-safe connect, callback, refresh, disconnect, post-listen restore, budgeted auto-reconnect (3 consecutive drops without RPC), tool calls (with error content capture), and shutdown |
 | `lib/mcp/characterRefs.ts` | 41 | Character provider binding resolution for MCP generate — element load, binding validation, refs expansion without trimming |
 | `lib/mcp/shutdown.ts` | 24 | Post-listen restore activation plus concurrent HTTP/MCP shutdown coordination and grace bound |
 | `lib/mcp/snapshotPipeline.ts` | 113 | Generation/epoch-safe live tool snapshot ingest and stale-result suppression |
@@ -179,7 +179,7 @@ routes/
 | `lib/oauthProxy/index.ts` | 29 | Public surface — re-exports generators, streams, prompts, references, runtime, and shared types |
 | `lib/oauthProxy/generators.ts` | 229 | OAuth Responses single-image generation and stable generator exports |
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
-| `lib/generatePipeline.ts` | 640 | Classic generation pipeline, provider retry, persistence, background-preset prompt shaping, and event publication |
+| `lib/generatePipeline.ts` | 641 | Classic generation pipeline, provider retry, persistence, background-preset prompt shaping, and event publication |
 | `lib/backgroundPresets.ts` | 47 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
 | `lib/multimodePipeline.ts` | 573 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
@@ -193,7 +193,7 @@ routes/
 | `lib/oauthProxy/errors.ts` | 129 | OAuth-specific error codes and normalization |
 | `lib/oauthProxy/types.ts` | 10 | Shared OAuth proxy types (re-exported from `index`) |
 | `lib/promptSafetyPolicy.ts` | 3 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
-| `lib/responsesImageAdapter.ts` | 478 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
+| `lib/responsesImageAdapter.ts` | 479 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
 | `lib/providerOptions.ts` | 120 | Per-provider option assembly (provider, model, size, reasoning effort, web search) |
 | `lib/runtimeContext.ts` | 196 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
@@ -218,7 +218,7 @@ routes/
 | `lib/cardNewsGenerator.ts` | 307 | Card-by-card image assembly orchestrator |
 | `lib/cardNewsPath.ts` | 29 | Generated card-news set path construction and validation helpers |
 | `lib/agyCli.ts` | 44 | Antigravity CLI discovery and process execution helpers |
-| `lib/agyImageAdapter.ts` | 398 | Antigravity CLI image-generation provider adapter |
+| `lib/agyImageAdapter.ts` | 401 | Antigravity CLI image-generation provider adapter |
 | `lib/apiCachePolicy.ts` | 12 | API response cache-control policy helpers |
 | `lib/assetsStore.ts` | 533 | Generated asset indexing, lookup, and persistence helpers |
 | `lib/assetRef.ts` | 57 | Asset-id-first reference resolution with legacy filename fallback and `via` provenance for generate requests |
@@ -227,7 +227,7 @@ routes/
 | `lib/characterBindings.ts` | 112 | Character provider binding validation, refs preservation guard, and drift detection |
 | `lib/composerSnapshot.ts` | 34 | Composer state snapshot normalization |
 | `lib/configKeys.ts` | 69 | Runtime configuration key definitions and validation |
-| `lib/elementCompiler.ts` | 199 | Structured element prompt compilation and validation |
+| `lib/elementCompiler.ts` | 200 | Structured element prompt compilation and validation |
 | `lib/geminiApiImageAdapter.ts` | 265 | Gemini API image-generation provider adapter |
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
@@ -236,7 +236,7 @@ routes/
 | `lib/grokProxyLauncher.ts` | 198 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
 | `lib/grokUpstreamRetry.ts` | 158 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
-| `lib/grokSizeMapper.ts` | 85 | Grok model image-size mapping and validation |
+| `lib/grokSizeMapper.ts` | 86 | Grok model image-size mapping and validation |
 | `lib/grokVideoCanvas.ts` | 41 | Grok video canvas/source preparation helpers |
 | `lib/grokVideoDownload.ts` | 65 | Grok video download and persistence helpers |
 | `lib/grokVideoPlannerPrompt.ts` | 167 | Grok video planner prompt construction |
@@ -249,14 +249,14 @@ routes/
 | `lib/presetCompiler.ts` | 67 | Named preset prompt compilation helpers |
 | `lib/responsesDoctor.ts` | 457 | Responses API diagnostics and provider health checks |
 | `lib/responsesErrors.ts` | 85 | Responses API error normalization helpers |
-| `lib/responsesFallback.ts` | 161 | Responses API fallback routing helpers |
+| `lib/responsesFallback.ts` | 162 | Responses API fallback routing helpers |
 | `lib/responsesParse.ts` | 453 | Responses API output parsing and normalization |
 | `lib/responsesTools.ts` | 29 | Responses API tool-call definitions and helpers |
 | `lib/routeHelpers.ts` | 58 | Shared Express route request/response helpers |
 | `lib/storyboardPrefix.ts` | 29 | Storyboard prompt-prefix construction |
 | `lib/thumbBackfill.ts` | 79 | Generated-media thumbnail backfill helpers |
 | `lib/vertexAuth.ts` | 48 | Vertex AI authentication resolution helpers |
-| `lib/videoChromaKey.ts` | 132 | Video chroma-key ffmpeg argument construction |
+| `lib/videoChromaKey.ts` | 139 | Video chroma-key ffmpeg argument construction |
 | `lib/videoMotionPresets.ts` | 52 | Video motion preset definitions and prompt suffixes |
 | `lib/videoSeriesChain.ts` | 30 | Video-series continuation chain helpers |
 | `lib/videoThumb.ts` | 63 | Video thumbnail extraction helpers |
@@ -264,11 +264,11 @@ routes/
 | `lib/promptImport/errors.ts` | 19 | Prompt import error type and detection helpers |
 | `lib/promptImport/curatedSources.ts` | 142 | Static curated prompt source registry for PR2 indexed search |
 | `lib/promptImport/discoveryRegistry.ts` | 330 | File-based PR4 discovery review queue, approved/rejected state, reviewed source conversion, and allowed-path validation |
-| `lib/promptImport/githubFolder.ts` | 398 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
+| `lib/promptImport/githubFolder.ts` | 404 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
 | `lib/promptImport/githubDiscovery.ts` | 310 | GitHub repository discovery search, rate-limit normalization, candidate scoring, and registry upsert |
-| `lib/promptImport/githubSource.ts` | 258 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
+| `lib/promptImport/githubSource.ts` | 259 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
 | `lib/promptImport/gptImageHints.ts` | 71 | `gpt-image-2` model/task/size/quality hint and warning extraction |
-| `lib/promptImport/parsePromptCandidates.ts` | 180 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
+| `lib/promptImport/parsePromptCandidates.ts` | 181 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
 | `lib/promptImport/promptIndex.ts` | 327 | File-based curated/reviewed source index/cache, refresh, and search orchestration |
 | `lib/promptImport/rankPromptCandidates.ts` | 66 | Query scoring for curated prompt candidates |
 
@@ -282,15 +282,15 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `lib/agentStore.ts` | 423 | SQLite session/turn persistence |
 | `lib/agentStoreRows.ts` | 137 | Row mapping helpers for agent store |
 | `lib/agentSettings.ts` | 77 | Per-session generation settings |
-| `lib/agentRuntime.ts` | 412 | Turn execution, tool dispatch, generation delegation |
+| `lib/agentRuntime.ts` | 414 | Turn execution, tool dispatch, generation delegation |
 | `lib/agentQueueStore.ts` | 358 | Durable async queue persistence |
 | `lib/agentQueueWorker.ts` | 221 | Background queue worker |
-| `lib/agentCommandParser.ts` | 75 | Slash-command parsing |
+| `lib/agentCommandParser.ts` | 77 | Slash-command parsing |
 | `lib/agentToolManifest.ts` | 31 | Tool metadata for `/api/agent/tools` |
 | `lib/agentPlannerModel.ts` | 201 | Planner model selection |
 | `lib/agentGenerationPlanner.ts` | 353 | Generation plan assembly |
 | `lib/agentImageVideoGen.ts` | 416 | Image/video generation caller for agent turns |
-| `lib/agentQuestionResponder.ts` | 274 | `/question` responder |
+| `lib/agentQuestionResponder.ts` | 275 | `/question` responder |
 
 ## UI File Map
 

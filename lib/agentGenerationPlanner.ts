@@ -43,7 +43,7 @@ const NUMERIC_COUNT_PATTERN = /(?:^|\b)(\d{1,3})\s*(?:장|개|가지|컷|시안|
 type PlanningInput = {
   prompt: string;
   settings: AgentGenerationSettings;
-  command?: AgentSlashCommand | null;
+  command?: AgentSlashCommand | null | undefined;
 };
 
 type VariantDecision = {
@@ -328,9 +328,9 @@ function isVideoIntent(prompt: string): boolean {
 }
 
 export interface VideoParamsFromPrompt {
-  duration?: number;
-  resolution?: "480p" | "720p" | "1080p";
-  aspectRatio?: string;
+  duration?: number | undefined;
+  resolution?: "480p" | "720p" | "1080p" | undefined;
+  aspectRatio?: string | undefined;
 }
 
 const DURATION_PATTERN = /(\d{1,2})\s*(?:s|sec|seconds?|초)/i;

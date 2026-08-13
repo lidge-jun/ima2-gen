@@ -35,16 +35,16 @@ import {
 } from "./oauthProxy.js";
 
 interface MakeErrorOptions {
-  status?: number;
-  code?: string;
-  cause?: unknown;
+  status?: number | undefined;
+  code?: string | undefined;
+  cause?: unknown | undefined;
   [key: string]: unknown;
 }
 
 interface ResponsesError extends Error {
   status: number;
   code: string;
-  cause?: unknown;
+  cause?: unknown | undefined;
   [key: string]: unknown;
 }
 
@@ -137,7 +137,7 @@ function isKnownResponsesError(value: unknown) {
   return Boolean(
     value &&
     typeof value === "object" &&
-    (value as { ima2ResponsesError?: unknown }).ima2ResponsesError === true,
+    (value as { ima2ResponsesError?: unknown | undefined }).ima2ResponsesError === true,
   );
 }
 
@@ -160,7 +160,7 @@ async function getEndpoint(ctx: RouteRuntimeContext, provider: string | undefine
   };
 }
 
-type ReferenceRef = string | { b64?: string; detectedMime?: string | null; declaredMime?: string | null };
+type ReferenceRef = string | { b64?: string | undefined; detectedMime?: string | null; declaredMime?: string | null };
 
 function normalizeRef(ref: ReferenceRef) {
   const b64 = typeof ref === "string" ? ref : ref?.b64;
@@ -181,11 +181,11 @@ interface PostResponsesArgs {
   provider: string | undefined;
   scope: string;
   payload: unknown;
-  requestId?: string | null;
-  maxImages?: number;
-  signal?: AbortSignal | null;
-  onPartialImage?: ((partial: { b64: string; index: number | null | undefined }) => void) | null;
-  onFinalImage?: FinalImageHandler | null;
+  requestId?: string | null | undefined;
+  maxImages?: number | undefined;
+  signal?: AbortSignal | null | undefined;
+  onPartialImage?: ((partial: { b64: string | undefined; index: number | null | undefined }) => void) | null;
+  onFinalImage?: FinalImageHandler | null | undefined;
 }
 
 function combineAbortSignals(signals: AbortSignal[]): AbortSignal {
@@ -277,19 +277,19 @@ async function postResponses({
 }
 
 interface GenerateOptions {
-  webSearchEnabled?: boolean;
-  searchMode?: string;
-  onPartialImage?: ((partial: { b64: string; index: number | null | undefined }) => void) | null;
-  onFinalImage?: FinalImageHandler | null;
-  model?: string;
-  partialImages?: number;
-  reasoningEffort?: string;
-  maxImages?: number;
-  references?: ReferenceRef[];
-  mask?: string;
-  signal?: AbortSignal | null;
-  forceImageToolChoice?: boolean;
-  allowPromptOnlyOAuthFallback?: boolean;
+  webSearchEnabled?: boolean | undefined;
+  searchMode?: string | undefined;
+  onPartialImage?: ((partial: { b64: string | undefined; index: number | null | undefined }) => void) | null;
+  onFinalImage?: FinalImageHandler | null | undefined;
+  model?: string | undefined;
+  partialImages?: number | undefined;
+  reasoningEffort?: string | undefined;
+  maxImages?: number | undefined;
+  references?: ReferenceRef[] | undefined;
+  mask?: string | undefined;
+  signal?: AbortSignal | null | undefined;
+  forceImageToolChoice?: boolean | undefined;
+  allowPromptOnlyOAuthFallback?: boolean | undefined;
 }
 
 export async function generateViaResponses(provider: string | undefined, prompt: string | undefined, quality: string | undefined, size: string | undefined, moderation: string = "low", references: ReferenceRef[] = [], requestId: string | null = null, mode: string = "auto", ctxRaw: RouteRuntimeContext = {}, options: GenerateOptions = {}) {
@@ -309,9 +309,9 @@ export async function generateViaResponses(provider: string | undefined, prompt:
     scope: provider === "api" ? "api-generate" : "oauth",
     requestId,
     maxImages: 1,
-    signal: options.signal,
-    onPartialImage: options.onPartialImage,
-    onFinalImage: options.onFinalImage,
+    ...(options.signal !== undefined ? { signal: options.signal } : {}),
+    ...(options.onPartialImage !== undefined ? { onPartialImage: options.onPartialImage } : {}),
+    ...(options.onFinalImage !== undefined ? { onFinalImage: options.onFinalImage } : {}),
     payload: {
       model,
       input: [
@@ -338,11 +338,11 @@ export async function generateViaResponses(provider: string | undefined, prompt:
         size,
         moderation,
         requestId,
-        signal: options.signal,
+        ...(options.signal !== undefined ? { signal: options.signal } : {}),
         initial: result,
         referenceInputs,
         webSearchDroppedOnRetry: webSearchEnabled,
-        reasoningEffort: options.reasoningEffort,
+        ...(options.reasoningEffort !== undefined ? { reasoningEffort: options.reasoningEffort } : {}),
       });
       if (fallback) return fallback;
     }
@@ -393,9 +393,9 @@ export async function generateMultimodeViaResponses(provider: string | undefined
     scope: provider === "api" ? "api-multimode" : "oauth-multimode",
     requestId,
     maxImages,
-    signal: options.signal,
-    onPartialImage: options.onPartialImage,
-    onFinalImage: options.onFinalImage,
+    ...(options.signal !== undefined ? { signal: options.signal } : {}),
+    ...(options.onPartialImage !== undefined ? { onPartialImage: options.onPartialImage } : {}),
+    ...(options.onFinalImage !== undefined ? { onFinalImage: options.onFinalImage } : {}),
     payload: {
       model,
       input: [

@@ -10,6 +10,8 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
     "strictNullChecks": false,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
     "noImplicitAny": false
   },
   "include": [

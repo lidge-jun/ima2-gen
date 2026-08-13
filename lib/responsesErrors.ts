@@ -13,28 +13,28 @@ export const RESPONSE_DIAGNOSTIC_CODES = new Set([
 ]);
 
 export interface EmptyResponseMeta {
-  provider?: string;
-  model?: string;
-  toolTypes?: string[];
-  toolChoiceKind?: string;
-  quality?: string;
-  size?: string;
-  moderation?: string;
-  webSearchEnabled?: boolean;
-  refsCount?: number;
-  inputImageCount?: number;
-  promptChars?: number;
-  retryKind?: string;
-  initialEventCount?: number;
-  initialEventTypes?: Record<string, number>;
-  hadReferences?: boolean;
-  referencesDroppedOnRetry?: boolean;
-  developerPromptDroppedOnRetry?: boolean;
-  webSearchDroppedOnRetry?: boolean;
-  fallbackEventCount?: number;
-  fallbackEventTypes?: Record<string, number>;
-  fallbackImageCallSeen?: boolean;
-  fallbackImageResultCount?: number;
+  provider?: string | undefined;
+  model?: string | undefined;
+  toolTypes?: string[] | undefined;
+  toolChoiceKind?: string | undefined;
+  quality?: string | undefined;
+  size?: string | undefined;
+  moderation?: string | undefined;
+  webSearchEnabled?: boolean | undefined;
+  refsCount?: number | undefined;
+  inputImageCount?: number | undefined;
+  promptChars?: number | undefined;
+  retryKind?: string | undefined;
+  initialEventCount?: number | undefined;
+  initialEventTypes?: Record<string, number> | undefined;
+  hadReferences?: boolean | undefined;
+  referencesDroppedOnRetry?: boolean | undefined;
+  developerPromptDroppedOnRetry?: boolean | undefined;
+  webSearchDroppedOnRetry?: boolean | undefined;
+  fallbackEventCount?: number | undefined;
+  fallbackEventTypes?: Record<string, number> | undefined;
+  fallbackImageCallSeen?: boolean | undefined;
+  fallbackImageResultCount?: number | undefined;
 }
 
 interface ResponsesError extends Error {

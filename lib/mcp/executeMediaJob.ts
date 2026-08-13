@@ -49,7 +49,7 @@ export async function executeMediaPlan(
 ): Promise<MediaJobResult> {
   if (!adapter.executable) throw new Error(`MCP_EXECUTION_LOCKED:${adapter.provider}`);
   const deadline = Date.now() + (options.timeoutMs ?? 12 * 60_000);
-  const submitResult = await manager.callTool(adapter.provider, plan.toolName, plan.args, { signal: options.signal });
+  const submitResult = await manager.callTool(adapter.provider, plan.toolName, plan.args, { ...(options.signal ? { signal: options.signal } : {}) });
   const taskId = adapter.parseTaskId(submitResult);
   if (!taskId) throw new Error(`MCP_TASK_ID_MISSING:${adapter.provider}:${plan.toolName}`);
   options.onPhase?.("provider-queued");
@@ -66,7 +66,7 @@ export async function executeMediaPlan(
     const pollPlan = adapter.buildPollCall(taskId);
     let pollResult: Record<string, unknown>;
     try {
-      pollResult = await manager.callTool(adapter.provider, pollPlan.toolName, pollPlan.args, { signal: options.signal });
+      pollResult = await manager.callTool(adapter.provider, pollPlan.toolName, pollPlan.args, { ...(options.signal ? { signal: options.signal } : {}) });
       pollErrors = 0;
     } catch (error) {
       if (options.signal?.aborted) throw new Error("MCP_JOB_ABORTED");

@@ -21,43 +21,43 @@ export type GrokVideoPhase = "planning" | "submitted" | "progress";
 
 export interface GrokVideoEvent {
   phase: GrokVideoPhase;
-  xaiVideoRequestId?: string;
-  requestedModel?: string;
-  effectiveModel?: string;
+  xaiVideoRequestId?: string | undefined;
+  requestedModel?: string | undefined;
+  effectiveModel?: string | undefined;
   modelFallback?: { from: string; to: string } | null;
-  progress?: number;
-  stalled?: boolean;
+  progress?: number | undefined;
+  stalled?: boolean | undefined;
 }
 
 export interface GrokVideoPollResult {
   status: "pending" | "done" | "failed" | "expired";
-  progress?: number;
-  videoUrl?: string;
-  duration?: number | null;
-  respectModeration?: boolean;
-  usage?: Record<string, number> | null;
-  failedCode?: string;
+  progress?: number | undefined;
+  videoUrl?: string | undefined;
+  duration?: number | null | undefined;
+  respectModeration?: boolean | undefined;
+  usage?: Record<string, number> | null | undefined;
+  failedCode?: string | undefined;
 }
 
 export interface GrokVideoOptions {
-  model?: string;
-  mode?: VideoMode;
-  duration?: number;
-  resolution?: VideoResolution;
-  aspectRatio?: VideoAspectRatio;
-  sourceImage?: string;
-  sourceMime?: string | null;
-  referenceImages?: string[];
-  signal?: AbortSignal;
-  requestId?: string;
-  plannedPrompt?: string;
-  webSearchCalls?: number;
-  continuityLineage?: VideoContinuityLineage | null;
-  plannerModel?: string;
-  directApiKey?: string;
-  onEvent?: (ev: GrokVideoEvent) => void;
-  storyboardActive?: boolean;
-  backgroundConstraint?: string;
+  model?: string | undefined;
+  mode?: VideoMode | undefined;
+  duration?: number | undefined;
+  resolution?: VideoResolution | undefined;
+  aspectRatio?: VideoAspectRatio | undefined;
+  sourceImage?: string | undefined;
+  sourceMime?: string | null | undefined;
+  referenceImages?: string[] | undefined;
+  signal?: AbortSignal | undefined;
+  requestId?: string | undefined;
+  plannedPrompt?: string | undefined;
+  webSearchCalls?: number | undefined;
+  continuityLineage?: VideoContinuityLineage | null | undefined;
+  plannerModel?: string | undefined;
+  directApiKey?: string | undefined;
+  onEvent?: (ev: GrokVideoEvent) => void | undefined;
+  storyboardActive?: boolean | undefined;
+  backgroundConstraint?: string | undefined;
 }
 
 export interface VideoConfig {

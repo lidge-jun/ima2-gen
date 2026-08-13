@@ -15,8 +15,8 @@ export async function shutdownServerAndMcp(options: {
 }
 
 export function startMcpRestoreAfterListen(ctx: {
-  serverActualPort?: number;
-  mcpConnectionManager?: { restoreStoredConnections(): Promise<void> };
+  serverActualPort?: number | undefined;
+  mcpConnectionManager?: { restoreStoredConnections(): Promise<void> } | undefined;
 }): Promise<void> {
   if (!ctx.serverActualPort || !ctx.mcpConnectionManager) return Promise.resolve();
   return ctx.mcpConnectionManager.restoreStoredConnections();

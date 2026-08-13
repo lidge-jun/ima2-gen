@@ -58,20 +58,20 @@ export function responseSummary(body: unknown): ResponseShapeSummary {
       : undefined;
   const contentItems = output.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
-    const content = (item as { content?: unknown }).content;
+    const content = (item as { content?: unknown | undefined }).content;
     return Array.isArray(content) ? content : [];
   });
   const outputTypes = output
     .map((item) =>
       item && typeof item === "object"
-        ? (item as { type?: unknown }).type
+        ? (item as { type?: unknown | undefined }).type
         : undefined,
     )
     .filter((t): t is string => typeof t === "string" && t.length > 0);
   const contentTypes = contentItems
     .map((item) =>
       item && typeof item === "object"
-        ? (item as { type?: unknown }).type
+        ? (item as { type?: unknown | undefined }).type
         : undefined,
     )
     .filter((t): t is string => typeof t === "string" && t.length > 0);

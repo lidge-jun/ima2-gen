@@ -13,9 +13,9 @@ export function sequenceStatus(returned: number, requested: number): "empty" | "
 
 export interface MultimodeImage {
   b64: string;
-  revisedPrompt?: string | null;
-  mime?: string | null;
-  providerUrl?: string;
+  revisedPrompt?: string | null | undefined;
+  mime?: string | null | undefined;
+  providerUrl?: string | undefined;
 }
 
 export type MultimodeRouteItem = {

@@ -37,14 +37,14 @@ export async function generateMultimodeViaGrok(
   prompt: string,
   ctx: RouteRuntimeContext,
   options: {
-    model?: string;
-    maxImages?: number;
-    size?: string;
-    signal?: AbortSignal;
-    requestId?: string;
-    references?: GrokReferenceImage[];
-    directApiKey?: string;
-    onFinalImage?: (image: { b64: string; revisedPrompt?: string; mime?: string }, index: number) => void | Promise<void>;
+    model?: string | undefined;
+    maxImages?: number | undefined;
+    size?: string | undefined;
+    signal?: AbortSignal | undefined;
+    requestId?: string | undefined;
+    references?: GrokReferenceImage[] | undefined;
+    directApiKey?: string | undefined;
+    onFinalImage?: ((image: { b64: string; revisedPrompt?: string | undefined; mime?: string | undefined }, index: number) => void | Promise<void>) | undefined;
   } = {},
 ): Promise<GrokMultimodeResult> {
   const model = options.model || (ctx.config as any).grokProvider?.defaultImageModel || "grok-imagine-image-quality";

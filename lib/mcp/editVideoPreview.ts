@@ -9,9 +9,9 @@ import type { MediaProviderAdapter, ToolCallPlan } from "./providerAdapter.js";
 
 export interface EditVideoPreviewResult {
   keyframeUrl: string;
-  prompt?: string;
-  keyframeTimestampSeconds?: number;
-  nextArguments?: Record<string, unknown>;
+  prompt?: string | undefined;
+  keyframeTimestampSeconds?: number | undefined;
+  nextArguments?: Record<string, unknown> | undefined;
 }
 
 const PREVIEW_ATTEMPTS = 3;
@@ -39,7 +39,7 @@ export function parseKeyframePreview(result: Record<string, unknown>): EditVideo
   }
   const content = result.content;
   if (Array.isArray(content)) {
-    const text = content.map((entry) => (entry as { text?: string }).text ?? "").join("\n");
+    const text = content.map((entry) => (entry as { text?: string | undefined }).text ?? "").join("\n");
     const match = text.match(/Keyframe URL:\s*(https:\/\/\S+)/i);
     if (match?.[1]) return { keyframeUrl: match[1] };
   }
@@ -50,7 +50,7 @@ export async function executeEditVideoPreview(
   manager: McpConnectionManager,
   adapter: MediaProviderAdapter,
   plan: ToolCallPlan,
-  options: { signal?: AbortSignal; attempts?: number } = {},
+  options: { signal?: AbortSignal | undefined; attempts?: number | undefined } = {},
 ): Promise<EditVideoPreviewResult> {
   if (!adapter.executable) throw new Error(`MCP_EXECUTION_LOCKED:${adapter.provider}`);
   const attempts = options.attempts ?? PREVIEW_ATTEMPTS;
@@ -58,7 +58,7 @@ export async function executeEditVideoPreview(
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     if (options.signal?.aborted) throw new Error("MCP_JOB_ABORTED");
     try {
-      const raw = await manager.callTool(adapter.provider, plan.toolName, plan.args, { signal: options.signal, timeoutMs: 300_000 });
+      const raw = await manager.callTool(adapter.provider, plan.toolName, plan.args, { ...(options.signal ? { signal: options.signal } : {}), timeoutMs: 300_000 });
       const preview = parseKeyframePreview(raw);
       if (!preview) throw new Error(`MCP_PREVIEW_SHAPE_UNEXPECTED:${adapter.provider}`);
       return preview;

@@ -32,7 +32,7 @@ export type CatalogToolCaller = (
   provider: string,
   name: string,
   args: Record<string, unknown>,
-  options?: { signal?: AbortSignal; timeoutMs?: number },
+  options?: { signal?: AbortSignal | undefined; timeoutMs?: number | undefined },
 ) => Promise<Record<string, unknown>>;
 
 function boundedText(value: unknown, maxLength: number): string | undefined {
@@ -99,7 +99,7 @@ function parseCapabilities(record: Record<string, unknown>): McpModelCapabilitie
   if (duration && !parameters.some((parameter) => parameter.name === "duration")) parameters.push(duration);
   const mediaItems = Array.isArray(record.medias) ? record.medias.slice(0, 50) : [];
   const inputRoles = boundedStrings(mediaItems.flatMap((item) => (
-    item && typeof item === "object" ? (item as { roles?: unknown }).roles ?? [] : []
+    item && typeof item === "object" ? (item as { roles?: unknown | undefined }).roles ?? [] : []
   )), 100, 64);
   return {
     source: "provider-declared",
@@ -111,7 +111,7 @@ function parseCapabilities(record: Record<string, unknown>): McpModelCapabilitie
 
 /** Projects bounded models_explore facts without dropping provider presets. */
 export function parseModelsExploreItems(result: Record<string, unknown>): McpModelEntry[] {
-  const structured = (result as { structuredContent?: { items?: unknown } }).structuredContent;
+  const structured = (result as { structuredContent?: { items?: unknown | undefined } }).structuredContent;
   const items = Array.isArray(structured?.items) ? structured.items : [];
   const entries: McpModelEntry[] = [];
   for (const item of items) {
@@ -133,7 +133,7 @@ export function parseModelsExploreItems(result: Record<string, unknown>): McpMod
 
 function nextCursor(result: Record<string, unknown>): string | null {
   const structured = (result as {
-    structuredContent?: { has_more?: unknown; next_page_token?: unknown };
+    structuredContent?: { has_more?: unknown | undefined; next_page_token?: unknown | undefined };
   }).structuredContent;
   if (!structured || structured.has_more !== true) return null;
   return typeof structured.next_page_token === "string" && structured.next_page_token
@@ -144,7 +144,7 @@ function nextCursor(result: Record<string, unknown>): string | null {
 async function listHiggsfieldKind(
   callTool: CatalogToolCaller,
   kind: "image" | "video",
-  options: { signal?: AbortSignal; timeoutMs?: number },
+  options: { signal?: AbortSignal | undefined; timeoutMs?: number | undefined },
 ): Promise<McpModelEntry[]> {
   const seen = new Set<string>();
   const entries: McpModelEntry[] = [];
@@ -194,7 +194,7 @@ function cloneEntries(entries: readonly McpModelEntry[]): McpModelEntry[] {
 export async function getProviderModels(
   provider: string,
   callTool: CatalogToolCaller,
-  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+  options: { signal?: AbortSignal | undefined; timeoutMs?: number | undefined } = {},
 ): Promise<McpProviderModels> {
   if (provider === "runway") {
     return {

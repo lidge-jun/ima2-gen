@@ -84,7 +84,7 @@ async function generateAgentImage(
     searchMode: webSearchEnabled ? "on" : "off",
   });
   if (providerOptions.error) {
-    const err = new Error(providerOptions.error) as Error & { code?: string; status?: number };
+    const err = new Error(providerOptions.error) as Error & { code?: string | undefined; status?: number | undefined };
     err.code = providerOptions.code;
     err.status = providerOptions.status;
     throw err;
@@ -96,15 +96,15 @@ async function generateAgentImage(
   const response = activeProvider === "agy"
     ? await generateViaAgy(`${manifest}\n\nUser request:\n${prompt}`, {
         requestId,
-        signal: options.signal ?? undefined,
+        ...(options.signal ? { signal: options.signal } : {}),
       })
-    : activeProvider === "atlascloud"
+    : activeProvider === "atlascloud" 
     ? await generateViaAtlasCloud(`${manifest}\n\nUser request:\n${prompt}`, ctx, {
         model: effectiveModel,
         size: providerOptions.size,
         quality: options.quality ?? "medium",
         requestId,
-        signal: options.signal ?? undefined,
+        ...(options.signal ? { signal: options.signal } : {}),
         references: await loadAgentCurrentImageReferences(ctx, sessionId, options.sourceImagePolicy ?? "none"),
       })
     : activeProvider === "minimax"
@@ -112,7 +112,7 @@ async function generateAgentImage(
         model: effectiveModel,
         size: providerOptions.size,
         requestId,
-        signal: options.signal ?? undefined,
+        ...(options.signal ? { signal: options.signal } : {}),
         references: await loadAgentCurrentImageReferences(ctx, sessionId, options.sourceImagePolicy ?? "none"),
       })
     : activeProvider === "grok"
@@ -120,7 +120,7 @@ async function generateAgentImage(
         model: effectiveModel,
         size: providerOptions.size,
         requestId,
-        signal: options.signal ?? undefined,
+        ...(options.signal ? { signal: options.signal } : {}),
         references: await loadAgentCurrentImageReferences(ctx, sessionId, options.sourceImagePolicy ?? "none"),
         plannerModel: grokPlannerModel,
       })
@@ -194,7 +194,7 @@ async function persistAgentImage(
   format: string,
   size: string,
   requestId: string,
-  response: { b64: string; revisedPrompt?: string | null; usage?: unknown; webSearchCalls?: number },
+  response: { b64: string; revisedPrompt?: string | null | undefined; usage?: unknown | undefined; webSearchCalls?: number | undefined; mime?: string | undefined; text?: string | null | undefined },
   generation: { provider: string; model: string },
 ) {
   await mkdir(ctx.config.storage.generatedDir, { recursive: true });
@@ -240,7 +240,7 @@ export async function runAgentVideoGeneration(
   ctx: RuntimeContext,
   sessionId: string,
   prompt: string,
-  options: AgentRunOptions & { skipUserTurn?: boolean; assistantText?: string | null } = {},
+  options: AgentRunOptions & { skipUserTurn?: boolean | undefined; assistantText?: string | null | undefined } = {},
 ) {
   const session = getAgentSession(sessionId);
   if (!session) throw notFound(sessionId);

@@ -115,11 +115,11 @@ async function fetchCatalog(serverFlag: unknown, jsonMode: boolean) {
 
 function resolveImageTarget(args: ParsedArgs, catalog: ModelCatalog): ResolvedTarget {
   const result = resolveTarget("image", {
-    model: args.model ? String(args.model) : undefined,
-    provider: args.provider ? String(args.provider) : undefined,
+    ...(args.model ? { model: String(args.model) } : {}),
+    ...(args.provider ? { provider: String(args.provider) } : {}),
   }, catalog, loadCliDefaults());
   if (!result.ok) {
-    fail({ json: Boolean(args.json), code: result.code, message: result.message, extra: result.extra });
+    fail({ json: Boolean(args.json), code: result.code, message: result.message, ...(result.extra ? { extra: result.extra } : {}) });
   }
   return result;
 }
@@ -149,7 +149,7 @@ function rejectUnsupportedMcpFlags(argv: string[], args: ParsedArgs): void {
   if (!Number.isInteger(count) || count !== 1) fail({ json: Boolean(args.json), code: "FLAG_NOT_SUPPORTED", message: "MCP image lanes support --count 1 only", extra: { flag: "--count" } });
 }
 
-type McpImageReference = { filename: string; tag?: string };
+type McpImageReference = { filename: string; tag?: string | undefined };
 
 function parseMcpReference(value: string, jsonMode: boolean): McpImageReference {
   const separator = value.lastIndexOf(":");
@@ -222,7 +222,7 @@ async function runMcpImage(argv: string[], args: ParsedArgs, context: ImageConte
     if (args.json) json({ ok: true, requestId, filename: result.filename, url: result.url, ...(target ? { path: target } : {}) });
     else out(color.green("✓ ") + (target ?? `${context.server.base}${result.url}`));
   } catch (error) {
-    const typed = error as Error & { code?: string };
+    const typed = error as Error & { code?: string | undefined };
     fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: 1 });
   }
 }

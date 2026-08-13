@@ -69,8 +69,8 @@ export function isStartJobFailure(r: StartJobResult): r is { ok: false; code: St
 export function startJob({ requestId, kind, prompt, meta = {}, respectCanceledTombstone = false }: {
   requestId: string;
   kind: string;
-  prompt?: string | null;
-  meta?: Record<string, unknown>;
+  prompt?: string | null | undefined;
+  meta?: Record<string, unknown> | undefined;
   /** Opt-in: deny admission when a fresh canceled tombstone exists (extend route only — queue retry reuses requestIds legitimately). */
   respectCanceledTombstone?: boolean;
 }): StartJobResult | undefined {

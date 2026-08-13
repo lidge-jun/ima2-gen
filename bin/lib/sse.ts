@@ -6,10 +6,10 @@ export function setCliVersion(v: string) { CLI_VERSION = v; }
 export type SseEvent = { event: string; data: any; id?: string };
 
 export interface SseInit {
-  method?: string;
-  body?: unknown;
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
+  method?: string | undefined;
+  body?: unknown | undefined;
+  headers?: Record<string, string> | undefined;
+  signal?: AbortSignal | undefined;
 }
 
 export interface OpenSseResult {
@@ -101,7 +101,7 @@ async function openWithMethod(url: string, init: SseInit, defaultMethod: string)
     const res = await fetch(url, {
       method: init.method || defaultMethod,
       headers: requestHeaders(init),
-      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
       signal: controller.signal,
     });
     if (!res.ok) {

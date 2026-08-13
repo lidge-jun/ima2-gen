@@ -131,7 +131,7 @@ function validateEditModel(model: unknown): string {
 
 async function saveVideoResult(
   ctx: RuntimeContext,
-  options: { requestId: string; prompt: string; model: string; operation: "edit" | "extend"; source: string; duration: number | null; videoUrl: string; usage?: Record<string, number> | null; signal?: AbortSignal },
+  options: { requestId: string; prompt: string; model: string; operation: "edit" | "extend"; source: string; duration: number | null; videoUrl: string; usage?: Record<string, number> | null | undefined; signal?: AbortSignal | undefined },
 ): Promise<{ filename: string; url: string; sourceUrl: string }> {
   const { buffer, contentType } = await downloadVideo(ctx, options.videoUrl, options.signal);
   await mkdir(ctx.config.storage.generatedDir, { recursive: true });

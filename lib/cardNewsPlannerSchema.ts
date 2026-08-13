@@ -121,12 +121,12 @@ interface RoleTemplate {
 }
 
 interface BriefInput {
-  topic?: string;
-  title?: string;
-  audience?: string;
-  goal?: string;
-  contentBrief?: string;
-  roleTemplate?: RoleTemplate;
+  topic?: string | undefined;
+  title?: string | undefined;
+  audience?: string | undefined;
+  goal?: string | undefined;
+  contentBrief?: string | undefined;
+  roleTemplate?: RoleTemplate | undefined;
 }
 
 function asText(value: unknown, fallback = ""): string {

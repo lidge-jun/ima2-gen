@@ -33,25 +33,25 @@ const VALID_ASPECT_RATIOS = new Set([
 
 type MinimaxReference = {
   b64: string;
-  declaredMime?: string | null;
-  detectedMime?: string | null;
+  declaredMime?: string | null | undefined;
+  detectedMime?: string | null | undefined;
 };
 
 type MinimaxGenerateOptions = {
-  model?: string;
-  size?: string;
-  signal?: AbortSignal;
-  requestId?: string;
-  references?: MinimaxReference[];
+  model?: string | undefined;
+  size?: string | undefined;
+  signal?: AbortSignal | undefined;
+  requestId?: string | undefined;
+  references?: MinimaxReference[] | undefined;
 };
 
 type MinimaxImageResult = {
   b64: string;
-  revisedPrompt?: string | null;
+  revisedPrompt?: string | null | undefined;
   usage: Record<string, number> | null;
   webSearchCalls: number;
-  mime?: string;
-  providerUrl?: string | null;
+  mime?: string | undefined;
+  providerUrl?: string | null | undefined;
   /** Model actually sent upstream. */
   effectiveModel: string;
 };

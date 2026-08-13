@@ -43,8 +43,8 @@ interface ModelsRouteDeps {
   detectAgyInstalled?: () => Promise<boolean>;
 }
 
-type LaneState = { status: ModelLaneStatus; reason?: string };
-type CatalogResult = { models: McpProviderModels; reason?: string; disconnected?: boolean };
+type LaneState = { status: ModelLaneStatus; reason?: string | undefined };
+type CatalogResult = { models: McpProviderModels; reason?: string | undefined; disconnected?: boolean | undefined };
 
 const MCP_LANES = new Set<ModelLaneId>(["runway", "higgsfield"]);
 const MCP_PROVIDER_FALLBACKS = listProviders([])

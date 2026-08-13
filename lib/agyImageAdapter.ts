@@ -287,9 +287,9 @@ async function cleanupAgyArtifact(artifactPath: string): Promise<void> {
 export async function generateViaAgy(
   prompt: string,
   options: {
-    references?: RefDetail[];
-    signal?: AbortSignal;
-    requestId?: string;
+    references?: RefDetail[] | undefined;
+    signal?: AbortSignal | undefined;
+    requestId?: string | undefined;
   } = {},
 ): Promise<AgyGenerateResult> {
   const refDetails = (options.references || []).slice(0, deriveReferenceLimit("agy", "edit"));

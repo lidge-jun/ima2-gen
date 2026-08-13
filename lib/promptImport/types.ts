@@ -10,43 +10,43 @@ export interface PromptImportLimits {
   maxCandidateChars: number;
   minCandidateChars: number;
   maxSourceCharsScanned: number;
-  maxRepoIndexFiles?: number;
-  searchLimit?: number;
-  ttlMs?: number;
-  maxFolderFiles?: number;
-  maxFolderPreviewFiles?: number;
+  maxRepoIndexFiles?: number | undefined;
+  searchLimit?: number | undefined;
+  ttlMs?: number | undefined;
+  maxFolderFiles?: number | undefined;
+  maxFolderPreviewFiles?: number | undefined;
 }
 
 export interface PromptCandidateSource {
   kind: string;
-  owner?: string;
-  repo?: string;
-  ref?: string;
-  path?: string;
-  htmlUrl?: string;
-  sourceId?: string;
-  filename?: string;
+  owner?: string | undefined;
+  repo?: string | undefined;
+  ref?: string | undefined;
+  path?: string | undefined;
+  htmlUrl?: string | undefined;
+  sourceId?: string | undefined;
+  filename?: string | undefined;
 }
 
 export interface PromptCandidateScoreHints {
-  modelHints?: string[];
-  generationSurfaceHints?: string[];
-  taskHints?: string[];
-  sizeHints?: string[];
-  qualityHints?: string[];
-  warnings?: string[];
+  modelHints?: string[] | undefined;
+  generationSurfaceHints?: string[] | undefined;
+  taskHints?: string[] | undefined;
+  sizeHints?: string[] | undefined;
+  qualityHints?: string[] | undefined;
+  warnings?: string[] | undefined;
 }
 
 export interface PromptCandidate {
   id: string;
-  candidateId?: string;
+  candidateId?: string | undefined;
   name: string;
   text: string;
   textPreview: string;
   tags: string[];
   warnings: string[];
   source: PromptCandidateSource;
-  sourceFileId?: string;
+  sourceFileId?: string | undefined;
   headingPath: string | null;
   ordinal: number;
   promptHash: string;
@@ -56,48 +56,48 @@ export interface PromptCandidate {
 export interface CuratedSourceLike {
   id: string;
   repo: string;
-  owner?: string;
-  name?: string;
-  displayName?: string;
+  owner?: string | undefined;
+  name?: string | undefined;
+  displayName?: string | undefined;
   defaultRef: string;
   allowedPaths: string[];
   extensions: string[];
-  sourceType?: string;
+  sourceType?: string | undefined;
   licenseSpdx: string;
-  requiresAttribution?: boolean;
+  requiresAttribution?: boolean | undefined;
   trustTier: string;
-  lastVerifiedAt?: string | null;
-  notes?: string;
-  searchSeeds?: string[];
-  defaultSearch?: boolean;
+  lastVerifiedAt?: string | null | undefined;
+  notes?: string | undefined;
+  searchSeeds?: string[] | undefined;
+  defaultSearch?: boolean | undefined;
 }
 
 export interface GitHubFileSource {
-  kind?: string;
-  owner?: string;
-  repo?: string;
-  ref?: string;
-  path?: string;
-  extension?: string;
-  htmlUrl?: string;
+  kind?: string | undefined;
+  owner?: string | undefined;
+  repo?: string | undefined;
+  ref?: string | undefined;
+  path?: string | undefined;
+  extension?: string | undefined;
+  htmlUrl?: string | undefined;
   rawUrl: string;
-  tags?: string[];
+  tags?: string[] | undefined;
 }
 
 export interface DiscoveryRepo {
-  full_name?: string;
-  description?: string | null;
-  topics?: string[];
-  pushed_at?: string | null;
-  stargazers_count?: number;
-  forks_count?: number;
-  open_issues_count?: number;
-  updated_at?: string | null;
-  license?: { spdx_id?: string | null } | null;
-  archived?: boolean;
-  disabled?: boolean;
-  fork?: boolean;
-  default_branch?: string | null;
-  html_url?: string | null;
-  language?: string | null;
+  full_name?: string | undefined;
+  description?: string | null | undefined;
+  topics?: string[] | undefined;
+  pushed_at?: string | null | undefined;
+  stargazers_count?: number | undefined;
+  forks_count?: number | undefined;
+  open_issues_count?: number | undefined;
+  updated_at?: string | null | undefined;
+  license?: { spdx_id?: string | null } | null | undefined;
+  archived?: boolean | undefined;
+  disabled?: boolean | undefined;
+  fork?: boolean | undefined;
+  default_branch?: string | null | undefined;
+  html_url?: string | null | undefined;
+  language?: string | null | undefined;
 }

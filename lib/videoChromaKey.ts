@@ -26,7 +26,7 @@ export type VideoKeyParams = {
 };
 
 export type ClientKeyParams = {
-  keyColor?: { r: number; g: number; b: number };
+  keyColor?: { r: number; g: number; b: number } | undefined;
   tolerance: number; // 0-100 (UI slider)
   softness: number;  // 0-50  (UI slider)
 };

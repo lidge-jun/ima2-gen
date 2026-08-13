@@ -9,12 +9,12 @@ export type McpCapabilitySource = "provider-declared" | "verified-contract";
 export interface McpModelParameter {
   name: string;
   type: McpParameterType;
-  required?: boolean;
-  description?: string;
-  default?: McpPresetValue;
-  options?: McpPresetValue[];
-  min?: number;
-  max?: number;
+  required?: boolean | undefined;
+  description?: string | undefined;
+  default?: McpPresetValue | undefined;
+  options?: McpPresetValue[] | undefined;
+  min?: number | undefined;
+  max?: number | undefined;
 }
 
 export interface McpModelCapabilities {
@@ -27,7 +27,7 @@ export interface McpModelCapabilities {
 export interface McpModelEntry {
   id: string;
   label: string;
-  description?: string;
+  description?: string | undefined;
   capabilities: McpModelCapabilities;
 }
 

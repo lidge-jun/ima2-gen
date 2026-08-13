@@ -23,19 +23,19 @@ export interface McpCurrentBinding {
   endpoint: string;
   redirectOrigin: string;
   /** Historical endpoint accepted only for one-time legacy-record migration. */
-  legacyEndpoint?: string;
+  legacyEndpoint?: string | undefined;
 }
 
 export interface McpTokenRecord {
-  schemaVersion?: 1;
-  revision?: number;
-  binding?: McpTokenBinding;
-  clientInformation?: Record<string, unknown>;
-  tokens?: Record<string, unknown>;
-  codeVerifier?: string;
+  schemaVersion?: 1 | undefined;
+  revision?: number | undefined;
+  binding?: McpTokenBinding | undefined;
+  clientInformation?: Record<string, unknown> | undefined;
+  tokens?: Record<string, unknown> | undefined;
+  codeVerifier?: string | undefined;
   /** Legacy callback origin, migrated after the next successful credential save. */
-  origin?: string;
-  tombstone?: true;
+  origin?: string | undefined;
+  tombstone?: true | undefined;
 }
 
 export type McpCredentialScope = "all" | "client" | "tokens" | "verifier" | "discovery";

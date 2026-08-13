@@ -75,7 +75,7 @@ export async function generateViaOAuth(
     const res = await fetchOAuth(`${oauthUrl}/v1/responses`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      signal: timeout.signal,
+      ...(timeout.signal ? { signal: timeout.signal } : {}),
       body: JSON.stringify({
         model,
         input: [
@@ -151,7 +151,7 @@ export async function generateViaOAuth(
       const retryRes = await fetchOAuth(`${oauthUrl}/v1/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: timeout.signal,
+        ...(timeout.signal ? { signal: timeout.signal } : {}),
         body: JSON.stringify({
           model,
           input: [{ role: "user", content: userContent }],

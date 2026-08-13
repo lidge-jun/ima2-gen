@@ -141,5 +141,9 @@ tags: [ima2-gen, devlog, phase, typescript]
 ## 진행 (2026-08-14)
 
 - step1 landed: noUncheckedIndexedAccess enabled on origin/dev a2809034. 159->0. as-ws 1131->1132, bang 25->17.
-- step2 in working tree: exactOptionalPropertyTypes enabled locally, 155->103 remaining after optional-type widening. Not committed yet because RequestInit/MCP transport residuals remain.
-- i4 so far: no confirmed reachable runtime bug; all fixes were type narrowing/optional unions.
+- step2 landed: exactOptionalPropertyTypes enabled in ./tsconfig.json. npm run typecheck and typecheck:tests exit 0. npm test 2191 pass / 0 fail / 2 skip.
+- i3 census (` as ` in lib/routes/bin/server.ts/config.ts): HEAD 1126 -> 1127. The +1 is connectClient bind-narrowing in lib/mcp/connectionManager.ts, not `as unknown`. bang-nn 36 -> 36.
+- i4: two reachable defects from step1 indexed-access guards, both repaired here.
+  - bin/ima2.ts: `command !== undefined` skipped bare `ima2` help and printed `Unknown command: "undefined"`. Restored no-arg help without assertions.
+  - lib/minimaxImageAdapter.ts: empty string in imageUrls now throws MINIMAX_EMPTY_IMAGE; mapped to INTERNAL_STATE_ERROR.
+- tsconfig.tests.json keeps both flags off (085 OUT). No publish / dist-tag / workflow dispatch.

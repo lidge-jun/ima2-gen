@@ -3,10 +3,10 @@ import { CARD_NEWS_PLANNER_SCHEMA } from "./cardNewsPlannerSchema.js";
 import { logEvent } from "./logger.js";
 
 type PlannerError = Error & {
-  code?: string;
-  status?: number;
-  upstreamStatus?: number;
-  upstreamBodyChars?: number;
+  code?: string | undefined;
+  status?: number | undefined;
+  upstreamStatus?: number | undefined;
+  upstreamBodyChars?: number | undefined;
 };
 
 interface PlannerMessage {
@@ -19,8 +19,8 @@ interface PlannerRequestOptions {
   model: string;
   messages: PlannerMessage[];
   timeoutMs: number;
-  structured?: boolean;
-  reasoningEffort?: string;
+  structured?: boolean | undefined;
+  reasoningEffort?: string | undefined;
 }
 
 interface PlannerInput {
@@ -28,10 +28,10 @@ interface PlannerInput {
 }
 
 interface PlannerCallOptions {
-  oauthUrl?: string;
-  model?: string;
-  timeoutMs?: number;
-  reasoningEffort?: string;
+  oauthUrl?: string | undefined;
+  model?: string | undefined;
+  timeoutMs?: number | undefined;
+  reasoningEffort?: string | undefined;
 }
 
 function plannerError(message: string, code: string, status = 502): PlannerError {
@@ -125,7 +125,7 @@ async function requestChatJson({ oauthUrl, model, messages, timeoutMs }: Omit<Pl
       err.upstreamBodyChars = text.length;
       throw err;
     }
-    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string | undefined } }> };
     return json.choices?.[0]?.message?.content || "";
   } finally {
     clearTimeout(timer);
@@ -142,7 +142,7 @@ export async function requestCardNewsPlannerJson(input: PlannerInput, options: P
   try {
     text = await requestJson({ oauthUrl, model, messages: input.messages, timeoutMs, structured: true, reasoningEffort });
   } catch (err) {
-    const code = (err as { code?: unknown })?.code;
+    const code = (err as { code?: unknown | undefined })?.code;
     if (code !== "PLANNER_UPSTREAM_FAILED") throw err;
     mode = "json-mode";
     text = await requestChatJson({ oauthUrl, model, messages: input.messages, timeoutMs });

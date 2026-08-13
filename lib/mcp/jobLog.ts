@@ -8,13 +8,13 @@ import { scrubValue } from "./sanitizer.js";
 
 export type McpJobLogEvent = {
   event: "submitted" | "taskId" | "succeeded" | "download-attempt-failed" | "error" | "done" | "recovered";
-  requestId?: string;
-  provider?: string;
-  taskId?: string;
-  sanitizedUrl?: string;
-  prompt?: string;
-  code?: string;
-  cause?: string;
+  requestId?: string | undefined;
+  provider?: string | undefined;
+  taskId?: string | undefined;
+  sanitizedUrl?: string | undefined;
+  prompt?: string | undefined;
+  code?: string | undefined;
+  cause?: string | undefined;
 };
 
 export function mcpJobLogPath(generatedDir: string): string {

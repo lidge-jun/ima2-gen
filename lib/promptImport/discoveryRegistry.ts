@@ -11,31 +11,31 @@ const SUPPORTED_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 interface DiscoveryCandidateRecord {
   id: string;
   repo: string;
-  owner?: string;
-  name?: string;
+  owner?: string | undefined;
+  name?: string | undefined;
   fullName: string;
-  htmlUrl?: string | null;
-  description?: string;
-  defaultBranch?: string;
-  stars?: number;
-  forks?: number;
-  openIssues?: number;
-  updatedAt?: string | null;
-  pushedAt?: string | null;
-  licenseSpdx?: string;
-  topics?: string[];
-  language?: string | null;
-  score?: number;
-  scoreReasons?: string[];
-  warnings?: string[];
-  status?: string;
-  query?: string;
-  discoveredAt?: string;
-  allowedPaths?: string[];
-  reviewedAt?: string | null;
-  reviewNotes?: string;
-  approvedSource?: CuratedSourceLike | null;
-  defaultSearch?: boolean;
+  htmlUrl?: string | null | undefined;
+  description?: string | undefined;
+  defaultBranch?: string | undefined;
+  stars?: number | undefined;
+  forks?: number | undefined;
+  openIssues?: number | undefined;
+  updatedAt?: string | null | undefined;
+  pushedAt?: string | null | undefined;
+  licenseSpdx?: string | undefined;
+  topics?: string[] | undefined;
+  language?: string | null | undefined;
+  score?: number | undefined;
+  scoreReasons?: string[] | undefined;
+  warnings?: string[] | undefined;
+  status?: string | undefined;
+  query?: string | undefined;
+  discoveredAt?: string | undefined;
+  allowedPaths?: string[] | undefined;
+  reviewedAt?: string | null | undefined;
+  reviewNotes?: string | undefined;
+  approvedSource?: CuratedSourceLike | null | undefined;
+  defaultSearch?: boolean | undefined;
 }
 
 interface DiscoveryRegistry {
@@ -202,7 +202,7 @@ export async function writeDiscoveryRegistry(ctxIn: PromptImportCtx, registry: D
 }
 
 interface ListFilters {
-  status?: string;
+  status?: string | undefined;
 }
 
 export async function listDiscoveryCandidates(ctxIn: PromptImportCtx, filters: ListFilters = {}): Promise<PublicCandidate[]> {

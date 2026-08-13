@@ -4,8 +4,8 @@ interface RankablePromptCandidate extends Partial<PromptCandidate> {
   id: string;
   name: string;
   text: string;
-  sourceFileId?: string;
-  score?: number;
+  sourceFileId?: string | undefined;
+  score?: number | undefined;
 }
 
 interface RankPromptCandidatesOptions {

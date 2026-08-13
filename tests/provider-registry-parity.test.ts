@@ -78,7 +78,7 @@ describe("core provider registry parity", () => {
     const editSource = readFileSync(join(repoRoot, "routes/edit.ts"), "utf8");
     const adapterSource = readFileSync(join(repoRoot, "lib/responsesImageAdapter.ts"), "utf8");
     assert.match(editSource, /editViaResponses\(/);
-    assert.match(adapterSource, /\bmask\?: string;/);
+    assert.match(adapterSource, /\bmask\?: string(?: \| undefined)?;/);
 
     const guard = maskGuard(editSource);
     const maskRejectedLanes = REGISTRY

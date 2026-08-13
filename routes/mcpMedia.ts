@@ -181,11 +181,11 @@ async function runMediaAction(input: {
   mode: "native" | "fallback";
   provider: string;
   resolvedFiles: string[];
-  prompt?: string;
-  keyframeTimestampSeconds?: number;
-  previewUrl?: string;
-  keyframeModel?: string;
-  upscaleParameters?: Record<string, unknown>;
+  prompt?: string | undefined;
+  keyframeTimestampSeconds?: number | undefined;
+  previewUrl?: string | undefined;
+  keyframeModel?: string | undefined;
+  upscaleParameters?: Record<string, unknown> | undefined;
   signal: AbortSignal;
 }): Promise<void> {
   const { ctx, deps, requestId } = input;

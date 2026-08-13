@@ -41,9 +41,9 @@ export interface RuntimeContext {
   vertexServiceAccountJson: string | undefined;
   vertexProjectId: string | undefined;
   hasVertexKey: boolean;
-  geminiAuthMode?: string;
+  geminiAuthMode?: string | undefined;
   /** Lazily attached by routes/mcpConnections.ts (030 WP3); undefined until MCP routes register. */
-  mcpConnectionManager?: McpConnectionManager;
+  mcpConnectionManager?: McpConnectionManager | undefined;
 }
 
 /** A partial used during boot when only some fields are known, or by callers

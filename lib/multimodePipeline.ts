@@ -340,7 +340,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         dualEmitMultimode(res, requestId, "image", item);
       };
       dualEmitMultimode(res, requestId, "phase", { phase: "streaming", requestId, sequenceId, maxImages });
-      let generated: { images: Array<{ b64: string; revisedPrompt?: string | null }>; usage: Record<string, number> | null; webSearchCalls?: number; extraIgnored?: number; error?: unknown };
+      let generated: { images: Array<{ b64: string; revisedPrompt?: string | null }>; usage: Record<string, number> | null; webSearchCalls?: number | undefined; extraIgnored?: number | undefined; error?: unknown | undefined };
       if (activeProvider === "gemini-api") {
         const r = await generateViaGeminiApi(generationPrompt, requireRuntimeContext(ctx), {
           model: imageModel,
@@ -350,7 +350,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           references: refCheck.refDetails,
         });
         generated = {
-          images: [{ b64: r.b64, revisedPrompt: r.revisedPrompt }],
+          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
           usage: r.usage,
           webSearchCalls: r.webSearchCalls,
         };
@@ -361,7 +361,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           requestId,
         });
         generated = {
-          images: [{ b64: r.b64, revisedPrompt: r.revisedPrompt }],
+          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
           usage: r.usage,
           webSearchCalls: r.webSearchCalls,
         };
@@ -375,7 +375,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           references: refCheck.refDetails,
         });
         generated = {
-          images: [{ b64: r.b64, revisedPrompt: r.revisedPrompt }],
+          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
           usage: r.usage,
           webSearchCalls: r.webSearchCalls,
         };
@@ -388,7 +388,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           references: refCheck.refDetails,
         });
         generated = {
-          images: [{ b64: r.b64, revisedPrompt: r.revisedPrompt }],
+          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
           usage: r.usage,
           webSearchCalls: r.webSearchCalls,
         };

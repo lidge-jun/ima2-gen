@@ -174,7 +174,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       const started = startJob({
         requestId,
         kind: "node",
-        prompt: body.prompt,
+        ...(body.prompt !== undefined ? { prompt: body.prompt } : {}),
         meta: {
           kind: "node",
           sessionId,
@@ -279,9 +279,9 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
               })
             : activeProvider === "agy"
             ? await generateViaAgy(parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt, {
-                references: parentB64
-                  ? [{ b64: parentB64, declaredMime: null, detectedMime: null }]
-                  : undefined,
+                ...(parentB64
+                  ? { references: [{ b64: parentB64, declaredMime: null, detectedMime: null }] }
+                  : {}),
                 signal: cancelController.signal,
                 requestId,
               })
@@ -343,7 +343,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
                     onPartialImage: emitProgress
                       ? (partial) => {
                           if (isJobCanceled(requestId)) return;
-                          const pd = { requestId, image: dataUrlFromB64(format, partial.b64), index: partial.index };
+                          const pd = { requestId, image: dataUrlFromB64(format, partial.b64 ?? ""), index: partial.index };
                           if (streamResponse) writeSse(res, "partial", pd);
                           publish(requestId, "partial", pd);
                         }

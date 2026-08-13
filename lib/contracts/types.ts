@@ -32,18 +32,18 @@ export type AvailabilityCause =
 
 export interface Availability {
   state: AvailabilityState;
-  cause?: AvailabilityCause;
+  cause?: AvailabilityCause | undefined;
   /** Human/machine-readable judgment basis (hash, timestamp, "builtin", ...). */
-  evidence?: string;
+  evidence?: string | undefined;
 }
 
 export interface SnapshotProvenance {
   provider: string;
   endpoint: string;
   fetchedAt: string;
-  serverInfo?: Record<string, unknown> | null;
+  serverInfo?: Record<string, unknown> | null | undefined;
   /** Negotiated MCP protocol version from the live session, when known. */
-  protocolVersion?: string;
+  protocolVersion?: string | undefined;
   entitlementTag: string;
   originalHash: string;
   sanitizedHash: string;
@@ -52,19 +52,19 @@ export interface SnapshotProvenance {
 /** Lossless sanitized snapshot artifact shape (written by the 010 spike, owned by 040). */
 export interface SnapshotSource {
   provenance: SnapshotProvenance;
-  serverInstructions?: string | null;
+  serverInstructions?: string | null | undefined;
   tools: SnapshotTool[];
 }
 
 export interface SnapshotTool {
   name: string;
-  title?: string;
-  description?: string;
-  inputSchema?: JsonSchema;
-  outputSchema?: JsonSchema;
-  annotations?: Record<string, unknown>;
+  title?: string | undefined;
+  description?: string | undefined;
+  inputSchema?: JsonSchema | undefined;
+  outputSchema?: JsonSchema | undefined;
+  annotations?: Record<string, unknown> | undefined;
   /** sha256 of canonical({inputSchema, outputSchema}); recomputed when absent. */
-  schemaHash?: string;
+  schemaHash?: string | undefined;
 }
 
 export interface ToolContract {
@@ -73,16 +73,16 @@ export interface ToolContract {
   namespace: ContractNamespace;
   /** Upstream original name (mcp.*) or canonical ima2 name. */
   name: string;
-  title?: string;
+  title?: string | undefined;
   description: string;
   /** Upstream descriptions are data, never instructions. */
   trust: "builtin" | "upstream-untrusted";
   inputSchema: JsonSchema;
-  outputSchema?: JsonSchema;
-  annotations?: Record<string, unknown>;
+  outputSchema?: JsonSchema | undefined;
+  annotations?: Record<string, unknown> | undefined;
   errorContract: TypedErrorCode[];
   /** Interview Round 2: ima2 runtime owns all execution. */
   executionOwner: "ima2-server";
   availability: Availability;
-  provenance?: SnapshotProvenance;
+  provenance?: SnapshotProvenance | undefined;
 }

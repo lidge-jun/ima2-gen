@@ -40,23 +40,23 @@ export interface AgentSlashCommand {
   rawName: string;
   raw: string;
   prompt: string;
-  value?: number;
+  value?: number | undefined;
 }
 
 export interface AgentToolCallSummary {
   id: string;
   name: AgentToolName;
   status: AgentToolCallStatus;
-  startedAt?: number | null;
-  finishedAt?: number | null;
-  durationMs?: number | null;
-  requestId?: string | null;
-  inputSummary?: string | null;
-  outputSummary?: string | null;
-  imageIds?: string[];
-  webFindingIds?: string[];
-  errorCode?: string | null;
-  errorMessage?: string | null;
+  startedAt?: number | null | undefined;
+  finishedAt?: number | null | undefined;
+  durationMs?: number | null | undefined;
+  requestId?: string | null | undefined;
+  inputSummary?: string | null | undefined;
+  outputSummary?: string | null | undefined;
+  imageIds?: string[] | undefined;
+  webFindingIds?: string[] | undefined;
+  errorCode?: string | null | undefined;
+  errorMessage?: string | null | undefined;
 }
 
 export interface AgentQueueItem {
@@ -67,21 +67,21 @@ export interface AgentQueueItem {
   status: AgentQueueStatus;
   position: number;
   resultImageIds: string[];
-  errorCode?: string | null;
-  errorClass?: string | null;
-  errorMessage?: string | null;
+  errorCode?: string | null | undefined;
+  errorClass?: string | null | undefined;
+  errorMessage?: string | null | undefined;
   createdAt: number;
   startedAt: number | null;
-  finishedAt?: number | null;
-  progressStage?: "requesting" | "polling" | "downloading" | null;
+  finishedAt?: number | null | undefined;
+  progressStage?: "requesting" | "polling" | "downloading" | null | undefined;
   options: AgentGenerationSettings;
   plan: AgentGenerationPlan;
 }
 
 export interface AgentVideoParams {
-  duration?: number;
-  resolution?: "480p" | "720p" | "1080p";
-  aspectRatio?: string;
+  duration?: number | undefined;
+  resolution?: "480p" | "720p" | "1080p" | undefined;
+  aspectRatio?: string | undefined;
 }
 
 export interface AgentGenerationPlan {
@@ -92,18 +92,18 @@ export interface AgentGenerationPlan {
   plannedParallelism: number;
   source: AgentGenerationPlanSource;
   reason: string;
-  command?: AgentSlashCommandName | null;
-  assistantText?: string | null;
-  videoParams?: AgentVideoParams | null;
-  sourceImagePolicy?: AgentSourceImagePolicy | null;
+  command?: AgentSlashCommandName | null | undefined;
+  assistantText?: string | null | undefined;
+  videoParams?: AgentVideoParams | null | undefined;
+  sourceImagePolicy?: AgentSourceImagePolicy | null | undefined;
 }
 
 export interface AgentGenerationErrorRecord {
   scope: "queue" | "turn";
   code: string | null;
-  errorClass?: string | null;
+  errorClass?: string | null | undefined;
   message: string;
-  prompt?: string | null;
+  prompt?: string | null | undefined;
   at: number;
 }
 
@@ -111,32 +111,32 @@ export interface AgentSessionRunSummary {
   status: AgentSessionRunStatus;
   queuedCount: number;
   runningCount: number;
-  lastQueueItemId?: string | null;
-  lastError?: string | null;
+  lastQueueItemId?: string | null | undefined;
+  lastError?: string | null | undefined;
 }
 
 export interface AgentImageInput {
-  id?: string | null;
-  filename?: string | null;
-  url?: string | null;
-  thumbUrl?: string | null;
-  prompt?: string | null;
-  revisedPrompt?: string | null;
-  createdAt?: number | null;
-  width?: number | null;
-  height?: number | null;
+  id?: string | null | undefined;
+  filename?: string | null | undefined;
+  url?: string | null | undefined;
+  thumbUrl?: string | null | undefined;
+  prompt?: string | null | undefined;
+  revisedPrompt?: string | null | undefined;
+  createdAt?: number | null | undefined;
+  width?: number | null | undefined;
+  height?: number | null | undefined;
 }
 
 export interface AgentImageHandle {
   id: string;
   filename: string;
   url: string;
-  thumbUrl?: string | null;
-  prompt?: string | null;
-  revisedPrompt?: string | null;
+  thumbUrl?: string | null | undefined;
+  prompt?: string | null | undefined;
+  revisedPrompt?: string | null | undefined;
   createdAt: number;
-  width?: number | null;
-  height?: number | null;
+  width?: number | null | undefined;
+  height?: number | null | undefined;
 }
 
 export interface AgentSessionSummary {
@@ -159,7 +159,7 @@ export interface AgentTurn {
   imageIds: string[];
   webFindingIds: string[];
   status: AgentTurnStatus;
-  toolCalls?: AgentToolCallSummary[];
+  toolCalls?: AgentToolCallSummary[] | undefined;
   createdAt: number;
 }
 

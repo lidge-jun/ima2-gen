@@ -17,29 +17,29 @@ export type VideoGenerationMode = "text-to-video" | "image-to-video" | "referenc
  */
 export type VideoGenerationRequest = {
   prompt: string;
-  provider?: string;
-  model?: string;
+  provider?: string | undefined;
+  model?: string | undefined;
   mode: VideoGenerationMode;
-  sourceImage?: string;
-  sourceFilename?: string;
+  sourceImage?: string | undefined;
+  sourceFilename?: string | undefined;
   /**
    * Stable reference to the source asset. Preferred over `sourceFilename`, which stops
    * identifying anything once the file is moved or renamed. Both may be present during
    * migration; the resolver takes the id first (lib/assetRef.ts).
    */
-  sourceAssetId?: string;
-  referenceImages?: string[];
-  referenceFilenames?: string[];
-  continueFromVideo?: string;
+  sourceAssetId?: string | undefined;
+  referenceImages?: string[] | undefined;
+  referenceFilenames?: string[] | undefined;
+  continueFromVideo?: string | undefined;
   duration: number;
   resolution: VideoResolution;
   aspectRatio: VideoAspectRatio;
-  topic?: string;
-  storyboard?: boolean;
-  plannerModel?: string;
-  presetIds?: string[];
-  elementIds?: string[];
-  requestId?: string;
+  topic?: string | undefined;
+  storyboard?: boolean | undefined;
+  plannerModel?: string | undefined;
+  presetIds?: string[] | undefined;
+  elementIds?: string[] | undefined;
+  requestId?: string | undefined;
 };
 
 /**
@@ -50,11 +50,11 @@ export type VideoGenerationRequest = {
 export type VideoGenerationRequestInput =
   Partial<Omit<VideoGenerationRequest, "prompt" | "duration" | "resolution" | "aspectRatio" | "mode">>
   & {
-    prompt?: unknown;
-    mode?: VideoGenerationMode;
-    duration?: unknown;
-    resolution?: unknown;
-    aspectRatio?: unknown;
+    prompt?: unknown | undefined;
+    mode?: VideoGenerationMode | undefined;
+    duration?: unknown | undefined;
+    resolution?: unknown | undefined;
+    aspectRatio?: unknown | undefined;
   };
 
 export type VideoGenerationNormalizeError = {
@@ -80,11 +80,11 @@ export function isVideoGenerationError(
  * supporting a different subset than the HTTP route.
  */
 export function deriveVideoMode(input: {
-  sourceImage?: unknown;
-  sourceFilename?: unknown;
-  sourceAssetId?: unknown;
-  referenceImages?: unknown;
-  referenceFilenames?: unknown;
+  sourceImage?: unknown | undefined;
+  sourceFilename?: unknown | undefined;
+  sourceAssetId?: unknown | undefined;
+  referenceImages?: unknown | undefined;
+  referenceFilenames?: unknown | undefined;
 }): VideoGenerationMode {
   if (input.sourceImage || input.sourceFilename || input.sourceAssetId) return "image-to-video";
   const refs =

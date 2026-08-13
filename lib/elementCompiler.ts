@@ -9,8 +9,8 @@ export interface ElementDefinition {
   name: string;
   kind: ElementKind;
   refs: string[];
-  notes?: string;
-  defaultStrength?: number;
+  notes?: string | undefined;
+  defaultStrength?: number | undefined;
   createdAt: number;
   updatedAt: number;
 }
@@ -18,7 +18,7 @@ export interface ElementDefinition {
 export interface ExistingReferenceInput {
   source: "composer" | "node" | "continuity";
   path: string;
-  strength?: number;
+  strength?: number | undefined;
 }
 
 export interface ElementReferenceSlot {
@@ -26,7 +26,7 @@ export interface ElementReferenceSlot {
   elementName: string;
   kind: ElementKind;
   path: string;
-  strength?: number;
+  strength?: number | undefined;
   priority: number;
 }
 
@@ -42,7 +42,7 @@ export interface CompileElementsInput {
   provider: ElementProvider;
   mode: ElementMode;
   capacity: ElementCapacity;
-  missingPolicy?: "error" | "collect";
+  missingPolicy?: "error" | "collect" | undefined;
 }
 
 export interface CompileElementsOutput {

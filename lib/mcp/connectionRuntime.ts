@@ -7,15 +7,15 @@ import type { McpConnectionStatus } from "./types.js";
 
 export interface ProviderSession {
   state: McpConnectionStatus["state"];
-  client?: Client;
-  transport?: StreamableHTTPClientTransport;
-  authorizationUrl?: string;
-  detail?: string;
-  connectedAt?: string;
-  toolCount?: number;
-  snapshotDiff?: { drifted: string[]; missing: string[]; added: string[] };
-  identity?: McpConnectionIdentity;
-  expectedClose?: boolean;
+  client?: Client | undefined;
+  transport?: StreamableHTTPClientTransport | undefined;
+  authorizationUrl?: string | undefined;
+  detail?: string | undefined;
+  connectedAt?: string | undefined;
+  toolCount?: number | undefined;
+  snapshotDiff?: { drifted: string[]; missing: string[]; added: string[] } | undefined;
+  identity?: McpConnectionIdentity | undefined;
+  expectedClose?: boolean | undefined;
 }
 
 export interface PendingAuth {
@@ -30,9 +30,9 @@ export interface McpConnectionManagerOptions {
   tokenDir: string;
   getOrigin: () => string;
   now?: () => number;
-  pendingAuthTtlMs?: number;
-  restoreTimeoutMs?: number;
-  reconnectDelayMs?: number;
+  pendingAuthTtlMs?: number | undefined;
+  restoreTimeoutMs?: number | undefined;
+  reconnectDelayMs?: number | undefined;
   transportFactory?: (endpoint: string, authProvider: ServerOAuthProvider) => StreamableHTTPClientTransport;
   clientFactory?: () => Client;
 }

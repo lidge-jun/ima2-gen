@@ -416,10 +416,14 @@ if (args.includes("-v") || args.includes("--version")) {
   exitFlushed(0);
 }
 
-if ((!command || args.includes("-h") || args.includes("--help"))
-    && command !== undefined && !["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs"].includes(command)) {
+const helpOwningCommands = ["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs"];
+if (!command) {
   showHelp();
-  exitFlushed(command ? 0 : 1);
+  exitFlushed(1);
+}
+if ((args.includes("-h") || args.includes("--help")) && !helpOwningCommands.includes(command)) {
+  showHelp();
+  exitFlushed(0);
 }
 
 switch (command) {

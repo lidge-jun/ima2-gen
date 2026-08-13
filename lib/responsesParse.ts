@@ -305,11 +305,11 @@ function resultFromState(state: ParseState): ParsedResponsesResult {
 }
 
 interface ParseStreamOptions {
-  requestId?: string | null;
+  requestId?: string | null | undefined;
   scope: string;
-  maxImages?: number;
-  onPartialImage?: ((partial: { b64: string; index: number | null | undefined }) => void) | null;
-  onFinalImage?: FinalImageHandler | null;
+  maxImages?: number | undefined;
+  onPartialImage?: ((partial: { b64: string | undefined; index: number | null | undefined }) => void) | null | undefined;
+  onFinalImage?: FinalImageHandler | null | undefined;
 }
 
 function makeStreamError(message: string, code: string, eventCount: number, eventType: string): Error {

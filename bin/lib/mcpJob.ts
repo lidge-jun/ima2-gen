@@ -8,9 +8,9 @@ export interface McpJobOptions {
   requestId: string;
   timeoutMs: number;
   json: boolean;
-  onProgress?: (phase: string) => void;
+  onProgress?: (phase: string) => void | undefined;
   /** POST path override (default /api/mcp/generate; media actions use /api/mcp/media-action). */
-  postPath?: string;
+  postPath?: string | undefined;
 }
 
 export interface McpJobResult {
@@ -21,8 +21,8 @@ export interface McpJobResult {
 
 export class McpJobError extends Error {
   code: string;
-  status?: number;
-  body?: unknown;
+  status?: number | undefined;
+  body?: unknown | undefined;
 
   constructor(code: string, message: string, options: { status?: number; body?: unknown } = {}) {
     super(message);
@@ -34,10 +34,10 @@ export class McpJobError extends Error {
 }
 
 type StreamOutcome =
-  | { kind: "done"; result: McpJobResult; lastEventId?: string }
-  | { kind: "error"; error: McpJobError; lastEventId?: string }
-  | { kind: "replay-gap"; lastEventId?: string }
-  | { kind: "dropped"; lastEventId?: string };
+  | { kind: "done"; result: McpJobResult; lastEventId?: string | undefined }
+  | { kind: "error"; error: McpJobError; lastEventId?: string | undefined }
+  | { kind: "replay-gap"; lastEventId?: string | undefined }
+  | { kind: "dropped"; lastEventId?: string | undefined };
 
 function baseUrl(serverBase: string): string {
   return serverBase.replace(/\/$/, "");

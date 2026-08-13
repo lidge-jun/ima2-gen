@@ -29,29 +29,29 @@ import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 
 type AgentSessionBody = {
-  title?: unknown;
-  currentImage?: unknown;
-  webSearchEnabled?: unknown;
-  currentImageId?: unknown;
-  styleLocks?: unknown;
-  subjectLocks?: unknown;
-  generationSettings?: unknown;
+  title?: unknown | undefined;
+  currentImage?: unknown | undefined;
+  webSearchEnabled?: unknown | undefined;
+  currentImageId?: unknown | undefined;
+  styleLocks?: unknown | undefined;
+  subjectLocks?: unknown | undefined;
+  generationSettings?: unknown | undefined;
 };
 
 type AgentTurnBody = {
-  prompt?: unknown;
-  provider?: unknown;
-  quality?: unknown;
-  size?: unknown;
-  format?: unknown;
-  moderation?: unknown;
-  model?: unknown;
-  reasoningEffort?: unknown;
-  requestId?: unknown;
+  prompt?: unknown | undefined;
+  provider?: unknown | undefined;
+  quality?: unknown | undefined;
+  size?: unknown | undefined;
+  format?: unknown | undefined;
+  moderation?: unknown | undefined;
+  model?: unknown | undefined;
+  reasoningEffort?: unknown | undefined;
+  requestId?: unknown | undefined;
 };
 
 type AgentQueueBody = AgentTurnBody & {
-  options?: unknown;
+  options?: unknown | undefined;
 };
 
 export function registerAgentRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
@@ -260,7 +260,7 @@ function cleanOption(value: unknown) {
 function cleanPrompt(value: unknown) {
   const prompt = cleanOption(value);
   if (prompt) return prompt;
-  const err = new Error("Prompt is required") as Error & { code?: string; status?: number };
+  const err = new Error("Prompt is required") as Error & { code?: string | undefined; status?: number | undefined };
   err.code = "AGENT_PROMPT_REQUIRED";
   err.status = 400;
   throw err;
@@ -288,14 +288,14 @@ function normalizeQueueOptions(sessionId: string, body: AgentQueueBody) {
 }
 
 function queueActionError(code: string, message: string) {
-  const err = new Error(message) as Error & { code?: string; status?: number };
+  const err = new Error(message) as Error & { code?: string | undefined; status?: number | undefined };
   err.code = code;
   err.status = 409;
   return err;
 }
 
 function queueItemNotFound(itemId: string) {
-  const err = new Error(`Agent queue item not found: ${itemId}`) as Error & { code?: string; status?: number };
+  const err = new Error(`Agent queue item not found: ${itemId}`) as Error & { code?: string | undefined; status?: number | undefined };
   err.code = "AGENT_QUEUE_ITEM_NOT_FOUND";
   err.status = 404;
   return err;
@@ -310,14 +310,14 @@ function sendError(res: Response, error: unknown) {
 }
 
 function notFound(sessionId: string) {
-  const err = new Error(`Agent session not found: ${sessionId}`) as Error & { code?: string; status?: number };
+  const err = new Error(`Agent session not found: ${sessionId}`) as Error & { code?: string | undefined; status?: number | undefined };
   err.code = "AGENT_SESSION_NOT_FOUND";
   err.status = 404;
   return err;
 }
 
 function imageNotFound(sessionId: string) {
-  const err = new Error(`Agent image not found in session: ${sessionId}`) as Error & { code?: string; status?: number };
+  const err = new Error(`Agent image not found in session: ${sessionId}`) as Error & { code?: string | undefined; status?: number | undefined };
   err.code = "AGENT_IMAGE_NOT_FOUND";
   err.status = 404;
   return err;

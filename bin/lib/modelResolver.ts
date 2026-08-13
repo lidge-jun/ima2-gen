@@ -23,14 +23,14 @@ export type ModelCatalog = { lanes: Record<string, LaneInfo> };
 export interface CliDefaults { image?: string; video?: string }
 export type ResolveResult =
   | { ok: true; lane: Lane; model: string; transport: "core" | "mcp" }
-  | { ok: false; code: string; message: string; extra?: Record<string, unknown> };
+  | { ok: false; code: string; message: string; extra?: Record<string, unknown> | undefined };
 
 const LANES = [
   ...deriveProviderIds(),
   ...listProviders([]).map((provider) => provider.id as Lane),
 ] as readonly Lane[];
 
-function failure(code: string, message: string, extra?: Record<string, unknown>): ResolveResult {
+function failure(code: string, message: string, extra?: Record<string, unknown> | undefined): ResolveResult {
   return { ok: false, code, message, ...(extra ? { extra } : {}) };
 }
 
@@ -145,7 +145,7 @@ function resolveBare(
 
 export function resolveTarget(
   kind: "image" | "video",
-  flags: { model?: string; provider?: string },
+  flags: { model?: string | undefined; provider?: string | undefined },
   catalog: ModelCatalog,
   defaults: CliDefaults,
 ): ResolveResult {

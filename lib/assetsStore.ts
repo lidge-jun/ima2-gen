@@ -44,14 +44,14 @@ export type AssetFolderRecord = {
 };
 
 export type ListAssetsQuery = {
-  kind?: string;
-  elementKind?: unknown;
-  filePath?: string;
-  folderId?: string;
-  tag?: string;
-  q?: string;
-  cursor?: string;
-  limit?: number;
+  kind?: string | undefined;
+  elementKind?: unknown | undefined;
+  filePath?: string | undefined;
+  folderId?: string | undefined;
+  tag?: string | undefined;
+  q?: string | undefined;
+  cursor?: string | undefined;
+  limit?: number | undefined;
 };
 
 export type ListElementsQuery = Omit<ListAssetsQuery, "kind">;
@@ -250,12 +250,12 @@ function replaceTags(assetId: string, tags: string[]) {
 
 export function createAsset(input: {
   kind: unknown;
-  name?: unknown;
-  filePath?: unknown;
-  folderId?: unknown;
-  notes?: unknown;
-  metadata?: unknown;
-  tags?: unknown;
+  name?: unknown | undefined;
+  filePath?: unknown | undefined;
+  folderId?: unknown | undefined;
+  notes?: unknown | undefined;
+  metadata?: unknown | undefined;
+  tags?: unknown | undefined;
 }): AssetRecord {
   const kind = assertAssetKind(input.kind);
   const filePath = canonicalizeStoredPath(input.filePath);
@@ -385,11 +385,11 @@ export function listElements(query: ListElementsQuery = {}): {
 export function updateAsset(
   id: string,
   patch: {
-    name?: unknown;
-    folderId?: unknown;
-    notes?: unknown;
-    tags?: unknown;
-    metadata?: unknown;
+    name?: unknown | undefined;
+    folderId?: unknown | undefined;
+    notes?: unknown | undefined;
+    tags?: unknown | undefined;
+    metadata?: unknown | undefined;
   },
 ): AssetRecord | null {
   const db = getDb();

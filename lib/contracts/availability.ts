@@ -13,9 +13,9 @@ export interface AvailabilityInput {
   /** The live schema hash matches the stored snapshot hash. */
   schemaHashMatch: boolean;
   /** Local transport/package is installed (remote endpoints: treated as true when registered). */
-  installed?: boolean;
+  installed?: boolean | undefined;
   /** Typed denial observed from the provider (revoked grant, entitlement rejection...). */
-  deniedCause?: AvailabilityCause;
+  deniedCause?: AvailabilityCause | undefined;
 }
 
 export function isCallable(input: AvailabilityInput): boolean {

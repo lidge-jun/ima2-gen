@@ -34,7 +34,7 @@ interface LocalSource {
   tags: string[];
 }
 
-type ParsedSource = LocalSource | (GitHubFileSource & { kind?: string; filename?: string });
+type ParsedSource = LocalSource | (GitHubFileSource & { kind?: string | undefined; filename?: string | undefined });
 
 type ImportLimits = ReturnType<typeof promptImportLimits>;
 

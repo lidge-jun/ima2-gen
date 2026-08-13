@@ -1,8 +1,8 @@
 import { providerErrorClass } from "./providerMap.js";
 
 export interface ErrorEnvelopeFields {
-  rawCode?: string;
-  errorClass?: string;
+  rawCode?: string | undefined;
+  errorClass?: string | undefined;
 }
 
 export function errorEnvelopeFields(err: unknown): ErrorEnvelopeFields {

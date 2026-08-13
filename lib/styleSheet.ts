@@ -69,7 +69,7 @@ function coerceStyleSheet(raw: unknown): StyleSheet | null {
   return hasContent ? sheet : null;
 }
 
-export async function extractStyleSheet(openai: OpenAI | null | undefined, { prompt, referenceDataUrl }: { prompt: string; referenceDataUrl?: string }) {
+export async function extractStyleSheet(openai: OpenAI | null | undefined, { prompt, referenceDataUrl }: { prompt: string; referenceDataUrl?: string | undefined }) {
   if (!openai) {
     const err = new Error("No OpenAI client configured for style-sheet extraction") as Error & { code?: string };
     err.code = "STYLE_SHEET_NO_KEY";

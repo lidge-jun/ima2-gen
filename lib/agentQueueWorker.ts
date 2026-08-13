@@ -156,7 +156,7 @@ async function runClaimedQueueItem(ctx: RuntimeContext, itemId: string) {
       webSearchEnabled: item.options.webSearchEnabled,
       parallelism: plan.plannedParallelism,
       signal,
-      onProgressStage: (stage) => updateAgentQueueItemProgress(item.id, stage),
+      onProgressStage: (stage) => { updateAgentQueueItemProgress(item.id, stage); },
     }, {
       appendUserTurn: false,
     });

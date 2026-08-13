@@ -14,9 +14,9 @@ type PostResponses = (args: {
   provider: string | undefined;
   scope: string;
   payload: unknown;
-  requestId?: string | null;
-  maxImages?: number;
-  signal?: AbortSignal | null;
+  requestId?: string | null | undefined;
+  maxImages?: number | undefined;
+  signal?: AbortSignal | null | undefined;
 }) => Promise<ParsedResponsesResult>;
 
 const MAX_RETRIES = 2;
@@ -46,9 +46,9 @@ export async function retryPromptOnlyJsonImage({
   prompt: string | undefined;
   mode: string;
   model: string;
-  quality?: string;
-  size?: string;
-  moderation?: string;
+  quality?: string | undefined;
+  size?: string | undefined;
+  moderation?: string | undefined;
   requestId: string | null;
   signal?: AbortSignal | null;
   initial: ParsedResponsesResult;

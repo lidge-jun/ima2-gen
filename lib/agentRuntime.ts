@@ -24,20 +24,20 @@ import { errInfo } from "./errInfo.js";
 import { type RuntimeContext } from "./runtimeContext.js";
 
 export type AgentRunOptions = {
-  provider?: string;
-  quality?: string;
-  size?: string;
-  format?: string;
-  moderation?: string;
-  model?: string;
-  reasoningEffort?: string;
-  requestId?: string;
-  webSearchEnabled?: boolean;
-  parallelism?: number;
-  signal?: AbortSignal | null;
-  videoParams?: AgentVideoParams | null;
-  sourceImagePolicy?: AgentSourceImagePolicy | null;
-  onProgressStage?: (stage: "requesting" | "polling" | "downloading") => void;
+  provider?: string | undefined;
+  quality?: string | undefined;
+  size?: string | undefined;
+  format?: string | undefined;
+  moderation?: string | undefined;
+  model?: string | undefined;
+  reasoningEffort?: string | undefined;
+  requestId?: string | undefined;
+  webSearchEnabled?: boolean | undefined;
+  parallelism?: number | undefined;
+  signal?: AbortSignal | null | undefined;
+  videoParams?: AgentVideoParams | null | undefined;
+  sourceImagePolicy?: AgentSourceImagePolicy | null | undefined;
+  onProgressStage?: (stage: "requesting" | "polling" | "downloading") => void | undefined;
 };
 
 export function assertAgentAllowedTools(tools: readonly string[]) {
@@ -45,9 +45,9 @@ export function assertAgentAllowedTools(tools: readonly string[]) {
   const denied = tools.filter((tool) => !allowed.has(tool));
   if (denied.length > 0) {
     const err = new Error(`Agent tool is not allowed: ${denied.join(", ")}`) as Error & {
-      code?: string;
-      status?: number;
-      deniedTools?: string[];
+      code?: string | undefined;
+      status?: number | undefined;
+      deniedTools?: string[] | undefined;
     };
     err.code = "AGENT_TOOL_NOT_ALLOWED";
     err.status = 403;
@@ -88,7 +88,7 @@ export async function runAgentGenerationPlan(
   prompt: string,
   plan: AgentGenerationPlan,
   options: AgentRunOptions = {},
-  behavior: { appendUserTurn?: boolean } = {},
+  behavior: { appendUserTurn?: boolean | undefined } = {},
 ) {
   const session = getAgentSession(sessionId);
   if (!session) throw notFound(sessionId);
@@ -316,12 +316,12 @@ async function runGeneratorWithRuntimeRecovery(
 
 export function markAgentErrorTurnRecorded(error: unknown) {
   if (error && typeof error === "object") {
-    (error as { agentErrorTurnRecorded?: boolean }).agentErrorTurnRecorded = true;
+    (error as { agentErrorTurnRecorded?: boolean | undefined }).agentErrorTurnRecorded = true;
   }
 }
 
 export function hasAgentErrorTurnRecorded(error: unknown): boolean {
-  return Boolean(error && typeof error === "object" && (error as { agentErrorTurnRecorded?: boolean }).agentErrorTurnRecorded);
+  return Boolean(error && typeof error === "object" && (error as { agentErrorTurnRecorded?: boolean | undefined }).agentErrorTurnRecorded);
 }
 
 export function isRuntimeRestartableError(error: unknown) {
@@ -369,9 +369,9 @@ export function isTextOnlyResult(error: unknown) {
 
 export function textOnlyError(cause: unknown) {
   const err = new Error("Agent result did not include an image artifact.") as Error & {
-    code?: string;
-    status?: number;
-    cause?: unknown;
+    code?: string | undefined;
+    status?: number | undefined;
+    cause?: unknown | undefined;
   };
   err.code = "AGENT_TEXT_ONLY_RESULT";
   err.status = 422;
@@ -406,7 +406,7 @@ function cleanParallelism(value: unknown) {
 }
 
 export function notFound(sessionId: string) {
-  const err = new Error(`Agent session not found: ${sessionId}`) as Error & { code?: string; status?: number };
+  const err = new Error(`Agent session not found: ${sessionId}`) as Error & { code?: string | undefined; status?: number | undefined };
   err.code = "AGENT_SESSION_NOT_FOUND";
   err.status = 404;
   return err;

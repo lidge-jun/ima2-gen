@@ -47,21 +47,21 @@ interface DiscoveryCandidate {
 }
 
 interface DiscoveryContext {
-  query?: string;
-  seeds?: string[];
+  query?: string | undefined;
+  seeds?: string[] | undefined;
 }
 
 interface DiscoveryQueryOptions {
-  q?: string;
-  seeds?: string[];
-  limit?: number;
+  q?: string | undefined;
+  seeds?: string[] | undefined;
+  limit?: number | undefined;
 }
 
 interface DiscoverySearchOptions {
-  q?: string;
-  seeds?: string[];
-  limit?: number;
-  maxQueries?: number;
+  q?: string | undefined;
+  seeds?: string[] | undefined;
+  limit?: number | undefined;
+  maxQueries?: number | undefined;
 }
 
 function tokenize(value: unknown): string[] {
@@ -109,7 +109,7 @@ function searchHeaders(ctx: PromptImportCtx): Record<string, string> {
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "ima2-prompt-import-discovery",
   };
-  const github = (ctx.config as { github?: { token?: string } } | undefined)?.github;
+  const github = (ctx.config as { github?: { token?: string | undefined } } | undefined)?.github;
   const token = github?.token;
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
@@ -254,7 +254,7 @@ async function searchOneQuery(ctx: PromptImportCtx, query: string, perPage: numb
     if (!response.ok) {
       throw promptImportError("GITHUB_DISCOVERY_FAILED", `GitHub discovery failed with ${response.status}`, 422);
     }
-    const data = (await response.json()) as { items?: DiscoveryRepo[] };
+    const data = (await response.json()) as { items?: DiscoveryRepo[] | undefined };
     const items = Array.isArray(data.items) ? data.items : [];
     return { items, rateLimit };
   } catch (error) {

@@ -156,7 +156,7 @@ interface ParsePromptCandidatesInput {
   text: string;
   filename: string;
   source: PromptCandidateSource;
-  tags?: string[];
+  tags?: string[] | undefined;
   limits: PromptImportLimits;
 }
 

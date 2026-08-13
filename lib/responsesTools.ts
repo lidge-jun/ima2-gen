@@ -1,11 +1,11 @@
 export interface ImageGenOptions {
-  quality?: string;
-  size?: string;
-  moderation?: string;
-  partial_images?: number;
+  quality?: string | undefined;
+  size?: string | undefined;
+  moderation?: string | undefined;
+  partial_images?: number | undefined;
 }
 
-export type ResponseTool = { type: string; quality?: string; size?: string; moderation?: string; partial_images?: number };
+export type ResponseTool = { type: string; quality?: string | undefined; size?: string | undefined; moderation?: string | undefined; partial_images?: number | undefined };
 export type ImageToolChoice = "required" | { type: "image_generation" };
 
 export function tools(webSearchEnabled: boolean, imageOptions: ImageGenOptions): ResponseTool[] {

@@ -56,7 +56,7 @@ export function fail(opts: {
   json: boolean;
   code: string;
   message: string;
-  extra?: Record<string, unknown>;
+  extra?: Record<string, unknown> | undefined;
   exitCode?: number;
 }): never {
   if (opts.json) {

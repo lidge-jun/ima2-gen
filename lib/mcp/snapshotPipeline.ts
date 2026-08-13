@@ -8,10 +8,10 @@ export interface BuildSnapshotInput {
   endpoint: string;
   entitlementTag: string;
   tools: Array<Record<string, unknown>>;
-  serverInfo?: Record<string, unknown> | null;
-  protocolVersion?: string;
-  serverInstructions?: string | null;
-  fetchedAt?: string;
+  serverInfo?: Record<string, unknown> | null | undefined;
+  protocolVersion?: string | undefined;
+  serverInstructions?: string | null | undefined;
+  fetchedAt?: string | undefined;
 }
 
 function toSnapshotTool(raw: Record<string, unknown>): SnapshotTool {
@@ -77,14 +77,14 @@ export interface IngestLiveToolsInput {
     provider: string;
     fetchedAt: string;
     tools: Array<Record<string, unknown>>;
-    serverInfo?: Record<string, unknown> | null;
-    protocolVersion?: string;
+    serverInfo?: Record<string, unknown> | null | undefined;
+    protocolVersion?: string | undefined;
   };
   endpoint: string;
   entitlementTag: string;
   snapshotDir: string;
   packageRoot: string;
-  isCurrent?: () => boolean;
+  isCurrent?: () => boolean | undefined;
 }
 
 /** Connect/refresh success path (040 audit round 1): sanitize live tools, diff

@@ -74,7 +74,7 @@ function sourceImageUrl(image: string, mime?: string | null): string {
 
 export function buildGrokVideoPlannerPayload(
   prompt: string,
-  opts: { model: string; mode: VideoMode; duration: number; resolution: VideoResolution; aspectRatio: VideoAspectRatio; plannerModel?: string; searchSummary?: string; sourceImageUrl?: string; referenceImageUrls?: string[]; continuityLineage?: VideoContinuityLineage | null; backgroundConstraint?: string },
+  opts: { model: string; mode: VideoMode; duration: number; resolution: VideoResolution; aspectRatio: VideoAspectRatio; plannerModel?: string | undefined; searchSummary?: string | undefined; sourceImageUrl?: string | undefined; referenceImageUrls?: string[] | undefined; continuityLineage?: VideoContinuityLineage | null | undefined; backgroundConstraint?: string | undefined },
 ) {
   const isI2V = opts.mode === "image-to-video";
   const isRef2V = opts.mode === "reference-to-video";
@@ -171,7 +171,7 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
   const aspectRatio = options.aspectRatio || "auto";
   const plannerModel = options.plannerModel || cfg.plannerModel;
   const model = canonicalVideoModel(options.model || cfg.model);
-  const search = await searchGrokVisualContext(prompt, ctx, { signal: options.signal, requestId: options.requestId, directApiKey: options.directApiKey, plannerModel });
+  const search = await searchGrokVisualContext(prompt, ctx, { ...(options.signal ? { signal: options.signal } : {}), ...(options.requestId ? { requestId: options.requestId } : {}), ...(options.directApiKey ? { directApiKey: options.directApiKey } : {}), plannerModel });
   const referenceImageUrls = (options.referenceImages ?? []).map((img) => sourceImageUrl(img, undefined));
   const payload = buildGrokVideoPlannerPayload(prompt, {
     model,
@@ -214,7 +214,7 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
   }
 }
 
-export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: string; sourceImageUrl?: string; referenceImageUrls?: string[] }): Record<string, unknown> {
+export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: string; sourceImageUrl?: string | undefined; referenceImageUrls?: string[] | undefined }): Record<string, unknown> {
   const model = canonicalVideoModel(opts.model);
   if (plan.mode === "image-to-video" && !opts.sourceImageUrl) {
     throw grokError("image-to-video requires a source image", 400, "GROK_VIDEO_INVALID_MODE");

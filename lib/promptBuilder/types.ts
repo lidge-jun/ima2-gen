@@ -5,48 +5,48 @@ export type PromptBuilderAttachment = {
   name: string;
   mimeType: string;
   size: number;
-  dataUrl?: string;
-  text?: string;
+  dataUrl?: string | undefined;
+  text?: string | undefined;
 };
 
 export type PromptBuilderMessage = {
   role: PromptBuilderRole;
   content: string;
-  attachments?: PromptBuilderAttachment[];
+  attachments?: PromptBuilderAttachment[] | undefined;
 };
 
 export type PromptBuilderContext = {
-  currentPrompt?: string;
+  currentPrompt?: string | undefined;
   insertedPrompts?: Array<{ name?: string; text?: string }>;
-  settings?: Record<string, unknown>;
-  currentResultPrompt?: string | null;
+  settings?: Record<string, unknown> | undefined;
+  currentResultPrompt?: string | null | undefined;
 };
 
 export type PromptBuilderRequest = {
-  model?: unknown;
-  messages?: unknown;
-  context?: PromptBuilderContext;
+  model?: unknown | undefined;
+  messages?: unknown | undefined;
+  context?: PromptBuilderContext | undefined;
 };
 
 export type PromptBuilderError = Error & {
-  status?: number;
-  code?: string;
-  upstreamStatus?: number;
-  upstreamBodyChars?: number;
-  upstreamEndpoint?: "chat" | "responses";
-  upstreamCode?: string;
-  upstreamType?: string;
-  upstreamParam?: string;
-  responseBodyKeys?: string;
-  responseStatus?: string;
-  responseErrorCode?: string;
-  responseErrorType?: string;
-  responseErrorParam?: string;
-  responseIncompleteReason?: string;
-  responseOutputTypes?: string;
-  responseContentTypes?: string;
-  responseOutputCount?: number;
-  responseContentCount?: number;
+  status?: number | undefined;
+  code?: string | undefined;
+  upstreamStatus?: number | undefined;
+  upstreamBodyChars?: number | undefined;
+  upstreamEndpoint?: "chat" | "responses" | undefined;
+  upstreamCode?: string | undefined;
+  upstreamType?: string | undefined;
+  upstreamParam?: string | undefined;
+  responseBodyKeys?: string | undefined;
+  responseStatus?: string | undefined;
+  responseErrorCode?: string | undefined;
+  responseErrorType?: string | undefined;
+  responseErrorParam?: string | undefined;
+  responseIncompleteReason?: string | undefined;
+  responseOutputTypes?: string | undefined;
+  responseContentTypes?: string | undefined;
+  responseOutputCount?: number | undefined;
+  responseContentCount?: number | undefined;
 };
 
 export type ResponseShapeSummary = Pick<
@@ -66,25 +66,25 @@ export type ResponseShapeSummary = Pick<
 export type ChatCompletionBody = {
   choices?: Array<{
     message?: {
-      role?: string;
-      content?: string | null;
+      role?: string | undefined;
+      content?: string | null | undefined;
     };
   }>;
-  usage?: Record<string, unknown>;
+  usage?: Record<string, unknown> | undefined;
 };
 
 export type ResponsesBody = {
-  output_text?: string;
+  output_text?: string | undefined;
   output?: Array<{
-    type?: string;
+    type?: string | undefined;
     content?: Array<{
-      type?: string;
-      text?: string | { value?: string };
-      value?: string;
-      refusal?: string;
+      type?: string | undefined;
+      text?: string | { value?: string } | undefined;
+      value?: string | undefined;
+      refusal?: string | undefined;
     }>;
   }>;
-  usage?: Record<string, unknown>;
+  usage?: Record<string, unknown> | undefined;
 };
 
 export type ResponsesReadResult = {

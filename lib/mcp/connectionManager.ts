@@ -8,6 +8,18 @@ import { tombstoneTokenRecord } from "./tokenStore.js";
 import { addCandidate, inspectRestore, isTerminalTransportError, markSessionInvalid, publicStatus, removeCandidate, runBounded, sameConnection } from "./connectionRuntime.js";
 import type { McpConnectionIdentity, McpConnectionManagerOptions, PendingAuth, ProviderSession } from "./connectionRuntime.js";
 import type { McpConnectionStatus, McpToolListing } from "./types.js";
+
+function connectClient(
+  client: Client,
+  transport: StreamableHTTPClientTransport,
+  requestOptions?: { signal?: AbortSignal; timeout?: number; maxTotalTimeout?: number },
+): Promise<void> {
+  const connect = client.connect.bind(client) as (
+    nextTransport: StreamableHTTPClientTransport,
+    options?: { signal?: AbortSignal; timeout?: number; maxTotalTimeout?: number },
+  ) => Promise<void>;
+  return requestOptions ? connect(transport, requestOptions) : connect(transport);
+}
 const DEFAULT_PENDING_AUTH_TTL_MS = 10 * 60 * 1000;
 /** Cap on consecutive automatic reconnects without a successful real RPC (010-B). */
 const MAX_AUTO_RECONNECTS = 3;
@@ -132,7 +144,7 @@ export class McpConnectionManager {
     client.onclose = () => this.handleRuntimeClose(provider, identity);
     addCandidate(this.candidates, provider, transport);
     try {
-      await client.connect(transport, requestOptions);
+      await connectClient(client, transport, requestOptions);
       if (!this.isCurrent(provider, generation)) return this.closeStale(provider, transport);
       removeCandidate(this.candidates, provider, transport);
       Object.assign(session, {
@@ -491,7 +503,7 @@ export class McpConnectionManager {
     provider: string,
     name: string,
     args: Record<string, unknown>,
-    options: { signal?: AbortSignal; timeoutMs?: number } = {},
+    options: { signal?: AbortSignal | undefined; timeoutMs?: number | undefined } = {},
   ): Promise<Record<string, unknown>> {
     const session = this.sessions.get(provider);
     if (session?.state !== "connected" || !session.client) throw new Error("MCP_NOT_CONNECTED");

@@ -12,11 +12,11 @@ const AGENT_QUESTION_DEVELOPER_PROMPT = [
 ].join(" ");
 
 type AgentQuestionOptions = {
-  provider?: string;
-  model?: string;
-  reasoningEffort?: string;
-  requestId?: string;
-  signal?: AbortSignal | null;
+  provider?: string | undefined;
+  model?: string | undefined;
+  reasoningEffort?: string | undefined;
+  requestId?: string | undefined;
+  signal?: AbortSignal | null | undefined;
 };
 
 type AgentQuestionResult = {
@@ -30,30 +30,30 @@ type QuestionEndpoint = {
 };
 
 type TextContentPart = {
-  type?: string;
-  text?: string | { value?: string };
-  value?: string;
-  refusal?: string;
+  type?: string | undefined;
+  text?: string | { value?: string } | undefined;
+  value?: string | undefined;
+  refusal?: string | undefined;
 };
 
 type TextResponseBody = {
-  output_text?: string;
+  output_text?: string | undefined;
   output?: Array<{
-    type?: string;
-    content?: TextContentPart[];
+    type?: string | undefined;
+    content?: TextContentPart[] | undefined;
   }>;
-  usage?: Record<string, unknown>;
+  usage?: Record<string, unknown> | undefined;
 };
 
 type SseEvent = {
-  type?: string;
-  delta?: string;
-  text?: string;
+  type?: string | undefined;
+  delta?: string | undefined;
+  text?: string | undefined;
   item?: {
-    type?: string;
-    content?: TextContentPart[];
+    type?: string | undefined;
+    content?: TextContentPart[] | undefined;
   };
-  response?: { usage?: Record<string, unknown> };
+  response?: { usage?: Record<string, unknown> } | undefined;
   error?: { code?: string; message?: string };
 };
 
@@ -262,10 +262,10 @@ function combineSignals(signals: AbortSignal[]): AbortSignal {
 
 function questionError(message: string, code: string, status: number, cause?: unknown) {
   const err = new Error(message) as Error & {
-    code?: string;
-    status?: number;
-    cause?: unknown;
-    upstreamBodyChars?: number;
+    code?: string | undefined;
+    status?: number | undefined;
+    cause?: unknown | undefined;
+    upstreamBodyChars?: number | undefined;
   };
   err.code = code;
   err.status = status;

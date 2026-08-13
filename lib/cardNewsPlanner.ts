@@ -24,21 +24,21 @@ interface RoleTemplate {
 }
 
 interface CardNewsBriefInput {
-  setId?: string;
-  topic?: string;
-  title?: string;
-  audience?: string;
-  goal?: string;
-  contentBrief?: string;
-  imageTemplateId?: string;
-  roleTemplateId?: string;
-  size?: string;
+  setId?: string | undefined;
+  topic?: string | undefined;
+  title?: string | undefined;
+  audience?: string | undefined;
+  goal?: string | undefined;
+  contentBrief?: string | undefined;
+  imageTemplateId?: string | undefined;
+  roleTemplateId?: string | undefined;
+  size?: string | undefined;
 }
 
 interface BriefForBody {
-  audience?: string;
-  goal?: string;
-  content?: string;
+  audience?: string | undefined;
+  goal?: string | undefined;
+  content?: string | undefined;
 }
 
 interface PlannerCardOutput {
@@ -46,16 +46,16 @@ interface PlannerCardOutput {
   headline: string;
   body: string;
   visualPrompt: string;
-  textFields?: unknown;
-  references?: unknown[];
-  order?: number;
+  textFields?: unknown | undefined;
+  references?: unknown[] | undefined;
+  order?: number | undefined;
 }
 
 interface PlannerOutput {
   title: string;
   topic: string;
-  audience?: string;
-  goal?: string;
+  audience?: string | undefined;
+  goal?: string | undefined;
   cards: PlannerCardOutput[];
 }
 
@@ -178,7 +178,7 @@ export function createDeterministicCardNewsDraft(input: CardNewsBriefInput = {})
   return toCardNewsPlan(output, input, roleTemplate);
 }
 
-type PlannerError = Error & { code?: string; status?: number };
+type PlannerError = Error & { code?: string | undefined; status?: number | undefined };
 
 function plannerError(message: string, code: string, status: number): PlannerError {
   const err = new Error(message) as PlannerError;
@@ -194,7 +194,7 @@ export async function createCardNewsDraft(ctxOrInput: RouteRuntimeContext | Card
   const roleTemplate = getRoleTemplate(input.roleTemplateId) as RoleTemplate;
 
   if (!ctx) return createDeterministicCardNewsDraft(input);
-  const planner = (ctx.config as { cardNewsPlanner?: { enabled?: boolean; model?: string; timeoutMs?: number; deterministicFallback?: boolean } } | undefined)?.cardNewsPlanner;
+  const planner = (ctx.config as { cardNewsPlanner?: { enabled?: boolean | undefined; model?: string | undefined; timeoutMs?: number | undefined; deterministicFallback?: boolean | undefined } } | undefined)?.cardNewsPlanner;
   if (!planner?.enabled) {
     return {
       plan: createDeterministicCardNewsDraft(input),
@@ -207,7 +207,7 @@ export async function createCardNewsDraft(ctxOrInput: RouteRuntimeContext | Card
     await waitForOAuthReady(ctx);
     const messages = buildCardNewsPlannerMessages({ ...input, roleTemplate, imageTemplate });
     const raw = await requestCardNewsPlannerJson({ messages }, {
-      oauthUrl: (ctx as RouteRuntimeContext & { oauthUrl?: string }).oauthUrl,
+      oauthUrl: (ctx as RouteRuntimeContext & { oauthUrl?: string | undefined }).oauthUrl,
       model: planner.model,
       timeoutMs: planner.timeoutMs,
     });

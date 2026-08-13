@@ -71,10 +71,10 @@ function decodePngDataUrl(value: unknown, invalidCode: string, pngCode: string):
 }
 
 interface MaskValidationResult {
-  mask?: string | null;
-  maskBytes?: number;
-  error?: string;
-  code?: string;
+  mask?: string | null | undefined;
+  maskBytes?: number | undefined;
+  error?: string | undefined;
+  code?: string | undefined;
 }
 
 function validateEditMask(imageB64: unknown, mask: unknown): MaskValidationResult {

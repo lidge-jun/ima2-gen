@@ -18,8 +18,8 @@ function terminalCount(template: NodeTemplateRecord): number {
 function previewGraph(graph: NodeTemplateGraph) {
   if (graph.nodes.length === 0) return [];
   const points = graph.nodes.map((node) => node.position ?? { x: 0, y: 0 });
-  const minX = Math.min(...points.map((point) => point.x));
-  const maxX = Math.max(...points.map((point) => point.x));
+  const minX = Math.min(...points.map((point) => point.x ?? 0));
+  const maxX = Math.max(...points.map((point) => point.x ?? 0));
   const minY = Math.min(...points.map((point) => point.y));
   const maxY = Math.max(...points.map((point) => point.y));
   const normalize = (value: number, min: number, max: number) =>

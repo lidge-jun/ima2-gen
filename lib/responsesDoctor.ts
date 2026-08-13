@@ -24,17 +24,17 @@ interface ProbeSpec {
 }
 
 export interface ImageDoctorProbeOptions {
-  provider?: string;
-  apiKey?: string;
-  oauthUrl?: string;
-  model?: string;
-  size?: string;
-  quality?: string;
-  moderation?: string;
-  prompt?: string;
-  matrix?: boolean;
-  timeoutMs?: number;
-  ctx?: RouteRuntimeContext;
+  provider?: string | undefined;
+  apiKey?: string | undefined;
+  oauthUrl?: string | undefined;
+  model?: string | undefined;
+  size?: string | undefined;
+  quality?: string | undefined;
+  moderation?: string | undefined;
+  prompt?: string | undefined;
+  matrix?: boolean | undefined;
+  timeoutMs?: number | undefined;
+  ctx?: RouteRuntimeContext | undefined;
 }
 
 export interface ImageDoctorProbeResult {
@@ -67,7 +67,7 @@ export interface ImageDoctorProbeResult {
     type: string | null;
     param: string | null;
     message: string;
-    upstreamBodyChars?: number;
+    upstreamBodyChars?: number | undefined;
   } | null;
 }
 
@@ -86,7 +86,7 @@ function createProbeSpecs({
   moderation,
   prompt,
   matrix,
-}: Required<Pick<ImageDoctorProbeOptions, "model" | "size" | "quality" | "moderation" | "prompt">> & { matrix: boolean }): ProbeSpec[] {
+}: { model: string; size: string; quality: string; moderation: string; prompt: string; matrix: boolean }): ProbeSpec[] {
   const imageOnlyTools = [imageTool(size, quality, moderation)];
   const webSearchImageTools = [{ type: "web_search" }, imageTool(size, quality, moderation)];
   const specs: ProbeSpec[] = [
@@ -108,13 +108,13 @@ function createProbeSpecs({
       id: "minimal_image_non_stream",
       expectation: "image",
       promptId: BUILTIN_PROMPT_ID,
-      promptChars: prompt.length,
+      promptChars: (prompt ?? BUILTIN_CAT_PROMPT).length,
       stream: false,
       toolTypes: ["image_generation"],
       toolChoiceKind: "image_generation",
       payload: {
         model,
-        input: [{ role: "user", content: prompt }],
+        input: [{ role: "user", content: prompt ?? BUILTIN_CAT_PROMPT }],
         tools: imageOnlyTools,
         tool_choice: { type: "image_generation" },
         stream: false,
@@ -124,13 +124,13 @@ function createProbeSpecs({
       id: "minimal_image_stream",
       expectation: "image",
       promptId: BUILTIN_PROMPT_ID,
-      promptChars: prompt.length,
+      promptChars: (prompt ?? BUILTIN_CAT_PROMPT).length,
       stream: true,
       toolTypes: ["image_generation"],
       toolChoiceKind: "image_generation",
       payload: {
         model,
-        input: [{ role: "user", content: prompt }],
+        input: [{ role: "user", content: prompt ?? BUILTIN_CAT_PROMPT }],
         tools: imageOnlyTools,
         tool_choice: { type: "image_generation" },
         stream: true,
@@ -144,7 +144,7 @@ function createProbeSpecs({
       id: "current_payload_no_search_required",
       expectation: "image",
       promptId: BUILTIN_PROMPT_ID,
-      promptChars: prompt.length,
+      promptChars: (prompt ?? BUILTIN_CAT_PROMPT).length,
       stream: true,
       toolTypes: ["image_generation"],
       toolChoiceKind: "required",
@@ -164,7 +164,7 @@ function createProbeSpecs({
       id: "current_payload_web_search_required",
       expectation: "image",
       promptId: BUILTIN_PROMPT_ID,
-      promptChars: prompt.length,
+      promptChars: (prompt ?? BUILTIN_CAT_PROMPT).length,
       stream: true,
       toolTypes: ["web_search", "image_generation"],
       toolChoiceKind: "required",
@@ -184,7 +184,7 @@ function createProbeSpecs({
       id: "current_payload_web_search_forced_image",
       expectation: "image",
       promptId: BUILTIN_PROMPT_ID,
-      promptChars: prompt.length,
+      promptChars: (prompt ?? BUILTIN_CAT_PROMPT).length,
       stream: true,
       toolTypes: ["web_search", "image_generation"],
       toolChoiceKind: "image_generation",
@@ -400,7 +400,7 @@ async function runSingleProbe(provider: string, options: ImageDoctorProbeOptions
         contentType,
         upstreamRequestId,
         durationMs: Date.now() - start,
-        eventCount: Number((err.raw as { eventCount?: unknown })?.eventCount) || 0,
+        eventCount: Number((err.raw as { eventCount?: unknown | undefined })?.eventCount) || 0,
         eventTypes: {},
         webSearchCalls: 0,
         textOutputChars: 0,
@@ -444,7 +444,7 @@ export async function runImageDoctorProbe(options: ImageDoctorProbeOptions = {})
     quality,
     moderation,
     promptId: options.prompt ? "custom" : BUILTIN_PROMPT_ID,
-    promptChars: prompt.length,
+    promptChars: (prompt ?? BUILTIN_CAT_PROMPT).length,
     matrix: options.matrix === true,
     probes,
     summary: {

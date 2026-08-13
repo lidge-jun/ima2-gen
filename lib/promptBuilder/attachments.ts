@@ -64,7 +64,7 @@ export function attachmentText(
 }
 
 export function hasImageAttachments(
-  messages: Array<{ attachments?: PromptBuilderAttachment[] }>,
+  messages: Array<{ attachments?: PromptBuilderAttachment[] | undefined }>,
 ): boolean {
   return messages.some((message) =>
     message.attachments?.some(

@@ -182,7 +182,7 @@ export function completeAgentQueueItem(id: string, imageIds: readonly string[]) 
   `).run(JSON.stringify([...imageIds]), Date.now(), id);
 }
 
-export function failAgentQueueItem(id: string, error: { code?: string | null; errorClass?: string | null; message: string }) {
+export function failAgentQueueItem(id: string, error: { code?: string | null | undefined; errorClass?: string | null | undefined; message: string }) {
   getDb().prepare(`
     UPDATE agent_queue_items
     SET status = 'failed',

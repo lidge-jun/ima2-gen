@@ -14,22 +14,22 @@ type AtlasReference = {
 };
 
 type AtlasGenerateOptions = {
-  model?: string;
-  size?: string;
-  quality?: string;
-  outputFormat?: "jpeg" | "png";
-  references?: AtlasReference[];
-  signal?: AbortSignal;
-  requestId?: string;
+  model?: string | undefined;
+  size?: string | undefined;
+  quality?: string | undefined;
+  outputFormat?: "jpeg" | "png" | undefined;
+  references?: AtlasReference[] | undefined;
+  signal?: AbortSignal | undefined;
+  requestId?: string | undefined;
 };
 
 type AtlasImageResult = {
   b64: string;
-  revisedPrompt?: string | null;
+  revisedPrompt?: string | null | undefined;
   usage: Record<string, number> | null;
   webSearchCalls: number;
-  mime?: string;
-  providerUrl?: string | null;
+  mime?: string | undefined;
+  providerUrl?: string | null | undefined;
 };
 
 function atlasCloudError(message: string, status: number, code: string): Error {
@@ -87,7 +87,7 @@ async function uploadReference(apiKey: string, ref: AtlasReference, index: numbe
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
-    signal,
+    ...(signal ? { signal } : {}),
   });
   const json = await readJson(res);
   if (!res.ok) {
@@ -115,7 +115,7 @@ async function submitGeneration(apiKey: string, body: Record<string, unknown>, s
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
-    signal,
+    ...(signal ? { signal } : {}),
   });
   const json = await readJson(res);
   if (!res.ok) {
@@ -141,9 +141,9 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 
 async function fetchPrediction(apiKey: string, id: string, signal?: AbortSignal): Promise<any> {
   const headers = { Authorization: `Bearer ${apiKey}`, Accept: "application/json" };
-  const primary = await fetch(`${ATLAS_BASE_URL}/model/result/${encodeURIComponent(id)}`, { headers, signal });
+  const primary = await fetch(`${ATLAS_BASE_URL}/model/result/${encodeURIComponent(id)}`, { headers, ...(signal ? { signal } : {}) });
   if (primary.status !== 404) return readJson(primary);
-  const fallback = await fetch(`${ATLAS_BASE_URL}/model/prediction/${encodeURIComponent(id)}`, { headers, signal });
+  const fallback = await fetch(`${ATLAS_BASE_URL}/model/prediction/${encodeURIComponent(id)}`, { headers, ...(signal ? { signal } : {}) });
   return readJson(fallback);
 }
 
@@ -166,13 +166,13 @@ async function pollOutputUrl(apiKey: string, id: string, signal?: AbortSignal): 
   throw atlasCloudError(`Atlas Cloud generation timed out (last status: ${lastStatus})`, 504, "GENERATION_TIMEOUT");
 }
 
-async function downloadOutput(output: string, signal?: AbortSignal): Promise<{ b64: string; mime?: string; url?: string | null }> {
+async function downloadOutput(output: string, signal?: AbortSignal): Promise<{ b64: string; mime?: string | undefined; url?: string | null }> {
   const dataUri = output.match(/^data:([^;]+);base64,(.+)$/);
   if (dataUri?.[1] && dataUri[2]) return { b64: dataUri[2], mime: dataUri[1], url: null };
   if (/^[A-Za-z0-9+/=]+$/.test(output) && output.length > 100) {
     return { b64: output, mime: "image/png", url: null };
   }
-  const res = await fetch(output, { signal });
+  const res = await fetch(output, { ...(signal ? { signal } : {}) });
   if (!res.ok) {
     throw atlasCloudError(`Atlas Cloud output download failed (${res.status})`, 502, "ATLASCLOUD_OUTPUT_DOWNLOAD_FAILED");
   }

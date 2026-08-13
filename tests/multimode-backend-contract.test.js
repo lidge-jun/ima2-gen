@@ -62,7 +62,7 @@ describe("multimode backend contract", () => {
     assert.match(parser, /await onFinalImage\?\.\(image, index\)/);
     assert.match(
       adapter,
-      /export async function generateMultimodeViaResponses[\s\S]*?onPartialImage: options\.onPartialImage,[\s\S]*?onFinalImage: options\.onFinalImage,/,
+      /export async function generateMultimodeViaResponses[\s\S]*?onPartialImage: options\.onPartialImage[\s\S]*?onFinalImage: options\.onFinalImage/,
     );
     assert.match(parser, /extraIgnored/);
     assert.match(responsesTools, /function tools\(webSearchEnabled/);
@@ -103,4 +103,3 @@ describe("multimode backend contract", () => {
     assert.match(route, /extraIgnored: latestExtraIgnored/);
   });
 });
-
