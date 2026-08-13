@@ -4,7 +4,7 @@ Last reviewed: 2026-05-26
 
 This FAQ collects the questions that tend to come up after installing or updating `ima2-gen`. The README stays short; this page is the place for practical details and recovery steps.
 
-For Korean, see [FAQ.ko.md](FAQ.ko.md).
+For Korean, see [FAQ.ko.md](FAQ.ko.md). For Traditional Chinese, see [FAQ.zh-TW.md](FAQ.zh-TW.md); for Simplified Chinese, see [FAQ.zh-CN.md](FAQ.zh-CN.md).
 
 ## Quick fixes
 

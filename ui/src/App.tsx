@@ -24,6 +24,7 @@ import { useBrowserAttentionBadge } from "./hooks/useBrowserAttentionBadge";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useVisualViewportInset } from "./hooks/useVisualViewportInset";
 import { resolveWorkspaceSettings } from "./lib/workspaceProfile";
+import { useI18n } from "./i18n";
 
 const LazyNodeCanvas = lazy(() =>
   import("./components/NodeCanvas").then((module) => ({ default: module.NodeCanvas })),
@@ -57,6 +58,7 @@ function WorkspaceFallback() {
 export default function App() {
   useGalleryViewerNavigation();
   useVisualViewportInset();
+  const { locale } = useI18n();
   const hydrateHistory = useAppStore((s) => s.hydrateHistory);
   const loadSessions = useAppStore((s) => s.loadSessions);
   const syncCapabilities = useAppStore((s) => s.syncCapabilities);
@@ -90,6 +92,10 @@ export default function App() {
   const showHistoryStrip = !promptStudioClassic && !isAgentMode && !isAssetsMode && !isAssetGenMode && !isHomeMode;
 
   useBrowserAttentionBadge(unseenGeneratedCount);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   useEffect(() => {
     void syncCapabilities();

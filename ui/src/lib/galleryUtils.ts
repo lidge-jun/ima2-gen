@@ -1,6 +1,6 @@
 export type DateBucketKey = "earlier" | "today" | "yesterday" | "thisWeek" | string;
 
-export function dateBucket(createdAt: number | undefined): DateBucketKey {
+export function dateBucket(createdAt: number | undefined, locale = "en"): DateBucketKey {
   if (!createdAt) return "earlier";
   const d = new Date(createdAt);
   if (Number.isNaN(d.getTime())) return "earlier";
@@ -9,9 +9,9 @@ export function dateBucket(createdAt: number | undefined): DateBucketKey {
   if (diffDays === 0) return "today";
   if (diffDays === 1) return "yesterday";
   if (diffDays < 7) return "thisWeek";
-  return d.toLocaleDateString("ko-KR", {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+  }).format(d);
 }

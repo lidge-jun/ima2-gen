@@ -17,6 +17,14 @@ const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const UI_SOURCE_ROOT = resolve(PROJECT_ROOT, "ui/src");
 const en = readDictionary("ui/src/i18n/en.json");
 const ko = readDictionary("ui/src/i18n/ko.json");
+const zhHant = readDictionary("ui/src/i18n/zh-Hant.json");
+const zhHans = readDictionary("ui/src/i18n/zh-Hans.json");
+const dictionaries = [
+  ["en", en],
+  ["ko", ko],
+  ["zh-Hant", zhHant],
+  ["zh-Hans", zhHans],
+] as const;
 
 const LEGACY_DOTTED_ROOTS = ["assets.clearAll", "assets.clearConfirm"] as const;
 const REQUIRED_KEYS = [
@@ -327,27 +335,31 @@ function collectTranslationCalls(): CollectedTranslations {
   return result;
 }
 
-test("English and Korean dictionaries have identical leaf paths", () => {
-  assert.deepEqual([...flattenLeafPaths(en)].sort(), [...flattenLeafPaths(ko)].sort());
+test("all locale dictionaries have identical leaf paths", () => {
+  const expected = [...flattenLeafPaths(en)].sort();
+  for (const [locale, dictionary] of dictionaries) {
+    assert.deepEqual([...flattenLeafPaths(dictionary)].sort(), expected, `${locale} leaf paths`);
+  }
 });
 
 test("root dotted keys are exactly the frozen legacy set", () => {
-  for (const dictionary of [en, ko]) {
+  for (const [locale, dictionary] of dictionaries) {
     const dotted = Object.keys(dictionary).filter((key) => key.includes(".")).sort();
-    assert.deepEqual(dotted, [...LEGACY_DOTTED_ROOTS].sort());
+    assert.deepEqual(dotted, [...LEGACY_DOTTED_ROOTS].sort(), `${locale} dotted roots`);
   }
 });
 
 test("legacy dotted roots are shadowed by nested keys", () => {
   for (const key of LEGACY_DOTTED_ROOTS) {
-    assert.equal(typeof getPath(en, key), "string", `nested ${key} must resolve in en`);
-    assert.equal(typeof getPath(ko, key), "string", `nested ${key} must resolve in ko`);
+    for (const [locale, dictionary] of dictionaries) {
+      assert.equal(typeof getPath(dictionary, key), "string", `nested ${key} must resolve in ${locale}`);
+    }
   }
 });
 
 test("new navigation and asset keys are non-empty strings", () => {
   for (const key of REQUIRED_KEYS) {
-    for (const [locale, dictionary] of [["en", en], ["ko", ko]] as const) {
+    for (const [locale, dictionary] of dictionaries) {
       const value = getPath(dictionary, key);
       assert.ok(typeof value === "string" && value.trim().length > 0, `${locale} missing ${key}`);
     }
@@ -361,17 +373,16 @@ test("every t() reference resolves or is an explicit known missing key", () => {
   for (const namespace of collected.templateNamespaces) {
     assert.ok(isDictionary(getPath(en, namespace)), `en template namespace must be an object: ${namespace}`);
   }
-  const missing = [...collected.keys].filter((key) => (
-    typeof getPath(en, key) !== "string" || typeof getPath(ko, key) !== "string"
-  )).sort();
-  assert.deepEqual(missing, [...KNOWN_MISSING].sort(), "unexpected or stale KNOWN_MISSING keys");
+  for (const [locale, dictionary] of dictionaries) {
+    const missing = [...collected.keys].filter((key) => typeof getPath(dictionary, key) !== "string").sort();
+    assert.deepEqual(missing, [...KNOWN_MISSING].sort(), `${locale}: unexpected or stale KNOWN_MISSING keys`);
+  }
 });
 
 test("sprite remains a top-level object whose tab label participates in parity", () => {
-  assert.ok(isDictionary(en.sprite));
-  assert.ok(isDictionary(ko.sprite));
-  assert.equal(typeof getPath(en, "sprite.tabs.label"), "string");
-  assert.equal(typeof getPath(ko, "sprite.tabs.label"), "string");
-  assert.ok(flattenLeafPaths(en).has("sprite.tabs.label"));
-  assert.ok(flattenLeafPaths(ko).has("sprite.tabs.label"));
+  for (const [locale, dictionary] of dictionaries) {
+    assert.ok(isDictionary(dictionary.sprite), `${locale}.sprite must be an object`);
+    assert.equal(typeof getPath(dictionary, "sprite.tabs.label"), "string", `${locale} sprite label`);
+    assert.ok(flattenLeafPaths(dictionary).has("sprite.tabs.label"), `${locale} sprite parity`);
+  }
 });

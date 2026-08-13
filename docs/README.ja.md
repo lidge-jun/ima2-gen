@@ -6,7 +6,7 @@
 
 > 🌐 **Live site**: [lidge-jun.github.io/ima2-gen](https://lidge-jun.github.io/ima2-gen/) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/)
 >
-> **他の言語で読む**: [English](../README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
+> **他の言語で読む**: [English](../README.md) · [한국어](README.ko.md) · [正體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md)
 
 `ima2-gen` は、無料の ChatGPT と SuperGrok だけで画像と動画を作れるローカル AI スタジオです。
 

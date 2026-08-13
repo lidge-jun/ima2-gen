@@ -191,7 +191,7 @@ export function AssetsWorkspace() {
 }
 
 function AssetMetaDetail({ asset, onRename }: { asset: AssetItem; onRename: (name: string) => Promise<boolean> }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(asset.name);
   const renamePendingRef = useRef(false);
@@ -240,7 +240,7 @@ function AssetMetaDetail({ asset, onRename }: { asset: AssetItem; onRename: (nam
         <dt>{t("assets.detailKind")}</dt>
         <dd>{t(`assets.kind${asset.kind[0].toUpperCase()}${asset.kind.slice(1)}`)}</dd>
         <dt>{t("assets.detailCreated")}</dt>
-        <dd>{new Date(asset.createdAt).toLocaleString()}</dd>
+        <dd>{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(asset.createdAt))}</dd>
         {provider ? (<><dt>{t("assets.detailProvider")}</dt><dd>{provider}</dd></>) : null}
         {prompt ? (<><dt>{t("assets.detailPrompt")}</dt><dd className="assets-workspace__detail-prompt">{prompt}</dd></>) : null}
         {asset.tags.length > 0 ? (<><dt>{t("assets.detailTags")}</dt><dd>{asset.tags.join(", ")}</dd></>) : null}
