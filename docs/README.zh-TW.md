@@ -4,21 +4,21 @@
   <img src="../assets/logo.png" alt="ima2-gen logo" width="240">
 </p>
 
-[![npm版本](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
+[![npm 版本](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
-[![許可證：麻省理工學院](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
+[![授權條款：MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
-> 🌐 **現場直播**: [lidge-jun.github.io/ima2-gen](https://lidge-jun.github.io/ima2-gen/) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/)
+> 🌐 **線上網站**：[lidge-jun.github.io/ima2-gen](https://lidge-jun.github.io/ima2-gen/) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/)
 >
-> 📖 **開發者文檔**: [文件站點](https://lidge-jun.github.io/ima2-gen/docs) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/docs)
+> 📖 **開發者文件**：[文件網站](https://lidge-jun.github.io/ima2-gen/docs) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/docs)
 >
 > **閱讀其他語言版本**：[English](../README.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [正體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md)
 
-`ima2-gen`是一個本地圖像生成工作室，為那些想要ChatGPT/Codex類似桌面的小型 Web 應用程式中的圖像工作流程。
+`ima2-gen` 是一套本機圖片生成工作室，適合想在小巧、類桌面體驗的 Web 應用程式中使用 ChatGPT／Codex 圖片工作流程的人。
 
-全域安裝，登入ChatGPT OAuth或者Grok OAuth，並開始生成圖像和視頻。使用歷史記錄、引用、節點分支、多模式批次、畫布模式清理等進行迭代Grok影片生成。預設OAuth路徑不需要API鑰匙;選修的API-關鍵提供者（`api`, `grok-api`, `gemini-api`, `agy`）也受支持。
+全域安裝後，使用 ChatGPT OAuth 或 Grok OAuth 登入，就能開始產生圖片與影片。你可以搭配歷史記錄、參考圖、節點分支、多階段批次、畫布模式去背，以及 Grok 影片生成來反覆調整結果。預設的 OAuth 路徑不需要 API 金鑰；另外也支援使用 API 金鑰的提供者（`api`、`grok-api`、`gemini-api`、`agy`）。
 
-![ima2-gen影片播放，圖庫側邊欄顯示生成的圖像和影片。](../assets/screenshots/classic-generate-light.png)
+![ima2-gen 播放影片時的畫面，右側圖庫顯示產生的圖片與影片。](../assets/screenshots/classic-generate-light.png)
 
 ## 快速入門
 
@@ -28,7 +28,7 @@ ima2 setup
 ima2 serve
 ```
 
-然後打開`http://localhost:3333`.
+接著在瀏覽器開啟 `http://localhost:3333`。
 
 ### Docker
 
@@ -37,9 +37,9 @@ docker build -t ima2-gen .
 docker run -d -p 3333:3333 -e IMA2_LAN_TOKEN=change-me -v ima2-data:/data ima2-gen
 ```
 
-看[docs/DOCKER.md](DOCKER.md)了解 compose 的用法、所需的環境和限制。
+請參閱 [DOCKER.md](DOCKER.md)，了解 Compose 用法、必要環境變數與限制。
 
-生成自CLI，檢查即時車道目錄並選擇顯式影像/視訊預設值一次：
+若要從 CLI 產生內容，可以先查看目前可用的模型清單，並設定圖片／影片的預設模型：
 
 ```bash
 ima2 models
@@ -50,17 +50,17 @@ ima2 video "a cat playing piano" --duration 5 --resolution 720p
 ima2 video "animate this scene" --ref photo.png --duration 10
 ```
 
-`ima2 gen`和生成模式`ima2 video`失敗關閉`NO_DEFAULT_MODEL`直到一個CLI目標已配置，除非該呼叫通過`--model <lane>/<model>`或明確的`--provider <lane>`。這可以防止升級時默默地切換提供者或計費通道。
+在設定 CLI 目標前，`ima2 gen` 與生成模式的 `ima2 video` 會以 `NO_DEFAULT_MODEL` 安全失敗；除非該次呼叫指定 `--model <lane>/<model>` 或明確指定 `--provider <lane>`。這能避免升級後不知情地切換提供者或計費路徑。
 
-如果`3333`已經被佔用了，`ima2-gen`綁定下一個可用連接埠並寫入實際的URL到`~/.ima2/server.json`。使用`ima2 open`或URL在終端中列印而不是假設連接埠。
+如果 `3333` 已被其他程式使用，`ima2-gen` 會改用下一個可用的連接埠，並把實際網址寫入 `~/.ima2/server.json`。請使用 `ima2 open`，或開啟終端機列出的網址，不要假設連接埠一定是 `3333`。
 
-> **使用npx？**看[docs/NPX_QUICKSTART.md](NPX_QUICKSTART.md)為`npx ima2-gen serve`工作流程。
+> **想使用 npx？**請參閱 [NPX_QUICKSTART.md](NPX_QUICKSTART.md) 的 `npx ima2-gen serve` 使用方式。
 
-### 一鍵安裝（無npm必需的）
+### 一鍵安裝（不需要 npm）
 
-沒有Node.js或者npm？使用平台安裝腳本 — 它會偵測您的環境，根據需要安裝 Node LTS，然後安裝ima2-gen.
+如果沒有 Node.js 或 npm，可以使用對應平台的安裝腳本。腳本會偵測環境、視需要安裝 Node LTS，最後安裝 ima2-gen。
 
-**蘋果系統：**
+**macOS：**
 ```bash
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-mac.sh | bash
 ```
@@ -75,54 +75,52 @@ irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 ```
 
-每個腳本都會檢查 nvm/fnm/brew/winget，透過最佳可用方法安裝 Node LTS，並自動處理過時進程清理。
+每個腳本都會檢查 nvm、fnm、Homebrew 或 winget，選擇最適合的方法安裝 Node LTS，並自動清理殘留的舊程序。
 
 ### 設定
 
-`ima2 setup`提供四種身份驗證選擇：
+`ima2 setup` 提供四種驗證方式：
 
-1. **GPT OAuth**— 登入方式ChatGPT帳戶（免費，僅圖像）
-2. **Grok OAuth**— 登入方式xAI/Grok帳戶（圖片+影​​片）
-3. **兩個都** — GPT OAuth + Grok OAuth（全功能存取）
-4. **網頁設定**— 設定網路中的所有內容UI
+1. **GPT OAuth** — 使用 ChatGPT 帳戶登入（免費，僅支援圖片）
+2. **Grok OAuth** — 使用 xAI／Grok 帳戶登入（支援圖片與影片）
+3. **兩者皆用** — 同時使用 GPT OAuth 與 Grok OAuth（完整功能）
+4. **Web 設定** — 在 Web UI 中設定所有選項
 
-視訊生成需要Grok OAuth（選項 2 或 3）。跑步`ima2 grok login`如果您已經有，請單獨GPT OAuth配置並想要添加視訊支援；它預設為手動貼上流程。
+影片生成需要 Grok OAuth（選項 2 或 3）。如果已經設定 GPT OAuth、想再加入影片支援，請另外執行 `ima2 grok login`；預設會使用手動貼上驗證資訊的流程。
 
 ### 更新中
 
-使用 Ctrl+C 停止正在執行的伺服器，然後：
+使用 Ctrl+C 停止執行中的伺服器，然後執行：
 
 ```bash
 npm install -g ima2-gen@latest
 ```
 
-Ctrl+C 現在執行乾淨關閉 — 關閉資料庫、停止子程序並釋放檔案鎖定。在舊版 (< 1.1.22) 上或如果您看到`EBUSY`在 Windows 上，使用自動處理過時進程清理的安裝腳本。
+現在按下 Ctrl+C 會正常關閉程式：關閉資料庫、停止子程序並釋放檔案鎖定。如果使用舊版（< 1.1.22），或在 Windows 上看到 `EBUSY`，請改用會自動清理殘留程序的安裝腳本。
 
-## 它的作用
+## 功能總覽
 
-- **經典模式**：產生、編輯、重複使用目前影像、貼上引用並從歷史記錄繼續。
-- **節點模式**：將好的影像分支到多個方向，而不遺失原始影像。
-- **多模式批次**：從一個提示啟動多個經典輸出，逐一觀察插槽進度，然後從最佳結果繼續。
-- **影片生成**：透過文字、單一圖像或多個參考圖像建立短視頻Grok視訊模型。SSE串流顯示計畫→提交→進度％→完成。視訊幀複製按鈕（第一個/中間/最後一個）可讓您從生成的影片中提取和複製關鍵影格。
-- **分鏡模式**：在編輯器中切換故事板模式，以保持連續幀之間的角色和場景連續性。適用於影像和影片生成 - 為影片製作組合影像關鍵幀，影片剪輯繼承角色/環境鎖定規則。
-- **畫布模式**：縮放、平移、註釋、擦除、清理背景、保持透明預覽以及匯出 Alpha 或遮罩版本。
-- **當地畫廊**：將產生的資產保留在您的電腦上並具有會話感知歷史記錄。預設情況下，圖庫顯示目前會話，所有影像切換顯示完整歷史記錄；預設範圍是跨會話的黏性。每個圖像都會在結果元資料中記錄其生成時間和推理工作，因此它們在重新加載後仍然存在。
-- **參考圖片**：拖放、貼上和附加最多 5 個參考文獻（圖像）或最多 7 個參考文獻（影片）；大圖像在上傳之前會被壓縮。
-- **提示庫導入**：匯入本機提示包，GitHub文件夾和策劃GPT-圖像提示提示進入內建提示庫。
-- **手機殼**：在較小的螢幕上使用應用程式列、撰寫表格和緊湊設定切換。
-- **可觀察的職位**：使用安全日誌和請求 ID 追蹤活動的和最近的作業。
+- **經典模式**：產生、編輯、重複使用目前圖片、貼上參考圖，或從歷史記錄繼續工作。
+- **節點模式**：從一張好圖片分支出多個方向，同時保留原始結果。
+- **多階段批次**：從一個提示詞啟動多個經典模式結果，逐一查看進度，再從最佳結果繼續。
+- **影片生成**：使用文字、單張圖片或多張參考圖，透過 Grok 影片模型建立短片。SSE 串流會顯示「規劃 → 已提交 → 進度百分比 → 完成」；影片影格按鈕（第一格／中間格／最後一格）可擷取並複製關鍵影格。
+- **分鏡模式**：在編輯器中開啟分鏡模式，維持連續影格中的角色與場景一致性。圖片與影片生成都支援此模式；圖片關鍵影格可用於影片製作，影片片段則會沿用角色／環境鎖定規則。
+- **畫布模式**：縮放、平移、加註解、擦除、清理背景、預覽透明圖片，並匯出透明度或指定底色的版本。
+- **本機圖庫**：將產生的資產保存在電腦上，並以工作階段管理歷史記錄。圖庫預設顯示目前工作階段；切換「所有圖片」即可查看完整歷史記錄，而且範圍設定會跨工作階段保留。每張圖片的產生時間與推理強度都會記錄在結果中繼資料裡，重新載入後仍可查看。
+- **參考圖片**：拖放、貼上並附加最多 5 張圖片參考，或最多 7 張影片參考；大型圖片會在上傳前自動壓縮。
+- **提示詞庫匯入**：將本機提示詞包、GitHub 資料夾、精選來源與 GPT 圖片提示詞提示包匯入內建提示詞庫。
+- **行動版介面**：在小螢幕上使用應用程式列、撰寫面板與精簡設定切換。
+- **可觀測的工作**：透過安全日誌與請求 ID 追蹤目前及最近的工作。
 
 ### 代理技巧
 
-ima2-gen為 AI 編碼代理提供了三種打包技能。這些是 Markdown
-代理程式載入的指令檔案以獲得圖像/影片的結構化工作流程
-生成、前端資產生產和設計方向發現。
+ima2-gen 內建三套提供給 AI 程式碼代理使用的技能。這些 Markdown 指令檔案可協助代理建立圖片／影片的結構化工作流程、製作前端資產，以及探索設計方向。
 
 |技能|命令|它涵蓋什麼|
 |-------|---------|----------------|
 | **核** | `ima2 skill` | CLI參考、提示協定、提供者路由、韓文文字、影片工作流程|
-| **前端** | `ima2 skill front` |資產管道（並行生成、變體選擇、提供者路由）、網路運動/視訊、響應式、a11y、防傾斜、30 多個參考文件|
-| **UI/UX設計** | `ima2 skill uiux` |影像優先的設計方向發現，UX狀態、設計主義、產品個性、DESIGN.md工作流程，18 個參考文件|
+| **前端** | `ima2 skill front` | 資產流程（平行產生、變體選擇、提供者路由）、Web 動態／影片、響應式設計、無障礙、防止 AI 味設計，以及 30 多份參考文件 |
+| **UI／UX 設計** | `ima2 skill uiux` | 以圖片為核心的設計方向探索、UX 狀態、設計語彙、產品個性、DESIGN.md 工作流程，以及 18 份參考文件 |
 
 ```bash
 ima2 skill ls            # list available skills
@@ -136,28 +134,24 @@ ima2 skill install --dir <path>     # install skills to agent's skill dir
 ima2 skill install --tmp            # install to temp dir (fallback)
 ```
 
-前端和UI/UX技能是生產級設計工程指南
-適應於ima2工作流程。它們涵蓋版式、色彩系統、佈局
-紀律, 韓語UX模式、動作編排和視覺驗證，
-每個資產生成步驟都會對應到`ima2 gen`, `ima2 video`， 和
-`ima2 multimode`命令。
+前端與 UI／UX 技能是針對 ima2 工作流程整理的正式產品設計工程指南，涵蓋字體、色彩系統、版面配置、韓文 UX 模式、動態編排與視覺驗證；每個資產產生步驟都對應到 `ima2 gen`、`ima2 video` 與 `ima2 multimode` 指令。
 
 ### SSE多路復用
 
-網路UI使用單一`GET /api/events`所有產生進度的伺服器發送事件連線。多模式、節點和視訊請求作為非同步 POST 提交（`202 { requestId }`）和進度事件透過共享事件匯流排進行多路復用。這消除了先前在並發生成期間導致圖庫掛起的瀏覽器 6 個連線限制。CLI不發送的客戶`async: true`仍然收到每個請求SSE流以實現向後相容性。
+Web UI 使用單一 `GET /api/events` 伺服器發送事件（SSE）連線，接收所有生成進度。多階段、節點與影片請求會以非同步 POST（`202 { requestId }`）提交，進度事件則透過共用事件匯流排多工傳送。這避免了瀏覽器最多 6 條連線的限制，不再因同時生成而讓圖庫卡住。未傳送 `async: true` 的 CLI 用戶端仍會收到每個請求各自的 SSE 串流，以維持向下相容性。
 
 ## 提供者路徑
 
-圖像生成可以透過本地運行Codex/ChatGPT OAuth路徑，配置的OpenAI API鍵，捆綁的Grok提供者，或Gemini提供者透過Antigravity CLI.
+圖片生成可以使用本機 Codex／ChatGPT OAuth、已設定的 OpenAI API 金鑰、內建 Grok 提供者，或透過 Antigravity CLI 使用 Gemini 提供者。
 
-- `provider: "oauth"`使用本地的Codex OAuth代理人。
-- `provider: "api"`稱為OpenAI回應API與託管的`image_generation`工具。
+- `provider: "oauth"` 使用本機 Codex OAuth 代理程式。
+- `provider: "api"` 使用 OpenAI Responses API 的 `image_generation` 工具。
 - `provider: "grok"`開始捆綁`progrok`在`127.0.0.1:18645`, 強制運行xAI網路搜尋加上規劃者通行證（預設：`grok-4.5`，可在設定中配置或透過`--planner-model`），然後調用xAI圖片API透過本地代理。`grok-4.3`仍然可以作為顯式相容性覆蓋使用。
 - `provider: "grok-api"`稱為xAI圖片API直接與`XAI_API_KEY`（無捆綁progrok OAuth代理人）。
-- `provider: "agy"`產生Antigravity CLI (`agy -p`）透過Google生成圖像Gemini's `default_api:generate_image`工具（型號：`nano-banana-2`）。輸出固定為1024×1024JPEG，最多 3 個參考影像。沒有網路搜尋、品質或大小控制。
-- `provider: "gemini-api"`呼叫 Google 生成語言API直接地。支援兩種型號：`nano-banana-2` (Gemini3.1 Flash 影像）和`nano-banana-pro` (Gemini3 專業圖像）。身份驗證是透過`GEMINI_API_KEY`環境變數、網絡UI密鑰管理，或Vertex AI服務帳戶JSON (`VERTEX_SERVICE_ACCOUNT_JSON`）。當兩者都APIkey 和 Vertex 憑證已配置，Vertex 優先。支援可變寬高比（1:1 至 21:9）和四個解析度等級（512px、1K、2K、4K）；這些控制僅在直接上受到尊重API路徑——Vertex AI端點忽略方面/大小，因為它不接受`response_format`場地。每個型號的成本不同：`nano-banana-2`（快閃記憶體）：512=0.001 美元、1K=0.003 美元、2K=0.004 美元、4K=0.006 美元；`nano-banana-pro`：1K=0.007 美元，2K=0.007 美元，4K=0.013 美元。沒有網路搜尋或遮罩控制。
-- API-金鑰產生支援經典生成、編輯、遮罩引導編輯、多模式和節點產生。
-- Grok產生支援經典流、節點流和代理流。如果存在經典參考、節點父映像或代理程式目前映像，ima2切換最後的Grok打電話給xAI圖像編輯，以便保留圖像到圖像的上下文。
+- `provider: "agy"` 啟動 Antigravity CLI（`agy -p`），透過 Google Gemini 的 `default_api:generate_image` 工具產生圖片（模型：`nano-banana-2`）。輸出固定為 1024×1024 JPEG，最多 3 張參考圖，不提供網路搜尋、品質或尺寸控制。
+- `provider: "gemini-api"` 直接呼叫 Google Generative Language API。支援 `nano-banana-2`（Gemini 3.1 Flash Image）與 `nano-banana-pro`（Gemini 3 Pro Image）；驗證方式包括 `GEMINI_API_KEY` 環境變數、Web UI 金鑰管理，或 Vertex AI 服務帳戶 JSON（`VERTEX_SERVICE_ACCOUNT_JSON`）。同時設定 API 金鑰與 Vertex 憑證時，優先使用 Vertex。支援 1:1 至 21:9 的長寬比與 512px、1K、2K、4K 四種解析度；這些控制只有直接 API 路徑有效，Vertex AI 端點不接受 `response_format` 欄位，因此會忽略長寬比與尺寸設定。
+- API 金鑰產生支援經典模式的產生、編輯、遮罩導向編輯、多階段與節點產生。
+- Grok 產生支援經典、節點與代理模式。如果有經典參考圖、節點父圖片或代理模式目前圖片，ima2 會將最後一次 Grok 呼叫切換為 xAI 圖片編輯，以保留圖片轉圖片的上下文。
 
 如果未指定提供者，應用程式將保留目前的GPT OAuth/預設行為。GPT OAuth和API-金鑰產生預設為`gpt-5.6-luna`;這API-key路徑也預設為`low`推理和`1024x1024`除非請求通過了經過驗證的選項。Grok影像生成預設為`grok-imagine-image-quality`.
 
@@ -175,19 +169,19 @@ Grok影片產生預設為規範`grok-imagine-video-1.5`; `grok-imagine-video`仍
 - `gpt-5.6-terra` / `gpt-5.6-sol`- 目前的GPT-5.6當您的帳戶暴露它們時的替代方案。
 - `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`- 支援的相容性選擇。
 
-該應用程式還暴露了品質（`low`, `medium`, `high`）和適度（`auto`, `low`）控制。
+應用程式也提供品質（`low`、`medium`、`high`）與內容審查（`auto`、`low`）控制。
 
 ## 工作流程
 
 ### 經典模式
 
-當您想要快速獲得強大的結果時，請使用經典。
+如果想快速取得一個完整結果，請使用經典模式。
 
-1. 寫一個提示。
-2. 如有需要，附加或貼上參考文獻。
-3. 選擇型號、品質、尺寸、格式和審核。
-4. 產生一個影像，或啟用多模式以從相同提示中扇出多個候選插槽。
-5. 複製、下載、繼續結果或將其傳送至畫布模式。
+1. 輸入提示詞。
+2. 視需要附加或貼上參考圖。
+3. 選擇模型、品質、尺寸、格式與內容審查模式。
+4. 產生一張圖片，或開啟多階段模式，從同一個提示詞產生多個候選結果。
+5. 複製、下載、從結果繼續，或將結果送到畫布模式。
 
 有關 Prompt Studio、多模式配方、直接模式的逐一控制指南，
 推理努力和畫廊最喜歡的行為，請參閱
@@ -215,9 +209,9 @@ Grok影片產生預設為規範`grok-imagine-video-1.5`; `grok-imagine-video`仍
 
 ![帶有縮放控制項、註解標記、便籤和畫布工具列的畫布模式。](../assets/screenshots/canvas-mode-cleanup.png)
 
-### 提示庫和導入
+### 提示詞庫與匯入
 
-現在可以從本機檔案填充提示庫，GitHub文件夾、精選資源以及GPT-圖像提示包。匯入的提示在本機建立索引，因此搜尋和排名無需在每個會話中重新匯入相同的來源。
+現在可以從本機檔案、GitHub 資料夾、精選來源與 GPT 圖片提示詞包填入提示詞庫。匯入的提示詞會在本機建立索引，因此搜尋與排序不必在每個工作階段重新匯入相同來源。
 
 ![用於將提示導入庫的提示導入對話框，顯示GitHub匯入前的資料夾控制項、精選來源和搜尋提示候選者。](../assets/screenshots/prompt-import-dialog.png)
 
@@ -229,7 +223,7 @@ Card News 仍處於開發階段且處於實驗階段。預設是隱藏的
 
 ### 設定
 
-設定工作區可使帳戶、模型、外觀和語言控制項遠離生成側邊欄。
+設定工作區將帳戶、模型、外觀與語言選項集中管理，讓生成側欄保持精簡。
 
 ![具有帳戶導航和產生模型控制項的設定工作區。](../assets/screenshots/settings-workspace.png)
 
@@ -241,7 +235,7 @@ Card News 仍處於開發階段且處於實驗階段。預設是隱藏的
 |---|---|
 | `ima2 serve [--dev]` |啟動本地網路伺服器；`--dev`啟用詳細的伺服器診斷|
 | `ima2 setup` |重新配置已儲存的身份驗證|
-| `ima2 status` |顯示配置和OAuth地位|
+| `ima2 status` | 顯示設定與 OAuth 狀態 |
 | `ima2 doctor` |診斷節點、套件、配置和身份驗證|
 | `ima2 doctor image-probe [--json]` |運行經過淨化的影像探針進行無影像診斷|
 | `ima2 open` |開啟網路UI |
@@ -249,7 +243,7 @@ Card News 仍處於開發階段且處於實驗階段。預設是隱藏的
 
 ### 客戶
 
-這些都需要運行`ima2 serve`。這CLI覆蓋每條伺服器路線。最常見的如下 -[滿的CLI參考](CLI.md)列出所有內容（生成、歷史、會話、提示庫、註釋、卡片新聞、可觀察性、配置）。
+以下指令都需要先執行 `ima2 serve`。CLI 覆蓋伺服器提供的各項功能；下面列出最常用的指令，完整清單請參閱 [CLI 參考](CLI.md)（包含產生、歷史記錄、工作階段、提示詞庫、註解、Card News、可觀測性與設定）。
 
 |命令|描述|
 |---|---|
@@ -264,10 +258,10 @@ Card News 仍處於開發階段且處於實驗階段。預設是隱藏的
 | `ima2 show <name> [--metadata]` |顯示產生的資產|
 | `ima2 prompt ls -q <search>` |搜尋提示庫|
 | `ima2 inflight ls [--terminal]` |列出目前和最近的工作（別名`ps`) |
-| `ima2 config set <key> <value>` |寫信給`~/.ima2/config.json` |
+| `ima2 config set <key> <value>` | 寫入 `~/.ima2/config.json` |
 | `ima2 ping` |健康檢查正在運行的伺服器|
 
-伺服器公佈其實際連接埠為`~/.ima2/server.json`。如果`3333`正忙，後端回落到`3334+`和CLI命令遵循廣告URL。覆蓋發現`--server <url>`或者`IMA2_SERVER=http://localhost:3333`.
+伺服器會將實際連接埠寫入 `~/.ima2/server.json`。如果 `3333` 忙碌，後端會改用 `3334` 以上的連接埠，CLI 指令也會遵循公告網址。你可以用 `--server <url>` 或 `IMA2_SERVER=http://localhost:3333` 覆寫自動偵測結果。
 
 ```bash
 ima2 models --kind image
@@ -290,9 +284,9 @@ ima2 config set imageModels.reasoningEffort high
 environment variables > ~/.ima2/config.json > built-in defaults
 ```
 
-|多變的|預設|描述|
+| 環境變數 | 預設值 | 說明 |
 |---|---:|---|
-| `IMA2_PORT` / `PORT` | `3333` |網路伺服器連接埠|
+| `IMA2_PORT` / `PORT` | `3333` | Web 伺服器連接埠 |
 | `IMA2_HOST` | `127.0.0.1` |Web伺服器綁定主機|
 | `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | `10531` | OAuth代理端口|
 | `IMA2_SERVER` | — | CLI目標覆蓋|
