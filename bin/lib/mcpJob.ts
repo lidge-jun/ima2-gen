@@ -1,5 +1,5 @@
 import { openSse, sseUrlWithCursor, type OpenSseResult, type SseEvent } from "./sse.js";
-import { normalizeTerminalStatus } from "./jobStatus.js";
+import { normalizeTerminalStatus } from "../../lib/jobStatus.js";
 
 export interface McpJobOptions {
   serverBase: string;
@@ -151,6 +151,14 @@ function terminalResult(job: Record<string, unknown>): McpJobResult | McpJobErro
     return new McpJobError(
       typeof job.errorCode === "string" ? job.errorCode : "MCP_JOB_FAILED",
       typeof meta.message === "string" ? meta.message : "MCP job failed",
+    );
+  }
+  // A canceled job is terminal too. Falling through would report the generic
+  // SSE_REPLAY_GAP instead of telling the caller the job was canceled.
+  if (normalized === "canceled") {
+    return new McpJobError(
+      typeof job.errorCode === "string" ? job.errorCode : "GENERATION_CANCELED",
+      typeof meta.message === "string" ? meta.message : "MCP job was canceled",
     );
   }
   // Accept every success spelling, not just "done": finishJob defaults to

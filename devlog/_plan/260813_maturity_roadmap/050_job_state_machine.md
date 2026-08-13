@@ -154,7 +154,7 @@ A phase 감사도 같은 지적을 했다: UI 상태와 queue 상태까지 전�
 | 명령 | 관측 대상 | 실행 결과 |
 |---|---|---|
 | `npm run typecheck` | `lib/jobStatus.ts`, `lib/inflight.ts`, `bin/**` | include에 `lib/**`·`bin/**` 포함 — **관측함** |
-| `node --test tests/job-terminal-status-contract.test.ts` | 통합 경로 | 파일 미존재 (B에서) |
+| `node --import tsx --test tests/job-terminal-status-contract.test.ts` | 통합 경로 | `--import tsx`가 필수다(C phase 리뷰): 이 저장소의 러너가 `scripts/run-tests.mjs:19`에서 붙이는 로더이며, 없으면 `.ts` 상대 import가 해석되지 않는다 |
 | `npm test` | 회귀(`e4`) | `d2fe420`에서 2118/2116 pass |
 
 ## 미루는 것

@@ -14,10 +14,13 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { once } from "node:events";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { normalizeTerminalStatus, isTerminalSuccess, TERMINAL_SUCCESS } from "../lib/jobStatus.ts";
-import * as cliJobStatus from "../bin/lib/jobStatus.ts";
 import { finishJob, listTerminalJobs, startJob, _resetForTests } from "../lib/inflight.ts";
 import { runMcpJob, type McpJobOptions } from "../bin/lib/mcpJob.ts";
+import { commitMediaResult } from "../lib/mcp/commitMediaResult.ts";
 
 describe("terminal status normalization", () => {
   it("collapses every success spelling that reaches the snapshot", () => {
@@ -45,23 +48,6 @@ describe("terminal status normalization", () => {
     }
   });
 
-  it("keeps the CLI copy identical to the server module", () => {
-    // bin/ is transpiled and bundled separately, so mcpJob cannot import lib/.
-    // Drift between the two copies would silently re-open the recovery gap.
-    assert.equal(cliJobStatus.TERMINAL_SUCCESS, TERMINAL_SUCCESS);
-    const inputs = [
-      "done", "completed", "complete", "COMPLETED", " done ",
-      "error", "failed", "canceled", "cancelled",
-      "weird", "", null, undefined, 42, {},
-    ];
-    for (const value of inputs) {
-      assert.equal(
-        cliJobStatus.normalizeTerminalStatus(value),
-        normalizeTerminalStatus(value),
-        `CLI and server disagree on ${JSON.stringify(value)}`,
-      );
-    }
-  });
 });
 
 // --- Integration: producer -> snapshot -> CLI recovery -------------------
@@ -73,6 +59,9 @@ let serverBase = "";
 let server: ReturnType<typeof createServer>;
 // Each case registers what finishJob should record before the stream drops.
 const pending = new Map<string, string | undefined | null>();
+// Cases that must run through the real commitMediaResult instead of finishJob.
+const commitCases = new Set<string>();
+let generatedDir = "";
 
 function emit(res: Client, event: string, data: unknown, id: number) {
   res.write(`id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -142,14 +131,53 @@ function finishAndDropStream(requestId: string) {
   const status = pending.get(requestId);
   startJob({ requestId, kind: "image", meta: {} });
   for (const client of clients) emit(client, "progress", { jobId: requestId, phase: "persisting" }, 10);
-  finishJob(requestId, status === null
-    ? { meta: { filename: `${requestId}.png` } }
-    : { status, meta: { filename: `${requestId}.png` } });
+  if (commitCases.has(requestId)) {
+    void commitThenDrop(requestId);
+    return;
+  }
+  if (status === "canceled") {
+    // Exercise the real cancel path: options.canceled overrides status.
+    finishJob(requestId, { canceled: true, meta: { filename: `${requestId}.png` } });
+  } else {
+    finishJob(requestId, status === null
+      ? { meta: { filename: `${requestId}.png` } }
+      : { status, meta: { filename: `${requestId}.png` } });
+  }
   for (const client of [...clients]) client.end();
+}
+
+// e2: the real producer. commitMediaResult writes the snapshot AND publishes a
+// live done event; the live event is suppressed here (no SSE bridge is wired to
+// publishJobEvent in this harness) and the stream is dropped, so the client has
+// to recover from the snapshot commitMediaResult actually wrote.
+async function commitThenDrop(requestId: string) {
+  const tempPath = join(generatedDir, `${requestId}-src.png`);
+  writeFileSync(tempPath, "not-a-real-png");
+  try {
+    await commitMediaResult({
+      ctx: {
+        config: {
+          ids: { generatedHexBytes: 4 },
+          storage: { generatedDir },
+        },
+      } as never,
+      deps: { writeSidecar: async () => undefined },
+      requestId,
+      kind: "image",
+      tempPath,
+      cleanup: async () => undefined,
+      ext: "png",
+      meta: {},
+      doneExtra: {},
+    });
+  } finally {
+    for (const client of [...clients]) client.end();
+  }
 }
 
 describe("finishJob snapshot reaches CLI recovery", () => {
   before(async () => {
+    generatedDir = mkdtempSync(join(tmpdir(), "ima2-terminal-status-"));
     server = createServer(handler);
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
@@ -163,6 +191,18 @@ describe("finishJob snapshot reaches CLI recovery", () => {
     server.closeAllConnections();
     server.close();
     _resetForTests();
+    if (generatedDir) rmSync(generatedDir, { recursive: true, force: true });
+  });
+
+  it("recovers a job committed by the real commitMediaResult (e2)", async () => {
+    _resetForTests();
+    pending.set("commit-job", TERMINAL_SUCCESS);
+    commitCases.add("commit-job");
+    const result = await runMcpJob(opts("commit-job"));
+    // The filename is minted inside commitMediaResult, so a passing assertion
+    // proves the snapshot came from the real producer, not from the harness.
+    assert.match(result.filename, /_mcp\.png$/);
+    assert.equal(result.url, `/generated/${encodeURIComponent(result.filename)}`);
   });
 
   it("recovers a job finished with the MCP 'done' spelling", async () => {
@@ -193,5 +233,18 @@ describe("finishJob snapshot reaches CLI recovery", () => {
     _resetForTests();
     pending.set("status-error", "error");
     await assert.rejects(runMcpJob(opts("status-error")));
+  });
+
+  it("reports a canceled job as canceled, not as an unrecoverable gap", async () => {
+    // finishJob's options.canceled wins over status, so this is the real
+    // cancel path. Without explicit handling it fell through to the generic
+    // SSE_REPLAY_GAP, which tells the user nothing.
+    _resetForTests();
+    pending.set("status-canceled", "canceled");
+    await assert.rejects(runMcpJob(opts("status-canceled")), (error: { code?: string }) => {
+      assert.notEqual(error.code, "SSE_REPLAY_GAP");
+      assert.equal(error.code, "GENERATION_CANCELED");
+      return true;
+    });
   });
 });

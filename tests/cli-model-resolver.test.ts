@@ -2,7 +2,7 @@ import { after, describe, it } from "node:test";
 import assert from "node:assert";
 import { spawnSync } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -169,16 +169,26 @@ describe("loadCliDefaults", () => {
 
 const transpiledDir = mkdtempSync(join(tmpdir(), "ima2-mcp-job-"));
 const binLibDir = fileURLToPath(new URL("../bin/lib/", import.meta.url));
+const serverLibDir = fileURLToPath(new URL("../lib/", import.meta.url));
 writeFileSync(join(transpiledDir, "package.json"), '{"type":"module"}');
-for (const name of ["sse", "jobStatus", "mcpJob"]) {
-  const source = readFileSync(join(binLibDir, `${name}.ts`), "utf8");
-  const output = ts.transpileModule(source, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
-    fileName: `${name}.ts`,
-  }).outputText;
-  writeFileSync(join(transpiledDir, `${name}.js`), output);
+// mcpJob imports shared server modules with ../../lib/... specifiers, so the
+// temp tree mirrors both directories instead of flattening them.
+mkdirSync(join(transpiledDir, "bin", "lib"), { recursive: true });
+mkdirSync(join(transpiledDir, "lib"), { recursive: true });
+for (const [sourceDir, targetDir, names] of [
+  [binLibDir, join(transpiledDir, "bin", "lib"), ["sse", "mcpJob"]],
+  [serverLibDir, join(transpiledDir, "lib"), ["jobStatus"]],
+] as const) {
+  for (const name of names) {
+    const source = readFileSync(join(sourceDir, `${name}.ts`), "utf8");
+    const output = ts.transpileModule(source, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+      fileName: `${name}.ts`,
+    }).outputText;
+    writeFileSync(join(targetDir, `${name}.js`), output);
+  }
 }
-const mcpModule = await import(`${pathToFileURL(join(transpiledDir, "mcpJob.js")).href}?v=${Date.now()}`) as {
+const mcpModule = await import(`${pathToFileURL(join(transpiledDir, "bin", "lib", "mcpJob.js")).href}?v=${Date.now()}`) as {
   runMcpJob(opts: McpJobOptions): Promise<McpJobResult>;
 };
 
