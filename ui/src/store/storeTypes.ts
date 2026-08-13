@@ -155,7 +155,7 @@ export type GraphHistoryEntry = import("../lib/nodeHistory").GraphSnapshotEntry;
 
 export type ToastEntry = { message: string; error: boolean; id: number; createdAt: number };
 export type ToastState = ToastEntry | null;
-export type ErrorCardEntry = { code: ImaErrorCode; cardKey?: string; fallbackMessage?: string; id: number; createdAt: number };
+export type ErrorCardEntry = { code: ImaErrorCode; cardKey?: string; cta?: "reauth" | "reload" | "retry" | "dismiss"; fallbackMessage?: string; id: number; createdAt: number };
 export type ComposeSheetTab = "prompt" | "controls" | "library";
 
 export type TrashPendingState = {
@@ -545,7 +545,7 @@ export type AppState = PresetState & ReferenceTraySlice & {
   dismissToast: (id: number) => void;
   errorCard: ErrorCardEntry | null;
   errorCardLog: ErrorCardEntry[];
-  showErrorCard: (code: ImaErrorCode, params?: { fallbackMessage?: string; cardKey?: string }) => void;
+  showErrorCard: (code: ImaErrorCode, params?: { fallbackMessage?: string; cardKey?: string; cta?: "reauth" | "reload" | "retry" | "dismiss" }) => void;
   dismissErrorCard: (id?: number) => void;
   getResolvedSize: () => string;
 

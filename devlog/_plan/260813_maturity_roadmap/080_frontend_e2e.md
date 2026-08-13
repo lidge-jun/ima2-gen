@@ -1,7 +1,7 @@
 ---
 created: 2026-08-13
 updated: 2026-08-13
-tags: [ima2-gen, devlog, phase, e2e, playwright]
+tags: [ima2-gen, devlog, phase, e2e, agbrowse, playwright]
 ---
 
 # 080 — 프런트엔드 E2E
@@ -15,9 +15,10 @@ tags: [ima2-gen, devlog, phase, e2e, playwright]
 
 ## 현재 상태
 
-`ui/package.json`의 scripts는 `dev`, `build`, `preview` 세 개뿐이다(`002` C-09).
-Playwright·Vitest·Cypress 어느 것도 없다. React 19 + React Flow + DnD + Canvas
-처럼 상태가 복잡한 UI를 사람이 눈으로 확인하는 구조다.
+2026-08-13 WP8: 업스트림 스텁 + 격리 home 부트 헬퍼 + Toast reauth/reload CTA.
+로컬 QA는 Playwright 러너가 아니라 agbrowse(Chrome/CDP)다. `ui/e2e/*.spec.ts`는
+프로젝트 소유 회귀 스위트로 남기고, CI e2e job은 Linux Chromium 러너에서만 돈다.
+
 
 다만 **UI가 전혀 검증되지 않는 것은 아니다.** 서버 쪽 계약 테스트가 UI 등록을
 간접 확인한다(예: `tests/minimax-ui-registration-contract.test.ts`,
@@ -166,7 +167,8 @@ J2를 MiniMax 401로 대체하면 그것은 일반 오류 표시 테스트가 �
 | `ui/tsconfig.json` | `references`에 `./tsconfig.e2e.json` 추가 |
 | `.github/workflows/ci.yml` | E2E job 추가 (Linux만) |
 | E2E 환경변수 설정 | `IMA2_MINIMAX_GLOBAL_BASE_URL`을 로컬 스텁으로. **프로덕션 코드도 `040` 매니페스트도 변경하지 않는다** |
-| `scripts/classify-tests.mjs` | E2E 파일을 인벤토리에 등록 |
+| `scripts/classify-tests.mjs` | 변경 없음. 이 스크립트는 tests/만 본다. ui/e2e는 tsconfig.e2e.json + CI e2e job이 게이트한다 |
+| `ui/src/components/Toast.tsx` | J2: `reauth`/`reload` CTA 버튼을 렌더. 새 CTA 종류는 추가하지 않음 |
 
 **`ui/dist/`는 건드리지 않는다.** E2E는 빌드 산출물을 소비하지 CI에서 새로
 커밋하지 않는다(`010`의 drift 규칙).
@@ -175,9 +177,8 @@ J2를 MiniMax 401로 대체하면 그것은 일반 오류 표시 테스트가 �
 
 - IN: `ui/e2e/**`, `ui/playwright.config.ts`, `ui/tsconfig.e2e.json`,
   `ui/tsconfig.json`의 `references`, `ui/package.json` 스크립트,
-  `.github/workflows/ci.yml`의 E2E job, `scripts/classify-tests.mjs` 인벤토리 등록.
-- OUT: **프로덕션 코드 일체** — 어댑터, 디스패치, `040` 매니페스트를 건드리지
-  않는다. 업스트림 전환은 기존 환경변수로만 한다. 시각 회귀(스크린샷 비교)는 별도
+  `.github/workflows/ci.yml`의 E2E job. `scripts/classify-tests.mjs`는 tests/ 전용이므로 건드리지 않는다.
+- OUT: 어댑터, 디스패치, `040` 매니페스트. Toast CTA는 J2 수용을 위한 최소 UI 수정이다. 업스트림 전환은 기존 환경변수로만 한다. 시각 회귀(스크린샷 비교)는 별도
   라운드. 실제 공급자 호출. Windows E2E (러너 비용 대비 이득이 불명확하고,
   `020`이 이미 Windows 표면을 다룬다).
 
@@ -211,11 +212,11 @@ E2E 자체가 활성화 도구이므로, 여기서는 **테스트가 실패할 �
 |---|---|---|
 | `cd ui && npm run test:e2e` | 다섯 여정 | 스크립트 미존재 (B에서 생성) |
 | `cd ui && npm run build` | 빌드 무결성 | **실행 가능** — 현재 통과 |
-| `npm run test:inventory` | E2E 파일 등록 | 현재 통과. 신규 파일 추가 시 갱신 필요 |
+| `npm run test:inventory` | tests/ 인벤토리만 | ui/e2e는 이 스크립트 범위 밖. typecheck:e2e가 게이트 |
 | `actionlint .github/workflows/ci.yml` | 워크플로 문법 | 미실행 (B에서) |
 
 `npm run typecheck`는 `ui/`를 exclude하므로 **E2E 파일을 보지 못한다.**
-그리고 확인해 보니 `cd ui && npm run build`도 보지 못한다.
+`cd ui && npm run build`는 이제 `tsc -p tsconfig.e2e.json --noEmit`을 포함한다.
 
 ```
 ui/tsconfig.json       → files: [], references: [tsconfig.app.json, tsconfig.node.json]
@@ -236,3 +237,20 @@ ui/tsconfig.node.json  → include: ["vite.config.ts", "dev/**/*.d.mts"]
 전체 사용자 여정을 덮는다는 뜻은 아니다. Canvas·Video·Agent·MCP 여정은 이
 라운드에 없다. 다섯 개는 **가장 자주 깨지고 가장 비싸게 발견되는** 경로를 고른
 것이고, 커버리지 주장은 그만큼만 한다.
+
+
+## 라이브 검증 증거 (2026-08-13, agbrowse)
+
+로컬 Playwright 러너는 설치하지 않았다. Chrome/CDP(agbrowse)로 같은 스텁 경로를 돌렸다.
+
+| 여정 | 관측 |
+|---|---|
+| J1 | MiniMax 키 저장됨, provider MiniMax/image-01, a red cube 생성, generated PNG + 갤러리 타일 |
+| J2 | OAuth 스텁 authentication_error + token is expired -> API AUTH_CHATGPT_EXPIRED -> Toast Reload CTA |
+| J3 | MiniMax 1008 -> API BILLING_REQUIRED -> Toast Billing required, unknown error 없음 |
+| J4 | #node 진입, Start blank/templates/Add image, react-flow 캔버스 존재 |
+| J5 | 같은 IMA2_CONFIG_DIR 재기동 후 history total=1, a red cube 이미지 복구 |
+
+J2 스텁은 type: invalid_request_error를 쓰면 errorClassify가 만료보다 요청 오류를 먼저 고른다. 스텁은 authentication_error를 쓴다.
+
+감사 FAIL 5건은 스펙에 접었다. J1은 온보딩 Skip을 먼저 누르고, J2는 Reload CTA를 클릭하며, J4는 blank canvas를 시작하고, J5는 같은 home을 재사용하며, 스텁 host는 loopback만 허용한다.

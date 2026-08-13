@@ -182,11 +182,11 @@ export function dismissToastImpl(id: number, set: StoreSet): void {
 
 export function showErrorCardImpl(
   code: ImaErrorCode,
-  params: { fallbackMessage?: string; cardKey?: string } | undefined,
+  params: { fallbackMessage?: string; cardKey?: string; cta?: "reauth" | "reload" | "retry" | "dismiss" } | undefined,
   set: StoreSet,
 ): void {
   const createdAt = Date.now();
-  const entry = { code, cardKey: params?.cardKey, fallbackMessage: params?.fallbackMessage, id: createdAt + Math.random(), createdAt };
+  const entry = { code, cardKey: params?.cardKey, cta: params?.cta, fallbackMessage: params?.fallbackMessage, id: createdAt + Math.random(), createdAt };
   set((s) => ({ errorCard: entry, errorCardLog: [...s.errorCardLog, entry] }));
 }
 

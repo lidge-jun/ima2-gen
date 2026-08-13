@@ -149,3 +149,27 @@ jobs:
       - name: Publish dry-run
         if: matrix.os == 'ubuntu-latest' && matrix.npm == '11.18.0'
         run: npm run publish:dry-run
+
+  e2e:
+    name: frontend e2e (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Install root deps
+        run: npm ci
+      - name: Install ui deps
+        run: npm --prefix ui ci --no-audit --no-fund
+      - name: Install Playwright Chromium
+        run: npx --prefix ui playwright install --with-deps chromium
+      - name: Build ui
+        run: npm --prefix ui run build
+      - name: Run frontend e2e
+        run: npm --prefix ui run test:e2e

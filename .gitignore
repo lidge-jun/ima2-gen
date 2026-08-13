@@ -15,6 +15,9 @@ devlog/_plan/*
 ui/dist/
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo
+ui/tsconfig.e2e.tsbuildinfo
+ui/test-results/
+ui/playwright-report/
 __pycache__/
 *.pyc
 

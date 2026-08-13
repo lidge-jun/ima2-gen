@@ -83,11 +83,15 @@ export function Toast() {
       message: toast.message,
       error: toast.error,
       createdAt: toast.createdAt,
+      cta: undefined as "reauth" | "reload" | "retry" | "dismiss" | undefined,
+      cardKey: undefined as string | undefined,
     })),
     ...errorCards.map((card) => {
-      const cardKey = card.cardKey ?? errorCodes[card.code]?.cardKey ?? "errorCard.unknown";
+      const spec = errorCodes[card.code];
+      const cardKey = card.cardKey ?? spec?.cardKey ?? "errorCard.unknown";
       const title = t(`${cardKey}.title`);
       const body = t(`${cardKey}.body`);
+      const cta = card.cta ?? spec?.cta;
       return {
         kind: "error-card" as const,
         id: card.id,
@@ -95,6 +99,8 @@ export function Toast() {
         message: card.fallbackMessage ? `${title}: ${body} ${card.fallbackMessage}` : `${title}: ${body}`,
         error: true,
         createdAt: card.createdAt,
+        cta,
+        cardKey,
       };
     }),
   ].sort((a, b) => a.createdAt - b.createdAt).slice(-TOAST_MAX_VISIBLE);
@@ -110,6 +116,18 @@ export function Toast() {
         return (
           <div className={cls} key={row.key} role={row.error ? "alert" : "status"}>
             <span className="toast__message">{row.message}</span>
+            {row.kind === "error-card" && (row.cta === "reauth" || row.cta === "reload") ? (
+              <button
+                type="button"
+                className="toast__cta"
+                onClick={() => {
+                  if (row.cta === "reauth") useAppStore.getState().openSettings("providers");
+                  if (row.cta === "reload") window.location.reload();
+                }}
+              >
+                {t(`${row.cardKey ?? "errorCard.unknown"}.cta`)}
+              </button>
+            ) : null}
             <button
               type="button"
               className="toast__dismiss"

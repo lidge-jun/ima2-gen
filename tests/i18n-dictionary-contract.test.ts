@@ -196,6 +196,8 @@ const DYNAMIC_T_TEMPLATES = new Map<string, readonly string[]>([
     ERROR_CARD_ROOTS.map((root) => `${root}.title`)],
   ["ui/src/components/Toast.tsx :: `${cardKey}.body`",
     ERROR_CARD_ROOTS.map((root) => `${root}.body`)],
+  ["ui/src/components/Toast.tsx :: `${row.cardKey ?? \"errorCard.unknown\"}.cta`",
+    ["errorCard.moderationRefused.cta", "errorCard.emptyResponse.cta", "errorCard.streamParseFailed.cta", "errorCard.imageToolNotCalled.cta", "errorCard.webSearchOnlyResponse.cta", "errorCard.imageToolFailed.cta", "errorCard.imageToolNoResult.cta", "errorCard.oauthImageCapabilityUnavailable.cta", "errorCard.responsesStreamError.cta", "errorCard.upstream5xx.cta", "errorCard.authChatgptExpired.cta", "errorCard.authApiKeyInvalid.cta", "errorCard.networkFailed.cta", "errorCard.oauthUnavailable.cta", "errorCard.invalidRequest.cta", "errorCard.apikeyDisabled.cta", "errorCard.agyGenerationFailed.cta", "errorCard.agyTimeout.cta", "errorCard.agyProcessError.cta", "errorCard.agyQuotaExhausted.cta", "errorCard.authClass.cta"]],
   ["ui/src/lib/agentQueueError.ts :: `${resolved.spec.cardKey}.title`",
     ERROR_CARD_ROOTS.map((root) => `${root}.title`)],
 ]);

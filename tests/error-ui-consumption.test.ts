@@ -37,7 +37,7 @@ describe("063 error UI consumption", () => {
     assert.equal(koTitle(resolved.spec.cardKey ?? ""), "잔액이 부족합니다");
     assert.match(source("ui/src/lib/errorHandler.ts"), /cardKey: spec\.cardKey/);
     assert.match(source("ui/src/store/storeUIImpl.ts"), /cardKey: params\?\.cardKey/);
-    assert.match(source("ui/src/components/Toast.tsx"), /card\.cardKey \?\? errorCodes\[card\.code\]\?\.cardKey/);
+    assert.match(source("ui/src/components/Toast.tsx"), /card\.cardKey \?\? spec\?\.cardKey/);
     assert.doesNotMatch(source("ui/src/components/Toast.tsx"), /errorCodes\[card\.code\] \?\? errorCodes\.UNKNOWN/);
   });
 
