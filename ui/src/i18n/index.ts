@@ -68,7 +68,7 @@ export function loadLocale(): Locale {
   } catch {
     /* storage disabled */
   }
-  // Browser default: preserve Chinese script preference, then fall back to English.
+  // Browser default: follow the browser's language when it is supported.
   if (typeof navigator !== "undefined") {
     const nav = navigator.language || "";
     if (nav.toLowerCase().startsWith("ko")) return "ko";
