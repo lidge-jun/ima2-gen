@@ -18,7 +18,7 @@ tags: [ima2-gen, devlog, phase, doctor, onboarding]
 
 | 현재 검사 | 위치 |
 |---|---|
-| Node.js major >= 20 | `bin/commands/doctor.ts:135` — **npm 버전은 보지 않는다** |
+| Node.js major >= 20 | `bin/commands/doctor.ts:140` — **npm 버전은 보지 않는다** |
 | `package.json` 존재 | `bin/commands/doctor.ts:146` |
 | 런타임 의존성 해석 가능 | `bin/commands/doctor.ts:155` |
 | `.env` 존재 | `bin/commands/doctor.ts:163` |
@@ -85,8 +85,8 @@ fetch를 감시하지 않는다. 기본 `doctor`가 비과금인 것은 사실�
 | kind | 검사 |
 |---|---|
 | `api-key` | 키 존재, `keyPrefix` 일치. `validateUrl` 호출은 **선택** (`--verify-keys`) |
-| `oauth-proxy` | 파일 기반 세션 존재 (기존 GPT 경로를 일반화) |
-| `service-account` | 자격증명 파일 경로 존재·읽기 가능 |
+| `oauth-proxy` | lane별: `oauth`는 Codex 파일 세션, `grok`는 `~/.progrok/auth.json` 또는 `~/.grok/auth.json` |
+| `service-account` | `VERTEX_SERVICE_ACCOUNT_JSON` JSON 문자열을 파싱해 `type=service_account`와 `project_id`만 확인. 경로가 아니다 |
 | `local-cli` | 실행 파일 해석 가능 |
 
 ### 2. 비과금 capability 검증
@@ -126,8 +126,8 @@ fetch를 감시하지 않는다. 기본 `doctor`가 비과금인 것은 사실�
 
 - `g1`: **기본 `doctor`가 네트워크 요청을 0건 한다.** fetch를 스텁으로 감시해
   호출 0을 단언한다. 이것이 이 phase의 최우선 기준이다.
-- `g2`: `--verify-keys`에서도 **생성 엔드포인트는 호출되지 않는다.** 호출된 URL이
-  전부 `040`의 `validateUrl` 집합에 속한다.
+- `g2`: `--verify-keys`에서도 **생성 엔드포인트는 호출되지 않는다.** 호출된 URL은
+  `resolveValidateUrl()` 결과다. MiniMax는 `validateUrlIsFallback`이라 지역 호스트를 고른다.
 - `g2b`: `ima2 doctor image-probe`는 지금처럼 **명시적 하위 명령으로만** 도달
   가능하다. 기본 `doctor`가 그 유료 경로로 새지 않음을 테스트가 고정하고,
   `image-probe` 자신은 과금 경고를 **stderr로** 출력한다.
@@ -163,7 +163,7 @@ fetch를 감시하지 않는다. 기본 `doctor`가 비과금인 것은 사실�
 | 명령 | 관측 대상 | 실행 결과 |
 |---|---|---|
 | `npm run typecheck` | `bin/**/*.ts` | include에 `bin/**/*.ts` 포함 — **관측함** |
-| `node --test tests/doctor-provider-contract.test.ts` | 비과금·registry 연동 | 파일 미존재 (B에서) |
+| `node --import tsx --test tests/doctor-provider-contract.test.ts` | 비과금·registry 연동. fetch는 `verifyConfiguredKeys`에 주입 |
 | `node bin/ima2.js doctor` | 실제 출력 | **실행 가능** — 현재도 동작한다 |
 | `npm test` | 회귀 | `d2fe420`에서 2118/2116 pass |
 

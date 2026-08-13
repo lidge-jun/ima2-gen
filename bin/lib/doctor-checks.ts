@@ -1,7 +1,8 @@
 import { createRequire } from "module";
 import { createServer } from "net";
-import { existsSync, statSync } from "fs";
-import { join } from "path";
+import { accessSync, constants, existsSync, statSync } from "fs";
+import { execFileSync } from "child_process";
+import { dirname, join } from "path";
 import { config as runtimeConfig } from "../../config.js";
 import { isSensitiveConfigKey } from "../../lib/configKeys.js";
 
@@ -31,6 +32,26 @@ async function probePort(host: string, port: number): Promise<boolean> {
   });
 }
 
+
+function probeNpmVersion(): DoctorCheckLine {
+  try {
+    const raw = execFileSync("npm", ["-v"], { encoding: "utf8", timeout: 4000 }).trim();
+    const major = Number.parseInt(raw.split(".")[0] || "", 10);
+    if (Number.isFinite(major) && major >= 9) return { kind: "pass", text: `npm ${raw} (>= 9)` };
+    return { kind: "warn", text: `npm ${raw} (recommend >= 9)` };
+  } catch {
+    return { kind: "warn", text: "npm not found on PATH" };
+  }
+}
+
+function probeDbPathWritable(dbPath: string): DoctorCheckLine {
+  try {
+    accessSync(dirname(dbPath), constants.W_OK);
+    return { kind: "pass", text: `dbPath writable: ${dbPath}` };
+  } catch {
+    return { kind: "fail", text: `dbPath not writable: ${dbPath}` };
+  }
+}
 function probeBetterSqlite(root: string): DoctorCheckLine {
   try {
     const requireFromRoot = createRequire(join(root, "package.json"));
@@ -85,6 +106,8 @@ export async function buildHardeningDoctorLines({
         : { kind: "fail", text: `packaged skill missing: ${skillPath}` },
     );
   }
+  lines.push(probeNpmVersion());
+  lines.push(probeDbPathWritable(runtimeConfig.storage.dbPath));
   lines.push(probeBetterSqlite(root));
 
   const perm = configPermissionLine(configFile, fileConfig);

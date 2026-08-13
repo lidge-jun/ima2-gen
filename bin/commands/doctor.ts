@@ -9,6 +9,9 @@ import { resolvePackageBin } from "../../lib/packageCli.js";
 import { runImageDoctorProbe } from "../../lib/responsesDoctor.js";
 import { config as runtimeConfig } from "../../config.js";
 import { exitFlushed } from "../lib/output.js";
+import { buildProviderDoctorLines, verifyConfiguredKeys } from "../lib/doctor-providers.js";
+import { buildMediaDoctorLines } from "../lib/doctor-media.js";
+import { buildDoctorBundle } from "../lib/doctor-bundle.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "../..");
@@ -92,6 +95,7 @@ async function imageProbe(args: string[]) {
     showImageProbeHelp();
     return;
   }
+  console.error("Warning: ima2 doctor image-probe performs live billed image generation.");
   const fileConfig = loadConfig();
   const result = await runImageDoctorProbe({
     provider: valueAfter(args, "--provider") || fileConfig.provider || "oauth",
@@ -126,7 +130,7 @@ async function imageProbe(args: string[]) {
   exitFlushed(result.summary.ok ? 0 : 1);
 }
 
-async function standardDoctor() {
+async function standardDoctor(args: string[] = []) {
   console.log(`\n  ${pkg.name} v${pkg.version} — Doctor\n`);
 
   let ok = 0;
@@ -218,7 +222,43 @@ async function standardDoctor() {
     ok++;
   }
 
-  console.log(`\n  ${ok} passed, ${fail} failed\n`);
+  const providerLines = buildProviderDoctorLines(fileConfig as Record<string, unknown>);
+  console.log("");
+  console.log("  Providers");
+  for (const line of providerLines) {
+    const prefix = line.kind === "pass" ? "✓" : line.kind === "fail" ? "✗" : line.kind === "warn" ? "⚠" : "ℹ";
+    console.log(`    ${prefix} ${line.text}`);
+    if (line.kind === "pass") ok++;
+    if (line.kind === "fail") fail++;
+  }
+  if (args.includes("--verify-keys")) {
+    const verified = await verifyConfiguredKeys(fileConfig as Record<string, unknown>);
+    for (const line of verified) {
+      const prefix = line.kind === "pass" ? "✓" : "✗";
+      console.log(`    ${prefix} ${line.text}`);
+      if (line.kind === "pass") ok++;
+      if (line.kind === "fail") fail++;
+    }
+  }
+  const mediaLines = await buildMediaDoctorLines();
+  for (const line of mediaLines) {
+    const prefix = line.kind === "pass" ? "✓" : line.kind === "warn" ? "⚠" : "ℹ";
+    console.log(`  ${prefix} ${line.text}`);
+    if (line.kind === "pass") ok++;
+  }
+  if (args.includes("--bundle")) {
+    const bundle = buildDoctorBundle({ version: pkg.version, providerLines });
+    if (args.includes("--json")) {
+      console.log(JSON.stringify(bundle, null, 2));
+      exitFlushed(fail > 0 ? 1 : 0);
+    }
+    console.log("");
+    console.log("  Bundle");
+    console.log(`    ${JSON.stringify(bundle)}`);
+  }
+  console.log(`
+  ${ok} passed, ${fail} failed
+`);
   exitFlushed(fail > 0 ? 1 : 0);
 }
 
@@ -232,5 +272,5 @@ export async function doctor(args: string[] = []) {
     await imageProbe(args.slice(1));
     return;
   }
-  await standardDoctor();
+  await standardDoctor(args);
 }
