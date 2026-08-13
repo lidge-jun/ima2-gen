@@ -1,0 +1,19 @@
+name: Feature
+description: One screen or one contract
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: What should exist
+      description: One screen or one contract. Not a roadmap.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+    validations:
+      required: false
+

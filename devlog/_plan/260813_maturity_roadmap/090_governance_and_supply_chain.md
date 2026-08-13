@@ -1,6 +1,7 @@
 ---
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-14
+stale-checked: 2026-08-14
 tags: [ima2-gen, devlog, phase, governance, supply-chain]
 ---
 
@@ -102,27 +103,58 @@ test:native-deps → typecheck → typecheck:tests → test:inventory → ui:bui
 - IN: `SECURITY.md`, `CONTRIBUTING.md`, `CODEOWNERS`,
   `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`,
   `.github/workflows/codeql.yml`, `.github/dependabot.yml`,
-  `.github/workflows/nix.yml`의 액션 SHA 고정, 서명된 릴리스 매니페스트
-  (`030` 이후), lockfile 변경 감시 설정, **그리고 사용자 승인 아래 수행하는
-  저장소 설정 변경**(비공개 신고·vulnerability alerts 활성화).
-- OUT: LTS 브랜치, 메인테이너 추가(사람 결정), npm provenance/SBOM(이미 있음).
+  `.github/workflows/nix.yml`의 액션 SHA 고정, lockfile CODEOWNERS 감시,
+  GitHub artifact attestation 보강(publish.yml package job, 이미 있는 npm
+  provenance와 겹치지 않는 경로만).
+- OUT: LTS 브랜치, 메인테이너 추가, npm provenance/SBOM 재구현,
+  **저장소 설정 변경**(Security Advisory / vulnerability alerts / default
+  setup). 이슈 #132가 설정 변경을 승인 경계로 고정한다.
 
-**저장소 설정 변경을 OUT에 두지 않는다**(A phase 감사 blocker 3). `j5`가 신고
-경로가 실제로 열려 있기를 요구하는데 설정 변경을 범위 밖에 두면 그 기준은 영원히
-충족될 수 없다. 대신 **사용자 승인이 필요한 단계**로 표시한다.
+`j5`는 이 사이클에서 **문서화 + 현재 설정 스냅샷**으로만 닫는다. Advisory를
+여기서 켜지 않는다. 켜는 순간은 별도 승인이다.
+
+## 파일 변경 맵 (2026-08-14 stale check)
+
+기준: origin/dev `8449e79d`. `.github/`에는 `workflows/`만 있다.
+
+| 경로 | 동작 |
+|---|---|
+| `SECURITY.md` | NEW. 지원 버전 = published npm latest. 신고는 GitHub Security Advisory. 응답 목표는 "best effort, no SLA" — 1인 메인테이너가 48시간을 약속하지 않는다. |
+| `CONTRIBUTING.md` | NEW. 1 `npm run typecheck` / 2 `npm test` / 3 `cd ui && npm run build`(UI만) / 4 `verify:release:source`는 선택. 문서가 4단계를 필수로 적으면 FAIL. |
+| `.github/CODEOWNERS` | NEW. `* @lidge-jun`. lockfile 두 줄도 같은 소유자. 리뷰 강제 여부는 저장소 ruleset 승인 전엔 문서 표시만. |
+| `.github/ISSUE_TEMPLATE/bug.yml` | NEW. `ima2 doctor --bundle` / `ima2 doctor image-probe --json` 필드. 둘 다 이미 CLI에 있다. 비밀·쿠키·토큰 첨부 금지 문구. |
+| `.github/ISSUE_TEMPLATE/feature.yml` | NEW. 한 화면/한 계약. |
+| `.github/ISSUE_TEMPLATE/config.yml` | NEW. blank issues 유지. |
+| `.github/pull_request_template.md` | NEW. typecheck / test / UI build 체크. publish·dist-tag·dispatch는 체크하지 않음. |
+| `.github/workflows/codeql.yml` | NEW. JS/TS only, build-mode none. checkout는 기존 `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5` (v4). CodeQL은 `github/codeql-action/{init,analyze}@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd` (v4.37.7, 2026-08-13). permissions: contents read + security-events write. |
+| `.github/dependabot.yml` | NEW. npm (root + /ui) + github-actions. weekly. groups: production-npm / development-npm / github-actions. open-pull-requests-limit 5. |
+| `.github/workflows/nix.yml` | MODIFY 1줄. `cachix/install-nix-action@v30` → `cachix/install-nix-action@08dcb3a5e62fa31e2da3d490afc4176ef55ecd72` # v30. |
+| `.github/workflows/publish.yml` | MODIFY. **package job이 아니라 create-github-release job**. package job은 `Prove package job has no OIDC token`과 `id-token: write` 1회 계약을 깨면 안 된다. attestation은 GitHub Release 업로드 직후, subject = 이미 검증된 tarball+manifest+sbom. `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8` (v4.2.2). npm `--provenance`는 publish job에 그대로 둔다. |
+| `tests/governance-files-contract.test.ts` | NEW. 위 파일 존재 + CODEOWNERS 소유자 + nix SHA + dependabot groups + CONTRIBUTING 1-3단계 명령이 package.json scripts에 실재. |
+
+서명된 매니페스트: 새 포맷을 만들지 않는다. 이미 `release-manifest.json` + npm
+provenance가 있다. 이번 사이클은 그 아티팩트에 GitHub attestation을 얹는 것
+뿐이다. publish job의 `id-token: write` 1회 계약은 유지한다. package job에는
+OIDC를 주지 않는다. create-github-release job에 `id-token: write` +
+`attestations: write`를 추가하고, 계약 테스트의 "only publish job may mint
+OIDC tokens" 단언을 "publish.yml may mint OIDC only in publish and
+create-github-release jobs"로 갱신한다.
 
 ## 수용 기준
 
 - `j1`: 6개 거버넌스 파일이 존재하고 GitHub UI가 인식한다(이슈 템플릿이 선택지로
   뜨고, PR 템플릿이 자동 채워진다).
-- `j2`: CodeQL이 PR에서 실행되고 초록이다. **기존 발견 0건이 아니면 그 목록을
-  기록한다** — 켜자마자 빨간 것이 정상이며, 숨기지 않는다.
-- `j3`: Dependabot PR이 그룹화되어 주당 5건을 넘지 않는다. 넘으면 소유자 부담이
-  되어 오히려 꺼진다.
+- `j2`: CodeQL 워크플로가 트리에 있고 SHA-pinned다. 첫 실행 결과는 숨기지 않고
+  이슈 #132에 기록한다. 기존 발견이 있어도 이 사이클에서 지우지 않는다.
+- `j3`: Dependabot 설정이 groups + open-pull-requests-limit 5를 가진다. 실제
+  주간 PR 수는 설정 활성화 후에만 관측된다.
 - `j4`: `CONTRIBUTING.md`의 **1~3단계 명령이 실제로 동작한다.** 4단계 전체
   게이트는 선택으로 표시했으므로 문서가 그것을 요구처럼 적지 않았는지도 함께
   확인한다.
-- `j5`: `SECURITY.md`의 신고 경로가 실제로 열려 있다(저장소 설정 확인).
+- `j5`: `SECURITY.md`가 Advisory 경로를 가리키고, 현재 저장소 설정 스냅샷을
+  이슈에 남긴다. Advisory/vulnerability alerts는 승인 전에는 켜지 않는다.
+  2026-08-14 스냅샷: secret_scanning=enabled, push_protection=enabled,
+  dependabot_security_updates=disabled.
 
 ## 조건부 경로 활성화 시나리오
 
@@ -149,8 +181,10 @@ test:native-deps → typecheck → typecheck:tests → test:inventory → ui:bui
 
 1. **Security Advisory(비공개 신고) 활성화** — 저장소 설정. 관리자 권한.
    secret scanning과 push protection은 **이미 켜져 있다**(`gh api` 확인).
-2. **CodeQL 활성화** — Actions 사용량이 늘어난다.
+   **이 사이클에서 켜지 않는다.**
+2. **CodeQL 활성화** — Actions 사용량이 늘어난다. 워크플로 파일은 커밋한다.
+   default setup 토글은 승인 대상이다.
 3. **`CODEOWNERS`에 누구를 넣을지** — 현재 사실상 1명. 이름을 적는 것 자체가
-   소유자 결정이다.
+   소유자 결정이다. 이 사이클은 `@lidge-jun`만 적는다.
 4. **취약점 신고 응답 목표 시간** — 지킬 수 있는 값을 소유자가 정해야 한다.
-   지키지 못할 약속을 문서에 적으면 없느니만 못하다.
+   지키지 못할 약속을 문서에 적으면 없느니만 못하다. 이 사이클은 SLA를 적지 않는다.

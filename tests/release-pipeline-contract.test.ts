@@ -185,7 +185,10 @@ describe("package install policy contract", () => {
     assert.doesNotMatch(workflow, /(?:^|\n)on:[\s\S]{0,400}?(?:^|\n)\s{2}release:\s*(?:\n|$)/);
     assert.match(workflow, /branches:\s*\[preview\]/);
     assert.match(workflow, /tags:\s*\['v\*'\]/);
-    assert.equal((workflow.match(/id-token:\s*write/g) || []).length, 1, "only publish job may mint OIDC tokens");
+    assert.equal((workflow.match(/id-token:\s*write/g) || []).length, 2, "only publish and create-github-release may mint OIDC tokens");
+    assert.match(workflow, /create-github-release:[\s\S]*id-token:\s*write[\s\S]*attestations:\s*write/);
+    assert.match(workflow, /actions\/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8/);
+    assert.doesNotMatch(workflow, /package:[\s\S]{0,400}id-token:\s*write/, "package job stays OIDC-free");
     assert.doesNotMatch(workflow, /uses:\s*[^\s]+@v\d/, "release actions must use immutable commit SHAs");
     assert.match(workflow, /verify-artifact release-artifact\/release-manifest\.json/);
     assert.match(workflow, /TARBALL=.*'\.\/release-artifact\/'[\s\S]*npm publish "\$TARBALL"/);

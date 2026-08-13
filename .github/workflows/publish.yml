@@ -263,6 +263,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -289,6 +291,13 @@ jobs:
           "${{ needs.prepare.outputs.version }}"
           "$PUBLISH_SHA"
           release-artifact
+      - name: Attest the tested release artifact
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release-artifact/*.tgz
+            release-artifact/release-manifest.json
+            release-artifact/sbom.cdx.json
       - name: Write GitHub Release proof summary
         run: |
           {

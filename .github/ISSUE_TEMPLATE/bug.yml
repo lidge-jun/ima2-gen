@@ -1,0 +1,39 @@
+name: Bug
+description: Something is broken
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach cookies, OAuth tokens, API keys, raw upstream
+        responses, or generated base64.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Expected vs actual.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: ima2 doctor --bundle
+      description: Paste the redacted bundle from `ima2 doctor --bundle`.
+    validations:
+      required: true
+  - type: textarea
+    id: probe
+    attributes:
+      label: ima2 doctor image-probe --json
+      description: Only for empty-image / billed-generation failures. This command bills.
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: ima2 version
+      placeholder: "3.0.5"
+    validations:
+      required: true
+
