@@ -15,6 +15,8 @@ export const PROVIDER_ERROR_MAP = {
   MINIMAX_REF_TOO_MANY: "CAPABILITY_UNSUPPORTED",
   MINIMAX_SAFETY_BLOCKED: "CONTENT_REJECTED",
   MINIMAX_UPSTREAM_ERROR: "NETWORK_FAILURE",
+  // Emitted by the shared routes rather than the adapter (routes/edit.ts).
+  MINIMAX_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
 
   GEMINI_API_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
   GEMINI_API_KEY_MISSING: "AUTH_INVALID",
@@ -23,6 +25,7 @@ export const PROVIDER_ERROR_MAP = {
   GEMINI_API_RATE_LIMITED: "RATE_LIMITED",
   GEMINI_API_SAFETY_BLOCKED: "CONTENT_REJECTED",
   GEMINI_API_UPSTREAM_ERROR: "NETWORK_FAILURE",
+  GEMINI_API_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
 
   GROK_AUTH_FAILED: "AUTH_INVALID",
   GROK_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
@@ -51,6 +54,10 @@ export const PROVIDER_ERROR_MAP = {
   GROK_VIDEO_REF_TOO_MANY: "CAPABILITY_UNSUPPORTED",
   GROK_VIDEO_REQUEST_FAILED: "CAPABILITY_UNSUPPORTED",
   GROK_VIDEO_TIMEOUT: "PROVIDER_TIMEOUT",
+  GROK_VIDEO_FRAME_FAILED: "INTERNAL_STATE_ERROR",
+  GROK_VIDEO_INVALID_PROMPT: "CAPABILITY_UNSUPPORTED",
+  GROK_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
+  GROK_REF_TOO_MANY: "CAPABILITY_UNSUPPORTED",
 
   AGY_ARTIFACT_NOT_FOUND: "INTERNAL_STATE_ERROR",
   AGY_GENERATION_FAILED: "INTERNAL_STATE_ERROR",
@@ -60,6 +67,9 @@ export const PROVIDER_ERROR_MAP = {
   AGY_PROCESS_ERROR: "NETWORK_FAILURE",
   AGY_QUOTA_EXHAUSTED: "RATE_LIMITED",
   AGY_TIMEOUT: "PROVIDER_TIMEOUT",
+  AGY_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
+  AGY_REF_TOO_MANY: "CAPABILITY_UNSUPPORTED",
+  AGY_VIDEO_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
 
   ATLASCLOUD_API_KEY_MISSING: "AUTH_INVALID",
   ATLASCLOUD_GENERATE_FAILED: "NETWORK_FAILURE",
@@ -68,6 +78,7 @@ export const PROVIDER_ERROR_MAP = {
   ATLASCLOUD_OUTPUT_DOWNLOAD_FAILED: "NETWORK_FAILURE",
   ATLASCLOUD_REF_TOO_MANY: "CAPABILITY_UNSUPPORTED",
   ATLASCLOUD_UPLOAD_FAILED: "NETWORK_FAILURE",
+  ATLASCLOUD_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
   ATLASCLOUD_UPLOAD_NO_URL: "INTERNAL_STATE_ERROR",
 } as const satisfies Record<string, GenerationErrorClass>;
 
@@ -89,7 +100,28 @@ export const DYNAMIC_PROVIDER_CODE_SITES = [{
   expandedCodes: ["GROK_SEARCH_BAD_REQUEST", "GROK_PLANNER_BAD_REQUEST"],
 }] as const satisfies readonly DynamicProviderCodeSite[];
 
-export function providerErrorClass(code: unknown): GenerationErrorClass | undefined {
+/**
+ * Codes whose meaning depends on the HTTP status the adapter attached, so a
+ * single static class would be wrong. GROK_VIDEO_REQUEST_FAILED covers
+ * 400/403/412 rejections AND upstream 5xx/network failures
+ * (lib/grokVideoShared.ts, lib/grokVideoAdapter.ts); AtlasCloud upload and
+ * generation codes likewise carry arbitrary upstream statuses.
+ */
+const STATUS_DEPENDENT_CODES: Record<string, { clientError: GenerationErrorClass; serverError: GenerationErrorClass }> = {
+  GROK_VIDEO_REQUEST_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
+  ATLASCLOUD_UPLOAD_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
+  ATLASCLOUD_GENERATION_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
+};
+
+export function providerErrorClass(code: unknown, status?: unknown): GenerationErrorClass | undefined {
   if (typeof code !== "string") return undefined;
+  const statusDependent = STATUS_DEPENDENT_CODES[code];
+  if (statusDependent) {
+    const numeric = Number(status);
+    // 429 is a rate limit regardless of which family it arrives through.
+    if (numeric === 429) return "RATE_LIMITED";
+    if (Number.isFinite(numeric) && numeric >= 400 && numeric < 500) return statusDependent.clientError;
+    return statusDependent.serverError;
+  }
   return (PROVIDER_ERROR_MAP as Record<string, GenerationErrorClass>)[code];
 }

@@ -176,19 +176,14 @@ function copyEmptyResponseMetadata(target: any, source: UpstreamErr | null | und
 }
 
 function decorateProviderFailure<T extends Error>(target: T, source: UpstreamErr | null | undefined): T {
-  const visited = new Set<unknown>();
-  let current: UpstreamErr | null | undefined = source;
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    const errorClass = providerErrorClass(current.code);
-    if (errorClass && typeof current.code === "string") {
-      Object.assign(target, { rawCode: current.code, errorClass });
-      break;
-    }
-    current = current.cause && typeof current.cause === "object"
-      ? current.cause as UpstreamErr
-      : undefined;
-  }
+  // Only the top-level code is authoritative. Walking the cause chain looked
+  // thorough but attaches an unrelated inner error's identity: a SAFETY_REFUSAL
+  // wrapping a transport failure would come out as NETWORK_FAILURE. Provider
+  // adapters throw their own code directly, so the outer code is the one that
+  // describes this failure.
+  if (typeof source?.code !== "string") return target;
+  const errorClass = providerErrorClass(source.code, source.status);
+  if (errorClass) Object.assign(target, { rawCode: source.code, errorClass });
   return target;
 }
 

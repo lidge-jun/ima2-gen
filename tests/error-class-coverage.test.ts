@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 import { GENERATION_ERROR_CLASSES } from "../lib/errors/classes.ts";
 import {
@@ -7,30 +8,53 @@ import {
   PROVIDER_ERROR_MAP,
 } from "../lib/errors/providerMap.ts";
 
-const ADAPTER_FILES = [
-  "lib/minimaxImageAdapter.ts",
-  "lib/geminiApiImageAdapter.ts",
-  "lib/agyImageAdapter.ts",
-  "lib/atlasCloudImageAdapter.ts",
-  ...readdirSync("lib")
-    .filter((file) => /^grok.*\.ts$/i.test(file))
-    .map((file) => `lib/${file}`),
-] as const;
+// Scan the whole server surface, not a hand-listed set of adapters: provider
+// codes are also emitted from routes and pipelines (routes/edit.ts mask
+// rejections, generatePipeline/nodeGeneration reference caps, video routes).
+// A curated file list let ten emitted codes stay unmapped while green.
+function serverSourceFiles(): string[] {
+  const roots = ["lib", "routes"];
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) files.push(path);
+    }
+  };
+  for (const root of roots) walk(root);
+  return files.sort();
+}
+
+const ADAPTER_FILES = serverSourceFiles();
 
 const PROVIDER_CODE_PATTERN = /\b(?:MINIMAX|GEMINI_API|GROK|AGY|ATLASCLOUD)_[A-Z0-9_]+\b/g;
 const LEXICAL_EXCEPTIONS = new Set([
   "AGY_MAX_OUTPUT_BYTES",
   "AGY_OUTPUT_RESOLUTION",
   "AGY_TIMEOUT_MS",
+  "ATLASCLOUD_API_KEY",
   "ATLASCLOUD_EDIT_MODEL",
+  "ATLASCLOUD_FALLBACK_IMAGE_MODEL",
   "ATLASCLOUD_TEXT_TO_IMAGE_MODEL",
+  "GEMINI_API_FALLBACK_IMAGE_MODEL",
   "GEMINI_API_KEY",
+  "GROK_BILLING_URL",
+  "GROK_CLIENT_ID",
+  "GROK_CREDITS_URL",
+  "GROK_FALLBACK_IMAGE_MODEL",
   "GROK_FALLBACK_VIDEO_MODEL",
   "GROK_PLANNER",
+  "GROK_PLANNER_MODELS",
+  "GROK_SCOPE",
   "GROK_SEARCH",
+  "GROK_TOKEN_URL",
+  "GROK_USER_URL",
   "GROK_VIDEO_MODEL_15",
   "GROK_VIDEO_MODEL_15_PREVIEW_ALIAS",
   "GROK_VIDEO_MODEL_BASE",
+  "MINIMAX_API_KEY",
+  "MINIMAX_FALLBACK_IMAGE_MODEL",
   "MINIMAX_IMAGE_TO_IMAGE_MODEL",
   "MINIMAX_TEXT_TO_IMAGE_MODEL",
   "MINIMAX_TIMEOUT_MS",
@@ -67,10 +91,10 @@ function declaredPrefixDomain(file: string, variable: string): string[] {
 
 test("every provider map key has one of the common error classes", () => {
   const classes = new Set<string>(GENERATION_ERROR_CLASSES);
-  assert.equal(Object.keys(PROVIDER_ERROR_MAP).length, 64);
   for (const [code, errorClass] of Object.entries(PROVIDER_ERROR_MAP)) {
     assert.ok(classes.has(errorClass), `${code} has invalid class ${errorClass}`);
   }
+  assert.ok(Object.keys(PROVIDER_ERROR_MAP).length > 0);
 });
 
 test("lexically emitted provider codes are mapped or explicitly excepted", () => {
@@ -78,6 +102,17 @@ test("lexically emitted provider codes are mapped or explicitly excepted", () =>
     .filter((code) => !(code in PROVIDER_ERROR_MAP) && !LEXICAL_EXCEPTIONS.has(code))
     .sort();
   assert.deepEqual(unmapped, []);
+});
+
+test("no mapped code is dead: every key is emitted somewhere", () => {
+  // The reverse direction. Without it the map can accumulate invented codes
+  // that no adapter ever throws, which makes the coverage number meaningless.
+  const emitted = lexicalProviderCodes();
+  const dynamic = new Set<string>(DYNAMIC_PROVIDER_CODE_SITES.flatMap((site) => [...site.expandedCodes]));
+  const dead = Object.keys(PROVIDER_ERROR_MAP)
+    .filter((code) => !emitted.has(code) && !dynamic.has(code))
+    .sort();
+  assert.deepEqual(dead, []);
 });
 
 test("dynamic provider-code sites and expanded outputs stay pinned", () => {
