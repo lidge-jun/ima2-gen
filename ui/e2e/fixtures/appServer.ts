@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { startStubUpstream, type StubHandle, type StubMode } from "./stubUpstream";
+import type { Page } from "@playwright/test";
 
 export type AppHandle = {
   baseUrl: string;
@@ -18,7 +19,7 @@ export function assertStubOnlyCalls(stub: StubHandle): void {
 }
 
 export async function seedBrowser(
-  page: { addInitScript: (fn: (arg: string) => void, arg?: string) => Promise<void> },
+  page: Pick<Page, "addInitScript">,
   options: { provider?: "minimax" | "oauth"; dismissOnboarding?: boolean } = {},
 ): Promise<void> {
   const provider = options.provider ?? "minimax";
