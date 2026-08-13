@@ -36,7 +36,7 @@
     "release:minor": "gh workflow run release.yml -f bump=minor -f dry_run=false",
     "release:major": "gh workflow run release.yml -f bump=major -f dry_run=false",
     "audit:gate": "node scripts/audit-gate.mjs --audit-level high --omit dev && node scripts/audit-gate.mjs --prefix ui --audit-level high",
-    "verify:release:source": "npm run test:native-deps && npm run typecheck && npm run typecheck:tests && npm run test:inventory && npm run test:provider-registry && npm run ui:build && npm run build:server && npm run build:cli && npm test && npm run lint:pkg && npm run test:install-policy && npm run audit:gate",
+    "verify:release:source": "npm run test:native-deps && npm run typecheck && npm run typecheck:tests && npm run test:inventory && npm run ui:build && npm run build:server && npm run build:cli && npm run test:provider-registry && npm test && npm run lint:pkg && npm run test:install-policy && npm run audit:gate",
     "verify:release": "npm run verify:release:source && npm run test:package-install",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
