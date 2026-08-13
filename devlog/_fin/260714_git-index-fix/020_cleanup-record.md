@@ -8,7 +8,7 @@
 | Stashes dropped | `stash@{1}` → `e47a0e5430ff` (v1.1.10-era), `stash@{0}` → `64303f117479` (pre-rebuild WIP, base `d2667ff3`) | patches in `artifacts/`; commits fsck-recoverable ~2 weeks |
 | Branches deleted | `docs/structure-refresh-2026-05-06` @ `22505f9b` (all commits patch-equivalent in dev), `ts-strict-followup` @ `3525406c` (landed as squash PR #50; `refs/pull/50/head` retained on GitHub) | reflog-independent: SHAs recorded here |
 | Config restored | `core.fsmonitor`/`core.untrackedcache` unset; **`core.worktree = /Users/jun/Developer/new/700_projects/ima2-gen` restored** in `$GIT_COMMON_DIR/config.worktree` (`extensions.worktreeConfig=true` kept — canonical absorbed-submodule + worktree layout) | incident fix had deleted `core.worktree` outright, leaving the main worktree resolving to the git dir |
-| Git dir de-polluted | 38 foreign working-tree entries (~35MB: `site/`, `assets/`, `devlog/`, `ui/`, …) materialized inside the module git dir during the incident were archived (`artifacts/gitdir-foreign-files.tar.gz`, 32MB) and removed; `hooks/` (lfs) + `lfs/` preserved | tar in `artifacts/` |
+| Git dir de-polluted | 38 foreign working-tree entries (~35MB: `site/`, `assets/`, `devlog/`, `ui/`, …) materialized inside the module git dir during the incident were archived (tar 보관 종료, 2026-08-13 — `artifacts/README.md` 참조) and removed; `hooks/` (lfs) + `lfs/` preserved | tar in `artifacts/` |
 | Rescued unique data | `devlog/_fin/260713_issue110-windows-installer-npm/` existed ONLY in the 7174 worktree (no ref) → copied into this checkout's `devlog/_fin/` | now on disk here |
 | Canary | 1-byte append to `LICENSE` → ` M LICENSE` detected; revert byte-identical (shasum `5cd6bf58…` unchanged) | change detection proven healthy |
 

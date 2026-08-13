@@ -29,7 +29,7 @@
 | 1 | `git -C <wt> status --porcelain` full listing | `devlog/_plan/git-index-fix/artifacts/wt7174-status.txt` |
 | 2 | `git -C <wt> diff HEAD` (staged+unstaged vs d66a75d) | `artifacts/wt7174-full.patch` |
 | 2b | `git -C <wt> diff --cached` (staged-only blobs: 2 AD entries incl. 117-line ThemeToggle.tsx, MM staged intermediates) + `git status --porcelain=v2` | `artifacts/wt7174-staged.patch`, `artifacts/wt7174-status-v2.txt` (audit fold-back, blocker 1) |
-| 3 | tar of the 24 untracked files in 7174 | `artifacts/wt7174-untracked.tar.gz` |
+| 3 | tar of the 24 untracked files in 7174 | 보관 종료 (2026-08-13) — `artifacts/README.md` 참조 |
 | 3b | `git -C <wt> status --porcelain --ignored=matching` inventory; rescue ignored uniques — verified: `devlog/_fin/260713_issue110-windows-installer-npm/` exists in NO ref and only in 7174 → copy into this checkout's `devlog/_fin/`; archive 7174-unique `.codexclaw/{evidence,sessions}` into artifacts tar (audit fold-back, blocker 2) | `artifacts/wt7174-ignored-inventory.txt`, `artifacts/wt7174-codexclaw.tar.gz`, rescued devlog dir |
 | 4 | `git stash show -p stash@{0}` / `stash@{1}` — headers record base SHAs (stash@{0} base = dangling d2667ff3) and the stash-commit SHAs printed by later drops | `artifacts/stash0-pre-rebuild.patch`, `artifacts/stash1-v1110.patch` |
 | 5 | Snapshot of main-checkout WIP status (byte-identity baseline) | `artifacts/wip-baseline.txt` (status + hashes) |
