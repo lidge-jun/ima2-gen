@@ -113,3 +113,7 @@ tags: [ima2-gen, devlog, phase, errors, ui]
 ## 이 유닛이 하지 않는 것
 
 토스트에 retry/reauth 버튼을 그리는 일, 충전 링크, 서버 봉투 재설계, `errorCodes`의 기존 31개 문구 삭제.
+
+## 구현 잔여 (C, dfd492a5)
+
+`handleError`/`showErrorCardImpl`/`Toast`/`AgentQueueRow`는 `import.meta.env`와 zustand 스토어를 끌어 루트 `node:test`에서 실행할 수 없다. u1/u4의 소비 경로는 헬퍼 실행 + 소스 핀으로 증명한다. 브라우저 E2E는 080의 몫이다.
