@@ -12,6 +12,8 @@ import { characterElementIdForMcp } from "../lib/characterResolve.js";
 import { resolveTarget, type ModelCatalog, type ModelEntry, type ResolveResult } from "../lib/modelResolver.js";
 import { out, die, dieWithError, color, err, fail, json } from "../lib/output.js";
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
+import { deriveProviderIds } from "../../lib/providers/derive.js";
+import { listProviders } from "../../lib/mcp/providerRegistry.js";
 
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
@@ -19,6 +21,10 @@ const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGene
 const MAX_REFERENCE_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxRefCount) || 5));
 const MCP_IMAGE_TIMEOUT_MS = 5 * 60_000 + 120_000 + 30_000;
 const MCP_LANES = new Set(["runway", "higgsfield"]);
+const PROVIDER_VALUES = [
+  ...deriveProviderIds(),
+  ...listProviders([]).map((provider) => provider.id),
+];
 
 const SPEC = {
   flags: {
@@ -64,7 +70,7 @@ const HELP = `
         --server <url>                      Override server URL
         --model <model|lane/model>          Bare IDs must be unique across lanes
                                             Core aliases: luna, sol, terra, spark
-        --provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|runway|higgsfield>
+        --provider <${PROVIDER_VALUES.join("|")}>
                                             'auto' was removed; choose a lane explicitly
         --mode <auto|direct>                Core lanes only. Default: auto
         --moderation <auto|low>             Core lanes only. Default: low

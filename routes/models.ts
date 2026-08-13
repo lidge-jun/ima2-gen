@@ -1,17 +1,9 @@
 import { spawn } from "node:child_process";
 import type { Express, Request, Response } from "express";
 import { buildAgyPathEnv, resolveAgyBin } from "../lib/agyCli.js";
+import { ATLASCLOUD_TEXT_TO_IMAGE_MODEL } from "../lib/atlasCloudImageAdapter.js";
+import { MINIMAX_TEXT_TO_IMAGE_MODEL } from "../lib/minimaxImageAdapter.js";
 import {
-  ATLASCLOUD_EDIT_MODEL,
-  ATLASCLOUD_TEXT_TO_IMAGE_MODEL,
-} from "../lib/atlasCloudImageAdapter.js";
-import {
-  MINIMAX_IMAGE_TO_IMAGE_MODEL,
-  MINIMAX_TEXT_TO_IMAGE_MODEL,
-} from "../lib/minimaxImageAdapter.js";
-import {
-  GROK_VIDEO_MODEL_15,
-  GROK_VIDEO_MODEL_BASE,
   MAX_VIDEO_DURATION,
   MIN_VIDEO_DURATION,
   VALID_VIDEO_ASPECT_RATIOS,
@@ -29,6 +21,8 @@ import {
   type McpProviderDescriptor,
 } from "../lib/mcp/providerRegistry.js";
 import type { McpConnectionStatus } from "../lib/mcp/types.js";
+import { deriveModels } from "../lib/providers/derive.js";
+import type { CoreProviderId } from "../lib/providers/registry.js";
 import {
   requireRuntimeContext,
   type RouteRuntimeContext,
@@ -36,9 +30,7 @@ import {
 } from "../lib/runtimeContext.js";
 
 export type ModelLaneStatus = "ready" | "locked" | "disconnected" | "key-missing";
-export type ModelLaneId =
-  | "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api"
-  | "atlascloud" | "minimax" | "runway" | "higgsfield";
+export type ModelLaneId = CoreProviderId | "runway" | "higgsfield";
 
 export interface ModelLaneDto {
   status: ModelLaneStatus;
@@ -132,8 +124,11 @@ function grokLane(ctx: RuntimeContext): ModelLaneDto {
     image: ctx.config.grokProvider.defaultImageModel,
     video: ctx.config.grokProvider.defaultVideoModel,
   }, {
-    image: entries(["grok-imagine-image", "grok-imagine-image-quality"]),
-    video: entries([GROK_VIDEO_MODEL_BASE, GROK_VIDEO_MODEL_15], videoCapabilities()),
+    image: entries(deriveModels("grok", "image")),
+    video: entries(
+      [...deriveModels("grok", "video")].filter((model) => model !== "grok-imagine-video-1.5-preview"),
+      videoCapabilities(),
+    ),
   });
 }
 
@@ -150,7 +145,7 @@ function agyLane(installed: boolean): ModelLaneDto {
     ? { status: "ready", reason: "binary installed; login cannot be probed" }
     : { status: "disconnected", reason: "binary not installed" };
   return lane(state, { image: "nano-banana-2" }, {
-    image: entries(["nano-banana-2", "nano-banana-pro"]), video: [],
+    image: entries(deriveModels("agy", "image")), video: [],
   });
 }
 
@@ -160,7 +155,7 @@ function geminiLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: "Gemini API or Vertex credentials missing" };
   return lane(state, { image: "nano-banana-2" }, {
-    image: entries(["nano-banana-2", "nano-banana-pro"]), video: [],
+    image: entries(deriveModels("gemini-api", "image")), video: [],
   });
 }
 
@@ -169,7 +164,7 @@ function atlasCloudLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: "Atlas Cloud API key missing" };
   return lane(state, { image: ATLASCLOUD_TEXT_TO_IMAGE_MODEL }, {
-    image: entries([ATLASCLOUD_TEXT_TO_IMAGE_MODEL, ATLASCLOUD_EDIT_MODEL]), video: [],
+    image: entries(deriveModels("atlascloud", "image")), video: [],
   });
 }
 
@@ -178,7 +173,7 @@ function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: "MiniMax API key missing" };
   return lane(state, { image: MINIMAX_TEXT_TO_IMAGE_MODEL }, {
-    image: entries([MINIMAX_TEXT_TO_IMAGE_MODEL, MINIMAX_IMAGE_TO_IMAGE_MODEL]), video: [],
+    image: entries(deriveModels("minimax", "image")), video: [],
   });
 }
 

@@ -1,20 +1,27 @@
+import type {
+  CoreProviderId,
+  ImageModelId,
+  UnsupportedImageModelId,
+  VideoModelId,
+} from "./generated/providers";
+
 export type UIMode = "classic" | "node" | "card-news" | "agent" | "assets" | "asset-gen" | "home";
 export type AssetGenBackgroundPreset = "chroma-green" | "white" | "black";
 export type SettingsSection = "providers" | "workspace" | "general";
 export type HistoryStripLayout = "rail" | "horizontal" | "sidebar";
-export type Provider = "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api" | "atlascloud" | "minimax";
+export type Provider = CoreProviderId;
 export type Quality = "low" | "medium" | "high";
 export type Format = "png" | "jpeg" | "webp";
 export type Moderation = "low" | "auto";
-export type OpenAIImageModel = "gpt-5.5" | "gpt-5.4" | "gpt-5.4-mini" | "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna";
-export type GrokImageModel = "grok-imagine-image" | "grok-imagine-image-quality";
-export type GeminiImageModel = "nano-banana-2" | "nano-banana-pro";
-export type AtlasCloudImageModel = "openai/gpt-image-2/text-to-image" | "openai/gpt-image-2/edit";
-export type MinimaxImageModel = "image-01" | "image-01-live";
-export type ImageModel = OpenAIImageModel | GrokImageModel | GeminiImageModel | AtlasCloudImageModel | MinimaxImageModel;
-export type VideoModel = "grok-imagine-video" | "grok-imagine-video-1.5" | "grok-imagine-video-1.5-preview";
+export type OpenAIImageModel = Extract<ImageModelId, `gpt-${string}`>;
+export type GrokImageModel = Extract<ImageModelId, `grok-${string}`>;
+export type GeminiImageModel = Extract<ImageModelId, `nano-${string}`>;
+export type AtlasCloudImageModel = Extract<ImageModelId, `openai/${string}`>;
+export type MinimaxImageModel = Extract<ImageModelId, `image-${string}`>;
+export type ImageModel = ImageModelId;
+export type VideoModel = VideoModelId;
 export type VideoResolutionUI = "480p" | "720p" | "1080p";
-export type UnsupportedImageModel = "gpt-5.3-codex-spark";
+export type UnsupportedImageModel = UnsupportedImageModelId;
 export type Count = number;
 
 export type ComposerInsertedPromptSnapshot = {

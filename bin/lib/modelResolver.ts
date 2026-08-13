@@ -1,6 +1,9 @@
 import { canonicalizeImageModel } from "./model-aliases.js";
+import { deriveProviderIds } from "../../lib/providers/derive.js";
+import { listProviders } from "../../lib/mcp/providerRegistry.js";
+import type { CoreProviderId } from "../../lib/providers/registry.js";
 
-export type Lane = "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api" | "atlascloud" | "minimax" | "runway" | "higgsfield";
+export type Lane = CoreProviderId | "runway" | "higgsfield";
 export type LaneStatus = "ready" | "locked" | "disconnected" | "key-missing";
 
 export interface ModelEntry {
@@ -22,9 +25,10 @@ export type ResolveResult =
   | { ok: true; lane: Lane; model: string; transport: "core" | "mcp" }
   | { ok: false; code: string; message: string; extra?: Record<string, unknown> };
 
-const LANES: readonly Lane[] = [
-  "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "runway", "higgsfield",
-];
+const LANES = [
+  ...deriveProviderIds(),
+  ...listProviders([]).map((provider) => provider.id as Lane),
+] as readonly Lane[];
 
 function failure(code: string, message: string, extra?: Record<string, unknown>): ResolveResult {
   return { ok: false, code, message, ...(extra ? { extra } : {}) };

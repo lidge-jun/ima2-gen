@@ -1,3 +1,5 @@
+import type { CoreProviderId } from "./providers/registry.js";
+
 export const AGENT_ALLOWED_TOOLS = [
   "ima2.get_image_context",
   "ima2.web_search",
@@ -19,7 +21,7 @@ export type AgentSourceImagePolicy = "auto" | "none" | "current";
 export type AgentSlashCommandName = "question" | "help" | "variants" | "generate" | "parallelism";
 
 export interface AgentGenerationSettings {
-  provider: "oauth" | "api" | "grok" | "agy";
+  provider: CoreProviderId;
   model: string;
   quality: "low" | "medium" | "high";
   size: string;

@@ -15,6 +15,7 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
+import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
 
 export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.5";
 export const GROK_PLANNER_MODELS = [
@@ -282,8 +283,8 @@ export const config = {
   },
   imageModels: {
     default: pickStr(env.IMA2_IMAGE_MODEL_DEFAULT, fileCfg.imageModels?.default, "gpt-5.6-luna"),
-    valid: new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]),
-    unsupported: new Set(["gpt-5.3-codex-spark"]),
+    valid: deriveSupportedImageModels("oauth"),
+    unsupported: deriveUnsupportedImageModels(),
     reasoningEffort: pickStr(
       env.IMA2_REASONING_EFFORT,
       fileCfg.imageModels?.reasoningEffort,

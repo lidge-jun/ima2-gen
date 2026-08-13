@@ -5,18 +5,20 @@ import { fileToDataUri, dataUriToFile, defaultOutName } from "../lib/files.js";
 import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { canonicalizeImageModel } from "../lib/model-aliases.js";
 import { config } from "../../config.js";
+import { deriveProviderIds } from "../../lib/providers/derive.js";
 
 const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGeneratedImages) || 24));
+const PROVIDER_VALUES = ["auto", ...deriveProviderIds()];
 
 const HELP = `
   ima2 node <subcommand> [options]
 
   Subcommands:
-    generate <prompt...> [--parent <nodeId>] [--ref <file>...] [--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>] [--no-stream] [...gen-style flags]
+    generate <prompt...> [--parent <nodeId>] [--ref <file>...] [--provider <${PROVIDER_VALUES.join("|")}>] [--no-stream] [...gen-style flags]
     show <nodeId> [--json]
 
   Generate options:
-        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>  Provider for this request
+        --provider <${PROVIDER_VALUES.join("|")}>  Provider for this request
 `;
 
 const GEN_FLAGS = {
@@ -57,10 +59,10 @@ async function generateSub(argv: string[]) {
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
   const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
-  const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax"]);
+  const VALID_PROVIDERS = new Set(PROVIDER_VALUES);
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
   if (args.provider && !VALID_PROVIDERS.has(String(args.provider))) {
-    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud, minimax");
+    die(2, `--provider must be one of: ${PROVIDER_VALUES.join(", ")}`);
   }
   if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {
     die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh, max");

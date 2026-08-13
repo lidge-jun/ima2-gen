@@ -7,6 +7,7 @@ import { buildAgyPathEnv, resolveAgyBin } from "./agyCli.js";
 import { logEvent } from "./logger.js";
 import { SAFETY_INTENT_POLICY } from "./promptSafetyPolicy.js";
 import { detectImageMimeFromB64 } from "./refs.js";
+import { deriveReferenceLimit } from "./providers/derive.js";
 
 export interface AgyGenerateResult {
   b64: string;
@@ -288,7 +289,7 @@ export async function generateViaAgy(
     requestId?: string;
   } = {},
 ): Promise<AgyGenerateResult> {
-  const refDetails = (options.references || []).slice(0, 3);
+  const refDetails = (options.references || []).slice(0, deriveReferenceLimit("agy", "edit"));
   const { paths: refPaths, cleanup } = await writeRefsToTempFiles(refDetails);
   const agyPrompt = buildAgyPrompt(prompt, refPaths);
 

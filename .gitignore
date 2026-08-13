@@ -3,6 +3,8 @@
 .codexclaw/
 node_modules
 generated/
+!ui/src/generated/
+!ui/src/generated/providers.ts
 .DS_Store
 # Keep ad-hoc devlog output ignored, except the reviewed subscription-MCP plan.
 devlog/*

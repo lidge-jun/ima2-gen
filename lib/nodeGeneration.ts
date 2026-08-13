@@ -23,6 +23,7 @@ import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
 import { type NodeGenerateBody, asUpstream, wantsSse, writeNodeError, loadParentNodeB64, toGrokReferences, nodeErrorDetails, } from "./nodeHelpers.js";
 import { normalizeBodyRequestId, validateGenerationPrompt } from "./generationInputValidation.js";
+import { deriveReferenceLimit } from "./providers/derive.js";
 export async function runNodeGeneration(req: Request, res: Response, ctx: RuntimeContext) {
     const body = (req.body ?? {}) as NodeGenerateBody;
     const promptError = validateGenerationPrompt(body.prompt);
@@ -131,38 +132,39 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       const refsForRequest = contextMode === "parent-only" ? [] : (refCheck.refDetails || refCheck.refs);
       const parentImagePresent = !!parentB64;
       const inputImageCount = (parentImagePresent ? 1 : 0) + refsForRequest.length;
-      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api") && inputImageCount > 3) {
+      const providerReferenceLimit = deriveReferenceLimit(activeProvider, "edit");
+      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api") && inputImageCount > providerReferenceLimit!) {
         finishStatus = "error";
         finishHttpStatus = 400;
         const code = activeProvider === "agy" ? "AGY_REF_TOO_MANY" : "GROK_REF_TOO_MANY";
         return res.status(400).json({
           error: {
             code,
-            message: `${activeProvider === "agy" ? "Agy" : "Grok"} image editing supports up to 3 reference images.`,
+            message: `${activeProvider === "agy" ? "Agy" : "Grok"} image editing supports up to ${providerReferenceLimit} reference images.`,
           },
           code,
           parentNodeId,
         });
       }
-      if (activeProvider === "atlascloud" && inputImageCount > 10) {
+      if (activeProvider === "atlascloud" && inputImageCount > providerReferenceLimit!) {
         finishStatus = "error";
         finishHttpStatus = 400;
         return res.status(400).json({
           error: {
             code: "ATLASCLOUD_REF_TOO_MANY",
-            message: "Atlas Cloud image editing supports up to 10 reference images.",
+            message: `Atlas Cloud image editing supports up to ${providerReferenceLimit} reference images.`,
           },
           code: "ATLASCLOUD_REF_TOO_MANY",
           parentNodeId,
         });
       }
-      if (activeProvider === "minimax" && inputImageCount > 1) {
+      if (activeProvider === "minimax" && inputImageCount > providerReferenceLimit!) {
         finishStatus = "error";
         finishHttpStatus = 400;
         return res.status(400).json({
           error: {
             code: "MINIMAX_REF_TOO_MANY",
-            message: "MiniMax image editing supports up to 1 subject reference.",
+            message: `MiniMax image editing supports up to ${providerReferenceLimit} subject reference.`,
           },
           code: "MINIMAX_REF_TOO_MANY",
           parentNodeId,

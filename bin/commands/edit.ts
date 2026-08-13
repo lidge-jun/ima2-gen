@@ -5,13 +5,15 @@ import { out, die, dieWithError, color, json } from "../lib/output.js";
 import { config } from "../../config.js";
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
 import { canonicalizeImageModel } from "../lib/model-aliases.js";
+import { deriveCliImageModelSet, deriveProviderIds } from "../../lib/providers/derive.js";
 import { join } from "node:path";
 
 import { errInfo } from "../../lib/errInfo.js";
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
-const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax"]);
-const KNOWN_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.3-codex-spark", "grok-imagine-image", "grok-imagine-image-quality", "nano-banana-2", "nano-banana-pro", "image-01", "image-01-live"]);
+const PROVIDER_VALUES = ["auto", ...deriveProviderIds()];
+const VALID_PROVIDERS = new Set(PROVIDER_VALUES);
+const KNOWN_IMAGE_MODELS = deriveCliImageModelSet();
 
 const SPEC = {
   flags: {
@@ -45,9 +47,9 @@ const HELP = `
     -s, --size <WxH>
     -o, --out <file>
         --json
-        --model <gpt-5.5|gpt-5.4|gpt-5.4-mini|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark|grok-imagine-image|grok-imagine-image-quality|nano-banana-2|nano-banana-pro|image-01|image-01-live>  Default: gpt-5.6-luna
+        --model <${[...KNOWN_IMAGE_MODELS].join("|")}>  Default: gpt-5.6-luna
                                       Aliases: luna, sol, terra, spark
-        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>
+        --provider <${PROVIDER_VALUES.join("|")}>
                                       Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini)
         --mode <auto|direct>       Prompt handling mode. Default: auto
         --moderation <auto|low>    Default: low
@@ -67,11 +69,11 @@ export default async function editCmd(argv: string[]) {
   if (!VALID_MODES.has(String(args.mode))) die(2, "--mode must be one of: auto, direct");
   if (!VALID_MODERATION.has(String(args.moderation))) die(2, "--moderation must be one of: auto, low");
   if (args.provider && !VALID_PROVIDERS.has(String(args.provider))) {
-    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud, minimax");
+    die(2, `--provider must be one of: ${PROVIDER_VALUES.join(", ")}`);
   }
   const model = canonicalizeImageModel(args.model);
   if (model && !KNOWN_IMAGE_MODELS.has(model)) {
-    die(2, "--model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.3-codex-spark, grok-imagine-image, grok-imagine-image-quality, nano-banana-2, nano-banana-pro, image-01, image-01-live");
+    die(2, `--model must be one of: ${[...KNOWN_IMAGE_MODELS].join(", ")}`);
   }
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
   if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {

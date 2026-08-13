@@ -36,3 +36,12 @@ test("minimax caps at a single subject reference", () => {
   // A lower server capability still wins.
   assert.equal(effectiveReferenceLimit({ ...base, provider: "minimax", serverLimit: 0 }), 0);
 });
+
+test("atlascloud caps at its 10-reference lane limit", () => {
+  // lib/generatePipeline.ts rejects >10 with a 400. The tray previously derived
+  // limited lanes by matching Grok's value of 3, which silently skipped Atlas
+  // and let a high server capability through unchecked.
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "atlascloud", serverLimit: 25 }), 10);
+  // The server capability still wins when it is the tighter bound.
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "atlascloud", serverLimit: 4 }), 4);
+});

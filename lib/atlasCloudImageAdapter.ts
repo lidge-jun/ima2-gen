@@ -1,6 +1,7 @@
 import type { RuntimeContext } from "./runtimeContext.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { logEvent } from "./logger.js";
+import { deriveReferenceLimit } from "./providers/derive.js";
 
 const ATLAS_BASE_URL = "https://api.atlascloud.ai/api/v1";
 export const ATLASCLOUD_TEXT_TO_IMAGE_MODEL = "openai/gpt-image-2/text-to-image";
@@ -190,8 +191,8 @@ export async function generateViaAtlasCloud(
     throw atlasCloudError("Atlas Cloud API key not configured", 401, "ATLASCLOUD_API_KEY_MISSING");
   }
   const references = options.references?.filter((ref) => ref.b64) || [];
-  if (references.length > 10) {
-    throw atlasCloudError("Atlas Cloud image editing supports up to 10 reference images", 400, "ATLASCLOUD_REF_TOO_MANY");
+  if (references.length > deriveReferenceLimit("atlascloud", "edit")!) {
+    throw atlasCloudError(`Atlas Cloud image editing supports up to ${deriveReferenceLimit("atlascloud", "edit")} reference images`, 400, "ATLASCLOUD_REF_TOO_MANY");
   }
   const model = references.length > 0 ? ATLASCLOUD_EDIT_MODEL : (options.model || ATLASCLOUD_TEXT_TO_IMAGE_MODEL);
   const imageUrls = references.length

@@ -93,7 +93,7 @@ describe("Agent Mode right sidebar contract", () => {
     const types = readSource("ui/src/components/agent/agentTypes.ts");
     const css = readSource("ui/src/styles/provider-controls.css");
 
-    assert.match(types, /provider: "oauth" \| "api" \| "grok"/);
+    assert.match(types, /provider: Extract<CoreProviderId, AgentLlmModelOption\["provider"\]>/);
     const options = readSource("ui/src/lib/agentModelOptions.ts");
     assert.match(model, /AGENT_LLM_MODEL_OPTIONS/);
     assert.match(options, /value: "gpt-5\.4-mini"[\s\S]*?shortLabel: "5\.4m"[\s\S]*?provider: "oauth"/);

@@ -6,11 +6,12 @@ import { loadAllBundledSnapshots } from "./mcp/snapshotStore.js";
 import { KEY_TO_ENV, WRITABLE_CONFIG_KEYS } from "./configKeys.js";
 import { DEFAULT_IMAGE_QUALITY, VALID_IMAGE_QUALITIES } from "./oauthNormalize.js";
 import type { AppConfig } from "./runtimeContext.js";
+import { deriveProviderIds } from "./providers/derive.js";
 
 type CapabilitySource = "local" | "server";
 
 const VALID_MODES = ["auto", "direct"] as const;
-const VALID_PROVIDERS = ["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax"] as const;
+const VALID_PROVIDERS = ["auto", ...deriveProviderIds()] as const;
 const AGENT_COMMANDS = [
   "skill",
   "capabilities",

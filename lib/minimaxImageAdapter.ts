@@ -13,6 +13,7 @@
 import type { RuntimeContext } from "./runtimeContext.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { logEvent } from "./logger.js";
+import { deriveReferenceLimit } from "./providers/derive.js";
 
 export const MINIMAX_TEXT_TO_IMAGE_MODEL = "image-01";
 export const MINIMAX_IMAGE_TO_IMAGE_MODEL = "image-01-live";
@@ -198,8 +199,8 @@ export async function generateViaMinimax(
     throw minimaxError("MiniMax API key not configured", 401, "MINIMAX_API_KEY_MISSING");
   }
   const references = (options.references || []).filter((ref) => ref.b64);
-  if (references.length > 1) {
-    throw minimaxError("MiniMax image-to-image supports up to 1 subject reference", 400, "MINIMAX_REF_TOO_MANY");
+  if (references.length > deriveReferenceLimit("minimax", "edit")!) {
+    throw minimaxError(`MiniMax image-to-image supports up to ${deriveReferenceLimit("minimax", "edit")} subject reference`, 400, "MINIMAX_REF_TOO_MANY");
   }
   // Both image-01 and image-01-live accept `subject_reference`, so an attached
   // reference never overrides the caller's model choice; swapping it silently

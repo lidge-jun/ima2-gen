@@ -71,6 +71,8 @@ jobs:
         run: npm install -g npm@${{ matrix.npm }}
       - name: Install root deps
         run: npm ci
+      - name: Provider registry generated-file drift
+        run: node scripts/generate-provider-types.mjs --check
       - name: Native dependency smoke
         run: npm run test:native-deps
       - name: Install ui deps

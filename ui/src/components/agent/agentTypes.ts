@@ -1,3 +1,6 @@
+import type { CoreProviderId } from "../../generated/providers";
+import type { AgentLlmModelOption } from "../../lib/agentModelOptions";
+
 export type AgentLayoutMode =
   | "desktop-three-pane"
   | "desktop-rail"
@@ -19,7 +22,7 @@ export type AgentSidebarTab = "image" | "library" | "forms" | "quality" | "model
 export type AgentSourceImagePolicy = "auto" | "none" | "current";
 
 export type AgentGenerationSettings = {
-  provider: "oauth" | "api" | "grok" | "agy";
+  provider: Extract<CoreProviderId, AgentLlmModelOption["provider"]>;
   model: string;
   quality: "low" | "medium" | "high";
   size: string;

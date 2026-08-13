@@ -33,6 +33,7 @@ import { publishJobEvent } from "./ssePublish.js";
 import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt } from "./generationInputValidation.js";
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
+import { deriveReferenceLimit } from "./providers/derive.js";
 export async function runGeneratePipeline(req: Request, res: Response, ctx: RuntimeContext) {
     const requestId = normalizeBodyRequestId(req.body?.requestId, req.id);
     const asyncMode = req.body?.async === true;
@@ -202,23 +203,24 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       const providerRefCount = activeProvider === "grok" || activeProvider === "grok-api"
         ? grokRefs.length
         : refCheck.refs.length;
-      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api") && providerRefCount > 3) {
+      const providerReferenceLimit = deriveReferenceLimit(activeProvider, "edit");
+      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api") && providerRefCount > providerReferenceLimit!) {
         return fail(400, {
-          error: `${activeProvider === "agy" ? "Agy" : "Grok"} image editing supports up to 3 reference images`,
+          error: `${activeProvider === "agy" ? "Agy" : "Grok"} image editing supports up to ${providerReferenceLimit} reference images`,
           code: activeProvider === "agy" ? "AGY_REF_TOO_MANY" : "GROK_REF_TOO_MANY",
           requestId,
         });
       }
-      if (activeProvider === "atlascloud" && providerRefCount > 10) {
+      if (activeProvider === "atlascloud" && providerRefCount > providerReferenceLimit!) {
         return fail(400, {
-          error: "Atlas Cloud image editing supports up to 10 reference images",
+          error: `Atlas Cloud image editing supports up to ${providerReferenceLimit} reference images`,
           code: "ATLASCLOUD_REF_TOO_MANY",
           requestId,
         });
       }
-      if (activeProvider === "minimax" && providerRefCount > 1) {
+      if (activeProvider === "minimax" && providerRefCount > providerReferenceLimit!) {
         return fail(400, {
-          error: "MiniMax image editing supports up to 1 subject reference",
+          error: `MiniMax image editing supports up to ${providerReferenceLimit} subject reference`,
           code: "MINIMAX_REF_TOO_MANY",
           requestId,
         });

@@ -2,6 +2,7 @@ import { logEvent } from "./logger.js";
 import type { RuntimeContext } from "./runtimeContext.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { getVertexAccessToken, getVertexProjectId, isVertexInitialized } from "./vertexAuth.js";
+import { deriveReferenceLimit } from "./providers/derive.js";
 
 export interface GeminiApiGenerateResult {
   b64: string;
@@ -93,7 +94,7 @@ function buildContents(
   const parts: unknown[] = [];
 
   // Add reference images first (if any)
-  for (const ref of references.slice(0, 3)) {
+  for (const ref of references.slice(0, deriveReferenceLimit("gemini-api", "edit"))) {
     const mime = ref.declaredMime || ref.detectedMime || detectImageMimeFromB64(ref.b64) || "image/png";
     parts.push({
       inlineData: {
@@ -130,7 +131,7 @@ export async function generateViaGeminiApi(
 
   const model = options.model || "nano-banana-2";
   const apiModelId = resolveGeminiModelId(model);
-  const references = (options.references || []).slice(0, 3);
+  const references = (options.references || []).slice(0, deriveReferenceLimit("gemini-api", "edit"));
 
   let url: string;
   let authHeaders: Record<string, string>;

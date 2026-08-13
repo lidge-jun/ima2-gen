@@ -1,23 +1,21 @@
 import type { RouteRuntimeContext } from "./runtimeContext.js";
+import { deriveModels, deriveSupportedImageModels, deriveUnsupportedImageModels } from "./providers/derive.js";
 
 export const FALLBACK_IMAGE_MODEL = "gpt-5.6-luna";
-const VALID_IMAGE_MODELS = new Set(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]);
-const UNSUPPORTED_IMAGE_MODELS = new Set(["gpt-5.3-codex-spark"]);
+const VALID_IMAGE_MODELS = deriveSupportedImageModels("oauth");
+const UNSUPPORTED_IMAGE_MODELS = deriveUnsupportedImageModels();
 const FALLBACK_REASONING_EFFORT = "none";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
 
 export const GROK_FALLBACK_IMAGE_MODEL = "grok-imagine-image-quality";
-const VALID_GROK_IMAGE_MODELS = new Set(["grok-imagine-image", "grok-imagine-image-quality"]);
+const VALID_GROK_IMAGE_MODELS = deriveModels("grok", "image");
 
 const GEMINI_API_FALLBACK_IMAGE_MODEL = "nano-banana-2";
-const VALID_GEMINI_API_MODELS = new Set(["nano-banana-2", "nano-banana-pro"]);
+const VALID_GEMINI_API_MODELS = deriveModels("gemini-api", "image");
 const ATLASCLOUD_FALLBACK_IMAGE_MODEL = "openai/gpt-image-2/text-to-image";
-const VALID_ATLASCLOUD_IMAGE_MODELS = new Set([
-  "openai/gpt-image-2/text-to-image",
-  "openai/gpt-image-2/edit",
-]);
+const VALID_ATLASCLOUD_IMAGE_MODELS = deriveModels("atlascloud", "image");
 const MINIMAX_FALLBACK_IMAGE_MODEL = "image-01";
-const VALID_MINIMAX_IMAGE_MODELS = new Set(["image-01", "image-01-live"]);
+const VALID_MINIMAX_IMAGE_MODELS = deriveModels("minimax", "image");
 
 export function normalizeReasoningEffort(ctx: RouteRuntimeContext | null | undefined, rawEffort: unknown) {
   const configured = (ctx?.config as { imageModels?: { reasoningEffort?: string; validReasoningEfforts?: Set<string> } } | undefined)?.imageModels;
@@ -130,8 +128,7 @@ export const GROK_VIDEO_MODEL_15 = "grok-imagine-video-1.5";
 export const GROK_VIDEO_MODEL_15_PREVIEW_ALIAS = "grok-imagine-video-1.5-preview";
 export const GROK_FALLBACK_VIDEO_MODEL = GROK_VIDEO_MODEL_15;
 export const VALID_GROK_VIDEO_MODELS = new Set([
-  GROK_VIDEO_MODEL_BASE,
-  GROK_VIDEO_MODEL_15,
+  ...deriveModels("grok", "video"),
   GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
 ]);
 export const VALID_VIDEO_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);

@@ -1,4 +1,5 @@
 import type { CanvasExportBackground, HexColor } from "../types/canvas";
+import { isCoreProviderId } from "../generated/providers";
 import type {
   Count,
   ComposerInsertedPromptSnapshot,
@@ -320,7 +321,7 @@ export function isModeration(value: unknown): value is Moderation {
 }
 
 export function isProvider(value: unknown): value is Provider {
-  return value === "oauth" || value === "api" || value === "grok" || value === "grok-api" || value === "agy" || value === "gemini-api" || value === "atlascloud" || value === "minimax";
+  return isCoreProviderId(value);
 }
 
 export function isPromptMode(value: unknown): value is "auto" | "direct" {

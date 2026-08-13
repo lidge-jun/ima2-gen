@@ -1,4 +1,5 @@
 import type { ImageModel, OpenAIImageModel, GeminiImageModel, AtlasCloudImageModel, MinimaxImageModel, Provider, UnsupportedImageModel, VideoModel } from "../types";
+import { PROVIDER_MODELS } from "../generated/providers";
 
 export const DEFAULT_IMAGE_MODEL: ImageModel = "gpt-5.6-luna";
 export const IMAGE_MODEL_STORAGE_KEY = "ima2.imageModel";
@@ -26,9 +27,9 @@ export const IMAGE_MODEL_OPTIONS: Array<{
   { value: "image-01-live", shortLabel: "minimax live", fullLabelKey: "settings.imageModel.minimaxImage01Live", providerHint: "minimax" },
 ];
 
-const GEMINI_MODEL_VALUES = new Set<string>(["nano-banana-2", "nano-banana-pro"]);
-const ATLASCLOUD_MODEL_VALUES = new Set<string>(["openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit"]);
-const MINIMAX_MODEL_VALUES = new Set<string>(["image-01", "image-01-live"]);
+const GEMINI_MODEL_VALUES = new Set<string>(PROVIDER_MODELS["gemini-api"].image);
+const ATLASCLOUD_MODEL_VALUES = new Set<string>(PROVIDER_MODELS.atlascloud.image);
+const MINIMAX_MODEL_VALUES = new Set<string>(PROVIDER_MODELS.minimax.image);
 
 export const OPENAI_IMAGE_MODEL_OPTIONS = IMAGE_MODEL_OPTIONS.filter(
   (option): option is { value: OpenAIImageModel; shortLabel: string; fullLabelKey: string } =>

@@ -65,8 +65,9 @@ describe("gpt-5.6 rollout: surface contracts", () => {
     assert.match(genSrc, /\/api\/models/);
     assert.match(genSrc, /none, low, medium, high, xhigh, max/);
     const editSrc = readSource("bin/commands/edit.ts");
+    const generatedProviders = readSource("ui/src/generated/providers.ts");
     for (const model of GPT56_MODELS) {
-      assert.ok(editSrc.includes(`"${model}"`), `bin/commands/edit.ts KNOWN_IMAGE_MODELS missing ${model}`);
+      assert.ok(generatedProviders.includes(`"${model}"`), `generated provider models missing ${model}`);
     }
     assert.match(editSrc, /none, low, medium, high, xhigh, max/);
     for (const path of ["bin/commands/multimode.ts", "bin/commands/node.ts"]) {
@@ -87,8 +88,9 @@ describe("gpt-5.6 rollout: surface contracts", () => {
 
   it("UI unions and pickers carry the 5.6 slugs and max", () => {
     const types = readSource("ui/src/types.ts");
+    const generatedProviders = readSource("ui/src/generated/providers.ts");
     for (const model of GPT56_MODELS) {
-      assert.ok(types.includes(`"${model}"`), `ui types missing ${model}`);
+      assert.ok(generatedProviders.includes(`"${model}"`), `generated ui types missing ${model}`);
     }
     assert.match(types, /"xhigh" \| "max"/);
     const imageModels = readSource("ui/src/lib/imageModels.ts");

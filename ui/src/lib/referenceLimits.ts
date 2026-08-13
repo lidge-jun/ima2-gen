@@ -8,13 +8,22 @@
 // - lib/minimaxImageAdapter.ts: MiniMax takes a single subject_reference
 // - gpt oauth/api: server capabilities.limits.maxRefCount (referenceLimit)
 import type { Provider } from "../types";
+import { PROVIDER_REFERENCE_LIMITS } from "../generated/providers";
 
-export const GROK_FAMILY_IMAGE_REF_LIMIT = 3;
-export const MINIMAX_IMAGE_REF_LIMIT = 1;
-export const GROK_VIDEO_REF_LIMIT = 7;
+export const GROK_FAMILY_IMAGE_REF_LIMIT = PROVIDER_REFERENCE_LIMITS.grok.image;
+export const MINIMAX_IMAGE_REF_LIMIT = PROVIDER_REFERENCE_LIMITS.minimax.image;
+export const GROK_VIDEO_REF_LIMIT = PROVIDER_REFERENCE_LIMITS.grok.video;
 export const MCP_REFERENCE_LIMIT = 3;
 
-const LIMITED_IMAGE_PROVIDERS: ReadonlySet<Provider> = new Set(["grok", "grok-api", "agy", "gemini-api"]);
+type LaneLimits = { readonly image?: number; readonly edit?: number; readonly video?: number };
+
+// Every lane cap comes from the manifest by lookup, not by matching Grok's
+// number. Value-matching silently dropped Atlas (10), so the tray allowed more
+// references than lib/generatePipeline.ts accepts whenever serverLimit > 10.
+function laneLimit(provider: Provider, mode: "image" | "video"): number | undefined {
+  const limits = (PROVIDER_REFERENCE_LIMITS as Record<string, LaneLimits | undefined>)[provider];
+  return limits?.[mode];
+}
 
 export function effectiveReferenceLimit(input: {
   provider: Provider;
@@ -24,11 +33,6 @@ export function effectiveReferenceLimit(input: {
 }): number {
   if (input.mcpProvider) return MCP_REFERENCE_LIMIT;
   if (input.videoModelSelected) return Math.min(input.serverLimit, GROK_VIDEO_REF_LIMIT);
-  if (input.provider === "minimax") {
-    return Math.min(input.serverLimit, MINIMAX_IMAGE_REF_LIMIT);
-  }
-  if (LIMITED_IMAGE_PROVIDERS.has(input.provider)) {
-    return Math.min(input.serverLimit, GROK_FAMILY_IMAGE_REF_LIMIT);
-  }
-  return input.serverLimit;
+  const lane = laneLimit(input.provider, "image");
+  return lane === undefined ? input.serverLimit : Math.min(input.serverLimit, lane);
 }

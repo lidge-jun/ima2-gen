@@ -6,9 +6,11 @@ import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { config } from "../../config.js";
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
 import { canonicalizeImageModel } from "../lib/model-aliases.js";
+import { deriveProviderIds } from "../../lib/providers/derive.js";
 
 const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGeneratedImages) || 24));
 const MAX_REFERENCE_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxRefCount) || 5));
+const PROVIDER_VALUES = ["auto", ...deriveProviderIds()];
 
 const SPEC = {
   flags: {
@@ -50,7 +52,7 @@ const HELP = `
         --json
         --model <gpt-5.5|gpt-5.4|gpt-5.4-mini|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark|grok-imagine-image|grok-imagine-image-quality|nano-banana-2|nano-banana-pro>  Default: gpt-5.6-luna
                                       Aliases: luna, sol, terra, spark
-        --provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>
+        --provider <${PROVIDER_VALUES.join("|")}>
                                       Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini)
         --mode <auto|direct>            Prompt handling mode. Default: auto
         --ref <file>                    Attach reference image (repeatable, max ${MAX_REFERENCE_COUNT})
@@ -72,11 +74,11 @@ export default async function multimodeCmd(argv: string[]) {
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
 
-  const VALID_PROVIDERS = new Set(["auto", "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax"]);
+  const VALID_PROVIDERS = new Set(PROVIDER_VALUES);
   const VALID_MODES = new Set(["auto", "direct"]);
   const VALID_REASONING = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
   if (args.provider && !VALID_PROVIDERS.has(String(args.provider))) {
-    die(2, "--provider must be one of: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud, minimax");
+    die(2, `--provider must be one of: ${PROVIDER_VALUES.join(", ")}`);
   }
   if (!VALID_MODES.has(String(args.mode))) die(2, "--mode must be one of: auto, direct");
   if (args["reasoning-effort"] && !VALID_REASONING.has(String(args["reasoning-effort"]))) {

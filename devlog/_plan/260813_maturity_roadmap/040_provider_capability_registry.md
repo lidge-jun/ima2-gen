@@ -18,9 +18,11 @@ tags: [ima2-gen, devlog, phase, provider, registry]
 
 ## 문제 (측정값)
 
-공급자 id 목록이 **9곳**에 독립적으로 존재하고, 어휘도 하나가 아니다.
+공급자 id 목록이 **10곳 이상**에 독립적으로 존재하고, 어휘도 하나가 아니다.
 `routes/keys.ts:36`은 auth 관점(`openai`/`xai`)을, 나머지는 lane 관점
-(`oauth`/`grok-api`)을 쓴다. 모델 목록은 4곳, 참조 상한은 5곳에 흩어져 있다.
+(`oauth`/`grok-api`)을 쓴다. 모델 목록과 참조 상한도 여러 계층에 흩어져 있다.
+정확한 인벤토리는 아래 전환 표의 원장을 따른다 — 초안의 "9곳/4곳/5곳" 집계는
+구현 감사에서 과소 측정으로 판정됐으므로 고정 숫자를 주장하지 않는다.
 `supportsEdit`/`supportsMask`/`supportsStreaming`/`maxReferences`를 담은 **기계
 판독 가능한 객체는 없다**.
 
@@ -54,7 +56,7 @@ export interface CoreProviderManifest {
         keyPrefix?: string; validateUrl?: string; configKey?: string }
     | { kind: "oauth-proxy"; envVars: string[]; configKey?: string }
     | { kind: "service-account"; envVars: string[]; configKey?: string }  // Vertex
-    | { kind: "local-cli"; envVars: string[] }                            // agy
+    | { kind: "local-cli"; envVars: string[]; optionalApiKeyEnv?: string }      // agy는 GEMINI_API_KEY를 선택 전달
   >;
 
   models: Array<{
@@ -84,7 +86,7 @@ export interface CoreProviderManifest {
 | `grok` | 프록시 (**xAI 키를 쓰지 않는다**) | 아니오 |
 | `grok-api` | `xai` 키 | 예 |
 | `gemini-api` | Gemini API 키 **또는** Vertex 서비스 계정 | 아니오 — 둘 중 하나 |
-| `agy` | 로컬 CLI, 키 없음 | 예(`null`) |
+| `agy` | 로컬 CLI + **선택적** `GEMINI_API_KEY` 전달 (`lib/agyImageAdapter.ts:173`) | 아니오 — CLI가 필수 transport이고 키는 선택 |
 
 두 가지를 분리한다. **`vendor`**는 정체성(`oauth`와 `api` 모두 `openai` 벤더),
 **`credentials[].keyVocabulary`**는 `routes/keys.ts:36`의 키 어휘다. 프록시
@@ -104,9 +106,16 @@ Vertex는 `KeyProviderId`에 없으므로 `service-account`라는 별도 kind를
 | 계층 | 값 | 소유 |
 |---|---|---|
 | 코어 전역 상한 | 기본 5 (`./config.ts` 94행, `lib/refs.ts:88`) | config — registry가 가져오지 않는다 |
-| lane/모드 상한 | Grok 이미지 3, Grok 비디오 7, MiniMax 1 (`ui/src/lib/referenceLimits.ts:12`) | **`referenceLimits` — 이 phase가 통합** |
+| lane/모드 상한 | Grok 계열 3, Grok 비디오 7, MiniMax 1 (`ui/src/lib/referenceLimits.ts:12`), **Atlas Cloud 10** (`lib/generatePipeline.ts:212`) | **`referenceLimits` — 이 phase가 통합** |
 | element capacity | gpt/gemini/grok × image/edit/video, 총량·개당 (`lib/elementCompiler.ts:57`) | `elementCompiler` — `elementTaxonomy`로 연결만 |
 | MCP transport 상한 | 3 (`routes/mcpMedia.ts:381`, `ui/src/components/settings/McpReferenceSlots.tsx:18`) | MCP registry — 코어 lane 밖 |
+
+**서버 측 집행 지점도 같은 값을 읽어야 한다 (구현 감사 blocker 3).** lane 상한은
+UI에만 있지 않다: `lib/generatePipeline.ts:212`(Atlas 10),
+`lib/nodeGeneration.ts:135`(Grok/Gemini/Agy 3, Atlas 10, MiniMax 1),
+`lib/atlasCloudImageAdapter.ts:192`(Atlas 10)가 각자 하드코딩한다. 이 phase는 이
+집행 지점들도 registry 파생값을 읽도록 전환하고, 패리티 테스트는 UI와 서버
+양쪽을 대조한다. 초안은 Atlas 10을 누락하고 서버 집행을 전환 대상에서 뺐다.
 
 **`referenceLimits`는 두 번째 계층만 소유한다.** 나머지 셋은 각자 주인이 있고,
 registry가 전부 흡수하면 축이 다른 값들이 한 표에 뭉개진다. 이 표를 문서에 남기는
@@ -141,7 +150,7 @@ registry가 전부 흡수하면 축이 다른 값들이 한 표에 뭉개진다.
 
 | 경로 | 내용 |
 |---|---|
-| `lib/providers/types.ts` | 위 인터페이스 + `CoreProviderId`, `KeyProviderId` |
+| `lib/providers/types.ts` | 위 인터페이스 + `KeyProviderId` + **`CoreProviderManifestBase`(id가 `string`인 비재귀 기반 형태)**. 타입 재귀를 피하는 구조 (4라운드 감사): 매니페스트가 `CoreProviderId`를 참조하고 `CoreProviderId`가 매니페스트 배열에서 파생되면 순환이므로, base는 `id: string`으로 두고 `REGISTRY`를 `as const satisfies readonly CoreProviderManifestBase[]`로 선언한다. `CoreProviderId = (typeof REGISTRY)[number]["id"]`는 그 상수에서 파생하고, 최종 소비자용 매니페스트 타입은 base의 `id`를 `CoreProviderId`로 좁힌 형태다. 그래야 `d5`의 "매니페스트에만 추가"가 타입체크를 통과한다 |
 | `lib/providers/registry.ts` | 8개 lane 매니페스트. `listProviders()`, `getProvider(id)`, `byKeyVocabulary(id): CoreProviderManifest[]` (**배열** — 다대일이므로) |
 | `lib/providers/derive.ts` | registry에서 파생 목록을 만드는 순수 함수들 (id 배열, 모델 Set, 참조 상한 맵) |
 | `tests/provider-registry-contract.test.ts` | 매니페스트 불변식 |
@@ -157,6 +166,23 @@ registry가 전부 흡수하면 축이 다른 값들이 한 표에 뭉개진다.
 | `lib/imageModels.ts:3` 이하 6개 Set | 리터럴 Set | 파생 Set |
 | `ui/src/types.ts:5` | `Provider` union | **생성된 파일에서 import** (아래) |
 | `ui/src/lib/referenceLimits.ts:12` | 리터럴 상한 | 생성된 맵 |
+| `ui/src/store/storePersistence.ts:322` | `isProvider` 리터럴 나열 | 파생 검증 함수 |
+| `lib/agentTypes.ts:21` | agent provider union | registry 파생 타입 |
+| `ui/src/components/agent/agentTypes.ts:21` | 미러된 union | 생성 파일에서 import |
+| `bin/commands/multimode.ts:75`, `bin/commands/node.ts:60` | CLI provider Set | 파생 Set |
+| `./config.ts:283` | `config.imageModels.valid` | 파생 목록 |
+| `bin/commands/edit.ts:14` | `KNOWN_IMAGE_MODELS` | 파생 Set |
+| `ui/src/types.ts:9` | 모델 union | 생성 파일에서 import |
+| `lib/generatePipeline.ts:212`, `lib/nodeGeneration.ts:135`, `lib/atlasCloudImageAdapter.ts:192` | 서버 측 상한 집행 | registry 파생 상한 |
+| `lib/minimaxImageAdapter.ts:201`, `lib/geminiApiImageAdapter.ts:133`, `lib/agyImageAdapter.ts:291` | 어댑터 내부 상한/절단 | registry 파생 상한 (2라운드 감사) |
+| `routes/models.ts:39`, `routes/models.ts:135`, `routes/models.ts:153`, `routes/models.ts:181` | lane union + 모델 목록 | 파생 (2라운드 감사) |
+| `ui/src/lib/imageModels.ts:6`, `ui/src/lib/imageModels.ts:29` | UI 모델 값과 분류 | 생성 파일에서 import (2라운드 감사) |
+| `bin/commands/edit.ts:13` | CLI provider 목록 | 파생 Set (2라운드 감사) |
+| `bin/commands/edit.ts:50`, `bin/commands/node.ts:15`, `bin/commands/gen.ts:67`, `bin/commands/multimode.ts:53`, `bin/commands/multimode.ts:79` | 도움말/오류의 id 나열 **문자열** | registry 파생 목록의 `join`으로 생성 (3-5라운드 감사). 단 **변형을 보존**한다 (5라운드 감사, `d1` 동작 불변): `edit`/`node`/`multimode`는 `auto +` 코어 목록, `gen`은 코어 목록 `+ MCP lane(runway, higgsfield — MCP registry에서 파생)`. 단순 코어 join은 허용 값을 없앤다 |
+| `ui/src/lib/agentModelOptions.ts:1` | `AgentLlmProvider` union | **의도적 유지** — agent LLM 모델 카탈로그(gpt-5.x/grok-4.x 텍스트 모델)는 이미지 provider registry의 축이 아니다. union이 id를 인용하므로 파생 타입으로 좁히되, 옵션 목록 자체는 registry에 흡수하지 않는다 (8라운드 감사 후속 점검) |
+
+구현 감사(blocker 1)가 찾아낸 추가 리터럴이다. 초안의 "9곳/4곳/5곳" 집계는
+과소 측정이었고, 전환 표가 소비자 6개만 적어 `d3`/`d5`가 달성 불가능했다.
 
 ### UI 경계
 
@@ -166,6 +192,7 @@ UI는 서버 `lib/`를 import할 수 없다. 두 선택지 중 **생성**을 택
 |---|---|
 | 런타임에 `/api/models`로 받기 | 거부. 타입이 사라지고 첫 렌더 전에 값이 없다 |
 | **빌드 시 생성** (`scripts/generate-provider-types.mjs` → `ui/src/generated/providers.ts`) | 채택. 타입 유지, 런타임 비용 0 |
+| stale 게이트 | `scripts/generate-provider-types.mjs --check`(재생성 후 diff 시 exit 1)를 신규 package 스크립트 `test:provider-registry`로 노출하고 `verify:release:source`와 `ci.yml`에 연결한다 (구현 감사 blocker 4 — 초안은 "CI가 확인한다"고 적고 실행 경로를 계획하지 않았다) |
 
 생성 파일은 추적하되 **`010`의 drift 규칙과 충돌하지 않게** 한다: `.ts`이고
 대응하는 `.ts` 소스가 없으므로 `010`의 "`.ts` 짝이 있는 `.js`" 검사에 걸리지
@@ -174,7 +201,10 @@ UI는 서버 `lib/`를 import할 수 없다. 두 선택지 중 **생성**을 택
 ## IN / OUT
 
 - IN: `lib/providers/**` 신규, 위 소비자들의 **리터럴 → 파생 전환**,
-  `scripts/generate-provider-types.mjs`, `ui/src/generated/providers.ts`, 테스트 2종.
+  `scripts/generate-provider-types.mjs`(`--check` 포함), `ui/src/generated/providers.ts`,
+  테스트 2종, `./package.json`에 `test:provider-registry` 스크립트 추가와
+  `verify:release:source` 연결, `.github/workflows/ci.yml`에 stale 게이트 단계 추가
+  (2라운드 감사 blocker 3 — 초안은 게이트를 약속하고 IN에 넣지 않았다).
 - OUT: 공급자 **추가·제거**, 어댑터 구현 변경(`lib/*ImageAdapter.ts`), 오류 코드
   정규화(`060` 소유), job 상태(`050` 소유), `routes/keys.ts`의 검증 로직 자체.
   이 phase는 **값을 한 곳으로 모으는 것**이지 동작을 바꾸는 것이 아니다.
@@ -186,12 +216,31 @@ UI는 서버 `lib/`를 import할 수 없다. 두 선택지 중 **생성**을 택
 - `d2`: **패리티 테스트가 음성 대조를 가진다.** `tests/provider-registry-parity.test.ts`가
   파생값과 현재 하드코딩 값을 비교하고, 매니페스트에서 값 하나를 일부러 바꾸면
   실패한다. 이 테스트가 registry 전환의 유일한 안전망이다.
-- `d3`: 공급자 id 목록의 **리터럴 정의가 1개**다.
-  `rg -n 'minimax' lib/ bin/ routes/ --glob '!*.js'`가 반환하는 id 배열 정의가
-  `lib/providers/registry.ts` 하나뿐이다.
+- `d3`: 공급자 id의 **리터럴 정의가 registry 파생 외에 없다.** 정의 형상 오라클
+  두 개를 쓴다 (4-9라운드 감사의 수렴 결과 — 순서 정규식 계열은 매니페스트
+  크기와 행동 분기 때문에 전부 깨졌고, 객체 배열 registry는 `"oauth", "api"`
+  인접 쌍 자체를 만들지 않으므로 registry를 grep으로 찾는 발상도 버린다.
+  registry가 원본이라는 보증은 `d2` 패리티 테스트가 담당한다):
+
+  ```
+  test -z "$(rg -l '"oauth", "api"' lib/ bin/ routes/ ui/src \
+     --glob '*.ts' --glob '!**/generated/**' --glob '!**/*.test.ts')"
+  # exit 0 = 배열 형태의 id 리터럴 정의 0건 (전환 전에는 전환 대상 6개가 걸린다)
+
+  test "$(rg -l '"oauth" \| "api"' lib/ bin/ routes/ ui/src \
+     --glob '*.ts' --glob '!**/generated/**' --glob '!**/*.test.ts')" \
+     = "ui/src/lib/agentModelOptions.ts"
+  # exit 0 = union 형태 정의는 의도적 유지(agent LLM 축) 1개뿐
+  ```
+
 - `d4`: `ui/src/generated/providers.ts`를 재생성해도 diff가 없다.
 - `d5`: **신규 공급자 추가 비용 실측.** 가상의 lane을 매니페스트에만 추가하고,
-  기존 파일 수정 없이 `/api/models` 목록과 CLI 모델 검증에 나타나는지 확인한다.
+  기존 파일 수정 없이 **파생 id 검증·모델 Set·CLI 모델 검증**에 나타나는지
+  확인한다. `/api/models`의 lane readiness 목록은 요구하지 않는다 (2라운드 감사
+  blocker 5): `routes/models.ts:185`의 `buildCoreLanes()`는 8개 lane을 직접
+  열거하고 lane별 readiness 생성자를 호출하므로, 매니페스트 전용 lane은 이
+  목록에 나타나지 않는다. generic fallback을 만드는 것은 동작 변경이며 이
+  phase의 OUT이다.
 
   **"신규 3파일, 기존 수정 0"은 이 phase의 목표가 아니다.** registry는 *선언적
   데이터*(id, 모델, 상한, 키 어휘)만 통합한다. 실제 생성을 하려면 여전히 다음이
@@ -205,7 +254,7 @@ UI는 서버 `lib/`를 import할 수 없다. 두 선택지 중 **생성**을 택
   | lane별 readiness 생성자와 `buildCoreLanes` (`routes/models.ts:108`, `routes/models.ts:185`) | lane마다 준비 상태 판정이 다르다 |
   | `resolveProviderOptions`의 공급자 분기 (`lib/providerOptions.ts:13`) | 모델·크기·검색 옵션 정규화가 공급자마다 다르다 |
   | 키 저장·핫업데이트 분기 (`routes/keys.ts:205`) | 런타임 반영 경로 |
-  | 전용 엔드포인트가 필요한 경우 라우트 등록 (`routes/index.ts:49`) | |
+  | 전용 엔드포인트가 필요한 경우 라우트 등록 (`routes/index.ts` — 기존 등록은 agy 76행, models 82행, keys 88행; 49행은 health다, 구현 감사 blocker 5) | |
 
   A phase 감사가 이 네 개를 추가로 짚었다. 초안의 표는 남는 작업을 과소평가했다.
 
