@@ -102,6 +102,12 @@ test("status-dependent codes classify by the status the adapter attached", async
   assert.equal(providerErrorClass("GROK_VIDEO_REQUEST_FAILED", 429), "RATE_LIMITED");
   assert.equal(providerErrorClass("ATLASCLOUD_UPLOAD_FAILED", 400), "CAPABILITY_UNSUPPORTED");
   assert.equal(providerErrorClass("ATLASCLOUD_UPLOAD_FAILED", 503), "NETWORK_FAILURE");
+  // GENERATE_FAILED forwards the upstream status; GENERATION_FAILED is a fixed
+  // 502 poll failure and must stay statically classified.
+  assert.equal(providerErrorClass("ATLASCLOUD_GENERATE_FAILED", 400), "CAPABILITY_UNSUPPORTED");
+  assert.equal(providerErrorClass("ATLASCLOUD_GENERATE_FAILED", 429), "RATE_LIMITED");
+  assert.equal(providerErrorClass("ATLASCLOUD_GENERATE_FAILED", 502), "NETWORK_FAILURE");
+  assert.equal(providerErrorClass("ATLASCLOUD_GENERATION_FAILED", 400), "INTERNAL_STATE_ERROR");
   // Codes with a single meaning ignore status.
   assert.equal(providerErrorClass("MINIMAX_INSUFFICIENT_BALANCE", 502), "BILLING_REQUIRED");
 });

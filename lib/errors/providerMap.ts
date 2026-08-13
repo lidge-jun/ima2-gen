@@ -110,7 +110,10 @@ export const DYNAMIC_PROVIDER_CODE_SITES = [{
 const STATUS_DEPENDENT_CODES: Record<string, { clientError: GenerationErrorClass; serverError: GenerationErrorClass }> = {
   GROK_VIDEO_REQUEST_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
   ATLASCLOUD_UPLOAD_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
-  ATLASCLOUD_GENERATION_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
+  // GENERATE_FAILED forwards the upstream HTTP status
+  // (lib/atlasCloudImageAdapter.ts:121). GENERATION_FAILED is a fixed 502 poll
+  // failure (lib/atlasCloudImageAdapter.ts:158) and stays statically mapped.
+  ATLASCLOUD_GENERATE_FAILED: { clientError: "CAPABILITY_UNSUPPORTED", serverError: "NETWORK_FAILURE" },
 };
 
 export function providerErrorClass(code: unknown, status?: unknown): GenerationErrorClass | undefined {

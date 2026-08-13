@@ -15,11 +15,14 @@ import {
 function serverSourceFiles(): string[] {
   const roots = ["lib", "routes"];
   const files: string[] = [];
+  // The map itself must not count as an emitter: including it makes every key
+  // "found" and turns the dead-mapping check into a tautology.
+  const excluded = new Set(["lib/errors/providerMap.ts", "lib/errors/classes.ts"]);
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) walk(path);
-      else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) files.push(path);
+      else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts") && !excluded.has(path)) files.push(path);
     }
   };
   for (const root of roots) walk(root);
