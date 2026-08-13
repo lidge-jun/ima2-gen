@@ -18,6 +18,9 @@ const { registerVideoExtendedRoutes } = await import("../routes/videoExtended.ts
 const { registerVideoRoutes } = await import("../routes/video.ts");
 const { registerEditRoutes } = await import("../routes/edit.ts");
 const { registerMcpMediaRoutes } = await import("../routes/mcpMedia.ts");
+const { registerMcpRecoverRoutes } = await import("../routes/mcpRecover.ts");
+const { registerMcpMultishotRoutes } = await import("../routes/mcpMultishot.ts");
+const { registerNodeRoutes } = await import("../routes/nodes.ts");
 const { createAgentSession } = await import("../lib/agentStore.ts");
 const { tickAgentQueueWorker } = await import("../lib/agentQueueWorker.ts");
 const queue = await import("../lib/agentQueueStore.ts");
@@ -106,7 +109,10 @@ describe("062 error transport envelopes", () => {
     assert.equal(error.errorClass, "BILLING_REQUIRED");
   });
 
-  it("Node outer catch recovers fields from an undecorated adapter throw", () => {
+  it("Node outer catch uses the same helper as the live writer", () => {
+    // Provider failures are caught inside the generation loop and already
+    // covered by the Node SSE canary. The outer catch only sees persist or
+    // unexpected throws; it must still recover fields from the thrown object.
     let body: unknown;
     const res = {
       writableEnded: false, destroyed: false, headersSent: false,
@@ -117,11 +123,11 @@ describe("062 error transport envelopes", () => {
       code: "MINIMAX_INSUFFICIENT_BALANCE",
       status: 402,
     });
-    writeNodeError(res, thrown.status, thrown.code, thrown.message, null, {
+    writeNodeError(res, 402, "INVALID_REQUEST", thrown.message, null, {
       ...errorEnvelopeFields(thrown),
     });
     const error = (body as { error: Record<string, unknown> }).error;
-    assert.equal(error.code, "MINIMAX_INSUFFICIENT_BALANCE");
+    assert.equal(error.code, "INVALID_REQUEST");
     assert.equal(error.rawCode, "MINIMAX_INSUFFICIENT_BALANCE");
     assert.equal(error.errorClass, "BILLING_REQUIRED");
     assert.match(source("lib/nodeGeneration.ts"), /\.\.\.errorEnvelopeFields\(err\.raw\)/);
@@ -222,6 +228,39 @@ describe("062 error transport envelopes", () => {
     });
   });
 
+  it("Video extend preflight fail() carries a thrown provider error", async () => {
+    const app = express();
+    app.use(express.json());
+    registerVideoExtendedRoutes(app, {
+      rootDir: process.cwd(),
+      packageVersion: "test",
+      config: {
+        ...config,
+        storage: { ...config.storage, generatedDir: TEST_DIR },
+        grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 1 },
+        log: { ...config.log, level: "silent" },
+      },
+    }, {
+      readSidecar: async () => {
+        throw providerError("GROK_VIDEO_REQUEST_FAILED", 502);
+      },
+    });
+    await withServer(app, async (baseUrl) => {
+      const pending = waitForError("env-video-preflight");
+      const response = await fetch(`${baseUrl}/api/video/extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceVideoId: "root.mp4", requestId: "env-video-preflight", prompt: "continue" }),
+      });
+      const body = await response.json() as Record<string, unknown>;
+      const payload = await pending.catch(() => body);
+      assert.equal(response.status, 502);
+      assert.equal(payload.code, "GROK_VIDEO_REQUEST_FAILED");
+      assert.equal(payload.rawCode, "GROK_VIDEO_REQUEST_FAILED");
+      assert.equal(payload.errorClass, "NETWORK_FAILURE");
+    });
+  });
+
   it("Multimode returns the last item failure from the adapter", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (url) => {
@@ -298,6 +337,118 @@ describe("062 error transport envelopes", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "upscale-image", files: ["src-image.png"], requestId: "env-mcp" }),
+      });
+      assert.equal(response.status, 202);
+      const payload = await pending;
+      assert.equal(payload.code, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.rawCode, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.errorClass, "NETWORK_FAILURE");
+    });
+  });
+
+  it("MCP generate event payload prefers structured code", async () => {
+    const app = express();
+    app.use(express.json());
+    registerMcpMediaRoutes(app, {
+      config: {
+        storage: { generatedDir: join(TEST_DIR, "generated"), packageRoot: TEST_DIR },
+        ids: { generatedHexBytes: 4 },
+        mcp: { enabledProviders: ["runway"], tokenDir: TEST_DIR, snapshotDir: join(TEST_DIR, "snapshots") },
+      },
+      mcpConnectionManager: {
+        status: () => ({ provider: "runway", state: "connected", snapshotDiff: { drifted: [], missing: [], added: [] } }),
+        callTool: async () => { throw new Error("unused"); },
+      },
+    } as never, {
+      execute: async () => {
+        throw Object.assign(new Error("ordinary provider failure:ignored"), {
+          code: "MINIMAX_NETWORK_FAILED",
+          status: 502,
+        });
+      },
+    } as never);
+    await withServer(app, async (baseUrl) => {
+      const pending = waitForError("env-mcp-generate");
+      const response = await fetch(`${baseUrl}/api/mcp/generate`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ provider: "runway", kind: "image", prompt: "generate", requestId: "env-mcp-generate" }),
+      });
+      assert.equal(response.status, 202);
+      const payload = await pending;
+      assert.equal(payload.code, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.rawCode, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.errorClass, "NETWORK_FAILURE");
+    });
+  });
+
+  it("MCP recover event payload prefers structured code", async () => {
+    const app = express();
+    app.use(express.json());
+    registerMcpRecoverRoutes(app, {
+      config: {
+        storage: { generatedDir: join(TEST_DIR, "generated") },
+        ids: { generatedHexBytes: 4 },
+      },
+      mcpConnectionManager: {
+        status: () => ({ provider: "runway", state: "connected" }),
+        callTool: async () => {
+          throw Object.assign(new Error("ordinary provider failure:ignored"), {
+            code: "MINIMAX_NETWORK_FAILED",
+            status: 502,
+          });
+        },
+      },
+    } as never);
+    await withServer(app, async (baseUrl) => {
+      // recover generates its own requestId; subscribe to any mcp recover error.
+      const payloadPromise = new Promise<Record<string, unknown>>((resolve, reject) => {
+        const timer = setTimeout(() => { stop(); reject(new Error("timeout recover error")); }, 4000);
+        const stop = subscribe((ev) => {
+          if (ev.event === "error" && String(ev.jobId || "").startsWith("mcpr_")) {
+            clearTimeout(timer);
+            stop();
+            resolve(ev.data);
+          }
+        });
+      });
+      const response = await fetch(`${baseUrl}/api/mcp/tasks/20fba936-054a-4563-b91b-8fa9b019bb20/recover`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ provider: "runway", kind: "video" }),
+      });
+      assert.equal(response.status, 202);
+      const payload = await payloadPromise;
+      assert.equal(payload.code, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.rawCode, "MINIMAX_NETWORK_FAILED");
+      assert.equal(payload.errorClass, "NETWORK_FAILURE");
+    });
+  });
+
+  it("MCP multishot event payload prefers structured code", async () => {
+    const app = express();
+    app.use(express.json());
+    registerMcpMultishotRoutes(app, {
+      config: {
+        storage: { generatedDir: join(TEST_DIR, "generated") },
+        ids: { generatedHexBytes: 4 },
+      },
+      mcpConnectionManager: {
+        status: () => ({ provider: "runway", state: "connected" }),
+        callTool: async () => {
+          throw Object.assign(new Error("ordinary provider failure:ignored"), {
+            code: "MINIMAX_NETWORK_FAILED",
+            status: 502,
+          });
+        },
+      },
+    } as never);
+    await withServer(app, async (baseUrl) => {
+      const pending = waitForError("env-mcp-multishot");
+      const response = await fetch(`${baseUrl}/api/mcp/multishot`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "story", requestId: "env-mcp-multishot" }),
       });
       assert.equal(response.status, 202);
       const payload = await pending;
