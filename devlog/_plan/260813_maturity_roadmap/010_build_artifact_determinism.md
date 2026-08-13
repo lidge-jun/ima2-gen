@@ -248,7 +248,7 @@ tarball을 **대체하지는 않는다**: 미추적 파일 payload와 foreign gi
   불가능했다).
 
   ```
-  rg -l --no-ignore 'wt7174-untracked|gitdir-foreign-files' \
+  rg -l --no-ignore 'wt7174-untracked\.tar\.gz|gitdir-foreign-files\.tar\.gz' \
      devlog/_fin/260714_git-index-fix/
   # 기대 출력(정확히 1건): devlog/_fin/260714_git-index-fix/artifacts/README.md
   ```
@@ -257,7 +257,7 @@ tarball을 **대체하지는 않는다**: 미추적 파일 payload와 foreign gi
   비교로 기계화한다):
 
   ```
-  test "$(rg -l --no-ignore 'wt7174-untracked|gitdir-foreign-files' \
+  test "$(rg -l --no-ignore 'wt7174-untracked\.tar\.gz|gitdir-foreign-files\.tar\.gz' \
      devlog/_fin/260714_git-index-fix/)" = \
      "devlog/_fin/260714_git-index-fix/artifacts/README.md"
   # exit 0 = 통과, 그 외(추가 파일/0건) = 실패
