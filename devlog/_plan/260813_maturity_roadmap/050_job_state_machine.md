@@ -33,11 +33,35 @@ A phase 감사도 같은 지적을 했다: UI 상태와 queue 상태까지 전�
 
 | 표면 | 성공 종료 값 |
 |---|---|
-| `lib/inflight.ts:212` `finishJob` 기본값 | `completed` |
+| `lib/inflight.ts:217` `finishJob` 기본값 | `completed` |
 | `lib/mcp/commitMediaResult.ts:44` | `done` (명시적으로 넘김) |
 | `bin/lib/mcpJob.ts:154` 복구 판정 | `done`만 인정 |
-| `lib/db.ts:314` sprite CHECK | `complete` |
-| `lib/db.ts:95` agent turns 기본값 | `complete` |
+| `lib/db.ts:317` sprite CHECK | `complete` |
+| `lib/db.ts:100` agent turns 기본값 | `complete` |
+
+**성공 종료 호출자 실측 (P phase stale 검증).** `finishJob` 호출자를 전수
+조사하면 성공 경로에서 status를 명시하는 곳은 세 군데이고(`done` 1건,
+`completed` 2건), 나머지는 변수나 기본값이다.
+
+| 호출자 | 성공 값 | CLI 복구 대상 |
+|---|---|---|
+| `lib/mcp/commitMediaResult.ts:44` | `done` | **예** |
+| `routes/videoExtended.ts:370` | `completed` | 아니오 |
+| `lib/agentQueueWorker.ts:163` | `completed` | 아니오 |
+| `lib/generatePipeline.ts:622` | 변수 (`lib/generatePipeline.ts:40`에서 `completed` 초기화) | 아니오 |
+| `lib/multimodePipeline.ts:561` | 변수 (`lib/multimodePipeline.ts:101`) | 아니오 |
+| `lib/nodeGeneration.ts:525` | 변수 (`lib/nodeGeneration.ts:38`) | 아니오 |
+| `routes/edit.ts:438` | 변수 (`routes/edit.ts:104`) | 아니오 |
+| `routes/video.ts:508` | 변수 (`routes/video.ts:137`) | 아니오 |
+| `lib/spriteRowPipeline.ts:26` (`finally`) | 생략 → 기본값 `completed` | 아니오 |
+
+초판은 이 표를 세 줄로 적고 "전수"라고 주장했다. 구현 감사가 여섯 개를 더
+찾았다(1라운드 blocker 1). 결론(“`done`을 쓰는 MCP 경로만 복구 대상”)은
+유지되지만, 근거의 완전성 주장은 틀렸으므로 고쳐 적는다. `bin/lib/mcpJob.ts:82`가
+`/api/mcp/generate` 계열에만 제출하고 MCP 성공 경로는 전부
+`commitMediaResult`로 수렴하는 것이 분류의 진짜 근거다.
+
+즉 결함은 **잠재적**이고, `e1`/`e3`은 그 잠재성을 닫는 계약 강화다.
 
 **지금 깨지지는 않는다.** `commitMediaResult`가 `done`을 명시하기 때문이다.
 그러나 그 계약을 강제하는 **타입도 테스트도 없다**. 새 MCP 라우트가
@@ -51,14 +75,39 @@ A phase 감사도 같은 지적을 했다: UI 상태와 queue 상태까지 전�
 
 | 경로 | 동작 |
 |---|---|
-| `lib/jobStatus.ts` (신규) | `TerminalStatus` union + `normalizeTerminalStatus()`. `done`/`completed`/`complete`를 하나로 정규화 |
-| `lib/inflight.ts:212` | `finishJob`의 `options.status`를 `TerminalStatus`로 타입 지정. 기본값 유지 |
+| `lib/jobStatus.ts` (신규) | `JobTerminalStatus` union + `normalizeTerminalStatus()`. **성공 계열**(`done`/`completed`/`complete`)을 `done`으로 정규화하고, 실패 계열은 그대로 통과시킨다 |
+| `lib/inflight.ts:217` | `finishJob`의 `options.status` 타입은 **좁히지 않는다** — 아래 참조 |
 | `lib/mcp/commitMediaResult.ts:44` | 문자열 리터럴 → 상수 |
 | `bin/lib/mcpJob.ts:154` | `normalizeTerminalStatus()`로 판정. `completed`도 성공으로 인정 |
 | `tests/job-terminal-status-contract.test.ts` (신규) | 아래 통합 경로 |
 
+### `options.status`를 좁히지 않는 이유 (구현 감사 blocker 2)
+
+초판은 `options.status`를 `TerminalStatus`로 좁히자고 했다. 그러면 **기존
+호출자가 깨진다.** 다섯 개 파이프라인이 `let finishStatus = "completed"`로
+시작해 나중에 `"error"`를 대입하므로 TypeScript는 이를 리터럴 union이 아니라
+`string`으로 추론한다(`lib/generatePipeline.ts:40`, `lib/multimodePipeline.ts:101`,
+`lib/nodeGeneration.ts:38`, `routes/edit.ts:104`, `routes/video.ts:137`).
+`string`을 좁은 union 파라미터에 넘기면 typecheck가 실패한다.
+
+실제로 `finishJob`에 전달되는 어휘 전체는 이렇다.
+
+| 값 | 출처 |
+|---|---|
+| `done` | `lib/mcp/commitMediaResult.ts:44` |
+| `completed` | `routes/videoExtended.ts:370`, `lib/agentQueueWorker.ts:163`, 다섯 파이프라인의 기본 초기값 |
+| `error` | `routes/mcpMedia.ts:282` 외 파이프라인 오류 경로 |
+| `canceled` | `lib/agentQueueWorker.ts:171`, 그리고 `lib/inflight.ts:217`의 `options.canceled` 우선 규칙 |
+| `failed` | `lib/agentQueueWorker.ts:197` |
+
+따라서 이 phase는 **읽는 쪽에서만 정규화한다**: `bin/lib/mcpJob.ts`가
+`normalizeTerminalStatus()`로 판정하고, `finishJob`의 시그니처는 그대로 둔다.
+호출자 다섯 곳을 리터럴 union으로 바꾸는 리팩터링은 이 phase의 목적(터미널
+경계 계약)이 아니며, 다섯 파일의 제어 흐름을 건드리는 것은 `e4`의 회귀 0
+목표와 상충한다. 타입 강화는 `085`가 다룬다.
+
 **DB 스키마는 건드리지 않는다.** `lib/db.ts:317`의 sprite CHECK와
-`lib/db.ts:95`의 agent 기본값은 각자의 도메인에서 일관되고, 마이그레이션 위험이
+`lib/db.ts:100`의 agent 기본값은 각자의 도메인에서 일관되고, 마이그레이션 위험이
 이득보다 크다. 정규화는 **읽는 쪽**에서 한다.
 
 ## 수용 기준
@@ -66,8 +115,16 @@ A phase 감사도 같은 지적을 했다: UI 상태와 queue 상태까지 전�
 - `e1`: `bin/lib/mcpJob.ts`가 `done`과 `completed` **둘 다** 복구한다. 지금은
   `done`만 인정한다.
 - `e2`: **통합 테스트가 전 구간을 잇는다.** `commitMediaResult` → inflight 스냅샷
-  → CLI 복구를 실제로 태운다. 기존 replay-gap 테스트는 `done` fixture를 직접
-  넣을 뿐 이 경계를 잇지 않는다.
+  → CLI 복구를 실제로 태운다. 기존 replay-gap 테스트는 `{status:"done"}`을 직접
+  꽂을 뿐(`tests/cli-model-resolver.test.ts:247`) 이 경계를 잇지 않는다.
+
+  **replay gap을 강제해야 한다 (구현 감사 blocker 3).** `commitMediaResult`는
+  터미널 스냅샷을 기록한 직후 live `done` 이벤트를 publish하므로, 순진하게
+  `runMcpJob`을 태우면 클라이언트가 `bin/lib/mcpJob.ts:118`에서 그 live 이벤트를
+  소비해 **복구 경로를 아예 타지 않는다.** 테스트는 live 터미널 이벤트를
+  의도적으로 누락시키고, replay gap을 발생시킨 뒤, `listTerminalJobs()`가 만든
+  실제 스냅샷을 `/api/inflight`로 제공해야 한다. 이 설계가 아니면 e2는
+  통과해도 아무것도 증명하지 않는다.
 - `e3`: `finishJob`을 `status` 없이 호출해도 CLI 복구가 성공한다.
 
   **이것은 계약 강화이지 현재 회귀가 아니다**(감사 blocker 7). 현재 MCP 성공
@@ -87,7 +144,7 @@ A phase 감사도 같은 지적을 했다: UI 상태와 queue 상태까지 전�
 |---|---|---|
 | 기본값 종료 복구 | `finishJob(requestId)`를 status 없이 부르는 MCP 라우트를 테스트에서 실행 | CLI가 성공으로 복구. **패치 전 트리에서는 이 테스트가 실패해야 한다** |
 | `done` 경로 | 기존 `commitMediaResult` 경로 | 회귀 없이 복구 |
-| 알 수 없는 status | `finishJob(id, {status:"weird"})` | 타입에서 거부되고, 런타임에서는 오류로 분류 |
+| 알 수 없는 status | `finishJob(id, {status:"weird"})` 후 CLI 복구 시도 | **런타임 판정만** 한다: `normalizeTerminalStatus()`가 성공으로 인정하지 않아 복구가 결과를 반환하지 않는다. `options`는 여전히 `any`이므로(위 "좁히지 않는 이유") 타입 거부를 주장하지 않는다 |
 
 첫 행의 음성 대조가 핵심이다. 패치 전에 실패하지 않는 테스트는 이 phase가 무엇을
 고쳤는지 증명하지 못한다.

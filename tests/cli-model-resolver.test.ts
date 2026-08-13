@@ -170,7 +170,7 @@ describe("loadCliDefaults", () => {
 const transpiledDir = mkdtempSync(join(tmpdir(), "ima2-mcp-job-"));
 const binLibDir = fileURLToPath(new URL("../bin/lib/", import.meta.url));
 writeFileSync(join(transpiledDir, "package.json"), '{"type":"module"}');
-for (const name of ["sse", "mcpJob"]) {
+for (const name of ["sse", "jobStatus", "mcpJob"]) {
   const source = readFileSync(join(binLibDir, `${name}.ts`), "utf8");
   const output = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },

@@ -1,4 +1,5 @@
 import { openSse, sseUrlWithCursor, type OpenSseResult, type SseEvent } from "./sse.js";
+import { normalizeTerminalStatus } from "./jobStatus.js";
 
 export interface McpJobOptions {
   serverBase: string;
@@ -145,13 +146,16 @@ async function consumeStream(stream: OpenSseResult, opts: McpJobOptions): Promis
 function terminalResult(job: Record<string, unknown>): McpJobResult | McpJobError | null {
   const status = String(job.status ?? "");
   const meta = asRecord(job.meta) ?? {};
-  if (status === "error") {
+  const normalized = normalizeTerminalStatus(status);
+  if (normalized === "error") {
     return new McpJobError(
       typeof job.errorCode === "string" ? job.errorCode : "MCP_JOB_FAILED",
       typeof meta.message === "string" ? meta.message : "MCP job failed",
     );
   }
-  if (status !== "done" || typeof meta.filename !== "string") return null;
+  // Accept every success spelling, not just "done": finishJob defaults to
+  // "completed", so a route that omits the status used to strand recovery.
+  if (normalized !== "done" || typeof meta.filename !== "string") return null;
   return {
     filename: meta.filename,
     url: typeof meta.url === "string" ? meta.url : `/generated/${encodeURIComponent(meta.filename)}`,

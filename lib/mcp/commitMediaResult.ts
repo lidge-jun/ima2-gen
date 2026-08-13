@@ -9,6 +9,7 @@ import { generateImageThumbnail } from "../imageThumb.js";
 import { generateVideoThumbnail } from "../videoThumb.js";
 import { invalidateHistoryIndex } from "../historyIndex.js";
 import { finishJob } from "../inflight.js";
+import { TERMINAL_SUCCESS } from "../jobStatus.js";
 import { publishJobEvent } from "../ssePublish.js";
 import type { requireRuntimeContext } from "../runtimeContext.js";
 
@@ -41,7 +42,7 @@ export async function commitMediaResult(input: CommitMediaResultInput): Promise<
   if (kind === "video") await generateVideoThumbnail(filePath).catch(() => undefined);
   else await generateImageThumbnail(filePath).catch(() => undefined);
   invalidateHistoryIndex();
-  finishJob(requestId, { status: "done", meta: { filename } });
+  finishJob(requestId, { status: TERMINAL_SUCCESS, meta: { filename } });
   publishJobEvent(requestId, "done", {
     requestId, filename,
     url: `/generated/${encodeURIComponent(filename)}`,
