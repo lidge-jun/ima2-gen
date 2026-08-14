@@ -174,3 +174,11 @@ jobs:
         run: npm --prefix ui run build
       - name: Run frontend e2e
         run: npm --prefix ui run test:e2e
+      - name: Upload e2e failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-failure-context
+          path: ui/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
