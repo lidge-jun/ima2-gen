@@ -1,10 +1,12 @@
 import ko from "./ko.json";
 import en from "./en.json";
+import zhHant from "./zh-Hant.json";
+import zhHans from "./zh-Hans.json";
 import { useAppStore } from "../store/useAppStore";
 
-export type Locale = "ko" | "en";
+export type Locale = "ko" | "en" | "zh-Hant" | "zh-Hans";
 
-const dictionaries = { ko, en } as const;
+const dictionaries = { ko, en, "zh-Hant": zhHant, "zh-Hans": zhHans } as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRec = Record<string, any>;
@@ -57,19 +59,22 @@ export function useI18n() {
   };
 }
 
-export const SUPPORTED_LOCALES: readonly Locale[] = ["ko", "en"];
+export const SUPPORTED_LOCALES: readonly Locale[] = ["ko", "en", "zh-Hant", "zh-Hans"];
 
 export function loadLocale(): Locale {
   try {
     const raw = localStorage.getItem("ima2.locale");
-    if (raw === "ko" || raw === "en") return raw;
+    if (raw === "ko" || raw === "en" || raw === "zh-Hant" || raw === "zh-Hans") return raw;
   } catch {
     /* storage disabled */
   }
-  // Browser default — fall back to Korean if the user is on a Korean locale.
+  // Browser default: follow the browser's language when it is supported.
   if (typeof navigator !== "undefined") {
     const nav = navigator.language || "";
     if (nav.toLowerCase().startsWith("ko")) return "ko";
+    const normalized = nav.toLowerCase();
+    if (/^(zh[-_](tw|hk|mo|hant)|zh-hant)/.test(normalized)) return "zh-Hant";
+    if (/^(zh[-_](cn|sg|hans)|zh)/.test(normalized)) return "zh-Hans";
   }
   return "en";
 }

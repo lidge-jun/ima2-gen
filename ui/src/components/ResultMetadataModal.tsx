@@ -39,9 +39,9 @@ function stringify(value: unknown): string | null {
   return String(value);
 }
 
-function formatDate(ts: unknown): string | null {
+function formatDate(ts: unknown, locale: string): string | null {
   if (typeof ts !== "number" || !Number.isFinite(ts)) return null;
-  return new Date(ts).toLocaleString();
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts));
 }
 
 function formatSize(size: string | null | undefined): string | null {
@@ -133,7 +133,7 @@ export function ResultMetadataModal({
   onClose: () => void;
   onCopy: (value: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const rawJson = useMemo(() => JSON.stringify(item, null, 2), [item]);
   const latestContinuity = item.videoContinuity?.entries?.[item.videoContinuity.entries.length - 1] ?? null;
   const provider = providerLabel(item.provider);
@@ -185,7 +185,7 @@ export function ResultMetadataModal({
   addField(lineageFields, t("metadata.fields.filename"), item.filename, {
     copyValue: item.filename,
   });
-  addField(lineageFields, t("metadata.fields.createdAt"), formatDate(item.createdAt));
+  addField(lineageFields, t("metadata.fields.createdAt"), formatDate(item.createdAt, locale));
   addField(lineageFields, t("metadata.fields.sessionId"), item.sessionId);
   addField(lineageFields, t("metadata.fields.nodeId"), item.nodeId);
   addField(lineageFields, t("metadata.fields.parentNodeId"), item.parentNodeId);

@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 const quota = read("ui/src/components/settings/QuotaCard.tsx");
 const apiKey = read("ui/src/components/ApiKeyInput.tsx");
 const vertex = read("ui/src/components/VertexJsonInput.tsx");
-const locales = ["en", "ko"].map((locale) => JSON.parse(read(`ui/src/i18n/${locale}.json`)));
+const locales = ["en", "ko", "zh-Hant", "zh-Hans"].map((locale) => JSON.parse(read(`ui/src/i18n/${locale}.json`)));
 
 describe("settings i18n state contract", () => {
   it("localizes every account-switch phase and copied state", () => {
