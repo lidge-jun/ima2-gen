@@ -6,9 +6,14 @@ test("J1 first run can skip onboarding, save a MiniMax key, and generate into th
   try {
     await seedBrowser(page, { dismissOnboarding: false, provider: "minimax" });
     await page.goto(app.baseUrl);
+    // The onboarding popup only appears when the server reports no usable
+    // provider, and it renders after the first fetches settle — slower on CI
+    // than locally. Dismiss it when present, then make sure it is gone before
+    // touching anything it overlays.
     const skip = page.getByRole("button", { name: /I.ll set it up myself|직접 설정/i });
-    if (await skip.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (await skip.isVisible({ timeout: 15_000 }).catch(() => false)) {
       await skip.click();
+      await expect(skip).toBeHidden({ timeout: 10_000 });
     }
     await page.getByRole("button", { name: "Settings" }).click();
     // The keys panel is an accordion whose trigger wraps an h4, so match the
