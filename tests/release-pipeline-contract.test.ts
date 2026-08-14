@@ -148,6 +148,51 @@ describe("release artifact and provenance contract", () => {
       ref: "refs/tags/v2.0.14", sha: SHA, sha512: "digest", version: "2.0.14", runId: "1", runAttempt: "1",
     }), /predicate type mismatch/);
   });
+
+  it("accepts the dispatch host ref only for a dispatched publish", () => {
+    // release.yml reaches publish.yml by workflow_dispatch, and a dispatched run
+    // always executes on the default branch. npm therefore records
+    // refs/heads/main even when the published target is preview or a tag.
+    const dispatched: any = {
+      _type: "https://in-toto.io/Statement/v1",
+      predicateType: "https://slsa.dev/provenance/v1",
+      subject: [{ name: "pkg:npm/ima2-gen@2.0.14", digest: { sha512: "digest" } }],
+      predicate: {
+        buildDefinition: {
+          buildType: "https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1",
+          externalParameters: { workflow: { repository: "https://github.com/lidge-jun/ima2-gen", path: ".github/workflows/publish.yml", ref: "refs/heads/main" } },
+          internalParameters: { github: { event_name: "workflow_dispatch" } },
+          resolvedDependencies: [{ digest: { gitCommit: SHA } }],
+        },
+        runDetails: {
+          builder: { id: "https://github.com/actions/runner/github-hosted" },
+          metadata: { invocationId: "https://github.com/lidge-jun/ima2-gen/actions/runs/1/attempts/1" },
+        },
+      },
+    };
+    const expected = { ref: "refs/heads/preview", sha: SHA, sha512: "digest", version: "2.0.14", runId: "1", runAttempt: "1" };
+    assert.deepEqual(validateProvenance(dispatched, expected).runId, "1");
+
+    // The relaxation is scoped to the default branch. Any other ref still fails,
+    // so a dispatched run cannot claim an arbitrary source.
+    dispatched.predicate.buildDefinition.externalParameters.workflow.ref = "refs/heads/attacker";
+    assert.throws(() => validateProvenance(dispatched, expected), /source ref mismatch/);
+
+    // A push must still match the publish target exactly: no host-ref fallback.
+    dispatched.predicate.buildDefinition.externalParameters.workflow.ref = "refs/heads/main";
+    dispatched.predicate.buildDefinition.internalParameters.github.event_name = "push";
+    assert.throws(() => validateProvenance(dispatched, expected), /source ref mismatch/);
+
+    // The commit is the real binding and stays exact under dispatch.
+    dispatched.predicate.buildDefinition.internalParameters.github.event_name = "workflow_dispatch";
+    dispatched.predicate.buildDefinition.resolvedDependencies = [{ digest: { gitCommit: "b".repeat(40) } }];
+    assert.throws(() => validateProvenance(dispatched, expected), /source commit mismatch/);
+
+    // An unexpected trigger is refused outright.
+    dispatched.predicate.buildDefinition.resolvedDependencies = [{ digest: { gitCommit: SHA } }];
+    dispatched.predicate.buildDefinition.internalParameters.github.event_name = "pull_request";
+    assert.throws(() => validateProvenance(dispatched, expected), /event mismatch/);
+  });
 });
 
 describe("package install policy contract", () => {

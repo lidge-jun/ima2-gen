@@ -14,6 +14,9 @@ const IN_TOTO_TYPE = "https://in-toto.io/Statement/v1";
 const PROVENANCE_TYPE = "https://slsa.dev/provenance/v1";
 const SLSA_BUILD_TYPE = "https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1";
 const GITHUB_HOSTED_BUILDER = "https://github.com/actions/runner/github-hosted";
+// release.yml dispatches publish.yml, and a dispatched run always executes on
+// the default branch regardless of which ref it publishes.
+const DISPATCH_HOST_REF = "refs/heads/main";
 const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function commandName(name) {
@@ -230,14 +233,29 @@ export function validateProvenance(statement, expected) {
     [definition?.buildType, SLSA_BUILD_TYPE, "build type"],
     [workflow?.repository, REPOSITORY, "repository"],
     [workflow?.path, WORKFLOW_PATH, "workflow path"],
-    [workflow?.ref, expected.ref, "source ref"],
-    [github?.event_name, "push", "event"],
     [dependency?.digest?.gitCommit, expected.sha, "source commit"],
     [subject?.digest?.sha512, expected.sha512, "subject sha512"],
     [builder, GITHUB_HOSTED_BUILDER, "builder"],
   ];
   for (const [actual, wanted, label] of checks) {
     if (actual !== wanted) throw new Error(`provenance ${label} mismatch: ${actual} != ${wanted}`);
+  }
+  // npm records the ref the workflow RAN on, which is only the publish target
+  // for a push. release.yml reaches publish.yml by workflow_dispatch (a
+  // GITHUB_TOKEN push emits no event), and a dispatch always runs on the
+  // default branch — so demanding refs/heads/preview here can never pass.
+  // The publish target is already pinned by `source commit` above; the ref is
+  // narrowed to the refs this repository may publish from rather than dropped.
+  const eventName = github?.event_name;
+  if (eventName !== "push" && eventName !== "workflow_dispatch") {
+    throw new Error(`provenance event mismatch: ${eventName} != push|workflow_dispatch`);
+  }
+  const observedRef = workflow?.ref;
+  const allowedRefs = eventName === "push"
+    ? [expected.ref]
+    : [expected.ref, DISPATCH_HOST_REF];
+  if (!allowedRefs.includes(observedRef)) {
+    throw new Error(`provenance source ref mismatch: ${observedRef} != ${allowedRefs.join("|")}`);
   }
   if (expected.version && subject?.name !== `pkg:npm/${PACKAGE_NAME}@${expected.version}`) {
     throw new Error(`provenance subject mismatch: ${subject?.name || "missing"}`);
