@@ -189,10 +189,14 @@ jobs:
           npm run test:package-global-update
         timeout-minutes: 15
 
-  publish:
+  publish-preview:
     needs: [prepare, package, windows-consumer]
-    if: needs.prepare.outputs.should_publish == 'true'
+    if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.channel == 'preview'
     runs-on: ubuntu-latest
+    # Auto-approved: this lane can only ever move the preview dist-tag, which
+    # every cut overwrites anyway.
+    environment:
+      name: npm-preview
     permissions:
       contents: write
       id-token: write
@@ -219,7 +223,80 @@ jobs:
       - name: Verify OIDC endpoint
         run: |
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
-          echo "OIDC endpoint is available to the publish job"
+          echo "OIDC endpoint is available to the preview publish job"
+      - name: Recheck live release refs
+        run: node scripts/release-contract.mjs assert-remote-ref "$PUBLISH_REF" "$PUBLISH_SHA"
+      - id: registry
+        name: Guard immutable registry version
+        run: >-
+          node scripts/release-contract.mjs guard-publish
+          release-artifact/release-manifest.json
+          "${{ needs.prepare.outputs.npm_tag }}"
+          "${{ needs.prepare.outputs.source_ref }}"
+          "$PUBLISH_SHA"
+      - name: Publish tested tarball
+        if: steps.registry.outputs.should_publish == 'true'
+        run: |
+          TARBALL=$(node -p "'./release-artifact/' + require('./release-artifact/release-manifest.json').filename")
+          npm publish "$TARBALL" --ignore-scripts --tag "${{ needs.prepare.outputs.npm_tag }}" --provenance --access public
+      - name: Verify registry, dist-tag, integrity, and provenance
+        run: >-
+          node scripts/release-contract.mjs verify-registry
+          release-artifact/release-manifest.json
+          "${{ needs.prepare.outputs.npm_tag }}"
+          "${{ needs.prepare.outputs.source_ref }}"
+          "$PUBLISH_SHA"
+        env:
+          IMA2_EXPECT_CURRENT_PROVENANCE: ${{ steps.registry.outputs.should_publish }}
+      - name: Write release proof summary
+        run: |
+          VERSION=$(node -p "require('./release-artifact/release-manifest.json').version")
+          INTEGRITY=$(node -p "require('./release-artifact/release-manifest.json').integrity")
+          {
+            echo "### npm publish proof"
+            echo "- channel: ${{ needs.prepare.outputs.channel }}"
+            echo "- version: $VERSION"
+            echo "- source: $PUBLISH_REF@$PUBLISH_SHA"
+            echo "- integrity: $INTEGRITY"
+            echo "- workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-stable:
+    needs: [prepare, package, windows-consumer]
+    if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.channel == 'latest'
+    runs-on: ubuntu-latest
+    # release.yml gates its tag job on this same environment, so a release cut
+    # is already approved before it reaches here. This gate exists to cover the
+    # other way in: a v* tag pushed by hand.
+    environment:
+      name: npm-stable
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.publish_sha || github.sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.node-version'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Pin release npm
+        run: |
+          NPM_VERSION=$(node -p "require('./package.json').packageManager.split('@').pop()")
+          npm install -g "npm@$NPM_VERSION"
+          test "$(npm -v)" = "$NPM_VERSION"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-artifact
+          path: release-artifact
+      - name: Verify tested artifact digest
+        run: node scripts/release-contract.mjs verify-artifact release-artifact/release-manifest.json
+      - name: Verify OIDC endpoint
+        run: |
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+          echo "OIDC endpoint is available to the stable publish job"
       - name: Recheck live release refs
         run: node scripts/release-contract.mjs assert-remote-ref "$PUBLISH_REF" "$PUBLISH_SHA"
       - id: registry
@@ -258,7 +335,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   create-github-release:
-    needs: [prepare, publish]
+    needs: [prepare, publish-stable]
     if: needs.prepare.outputs.channel == 'latest' && needs.prepare.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     permissions:

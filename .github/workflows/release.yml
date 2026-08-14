@@ -175,6 +175,13 @@ jobs:
     if: needs.cut.outputs.dry_run == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # The approval gate sits here, before the atomic push, not on the stable
+    # publish job downstream. GitHub holds an environment-gated job before its
+    # first step, so a declined or ignored approval leaves main, dev, and the
+    # tag exactly where they were. Gating the publish instead would let the
+    # push land and then strand the release with npm still on the old version.
+    environment:
+      name: npm-stable
     permissions:
       contents: write
       actions: write
@@ -223,7 +230,10 @@ jobs:
       - name: Wait for the stable publish to finish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/wait-publish-run.mjs wait "${{ steps.stable_mark.outputs.id }}" "v${{ needs.cut.outputs.version }}"
+        # 80, not the 60-minute default: publish.yml's stable job is also
+        # environment-gated, so this wait now covers a second approval. The
+        # job timeout above is the real ceiling.
+        run: node scripts/wait-publish-run.mjs wait "${{ steps.stable_mark.outputs.id }}" "v${{ needs.cut.outputs.version }}" 80
       - name: Write the release summary
         run: |
           {

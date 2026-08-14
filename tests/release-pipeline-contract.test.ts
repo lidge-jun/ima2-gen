@@ -311,7 +311,21 @@ describe("package install policy contract", () => {
     assert.doesNotMatch(workflow, /(?:^|\n)on:[\s\S]{0,400}?(?:^|\n)\s{2}release:\s*(?:\n|$)/);
     assert.match(workflow, /branches:\s*\[preview\]/);
     assert.match(workflow, /tags:\s*\['v\*'\]/);
-    assert.equal((workflow.match(/id-token:\s*write/g) || []).length, 2, "only publish and create-github-release may mint OIDC tokens");
+    // Three, not two: the old single publish job is now publish-preview and
+    // publish-stable so each channel can carry its own approval environment.
+    // The count still matters — it is what stops a fourth job from quietly
+    // gaining the ability to publish.
+    assert.equal(
+      (workflow.match(/id-token:\s*write/g) || []).length,
+      3,
+      "only publish-preview, publish-stable, and create-github-release may mint OIDC tokens",
+    );
+    // Each publish lane must be pinned to its own environment, or the split
+    // buys nothing: an unpinned stable job would publish without approval.
+    assert.match(workflow, /publish-preview:[\s\S]{0,600}?name: npm-preview/);
+    assert.match(workflow, /publish-stable:[\s\S]{0,600}?name: npm-stable/);
+    assert.match(workflow, /publish-stable:[\s\S]{0,300}?channel == 'latest'/);
+    assert.match(workflow, /publish-preview:[\s\S]{0,300}?channel == 'preview'/);
     assert.match(workflow, /create-github-release:[\s\S]*id-token:\s*write[\s\S]*attestations:\s*write/);
     assert.match(workflow, /actions\/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8/);
     assert.doesNotMatch(workflow, /package:[\s\S]{0,400}id-token:\s*write/, "package job stays OIDC-free");
@@ -327,7 +341,10 @@ describe("package install policy contract", () => {
     assert.match(workflow, /if: steps\.registry\.outputs\.should_publish == 'true'[\s\S]*npm publish/);
     assert.match(workflow, /IMA2_EXPECT_CURRENT_PROVENANCE: \$\{\{ steps\.registry\.outputs\.should_publish \}\}/);
     assert.match(workflow, /create-github-release:/);
-    assert.match(workflow, /needs:\s*\[prepare, publish\]/);
+    // The GitHub Release must follow the stable publish specifically. Pointing
+    // it at publish-preview, or at nothing, would let a Release appear for a
+    // version npm never accepted.
+    assert.match(workflow, /needs:\s*\[prepare, publish-stable\]/);
     assert.match(workflow, /ensure-github-release/);
     assert.match(workflow, /channel == 'latest'/);
     assert.match(workflow, /permissions:[\s\S]*contents:\s*write[\s\S]*id-token:\s*write/);
