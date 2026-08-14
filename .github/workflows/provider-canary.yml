@@ -1,0 +1,49 @@
+name: Provider canary
+
+# #152: the hermetic E2E suite proves our contract against a stub, so it cannot
+# see a provider changing its API. This probes each lane's cheapest
+# authenticated surface daily.
+#
+# Scope note: only the no-cost tier is wired here. The weekly and pre-release
+# tiers in #152 issue real generation requests and stay unimplemented until the
+# cost budget is approved.
+#
+# This never runs on pull_request. A provider outage must not block a
+# contributor, and #152 says the same.
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provider-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    name: No-cost provider canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CANARY_OAUTH_MODELS_URL: ${{ secrets.CANARY_OAUTH_MODELS_URL }}
+      CANARY_OAUTH_TOKEN: ${{ secrets.CANARY_OAUTH_TOKEN }}
+      CANARY_OPENAI_API_KEY: ${{ secrets.CANARY_OPENAI_API_KEY }}
+      CANARY_GROK_MODELS_URL: ${{ secrets.CANARY_GROK_MODELS_URL }}
+      CANARY_GROK_TOKEN: ${{ secrets.CANARY_GROK_TOKEN }}
+      CANARY_XAI_API_KEY: ${{ secrets.CANARY_XAI_API_KEY }}
+      CANARY_GEMINI_API_KEY: ${{ secrets.CANARY_GEMINI_API_KEY }}
+      CANARY_ATLASCLOUD_API_KEY: ${{ secrets.CANARY_ATLASCLOUD_API_KEY }}
+      CANARY_MINIMAX_API_KEY: ${{ secrets.CANARY_MINIMAX_API_KEY }}
+      CANARY_MINIMAX_BASE_URL: ${{ secrets.CANARY_MINIMAX_BASE_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.0'
+      # No npm ci: the canary uses only Node builtins and fetch, so a dependency
+      # install would add failure modes that have nothing to do with providers.
+      - name: Probe provider lanes
+        run: node scripts/provider-canary.mjs
