@@ -103,9 +103,9 @@
     "zod"
   ],
   "allowScripts": {
-    "better-sqlite3@12.9.0": true,
-    "esbuild@0.27.7": true,
-    "fsevents@2.3.3": true
+    "better-sqlite3": true,
+    "esbuild": true,
+    "fsevents": true
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

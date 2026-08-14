@@ -215,6 +215,50 @@ describe("package install policy contract", () => {
     assert.equal(validateBundleParity({ bundleDependencies: ["progrok", "openai-oauth"] }, lock).length, 1);
   });
 
+  it("accepts a name-only approval across a version bump", () => {
+    // Version-pinned approvals go stale on every dependency bump, which is how
+    // #135 and #137 both went red. Name-only entries absorb the drift; npm
+    // itself writes them when approving without --allow-scripts-pin.
+    const before = { packages: { "": {}, "node_modules/sharp": { version: "1.2.3", hasInstallScript: true } } };
+    const after = { packages: { "": {}, "node_modules/sharp": { version: "2.0.0", hasInstallScript: true } } };
+    const nameOnly = { allowScripts: { sharp: true } };
+
+    assert.deepEqual(validateInstallPolicy(nameOnly, before, "root"), []);
+    assert.deepEqual(validateInstallPolicy(nameOnly, after, "root"), []);
+
+    // Control: the pinned form must still break on the same bump. If this stops
+    // failing, the stale check itself died and the name-only switch above would
+    // be proving nothing.
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { "sharp@1.2.3": true } }, after, "root"), [
+      "root: missing allowScripts approval for sharp@2.0.0",
+      "root: stale allowScripts approval sharp@1.2.3",
+    ]);
+  });
+
+  it("still rejects an approval for a package that is not installed", () => {
+    // Name-only approvals must not turn the stale check into a no-op: an entry
+    // for a package the lockfile never mentions is still dead weight.
+    const lock = { packages: { "": {}, "node_modules/sharp": { version: "1.2.3", hasInstallScript: true } } };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { sharp: true, ghost: true } }, lock, "root"), [
+      "root: stale allowScripts approval ghost",
+    ]);
+  });
+
+  it("covers every copy of a hoisted dependency with one name-only entry", () => {
+    // ui/package-lock.json really does carry two fsevents copies (2.3.2 under a
+    // nested tree, 2.3.3 at the top). Pinning meant listing both and updating
+    // both; one name-only entry covers whatever the tree ends up holding.
+    const lock = {
+      packages: {
+        "": {},
+        "node_modules/fsevents": { version: "2.3.3", hasInstallScript: true },
+        "node_modules/vite/node_modules/fsevents": { version: "2.3.2", hasInstallScript: true },
+        "node_modules/esbuild": { version: "0.28.1", hasInstallScript: true },
+      },
+    };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { fsevents: true, esbuild: true } }, lock, "ui"), []);
+  });
+
   it("keeps publishing inside the OIDC workflow", () => {
     // The local release scripts are gone: release.yml owns the cut end to end.
     for (const path of ["scripts/release.sh", "scripts/release-preview.sh"]) {
