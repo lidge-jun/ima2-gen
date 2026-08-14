@@ -24,7 +24,33 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260814_issue_pr_zeroing_release/` | 진행 중. 열린 이슈/PR 소거 + 다음 릴리스 발행 |
+| `260814_issue_pr_zeroing_release/` | v3.1.0으로 완료. 이관 판정은 다음 사이클 |
+| `260814b_maturity_ops_measurement/` | v3.2.0으로 완료. 이관 판정은 다음 사이클 |
+
+### 2026-08-15 — 260814b 사이클 결과
+
+성숙도 로드맵 #153의 P0 항목을 실행하고 **v3.2.0**을 발행했다.
+릴리스 SHA `0a0ce25c61173a82b38bad397213ca76478526a5`, npm `latest` = `3.2.0`.
+
+| 이슈 | 결과 |
+|---|---|
+| #146 npm stable 승인 관문 | **closed.** 실제 컷에서 `tag` job이 push 전에 `waiting`으로 멈추는 것 확인 |
+| #148 CI fast gate | **closed.** PR 940초 → 177초 |
+| #149 패키지 측정 | **closed.** 지표 7종 + blob 예산 + 5%/10% 임계, 실패 경로까지 실증 |
+| #147 포지셔닝 | open. `Provider Integration` 카테고리만 UI 수동 필요 |
+| #152 provider canary | open. 무과금 단계만 구현, 과금 2단계는 비용 승인 대기 |
+| #150 #151 RFC | open. 의존 순서(#151 → #150) 근거 코멘트 |
+| #145 브랜치 ruleset | open. **개인 저장소에서 달성 불가로 판정** |
+
+#145는 네 가지 구성을 실측하고 되돌렸다. 개인 계정 저장소에서는 App bypass가
+422로 거부되고, admin role bypass는 소유자 push까지 통과시키며, bypass 없는
+구성은 릴리스 워크플로의 atomic push도 막는다. evaluate 모드는 Enterprise
+전용이다. 근거는 `260814b_maturity_ops_measurement/060_wp6_branch_ruleset.md`
+부록 B에 있다.
+
+측정이 드러낸 것 하나: npm tarball 99.6MB 중 94.5MB가
+`ui/dist/presets/thumbs` PNG 45장이다. 저장소 history보다 이쪽이 사용자에게
+직접 닿는다. 배포 방식 변경은 다음 사이클 판단이다.
 
 ### 2026-08-14 아카이브 기록
 
