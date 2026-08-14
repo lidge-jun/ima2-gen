@@ -24,9 +24,23 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260812_navrail_grok_autotag/` | 릴리스 활성화 **증명됨** (2026-08-14). `060_release_activation_residual.md`에 재개 조건 충족 기록. `_fin` 이관 대기 |
-| `260813_maturity_roadmap/` | #122 코드 phase 010–090 구현됨. 우산 이슈 close와 함께 `_fin` 이관 예정. `000`/`004`/`020`에 2026-08-14 정정 블록 |
 | `260814_issue_pr_zeroing_release/` | 진행 중. 열린 이슈/PR 소거 + 다음 릴리스 발행 |
+
+### 2026-08-14 아카이브 기록
+
+`_fin`으로 이동:
+
+- `260812_navrail_grok_autotag/` → `_fin/260814_navrail_grok_autotag/`
+  `060`의 재개 조건 두 가지가 모두 충족됐다. release run `31778196224`가
+  `assert-clean`을 통과해 preview까지 승격됐고 npm preview의 `gitHead`가 컷 SHA와
+  일치한다. Windows `test:package-global-update`는 publish run `31780064187`에서
+  단계 상한 내에 끝났다. 이 유닛이 걸어둔 `.js` 2건 재생성 조건은 `/lib/**/*.js`가
+  gitignore된 빌드 산출물이라 해당 없음(`git ls-files`로 확인).
+- `260813_maturity_roadmap/` → `_fin/260814_maturity_roadmap/`
+  우산 이슈 #122의 완료 조건 7개를 실측 대조한 뒤 닫았다.
+
+`260814_issue_pr_zeroing_release/`는 **남긴다.** 이 유닛의 이관 판정은 다음
+사이클이 한다 — 자기 유닛을 자기가 완료 처리하는 것은 이 README가 금지하는 바다.
 
 ### 2026-08-14 정정 — 이전 기록은 stale이었다
 
