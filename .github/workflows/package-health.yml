@@ -1,0 +1,70 @@
+name: Package health
+
+on:
+  schedule:
+    - cron: '41 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-health-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-measurement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Resolve the metrics output path
+        run: echo "METRICS_PATH=${{ runner.temp }}/package-health.json" >> "$GITHUB_ENV"
+      - name: Pin npm
+        run: npm install -g npm@11.18.0
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install UI dependencies
+        run: npm --prefix ui ci --no-audit --no-fund
+      - name: Build package inputs
+        run: |
+          npm run build:server
+          npm run build:cli
+          npm --prefix ui run build
+      - name: Measure npm package
+        run: node scripts/collect-package-metrics.mjs package --output "$METRICS_PATH"
+      - name: Measure cold install
+        run: node scripts/collect-package-metrics.mjs install coldInstallMs --output "$METRICS_PATH"
+      - name: Measure global update
+        run: node scripts/collect-package-metrics.mjs install globalUpdateMs --output "$METRICS_PATH"
+      - name: Measure shallow clone object bytes
+        run: >-
+          node scripts/collect-package-metrics.mjs shallow-clone
+          "https://github.com/${{ github.repository }}.git" --output "$METRICS_PATH"
+      - name: Measure the latest GitHub Release assets
+        run: >-
+          node scripts/collect-package-metrics.mjs release-assets
+          "${{ github.repository }}" latest --output "$METRICS_PATH"
+      - name: Measure the newest commit blob set
+        run: >-
+          node scripts/check-new-blob-budget.mjs --base HEAD^
+          --output "$METRICS_PATH"
+      - name: Upload weekly package health evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-health-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/package-health.json
+          if-no-files-found: error
+          retention-days: 90

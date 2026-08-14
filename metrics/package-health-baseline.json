@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-08-14T14:30:00Z",
+  "package": {
+    "compressedBytes": 99623183,
+    "unpackedBytes": 119778042,
+    "entryCount": 3622
+  },
+  "coldInstallMs": null,
+  "globalUpdateMs": null,
+  "shallowCloneBytes": null,
+  "maxNewBlobBytes": null,
+  "releaseAssetBytes": null,
+  "source": "devlog/_plan/260814b_maturity_ops_measurement/000_plan.md:31-39"
+}
