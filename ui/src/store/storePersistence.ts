@@ -26,7 +26,6 @@ import { DEFAULT_WEB_SEARCH_ENABLED } from "../lib/webSearch";
 import { ENABLE_AGENT_MODE, ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
 import { normalizeGenerationCount } from "../lib/generationLimits";
 import { parseRequestedCustomSide } from "../lib/size";
-import { getPresetById } from "../lib/presets";
 import {
   ACTIVE_SESSION_ID_STORAGE_KEY,
   CANVAS_EXPORT_BG_KEY,
@@ -379,11 +378,12 @@ export function loadGenerationDefaults(): GenerationDefaults {
     if (typeof parsed.prompt === "string") out.prompt = parsed.prompt;
     const insertedPrompts = normalizeInsertedPromptArray(parsed.insertedPrompts);
     if (insertedPrompts) out.insertedPrompts = insertedPrompts;
-    if (Array.isArray(parsed.presetIds)) {
-      out.presetIds = [
-        ...new Set(parsed.presetIds.filter((id): id is string => typeof id === "string" && !!getPresetById(id))),
-      ];
-    }
+    // presetIds is deliberately dropped on load. The preset grid was removed
+    // from Home, so nothing can add or clear a selection anymore — a stored id
+    // would keep prepending its fragment to every prompt with no UI to reveal
+    // or remove it. Reading it back is the bug, so the read is what we delete.
+    // Historical presetIds in generated-image XMP stay readable; that parser is
+    // server-side and untouched.
     return out;
   } catch {
     return {};

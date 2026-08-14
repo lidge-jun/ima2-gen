@@ -341,13 +341,11 @@
   },
   "home": {
     "recentTitle": "Recent work",
-    "presetsTitle": "Presets",
     "selectedCount": "{count} selected",
     "selectedPresets": "Selected presets",
     "referenceTrayCount": "{count} refs",
     "referenceTrayAria": "{count} references are attached to the next generation",
-    "viewAll": "View all",
-    "presetSearch": "Search presets…"
+    "viewAll": "View all"
   },
   "billing": {
     "label": "API Status",

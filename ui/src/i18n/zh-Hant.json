@@ -341,13 +341,11 @@
   },
   "home": {
     "recentTitle": "最近的工作",
-    "presetsTitle": "預設",
     "selectedCount": "已選擇 {count}",
     "selectedPresets": "選定的預設",
     "referenceTrayCount": "{count} 參考文獻",
     "referenceTrayAria": "{count} 引用附加到下一代",
-    "viewAll": "看全部",
-    "presetSearch": "搜尋預設..."
+    "viewAll": "看全部"
   },
   "billing": {
     "label": "API 狀態",

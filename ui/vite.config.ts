@@ -15,6 +15,14 @@ export default defineConfig({
         target: apiTarget.url,
         changeOrigin: true,
       },
+      // Generated media lives on the API server, not in ui/public. Without
+      // this the dev server answers /generated with its index.html and every
+      // history thumbnail renders broken — which reads as a UI bug that
+      // production does not have (server.ts serves /generated directly).
+      "/generated": {
+        target: apiTarget.url,
+        changeOrigin: true,
+      },
     },
   },
   build: {

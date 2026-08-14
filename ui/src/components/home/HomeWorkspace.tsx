@@ -1,7 +1,6 @@
 import { useI18n } from "../../i18n";
 import { HomeRecentRow } from "./HomeRecentRow";
 import { HomePromptComposer } from "./HomePromptComposer";
-import { PresetGrid } from "./PresetGrid";
 import "../../styles/home-workspace.css";
 
 export function HomeWorkspace() {
@@ -19,9 +18,6 @@ export function HomeWorkspace() {
         <div className="home-workspace__recent">
           <h2>{t("home.recentTitle")}</h2>
           <HomeRecentRow />
-        </div>
-        <div className="home-workspace__presets">
-          <PresetGrid />
         </div>
         <div className="home-workspace__wordmark" aria-hidden="true">
           IMA2

@@ -341,13 +341,11 @@
   },
   "home": {
     "recentTitle": "최근 작업",
-    "presetsTitle": "프리셋",
     "selectedCount": "{count}개 선택",
     "selectedPresets": "선택한 프리셋",
     "referenceTrayCount": "참조 {count}개",
     "referenceTrayAria": "다음 생성에 참조 {count}개가 포함됩니다",
-    "viewAll": "전체 보기",
-    "presetSearch": "프리셋 검색…"
+    "viewAll": "전체 보기"
   },
   "billing": {
     "label": "API 상태",
