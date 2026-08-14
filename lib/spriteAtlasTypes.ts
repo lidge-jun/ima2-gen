@@ -3,15 +3,15 @@ import { z } from "zod";
 export const spriteFrameRectSchema = z.object({ x: z.number().int(), y: z.number().int(), w: z.number().int(), h: z.number().int() }).passthrough();
 export const spriteFrameLayoutSchema = z.object({
   sheetWidth: z.number().int(), sheetHeight: z.number().int(), cellWidth: z.number().int(), cellHeight: z.number().int(),
-  rows: z.record(z.array(spriteFrameRectSchema)),
+  rows: z.record(z.string(), z.array(spriteFrameRectSchema)),
 }).passthrough();
 export const spriteAnimationRowSchema = z.object({ row: z.number().int(), frames: z.number().int().nonnegative(), fps: z.number().positive(), loop: z.boolean() }).passthrough();
 export const spriteGenManifestSchema = z.object({
   characterId: z.string(), engine: z.string(), game_input: z.string(), degraded_static_fallback: z.boolean(),
   curation_applied: z.boolean(), frame_variant: z.string(), sprite_sheet_alpha: z.string(),
-  sprite_sheet_alpha_report: z.string(), base_image: z.string().nullable(), cell: z.record(z.unknown()),
-  chroma_key: z.record(z.unknown()),
-  animation: z.object({ cellWidth: z.number().int(), cellHeight: z.number().int(), columns: z.number().int().positive(), rows: z.record(spriteAnimationRowSchema) }).passthrough(),
+  sprite_sheet_alpha_report: z.string(), base_image: z.string().nullable(), cell: z.record(z.string(), z.unknown()),
+  chroma_key: z.record(z.string(), z.unknown()),
+  animation: z.object({ cellWidth: z.number().int(), cellHeight: z.number().int(), columns: z.number().int().positive(), rows: z.record(z.string(), spriteAnimationRowSchema) }).passthrough(),
   frame_layout: spriteFrameLayoutSchema,
 }).passthrough();
 

@@ -259,6 +259,25 @@ describe("package install policy contract", () => {
     assert.deepEqual(validateInstallPolicy({ allowScripts: { fsevents: true, esbuild: true } }, lock, "ui"), []);
   });
 
+  it("honours a name-only approval for a gypfile package the lockfile stays silent about", () => {
+    // better-sqlite3 13 moved to prebuilt binaries and dropped its install hook,
+    // so the lockfile records no hasInstallScript - but it still ships a
+    // binding.gyp, and npm keeps listing it as pending because node-gyp could
+    // run. Calling that approval stale would leave no manifest able to satisfy
+    // both this check and npm approve-scripts at once.
+    const lock = { packages: { "": {}, "node_modules/better-sqlite3": { version: "13.0.3" } } };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { "better-sqlite3": true } }, lock, "root"), []);
+  });
+
+  it("still rejects a name-only approval for a package no lockfile entry mentions", () => {
+    // The exemption above keys off the lockfile carrying the package at all, so
+    // it must not become a blanket amnesty for arbitrary names.
+    const lock = { packages: { "": {}, "node_modules/better-sqlite3": { version: "13.0.3" } } };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { "better-sqlite3": true, ghost: true } }, lock, "root"), [
+      "root: stale allowScripts approval ghost",
+    ]);
+  });
+
   it("keeps publishing inside the OIDC workflow", () => {
     // The local release scripts are gone: release.yml owns the cut end to end.
     for (const path of ["scripts/release.sh", "scripts/release-preview.sh"]) {

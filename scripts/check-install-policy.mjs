@@ -15,7 +15,7 @@ export function packageNameFromLockPath(lockPath) {
   return parts[0]?.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0] || null;
 }
 
-export function installScriptEntries(lock) {
+export function installScriptEntries(lock, manifest) {
   const entries = [];
   for (const [lockPath, metadata] of Object.entries(lock.packages || {})) {
     if (!lockPath || !metadata?.hasInstallScript) continue;
@@ -23,12 +23,25 @@ export function installScriptEntries(lock) {
     if (!name || !metadata.version) continue;
     entries.push({ name, version: metadata.version, key: `${name}@${metadata.version}` });
   }
+  // Packages that carry a binding.gyp but no install hook are invisible here:
+  // the lockfile records no hasInstallScript, yet npm still treats them as
+  // pending because node-gyp could run. better-sqlite3 13 is the live case -
+  // it moved to prebuilt binaries. Keeping such an approval readable means
+  // honouring it instead of calling it stale, otherwise no manifest satisfies
+  // both this check and npm's own pending oracle.
+  const known = new Set(entries.map((entry) => entry.name));
+  for (const name of Object.keys(manifest?.allowScripts || {})) {
+    if (known.has(name) || name.includes("@")) continue;
+    const metadata = lock.packages?.[`node_modules/${name}`];
+    if (!metadata?.version) continue;
+    entries.push({ name, version: metadata.version, key: `${name}@${metadata.version}` });
+  }
   return entries.sort((a, b) => a.key.localeCompare(b.key));
 }
 
 export function validateInstallPolicy(manifest, lock, label) {
   const errors = [];
-  const entries = installScriptEntries(lock);
+  const entries = installScriptEntries(lock, manifest);
   const approvals = manifest.allowScripts || {};
   const required = new Set(entries.map((entry) => entry.key));
 
@@ -81,7 +94,13 @@ export function checkNpmPendingApprovals(root = process.cwd()) {
       continue;
     }
     const pending = JSON.parse(result.stdout || "{}").allowScripts || [];
-    if (pending.length) errors.push(`${label}: npm reports pending install scripts: ${pending.map((item) => item.name).join(",")}`);
+    if (!pending.length) continue;
+    // A pending entry the manifest already approves by name is npm and the
+    // lockfile disagreeing, not a missing approval. See mergeNpmPendingEntries.
+    const manifest = readJson(resolve(cwd, "package.json"));
+    const approvals = manifest.allowScripts || {};
+    const unapproved = pending.filter((item) => approvals[item.name] !== true);
+    if (unapproved.length) errors.push(`${label}: npm reports pending install scripts: ${unapproved.map((item) => item.name).join(",")}`);
   }
   return errors;
 }
