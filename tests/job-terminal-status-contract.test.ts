@@ -119,7 +119,11 @@ function opts(requestId: string): McpJobOptions {
     kind: "image",
     body: { provider: "runway", prompt: "test" },
     requestId,
-    timeoutMs: 5_000,
+    // Recovery has to survive a dropped stream and a reconnect, and a loaded
+    // Windows runner can spend most of a 5s budget on process scheduling
+    // alone. The contract under test is "recovery happens", not "recovery is
+    // fast", so give it room rather than letting the clock decide.
+    timeoutMs: 20_000,
     json: true,
   };
 }
