@@ -1,0 +1,76 @@
+name: PR Fast Gate
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+concurrency:
+  group: pr-fast-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: PR fast gate
+    runs-on: ubuntu-latest
+    # The acceptance target is 10 minutes; the timeout is 15 so an over-budget
+    # run still produces a timing report instead of being killed mid-step.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Pin npm
+        run: npm install -g npm@11.18.0
+      - name: Install root deps
+        run: npm ci
+      - name: Install ui deps
+        run: npm --prefix ui ci --no-audit --no-fund
+      - name: Structure line-count drift
+        run: node scripts/refresh-structure-line-counts.mjs --check
+      - name: Provider registry generated-file drift
+        run: node scripts/generate-provider-types.mjs --check
+      - name: Native dependency smoke
+        run: npm run test:native-deps
+      - name: Install policy contract
+        run: npm run test:install-policy
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Typecheck tests
+        run: npm run typecheck:tests
+      - name: Test inventory
+        run: npm run test:inventory
+      - name: Build server
+        run: npm run build:server
+      - name: Build cli
+        run: npm run build:cli
+      - name: Build ui
+        run: npm --prefix ui run build
+      # The full suite stays in the fast gate: 355 files run in 79s on Ubuntu,
+      # so sharding or a unit/integration split would add structure without
+      # buying time. What the fast gate drops is the Windows lane and the two
+      # package smokes, which cost 573s of the 831s Windows job.
+      - name: Run tests
+        run: npm test
+        timeout-minutes: 5
+      - name: Lint package.json
+        run: npm run lint:pkg
+      - name: Install Playwright Chromium
+        run: npx --prefix ui playwright install --with-deps chromium
+      - name: Run frontend e2e
+        run: npm --prefix ui run test:e2e
+      - name: Upload e2e failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-fast-e2e-failure-context
+          path: ui/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

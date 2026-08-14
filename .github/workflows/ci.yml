@@ -6,8 +6,8 @@ permissions:
 on:
   push:
     branches: [main, dev]
-  pull_request:
-    branches: [main, dev]
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
       sha:
