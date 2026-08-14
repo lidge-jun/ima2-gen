@@ -277,7 +277,13 @@ after(() => {
   rmSync(transpiledDir, { recursive: true, force: true });
 });
 
-function mcpOpts(requestId: string, timeoutMs = 1_000): McpJobOptions {
+// A loaded windows-latest runner can spend most of a 1s budget on process
+// scheduling before the SSE stream even opens, which fails the job for a
+// reason the test is not about. These cases assert ordering and payload -
+// SSE opens before POST, progress arrives, done resolves - not latency, so
+// the clock should not be the thing that decides them. Same reasoning as
+// f6cdb8bc for job-terminal-status-contract.
+function mcpOpts(requestId: string, timeoutMs = 20_000): McpJobOptions {
   return {
     serverBase,
     kind: requestId === "replay-job" ? "video" : "image",
