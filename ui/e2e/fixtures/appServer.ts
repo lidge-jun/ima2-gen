@@ -20,15 +20,21 @@ export function assertStubOnlyCalls(stub: StubHandle): void {
 
 export async function seedBrowser(
   page: Pick<Page, "addInitScript">,
-  options: { provider?: "minimax" | "oauth"; dismissOnboarding?: boolean } = {},
+  options: { provider?: "minimax" | "oauth"; dismissOnboarding?: boolean; imageModel?: string } = {},
 ): Promise<void> {
   const provider = options.provider ?? "minimax";
   const dismissOnboarding = options.dismissOnboarding ?? false;
+  // The generate route validates the model against the provider lane, so the
+  // seeded provider must come with a model that lane accepts. Without this the
+  // stored GPT default reaches /api/generate and it fails closed with a 400
+  // before any stub upstream call happens.
+  const imageModel = options.imageModel ?? (provider === "minimax" ? "image-01" : "gpt-5.6-luna");
   await page.addInitScript((payload) => {
-    const next = JSON.parse(payload) as { provider: string; dismissOnboarding: boolean };
+    const next = JSON.parse(payload) as { provider: string; dismissOnboarding: boolean; imageModel: string };
     if (next.dismissOnboarding) localStorage.setItem("ima2.onboardingDismissed", "1");
     localStorage.setItem("ima2.generationDefaults", JSON.stringify({ provider: next.provider }));
-  }, JSON.stringify({ provider, dismissOnboarding }));
+    localStorage.setItem("ima2.imageModel", next.imageModel);
+  }, JSON.stringify({ provider, dismissOnboarding, imageModel }));
 }
 
 function waitForLog(child: ChildProcess, needle: RegExp, timeoutMs = 20_000): Promise<string> {
@@ -50,13 +56,19 @@ function waitForLog(child: ChildProcess, needle: RegExp, timeoutMs = 20_000): Pr
   });
 }
 
-export async function startApp(mode: StubMode = "minimax", options: { provider?: "minimax" | "oauth"; home?: string } = {}): Promise<AppHandle> {
+export async function startApp(
+  mode: StubMode = "minimax",
+  options: { provider?: "minimax" | "oauth"; home?: string; withoutMinimaxKey?: boolean } = {},
+): Promise<AppHandle> {
   const stub = await startStubUpstream(mode);
   const home = options.home ?? mkdtempSync(join(tmpdir(), "ima2-e2e-"));
   const provider = options.provider ?? (mode === "oauth-expired" ? "oauth" : "minimax");
+  // J1 proves the first-run key-entry path, so it needs a home that genuinely
+  // has no MiniMax credential. Every other journey starts pre-keyed.
+  const withoutMinimaxKey = options.withoutMinimaxKey ?? false;
   writeFileSync(join(home, "config.json"), JSON.stringify({
     provider,
-    minimaxApiKey: "e2e-minimax-key",
+    ...(withoutMinimaxKey ? {} : { minimaxApiKey: "e2e-minimax-key" }),
     oauth: { disableAutoStart: true },
     grokProvider: { disableAutoStart: true },
   }));
@@ -71,7 +83,7 @@ export async function startApp(mode: StubMode = "minimax", options: { provider?:
     IMA2_NO_GROK_PROXY: "1",
     IMA2_MINIMAX_REGION: "global_en",
     IMA2_MINIMAX_GLOBAL_BASE_URL: stub.url,
-    MINIMAX_API_KEY: "e2e-minimax-key",
+    ...(withoutMinimaxKey ? {} : { MINIMAX_API_KEY: "e2e-minimax-key" }),
     ...(mode === "oauth-expired" ? { IMA2_OAUTH_PROXY_PORT: stubPort } : {}),
   };
   const child = spawn(process.execPath, ["--import", "tsx", "server.ts"], {

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { assertStubOnlyCalls, seedBrowser, startApp } from "./fixtures/appServer";
 
 test("J1 first run can skip onboarding, save a MiniMax key, and generate into the gallery", async ({ page }) => {
-  const app = await startApp("minimax");
+  const app = await startApp("minimax", { withoutMinimaxKey: true });
   try {
     await seedBrowser(page, { dismissOnboarding: false, provider: "minimax" });
     await page.goto(app.baseUrl);
@@ -11,9 +11,20 @@ test("J1 first run can skip onboarding, save a MiniMax key, and generate into th
       await skip.click();
     }
     await page.getByRole("button", { name: "Settings" }).click();
-    await page.getByRole("button", { name: "API Keys" }).click();
-    await page.getByPlaceholder("Paste your MiniMax API key").fill("e2e-minimax-key");
-    await page.getByRole("button", { name: "Save" }).first().click();
+    // The keys panel is an accordion whose trigger wraps an h4, so match the
+    // heading inside it rather than assuming a flat button label.
+    await page.locator("button.settings-accordion__trigger").filter({ hasText: "API Keys" }).click();
+    // Each key card has its own Save button, disabled until its own field
+    // changes, so scope by the card heading. The placeholder disappears once
+    // the key is stored, which makes it unusable as a stable anchor.
+    const minimaxCard = page
+      .locator("article")
+      .filter({ has: page.getByRole("heading", { name: "MiniMax", exact: true }) })
+      .last();
+    await minimaxCard.getByPlaceholder("Paste your MiniMax API key").fill("e2e-minimax-key");
+    await minimaxCard.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(minimaxCard.getByRole("button", { name: "Remove" })).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: "Close settings" }).click();
     await page.locator("nav[aria-label='Main navigation']").getByRole("button", { name: "Create", exact: true }).click();
     await page.locator(".composer__textarea").fill("a red cube");
     await page.getByRole("button", { name: "Generate" }).click();
