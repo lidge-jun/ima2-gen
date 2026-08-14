@@ -5,6 +5,18 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # TypeScript 7.0 ships without a programming API - that is planned for 7.1 or
+      # later. scripts/generate-provider-types.mjs reads ts.ModuleKind and
+      # ts.ScriptTarget, and it runs inside verify:release:source, so taking the
+      # major turns the release cut red before it can promote anything. Drop this
+      # entry once the API returns or the script moves off the TypeScript API.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # @types/node 26 assumes a runtime newer than the >=20 this package still
+      # declares. Remove once engines.node is settled.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       production-npm:
         dependency-type: production
@@ -15,6 +27,21 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Same reason as the root ecosystem.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # vite 8 drops the bundled esbuild dependency, which alone invalidates the
+      # ui allowScripts contract, and it needs the whole build path re-verified:
+      # bundle output, e2e, tailwind plugin compatibility. That is its own unit of
+      # work, not a dependency bump. @vitejs/plugin-react 6 pairs with vite 8, so
+      # taking it alone buys nothing.
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
     groups:
       production-npm:
         dependency-type: production
@@ -29,4 +56,3 @@ updates:
       github-actions:
         patterns:
           - "*"
-
