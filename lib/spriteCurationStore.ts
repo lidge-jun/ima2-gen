@@ -6,7 +6,7 @@ import { resolveSpriteRunDir } from "./spriteRunPath.js";
 import type { SpriteCuration, SpriteFrameTransform } from "./spriteAtlasTypes.js";
 
 const transformSchema = z.object({ rotate: z.number().optional(), scale: z.number().optional(), dx: z.number().optional(), dy: z.number().optional(), shx: z.number().optional(), shy: z.number().optional(), flipX: z.union([z.literal(0), z.literal(1)]).optional() }).passthrough();
-const curationSchema = z.object({ version: z.literal(1), kind: z.literal("sprite-gen-curation"), pixel_perfect: z.boolean().optional(), states: z.record(z.object({ selected: z.array(z.number().int()).optional(), deleted: z.array(z.number().int()).optional(), order: z.array(z.number().int()).optional(), transforms: z.record(transformSchema).optional() }).passthrough()) }).passthrough();
+const curationSchema = z.object({ version: z.literal(1), kind: z.literal("sprite-gen-curation"), pixel_perfect: z.boolean().optional(), states: z.record(z.string(), z.object({ selected: z.array(z.number().int()).optional(), deleted: z.array(z.number().int()).optional(), order: z.array(z.number().int()).optional(), transforms: z.record(z.string(), transformSchema).optional() }).passthrough()) }).passthrough();
 const IDENTITY: SpriteFrameTransform = { rotate: 0, scale: 1, dx: 0, dy: 0, shx: 0, shy: 0, flipX: 0 };
 
 export function normalizeSpriteTransform(input: unknown): SpriteFrameTransform {

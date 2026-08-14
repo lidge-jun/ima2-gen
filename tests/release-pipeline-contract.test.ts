@@ -14,7 +14,7 @@ import {
   validateRemoteRefs,
   verifyArtifactDigest,
 } from "../scripts/release-contract.mjs";
-import { validateBundleParity, validateInstallPolicy } from "../scripts/check-install-policy.mjs";
+import { gypfileNames, validateBundleParity, validateInstallPolicy } from "../scripts/check-install-policy.mjs";
 import { npmInvocation } from "../scripts/npm-subprocess.mjs";
 
 const SHA = "a".repeat(40);
@@ -257,6 +257,43 @@ describe("package install policy contract", () => {
       },
     };
     assert.deepEqual(validateInstallPolicy({ allowScripts: { fsevents: true, esbuild: true } }, lock, "ui"), []);
+  });
+
+  it("treats a gypfile package as needing approval even without hasInstallScript", () => {
+    // better-sqlite3 13 moved to prebuilt binaries and dropped its install hook,
+    // so the lockfile records no hasInstallScript - but binding.gyp is still in
+    // the tarball and npm will still consider running node-gyp. Asking npm
+    // directly is circular: approve-scripts reports only what is not yet
+    // approved, so its answer depends on the manifest under validation.
+    const lock = { packages: { "": {}, "node_modules/better-sqlite3": { version: "13.0.3" } } };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { "better-sqlite3": true } }, lock, "root", ["better-sqlite3"]), []);
+    assert.deepEqual(validateInstallPolicy({ allowScripts: {} }, lock, "root", ["better-sqlite3"]), [
+      "root: missing allowScripts approval for better-sqlite3@13.0.3",
+    ]);
+  });
+
+  it("does not let the gypfile allowance excuse an unrelated approval", () => {
+    // The allowance keys off a real binding.gyp on disk, so approving a package
+    // that ships no install script and no gypfile is still dead weight - even
+    // when the lockfile carries it.
+    const lock = { packages: { "": {}, "node_modules/express": { version: "5.1.0" }, "node_modules/better-sqlite3": { version: "13.0.3" } } };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { express: true } }, lock, "root", ["better-sqlite3"]), [
+      "root: missing allowScripts approval for better-sqlite3@13.0.3",
+      "root: stale allowScripts approval express",
+    ]);
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { ghost: true } }, lock, "root", []), [
+      "root: stale allowScripts approval ghost",
+    ]);
+  });
+
+  it("refuses to probe for gypfiles without an installed tree", () => {
+    // gypfileNames reads node_modules. On an uninstalled checkout it would find
+    // nothing and quietly turn every real approval into a stale one, so the
+    // absence has to be an error rather than an empty answer.
+    assert.throws(
+      () => gypfileNames(join(tmpdir(), "ima2-install-policy-absent"), { packages: { "": {} } }),
+      /needs an installed tree/,
+    );
   });
 
   it("keeps publishing inside the OIDC workflow", () => {
