@@ -108,10 +108,10 @@
     "fsevents": true
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
-    "@types/node": "^22.19.17",
-    "tsx": "^4.21.0",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   }
 }
