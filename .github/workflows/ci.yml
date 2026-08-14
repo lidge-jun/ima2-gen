@@ -48,6 +48,7 @@ jobs:
           ref: ${{ github.event.inputs.sha || github.sha }}
       - name: Assert the checked-out SHA is the dispatched one
         if: ${{ github.event.inputs.sha != '' && github.event.inputs.sha != null }}
+        shell: bash
         env:
           WANT: ${{ github.event.inputs.sha }}
         run: |
