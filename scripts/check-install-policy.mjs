@@ -78,6 +78,14 @@ export function validateBundleParity(manifest, lock) {
 // only what is *not* yet approved, so the answer changes with the manifest we
 // are trying to validate.
 export function gypfileNames(root, lock) {
+  // The probe reads the installed tree, so an uninstalled checkout would report
+  // no gypfile packages at all and turn every legitimate approval into a stale
+  // one. Fail loudly instead: this check runs after npm ci in CI, and a missing
+  // node_modules means the caller ran it too early, not that the manifest is
+  // wrong.
+  if (!existsSync(resolve(root, "node_modules"))) {
+    throw new Error(`install-policy needs an installed tree: ${resolve(root, "node_modules")} is missing (run npm ci first)`);
+  }
   const names = [];
   for (const lockPath of Object.keys(lock.packages || {})) {
     if (!lockPath) continue;

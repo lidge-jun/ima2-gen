@@ -14,7 +14,7 @@ import {
   validateRemoteRefs,
   verifyArtifactDigest,
 } from "../scripts/release-contract.mjs";
-import { validateBundleParity, validateInstallPolicy } from "../scripts/check-install-policy.mjs";
+import { gypfileNames, validateBundleParity, validateInstallPolicy } from "../scripts/check-install-policy.mjs";
 import { npmInvocation } from "../scripts/npm-subprocess.mjs";
 
 const SHA = "a".repeat(40);
@@ -284,6 +284,16 @@ describe("package install policy contract", () => {
     assert.deepEqual(validateInstallPolicy({ allowScripts: { ghost: true } }, lock, "root", []), [
       "root: stale allowScripts approval ghost",
     ]);
+  });
+
+  it("refuses to probe for gypfiles without an installed tree", () => {
+    // gypfileNames reads node_modules. On an uninstalled checkout it would find
+    // nothing and quietly turn every real approval into a stale one, so the
+    // absence has to be an error rather than an empty answer.
+    assert.throws(
+      () => gypfileNames(join(tmpdir(), "ima2-install-policy-absent"), { packages: { "": {} } }),
+      /needs an installed tree/,
+    );
   });
 
   it("keeps publishing inside the OIDC workflow", () => {
