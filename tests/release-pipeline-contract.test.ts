@@ -259,21 +259,29 @@ describe("package install policy contract", () => {
     assert.deepEqual(validateInstallPolicy({ allowScripts: { fsevents: true, esbuild: true } }, lock, "ui"), []);
   });
 
-  it("honours a name-only approval for a gypfile package the lockfile stays silent about", () => {
+  it("treats a gypfile package as needing approval even without hasInstallScript", () => {
     // better-sqlite3 13 moved to prebuilt binaries and dropped its install hook,
-    // so the lockfile records no hasInstallScript - but it still ships a
-    // binding.gyp, and npm keeps listing it as pending because node-gyp could
-    // run. Calling that approval stale would leave no manifest able to satisfy
-    // both this check and npm approve-scripts at once.
+    // so the lockfile records no hasInstallScript - but binding.gyp is still in
+    // the tarball and npm will still consider running node-gyp. Asking npm
+    // directly is circular: approve-scripts reports only what is not yet
+    // approved, so its answer depends on the manifest under validation.
     const lock = { packages: { "": {}, "node_modules/better-sqlite3": { version: "13.0.3" } } };
-    assert.deepEqual(validateInstallPolicy({ allowScripts: { "better-sqlite3": true } }, lock, "root"), []);
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { "better-sqlite3": true } }, lock, "root", ["better-sqlite3"]), []);
+    assert.deepEqual(validateInstallPolicy({ allowScripts: {} }, lock, "root", ["better-sqlite3"]), [
+      "root: missing allowScripts approval for better-sqlite3@13.0.3",
+    ]);
   });
 
-  it("still rejects a name-only approval for a package no lockfile entry mentions", () => {
-    // The exemption above keys off the lockfile carrying the package at all, so
-    // it must not become a blanket amnesty for arbitrary names.
-    const lock = { packages: { "": {}, "node_modules/better-sqlite3": { version: "13.0.3" } } };
-    assert.deepEqual(validateInstallPolicy({ allowScripts: { "better-sqlite3": true, ghost: true } }, lock, "root"), [
+  it("does not let the gypfile allowance excuse an unrelated approval", () => {
+    // The allowance keys off a real binding.gyp on disk, so approving a package
+    // that ships no install script and no gypfile is still dead weight - even
+    // when the lockfile carries it.
+    const lock = { packages: { "": {}, "node_modules/express": { version: "5.1.0" }, "node_modules/better-sqlite3": { version: "13.0.3" } } };
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { express: true } }, lock, "root", ["better-sqlite3"]), [
+      "root: missing allowScripts approval for better-sqlite3@13.0.3",
+      "root: stale allowScripts approval express",
+    ]);
+    assert.deepEqual(validateInstallPolicy({ allowScripts: { ghost: true } }, lock, "root", []), [
       "root: stale allowScripts approval ghost",
     ]);
   });
