@@ -90,7 +90,16 @@
     "comfyExportInvalidImage": "此儲存的影像無法傳送至 ComfyUI。",
     "comfyExportImageNotFound": "未找到已儲存的影像檔案。",
     "comfyExportFailed": "無法將映像上傳到 ComfyUI。",
-    "cancelFailed": "無法取消生成。"
+    "cancelFailed": "無法取消生成。",
+    "errorClass": {
+      "rateLimited": "請求過於頻繁，請稍後再試。",
+      "providerTimeout": "服務商回應逾時，請稍後再試。",
+      "networkFailure": "無法連線至服務商。請檢查網路後重試。",
+      "contentRejected": "服務商拒絕了該提示詞，請修改後重試。",
+      "capabilityUnsupported": "目前服務商不支援此請求。",
+      "modelUnavailable": "所選模型暫時無法使用。",
+      "internalState": "內部狀態異常，請重新載入頁面。"
+    }
   },
   "inflight": {
     "queued": "排隊",
@@ -1495,6 +1504,15 @@
       "title": "Gemini 配額已用完",
       "body": "您已用盡 Gemini 圖像生成能力。您的配額將自動重設 - 檢查錯誤詳細資料中的重設計時器。",
       "cta": "確定"
+    },
+    "authClass": {
+      "title": "需要重新登入",
+      "body": "服務商認證已過期或金鑰遭拒。請至設定重新登入。",
+      "cta": "重新登入"
+    },
+    "billingRequired": {
+      "title": "需要儲值",
+      "body": "此服務商帳戶餘額不足。請前往服務商主控台確認後重試。"
     }
   },
   "promptLibrary": {
