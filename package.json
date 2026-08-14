@@ -2,7 +2,7 @@
   "name": "ima2-gen",
   "version": "3.1.0",
   "packageManager": "npm@11.18.0",
-  "description": "Local OAuth image generation studio with classic and node workflows",
+  "description": "Local-first visual generation runtime and studio for people and coding agents, with reproducible image and video workflows across multiple providers.",
   "type": "module",
   "bin": {
     "ima2": "bin/ima2.js"
@@ -47,11 +47,16 @@
     "release:canary": "gh workflow run release.yml -f bump=patch -f dry_run=canary"
   },
   "keywords": [
-    "openai",
-    "gpt-image-2",
     "image-generation",
-    "oauth",
-    "cli"
+    "video-generation",
+    "local-first",
+    "mcp",
+    "ai-agent",
+    "visual-workflow",
+    "node-editor",
+    "openai",
+    "grok",
+    "gemini"
   ],
   "license": "MIT",
   "homepage": "https://lidge-jun.github.io/ima2-gen/",

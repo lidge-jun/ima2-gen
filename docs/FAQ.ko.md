@@ -25,7 +25,7 @@ English version: [FAQ.md](FAQ.md)
 
 ### Node.js 버전은 무엇이 필요한가요?
 
-Node.js 20 이상을 권장합니다. 패키지 요구사항은 Node `>=20`입니다.
+Node.js 22 이상이 필요합니다. 패키지 요구사항은 Node `>=22`입니다.
 
 ### 어떻게 설치하나요?
 

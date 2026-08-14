@@ -9,14 +9,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   lang="en"
   active="concepts/providers"
   title="Providers & Models"
-  description="Choose between OAuth, API-key, and bundled Grok provider paths, pick a model, and set quality, moderation, and reasoning defaults."
+  description="Choose among eight core provider lanes, pick a model, and set quality, moderation, and reasoning defaults."
 >
   <p class="docs-eyebrow">Concepts</p>
   <h1>Providers &amp; Models</h1>
   <p class="lead">
-    Image generation runs through one of five provider paths: your local Codex/ChatGPT OAuth login,
-    a configured OpenAI API key, the bundled Grok/progrok xAI path, the direct Google Gemini API,
-    or the Gemini/Antigravity CLI.
+    The core registry contains eight provider lanes: OpenAI OAuth and API, Grok OAuth and API,
+    Gemini/Antigravity CLI, direct Gemini API, AtlasCloud API, and MiniMax API. Runway and
+    Higgsfield are separate MCP-backed integrations described below.
   </p>
 
   <h2>Provider paths</h2>
@@ -27,21 +27,25 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
     <li><code>provider: "grok-api"</code> — same xAI pipeline as <code>grok</code> but uses a direct <code>XAI_API_KEY</code> instead of the OAuth proxy.</li>
     <li><code>provider: "gemini-api"</code> — calls the Google Gemini image API directly. Supports two models (<code>nano-banana-2</code> and <code>nano-banana-pro</code>), aspect ratio and resolution controls, and two auth modes: a <code>GEMINI_API_KEY</code> or a Vertex AI service-account JSON (<code>VERTEX_SERVICE_ACCOUNT_JSON</code>). When both are configured, Vertex AI takes priority unless overridden by the last-saved auth mode. Cost varies by model and resolution (see Gemini API section below).</li>
     <li><code>provider: "agy"</code> — spawns the Antigravity CLI (<code>agy -p</code>) to generate via Google Gemini (<code>nano-banana-2</code>). Fixed 1024×1024 JPEG output, max 3 refs. Free (no token cost).</li>
+    <li><code>provider: "atlascloud"</code> — calls AtlasCloud with <code>ATLASCLOUD_API_KEY</code> for GPT Image 2 generation and edit, with up to 10 references.</li>
+    <li><code>provider: "minimax"</code> — calls MiniMax with <code>MINIMAX_API_KEY</code> for <code>image-01</code> and <code>image-01-live</code>, with one reference.</li>
   </ul>
-  <p>All provider paths cover Classic, Node, and Agent Mode. Agent Mode is web-UI only; Classic and Node also have CLI commands.</p>
+  <p>The core lanes cover Classic, Node, and Agent Mode. Agent Mode is web-UI only; Classic and Node also have CLI commands.</p>
 
   <h2>Per-request override</h2>
-  <p>Generation commands accept <code>--provider &lt;auto|oauth|api|grok|grok-api|agy|gemini-api&gt;</code>:</p>
+  <p>Generation commands use the eight explicit core lane IDs below. Where a command still accepts <code>auto</code>, it is a routing mode, not a ninth provider lane.</p>
   <table>
     <thead><tr><th>Value</th><th>Behavior</th></tr></thead>
     <tbody>
-      <tr><td><code>auto</code></td><td>Preserve route default behavior; currently resolves to OAuth.</td></tr>
+      <tr><td><code>auto</code></td><td>Routing mode where accepted; not a provider lane.</td></tr>
       <tr><td><code>oauth</code></td><td>Force the local OAuth proxy path.</td></tr>
       <tr><td><code>api</code></td><td>Force the API-key Responses path; requires a configured key.</td></tr>
       <tr><td><code>grok</code></td><td>Force the bundled xAI path through <code>127.0.0.1:18645</code>; run <code>ima2 grok login</code> once to authorize.</td></tr>
       <tr><td><code>grok-api</code></td><td>Same xAI pipeline but authenticates with a direct <code>XAI_API_KEY</code>.</td></tr>
       <tr><td><code>gemini-api</code></td><td>Direct Google Gemini API. Requires <code>GEMINI_API_KEY</code> or <code>VERTEX_SERVICE_ACCOUNT_JSON</code>. Supports aspect ratio and resolution controls. No quality/format/moderation/multimode controls.</td></tr>
       <tr><td><code>agy</code></td><td>Spawn Antigravity CLI for Gemini image generation. Requires <code>agy</code> binary installed. 1024×1024 fixed, JPEG, max 3 refs, no quality/size/mask controls.</td></tr>
+      <tr><td><code>atlascloud</code></td><td>Direct AtlasCloud API. Requires <code>ATLASCLOUD_API_KEY</code>.</td></tr>
+      <tr><td><code>minimax</code></td><td>Direct MiniMax API. Requires <code>MINIMAX_API_KEY</code>.</td></tr>
     </tbody>
   </table>
 

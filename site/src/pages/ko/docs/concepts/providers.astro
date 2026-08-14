@@ -9,13 +9,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
   lang="ko"
   active="concepts/providers"
   title="프로바이더 & 모델"
-  description="OAuth, API key, 번들 Grok, Gemini API 프로바이더 경로 선택, 모델 선택, 품질·moderation·reasoning 기본값 설정."
+  description="8개 core provider lane 선택, 모델 선택, 품질·moderation·reasoning 기본값 설정."
 >
   <p class="docs-eyebrow">핵심 개념</p>
   <h1>프로바이더 &amp; 모델</h1>
   <p class="lead">
-    이미지 생성은 네 프로바이더 경로 중 하나로 실행됩니다: 로컬 Codex/ChatGPT OAuth 로그인,
-    설정된 OpenAI API key, 번들 Grok/progrok xAI 경로, 또는 Google Gemini(Antigravity CLI 또는 직접 API).
+    core registry에는 OpenAI OAuth/API, Grok OAuth/API, Gemini/Antigravity CLI,
+    Gemini 직접 API, AtlasCloud API, MiniMax API로 구성된 provider lane 8개가 있습니다.
+    Runway와 Higgsfield는 아래에서 따로 설명하는 MCP-backed integration입니다.
   </p>
 
   <h2>프로바이더 경로</h2>
@@ -23,23 +24,28 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
     <li><code>provider: "oauth"</code> — 로컬 Codex OAuth 프록시를 사용합니다. 기본 경로이며 API key가 필요 없습니다.</li>
     <li><code>provider: "api"</code> — 호스티드 <code>image_generation</code> 도구로 OpenAI Responses API를 호출합니다. <code>OPENAI_API_KEY</code>가 필요합니다.</li>
     <li><code>provider: "grok"</code> — 번들 <code>progrok</code>을 시작하고, 필수 xAI Web Search와 planner pass(기본 <code>grok-4.5</code>, 설정 또는 <code>--planner-model</code>로 변경)를 거친 뒤 xAI Images API를 호출합니다. Grok 4.3은 호환 선택지로 유지합니다.</li>
+    <li><code>provider: "grok-api"</code> — <code>grok</code>과 같은 xAI pipeline을 직접 <code>XAI_API_KEY</code>로 실행합니다.</li>
     <li><code>provider: "agy"</code> — Antigravity CLI(<code>agy -p</code>)를 통해 Google Gemini(<code>nano-banana-2</code>)로 이미지를 생성합니다. 고정 1024×1024 JPEG 출력, 최대 3장 참조.</li>
     <li><code>provider: "gemini-api"</code> — Google Generative Language API 또는 Vertex AI를 직접 호출합니다. 모델 <code>nano-banana-2</code>(Gemini 3.1 Flash Image)와 <code>nano-banana-pro</code>(Gemini 3 Pro Image) 지원. 가변 화면비와 해상도(512px–4K) 지원. <code>GEMINI_API_KEY</code> 또는 Vertex AI 서비스 계정 JSON이 필요합니다.</li>
+    <li><code>provider: "atlascloud"</code> — <code>ATLASCLOUD_API_KEY</code>로 AtlasCloud GPT Image 2 생성·편집을 호출하며 참조는 최대 10장입니다.</li>
+    <li><code>provider: "minimax"</code> — <code>MINIMAX_API_KEY</code>로 MiniMax <code>image-01</code>과 <code>image-01-live</code>를 호출하며 참조는 1장입니다.</li>
   </ul>
-  <p>OAuth, API key, Grok, Gemini 생성은 Classic, Node, Agent Mode를 지원합니다. Agent Mode는 웹 UI 전용이고, Classic과 Node는 CLI도 있습니다.</p>
+  <p>core lane은 Classic, Node, Agent Mode를 지원합니다. Agent Mode는 웹 UI 전용이고, Classic과 Node는 CLI도 있습니다.</p>
 
   <h2>요청 단위 오버라이드</h2>
-  <p>생성 명령은 <code>--provider &lt;auto|oauth|api|grok|grok-api|agy|gemini-api&gt;</code>를 받습니다:</p>
+  <p>생성 명령은 아래 core lane ID 8개를 명시합니다. 일부 명령이 받는 <code>auto</code>는 아홉 번째 lane이 아니라 routing mode입니다.</p>
   <table>
     <thead><tr><th>값</th><th>동작</th></tr></thead>
     <tbody>
-      <tr><td><code>auto</code></td><td>라우트 기본 동작 유지; 현재는 OAuth로 해석됩니다.</td></tr>
+      <tr><td><code>auto</code></td><td>지원 명령에서만 쓰는 routing mode이며 provider lane이 아닙니다.</td></tr>
       <tr><td><code>oauth</code></td><td>로컬 OAuth 프록시 경로 강제.</td></tr>
       <tr><td><code>api</code></td><td>API key Responses 경로 강제; 설정된 key가 필요합니다.</td></tr>
       <tr><td><code>grok</code></td><td><code>127.0.0.1:18645</code>의 번들 xAI 경로 강제. 최초 1회 <code>ima2 grok login</code>으로 manual-paste 인증을 진행합니다.</td></tr>
       <tr><td><code>grok-api</code></td><td>번들 OAuth 대신 xAI API key를 직접 사용. <code>grok</code>과 동일한 파이프라인(Web Search → planner → 이미지 생성). 웹 UI key 관리 또는 <code>XAI_API_KEY</code> env var 필요. 비디오 생성도 지원.</td></tr>
       <tr><td><code>agy</code></td><td>Antigravity CLI로 Gemini 이미지 생성. <code>agy</code> 바이너리 필요. 1024×1024 고정, JPEG, 최대 3장 참조, 품질/크기/마스크 미지원.</td></tr>
       <tr><td><code>gemini-api</code></td><td>Google Generative Language API 또는 Vertex AI 직접 호출. 모델 <code>nano-banana-2</code>/<code>nano-banana-pro</code>. 가변 화면비·해상도 지원. API key 또는 Vertex 서비스 계정 JSON 필요.</td></tr>
+      <tr><td><code>atlascloud</code></td><td>AtlasCloud API 직접 호출. <code>ATLASCLOUD_API_KEY</code> 필요.</td></tr>
+      <tr><td><code>minimax</code></td><td>MiniMax API 직접 호출. <code>MINIMAX_API_KEY</code> 필요.</td></tr>
     </tbody>
   </table>
 

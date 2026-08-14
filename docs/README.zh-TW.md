@@ -5,7 +5,7 @@
 </p>
 
 [![npm 版本](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
 [![授權條款：MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
 > 🌐 **線上網站**：[lidge-jun.github.io/ima2-gen](https://lidge-jun.github.io/ima2-gen/) · [한국어](https://lidge-jun.github.io/ima2-gen/ko/)
@@ -14,9 +14,9 @@
 >
 > **閱讀其他語言版本**：[English](../README.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [正體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md)
 
-`ima2-gen` 是一套本機圖片生成工作室，適合想在小巧、類桌面體驗的 Web 應用程式中使用 ChatGPT／Codex 圖片工作流程的人。
+`ima2-gen` 是面向使用者與程式設計代理的本機優先視覺生成執行環境與工作室，支援跨多個供應商的可重現圖片與影片工作流程。
 
-全域安裝後，使用 ChatGPT OAuth 或 Grok OAuth 登入，就能開始產生圖片與影片。你可以搭配歷史記錄、參考圖、節點分支、多階段批次、畫布模式去背，以及 Grok 影片生成來反覆調整結果。預設的 OAuth 路徑不需要 API 金鑰；另外也支援使用 API 金鑰的提供者（`api`、`grok-api`、`gemini-api`、`agy`）。
+全域安裝後，可在 OpenAI OAuth/API、Grok OAuth/API、Antigravity CLI、Gemini API、AtlasCloud 與 MiniMax 組成的 8 個 core lane 中生成圖片與影片。Runway 與 Higgsfield 屬於獨立的 MCP integration。
 
 ![ima2-gen 播放影片時的畫面，右側圖庫顯示產生的圖片與影片。](../assets/screenshots/classic-generate-light.png)
 

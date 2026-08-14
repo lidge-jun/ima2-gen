@@ -25,7 +25,7 @@ For Korean, see [FAQ.ko.md](FAQ.ko.md). For Traditional Chinese, see [FAQ.zh-TW.
 
 ### What version of Node do I need?
 
-Use Node.js 20 or newer. The package declares Node `>=20`, and the README badge follows that requirement.
+Use Node.js 22 or newer. The package declares Node `>=22`, and the README badge follows that requirement.
 
 ### How do I install?
 

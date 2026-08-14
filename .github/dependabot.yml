@@ -13,8 +13,10 @@ updates:
       # entry once the API returns or the script moves off the TypeScript API.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
-      # @types/node 26 assumes a runtime newer than the >=20 this package still
-      # declares. Remove once engines.node is settled.
+      # engines.node is >=22 as of v3.1.0, so the original ">=20" rationale is
+      # gone. The pin stays until someone actually bumps @types/node to 26 and
+      # runs typecheck + typecheck:tests against Node 22 — that verification is
+      # its own unit of work, not a comment edit.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
     groups:

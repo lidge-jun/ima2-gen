@@ -1,7 +1,7 @@
 # ima2-gen
 
 [![npm version](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
 > 🌐 **Live site**: [lidge-jun.github.io/ima2-gen](https://lidge-jun.github.io/ima2-gen/) · [한국어 페이지](https://lidge-jun.github.io/ima2-gen/ko/)
@@ -10,9 +10,9 @@
 >
 > **다른 언어로 읽기**: [English](../README.md) · [日本語](README.ja.md) · [正體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md)
 
-`ima2-gen`은 무료 ChatGPT와 SuperGrok만으로 이미지와 영상을 만드는 로컬 AI 스튜디오입니다.
+`ima2-gen`은 사람과 코딩 에이전트가 여러 프로바이더에서 재현 가능한 이미지·영상 워크플로를 실행하는 로컬 우선 비주얼 생성 런타임이자 스튜디오입니다.
 
-전역 설치 후 ChatGPT 또는 Grok OAuth로 로그인하면 바로 시작됩니다. 기본 OAuth 경로는 API 키 없이 동작하며, 선택적으로 API 키 공급자(`api`, `grok-api`, `gemini-api`, `agy`)도 지원합니다.
+전역 설치 후 OpenAI OAuth/API, Grok OAuth/API, Antigravity CLI, Gemini API, AtlasCloud, MiniMax로 구성된 core lane 8개에서 이미지와 영상을 생성합니다. Runway와 Higgsfield는 별도 MCP integration입니다.
 
 ![프롬프트 작성창, 생성 이미지, 모델 표시, 결과 메타데이터가 보이는 ima2-gen 클래식 생성 화면](../assets/screenshots/classic-generate-light.png)
 
