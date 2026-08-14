@@ -153,3 +153,25 @@ tags: [ima2-gen, devlog, closeout]
 - `npm run test:install-policy` was red on CI and locally: ui Playwright pulled `fsevents@2.3.2`. Approval added in this closeout.
 
 #122 remains OPEN. 005 said 099 is not its own issue and cannot close the umbrella without a real release.
+
+## 2026-08-14 후기
+
+"릴리스 활성화 미증명"이라는 판단은 작성 시점에 옳았다. 그날 안에 `8bc4468e`가
+들어가고 v3.0.6, v3.0.7이 발행되면서 조건이 충족됐다.
+
+| 항목 | 값 |
+|---|---|
+| release run | `31778196224` success |
+| publish run | `31780064187` success |
+| npm `latest` | `3.0.7` |
+| `main`/`dev`/`preview` | `11bb9b87` 정렬 |
+
+`260812_navrail_grok_autotag`는 이제 `_fin` 이관 가능하다.
+
+#122는 여전히 열려 있다. 하위 #123–#132가 닫힌 것과 우산이 닫히는 것은 다르다 —
+우산의 완료 조건에 "실제 릴리스"가 포함돼 있었고 그것이 이제 두 번 일어났다.
+#122 클로즈아웃은 `260814_issue_pr_zeroing_release/060`에서 완료 조건 7개를
+대조한 뒤 처리한다.
+
+이 유닛의 `000`, `004`, `020`에도 2026-08-14 정정 블록을 넣었다. 후기 한 곳만
+고치면 정작 근거 문서가 실패 상태를 현재형으로 서술한 채 남는다.

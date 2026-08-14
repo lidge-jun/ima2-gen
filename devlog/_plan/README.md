@@ -24,16 +24,35 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260812_navrail_grok_autotag/` | 릴리스 활성화 미증명. `060_release_activation_residual.md` 참조 |
-| `260813_maturity_roadmap/` | #122 코드 phase 010–090 구현됨 (`origin/dev` `09660557`). 발행·설정 변경은 승인 대기. 099 기록은 decade 문서에 있음 |
+| `260812_navrail_grok_autotag/` | 릴리스 활성화 **증명됨** (2026-08-14). `060_release_activation_residual.md`에 재개 조건 충족 기록. `_fin` 이관 대기 |
+| `260813_maturity_roadmap/` | #122 코드 phase 010–090 구현됨. 우산 이슈 close와 함께 `_fin` 이관 예정. `000`/`004`/`020`에 2026-08-14 정정 블록 |
+| `260814_issue_pr_zeroing_release/` | 진행 중. 열린 이슈/PR 소거 + 다음 릴리스 발행 |
 
-GitHub open issue와 open PR은 여전히 **0건**이다(2026-08-13 확인). 그러나 열린
-이슈가 없다는 것과 릴리스가 건강하다는 것은 다른 문제다 — 현재 릴리스 컷과
-publish 워크플로가 둘 다 빨갛다.
+### 2026-08-14 정정 — 이전 기록은 stale이었다
 
-2026-08-14: 성숙도 하위 이슈 #123–#132는 닫혔고 우산 #122만 열려 있다.
-`origin/main`과 `origin/preview`는 아직 `ac1cace`(3.0.5)다. dry-run
-dispatch와 실전 컷은 하지 않았다.
+아래 세 주장은 모두 틀렸다. 실측으로 정정한다.
+
+| 이전 기록 | 실제 |
+|---|---|
+| "open issue와 open PR은 여전히 0건" | issue 1건(#122), PR 6건(#133–#138) |
+| "현재 릴리스 컷과 publish 워크플로가 둘 다 빨갛다" | 둘 다 success |
+| "`origin/main`과 `origin/preview`는 아직 `ac1cace`(3.0.5)" | 셋 다 `11bb9b87`(3.0.7) |
+
+| 항목 | 값 | 확인 명령 |
+|---|---|---|
+| `main` = `dev` = `preview` | `11bb9b870828e38fd65c425e5a9fe31ce5d6aae1` | `git rev-parse` |
+| npm `latest` | `3.0.7` (`gitHead` = `11bb9b87…`) | `npm view ima2-gen@3.0.7 gitHead` |
+| npm `preview` | `3.0.7-preview.260814.31779318312.1` | `npm view ima2-gen dist-tags` |
+| GitHub Release | `v3.0.7` (2026-08-14T07:42:51Z) | `gh release list` |
+| release run | `31778196224` success | `gh run list --workflow release.yml` |
+| publish run | `31780064187`, `31779318312` success | `gh run list --workflow publish.yml` |
+
+릴리스를 고친 것은 `8bc4468e fix(release): verify provenance against the dispatch
+host ref`다. 그 뒤 v3.0.6, v3.0.7이 연달아 나갔다.
+
+열린 이슈가 없다는 것과 릴리스가 건강하다는 것이 다른 문제라는 원래 지적은
+여전히 옳다. 다만 이번에는 **반대 방향**이다 — 릴리스는 건강해졌고 열린 항목이
+생겼다. 어느 쪽이든 폴더 위치나 카운트로 상태를 주장하지 않는다.
 
 ## 외부 차단으로 미완료인 항목
 

@@ -79,3 +79,34 @@ baseline 설치는 **네트워크에서 실제 레지스트리 tarball**을 받�
 
 `.js` 2건은 소스를 고친 뒤 재생성해야 한다. 이관을 수행하는 work-phase의 수용
 기준에 포함한다.
+
+## 2026-08-14 — 재개 조건 충족
+
+| 조건 | 상태 | 증거 |
+|---|---|---|
+| 1. release 컷이 `assert-clean` 통과 → preview 승격 → npm preview `gitHead` = 컷 SHA | **충족** | release run `31778196224` success. npm preview `3.0.7-preview.260814.31779318312.1`. `npm view ima2-gen@3.0.7 gitHead` = `11bb9b870828e38fd65c425e5a9fe31ce5d6aae1` |
+| 2. Windows Node24/npm12 `test:package-global-update`가 단계 타임아웃 내 완료 | **충족** | publish run `31780064187` success |
+
+릴리스를 고친 커밋은 `8bc4468e fix(release): verify provenance against the dispatch
+host ref`다. 그 뒤 v3.0.6, v3.0.7이 연달아 발행됐다.
+
+### 이 문서의 분석은 옳았다
+
+두 실패의 성격을 다르게 진단한 것이 맞았다.
+
+- **tsbuildinfo drift**: "원인은 제거됐다. 다만 재현되지 않았다" → 재현됐다.
+- **Windows 타임아웃**: "원인이 제거되지 않았다" → 이번에는 상한 안에 들어왔다.
+
+두 번째는 `해소`이지 `원인 제거`가 아닐 수 있다. #138 CI에서 Windows Node24/npm12가
+15분 상한에 **14m43s**로 통과했다 — 여유 17초다. 이 문서가 지적한 계측 부재
+(`spawnSync` 하위 프로세스에 개별 timeout 없음, 어느 단계가 매달렸는지 알 수단 없음)는
+**여전히 유효하다**.
+
+### 판정
+
+이 유닛은 `_fin` 이관 가능하다. 이관은 `260814_issue_pr_zeroing_release/060`의
+WP6에서 다른 아카이빙과 함께 한다. 위에 적힌 `.js` 2건 재생성 조건도 그 work-phase의
+수용 기준에 포함한다.
+
+계측 부재는 이 유닛의 재개 조건이 아니었으므로 이관을 막지 않는다. 대신
+`260814.../060`에 **이월 항목**으로 기록한다 — 문제를 폴더 이동으로 지우지 않는다.

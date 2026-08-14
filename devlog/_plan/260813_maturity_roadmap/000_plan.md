@@ -125,6 +125,14 @@ WP6의 거버넌스 문서는 WP3–WP5 전체를 소비하지 않는다. 공급
 | npm `preview` | `3.0.6-preview.260812.31603578657.1`, `gitHead` = `97b32ce` |
 | 현재 HEAD | `ac1cace` — 성공한 preview 발행이 **없다** |
 
+> **2026-08-14 정정**: 위 표는 2026-08-13 시점이다. 이후 `8bc4468e fix(release):
+> verify provenance against the dispatch host ref`가 들어가고 release run
+> `31778196224`, publish run `31780064187`이 모두 success로 끝나 v3.0.6, v3.0.7이
+> 발행됐다. `main`/`dev`/`preview`는 `11bb9b87`로 정렬됐고 npm `latest`는 `3.0.7`,
+> npm `preview`는 `3.0.7-preview.260814.31779318312.1`이다. 즉 "성공한 preview
+> 발행이 없다"는 더 이상 사실이 아니다. 현재 상태는
+> `260814_issue_pr_zeroing_release/000_plan.md`를 보라.
+
 `_plan/README.md`가 금지하는 것이 정확히 이 상황이다: 폴더 위치로 완료를 주장하고
 빨간 릴리스를 시야에서 치우는 것. `040`의 `NEEDS_HUMAN`은 승인으로 해소됐지만
 `050`이 만든 워크플로 자체는 아직 초록인 적이 없다. 이 유닛은 `_plan`에 남고,
