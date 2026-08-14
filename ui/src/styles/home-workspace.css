@@ -4,33 +4,158 @@
 }
 .app[data-ui-mode="home"] > .sidebar { display: none; }
 
-.home-workspace__brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
+/* Hero -------------------------------------------------------------------
+   The wordmark is a background layer, not a headline. It carries the brand
+   at a size the composer never has to compete with, and everything readable
+   sits above it. Sized so the composer still opens inside the first screen.
+*/
+.home-hero {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(20px, 3.2vh, 36px) 0 clamp(16px, 2.2vh, 24px);
 }
 
-.home-chrome-logo {
-  font-family: var(--font-display, 'Clash Display', system-ui, sans-serif);
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
+.home-hero__mark {
+  position: absolute;
+  z-index: -1;
+  top: clamp(-12px, -1vh, -4px);
+  left: -0.06em;
+  right: 0;
+  font: 700 clamp(84px, 13vw, 176px) / 0.78 var(--font-display);
   color: transparent;
-  background: linear-gradient(180deg, #ffffff 0%, #c8ccd8 35%, #6f7484 60%, #e8eaf1 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-.home-workspace__wordmark {
-  width: 100%;
-  margin-top: 56px;
-  font: 700 clamp(80px, 14vw, 180px) / 0.85 var(--font-display, 'Clash Display', system-ui, sans-serif);
-  letter-spacing: 0;
+  -webkit-text-stroke: 1px rgba(244, 244, 246, 0.13);
   white-space: nowrap;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(244, 244, 246, 0.28);
   overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-hero__intro {
+  position: relative;
+  max-width: 30ch;
+}
+
+.home-hero__title {
+  margin: 0;
+  font: 700 clamp(30px, 3.6vw, 44px) / 1.06 var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  word-break: keep-all;
+  color: var(--text);
+}
+
+.home-hero__lede {
+  margin: 10px 0 0;
+  max-width: 52ch;
+  font-size: 15px;
+  line-height: 1.55;
+  text-wrap: balance;
+  /* Korean breaks mid-word without this: "합니 / 다." reads as a typo. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  color: var(--text-dim);
+}
+
+.home-hero__readiness {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 5px 11px 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.home-hero__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.home-hero__dot.is-ready { background: var(--green); }
+
+.home-workspace__composer { margin-top: 20px; }
+
+/* Mode roster ------------------------------------------------------------
+   An index of destinations, not a feature grid. Rows rather than equal cards
+   so it never reads as the primary action; Generate keeps that role.
+*/
+.home-modes {
+  display: grid;
+  margin-top: 56px;
+  border-top: 1px solid var(--border);
+}
+
+.home-modes__title {
+  margin: 0;
+  padding: 18px 4px 10px;
+  color: var(--text-muted);
+  font: 500 11px/1 var(--mono) !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-modes__item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 8rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, padding-left 160ms ease;
+}
+
+.home-modes__item:hover {
+  padding-left: 10px;
+  background: var(--control-bg);
+  color: var(--text);
+}
+
+.home-modes__item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.home-modes__label {
+  font: 600 14px/1.2 var(--font-display);
+  color: var(--text);
+}
+
+.home-modes__icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+}
+
+.home-modes__hint {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+  color: var(--text-muted);
+}
+
+.home-hero__mode-arrow {
+  align-self: center;
+  color: var(--text-faint);
+  transition: transform 160ms ease, color 160ms ease;
+}
+
+.home-modes__item:hover .home-hero__mode-arrow {
+  transform: translateX(3px);
+  color: var(--text-dim);
 }
 
 
@@ -42,7 +167,7 @@
   height: 100dvh;
   overflow-y: auto;
   padding: clamp(32px, 5vw, 72px) clamp(20px, 4vw, 48px) 72px;
-  color: var(--text, var(--text-primary));
+  color: var(--text);
   font-family: var(--font);
 }
 
@@ -56,7 +181,7 @@
   margin-inline: auto;
 }
 
-.home-workspace__recent { margin-top: 56px; }
+.home-workspace__recent { margin-top: 32px; }
 
 .home-workspace h2 {
   font-family: var(--font-display);
@@ -197,30 +322,25 @@
 .home-prompt__generate:disabled { cursor: not-allowed; opacity: 0.4; }
 
 .home-recent-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(116px, 1fr);
   gap: 12px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px;
+  min-height: 300px;
 }
-
-.home-recent-row::-webkit-scrollbar { height: 4px; }
-.home-recent-row::-webkit-scrollbar-track { background: transparent; }
-.home-recent-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .home-recent-card {
-  flex: 0 0 auto;
-  width: clamp(140px, 18vw, 200px);
-  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
   border-radius: 12px;
   overflow: hidden;
-  scroll-snap-align: start;
-  background: var(--surface, #14141a);
+  background: var(--surface);
   border: 1px solid var(--glass-line, var(--border));
-  cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease;
 }
+
+.home-recent-card.is-featured { grid-row: span 2; }
 
 .home-recent-card:hover {
   transform: translateY(-2px);
@@ -234,8 +354,26 @@
   object-fit: cover;
 }
 
+.home-recent-card__fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 116px;
+  place-items: center;
+  padding: 16px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  text-align: center;
+  font: 400 13px/1.4 var(--font);
+}
+
 @media (max-width: 768px) {
   .home-workspace { padding: 28px 20px 56px; }
+  .home-hero { padding: 20px 0 18px; }
+  .home-hero__mark { font-size: clamp(84px, 22vw, 150px); }
+  .home-recent-row { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .home-modes { margin-top: 40px; }
+  .home-modes__item { grid-template-columns: 24px minmax(0, 6.5rem) minmax(0, 1fr) auto; gap: 12px; }
 }
 
 @media (max-width: 480px) {
@@ -244,10 +382,32 @@
   .home-prompt__textarea { min-height: 144px; padding: 14px; font-size: 16px; }
   .home-prompt__footer { align-items: stretch; flex-direction: column; }
   .home-prompt__generate { width: 100%; min-height: 52px; }
-  .home-recent-card { width: 120px; }
+  .home-recent-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(108px, 1fr);
+  }
+  .home-recent-card.is-featured {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 220px;
+  }
+
+  /* The hero shrinks so the composer stays inside the first screen on a
+     390x844 phone; the wordmark keeps the frame without owning it. */
+  .home-hero { padding: 14px 0 14px; }
+  .home-hero__mark { top: -2px; font-size: clamp(64px, 26vw, 104px); }
+  .home-hero__title { font-size: clamp(26px, 8vw, 32px); }
+  .home-hero__lede { margin-top: 8px; font-size: 14px; }
+  .home-hero__readiness { margin-top: 12px; }
+  .home-modes__item { grid-template-columns: 22px minmax(0, 1fr) auto; row-gap: 3px; }
+  .home-modes__hint { grid-column: 2 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .home-prompt__generate { transition: none; }
   .home-prompt__generate:hover:not(:disabled) { transform: none; }
+  .home-modes__item { transition: none; }
+  .home-modes__item:hover { padding-left: 4px; }
+  .home-hero__mode-arrow { transition: none; }
+  .home-modes__item:hover .home-hero__mode-arrow { transform: none; }
 }

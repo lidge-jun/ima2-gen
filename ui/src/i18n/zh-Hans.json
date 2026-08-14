@@ -345,7 +345,19 @@
     "selectedPresets": "选定的预设",
     "referenceTrayCount": "{count} 参考文献",
     "referenceTrayAria": "{count} 引用附加到下一代",
-    "viewAll": "查看全部"
+    "viewAll": "查看全部",
+    "heroTitle": "从满意的那一张，继续展开。",
+    "heroLede": "在本机生成、编辑、让画面动起来。不主动发送，就不会离开这台机器。",
+    "lanesReady": "{total} 条生成通道中 {ready} 条就绪",
+    "lanesNone": "暂无就绪通道 — 请在设置中连接",
+    "modesTitle": "工作区",
+    "modeCreateHint": "生成并打磨单张图像",
+    "modeNodeHint": "把一个结果分成多个方向",
+    "modeAgentHint": "说明需求，交给智能体执行",
+    "modeAssetsHint": "收藏并重复使用你的成果",
+    "untitledResult": "未命名结果",
+    "recentResultAlt": "最近结果：{prompt}",
+    "mediaUnavailable": "无法显示预览"
   },
   "billing": {
     "label": "API 状态",

@@ -17,7 +17,7 @@ const HASH_TO_MODE: Record<string, UIMode | "settings"> = {
   "#asset-gen": "asset-gen",
 };
 
-const MODE_TO_HASH: Record<string, string> = {
+export const MODE_TO_HASH: Record<string, string> = {
   home: "#home",
   classic: "#create",
   node: "#node",
@@ -36,7 +36,7 @@ function resolveHash(): { mode: UIMode; settings: boolean } | null {
 
 /* ── Icons (14×14 stroke, Lucide style) ── */
 
-function IconCreate() {
+export function IconCreate() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -55,7 +55,7 @@ function IconHome() {
   );
 }
 
-function IconNode() {
+export function IconNode() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="2" y="6" width="8" height="6" rx="1" />
@@ -66,7 +66,7 @@ function IconNode() {
   );
 }
 
-function IconAgent() {
+export function IconAgent() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
       <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none" />
@@ -85,7 +85,7 @@ function IconSettings() {
   );
 }
 
-function IconAssets() {
+export function IconAssets() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />

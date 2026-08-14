@@ -345,7 +345,19 @@
     "selectedPresets": "Selected presets",
     "referenceTrayCount": "{count} refs",
     "referenceTrayAria": "{count} references are attached to the next generation",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "heroTitle": "Branch the images you love.",
+    "heroLede": "Generate, edit, and animate locally across your own provider lanes. Nothing leaves the machine unless you send it.",
+    "lanesReady": "{ready} of {total} lanes ready",
+    "lanesNone": "no lane ready — open Settings",
+    "modesTitle": "Workspaces",
+    "modeCreateHint": "Generate and iterate on a single image",
+    "modeNodeHint": "Branch one result into many directions",
+    "modeAgentHint": "Describe the job and let the agent run it",
+    "modeAssetsHint": "Collect, star, and reuse what you made",
+    "untitledResult": "Untitled result",
+    "recentResultAlt": "Recent result: {prompt}",
+    "mediaUnavailable": "Preview unavailable"
   },
   "billing": {
     "label": "API Status",

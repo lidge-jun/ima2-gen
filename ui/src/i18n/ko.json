@@ -345,7 +345,19 @@
     "selectedPresets": "선택한 프리셋",
     "referenceTrayCount": "참조 {count}개",
     "referenceTrayAria": "다음 생성에 참조 {count}개가 포함됩니다",
-    "viewAll": "전체 보기"
+    "viewAll": "전체 보기",
+    "heroTitle": "마음에 든 한 장,\n거기서 펼치기.",
+    "heroLede": "내 컴퓨터에서 만들고, 고치고, 움직이게 합니다. 보내지 않으면 아무것도 나가지 않습니다.",
+    "lanesReady": "생성 경로 {total}개 중 {ready}개 준비됨",
+    "lanesNone": "준비된 경로 없음 — 설정에서 연결",
+    "modesTitle": "작업 공간",
+    "modeCreateHint": "한 장을 만들고 다듬습니다",
+    "modeNodeHint": "결과 하나를 여러 방향으로 나눕니다",
+    "modeAgentHint": "할 일을 말하면 에이전트가 실행합니다",
+    "modeAssetsHint": "만든 것을 모으고 다시 씁니다",
+    "untitledResult": "이름 없는 결과",
+    "recentResultAlt": "최근 결과: {prompt}",
+    "mediaUnavailable": "미리보기를 표시할 수 없습니다"
   },
   "billing": {
     "label": "API 상태",

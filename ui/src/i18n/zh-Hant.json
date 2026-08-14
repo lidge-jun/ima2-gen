@@ -345,7 +345,19 @@
     "selectedPresets": "選定的預設",
     "referenceTrayCount": "{count} 參考文獻",
     "referenceTrayAria": "{count} 引用附加到下一代",
-    "viewAll": "看全部"
+    "viewAll": "看全部",
+    "heroTitle": "從滿意的那一張，繼續展開。",
+    "heroLede": "在本機生成、編輯、讓畫面動起來。不主動傳送，就不會離開這台機器。",
+    "lanesReady": "{total} 條生成通道中 {ready} 條就緒",
+    "lanesNone": "尚無就緒通道 — 請在設定中連接",
+    "modesTitle": "工作區",
+    "modeCreateHint": "生成並打磨單張圖像",
+    "modeNodeHint": "把一個結果分成多個方向",
+    "modeAgentHint": "說明需求，交給智慧代理執行",
+    "modeAssetsHint": "收藏並重複使用你的成果",
+    "untitledResult": "未命名結果",
+    "recentResultAlt": "最近結果：{prompt}",
+    "mediaUnavailable": "無法顯示預覽"
   },
   "billing": {
     "label": "API 狀態",

@@ -3,7 +3,7 @@ import type { TrayItem } from "../../lib/referenceTray";
 import { useI18n } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
 import type { Provider } from "../../types";
-import { useProviderAvailability } from "../../hooks/useProviderAvailability";
+import type { ProviderAvailability } from "../../hooks/useProviderAvailability";
 import { Chip, ChipRow } from "../controls";
 import { Select, type SelectItem } from "../controls/Select";
 
@@ -27,7 +27,11 @@ function homeReferenceThumbnail(item: TrayItem): string | undefined {
   return `/generated/${filename.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-export function HomePromptComposer() {
+type HomePromptComposerProps = {
+  providerAvailability: Record<Provider, ProviderAvailability>;
+};
+
+export function HomePromptComposer({ providerAvailability }: HomePromptComposerProps) {
   const prompt = useAppStore((state) => state.prompt);
   const setPrompt = useAppStore((state) => state.setPrompt);
   const provider = useAppStore((state) => state.provider);
@@ -37,7 +41,6 @@ export function HomePromptComposer() {
   const generate = useAppStore((state) => state.generate);
   const activeGenerations = useAppStore((state) => state.activeGenerations);
   const trayItems = useAppStore((state) => state.trayItems);
-  const providerAvailability = useProviderAvailability();
   const { t } = useI18n();
   const selectedIdSet = new Set(selectedPresetIds);
   const selectedPresets = getAllPresets().filter((preset) => selectedIdSet.has(preset.id));

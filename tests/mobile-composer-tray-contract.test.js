@@ -8,6 +8,7 @@ const read = (path) => readFileSync(path, "utf8");
 const sheet = read("ui/src/components/MobileComposeSheet.tsx");
 const inflightBadge = read("ui/src/components/composer/InFlightBadge.tsx");
 const homeComposer = read("ui/src/components/home/HomePromptComposer.tsx");
+const homeHero = read("ui/src/components/home/HomeHero.tsx");
 const homeWorkspace = read("ui/src/components/home/HomeWorkspace.tsx");
 const homeRecent = read("ui/src/components/home/HomeRecentRow.tsx");
 const responsiveCss = read("ui/src/styles/responsive-layout.css");
@@ -64,7 +65,8 @@ test("home exposes a compact read-only reference strip", () => {
 });
 
 test("home keeps the recent region visible for empty and populated histories", () => {
-  assert.match(homeWorkspace, /<div className="home-workspace__recent">/);
+  assert.match(homeWorkspace, /<HomeHero \/>/);
+  assert.match(homeHero, /<section className="home-workspace__recent"/);
   assert.doesNotMatch(homeWorkspace, /hasHistory/);
   assert.match(homeRecent, /recent\.length === 0/);
   assert.match(homeRecent, /className="home-recent-empty" role="status">\{t\("history\.emptyRecent"\)\}/);
@@ -72,10 +74,32 @@ test("home keeps the recent region visible for empty and populated histories", (
   assert.match(homeCss, /\.home-recent-empty\s*\{[^}]*var\(--surface\)[^}]*var\(--text-muted\)/s);
 });
 
+test("home hero shares readiness and keeps mode navigation contract-safe", () => {
+  assert.match(homeHero, /<HomePromptComposer providerAvailability=\{availability\} \/>/);
+  assert.match(homeComposer, /providerAvailability: Record<Provider, ProviderAvailability>/);
+  assert.doesNotMatch(homeComposer, /useProviderAvailability\(\)/);
+  assert.match(homeHero, /mode: "classic"/);
+  assert.doesNotMatch(homeHero, /mode: "create"/);
+  assert.match(homeHero, /enabled: ENABLE_NODE_MODE/);
+  assert.match(homeHero, /enabled: ENABLE_AGENT_MODE/);
+  assert.match(homeHero, /MODE_TO_HASH\[mode\]/);
+});
+
+test("home recent media is bounded and fails closed for video and image previews", () => {
+  assert.match(homeRecent, /history\.slice\(0, 5\)/);
+  assert.match(homeRecent, /if \(isVideo\) return item\.thumb/);
+  assert.match(homeRecent, /onError=\{\(\) => setFailed\(true\)\}/);
+  assert.match(homeRecent, /home-recent-card__fallback/);
+  assert.match(homeCss, /\.home-recent-card\.is-featured\s*\{[^}]*grid-row:\s*span 2/);
+  assert.doesNotMatch(homeCss, /grid-template-rows:\s*minmax\(220px/);
+});
+
 test("new tray visibility and mobile disclosure copy stays localized", () => {
   for (const locale of [en, ko]) {
     assert.equal(typeof locale.home.referenceTrayCount, "string");
     assert.equal(typeof locale.home.referenceTrayAria, "string");
+    assert.equal(typeof locale.home.recentResultAlt, "string");
+    assert.equal(typeof locale.home.mediaUnavailable, "string");
     assert.equal(typeof locale.inflight.inlineCollapse, "string");
   }
 });
