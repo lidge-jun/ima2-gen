@@ -181,6 +181,22 @@ export function isJobCanceled(requestId: string | null | undefined): boolean {
   return terminalJobs.get(requestId)?.status === "canceled";
 }
 
+/**
+ * Current raw phase for a job, or null when it is not active.
+ *
+ * Used by the envelope snapshot (#151) as its last-resort phase source; the
+ * event name and the event's own reported phase both outrank it.
+ */
+export function getJobPhase(requestId: string | null | undefined): string | null {
+  if (!requestId) return null;
+  try {
+    return getJob(requestId)?.phase ?? null;
+  } catch {
+    // Envelope metadata must never break publishing.
+    return null;
+  }
+}
+
 export function setJobPhase(requestId: string | null | undefined, phase: string) {
   if (!requestId) return;
   const j = getJob(requestId);

@@ -1,6 +1,6 @@
 import type { Express, Response } from "express";
 import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-import { subscribe, replaySince, hasReplayGap, replayOldestId, MAX_SSE_LISTENERS } from "../lib/eventBus.js";
+import { subscribe, replaySince, hasReplayGap, replayOldestId, MAX_SSE_LISTENERS, type BusEvent } from "../lib/eventBus.js";
 
 let activeConnections = 0;
 
@@ -14,8 +14,13 @@ function safeWrite(res: Response, chunk: string): boolean {
   }
 }
 
-function formatSse(ev: { id: number; jobId: string; event: string; data: Record<string, unknown> }): string {
-  return `id: ${ev.id}\nevent: ${ev.event}\ndata: ${JSON.stringify({ ...ev.data, jobId: ev.jobId })}\n\n`;
+function formatSse(ev: BusEvent): string {
+  // jobSeq and envelope are additive: the publisher already built them, so this
+  // only serializes. Consumers that ignore the new fields see the old payload.
+  const payload: Record<string, unknown> = { ...ev.data, jobId: ev.jobId };
+  if (ev.jobSeq !== undefined) payload.jobSeq = ev.jobSeq;
+  if (ev.envelope !== undefined) payload.envelope = ev.envelope;
+  return `id: ${ev.id}\nevent: ${ev.event}\ndata: ${JSON.stringify(payload)}\n\n`;
 }
 
 function parseLastEventIdHeader(value: string | string[] | undefined): number {

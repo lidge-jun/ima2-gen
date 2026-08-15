@@ -1,10 +1,18 @@
 import { EventEmitter } from "node:events";
+import type { JobEnvelopeV1 } from "./jobs/envelope.js";
 
 export interface BusEvent {
   id: number;
   jobId: string;
   event: string;
   data: Record<string, unknown>;
+  /** Per-job counter (#151). Distinct from `id`, which is a process-wide SSE cursor. */
+  jobSeq?: number;
+  /**
+   * Immutable snapshot taken by the publisher (#151). Lives beside `data`, not
+   * inside it, so subscribers comparing `event.data` are unaffected.
+   */
+  envelope?: JobEnvelopeV1;
 }
 
 /** Global replay window — sized for 7+ concurrent jobs (~15 events each) with reconnect headroom. */
@@ -16,6 +24,30 @@ bus.setMaxListeners(MAX_SSE_LISTENERS);
 
 let seq = 0;
 const ring: BusEvent[] = [];
+/**
+ * Per-job sequence counters. Bounded by RING_SIZE with LRU eviction: a job whose
+ * events have all aged out of the replay ring cannot have its sequence
+ * questioned, so its counter has nothing left to protect. Deleting on terminal
+ * instead would restart numbering for the late `error` that can still follow a
+ * `done` (lib/ssePublish.ts only suppresses the reverse order).
+ */
+const jobSeqs = new Map<string, number>();
+
+function nextJobSeq(jobId: string): number {
+  const next = (jobSeqs.get(jobId) ?? 0) + 1;
+  jobSeqs.delete(jobId);
+  jobSeqs.set(jobId, next);
+  if (jobSeqs.size > RING_SIZE) {
+    const oldest = jobSeqs.keys().next();
+    if (!oldest.done) jobSeqs.delete(oldest.value);
+  }
+  return next;
+}
+
+/** Reads a job's current sequence without allocating one. */
+export function peekJobSeq(jobId: string): number {
+  return jobSeqs.get(jobId) ?? 0;
+}
 
 function omitLargeImageFields(data: Record<string, unknown>): { data: Record<string, unknown>; omitted: boolean } {
   let omitted = false;
@@ -45,9 +77,39 @@ function toRingEntry(entry: BusEvent): BusEvent {
   return stripped.omitted ? { ...entry, data: stripped.data } : entry;
 }
 
-export function publish(jobId: string, event: string, data: Record<string, unknown>): void {
+/**
+ * Publishes a job event.
+ *
+ * `meta.buildEnvelope` receives the sequence this call just allocated and
+ * returns the snapshot to attach. It is a callback rather than a value because
+ * the sequence is assigned here, and a callback rather than an injected module
+ * because eventBus must not import inflight (routes/events.ts imports this
+ * module, and pulling inflight in would open the user's database from any test
+ * that imports the SSE route).
+ */
+export function publish(
+  jobId: string,
+  event: string,
+  data: Record<string, unknown>,
+  meta?: { buildEnvelope?: (sequence: number) => JobEnvelopeV1 | undefined },
+): void {
   seq++;
-  const entry: BusEvent = { id: seq, jobId, event, data };
+  const jobSeq = nextJobSeq(jobId);
+  let envelope: JobEnvelopeV1 | undefined;
+  try {
+    envelope = meta?.buildEnvelope?.(jobSeq);
+  } catch {
+    // An envelope is metadata. Never let building it drop the event itself.
+    envelope = undefined;
+  }
+  const entry: BusEvent = {
+    id: seq,
+    jobId,
+    event,
+    data,
+    jobSeq,
+    ...(envelope === undefined ? {} : { envelope }),
+  };
   const ringEntry = toRingEntry(entry);
   ring.push(ringEntry);
   if (ring.length > RING_SIZE) ring.shift();
@@ -79,5 +141,6 @@ export function replaySince(lastEventId: number): BusEvent[] {
 export function _resetForTest(): void {
   seq = 0;
   ring.length = 0;
+  jobSeqs.clear();
   bus.removeAllListeners();
 }
