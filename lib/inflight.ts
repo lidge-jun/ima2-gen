@@ -50,6 +50,83 @@ interface TerminalJob {
 }
 
 const terminalJobs = new Map<string, TerminalJob>(); // requestId -> terminal snapshot, active-only API stays default
+/**
+ * The map above is the source of truth; SQLite is its backup (#151).
+ *
+ * Restoration is lazy rather than at module load: routes/events.ts and other
+ * modules import this file transitively, and opening the user's database during
+ * import would make a route-import contract test touch real user state.
+ */
+let terminalJobsRestored = false;
+
+function ensureTerminalJobsRestored(): void {
+  if (terminalJobsRestored) return;
+  terminalJobsRestored = true;
+  try {
+    const cutoff = Date.now() - config.inflight.terminalTtlMs;
+    const rows = getDb()
+      .prepare("SELECT * FROM terminal_jobs WHERE finished_at > ?")
+      .all(cutoff) as TerminalJobRow[];
+    for (const row of rows) {
+      if (terminalJobs.has(row.request_id)) continue;
+      terminalJobs.set(row.request_id, {
+        requestId: row.request_id,
+        kind: row.kind,
+        status: row.status,
+        startedAt: Number(row.started_at),
+        finishedAt: Number(row.finished_at),
+        durationMs: Number(row.finished_at) - Number(row.started_at),
+        phase: row.phase || "unknown",
+        phaseAt: Number(row.phase_at || row.finished_at),
+        httpStatus: row.http_status ?? undefined,
+        errorCode: row.error_code ?? undefined,
+        meta: parseMeta(row.meta),
+      });
+    }
+  } catch (err: unknown) {
+    // A restore failure must not take down job tracking; the process simply
+    // starts with whatever it learns from here on.
+    logError("inflight", "terminal_restore:error", err);
+  }
+}
+
+interface TerminalJobRow {
+  request_id: string;
+  kind: string;
+  status: string;
+  started_at: number;
+  finished_at: number;
+  phase?: string | null;
+  phase_at?: number | null;
+  http_status?: number | null;
+  error_code?: string | null;
+  meta?: string | null;
+}
+
+function persistTerminalJob(job: TerminalJob): void {
+  try {
+    getDb()
+      .prepare(`
+        INSERT OR REPLACE INTO terminal_jobs (
+          request_id, kind, status, started_at, finished_at, phase, phase_at, http_status, error_code, meta
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        job.requestId,
+        job.kind,
+        job.status,
+        job.startedAt,
+        job.finishedAt,
+        job.phase,
+        job.phaseAt,
+        job.httpStatus ?? null,
+        job.errorCode ?? null,
+        JSON.stringify(job.meta ?? {}),
+      );
+  } catch (err: unknown) {
+    logError("inflight", "terminal_persist:error", err);
+  }
+}
 const abortControllers = new Map<string, AbortController>();
 const controllerRegisteredAt = new Map<string, number>();
 const ORPHAN_CONTROLLER_TTL_MS = Math.max(config.inflight.ttlMs * 6, 60 * 60 * 1000);
@@ -178,6 +255,7 @@ export function abortJob(requestId: string | null | undefined) {
 
 export function isJobCanceled(requestId: string | null | undefined): boolean {
   if (!requestId) return false;
+  ensureTerminalJobsRestored();
   return terminalJobs.get(requestId)?.status === "canceled";
 }
 
@@ -231,7 +309,7 @@ export function finishJob(requestId: string | null | undefined, options: any = {
   const finishedAt = Date.now();
   if (j) {
     const status = options.canceled ? "canceled" : options.status || "completed";
-    terminalJobs.set(requestId, {
+    const snapshot: TerminalJob = {
       requestId,
       kind: j.kind,
       status,
@@ -246,7 +324,9 @@ export function finishJob(requestId: string | null | undefined, options: any = {
         ...j.meta,
         ...(options.meta || {}),
       },
-    });
+    };
+    terminalJobs.set(requestId, snapshot);
+    persistTerminalJob(snapshot);
     logEvent("inflight", "finish", {
       requestId,
       kind: j.kind,
@@ -256,7 +336,7 @@ export function finishJob(requestId: string | null | undefined, options: any = {
       errorCode: options.errorCode,
     });
   } else if (options.canceled && !terminalJobs.has(requestId)) {
-    terminalJobs.set(requestId, {
+    const tombstone: TerminalJob = {
       requestId,
       kind: "unknown",
       status: "canceled",
@@ -268,7 +348,9 @@ export function finishJob(requestId: string | null | undefined, options: any = {
       httpStatus: options.httpStatus,
       errorCode: options.errorCode,
       meta: {},
-    });
+    };
+    terminalJobs.set(requestId, tombstone);
+    persistTerminalJob(tombstone);
   }
   getDb().prepare("DELETE FROM inflight WHERE request_id = ?").run(requestId);
   abortControllers.delete(requestId);
@@ -279,6 +361,13 @@ export function finishJob(requestId: string | null | undefined, options: any = {
 export function reapTerminalJobs(now = Date.now()) {
   for (const [id, j] of terminalJobs) {
     if (now - j.finishedAt > config.inflight.terminalTtlMs) terminalJobs.delete(id);
+  }
+  try {
+    getDb()
+      .prepare("DELETE FROM terminal_jobs WHERE finished_at <= ?")
+      .run(now - config.inflight.terminalTtlMs);
+  } catch (err: unknown) {
+    logError("inflight", "terminal_reap:error", err);
   }
   for (const [id, registeredAt] of controllerRegisteredAt) {
     if (now - registeredAt <= ORPHAN_CONTROLLER_TTL_MS || getJob(id)) continue;
@@ -309,6 +398,7 @@ export function listJobs(filters: any = {}) {
 }
 
 export function listTerminalJobs(filters: any = {}) {
+  ensureTerminalJobsRestored();
   reapTerminalJobs();
   const { kind, sessionId } = filters;
   return Array.from(terminalJobs.values())
@@ -322,7 +412,9 @@ export function listTerminalJobs(filters: any = {}) {
 
 export function _resetForTests() {
   getDb().prepare("DELETE FROM inflight").run();
+  getDb().prepare("DELETE FROM terminal_jobs").run();
   terminalJobs.clear();
+  terminalJobsRestored = true;
   abortControllers.clear();
   controllerRegisteredAt.clear();
 }

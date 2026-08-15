@@ -77,6 +77,39 @@ function migrate(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_inflight_kind ON inflight(kind);
     CREATE INDEX IF NOT EXISTS idx_inflight_session ON inflight(session_id);
 
+    -- #151: terminal job snapshots outlive the process that produced them.
+    -- The in-memory map stays the source of truth; this table repopulates it
+    -- on the first read after a restart so a client that reconnects still
+    -- learns how its job ended.
+    CREATE TABLE IF NOT EXISTS terminal_jobs (
+      request_id  TEXT PRIMARY KEY,
+      kind        TEXT NOT NULL,
+      status      TEXT NOT NULL,
+      started_at  INTEGER NOT NULL,
+      finished_at INTEGER NOT NULL,
+      phase       TEXT NOT NULL DEFAULT 'unknown',
+      phase_at    INTEGER NOT NULL,
+      http_status INTEGER,
+      error_code  TEXT,
+      meta        TEXT NOT NULL DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_terminal_jobs_finished ON terminal_jobs(finished_at);
+
+    -- #151: idempotency keys. A duplicate POST carrying the same key replays
+    -- the first request's outcome instead of paying a provider twice.
+    CREATE TABLE IF NOT EXISTS idempotency_keys (
+      key              TEXT PRIMARY KEY,
+      request_id       TEXT NOT NULL,
+      kind             TEXT NOT NULL,
+      fingerprint      TEXT NOT NULL,
+      created_at       INTEGER NOT NULL,
+      terminal_status  TEXT,
+      terminal_payload TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_idempotency_created ON idempotency_keys(created_at);
+
     CREATE TABLE IF NOT EXISTS agent_sessions (
       id                 TEXT PRIMARY KEY,
       title              TEXT NOT NULL DEFAULT 'New Agent',
@@ -328,10 +361,10 @@ function migrate(database: Database.Database) {
 
   const row = database.prepare("SELECT value FROM _meta WHERE key = 'schema_version'").get() as { value?: string } | undefined;
   if (!row) {
-    database.prepare("INSERT INTO _meta (key, value) VALUES ('schema_version', '6')").run();
-  } else if (row.value !== "6") {
+    database.prepare("INSERT INTO _meta (key, value) VALUES ('schema_version', '7')").run();
+  } else if (row.value !== "7") {
     database
-      .prepare("UPDATE _meta SET value = '6' WHERE key = 'schema_version'")
+      .prepare("UPDATE _meta SET value = '7' WHERE key = 'schema_version'")
       .run();
   }
 }

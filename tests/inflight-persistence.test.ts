@@ -59,10 +59,11 @@ test("stale inflight jobs are purged by ttl", () => {
   assert.equal(inflight.listJobs({ kind: "classic" }).length, 0);
 });
 
-test("migration records schema version 6", () => {
+test("migration records schema version 7", () => {
   const row = db
     .getDb()
     .prepare("SELECT value FROM _meta WHERE key = 'schema_version'")
     .get() as { value: string } | undefined;
-  assert.equal(row?.value, "6");
+  // 7 adds terminal_jobs and idempotency_keys (#151).
+  assert.equal(row?.value, "7");
 });
