@@ -24,7 +24,27 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260815_open_issues_platform/` | 진행 중. 열린 이슈 6건 + envelope/adapter 1단계 |
+| `260815_open_issues_platform/` | v3.5.0으로 완료. 이관 판정은 다음 사이클 |
+
+### 2026-08-15 — 260815 사이클 결과
+
+열린 이슈 6건을 처분하고 **v3.3.0 → v3.4.0 → v3.5.0** 세 릴리스를 발행했다.
+릴리스 SHA `f5732686`, npm `latest` = `3.5.0`.
+
+| 이슈 | 결과 |
+|---|---|
+| #147 포지셔닝 | **closed.** Discussions `Provider Integration` 카테고리 생성으로 수용 조건 5개 충족 |
+| #151 job envelope | open. 1단계 착수 — 수용 조건 6개 중 3개 충족, 1개 부분 |
+| #150 provider adapter | open. 1단계 착수 — 2개 충족, 2개 부분 |
+| #152 provider canary | open. 과금 tier 워크플로 구현, 예산 승인 대기 |
+| #145 브랜치 보호 | open. 개인 계정 제약 재확인, 조직 이전은 소유자 결정 |
+| #153 우산 | open. 사이클 결과 반영 |
+
+WP0 계획을 sol medium 리뷰어에게 7라운드 감사받았다. FAIL 4회 뒤
+LOOP-REPAIR-01로 범위를 재설정하고 PASS를 받았다. 감사가 막아낸 설계
+결함은 090_outcome.md에 정리돼 있다 — envelope 조립 위치를 세 번 바꿨고,
+phase 전수 조사에서 5종을 더 찾았고, 부팅 시 키 일괄 마감이 다중 프로세스
+환경에서 살아있는 요청을 죽인다는 것을 발견했다.
 | `260814_issue_pr_zeroing_release/` | v3.1.0으로 완료. 이관 판정은 다음 사이클 |
 | `260814b_maturity_ops_measurement/` | v3.2.0으로 완료. 이관 판정은 다음 사이클 |
 
