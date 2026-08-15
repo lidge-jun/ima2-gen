@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import { buildAgyPathEnv, resolveAgyBin } from "../lib/agyCli.js";
 import { ATLASCLOUD_TEXT_TO_IMAGE_MODEL } from "../lib/atlasCloudImageAdapter.js";
 import { MINIMAX_TEXT_TO_IMAGE_MODEL } from "../lib/minimaxImageAdapter.js";
+import { getProviderAdapter } from "../lib/providers/adapters/index.js";
 import {
   MAX_VIDEO_DURATION,
   MIN_VIDEO_DURATION,
@@ -169,11 +170,24 @@ function atlasCloudLane(ctx: RuntimeContext): ModelLaneDto {
 }
 
 function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
-  const state: LaneState = ctx.minimaxApiKey
+  // #150 phase 1: MiniMax is the reference lane behind ProviderAdapterV1. The
+  // adapter owns auth state and the model list; the DTO projection stays here,
+  // so /api/models keeps its exact shape.
+  const adapter = getProviderAdapter(ctx, "minimax");
+  if (!adapter) {
+    const fallback: LaneState = ctx.minimaxApiKey
+      ? { status: "ready" }
+      : { status: "key-missing", reason: "MiniMax API key missing" };
+    return lane(fallback, { image: MINIMAX_TEXT_TO_IMAGE_MODEL }, {
+      image: entries(deriveModels("minimax", "image")), video: [],
+    });
+  }
+  const auth = adapter.validateAuth();
+  const state: LaneState = auth.ok
     ? { status: "ready" }
-    : { status: "key-missing", reason: "MiniMax API key missing" };
+    : { status: "key-missing", reason: auth.reason ?? "MiniMax API key missing" };
   return lane(state, { image: MINIMAX_TEXT_TO_IMAGE_MODEL }, {
-    image: entries(deriveModels("minimax", "image")), video: [],
+    image: entries(adapter.listModels().map((model) => model.id)), video: [],
   });
 }
 

@@ -63,7 +63,7 @@ afterEach(async () => {
 });
 
 async function withApp(
-  options: { manager?: FakeMcpManager; agyInstalled?: boolean } = {},
+  options: { manager?: FakeMcpManager; agyInstalled?: boolean; minimaxApiKey?: string } = {},
   run: (base: string, manager: FakeMcpManager) => Promise<void>,
 ) {
   const app = express();
@@ -74,6 +74,7 @@ async function withApp(
     grokUrl: "http://127.0.0.1:18645/v1",
     xaiApiKey: undefined,
     geminiApiKey: "gemini-test-key",
+    minimaxApiKey: options.minimaxApiKey,
     mcpConnectionManager: manager,
     config: {
       imageModels: {
@@ -197,4 +198,37 @@ test("routes/index.ts registers the canonical models endpoint", () => {
   const source = readFileSync(new URL("../routes/index.ts", import.meta.url), "utf8");
   assert.match(source, /import \{ registerModelsRoutes \} from "\.\/models\.js";/);
   assert.match(source, /registerModelsRoutes\(app, ctx\);/);
+});
+
+/**
+ * #150 phase 1 routes the MiniMax lane through ProviderAdapterV1. The adapter
+ * contract suite proves the adapter is correct; these two prove the DTO the
+ * route builds from it did not drift, in both credential states.
+ */
+test("the MiniMax lane keeps its exact DTO when no key is configured", async () => {
+  await withApp({}, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    const minimax = body.lanes.minimax;
+    assert.equal(minimax.status, "key-missing");
+    assert.equal(minimax.reason, "MiniMax API key missing");
+    assert.equal(minimax.defaults.image, "image-01");
+    assert.deepEqual(minimax.models.image.map((model) => model.id), ["image-01", "image-01-live"]);
+    assert.deepEqual(minimax.models.video, []);
+    for (const model of minimax.models.image) {
+      assert.equal(model.label, model.id);
+      assert.ok(Array.isArray(model.capabilities.inputRoles));
+    }
+  });
+});
+
+test("the MiniMax lane reports ready once the runtime context holds a key", async () => {
+  await withApp({ minimaxApiKey: "mm-test-key" }, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    const minimax = body.lanes.minimax;
+    assert.equal(minimax.status, "ready");
+    assert.equal(minimax.reason, undefined, "a ready lane carries no reason");
+    assert.equal(minimax.defaults.image, "image-01");
+    assert.deepEqual(minimax.models.image.map((model) => model.id), ["image-01", "image-01-live"]);
+    assert.deepEqual(minimax.models.video, []);
+  });
 });
