@@ -24,6 +24,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
+| `260815_open_issues_platform/` | 진행 중. 열린 이슈 6건 + envelope/adapter 1단계 |
 | `260814_issue_pr_zeroing_release/` | v3.1.0으로 완료. 이관 판정은 다음 사이클 |
 | `260814b_maturity_ops_measurement/` | v3.2.0으로 완료. 이관 판정은 다음 사이클 |
 
