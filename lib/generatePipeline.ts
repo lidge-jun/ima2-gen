@@ -34,9 +34,18 @@ import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt 
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
 import { deriveReferenceLimit } from "./providers/derive.js";
+import {
+  claimIdempotencyKey,
+  completeIdempotencyKey,
+  fingerprintRequest,
+  IdempotencyFingerprintConflict,
+  IdempotencyKeyInvalid,
+  readIdempotencyKey,
+} from "./jobs/idempotency.js";
 export async function runGeneratePipeline(req: Request, res: Response, ctx: RuntimeContext) {
     const requestId = normalizeBodyRequestId(req.body?.requestId, req.id);
     const asyncMode = req.body?.async === true;
+    let idempotencyKey: string | null = null;
     let finishStatus = "completed";
     let finishHttpStatus: number | undefined;
     let finishErrorCode: string | undefined;
@@ -48,6 +57,9 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       finishStatus = "error";
       finishHttpStatus = status;
       finishErrorCode = typeof payload.code === "string" ? payload.code : finishErrorCode;
+      // Recorded here rather than from an event subscriber: synchronous
+      // generation is the default and never publishes a terminal event.
+      completeIdempotencyKey(idempotencyKey, "error", { ...payload, status });
       if (asyncMode && res.headersSent) {
         publish(requestId, "error", { ...payload, status, requestId });
         return;
@@ -55,6 +67,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       return res.status(status).json(payload);
     };
     const succeed = (payload: Record<string, unknown>) => {
+      completeIdempotencyKey(idempotencyKey, "completed", payload);
       if (asyncMode) {
         publishJobEvent(requestId, "done", payload);
         return;
@@ -62,6 +75,46 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       res.json(payload);
     };
     try {
+      // Idempotency is resolved before any validation or provider work, so a
+      // replay costs nothing and cannot start a second paid generation.
+      try {
+        idempotencyKey = readIdempotencyKey(req.get("idempotency-key"), req.body?.idempotencyKey);
+      } catch (keyError: unknown) {
+        const message = keyError instanceof Error ? keyError.message : "invalid Idempotency-Key";
+        return res.status(400).json({ error: message, code: "IDEMPOTENCY_KEY_INVALID", requestId });
+      }
+      if (idempotencyKey) {
+        const fingerprint = fingerprintRequest(req.body);
+        let claim;
+        try {
+          claim = claimIdempotencyKey(idempotencyKey, requestId, "classic", fingerprint);
+        } catch (claimError: unknown) {
+          if (claimError instanceof IdempotencyFingerprintConflict) {
+            return res.status(409).json({
+              error: claimError.message,
+              code: "IDEMPOTENCY_KEY_CONFLICT",
+              requestId,
+            });
+          }
+          if (claimError instanceof IdempotencyKeyInvalid) {
+            return res.status(400).json({ error: claimError.message, code: "IDEMPOTENCY_KEY_INVALID", requestId });
+          }
+          throw claimError;
+        }
+        if (claim.outcome === "duplicate") {
+          const { record } = claim;
+          // Finished: hand back the stored outcome. Still running: point the
+          // caller at the request that owns it, so it can follow that job's
+          // events instead of starting a rival one.
+          if (record.terminalPayload) {
+            const status = record.terminalStatus === "error"
+              ? Number(record.terminalPayload.status) || 500
+              : 200;
+            return res.status(status).json({ ...record.terminalPayload, idempotentReplay: true });
+          }
+          return res.status(202).json({ requestId: record.requestId, async: true, idempotentReplay: true });
+        }
+      }
       const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
       const clientNodeId = typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
       const {

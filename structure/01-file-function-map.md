@@ -179,7 +179,7 @@ routes/
 | `lib/oauthProxy/index.ts` | 29 | Public surface — re-exports generators, streams, prompts, references, runtime, and shared types |
 | `lib/oauthProxy/generators.ts` | 229 | OAuth Responses single-image generation and stable generator exports |
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
-| `lib/generatePipeline.ts` | 641 | Classic generation pipeline, provider retry, persistence, background-preset prompt shaping, and event publication |
+| `lib/generatePipeline.ts` | 694 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
 | `lib/backgroundPresets.ts` | 47 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
 | `lib/multimodePipeline.ts` | 573 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
