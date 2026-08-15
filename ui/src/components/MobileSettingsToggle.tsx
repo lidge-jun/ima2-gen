@@ -35,7 +35,7 @@ export function MobileSettingsToggle() {
   const { t } = useI18n();
   const isMobile = useIsMobile();
 
-  if (!isMobile || settingsOpen || uiMode === "card-news" || uiMode === "agent" || uiMode === "assets" || uiMode === "asset-gen") return null;
+  if (!isMobile || settingsOpen || uiMode === "home" || uiMode === "card-news" || uiMode === "agent" || uiMode === "assets" || uiMode === "asset-gen") return null;
 
   const open = sheetOpen && sheetTab === "controls";
   const label = open ? t("sheet.controlsOpen") : t("sheet.controlsOpen");

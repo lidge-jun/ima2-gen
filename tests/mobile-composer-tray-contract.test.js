@@ -6,6 +6,8 @@ import { readSourceTree } from "./_readTree.mjs";
 const read = (path) => readFileSync(path, "utf8");
 
 const sheet = read("ui/src/components/MobileComposeSheet.tsx");
+const mobileAppBar = read("ui/src/components/MobileAppBar.tsx");
+const mobileSettingsToggle = read("ui/src/components/MobileSettingsToggle.tsx");
 const inflightBadge = read("ui/src/components/composer/InFlightBadge.tsx");
 const homeComposer = read("ui/src/components/home/HomePromptComposer.tsx");
 const homeHero = read("ui/src/components/home/HomeHero.tsx");
@@ -32,6 +34,15 @@ test("mobile prompt sheet uses the shared tray and an inline inflight disclosure
   assert.match(sheet, /panel\?\.contains\(event\.target as Node\)/);
   assert.match(sheet, /querySelector<HTMLButtonElement>\("\.inflight-badge"\)\?\.focus\(\)[\s\S]*?setInflightExpanded\(false\)/);
   assert.match(inflightBadge, /activeElement\.closest\("\.inflight-popup"\)/);
+});
+
+test("home never mounts classic-only mobile chrome", () => {
+  assert.match(mobileAppBar, /uiModeRaw === "home" \? "home"/);
+  assert.match(mobileAppBar, /uiMode !== "classic"/);
+  assert.match(sheet, /uiModeRaw === "home" \? "home"/);
+  assert.match(sheet, /uiMode === "classic"/);
+  assert.match(mobileSettingsToggle, /uiMode === "home"/);
+  assert.match(mobileAppBar, /:\s*"classic";/, "Create must keep the classic fallback");
 });
 
 test("mobile layout grows the textarea and keeps tray, actions, and targets touch-safe", () => {

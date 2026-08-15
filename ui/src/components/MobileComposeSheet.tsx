@@ -36,6 +36,7 @@ export function MobileComposeSheet() {
     uiModeRaw === "agent" && ENABLE_AGENT_MODE ? "agent" :
       uiModeRaw === "card-news" && ENABLE_CARD_NEWS_MODE ? "card-news" :
       uiModeRaw === "node" && ENABLE_NODE_MODE ? "node" :
+      uiModeRaw === "home" ? "home" :
       uiModeRaw === "assets" ? "assets" :
         "classic";
   const isMobile = useIsMobile();
