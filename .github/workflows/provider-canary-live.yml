@@ -1,0 +1,79 @@
+name: Provider canary (live)
+
+# #152 weekly and pre-release tiers. Unlike provider-canary.yml, this one issues
+# real generation requests and costs real money.
+#
+# Nothing schedules it and nothing triggers it from a pull request. Two checks
+# stand between a dispatch and a charge:
+#   1. the provider-canary-live environment, which holds the paid credentials
+#   2. a typed budget acknowledgment, checked before the script runs
+#
+# Neither is enforcement. On a personal-account repository an admin can bypass
+# the environment and self-review is permitted, so treat both as an early
+# warning that stops an accidental dispatch, not a control that stops a
+# determined one. Full classification: devlog 020_wp2_canary_live.md.
+#
+# release.yml deliberately does not call this. Wiring a paid step into the
+# release path before a budget is approved would make every release wait on
+# spend nobody authorized.
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'weekly: one image per credentialed lane. pre-release: generate + edit on two representative lanes'
+        required: true
+        default: weekly
+        type: choice
+        options: [weekly, pre-release]
+      budget_ack:
+        description: 'Type exactly: I approve provider canary spend'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provider-canary-live
+  cancel-in-progress: false
+
+jobs:
+  live-canary:
+    name: Live provider canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: provider-canary-live
+    env:
+      CANARY_LIVE_TIER: ${{ inputs.tier }}
+      CANARY_OPENAI_API_KEY: ${{ secrets.CANARY_OPENAI_API_KEY }}
+      CANARY_XAI_API_KEY: ${{ secrets.CANARY_XAI_API_KEY }}
+      CANARY_GEMINI_API_KEY: ${{ secrets.CANARY_GEMINI_API_KEY }}
+      CANARY_ATLASCLOUD_API_KEY: ${{ secrets.CANARY_ATLASCLOUD_API_KEY }}
+      CANARY_MINIMAX_API_KEY: ${{ secrets.CANARY_MINIMAX_API_KEY }}
+      CANARY_MINIMAX_BASE_URL: ${{ secrets.CANARY_MINIMAX_BASE_URL }}
+    steps:
+      - name: Verify spend acknowledgment
+        env:
+          BUDGET_ACK: ${{ inputs.budget_ack }}
+        run: |
+          if [ "$BUDGET_ACK" != "I approve provider canary spend" ]; then
+            echo "::error::budget_ack must be exactly: I approve provider canary spend"
+            exit 1
+          fi
+          echo "Spend acknowledged for tier: $CANARY_LIVE_TIER"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.0'
+      # No npm ci: the canary uses only Node builtins and fetch, matching
+      # provider-canary.yml. A dependency install would add failure modes that
+      # have nothing to do with providers.
+      - name: Probe provider lanes
+        run: node scripts/provider-canary-live.mjs | tee canary-live-results.jsonl
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: provider-canary-live-${{ inputs.tier }}
+          path: canary-live-results.jsonl
+          retention-days: 30
