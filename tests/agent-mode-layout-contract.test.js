@@ -46,4 +46,20 @@ describe("Agent Mode layout contract", () => {
     assert.doesNotMatch(topbar, /onToggleSidebar/);
     assert.doesNotMatch(css, /agent-workspace--collapsed/);
   });
+
+  it("reserves the fixed mobile tab bar strip so the composer send button stays clickable", () => {
+    const css = readSource("ui/src/styles/agent-workspace.css");
+    const navRailCss = readSource("ui/src/styles/nav-rail.css");
+
+    // The mobile tab bar is fixed to the bottom of the viewport and paints above
+    // the workspace, so a full-height agent workspace would hide the composer's
+    // send button behind the nav icons and make submit unclickable.
+    assert.match(navRailCss, /\.nav-rail--mobile\s*\{[\s\S]*?position:\s*fixed[\s\S]*?bottom:\s*0/);
+    assert.match(navRailCss, /\.nav-rail--mobile\s*\{[\s\S]*?z-index:\s*160/);
+    assert.match(
+      css,
+      /\.app\[data-ui-mode="agent"\]\[data-mobile="1"\] \.agent-workspace\s*\{[\s\S]*?height:\s*calc\(100dvh - 56px - env\(safe-area-inset-bottom, 0px\)\)/,
+      "agent mode must subtract the mobile tab bar height from the workspace height",
+    );
+  });
 });

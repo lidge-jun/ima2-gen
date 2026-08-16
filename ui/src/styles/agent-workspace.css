@@ -40,6 +40,14 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* The mobile tab bar is `position: fixed; bottom: 0` at z-index 160, so a full
+   100dvh workspace puts the composer's send button underneath it and the nav
+   icons swallow the click. Every other mobile workspace reserves the same
+   56px + safe-area strip; agent mode must do it here too. */
+.app[data-ui-mode="agent"][data-mobile="1"] .agent-workspace {
+  height: calc(100dvh - 56px - env(safe-area-inset-bottom, 0px));
+}
+
 .agent-workspace--tablet-stacked,
 .agent-workspace--mobile-chat-image-sheet {
   grid-template-columns: minmax(0, 1fr);

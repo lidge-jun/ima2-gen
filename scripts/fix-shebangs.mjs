@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Restore #!/usr/bin/env node shebang on emitted bin/*.js after tsc.
-import { readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+// Restore #!/usr/bin/env node shebang and the exec bit on emitted bin/*.js after tsc.
+import { chmodSync, readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const SHEBANG = "#!/usr/bin/env node\n";
 const BIN_DIR = "bin";
+const ENTRY = join(BIN_DIR, "ima2.js");
 
 function walk(dir) {
   const out = [];
@@ -20,11 +21,17 @@ function walk(dir) {
 const files = walk(BIN_DIR);
 for (const f of files) {
   const src = readFileSync(f, "utf8");
-  if (src.startsWith("#!")) continue;
-  // Only restore on entry files that originally had the shebang
-  // We'll restore on bin/ima2.js specifically; tsc strips it.
-  if (f === join("bin", "ima2.js")) {
+  // Only restore on entry files that originally had the shebang.
+  // tsc strips it, and also emits mode 0644, which breaks the global bin symlink.
+  if (f !== ENTRY) continue;
+  if (!src.startsWith("#!")) {
     writeFileSync(f, SHEBANG + src);
     console.log(`shebang restored: ${f}`);
+  }
+  try {
+    chmodSync(f, 0o755);
+    console.log(`exec bit ensured: ${f}`);
+  } catch (err) {
+    console.warn(`failed to chmod ${f}: ${err?.message ?? err}`);
   }
 }
