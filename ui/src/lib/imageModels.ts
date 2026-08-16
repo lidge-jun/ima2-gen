@@ -16,6 +16,7 @@ export const IMAGE_MODEL_OPTIONS: Array<{
   { value: "gpt-5.5", shortLabel: "5.5", fullLabelKey: "settings.imageModel.gpt55" },
   { value: "gpt-5.4", shortLabel: "5.4", fullLabelKey: "settings.imageModel.gpt54" },
   { value: "gpt-5.4-mini", shortLabel: "5.4m", fullLabelKey: "settings.imageModel.gpt54Mini" },
+  { value: "grok-imagine-image-2.0", shortLabel: "grok2", fullLabelKey: "settings.imageModel.grokImagine20" },
   { value: "grok-imagine-image-quality", shortLabel: "grok+", fullLabelKey: "settings.imageModel.grokImagineQuality" },
   { value: "grok-imagine-image", shortLabel: "grok", fullLabelKey: "settings.imageModel.grokImagine" },
   { value: "nano-banana-2", shortLabel: "nb2 agy", fullLabelKey: "settings.imageModel.nanoBanana2", providerHint: "agy" },

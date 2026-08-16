@@ -42,6 +42,7 @@ export const PROVIDER_MODELS = {
   },
   "grok": {
     "image": [
+      "grok-imagine-image-2.0",
       "grok-imagine-image",
       "grok-imagine-image-quality"
     ],
@@ -53,6 +54,7 @@ export const PROVIDER_MODELS = {
   },
   "grok-api": {
     "image": [
+      "grok-imagine-image-2.0",
       "grok-imagine-image",
       "grok-imagine-image-quality"
     ],
@@ -98,6 +100,7 @@ export const IMAGE_MODEL_IDS = [
   "gpt-5.6-sol",
   "gpt-5.6-terra",
   "gpt-5.6-luna",
+  "grok-imagine-image-2.0",
   "grok-imagine-image",
   "grok-imagine-image-quality",
   "nano-banana-2",

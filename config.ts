@@ -17,9 +17,10 @@ import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
 import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
 
-export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.5";
+export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.6";
 export const GROK_PLANNER_MODELS = [
   DEFAULT_GROK_PLANNER_MODEL,
+  "grok-4.5",
   "grok-4.3",
   "gpt-5.6-luna",
   "gpt-5.6-terra",
@@ -317,12 +318,17 @@ export const config = {
     restartMaxDelayMs: pickInt(env.IMA2_GROK_RESTART_MAX_DELAY_MS, fileCfg.grokProvider?.restartMaxDelayMs, 60_000),
     restartHealthyMs: pickInt(env.IMA2_GROK_RESTART_HEALTHY_MS, fileCfg.grokProvider?.restartHealthyMs, 60_000),
     plannerModel: pickStr(env.IMA2_GROK_PLANNER_MODEL, fileCfg.grokProvider?.plannerModel, DEFAULT_GROK_PLANNER_MODEL),
-    plannerTimeoutMs: pickInt(env.IMA2_GROK_PLANNER_TIMEOUT_MS, fileCfg.grokProvider?.plannerTimeoutMs, 60_000),
-    defaultImageModel: pickStr(env.IMA2_GROK_IMAGE_MODEL_DEFAULT, fileCfg.grokProvider?.defaultImageModel, "grok-imagine-image-quality"),
-    generationTimeoutMs: pickInt(env.IMA2_GROK_GENERATION_TIMEOUT_MS, fileCfg.grokProvider?.generationTimeoutMs, 120_000),
+    // grok-4.6 web-search planning measured ~72 s against the live proxy and a full
+    // search+generate round trip measured ~202 s, so the old 60 s budget aborted every
+    // default-path search. 300 s absorbs slow search days with room to spare.
+    plannerTimeoutMs: pickInt(env.IMA2_GROK_PLANNER_TIMEOUT_MS, fileCfg.grokProvider?.plannerTimeoutMs, 300_000),
+    defaultImageModel: pickStr(env.IMA2_GROK_IMAGE_MODEL_DEFAULT, fileCfg.grokProvider?.defaultImageModel, "grok-imagine-image-2.0"),
+    // grok-imagine-image-2.0 measured 43-97 s per image; 2k/batch requests run longer,
+    // so the image call gets the same generous 300 s ceiling as the planner.
+    generationTimeoutMs: pickInt(env.IMA2_GROK_GENERATION_TIMEOUT_MS, fileCfg.grokProvider?.generationTimeoutMs, 300_000),
     statusTimeoutMs: pickInt(env.IMA2_GROK_STATUS_TIMEOUT_MS, fileCfg.grokProvider?.statusTimeoutMs, 3000),
     defaultVideoModel: pickStr(env.IMA2_GROK_VIDEO_MODEL_DEFAULT, fileCfg.grokProvider?.defaultVideoModel, "grok-imagine-video-1.5"),
-    videoStartTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_START_TIMEOUT_MS, fileCfg.grokProvider?.videoStartTimeoutMs, 60_000),
+    videoStartTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_START_TIMEOUT_MS, fileCfg.grokProvider?.videoStartTimeoutMs, 150_000),
     videoPollIntervalMs: pickInt(env.IMA2_GROK_VIDEO_POLL_INTERVAL_MS, fileCfg.grokProvider?.videoPollIntervalMs, 5_000),
     videoPollMaxConsecutiveErrors: pickInt(env.IMA2_GROK_VIDEO_POLL_MAX_ERRORS, fileCfg.grokProvider?.videoPollMaxConsecutiveErrors, 5),
     videoTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_TIMEOUT_MS, fileCfg.grokProvider?.videoTimeoutMs, 900_000),

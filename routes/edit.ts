@@ -10,6 +10,7 @@ import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { resolveProviderOptions } from "../lib/providerOptions.js";
 import { editViaResponses } from "../lib/responsesImageAdapter.js";
 import { editViaGrok } from "../lib/grokImageAdapter.js";
+import { resolveGrokQualityModel } from "../lib/imageModels.js";
 import { generateViaAgy } from "../lib/agyImageAdapter.js";
 import { generateViaGeminiApi } from "../lib/geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../lib/atlasCloudImageAdapter.js";
@@ -280,7 +281,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         resultMimeFromProvider = r.mime;
       } else if (activeProvider === "grok" || activeProvider === "grok-api") {
         const directApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-        const grokModel = quality === "high" ? "grok-imagine-image-quality" : imageModel;
+        const grokModel = resolveGrokQualityModel(imageModel, quality);
         const r = await editViaGrok(prompt, imageB64, ctx, {
           model: grokModel,
           size: effectiveSize,
@@ -332,7 +333,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       const filename = await writeFileUnique(
         ctx.config.storage.generatedDir,
         buildFilename({
-          model: (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high" ? "grok-imagine-image-quality" : (imageModel || activeProvider),
+          model: (activeProvider === "grok" || activeProvider === "grok-api") ? resolveGrokQualityModel(imageModel, quality) : (imageModel || activeProvider),
           size: effectiveSize,
           createdAt,
           prompt,
@@ -381,7 +382,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         filename,
         usage,
         provider: activeProvider,
-        model: activeProvider === "grok" ? (quality === "high" ? "grok-imagine-image-quality" : imageModel) : imageModel,
+        model: activeProvider === "grok" ? resolveGrokQualityModel(imageModel, quality) : imageModel,
         moderation,
         warnings: qualityWarnings,
         revisedPrompt: revisedPrompt || null,

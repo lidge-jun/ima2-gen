@@ -11,6 +11,7 @@ import { normalizeOAuthParams } from "./oauthNormalize.js";
 import { resolveProviderOptions } from "./providerOptions.js";
 import { generateMultimodeViaResponses } from "./responsesImageAdapter.js";
 import { generateMultimodeViaGrok } from "./grokMultimodeAdapter.js";
+import { resolveGrokQualityModel } from "./imageModels.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
@@ -276,7 +277,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(resultMime) : mmFormat;
         const createdAt = Date.now();
         const baseName = buildFilename({
-          model: (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high" ? "grok-imagine-image-quality" : imageModel,
+          model: (activeProvider === "grok" || activeProvider === "grok-api") ? resolveGrokQualityModel(imageModel, quality) : imageModel,
           size: effectiveSize,
           createdAt,
           prompt,
@@ -303,7 +304,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           size: effectiveSize,
           format: resultFormat,
           moderation,
-          model: activeProvider === "grok" ? (quality === "high" ? "grok-imagine-image-quality" : imageModel) : imageModel,
+          model: activeProvider === "grok" ? resolveGrokQualityModel(imageModel, quality) : imageModel,
           provider: activeProvider,
           createdAt,
           usage: latestUsage,
@@ -394,7 +395,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         };
       } else if (activeProvider === "grok" || activeProvider === "grok-api") {
         const directApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-        const grokModel = quality === "high" ? "grok-imagine-image-quality" : imageModel;
+        const grokModel = resolveGrokQualityModel(imageModel, quality);
         const grokRefs = incomingProviderUrl
           ? [{ b64: "", url: incomingProviderUrl }, ...refCheck.refDetails]
           : refCheck.refDetails;

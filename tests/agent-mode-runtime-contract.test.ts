@@ -223,7 +223,7 @@ describe("Agent Mode runtime contract", () => {
       });
     };
 
-    for (const plannerModel of ["grok-4.5", "grok-4.3"]) {
+    for (const plannerModel of ["grok-4.6", "grok-4.5", "grok-4.3"]) {
       calls.length = 0;
       await withApp(async (baseUrl) => {
       const created = await createSession(baseUrl);
@@ -251,7 +251,7 @@ describe("Agent Mode runtime contract", () => {
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/generations")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/edits")).length, 0);
       assert.equal(calls.find((call) => call.url.endsWith("/v1/chat/completions"))?.body.model, plannerModel);
-      assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model, "grok-imagine-image-quality");
+      assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model, "grok-imagine-image-2.0");
       assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model === plannerModel, false);
       assert.match(calls.find((call) => call.url.endsWith("/v1/chat/completions"))?.body.messages[1].content[0].text, /English only/);
       });

@@ -12,6 +12,7 @@ import { normalizeOAuthParams } from "./oauthNormalize.js";
 import { resolveProviderOptions } from "./providerOptions.js";
 import { generateViaResponses } from "./responsesImageAdapter.js";
 import { generateViaGrok, planGrokImage } from "./grokImageAdapter.js";
+import { resolveGrokQualityModel } from "./imageModels.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
@@ -349,7 +350,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
       const sharedGrokPlan = activeProvider === "grok" || activeProvider === "grok-api"
         ? await planGrokImage(generationPrompt, ctx, {
-          model: quality === "high" ? "grok-imagine-image-quality" : imageModel,
+          model: resolveGrokQualityModel(imageModel, quality),
           size: effectiveSize,
           signal: cancelController.signal,
           requestId,
@@ -405,7 +406,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           return r;
         }
         if (activeProvider === "grok" || activeProvider === "grok-api") {
-          const grokModel = quality === "high" ? "grok-imagine-image-quality" : imageModel;
+          const grokModel = resolveGrokQualityModel(imageModel, quality);
           const r = await generateViaGrok(generationPrompt, ctx, {
             model: grokModel,
             size: effectiveSize,
@@ -501,7 +502,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           }
           const createdAt = Date.now();
           const baseName = buildFilename({
-            model: (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high" ? "grok-imagine-image-quality" : imageModel,
+            model: (activeProvider === "grok" || activeProvider === "grok-api") ? resolveGrokQualityModel(imageModel, quality) : imageModel,
             size: effectiveSize,
             createdAt,
             prompt,
@@ -527,7 +528,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             size: effectiveSize,
             format: resultFormat,
             moderation,
-            model: activeProvider === "grok" ? (quality === "high" ? "grok-imagine-image-quality" : imageModel) : imageModel,
+            model: activeProvider === "grok" ? resolveGrokQualityModel(imageModel, quality) : imageModel,
             reasoningEffort,
             provider: activeProvider,
             createdAt,

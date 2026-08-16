@@ -74,7 +74,7 @@ export function getGrokEndpoint(ctx: RouteRuntimeContext, path = "/v1/images/gen
 }
 
 export function getGrokTimeout(ctx: RouteRuntimeContext): number {
-  return (ctx.config as any).grokProvider?.generationTimeoutMs || 120_000;
+  return (ctx.config as any).grokProvider?.generationTimeoutMs || 300_000;
 }
 
 export function grokError(message: string, status: number, code: string): Error {
@@ -96,7 +96,7 @@ export function getPlannerConfig(ctx: RouteRuntimeContext): { model: string; tim
   const grokCfg = (ctx.config as any).grokProvider || {};
   return {
     model: grokCfg.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
-    timeoutMs: grokCfg.plannerTimeoutMs || 60_000,
+    timeoutMs: grokCfg.plannerTimeoutMs || 300_000,
   };
 }
 

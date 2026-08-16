@@ -365,7 +365,7 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
     saveVideoDefaults({ model: false });
   }
   if ((provider === "grok" || provider === "grok-api") && !isGrokImageModel(currentModel)) {
-    const grokModel = "grok-imagine-image-quality";
+    const grokModel = "grok-imagine-image-2.0";
     saveImageModel(grokModel);
     set({ provider, imageModel: grokModel });
   } else if ((provider === "agy" || provider === "gemini-api") && !isGeminiImageModel(currentModel)) {

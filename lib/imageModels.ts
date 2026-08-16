@@ -7,8 +7,21 @@ const UNSUPPORTED_IMAGE_MODELS = deriveUnsupportedImageModels();
 const FALLBACK_REASONING_EFFORT = "none";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
 
-export const GROK_FALLBACK_IMAGE_MODEL = "grok-imagine-image-quality";
+export const GROK_FALLBACK_IMAGE_MODEL = "grok-imagine-image-2.0";
+// xAI's current flagship Imagine image model. The legacy "quality" knob used to
+// swap in grok-imagine-image-quality; 2.0 supersedes it for high-quality work,
+// so the knob now resolves here. An explicit user selection is never downgraded.
+export const GROK_QUALITY_IMAGE_MODEL = "grok-imagine-image-2.0";
 const VALID_GROK_IMAGE_MODELS = deriveModels("grok", "image");
+
+/**
+ * Resolve the Grok image model for a request, honoring the high-quality knob.
+ * Returns the caller's model untouched unless quality === "high".
+ */
+export function resolveGrokQualityModel(model: string | undefined, quality: unknown): string {
+  if (quality !== "high") return model ?? GROK_FALLBACK_IMAGE_MODEL;
+  return GROK_QUALITY_IMAGE_MODEL;
+}
 
 const GEMINI_API_FALLBACK_IMAGE_MODEL = "nano-banana-2";
 const VALID_GEMINI_API_MODELS = deriveModels("gemini-api", "image");

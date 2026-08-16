@@ -16,7 +16,7 @@ import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 import { generateVideoViaGrok, type GrokVideoGenerateResult } from "./grokVideoAdapter.js";
-import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE } from "./imageModels.js";
+import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, resolveGrokQualityModel } from "./imageModels.js";
 import { parseVideoParams } from "./agentGenerationPlanner.js";
 import {
   isVideoGenerationError,
@@ -33,7 +33,7 @@ import { errInfo } from "./errInfo.js";
 import { type RuntimeContext } from "./runtimeContext.js";
 import { type AgentRunOptions, forceImagePrompt, isTextOnlyResult, textOnlyError, notFound } from "./agentRuntime.js";
 
-const AGENT_GROK_PLANNER_MODELS = new Set([DEFAULT_GROK_PLANNER_MODEL, "grok-4.3"]);
+const AGENT_GROK_PLANNER_MODELS = new Set([DEFAULT_GROK_PLANNER_MODEL, "grok-4.5", "grok-4.3"]);
 
 export async function generateAgentImageWithRetry(
   ctx: RuntimeContext,
@@ -90,8 +90,8 @@ async function generateAgentImage(
     throw err;
   }
   const activeProvider = providerOptions.provider;
-  const effectiveModel = activeProvider === "grok" && options.quality === "high"
-    ? "grok-imagine-image-quality"
+  const effectiveModel = activeProvider === "grok"
+    ? resolveGrokQualityModel(providerOptions.model, options.quality)
     : providerOptions.model;
   const response = activeProvider === "agy"
     ? await generateViaAgy(`${manifest}\n\nUser request:\n${prompt}`, {

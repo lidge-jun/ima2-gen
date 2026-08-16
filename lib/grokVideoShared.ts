@@ -84,12 +84,12 @@ export function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
   const g = (ctx.config as any).grokProvider || {}; // justified: RouteRuntimeContext.config is a loose runtime bag; every Grok adapter reads grokProvider this way
   return {
     model: g.defaultVideoModel || GROK_FALLBACK_VIDEO_MODEL,
-    startTimeoutMs: g.videoStartTimeoutMs || 60_000,
+    startTimeoutMs: g.videoStartTimeoutMs || 150_000,
     pollIntervalMs: g.videoPollIntervalMs || 5_000,
     totalTimeoutMs: g.videoTimeoutMs || 900_000,
     pollMaxConsecutiveErrors: g.videoPollMaxConsecutiveErrors || 5,
     plannerModel: g.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
-    plannerTimeoutMs: g.plannerTimeoutMs || 60_000,
+    plannerTimeoutMs: g.plannerTimeoutMs || 300_000,
   };
 }
 

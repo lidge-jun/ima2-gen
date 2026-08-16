@@ -16,7 +16,7 @@ import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 
 function assetGenModel(s: AppState): AppState["imageModel"] | undefined {
   const provider = s.assetGenProvider;
-  if (provider === "grok" || provider === "grok-api") return "grok-imagine-image-quality";
+  if (provider === "grok" || provider === "grok-api") return "grok-imagine-image-2.0";
   // GPT(oauth/api): reuse the globally selected model only when it is a GPT
   // model. Grok/Gemini models would be rejected by the server with
   // INVALID_IMAGE_MODEL, so fall back to the server default instead.

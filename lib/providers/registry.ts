@@ -67,6 +67,7 @@ export const REGISTRY = [
     vendor: "xai",
     credentials: [{ kind: "oauth-proxy", envVars: ["IMA2_GROK_PROXY_HOST", "IMA2_GROK_PROXY_PORT"], configKey: "grokProvider" }],
     models: [
+      { id: "grok-imagine-image-2.0", kind: "image", supports: EDIT },
       { id: "grok-imagine-image", kind: "image", supports: EDIT },
       { id: "grok-imagine-image-quality", kind: "image", supports: EDIT },
       { id: "grok-imagine-video", kind: "video", supports: EDIT },
@@ -74,7 +75,7 @@ export const REGISTRY = [
     ],
     referenceLimits: { image: 3, edit: 3, video: 7 },
     elementTaxonomy: "grok",
-    limits: { timeoutMs: 120_000 },
+    limits: { timeoutMs: 300_000 },
     errorPrefix: "GROK_",
   },
   {
@@ -89,6 +90,7 @@ export const REGISTRY = [
       configKey: "xaiApiKey",
     }],
     models: [
+      { id: "grok-imagine-image-2.0", kind: "image", supports: EDIT },
       { id: "grok-imagine-image", kind: "image", supports: EDIT },
       { id: "grok-imagine-image-quality", kind: "image", supports: EDIT },
       { id: "grok-imagine-video", kind: "video", supports: EDIT },
@@ -96,7 +98,7 @@ export const REGISTRY = [
     ],
     referenceLimits: { image: 3, edit: 3, video: 7 },
     elementTaxonomy: "grok",
-    limits: { timeoutMs: 120_000 },
+    limits: { timeoutMs: 300_000 },
     errorPrefix: "GROK_",
   },
   {

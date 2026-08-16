@@ -660,7 +660,7 @@ describe("API provider parity", () => {
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/responses")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/chat/completions")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/generations")).length, 1);
-      assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model, "grok-imagine-image-quality");
+      assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model, "grok-imagine-image-2.0");
     });
   });
 

@@ -9,6 +9,7 @@ import { normalizeOAuthParams } from "./oauthNormalize.js";
 import { resolveProviderOptions } from "./providerOptions.js";
 import { generateViaResponses, editViaResponses } from "./responsesImageAdapter.js";
 import { generateViaGrok } from "./grokImageAdapter.js";
+import { resolveGrokQualityModel } from "./imageModels.js";
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
@@ -87,8 +88,8 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       const effectiveSize = providerOptions.size;
       const webSearchEnabled = providerOptions.webSearchEnabled;
       const activeProvider = providerOptions.provider;
-      const effectiveImageModel = (activeProvider === "grok" || activeProvider === "grok-api") && quality === "high"
-        ? "grok-imagine-image-quality"
+      const effectiveImageModel = (activeProvider === "grok" || activeProvider === "grok-api")
+        ? resolveGrokQualityModel(imageModel, quality)
         : imageModel;
       if (contextMode === "ancestry") {
         finishStatus = "error";

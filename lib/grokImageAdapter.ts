@@ -184,7 +184,7 @@ export function buildGrokPlannerPayload(
               },
               model: {
                 type: "string",
-                enum: ["grok-imagine-image", "grok-imagine-image-quality"],
+                enum: ["grok-imagine-image-2.0", "grok-imagine-image", "grok-imagine-image-quality"],
                 description: "The xAI image model. The server may override this with the user's selected model.",
               },
             },

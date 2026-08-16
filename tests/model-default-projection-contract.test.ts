@@ -14,9 +14,10 @@ function readSource(path: string) {
 }
 
 describe("current model defaults: runtime contract", () => {
-  it("projects Grok 4.5 and Luna through shared configuration", () => {
-    assert.equal(DEFAULT_GROK_PLANNER_MODEL, "grok-4.5");
+  it("projects Grok 4.6 and Luna through shared configuration", () => {
+    assert.equal(DEFAULT_GROK_PLANNER_MODEL, "grok-4.6");
     assert.equal(GROK_PLANNER_MODELS[0], DEFAULT_GROK_PLANNER_MODEL);
+    assert.ok(GROK_PLANNER_MODELS.includes("grok-4.5"));
     assert.ok(GROK_PLANNER_MODELS.includes("grok-4.3"));
     assert.equal(config.grokProvider.plannerModel, DEFAULT_GROK_PLANNER_MODEL);
     assert.equal(config.imageModels.default, "gpt-5.6-luna");
@@ -26,7 +27,7 @@ describe("current model defaults: runtime contract", () => {
 
   it("keeps compatibility activation while centralizing Grok fallbacks", () => {
     const agentSource = readSource("lib/agentImageVideoGen.ts");
-    assert.match(agentSource, /DEFAULT_GROK_PLANNER_MODEL, "grok-4\.3"/);
+    assert.match(agentSource, /DEFAULT_GROK_PLANNER_MODEL, "grok-4\.5", "grok-4\.3"/);
 
     for (const path of [
       "lib/grokImageCore.ts",
@@ -52,9 +53,9 @@ describe("current model defaults: runtime contract", () => {
     );
     assert.deepEqual(
       AGENT_LLM_MODEL_OPTIONS.filter((option) => option.provider === "grok").map((option) => option.value),
-      ["grok-4.5", "grok-4.3"],
+      ["grok-4.6", "grok-4.5", "grok-4.3"],
     );
-    assert.equal(getAgentLlmModelOption({ provider: "grok", model: "unknown" }).value, "grok-4.5");
+    assert.equal(getAgentLlmModelOption({ provider: "grok", model: "unknown" }).value, "grok-4.6");
     assert.equal(getAgentLlmModelOption({ provider: "grok", model: "grok-4.3" }).value, "grok-4.3");
   });
 

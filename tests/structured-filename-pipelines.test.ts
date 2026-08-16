@@ -246,7 +246,10 @@ describe("structured filenames across image pipelines", () => {
   });
 
   it("wires the effective grok/grok-api high-quality model rule into all three lanes", () => {
-    const grokRule = /\(activeProvider === "grok" \|\| activeProvider === "grok-api"\) && quality === "high" \? "grok-imagine-image-quality"/;
+    // The high-quality knob now resolves through the shared helper, which maps
+    // "high" onto the current flagship model instead of hardcoding the legacy
+    // grok-imagine-image-quality id at every call site.
+    const grokRule = /\(activeProvider === "grok" \|\| activeProvider === "grok-api"\) \? resolveGrokQualityModel\(imageModel, quality\)/;
     const classic = readFileSync(join(process.cwd(), "lib/generatePipeline.ts"), "utf8");
     const multimode = readFileSync(join(process.cwd(), "lib/multimodePipeline.ts"), "utf8");
     const edit = readFileSync(join(process.cwd(), "routes/edit.ts"), "utf8");
@@ -256,7 +259,7 @@ describe("structured filenames across image pipelines", () => {
     assert.match(edit, grokRule);
     // Agent lane: caller's effectiveModel (grok high override at :85-87) is the
     // persisted generation.model.
-    assert.match(agent, /const effectiveModel = activeProvider === "grok" && options\.quality === "high"\s*\?\s*"grok-imagine-image-quality"/);
+    assert.match(agent, /const effectiveModel = activeProvider === "grok"\s*\?\s*resolveGrokQualityModel\(providerOptions\.model, options\.quality\)/);
     assert.match(agent, /buildFilename\(\{ model: generation\.model, size, createdAt, prompt, ext: format \}\)/);
   });
 });
