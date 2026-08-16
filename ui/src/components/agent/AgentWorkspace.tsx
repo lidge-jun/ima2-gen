@@ -358,6 +358,12 @@ export function AgentWorkspace() {
   const retryQueue = (itemId: string) => {
     void retryAgentQueueItem(itemId).then(applyMutationWorkspace).catch(reportMutationError);
   };
+  // UX-STATE-01: a failed run must expose recovery where the user sees it. Retrying
+  // used to require opening the queue panel and finding the row by hand.
+  const failedQueueItemId = selectedRunSummary?.status === "error"
+    ? queueItems.find((item) => item.status === "failed")?.id
+    : undefined;
+  const retryFailedRun = failedQueueItemId ? () => retryQueue(failedQueueItemId) : undefined;
   const attachFiles = (files: File[]) => {
     if (!selectedSessionId || files.length === 0) return;
     void attachAgentImageFiles({
@@ -439,6 +445,7 @@ export function AgentWorkspace() {
           onAttachFiles={attachFiles}
           onImageSelect={selectImage}
           onSend={sendMessage}
+          onRetryRun={retryFailedRun}
         />
         {isDesktop ? (
           <AgentStagePane currentImage={currentImage} images={images} onImageSelect={selectImage} onOpenPanel={() => setToolsPanelOpen(true)} />

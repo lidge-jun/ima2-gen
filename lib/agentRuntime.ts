@@ -357,14 +357,27 @@ export function forceImagePrompt(prompt: string) {
   ].join("\n");
 }
 
+/**
+ * Codes where the upstream turn finished but produced no usable image, so a second
+ * attempt with a forced-image prompt is worth making.
+ *
+ * IMAGE_TOOL_FAILED belongs here even though the tool WAS invoked: the image call
+ * reported `status: "failed"` upstream, which is a transient per-call outcome rather
+ * than a rejection of the request. Leaving it out surfaced a raw
+ * "Responses image tool call failed." error to the user for a prompt that succeeded
+ * on an immediate manual retry.
+ */
+const RETRYABLE_NO_IMAGE_CODES = new Set([
+  "EMPTY_RESPONSE",
+  "IMAGE_TOOL_NOT_CALLED",
+  "WEB_SEARCH_ONLY_RESPONSE",
+  "IMAGE_TOOL_COMPLETED_WITHOUT_RESULT",
+  "IMAGE_TOOL_FAILED",
+]);
+
 export function isTextOnlyResult(error: unknown) {
   const err = errInfo(error);
-  return [
-    "EMPTY_RESPONSE",
-    "IMAGE_TOOL_NOT_CALLED",
-    "WEB_SEARCH_ONLY_RESPONSE",
-    "IMAGE_TOOL_COMPLETED_WITHOUT_RESULT",
-  ].includes(err.code || "") || err.message.includes("No image data");
+  return RETRYABLE_NO_IMAGE_CODES.has(err.code || "") || err.message.includes("No image data");
 }
 
 export function textOnlyError(cause: unknown) {
@@ -372,10 +385,16 @@ export function textOnlyError(cause: unknown) {
     code?: string | undefined;
     status?: number | undefined;
     cause?: unknown | undefined;
+    rawCode?: string | undefined;
   };
   err.code = "AGENT_TEXT_ONLY_RESULT";
   err.status = 422;
   err.cause = cause;
+  // Keep the code that actually caused the give-up. The wrapper code alone tells the
+  // user nothing about WHY no image came back, and every retry lands on the same
+  // generic string once the underlying cause is dropped.
+  const causeCode = errInfo(cause).code;
+  if (causeCode) err.rawCode = causeCode;
   return err;
 }
 

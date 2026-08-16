@@ -191,10 +191,13 @@ describe("Agent Mode frontend shell contract", () => {
     assert.match(workspace, /payload\.workspace/);
     assert.match(workspace, /t\("agent\.pending"\)/);
     assert.match(chat, /runProgress: AgentRunProgress \| null/);
-    assert.match(chat, /<AgentRunStatusBar progress=\{runProgress\} \/>/);
+    // The status bar also carries the failed-run recovery action (UX-STATE-01),
+    // so it is no longer a progress-only element.
+    assert.match(chat, /<AgentRunStatusBar progress=\{runProgress\} onRetry=\{onRetryRun\} \/>/);
     assert.match(statusBar, /role="status"/);
     assert.match(statusBar, /aria-live="polite"/);
     assert.match(statusBar, /agent-run-status/);
+    assert.match(statusBar, /agent-run-status__retry/);
     assert.match(runProgress, /labelKey: "pendingQueued" \| "pendingPlanning" \| "pendingGenerating" \| "runError"/);
     assert.match(runProgress, /turn\.role === "tool"/);
     assert.match(list, /aria-live="polite"/);

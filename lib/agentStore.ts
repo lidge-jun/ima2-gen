@@ -22,6 +22,7 @@ import {
   type AgentGenerationSettings,
   type AgentImageHandle,
   type AgentImageInput,
+  type AgentSessionRunSummary,
   type AgentTurn,
   type AgentTurnRole,
   type AgentTurnStatus,
@@ -302,8 +303,40 @@ export function getAgentWorkspacePayload(selectedSessionId?: string | null): Age
 	    allowedTools: AGENT_ALLOWED_TOOLS,
 	    manifest: selected ? buildImageContextManifest(selected) : null,
 	    queueBySession: queueProjection.queueBySession,
-	    runSummaryBySession: queueProjection.runSummaryBySession,
+	    runSummaryBySession: clearStaleRunErrors(queueProjection.runSummaryBySession, turnsBySession),
 	  };
+}
+
+/**
+ * The queue summary only knows about queued work, so a later SUCCESSFUL direct turn
+ * (POST /turns, which never enqueues) left the last failed queue item as the session's
+ * run status. The composer then showed "Run failed" forever, even while the newest
+ * turns were completed images.
+ *
+ * Drop the error only when a newer non-error turn proves the session recovered; the
+ * failure stays visible when it really is the latest thing that happened.
+ */
+function clearStaleRunErrors(
+  runSummaryBySession: Record<string, AgentSessionRunSummary>,
+  turnsBySession: Record<string, AgentTurn[]>,
+): Record<string, AgentSessionRunSummary> {
+  const corrected: Record<string, AgentSessionRunSummary> = {};
+  for (const [sessionId, summary] of Object.entries(runSummaryBySession)) {
+    corrected[sessionId] = summary.status === "error" && hasRecoveredSince(turnsBySession[sessionId])
+      ? { ...summary, status: "idle", lastError: null }
+      : summary;
+  }
+  return corrected;
+}
+
+function hasRecoveredSince(turns: readonly AgentTurn[] | undefined): boolean {
+  if (!turns?.length) return false;
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index];
+    if (!turn || turn.role !== "assistant") continue;
+    return turn.status !== "error";
+  }
+  return false;
 }
 
 export function buildImageContextManifest(sessionId: string) {

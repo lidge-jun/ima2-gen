@@ -98,7 +98,7 @@ routes/
 | `routes/cardNews.ts` | 213 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
 | `routes/generationRequestLog.ts` | 19 | `GET /api/generation-requests` — ring buffer of last 200 generation attempts (#95) |
 | `lib/generationRequestLog.ts` | 42 | In-memory generation request log store |
-| `routes/agent.ts` | 325 | Agent Mode API — sessions, turns, durable queue, compact, manifest, tools (`/api/agent/*`); backed by `lib/agent*.ts`; no CLI wrapper |
+| `routes/agent.ts` | 331 | Agent Mode API — sessions, turns, durable queue, compact, manifest, tools (`/api/agent/*`); backed by `lib/agent*.ts`; no CLI wrapper |
 | `routes/promptBuilder.ts` | 38 | `POST /api/prompt-builder/chat` prompt-builder assistant (`lib/promptBuilder/client.ts`); wrapped by `ima2 prompt build` |
 | `routes/events.ts` | 95 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat; serializes `jobSeq` and the job envelope |
 | `lib/eventBus.ts` | 147 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, per-job `jobSeq` (LRU-bounded), `replaySince`, `hasReplayGap` |
@@ -279,10 +279,10 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | File | Lines | Responsibility |
 |---|---:|---|
 | `lib/agentTypes.ts` | 178 | Shared Agent Mode types |
-| `lib/agentStore.ts` | 423 | SQLite session/turn persistence |
+| `lib/agentStore.ts` | 456 | SQLite session/turn persistence |
 | `lib/agentStoreRows.ts` | 137 | Row mapping helpers for agent store |
 | `lib/agentSettings.ts` | 77 | Per-session generation settings |
-| `lib/agentRuntime.ts` | 414 | Turn execution, tool dispatch, generation delegation |
+| `lib/agentRuntime.ts` | 433 | Turn execution, tool dispatch, generation delegation |
 | `lib/agentQueueStore.ts` | 358 | Durable async queue persistence |
 | `lib/agentQueueWorker.ts` | 221 | Background queue worker |
 | `lib/agentCommandParser.ts` | 77 | Slash-command parsing |
@@ -320,7 +320,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Image helpers | `ui/src/lib/image.ts` | 42 | Browser image utilities |
 | Compression | `ui/src/lib/compress.ts` | 159 | Browser-side image compression for references and uploads |
 | Cost | `ui/src/lib/cost.ts` | 91 | Quality/size cost estimation |
-| Error codes | `ui/src/lib/errorCodes.ts` | 222 | Stable error code → translation key mapping |
+| Error codes | `ui/src/lib/errorCodes.ts` | 229 | Stable error code → translation key mapping |
 | Error handler | `ui/src/lib/errorHandler.ts` | 24 | Routes errors to toast or persistent `ErrorCard` |
 | Image models | `ui/src/lib/imageModels.ts` | 142 | UI-side image model labels |
 | Video source count | `ui/src/lib/videoSourceCount.ts` | 52 | Effective video source counter for 1080p UI enablement; treats provider URL and node parent still/video sources as single I2V anchors |

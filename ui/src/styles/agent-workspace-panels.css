@@ -117,6 +117,32 @@
   cursor: default;
 }
 
+/* The failed-run recovery action. It is the primary action of the error state,
+   so it carries an accent border instead of the neutral control treatment, and
+   keeps the same 26px rhythm as the queue button beside it. */
+.agent-run-status__retry {
+  min-height: 26px;
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 42%, var(--border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--red) 12%, var(--control-bg));
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.agent-run-status__retry:hover {
+  background: color-mix(in srgb, var(--red) 20%, var(--control-bg));
+}
+
+/* When retry is present it owns the auto margin, so the queue button must drop
+   its own or the two actions split to opposite edges of the bar. */
+.agent-run-status__retry + .agent-run-status__queue {
+  margin-left: 6px;
+}
+
 .agent-message-list__empty,
 .agent-tab-empty {
   color: var(--text-dim);
@@ -232,6 +258,37 @@
 
 .agent-message.is-error .agent-message__role {
   color: var(--red);
+}
+
+/* UX-STATE-01: an error state must read as recoverable information, not as a
+   flat red slab. The tinted field is dropped to a hairline + left rule so the
+   failure sits in the same rhythm as the surrounding turns, and the reason
+   line stays legible instead of fighting a saturated background. */
+.agent-message.is-error {
+  border-color: color-mix(in srgb, var(--red) 26%, var(--border));
+  background: color-mix(in srgb, var(--red) 4%, var(--surface));
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--red) 62%, var(--border));
+}
+
+.agent-message.is-error .agent-message__role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in srgb, var(--red) 82%, var(--text));
+}
+
+/* A dot carries the status without an emoji or an icon dependency. */
+.agent-message.is-error .agent-message__role::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--red);
+}
+
+.agent-message.is-error p {
+  color: var(--text);
 }
 
 .agent-message__role {

@@ -550,6 +550,42 @@ describe("Agent Mode runtime contract", () => {
     });
   });
 
+  it("retries a failed image tool call instead of surfacing it as a dead end", async () => {
+    let upstreamHits = 0;
+    globalThis.fetch = async (url, init) => {
+      if (String(url).startsWith("http://127.0.0.1:")) return originalFetch(url, init);
+      upstreamHits++;
+      // An upstream image_generation_call that reports status "failed" is a transient
+      // per-call outcome, not a rejection: the same prompt succeeds on a retry.
+      return sseResponse([
+        {
+          type: "response.output_item.done",
+          item: { type: "image_generation_call", status: "failed" },
+        },
+        { type: "response.completed", response: { usage: { total_tokens: 1 } } },
+      ]);
+    };
+
+    await withApp(async (baseUrl) => {
+      const created = await createSession(baseUrl);
+      const res = await fetch(`${baseUrl}/api/agent/sessions/${created.selectedSessionId}/turns`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "draw something", provider: "api" }),
+      });
+      const body = await res.json() as { code: string; rawCode?: string };
+
+      assert.equal(res.status, 422);
+      assert.equal(upstreamHits, 2, "IMAGE_TOOL_FAILED must be retried once before giving up");
+      assert.equal(body.code, "AGENT_TEXT_ONLY_RESULT");
+      assert.equal(
+        body.rawCode,
+        "IMAGE_TOOL_FAILED",
+        "the give-up error must keep the underlying cause so the UI can explain it",
+      );
+    });
+  });
+
   it("classifies timeout, auth, and protocol wedge errors as runtime-restartable", () => {
     const timeout = Object.assign(new Error("timed out"), { code: "RESPONSES_IMAGE_TIMEOUT" });
     const auth = Object.assign(new Error("auth failed"), { code: "AUTH_CHATGPT_EXPIRED" });

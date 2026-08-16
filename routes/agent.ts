@@ -303,9 +303,15 @@ function queueItemNotFound(itemId: string) {
 
 function sendError(res: Response, error: unknown) {
   const err = errInfo(error);
+  // A wrapper code such as AGENT_TEXT_ONLY_RESULT carries the real cause in rawCode.
+  // Forward it so the UI can render the specific error card instead of a generic one.
+  const rawCode = (error && typeof error === "object")
+    ? (error as { rawCode?: unknown }).rawCode
+    : undefined;
   res.status(err.status || 500).json({
     error: { code: err.code || "AGENT_ERROR", message: err.message },
     code: err.code || "AGENT_ERROR",
+    ...(typeof rawCode === "string" && rawCode ? { rawCode } : {}),
   });
 }
 

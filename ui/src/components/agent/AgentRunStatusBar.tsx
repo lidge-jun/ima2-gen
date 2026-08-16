@@ -6,6 +6,7 @@ type Props = {
   progress: AgentRunProgress | null;
   queueSummary?: { activeCount: number; failedCount: number };
   onQueueOpen?: () => void;
+  onRetry?: (() => void) | undefined;
 };
 
 function formatElapsed(startedAt: number | null | undefined, now: number): string | null {
@@ -14,7 +15,7 @@ function formatElapsed(startedAt: number | null | undefined, now: number): strin
   return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(totalSeconds % 60).padStart(2, "0")}`;
 }
 
-export function AgentRunStatusBar({ progress, queueSummary, onQueueOpen }: Props) {
+export function AgentRunStatusBar({ progress, queueSummary, onQueueOpen, onRetry }: Props) {
   const { t } = useI18n();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -50,6 +51,11 @@ export function AgentRunStatusBar({ progress, queueSummary, onQueueOpen }: Props
       {elapsed ? <time className="agent-run-status__elapsed" dateTime={`PT${Math.floor((now - (progress?.startedAt ?? now)) / 1000)}S`}>{elapsed}</time> : null}
       {progress?.status === "error" && progress.lastError ? (
         <span className="agent-run-status__meta">{progress.lastError}</span>
+      ) : null}
+      {progress?.status === "error" && onRetry ? (
+        <button type="button" className="agent-run-status__retry" onClick={onRetry}>
+          {t("agent.retryQueue")}
+        </button>
       ) : null}
       <button type="button" className="agent-run-status__queue" onClick={onQueueOpen} disabled={!onQueueOpen}>
         {t("agent.queueSummary", { active: activeCount, failed: failedCount })}

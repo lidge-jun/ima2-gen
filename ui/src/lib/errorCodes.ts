@@ -189,7 +189,14 @@ export function resolveErrorSpec(err: unknown): ResolvedErrorSpec {
   const incomingCode = typeof rec.code === "string" ? rec.code : "";
   const incomingRawCode = typeof rec.rawCode === "string" ? rec.rawCode : undefined;
   const incomingClass = typeof rec.errorClass === "string" ? rec.errorClass : undefined;
-  const registered = incomingCode && incomingCode in errorCodes ? incomingCode as ImaErrorCode : undefined;
+  // A wrapper code (e.g. the agent's AGENT_TEXT_ONLY_RESULT) is not in the registry,
+  // but it carries the underlying cause in rawCode. Fall back to that so the user sees
+  // WHY generation gave up instead of a generic unknown-error toast.
+  const registered = incomingCode && incomingCode in errorCodes
+    ? incomingCode as ImaErrorCode
+    : incomingRawCode && incomingRawCode in errorCodes
+      ? incomingRawCode as ImaErrorCode
+      : undefined;
   const priority = isPriorityErrorClass(incomingClass) ? classSpec(incomingClass) : undefined;
   const fallbackClass = classSpec(incomingClass);
   let code: ImaErrorCode;

@@ -9,7 +9,7 @@ process.env.IMA2_CONFIG_DIR = testDir;
 process.env.IMA2_DB_PATH = join(testDir, "sessions.db");
 
 const db = await import("../lib/db.ts");
-const { createAgentSession, getAgentWorkspacePayload } = await import("../lib/agentStore.ts");
+const { appendAgentTurn, createAgentSession, getAgentWorkspacePayload } = await import("../lib/agentStore.ts");
 const {
   claimNextAgentQueueItem,
   completeAgentQueueItem,
@@ -68,5 +68,24 @@ describe("Agent queue persistence contracts", () => {
     const summary = getAgentWorkspacePayload(session.id).runSummaryBySession[session.id];
     assert.equal(summary.status, "idle");
     assert.equal(summary.lastError, null);
+  });
+
+  it("clears a queue failure once a later direct turn succeeded", () => {
+    const session = createAgentSession({ title: "direct turn recovery" });
+    const failed = createAgentQueueItem({ sessionId: session.id, prompt: "queued failure" });
+    claimNextAgentQueueItem(limits);
+    failAgentQueueItem(failed.id, { code: "IMAGE_TOOL_FAILED", message: "Responses image tool call failed." });
+
+    const stillFailing = getAgentWorkspacePayload(session.id).runSummaryBySession[session.id];
+    assert.equal(stillFailing.status, "error", "a real, latest failure must stay visible");
+
+    // POST /turns never enqueues, so a successful direct turn leaves the failed queue
+    // item as the newest queue row. Without the turn-aware correction the composer
+    // keeps showing "Run failed" on top of freshly generated images.
+    appendAgentTurn({ sessionId: session.id, role: "assistant", text: "이미지 생성이 완료됐어요.", status: "complete" });
+
+    const recovered = getAgentWorkspacePayload(session.id).runSummaryBySession[session.id];
+    assert.equal(recovered.status, "idle");
+    assert.equal(recovered.lastError, null);
   });
 });

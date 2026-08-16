@@ -22,6 +22,7 @@ type Props = {
   onAttachFiles: (files: File[]) => void;
   onImageSelect: (imageId: string) => void;
   onSend: (text: string) => void;
+  onRetryRun?: (() => void) | undefined;
 };
 
 export function AgentChatPane({
@@ -39,6 +40,7 @@ export function AgentChatPane({
   onAttachFiles,
   onImageSelect,
   onSend,
+  onRetryRun,
 }: Props) {
   const { t } = useI18n();
 
@@ -55,7 +57,7 @@ export function AgentChatPane({
         </div>
       </header>
       <AgentMessageList turns={turns} imagesById={imagesById} currentImageId={currentImageId} onImageSelect={onImageSelect} />
-      <AgentRunStatusBar progress={runProgress} />
+      <AgentRunStatusBar progress={runProgress} onRetry={onRetryRun} />
       <AgentComposer webSearchEnabled={session?.webSearchEnabled ?? false} insertedPrompt={insertedPrompt} onWebSearchChange={onWebSearchChange} onAttachFiles={onAttachFiles} onSend={onSend} />
     </section>
   );
