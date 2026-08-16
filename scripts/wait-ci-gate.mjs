@@ -49,6 +49,25 @@ function listRuns() {
   );
 }
 
+/**
+ * A single `gh` call can fail on a transient api.github.com i/o timeout. That
+ * once killed a release cut at minute 12 of an otherwise green candidate run:
+ * the CI it was watching went on to pass, but the gate had already exited 1.
+ *
+ * Polling is idempotent, so a failed poll is not evidence about the run — only
+ * about the network. Return null and let the caller poll again; the surrounding
+ * deadline still bounds the wait, so a genuinely unreachable API times out
+ * rather than looping forever.
+ */
+function listRunsOrNull() {
+  try {
+    return listRuns();
+  } catch (error) {
+    console.log(`ci gate: transient list failure, retrying — ${String(error.message || error).split("\n")[0]}`);
+    return null;
+  }
+}
+
 function latestId() {
   const runs = JSON.parse(
     gh(["run", "list", "--workflow", "ci.yml", "--limit", "5", "--json", "databaseId"]),
@@ -68,7 +87,8 @@ async function waitFor(afterRunId, candidateSha, timeoutMinutes) {
     if (Date.now() > discoveryDeadline) {
       throw new Error(`no ci.yml run with headSha ${candidateSha} appeared above run id ${afterRunId}`);
     }
-    run = pickRun(listRuns(), afterRunId, candidateSha);
+    const runs = listRunsOrNull();
+    run = runs ? pickRun(runs, afterRunId, candidateSha) : null;
     if (!run) await sleep(POLL_MS);
   }
   console.log(`ci gate: watching run ${run.databaseId} (headSha ${run.headSha})`);
@@ -76,7 +96,7 @@ async function waitFor(afterRunId, candidateSha, timeoutMinutes) {
   while (run.status !== "completed") {
     if (Date.now() > deadline) throw new Error(`ci.yml run ${run.databaseId} did not finish in time`);
     await sleep(POLL_MS);
-    const fresh = listRuns().find((candidate) => candidate.databaseId === run.databaseId);
+    const fresh = listRunsOrNull()?.find((candidate) => candidate.databaseId === run.databaseId);
     if (fresh) run = fresh;
   }
   if (run.conclusion !== "success") {

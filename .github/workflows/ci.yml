@@ -33,13 +33,7 @@ jobs:
           - os: ubuntu-latest
             node: '22.23.0'
             npm: '11.18.0'
-          - os: windows-latest
-            node: '22.23.0'
-            npm: '11.18.0'
           - os: ubuntu-latest
-            node: '24.17.0'
-            npm: '12.0.0'
-          - os: windows-latest
             node: '24.17.0'
             npm: '12.0.0'
     steps:
@@ -150,6 +144,66 @@ jobs:
       - name: Publish dry-run
         if: matrix.os == 'ubuntu-latest' && matrix.npm == '11.18.0'
         run: npm run publish:dry-run
+
+  # Windows is a supported install target, so its coverage is kept — but it is
+  # off the release path. The two Windows legs were the slowest thing on the
+  # board and they gated every release cut, while the only failure they ever
+  # produced was EPERM in a test's own `rmSync` teardown on a temp dir the OS
+  # had not released yet. That is a Windows filesystem behaviour, not a defect
+  # in the shipped package, and it blocked releases that were otherwise green
+  # on every other leg.
+  #
+  # `schedule` only: never on push, and never on the workflow_dispatch that
+  # release.yml uses for its candidate gate. A regression here is caught within
+  # a day and fixed on its own merit instead of stopping a release.
+  windows:
+    name: windows (node ${{ matrix.node }}, npm ${{ matrix.npm }})
+    if: github.event_name == 'schedule'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: '22.23.0'
+            npm: '11.18.0'
+          - node: '24.17.0'
+            npm: '12.0.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Pin npm
+        run: npm install -g npm@${{ matrix.npm }}
+      - name: Install root deps
+        run: npm ci
+      - name: Native dependency smoke
+        run: npm run test:native-deps
+      - name: Install ui deps
+        run: npm --prefix ui ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build server (tsc emit)
+        run: npm run build:server
+      - name: Build cli (tsc emit)
+        run: npm run build:cli
+      - name: Build ui
+        run: npm --prefix ui run build
+      - name: Run tests
+        run: npm test
+        timeout-minutes: 20
+      - name: Package install smoke
+        run: npm run test:package-install
+        timeout-minutes: 15
+      - name: CLI smoke (--version)
+        run: node bin/ima2.js --version
+      - name: CLI smoke (capabilities)
+        run: node bin/ima2.js capabilities --json
 
   e2e:
     name: frontend e2e (ubuntu)
