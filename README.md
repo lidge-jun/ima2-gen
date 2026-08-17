@@ -314,7 +314,9 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_GROK_PROXY_PORT` | `18645` | Port for the bundled progrok proxy |
 | `IMA2_NO_GROK_PROXY` | — | Set `1` to disable automatic progrok startup |
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok search/planner model (also configurable via settings UI or `--planner-model` CLI flag) |
-| `IMA2_GROK_PLANNER_TIMEOUT_MS` | `60000` | Timeout for Grok search and planner calls |
+| `IMA2_GROK_PLANNER_TIMEOUT_MS` | `900000` | Timeout for the Grok planner call |
+| `IMA2_GROK_SEARCH_TIMEOUT_MS` | `300000` | Timeout for the Grok web-search brief (degrades instead of failing) |
+| `IMA2_GROK_VIDEO_PLAN_TOTAL_TIMEOUT_MS` | `1500000` | Ceiling on the whole video planning phase |
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` | Default final Grok image model |
 | `IMA2_GROK_VIDEO_MODEL_DEFAULT` | `grok-imagine-video-1.5` | Default Grok video model |
 | `IMA2_GROK_GENERATION_TIMEOUT_MS` | `120000` | Timeout for the final Grok Images API call |

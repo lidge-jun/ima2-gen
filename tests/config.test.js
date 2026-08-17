@@ -76,7 +76,10 @@ test("config exposes default shape", () => {
   assert.equal(c.history.maxPageCap, 500);
   assert.equal(c.ids.generatedHexBytes, 4);
   assert.equal(c.ids.nodeHexBytes, 5);
-  assert.equal(c.inflight.ttlMs, 600000);
+  // Raised so the TTL outlives the longest legal request: purgeStaleJobs() drops the job
+  // row without aborting its worker, so a 10-minute TTL erased live Grok videos mid-flight.
+  // devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+  assert.equal(c.inflight.ttlMs, 4200000);
   assert.equal(c.inflight.terminalTtlMs, 300000);
   assert.deepEqual(c.oauth.validModeration.sort(), ["auto", "low"]);
   assert.equal(c.imageModels.default, "gpt-5.6-luna");

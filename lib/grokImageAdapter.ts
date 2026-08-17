@@ -230,7 +230,10 @@ export async function searchGrokVisualContext(
   const plannerModel = options.plannerModel || planner.model;
   const payload = buildGrokSearchPayload(prompt, plannerModel);
   const { url, headers } = getGrokEndpoint(ctx, "/v1/responses", options.directApiKey);
-  const { combinedSignal, timer } = withTimeoutSignal(options.signal, planner.timeoutMs);
+  // The search brief has its own, smaller budget: it runs BEFORE the planner call inside
+  // the same user request, so charging it the full planner budget lets one slow stage eat
+  // the other's time. See devlog/_plan/260817_grok_video_planner_timeout/010.
+  const { combinedSignal, timer } = withTimeoutSignal(options.signal, planner.searchTimeoutMs);
 
   logEvent("grok", "search:start", { requestId: options.requestId, plannerModel, promptChars: prompt.length });
   try {

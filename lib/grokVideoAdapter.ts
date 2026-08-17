@@ -1,11 +1,11 @@
-import { logEvent } from "./logger.js";
+import { logEvent, logWarn } from "./logger.js";
 import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { grokError, searchGrokVisualContext } from "./grokImageAdapter.js";
 import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { aspectToCanvas, generateWhiteCanvasB64 } from "./grokVideoCanvas.js";
 import { downloadVideo } from "./grokVideoDownload.js";
-import { buildGrokVideoPlannerSystemPrompt, formatDurationPacingGuidance, type VideoPlannerContext } from "./grokVideoPlannerPrompt.js";
+import { buildGrokVideoPlannerSystemPrompt, composeFallbackVideoPrompt, formatDurationPacingGuidance, type VideoPlannerContext } from "./grokVideoPlannerPrompt.js";
 import type { VideoAspectRatio, VideoMode, VideoResolution } from "./imageModels.js";
 import {
   GROK_VIDEO_MODEL_15,
@@ -43,6 +43,48 @@ export interface GrokVideoPlan {
   resolution: VideoResolution;
   aspectRatio: VideoAspectRatio;
   webSearchCalls: number;
+  /**
+   * Set when the web-search brief was skipped because it timed out or failed. The plan is
+   * still valid — the planner has the system prompt, the user prompt, the source image and
+   * continuity context without a brief — but the caller can surface the degradation.
+   */
+  searchDegraded?: GrokVideoSearchDegradation | undefined;
+  /** Set when the planner itself was unavailable and the prompt was composed locally. */
+  plannerDegraded?: GrokVideoPlannerDegradation | undefined;
+}
+
+export interface GrokVideoSearchDegradation {
+  reason: "timeout" | "failed";
+  message: string;
+}
+
+export interface GrokVideoPlannerDegradation {
+  reason: "timeout" | "failed" | "empty";
+  message: string;
+}
+
+/**
+ * A planner failure is degradable when retrying or waiting could plausibly have produced a
+ * prompt: a stall, an upstream 5xx, or a network fault.
+ *
+ * A 4xx is NOT degradable — the request itself is malformed or unauthorized, and generating
+ * a video anyway would spend the user's quota on a request the provider already rejected.
+ *
+ * Neither is a 200 that carries no usable tool call: the planner ANSWERED and declined or
+ * malfunctioned, which is a judgment about the request rather than an availability problem.
+ * Billing a video start on the back of a refusal is worse for the user than an honest error.
+ */
+export function isDegradablePlannerFailure(err: any): { reason: GrokVideoPlannerDegradation["reason"]; message: string } | null {
+  const message = typeof err?.message === "string" ? err.message : "planner unavailable";
+  if (err?.name === "AbortError") return { reason: "timeout", message };
+  const code = typeof err?.code === "string" ? err.code : "";
+  if (code === "GROK_PLANNER_TIMEOUT") return { reason: "timeout", message };
+  if (code === "GROK_PLANNER_NETWORK_FAILED") return { reason: "failed", message };
+  const status = typeof err?.status === "number" ? err.status : 0;
+  if (code === "GROK_PLANNER_BAD_REQUEST" && status >= 500) return { reason: "failed", message };
+  // 429 is the same availability class as a stall: the upstream is saturated, not offended.
+  if (code === "GROK_PLANNER_BAD_REQUEST" && status === 429) return { reason: "failed", message };
+  return null;
 }
 
 export interface GrokVideoGenerateResult {
@@ -60,6 +102,10 @@ export interface GrokVideoGenerateResult {
   requestedModel: string;
   effectiveModel: string;
   modelFallback: { from: string; to: string } | null;
+  /** Present when the video was planned without a web-search brief. */
+  searchDegraded?: GrokVideoSearchDegradation | undefined;
+  /** Present when the video was generated from a locally composed prompt. */
+  plannerDegraded?: GrokVideoPlannerDegradation | undefined;
 }
 
 function canonicalVideoModel(model: string): string {
@@ -171,7 +217,46 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
   const aspectRatio = options.aspectRatio || "auto";
   const plannerModel = options.plannerModel || cfg.plannerModel;
   const model = canonicalVideoModel(options.model || cfg.model);
-  const search = await searchGrokVisualContext(prompt, ctx, { ...(options.signal ? { signal: options.signal } : {}), ...(options.requestId ? { requestId: options.requestId } : {}), ...(options.directApiKey ? { directApiKey: options.directApiKey } : {}), plannerModel });
+  // One deadline for the whole planning phase. Both stages run under it, so search and
+  // planner can never sum to two independent budgets (the shape of the 360 s failure).
+  // devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+  const phase = withTimeoutSignal(options.signal, cfg.planTotalTimeoutMs);
+  const phaseSignal = phase.combinedSignal;
+  /** A phase-ceiling abort is fatal; it must never be mistaken for a degradable failure. */
+  const phaseExpired = () => phaseSignal.aborted && !options.signal?.aborted;
+  try {
+  // The web-search brief is an enhancement, not a requirement: a slow or failing search
+  // used to abort the whole video request (GROK_PLANNER_TIMEOUT / GROK_SEARCH_TIMEOUT).
+  // Degrade instead, and keep the planner's own budget intact.
+  // devlog/_plan/260817_grok_video_planner_timeout/020_search_resilience.md
+  let searchSummary: string | undefined;
+  let searchDegraded: GrokVideoSearchDegradation | undefined;
+  try {
+    // Pass the PHASE signal, never a locally wrapped search timer: searchGrokVisualContext
+    // reports any abort of its `options.signal` as a user cancellation, so handing it our
+    // own deadline would turn a slow search — the exact case 020 exists to degrade — into
+    // GENERATION_CANCELED. The stage bound is applied inside that function via
+    // getPlannerConfig().searchTimeoutMs.
+    const search = await searchGrokVisualContext(prompt, ctx, { signal: phaseSignal, ...(options.requestId ? { requestId: options.requestId } : {}), ...(options.directApiKey ? { directApiKey: options.directApiKey } : {}), plannerModel });
+    searchSummary = search.summary;
+  } catch (e: any) { // justified: adapter rejections are untyped; the shape is narrowed here
+    // A user cancellation is a real cancellation and must never be swallowed. Neither is
+    // the planning-phase ceiling: searchGrokVisualContext reports an inherited abort as its
+    // own cancellation, so without this check a ceiling hit would "degrade" and then start
+    // the planner after the phase had already expired.
+    if (options.signal?.aborted) throw e;
+    if (phaseExpired()) throw grokError("Grok video planning timed out", 504, "GROK_VIDEO_PLAN_TIMEOUT");
+    if (e?.code === "GENERATION_CANCELED") throw e;
+    searchDegraded = {
+      reason: e?.code === "GROK_SEARCH_TIMEOUT" ? "timeout" : "failed",
+      message: typeof e?.message === "string" ? e.message : "web search unavailable",
+    };
+    logWarn("grok", "video:search:degraded", {
+      requestId: options.requestId,
+      reason: searchDegraded.reason,
+      error: searchDegraded.message,
+    });
+  }
   const referenceImageUrls = (options.referenceImages ?? []).map((img) => sourceImageUrl(img, undefined));
   const payload = buildGrokVideoPlannerPayload(prompt, {
     model,
@@ -180,14 +265,14 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
     resolution,
     aspectRatio,
     plannerModel,
-    searchSummary: search.summary,
+    searchSummary,
     sourceImageUrl: options.sourceImage ? sourceImageUrl(options.sourceImage, options.sourceMime) : undefined,
     referenceImageUrls,
     continuityLineage: options.continuityLineage,
     backgroundConstraint: options.backgroundConstraint,
   });
   const { url, headers } = videoEndpoint(ctx, "/v1/chat/completions", options.directApiKey);
-  const { combinedSignal, timer } = withTimeoutSignal(options.signal, cfg.plannerTimeoutMs);
+  const { combinedSignal, timer } = withTimeoutSignal(phaseSignal, cfg.plannerTimeoutMs);
   logEvent("grok", "video:planner:start", { requestId: options.requestId, mode, duration, resolution });
   try {
     // Safe to replay: the planner produces no billable artifact, only a prompt.
@@ -202,15 +287,56 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
     }
     const planPrompt = parseGrokVideoPlanPrompt(await res.json());
     logEvent("grok", "video:planner:done", { requestId: options.requestId, mode, promptChars: planPrompt.length });
-    return { prompt: planPrompt, mode, duration, resolution, aspectRatio, webSearchCalls: 1 };
+    return {
+      prompt: planPrompt,
+      mode,
+      duration,
+      resolution,
+      aspectRatio,
+      // Honest accounting: no brief means no billable search call was completed.
+      webSearchCalls: searchDegraded ? 0 : 1,
+      ...(searchDegraded ? { searchDegraded } : {}),
+    };
   } catch (e: any) {
     clearTimeout(timer);
-    if (e.name === "AbortError") {
-      if (options.signal?.aborted) throw grokError("Generation canceled", 499, "GENERATION_CANCELED");
-      throw grokError("Grok video planner timed out", 504, "GROK_PLANNER_TIMEOUT");
-    }
-    if (e.code && e.status) throw e;
-    throw grokError(`Grok video planner request failed: ${e.message}`, 502, "GROK_PLANNER_NETWORK_FAILED");
+    // Real cancellation and the planning-phase ceiling are always fatal.
+    if (options.signal?.aborted) throw grokError("Generation canceled", 499, "GENERATION_CANCELED");
+    if (phaseExpired()) throw grokError("Grok video planning timed out", 504, "GROK_VIDEO_PLAN_TIMEOUT");
+    const normalized = e.name === "AbortError"
+      ? grokError("Grok video planner timed out", 504, "GROK_PLANNER_TIMEOUT")
+      : (e.code && e.status ? e : grokError(`Grok video planner request failed: ${e.message}`, 502, "GROK_PLANNER_NETWORK_FAILED"));
+    // A stalled or broken planner must not cost the user their video: the user's own
+    // prompt is already usable, so compose one locally and continue. 4xx stays fatal.
+    // devlog/_plan/260817_grok_video_planner_timeout/040_planner_fallback.md
+    const degradable = isDegradablePlannerFailure(normalized);
+    if (!degradable) throw normalized;
+    const fallbackPrompt = composeFallbackVideoPrompt(prompt, {
+      mode,
+      duration,
+      resolution,
+      searchSummary,
+      continuityText: formatVideoContinuityForPlanner(options.continuityLineage) || undefined,
+      backgroundConstraint: options.backgroundConstraint,
+    });
+    logWarn("grok", "video:planner:degraded", {
+      requestId: options.requestId,
+      reason: degradable.reason,
+      error: degradable.message,
+      promptChars: fallbackPrompt.length,
+    });
+    return {
+      prompt: fallbackPrompt,
+      mode,
+      duration,
+      resolution,
+      aspectRatio,
+      webSearchCalls: searchDegraded ? 0 : 1,
+      ...(searchDegraded ? { searchDegraded } : {}),
+      plannerDegraded: degradable,
+    };
+  }
+  } finally {
+    clearTimeout(phase.timer);
   }
 }
 
@@ -335,5 +461,7 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
     requestedModel: model,
     effectiveModel,
     modelFallback,
+    ...(plan.searchDegraded ? { searchDegraded: plan.searchDegraded } : {}),
+    ...(plan.plannerDegraded ? { plannerDegraded: plan.plannerDegraded } : {}),
   };
 }

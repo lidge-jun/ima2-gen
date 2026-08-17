@@ -164,3 +164,60 @@ export function buildGrokVideoPlannerSystemPrompt(ctx?: VideoPlannerContext): st
     "Call generate_video exactly once. Do not answer with plain text.",
   ].join("\n");
 }
+
+/** Hard cap so a degraded prompt never bloats the generation payload. */
+const FALLBACK_PROMPT_MAX_CHARS = 4000;
+/** The user's own scene text is the one part that must never be cut. */
+const FALLBACK_USER_PROMPT_RESERVE = 2500;
+
+/**
+ * Deterministic, network-free video prompt used when the Grok planner is unavailable
+ * (timeout, upstream failure, or an empty tool call).
+ *
+ * The user's own prompt is already a legitimate video prompt; this only adds the pacing
+ * and mode guidance the planner would have applied, so a stalled planner costs prompt
+ * polish instead of the whole generation.
+ * devlog/_plan/260817_grok_video_planner_timeout/040_planner_fallback.md
+ */
+export function composeFallbackVideoPrompt(
+  userPrompt: string,
+  opts: {
+    mode: VideoMode;
+    duration: number;
+    resolution?: VideoResolution | undefined;
+    searchSummary?: string | undefined;
+    continuityText?: string | undefined;
+    backgroundConstraint?: string | undefined;
+  },
+): string {
+  // The caller's prompt may already carry a long storyboard preamble. Truncating from the
+  // front would keep the boilerplate and drop the user's actual scene, so the user text is
+  // reserved first and everything else is fitted around it.
+  const base = userPrompt.trim().slice(0, FALLBACK_USER_PROMPT_RESERVE);
+  const modeLine = opts.mode === "image-to-video"
+    ? "Start from the provided source image as the first frame and preserve the subject's identity and composition while the described motion happens."
+    : opts.mode === "reference-to-video"
+    ? "Keep the referenced subjects recognizable throughout while the described motion happens."
+    : "Describe a fresh scene: establish the setting, then carry the described motion and camera work through the shot.";
+  // Continuity and background constraints are load-bearing: without them a continue-from
+  // clip can drift off-series, or a background preset can be silently ignored.
+  const continuity = opts.continuityText?.trim()
+    ? `Continuation context:\n${opts.continuityText.trim().slice(0, 600)}`
+    : "";
+  const background = opts.backgroundConstraint?.trim() ?? "";
+  const brief = opts.searchSummary?.trim()
+    ? `Research context: ${opts.searchSummary.trim().slice(0, 600)}`
+    : "";
+  const composed = [
+    base,
+    "",
+    modeLine,
+    continuity,
+    background,
+    formatDurationPacingGuidance(opts.duration, opts.mode, opts.resolution),
+    brief,
+  ].filter(Boolean).join("\n");
+  return composed.length > FALLBACK_PROMPT_MAX_CHARS
+    ? composed.slice(0, FALLBACK_PROMPT_MAX_CHARS).trimEnd()
+    : composed;
+}

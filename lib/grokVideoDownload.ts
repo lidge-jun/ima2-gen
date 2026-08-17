@@ -6,7 +6,7 @@ const MAX_VIDEO_DOWNLOAD_BYTES = 100 * 1024 * 1024;
 
 function downloadTimeoutMs(ctx: RouteRuntimeContext): number {
   const g = (ctx.config as any).grokProvider || {};
-  return g.videoDownloadTimeoutMs || 120_000;
+  return g.videoDownloadTimeoutMs || 300_000;
 }
 
 function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number) {

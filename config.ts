@@ -271,7 +271,11 @@ export const config = {
     nodeHexBytes: pickInt(env.IMA2_NODE_HEX_BYTES, fileCfg.ids?.nodeHexBytes, 5),
   },
   inflight: {
-    ttlMs: pickInt(env.IMA2_INFLIGHT_TTL_MS, fileCfg.inflight?.ttlMs, 10 * 60 * 1000),
+    // Must exceed the longest legal request. Grok video can legitimately run ~60 min
+    // (planning + start + poll + download), and purgeStaleJobs() drops the job row without
+    // aborting its worker, so a 10-minute TTL used to erase live jobs mid-flight.
+    // devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+    ttlMs: pickInt(env.IMA2_INFLIGHT_TTL_MS, fileCfg.inflight?.ttlMs, 70 * 60 * 1000),
     reapMs: pickInt(env.IMA2_INFLIGHT_REAP_MS, fileCfg.inflight?.reapMs, 60 * 1000),
     terminalTtlMs: pickInt(env.IMA2_INFLIGHT_TERMINAL_TTL_MS, fileCfg.inflight?.terminalTtlMs, 5 * 60 * 1000),
   },
@@ -318,21 +322,33 @@ export const config = {
     restartMaxDelayMs: pickInt(env.IMA2_GROK_RESTART_MAX_DELAY_MS, fileCfg.grokProvider?.restartMaxDelayMs, 60_000),
     restartHealthyMs: pickInt(env.IMA2_GROK_RESTART_HEALTHY_MS, fileCfg.grokProvider?.restartHealthyMs, 60_000),
     plannerModel: pickStr(env.IMA2_GROK_PLANNER_MODEL, fileCfg.grokProvider?.plannerModel, DEFAULT_GROK_PLANNER_MODEL),
-    // grok-4.6 web-search planning measured ~72 s against the live proxy and a full
-    // search+generate round trip measured ~202 s, so the old 60 s budget aborted every
-    // default-path search. 300 s absorbs slow search days with room to spare.
-    plannerTimeoutMs: pickInt(env.IMA2_GROK_PLANNER_TIMEOUT_MS, fileCfg.grokProvider?.plannerTimeoutMs, 300_000),
+    // Measured 260817: the forced web_search brief takes 70-73 s idle / 44-79 s concurrent,
+    // and the planner tool call 9-32 s idle / 28-41 s concurrent. But the reported failure
+    // was a planner call that STALLED for its entire 300 s budget while an isolated probe
+    // of the same payload answered in 32 s. Budgets are therefore calibrated against the
+    // stall, not the probe: 900 s is 3x the observed stall.
+    // devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+    plannerTimeoutMs: pickInt(env.IMA2_GROK_PLANNER_TIMEOUT_MS, fileCfg.grokProvider?.plannerTimeoutMs, 900_000),
+    // The web-search brief gets its own bound: it is an enhancement, not a requirement, so
+    // it degrades instead of failing the request (lib/grokVideoAdapter.ts).
+    searchTimeoutMs: pickInt(env.IMA2_GROK_SEARCH_TIMEOUT_MS, fileCfg.grokProvider?.searchTimeoutMs, 300_000),
+    // Wired ceiling on search + planner combined, so the two stages cannot sum unbounded.
+    // It must be STRICTLY greater than searchTimeoutMs + plannerTimeoutMs (invariant enforced
+    // by tests): if it equals the sum, a slow search followed by a stalled planner lands both
+    // timers together, the phase ceiling wins the race, and the local planner fallback never
+    // runs. The margin exists so the planner's own timeout always fires first.
+    videoPlanTotalTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_PLAN_TOTAL_TIMEOUT_MS, fileCfg.grokProvider?.videoPlanTotalTimeoutMs, 1_500_000),
     defaultImageModel: pickStr(env.IMA2_GROK_IMAGE_MODEL_DEFAULT, fileCfg.grokProvider?.defaultImageModel, "grok-imagine-image-2.0"),
     // grok-imagine-image-2.0 measured 43-97 s per image; 2k/batch requests run longer,
     // so the image call gets the same generous 300 s ceiling as the planner.
     generationTimeoutMs: pickInt(env.IMA2_GROK_GENERATION_TIMEOUT_MS, fileCfg.grokProvider?.generationTimeoutMs, 300_000),
     statusTimeoutMs: pickInt(env.IMA2_GROK_STATUS_TIMEOUT_MS, fileCfg.grokProvider?.statusTimeoutMs, 3000),
     defaultVideoModel: pickStr(env.IMA2_GROK_VIDEO_MODEL_DEFAULT, fileCfg.grokProvider?.defaultVideoModel, "grok-imagine-video-1.5"),
-    videoStartTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_START_TIMEOUT_MS, fileCfg.grokProvider?.videoStartTimeoutMs, 150_000),
+    videoStartTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_START_TIMEOUT_MS, fileCfg.grokProvider?.videoStartTimeoutMs, 300_000),
     videoPollIntervalMs: pickInt(env.IMA2_GROK_VIDEO_POLL_INTERVAL_MS, fileCfg.grokProvider?.videoPollIntervalMs, 5_000),
     videoPollMaxConsecutiveErrors: pickInt(env.IMA2_GROK_VIDEO_POLL_MAX_ERRORS, fileCfg.grokProvider?.videoPollMaxConsecutiveErrors, 5),
-    videoTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_TIMEOUT_MS, fileCfg.grokProvider?.videoTimeoutMs, 900_000),
-    videoDownloadTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_DOWNLOAD_TIMEOUT_MS, fileCfg.grokProvider?.videoDownloadTimeoutMs, 120_000),
+    videoTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_TIMEOUT_MS, fileCfg.grokProvider?.videoTimeoutMs, 1_800_000),
+    videoDownloadTimeoutMs: pickInt(env.IMA2_GROK_VIDEO_DOWNLOAD_TIMEOUT_MS, fileCfg.grokProvider?.videoDownloadTimeoutMs, 300_000),
   },
   // Direct MiniMax image-generation provider (text-to-image / image-to-image).
   // Region selects the global (.io) or China (.minimaxi.com) OpenAI-compatible

@@ -445,6 +445,8 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         elapsed,
         usage: result.usage,
         webSearchCalls: result.webSearchCalls,
+        ...(result.searchDegraded ? { searchDegraded: result.searchDegraded } : {}),
+        ...(result.plannerDegraded ? { plannerDegraded: result.plannerDegraded } : {}),
         video: {
           duration: result.duration,
           resolution: result.resolution,

@@ -16,6 +16,14 @@ import {
 
 const VALID_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);
 const VALID_ASPECT_RATIOS = new Set(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"]);
+/**
+ * Client ceiling for a whole video request. The server's own worst case is
+ * 1200 s planning + 300 s start + 1800 s poll + 300 s download = 3600 s (config.ts
+ * grokProvider), so the client sits 600 s above it rather than racing an equal ceiling.
+ * The previous 600 s default gave up on requests the server would have finished.
+ * devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+ */
+const VIDEO_CLIENT_TIMEOUT_SEC = 4200;
 const VALID_MODELS = new Set([GROK_VIDEO_MODEL_BASE, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_15_PREVIEW_ALIAS]);
 const ACTIVE_VIDEO_PROMPT_GUIDANCE = "Active video prompt required: describe visual flow, motion flow, sound/no-music intent, dialogue/no-dialogue intent, and the desired ending frame. Pace the scene to naturally fill the selected duration with an opening composition, connected motion/emotion change, and stable ending frame.";
 
@@ -50,7 +58,7 @@ async function readJsonResponse(res: Response, label: string): Promise<Record<st
 }
 
 function parseTimeoutSeconds(seconds: unknown): number {
-  const sec = parseIntegerFlag(seconds, 600, "--timeout");
+  const sec = parseIntegerFlag(seconds, VIDEO_CLIENT_TIMEOUT_SEC, "--timeout");
   if (sec < 1) die(2, "--timeout must be at least 1");
   return sec;
 }
@@ -93,7 +101,7 @@ const SPEC = {
     out:           { short: "o", type: "string" },
     "out-dir":     { short: "d", type: "string" },
     json:          { type: "boolean" },
-    timeout:       { type: "string", default: "600" },
+    timeout:       { type: "string", default: String(VIDEO_CLIENT_TIMEOUT_SEC) },
     server:        { type: "string" },
     session:       { type: "string" },
     help:          { short: "h", type: "boolean" },
@@ -138,7 +146,7 @@ const HELP = `
     -o, --out <file>                    Output file path
     -d, --out-dir <dir>                 Output directory
         --json                          Print JSON result to stdout
-        --timeout <sec>                 Default: 600
+        --timeout <sec>                 Default: 4200
         --server <url>                  Override server URL
         --session <id>                  Session ID
 
@@ -214,10 +222,10 @@ async function runVideoGenerateRequest(serverBase: string, body: Record<string, 
 // --- Subcommands ---
 
 async function videoEditCmd(argv: string[]) {
-  const spec = { flags: { video: { type: "string" }, out: { short: "o", type: "string" }, output: { type: "string" }, json: { type: "boolean" }, timeout: { type: "string", default: "600" }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
+  const spec = { flags: { video: { type: "string" }, out: { short: "o", type: "string" }, output: { type: "string" }, json: { type: "boolean" }, timeout: { type: "string", default: String(VIDEO_CLIENT_TIMEOUT_SEC) }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
   const args = parseArgs(argv, spec);
   rejectUnknownFlags(args);
-  if (args.help) { out(`  ima2 video edit <prompt> --video <url|file_id|generated-file>\n\n  Edit existing video with text prompt (real V2V).\n  Model: grok-imagine-video only. Input: mp4, max 8.7s.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n    -o, --out <file>      Download edited video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 600\n        --server <url>    Override server URL`); return; }
+  if (args.help) { out(`  ima2 video edit <prompt> --video <url|file_id|generated-file>\n\n  Edit existing video with text prompt (real V2V).\n  Model: grok-imagine-video only. Input: mp4, max 8.7s.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n    -o, --out <file>      Download edited video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 4200\n        --server <url>    Override server URL`); return; }
   const prompt = args.positional.join(" ");
   if (!prompt.trim()) die(2, ACTIVE_VIDEO_PROMPT_GUIDANCE);
   if (!args.video) die(2, "--video <url> is required");
@@ -233,10 +241,10 @@ async function videoEditCmd(argv: string[]) {
 }
 
 async function videoExtendCmd(argv: string[]) {
-  const spec = { flags: { video: { type: "string" }, duration: { type: "string", default: "6" }, out: { short: "o", type: "string" }, output: { type: "string" }, json: { type: "boolean" }, timeout: { type: "string", default: "600" }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
+  const spec = { flags: { video: { type: "string" }, duration: { type: "string", default: "6" }, out: { short: "o", type: "string" }, output: { type: "string" }, json: { type: "boolean" }, timeout: { type: "string", default: String(VIDEO_CLIENT_TIMEOUT_SEC) }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
   const args = parseArgs(argv, spec);
   rejectUnknownFlags(args);
-  if (args.help) { out(`  ima2 video extend <prompt> --video <url|file_id|generated-file> [--duration 6]\n\n  Extend video from its last frame.\n  Model: grok-imagine-video only. Extension: 2-10s.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n        --duration <2-10> Extension duration (default: 6)\n    -o, --out <file>      Download extended video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 600\n        --server <url>    Override server URL`); return; }
+  if (args.help) { out(`  ima2 video extend <prompt> --video <url|file_id|generated-file> [--duration 6]\n\n  Extend video from its last frame.\n  Model: grok-imagine-video only. Extension: 2-10s.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n        --duration <2-10> Extension duration (default: 6)\n    -o, --out <file>      Download extended video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 4200\n        --server <url>    Override server URL`); return; }
   const prompt = args.positional.join(" ");
   if (!prompt.trim()) die(2, ACTIVE_VIDEO_PROMPT_GUIDANCE);
   if (!args.video) die(2, "--video <url> is required");
@@ -266,7 +274,7 @@ async function videoContinueCmd(argv: string[]) {
       out: { short: "o", type: "string" },
       output: { type: "string" },
       json: { type: "boolean" },
-      timeout: { type: "string", default: "600" },
+      timeout: { type: "string", default: String(VIDEO_CLIENT_TIMEOUT_SEC) },
       server: { type: "string" },
       help: { short: "h", type: "boolean" },
     },
@@ -274,7 +282,7 @@ async function videoContinueCmd(argv: string[]) {
   const args = parseArgs(argv, spec);
   rejectUnknownFlags(args);
   if (args.help) {
-    out(`  ima2 video continue <prompt> --video <generated-file>\n\n  Generate a new clip from a generated video's last frame and carry branch-local revisedPrompt lineage.\n\n  Prompt must describe visual flow, motion, sound/music/no-music, dialogue/no-dialogue, ending frame, and how the selected duration should feel naturally filled.\n\n  Options:\n        --video <file>                 Generated .mp4 filename (required)\n        --duration <1..15>             Default: 5. Prompt motion should naturally fill this length\n        --resolution <480p|720p|1080p> Default: 720p. 1080p requires --model grok-imagine-video-1.5\n        --aspect-ratio <ratio|auto>    Default: auto\n        --model <name>                 grok-imagine-video, grok-imagine-video-1.5 (preview alias accepted)\n    -o, --out <file>                   Download continued video to file\n        --output <file>                Alias for --out\n        --json                         Print JSON result\n        --timeout <sec>                Default: 600\n        --server <url>                 Override server URL`);
+    out(`  ima2 video continue <prompt> --video <generated-file>\n\n  Generate a new clip from a generated video's last frame and carry branch-local revisedPrompt lineage.\n\n  Prompt must describe visual flow, motion, sound/music/no-music, dialogue/no-dialogue, ending frame, and how the selected duration should feel naturally filled.\n\n  Options:\n        --video <file>                 Generated .mp4 filename (required)\n        --duration <1..15>             Default: 5. Prompt motion should naturally fill this length\n        --resolution <480p|720p|1080p> Default: 720p. 1080p requires --model grok-imagine-video-1.5\n        --aspect-ratio <ratio|auto>    Default: auto\n        --model <name>                 grok-imagine-video, grok-imagine-video-1.5 (preview alias accepted)\n    -o, --out <file>                   Download continued video to file\n        --output <file>                Alias for --out\n        --json                         Print JSON result\n        --timeout <sec>                Default: 4200\n        --server <url>                 Override server URL`);
     return;
   }
   const prompt = args.positional.join(" ");

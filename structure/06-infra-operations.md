@@ -118,13 +118,15 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_GROK_PROXY_PORT` | Bundled progrok preferred port, default `18645` |
 | `IMA2_NO_GROK_PROXY` | Disable the embedded progrok proxy; use only when managing the proxy manually |
 | `IMA2_GROK_PLANNER_MODEL` | Search/planner model for `provider: "grok"` classic generation, default `grok-4.5`; `grok-4.3` remains a compatibility override |
-| `IMA2_GROK_PLANNER_TIMEOUT_MS` | Timeout for each Grok search/planner call before the image API call, default `60000` |
+| `IMA2_GROK_PLANNER_TIMEOUT_MS` | Timeout for the Grok planner call, default `900000` |
+| `IMA2_GROK_SEARCH_TIMEOUT_MS` | Timeout for the degradable Grok web-search brief, default `300000` |
+| `IMA2_GROK_VIDEO_PLAN_TOTAL_TIMEOUT_MS` | Ceiling on search + planner combined, default `1500000` |
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | Default xAI image model for `provider: "grok"`, default `grok-imagine-image-quality` |
 | `IMA2_GROK_VIDEO_MODEL_DEFAULT` | Default xAI video model for `provider: "grok"`, default `grok-imagine-video-1.5` |
 | `IMA2_GROK_GENERATION_TIMEOUT_MS` | Timeout for final Grok image generation/edit calls, default `120000` |
 | `IMA2_GROK_STATUS_TIMEOUT_MS` | Timeout for `/api/grok/status` model probes, default `3000` |
 | `IMA2_OAUTH_MASKED_EDIT_ENABLED` | Feature flag (#31) gating masked-edit requests on the OAuth path; default off — when off, `lib/oauthProxy/generators.ts` rejects requests carrying a mask before calling upstream |
-| `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `600000` |
+| `IMA2_INFLIGHT_TTL_MS` | Active in-flight stale-job TTL, default `4200000` (must outlive the longest legal request) |
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | Recent completed/error/canceled job debug retention, default `30000` |
 | `VITE_IMA2_NODE_MODE` | UI build-time gate; set `0` only for a classic-only bundle |
 | `IMA2_LOG_LEVEL` | Normal `ima2 serve` defaults to `warn`; `IMA2_DEV=1` defaults to `debug` unless env or config override is set |

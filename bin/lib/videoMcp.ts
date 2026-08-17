@@ -18,7 +18,12 @@ import { streamSse } from "./sse.js";
 
 const VALID_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);
 const VALID_ASPECT_RATIOS = new Set(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"]);
-const MCP_VIDEO_TIMEOUT_MS = 12 * 60_000 + 120_000 + 30_000;
+// Sits above the server-side worst case so the client never abandons a request the server
+// would have completed: 1200 s planning + 300 s start + 1800 s poll + 300 s download =
+// 3600 s, plus 600 s of slack. Also guards the runway/higgsfield MCP lanes, which end on
+// their own terminal events, so a longer ceiling is harmless there.
+// devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+const MCP_VIDEO_TIMEOUT_MS = 4200 * 1000;
 
 type Parameter = { name: string; type: string; options?: unknown[] | undefined; min?: number | undefined; max?: number | undefined };
 type ModelCapabilities = { parameters: Parameter[]; aspectRatios: string[]; inputRoles: string[] };
@@ -140,7 +145,7 @@ function coreBody(args: ParsedArgs, context: VideoContext, options: CoreOptions,
 async function consumeCoreSse(url: string, body: Record<string, unknown>, args: ParsedArgs, requestId: string) {
   const controller = new AbortController();
   let timedOut = false;
-  const timeoutMs = parseInteger(args.timeout, 600, "--timeout") * 1000;
+  const timeoutMs = parseInteger(args.timeout, MCP_VIDEO_TIMEOUT_MS / 1000, "--timeout") * 1000;
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
   const onSignal = () => { controller.abort(); process.exit(130); };
   process.once("SIGINT", onSignal); process.once("SIGTERM", onSignal);
@@ -185,7 +190,7 @@ async function runCoreVideo(args: ParsedArgs, context: VideoContext): Promise<vo
   const filename = String(done.filename);
   const target = args.out ? String(args.out) : args["out-dir"] ? join(String(args["out-dir"]), filename) : join(config.storage.generatedDir, filename);
   const response = await fetch(`${context.server.base}${done.url || `/generated/${encodeURIComponent(filename)}`}`,
-    { signal: AbortSignal.timeout(parseInteger(args.timeout, 600, "--timeout") * 1000) });
+    { signal: AbortSignal.timeout(parseInteger(args.timeout, MCP_VIDEO_TIMEOUT_MS / 1000, "--timeout") * 1000) });
   if (!response.ok) die(1, `failed to download video: HTTP ${response.status}`);
   await writeBuffer(target, Buffer.from(await response.arrayBuffer()));
   if (args.json) json({ ok: true, requestId: done.requestId, path: target, filename, elapsed: done.elapsed,
@@ -343,7 +348,7 @@ async function runMcpVideo(argv: string[], args: ParsedArgs, context: VideoConte
 }
 
 export async function runVideoGenerate(argv: string[], args: ParsedArgs, prompt: string): Promise<void> {
-  if (parseInteger(args.timeout, 600, "--timeout") < 1) die(2, "--timeout must be at least 1");
+  if (parseInteger(args.timeout, MCP_VIDEO_TIMEOUT_MS / 1000, "--timeout") < 1) die(2, "--timeout must be at least 1");
   const { server, catalog } = await fetchCatalog(args);
   const target = resolveVideoTarget(args, catalog);
   if (args.character && target.transport !== "mcp") {

@@ -10,6 +10,7 @@ process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
 
 const inflight = await import("../lib/inflight.ts");
 const db = await import("../lib/db.ts");
+const { config } = await import("../config.ts");
 
 beforeEach(() => {
   inflight._resetForTests();
@@ -54,7 +55,10 @@ test("stale inflight jobs are purged by ttl", () => {
     meta: {},
   });
 
-  inflight.purgeStaleJobs(Date.now() + 20 * 60 * 1000);
+  // Derive the advance from the configured TTL rather than a hardcoded window: the TTL now
+  // has to outlive the longest legal Grok video request, so a fixed 20 minutes no longer
+  // reaches past it. devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+  inflight.purgeStaleJobs(Date.now() + config.inflight.ttlMs + 60_000);
 
   assert.equal(inflight.listJobs({ kind: "classic" }).length, 0);
 });

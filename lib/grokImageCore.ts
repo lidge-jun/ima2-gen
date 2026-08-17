@@ -92,11 +92,14 @@ export function grokStageError(stage: "search" | "planner", message: string, sta
   return grokError(`Grok ${stage} bad request: ${message}`, status, `${prefix}_BAD_REQUEST`);
 }
 
-export function getPlannerConfig(ctx: RouteRuntimeContext): { model: string; timeoutMs: number } {
+export function getPlannerConfig(ctx: RouteRuntimeContext): { model: string; timeoutMs: number; searchTimeoutMs: number } {
   const grokCfg = (ctx.config as any).grokProvider || {};
   return {
     model: grokCfg.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
-    timeoutMs: grokCfg.plannerTimeoutMs || 300_000,
+    timeoutMs: grokCfg.plannerTimeoutMs || 900_000,
+    // The forced web_search brief is bounded separately: it is an enhancement, so a slow
+    // search should cost a less-researched prompt, not the whole generation.
+    searchTimeoutMs: grokCfg.searchTimeoutMs || 300_000,
   };
 }
 

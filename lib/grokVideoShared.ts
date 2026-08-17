@@ -68,6 +68,10 @@ export interface VideoConfig {
   pollMaxConsecutiveErrors: number;
   plannerModel: string;
   plannerTimeoutMs: number;
+  /** Own bound for the degradable web-search brief; smaller than the planner budget. */
+  searchTimeoutMs: number;
+  /** Ceiling on search + planner combined, so the two stages cannot sum unbounded. */
+  planTotalTimeoutMs: number;
 }
 
 export const STALE_PROGRESS_MS = 180_000;
@@ -84,12 +88,14 @@ export function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
   const g = (ctx.config as any).grokProvider || {}; // justified: RouteRuntimeContext.config is a loose runtime bag; every Grok adapter reads grokProvider this way
   return {
     model: g.defaultVideoModel || GROK_FALLBACK_VIDEO_MODEL,
-    startTimeoutMs: g.videoStartTimeoutMs || 150_000,
+    startTimeoutMs: g.videoStartTimeoutMs || 300_000,
     pollIntervalMs: g.videoPollIntervalMs || 5_000,
-    totalTimeoutMs: g.videoTimeoutMs || 900_000,
+    totalTimeoutMs: g.videoTimeoutMs || 1_800_000,
     pollMaxConsecutiveErrors: g.videoPollMaxConsecutiveErrors || 5,
     plannerModel: g.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
-    plannerTimeoutMs: g.plannerTimeoutMs || 300_000,
+    plannerTimeoutMs: g.plannerTimeoutMs || 900_000,
+    searchTimeoutMs: g.searchTimeoutMs || 300_000,
+    planTotalTimeoutMs: g.videoPlanTotalTimeoutMs || 1_500_000,
   };
 }
 
