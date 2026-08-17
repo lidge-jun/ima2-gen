@@ -172,7 +172,8 @@ const FALLBACK_USER_PROMPT_RESERVE = 2500;
 
 /**
  * Deterministic, network-free video prompt used when the Grok planner is unavailable
- * (timeout, upstream failure, or an empty tool call).
+ * (timeout, upstream 5xx/429, or a network fault). A planner that ANSWERS without a tool
+ * call is a refusal, not an availability problem, and stays fatal.
  *
  * The user's own prompt is already a legitimate video prompt; this only adds the pacing
  * and mode guidance the planner would have applied, so a stalled planner costs prompt

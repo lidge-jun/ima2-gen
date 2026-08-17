@@ -162,7 +162,7 @@ Video generate flags:
 | `--ref <file>` | Attach source/reference image (repeatable, max 7) |
 | `-o, --out <file>` | Output file path |
 | `-d, --out-dir <dir>` | Output directory |
-| `--timeout <sec>` | Timeout in seconds (default: 600) |
+| `--timeout <sec>` | Timeout in seconds (default: 5400) |
 | `--session <id>` | Session ID |
 
 Blank video prompts are rejected. Prompts should include visual flow, camera or
@@ -181,7 +181,7 @@ Video edit/extend flags:
 | `--duration <2..10>` | Extension duration only (default: 6) |
 | `-o, --out <file>` | Download the edited or extended video to a file |
 | `--json` | Print JSON result |
-| `--timeout <sec>` | Timeout in seconds (default: 600) |
+| `--timeout <sec>` | Timeout in seconds (default: 5400) |
 
 Video continue flags:
 

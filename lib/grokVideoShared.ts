@@ -86,6 +86,15 @@ export const FAILED_CODE_MAP: Record<string, { code: string; status: number }> =
 
 export function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
   const g = (ctx.config as any).grokProvider || {}; // justified: RouteRuntimeContext.config is a loose runtime bag; every Grok adapter reads grokProvider this way
+  const plannerTimeoutMs = g.plannerTimeoutMs || 900_000;
+  const searchTimeoutMs = g.searchTimeoutMs || 300_000;
+  // The planning ceiling must stay STRICTLY greater than the two stages it contains, or a
+  // slow search plus a stalled planner lands both timers together and the fatal ceiling
+  // preempts the planner fallback. Operator config can violate that, so clamp at runtime
+  // rather than trusting the defaults to survive an env override.
+  // devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
+  const configuredPlanTotal = g.videoPlanTotalTimeoutMs || 1_500_000;
+  const minimumPlanTotal = searchTimeoutMs + plannerTimeoutMs + 60_000;
   return {
     model: g.defaultVideoModel || GROK_FALLBACK_VIDEO_MODEL,
     startTimeoutMs: g.videoStartTimeoutMs || 300_000,
@@ -93,9 +102,9 @@ export function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
     totalTimeoutMs: g.videoTimeoutMs || 1_800_000,
     pollMaxConsecutiveErrors: g.videoPollMaxConsecutiveErrors || 5,
     plannerModel: g.plannerModel || DEFAULT_GROK_PLANNER_MODEL,
-    plannerTimeoutMs: g.plannerTimeoutMs || 900_000,
-    searchTimeoutMs: g.searchTimeoutMs || 300_000,
-    planTotalTimeoutMs: g.videoPlanTotalTimeoutMs || 1_500_000,
+    plannerTimeoutMs,
+    searchTimeoutMs,
+    planTotalTimeoutMs: Math.max(configuredPlanTotal, minimumPlanTotal),
   };
 }
 

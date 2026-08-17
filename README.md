@@ -316,7 +316,7 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok search/planner model (also configurable via settings UI or `--planner-model` CLI flag) |
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | `900000` | Timeout for the Grok planner call |
 | `IMA2_GROK_SEARCH_TIMEOUT_MS` | `300000` | Timeout for the Grok web-search brief (degrades instead of failing) |
-| `IMA2_GROK_VIDEO_PLAN_TOTAL_TIMEOUT_MS` | `1500000` | Ceiling on the whole video planning phase |
+| `IMA2_GROK_VIDEO_PLAN_TOTAL_TIMEOUT_MS` | `1500000` | Ceiling on the whole video planning phase (clamped above search + planner) |
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` | Default final Grok image model |
 | `IMA2_GROK_VIDEO_MODEL_DEFAULT` | `grok-imagine-video-1.5` | Default Grok video model |
 | `IMA2_GROK_GENERATION_TIMEOUT_MS` | `120000` | Timeout for the final Grok Images API call |

@@ -5,6 +5,7 @@ import {
   deriveVideoMode, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
   validateVideoResolutionForRequest, type VideoResolution,
 } from "../../lib/imageModels.js";
+import { VIDEO_CLIENT_TIMEOUT_MS } from "../../lib/videoClientTimeouts.js";
 import { type ParsedArgs } from "./args.js";
 import { wasFlagPassed } from "./argsExplicit.js";
 import { resolveHistoryReference, resolveServer, request } from "./client.js";
@@ -18,12 +19,10 @@ import { streamSse } from "./sse.js";
 
 const VALID_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);
 const VALID_ASPECT_RATIOS = new Set(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"]);
-// Sits above the server-side worst case so the client never abandons a request the server
-// would have completed: 1200 s planning + 300 s start + 1800 s poll + 300 s download =
-// 3600 s, plus 600 s of slack. Also guards the runway/higgsfield MCP lanes, which end on
-// their own terminal events, so a longer ceiling is harmless there.
-// devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
-const MCP_VIDEO_TIMEOUT_MS = 4200 * 1000;
+// Shared client ceiling (see lib/videoClientTimeouts.ts). Also guards the
+// runway/higgsfield MCP lanes, which end on their own terminal events, so a longer
+// ceiling is harmless there.
+const MCP_VIDEO_TIMEOUT_MS = VIDEO_CLIENT_TIMEOUT_MS;
 
 type Parameter = { name: string; type: string; options?: unknown[] | undefined; min?: number | undefined; max?: number | undefined };
 type ModelCapabilities = { parameters: Parameter[]; aspectRatios: string[]; inputRoles: string[] };

@@ -35,7 +35,11 @@ const SEARCH_URL = "/v1/responses";
 
 function searchOk() {
   return new Response(JSON.stringify({
-    output: [{ content: [{ type: "output_text", text: "brief: snowy field, golden hour" }] }],
+    // extractResponsesText only reads items whose type is "message"; without it the stub
+    // silently produced an EMPTY brief, so the planner-stall tests were exercising
+    // "search failed then planner stalled" instead of the reported incident shape
+    // ("search succeeded, then the planner stalled").
+    output: [{ type: "message", content: [{ type: "output_text", text: "brief: snowy field, golden hour" }] }],
   }), { status: 200, headers: { "content-type": "application/json" } });
 }
 
@@ -160,12 +164,16 @@ describe("planGrokVideo planner degradation", () => {
 
   it("treats the planning-phase ceiling as fatal, never as a degrade", async () => {
     stubFetch(stallUntilAbort);
-    await assert.rejects(
-      planGrokVideo("anything", ctx({ videoPlanTotalTimeoutMs: 150, plannerTimeoutMs: 60_000 }), {
-        mode: "text-to-video", duration: 5, requestId: "t_phase",
-      }),
-      (e: { code?: string }) => e.code === "GROK_VIDEO_PLAN_TIMEOUT",
-    );
+    // The runtime clamp in videoConfig makes the phase ceiling UNREACHABLE before the
+    // planner timeout: the planner deadline is (elapsed search) + plannerTimeout, and
+    // elapsed search <= searchTimeout, so it always lands below searchTimeout +
+    // plannerTimeout, which the clamp keeps strictly below the ceiling. Even with a
+    // deliberately tiny ceiling, planning therefore degrades rather than dying — which is
+    // the property that actually protects the user.
+    const plan = await planGrokVideo("anything", ctx({ searchTimeoutMs: 50, plannerTimeoutMs: 100, videoPlanTotalTimeoutMs: 1 }), {
+      mode: "text-to-video", duration: 5, requestId: "t_phase",
+    });
+    assert.equal(plan.plannerDegraded?.reason, "timeout");
   });
 
   it("still plans when the search stage fails, and reports it honestly", async () => {
@@ -201,5 +209,20 @@ describe("planGrokVideo planner degradation", () => {
     assert.equal(plan.prompt, "planned despite a stalled search");
     assert.equal(plan.searchDegraded?.reason, "timeout");
     assert.equal(plan.webSearchCalls, 0);
+  });
+
+  it("honors a user cancellation raised during the search stage", async () => {
+    // The degrade path must never swallow a real cancel, even though the search stage is
+    // the one stage that is allowed to fail softly.
+    const controller = new AbortController();
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : String(input);
+      if (url.includes(SEARCH_URL)) { controller.abort(); return stallUntilAbort(init); }
+      return searchOk();
+    }) as typeof fetch; // justified: a narrowed stub cannot satisfy the full fetch overload set
+    await assert.rejects(
+      planGrokVideo("anything", ctx(), { mode: "text-to-video", duration: 5, requestId: "t_cancel_search", signal: controller.signal }),
+      (e: { code?: string }) => e.code === "GENERATION_CANCELED",
+    );
   });
 });

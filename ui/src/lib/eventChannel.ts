@@ -7,14 +7,15 @@ interface Subscription {
 }
 
 /**
- * Max wait for done/error after async POST accepts the job (70 min).
+ * Max wait for done/error after async POST accepts the job (90 min).
  *
  * Must stay ABOVE the server's worst case for one request — Grok video is
- * 1200 s planning + 300 s start + 1800 s poll + 300 s download = 3600 s — or the UI
- * cancels generations the server would have finished and reports them as stream timeouts.
+ * 1500 s planning + 300 s start + 1800 s poll + 300 s poll overshoot + 300 s download
+ * = 4200 s — or the UI cancels generations the server would have finished and reports
+ * them as stream timeouts.
  * devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
  */
-export const JOB_STREAM_TIMEOUT_MS = 70 * 60 * 1000;
+export const JOB_STREAM_TIMEOUT_MS = 90 * 60 * 1000;
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30_000;

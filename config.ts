@@ -271,11 +271,12 @@ export const config = {
     nodeHexBytes: pickInt(env.IMA2_NODE_HEX_BYTES, fileCfg.ids?.nodeHexBytes, 5),
   },
   inflight: {
-    // Must exceed the longest legal request. Grok video can legitimately run ~60 min
-    // (planning + start + poll + download), and purgeStaleJobs() drops the job row without
-    // aborting its worker, so a 10-minute TTL used to erase live jobs mid-flight.
+    // Must exceed the longest legal request. Grok video can legitimately run ~70 min
+    // (planning + start + poll + poll overshoot + download), and purgeStaleJobs() drops the
+    // job row without aborting its worker, so a 10-minute TTL used to erase live jobs
+    // mid-flight.
     // devlog/_plan/260817_grok_video_planner_timeout/010_timeout_budgets.md
-    ttlMs: pickInt(env.IMA2_INFLIGHT_TTL_MS, fileCfg.inflight?.ttlMs, 70 * 60 * 1000),
+    ttlMs: pickInt(env.IMA2_INFLIGHT_TTL_MS, fileCfg.inflight?.ttlMs, 90 * 60 * 1000),
     reapMs: pickInt(env.IMA2_INFLIGHT_REAP_MS, fileCfg.inflight?.reapMs, 60 * 1000),
     terminalTtlMs: pickInt(env.IMA2_INFLIGHT_TERMINAL_TTL_MS, fileCfg.inflight?.terminalTtlMs, 5 * 60 * 1000),
   },
