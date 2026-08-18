@@ -161,11 +161,24 @@ function geminiLane(ctx: RuntimeContext): ModelLaneDto {
 }
 
 function atlasCloudLane(ctx: RuntimeContext): ModelLaneDto {
-  const state: LaneState = ctx.atlasCloudApiKey
+  // #150 phase 2: Atlas Cloud is the second lane behind ProviderAdapterV1.
+  // The adapter owns auth state and the model list; the DTO projection stays
+  // here, so /api/models keeps its exact shape.
+  const adapter = getProviderAdapter(ctx, "atlascloud");
+  if (!adapter) {
+    const fallback: LaneState = ctx.atlasCloudApiKey
+      ? { status: "ready" }
+      : { status: "key-missing", reason: "Atlas Cloud API key missing" };
+    return lane(fallback, { image: ATLASCLOUD_TEXT_TO_IMAGE_MODEL }, {
+      image: entries(deriveModels("atlascloud", "image")), video: [],
+    });
+  }
+  const auth = adapter.validateAuth();
+  const state: LaneState = auth.ok
     ? { status: "ready" }
-    : { status: "key-missing", reason: "Atlas Cloud API key missing" };
+    : { status: "key-missing", reason: auth.reason ?? "Atlas Cloud API key missing" };
   return lane(state, { image: ATLASCLOUD_TEXT_TO_IMAGE_MODEL }, {
-    image: entries(deriveModels("atlascloud", "image")), video: [],
+    image: entries(adapter.listModels().map((model) => model.id)), video: [],
   });
 }
 

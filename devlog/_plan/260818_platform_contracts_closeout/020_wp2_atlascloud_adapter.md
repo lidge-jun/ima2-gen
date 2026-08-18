@@ -19,7 +19,7 @@ agy(async binary), grok-api(prefix 공유), oauth/api(prefix null)는 부적합.
 | # | 파일 | 변경 | core? |
 |---|---|---|---|
 | 1 | `lib/providers/adapters/atlascloud.ts` | [NEW] createAtlasCloudAdapter(ctx). 파일명은 lane id와 정확히 일치해야 함 (contract test :54 규약) | core |
-| 2 | `lib/providers/adapters/index.ts` | [MOD] factory map에 `atlascloud: createAtlasCloudAdapter` 1줄 | core |
+| 2 | `lib/providers/adapters/index.ts` | [MOD] import + factory map 항목 + **헤더 주석 갱신** ("Only MiniMax is registered"가 거짓이 되므로 — wp2 감사 C) | core |
 | 3 | `routes/models.ts` | [MOD] atlasCloudLane(:163-170)이 adapter 경유 (minimaxLane :172-192 패턴 복제, null-adapter 폴백 유지) | core |
 | 4 | `tests/provider-adapter-v1-contract.test.ts` | [MOD] :116 null 단언 목록에서 "atlascloud" 제거 | test |
 | 5 | `tests/models-endpoint-contract.test.ts` | [MOD] atlascloud lane 키 없음/있음 2상태 DTO 단언 (minimax 전례 :208-233) | test |
@@ -33,8 +33,11 @@ test:inventory 재생성 불필요 — 단 실측으로 확인한다.
 단순 문자열 삭제로는 auth 검증이 공허해진다:
 
 - `tests/provider-adapter-v1-contract.test.ts`의 `contextWith()`(line 17)가
-  `minimaxApiKey`만 만든다 → `atlasCloudApiKey`도 채워 with-key 상태에서
-  atlascloud `validateAuth().ok === true`가 실제로 단언되게 확장.
+  `minimaxApiKey`만 만든다 → `atlasCloudApiKey`도 채운다. **단 fixture 확장만으로는
+  단언이 생기지 않는다** (wp2 감사 A: 자동 순회 6건은 auth 결과를 단언하지 않고,
+  실제 auth 단언 line 71-83은 minimax 하드코딩). auth two-state 블록을
+  **lane 순회형으로 일반화**하거나 atlascloud 전용 블록을 추가해
+  `ok === true`/"Atlas Cloud API key missing" reason이 실제로 단언되게 한다.
 - `tests/models-endpoint-contract.test.ts`의 `withApp` 옵션에
   `atlasCloudApiKey`를 추가해 2상태 DTO 단언이 실제로 성립하게 확장.
 
@@ -55,9 +58,15 @@ minimax.ts를 전례로:
   `openai/gpt-image-2/edit` **둘 다** 하드코딩 금지. listModels는 registry
   파생으로만 만든다.
 
+## 알려진 한계 (wp2 감사 D)
+
+`ATLASCLOUD_UNKNOWN`은 `PROVIDER_ERROR_MAP`에 키가 없어
+`providerErrorClass()`가 undefined를 반환한다. `MINIMAX_UNKNOWN`도 동일한
+기존 구멍이며, 이번 유닛은 minimax 패리티를 유지한다(맵 확장은 범위 밖).
+
 ## 수용 기준
 
-- [ ] contract suite 9건이 atlascloud 포함 자동 통과 (자동 순회 7건 상속)
+- [ ] contract suite가 atlascloud 포함 통과 (자동 순회 6건 상속 + auth two-state 실단언)
 - [ ] /api/models atlascloud DTO 형태 불변 (2상태 단언)
 - [ ] core diff ≤ 5 파일 실측 기록
 - [ ] 전체 게이트 통과

@@ -54,8 +54,9 @@ jobStatus(`done|error|canceled|unknown`) / UI 임시(`planning|streaming|canceli
   AuthResult 설계 변경을 강제 → 부적합. agy는 async binary 탐지라 sync
   `validateAuth()` 부적합. grok-api는 errorPrefix를 grok과 공유. oauth/api는
   errorPrefix null이라 contract가 증명력이 없음. → atlascloud 확정.
-- contract 테스트(`tests/provider-adapter-v1-contract.test.ts`)는 7/9가
-  등록 adapter 자동 순회라 신규 adapter가 자동 상속. line 116의 null 단언에서
+- contract 테스트(`tests/provider-adapter-v1-contract.test.ts`)는 9건 중 6건이
+  등록 adapter 자동 순회라 신규 adapter가 자동 상속(auth 결과 단언은 별도 필요,
+  020 참조). line 116의 null 단언에서
   atlascloud 제거 필요. line 54가 파일명 규약 `adapters/<laneId>.ts` 강제.
 - ctx 필드는 `atlasCloudApiKey`(대문자 C), lane id는 `atlascloud`. 오타 주의.
 

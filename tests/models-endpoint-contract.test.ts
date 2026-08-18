@@ -63,7 +63,7 @@ afterEach(async () => {
 });
 
 async function withApp(
-  options: { manager?: FakeMcpManager; agyInstalled?: boolean; minimaxApiKey?: string } = {},
+  options: { manager?: FakeMcpManager; agyInstalled?: boolean; minimaxApiKey?: string; atlasCloudApiKey?: string } = {},
   run: (base: string, manager: FakeMcpManager) => Promise<void>,
 ) {
   const app = express();
@@ -75,6 +75,7 @@ async function withApp(
     xaiApiKey: undefined,
     geminiApiKey: "gemini-test-key",
     minimaxApiKey: options.minimaxApiKey,
+    atlasCloudApiKey: options.atlasCloudApiKey,
     mcpConnectionManager: manager,
     config: {
       imageModels: {
@@ -230,5 +231,45 @@ test("the MiniMax lane reports ready once the runtime context holds a key", asyn
     assert.equal(minimax.defaults.image, "image-01");
     assert.deepEqual(minimax.models.image.map((model) => model.id), ["image-01", "image-01-live"]);
     assert.deepEqual(minimax.models.video, []);
+  });
+});
+
+/**
+ * #150 phase 2 routes the Atlas Cloud lane through ProviderAdapterV1. Same
+ * proof shape as MiniMax above: the adapter contract suite proves the adapter,
+ * these two prove the DTO the route builds from it did not drift, in both
+ * credential states.
+ */
+test("the Atlas Cloud lane keeps its exact DTO when no key is configured", async () => {
+  await withApp({}, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    const atlascloud = body.lanes.atlascloud;
+    assert.equal(atlascloud.status, "key-missing");
+    assert.equal(atlascloud.reason, "Atlas Cloud API key missing");
+    assert.equal(atlascloud.defaults.image, "openai/gpt-image-2/text-to-image");
+    assert.deepEqual(
+      atlascloud.models.image.map((model) => model.id),
+      ["openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit"],
+    );
+    assert.deepEqual(atlascloud.models.video, []);
+    for (const model of atlascloud.models.image) {
+      assert.equal(model.label, model.id);
+      assert.ok(Array.isArray(model.capabilities.inputRoles));
+    }
+  });
+});
+
+test("the Atlas Cloud lane reports ready once the runtime context holds a key", async () => {
+  await withApp({ atlasCloudApiKey: "apikey-test" }, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    const atlascloud = body.lanes.atlascloud;
+    assert.equal(atlascloud.status, "ready");
+    assert.equal(atlascloud.reason, undefined, "a ready lane carries no reason");
+    assert.equal(atlascloud.defaults.image, "openai/gpt-image-2/text-to-image");
+    assert.deepEqual(
+      atlascloud.models.image.map((model) => model.id),
+      ["openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit"],
+    );
+    assert.deepEqual(atlascloud.models.video, []);
   });
 });

@@ -14,12 +14,25 @@ import type { RuntimeContext } from "../lib/runtimeContext.js";
  * remembering to extend this file. That automatic coverage is one of #150's
  * acceptance criteria.
  */
-function contextWith(minimaxApiKey: string | undefined): RuntimeContext {
-  return { minimaxApiKey } as unknown as RuntimeContext;
+function contextWith(key: string | undefined): RuntimeContext {
+  // One shared key value per registered lane. Note the spelling split the
+  // adapters have to survive: atlasCloudApiKey (capital C) vs lane id
+  // "atlascloud".
+  return { minimaxApiKey: key, atlasCloudApiKey: key } as unknown as RuntimeContext;
 }
 
 const withKey = contextWith("test-key");
 const withoutKey = contextWith(undefined);
+
+/**
+ * Expected no-credential reason per registered lane. A new adapter must add
+ * its row here, which keeps the auth two-state assertion real (not vacuous)
+ * for every lane the suite iterates.
+ */
+const EXPECTED_AUTH_REASON: Record<string, RegExp> = {
+  minimax: /MiniMax API key missing/,
+  atlascloud: /Atlas Cloud API key missing/,
+};
 
 test("at least one adapter is registered", () => {
   assert.ok(listProviderAdapters(withKey).length >= 1);
@@ -71,15 +84,20 @@ test("no adapter source hard-codes a model id", () => {
 test("validateAuth reflects live credentials from the runtime context", () => {
   // Not process.env: routes/keys.ts updates the context while the server runs,
   // so an env read would report a lane unauthenticated right after setup.
-  const present = getProviderAdapter(withKey, "minimax");
-  assert.ok(present);
-  assert.deepEqual(present!.validateAuth(), { ok: true });
+  // Iterates every registered adapter so the two-state assertion stays real
+  // for each new lane instead of only covering the reference implementation.
+  for (const adapter of listProviderAdapters(withKey)) {
+    const expectedReason = EXPECTED_AUTH_REASON[adapter.laneId];
+    assert.ok(expectedReason, `add ${adapter.laneId} to EXPECTED_AUTH_REASON`);
 
-  const absent = getProviderAdapter(withoutKey, "minimax");
-  assert.ok(absent);
-  const result = absent!.validateAuth();
-  assert.equal(result.ok, false);
-  assert.match(result.reason ?? "", /MiniMax API key missing/);
+    assert.deepEqual(adapter.validateAuth(), { ok: true }, `${adapter.laneId} with key`);
+
+    const absent = getProviderAdapter(withoutKey, adapter.laneId);
+    assert.ok(absent);
+    const result = absent!.validateAuth();
+    assert.equal(result.ok, false, `${adapter.laneId} without key`);
+    assert.match(result.reason ?? "", expectedReason);
+  }
 });
 
 test("normalizeError owns the lane's error vocabulary", () => {
@@ -113,7 +131,7 @@ test("an existing provider-specific code is preserved, not double-prefixed", () 
 });
 
 test("an unregistered lane returns null so its current path is untouched", () => {
-  for (const lane of ["oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud"] as const) {
-    assert.equal(getProviderAdapter(withKey, lane), null, `${lane} must not be adapter-routed in phase 1`);
+  for (const lane of ["oauth", "api", "grok", "grok-api", "agy", "gemini-api"] as const) {
+    assert.equal(getProviderAdapter(withKey, lane), null, `${lane} must not be adapter-routed yet`);
   }
 });
