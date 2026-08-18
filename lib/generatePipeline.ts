@@ -62,7 +62,8 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       // generation is the default and never publishes a terminal event.
       completeIdempotencyKey(idempotencyKey, "error", { ...payload, status });
       if (asyncMode && res.headersSent) {
-        publish(requestId, "error", { ...payload, status, requestId });
+        // #151 stage 2: terminal failure carries the canonical envelope.
+        publishJobEvent(requestId, "error", { ...payload, status, requestId });
         return;
       }
       return res.status(status).json(payload);

@@ -5,7 +5,7 @@ import type { GrokReferenceImage } from "./grokImageAdapter.js";
 import type { UpstreamErr } from "./generationErrors.js";
 import type { RuntimeContext } from "./runtimeContext.js";
 import { writeSse } from "./routeHelpers.js";
-import { publish } from "./eventBus.js";
+import { publishJobEvent } from "./ssePublish.js";
 import { errorEnvelopeFields } from "./errors/envelope.js";
 
 export interface NodeGenerateBody {
@@ -58,7 +58,14 @@ export function writeNodeError(
     status,
     ...payloadDetails,
   };
-  if (requestId) publish(requestId, "error", payload);
+  if (requestId) {
+    // #151 stage 2: node-mode terminal failure carries the canonical envelope.
+    // The bus record flattens code/error to top-level strings because
+    // buildEnvelope's errorFromData/resolvePhase read data.code / data.error as
+    // strings — the nested shape would stamp every node error "failed" and drop
+    // envelope.error (cancel/timeout classification depends on data.code).
+    publishJobEvent(requestId, "error", { ...payload, code, error: message });
+  }
   if (res.writableEnded || res.destroyed) return;
   if (res.headersSent) {
     writeSse(res, "error", payload);

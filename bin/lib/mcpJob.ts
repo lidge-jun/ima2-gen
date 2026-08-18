@@ -108,6 +108,20 @@ function doneResult(data: Record<string, unknown>): StreamOutcome {
   };
 }
 
+/** Human-readable failure text. Non-MCP producers put it in data.error; MCP routes use data.message. */
+function errorMessage(data: Record<string, unknown>): string {
+  if (typeof data.error === "string" && data.error) return data.error;
+  if (typeof data.message === "string" && data.message) return data.message;
+  return "MCP job failed";
+}
+
+/** Defensive code fallback per canonical phase; producers normally supply data.code. */
+function fallbackCode(phase: string): string {
+  if (phase === "cancelled") return "GENERATION_CANCELED";
+  if (phase === "timed_out") return "MCP_JOB_TIMEOUT";
+  return "MCP_JOB_FAILED";
+}
+
 function matchingOutcome(event: SseEvent, opts: McpJobOptions): StreamOutcome | null {
   if (event.event === "replay-gap") return { kind: "replay-gap", lastEventId: event.id };
   const data = asRecord(event.data);
@@ -115,6 +129,29 @@ function matchingOutcome(event: SseEvent, opts: McpJobOptions): StreamOutcome | 
   if (event.event === "progress") {
     if (typeof data.phase === "string") opts.onProgress?.(data.phase);
     return null;
+  }
+  // #151 stage 2: the canonical envelope is the primary terminal signal. The
+  // event-name branches below stay as the fallback for servers that predate it.
+  const envelope = asRecord(data.envelope);
+  if (envelope && envelope.terminal === true) {
+    const phase = String(envelope.phase ?? "");
+    if (phase === "completed") {
+      // Only a real done event carries filename/url; a non-done event with a
+      // completed envelope falls through rather than minting an invalid-event
+      // error.
+      if (event.event === "done") return doneResult(data);
+    } else {
+      const envErr = asRecord(envelope.error);
+      return {
+        kind: "error",
+        error: new McpJobError(
+          typeof envErr?.code === "string" ? envErr.code
+            : typeof data.code === "string" ? data.code
+            : fallbackCode(phase),
+          errorMessage(data),
+        ),
+      };
+    }
   }
   if (event.event === "done") return doneResult(data);
   if (event.event === "error") {

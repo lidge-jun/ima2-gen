@@ -37,6 +37,13 @@ tags: [ima2-gen, devlog, wp1, jobs, envelope]
 를 부른다** — `ssePublish`를 import하지 않고 `jobs/envelope.js`만 추가 import.
 envelope.ts는 import가 0건이므로 순환 없음 (감사에서 직접 확인).
 
+**범위 제외 명시 (wp1 감사 블로커 7):** `lib/spriteRowPipeline.ts`의 sprite
+emitter error와 `routes/videoKeying.ts:105`의 keying-error는 이번 단계에서
+제외한다. 사유: sprite/keying은 별도 이벤트 어휘(keying-*)를 쓰는 부가 잡이고,
+CLI/MCP job 복구 경로가 소비하지 않는다. 제외를 이슈 코멘트의 경로 목록에
+명시해 부분 충족이 감사 가능하게 한다. sprite payload도 중첩형이므로 추후
+전환 시 같은 평탄화가 필요하다.
+
 **nodeHelpers 검토 (감사 블로커 2):** `lib/nodeHelpers.ts`는 현재 inflight를
 import하지 않는다. `publishJobEvent`(ssePublish) import는 nodeHelpers를 쓰는
 모든 소비자가 이미 inflight에 의존하는 라우트/파이프라인이므로 테스트 DB 오염
@@ -57,18 +64,34 @@ envelope 분기는 **progress 분기 뒤, done/error 분기 앞**에 둔다 (감
 progress 콜백이 계속 도달해야 함). envelope 분기는 `terminal === true`일 때만
 early-return하고, 그 외에는 기존 분기로 흘려보낸다:
 
+wp1 감사 확정 세부 (블로커 1·2·3):
+
+- `errorMessage`/`fallbackCode`는 존재하지 않는 헬퍼 — mcpJob.ts에 로컬로
+  새로 정의한다. `errorMessage(data)`는 **`data.error`(문자열) →
+  `data.message` → "MCP job failed"** 순서. 비-MCP 생산자는 문구를
+  `data.error`에 싣기 때문에 message 우선이면 cancel 문구 개선이 실현 안 됨.
+- `fallbackCode(phase)`: cancelled→GENERATION_CANCELED,
+  timed_out→MCP_JOB_TIMEOUT, 그 외→MCP_JOB_FAILED. 로컬 함수.
+- completed 분기는 `event.event === "done"`일 때만 `doneResult`를 부른다
+  (블로커 3: done 아닌 이벤트의 terminal envelope가 MCP_JOB_INVALID_EVENT를
+  만들지 않게). 그 외 completed는 기존 분기로 흘린다.
+
 ```ts
 // progress 분기(:115-118)는 그대로 유지. 그 다음에:
 const envelope = asRecord(data.envelope);
 if (envelope && envelope.terminal === true) {
   const phase = String(envelope.phase ?? "");
-  if (phase === "completed") return doneResult(data);
-  const envErr = asRecord(envelope.error);
-  return { kind: "error", error: new McpJobError(
-    typeof envErr?.code === "string" ? envErr.code
-      : typeof data.code === "string" ? data.code
-      : fallbackCode(phase),
-    errorMessage(data)) };
+  if (phase === "completed") {
+    if (event.event === "done") return doneResult(data);
+    // done이 아닌 completed envelope는 기존 분기로 (방어)
+  } else {
+    const envErr = asRecord(envelope.error);
+    return { kind: "error", error: new McpJobError(
+      typeof envErr?.code === "string" ? envErr.code
+        : typeof data.code === "string" ? data.code
+        : fallbackCode(phase),
+      errorMessage(data)) };
+  }
 }
 // fallback: 기존 done/error 분기 유지 (envelope 없는 서버 호환)
 ```
@@ -89,11 +112,15 @@ if (envelope && envelope.terminal === true) {
 envelope가 도달하지 않는다. 실제 SSE 소비자는 `ui/src/lib/api-generation.ts`,
 `nodeApi.ts` 등이다.
 
-재설계: UI 슬라이스는 **`ui/src/lib/api-generation.ts`의 error/done 종결
-판정**을 envelope 우선으로 전환한다 (CLI 단계 B와 같은 패턴: envelope.terminal
-이 있으면 canonical phase로 판정, 없으면 기존 로직). eventChannel의 dispatch는
-`data.envelope`를 이미 data 안에 그대로 전달하므로 (formatSse가 data에 합침)
-eventChannel 수정은 불필요 — 소비자 쪽에서 읽기만 하면 된다.
+재설계: UI 슬라이스는 **`ui/src/lib/api-generation.ts`의 종결 판정 3곳 전부**
+— :42-45 generate, :123-126 multimode, :319-322 video (wp1 감사 블로커 4) —
+를 envelope 우선으로 전환한다 (CLI 단계 B와 같은 패턴). eventChannel의
+dispatch는 `data.envelope`를 이미 data 안에 그대로 전달하므로 (formatSse가
+data에 합침) eventChannel 수정은 불필요 — 소비자 쪽에서 읽기만 하면 된다.
+
+관측 가능한 변화(수용 근거): envelope가 있는 error 이벤트에서
+`envelope.error.code`/canonical phase가 오류 판정 소스로 우선된다. ui build
+통과만으로는 소비 증거가 아니므로 전환 지점 3곳의 diff를 수용 근거에 포함한다.
 
 범위 제한: storeInflightImpl(REST 경로), storeVideoImpl의
 `planning`/`streaming` 리터럴, EVENT_TYPES 목록은 건드리지 않는다.
@@ -113,6 +140,7 @@ per-job 커서는 후속 결정으로 남긴다.
 | `tests/job-envelope-terminal-coverage.test.ts` | [NEW] abortJob→cancelled envelope, generatePipeline fail 경로/dual-emit error 경로가 envelope를 싣는지 subscribe로 검증 |
 | `tests/mcp-job-envelope-consumer.test.ts` | [NEW] matchingOutcome이 envelope terminal을 우선 소비 + envelope 부재 폴백 + progress 도달성 |
 | 기존 `tests/job-envelope-contract.test.ts` | 불변 (buildEnvelope 계약 유지) |
+| `tests/error-envelope-contract.test.ts` | [검토] writeNodeError 직접 호출 + payload 정확 단언 (wp1 감사 블로커 5). 평탄화 additive 필드로 단언이 깨지면 갱신 |
 | `docs/migration/runtime-test-inventory.md` | [MOD] 신규 테스트 2건 등록 — `node scripts/classify-tests.mjs` 재생성 (감사 블로커 3: 빠뜨리면 test:inventory 게이트가 릴리스 verify에서 실패) |
 
 inflight를 import하는 신규 테스트는 기존 terminal-status 테스트의 임시 DB

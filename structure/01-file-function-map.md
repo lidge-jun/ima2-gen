@@ -80,8 +80,8 @@ routes/
 | `routes/generate.ts` | 13 | Classic generation API route wiring |
 | `routes/edit.ts` | 452 | Edit API, mask validation, cancellation, OAuth/API edit response save, provider/web-search/reasoning-effort plumbing |
 | `routes/multimode.ts` | 10 | `POST /api/generate/multimode` route wiring |
-| `routes/video.ts` | 516 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
-| `routes/videoExtended.ts` | 489 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
+| `routes/video.ts` | 519 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
+| `routes/videoExtended.ts` | 491 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
 | `routes/nodes.ts` | 28 | Node generation and node fetch route wiring |
 | `routes/sessions.ts` | 318 | SQLite-backed session list/load/save/rename/delete, style-sheet get/put/enable/extract, graph save |
 | `routes/history.ts` | 234 | History list, cursor pagination, favorites-only filtering, grouped gallery, soft delete (OS trash), restore, gallery favorite toggle, permanent delete |
@@ -104,7 +104,7 @@ routes/
 | `lib/eventBus.ts` | 147 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, per-job `jobSeq` (LRU-bounded), `replaySince`, `hasReplayGap` |
 | `lib/ssePublish.ts` | 32 | `publishJobEvent` — terminal `done` suppression after cancel (cancel↔done race guard) plus the publish-time envelope snapshot |
 | `ui/src/lib/eventChannel.ts` | 164 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
-| `ui/src/lib/sseStreamError.ts` | 34 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
+| `ui/src/lib/sseStreamError.ts` | 66 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
 | `bin/ima2.ts` | 526 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
 | `bin/commands/gen.ts` | 322 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
 | `bin/commands/edit.ts` | 168 | CLI image-edit client with provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, and output options |
@@ -150,7 +150,7 @@ routes/
 | `lib/systemTrash.ts` | 21 | Cross-platform OS-trash helper wrapping the `trash` dependency |
 | `lib/db.ts` | 389 | SQLite bootstrap and migrations (schema 7): sessions, nodes, edges, inflight, terminal jobs, idempotency keys, prompts, prompt folders, canvas versions |
 | `lib/nodeStore.ts` | 92 | Node image and metadata load/save |
-| `lib/inflight.ts` | 484 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and terminal job snapshots that survive a restart |
+| `lib/inflight.ts` | 500 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and terminal job snapshots that survive a restart |
 | `lib/logger.ts` | 162 | Safe structured logging, redaction, level filtering, and test sink helpers |
 | `lib/requestLogger.ts` | 50 | API-only request lifecycle logging and sanitized request ID middleware |
 | `lib/codexDetect.ts` | 154 | Codex OAuth session detection helper |
@@ -179,9 +179,9 @@ routes/
 | `lib/oauthProxy/index.ts` | 29 | Public surface — re-exports generators, streams, prompts, references, runtime, and shared types |
 | `lib/oauthProxy/generators.ts` | 229 | OAuth Responses single-image generation and stable generator exports |
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
-| `lib/generatePipeline.ts` | 695 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
+| `lib/generatePipeline.ts` | 696 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
 | `lib/backgroundPresets.ts` | 47 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
-| `lib/multimodePipeline.ts` | 574 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
+| `lib/multimodePipeline.ts` | 576 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
 | `lib/comparisonRunner.ts` | 111 | Per-cell generation orchestrator with bounded concurrency, isolated failures, single-cell retry, and two-level cancel |
 | `lib/nodeGeneration.ts` | 540 | Node provider routing, retry, persistence, and SSE publication |
@@ -243,7 +243,7 @@ routes/
 | `lib/historyIndex.ts` | 57 | Generated-history index construction and lookup |
 | `lib/imageThumb.ts` | 44 | Image thumbnail generation helpers |
 | `lib/multimodeHelpers.ts` | 48 | Shared multimode generation helpers |
-| `lib/nodeHelpers.ts` | 106 | Node workflow graph and payload helpers |
+| `lib/nodeHelpers.ts` | 113 | Node workflow graph and payload helpers |
 | `lib/nodeTemplateSeeds.ts` | 84 | Built-in node workflow template seed definitions |
 | `lib/nodeTemplateStore.ts` | 127 | Node workflow template persistence and lookup |
 | `lib/presetCompiler.ts` | 67 | Named preset prompt compilation helpers |

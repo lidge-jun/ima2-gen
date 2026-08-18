@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import { getDb } from "./db.js";
 import { publish } from "./eventBus.js";
+import { buildEnvelope } from "./jobs/envelope.js";
 import { logError, logEvent } from "./logger.js";
 
 // SQLite-backed inflight job registry.
@@ -238,11 +239,26 @@ export function abortJob(requestId: string | null | undefined) {
     aborted = true;
   }
   if (active || aborted) {
-    publish(requestId, "error", {
+    // #151 stage 2: the cancel path is a terminal event, so it carries the
+    // canonical envelope. Assembled inline rather than via ssePublish because
+    // ssePublish imports this module (cycle), and abortJob already knows the
+    // inflight phase locally.
+    const data = {
       error: "Generation canceled",
       code: "GENERATION_CANCELED",
       status: 499,
       requestId,
+    };
+    const inflightPhase = getJobPhase(requestId);
+    publish(requestId, "error", data, {
+      buildEnvelope: (sequence) => buildEnvelope({
+        jobId: requestId,
+        requestId,
+        sequence,
+        event: "error",
+        data,
+        inflightPhase,
+      }),
     });
   }
   finishJob(requestId, {

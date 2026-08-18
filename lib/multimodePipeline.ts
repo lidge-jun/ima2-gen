@@ -69,7 +69,8 @@ async function resolveMultimodeElements(
 }
 function dualEmitMultimode(res: Response, requestId: string, event: string, data: unknown) {
   if (!res.writableEnded) writeSse(res, event, data);
-  if (event === "done") {
+  if (event === "done" || event === "error") {
+    // #151 stage 2: terminal events carry the canonical envelope.
     publishJobEvent(requestId, event, data as Record<string, unknown>);
   } else {
     publish(requestId, event, data as Record<string, unknown>);
@@ -83,7 +84,8 @@ function respondMultimodeValidationError(
   status: number,
   payload: Record<string, unknown>,
 ) {
-  publish(requestId, "error", payload);
+  // #151 stage 2: terminal failure carries the canonical envelope.
+  publishJobEvent(requestId, "error", payload);
   if (asyncMode && !res.headersSent) {
     return res.status(status).json(payload);
   }

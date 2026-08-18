@@ -58,7 +58,9 @@ function sendSse(res: Response, event: string, data: unknown) {
 
 function dualEmitVideo(res: Response, requestId: string, event: string, data: unknown) {
   if (!res.writableEnded) sendSse(res, event, data);
-  if (event === "done") {
+  if (event === "done" || event === "error") {
+    // #151 stage 2: terminal events (done AND error) carry the canonical
+    // envelope. Stream events (progress/phase/partial) stay on raw publish.
     publishJobEvent(requestId, event, data as Record<string, unknown>);
   } else {
     publish(requestId, event, data as Record<string, unknown>);
@@ -156,7 +158,8 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       finishHttpStatus = httpStatus;
       finishErrorCode = code;
       const payload = { error, code, status: httpStatus, requestId, ...extra };
-      publish(requestId, "error", payload);
+      // #151 stage 2: terminal failure carries the canonical envelope.
+      publishJobEvent(requestId, "error", payload);
       if (asyncMode && !res.headersSent) {
         return res.status(httpStatus).json(payload);
       }

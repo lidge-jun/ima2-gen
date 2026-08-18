@@ -262,7 +262,8 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       const status = info.status ?? 500;
       const code = info.code ?? "VIDEO_EXTEND_FAILED";
       const payload = { requestId, error: info.message, code, status, ...retryableData(error), ...errorEnvelopeFields(error) };
-      publish(requestId, "error", payload);
+      // #151 stage 2: terminal failure carries the canonical envelope.
+      publishJobEvent(requestId, "error", payload);
       finishJob(requestId, { status: "error", httpStatus: status, errorCode: code, meta: { stage: "preflight" } });
       if (!res.headersSent) res.status(status).json(payload);
     };
@@ -373,7 +374,8 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       } catch (error) {
         if (!isJobCanceled(requestId)) {
           const info = errInfo(error);
-          publish(requestId, "error", { requestId, error: info.message, code: info.code ?? "VIDEO_EXTEND_FAILED", status: info.status ?? 500, ...retryableData(error), ...errorEnvelopeFields(error) });
+          // #151 stage 2: terminal failure carries the canonical envelope.
+          publishJobEvent(requestId, "error", { requestId, error: info.message, code: info.code ?? "VIDEO_EXTEND_FAILED", status: info.status ?? 500, ...retryableData(error), ...errorEnvelopeFields(error) });
           finishJob(requestId, { status: "error", httpStatus: info.status ?? 500, errorCode: info.code ?? "VIDEO_EXTEND_FAILED", meta: { stage } });
         }
       }
