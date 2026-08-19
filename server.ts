@@ -290,6 +290,42 @@ function runtimeHostUrl(host: string | undefined): string {
   return host;
 }
 
+/**
+ * Pure payload builder, exported so the liveness contract is testable without
+ * booting a server or spawning a real progrok child.
+ *
+ * The grok section only carries an endpoint while a supervised child is actually
+ * listening. Publishing `actualPort`/`url` for a dead child is a claim the file
+ * cannot back up, so those go null and `configuredPort` stays for diagnostics.
+ */
+export function buildAdvertisePayload(ctx: RuntimeContext) {
+  const grokLive = ctx.grokProxyLive === true;
+  return {
+    port: Number(ctx.serverActualPort || ctx.config.server.port),
+    url: ctx.serverUrl,
+    pid: process.pid,
+    startedAt: ctx.startedAt,
+    version: ctx.packageVersion,
+    backend: {
+      configuredPort: Number(ctx.serverConfiguredPort || ctx.config.server.port),
+      actualPort: Number(ctx.serverActualPort || ctx.config.server.port),
+      url: ctx.serverUrl,
+    },
+    oauth: {
+      configuredPort: Number(ctx.oauthPort),
+      actualPort: Number(ctx.oauthActualPort || ctx.oauthPort),
+      url: ctx.oauthUrl,
+      status: ctx.oauthReadyState,
+    },
+    grok: {
+      configuredPort: Number(ctx.grokPort),
+      actualPort: grokLive ? Number(ctx.grokActualPort || ctx.grokPort) : null,
+      url: grokLive ? ctx.grokUrl : null,
+      live: grokLive,
+    },
+  };
+}
+
 function advertise(ctx: RuntimeContext) {
   // Proxy readiness can arrive before the backend has bound. Publishing that
   // intermediate state makes consumers treat the configured port as live.
@@ -298,29 +334,7 @@ function advertise(ctx: RuntimeContext) {
     mkdirSync(dirname(ctx.config.storage.advertiseFile), { recursive: true });
     writeFileSync(
       ctx.config.storage.advertiseFile,
-      JSON.stringify({
-        port: Number(ctx.serverActualPort || ctx.config.server.port),
-        url: ctx.serverUrl,
-        pid: process.pid,
-        startedAt: ctx.startedAt,
-        version: ctx.packageVersion,
-        backend: {
-          configuredPort: Number(ctx.serverConfiguredPort || ctx.config.server.port),
-          actualPort: Number(ctx.serverActualPort || ctx.config.server.port),
-          url: ctx.serverUrl,
-        },
-        oauth: {
-          configuredPort: Number(ctx.oauthPort),
-          actualPort: Number(ctx.oauthActualPort || ctx.oauthPort),
-          url: ctx.oauthUrl,
-          status: ctx.oauthReadyState,
-        },
-        grok: {
-          configuredPort: Number(ctx.grokPort),
-          actualPort: Number(ctx.grokActualPort || ctx.grokPort),
-          url: ctx.grokUrl,
-        },
-      }),
+      JSON.stringify(buildAdvertisePayload(ctx)),
     );
   } catch (e) {
     const err = errInfo(e);
@@ -461,14 +475,24 @@ export async function startServer(overrides: StartServerOverrides = {}) {
         restartDelayMs: ctx.config.grokProvider.restartDelayMs,
         onPortSelected: ({ url, port }: { url: string; port: number }) => {
           ctx.markGrokProxyPort({ url, port });
+          // Port selection is an intent to bind, not a successful bind.
+          ctx.grokProxyLive = false;
           advertise(ctx);
         },
         onReady: ({ url, port }: { url: string; port: number }) => {
           ctx.markGrokProxyPort({ url, port });
+          ctx.grokProxyLive = true;
+          advertise(ctx);
+        },
+        onExit: () => {
+          // Without this the advertise file keeps publishing the port of a child
+          // that is already gone.
+          ctx.grokProxyLive = false;
           advertise(ctx);
         },
       })
     : null;
+  ctx.grokProxy = grokChild ?? undefined;
 
   let server: import("node:net").Server;
   let reapTimer: NodeJS.Timeout;

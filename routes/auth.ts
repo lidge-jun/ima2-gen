@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { writeFileSync, renameSync, mkdirSync, existsSync } from "node:fs";
@@ -72,7 +73,9 @@ function saveGrokTokens(tokens: Record<string, unknown>) {
   renameSync(tmp, target);
 }
 
-async function startGrokDeviceCode(): Promise<{ sessionId: string; userCode: string; verificationUrl: string; expiresIn: number }> {
+async function startGrokDeviceCode(
+  onCredentialsSaved?: () => void,
+): Promise<{ sessionId: string; userCode: string; verificationUrl: string; expiresIn: number }> {
   const discovery = await fetch("https://auth.x.ai/.well-known/openid-configuration", { signal: AbortSignal.timeout(10000) });
   const disc = await discovery.json() as { device_authorization_endpoint?: string; token_endpoint: string };
   if (!disc.device_authorization_endpoint) throw new Error("xAI does not expose device_authorization_endpoint");
@@ -119,6 +122,9 @@ async function startGrokDeviceCode(): Promise<{ sessionId: string; userCode: str
       if (tokenRes.ok) {
         const tokens = await tokenRes.json() as Record<string, unknown>;
         saveGrokTokens(tokens);
+        // progrok checks credentials only at startup, so a proxy that gave up
+        // before login stays dead until something tells it the world changed.
+        onCredentialsSaved?.();
         session.status = "complete";
         cleanup(id);
         return;
@@ -238,7 +244,7 @@ function startCodexDeviceCode(): Promise<{ sessionId: string; userCode: string; 
   });
 }
 
-export function registerAuthRoutes(app: Express) {
+export function registerAuthRoutes(app: Express, ctx?: RouteRuntimeContext) {
   app.post("/api/auth/switch", async (req, res) => {
     const provider = req.body?.provider;
     if (provider !== "grok" && provider !== "codex") {
@@ -249,7 +255,7 @@ export function registerAuthRoutes(app: Express) {
     }
     try {
       const result = provider === "grok"
-        ? await startGrokDeviceCode()
+        ? await startGrokDeviceCode(() => ctx?.grokProxy?.notifyCredentialsChanged())
         : await startCodexDeviceCode();
       res.json(result);
     } catch (e) {

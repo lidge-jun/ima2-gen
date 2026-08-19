@@ -77,7 +77,7 @@ export function configureRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   registerVideoRoutes(app, ctx);
   registerVideoExtendedRoutes(app, ctx);
   registerQuotaRoutes(app, ctx);
-  registerAuthRoutes(app);
+  registerAuthRoutes(app, ctx);
   registerMcpConnectionRoutes(app, ctx);
   registerModelsRoutes(app, ctx);
   registerMcpMediaRoutes(app, ctx);

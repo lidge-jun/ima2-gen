@@ -63,7 +63,13 @@ afterEach(async () => {
 });
 
 async function withApp(
-  options: { manager?: FakeMcpManager; agyInstalled?: boolean; minimaxApiKey?: string; atlasCloudApiKey?: string } = {},
+  options: {
+    manager?: FakeMcpManager;
+    agyInstalled?: boolean;
+    minimaxApiKey?: string;
+    atlasCloudApiKey?: string;
+    grokProxyState?: string;
+  } = {},
   run: (base: string, manager: FakeMcpManager) => Promise<void>,
 ) {
   const app = express();
@@ -77,6 +83,7 @@ async function withApp(
     minimaxApiKey: options.minimaxApiKey,
     atlasCloudApiKey: options.atlasCloudApiKey,
     mcpConnectionManager: manager,
+    ...(options.grokProxyState ? { grokProxy: { state: options.grokProxyState } } : {}),
     config: {
       imageModels: {
         default: "gpt-5.6-luna",
@@ -271,5 +278,39 @@ test("the Atlas Cloud lane reports ready once the runtime context holds a key", 
       ["openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit"],
     );
     assert.deepEqual(atlascloud.models.video, []);
+  });
+});
+
+test("the grok lane follows the supervisor instead of the mere presence of a URL", async () => {
+  // The old lane answered "ready" whenever a URL string existed, so /api/models
+  // could claim ready while /api/grok/status reported offline on the same server.
+  const cases: Array<[string, string, RegExp | undefined]> = [
+    ["ready", "ready", undefined],
+    ["waiting-for-login", "disconnected", /login required/i],
+    ["gave-up", "disconnected", /failed to start/i],
+    ["stopped", "disconnected", /stopped/i],
+  ];
+  for (const [supervisorState, expected, reason] of cases) {
+    await withApp({ grokProxyState: supervisorState }, async (base) => {
+      const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+      assert.equal(body.lanes.grok.status, expected, `state=${supervisorState}`);
+      if (reason) assert.match(String(body.lanes.grok.reason), reason);
+    });
+  }
+});
+
+test("transient supervisor states do not flicker the grok lane", async () => {
+  // Boot and re-arm are not settled failures.
+  for (const transient of ["starting", "gave-up-retryable"]) {
+    await withApp({ grokProxyState: transient }, async (base) => {
+      const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+      assert.equal(body.lanes.grok.status, "ready", `state=${transient}`);
+    });
+  }
+  // backoff means the proxy crashed and is retrying — honest about the situation
+  await withApp({ grokProxyState: "backoff" }, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    assert.equal(body.lanes.grok.status, "disconnected", "backoff is honest");
+    assert.match(String(body.lanes.grok.reason), /restart/i);
   });
 });

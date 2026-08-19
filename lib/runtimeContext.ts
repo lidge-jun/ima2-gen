@@ -1,6 +1,7 @@
 import type OpenAI from "openai";
 import { config as runtimeConfigDefault } from "../config.js";
 import type { McpConnectionManager } from "./mcp/connectionManager.js";
+import type { GrokProxyHandle } from "./grokProxyLauncher.js";
 
 export type AppConfig = typeof runtimeConfigDefault;
 export type ApiKeySource = "env" | "oauth" | "config" | "none" | undefined;
@@ -13,6 +14,10 @@ export interface RuntimeContext {
   grokActualPort: number | undefined;
   grokPort: number;
   grokUrl: string;
+  /** Supervisor handle. Optional: absent when autoStart is off or in test contexts. */
+  grokProxy?: GrokProxyHandle | undefined;
+  /** True only while a supervised child is actually listening. */
+  grokProxyLive?: boolean | undefined;
   hasApiKey: boolean;
   oauthActualPort: number | undefined;
   oauthPort: number;

@@ -72,7 +72,7 @@ routes/
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `server.ts` | 567 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
+| `server.ts` | 591 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
 | `config.ts` | 428 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 91 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
@@ -195,7 +195,7 @@ routes/
 | `lib/promptSafetyPolicy.ts` | 3 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
 | `lib/responsesImageAdapter.ts` | 479 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
 | `lib/providerOptions.ts` | 120 | Per-provider option assembly (provider, model, size, reasoning effort, web search) |
-| `lib/runtimeContext.ts` | 196 | Per-request runtime context plumbing for routes and lib helpers |
+| `lib/runtimeContext.ts` | 201 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
 | `lib/oauthNormalize.ts` | 31 | Upstream OAuth response field normalization |
 | `lib/openDirectory.ts` | 48 | Cross-platform open of the generated directory (used by `/api/storage/open-generated-dir`) |
@@ -233,7 +233,7 @@ routes/
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
 | `lib/grokImageCore.ts` | 252 | Shared Grok image request and response handling |
 | `lib/grokMultimodeAdapter.ts` | 115 | Grok multimode generation provider adapter |
-| `lib/grokProxyLauncher.ts` | 198 | Grok proxy process startup and readiness helpers |
+| `lib/grokProxyLauncher.ts` | 326 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
 | `lib/grokUpstreamRetry.ts` | 158 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
 | `lib/grokSizeMapper.ts` | 86 | Grok model image-size mapping and validation |

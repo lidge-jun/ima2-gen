@@ -116,11 +116,41 @@ function apiLane(ctx: RuntimeContext, image: McpModelEntry[]): ModelLaneDto {
   );
 }
 
+const UNPROBED_GROK_REASON = "configured proxy endpoint; live session not probed";
+
+/**
+ * Lane status follows the supervisor instead of the mere existence of a URL
+ * string, so /api/models and /api/grok/status can no longer disagree.
+ *
+ * Transient states (starting/backoff/re-armed) keep the legacy optimistic
+ * answer on purpose: flickering the lane during a few hundred ms of boot or a
+ * bounded retry is noise, not honesty. Only settled-bad states go disconnected.
+ */
+function grokLaneState(ctx: RuntimeContext): LaneState {
+  if (!ctx.grokUrl) return { status: "disconnected", reason: "Grok proxy not configured" };
+  switch (ctx.grokProxy?.state) {
+    case "ready":
+      return { status: "ready" };
+    case "starting":
+      return { status: "ready", reason: UNPROBED_GROK_REASON };
+    case "backoff":
+      return { status: "disconnected", reason: "Grok proxy restarting" };
+    case "gave-up-retryable":
+      return { status: "ready", reason: UNPROBED_GROK_REASON };
+    case "waiting-for-login":
+      return { status: "disconnected", reason: "Grok login required" };
+    case "gave-up":
+      return { status: "disconnected", reason: "Grok proxy failed to start" };
+    case "stopped":
+      return { status: "disconnected", reason: "Grok proxy stopped" };
+    default:
+      // No supervisor (autoStart off, or a test context): legacy contract.
+      return { status: "ready", reason: UNPROBED_GROK_REASON };
+  }
+}
+
 function grokLane(ctx: RuntimeContext): ModelLaneDto {
-  const configured = Boolean(ctx.grokUrl);
-  const state: LaneState = configured
-    ? { status: "ready", reason: "configured proxy endpoint; live session not probed" }
-    : { status: "disconnected", reason: "Grok proxy not configured" };
+  const state = grokLaneState(ctx);
   return lane(state, {
     image: ctx.config.grokProvider.defaultImageModel,
     video: ctx.config.grokProvider.defaultVideoModel,
