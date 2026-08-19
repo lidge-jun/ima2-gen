@@ -346,7 +346,12 @@ jobs:
 
   create-github-release:
     needs: [prepare, publish-stable]
-    if: needs.prepare.outputs.channel == 'latest' && needs.prepare.outputs.should_publish == 'true'
+    # !failure() && !cancelled() is required here too: success() is transitive
+    # over the whole needs chain, so the deliberately skipped windows-consumer
+    # (via publish-stable's needs) would otherwise skip this job — measured on
+    # the v3.7.1 cut, where the tag published but no GitHub Release appeared.
+    # publish-stable succeeding is the real gate, and it is a direct need.
+    if: ${{ !failure() && !cancelled() && needs.prepare.outputs.channel == 'latest' && needs.prepare.outputs.should_publish == 'true' && needs.publish-stable.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

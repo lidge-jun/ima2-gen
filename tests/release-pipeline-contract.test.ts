@@ -366,6 +366,16 @@ describe("package install policy contract", () => {
     assert.match(stableBlock, /!failure\(\) && !cancelled\(\)/, "publish-stable must accept a skipped windows-consumer");
     // (d) Never always(): a failed package job must still block the publish.
     assert.doesNotMatch(stableBlock, /always\(\)/, "publish-stable must not run over failures");
+    // (e) success() is transitive over the needs chain, so every job downstream
+    //     of the skipped windows-consumer needs the same override, gated on its
+    //     direct publish need actually succeeding. Measured failure mode on the
+    //     v3.7.1 cut: tag published, GitHub Release job silently skipped.
+    const ghReleaseBlock = workflow.slice(workflow.indexOf("create-github-release:"));
+    assert.match(
+      ghReleaseBlock,
+      /!failure\(\) && !cancelled\(\)[\s\S]{0,200}?needs\.publish-stable\.result == 'success'/,
+      "create-github-release must tolerate the skipped matrix but require a successful stable publish",
+    );
     assert.match(workflow, /test:package-global-update/);
     assert.match(workflow, /assert-remote-ref/);
     assert.match(workflow, /id: registry[\s\S]*guard-publish/);
