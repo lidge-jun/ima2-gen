@@ -150,7 +150,13 @@ jobs:
 
   windows-consumer:
     needs: [prepare, package]
-    if: needs.prepare.outputs.should_publish == 'true'
+    # Preview lane only (260819 release-speed unit). The stable tag can only
+    # exist after release.yml's preview proof, and prepare re-verifies that
+    # proof for the latest channel: the same gitHead already passed this
+    # matrix minutes earlier on the preview lane. Re-running it doubled the
+    # release wall time for zero new evidence (opencodex pattern: a verified
+    # SHA is not re-verified).
+    if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.channel == 'preview'
     runs-on: windows-latest
     permissions:
       contents: read
@@ -263,7 +269,11 @@ jobs:
 
   publish-stable:
     needs: [prepare, package, windows-consumer]
-    if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.channel == 'latest'
+    # windows-consumer is deliberately skipped on this channel, so success()
+    # must be replaced: !failure() && !cancelled() accepts a skipped need but
+    # still refuses to run after a failed package job. An unconditional
+    # override is forbidden here — it would publish over a failure.
+    if: ${{ !failure() && !cancelled() && needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.channel == 'latest' }}
     runs-on: ubuntu-latest
     # release.yml gates its tag job on this same environment, so a release cut
     # is already approved before it reaches here. This gate exists to cover the

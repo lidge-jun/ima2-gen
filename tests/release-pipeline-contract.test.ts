@@ -323,8 +323,8 @@ describe("package install policy contract", () => {
     // Each publish lane must be pinned to its own environment, or the split
     // buys nothing: an unpinned stable job would publish without approval.
     assert.match(workflow, /publish-preview:[\s\S]{0,600}?name: npm-preview/);
-    assert.match(workflow, /publish-stable:[\s\S]{0,600}?name: npm-stable/);
-    assert.match(workflow, /publish-stable:[\s\S]{0,300}?channel == 'latest'/);
+    assert.match(workflow, /publish-stable:[\s\S]{0,900}?name: npm-stable/);
+    assert.match(workflow, /publish-stable:[\s\S]{0,700}?channel == 'latest'/);
     assert.match(workflow, /publish-preview:[\s\S]{0,300}?channel == 'preview'/);
     assert.match(workflow, /create-github-release:[\s\S]*id-token:\s*write[\s\S]*attestations:\s*write/);
     assert.match(workflow, /actions\/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8/);
@@ -334,7 +334,38 @@ describe("package install policy contract", () => {
     assert.match(workflow, /TARBALL=.*'\.\/release-artifact\/'[\s\S]*npm publish "\$TARBALL"/);
     assert.match(workflow, /verify-existing:/);
     assert.match(workflow, /windows-consumer:/);
-    assert.match(workflow, /needs:\s*\[prepare, package, windows-consumer\]/);
+    // 260819 release-speed unit: windows-consumer runs on the preview lane
+    // only. The stable lane's evidence is the preview proof — prepare verifies
+    // the npm preview's gitHead equals the publish sha, and that preview could
+    // only publish after this matrix passed. That inference lives in the four
+    // job-scoped pins below; a global needs regex would stay green while the
+    // stable lane silently lost its dependency.
+    // (a) The load-bearing pin: preview CANNOT publish without the matrix.
+    assert.match(
+      workflow,
+      /publish-preview:\s*\n\s*needs:\s*\[prepare, package, windows-consumer\]/,
+      "publish-preview must depend on windows-consumer — the stable lane's skip is only safe while this holds",
+    );
+    // (b) The matrix is scoped to the preview channel.
+    assert.match(
+      workflow,
+      /windows-consumer:[\s\S]{0,600}?channel == 'preview'/,
+      "windows-consumer must be preview-only",
+    );
+    // (c) Stable keeps the dependency edge and tolerates the skipped need
+    //     without accepting a failed one.
+    assert.match(
+      workflow,
+      /publish-stable:\s*\n\s*needs:\s*\[prepare, package, windows-consumer\]/,
+      "publish-stable must keep its needs edge",
+    );
+    const stableBlock = workflow.slice(
+      workflow.indexOf("publish-stable:"),
+      workflow.indexOf("create-github-release:"),
+    );
+    assert.match(stableBlock, /!failure\(\) && !cancelled\(\)/, "publish-stable must accept a skipped windows-consumer");
+    // (d) Never always(): a failed package job must still block the publish.
+    assert.doesNotMatch(stableBlock, /always\(\)/, "publish-stable must not run over failures");
     assert.match(workflow, /test:package-global-update/);
     assert.match(workflow, /assert-remote-ref/);
     assert.match(workflow, /id: registry[\s\S]*guard-publish/);
