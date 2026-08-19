@@ -8,6 +8,20 @@ tags: [ima2-gen, devlog, wp1, ui, modal]
 
 의존: 없음.
 
+## B-중 범위 수정 (사용자 요청, 2026-08-19)
+
+"실패 요인까지 넣어놔" — 오류 코드만으로는 실패 사유를 알 수 없으므로
+서버 로그 엔트리에 **errorMessage**(사람이 읽는 실패 문구)를 추가한다.
+000의 "서버 스키마 확장 OUT" 결정을 이 필드 하나에 한해 해제한다.
+
+| 파일 | 변경 |
+|---|---|
+| `lib/generationRequestLog.ts` | [MOD] `errorMessage?: string \| null` 필드 (additive, 구 엔트리는 부재 허용) |
+| `lib/generatePipeline.ts` | [MOD] fail()에서 `payload.error`(err.message)를 finishErrorMessage로 캡처, 로그 write에 포함 |
+| `ui/src/lib/api-log.ts` | [MOD] 타입에 errorMessage 추가 |
+| 모달 | 오류 코드 행 아래 "실패 사유" 행 (없으면 생략) |
+| i18n 4로케일 | `generationLog.detailErrorMessage` |
+
 ## 파일 맵
 
 | # | 파일 | 변경 |

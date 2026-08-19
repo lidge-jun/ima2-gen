@@ -1666,7 +1666,16 @@
     "copied": "프롬프트 복사됨",
     "copy": "클릭하여 프롬프트 복사",
     "loadFailed": "생성 로그를 불러오지 못했습니다.",
-    "retry": "다시 시도"
+    "retry": "다시 시도",
+    "detailOpen": "클릭하여 상세 보기",
+    "detailTitle": "생성 요청",
+    "detailTime": "시각",
+    "detailRequestId": "요청 ID",
+    "detailCounts": "성공 / 요청",
+    "detailError": "오류 코드",
+    "detailPrompt": "프롬프트",
+    "detailPromptEmpty": "(프롬프트 없음)",
+    "detailErrorMessage": "실패 사유"
   },
   "clipboard": {
     "writeFailed": "클립보드에 복사하지 못했습니다."

@@ -3,6 +3,7 @@ import { getGenerationRequestLog, type GenerationRequestLogEntry } from "../lib/
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { copyTextToClipboard } from "../lib/clipboard";
+import { GenerationLogDetailModal } from "./GenerationLogDetailModal";
 
 export function GenerationRequestLogPanel() {
   const { t } = useI18n();
@@ -11,6 +12,10 @@ export function GenerationRequestLogPanel() {
   const [items, setItems] = useState<GenerationRequestLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Snapshot of the clicked entry. Log records are immutable append-only
+  // writes, so a frozen snapshot stays correct even while the panel's
+  // items refresh during active generations.
+  const [selected, setSelected] = useState<GenerationRequestLogEntry | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -62,8 +67,8 @@ export function GenerationRequestLogPanel() {
           type="button"
           role="listitem"
           className="generation-request-log__item"
-          onClick={() => void copyPrompt(item)}
-          title={item.succeeded === 0 && item.error ? item.error : t("generationLog.copy")}
+          onClick={() => setSelected(item)}
+          title={t("generationLog.detailOpen")}
         >
           <span className="generation-request-log__prompt">{item.prompt}</span>
           <span className={`generation-request-log__count${item.succeeded === 0 ? " is-error" : " is-success"}`}>
@@ -71,6 +76,13 @@ export function GenerationRequestLogPanel() {
           </span>
         </button>
       ))}
+      {selected ? (
+        <GenerationLogDetailModal
+          entry={selected}
+          onClose={() => setSelected(null)}
+          onCopyPrompt={(entry) => void copyPrompt(entry)}
+        />
+      ) : null}
     </div>
   );
 }

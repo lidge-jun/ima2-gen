@@ -10,6 +10,8 @@ export type GenerationRequestLogEntry = {
   requested: number;
   succeeded: number;
   error: string | null;
+  /** Human-readable failure reason (260819). Absent on pre-260819 entries. */
+  errorMessage?: string | null;
 };
 
 const MAX_ENTRIES = 200;

@@ -1666,7 +1666,16 @@
     "copied": "提示已複製",
     "copy": "點選複製提示",
     "loadFailed": "無法載入生成日誌。",
-    "retry": "重試"
+    "retry": "重試",
+    "detailOpen": "點擊查看詳情",
+    "detailTitle": "生成請求",
+    "detailTime": "時間",
+    "detailRequestId": "請求 ID",
+    "detailCounts": "成功 / 請求",
+    "detailError": "錯誤代碼",
+    "detailPrompt": "提示詞",
+    "detailPromptEmpty": "（無提示詞）",
+    "detailErrorMessage": "失敗原因"
   },
   "clipboard": {
     "writeFailed": "無法寫入剪貼簿。"

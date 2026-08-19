@@ -1666,7 +1666,16 @@
     "copied": "Prompt copied",
     "copy": "Click to copy prompt",
     "loadFailed": "Could not load generation logs.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "detailOpen": "Click for details",
+    "detailTitle": "Generation request",
+    "detailTime": "Time",
+    "detailRequestId": "Request ID",
+    "detailCounts": "Succeeded / requested",
+    "detailError": "Error code",
+    "detailPrompt": "Prompt",
+    "detailPromptEmpty": "(empty prompt)",
+    "detailErrorMessage": "Failure reason"
   },
   "clipboard": {
     "writeFailed": "Could not write to the clipboard."

@@ -1666,7 +1666,16 @@
     "copied": "提示已复制",
     "copy": "点击复制提示",
     "loadFailed": "无法加载生成日志。",
-    "retry": "重试"
+    "retry": "重试",
+    "detailOpen": "点击查看详情",
+    "detailTitle": "生成请求",
+    "detailTime": "时间",
+    "detailRequestId": "请求 ID",
+    "detailCounts": "成功 / 请求",
+    "detailError": "错误代码",
+    "detailPrompt": "提示词",
+    "detailPromptEmpty": "（无提示词）",
+    "detailErrorMessage": "失败原因"
   },
   "clipboard": {
     "writeFailed": "无法写入剪贴板。"

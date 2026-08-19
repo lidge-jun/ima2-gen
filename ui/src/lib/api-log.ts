@@ -8,6 +8,7 @@ export type GenerationRequestLogEntry = {
   requested: number;
   succeeded: number;
   error: string | null;
+  errorMessage?: string | null;
 };
 
 export async function getGenerationRequestLog(): Promise<{ items: GenerationRequestLogEntry[] }> {

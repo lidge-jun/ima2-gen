@@ -50,6 +50,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
     let finishStatus = "completed";
     let finishHttpStatus: number | undefined;
     let finishErrorCode: string | undefined;
+    let finishErrorMessage: string | undefined;
     let finishMeta: Record<string, unknown> = {};
     let finishCanceled = false;
     let jobOwned = false;
@@ -58,6 +59,11 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       finishStatus = "error";
       finishHttpStatus = status;
       finishErrorCode = typeof payload.code === "string" ? payload.code : finishErrorCode;
+      // The human-readable reason for the request log (260819): producers put
+      // it in payload.error, MCP-shaped payloads in payload.message.
+      finishErrorMessage = typeof payload.error === "string" ? payload.error
+        : typeof payload.message === "string" ? payload.message
+        : finishErrorMessage;
       // Recorded here rather than from an event subscriber: synchronous
       // generation is the default and never publishes a terminal event.
       completeIdempotencyKey(idempotencyKey, "error", { ...payload, status });
@@ -690,6 +696,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         requested: parseInt(req.body?.n) || 1,
         succeeded: finishStatus === "completed" ? ((finishMeta.imageCount as number) ?? 1) : 0,
         error: finishStatus === "error" ? (finishErrorCode ?? "unknown") : null,
+        errorMessage: finishStatus === "error" ? (finishErrorMessage ?? null) : null,
       }).catch(() => {});
     }
 }

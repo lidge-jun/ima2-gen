@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 const DIALOG_SURFACES = [
   "ui/src/components/PromptDetailModal.tsx",
   "ui/src/components/GalleryModal.tsx",
+  "ui/src/components/GenerationLogDetailModal.tsx",
   "ui/src/components/CustomSizeConfirmModal.tsx",
   "ui/src/components/OnboardingPopup.tsx",
   "ui/src/components/ProviderReadinessPopup.tsx",
