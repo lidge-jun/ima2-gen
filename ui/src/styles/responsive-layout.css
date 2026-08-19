@@ -380,6 +380,9 @@
     grid-template-rows: 1fr;
     height: 100dvh;
     overflow: hidden;
+    /* The base mobile rule reserves room for the bottom tab bar. Settings owns
+       the whole screen, so that reserve only re-creates offscreen scroll room. */
+    padding-bottom: 0;
   }
   .app.app--settings-open .sidebar,
   .app.app--settings-open .history-strip {

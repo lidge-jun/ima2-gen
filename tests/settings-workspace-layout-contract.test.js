@@ -36,6 +36,23 @@ test("settings workspace keeps mobile and desktop navigation from occupying the 
   assert.match(mobileToggle, /openComposeSheet\("controls"\)/);
 });
 
+test("open settings collapses the app grid to a single row so nothing can scroll it away", () => {
+  // The settings workspace spans `grid-column: 2 / -1`, leaving no room in row 1
+  // for the sidebar, history strip, or right panel. If those stay displayed they
+  // auto-place into a second full-height row, making the app twice the viewport
+  // height inside an `overflow: hidden` box. A focus or scrollIntoView in that
+  // offscreen row then pushed settings above the top edge, unreachable.
+  assert.match(css, /\.app--settings-open\s*\{[\s\S]*?grid-template-rows:\s*minmax\(0,\s*1fr\);/);
+  assert.match(
+    css,
+    /\.app\.app--settings-open > \.sidebar,[\s\S]*?\.app\.app--settings-open > \.history-strip,[\s\S]*?\.app\.app--settings-open > \.right-panel\s*\{[\s\S]*?display:\s*none;/,
+  );
+  assert.match(css, /\.app--settings-open \.settings-workspace\s*\{[\s\S]*?grid-column:\s*2 \/ -1;[\s\S]*?height:\s*100dvh;/);
+  // Mobile reserves bottom-tab-bar padding on `.app`; settings owns the whole
+  // screen, so that reserve would re-introduce the same offscreen scroll room.
+  assert.match(css, /@media \(max-width:\s*800px\)[\s\S]*?\.app\.app--settings-open\s*\{[\s\S]*?padding-bottom:\s*0;/);
+});
+
 test("settings section shortcuts scroll only the settings content container", () => {
   assert.match(settings, /const contentRef = useRef<HTMLElement \| null>\(null\)/);
   assert.match(settings, /const root = contentRef\.current/);

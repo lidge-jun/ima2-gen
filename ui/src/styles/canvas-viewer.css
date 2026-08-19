@@ -9,13 +9,31 @@
   height: 100dvh;
 }
 
-.app--settings-open .right-panel {
-  opacity: 0.58;
+/* Settings is a full-surface workspace, not an overlay. It spans every column
+   after the nav rail, so the sidebar, history strip and right panel have no
+   room left in row 1. Left auto-placed, the grid invented a second full-height
+   row for them: the app then had 2x100dvh of content inside a 100dvh box with
+   `overflow: hidden`. Any focus or scrollIntoView in that offscreen row
+   scrolled the container and shoved settings above the viewport with no
+   scrollbar to bring it back. Hiding those items keeps the grid one row tall. */
+.app--settings-open {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.app.app--settings-open > .sidebar,
+.app.app--settings-open > .history-strip,
+.app.app--settings-open > .right-panel {
+  display: none;
 }
 
 .app--settings-open .settings-workspace {
   grid-column: 2 / -1;
   grid-row: 1;
+  height: 100dvh;
+}
+
+.app--settings-open .settings-shell {
+  height: calc(100dvh - 48px);
 }
 
 .settings-workspace {
