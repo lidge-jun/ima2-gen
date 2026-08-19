@@ -15,6 +15,14 @@ test("J2 auth failure exposes a reachable reauth action", async ({ page }) => {
     await cta.click();
     await page.waitForLoadState("domcontentloaded");
     expect(page.url()).toContain(new URL(hrefBefore).host);
+    // The reauth CTA opens the settings workspace on its providers section.
+    // Settings is a full-surface workspace, so the composer is unmounted while
+    // it is open; asserting on Generate here only passed while a layout bug let
+    // the composer stay in a second, offscreen grid row.
+    await expect(page.getByRole("main", { name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Providers" })).toBeVisible();
+    // Closing settings must return to the canvas with the composer usable.
+    await page.getByRole("button", { name: "Close settings" }).click();
     await expect(page.getByRole("button", { name: "Generate" })).toBeVisible();
   } finally {
     await app.close();
