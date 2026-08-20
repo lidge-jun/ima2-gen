@@ -127,8 +127,13 @@ export async function runVideoGenerateImpl(
       requestId: flightId,
       provider: (get().provider === "grok-api" ? "grok-api" : "grok") as "grok" | "grok-api",
       model: (typeof get().videoModelSelected === "string" && get().videoModelSelected) || undefined,
-      referenceImages: refs.length >= 2 ? refs : undefined,
-      sourceImage: refs.length === 1 ? refs[0] : parentVideoFrameRef,
+      // Tray references go in the reference slot no matter how many there are. Sending
+      // a lone tray image as `sourceImage` made it the locked first frame, which is the
+      // opposite of what the reference tray is for. First-frame intent still has its own
+      // path: `parentVideoFrameRef` from a node/continuity chain.
+      // devlog/_plan/260820_grok15_multi_reference_video/030_single_ref_mode_choice.md
+      referenceImages: refs.length > 0 ? refs : undefined,
+      sourceImage: refs.length > 0 ? undefined : parentVideoFrameRef,
       sourceFilename: refs.length === 0 && !parentVideoFrameRef ? parentSourceFilename : undefined,
       continueFromVideo,
       continuityLineage: parentVideoContinuity,

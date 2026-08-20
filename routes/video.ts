@@ -314,16 +314,39 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         }
       }
       refInputs.push(...elementResolvedRefs.map((image) => ({ image, source: "composer" as const })));
-      let resolved: Array<{ b64: string; filename: string | null }>;
+      let resolved: Array<{ b64: string; filename: string | null; source: ExistingReferenceInput["source"] }>;
       try {
-        const all = await Promise.all(refInputs.map((r) => resolveSourceImage(ctx, r.image, r.filename)));
-        resolved = all.filter((r): r is { b64: string; filename: string | null } => Boolean(r.b64));
+        const all = await Promise.all(refInputs.map(async (r) => ({
+          ...(await resolveSourceImage(ctx, r.image, r.filename)),
+          source: r.source,
+        })));
+        resolved = all.filter((r): r is { b64: string; filename: string | null; source: ExistingReferenceInput["source"] } => Boolean(r.b64));
       } catch (e: any) {
         return fail(e?.status || 400, e?.code || "GROK_VIDEO_INVALID_MODE", e?.message || "invalid reference image");
       }
       if (resolved.length > MAX_REF2V_REFERENCES) return fail(400, "GROK_VIDEO_REF_TOO_MANY", `at most ${MAX_REF2V_REFERENCES} reference images`);
       const incomingProviderUrl = typeof req.body?.providerUrl === "string" && req.body.providerUrl.startsWith("http") ? req.body.providerUrl : null;
-      const mode: VideoMode = incomingProviderUrl ? "image-to-video" : deriveVideoMode(resolved.length);
+      // Which slot an image arrived in IS the caller's intent, and a bare count throws
+      // that away. A composer reference means "guide the video with this" even when
+      // there is only one of them; a node/continuity image means "start from this
+      // frame". Deriving from the count alone forced every single composer reference
+      // into image-to-video, so the one thing the tray is named for was unreachable.
+      // devlog/_plan/260820_grok15_multi_reference_video/030_single_ref_mode_choice.md
+      const composerRefCount = resolved.filter((r) => r.source === "composer").length;
+      const requestedMode = typeof req.body?.mode === "string" ? req.body.mode : null;
+      const derivedMode: VideoMode = composerRefCount > 0
+        ? "reference-to-video"
+        : deriveVideoMode(resolved.length);
+      const mode: VideoMode = incomingProviderUrl
+        ? "image-to-video"
+        : (requestedMode === "reference-to-video" || requestedMode === "image-to-video" || requestedMode === "text-to-video")
+          ? requestedMode
+          : derivedMode;
+      // An explicit reference-to-video with nothing to reference would ship an empty
+      // reference_images array and fail upstream with a less useful message.
+      if (mode === "reference-to-video" && resolved.length === 0) {
+        return fail(400, "GROK_VIDEO_INVALID_MODE", "reference-to-video requires at least 1 reference image");
+      }
       const duration = durationCheck.duration;
       const resolutionModeCheck = validateVideoResolutionForRequest(modelCheck.model, resolutionCheck.resolution, mode, {
         allowTextCanvasShim: true,

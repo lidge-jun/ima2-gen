@@ -167,7 +167,17 @@ export type VideoResolution = "480p" | "720p" | "1080p";
 export type VideoAspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "auto";
 export type VideoMode = "text-to-video" | "image-to-video" | "reference-to-video";
 
-// Mode is derived purely from the number of attached reference images.
+/**
+ * Count-only fallback for callers that have lost track of WHICH slot each image
+ * arrived in.
+ *
+ * A single image is ambiguous on its own: as a first frame it means image-to-video,
+ * as a reference it means reference-to-video, and the count cannot tell them apart.
+ * This returns the historical default (image-to-video) so old callers keep their
+ * behavior — it is a fallback, not a ceiling. Callers that DO know the slot should
+ * use `deriveVideoMode` in lib/videoGenerationRequest.ts, which reads intent from
+ * the field the caller chose.
+ */
 export function deriveVideoMode(refCount: number): VideoMode {
   if (refCount >= 2) return "reference-to-video";
   if (refCount === 1) return "image-to-video";

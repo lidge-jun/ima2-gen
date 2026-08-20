@@ -347,7 +347,11 @@ export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: 
   }
   const refs = opts.referenceImageUrls ?? [];
   if (plan.mode === "reference-to-video") {
-    if (refs.length < 2) throw grokError("reference-to-video requires at least 2 reference images", 400, "GROK_VIDEO_INVALID_MODE");
+    // One reference is a legitimate reference-to-video request: it guides the subject
+    // without locking the first frame, which is what distinguishes it from
+    // image-to-video. Verified against api.x.ai on 2026-08-20 (000_research.md).
+    // Zero references is still nonsense — that is text-to-video wearing the wrong name.
+    if (refs.length < 1) throw grokError("reference-to-video requires at least 1 reference image", 400, "GROK_VIDEO_INVALID_MODE");
     if (refs.length > MAX_REF2V_REFERENCES) throw grokError(`reference-to-video allows at most ${MAX_REF2V_REFERENCES} reference images`, 400, "GROK_VIDEO_REF_TOO_MANY");
     if (opts.sourceImageUrl) throw grokError("reference-to-video cannot be combined with a single source image", 400, "GROK_VIDEO_INVALID_MODE");
   }

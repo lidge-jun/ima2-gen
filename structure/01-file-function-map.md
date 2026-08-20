@@ -80,7 +80,7 @@ routes/
 | `routes/generate.ts` | 13 | Classic generation API route wiring |
 | `routes/edit.ts` | 452 | Edit API, mask validation, cancellation, OAuth/API edit response save, provider/web-search/reasoning-effort plumbing |
 | `routes/multimode.ts` | 10 | `POST /api/generate/multimode` route wiring |
-| `routes/video.ts` | 518 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
+| `routes/video.ts` | 541 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
 | `routes/videoExtended.ts` | 491 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
 | `routes/nodes.ts` | 28 | Node generation and node fetch route wiring |
 | `routes/sessions.ts` | 318 | SQLite-backed session list/load/save/rename/delete, style-sheet get/put/enable/extract, graph save |
@@ -161,7 +161,7 @@ routes/
 | `lib/videoContinuity.ts` | 193 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
 | `lib/videoFrameExtract.ts` | 100 | Generated-dir-safe MP4 validation and ffmpeg frame extraction for video frame/analyze/continue workflows |
 | `lib/videoGenerationRequest.ts` | 163 | Shared generate-request contract: mode inference, mutually-exclusive source guard, and duration/resolution/aspect defaults for UI, CLI, agent, and route |
-| `lib/grokVideoAdapter.ts` | 468 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
+| `lib/grokVideoAdapter.ts` | 472 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
 | `lib/grokVideoShared.ts` | 159 | Shared Grok video types, config, endpoint, and timeout helpers keeping the adapter/poll dependency one-way |
 | `lib/grokVideoPoll.ts` | 117 | Grok video status polling with transient-failure tolerance so a network blip cannot discard a long render |
 | `lib/localImportStore.ts` | 115 | Validates raw PNG/JPEG/WebP body, writes timestamped `imported-*` to generated/, embeds XMP metadata, returns GenerateItem-shaped row |
@@ -201,7 +201,7 @@ routes/
 | `lib/openDirectory.ts` | 48 | Cross-platform open of the generated directory (used by `/api/storage/open-generated-dir`) |
 | `lib/refs.ts` | 134 | Reference image validation, count/size limits |
 | `lib/referenceImageCompress.ts` | 85 | Sharp-based reference image compression below the configured byte cap |
-| `lib/imageModels.ts` | 257 | Image model allowlist and `normalizeImageModel(ctx, raw)` helper |
+| `lib/imageModels.ts` | 267 | Image model allowlist and `normalizeImageModel(ctx, raw)` helper |
 | `lib/imageMetadata.ts` | 124 | `ima2.generation.v1` payload schema, XMP build/parse, embed limits |
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
 | `lib/canvasVersionStore.ts` | 331 | Canvas version snapshot storage, list, restore, and pruning |
@@ -322,7 +322,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Cost | `ui/src/lib/cost.ts` | 91 | Quality/size cost estimation |
 | Error codes | `ui/src/lib/errorCodes.ts` | 229 | Stable error code → translation key mapping |
 | Error handler | `ui/src/lib/errorHandler.ts` | 24 | Routes errors to toast or persistent `ErrorCard` |
-| Image models | `ui/src/lib/imageModels.ts` | 137 | UI-side image model labels |
+| Image models | `ui/src/lib/imageModels.ts` | 139 | UI-side image model labels |
 | Video source count | `ui/src/lib/videoSourceCount.ts` | 52 | Effective video source counter for 1080p UI enablement; treats provider URL and node parent still/video sources as single I2V anchors |
 | Storage | `ui/src/lib/storage.ts` | 26 | localStorage helpers |
 | Gallery utils | `ui/src/lib/galleryUtils.ts` | 18 | Gallery navigation helpers |

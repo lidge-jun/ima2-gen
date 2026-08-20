@@ -187,7 +187,9 @@ describe("Grok video adapter", () => {
 
   it("rejects invalid Ref2V payload combinations", () => {
     const plan: GrokVideoPlan = { prompt: "p", mode: "reference-to-video", duration: 5, resolution: "480p", aspectRatio: "auto", webSearchCalls: 1 };
-    assert.throws(() => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: ["data:image/png;base64,A"] }), (e: any) => e.code === "GROK_VIDEO_INVALID_MODE");
+    // One reference is valid now (issue #157) — the floor is zero references, not one.
+    // devlog/_plan/260820_grok15_multi_reference_video/030_single_ref_mode_choice.md
+    assert.throws(() => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: [] }), (e: any) => e.code === "GROK_VIDEO_INVALID_MODE");
     assert.throws(
       () => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B"], sourceImageUrl: "data:image/png;base64,S" }),
       (e: any) => e.code === "GROK_VIDEO_INVALID_MODE",

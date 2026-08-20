@@ -124,9 +124,11 @@ export function normalizeVideoModelValue(v: unknown): VideoModel | false {
   return v === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : v;
 }
 
+// Tray attachments are references at any count, matching what the composer sends and
+// what the server derives from the slot. A first frame comes from a node/continuity
+// chain instead, not from the reference tray.
 export function deriveVideoModeUI(refCount: number): "text-to-video" | "image-to-video" | "reference-to-video" {
-  if (refCount >= 2) return "reference-to-video";
-  if (refCount === 1) return "image-to-video";
+  if (refCount >= 1) return "reference-to-video";
   return "text-to-video";
 }
 
