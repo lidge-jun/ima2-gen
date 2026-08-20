@@ -575,8 +575,8 @@ Persist the server-side model defaults shared by GPT OAuth and API provider path
 
 The built-in OAuth image default is `gpt-5.6-luna`; Grok image and video code
 defaults are `grok-imagine-image-quality` and `grok-imagine-video` respectively.
-Use `grok-imagine-video-1.5` explicitly when its quality or 1080p capabilities
-are needed.
+For video, set `grok-imagine-video-1.5` as your default and leave the base model
+for edit and extension, which are the only things 1.5 cannot do.
 
 ```bash
 ima2 defaults set model gpt-5.5
@@ -659,10 +659,11 @@ a SuperGrok subscription; MCP lanes require their own connected subscription.
 
 ```bash
 ima2 models --kind video
-ima2 defaults set video grok/grok-imagine-video
+ima2 defaults set video grok/grok-imagine-video-1.5
 ima2 video "a cat playing piano"                    # text-to-video, uses saved default
-ima2 video "animate this" --model grok/grok-imagine-video --ref photo.png
-ima2 video "cinematic" --model grok/grok-imagine-video --ref a.png --ref b.png
+ima2 video "animate this" --ref photo.png           # image-to-video: photo is frame 1
+ima2 video "same cat, on a beach" --ref cat.png --as-reference   # new scene, same subject
+ima2 video "cinematic" --ref a.png --ref b.png      # 2+ refs are always references
 ```
 
 Targets use `--model <lane>/<model>`; a bare ID is accepted only when it is
@@ -691,24 +692,62 @@ parameters. Multishot generation is `POST /api/mcp/multishot` (CLI surface
 planned). Video edit is the 2-step `edit-video-preview` → `edit-video-submit`
 media action; stage-1 returns a synchronous keyframe preview.
 
-### Modes (auto-detected from --ref count)
+### Model choice: reach for 1.5 first
+
+`grok-imagine-video-1.5` is the model to use unless you are editing or extending an
+existing video. It owns everything that makes a clip better; the base model owns two
+operations 1.5 refuses.
+
+| Capability | `grok-imagine-video-1.5` | `grok-imagine-video` (base) |
+|---|---|---|
+| Reference images (1-7) | yes | yes |
+| 1080p | yes (not in reference-to-video) | no |
+| Duration 1-15s | yes | yes |
+| Preset voices (`--voice`) | yes, up to 3 | **no** — returns 400 |
+| Video edit (V2V) | **no** — returns 400 | yes |
+| Video extension | **no** — returns 400 | yes |
+
+So: **1.5 for generating, base for editing and extending.** Nothing needs both at once.
+
+`grok-imagine-video-1.5-preview` is still accepted as a compatibility alias, but write
+`grok-imagine-video-1.5` in anything new.
+
+Prompt-only text-to-video on 1.5 is implemented as an internal white-canvas image-to-video anchor,
+because upstream 1.5 rejects raw T2V. That is an implementation detail — ask for
+text-to-video normally.
+
+When a request does fall back to another model, the result carries `requestedModel`,
+`effectiveModel`, and `modelFallback`. Read `effectiveModel` before naming or reporting
+which model produced a clip. A request carrying `--voice` never falls back, because the
+base model cannot honor the voice and silently dropping it would return a clip missing
+what was asked for.
+
+### Modes (from --ref count, plus your choice at one reference)
 
 | Refs | Mode | Max Duration |
 |------|------|-------------|
 | 0 | text-to-video | 15s |
-| 1 | image-to-video | 15s |
-| 2-7 | reference-to-video | 10s |
+| 1 | image-to-video (default) | 15s |
+| 1 + `--as-reference` | reference-to-video | 15s |
+| 2-7 | reference-to-video | 15s |
 
-`grok-imagine-video-1.5` supports image-to-video and supports 1080p for prompt-only text-to-video and single image/frame image-to-video. Prompt-only 1.5 text-to-video is implemented as an internal white-canvas image-to-video anchor because upstream 1.5 rejects raw T2V. The old `grok-imagine-video-1.5-preview` string is accepted as a compatibility alias. 1.5 does not support `reference_images` Ref2V, V2V edit, or extension. For 2+ references, use `grok-imagine-video` and keep duration at 10s or less. ima2 may auto-retry a rejected 1.5 Ref2V request with the base model; read `effectiveModel` and `modelFallback` from the final result before naming or reporting the output.
+One image is ambiguous and only the caller knows the intent, so it is a choice rather
+than a deduction. **image-to-video** locks that image as the opening frame and animates
+it. **reference-to-video** carries its subject, outfit, or location into a new scene
+without reproducing the shot. Two or more images can only be references.
+
+Reference-to-video tops out at 720p; ask for 1080p there and the request is refused.
 
 ### Parameters
 
 | Flag | Values | Default |
 |------|--------|---------|
 | `--duration` | 1–15 (seconds) | 5 |
-| `--resolution` | 480p, 720p, 1080p (1.5 T2V canvas shim or I2V) | 480p |
+| `--resolution` | 480p, 720p, 1080p (1.5 only; not in reference-to-video) | 480p |
 | `--aspect-ratio` | auto, 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3 | auto |
-| `--model` | `<lane>/<model>`; Grok base or 1.5 (preview alias accepted) | `grok-imagine-video` after selecting the Grok lane |
+| `--model` | `<lane>/<model>`; prefer `grok-imagine-video-1.5` (preview alias accepted) | `grok-imagine-video` after selecting the Grok lane |
+| `--as-reference` | (flag) with exactly one `--ref`: guide a new scene instead of animating that image | off |
+| `--voice` | preset voice id, repeatable, max 3 (1.5 only) | (none) |
 | `--topic` | any string | (none) |
 | `--session` | session ID | (none) |
 | `-o, --out` | output file path | saved under configured generated dir |
@@ -804,7 +843,7 @@ ima2 serve          # server must be running
 ### Output
 
 SSE streaming events: `planning` → `submitted` → `progress` (0-100%) → `done`.
-The `submitted` and `done` payloads include `requestedModel`, `effectiveModel`, and `modelFallback` so agents can report when a requested 1.5-preview Ref2V job actually ran on `grok-imagine-video`. CLI `--json` prints `video.requestedModel`, `video.effectiveModel`, and `video.modelFallback`; use `path`/`filename` for local chaining.
+The `submitted` and `done` payloads include `requestedModel`, `effectiveModel`, and `modelFallback` so agents can report which model actually produced a clip when a request falls back. A request carrying `--voice` never falls back. CLI `--json` prints `video.requestedModel`, `video.effectiveModel`, and `video.modelFallback`; use `path`/`filename` for local chaining.
 
 ### Discover Valid Parameters
 
@@ -830,8 +869,9 @@ Generate a high-quality still image first, then animate it. This produces better
 
 | Scenario | Use | Why |
 |----------|-----|-----|
-| Need 2+ character identity lock from separate refs | ref2v (`grok-imagine-video`, max 7 refs, max 10s) | Refs lock character appearance |
-| Single composed scene with all elements | i2v (`1.5-preview` or base, 1 ref) | Better motion quality from composed start |
+| Need 2+ character identity lock from separate refs | ref2v (`grok-imagine-video-1.5`, max 7 refs, up to 15s, 720p) | Refs lock character appearance |
+| Single composed scene with all elements | i2v (`grok-imagine-video-1.5`, 1 ref) | Better motion quality from composed start |
+| One subject, but a brand new setting | ref2v with one ref (`--as-reference`) | Keeps the subject without reproducing the source shot |
 | Continue from previous video | `video continue` (last frame as i2v ref) | Lineage metadata preserved |
 
 ```bash
@@ -1021,11 +1061,42 @@ done
 ### Limitations
 
 - Max 15 seconds per clip (extend adds 2-10s more)
-- Reference-to-video (2+ refs): max 10 seconds, max 7 refs, `grok-imagine-video` effective model
+- Reference-to-video: 1-7 refs, up to 15 seconds, 720p ceiling. The 10-second clamp this
+  section used to describe was ours, not xAI's, and was removed in v3.8.0 (issue #155)
 - 1080p resolution is available for `grok-imagine-video-1.5` prompt-only text-to-video via the white-canvas I2V shim, and for image-to-video with a single image/frame source
 - Video edit/extend: grok-imagine-video only (1.5 is not supported)
 - Video edit input: max 8.7 seconds
 - Video extend input: 2-15 seconds; extension duration: 2-10 seconds
+
+#### Provenance of the limits above
+
+Do not re-litigate these from doc snippets alone. Two different kinds of fact are
+mixed in this section, and they age differently.
+
+**Owner-measured, not in any public doc — trust it, do not "correct" it away:**
+
+| Limit | Source |
+|---|---|
+| Video edit input max **8.7 seconds** | Owner's own empirical measurement, recorded in `docs/grok-video-i2v-research.md` (2026-05-30). No xAI doc states this number. It is not a hallucination and it is not stale-by-default — leave it in place unless a fresh measurement contradicts it. |
+
+**Live-probed against `api.x.ai` on 2026-08-20 (real requests, real responses):**
+
+| Behavior | Observed |
+|---|---|
+| `grok-imagine-video-1.5` + `/v1/videos/edits` | `400 "Video editing is not supported for this model."` |
+| `grok-imagine-video-1.5` + `/v1/videos/extensions` | `400 "Video extension is not supported for this model."` |
+| `grok-imagine-video` (base) + edit / extend | `200` → `done` (both work) |
+| Edit `duration` / `resolution` overrides | Accepted with `200` but **silently ignored** — output inherits the source video's properties, capped at 720p |
+| Extension `duration` outside 2-10 | Returns `200` with a `request_id`, then **fails asynchronously** on poll: `"Duration must be between 2 and 10 seconds"`. Validate before sending; a 200 here does not mean accepted. |
+| R2V reference count | 7 max; 8 → `400 "Too many reference images: 8. Maximum allowed is 7."` |
+| R2V + 1080p | `400 "1080p video resolution is not supported for reference-to-video requests."` |
+| R2V duration 15 | `200` → `done`, `video.duration=15` (this is why the old 10s clamp was removed) |
+| R2V with a single reference image | Accepted (`200`) — 2+ is an ima2 convention, not an API requirement |
+| `reference_audios: [{"voice_id": "eve"}]` on 1.5 | `200` → `done` (preset voices work; up to 3) |
+| Rate limit | 2 requests/second per team; exceeding it returns `429` |
+
+The 1.5-vs-base split is not symmetric: **1.5** owns reference images, 1080p, and 15s;
+**base** owns video editing and extension. Neither model does both.
 
 ### Video Editing (V2V)
 
@@ -1045,13 +1116,22 @@ ima2 video edit "Add a sailboat in the distance" --video "$VIDEO_FILE"
 ima2 video edit "Make it stormy with dark clouds" --video "$VIDEO_FILE"
 ```
 
-Constraints: grok-imagine-video only, input mp4 <=8.7s. Use `-o/--out` if you also need a local copy outside the generated directory.
+Constraints: grok-imagine-video only, input mp4 <=8.7s (owner-measured 2026-05-30; not
+in any xAI doc — see Provenance above). `grok-imagine-video-1.5` returns
+`400 "Video editing is not supported for this model."` (verified 2026-08-20).
+`duration` and `resolution` are accepted but ignored: the output inherits the source
+video's properties, capped at 720p. Use `-o/--out` if you also need a local copy
+outside the generated directory.
 
 ### Video Extension (Continue from Last Frame)
 
 Extend a video from its last frame using xAI's video extension endpoint. The output combines the source video and extension, but continuity quality is provider-dependent.
 
-Constraints: grok-imagine-video only, extension duration 2-10s. 1.5-preview is not supported for extension.
+Constraints: grok-imagine-video only, extension duration 2-10s. `grok-imagine-video-1.5`
+returns `400 "Video extension is not supported for this model."` (verified 2026-08-20).
+`duration` is the length of the **appended segment**, not the total: a 10s source with
+`duration: 5` returns a 15s video. Out-of-range durations return `200` and then fail
+asynchronously on poll, so validate before sending.
 
 ```bash
 # Generate initial clip
@@ -1335,3 +1415,23 @@ Agents: run `ima2 tools list --json` for the live view; this section is the bund
 | `mcp.runway.whoami` | — | Returns the authenticated Runway user profile, the workspace this MCP connection is pinned to (chosen at sign-in), and the list of image/vid |
 
 <!-- mcp-tools:generated:end -->
+### Preset Voices (1.5 only)
+
+`grok-imagine-video-1.5` can give the subject a speaking voice. Pass up to three preset
+voices; the base model rejects the field outright.
+
+```bash
+ima2 video "the person from <IMAGE_1> greets the camera with <AUDIO_0>" \
+  --ref portrait.png --as-reference --voice eve --duration 6 --resolution 720p
+```
+
+Address voices in the prompt as `<AUDIO_0>`, `<AUDIO_1>`, `<AUDIO_2>`, the same way
+reference images are `<IMAGE_1>`..`<IMAGE_N>`. A voice nobody is assigned to in the
+prompt does not get used.
+
+Known presets include `ara`, `eve`, `leo`, `rex`, `sal`, `carina`, `luna`, `orion`,
+`iris`, `atlas`. **This list is a hint, not an allowlist.** xAI owns the roster and also
+accepts custom voice ids, so an unknown id comes back as a 400 that names every voice it
+will take — read that error rather than guessing from this page.
+
+### Video Editing (V2V)

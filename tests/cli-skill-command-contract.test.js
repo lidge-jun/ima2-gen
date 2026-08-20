@@ -43,9 +43,13 @@ describe("CLI packaged skill contract", () => {
   it("documents Grok video continuity contracts and audio prompt controls", () => {
     const skill = readSource("skills/ima2/SKILL.md");
 
-    assert.match(skill, /reference-to-video \| 10s/);
-    assert.match(skill, /does not support `reference_images` Ref2V/);
-    assert.match(skill, /supports image-to-video/);
+    // CONTRACT REVERSED (v3.8.x): these two lines used to require the skill to say
+    // reference-to-video caps at 10s and that 1.5 cannot take reference images. Both
+    // became false — the clamp was ours and was removed, and 1.5 does take references —
+    // so the test was holding the documentation at the old behavior.
+    assert.match(skill, /reference-to-video \| 15s/);
+    assert.doesNotMatch(skill, /does not support `reference_images` Ref2V/);
+    assert.match(skill, /Preset Voices \(1\.5 only\)/);
     assert.match(skill, /white-canvas image-to-video anchor/);
     assert.match(skill, /requestedModel/);
     assert.match(skill, /effectiveModel/);

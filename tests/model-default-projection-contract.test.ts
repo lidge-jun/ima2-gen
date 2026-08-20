@@ -14,11 +14,13 @@ function readSource(path: string) {
 }
 
 describe("current model defaults: runtime contract", () => {
-  it("projects Grok 4.6 and Luna through shared configuration", () => {
-    assert.equal(DEFAULT_GROK_PLANNER_MODEL, "grok-4.6");
+  it("projects the Grok planner default and Luna through shared configuration", () => {
+    // The video planner rewrites the user's prompt, so its default is a quality call
+    // rather than a version race: 4.3 reads better here and 4.6 stays selectable.
+    assert.equal(DEFAULT_GROK_PLANNER_MODEL, "grok-4.3");
     assert.equal(GROK_PLANNER_MODELS[0], DEFAULT_GROK_PLANNER_MODEL);
     assert.ok(GROK_PLANNER_MODELS.includes("grok-4.5"));
-    assert.ok(GROK_PLANNER_MODELS.includes("grok-4.3"));
+    assert.ok(GROK_PLANNER_MODELS.includes("grok-4.6"));
     assert.equal(config.grokProvider.plannerModel, DEFAULT_GROK_PLANNER_MODEL);
     assert.equal(config.imageModels.default, "gpt-5.6-luna");
     assert.equal(config.styleSheet.model, "gpt-5.6-luna");
@@ -27,7 +29,7 @@ describe("current model defaults: runtime contract", () => {
 
   it("keeps compatibility activation while centralizing Grok fallbacks", () => {
     const agentSource = readSource("lib/agentImageVideoGen.ts");
-    assert.match(agentSource, /DEFAULT_GROK_PLANNER_MODEL, "grok-4\.5", "grok-4\.3"/);
+    assert.match(agentSource, /DEFAULT_GROK_PLANNER_MODEL, "grok-4\.6", "grok-4\.5", "grok-4\.3"/);
 
     for (const path of [
       "lib/grokImageCore.ts",

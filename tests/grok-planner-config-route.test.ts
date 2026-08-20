@@ -17,7 +17,7 @@ async function startApp() {
   const app = express();
   app.use(express.json());
   registerCapabilitiesRoutes(app, {
-    config: { grokProvider: { plannerModel: "grok-4.6" } },
+    config: { grokProvider: { plannerModel: "grok-4.3" } },
   });
   server = await new Promise<Server>((resolve) => {
     const listening = app.listen(0, "127.0.0.1", () => resolve(listening));
@@ -26,22 +26,22 @@ async function startApp() {
   return `http://127.0.0.1:${address.port}`;
 }
 
-test("Grok planner config defaults to 4.6 and preserves the 4.3 override", async () => {
+test("Grok planner config defaults to 4.3 and preserves the 4.6 override", async () => {
   const base = await startApp();
   const initial = await fetch(`${base}/api/config/grok-planner`);
   const initialBody = await initial.json() as { model: string; options: string[] };
   assert.equal(initial.status, 200);
-  assert.equal(initialBody.model, "grok-4.6");
-  assert.equal(initialBody.options[0], "grok-4.6");
-  assert.ok(initialBody.options.includes("grok-4.3"));
+  assert.equal(initialBody.model, "grok-4.3");
+  assert.equal(initialBody.options[0], "grok-4.3");
+  assert.ok(initialBody.options.includes("grok-4.6"));
 
   const compatible = await fetch(`${base}/api/config/grok-planner`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "grok-4.3" }),
+    body: JSON.stringify({ model: "grok-4.6" }),
   });
   assert.equal(compatible.status, 200);
-  assert.deepEqual(await compatible.json(), { model: "grok-4.3" });
+  assert.deepEqual(await compatible.json(), { model: "grok-4.6" });
 
   const invalid = await fetch(`${base}/api/config/grok-planner`, {
     method: "PATCH",

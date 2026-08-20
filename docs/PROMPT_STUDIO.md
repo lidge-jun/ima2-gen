@@ -17,7 +17,7 @@ you want a reproducible way to report a workspace issue.
 | 1:1 Direct | Sends the prompt through with less rewriting by the app. | Use it for exact wording, strict prompt experiments, or provider-side prompt syntax. |
 | Model quick menu | Changes the image model and reasoning effort from the sidebar header. | The full Settings workspace remains the detailed configuration page. |
 | Recent generations | Shows the visible Prompt Studio history domain. | Arrow keys move inside the same visible recent domain instead of hidden older rows. Video items render as video thumbnails. Drag any thumbnail to the composer to add it as a reference image. Video results expose First, Mid, and Last frame buttons to copy keyframes. |
-| Video settings | Controls Grok video duration, resolution, aspect ratio, and planner model. | Default planner model is `grok-4.5`; `grok-4.3` remains a compatibility override. |
+| Video settings | Controls Grok video duration, resolution, aspect ratio, and planner model. | Default planner model is `grok-4.3`; `grok-4.6` and `grok-4.5` are selectable. |
 | Gallery | Browses saved local images, All/Favorites tabs, and folders. | Favorite toggles should preserve the gallery viewport you were browsing. |
 | Prompt library | Imports saved prompt text into the composer intentionally. | Library insert/continue actions are explicit prompt imports; passive image selection is not. |
 
