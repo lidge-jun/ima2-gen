@@ -157,9 +157,10 @@ export const VALID_VIDEO_ASPECT_RATIOS = new Set([
 ]);
 export const MIN_VIDEO_DURATION = 1;
 export const MAX_VIDEO_DURATION = 15;
-// reference-to-video (xAI): up to 7 reference images, max 10s duration.
+// reference-to-video (xAI): up to 7 reference images (8 -> 400), 1-15s, 720p max.
+// Verified against api.x.ai on 2026-08-20:
+// devlog/_plan/260820_grok15_multi_reference_video/000_research.md
 export const MAX_REF2V_REFERENCES = 7;
-export const MAX_REF2V_DURATION = 10;
 
 export type GrokVideoModel = typeof GROK_VIDEO_MODEL_BASE | typeof GROK_VIDEO_MODEL_15 | typeof GROK_VIDEO_MODEL_15_PREVIEW_ALIAS;
 export type VideoResolution = "480p" | "720p" | "1080p";
@@ -171,11 +172,6 @@ export function deriveVideoMode(refCount: number): VideoMode {
   if (refCount >= 2) return "reference-to-video";
   if (refCount === 1) return "image-to-video";
   return "text-to-video";
-}
-
-// Clamp duration to the reference-to-video ceiling; other modes keep their value.
-export function clampVideoDuration(duration: number, mode: VideoMode): number {
-  return mode === "reference-to-video" ? Math.min(duration, MAX_REF2V_DURATION) : duration;
 }
 
 export function isGrokVideoModel(value: unknown): value is GrokVideoModel {

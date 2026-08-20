@@ -32,7 +32,6 @@ import {
   normalizeVideoAspectRatio,
   normalizeVideoDuration,
   deriveVideoMode,
-  clampVideoDuration,
   MAX_REF2V_REFERENCES,
   validateVideoResolutionForRequest,
   type VideoMode,
@@ -325,7 +324,7 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       if (resolved.length > MAX_REF2V_REFERENCES) return fail(400, "GROK_VIDEO_REF_TOO_MANY", `at most ${MAX_REF2V_REFERENCES} reference images`);
       const incomingProviderUrl = typeof req.body?.providerUrl === "string" && req.body.providerUrl.startsWith("http") ? req.body.providerUrl : null;
       const mode: VideoMode = incomingProviderUrl ? "image-to-video" : deriveVideoMode(resolved.length);
-      const duration = clampVideoDuration(durationCheck.duration, mode);
+      const duration = durationCheck.duration;
       const resolutionModeCheck = validateVideoResolutionForRequest(modelCheck.model, resolutionCheck.resolution, mode, {
         allowTextCanvasShim: true,
       });

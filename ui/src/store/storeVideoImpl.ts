@@ -1,10 +1,6 @@
 import type { GenerateItem, VideoContinuityLineage } from "../types";
 import { postVideoGenerateStream } from "../lib/api";
 import { addHistory } from "./storeGraphSave";
-import {
-  deriveVideoModeUI,
-  clampVideoDurationUI,
-} from "../lib/imageModels";
 import { isVideoUrl } from "../lib/videoMedia";
 import { frameExtraction } from "../lib/frameExtraction";
 import {
@@ -46,7 +42,6 @@ export async function runVideoGenerateImpl(
 ): Promise<void> {
   const node = nodeId ? get().graphNodes.find((n) => n.id === nodeId) : null;
   const refs = node ? (node.data.referenceImages ?? []) : get().referenceImages;
-  const mode = deriveVideoModeUI(refs.length);
   const userPrompt = node ? node.data.prompt.trim() : composePrompt(get().prompt, get().insertedPrompts);
   if (!userPrompt.trim()) {
     get().showToast(ACTIVE_VIDEO_PROMPT_GUIDANCE, true);
@@ -137,7 +132,7 @@ export async function runVideoGenerateImpl(
       sourceFilename: refs.length === 0 && !parentVideoFrameRef ? parentSourceFilename : undefined,
       continueFromVideo,
       continuityLineage: parentVideoContinuity,
-      duration: clampVideoDurationUI(get().videoDuration, mode),
+      duration: get().videoDuration,
       resolution: get().videoResolution,
       aspectRatio: get().videoAspectRatio,
       topic: get().videoTopic || undefined,
