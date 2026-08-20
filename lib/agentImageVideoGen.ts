@@ -16,7 +16,7 @@ import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 import { generateVideoViaGrok, type GrokVideoGenerateResult } from "./grokVideoAdapter.js";
-import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, resolveGrokQualityModel } from "./imageModels.js";
+import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, resolveGrokQualityModel, validateVideoResolutionForRequest } from "./imageModels.js";
 import { parseVideoParams } from "./agentGenerationPlanner.js";
 import {
   isVideoGenerationError,
@@ -250,17 +250,27 @@ export async function runAgentVideoGeneration(
   const requestId = options.requestId ?? `agent_video_${ulid()}`;
   const startedAt = Date.now();
 
-  // Auto I2V: if session has a last image, use it as source
+  // Attach the session's current image unless the planner said not to. The image path
+  // has always honored this policy; the video path ignored it, so "make something new"
+  // still got the previous image welded on as the first frame.
+  //
+  // The planner also chooses what the image MEANS. A first frame reproduces the source
+  // shot; a reference carries the subject into a new one. Chat has no reference tray,
+  // so without the planner saying which, reference-to-video was unreachable here.
+  // devlog/_plan/260820_grok15_multi_reference_video/020_agent_reference_loss.md
+  const requestedMode = options.videoParams?.mode;
+  const attachPolicy = options.sourceImagePolicy ?? "auto";
   let sourceImage: string | undefined;
-  let mode: "text-to-video" | "image-to-video" = "text-to-video";
-  if (session.lastImageId) {
+  let referenceImages: string[] | undefined;
+  if (attachPolicy !== "none" && session.lastImageId) {
     const images = getAgentImages(sessionId);
     const lastImage = images.find((img) => img.id === session.lastImageId);
     if (lastImage?.filename && !lastImage.filename.endsWith(".mp4")) {
       try {
         const { loadAssetB64 } = await import("./nodeStore.js");
-        sourceImage = await loadAssetB64(ctx.rootDir, lastImage.filename, ctx.config.storage.generatedDir);
-        mode = "image-to-video";
+        const b64 = await loadAssetB64(ctx.rootDir, lastImage.filename, ctx.config.storage.generatedDir);
+        if (requestedMode === "reference-to-video") referenceImages = [b64];
+        else sourceImage = b64;
       } catch { /* fallback to T2V */ }
     }
   }
@@ -271,8 +281,9 @@ export async function runAgentVideoGeneration(
   // validation cannot drift between "generate from chat" and "generate from the app".
   const normalized = normalizeVideoGenerationRequest({
     prompt,
-    mode,
     sourceImage,
+    ...(referenceImages ? { referenceImages } : {}),
+    ...(requestedMode ? { mode: requestedMode } : {}),
     duration: options.videoParams?.duration ?? parsedParams.duration,
     resolution: options.videoParams?.resolution ?? parsedParams.resolution,
     aspectRatio: options.videoParams?.aspectRatio ?? parsedParams.aspectRatio,
@@ -288,12 +299,26 @@ export async function runAgentVideoGeneration(
   const videoModel = videoParams.resolution === "1080p"
     ? GROK_VIDEO_MODEL_15
     : GROK_VIDEO_MODEL_BASE;
+  // Reference-to-video has no 1080p (xAI returns 400). Say so instead of quietly
+  // downgrading the resolution — silently altering the request is the defect this
+  // work-phase exists to remove. Same helper the HTTP route uses, so the two surfaces
+  // cannot drift apart again.
+  const resolutionCheck = validateVideoResolutionForRequest(videoModel, videoParams.resolution, videoParams.mode, {
+    allowTextCanvasShim: true,
+  });
+  if (!("ok" in resolutionCheck)) {
+    throw Object.assign(new Error(resolutionCheck.error), {
+      status: resolutionCheck.status,
+      code: resolutionCheck.code,
+    });
+  }
 
   options.onProgressStage?.("requesting");
   const result = await generateVideoViaGrok(prompt, ctx, {
     model: videoModel,
-    mode: videoParams.mode === "reference-to-video" ? "text-to-video" : videoParams.mode,
+    mode: videoParams.mode,
     sourceImage,
+    ...(videoParams.referenceImages ? { referenceImages: videoParams.referenceImages } : {}),
     duration: videoParams.duration,
     resolution: videoParams.resolution,
     aspectRatio: videoParams.aspectRatio as "auto" | "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3",

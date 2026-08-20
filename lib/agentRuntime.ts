@@ -119,6 +119,9 @@ export async function runAgentGenerationPlan(
     return runAgentVideoGeneration(ctx, sessionId, plan.prompts[0] ?? prompt, {
       ...options,
       videoParams: plan.videoParams ?? options.videoParams ?? null,
+      // The image path has always forwarded this (see below); the video path did not,
+      // so a planner that chose "none" was overruled by whatever image came last.
+      sourceImagePolicy: plan.sourceImagePolicy ?? "auto",
       assistantText: preludeSent ? null : plan.assistantText,
       requestId: options.requestId ?? `agent_video_${ulid()}`,
       skipUserTurn: true,

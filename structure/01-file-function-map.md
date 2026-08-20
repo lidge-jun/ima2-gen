@@ -278,18 +278,18 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `lib/agentTypes.ts` | 178 | Shared Agent Mode types |
+| `lib/agentTypes.ts` | 184 | Shared Agent Mode types |
 | `lib/agentStore.ts` | 456 | SQLite session/turn persistence |
 | `lib/agentStoreRows.ts` | 137 | Row mapping helpers for agent store |
 | `lib/agentSettings.ts` | 77 | Per-session generation settings |
-| `lib/agentRuntime.ts` | 433 | Turn execution, tool dispatch, generation delegation |
+| `lib/agentRuntime.ts` | 436 | Turn execution, tool dispatch, generation delegation |
 | `lib/agentQueueStore.ts` | 358 | Durable async queue persistence |
 | `lib/agentQueueWorker.ts` | 221 | Background queue worker |
 | `lib/agentCommandParser.ts` | 77 | Slash-command parsing |
 | `lib/agentToolManifest.ts` | 31 | Tool metadata for `/api/agent/tools` |
-| `lib/agentPlannerModel.ts` | 201 | Planner model selection |
-| `lib/agentGenerationPlanner.ts` | 353 | Generation plan assembly |
-| `lib/agentImageVideoGen.ts` | 416 | Image/video generation caller for agent turns |
+| `lib/agentPlannerModel.ts` | 202 | Planner model selection |
+| `lib/agentGenerationPlanner.ts` | 356 | Generation plan assembly |
+| `lib/agentImageVideoGen.ts` | 441 | Image/video generation caller for agent turns |
 | `lib/agentQuestionResponder.ts` | 275 | `/question` responder |
 
 ## UI File Map

@@ -279,6 +279,9 @@ export function cleanVideoParams(value: unknown): AgentVideoParams | null {
   if (typeof input.aspectRatio === "string" && /^(auto|16:9|9:16|4:3|3:4|3:2|2:3|1:1)$/.test(input.aspectRatio)) {
     params.aspectRatio = input.aspectRatio;
   }
+  if (input.mode === "text-to-video" || input.mode === "image-to-video" || input.mode === "reference-to-video") {
+    params.mode = input.mode;
+  }
   return Object.keys(params).length > 0 ? params : null;
 }
 
