@@ -90,6 +90,7 @@ const SPEC = {
     end:           { type: "string" },
     ref:           { type: "string", repeatable: true },
     voice:         { type: "string", repeatable: true },
+    "as-reference": { type: "boolean" },
     "video-ref":   { type: "string" },
     character:     { type: "string" },
     out:           { short: "o", type: "string" },
@@ -137,6 +138,8 @@ const HELP = `
         --voice <voice-id>              Preset voice for the subject (grok-imagine-video-1.5,
                                         repeatable, max 3). e.g. eve, leo, rex, luna, atlas.
                                         An unknown id returns the full list of valid voices
+        --as-reference                  With exactly one --ref, guide a new scene instead of
+                                        animating that image. Ignored for 0 or 2+ refs
                                         Repeatable: Grok max 7, MCP max 3
         --video-ref <generated-filename> MCP V2V/restyle reference video
         --character <element-id|name>      MCP lanes only: character binding element
@@ -151,10 +154,11 @@ const HELP = `
         --video <value>                 HTTPS URL, xAI file_id, data URL, or generated filename
         --duration <2..10>              Extension duration only. Default: 6
 
-  Grok modes (auto-detected from --ref count):
-    0 refs   → text-to-video
-    1-7 refs → reference-to-video (max 720p). References guide the subject without
-               locking the first frame; use a node/continuity chain for a first frame.
+  Grok modes (from --ref count, and --as-reference when there is exactly one):
+    0 refs                    → text-to-video
+    1 ref                     → image-to-video (that image is the opening frame)
+    1 ref + --as-reference    → reference-to-video (guides a new scene instead)
+    2-7 refs                  → reference-to-video (max 720p)
 
   Examples:
     ima2 video "a cat playing piano"

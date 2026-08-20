@@ -42,6 +42,7 @@ export async function runVideoGenerateImpl(
 ): Promise<void> {
   const node = nodeId ? get().graphNodes.find((n) => n.id === nodeId) : null;
   const refs = node ? (node.data.referenceImages ?? []) : get().referenceImages;
+  const singleRefAsSource = refs.length === 1 && get().videoSingleRefMode === "image-to-video";
   const userPrompt = node ? node.data.prompt.trim() : composePrompt(get().prompt, get().insertedPrompts);
   if (!userPrompt.trim()) {
     get().showToast(ACTIVE_VIDEO_PROMPT_GUIDANCE, true);
@@ -127,13 +128,13 @@ export async function runVideoGenerateImpl(
       requestId: flightId,
       provider: (get().provider === "grok-api" ? "grok-api" : "grok") as "grok" | "grok-api",
       model: (typeof get().videoModelSelected === "string" && get().videoModelSelected) || undefined,
-      // Tray references go in the reference slot no matter how many there are. Sending
-      // a lone tray image as `sourceImage` made it the locked first frame, which is the
-      // opposite of what the reference tray is for. First-frame intent still has its own
-      // path: `parentVideoFrameRef` from a node/continuity chain.
-      // devlog/_plan/260820_grok15_multi_reference_video/030_single_ref_mode_choice.md
-      referenceImages: refs.length > 0 ? refs : undefined,
-      sourceImage: refs.length > 0 ? undefined : parentVideoFrameRef,
+      // One attachment is ambiguous and the user owns the answer: animate this exact
+      // picture (first frame) or carry its subject into a new scene (reference). Two or
+      // more can only be references. v3.8.0 forced every count into the reference slot,
+      // which silently took first-frame workflows away from anyone dragging in a single
+      // photo — devlog/_plan/260820_grok15_multi_reference_video/060_single_ref_mode_restore.md
+      referenceImages: refs.length > 0 && !singleRefAsSource ? refs : undefined,
+      sourceImage: singleRefAsSource ? refs[0] : (refs.length > 0 ? undefined : parentVideoFrameRef),
       sourceFilename: refs.length === 0 && !parentVideoFrameRef ? parentSourceFilename : undefined,
       continueFromVideo,
       continuityLineage: parentVideoContinuity,

@@ -1188,7 +1188,13 @@
     "resolution1080Help": "1080p uses Grok V1.5 for prompt-only or single image/frame video. It is not available with 2+ references.",
     "aspectTitle": "Aspect ratio",
     "plannerUpdateFailed": "Could not update the planner model. The previous setting was restored.",
-    "continuationFallbackT2V": "The continuation frame could not be extracted. Generation will continue as text-to-video."
+    "continuationFallbackT2V": "The continuation frame could not be extracted. Generation will continue as text-to-video.",
+    "singleRefTitle": "One reference",
+    "singleRefHelp": "Use this image as the opening frame, or only as a guide. Two or more are always guides.",
+    "singleRef": {
+      "source": "Start from it",
+      "reference": "Use as guide"
+    }
   },
   "sidebar": {
     "appName": "Image Generator",

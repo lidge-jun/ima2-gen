@@ -29,6 +29,8 @@ export function VideoControlsPanel() {
   const videoModelSelected = useAppStore((s) => s.videoModelSelected);
   const selectVideoModel = useAppStore((s) => s.selectVideoModel);
   const refCount = useAppStore((s) => s.activeVideoRefCount());
+  const singleRefMode = useAppStore((s) => s.videoSingleRefMode);
+  const setSingleRefMode = useAppStore((s) => s.setVideoSingleRefMode);
   const duration = useAppStore((s) => s.videoDuration);
   const setDuration = useAppStore((s) => s.setVideoDuration);
   const resolution = useAppStore((s) => s.videoResolution);
@@ -45,7 +47,7 @@ export function VideoControlsPanel() {
     .map((id) => getPresetById(id))
     .filter((preset): preset is NonNullable<typeof preset> => preset?.category === "camera-motion");
   const maxDuration = 15;
-  const mode = deriveVideoModeUI(refCount);
+  const mode = deriveVideoModeUI(refCount, singleRefMode);
   const summary = continuitySummary(continuity);
   const canUse1080pWithSelectedModel = supportsVideoResolutionUI(videoModelSelected, "1080p", mode);
   const canUse1080pIfModelSelected = supportsVideoResolutionUI(GROK_VIDEO_MODEL_15, "1080p", mode);
@@ -149,6 +151,18 @@ export function VideoControlsPanel() {
           onChange={(next) => setDuration(next ?? DURATIONS[0])}
         />
       </div>
+      {refCount === 1 && (
+        <OptionGroup<"image-to-video" | "reference-to-video">
+          title={t("video.singleRefTitle")}
+          help={t("video.singleRefHelp")}
+          items={[
+            { value: "image-to-video", label: t("video.singleRef.source") },
+            { value: "reference-to-video", label: t("video.singleRef.reference") },
+          ]}
+          value={singleRefMode}
+          onChange={setSingleRefMode}
+        />
+      )}
       <OptionGroup<VideoResolutionUI>
         title={t("video.resolutionTitle")}
         help={!canUse1080pIfModelSelected ? t("video.resolution1080Help") : undefined}

@@ -124,11 +124,16 @@ export function normalizeVideoModelValue(v: unknown): VideoModel | false {
   return v === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : v;
 }
 
-// Tray attachments are references at any count, matching what the composer sends and
-// what the server derives from the slot. A first frame comes from a node/continuity
-// chain instead, not from the reference tray.
-export function deriveVideoModeUI(refCount: number): "text-to-video" | "image-to-video" | "reference-to-video" {
-  if (refCount >= 1) return "reference-to-video";
+// Two or more attachments can only be references — that is the only shape the API
+// takes. Exactly one is ambiguous, so the caller passes the user's choice; treating
+// a lone attachment as a reference by fiat is what broke first-frame workflows in
+// v3.8.0 (issue #164).
+export function deriveVideoModeUI(
+  refCount: number,
+  singleRefMode: "image-to-video" | "reference-to-video" = "image-to-video",
+): "text-to-video" | "image-to-video" | "reference-to-video" {
+  if (refCount >= 2) return "reference-to-video";
+  if (refCount === 1) return singleRefMode;
   return "text-to-video";
 }
 
