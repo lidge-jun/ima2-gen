@@ -108,9 +108,12 @@ function validateCoreOptions(args: ParsedArgs, refs: string[], model: string) {
   const aspectRatio = String(args["aspect-ratio"] ?? "auto");
   if (!VALID_ASPECT_RATIOS.has(aspectRatio)) die(2, "--aspect-ratio must be one of: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto");
   if (refs.length > 7) die(2, "max 7 --ref attachments for video");
-  // `--ref` always fills the reference slot now, so any attachment means
-  // reference-to-video — the same conclusion the server reaches from the slot.
-  const mode = refs.length > 0 ? ("reference-to-video" as const) : ("text-to-video" as const);
+  const asReference = Boolean(args["as-reference"]);
+  const mode = refs.length === 0
+    ? ("text-to-video" as const)
+    : refs.length === 1 && !asReference
+      ? ("image-to-video" as const)
+      : ("reference-to-video" as const);
   const check = validateVideoResolutionForRequest(model, resolution as VideoResolution, mode, { allowTextCanvasShim: true });
   if (!("ok" in check)) die(2, check.error);
   return { duration, resolution, aspectRatio };
@@ -142,10 +145,12 @@ function coreBody(args: ParsedArgs, context: VideoContext, options: CoreOptions,
   // voices), and its rejection names every accepted value.
   const voices = (Array.isArray(args.voice) ? args.voice : args.voice ? [args.voice] : []) as string[];
   if (voices.length > 0) body.referenceAudios = voices.map((v) => String(v));
-  // `--ref` is the reference slot at any count; one reference guides the video without
-  // locking the first frame. Mapping a single --ref to sourceImage made the CLI disagree
-  // with the server contract and with the UI.
-  if (references.length > 0) body.referenceImages = references;
+  // One `--ref` animates that image by default; `--as-reference` says to treat it as a
+  // guide for a new scene instead. Two or more can only be guides. This mirrors the app,
+  // where the same choice appears whenever exactly one reference is attached.
+  const asReference = Boolean(args["as-reference"]);
+  if (references.length === 1 && !asReference) body.sourceImage = references[0];
+  else if (references.length > 0) body.referenceImages = references;
   return body;
 }
 

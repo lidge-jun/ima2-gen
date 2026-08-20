@@ -1188,7 +1188,13 @@
     "resolution1080Help": "1080p 使用 Grok V1.5 進行僅提示或單一影像/幀影片。它不適用於 2 個以上的參考文獻。",
     "aspectTitle": "縱橫比",
     "plannerUpdateFailed": "無法更新規劃器模型。之前的設定已恢復。",
-    "continuationFallbackT2V": "無法提取連續幀。生成將繼續以文字到影片的形式進行。"
+    "continuationFallbackT2V": "無法提取連續幀。生成將繼續以文字到影片的形式進行。",
+    "singleRefTitle": "單張參考的用法",
+    "singleRefHelp": "選擇將該圖片作為首格，還是僅作參考。兩張以上一律作為參考。",
+    "singleRef": {
+      "source": "以此圖開場",
+      "reference": "僅作參考"
+    }
   },
   "sidebar": {
     "appName": "影像生成器",

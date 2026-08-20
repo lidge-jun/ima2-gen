@@ -1188,7 +1188,13 @@
     "resolution1080Help": "1080p는 Grok V1.5의 프롬프트 전용 또는 단일 이미지/프레임 영상에서 사용합니다. 참조 2장 이상에서는 사용할 수 없습니다.",
     "aspectTitle": "비율",
     "plannerUpdateFailed": "플래너 모델을 변경하지 못해 이전 설정으로 되돌렸습니다.",
-    "continuationFallbackT2V": "이어갈 영상의 마지막 프레임을 추출하지 못했습니다. 텍스트-비디오 방식으로 계속 생성합니다."
+    "continuationFallbackT2V": "이어갈 영상의 마지막 프레임을 추출하지 못했습니다. 텍스트-비디오 방식으로 계속 생성합니다.",
+    "singleRefTitle": "참조 1장 사용법",
+    "singleRefHelp": "이 이미지를 첫 프레임으로 쓸지, 참고만 할지 고릅니다. 2장부터는 항상 참고로 쓰입니다.",
+    "singleRef": {
+      "source": "이 이미지로 시작",
+      "reference": "참고만 하기"
+    }
   },
   "sidebar": {
     "appName": "이미지 생성기",

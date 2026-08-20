@@ -214,7 +214,7 @@ export function saveWebSearchEnabled(enabled: boolean): void {
 export type { VideoDefaults } from "./storeTypes";
 import type { VideoDefaults } from "./storeTypes";
 
-export const VIDEO_DEFAULTS_FALLBACK: VideoDefaults = { model: false, duration: 5, resolution: "480p", aspectRatio: "auto" };
+export const VIDEO_DEFAULTS_FALLBACK: VideoDefaults = { model: false, duration: 5, resolution: "480p", aspectRatio: "auto", singleRefMode: "image-to-video" };
 
 export function loadVideoDefaults(): VideoDefaults {
   try {
@@ -226,6 +226,7 @@ export function loadVideoDefaults(): VideoDefaults {
       duration: typeof p.duration === "number" ? p.duration : 5,
       resolution: p.resolution === "480p" || p.resolution === "720p" || p.resolution === "1080p" ? p.resolution : "480p",
       aspectRatio: typeof p.aspectRatio === "string" ? p.aspectRatio : "auto",
+      singleRefMode: p.singleRefMode === "reference-to-video" ? "reference-to-video" : "image-to-video",
     };
   } catch {
     return VIDEO_DEFAULTS_FALLBACK;

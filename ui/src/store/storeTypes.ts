@@ -56,6 +56,12 @@ export type VideoDefaults = {
   duration: number;
   resolution: string;
   aspectRatio: string;
+  /**
+   * What a lone tray reference means. One image is ambiguous — as a first frame it
+   * gets animated, as a reference it guides a new scene — and only the user knows
+   * which they meant.
+   */
+  singleRefMode: "image-to-video" | "reference-to-video";
 };
 
 export type PersistedInFlight = {
@@ -496,6 +502,7 @@ export type AppState = PresetState & ReferenceTraySlice & {
   videoModelSelected: string | false;
   videoDuration: number;
   videoResolution: VideoResolutionUI;
+  videoSingleRefMode: "image-to-video" | "reference-to-video";
   videoAspectRatio: string;
   videoTopic: string;
   videoContinuityLineage: VideoContinuityLineage | null;
@@ -504,6 +511,7 @@ export type AppState = PresetState & ReferenceTraySlice & {
   setVideoDuration: (n: number) => void;
   setVideoResolution: (r: VideoResolutionUI) => void;
   setVideoAspectRatio: (a: string) => void;
+  setVideoSingleRefMode: (m: "image-to-video" | "reference-to-video") => void;
   setVideoTopic: (topic: string) => void;
   setVideoContinuityLineage: (lineage: VideoContinuityLineage | null) => void;
   activeVideoRefCount: () => number;
