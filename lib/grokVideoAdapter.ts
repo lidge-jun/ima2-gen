@@ -12,6 +12,7 @@ import {
   GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
   GROK_VIDEO_MODEL_BASE,
   MAX_REF2V_REFERENCES,
+  MAX_REFERENCE_AUDIOS,
   validateVideoResolutionForRequest,
 } from "./imageModels.js";
 import { formatVideoContinuityForPlanner, type VideoContinuityLineage } from "./videoContinuity.js";
@@ -120,7 +121,7 @@ function sourceImageUrl(image: string, mime?: string | null): string {
 
 export function buildGrokVideoPlannerPayload(
   prompt: string,
-  opts: { model: string; mode: VideoMode; duration: number; resolution: VideoResolution; aspectRatio: VideoAspectRatio; plannerModel?: string | undefined; searchSummary?: string | undefined; sourceImageUrl?: string | undefined; referenceImageUrls?: string[] | undefined; continuityLineage?: VideoContinuityLineage | null | undefined; backgroundConstraint?: string | undefined },
+  opts: { model: string; mode: VideoMode; duration: number; resolution: VideoResolution; aspectRatio: VideoAspectRatio; plannerModel?: string | undefined; searchSummary?: string | undefined; sourceImageUrl?: string | undefined; referenceImageUrls?: string[] | undefined; referenceAudios?: string[] | undefined; continuityLineage?: VideoContinuityLineage | null | undefined; backgroundConstraint?: string | undefined },
 ) {
   const isI2V = opts.mode === "image-to-video";
   const isRef2V = opts.mode === "reference-to-video";
@@ -129,6 +130,12 @@ export function buildGrokVideoPlannerPayload(
     : isI2V
     ? "This is image-to-video: preserve subject identity and composition unless asked otherwise, and use the source image as the first frame / starting point."
     : "This is text-to-video: describe motion, camera, and action clearly.";
+  // Voices only bind to a speaker if the prompt says where they go, and the planner
+  // rewrites the prompt — so it has to know the tag convention.
+  const voiceCount = opts.referenceAudios?.length ?? 0;
+  const voiceGuidance = voiceCount > 0
+    ? `${voiceCount} preset voice${voiceCount > 1 ? "s are" : " is"} attached, referred to as <AUDIO_0>..<AUDIO_${voiceCount - 1}>. Say who speaks with which voice in the prompt (for example "the person from <IMAGE_1> speaks with <AUDIO_0>"); a voice nobody is assigned to will not be used.`
+    : "";
   const lineageText = formatVideoContinuityForPlanner(opts.continuityLineage);
   const userContent: any[] = [
     {
@@ -139,6 +146,7 @@ export function buildGrokVideoPlannerPayload(
         continuity,
         lineageText ? `Authoritative continuation context:\n${lineageText}` : "Authoritative continuation context: none.",
         formatDurationPacingGuidance(opts.duration, opts.mode, opts.resolution),
+        ...(voiceGuidance ? [voiceGuidance] : []),
         opts.searchSummary ? `Mandatory web-search brief:\n${opts.searchSummary}` : "Mandatory web-search brief: unavailable.",
         ...(opts.backgroundConstraint ? [opts.backgroundConstraint] : []),
         "Return the generate_video.prompt argument in English only, except for exact visible text the user explicitly requested.",
@@ -268,6 +276,7 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
     searchSummary,
     sourceImageUrl: options.sourceImage ? sourceImageUrl(options.sourceImage, options.sourceMime) : undefined,
     referenceImageUrls,
+    ...(options.referenceAudios?.length ? { referenceAudios: options.referenceAudios } : {}),
     continuityLineage: options.continuityLineage,
     backgroundConstraint: options.backgroundConstraint,
   });
@@ -340,8 +349,19 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
   }
 }
 
-export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: string; sourceImageUrl?: string | undefined; referenceImageUrls?: string[] | undefined }): Record<string, unknown> {
+export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: string; sourceImageUrl?: string | undefined; referenceImageUrls?: string[] | undefined; referenceAudios?: string[] | undefined }): Record<string, unknown> {
   const model = canonicalVideoModel(opts.model);
+  const voices = opts.referenceAudios ?? [];
+  if (voices.length > 0) {
+    // Preset voices exist only on 1.5. Attaching them to the base model earns a 400 from
+    // xAI; dropping them earns a video without the voice the user asked for. Say no.
+    if (model !== GROK_VIDEO_MODEL_15) {
+      throw grokError(`reference audio requires ${GROK_VIDEO_MODEL_15}`, 400, "GROK_VIDEO_AUDIO_UNSUPPORTED_MODEL");
+    }
+    if (voices.length > MAX_REFERENCE_AUDIOS) {
+      throw grokError(`at most ${MAX_REFERENCE_AUDIOS} reference voices`, 400, "GROK_VIDEO_AUDIO_TOO_MANY");
+    }
+  }
   if (plan.mode === "image-to-video" && !opts.sourceImageUrl) {
     throw grokError("image-to-video requires a source image", 400, "GROK_VIDEO_INVALID_MODE");
   }
@@ -363,6 +383,7 @@ export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: 
   if (plan.aspectRatio && plan.aspectRatio !== "auto") payload.aspect_ratio = plan.aspectRatio;
   if (plan.mode === "image-to-video") payload.image = { url: opts.sourceImageUrl };
   if (plan.mode === "reference-to-video") payload.reference_images = refs.map((url) => ({ url }));
+  if (voices.length > 0) payload.reference_audios = voices.map((voiceId) => ({ voice_id: voiceId }));
   return payload;
 }
 
@@ -400,6 +421,7 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
   const model = canonicalVideoModel(options.model || cfg.model);
   const srcUrl = options.sourceImage ? sourceImageUrl(options.sourceImage, options.sourceMime) : undefined;
   const refUrls = (options.referenceImages ?? []).map((img) => sourceImageUrl(img, undefined));
+  const voices = options.referenceAudios ?? [];
   options.onEvent?.({ phase: "planning" });
   const plan = options.plannedPrompt
     ? {
@@ -422,18 +444,21 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
     const canvasSrcUrl = `data:image/png;base64,${whiteCanvas}`;
     effectivePayload = buildVideoGenerationPayload(
       { ...plan, mode: "image-to-video", prompt: `[Technical note: the attached image is a blank white canvas used as a technical placeholder for text-to-video generation. It is NOT a meaningful source frame. Ignore it completely and generate a fresh scene from scratch.]\n\n${plan.prompt}` },
-      { model, sourceImageUrl: canvasSrcUrl, referenceImageUrls: [] },
+      { model, sourceImageUrl: canvasSrcUrl, referenceImageUrls: [], ...(voices.length ? { referenceAudios: voices } : {}) },
     );
     logEvent("grok", "video:1.5-t2v-canvas", { requestId: options.requestId, width, height });
   } else {
-    effectivePayload = buildVideoGenerationPayload(plan, { model, sourceImageUrl: srcUrl, referenceImageUrls: refUrls });
+    effectivePayload = buildVideoGenerationPayload(plan, { model, sourceImageUrl: srcUrl, referenceImageUrls: refUrls, ...(voices.length ? { referenceAudios: voices } : {}) });
   }
 
   try {
     xaiVideoRequestId = await startVideoRequest(ctx, effectivePayload, options);
   } catch (e: any) {
-    // Fallback: if 1.5-preview still fails, retry with base model
-    if (model !== GROK_VIDEO_MODEL_BASE && e?.status === 400) {
+    // Fallback: if 1.5-preview still fails, retry with base model.
+    // Not when voices are attached: the base model rejects reference_audios outright, so
+    // the retry would only replace one 400 with a more confusing one. Dropping the voice
+    // to make the call succeed would hand back a video missing what was asked for.
+    if (model !== GROK_VIDEO_MODEL_BASE && e?.status === 400 && voices.length === 0) {
       effectiveModel = GROK_VIDEO_MODEL_BASE;
       const fallbackPayload = buildVideoGenerationPayload(plan, { model: effectiveModel, sourceImageUrl: srcUrl, referenceImageUrls: refUrls });
       xaiVideoRequestId = await startVideoRequest(ctx, fallbackPayload, options);

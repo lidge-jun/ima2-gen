@@ -33,6 +33,7 @@ import {
   normalizeVideoDuration,
   deriveVideoMode,
   MAX_REF2V_REFERENCES,
+  MAX_REFERENCE_AUDIOS,
   validateVideoResolutionForRequest,
   type VideoMode,
 } from "../lib/imageModels.js";
@@ -411,6 +412,15 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
 
       const plannerModel = typeof req.body?.plannerModel === "string" ? req.body.plannerModel.trim() : undefined;
       const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
+      // Only the shape is checked here. Which voice ids exist is xAI's to answer, and its
+      // 400 names every valid voice — a list we would only get wrong, and which cannot
+      // include the caller's custom voices anyway.
+      const referenceAudios = toArray(req.body?.referenceAudios)
+        .map((voice) => (typeof voice === "string" ? voice.trim() : ""))
+        .filter((voice) => voice.length > 0);
+      if (referenceAudios.length > MAX_REFERENCE_AUDIOS) {
+        return fail(400, "GROK_VIDEO_AUDIO_TOO_MANY", `at most ${MAX_REFERENCE_AUDIOS} reference voices`);
+      }
 
       const result = await generateVideoViaGrok(effectivePrompt, ctx, {
         model: modelCheck.model,
@@ -420,6 +430,7 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         aspectRatio: aspectCheck.aspectRatio,
         sourceImage: sourceB64,
         referenceImages,
+        ...(referenceAudios.length ? { referenceAudios } : {}),
         signal: cancelController.signal,
         requestId,
         continuityLineage: parentLineage,

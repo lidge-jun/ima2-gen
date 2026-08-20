@@ -48,6 +48,8 @@ export interface GrokVideoOptions {
   sourceImage?: string | undefined;
   sourceMime?: string | null | undefined;
   referenceImages?: string[] | undefined;
+  /** Preset voice ids (grok-imagine-video-1.5 only, max 3). */
+  referenceAudios?: string[] | undefined;
   signal?: AbortSignal | undefined;
   requestId?: string | undefined;
   plannedPrompt?: string | undefined;

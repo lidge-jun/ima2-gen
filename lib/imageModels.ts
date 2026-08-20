@@ -161,6 +161,8 @@ export const MAX_VIDEO_DURATION = 15;
 // Verified against api.x.ai on 2026-08-20:
 // devlog/_plan/260820_grok15_multi_reference_video/000_research.md
 export const MAX_REF2V_REFERENCES = 7;
+// reference_audios: preset voices, grok-imagine-video-1.5 only. 4 -> 400.
+export const MAX_REFERENCE_AUDIOS = 3;
 
 export type GrokVideoModel = typeof GROK_VIDEO_MODEL_BASE | typeof GROK_VIDEO_MODEL_15 | typeof GROK_VIDEO_MODEL_15_PREVIEW_ALIAS;
 export type VideoResolution = "480p" | "720p" | "1080p";

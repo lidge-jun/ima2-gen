@@ -89,6 +89,7 @@ const SPEC = {
     start:         { type: "string" },
     end:           { type: "string" },
     ref:           { type: "string", repeatable: true },
+    voice:         { type: "string", repeatable: true },
     "video-ref":   { type: "string" },
     character:     { type: "string" },
     out:           { short: "o", type: "string" },
@@ -133,6 +134,9 @@ const HELP = `
         --start <generated-filename>    MCP start frame
         --end <generated-filename>      MCP end frame; requires --start
         --ref <file|@last|file:tag>     Grok image input or MCP tagged image reference
+        --voice <voice-id>              Preset voice for the subject (grok-imagine-video-1.5,
+                                        repeatable, max 3). e.g. eve, leo, rex, luna, atlas.
+                                        An unknown id returns the full list of valid voices
                                         Repeatable: Grok max 7, MCP max 3
         --video-ref <generated-filename> MCP V2V/restyle reference video
         --character <element-id|name>      MCP lanes only: character binding element
@@ -148,9 +152,9 @@ const HELP = `
         --duration <2..10>              Extension duration only. Default: 6
 
   Grok modes (auto-detected from --ref count):
-    0 refs  → text-to-video
-    1 ref   → image-to-video
-    2-7 refs → reference-to-video (max 10s duration)
+    0 refs   → text-to-video
+    1-7 refs → reference-to-video (max 720p). References guide the subject without
+               locking the first frame; use a node/continuity chain for a first frame.
 
   Examples:
     ima2 video "a cat playing piano"
@@ -218,7 +222,11 @@ async function videoEditCmd(argv: string[]) {
   const spec = { flags: { video: { type: "string" }, out: { short: "o", type: "string" }, output: { type: "string" }, json: { type: "boolean" }, timeout: { type: "string", default: String(VIDEO_CLIENT_TIMEOUT_SEC) }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
   const args = parseArgs(argv, spec);
   rejectUnknownFlags(args);
-  if (args.help) { out(`  ima2 video edit <prompt> --video <url|file_id|generated-file>\n\n  Edit existing video with text prompt (real V2V).\n  Model: grok-imagine-video only. Input: mp4, max 8.7s.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n    -o, --out <file>      Download edited video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 5400\n        --server <url>    Override server URL`); return; }
+  // Limits: 8.7s input is the owner's own measurement (docs/grok-video-i2v-research.md,
+  // 2026-05-30) and appears in no xAI doc — keep it. The 1.5 rejection and the
+  // ignored duration/resolution were live-probed against api.x.ai on 2026-08-20.
+  // Details + full probe table: skills/ima2/SKILL.md "Provenance of the limits above".
+  if (args.help) { out(`  ima2 video edit <prompt> --video <url|file_id|generated-file>\n\n  Edit existing video with text prompt (real V2V).\n  Model: grok-imagine-video only (1.5 rejects edits). Input: mp4, max 8.7s.\n  Output inherits the source video's duration and resolution (max 720p).\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n    -o, --out <file>      Download edited video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 5400\n        --server <url>    Override server URL`); return; }
   const prompt = args.positional.join(" ");
   if (!prompt.trim()) die(2, ACTIVE_VIDEO_PROMPT_GUIDANCE);
   if (!args.video) die(2, "--video <url> is required");

@@ -138,6 +138,10 @@ function coreBody(args: ParsedArgs, context: VideoContext, options: CoreOptions,
   if (args.storyboard) body.storyboard = true;
   if (args.session) body.sessionId = args.session;
   if (args.topic) body.topic = args.topic;
+  // Voice ids pass through unvalidated on purpose: xAI owns the roster (and custom
+  // voices), and its rejection names every accepted value.
+  const voices = (Array.isArray(args.voice) ? args.voice : args.voice ? [args.voice] : []) as string[];
+  if (voices.length > 0) body.referenceAudios = voices.map((v) => String(v));
   // `--ref` is the reference slot at any count; one reference guides the video without
   // locking the first frame. Mapping a single --ref to sourceImage made the CLI disagree
   // with the server contract and with the UI.

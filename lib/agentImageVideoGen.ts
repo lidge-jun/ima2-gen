@@ -319,6 +319,7 @@ export async function runAgentVideoGeneration(
     mode: videoParams.mode,
     sourceImage,
     ...(videoParams.referenceImages ? { referenceImages: videoParams.referenceImages } : {}),
+    ...(videoParams.referenceAudios ? { referenceAudios: videoParams.referenceAudios } : {}),
     duration: videoParams.duration,
     resolution: videoParams.resolution,
     aspectRatio: videoParams.aspectRatio as "auto" | "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3",
