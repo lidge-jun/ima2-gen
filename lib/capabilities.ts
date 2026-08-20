@@ -5,6 +5,7 @@ import { buildCatalog, catalogSummary } from "./contracts/catalog.js";
 import { loadAllBundledSnapshots } from "./mcp/snapshotStore.js";
 import { KEY_TO_ENV, WRITABLE_CONFIG_KEYS } from "./configKeys.js";
 import { DEFAULT_IMAGE_QUALITY, VALID_IMAGE_QUALITIES } from "./oauthNormalize.js";
+import { MAX_REF2V_REFERENCES, MAX_REFERENCE_AUDIOS, MAX_VIDEO_DURATION, MIN_VIDEO_DURATION } from "./imageModels.js";
 import type { AppConfig } from "./runtimeContext.js";
 import { deriveProviderIds } from "./providers/derive.js";
 
@@ -85,6 +86,45 @@ export function buildIma2Capabilities({
         aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"],
         durationRange: [1, 15],
         maxReferences: 7,
+        // Flat numbers above describe the widest case, which is not what any single
+        // request is allowed to do. A client that reads only those draws controls the
+        // server will reject. These per-mode entries come from the same constants the
+        // request path enforces, so the advertisement cannot drift from the behavior.
+        // Verified against api.x.ai on 2026-08-20:
+        // devlog/_plan/260820_grok15_multi_reference_video/000_research.md
+        modes: {
+          "text-to-video": {
+            maxReferences: 0,
+            durationRange: [MIN_VIDEO_DURATION, MAX_VIDEO_DURATION],
+            resolutions: ["480p", "720p", "1080p"],
+            notes: "1080p on grok-imagine-video-1.5 goes through the white-canvas shim.",
+          },
+          "image-to-video": {
+            maxReferences: 1,
+            durationRange: [MIN_VIDEO_DURATION, MAX_VIDEO_DURATION],
+            resolutions: ["480p", "720p", "1080p"],
+            notes: "The source image becomes the first frame.",
+          },
+          "reference-to-video": {
+            maxReferences: MAX_REF2V_REFERENCES,
+            durationRange: [MIN_VIDEO_DURATION, MAX_VIDEO_DURATION],
+            resolutions: ["480p", "720p"],
+            notes: "References guide the subject without locking the first frame. 1080p is rejected upstream.",
+          },
+        },
+        referenceAudio: {
+          maxVoices: MAX_REFERENCE_AUDIOS,
+          models: ["grok-imagine-video-1.5"],
+          // Not the allowlist: xAI owns the roster and accepts custom voice ids too. An
+          // unknown id comes back as a 400 naming every voice it will take.
+          knownPresets: [
+            "ara", "eve", "leo", "rex", "sal", "carina", "zagan", "helix", "orion",
+            "luna", "iris", "altair", "zenith", "perseus", "helios", "lux", "kepler",
+            "rigel", "cosmo", "celeste", "ursa", "sirius", "lumen", "castor", "naksh",
+            "atlas",
+          ],
+          presetsAreAuthoritative: false,
+        },
       },
       reasoningEfforts: toArray(appConfig.imageModels.validReasoningEfforts),
       quality: toArray(VALID_IMAGE_QUALITIES),

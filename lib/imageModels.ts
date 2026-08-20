@@ -157,25 +157,33 @@ export const VALID_VIDEO_ASPECT_RATIOS = new Set([
 ]);
 export const MIN_VIDEO_DURATION = 1;
 export const MAX_VIDEO_DURATION = 15;
-// reference-to-video (xAI): up to 7 reference images, max 10s duration.
+// reference-to-video (xAI): up to 7 reference images (8 -> 400), 1-15s, 720p max.
+// Verified against api.x.ai on 2026-08-20:
+// devlog/_plan/260820_grok15_multi_reference_video/000_research.md
 export const MAX_REF2V_REFERENCES = 7;
-export const MAX_REF2V_DURATION = 10;
+// reference_audios: preset voices, grok-imagine-video-1.5 only. 4 -> 400.
+export const MAX_REFERENCE_AUDIOS = 3;
 
 export type GrokVideoModel = typeof GROK_VIDEO_MODEL_BASE | typeof GROK_VIDEO_MODEL_15 | typeof GROK_VIDEO_MODEL_15_PREVIEW_ALIAS;
 export type VideoResolution = "480p" | "720p" | "1080p";
 export type VideoAspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "auto";
 export type VideoMode = "text-to-video" | "image-to-video" | "reference-to-video";
 
-// Mode is derived purely from the number of attached reference images.
+/**
+ * Count-only fallback for callers that have lost track of WHICH slot each image
+ * arrived in.
+ *
+ * A single image is ambiguous on its own: as a first frame it means image-to-video,
+ * as a reference it means reference-to-video, and the count cannot tell them apart.
+ * This returns the historical default (image-to-video) so old callers keep their
+ * behavior — it is a fallback, not a ceiling. Callers that DO know the slot should
+ * use `deriveVideoMode` in lib/videoGenerationRequest.ts, which reads intent from
+ * the field the caller chose.
+ */
 export function deriveVideoMode(refCount: number): VideoMode {
   if (refCount >= 2) return "reference-to-video";
   if (refCount === 1) return "image-to-video";
   return "text-to-video";
-}
-
-// Clamp duration to the reference-to-video ceiling; other modes keep their value.
-export function clampVideoDuration(duration: number, mode: VideoMode): number {
-  return mode === "reference-to-video" ? Math.min(duration, MAX_REF2V_DURATION) : duration;
 }
 
 export function isGrokVideoModel(value: unknown): value is GrokVideoModel {

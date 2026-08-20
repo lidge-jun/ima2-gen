@@ -82,6 +82,12 @@ export interface AgentVideoParams {
   duration?: number | undefined;
   resolution?: "480p" | "720p" | "1080p" | undefined;
   aspectRatio?: string | undefined;
+  /**
+   * Whether an attached image should become the first frame ("image-to-video") or
+   * only guide the result ("reference-to-video"). Chat has no reference tray, so the
+   * planner is where that intent gets expressed.
+   */
+  mode?: "text-to-video" | "image-to-video" | "reference-to-video" | undefined;
 }
 
 export interface AgentGenerationPlan {

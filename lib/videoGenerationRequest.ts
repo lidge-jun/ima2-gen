@@ -30,6 +30,8 @@ export type VideoGenerationRequest = {
   sourceAssetId?: string | undefined;
   referenceImages?: string[] | undefined;
   referenceFilenames?: string[] | undefined;
+  /** Preset voice ids for reference audio (grok-imagine-video-1.5 only, max 3). */
+  referenceAudios?: string[] | undefined;
   continueFromVideo?: string | undefined;
   duration: number;
   resolution: VideoResolution;
@@ -150,6 +152,7 @@ export function normalizeVideoGenerationRequest(
       ...(input.sourceAssetId ? { sourceAssetId: input.sourceAssetId } : {}),
       ...(input.referenceImages?.length ? { referenceImages: input.referenceImages } : {}),
       ...(input.referenceFilenames?.length ? { referenceFilenames: input.referenceFilenames } : {}),
+      ...(input.referenceAudios?.length ? { referenceAudios: input.referenceAudios } : {}),
       ...(input.continueFromVideo ? { continueFromVideo: input.continueFromVideo } : {}),
       ...(input.topic ? { topic: input.topic } : {}),
       ...(input.storyboard ? { storyboard: true } : {}),

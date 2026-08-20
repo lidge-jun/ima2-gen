@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 import { OptionGroup } from "./OptionGroup";
 import { Chip, ChipRow, Select } from "./controls";
 import { DurationSlider } from "./controls/DurationSlider";
-import { deriveVideoModeUI, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, MAX_REF2V_DURATION_UI, supportsVideoResolutionUI } from "../lib/imageModels";
+import { deriveVideoModeUI, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, supportsVideoResolutionUI } from "../lib/imageModels";
 import { ACTIVE_VIDEO_PROMPT_GUIDANCE, continuitySummary } from "../lib/videoContinuity";
 import { getPresetById } from "../lib/presets";
 import type { VideoResolutionUI } from "../types";
@@ -44,7 +44,7 @@ export function VideoControlsPanel() {
   const cameraPresets = selectedPresetIds
     .map((id) => getPresetById(id))
     .filter((preset): preset is NonNullable<typeof preset> => preset?.category === "camera-motion");
-  const maxDuration = refCount >= 2 ? MAX_REF2V_DURATION_UI : 15;
+  const maxDuration = 15;
   const mode = deriveVideoModeUI(refCount);
   const summary = continuitySummary(continuity);
   const canUse1080pWithSelectedModel = supportsVideoResolutionUI(videoModelSelected, "1080p", mode);

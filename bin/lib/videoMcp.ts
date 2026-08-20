@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { config } from "../../config.js";
 import {
-  deriveVideoMode, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
+  GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
   validateVideoResolutionForRequest, type VideoResolution,
 } from "../../lib/imageModels.js";
 import { VIDEO_CLIENT_TIMEOUT_MS } from "../../lib/videoClientTimeouts.js";
@@ -108,8 +108,10 @@ function validateCoreOptions(args: ParsedArgs, refs: string[], model: string) {
   const aspectRatio = String(args["aspect-ratio"] ?? "auto");
   if (!VALID_ASPECT_RATIOS.has(aspectRatio)) die(2, "--aspect-ratio must be one of: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto");
   if (refs.length > 7) die(2, "max 7 --ref attachments for video");
-  if (refs.length >= 2 && duration > 10) die(2, "--duration must be between 1 and 10 when using 2 or more --ref attachments");
-  const check = validateVideoResolutionForRequest(model, resolution as VideoResolution, deriveVideoMode(refs.length), { allowTextCanvasShim: true });
+  // `--ref` always fills the reference slot now, so any attachment means
+  // reference-to-video — the same conclusion the server reaches from the slot.
+  const mode = refs.length > 0 ? ("reference-to-video" as const) : ("text-to-video" as const);
+  const check = validateVideoResolutionForRequest(model, resolution as VideoResolution, mode, { allowTextCanvasShim: true });
   if (!("ok" in check)) die(2, check.error);
   return { duration, resolution, aspectRatio };
 }
@@ -136,8 +138,14 @@ function coreBody(args: ParsedArgs, context: VideoContext, options: CoreOptions,
   if (args.storyboard) body.storyboard = true;
   if (args.session) body.sessionId = args.session;
   if (args.topic) body.topic = args.topic;
-  if (references.length === 1) body.sourceImage = references[0];
-  else if (references.length > 1) body.referenceImages = references;
+  // Voice ids pass through unvalidated on purpose: xAI owns the roster (and custom
+  // voices), and its rejection names every accepted value.
+  const voices = (Array.isArray(args.voice) ? args.voice : args.voice ? [args.voice] : []) as string[];
+  if (voices.length > 0) body.referenceAudios = voices.map((v) => String(v));
+  // `--ref` is the reference slot at any count; one reference guides the video without
+  // locking the first frame. Mapping a single --ref to sourceImage made the CLI disagree
+  // with the server contract and with the UI.
+  if (references.length > 0) body.referenceImages = references;
   return body;
 }
 
