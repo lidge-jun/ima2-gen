@@ -17,11 +17,13 @@ import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
 import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
 
-export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.6";
+// 4.6 rewrites prompts in ways that read worse than 4.3 for this planner's job, which
+// is judged by the result rather than a benchmark. 4.6 stays selectable below.
+export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.3";
 export const GROK_PLANNER_MODELS = [
   DEFAULT_GROK_PLANNER_MODEL,
+  "grok-4.6",
   "grok-4.5",
-  "grok-4.3",
   "gpt-5.6-luna",
   "gpt-5.6-terra",
   "gpt-5.6-sol",
