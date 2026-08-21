@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 import { logEvent } from "../lib/logger.js";
 
@@ -30,7 +31,13 @@ export function registerAdminRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       return res.status(403).json({ error: "admin stop is not callable from a browser context" });
     }
     const nonce = req.headers["x-ima2-admin-nonce"];
-    if (typeof nonce !== "string" || nonce.length === 0 || nonce !== ctx.adminNonce) {
+    const expected = Buffer.from(ctx.adminNonce);
+    const presented = typeof nonce === "string" ? Buffer.from(nonce) : Buffer.alloc(0);
+    const valid =
+      expected.length > 0 &&
+      presented.length === expected.length &&
+      timingSafeEqual(presented, expected);
+    if (!valid) {
       return res.status(401).json({ error: "missing or invalid admin nonce" });
     }
     logEvent("admin", "stop_requested", { pid: process.pid });

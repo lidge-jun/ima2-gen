@@ -7,11 +7,14 @@
  * before SIGKILL, and a stale advertise file is cleaned, not trusted.
  */
 
+import { execFileSync } from "node:child_process";
+
 export interface AdvertiseEntry {
   pid?: number;
   port?: number;
   url?: string;
   adminNonce?: string;
+  startedAt?: number;
   [key: string]: unknown;
 }
 
@@ -35,6 +38,43 @@ export async function waitForExit(pid: number, timeoutMs: number): Promise<boole
 }
 
 export type IdentityVerdict = "match" | "mismatch" | "unreachable";
+
+/**
+ * Secondary identity signal for when the HTTP check is unreachable: compare
+ * the LIVE process start time against the advertised startedAt. A recycled
+ * pid belongs to a process started well after our server did; a hung-but-ours
+ * server started (approximately) when the advertise file says. Returns
+ * "corroborated" only when the start times agree within tolerance; "recycled"
+ * when the live process is provably younger than the advertised boot;
+ * "unknown" when ps output cannot be read — callers must REFUSE to kill on
+ * "unknown"/"recycled" (audit blocker: never guess).
+ */
+export function corroborateByStartTime(
+  pid: number,
+  advertisedStartedAt: number | undefined,
+  runPs: (pid: number) => string | null = defaultPs,
+): "corroborated" | "recycled" | "unknown" {
+  if (!advertisedStartedAt || !Number.isFinite(advertisedStartedAt)) return "unknown";
+  if (process.platform === "win32") return "unknown";
+  const lstart = runPs(pid);
+  if (!lstart) return "unknown";
+  const started = Date.parse(lstart);
+  if (!Number.isFinite(started)) return "unknown";
+  // advertise happens moments after process start; allow generous skew.
+  const TOLERANCE_MS = 120_000;
+  if (Math.abs(started - advertisedStartedAt) <= TOLERANCE_MS) return "corroborated";
+  return started > advertisedStartedAt + TOLERANCE_MS ? "recycled" : "unknown";
+}
+
+function defaultPs(pid: number): string | null {
+  try {
+    const out = execFileSync("ps", ["-p", String(pid), "-o", "lstart="], { encoding: "utf8" });
+    const line = out.trim();
+    return line.length > 0 ? line : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Does the server answering on entry.url/port actually carry entry.pid?

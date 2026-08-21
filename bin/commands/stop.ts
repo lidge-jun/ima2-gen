@@ -2,6 +2,7 @@ import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
+  corroborateByStartTime,
   escalateKill,
   gracefulStop,
   isProcessAlive,
@@ -64,12 +65,26 @@ export async function stop(args: string[] = []): Promise<void> {
     return;
   }
 
-  // Service-managed? KeepAlive will resurrect a plain kill.
+  if (process.platform === "win32") {
+    console.log("\n  'ima2 stop' is not supported on Windows yet (SIGTERM would orphan");
+    console.log("  the provider proxies). Stop the server from its own terminal (Ctrl+C)");
+    console.log(`  or: taskkill /PID ${pid} /T\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  // Service-managed? KeepAlive will resurrect a plain kill — refuse without --force
+  // (ownership refusal, mirroring opencodex's 409 semantics in spirit).
   const stateFile = join(process.env.IMA2_CONFIG_DIR || join(homedir(), ".ima2"), "service-state.json");
   if (existsSync(stateFile)) {
-    console.log("\n  Note: ima2 is installed as a background service — a plain stop will be");
-    console.log("  restarted automatically. Use 'ima2 service stop' to stop it properly.");
-    console.log("  Continuing anyway (this stop affects the current process only).\n");
+    if (!force) {
+      console.log("\n  ima2 is installed as a background service: KeepAlive would restart");
+      console.log("  the server immediately after this stop, so it would be a lie.");
+      console.log("  Use 'ima2 service stop' — or 'ima2 stop --force' to kill it anyway.\n");
+      process.exitCode = 1;
+      return;
+    }
+    console.log("\n  --force: stopping a service-managed server; KeepAlive may restart it.\n");
   }
 
   const identity = await verifyServerIdentity(entry);
@@ -79,6 +94,27 @@ export async function stop(args: string[] = []): Promise<void> {
     console.log("  Refusing to kill a process the advertise file cannot vouch for.");
     console.log("  Cleaned the stale advertise file; stop the other server from its own CLI.\n");
     return;
+  }
+
+  if (identity === "unreachable") {
+    // HTTP says nothing — corroborate with the process start time before ANY
+    // signal. A recycled pid is provably younger than the advertised boot;
+    // when we cannot tell, we refuse rather than guess (audit blocker 1).
+    const corroboration = corroborateByStartTime(pid, Number(entry.startedAt) || undefined);
+    if (corroboration !== "corroborated") {
+      console.log(`\n  pid ${pid} is alive but the server is unreachable, and its start time`);
+      console.log(
+        corroboration === "recycled"
+          ? "  shows it is NOT the advertised server (the pid was recycled)."
+          : "  could not be corroborated against the advertise file.",
+      );
+      console.log("  Refusing to send signals to a process that may not be ours.");
+      if (corroboration === "recycled") cleanupAdvertise(path, pid);
+      else console.log(`  If you are sure, stop it manually: kill ${pid}`);
+      console.log("");
+      process.exitCode = corroboration === "recycled" ? 0 : 1;
+      return;
+    }
   }
 
   if (!force && identity === "match") {

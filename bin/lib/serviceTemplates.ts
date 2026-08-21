@@ -95,10 +95,16 @@ export interface ServiceState {
   installedAt: number;
 }
 
-/** Paths drifted (nvm/prefix move) since install? repair re-renders. */
-export function serviceStateStale(state: ServiceState, current: { nodePath: string; serverJs: string }): string[] {
+/** Paths drifted (nvm/prefix/config-dir move) since install? repair re-renders. */
+export function serviceStateStale(
+  state: ServiceState,
+  current: { nodePath: string; serverJs: string; configDir?: string },
+): string[] {
   const issues: string[] = [];
   if (state.nodePath !== current.nodePath) issues.push(`node moved: ${state.nodePath} -> ${current.nodePath}`);
   if (state.serverJs !== current.serverJs) issues.push(`server.js moved: ${state.serverJs} -> ${current.serverJs}`);
+  if (current.configDir !== undefined && state.configDir !== current.configDir) {
+    issues.push(`config dir moved: ${state.configDir} -> ${current.configDir}`);
+  }
   return issues;
 }

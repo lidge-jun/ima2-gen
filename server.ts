@@ -7,6 +7,7 @@ import {
   existsSync,
   writeFileSync,
   unlinkSync,
+  chmodSync,
   mkdirSync,
   readFileSync as fsReadFileSync,
 } from "fs";
@@ -333,11 +334,18 @@ function advertise(ctx: RuntimeContext) {
   // intermediate state makes consumers treat the configured port as live.
   if (!ctx.serverActualPort) return;
   try {
-    mkdirSync(dirname(ctx.config.storage.advertiseFile), { recursive: true });
+    // The payload carries the admin nonce (a kill-switch credential): the file
+    // must be owner-only, or any local user on a shared host can stop the
+    // server (adversarial review 260821c, blocker 3).
+    mkdirSync(dirname(ctx.config.storage.advertiseFile), { recursive: true, mode: 0o700 });
     writeFileSync(
       ctx.config.storage.advertiseFile,
       JSON.stringify(buildAdvertisePayload(ctx)),
+      { mode: 0o600 },
     );
+    // mode applies only at creation: a crash-survivor file from an older build
+    // keeps its old permissions, so re-assert them on every publish.
+    chmodSync(ctx.config.storage.advertiseFile, 0o600);
   } catch (e) {
     const err = errInfo(e);
     console.warn("[advertise] skipped:", err.message);

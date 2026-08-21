@@ -12,7 +12,15 @@ import {
   serviceStateStale,
   type ServiceState,
 } from "../lib/serviceTemplates.js";
-import { escalateKill, isProcessAlive, type AdvertiseEntry } from "../../lib/processControl.js";
+import {
+  corroborateByStartTime,
+  escalateKill,
+  gracefulStop,
+  isProcessAlive,
+  verifyServerIdentity,
+  waitForExit,
+  type AdvertiseEntry,
+} from "../../lib/processControl.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
@@ -145,7 +153,7 @@ async function macInstall(): Promise<boolean> {
   return true;
 }
 
-async function macBootout(): Promise<void> {
+async function macBootout(): Promise<boolean> {
   run("/bin/launchctl", ["bootout", `${guiDomain()}/${LAUNCHD_LABEL}`]);
   // bootout is asynchronous: bootstrapping again while the old job is still
   // draining fails with "Bootstrap failed: 5: Input/output error" (hit live
@@ -155,6 +163,9 @@ async function macBootout(): Promise<void> {
   while (Date.now() < deadline && macRegistered()) {
     await new Promise((r) => setTimeout(r, 200));
   }
+  // Honest outcome: a job still registered after the drain window is a FAILED
+  // bootout, not a success to report (audit P2).
+  return !macRegistered();
 }
 
 async function macBootstrapWithRetry(): Promise<RunResult> {
@@ -196,12 +207,39 @@ function linuxInstall(): boolean {
 
 // ── shared flows ──
 
+/**
+ * Stop whatever server the advertise file names — same doctrine as
+ * `ima2 stop` (audit blocker 2): graceful admin-API first, identity-verified
+ * signals second, and NEVER a signal to a pid we cannot corroborate.
+ */
 async function stopLiveServer(): Promise<void> {
   const entry = readAdvertise();
-  if (entry?.pid && isProcessAlive(Number(entry.pid))) {
-    await escalateKill(Number(entry.pid));
+  if (!entry?.pid) return;
+  const pid = Number(entry.pid);
+  if (!isProcessAlive(pid)) {
     try { unlinkSync(advertisePath()); } catch { /* gone already */ }
+    return;
   }
+  const identity = await verifyServerIdentity(entry);
+  if (identity === "mismatch") {
+    console.log(`  Note: a different server answers where pid ${pid} was advertised; leaving it alone.`);
+    try { unlinkSync(advertisePath()); } catch { /* stale */ }
+    return;
+  }
+  if (identity === "unreachable") {
+    const corroboration = corroborateByStartTime(pid, Number(entry.startedAt) || undefined);
+    if (corroboration !== "corroborated") {
+      console.log(`  Note: pid ${pid} could not be identified as the ima2 server; not signalling it.`);
+      if (corroboration === "recycled") { try { unlinkSync(advertisePath()); } catch { /* stale */ } }
+      return;
+    }
+  }
+  if (identity === "match" && (await gracefulStop(entry)) && (await waitForExit(pid, 8000))) {
+    try { unlinkSync(advertisePath()); } catch { /* server removed it */ }
+    return;
+  }
+  await escalateKill(pid);
+  try { unlinkSync(advertisePath()); } catch { /* gone */ }
 }
 
 async function install(): Promise<void> {
@@ -231,8 +269,15 @@ async function install(): Promise<void> {
 }
 
 async function uninstall(): Promise<void> {
+  if (process.platform === "win32") {
+    console.log("\n  Windows service management is not built in yet — nothing to uninstall.\n");
+    return;
+  }
   if (process.platform === "darwin") {
-    await macBootout();
+    const drained = await macBootout();
+    if (!drained) {
+      console.error("  Warning: launchctl still reports the job registered; artifacts removed anyway.");
+    }
     try { unlinkSync(plistPath()); } catch { /* absent is fine */ }
   } else if (process.platform === "linux") {
     run("systemctl", ["--user", "disable", "--now", SYSTEMD_UNIT]);
@@ -266,13 +311,29 @@ async function start(): Promise<void> {
 
 async function stopSvc(): Promise<void> {
   // bootout (not kill): with KeepAlive, killing the pid just respawns it.
-  if (process.platform === "darwin") await macBootout();
-  else if (process.platform === "linux") run("systemctl", ["--user", "stop", SYSTEMD_UNIT]);
+  if (process.platform === "win32") {
+    console.log("\n  Windows service management is not built in yet.\n");
+    process.exitCode = 1;
+    return;
+  }
+  if (process.platform === "darwin") {
+    const drained = await macBootout();
+    if (!drained) {
+      console.error("\n  launchctl bootout did not take — the job is still registered.");
+      console.error(`  Inspect: launchctl print gui/$UID/${LAUNCHD_LABEL}\n`);
+      process.exitCode = 1;
+      return;
+    }
+  } else if (process.platform === "linux") run("systemctl", ["--user", "stop", SYSTEMD_UNIT]);
   await stopLiveServer();
   console.log("\n  Service stopped (registration removed until 'ima2 service start').\n");
 }
 
 async function status(): Promise<void> {
+  if (process.platform === "win32") {
+    console.log("\n  Windows service management is not built in yet; no status to report.\n");
+    return;
+  }
   const state = readState();
   const installedArtifact = process.platform === "darwin" ? plistPath() : unitPath();
   const artifactExists = existsSync(installedArtifact);
@@ -290,7 +351,7 @@ async function status(): Promise<void> {
     }
   }
   if (state) {
-    const stale = serviceStateStale(state, currentPaths());
+    const stale = serviceStateStale(state, { ...currentPaths(), configDir: configDir() });
     console.log(`  Installed: ${new Date(state.installedAt).toLocaleString()} (node ${state.nodePath})`);
     for (const issue of stale) console.log(`  Stale: ${issue} — run 'ima2 service repair'`);
   } else {
@@ -307,7 +368,8 @@ async function status(): Promise<void> {
 }
 
 function logs(args: string[]): void {
-  const n = Math.max(1, Number(args[args.indexOf("-n") + 1]) || 50);
+  const nFlag = args.indexOf("-n");
+  const n = Math.max(1, (nFlag >= 0 ? Number(args[nFlag + 1]) : NaN) || 50);
   if (process.platform === "linux") {
     const r = run("journalctl", ["--user", "-u", SYSTEMD_UNIT, "-n", String(n), "--no-pager"]);
     console.log(r.stdout || r.stderr);
