@@ -28,7 +28,7 @@ import { errInfo } from "./errInfo.js";
 import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
 import { STORYBOARD_PREFIX } from "./storyboardPrefix.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "./backgroundPresets.js";
-import { resolveImageBackgroundParams, validateTransparentFormat } from "./imageBackgroundParam.js";
+import { resolveImageBackgroundParams, validateTransparentFormat, validateTransparentProvider } from "./imageBackgroundParam.js";
 import { validateModeration, imageFormatFromMime, upstreamErrorFields } from "./routeHelpers.js";
 import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
@@ -157,9 +157,10 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         return fail(400, { error: backgroundParse.error, code: backgroundParse.code });
       }
       const backgroundPreset = backgroundParse.preset;
-      // A transparent background paired with an alpha-incapable format would
-      // silently ship an opaque image, so refuse it at the edge instead.
-      const formatConflict = validateTransparentFormat(backgroundPreset, req.body?.outputFormat);
+      // `format` is the canonical request field (default "png"). Validating
+      // req.body.outputFormat instead would let format:"jpeg" slip past and
+      // then get transcoded to JPEG on save, destroying the alpha channel.
+      const formatConflict = validateTransparentFormat(backgroundPreset, format);
       if (formatConflict) {
         return fail(400, { error: formatConflict.error, code: formatConflict.code });
       }
@@ -193,8 +194,15 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       const backgroundParams = resolveImageBackgroundParams({
         preset: backgroundPreset,
         supportsForcedTransparent: activeProvider === "atlascloud",
-        requestedFormat: typeof req.body?.outputFormat === "string" ? req.body.outputFormat : undefined,
+        requestedFormat: typeof format === "string" ? format : undefined,
       });
+      // Grok/Gemini/Agy/MiniMax have no background parameter and their branches
+      // force JPEG, so a transparent request there would return an opaque image
+      // recorded as a cutout. Refuse instead of billing for a wrong result.
+      const providerConflict = validateTransparentProvider(backgroundPreset, activeProvider);
+      if (providerConflict) {
+        return fail(400, { error: providerConflict.error, code: providerConflict.code });
+      }
 
       // --- Element injection (after provider resolution) ---
       const rawElementIds: string[] = Array.isArray(req.body?.elementIds)
@@ -370,7 +378,13 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       });
       const startTime = Date.now();
       const mimeMap: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
-      const effectiveFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : String(format);
+      const providerForcesJpeg = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax";
+      // An alpha-bearing result must never be persisted through a lossy opaque
+      // format: embedImageMetadata re-encodes with sharp.toFormat(), so a JPEG
+      // here silently flattens the transparency we just asked for.
+      const effectiveFormat = backgroundParams
+        ? (backgroundParams.outputFormat ?? "png")
+        : (providerForcesJpeg ? "jpeg" : String(format));
       const mime = mimeMap[effectiveFormat] || "image/png";
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
       const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;

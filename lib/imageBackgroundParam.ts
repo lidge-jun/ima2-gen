@@ -55,6 +55,38 @@ export function isAlphaCapableFormat(value: unknown): value is AlphaCapableForma
 }
 
 /**
+ * Image lanes that can actually return an alpha channel.
+ *
+ * Only the GPT image tool (OAuth/API) and the gpt-image-2 API surface expose a
+ * background parameter. Grok, Gemini, Agy, and MiniMax have no equivalent and
+ * their pipeline branches force JPEG, so a transparent request there would bill
+ * the user for an opaque image labeled as a cutout.
+ */
+export const ALPHA_CAPABLE_PROVIDERS = ["oauth", "api", "atlascloud"] as const;
+
+export function providerSupportsTransparent(provider: string | undefined | null): boolean {
+  return typeof provider === "string" && (ALPHA_CAPABLE_PROVIDERS as readonly string[]).includes(provider);
+}
+
+export interface ProviderConflict {
+  error: string;
+  code: "TRANSPARENT_PROVIDER_UNSUPPORTED";
+}
+
+/** Refuse a transparent request on a lane that cannot deliver alpha. */
+export function validateTransparentProvider(
+  preset: string | null | undefined,
+  provider: string | undefined | null,
+): ProviderConflict | null {
+  if (preset !== "transparent") return null;
+  if (providerSupportsTransparent(provider)) return null;
+  return {
+    error: `transparent backgrounds are not supported on the "${String(provider)}" lane (no alpha channel); use ${ALPHA_CAPABLE_PROVIDERS.join(", ")}, or pick a solid background and key it`,
+    code: "TRANSPARENT_PROVIDER_UNSUPPORTED",
+  };
+}
+
+/**
  * Resolve the tool parameters for a preset. Returns `null` when the preset
  * implies no explicit background handling, so existing callers keep their
  * current payload byte-for-byte.

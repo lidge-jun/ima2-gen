@@ -39,7 +39,9 @@ export function AssetMediaLightbox({ item, onClose }: Props) {
   const close = useCallback(() => onClose(), [onClose]);
   const panelRef = useAgentDialogFocus(true, close);
   const isVideo = item.mediaType === "video";
-  const canKey = item.kind !== "edit" && Boolean(item.filename);
+  // A transparent asset already carries alpha: there is no matte to key, and
+  // keying it would only eat anti-aliased edges.
+  const canKey = item.kind !== "edit" && Boolean(item.filename) && item.backgroundPreset !== "transparent";
   const metadata = inlineMetadata ?? assetMetadata;
   const spriteRunId = typeof metadata?.spriteRunId === "string" ? metadata.spriteRunId : null;
   const manifestPath = typeof metadata?.manifestPath === "string" ? metadata.manifestPath : null;

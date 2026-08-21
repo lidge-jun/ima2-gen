@@ -179,7 +179,7 @@ routes/
 | `lib/oauthProxy/index.ts` | 29 | Public surface — re-exports generators, streams, prompts, references, runtime, and shared types |
 | `lib/oauthProxy/generators.ts` | 229 | OAuth Responses single-image generation and stable generator exports |
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
-| `lib/generatePipeline.ts` | 726 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
+| `lib/generatePipeline.ts` | 740 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
 | `lib/backgroundPresets.ts` | 78 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
 | `lib/multimodePipeline.ts` | 576 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
@@ -193,7 +193,7 @@ routes/
 | `lib/oauthProxy/errors.ts` | 129 | OAuth-specific error codes and normalization |
 | `lib/oauthProxy/types.ts` | 10 | Shared OAuth proxy types (re-exported from `index`) |
 | `lib/promptSafetyPolicy.ts` | 3 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
-| `lib/responsesImageAdapter.ts` | 495 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
+| `lib/responsesImageAdapter.ts` | 497 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
 | `lib/providerOptions.ts` | 120 | Per-provider option assembly (provider, model, size, reasoning effort, web search) |
 | `lib/runtimeContext.ts` | 201 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
@@ -249,7 +249,7 @@ routes/
 | `lib/presetCompiler.ts` | 67 | Named preset prompt compilation helpers |
 | `lib/responsesDoctor.ts` | 457 | Responses API diagnostics and provider health checks |
 | `lib/responsesErrors.ts` | 85 | Responses API error normalization helpers |
-| `lib/responsesFallback.ts` | 162 | Responses API fallback routing helpers |
+| `lib/responsesFallback.ts` | 173 | Responses API fallback routing helpers |
 | `lib/responsesParse.ts` | 453 | Responses API output parsing and normalization |
 | `lib/responsesTools.ts` | 39 | Responses API tool-call definitions and helpers |
 | `lib/routeHelpers.ts` | 58 | Shared Express route request/response helpers |

@@ -359,6 +359,8 @@ export async function generateViaResponses(provider: string | undefined, prompt:
         referenceInputs,
         webSearchDroppedOnRetry: webSearchEnabled,
         ...(options.reasoningEffort !== undefined ? { reasoningEffort: options.reasoningEffort } : {}),
+        ...(options.background !== undefined ? { background: options.background } : {}),
+        ...(options.outputFormat !== undefined ? { outputFormat: options.outputFormat } : {}),
       });
       if (fallback) return fallback;
     }

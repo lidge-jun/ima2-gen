@@ -16,6 +16,7 @@ devlog/_plan/*
 # generated PNG evidence (kept locally under evidence/).
 !devlog/_plan/260821_gpt_image2_transparent_background/
 !devlog/_plan/260821_gpt_image2_transparent_background/*.md
+devlog/_plan/260821_gpt_image2_transparent_background/evidence/
 ui/dist/
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo

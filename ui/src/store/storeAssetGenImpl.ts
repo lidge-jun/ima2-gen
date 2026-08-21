@@ -36,7 +36,10 @@ export async function registerAssetGenResult(item: GenerateItem, set: StoreSet, 
       tags: [],
       metadata: {
         source: "asset-gen",
-        backgroundPreset: s.assetGenBackground,
+        // Read from the ITEM, not the live store: the user can switch presets
+        // while a generation is in flight, which would otherwise persist a
+        // preset the image was never generated with.
+        backgroundPreset: item.backgroundPreset ?? s.assetGenBackground,
         prompt: item.prompt,
         provider: item.provider,
         requestId: item.requestId,
@@ -105,7 +108,7 @@ async function registerAssetGenVideoResult(item: GenerateItem, set: StoreSet, ge
       tags: [],
       metadata: {
         source: "asset-gen",
-        backgroundPreset: s.assetGenBackground,
+        backgroundPreset: item.backgroundPreset ?? s.assetGenBackground,
         prompt: item.prompt,
         provider: item.provider,
         requestId: item.requestId,
