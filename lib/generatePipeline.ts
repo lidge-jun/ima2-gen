@@ -28,7 +28,7 @@ import { errInfo } from "./errInfo.js";
 import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
 import { STORYBOARD_PREFIX } from "./storyboardPrefix.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "./backgroundPresets.js";
-import { resolveImageBackgroundParams, validateTransparentFormat, validateTransparentProvider } from "./imageBackgroundParam.js";
+import { resolveImageBackgroundParams, validateTransparentFormat, validateTransparentProvider, bufferCarriesAlpha, makeTransparentResultError } from "./imageBackgroundParam.js";
 import { validateModeration, imageFormatFromMime, upstreamErrorFields } from "./routeHelpers.js";
 import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
@@ -525,12 +525,14 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           // (lib/atlasCloudImageAdapter.ts), and a transparent PNG mislabeled
           // "image/jpeg" would otherwise be re-encoded to JPEG by
           // embedImageMetadata's sharp.toFormat() and lose its alpha channel.
-          const detectedMime = detectImageMimeFromB64(r.value.b64);
           const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax";
+          // Lazily decoded: only alpha requests always need the byte check, and
+          // the provider-mime path keeps its original short-circuit order.
+          const detectMime = () => detectImageMimeFromB64(r.value.b64);
           const resultMime = backgroundParams
-            ? (detectedMime || mime)
+            ? (detectMime() || mime)
             : providerReportsMime
-              ? (valueWithMime.mime || detectedMime || mime)
+              ? (valueWithMime.mime || detectMime() || mime)
               : mime;
           const resultFormat = backgroundParams
             ? imageFormatFromMime(resultMime)
@@ -601,6 +603,18 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             ...(elementRefReadFailures.length > 0 ? { refReadFailures: elementRefReadFailures } : {}),
           };
           const rawBuffer = Buffer.from(r.value.b64, "base64");
+          // Requesting alpha does not guarantee alpha. If the provider returned
+          // opaque bytes (or JPEG, which cannot hold alpha at all), refuse the
+          // result instead of re-encoding it through sharp.toFormat() and
+          // recording it with a "transparent" preset the file does not honor.
+          if (backgroundParams) {
+            const verdict = bufferCarriesAlpha(rawBuffer);
+            if (verdict.hasAlpha === false) {
+              const { reason } = verdict;
+              logEvent("generate", "transparent_result_opaque", { requestId, provider: activeProvider, reason, format: resultFormat });
+              throw makeTransparentResultError(activeProvider, reason);
+            }
+          }
           const embedded: any = await embedImageMetadataBestEffort(rawBuffer, resultFormat, meta, {
             version: ctx.packageVersion,
           });

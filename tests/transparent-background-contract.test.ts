@@ -177,8 +177,11 @@ describe("surface routing and entrypoint guards (source contract)", () => {
     // Atlas reads its mime from the download Content-Type header, so a
     // transparent PNG mislabeled "image/jpeg" would be re-encoded to JPEG by
     // embedImageMetadata's sharp.toFormat() and lose its alpha.
-    assert.match(pipeline, /const resultMime = backgroundParams\s*\n\s*\? \(detectedMime \|\| mime\)/);
+    assert.match(pipeline, /const resultMime = backgroundParams\s*\n\s*\? \(detectMime\(\) \|\| mime\)/);
     assert.match(pipeline, /const resultFormat = backgroundParams/);
+    // And a result that claims alpha must actually carry it.
+    assert.match(pipeline, /bufferCarriesAlpha\(rawBuffer\)/);
+    assert.match(pipeline, /makeTransparentResultError/);
   });
 
   it("captures the preset on the video item so registration cannot race it", () => {
