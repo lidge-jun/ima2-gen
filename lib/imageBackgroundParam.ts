@@ -95,42 +95,50 @@ export function validateTransparentProvider(
  * sharp.toFormat() and record it with a "transparent" preset, so the file,
  * the metadata, and the UI would all disagree with reality.
  *
- * Byte-level check only — no decode — so this stays cheap enough for the hot
- * path: PNG declares its color type in the IHDR chunk, and only types 4
- * (grayscale+alpha) and 6 (truecolor+alpha) carry transparency. A tRNS chunk
- * also encodes transparency for palette/indexed images.
+ * This DECODES the image and inspects real pixels. A header-only check proves
+ * only that the container CAN hold alpha, which is not the same claim: an RGBA
+ * PNG whose every alpha byte is 255 is completely opaque yet advertises an
+ * alpha channel, and `VP8X` merely marks an extended WebP container. Measured
+ * against sharp, the header-only version passed a fully-opaque RGBA PNG — the
+ * exact false positive this guard exists to stop (adversarial review 260821
+ * round 4).
+ *
+ * Cost is bounded: this runs once per generated image, only when transparency
+ * was requested, on an image we are about to re-encode and write anyway.
  */
 export type AlphaVerdict =
   | { hasAlpha: true }
-  | { hasAlpha: false; reason: "jpeg" | "no-alpha-channel" | "undetectable" };
+  | { hasAlpha: false; reason: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable" };
 
-export function bufferCarriesAlpha(buffer: Buffer): AlphaVerdict {
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return { hasAlpha: false, reason: "jpeg" };
-  }
-  const isPng = buffer.length >= 8
-    && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
-  if (isPng) {
-    // IHDR is always the first chunk: 8-byte signature, 4-byte length,
-    // 4-byte type, then width(4) height(4) bitDepth(1) colorType(1).
-    if (buffer.length < 26) return { hasAlpha: false, reason: "undetectable" };
-    const colorType = buffer[25];
-    if (colorType === 4 || colorType === 6) return { hasAlpha: true };
-    if (buffer.includes(Buffer.from("tRNS", "ascii"))) return { hasAlpha: true };
-    return { hasAlpha: false, reason: "no-alpha-channel" };
-  }
-  const isWebp = buffer.length >= 16
-    && buffer.subarray(0, 4).toString("ascii") === "RIFF"
-    && buffer.subarray(8, 12).toString("ascii") === "WEBP";
-  if (isWebp) {
-    const chunk = buffer.subarray(12, 16).toString("ascii");
-    // VP8L and VP8X can carry alpha; plain lossy VP8 cannot.
-    if (chunk === "VP8L" || chunk === "VP8X") return { hasAlpha: true };
-    return { hasAlpha: false, reason: "no-alpha-channel" };
-  }
-  return { hasAlpha: false, reason: "undetectable" };
+/** Fast pre-check: JPEG can never carry alpha, so skip the decode entirely. */
+export function isJpegBuffer(buffer: Buffer): boolean {
+  return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
 }
 
+type RawDecoder = (buffer: Buffer) => Promise<{ data: Buffer; channels: number; hasAlpha: boolean }>;
+
+/**
+ * @param decode injected so tests can drive failure paths without stubbing sharp
+ */
+export async function verifyBufferAlpha(buffer: Buffer, decode: RawDecoder): Promise<AlphaVerdict> {
+  if (isJpegBuffer(buffer)) return { hasAlpha: false, reason: "jpeg" };
+  let decoded: { data: Buffer; channels: number; hasAlpha: boolean };
+  try {
+    decoded = await decode(buffer);
+  } catch {
+    // Unreadable bytes are not evidence of transparency.
+    return { hasAlpha: false, reason: "undetectable" };
+  }
+  if (!decoded.hasAlpha) return { hasAlpha: false, reason: "no-alpha-channel" };
+  const { data, channels } = decoded;
+  if (channels < 4 || data.length < channels) return { hasAlpha: false, reason: "no-alpha-channel" };
+  // One non-opaque pixel is enough: partial alpha (glass, hair, anti-aliased
+  // edges) counts as transparency just as much as a fully cut-out background.
+  for (let i = channels - 1; i < data.length; i += channels) {
+    if (data[i]! < 255) return { hasAlpha: true };
+  }
+  return { hasAlpha: false, reason: "fully-opaque" };
+}
 export interface TransparentResultError extends Error {
   status: number;
   code: "TRANSPARENT_RESULT_OPAQUE";
@@ -140,13 +148,15 @@ export interface TransparentResultError extends Error {
 /** Operational error for a transparency request that came back opaque. */
 export function makeTransparentResultError(
   provider: string | undefined | null,
-  reason: "jpeg" | "no-alpha-channel" | "undetectable",
+  reason: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable",
 ): TransparentResultError {
   const detail = reason === "jpeg"
     ? "the provider returned JPEG, which cannot carry an alpha channel"
     : reason === "no-alpha-channel"
       ? "the returned image has no alpha channel"
-      : "the returned image format could not be verified to carry alpha";
+      : reason === "fully-opaque"
+        ? "the returned image has an alpha channel but every pixel is fully opaque"
+        : "the returned image could not be decoded to verify transparency";
   const err = new Error(
     `transparent background requested but ${detail} (lane: ${String(provider)}). Nothing was saved; retry, or use a solid background and key it.`,
   ) as TransparentResultError;

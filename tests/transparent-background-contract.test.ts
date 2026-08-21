@@ -179,9 +179,14 @@ describe("surface routing and entrypoint guards (source contract)", () => {
     // embedImageMetadata's sharp.toFormat() and lose its alpha.
     assert.match(pipeline, /const resultMime = backgroundParams\s*\n\s*\? \(detectMime\(\) \|\| mime\)/);
     assert.match(pipeline, /const resultFormat = backgroundParams/);
-    // And a result that claims alpha must actually carry it.
-    assert.match(pipeline, /bufferCarriesAlpha\(rawBuffer\)/);
+    // And a result that claims alpha must actually carry it — verified for the
+    // WHOLE batch before any file is written, so a failure cannot leave orphans.
+    assert.match(pipeline, /verifyBufferAlpha\(Buffer\.from\(r\.value\.b64, "base64"\), decodeRawForAlpha\)/);
     assert.match(pipeline, /makeTransparentResultError/);
+    const verifyIdx = pipeline.indexOf("verifyBufferAlpha(Buffer.from");
+    const writeIdx = pipeline.indexOf("await writeFileUnique(");
+    assert.ok(verifyIdx > 0 && writeIdx > 0);
+    assert.ok(verifyIdx < writeIdx, "alpha verification must precede any file write");
   });
 
   it("captures the preset on the video item so registration cannot race it", () => {
