@@ -84,7 +84,7 @@ describe("node UI compact metadata contract", () => {
     assert.match(en, /"generateTitle":\s*"Generate node image"/);
   });
 
-  it("keeps dark-theme canvas overlays readable without a light palette", () => {
+  it("keeps canvas overlays readable in both theme palettes", () => {
     const cssPaths = [
       "ui/src/index.css",
       ...readdirSync(join(root, "ui/src/styles"))
@@ -97,7 +97,11 @@ describe("node UI compact metadata contract", () => {
     const loadingRule = /\.node-canvas__loading\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
 
     assert.match(rootRule, /--on-scrim:\s*#f6f7fb/);
-    assert.doesNotMatch(css, /:root\[data-theme="light"\]/);
+    // The light palette was reintroduced deliberately (devlog 260821b). Scrim
+    // text must stay readable in BOTH themes: the light override block must
+    // redefine --on-scrim so scrim chips never go dark-on-dark.
+    const lightRule = /:root\[data-theme="light"\]\s*\{[^}]*\}/s.exec(css)?.[0] ?? "";
+    assert.match(lightRule, /--on-scrim:\s*#fafafc/);
     assert.match(hintRule, /color:\s*var\(--on-scrim\)/);
     assert.match(hintRule, /background:\s*var\(--chip-scrim\)/);
     assert.match(loadingRule, /color:\s*var\(--on-scrim\)/);
