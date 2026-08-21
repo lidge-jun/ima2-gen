@@ -199,6 +199,24 @@ export function renderSelectionOutline(
   ctx.restore();
 }
 
+export function renderHoverOutline(
+  ctx: CanvasRenderingContext2D,
+  box: BoundingBox,
+  size: ImageSize,
+): void {
+  ctx.save();
+  ctx.strokeStyle = "rgba(100, 200, 255, 0.5)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 4]);
+  ctx.strokeRect(
+    box.x * size.width,
+    box.y * size.height,
+    box.width * size.width,
+    box.height * size.height,
+  );
+  ctx.restore();
+}
+
 function drawArrowHead(
   ctx: CanvasRenderingContext2D,
   from: { x: number; y: number },

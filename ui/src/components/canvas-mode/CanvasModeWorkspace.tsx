@@ -20,6 +20,7 @@ import {
   saveCanvasAnnotations,
 } from "../../lib/api";
 import { useCanvasAnnotations } from "../../hooks/useCanvasAnnotations";
+import type { CanvasObjectKey } from "../../lib/canvas/objectKeys";
 import { CanvasModeStage } from "./CanvasModeStage";
 import { CanvasBackgroundCleanupLayer } from "./CanvasBackgroundCleanupLayer";
 import { CanvasModeFloatingToolbar } from "./CanvasModeFloatingToolbar";
@@ -330,6 +331,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     canvasZoom > 1.01 &&
     annotations.activeTool === "select" &&
     !isBackgroundCleanupActive;
+  const [hoveredAnnotationId, setHoveredAnnotationId] = useState<CanvasObjectKey | null>(null);
   const {
     viewportPanActive,
     resetPointerSession,
@@ -354,6 +356,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     updateBackgroundCleanupBrushStroke: backgroundCleanup.updateBackgroundCleanupBrushStroke,
     endBackgroundCleanupBrushStroke: backgroundCleanup.endBackgroundCleanupBrushStroke,
     setCleanupBrushCursor: backgroundCleanup.setCleanupBrushCursor,
+    setHoveredAnnotationId,
   });
 
   return (
@@ -416,8 +419,10 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
                   : canvasOpen
                     ? isBackgroundCleanupActive
                       ? "crosshair"
-                      : annotations.activeTool === "select"
-                      ? "default"
+                    : annotations.activeTool === "select"
+                      ? hoveredAnnotationId
+                        ? "move"
+                        : "default"
                       : annotations.activeTool === "eraser"
                         ? annotations.eraserMode === "object"
                           ? OBJECT_ERASER_CURSOR
@@ -445,6 +450,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
               />
             )}
             annotations={annotations}
+            hoveredAnnotationId={hoveredAnnotationId}
             onOpenCanvas={openCanvas}
             onPointerDown={handleAnnotationPointerDown}
             onPointerMove={handleAnnotationPointerMove}
