@@ -8,6 +8,7 @@
 // Evidence: devlog/_plan/260821_gpt_image2_transparent_background/{000,001}.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   BACKGROUND_PRESETS,
   parseBackgroundPreset,
@@ -138,5 +139,36 @@ describe("prompt suffix carries the cutout intent that actually drives alpha", (
 
   it("preserves partial alpha for translucent subjects", () => {
     assert.match(backgroundPromptSuffix("transparent", "image"), /partial transparency/i);
+  });
+});
+
+describe("surface routing and entrypoint guards (source contract)", () => {
+  const read = (p: string) => readFileSync(p, "utf8");
+
+  it("keys forced-transparent support off activeProvider, not the raw request provider", () => {
+    const pipeline = read("lib/generatePipeline.ts");
+    // The raw body `provider` defaults to "auto", so it can never be trusted to
+    // name the lane that actually runs.
+    assert.match(pipeline, /supportsForcedTransparent: activeProvider === "atlascloud"/);
+    assert.doesNotMatch(pipeline, /supportsForcedTransparent: provider === /);
+  });
+
+  it("resolves background params only after provider resolution", () => {
+    const pipeline = read("lib/generatePipeline.ts");
+    const activeIdx = pipeline.indexOf("const activeProvider = providerOptions.provider");
+    const paramsIdx = pipeline.indexOf("const backgroundParams = resolveImageBackgroundParams");
+    assert.ok(activeIdx > 0 && paramsIdx > 0);
+    assert.ok(activeIdx < paramsIdx, "backgroundParams must resolve after activeProvider");
+  });
+
+  it("refuses transparent on the video route, which has no alpha channel", () => {
+    const video = read("routes/video.ts");
+    assert.match(video, /backgroundPreset === "transparent"/);
+    assert.match(video, /TRANSPARENT_VIDEO_UNSUPPORTED/);
+  });
+
+  it("atlas cloud never defaults a transparent request to jpeg", () => {
+    const atlas = read("lib/atlasCloudImageAdapter.ts");
+    assert.match(atlas, /background === "transparent" \? "png" : "jpeg"/);
   });
 });

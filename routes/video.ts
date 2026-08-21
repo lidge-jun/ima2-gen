@@ -175,6 +175,13 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         return fail(400, backgroundParse.code, backgroundParse.error);
       }
       const backgroundPreset = backgroundParse.preset;
+      // "transparent" is an image-only preset: it depends on the GPT image
+      // tool's alpha-capable output, and Grok video has no such parameter.
+      // Accepting it here would append a cutout suffix that the model cannot
+      // honor and hand back an opaque clip that claims transparency.
+      if (backgroundPreset === "transparent") {
+        return fail(400, "TRANSPARENT_VIDEO_UNSUPPORTED", "transparent backgrounds are image-only; video generation has no alpha channel — use chroma-green and key the clip instead");
+      }
       const clientNodeId = typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
       const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
 

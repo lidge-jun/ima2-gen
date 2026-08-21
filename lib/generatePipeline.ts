@@ -165,11 +165,6 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       }
       // Atlas Cloud talks to the gpt-image-2 API directly and accepts the
       // forced value; the OAuth proxy does not (see lib/imageBackgroundParam.ts).
-      const backgroundParams = resolveImageBackgroundParams({
-        preset: backgroundPreset,
-        supportsForcedTransparent: provider === "atlascloud",
-        requestedFormat: typeof req.body?.outputFormat === "string" ? req.body.outputFormat : undefined,
-      });
       const composerPrompt = normalizeComposerPrompt(req.body?.composerPrompt);
       const composerInsertedPrompts = normalizeComposerInsertedPrompts(
         req.body?.composerInsertedPrompts,
@@ -190,6 +185,16 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       const effectiveSize = providerOptions.size;
       const webSearchEnabled = providerOptions.webSearchEnabled;
       const activeProvider = providerOptions.provider;
+      // Resolved AFTER provider resolution on purpose: the raw request `provider`
+      // defaults to "auto", so only `activeProvider` names the lane that will
+      // actually run. Atlas Cloud talks to the gpt-image-2 API directly and
+      // accepts a forced transparent background; the OAuth proxy rejects it
+      // (see lib/imageBackgroundParam.ts).
+      const backgroundParams = resolveImageBackgroundParams({
+        preset: backgroundPreset,
+        supportsForcedTransparent: activeProvider === "atlascloud",
+        requestedFormat: typeof req.body?.outputFormat === "string" ? req.body.outputFormat : undefined,
+      });
 
       // --- Element injection (after provider resolution) ---
       const rawElementIds: string[] = Array.isArray(req.body?.elementIds)
