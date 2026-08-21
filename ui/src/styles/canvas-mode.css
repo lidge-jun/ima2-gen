@@ -2,8 +2,8 @@
 
 .canvas--mode-open {
   position: relative;
-  background-color: #0d0d0d;
-  background-image: radial-gradient(rgba(100, 200, 255, 0.25) 1.5px, transparent 1.5px);
+  background-color: var(--canvas-stage-bg);
+  background-image: radial-gradient(var(--canvas-dot) 1.5px, transparent 1.5px);
   background-size: 20px 20px;
 }
 
@@ -14,7 +14,7 @@
   left: 0;
   right: 0;
   height: 60px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+  background: linear-gradient(to bottom, var(--canvas-topscrim), transparent);
   z-index: 10;
   pointer-events: none;
 }
@@ -54,10 +54,10 @@
   gap: 8px;
   min-height: 38px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid var(--tint-20);
   border-radius: 8px;
   background: var(--tint-10);
-  color: #fff;
+  color: var(--text);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -68,7 +68,7 @@
 
 .canvas-mode-blank:hover:not(:disabled) {
   background: var(--tint-18);
-  border-color: rgba(255, 255, 255, 0.34);
+  border-color: var(--tint-32);
 }
 
 .canvas-mode-blank:disabled {
@@ -79,8 +79,8 @@
 .canvas-mode-blank kbd {
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: var(--tint-32);
+  border: 1px solid var(--tint-26);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 600;
@@ -94,7 +94,7 @@
   border-radius: 8px;
   background: var(--tint-10);
   border: 1px solid var(--tint-20);
-  color: #fff;
+  color: var(--text);
   font-size: 14px;
   cursor: pointer;
   pointer-events: auto;
@@ -109,7 +109,7 @@
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--tint-32);
   font-family: var(--font-mono, monospace);
   font-size: 12px;
 }

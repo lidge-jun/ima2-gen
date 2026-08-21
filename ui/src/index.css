@@ -76,6 +76,7 @@
   --accent-ink: #0b0b0f;
   --accent-shadow: rgba(255, 255, 255, 0.1);
   --focus-ring: rgba(122, 215, 255, 0.35);
+  --focus-ring-strong: rgba(122, 215, 255, 0.65);
   --hairline: rgba(255, 255, 255, 0.16);
   --hairline-soft: rgba(255, 255, 255, 0.04);
   --control-bg: rgba(255, 255, 255, 0.03);
@@ -118,6 +119,15 @@
   --chrome: linear-gradient(180deg, #ffffff 0%, #c8ccd8 35%, #6f7484 60%, #e8eaf1 100%);
   --glass: rgba(255, 255, 255, 0.04);
   --glass-line: rgba(255, 255, 255, 0.1);
+  /* Canvas-mode stage surfaces: the stage keeps its own plate system so
+     floating chrome stays legible over arbitrary artwork in both themes. */
+  --canvas-stage-bg: #0d0d0d;
+  --canvas-dot: rgba(100, 200, 255, 0.25);
+  --canvas-topscrim: rgba(0, 0, 0, 0.7);
+  --canvas-plate: rgba(12, 14, 17, 0.97);
+  --canvas-plate-soft: rgba(12, 14, 17, 0.78);
+  --canvas-plate-strong: rgba(12, 14, 17, 0.92);
+  --canvas-plate-mid: rgba(12, 14, 17, 0.88);
   color-scheme: dark;
 }
 
@@ -142,6 +152,7 @@
   --accent-ink: #fafafc;
   --accent-shadow: rgba(15, 15, 20, 0.12);
   --focus-ring: rgba(29, 120, 180, 0.4);
+  --focus-ring-strong: rgba(23, 98, 150, 0.8);
   --hairline: rgba(20, 20, 28, 0.16);
   --hairline-soft: rgba(20, 20, 28, 0.05);
   --control-bg: rgba(20, 20, 28, 0.04);
@@ -176,6 +187,13 @@
   --red: #cc3340;
   --glass: rgba(20, 20, 28, 0.04);
   --glass-line: rgba(20, 20, 28, 0.1);
+  --canvas-stage-bg: #e6e6ec;
+  --canvas-dot: rgba(29, 111, 209, 0.22);
+  --canvas-topscrim: rgba(242, 242, 246, 0.85);
+  --canvas-plate: rgba(250, 250, 252, 0.97);
+  --canvas-plate-soft: rgba(250, 250, 252, 0.8);
+  --canvas-plate-strong: rgba(250, 250, 252, 0.92);
+  --canvas-plate-mid: rgba(250, 250, 252, 0.88);
   color-scheme: light;
 }
 
@@ -206,7 +224,7 @@ body::after {
 
 /* Phase 020: unified keyboard focus ring (site :focus-visible grammar). */
 :focus-visible {
-  outline: 2px solid rgba(122, 215, 255, 0.65);
+  outline: 2px solid var(--focus-ring-strong, rgba(122, 215, 255, 0.65));
   outline-offset: 2px;
   border-radius: 2px;
 }
