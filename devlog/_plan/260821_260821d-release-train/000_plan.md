@@ -38,3 +38,8 @@ preview 승격 + npm stable 3.10.0 배포.
   이는 저장소 전반의 기존 패턴(동일 룰 open 경보 30+, express rate-limit 부재)이
   파일 수정으로 재표면화된 것 — 필수 체크 아님(main 비보호), 릴리스 비차단 판단.
   후속 과제로 원장에 기록.
+- rwp3 DONE: 첫 컷은 베이스라인 가드(main이 dev 원장 커밋 미포함)로 정직하게
+  거부 → PR #169(docs 동기화) 머지 후 재컷(32489139701) 성공. 후보 CI 게이트
+  PASS → preview 3.10.0-preview.260821.32489909756.1 publish 증명 → npm-stable
+  environment 2회 승인(사용자 지시 배포) → stable v3.10.0 publish. 최종 정합:
+  npm latest=3.10.0, origin/main == origin/preview == v3.10.0 == b7369f8a.
