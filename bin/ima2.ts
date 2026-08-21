@@ -418,7 +418,7 @@ if (args.includes("-v") || args.includes("--version")) {
   exitFlushed(0);
 }
 
-const helpOwningCommands = ["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs"];
+const helpOwningCommands = ["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs", "service"];
 if (!command) {
   showHelp();
   exitFlushed(1);
@@ -435,6 +435,12 @@ switch (command) {
   case "stop": {
     const { stop } = await import("./commands/stop.js");
     await stop(args.slice(1));
+    exitFlushed(Number(process.exitCode ?? 0));
+    break;
+  }
+  case "service": {
+    const { service } = await import("./commands/service.js");
+    await service(args.slice(1));
     exitFlushed(Number(process.exitCode ?? 0));
     break;
   }
