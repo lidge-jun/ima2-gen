@@ -173,6 +173,36 @@
   box-shadow: none;
 }
 
+.canvas-toolbar__button--transparency {
+  background: rgba(122, 215, 255, 0.12);
+  color: var(--text);
+}
+.canvas-toolbar__button--transparency:hover:not(:disabled) {
+  background: rgba(122, 215, 255, 0.22);
+}
+
+.canvas-toolbar__spinner {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(122, 215, 255, 0.25);
+  border-top-color: rgba(122, 215, 255, 0.9);
+  animation: canvas-toolbar-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-toolbar__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@keyframes canvas-toolbar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .canvas-toolbar__icon--small {
   width: 14px;
   height: 14px;

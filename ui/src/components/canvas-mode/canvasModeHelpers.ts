@@ -78,6 +78,8 @@ export function responseToGenerateItem(response: GenerateResponse, prompt: strin
       moderation: response.moderation,
       model: response.model,
       usage: response.usage,
+      alphaVerified: (response as { alphaVerified?: boolean }).alphaVerified,
+      alphaReason: (response as { alphaReason?: GenerateItem["alphaReason"] }).alphaReason,
       kind: "edit",
       createdAt: Date.now(),
     };
@@ -98,6 +100,8 @@ export function responseToGenerateItem(response: GenerateResponse, prompt: strin
     usage: response.usage,
     revisedPrompt: response.revisedPrompt ?? null,
     promptMode: response.promptMode ?? null,
+    alphaVerified: response.alphaVerified,
+    alphaReason: response.alphaReason,
     kind: "edit",
     createdAt: Date.now(),
   };

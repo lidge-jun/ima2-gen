@@ -111,6 +111,10 @@ export type GenerateItem = {
    * must not be offered to the color-keying flow.
    */
   backgroundPreset?: AssetGenBackgroundPreset | null;
+  /** Server-verified semantic alpha: at least one pixel with alpha < 255. */
+  alphaVerified?: boolean;
+  /** Why alpha verification did not pass (null/undefined when verified). */
+  alphaReason?: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable" | null;
   usage?: { total_tokens?: number } & Record<string, unknown>;
   thumb?: string;
   createdAt?: number;
@@ -185,6 +189,8 @@ export type GenerateSingleResponse = {
   reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   filename: string;
   requestId?: string | null;
+  alphaVerified?: boolean;
+  alphaReason?: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable" | null;
   usage?: GenerateItem["usage"];
   provider: string;
   quality?: string;

@@ -55,6 +55,7 @@ interface UseCanvasModeSessionArgs {
   setIsApplying: (value: boolean) => void;
   setIsExporting: (value: boolean) => void;
   setIsEditingWithMask: (value: boolean) => void;
+  setIsTransparencyRunning: (value: boolean) => void;
   applyMergedCanvasImage: (item: GenerateItem) => void;
   addGeneratedHistoryItem: (item: GenerateItem) => Promise<void> | void;
   attachCanvasVersionReference: (item: GenerateItem, overrideSource?: string) => Promise<void>;
@@ -89,6 +90,7 @@ export function useCanvasModeSession({
   setIsApplying,
   setIsExporting,
   setIsEditingWithMask,
+  setIsTransparencyRunning,
   applyMergedCanvasImage,
   addGeneratedHistoryItem,
   attachCanvasVersionReference,
@@ -312,6 +314,67 @@ export function useCanvasModeSession({
     }
   };
 
+  /**
+   * One-click GPT i2i background transparency. Uses the validated prompt-nudge
+   * path (forced background:"transparent" is rejected by the OAuth
+   * gpt-image-2-codex variant with 400; "auto" + explicit instructions works —
+   * devlog 260821 probe). The server verifies real pixel alpha on the result
+   * and reports it as alphaVerified.
+   */
+  const handleGptTransparency = async (): Promise<void> => {
+    if (!canvasDisplayImage && !currentImage) return;
+    setIsTransparencyRunning(true);
+    try {
+      // Always derive from the image the user is actually looking at.
+      // lastCleanDataUrlRef can go stale after a canvas apply (it is only
+      // written by saveCanvasVersionAndUseReference), so never trust it here.
+      const editImage = await loadCleanSourceDataUrl(
+        canvasDisplayImage ?? canvasSourceImageRef.current ?? currentImage!,
+      );
+      const inheritedSize = canvasDisplayImage?.size ?? currentImage?.size ?? null;
+      const editSize = inheritedSize && /^\d+x\d+$/.test(inheritedSize) ? inheritedSize : getResolvedSize();
+      // Always route through the OAuth lane; the workspace provider/model may
+      // be a non-GPT lane (Grok, Gemini...), so never forward its model id.
+      const response = await postEdit({
+        image: editImage,
+        prompt:
+          "Remove the background completely. Output a PNG with a fully transparent background (real alpha channel). Keep the subject pixel-identical — do not redraw, restyle, or crop the subject.",
+        quality: "high",
+        size: editSize,
+        format,
+        moderation,
+        provider: "oauth" as Provider,
+        n: 1,
+        mode: "direct",
+        webSearchEnabled: false,
+      });
+      const item = responseToGenerateItem(
+        response,
+        canvasDisplayImage?.prompt ?? currentImage?.prompt ?? "transparent background",
+      );
+      await addGeneratedHistoryItem(item);
+      showToast(
+        item.alphaVerified
+          ? t("canvas.toolbar.transparencyVerified")
+          : item.alphaReason === "undetectable"
+            ? t("canvas.toolbar.transparencyUnverifiable")
+            : t("canvas.toolbar.transparencyNoAlpha"),
+        !item.alphaVerified,
+      );
+    } catch (err) {
+      console.error("[canvas] gpt transparency failed", err);
+      const code = (err as { code?: string }).code;
+      showToast(
+        code
+          ? `${t("canvas.toolbar.transparencyFailed")} (${code})`
+          : t("canvas.toolbar.transparencyFailed"),
+        true,
+      );
+    } finally {
+      setIsTransparencyRunning(false);
+    }
+  };
+
   return {
     saveCanvasVersionAndUseReference,
     handleApplyCanvas,
@@ -319,5 +382,6 @@ export function useCanvasModeSession({
     handleCloseCanvas,
     handleExportCanvas,
     handleEditWithMask,
+    handleGptTransparency,
   };
 }

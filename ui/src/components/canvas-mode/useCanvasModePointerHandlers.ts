@@ -167,20 +167,20 @@ export function useCanvasModePointerHandlers({
       else setCleanupBrushCursor(point);
       return;
     }
-    const isDraggingAnnotation =
-      selectionDragRef.current.mode !== null || viewportPanRef.current.active;
-    if (!isDraggingAnnotation) {
-      const hovered = hitTestAnnotation({
-        point,
-        paths: annotations.paths,
-        boxes: annotations.boxes,
-        memos: annotations.memos,
-      });
-      setHoveredAnnotationId(hovered);
-    } else {
-      setHoveredAnnotationId(null);
-    }
     if (annotations.activeTool === "select") {
+      // Hover hit-test only on the select tool: running it on the freehand
+      // drawing path would repaint the annotation canvas on every pointermove.
+      if (selectionDragRef.current.mode === null) {
+        const hovered = hitTestAnnotation({
+          point,
+          paths: annotations.paths,
+          boxes: annotations.boxes,
+          memos: annotations.memos,
+        });
+        setHoveredAnnotationId(hovered);
+      } else {
+        setHoveredAnnotationId(null);
+      }
       if (selectionDragRef.current.mode === "move" && selectionDragRef.current.lastPoint) {
         const delta = {
           x: point.x - selectionDragRef.current.lastPoint.x,
@@ -261,6 +261,7 @@ export function useCanvasModePointerHandlers({
       pointerId: null,
     };
     setViewportPanActive(false);
+    setHoveredAnnotationId(null);
   };
 
   const handleAnnotationPointerLeave = (): void => {

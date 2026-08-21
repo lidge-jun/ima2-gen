@@ -78,7 +78,7 @@ routes/
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 34 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
 | `routes/generate.ts` | 13 | Classic generation API route wiring |
-| `routes/edit.ts` | 452 | Edit API, mask validation, cancellation, OAuth/API edit response save, provider/web-search/reasoning-effort plumbing |
+| `routes/edit.ts` | 471 | Edit API, mask validation, cancellation, OAuth/API edit response save, alpha verification (alphaVerified/alphaReason), provider/web-search/reasoning-effort plumbing |
 | `routes/multimode.ts` | 10 | `POST /api/generate/multimode` route wiring |
 | `routes/video.ts` | 559 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
 | `routes/videoExtended.ts` | 491 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
@@ -298,7 +298,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 |---|---|---:|---|
 | App shell | `ui/src/App.tsx` | 200 | Initial hydration, polling, classic/node/card-news canvas switch, Canvas Mode workspace mount, prompt library overlay, mobile shell (dark-only since Phase 010) |
 | Entry | `ui/src/main.tsx` | 46 | React mount |
-| Types | `ui/src/types.ts` | 280 | Provider, quality, size, image model, embedded metadata, response types, web-search, reasoning effort, multimode |
+| Types | `ui/src/types.ts` | 286 | Provider, quality, size, image model, embedded metadata, response types, alpha verification fields, web-search, reasoning effort, multimode |
 | Canvas types | `ui/src/types/canvas.ts` | 98 | Canvas Mode shared types (annotations, versions, masks, brushes) |
 | Store | `ui/src/store/useAppStore.ts` | 663 | Zustand facade; classic/node/video/multimode/inflight/history/asset-gen logic split into `ui/src/store/store*Impl.ts` modules |
 | Persistence registry | `ui/src/store/persistenceRegistry.ts` | 84 | Single source of truth for `ima2.*` localStorage key names — covers gallery scope, gallery default scope, and settings keys (theme keys removed in Phase 010); prevents drift between hydration helpers and setters (#43) |
