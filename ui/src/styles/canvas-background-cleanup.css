@@ -8,7 +8,7 @@
 
 .canvas-mode-topbar__stack .canvas-toolbar__zoom {
   padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--tint-14);
   border-radius: 8px;
   background: rgba(12, 14, 17, 0.78);
   backdrop-filter: blur(12px);
@@ -29,7 +29,7 @@
   height: 86px;
   overflow: hidden;
   padding: 0;
-  border: 1px solid var(--minimap-border, rgba(255, 255, 255, 0.18));
+  border: 1px solid var(--minimap-border, var(--tint-18));
   border-radius: 8px;
   background: var(--minimap-bg, rgba(12, 14, 17, 0.92));
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
@@ -64,7 +64,7 @@
   flex-direction: column;
   min-width: 150px;
   padding: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--tint-14);
   border-radius: 8px;
   background: rgba(12, 14, 17, 0.97);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38);
@@ -81,7 +81,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--tint-72);
   font-size: 12px;
   font-weight: 700;
   text-align: left;
@@ -101,7 +101,7 @@
 
 .canvas-tool-picker__item kbd {
   min-width: 18px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--tint-50);
   font: 700 11px/1 var(--font-mono, monospace);
   text-align: right;
 }
@@ -158,7 +158,7 @@
 
 .canvas-toolbar__zoom-button:hover,
 .canvas-toolbar__zoom-value:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--tint-12);
   background: rgba(255, 255, 255, 0.09);
   color: #fff;
 }
@@ -174,7 +174,7 @@
   bottom: 48px;
   width: 278px;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--tint-14);
   border-radius: 8px;
   background: rgba(12, 14, 17, 0.97);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
@@ -234,10 +234,10 @@
 .canvas-toolbar__cleanup-actions button {
   min-height: 28px;
   padding: 0 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--tint-12);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.78);
+  background: var(--tint-06);
+  color: var(--tint-78);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -272,9 +272,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
   padding: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--tint-12);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tint-05);
 }
 
 .canvas-toolbar__segmented-button {
@@ -289,7 +289,7 @@
 }
 
 .canvas-toolbar__segmented-button[aria-pressed="true"] {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--tint-14);
   color: #fff;
 }
 
@@ -327,7 +327,7 @@
 }
 
 .canvas-cleanup-cursor {
-  fill: rgba(255, 255, 255, 0.05);
+  fill: var(--tint-05);
   stroke: rgba(255, 255, 255, 0.9);
   stroke-width: 1.4;
   pointer-events: none;

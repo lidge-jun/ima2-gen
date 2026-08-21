@@ -250,7 +250,7 @@
   line-height: 1;
 }
 .prompt-library-row__star--on {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .prompt-library-row__name {
   flex: 1;

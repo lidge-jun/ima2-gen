@@ -80,6 +80,25 @@
   --hairline-soft: rgba(255, 255, 255, 0.04);
   --control-bg: rgba(255, 255, 255, 0.03);
   --control-hover: rgba(255, 255, 255, 0.08);
+  /* Foreground tint ladder: white in dark mode, ink in light mode. Use for
+     hover washes, hairlines, and subtle fills that must flip with the theme. */
+  --tint-02: rgba(255, 255, 255, 0.02);
+  --tint-03: rgba(255, 255, 255, 0.03);
+  --tint-04: rgba(255, 255, 255, 0.04);
+  --tint-05: rgba(255, 255, 255, 0.05);
+  --tint-06: rgba(255, 255, 255, 0.06);
+  --tint-08: rgba(255, 255, 255, 0.08);
+  --tint-10: rgba(255, 255, 255, 0.1);
+  --tint-12: rgba(255, 255, 255, 0.12);
+  --tint-14: rgba(255, 255, 255, 0.14);
+  --tint-16: rgba(255, 255, 255, 0.16);
+  --tint-18: rgba(255, 255, 255, 0.18);
+  --tint-20: rgba(255, 255, 255, 0.2);
+  --tint-26: rgba(255, 255, 255, 0.26);
+  --tint-32: rgba(255, 255, 255, 0.32);
+  --tint-50: rgba(255, 255, 255, 0.5);
+  --tint-72: rgba(255, 255, 255, 0.72);
+  --tint-78: rgba(255, 255, 255, 0.78);
   --scrim: rgba(0, 0, 0, 0.6);
   --scrim-strong: rgba(0, 0, 0, 0.78);
   --caption-scrim: rgba(0, 0, 0, 0.85);

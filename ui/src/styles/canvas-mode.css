@@ -33,7 +33,7 @@
 }
 
 .canvas-mode-topbar__label {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--tint-50);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -56,7 +56,7 @@
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--tint-10);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -67,7 +67,7 @@
 }
 
 .canvas-mode-blank:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--tint-18);
   border-color: rgba(255, 255, 255, 0.34);
 }
 
@@ -92,8 +92,8 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--tint-10);
+  border: 1px solid var(--tint-20);
   color: #fff;
   font-size: 14px;
   cursor: pointer;
@@ -102,7 +102,7 @@
 }
 
 .canvas-mode-close:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--tint-20);
 }
 
 .canvas-mode-close kbd {

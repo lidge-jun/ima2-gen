@@ -65,7 +65,7 @@
 .vertex-json-textarea:focus {
   border-color: var(--accent);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px var(--tint-08);
 }
 .vertex-json-textarea.is-invalid {
   border-color: var(--red);
