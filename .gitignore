@@ -12,13 +12,6 @@ devlog/*
 devlog/_plan/*
 !devlog/_plan/260715_subscription-mcp-providers/
 !devlog/_plan/260715_subscription-mcp-providers/**
-# 260821 transparent-background unit: track the write-up, not the 23MB of
-# generated PNG evidence (kept locally under evidence/).
-!devlog/_plan/260821_gpt_image2_transparent_background/
-!devlog/_plan/260821_gpt_image2_transparent_background/*.md
-devlog/_plan/260821_gpt_image2_transparent_background/evidence/
-!devlog/_plan/260821_260821b-canvas-hover-transparency-light-ui/
-!devlog/_plan/260821_260821b-canvas-hover-transparency-light-ui/*.md
 ui/dist/
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo
@@ -47,5 +40,6 @@ tests/experiments/
 
 # Runtime thumbnail/project cache
 cache/
-!devlog/_plan/260821_260821c-stop-service-commands/
-!devlog/_plan/260821_260821c-stop-service-commands/*.md
+
+!devlog/_plan/260821_260821d-release-train/
+!devlog/_plan/260821_260821d-release-train/*.md
