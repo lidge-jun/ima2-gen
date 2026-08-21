@@ -115,6 +115,11 @@
   --font: "Satoshi", "Pretendard Variable", system-ui, sans-serif;
   --font-display: "Clash Display", "Pretendard Variable", system-ui, sans-serif;
   --mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  /* Typography rule (UI/UX round 2): --mono is reserved for MACHINE VALUES —
+     status chips, aspect ratios, resolutions, shortcuts, token counts, ids.
+     Human-language labels of any rank use --font. When a control mixes both
+     (segmented toggles), the OPTION VALUES may be mono but the row label is
+     always proportional. */
   --prism: linear-gradient(100deg, #ff5adf 0%, #7ad7ff 28%, #ffd166 55%, #b28dff 78%, #7ad7ff 100%);
   --chrome: linear-gradient(180deg, #ffffff 0%, #c8ccd8 35%, #6f7484 60%, #e8eaf1 100%);
   --glass: rgba(255, 255, 255, 0.04);
@@ -273,14 +278,14 @@ body::after {
 
 .node-studio-empty-overlay { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 72px 16px 24px; pointer-events: none; }
 .node-studio-empty-overlay > * { pointer-events: auto; }
-.node-studio-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: min(520px, calc(100vw - 280px)); }
+.node-studio-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: min(520px, calc(100vw - 280px)); margin-right: 52px; position: relative; z-index: 11; }
 .node-studio-toolbar button, .node-element-tray button { min-height: 32px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); cursor: pointer; }
 .node-studio-toolbar button:disabled, .node-element-tray button:disabled { cursor: not-allowed; opacity: .5; }
-.node-studio-element-panel { width: 230px; margin-top: 44px !important; }
-.node-element-tray { max-height: min(440px, calc(100vh - 180px)); overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); box-shadow: 0 10px 30px var(--shadow-soft); }
+.node-studio-element-panel { width: 230px; margin-top: 56px !important; }
+.node-element-tray { max-height: min(380px, calc(100vh - 200px)); overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); backdrop-filter: blur(10px); color: var(--text); box-shadow: 0 10px 30px var(--shadow-soft); }
 .node-element-tray header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }.node-element-tray header span, .node-element-tray p { color: var(--text-muted); font-size: 11px; }
 .node-element-tray__list { display: grid; gap: 7px; }.node-element-tray__item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 7px; align-items: center; padding: 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); font-size: 11px; }.node-element-tray__item img, .node-element-tray__placeholder { width: 34px; height: 34px; border-radius: 7px; background: var(--surface-3); object-fit: cover; }.node-element-tray__item > span:not(.node-element-tray__placeholder) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.node-element-tray__item button { grid-column: 1 / -1; width: 100%; }
 .node-studio-dialog-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, #05070a 72%, transparent); }
 .node-studio-dialog-backdrop fieldset { display: grid; gap: 8px; margin: 0; padding: 12px; }.node-studio-dialog-backdrop select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); }
-.node-studio-status { position: absolute; z-index: 5; inset-inline: 50%; bottom: 18px; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
+.node-studio-status { position: absolute; z-index: 5; font-family: var(--font); inset-inline: 50%; bottom: 18px; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
 @media (max-width: 680px) { .node-studio-element-panel { width: calc(100% - 24px); margin-top: 86px !important; }.node-element-tray { max-height: 118px; }.node-element-tray__list { display: flex; overflow-x: auto; }.node-element-tray__item { flex: 0 0 150px; }.node-studio-toolbar { max-width: calc(100vw - 100px); }.node-studio-empty-overlay { align-items: start; padding-top: 250px; overflow-y: auto; }.node-studio-dialog-backdrop { align-items: end; padding: 10px; }.node-studio-dialog-backdrop .node-template-picker { max-height: calc(100dvh - 20px); } }

@@ -62,7 +62,7 @@
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: var(--mono, monospace);
+  font-family: var(--font);
   font-size: 11px;
   color: var(--on-scrim);
   background: var(--chip-scrim);
@@ -230,7 +230,7 @@
   justify-content: center;
   color: var(--on-scrim);
   font-size: 13px;
-  font-family: var(--mono, monospace);
+  font-family: var(--font);
   pointer-events: auto;
 }
 

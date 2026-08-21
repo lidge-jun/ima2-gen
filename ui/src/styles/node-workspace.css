@@ -69,8 +69,11 @@
 }
 .node-canvas__add-root {
   position: absolute;
-  top: 16px;
   right: 16px;
+  /* Keep the FAB clear of the React Flow top-right toolbar row (Add image /
+     Templates / Save template / Branch) — overlapping it truncated the Branch
+     label and stole half its hit target (uiux round-2 blocker 1). */
+  top: 64px;
   z-index: 10;
   width: 36px;
   height: 36px;

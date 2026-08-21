@@ -12,7 +12,7 @@
 .home-hero {
   position: relative;
   isolation: isolate;
-  padding: clamp(20px, 3.2vh, 36px) 0 clamp(16px, 2.2vh, 24px);
+  padding: clamp(12px, 2vh, 24px) 0 clamp(12px, 1.8vh, 20px);
 }
 
 .home-hero__mark {
@@ -37,7 +37,7 @@
 
 .home-hero__title {
   margin: 0;
-  font: 700 clamp(30px, 3.6vw, 44px) / 1.06 var(--font-display);
+  font: 700 clamp(24px, 2.8vw, 34px) / 1.08 var(--font-display);
   letter-spacing: -0.02em;
   text-wrap: balance;
   word-break: keep-all;
