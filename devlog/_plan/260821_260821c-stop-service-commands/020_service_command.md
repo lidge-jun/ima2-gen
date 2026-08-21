@@ -9,10 +9,18 @@
   - ProgramArguments: [설치 시점의 process.execPath(node), <ROOT>/server.js]
   - RunAtLoad true, KeepAlive true, WorkingDirectory <ROOT>,
     StandardOut/ErrPath: ~/.ima2/logs/service.{out,err}.log
-  - EnvironmentVariables: IMA2_SERVICE=1 (+ IMA2_CONFIG_DIR 현재값 있으면)
+  - EnvironmentVariables: IMA2_SERVICE=1, **PATH=설치 시점 process.env.PATH**
+    (+ IMA2_CONFIG_DIR 현재값 있으면) — 감사 블로커 3: launchd 최소 환경에서는
+    grok 프록시의 bare `progrok` 스폰(grokProxyLauncher.ts:176 localBinPath)과
+    oauth 런처가 조용히 죽는다. systemd unit에도 동일하게 Environment=PATH 주입.
 - install: plist 렌더 → launchctl bootstrap gui/$UID (fallback: load -w)
   → launchctl 출력 함정 처리: exit 0이어도 stderr "Load failed" 파싱
-  → 기동 후 /api/health 폴링(10s)으로 실제 살아났는지 확인
+  → 기동 후 /api/health 폴링(10s) **+ 프로바이더 라이브니스 확인**
+  (감사 블로커 3 후속): health의 runtime.oauth.status는 쓸 수 있지만
+  **runtime.grok에는 live 불리언이 없다** (configuredPort/actualPort/url만;
+  live는 server.ts:302 buildAdvertisePayload 전용) — grok 라이브니스는
+  **advertise 파일(server.json)의 grok.live에서 읽는다**. 설정된 프로바이더가
+  죽어 있으면 install 게이트에서 경고 출력.
 - uninstall: launchctl bootout(fallback unload) → plist 삭제 → state 삭제
   → 살아있는 서버는 stop 시퀀스로 정리
 - start/stop: launchctl kickstart / bootout 없이 kill (KeepAlive 고려:

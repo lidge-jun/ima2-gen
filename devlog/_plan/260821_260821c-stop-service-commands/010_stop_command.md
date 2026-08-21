@@ -25,13 +25,26 @@
     — /api/health의 pid 대조
   - `gracefulStop(entry): Promise<boolean>` — POST /api/admin/stop, 2s 타임아웃
   - `escalateKill(pid): Promise<"term"|"kill"|"already-dead">`
-- NEW `routes/admin.ts` 또는 기존 라우트에 POST `/api/admin/stop` (~30줄)
-  - 로컬 전용(기존 LAN 토큰 정책 따름), 응답 202 후 setImmediate로 기존
-    shutdownServerAndMcp 경로 호출 (server.ts:510과 동일 함수 재사용)
-  - server.ts에 셧다운 트리거 함수 주입 (RuntimeContext에 requestShutdown 추가)
+- NEW `routes/admin.ts`에 POST `/api/admin/stop` (~50줄)
+  - **인증 (감사 블로커 1)**: LAN 가드는 루프백에서 pass-through라 브라우저
+    drive-by(fetch from any web page)로 킬 스위치가 된다. 방어 2중:
+    (a) advertise 파일에 `adminNonce`(설치 시 randomUUID) 기록, stop 요청은
+    `X-Ima2-Admin-Nonce` 헤더 필수 — 파일을 읽을 수 있는 로컬 프로세스만 통과;
+    (b) `Origin` 헤더가 존재하면(브라우저 발) 무조건 403. CLI fetch는 Origin 없음.
+  - 응답 202 후 setImmediate로 **process.kill(process.pid, "SIGTERM") 자기-시그널**
+    (감사 블로커 2): 진짜 teardown(unadvertise, oauth/grok 자식 정리,
+    stopAgentQueueWorker, closeDb, exit)은 server.ts:501의 비공개 onShutdown
+    클로저에 있고 platform.ts:91의 shutdownStarted 래치가 자기-시그널을 멱등하게
+    만들어 준다. shutdownServerAndMcp 단독 호출은 고아 프록시+stale advertise를
+    남기므로 금지.
 - NEW `bin/commands/stop.ts` (~90줄) — 위 시퀀스 + 사람이 읽는 리포트
   ("stopped pid 1234 (graceful)" / "was not running" / "stale advertise cleaned")
 - MODIFY `bin/ima2.ts` — 커맨드 라우팅 + help 텍스트에 stop 추가
+
+## 명시 동작 (감사 소소 지적 반영)
+
+- `bin/lib/client.ts`는 LAN 토큰 미지원 — IMA2_LAN_TOKEN 설정 환경에서 graceful
+  POST가 401로 강등되어 SIGTERM 경로로 가는 것은 **의도된 동작**으로 문서화.
 
 ## 검증
 
