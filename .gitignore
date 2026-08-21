@@ -17,6 +17,8 @@ devlog/_plan/*
 !devlog/_plan/260821_gpt_image2_transparent_background/
 !devlog/_plan/260821_gpt_image2_transparent_background/*.md
 devlog/_plan/260821_gpt_image2_transparent_background/evidence/
+!devlog/_plan/260821_260821b-canvas-hover-transparency-light-ui/
+!devlog/_plan/260821_260821b-canvas-hover-transparency-light-ui/*.md
 ui/dist/
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo
