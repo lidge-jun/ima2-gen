@@ -26,3 +26,15 @@ preview 승격 + npm stable 3.10.0 배포.
 | rwp3 | release.yml dispatch(minor, dry_run=false, expected_sha) + 완주 추적 + npm/SHA 정합 검증 |
 
 ## Accept criteria: goalplan rc-polish / rc-main / rc-npm 미러
+
+## 실행 원장 (진행 중 기록)
+
+- rwp1 DONE: devlog 3개 유닛 _fin 이관 + gitignore 정리, 게이트 전부 그린
+  (typecheck/typecheck:tests/inventory/ui build/npm test 2434-0), push
+  8f980340..80c2d9a0 dev.
+- rwp2 DONE: PR #168 (dev→main) 생성·머지 — merge commit d862373d.
+  CI: test x2/e2e/fast-gate/Analyze x2 전부 PASS. CodeQL 경보 게이트는
+  routes/edit.ts의 js/missing-rate-limiting 1건(high)을 신규로 표기했으나
+  이는 저장소 전반의 기존 패턴(동일 룰 open 경보 30+, express rate-limit 부재)이
+  파일 수정으로 재표면화된 것 — 필수 체크 아님(main 비보호), 릴리스 비차단 판단.
+  후속 과제로 원장에 기록.
