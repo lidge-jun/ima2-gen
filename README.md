@@ -91,6 +91,7 @@ Video generation requires Grok OAuth (option 2 or 3). Run `ima2 grok login` sepa
 ### Updating
 
 Stop the running server with Ctrl+C, then:
+(or from another terminal: `ima2 stop`)
 
 ```bash
 npm install -g ima2-gen@latest
@@ -248,6 +249,8 @@ Appearance now includes a light / dark / system theme toggle; the light palette 
 | Command | Description |
 |---|---|
 | `ima2 serve [--dev]` | Start the local web server; `--dev` enables verbose server diagnostics |
+| `ima2 stop [--force]` | Stop the running server safely — graceful admin-API stop first, then SIGTERM/SIGKILL; verifies the advertised pid against `/api/health` so a recycled pid is never killed |
+| `ima2 service <sub>` | Background service: `install`/`uninstall`/`start`/`stop`/`restart`/`status`/`logs`/`repair` — launchd on macOS, systemd user unit on Linux, auto-start on login with crash restart |
 | `ima2 setup` | Reconfigure saved auth |
 | `ima2 status` | Show config and OAuth status |
 | `ima2 doctor` | Diagnose Node, package, config, and auth |

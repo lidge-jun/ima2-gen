@@ -338,9 +338,12 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       let alphaVerified = false;
       let alphaReason: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable" | null = null;
       try {
-        const verdict = await verifyBufferAlpha(editBuffer, decodeRawForAlpha);
+        const verdict = (await verifyBufferAlpha(editBuffer, decodeRawForAlpha)) as {
+          hasAlpha: boolean;
+          reason?: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable";
+        };
         alphaVerified = verdict.hasAlpha === true;
-        if (!verdict.hasAlpha) alphaReason = verdict.reason;
+        if (!alphaVerified) alphaReason = verdict.reason ?? "undetectable";
       } catch {
         alphaVerified = false;
         alphaReason = "undetectable";

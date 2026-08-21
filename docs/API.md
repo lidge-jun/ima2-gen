@@ -31,6 +31,7 @@ Generation section below for the full endpoint specification.
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/health` | Server health, version, paths, provider policy |
+| `POST` | `/api/admin/stop` | Clean shutdown (local admin only): requires the boot-generated `X-Ima2-Admin-Nonce` from `~/.ima2/server.json`; any request with an `Origin` header is refused (browser drive-by protection). Responds `202` then self-signals SIGTERM |
 | `GET` | `/api/providers` | Provider availability and runtime ports |
 | `GET` | `/api/oauth/status` | OAuth proxy status and visible models |
 | `GET` | `/api/grok/status` | Bundled progrok status and visible xAI image models |
