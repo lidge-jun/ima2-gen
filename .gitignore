@@ -47,3 +47,5 @@ tests/experiments/
 
 # Runtime thumbnail/project cache
 cache/
+!devlog/_plan/260821_260821c-stop-service-commands/
+!devlog/_plan/260821_260821c-stop-service-commands/*.md
