@@ -71,7 +71,10 @@ describe("Asset Gen keyed preview contract", () => {
     assert.match(workspace, /const isKeyed = item\.kind === "edit"/);
     assert.match(workspace, /assetgen-tile\$\{isKeyed \? " is-keyed" : ""\}/);
     assert.match(workspace, /t\("keying\.resultBadge"\)/);
-    assert.match(workspace, /\{!isKeyed \? \(/);
+    // Transparent generations already carry alpha, so they are excluded from
+    // the keying offer alongside already-keyed derivatives (260821).
+    assert.match(workspace, /const isAlpha = item\.backgroundPreset === "transparent"/);
+    assert.match(workspace, /\{!isKeyed && !isAlpha \? \(/);
     assert.match(workspace, /!isKeyed && item\.requestId && saveFailures\.includes/);
   });
 
@@ -82,6 +85,7 @@ describe("Asset Gen keyed preview contract", () => {
     assert.match(css, /\.keying-panel__preview\s*\{[^}]*min-width:\s*0/s);
     assert.match(css, /\.keying-panel\s*\{[^}]*overflow-y:\s*auto/s);
     assert.match(css, /\.assetgen-tile\.is-keyed \.assetgen-tile__media\s*\{[^}]*repeating-conic-gradient/s);
+    assert.match(css, /\.assetgen-tile\.is-alpha \.assetgen-tile__media\s*\{[^}]*repeating-conic-gradient/s);
     assert.match(css, /@media \(max-width: 480px\)/);
   });
 

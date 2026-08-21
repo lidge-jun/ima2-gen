@@ -47,7 +47,10 @@ export function extractGptImageHints(text: unknown) {
   const warnings: string[] = [];
 
   if (/\btransparent|alpha channel|no background|cutout\b/i.test(value)) {
-    warnings.push("transparent-unsupported-gpt-image-2");
+    // gpt-image-2 supports real alpha since 2026-08-21; the remaining hazard is
+    // asking for it in bare prompt text instead of the background parameter,
+    // which can bake a fake checkerboard into an opaque image.
+    warnings.push("transparent-needs-background-param");
   }
   if (/\bexact text|small text|dense text|legal copy\b/i.test(value)) {
     warnings.push("text-rendering-sensitive");

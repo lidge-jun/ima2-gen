@@ -106,7 +106,7 @@ routes/
 | `ui/src/lib/eventChannel.ts` | 164 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
 | `ui/src/lib/sseStreamError.ts` | 66 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
 | `bin/ima2.ts` | 526 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
-| `bin/commands/gen.ts` | 322 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
+| `bin/commands/gen.ts` | 332 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
 | `bin/commands/edit.ts` | 168 | CLI image-edit client with provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, and output options |
 | `bin/commands/multimode.ts` | 212 | CLI multimode SSE client with provider override, references, prompt mode, incremental image save, timeout recovery, web-search, reasoning-effort, and session options |
 | `bin/commands/node.ts` | 173 | CLI node-mode generate/show client with references, provider override, parent node, web-search, reasoning-effort, and SSE support |
@@ -179,8 +179,8 @@ routes/
 | `lib/oauthProxy/index.ts` | 29 | Public surface — re-exports generators, streams, prompts, references, runtime, and shared types |
 | `lib/oauthProxy/generators.ts` | 229 | OAuth Responses single-image generation and stable generator exports |
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
-| `lib/generatePipeline.ts` | 703 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
-| `lib/backgroundPresets.ts` | 47 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
+| `lib/generatePipeline.ts` | 721 | Classic generation pipeline, idempotency-key replay, provider retry, persistence, background-preset prompt shaping, and event publication |
+| `lib/backgroundPresets.ts` | 78 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
 | `lib/multimodePipeline.ts` | 576 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
 | `lib/comparisonRunner.ts` | 111 | Per-cell generation orchestrator with bounded concurrency, isolated failures, single-cell retry, and two-level cancel |
@@ -193,7 +193,7 @@ routes/
 | `lib/oauthProxy/errors.ts` | 129 | OAuth-specific error codes and normalization |
 | `lib/oauthProxy/types.ts` | 10 | Shared OAuth proxy types (re-exported from `index`) |
 | `lib/promptSafetyPolicy.ts` | 3 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
-| `lib/responsesImageAdapter.ts` | 479 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
+| `lib/responsesImageAdapter.ts` | 495 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
 | `lib/providerOptions.ts` | 120 | Per-provider option assembly (provider, model, size, reasoning effort, web search) |
 | `lib/runtimeContext.ts` | 201 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
@@ -251,7 +251,7 @@ routes/
 | `lib/responsesErrors.ts` | 85 | Responses API error normalization helpers |
 | `lib/responsesFallback.ts` | 162 | Responses API fallback routing helpers |
 | `lib/responsesParse.ts` | 453 | Responses API output parsing and normalization |
-| `lib/responsesTools.ts` | 29 | Responses API tool-call definitions and helpers |
+| `lib/responsesTools.ts` | 39 | Responses API tool-call definitions and helpers |
 | `lib/routeHelpers.ts` | 58 | Shared Express route request/response helpers |
 | `lib/storyboardPrefix.ts` | 29 | Storyboard prompt-prefix construction |
 | `lib/thumbBackfill.ts` | 79 | Generated-media thumbnail backfill helpers |
@@ -267,7 +267,7 @@ routes/
 | `lib/promptImport/githubFolder.ts` | 404 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
 | `lib/promptImport/githubDiscovery.ts` | 310 | GitHub repository discovery search, rate-limit normalization, candidate scoring, and registry upsert |
 | `lib/promptImport/githubSource.ts` | 259 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
-| `lib/promptImport/gptImageHints.ts` | 71 | `gpt-image-2` model/task/size/quality hint and warning extraction |
+| `lib/promptImport/gptImageHints.ts` | 74 | `gpt-image-2` model/task/size/quality hint and warning extraction |
 | `lib/promptImport/parsePromptCandidates.ts` | 181 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
 | `lib/promptImport/promptIndex.ts` | 327 | File-based curated/reviewed source index/cache, refresh, and search orchestration |
 | `lib/promptImport/rankPromptCandidates.ts` | 66 | Query scoring for curated prompt candidates |
@@ -298,9 +298,9 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 |---|---|---:|---|
 | App shell | `ui/src/App.tsx` | 200 | Initial hydration, polling, classic/node/card-news canvas switch, Canvas Mode workspace mount, prompt library overlay, mobile shell (dark-only since Phase 010) |
 | Entry | `ui/src/main.tsx` | 46 | React mount |
-| Types | `ui/src/types.ts` | 274 | Provider, quality, size, image model, embedded metadata, response types, web-search, reasoning effort, multimode |
+| Types | `ui/src/types.ts` | 280 | Provider, quality, size, image model, embedded metadata, response types, web-search, reasoning effort, multimode |
 | Canvas types | `ui/src/types/canvas.ts` | 98 | Canvas Mode shared types (annotations, versions, masks, brushes) |
-| Store | `ui/src/store/useAppStore.ts` | 655 | Zustand facade; classic/node/video/multimode/inflight/history/asset-gen logic split into `ui/src/store/store*Impl.ts` modules |
+| Store | `ui/src/store/useAppStore.ts` | 663 | Zustand facade; classic/node/video/multimode/inflight/history/asset-gen logic split into `ui/src/store/store*Impl.ts` modules |
 | Persistence registry | `ui/src/store/persistenceRegistry.ts` | 84 | Single source of truth for `ima2.*` localStorage key names — covers gallery scope, gallery default scope, and settings keys (theme keys removed in Phase 010); prevents drift between hydration helpers and setters (#43) |
 | Card-news store | `ui/src/store/cardNewsStore.ts` | 417 | Card-news plan, role/image template selection, planner draft, job polling, regenerate actions |
 | Mode/dev gates | `ui/src/lib/devMode.ts` | 16 | `IS_DEV_UI`, `ENABLE_NODE_MODE`, `ENABLE_CARD_NEWS_MODE` build-time flags |

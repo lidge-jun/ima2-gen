@@ -29,7 +29,7 @@ describe("prompt index ranking contract", () => {
     assert.ok(hints.taskHints.includes("reference-image"));
     assert.ok(hints.taskHints.includes("typography"));
     assert.ok(hints.sizeHints.includes("4k"));
-    assert.ok(hints.warnings.includes("transparent-unsupported-gpt-image-2"));
+    assert.ok(hints.warnings.includes("transparent-needs-background-param"));
   });
 
   it("ranks exact title, tag, and hint matches above weaker text matches", () => {

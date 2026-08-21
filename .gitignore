@@ -12,6 +12,10 @@ devlog/*
 devlog/_plan/*
 !devlog/_plan/260715_subscription-mcp-providers/
 !devlog/_plan/260715_subscription-mcp-providers/**
+# 260821 transparent-background unit: track the write-up, not the 23MB of
+# generated PNG evidence (kept locally under evidence/).
+!devlog/_plan/260821_gpt_image2_transparent_background/
+!devlog/_plan/260821_gpt_image2_transparent_background/*.md
 ui/dist/
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo

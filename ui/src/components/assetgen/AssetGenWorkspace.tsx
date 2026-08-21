@@ -195,13 +195,16 @@ export function AssetGenWorkspace() {
           <div className="assetgen-grid">
             {items.map((item) => {
               const isKeyed = item.kind === "edit";
+              // A transparent generation already carries alpha, so it renders on
+              // the checkerboard and is never offered to the keying flow.
+              const isAlpha = item.backgroundPreset === "transparent";
               const isVideo = item.mediaType === "video";
               const fallback = t(isVideo ? "assetGen.videoFallback" : "assetGen.imageFallback");
               const mediaLabel = t(isVideo ? "assetGen.previewVideo" : "assetGen.previewImage", {
                 prompt: item.prompt?.trim() || fallback,
               });
               return (
-              <figure key={`${item.requestId}-${item.filename ?? item.createdAt}`} className={`assetgen-tile${isKeyed ? " is-keyed" : ""}`}>
+              <figure key={`${item.requestId}-${item.filename ?? item.createdAt}`} className={`assetgen-tile${isKeyed ? " is-keyed" : ""}${isAlpha ? " is-alpha" : ""}`}>
                 {isKeyed ? <span className="assetgen-tile__badge">{t("keying.resultBadge")}</span> : null}
                 <button
                   type="button"
@@ -226,7 +229,7 @@ export function AssetGenWorkspace() {
                   </span>
                 </button>
                 <figcaption title={item.prompt}>{item.prompt}</figcaption>
-                {!isKeyed ? (
+                {!isKeyed && !isAlpha ? (
                   <button type="button" className="assetgen-tile__key" onClick={() => setKeyingTarget(item)}>
                     {t("keying.open")}
                   </button>

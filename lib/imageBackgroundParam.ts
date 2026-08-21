@@ -1,0 +1,98 @@
+/**
+ * Maps ima2's background preset onto the Responses `image_generation` tool
+ * parameters (`background` + `output_format`).
+ *
+ * Why this is not a straight pass-through of `background: "transparent"`:
+ *
+ * The ChatGPT OAuth (Codex) session pins the image tool to the
+ * `gpt-image-2-codex` variant, which REJECTS a forced transparent background
+ * with HTTP 400 "Transparent background is not supported for this model." on
+ * every OAuth model (gpt-5.6-luna/sol/terra, gpt-5.5, gpt-5.4, gpt-5.4-mini).
+ * A bogus-parameter control returns a different error ("Unknown parameter"),
+ * so that 400 is a genuine upstream semantic rejection, not a schema strip.
+ *
+ * `background: "auto"` IS accepted, and with an explicit cutout intent in the
+ * prompt the model returns a real RGBA PNG. Measured on the live OAuth path:
+ * 5/5 generations came back with 4 channels, all four corners at alpha 0, and
+ * 42-56% fully transparent pixels — including genuine PARTIAL alpha for glass
+ * and leaf veins. A scene-style prompt on the same settings returns 3 channels
+ * with no alpha, so the prompt is the lever and `auto` is the switch that lets
+ * the model pull it.
+ *
+ * Evidence: devlog/_plan/260821_gpt_image2_transparent_background/{000,001}.
+ *
+ * Direct API surfaces (Atlas Cloud gpt-image-2) accept the forced value per
+ * OpenAI's 2026-08-21 preview announcement, so `supportsForcedTransparent`
+ * lets those callers opt into the strict parameter.
+ */
+import type { BackgroundPreset } from "./backgroundPresets.js";
+
+export const VALID_BACKGROUND_VALUES = ["auto", "opaque", "transparent"] as const;
+export type BackgroundValue = (typeof VALID_BACKGROUND_VALUES)[number];
+
+/** Formats that can carry an alpha channel. JPEG cannot. */
+export const ALPHA_CAPABLE_FORMATS = ["png", "webp"] as const;
+export type AlphaCapableFormat = (typeof ALPHA_CAPABLE_FORMATS)[number];
+
+export interface ImageBackgroundParams {
+  background: BackgroundValue;
+  outputFormat: AlphaCapableFormat | undefined;
+}
+
+export interface ResolveBackgroundInput {
+  preset: BackgroundPreset | null | undefined;
+  /**
+   * True only for surfaces proven to accept a forced transparent background.
+   * The OAuth proxy is NOT one of them; see the module docblock.
+   */
+  supportsForcedTransparent?: boolean | undefined;
+  /** Caller-requested output format, if any. */
+  requestedFormat?: string | null | undefined;
+}
+
+export function isAlphaCapableFormat(value: unknown): value is AlphaCapableFormat {
+  return typeof value === "string" && (ALPHA_CAPABLE_FORMATS as readonly string[]).includes(value);
+}
+
+/**
+ * Resolve the tool parameters for a preset. Returns `null` when the preset
+ * implies no explicit background handling, so existing callers keep their
+ * current payload byte-for-byte.
+ */
+export function resolveImageBackgroundParams(
+  input: ResolveBackgroundInput,
+): ImageBackgroundParams | null {
+  if (input.preset !== "transparent") return null;
+
+  const requested = input.requestedFormat;
+  // JPEG cannot hold alpha: silently honoring it would ship an opaque image
+  // while the UI claims transparency. Fall back to PNG instead.
+  const outputFormat: AlphaCapableFormat = isAlphaCapableFormat(requested) ? requested : "png";
+
+  return {
+    background: input.supportsForcedTransparent ? "transparent" : "auto",
+    outputFormat,
+  };
+}
+
+export interface FormatConflict {
+  error: string;
+  code: "TRANSPARENT_FORMAT_CONFLICT";
+}
+
+/**
+ * Reject an explicit alpha-incapable format paired with a transparent
+ * background instead of quietly producing an opaque image.
+ */
+export function validateTransparentFormat(
+  preset: BackgroundPreset | null | undefined,
+  requestedFormat: unknown,
+): FormatConflict | null {
+  if (preset !== "transparent") return null;
+  if (requestedFormat === undefined || requestedFormat === null || requestedFormat === "") return null;
+  if (isAlphaCapableFormat(requestedFormat)) return null;
+  return {
+    error: `a transparent background requires an alpha-capable output format (${ALPHA_CAPABLE_FORMATS.join(", ")}); received "${String(requestedFormat)}"`,
+    code: "TRANSPARENT_FORMAT_CONFLICT",
+  };
+}

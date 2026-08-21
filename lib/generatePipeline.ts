@@ -28,6 +28,7 @@ import { errInfo } from "./errInfo.js";
 import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
 import { STORYBOARD_PREFIX } from "./storyboardPrefix.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "./backgroundPresets.js";
+import { resolveImageBackgroundParams, validateTransparentFormat } from "./imageBackgroundParam.js";
 import { validateModeration, imageFormatFromMime, upstreamErrorFields } from "./routeHelpers.js";
 import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
@@ -156,6 +157,19 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         return fail(400, { error: backgroundParse.error, code: backgroundParse.code });
       }
       const backgroundPreset = backgroundParse.preset;
+      // A transparent background paired with an alpha-incapable format would
+      // silently ship an opaque image, so refuse it at the edge instead.
+      const formatConflict = validateTransparentFormat(backgroundPreset, req.body?.outputFormat);
+      if (formatConflict) {
+        return fail(400, { error: formatConflict.error, code: formatConflict.code });
+      }
+      // Atlas Cloud talks to the gpt-image-2 API directly and accepts the
+      // forced value; the OAuth proxy does not (see lib/imageBackgroundParam.ts).
+      const backgroundParams = resolveImageBackgroundParams({
+        preset: backgroundPreset,
+        supportsForcedTransparent: provider === "atlascloud",
+        requestedFormat: typeof req.body?.outputFormat === "string" ? req.body.outputFormat : undefined,
+      });
       const composerPrompt = normalizeComposerPrompt(req.body?.composerPrompt);
       const composerInsertedPrompts = normalizeComposerInsertedPrompts(
         req.body?.composerInsertedPrompts,
@@ -397,6 +411,8 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             signal: cancelController.signal,
             requestId,
             references: refCheck.refDetails,
+            ...(backgroundParams ? { background: backgroundParams.background } : {}),
+            ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
           });
           throwIfJobCanceled(requestId);
           return r;
@@ -447,6 +463,8 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
                 webSearchEnabled,
                 signal: cancelController.signal,
                 allowPromptOnlyOAuthFallback: activeProvider !== "api",
+                ...(backgroundParams ? { background: backgroundParams.background } : {}),
+                ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
               },
             );
             throwIfJobCanceled(requestId);

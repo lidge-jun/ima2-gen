@@ -14,6 +14,7 @@ import { out, die, dieWithError, color, err, fail, json } from "../lib/output.js
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
 import { deriveProviderIds } from "../../lib/providers/derive.js";
 import { listProviders } from "../../lib/mcp/providerRegistry.js";
+import { BACKGROUND_PRESETS } from "../../lib/backgroundPresets.js";
 
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
@@ -74,6 +75,9 @@ const HELP = `
                                             'auto' was removed; choose a lane explicitly
         --mode <auto|direct>                Core lanes only. Default: auto
         --moderation <auto|low>             Core lanes only. Default: low
+        --bg <chroma-green|white|black|transparent>
+                                            Core lanes only. 'transparent' asks GPT Image 2
+                                            for a real alpha channel (saved as PNG)
         --session <id>                      Core lanes only
         --reasoning-effort <none|low|medium|high|xhigh|max>
                                             Core lanes only
@@ -83,6 +87,7 @@ const HELP = `
     ima2 defaults set image oauth/gpt-5.6-luna
     ima2 gen "a shiba in space"
     ima2 gen "poster" --model oauth/luna --mode direct
+    ima2 gen "fox logo mark" --bg transparent -o logo.png
     ima2 gen "campaign still" --model runway/gen-4 --ref 1780000000000_abcd.png
 `;
 
@@ -230,6 +235,11 @@ async function runMcpImage(argv: string[], args: ParsedArgs, context: ImageConte
 function validateCoreFlags(args: ParsedArgs): void {
   if (!VALID_MODES.has(String(args.mode))) die(2, "--mode must be one of: auto, direct");
   if (!VALID_MODERATION.has(String(args.moderation))) die(2, "--moderation must be one of: auto, low");
+  // Fail locally on a typo instead of spending a round trip to learn the
+  // server rejected it.
+  if (args.bg && !BACKGROUND_PRESETS.includes(String(args.bg) as (typeof BACKGROUND_PRESETS)[number])) {
+    die(2, `--bg must be one of: ${BACKGROUND_PRESETS.join(", ")}`);
+  }
   const validReasoning = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
   if (args["reasoning-effort"] && !validReasoning.has(String(args["reasoning-effort"]))) die(2, "--reasoning-effort must be one of: none, low, medium, high, xhigh, max");
   if (args["web-search"] && args["no-web-search"]) die(2, "--web-search and --no-web-search are mutually exclusive");

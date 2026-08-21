@@ -175,6 +175,9 @@ export async function generateAssetGenImpl(set: StoreSet, get: StoreGet): Promis
       quality: res.quality,
       size: res.size,
       model: res.model ?? null,
+      // Carried so the gallery can show a checkerboard and skip the keying
+      // offer: a transparent result has no matte to key out.
+      backgroundPreset: s.assetGenBackground,
       createdAt: (first ? first.createdAt : (res as { createdAt?: number }).createdAt) ?? Date.now(),
     };
     await addHistory(item, set, get, { autoSelectStartedAt: startedAt });
