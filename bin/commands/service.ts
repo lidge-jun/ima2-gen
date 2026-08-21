@@ -129,11 +129,11 @@ function reportProviderLiveness(entry: AdvertiseEntry | null): void {
 
 // ── macOS (launchd) ──
 
-function macInstall(): boolean {
+async function macInstall(): Promise<boolean> {
   mkdirSync(logDir(), { recursive: true });
   mkdirSync(dirname(plistPath()), { recursive: true });
   writeFileSync(plistPath(), renderLaunchdPlist(renderInput()));
-  const boot = run("/bin/launchctl", ["bootstrap", guiDomain(), plistPath()]);
+  const boot = await macBootstrapWithRetry();
   if (!boot.ok || launchctlOutputIndicatesFailure(boot.stderr)) {
     const legacy = run("/bin/launchctl", ["load", "-w", plistPath()]);
     if (!legacy.ok || launchctlOutputIndicatesFailure(legacy.stderr)) {
@@ -145,8 +145,28 @@ function macInstall(): boolean {
   return true;
 }
 
-function macBootout(): void {
+async function macBootout(): Promise<void> {
   run("/bin/launchctl", ["bootout", `${guiDomain()}/${LAUNCHD_LABEL}`]);
+  // bootout is asynchronous: bootstrapping again while the old job is still
+  // draining fails with "Bootstrap failed: 5: Input/output error" (hit live
+  // during 040 verification — restart left the service unregistered). Wait for
+  // the registration to actually disappear before letting a start proceed.
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline && macRegistered()) {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+
+async function macBootstrapWithRetry(): Promise<RunResult> {
+  let last: RunResult = { ok: false, stdout: "", stderr: "never attempted" };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    last = run("/bin/launchctl", ["bootstrap", guiDomain(), plistPath()]);
+    const failed = !last.ok || launchctlOutputIndicatesFailure(last.stderr);
+    if (!failed && macRegistered()) return { ...last, ok: true };
+    await new Promise((r) => setTimeout(r, 1000));
+    if (macRegistered()) return { ...last, ok: true };
+  }
+  return last;
 }
 
 function macRegistered(): boolean {
@@ -194,7 +214,7 @@ async function install(): Promise<void> {
   }
   // A manually-started server would fight the KeepAlive service over the port.
   await stopLiveServer();
-  const ok = process.platform === "darwin" ? macInstall() : linuxInstall();
+  const ok = process.platform === "darwin" ? await macInstall() : linuxInstall();
   if (!ok) { process.exitCode = 1; return; }
   console.log(`\n  Service installed (${process.platform === "darwin" ? "launchd" : "systemd user unit"}).`);
   const health = await waitForHealth(12_000);
@@ -212,7 +232,7 @@ async function install(): Promise<void> {
 
 async function uninstall(): Promise<void> {
   if (process.platform === "darwin") {
-    macBootout();
+    await macBootout();
     try { unlinkSync(plistPath()); } catch { /* absent is fine */ }
   } else if (process.platform === "linux") {
     run("systemctl", ["--user", "disable", "--now", SYSTEMD_UNIT]);
@@ -231,7 +251,7 @@ async function start(): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    const boot = run("/bin/launchctl", ["bootstrap", guiDomain(), plistPath()]);
+    const boot = await macBootstrapWithRetry();
     if (!boot.ok && !macRegistered()) {
       console.error(`\n  launchctl bootstrap failed: ${boot.stderr}\n`);
       process.exitCode = 1;
@@ -246,7 +266,7 @@ async function start(): Promise<void> {
 
 async function stopSvc(): Promise<void> {
   // bootout (not kill): with KeepAlive, killing the pid just respawns it.
-  if (process.platform === "darwin") macBootout();
+  if (process.platform === "darwin") await macBootout();
   else if (process.platform === "linux") run("systemctl", ["--user", "stop", SYSTEMD_UNIT]);
   await stopLiveServer();
   console.log("\n  Service stopped (registration removed until 'ima2 service start').\n");
@@ -310,7 +330,7 @@ async function repair(): Promise<void> {
     return;
   }
   console.log("\n  Re-rendering service artifacts for the current paths...");
-  if (process.platform === "darwin") macBootout();
+  if (process.platform === "darwin") await macBootout();
   else if (process.platform === "linux") run("systemctl", ["--user", "stop", SYSTEMD_UNIT]);
   await install();
 }
