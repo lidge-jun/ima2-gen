@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import { readFile } from "fs/promises";
 import {
   existsSync,
@@ -306,6 +307,7 @@ export function buildAdvertisePayload(ctx: RuntimeContext) {
     pid: process.pid,
     startedAt: ctx.startedAt,
     version: ctx.packageVersion,
+    adminNonce: ctx.adminNonce,
     backend: {
       configuredPort: Number(ctx.serverConfiguredPort || ctx.config.server.port),
       actualPort: Number(ctx.serverActualPort || ctx.config.server.port),
@@ -397,6 +399,7 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
     openai,
     startedAt: overrides.startedAt ?? Date.now(),
     packageVersion: overrides.packageVersion ?? readPackageVersion(),
+    adminNonce: randomUUID(),
     xaiApiKey: loadedXaiKey.apiKey ?? undefined,
     xaiApiKeySource: loadedXaiKey.apiKeySource as ApiKeySource,
     hasXaiApiKey: !!loadedXaiKey.apiKey,

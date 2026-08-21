@@ -354,6 +354,8 @@ function showHelp() {
     capabilities   Agent capability metadata       (ima2 capabilities --help)
     tools          Machine tool contracts for agents (ima2 tools --help)
     ping           Ping running server / check health
+    stop           Stop the running server safely (graceful, then signals)
+    service        Background service management (install/status/... ; -h)
 
   Agent skills (SKILL.md + references/):
     skill ls                         List packaged skills (ima2, front, uiux)
@@ -430,6 +432,12 @@ switch (command) {
   case "serve":
     serve(args.slice(1));
     break;
+  case "stop": {
+    const { stop } = await import("./commands/stop.js");
+    await stop(args.slice(1));
+    exitFlushed(Number(process.exitCode ?? 0));
+    break;
+  }
   case "setup":
   case "login":
     setup().then(() => console.log("  Done. Run 'ima2 serve' to start.")).catch((e) => {
