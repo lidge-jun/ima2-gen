@@ -10,6 +10,13 @@ export type OAuthReadyState = "starting" | "ready" | "failed" | "disabled" | und
 export interface RuntimeContext {
   apiKey: string | undefined;
   apiKeySource: ApiKeySource;
+  /**
+   * Boot-generated shared secret for the local admin surface (POST
+   * /api/admin/stop). Published in the advertise file so only processes that
+   * can read ~/.ima2/server.json can stop the server; generated ONCE at boot
+   * (advertise() re-runs on proxy state changes and must not rotate it).
+   */
+  adminNonce: string;
   config: AppConfig;
   grokActualPort: number | undefined;
   grokPort: number;
@@ -163,6 +170,7 @@ export function createTestRuntimeContext(over: RuntimeContextOverrides = {}): Ru
   const base: RuntimeContext = {
     apiKey: undefined,
     apiKeySource: undefined,
+    adminNonce: "",
     config: {} as AppConfig,
     grokActualPort: undefined,
     grokPort: 18645,

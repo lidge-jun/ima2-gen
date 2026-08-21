@@ -12,7 +12,7 @@
 .home-hero {
   position: relative;
   isolation: isolate;
-  padding: clamp(20px, 3.2vh, 36px) 0 clamp(16px, 2.2vh, 24px);
+  padding: clamp(12px, 2vh, 24px) 0 clamp(12px, 1.8vh, 20px);
 }
 
 .home-hero__mark {
@@ -37,7 +37,7 @@
 
 .home-hero__title {
   margin: 0;
-  font: 700 clamp(30px, 3.6vw, 44px) / 1.06 var(--font-display);
+  font: 700 clamp(24px, 2.8vw, 34px) / 1.08 var(--font-display);
   letter-spacing: -0.02em;
   text-wrap: balance;
   word-break: keep-all;
@@ -208,7 +208,7 @@
   padding: clamp(20px, 3vw, 32px);
   border: 1px solid var(--glass-line, var(--border));
   border-radius: 20px;
-  background: color-mix(in srgb, var(--surface, #14141a) 86%, transparent);
+  background: color-mix(in srgb, var(--surface, var(--surface)) 86%, transparent);
   box-shadow: 0 24px 64px var(--shadow-soft);
   backdrop-filter: blur(12px);
 }
@@ -275,7 +275,7 @@
   border: 1px solid var(--border-strong, var(--border));
   border-radius: 14px;
   padding: 18px 20px;
-  background: color-mix(in srgb, var(--surface-2, #1c1c23) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-2, var(--surface-2)) 88%, transparent);
   color: var(--text, var(--text-primary));
   font: 500 18px/1.6 var(--font);
   transition: border-color 160ms ease, box-shadow 160ms ease;
@@ -312,7 +312,7 @@
   border-radius: 12px;
   padding: 0 28px;
   background: var(--accent);
-  color: var(--accent-ink, #0b0b0f);
+  color: var(--accent-ink, var(--bg));
   font: 700 15px/1 var(--font);
   cursor: pointer;
   transition: transform 160ms ease, opacity 160ms ease;

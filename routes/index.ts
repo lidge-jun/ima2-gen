@@ -3,6 +3,7 @@ import { registerCapabilitiesRoutes } from "./capabilities.js";
 import { registerModelsRoutes } from "./models.js";
 import { registerEventsRoute } from "./events.js";
 import { registerHealthRoutes } from "./health.js";
+import { registerAdminRoutes } from "./admin.js";
 import { registerHistoryRoutes } from "./history.js";
 import { registerAssetsRoutes } from "./assets.js";
 import { registerSpriteRecipeRoutes } from "./spriteRecipes.js";
@@ -47,6 +48,7 @@ export function configureRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
   registerEventsRoute(app, ctx);
   registerHealthRoutes(app, ctx);
+  registerAdminRoutes(app, ctx);
   registerCapabilitiesRoutes(app, ctx);
   registerStorageRoutes(app, ctx);
   registerMetadataRoutes(app, ctx);

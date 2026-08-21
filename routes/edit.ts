@@ -23,6 +23,8 @@ import {
 } from "../lib/generationCancel.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { hasPngAlphaChannel, parsePngInfo } from "../lib/pngInfo.js";
+import { verifyBufferAlpha } from "../lib/imageBackgroundParam.js";
+import { decodeRawForAlpha } from "../lib/alphaDecode.js";
 import { invalidateHistoryIndex } from "../lib/historyIndex.js";
 
 import { errInfo } from "../lib/errInfo.js";
@@ -330,6 +332,22 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       const editExt = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(editMime) : "png";
       const editBuffer = Buffer.from(resultB64, "base64");
       const createdAt = Date.now();
+      // Semantic alpha verification: at least one pixel with alpha < 255.
+      // Never trust provider mime for transparency claims (same doctrine as
+      // the generate path); a failed decode reports alphaVerified: false.
+      let alphaVerified = false;
+      let alphaReason: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable" | null = null;
+      try {
+        const verdict = (await verifyBufferAlpha(editBuffer, decodeRawForAlpha)) as {
+          hasAlpha: boolean;
+          reason?: "jpeg" | "no-alpha-channel" | "fully-opaque" | "undetectable";
+        };
+        alphaVerified = verdict.hasAlpha === true;
+        if (!alphaVerified) alphaReason = verdict.reason ?? "undetectable";
+      } catch {
+        alphaVerified = false;
+        alphaReason = "undetectable";
+      }
       const filename = await writeFileUnique(
         ctx.config.storage.generatedDir,
         buildFilename({
@@ -359,6 +377,8 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         kind: "edit",
         requestId,
         createdAt,
+        alphaVerified,
+        alphaReason,
         usage: usage || null,
         webSearchCalls,
         webSearchEnabled,
@@ -380,6 +400,8 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         elapsed,
         reasoningEffort,
         filename,
+        alphaVerified,
+        alphaReason,
         usage,
         provider: activeProvider,
         model: activeProvider === "grok" ? resolveGrokQualityModel(imageModel, quality) : imageModel,

@@ -281,10 +281,10 @@
   border-radius: 3px;
 }
 .generation-request-log__count.is-success {
-  color: var(--success, #22c55e);
+  color: var(--success, var(--green));
 }
 .generation-request-log__count.is-error {
-  color: var(--error, #ef4444);
+  color: var(--error, var(--red));
 }
 @media (prefers-reduced-motion: reduce) {
   .right-panel {
@@ -562,6 +562,18 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
+/* One promoted next-step per result bar: Continue here. */
+.action-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+.action-btn--primary:hover {
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+}
 .action-btn:hover {
   border-color: var(--border-strong);
   background: var(--surface-2);
@@ -684,7 +696,7 @@
   display: grid;
   gap: 3px;
   padding: 0 0 8px;
-  border-bottom: 1px solid var(--hairline-soft, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--hairline-soft, var(--tint-08));
 }
 .mcp-selected-model strong {
   font-family: var(--mono);
@@ -767,7 +779,7 @@
   opacity: 0.55;
 }
 .mcp-advanced-presets {
-  border-top: 1px solid var(--hairline-soft, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--hairline-soft, var(--tint-08));
   padding-top: 8px;
 }
 .mcp-advanced-presets summary {

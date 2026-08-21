@@ -354,6 +354,8 @@ function showHelp() {
     capabilities   Agent capability metadata       (ima2 capabilities --help)
     tools          Machine tool contracts for agents (ima2 tools --help)
     ping           Ping running server / check health
+    stop           Stop the running server safely (graceful, then signals)
+    service        Background service management (install/status/... ; -h)
 
   Agent skills (SKILL.md + references/):
     skill ls                         List packaged skills (ima2, front, uiux)
@@ -416,7 +418,7 @@ if (args.includes("-v") || args.includes("--version")) {
   exitFlushed(0);
 }
 
-const helpOwningCommands = ["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs"];
+const helpOwningCommands = ["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs", "service"];
 if (!command) {
   showHelp();
   exitFlushed(1);
@@ -430,6 +432,18 @@ switch (command) {
   case "serve":
     serve(args.slice(1));
     break;
+  case "stop": {
+    const { stop } = await import("./commands/stop.js");
+    await stop(args.slice(1));
+    exitFlushed(Number(process.exitCode ?? 0));
+    break;
+  }
+  case "service": {
+    const { service } = await import("./commands/service.js");
+    await service(args.slice(1));
+    exitFlushed(Number(process.exitCode ?? 0));
+    break;
+  }
   case "setup":
   case "login":
     setup().then(() => console.log("  Done. Run 'ima2 serve' to start.")).catch((e) => {

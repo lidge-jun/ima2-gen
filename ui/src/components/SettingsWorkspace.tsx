@@ -5,6 +5,7 @@ import { ImageModelSelect } from "./ImageModelSelect";
 import { ReasoningEffortSelect } from "./ReasoningEffortSelect";
 import { WebSearchToggle } from "./WebSearchToggle";
 import { LanguageToggle } from "./LanguageToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { HistoryStripLayoutToggle } from "./HistoryStripLayoutToggle";
 import { WorkspaceProfileSettings } from "./settings/WorkspaceProfileSettings";
 import { GrokPlannerSelect } from "./settings/GrokPlannerSelect";
@@ -143,7 +144,10 @@ export function SettingsWorkspace() {
             aria-label={t("settings.closeAria")}
             title={t("settings.closeTitle")}
           >
-            X
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
           </button>
         </header>
 
@@ -295,6 +299,15 @@ export function SettingsWorkspace() {
                 </div>
                 <div className="settings-row__control">
                   <LanguageToggle />
+                </div>
+              </article>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.theme.title")}</h4>
+                  <p>{t("settings.theme.body")}</p>
+                </div>
+                <div className="settings-row__control">
+                  <ThemeToggle />
                 </div>
               </article>
             </SettingsSectionBlock>

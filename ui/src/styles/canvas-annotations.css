@@ -53,9 +53,9 @@
   transform: translateX(-50%);
   padding: 6px 10px;
   border-radius: 6px;
-  background: rgba(12, 14, 17, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.82);
+  background: var(--canvas-plate-mid);
+  border: 1px solid var(--tint-12);
+  color: var(--text);
   font-size: 12px;
   font-weight: 600;
   pointer-events: none;
@@ -82,8 +82,8 @@
   padding: 5px;
   border-radius: 8px;
   transform: translateX(-50%);
-  background: rgba(12, 14, 17, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--canvas-plate);
+  border: 1px solid var(--tint-14);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(14px);
 }
@@ -98,14 +98,14 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--tint-72);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .canvas-toolbar__button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--tint-10);
+  color: var(--text);
 }
 
 .canvas-toolbar__button:active {
@@ -114,13 +114,13 @@
 
 .canvas-toolbar__button--active {
   background: rgba(100, 200, 255, 0.2);
-  color: #fff;
+  color: var(--text);
   box-shadow: inset 0 0 0 1px rgba(100, 200, 255, 0.42);
 }
 
 .canvas-toolbar__button--primary {
   background: rgba(100, 200, 255, 0.16);
-  color: #fff;
+  color: var(--text);
 }
 
 .canvas-toolbar__split-button {
@@ -143,20 +143,20 @@
 
 .canvas-toolbar__button--split-menu {
   width: 26px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid var(--tint-10);
   border-radius: 0 6px 6px 0;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.86);
+  background: var(--tint-04);
+  color: var(--text);
 }
 
 .canvas-toolbar__button--split-menu:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--tint-14);
+  color: var(--text);
 }
 
 .canvas-toolbar__split-button--active .canvas-toolbar__button--split-menu {
   background: rgba(248, 113, 113, 0.16);
-  color: #fff;
+  color: var(--text);
 }
 
 .canvas-toolbar__divider {
@@ -164,13 +164,43 @@
   height: 26px;
   flex: 0 0 auto;
   margin: 0 4px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--tint-14);
 }
 
 .canvas-toolbar__button--mask:disabled {
-  background: rgba(255, 255, 255, 0.02);
-  color: rgba(255, 255, 255, 0.26);
+  background: var(--tint-02);
+  color: var(--tint-26);
   box-shadow: none;
+}
+
+.canvas-toolbar__button--transparency {
+  background: rgba(122, 215, 255, 0.12);
+  color: var(--text);
+}
+.canvas-toolbar__button--transparency:hover:not(:disabled) {
+  background: rgba(122, 215, 255, 0.22);
+}
+
+.canvas-toolbar__spinner {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(122, 215, 255, 0.25);
+  border-top-color: rgba(122, 215, 255, 0.9);
+  animation: canvas-toolbar-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-toolbar__spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@keyframes canvas-toolbar-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .canvas-toolbar__icon--small {
@@ -187,9 +217,9 @@
   min-width: 148px;
   gap: 2px;
   padding: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--tint-16);
   border-radius: 8px;
-  background: rgba(12, 14, 17, 0.97);
+  background: var(--canvas-plate);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
 }
 
@@ -198,7 +228,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--tint-78);
   cursor: pointer;
   font-size: 13px;
   text-align: left;
@@ -207,7 +237,7 @@
 .canvas-toolbar__eraser-menu-item:hover,
 .canvas-toolbar__eraser-menu-item--active {
   background: rgba(248, 113, 113, 0.18);
-  color: #fff;
+  color: var(--text);
 }
 
 .canvas-toolbar__button--busy {
@@ -224,14 +254,14 @@
   width: 18px;
   height: 12px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
+  border: 1px solid var(--tint-32);
 }
 
 .canvas-style-trigger__width {
   display: block;
   width: 18px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--tint-72);
 }
 
 .canvas-style-popover {
@@ -243,8 +273,8 @@
   gap: 8px;
   padding: 8px;
   border-radius: 8px;
-  background: rgba(12, 14, 17, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--canvas-plate);
+  border: 1px solid var(--tint-16);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
 }
 
@@ -258,7 +288,7 @@
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  border: 2px solid var(--tint-18);
   cursor: pointer;
   padding: 0;
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
@@ -269,7 +299,7 @@
 }
 
 .canvas-style-swatch--active {
-  border-color: #fff;
+  border-color: var(--text);
   box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.55);
 }
 
@@ -281,13 +311,13 @@
   justify-content: center;
   border: 0;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--tint-06);
   cursor: pointer;
   padding: 0;
 }
 
 .canvas-style-width:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--tint-12);
 }
 
 .canvas-style-width span {
@@ -324,7 +354,7 @@
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.46);
+  color: var(--text-muted);
 }
 
 @media (max-width: 720px) {
@@ -369,7 +399,7 @@
 .canvas__drop-hint {
   font-size: 15px;
   font-weight: 600;
-  color: var(--accent-fg, #fff);
+  color: var(--accent-ink);
   background: var(--accent, #2563eb);
   padding: 10px 18px;
   border-radius: 999px;

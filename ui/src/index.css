@@ -76,10 +76,30 @@
   --accent-ink: #0b0b0f;
   --accent-shadow: rgba(255, 255, 255, 0.1);
   --focus-ring: rgba(122, 215, 255, 0.35);
+  --focus-ring-strong: rgba(122, 215, 255, 0.65);
   --hairline: rgba(255, 255, 255, 0.16);
   --hairline-soft: rgba(255, 255, 255, 0.04);
   --control-bg: rgba(255, 255, 255, 0.03);
   --control-hover: rgba(255, 255, 255, 0.08);
+  /* Foreground tint ladder: white in dark mode, ink in light mode. Use for
+     hover washes, hairlines, and subtle fills that must flip with the theme. */
+  --tint-02: rgba(255, 255, 255, 0.02);
+  --tint-03: rgba(255, 255, 255, 0.03);
+  --tint-04: rgba(255, 255, 255, 0.04);
+  --tint-05: rgba(255, 255, 255, 0.05);
+  --tint-06: rgba(255, 255, 255, 0.06);
+  --tint-08: rgba(255, 255, 255, 0.08);
+  --tint-10: rgba(255, 255, 255, 0.1);
+  --tint-12: rgba(255, 255, 255, 0.12);
+  --tint-14: rgba(255, 255, 255, 0.14);
+  --tint-16: rgba(255, 255, 255, 0.16);
+  --tint-18: rgba(255, 255, 255, 0.18);
+  --tint-20: rgba(255, 255, 255, 0.2);
+  --tint-26: rgba(255, 255, 255, 0.26);
+  --tint-32: rgba(255, 255, 255, 0.32);
+  --tint-50: rgba(255, 255, 255, 0.5);
+  --tint-72: rgba(255, 255, 255, 0.72);
+  --tint-78: rgba(255, 255, 255, 0.78);
   --scrim: rgba(0, 0, 0, 0.6);
   --scrim-strong: rgba(0, 0, 0, 0.78);
   --caption-scrim: rgba(0, 0, 0, 0.85);
@@ -95,11 +115,91 @@
   --font: "Satoshi", "Pretendard Variable", system-ui, sans-serif;
   --font-display: "Clash Display", "Pretendard Variable", system-ui, sans-serif;
   --mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  /* Typography rule (UI/UX round 2): --mono is reserved for MACHINE VALUES —
+     status chips, aspect ratios, resolutions, shortcuts, token counts, ids.
+     Human-language labels of any rank use --font. When a control mixes both
+     (segmented toggles), the OPTION VALUES may be mono but the row label is
+     always proportional. */
   --prism: linear-gradient(100deg, #ff5adf 0%, #7ad7ff 28%, #ffd166 55%, #b28dff 78%, #7ad7ff 100%);
   --chrome: linear-gradient(180deg, #ffffff 0%, #c8ccd8 35%, #6f7484 60%, #e8eaf1 100%);
   --glass: rgba(255, 255, 255, 0.04);
   --glass-line: rgba(255, 255, 255, 0.1);
+  /* Canvas-mode stage surfaces: the stage keeps its own plate system so
+     floating chrome stays legible over arbitrary artwork in both themes. */
+  --canvas-stage-bg: #0d0d0d;
+  --canvas-dot: rgba(100, 200, 255, 0.25);
+  --canvas-topscrim: rgba(0, 0, 0, 0.7);
+  --canvas-plate: rgba(12, 14, 17, 0.97);
+  --canvas-plate-soft: rgba(12, 14, 17, 0.78);
+  --canvas-plate-strong: rgba(12, 14, 17, 0.92);
+  --canvas-plate-mid: rgba(12, 14, 17, 0.88);
   color-scheme: dark;
+}
+
+/* Light theme: tinted cool neutrals (not pure white), ink text, and a flipped
+   tint ladder so hover washes and hairlines read as ink instead of white.
+   Contrast targets: body text >= 4.5:1, muted text >= 4.5:1 on --bg. */
+:root[data-theme="light"] {
+  --bg: #f2f2f6;
+  --surface: #fafafc;
+  --surface-2: #ececf1;
+  --surface-3: #e2e2e9;
+  --border: #d8d8e0;
+  --border-strong: #b9b9c6;
+  --text: #1a1a21;
+  --text-dim: #45454f;
+  --text-muted: #5d5d68;
+  --text-faint: #8f8f9b;
+  --canvas-muted: #c9c9d3;
+  --accent: #1a1a21;
+  --accent-bright: #000;
+  --accent-soft: rgba(38, 40, 52, 0.08);
+  --accent-ink: #fafafc;
+  --accent-shadow: rgba(15, 15, 20, 0.12);
+  --focus-ring: rgba(29, 120, 180, 0.4);
+  --focus-ring-strong: rgba(23, 98, 150, 0.8);
+  --hairline: rgba(20, 20, 28, 0.16);
+  --hairline-soft: rgba(20, 20, 28, 0.05);
+  --control-bg: rgba(20, 20, 28, 0.04);
+  --control-hover: rgba(20, 20, 28, 0.08);
+  --tint-02: rgba(20, 20, 28, 0.02);
+  --tint-03: rgba(20, 20, 28, 0.03);
+  --tint-04: rgba(20, 20, 28, 0.04);
+  --tint-05: rgba(20, 20, 28, 0.05);
+  --tint-06: rgba(20, 20, 28, 0.06);
+  --tint-08: rgba(20, 20, 28, 0.08);
+  --tint-10: rgba(20, 20, 28, 0.1);
+  --tint-12: rgba(20, 20, 28, 0.12);
+  --tint-14: rgba(20, 20, 28, 0.14);
+  --tint-16: rgba(20, 20, 28, 0.16);
+  --tint-18: rgba(20, 20, 28, 0.18);
+  --tint-20: rgba(20, 20, 28, 0.2);
+  --tint-26: rgba(20, 20, 28, 0.26);
+  --tint-32: rgba(20, 20, 28, 0.32);
+  --tint-50: rgba(20, 20, 28, 0.5);
+  --tint-72: rgba(20, 20, 28, 0.72);
+  --tint-78: rgba(20, 20, 28, 0.78);
+  --scrim: rgba(20, 20, 26, 0.45);
+  --scrim-strong: rgba(20, 20, 26, 0.62);
+  --caption-scrim: rgba(20, 20, 26, 0.78);
+  --chip-scrim: rgba(20, 20, 26, 0.68);
+  --on-scrim: #fafafc;
+  --shadow-soft: rgba(30, 30, 40, 0.16);
+  --shadow-strong: rgba(30, 30, 40, 0.24);
+  --blue: #1d6fd1;
+  --green: #178a43;
+  --amber: #a96a06;
+  --red: #cc3340;
+  --glass: rgba(20, 20, 28, 0.04);
+  --glass-line: rgba(20, 20, 28, 0.1);
+  --canvas-stage-bg: #e6e6ec;
+  --canvas-dot: rgba(29, 111, 209, 0.22);
+  --canvas-topscrim: rgba(242, 242, 246, 0.85);
+  --canvas-plate: rgba(250, 250, 252, 0.97);
+  --canvas-plate-soft: rgba(250, 250, 252, 0.8);
+  --canvas-plate-strong: rgba(250, 250, 252, 0.92);
+  --canvas-plate-mid: rgba(250, 250, 252, 0.88);
+  color-scheme: light;
 }
 
 /* Site-texture layers: corner glow + film-grain noise (behind all content).
@@ -129,7 +229,7 @@ body::after {
 
 /* Phase 020: unified keyboard focus ring (site :focus-visible grammar). */
 :focus-visible {
-  outline: 2px solid rgba(122, 215, 255, 0.65);
+  outline: 2px solid var(--focus-ring-strong, rgba(122, 215, 255, 0.65));
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -178,14 +278,14 @@ body::after {
 
 .node-studio-empty-overlay { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 72px 16px 24px; pointer-events: none; }
 .node-studio-empty-overlay > * { pointer-events: auto; }
-.node-studio-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: min(520px, calc(100vw - 280px)); }
+.node-studio-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: min(520px, calc(100vw - 280px)); margin-right: 52px; position: relative; z-index: 11; }
 .node-studio-toolbar button, .node-element-tray button { min-height: 32px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); cursor: pointer; }
 .node-studio-toolbar button:disabled, .node-element-tray button:disabled { cursor: not-allowed; opacity: .5; }
-.node-studio-element-panel { width: 230px; margin-top: 44px !important; }
-.node-element-tray { max-height: min(440px, calc(100vh - 180px)); overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); box-shadow: 0 10px 30px var(--shadow-soft); }
+.node-studio-element-panel { width: 230px; margin-top: 56px !important; }
+.node-element-tray { max-height: min(380px, calc(100vh - 200px)); overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); backdrop-filter: blur(10px); color: var(--text); box-shadow: 0 10px 30px var(--shadow-soft); }
 .node-element-tray header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }.node-element-tray header span, .node-element-tray p { color: var(--text-muted); font-size: 11px; }
 .node-element-tray__list { display: grid; gap: 7px; }.node-element-tray__item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 7px; align-items: center; padding: 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); font-size: 11px; }.node-element-tray__item img, .node-element-tray__placeholder { width: 34px; height: 34px; border-radius: 7px; background: var(--surface-3); object-fit: cover; }.node-element-tray__item > span:not(.node-element-tray__placeholder) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.node-element-tray__item button { grid-column: 1 / -1; width: 100%; }
 .node-studio-dialog-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, #05070a 72%, transparent); }
 .node-studio-dialog-backdrop fieldset { display: grid; gap: 8px; margin: 0; padding: 12px; }.node-studio-dialog-backdrop select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); }
-.node-studio-status { position: absolute; z-index: 5; inset-inline: 50%; bottom: 18px; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
+.node-studio-status { position: absolute; z-index: 5; font-family: var(--font); inset-inline: 50%; bottom: 18px; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
 @media (max-width: 680px) { .node-studio-element-panel { width: calc(100% - 24px); margin-top: 86px !important; }.node-element-tray { max-height: 118px; }.node-element-tray__list { display: flex; overflow-x: auto; }.node-element-tray__item { flex: 0 0 150px; }.node-studio-toolbar { max-width: calc(100vw - 100px); }.node-studio-empty-overlay { align-items: start; padding-top: 250px; overflow-y: auto; }.node-studio-dialog-backdrop { align-items: end; padding: 10px; }.node-studio-dialog-backdrop .node-template-picker { max-height: calc(100dvh - 20px); } }

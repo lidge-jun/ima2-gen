@@ -508,6 +508,11 @@
       "editMaskDisabled": "Draw a box first",
       "editMaskFailed": "Masked edit failed",
       "editMaskUnsupported": "Masked edit is not supported by the current image provider",
+      "gptTransparency": "GPT transparency — remove background (i2i)",
+      "transparencyVerified": "Background removed — real alpha verified",
+      "transparencyNoAlpha": "Edit finished, but no real alpha was detected",
+      "transparencyUnverifiable": "Edit finished, but transparency could not be verified",
+      "transparencyFailed": "GPT transparency failed",
       "style": "Style",
       "color": "Color",
       "strokeWidth": "Stroke width",
@@ -1394,6 +1399,14 @@
     "language": {
       "title": "Language",
       "body": "Switch the UI language without changing generated content."
+    },
+    "theme": {
+      "title": "Theme",
+      "body": "Light, dark, or follow the system appearance.",
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
     }
   },
   "nodeCanvas": {
@@ -1732,6 +1745,10 @@
     "generating": "Generating…",
     "emptyTitle": "No assets yet",
     "emptyBody": "Write a prompt on the left and press “Generate asset”. Results appear here and are saved to your project automatically.",
+    "emptySessionTitle": "Nothing generated this session",
+    "emptySessionBody": "Your earlier results are saved in this project. Generate something new, or browse what you already made.",
+    "emptySessionCta": "Browse project assets",
+    "generateHint": "Write a prompt first — the button enables automatically.",
     "previewImage": "Open image preview: {prompt}",
     "previewVideo": "Open video preview: {prompt}",
     "previewDialogTitle": "Preview: {prompt}",

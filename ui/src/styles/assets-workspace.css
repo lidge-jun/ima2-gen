@@ -12,7 +12,7 @@
 .assets-folder-row { position: relative; display: flex; align-items: center; min-height: 44px; padding-left: calc(var(--folder-depth) * 14px); }
 .assets-folder-row__name.is-active, .assets-folder-all.is-active { color: var(--accent-bright); background: var(--accent-soft); }
 .assets-folder-elements { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
-.assets-folder-elements__glyph { flex: none; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border, rgba(255,255,255,0.16)); border-radius: 5px; font-size: 11px; font-weight: 650; color: var(--text-dim); }
+.assets-folder-elements__glyph { flex: none; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border, var(--tint-16)); border-radius: 5px; font-size: 11px; font-weight: 650; color: var(--text-dim); }
 .assets-folder-elements.is-active .assets-folder-elements__glyph { color: var(--accent-bright); border-color: var(--accent); }
 .assets-folder-row__actions { position: absolute; right: 3px; display: none; align-items: center; background: var(--surface); }
 .assets-folder-row:hover .assets-folder-row__actions, .assets-folder-row:focus-within .assets-folder-row__actions { display: flex; }
@@ -64,7 +64,7 @@
 .assets-empty { align-self: center; justify-self: center; max-width: 360px; padding: 28px; text-align: center; }
 .assets-empty h2 { margin: 0 0 8px; font-size: 18px; text-wrap: balance; }
 .assets-empty p { margin: 0; color: var(--text-dim); line-height: 1.5; text-wrap: pretty; }
-.assets-empty__cta { margin-top: 16px; padding: 9px 16px; border: 0; border-radius: 9px; background: var(--accent); color: var(--accent-ink, #0b0b0f); font-weight: 650; font-size: 13px; cursor: pointer; }
+.assets-empty__cta { margin-top: 16px; padding: 9px 16px; border: 0; border-radius: 9px; background: var(--accent); color: var(--accent-ink, var(--bg)); font-weight: 650; font-size: 13px; cursor: pointer; }
 .assets-empty__cta:hover { background: var(--accent-bright); }
 .assets-workspace__detail-backdrop { display: none; }
 .assets-workspace__detail { position: relative; min-width: 0; border-left: 1px solid var(--hairline-soft); background: var(--surface); overflow-y: auto; }

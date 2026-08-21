@@ -12,6 +12,7 @@ interface CanvasModeFloatingToolbarProps {
     isApplying: boolean;
     isExporting: boolean;
     isEditingWithMask: boolean;
+    isTransparencyRunning: boolean;
     canRevertAnnotations: boolean;
   };
   actions: {
@@ -19,6 +20,7 @@ interface CanvasModeFloatingToolbarProps {
     handleRevertAnnotations: () => Promise<void>;
     handleExportCanvas: (format?: CanvasExportFormat) => Promise<void>;
     handleEditWithMask: () => Promise<void>;
+    handleGptTransparency: () => Promise<void>;
     setExportBackground: (mode: CanvasExportBackground) => void;
     setExportMatteColor: (color: HexColor) => void;
   };
@@ -55,6 +57,8 @@ export function CanvasModeFloatingToolbar({
       onEditWithMask={() => void actions.handleEditWithMask()}
       canEditWithMask={annotations.boxes.length > 0}
       isEditingWithMask={canvasState.isEditingWithMask}
+      onGptTransparency={() => void actions.handleGptTransparency()}
+      isTransparencyRunning={canvasState.isTransparencyRunning}
       isApplying={canvasState.isApplying}
       isExporting={canvasState.isExporting}
       exportBackground={canvasState.exportBackground}

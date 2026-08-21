@@ -41,6 +41,8 @@ interface CanvasToolbarProps {
   onEditWithMask?: () => void;
   canEditWithMask?: boolean;
   isEditingWithMask?: boolean;
+  onGptTransparency?: () => void;
+  isTransparencyRunning?: boolean;
   isApplying?: boolean;
   isExporting?: boolean;
   exportBackground?: CanvasExportBackground;
@@ -91,6 +93,8 @@ export function CanvasToolbar({
   onEditWithMask,
   canEditWithMask,
   isEditingWithMask,
+  onGptTransparency,
+  isTransparencyRunning,
   isApplying,
   isExporting,
   exportBackground = "alpha",
@@ -333,6 +337,20 @@ export function CanvasToolbar({
           onReset={onCleanupReset}
         />
       ) : null}
+      {onGptTransparency ? (
+        <button
+          type="button"
+          className={`canvas-toolbar__button canvas-toolbar__button--transparency${
+            isTransparencyRunning ? " canvas-toolbar__button--busy" : ""
+          }`}
+          onClick={onGptTransparency}
+          disabled={isTransparencyRunning || isApplying || isEditingWithMask}
+          aria-label={t("canvas.toolbar.gptTransparency")}
+          title={t("canvas.toolbar.gptTransparency")}
+        >
+          {isTransparencyRunning ? <span className="canvas-toolbar__spinner" aria-hidden="true" /> : <TransparencyIcon />}
+        </button>
+      ) : null}
       {onExport ? (
         <CanvasExportMenu
           onExport={onExport}
@@ -462,6 +480,15 @@ function MaskIcon() {
     <svg className="canvas-toolbar__icon" viewBox="0 0 24 24" aria-hidden="true">
       <rect x="5" y="5" width="14" height="14" rx="2" />
       <path d="M9 9h6v6H9z" />
+    </svg>
+  );
+}
+
+function TransparencyIcon() {
+  return (
+    <svg className="canvas-toolbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="4" width="16" height="16" rx="2" fill="none" />
+      <path d="M4 8h4V4M12 4v4h4v4h4M4 12h4v4H4M12 12v4h-4M12 20v-4h4v4M20 16h-4" opacity="0.55" />
     </svg>
   );
 }

@@ -1,4 +1,5 @@
 import type { CSSProperties, PointerEventHandler, ReactNode, RefObject } from "react";
+import type { CanvasObjectKey } from "../../lib/canvas/objectKeys";
 import { CanvasAnnotationLayer } from "./CanvasAnnotationLayer";
 import { CanvasMemoOverlay } from "./CanvasMemoOverlay";
 
@@ -15,6 +16,7 @@ interface CanvasModeStageProps {
   maskOverlayUrl: string | null;
   cleanupLayer?: ReactNode;
   annotations: any;
+  hoveredAnnotationId?: CanvasObjectKey | null;
   onOpenCanvas: () => void;
   onPointerDown: PointerEventHandler<HTMLDivElement>;
   onPointerMove: PointerEventHandler<HTMLDivElement>;
@@ -35,6 +37,7 @@ export function CanvasModeStage({
   maskOverlayUrl,
   cleanupLayer,
   annotations,
+  hoveredAnnotationId = null,
   onOpenCanvas,
   onPointerDown,
   onPointerMove,
@@ -82,6 +85,7 @@ export function CanvasModeStage({
             memos={annotations.memos}
             selectedIds={annotations.selectedIds}
             selectionBox={annotations.selectionBox}
+            hoveredId={hoveredAnnotationId}
             activePath={annotations.activePath}
             activeBox={annotations.activeBox}
           />

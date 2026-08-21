@@ -5,6 +5,7 @@ import {
   getAnnotationBounds,
   renderAnnotationPath,
   renderBoundingBox,
+  renderHoverOutline,
   renderSelectionOutline,
 } from "../../lib/canvas/annotationRenderer";
 
@@ -14,6 +15,7 @@ interface CanvasAnnotationLayerProps {
   memos?: CanvasMemo[];
   selectedIds?: CanvasObjectKey[];
   selectionBox?: SelectionBox | null;
+  hoveredId?: CanvasObjectKey | null;
   activePath: DrawingPath | null;
   activeBox: { start: NormalizedPoint; current: NormalizedPoint } | null;
 }
@@ -24,6 +26,7 @@ export function CanvasAnnotationLayer({
   memos = [],
   selectedIds = [],
   selectionBox = null,
+  hoveredId = null,
   activePath,
   activeBox,
 }: CanvasAnnotationLayerProps) {
@@ -52,9 +55,13 @@ export function CanvasAnnotationLayer({
       if (bounds) renderSelectionOutline(ctx, bounds, size);
     }
     if (selectionBox) renderSelectionOutline(ctx, selectionBox, size);
+    if (hoveredId && !selectedIds.includes(hoveredId)) {
+      const bounds = getAnnotationBounds(hoveredId, { paths, boxes, memos });
+      if (bounds) renderHoverOutline(ctx, bounds, size);
+    }
     if (activePath) renderAnnotationPath(ctx, activePath, size);
     if (activeBox) renderBoundingBox(ctx, activeBox, size, "active");
-  }, [paths, boxes, memos, selectedIds, selectionBox, activePath, activeBox]);
+  }, [paths, boxes, memos, selectedIds, selectionBox, hoveredId, activePath, activeBox]);
 
   return <canvas ref={canvasRef} className="canvas-annotation-layer" aria-hidden="true" />;
 }

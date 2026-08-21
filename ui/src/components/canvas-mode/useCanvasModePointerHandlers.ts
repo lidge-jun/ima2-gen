@@ -7,6 +7,7 @@ import {
   normalizeSelectionBox,
 } from "../../lib/canvas/hitTest";
 import type { CanvasBackgroundCleanupTool, NormalizedPoint } from "../../types/canvas";
+import type { CanvasObjectKey } from "../../lib/canvas/objectKeys";
 
 interface UseCanvasModePointerHandlersArgs {
   canvasOpen: boolean;
@@ -25,6 +26,7 @@ interface UseCanvasModePointerHandlersArgs {
   updateBackgroundCleanupBrushStroke: (point: NormalizedPoint) => void;
   endBackgroundCleanupBrushStroke: () => void;
   setCleanupBrushCursor: (point: NormalizedPoint | null) => void;
+  setHoveredAnnotationId: (id: CanvasObjectKey | null) => void;
 }
 
 export function useCanvasModePointerHandlers({
@@ -44,6 +46,7 @@ export function useCanvasModePointerHandlers({
   updateBackgroundCleanupBrushStroke,
   endBackgroundCleanupBrushStroke,
   setCleanupBrushCursor,
+  setHoveredAnnotationId,
 }: UseCanvasModePointerHandlersArgs) {
   const selectionDragRef = useRef<{
     mode: "move" | "box" | null;
@@ -159,11 +162,25 @@ export function useCanvasModePointerHandlers({
     }
     const point = screenToNormalized(event, annotationFrameRef.current);
     if (isBackgroundCleanupActive) {
+      setHoveredAnnotationId(null);
       if (cleanupTool === "brush") updateBackgroundCleanupBrushStroke(point);
       else setCleanupBrushCursor(point);
       return;
     }
     if (annotations.activeTool === "select") {
+      // Hover hit-test only on the select tool: running it on the freehand
+      // drawing path would repaint the annotation canvas on every pointermove.
+      if (selectionDragRef.current.mode === null) {
+        const hovered = hitTestAnnotation({
+          point,
+          paths: annotations.paths,
+          boxes: annotations.boxes,
+          memos: annotations.memos,
+        });
+        setHoveredAnnotationId(hovered);
+      } else {
+        setHoveredAnnotationId(null);
+      }
       if (selectionDragRef.current.mode === "move" && selectionDragRef.current.lastPoint) {
         const delta = {
           x: point.x - selectionDragRef.current.lastPoint.x,
@@ -244,10 +261,12 @@ export function useCanvasModePointerHandlers({
       pointerId: null,
     };
     setViewportPanActive(false);
+    setHoveredAnnotationId(null);
   };
 
   const handleAnnotationPointerLeave = (): void => {
     if (isBackgroundCleanupActive) setCleanupBrushCursor(null);
+    setHoveredAnnotationId(null);
   };
 
   return {

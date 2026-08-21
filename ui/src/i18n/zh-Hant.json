@@ -508,6 +508,11 @@
       "editMaskDisabled": "先畫一個盒子",
       "editMaskFailed": "屏蔽編輯失敗",
       "editMaskUnsupported": "目前圖像提供者不支援蒙版編輯",
+      "gptTransparency": "GPT 透明化 — 移除背景 (i2i)",
+      "transparencyVerified": "背景已移除 — 已驗證真實 Alpha",
+      "transparencyNoAlpha": "編輯完成，但未偵測到真實 Alpha",
+      "transparencyUnverifiable": "編輯完成，但無法驗證透明度",
+      "transparencyFailed": "GPT 透明化失敗",
       "style": "風格",
       "color": "顏色",
       "strokeWidth": "筆觸寬度",
@@ -1394,6 +1399,14 @@
     "language": {
       "title": "語言",
       "body": "切換介面語言，不會變更生成內容。"
+    },
+    "theme": {
+      "title": "主題",
+      "body": "淺色、深色，或跟隨系統外觀。",
+      "label": "主題",
+      "light": "淺色",
+      "dark": "深色",
+      "system": "系統"
     }
   },
   "nodeCanvas": {
@@ -1732,6 +1745,10 @@
     "generating": "生成…",
     "emptyTitle": "還沒有資產",
     "emptyBody": "在左側寫下提示，然後按下「產生資產」。結果顯示在此處並自動儲存到您的項目中。",
+    "emptySessionTitle": "本次工作階段尚未生成內容",
+    "emptySessionBody": "先前的結果已儲存在專案中。生成新內容，或瀏覽既有資產。",
+    "emptySessionCta": "瀏覽專案資產",
+    "generateHint": "先輸入提示詞，按鈕會自動啟用。",
     "previewImage": "開啟影像預覽：{prompt}",
     "previewVideo": "開啟影片預覽：{prompt}",
     "previewDialogTitle": "預覽：{prompt}",

@@ -8,14 +8,14 @@
 
 .canvas-mode-topbar__stack .canvas-toolbar__zoom {
   padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--tint-14);
   border-radius: 8px;
-  background: rgba(12, 14, 17, 0.78);
+  background: var(--canvas-plate-soft);
   backdrop-filter: blur(12px);
 }
 
 .canvas-mode-topbar__shortcuts {
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 650;
 }
@@ -29,9 +29,9 @@
   height: 86px;
   overflow: hidden;
   padding: 0;
-  border: 1px solid var(--minimap-border, rgba(255, 255, 255, 0.18));
+  border: 1px solid var(--minimap-border, var(--tint-18));
   border-radius: 8px;
-  background: var(--minimap-bg, rgba(12, 14, 17, 0.92));
+  background: var(--minimap-bg, var(--canvas-plate-strong));
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
   cursor: pointer;
 }
@@ -64,9 +64,9 @@
   flex-direction: column;
   min-width: 150px;
   padding: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--tint-14);
   border-radius: 8px;
-  background: rgba(12, 14, 17, 0.97);
+  background: var(--canvas-plate);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(14px);
 }
@@ -81,7 +81,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--tint-72);
   font-size: 12px;
   font-weight: 700;
   text-align: left;
@@ -91,7 +91,7 @@
 .canvas-tool-picker__item:hover,
 .canvas-tool-picker__item.active {
   background: rgba(100, 200, 255, 0.16);
-  color: #fff;
+  color: var(--text);
 }
 
 .canvas-tool-picker__item .canvas-toolbar__icon {
@@ -101,7 +101,7 @@
 
 .canvas-tool-picker__item kbd {
   min-width: 18px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--tint-50);
   font: 700 11px/1 var(--font-mono, monospace);
   text-align: right;
 }
@@ -141,7 +141,7 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--text-dim);
   font-weight: 750;
   cursor: pointer;
 }
@@ -158,9 +158,9 @@
 
 .canvas-toolbar__zoom-button:hover,
 .canvas-toolbar__zoom-value:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.09);
-  color: #fff;
+  border-color: var(--tint-12);
+  background: var(--tint-08);
+  color: var(--text);
 }
 
 .canvas-toolbar__cleanup {
@@ -174,11 +174,11 @@
   bottom: 48px;
   width: 278px;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--tint-14);
   border-radius: 8px;
-  background: rgba(12, 14, 17, 0.97);
+  background: var(--canvas-plate);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--text);
   backdrop-filter: blur(14px);
 }
 
@@ -203,7 +203,7 @@
 
 .canvas-toolbar__cleanup-meta,
 .canvas-toolbar__cleanup-status {
-  color: rgba(255, 255, 255, 0.58);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
 }
@@ -218,7 +218,7 @@
   min-width: 34px;
   font-size: 11px;
   font-weight: 650;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--text-dim);
 }
 
 .canvas-toolbar__cleanup-slider input {
@@ -234,10 +234,10 @@
 .canvas-toolbar__cleanup-actions button {
   min-height: 28px;
   padding: 0 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--tint-12);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.78);
+  background: var(--tint-06);
+  color: var(--tint-78);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -246,7 +246,7 @@
 .canvas-toolbar__cleanup-actions button:hover:not(:disabled),
 .canvas-toolbar__cleanup-actions button.active {
   background: rgba(100, 200, 255, 0.18);
-  color: #fff;
+  color: var(--text);
 }
 
 .canvas-toolbar__cleanup-actions button:disabled {
@@ -272,9 +272,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
   padding: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--tint-12);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tint-05);
 }
 
 .canvas-toolbar__segmented-button {
@@ -282,15 +282,15 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--text-dim);
   font-size: 11px;
   font-weight: 750;
   cursor: pointer;
 }
 
 .canvas-toolbar__segmented-button[aria-pressed="true"] {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--tint-14);
+  color: var(--text);
 }
 
 .canvas-toolbar__segmented-button[data-value="remove"][aria-pressed="true"] {
@@ -327,8 +327,8 @@
 }
 
 .canvas-cleanup-cursor {
-  fill: rgba(255, 255, 255, 0.05);
-  stroke: rgba(255, 255, 255, 0.9);
+  fill: var(--tint-05);
+  stroke: var(--text);
   stroke-width: 1.4;
   pointer-events: none;
 }

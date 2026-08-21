@@ -508,6 +508,11 @@
       "editMaskDisabled": "먼저 박스를 그려주세요",
       "editMaskFailed": "마스크 편집 실패",
       "editMaskUnsupported": "현재 이미지 제공자는 마스크 편집을 지원하지 않습니다",
+      "gptTransparency": "GPT 투명화 — 배경 제거 (i2i)",
+      "transparencyVerified": "배경 제거 완료 — 실제 알파 확인됨",
+      "transparencyNoAlpha": "편집은 끝났지만 실제 알파가 검출되지 않았습니다",
+      "transparencyUnverifiable": "편집은 끝났지만 투명 여부를 검증하지 못했습니다",
+      "transparencyFailed": "GPT 투명화 실패",
       "style": "스타일",
       "color": "색상",
       "strokeWidth": "선 굵기",
@@ -1394,6 +1399,14 @@
     "language": {
       "title": "언어",
       "body": "생성 프롬프트와 무관하게 인터페이스 언어만 바꿉니다."
+    },
+    "theme": {
+      "title": "테마",
+      "body": "라이트, 다크, 또는 시스템 설정을 따릅니다.",
+      "label": "테마",
+      "light": "라이트",
+      "dark": "다크",
+      "system": "시스템"
     }
   },
   "nodeCanvas": {
@@ -1732,6 +1745,10 @@
     "generating": "생성 중…",
     "emptyTitle": "아직 에셋이 없습니다",
     "emptyBody": "왼쪽에 프롬프트를 쓰고 “에셋 생성”을 누르세요. 결과는 여기에 나타나고 프로젝트에 자동 저장됩니다.",
+    "emptySessionTitle": "이번 세션에는 아직 생성물이 없습니다",
+    "emptySessionBody": "이전 결과는 프로젝트에 저장되어 있습니다. 새로 생성하거나 저장된 에셋을 둘러보세요.",
+    "emptySessionCta": "프로젝트 에셋 보기",
+    "generateHint": "프롬프트를 입력하면 버튼이 자동으로 활성화됩니다.",
     "previewImage": "이미지 미리보기 열기: {prompt}",
     "previewVideo": "비디오 미리보기 열기: {prompt}",
     "previewDialogTitle": "미리보기: {prompt}",

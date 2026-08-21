@@ -508,6 +508,11 @@
       "editMaskDisabled": "先画一个盒子",
       "editMaskFailed": "屏蔽编辑失败",
       "editMaskUnsupported": "当前图像提供商不支持蒙版编辑",
+      "gptTransparency": "GPT 透明化 — 移除背景 (i2i)",
+      "transparencyVerified": "背景已移除 — 已验证真实 Alpha",
+      "transparencyNoAlpha": "编辑完成，但未检测到真实 Alpha",
+      "transparencyUnverifiable": "编辑完成，但无法验证透明度",
+      "transparencyFailed": "GPT 透明化失败",
       "style": "风格",
       "color": "颜色",
       "strokeWidth": "笔划宽度",
@@ -1394,6 +1399,14 @@
     "language": {
       "title": "语言",
       "body": "切换界面语言，不会更改生成内容。"
+    },
+    "theme": {
+      "title": "主题",
+      "body": "浅色、深色，或跟随系统外观。",
+      "label": "主题",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "系统"
     }
   },
   "nodeCanvas": {
@@ -1732,6 +1745,10 @@
     "generating": "生成…",
     "emptyTitle": "还没有资产",
     "emptyBody": "在左侧写下提示，然后按“生成资产”。结果显示在此处并自动保存到您的项目中。",
+    "emptySessionTitle": "本次会话尚未生成内容",
+    "emptySessionBody": "之前的结果已保存在项目中。生成新内容，或浏览已有资产。",
+    "emptySessionCta": "浏览项目资产",
+    "generateHint": "先输入提示词，按钮会自动启用。",
     "previewImage": "打开图像预览：{prompt}",
     "previewVideo": "打开视频预览：{prompt}",
     "previewDialogTitle": "预览：{prompt}",

@@ -59,6 +59,12 @@ const en: Dict = {
   'latest.h.em': 'import.',
   'latest.lede':
     'Grok Video with storyboard continuity and keyframe copy, multimode candidate slots, Canvas Mode cleanup, and prompt-library imports from files, GitHub folders, and curated sources.',
+  'latest.theme.label': 'Light & dark',
+  'latest.theme.h': 'Two themes, honest contrast.',
+  'latest.theme.body':
+    'A token-based light mode with tinted neutrals joins the dark studio. Switch light, dark, or system in Settings — applied before first paint, AA contrast throughout.',
+  'latest.theme.alt':
+    'ima2-gen settings in light mode showing the light, dark, and system theme toggle.',
   'latest.multimode.label': 'Multimode',
   'latest.multimode.h': 'Four candidates from one prompt.',
   'latest.multimode.body':
@@ -68,9 +74,9 @@ const en: Dict = {
   'latest.canvas.label': 'Canvas Mode',
   'latest.canvas.h': 'Clean up the winning frame.',
   'latest.canvas.body':
-    'Pan around a zoomed image, annotate target areas, clean backgrounds, and export transparent or matte-backed canvas versions.',
+    'Pan around a zoomed image, annotate with live hover feedback, clean backgrounds, and remove the background in one click with GPT transparency — the server verifies real pixel alpha before it tells you it worked.',
   'latest.canvas.alt':
-    'ima2-gen Canvas Mode showing annotation marks, sticky note, zoom controls, and canvas toolbar.',
+    'ima2-gen Canvas Mode in light theme with the one-click GPT transparency flow and a transparent result.',
   'latest.import.label': 'Prompt import',
   'latest.import.h': 'Bring prompt packs in.',
   'latest.import.body':
@@ -263,6 +269,12 @@ const ko: Dict = {
   'latest.h.em': '가져오기.',
   'latest.lede':
     '스토리보드 연속성과 키프레임 복사가 있는 Grok Video, multimode 후보 슬롯, Canvas 정리, 파일/GitHub/추천 소스에서 프롬프트를 가져오는 라이브러리.',
+  'latest.theme.label': 'Light & dark',
+  'latest.theme.h': '두 가지 테마, 정직한 대비.',
+  'latest.theme.body':
+    '틴티드 뉴트럴 기반 라이트 모드가 다크 스튜디오에 합류했습니다. 설정에서 라이트/다크/시스템을 고르면 첫 페인트 전에 적용되고, 전 화면 AA 대비를 지킵니다.',
+  'latest.theme.alt':
+    'ima2-gen 설정 라이트 모드 — 라이트/다크/시스템 테마 토글이 보이는 화면.',
   'latest.multimode.label': 'Multimode',
   'latest.multimode.h': '하나의 프롬프트에서 네 후보.',
   'latest.multimode.body':
@@ -272,9 +284,9 @@ const ko: Dict = {
   'latest.canvas.label': 'Canvas Mode',
   'latest.canvas.h': '마음에 든 컷을 정리하기.',
   'latest.canvas.body':
-    '확대된 이미지를 이동하고, 수정 지점을 표시하고, 배경을 정리한 뒤 투명 또는 matte-backed canvas version으로 export합니다.',
+    '확대된 이미지를 이동하고, 호버 하이라이트로 주석을 다루고, GPT 투명화 버튼 한 번으로 배경을 제거합니다. 서버가 실제 픽셀 알파를 검증한 뒤에만 성공이라고 알려줍니다.',
   'latest.canvas.alt':
-    'ima2-gen Canvas Mode — annotation, sticky note, zoom control, canvas toolbar가 보이는 화면.',
+    'ima2-gen Canvas Mode 라이트 테마 — 원클릭 GPT 투명화와 투명 결과가 보이는 화면.',
   'latest.import.label': 'Prompt import',
   'latest.import.h': 'Prompt pack 가져오기.',
   'latest.import.body':
