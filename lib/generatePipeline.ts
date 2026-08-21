@@ -520,10 +520,23 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         if (r.status === "fulfilled" && r.value.b64) {
           throwIfJobCanceled(requestId);
           const valueWithMime = r.value as typeof r.value & { mime?: string };
-          const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax"
-            ? (valueWithMime.mime || detectImageMimeFromB64(r.value.b64) || mime)
-            : mime;
-          const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(resultMime) : effectiveFormat;
+          // When alpha was requested, trust the BYTES, never a provider-supplied
+          // Content-Type. Atlas reads its mime from the download response header
+          // (lib/atlasCloudImageAdapter.ts), and a transparent PNG mislabeled
+          // "image/jpeg" would otherwise be re-encoded to JPEG by
+          // embedImageMetadata's sharp.toFormat() and lose its alpha channel.
+          const detectedMime = detectImageMimeFromB64(r.value.b64);
+          const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax";
+          const resultMime = backgroundParams
+            ? (detectedMime || mime)
+            : providerReportsMime
+              ? (valueWithMime.mime || detectedMime || mime)
+              : mime;
+          const resultFormat = backgroundParams
+            ? imageFormatFromMime(resultMime)
+            : providerReportsMime
+              ? imageFormatFromMime(resultMime)
+              : effectiveFormat;
           const retryValue = r.value as typeof r.value & {
             retryKind?: string | undefined;
             initialEventCount?: number | undefined;

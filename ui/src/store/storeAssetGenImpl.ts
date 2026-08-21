@@ -88,6 +88,9 @@ async function generateAssetGenVideo(flightId: string, set: StoreSet, get: Store
     provider: "grok",
     requestId: res.requestId ?? flightId,
     elapsed: res.elapsed,
+    // Captured at request time so registration cannot pick up a preset the
+    // user switched to while this video was still generating.
+    backgroundPreset: s.assetGenBackground,
     createdAt: Date.now(),
   };
   await addHistory(item, set, get, { autoSelectStartedAt: Date.now() });

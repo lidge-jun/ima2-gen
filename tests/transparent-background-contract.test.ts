@@ -171,4 +171,19 @@ describe("surface routing and entrypoint guards (source contract)", () => {
     const atlas = read("lib/atlasCloudImageAdapter.ts");
     assert.match(atlas, /background === "transparent" \? "png" : "jpeg"/);
   });
+
+  it("ignores provider-reported mime for alpha results and trusts the bytes", () => {
+    const pipeline = read("lib/generatePipeline.ts");
+    // Atlas reads its mime from the download Content-Type header, so a
+    // transparent PNG mislabeled "image/jpeg" would be re-encoded to JPEG by
+    // embedImageMetadata's sharp.toFormat() and lose its alpha.
+    assert.match(pipeline, /const resultMime = backgroundParams\s*\n\s*\? \(detectedMime \|\| mime\)/);
+    assert.match(pipeline, /const resultFormat = backgroundParams/);
+  });
+
+  it("captures the preset on the video item so registration cannot race it", () => {
+    const impl = read("ui/src/store/storeAssetGenImpl.ts");
+    assert.match(impl, /backgroundPreset: item\.backgroundPreset \?\? s\.assetGenBackground/);
+    assert.doesNotMatch(impl, /metadata: \{\s*\n\s*source: "asset-gen",\s*\n\s*backgroundPreset: s\.assetGenBackground/);
+  });
 });
