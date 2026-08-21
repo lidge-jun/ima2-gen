@@ -33,7 +33,12 @@
 }
 
 .canvas-mode-topbar__label {
-  color: var(--tint-50);
+  color: var(--text-dim);
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--canvas-plate-soft);
+  border: 1px solid var(--hairline-soft);
+  backdrop-filter: blur(10px);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -56,7 +61,8 @@
   padding: 0 12px;
   border: 1px solid var(--tint-20);
   border-radius: 8px;
-  background: var(--tint-10);
+  background: var(--canvas-plate-mid);
+  backdrop-filter: blur(10px);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -92,7 +98,8 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 8px;
-  background: var(--tint-10);
+  background: var(--canvas-plate-mid);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--tint-20);
   color: var(--text);
   font-size: 14px;
@@ -108,7 +115,7 @@
 .canvas-mode-close kbd {
   padding: 2px 8px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--tint-20);
   border: 1px solid var(--tint-32);
   font-family: var(--font-mono, monospace);
   font-size: 12px;
@@ -128,4 +135,3 @@
 .canvas--mode-open {
   overscroll-behavior: contain;
 }
-

@@ -144,7 +144,10 @@ export function SettingsWorkspace() {
             aria-label={t("settings.closeAria")}
             title={t("settings.closeTitle")}
           >
-            X
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
           </button>
         </header>
 

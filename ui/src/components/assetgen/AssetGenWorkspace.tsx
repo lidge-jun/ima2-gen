@@ -40,6 +40,7 @@ export function AssetGenWorkspace() {
   const onWorkflowTabKeyDown = useTablistKeys<HTMLDivElement>();
   const [previewItem, setPreviewItem] = useState<GenerateItem | null>(null);
   const [railSelectedId, setRailSelectedId] = useState<string | null>(null);
+  const [projectAssetCount, setProjectAssetCount] = useState(0);
   const closePreview = useCallback(() => { setPreviewItem(null); setRailSelectedId(null); }, []);
   const openRailPreview = useCallback((item: GenerateItem, assetId: string) => {
     setRailSelectedId(assetId);
@@ -160,6 +161,9 @@ export function AssetGenWorkspace() {
         >
           {activeGens > 0 ? t("assetGen.generating") : t("assetGen.generate")}
         </button>
+        {!canGenerate ? (
+          <p className="assetgen-generate__hint">{t("assetGen.generateHint")}</p>
+        ) : null}
         <InFlightList />
       </aside>
       <main className="assetgen-results">
@@ -178,11 +182,23 @@ export function AssetGenWorkspace() {
           ) : null}
           {items.length === 0 ? (
           <div className="assetgen-empty">
-            <h2>{t("assetGen.emptyTitle")}</h2>
-            <p>{t("assetGen.emptyBody")}</p>
-            <button type="button" className="assetgen-empty__cta" onClick={focusPrompt}>
-              {t("assetGen.emptyCta")}
-            </button>
+            {projectAssetCount > 0 ? (
+              <>
+                <h2>{t("assetGen.emptySessionTitle")}</h2>
+                <p>{t("assetGen.emptySessionBody")}</p>
+                <button type="button" className="assetgen-empty__cta" onClick={() => setUIMode("assets")}>
+                  {t("assetGen.emptySessionCta")}
+                </button>
+              </>
+            ) : (
+              <>
+                <h2>{t("assetGen.emptyTitle")}</h2>
+                <p>{t("assetGen.emptyBody")}</p>
+                <button type="button" className="assetgen-empty__cta" onClick={focusPrompt}>
+                  {t("assetGen.emptyCta")}
+                </button>
+              </>
+            )}
           </div>
           ) : (
           <>
@@ -250,7 +266,7 @@ export function AssetGenWorkspace() {
           </>
           )}
         </div>
-        <AssetGenProjectRail selectedAssetId={railSelectedId} onPreview={openRailPreview} />
+        <AssetGenProjectRail selectedAssetId={railSelectedId} onPreview={openRailPreview} onAssetsLoaded={setProjectAssetCount} />
       </main>
       <KeyingPanel />
       {previewItem ? <AssetMediaLightbox item={previewItem} onClose={closePreview} /> : null}

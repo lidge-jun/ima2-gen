@@ -302,7 +302,7 @@
 
 .history-layout-toggle {
   display: grid;
-  grid-template-columns: repeat(3, minmax(62px, 1fr));
+  grid-template-columns: repeat(3, minmax(84px, 1fr));
   gap: 3px;
   padding: 3px;
   background: var(--surface-2);
@@ -322,6 +322,7 @@
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.03em;
+  white-space: nowrap;
   transition: background 140ms ease, color 140ms ease, transform 140ms ease;
 }
 

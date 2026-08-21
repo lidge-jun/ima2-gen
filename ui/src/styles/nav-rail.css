@@ -57,10 +57,11 @@
   top: 50%;
   translate: -4px -50%;
   z-index: 150;
+  pointer-events: none;
   padding: 5px 9px;
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+  background: var(--surface-2);
   box-shadow: 0 6px 20px var(--shadow-soft);
   color: var(--text);
   font-size: 12px;
@@ -75,6 +76,7 @@
 .nav-rail__btn:focus-visible .nav-rail__label {
   opacity: 1;
   translate: 0 -50%;
+  transition-delay: 0.35s;
 }
 
 /* ── Mobile: bottom tab bar ── */
