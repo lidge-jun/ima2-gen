@@ -1399,6 +1399,14 @@
     "language": {
       "title": "语言",
       "body": "切换界面语言，不会更改生成内容。"
+    },
+    "theme": {
+      "title": "主题",
+      "body": "浅色、深色，或跟随系统外观。",
+      "label": "主题",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "系统"
     }
   },
   "nodeCanvas": {

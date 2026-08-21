@@ -5,6 +5,7 @@ import { ImageModelSelect } from "./ImageModelSelect";
 import { ReasoningEffortSelect } from "./ReasoningEffortSelect";
 import { WebSearchToggle } from "./WebSearchToggle";
 import { LanguageToggle } from "./LanguageToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { HistoryStripLayoutToggle } from "./HistoryStripLayoutToggle";
 import { WorkspaceProfileSettings } from "./settings/WorkspaceProfileSettings";
 import { GrokPlannerSelect } from "./settings/GrokPlannerSelect";
@@ -295,6 +296,15 @@ export function SettingsWorkspace() {
                 </div>
                 <div className="settings-row__control">
                   <LanguageToggle />
+                </div>
+              </article>
+              <article className="settings-row">
+                <div className="settings-row__copy">
+                  <h4>{t("settings.theme.title")}</h4>
+                  <p>{t("settings.theme.body")}</p>
+                </div>
+                <div className="settings-row__control">
+                  <ThemeToggle />
                 </div>
               </article>
             </SettingsSectionBlock>

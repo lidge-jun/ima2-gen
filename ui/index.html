@@ -7,7 +7,19 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <title>Image Gen</title>
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem("ima2.themeMode");
+          var light =
+            m === "light" ||
+            (m === "system" &&
+              window.matchMedia("(prefers-color-scheme: light)").matches);
+          if (light) document.documentElement.dataset.theme = "light";
+        } catch (e) {}
+      })();
+    </script>
     <link
       rel="icon"
       type="image/svg+xml"

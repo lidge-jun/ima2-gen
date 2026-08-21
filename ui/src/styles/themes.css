@@ -11,6 +11,15 @@
   --minimap-border: #26262f;
 }
 
+:root[data-theme="light"] {
+  --canvas-grid: #d8d8e0;
+  --minimap-mask: rgba(242, 242, 246, 0.7);
+  --minimap-node-fill: #1a1a21;
+  --minimap-node-stroke: #fafafc;
+  --minimap-bg: #ececf1;
+  --minimap-border: #d8d8e0;
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);

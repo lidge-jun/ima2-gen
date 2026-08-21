@@ -121,6 +121,64 @@
   color-scheme: dark;
 }
 
+/* Light theme: tinted cool neutrals (not pure white), ink text, and a flipped
+   tint ladder so hover washes and hairlines read as ink instead of white.
+   Contrast targets: body text >= 4.5:1, muted text >= 4.5:1 on --bg. */
+:root[data-theme="light"] {
+  --bg: #f2f2f6;
+  --surface: #fafafc;
+  --surface-2: #ececf1;
+  --surface-3: #e2e2e9;
+  --border: #d8d8e0;
+  --border-strong: #b9b9c6;
+  --text: #1a1a21;
+  --text-dim: #45454f;
+  --text-muted: #5d5d68;
+  --text-faint: #8f8f9b;
+  --canvas-muted: #c9c9d3;
+  --accent: #1a1a21;
+  --accent-bright: #000;
+  --accent-soft: rgba(38, 40, 52, 0.08);
+  --accent-ink: #fafafc;
+  --accent-shadow: rgba(15, 15, 20, 0.12);
+  --focus-ring: rgba(29, 120, 180, 0.4);
+  --hairline: rgba(20, 20, 28, 0.16);
+  --hairline-soft: rgba(20, 20, 28, 0.05);
+  --control-bg: rgba(20, 20, 28, 0.04);
+  --control-hover: rgba(20, 20, 28, 0.08);
+  --tint-02: rgba(20, 20, 28, 0.02);
+  --tint-03: rgba(20, 20, 28, 0.03);
+  --tint-04: rgba(20, 20, 28, 0.04);
+  --tint-05: rgba(20, 20, 28, 0.05);
+  --tint-06: rgba(20, 20, 28, 0.06);
+  --tint-08: rgba(20, 20, 28, 0.08);
+  --tint-10: rgba(20, 20, 28, 0.1);
+  --tint-12: rgba(20, 20, 28, 0.12);
+  --tint-14: rgba(20, 20, 28, 0.14);
+  --tint-16: rgba(20, 20, 28, 0.16);
+  --tint-18: rgba(20, 20, 28, 0.18);
+  --tint-20: rgba(20, 20, 28, 0.2);
+  --tint-26: rgba(20, 20, 28, 0.26);
+  --tint-32: rgba(20, 20, 28, 0.32);
+  --tint-50: rgba(20, 20, 28, 0.5);
+  --tint-72: rgba(20, 20, 28, 0.72);
+  --tint-78: rgba(20, 20, 28, 0.78);
+  --scrim: rgba(20, 20, 26, 0.45);
+  --scrim-strong: rgba(20, 20, 26, 0.62);
+  --caption-scrim: rgba(20, 20, 26, 0.78);
+  --chip-scrim: rgba(20, 20, 26, 0.68);
+  --on-scrim: #fafafc;
+  --shadow-soft: rgba(30, 30, 40, 0.16);
+  --shadow-strong: rgba(30, 30, 40, 0.24);
+  --blue: #1d6fd1;
+  --green: #178a43;
+  --amber: #a96a06;
+  --red: #cc3340;
+  --glass: rgba(20, 20, 28, 0.04);
+  --glass-line: rgba(20, 20, 28, 0.1);
+  color-scheme: light;
+}
+
 /* Site-texture layers: corner glow + film-grain noise (behind all content).
    Opaque surfaces (panels, viewers, canvas) naturally cover them, so media
    review areas stay clean. */

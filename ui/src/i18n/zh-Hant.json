@@ -1399,6 +1399,14 @@
     "language": {
       "title": "語言",
       "body": "切換介面語言，不會變更生成內容。"
+    },
+    "theme": {
+      "title": "主題",
+      "body": "淺色、深色，或跟隨系統外觀。",
+      "label": "主題",
+      "light": "淺色",
+      "dark": "深色",
+      "system": "系統"
     }
   },
   "nodeCanvas": {
