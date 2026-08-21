@@ -16,9 +16,9 @@
 
 `ima2-gen` is a local-first visual generation runtime and studio for people and coding agents, with reproducible image and video workflows across multiple providers.
 
-Install globally and generate images and videos from eight core lanes: OpenAI OAuth/API, Grok OAuth/API, Antigravity CLI, Gemini API, AtlasCloud, and MiniMax. Runway and Higgsfield remain separate MCP-backed integrations. Iterate with history, references, node branches, multimode batches, and Canvas Mode cleanup.
+Install globally and generate images and videos from eight core lanes: OpenAI OAuth/API, Grok OAuth/API, Antigravity CLI, Gemini API, AtlasCloud, and MiniMax. Runway and Higgsfield remain separate MCP-backed integrations. Iterate with history, references, node branches, multimode batches, and Canvas Mode cleanup — now with one-click GPT background transparency (server-verified real alpha), annotation hover feedback, and a full light/dark/system theme.
 
-![ima2-gen video playback with gallery sidebar showing generated images and videos.](assets/screenshots/classic-generate-light.png)
+![ima2-gen classic workspace in light mode with a transparent-background result on the canvas.](assets/screenshots/classic-generate-lightmode.png)
 
 ## Quick Start
 
@@ -105,7 +105,8 @@ Ctrl+C now performs a clean shutdown — closing the database, stopping child pr
 - **Multimode batches**: launch several Classic outputs from one prompt, watch slot-by-slot progress, and continue from the best result.
 - **Video generation**: create short videos from text, a single image, or multiple reference images via Grok video models. SSE streaming shows planning → submitted → progress % → done. Video frame copy buttons (First/Mid/Last) let you extract and copy keyframes from generated videos.
 - **Storyboard mode**: toggle storyboard mode in the composer to maintain character and scene continuity across sequential frames. Works with both image and video generation — image keyframes are composed for video production, and video clips inherit character/environment lock rules.
-- **Canvas Mode**: zoom, pan, annotate, erase, clean backgrounds, keep transparent previews, and export either alpha or matte-backed versions.
+- **Canvas Mode**: zoom, pan, annotate (with hover highlighting), erase, clean backgrounds, keep transparent previews, and export either alpha or matte-backed versions. A one-click **GPT transparency** button sends the current image through the i2i edit lane and reports honestly whether the result carries real pixel alpha — verified on the server, never trusted from provider metadata.
+- **Light & dark themes**: a token-based light mode with tinted neutrals and AA contrast, switchable between light / dark / system in Settings, with no flash on load.
 - **Local gallery**: keep generated assets on your machine with session-aware history. By default the gallery shows the current session and an All Images toggle reveals the full history; the default scope is sticky across sessions. Each image records its generation time and reasoning effort in the result metadata, so they persist across reloads.
 - **Reference images**: drag, drop, paste, and attach up to 5 references (images) or up to 7 references (video); large images are compressed before upload.
 - **Prompt library imports**: import local prompt packs, GitHub folders, and curated GPT-image prompt hints into the built-in prompt library.
@@ -212,8 +213,12 @@ Use Canvas Mode when a generated image is close but needs targeted cleanup befor
 - Pick background-cleanup seeds, preview the mask, and save the cleanup as a canvas version.
 - Detect transparent images and show a checkerboard preview; export with preserved alpha or with a chosen matte color.
 - Saved canvas versions stay hidden from Gallery and HistoryStrip, but Canvas Mode can reuse them and attach a canvas version as the next reference.
+- Hover any annotation with the select tool to see a live outline and a move cursor before you click.
+- Press the **GPT transparency** button in the canvas toolbar to remove the background through the OAuth i2i lane in one click. The server decodes the returned bytes and reports `alphaVerified` — the toast tells you whether real transparency actually landed, instead of assuming.
 
 ![Canvas Mode with zoom controls, annotation marks, a sticky note, and the canvas toolbar.](assets/screenshots/canvas-mode-cleanup.png)
+
+![Canvas Mode in light theme with the one-click GPT transparency flow and a transparent checkerboard result.](assets/screenshots/canvas-mode-light-transparency.png)
 
 ### Prompt Library And Imports
 
@@ -230,8 +235,11 @@ be treated as a stable public feature yet.
 ### Settings
 
 The settings workspace keeps account, model, appearance, and language controls away from the generation sidebar.
+Appearance now includes a light / dark / system theme toggle; the light palette uses tinted neutrals with AA contrast and applies before first paint.
 
 ![Settings workspace with account navigation and generation model controls.](assets/screenshots/settings-workspace.png)
+
+![Settings appearance section with the light, dark, and system theme toggle in light mode.](assets/screenshots/settings-theme-toggle.png)
 
 ## CLI Commands
 
