@@ -21,7 +21,8 @@ describe("backgroundPresets parse", () => {
     }
   });
   it("rejects unknown values with INVALID_BACKGROUND_PRESET", () => {
-    for (const raw of ["green", "transparent", 42, {}]) {
+    // "transparent" is a VALID preset since 260821 (gpt-image-2 alpha support).
+    for (const raw of ["green", "alpha", 42, {}]) {
       const parsed = parseBackgroundPreset(raw);
       assert.ok("error" in parsed, `expected error for ${String(raw)}`);
       if ("error" in parsed) assert.equal(parsed.code, "INVALID_BACKGROUND_PRESET");
@@ -34,6 +35,13 @@ describe("backgroundPromptSuffix", () => {
     assert.match(backgroundPromptSuffix("chroma-green", "image"), /uniform solid chroma key green/);
     assert.match(backgroundPromptSuffix("white", "image"), /seamless white studio background/);
     assert.match(backgroundPromptSuffix("black", "image"), /seamless black studio background/);
+  });
+  it("transparent suffix demands a real alpha channel, not a colored matte", () => {
+    const suffix = backgroundPromptSuffix("transparent", "image");
+    assert.match(suffix, /fully transparent/i);
+    assert.match(suffix, /alpha channel/i);
+    // The whole point is that it must NOT ask for a solid backdrop.
+    assert.doesNotMatch(suffix, /uniform solid/i);
   });
   it("video suffix additionally pins per-frame stability", () => {
     const suffix = backgroundPromptSuffix("chroma-green", "video");

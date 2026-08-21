@@ -6,7 +6,7 @@ import type {
 } from "./generated/providers";
 
 export type UIMode = "classic" | "node" | "card-news" | "agent" | "assets" | "asset-gen" | "home";
-export type AssetGenBackgroundPreset = "chroma-green" | "white" | "black";
+export type AssetGenBackgroundPreset = "chroma-green" | "white" | "black" | "transparent";
 export type SettingsSection = "providers" | "workspace" | "general";
 export type HistoryStripLayout = "rail" | "horizontal" | "sidebar";
 export type Provider = CoreProviderId;
@@ -105,6 +105,12 @@ export type GenerateItem = {
   format?: string;
   moderation?: string;
   model?: string | null;
+  /**
+   * Background preset the image was generated with. "transparent" means the
+   * file carries a real alpha channel, so it needs a checkerboard preview and
+   * must not be offered to the color-keying flow.
+   */
+  backgroundPreset?: AssetGenBackgroundPreset | null;
   usage?: { total_tokens?: number } & Record<string, unknown>;
   thumb?: string;
   createdAt?: number;

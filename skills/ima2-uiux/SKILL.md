@@ -437,8 +437,17 @@ mockups is NOT a skip; it becomes generation input via `--ref`.
 When concept exploration (UX-CONCEPT-GEN-01) or image-first ism discovery
 (UX-IMAGE-FIRST-01) generates component/element mockups that need to float
 over arbitrary backgrounds — icons, 3D objects, product shots, stickers,
-UI chrome elements — use the cutout asset pipeline. GPT Image 2 cannot
-produce transparent backgrounds reliably; solid-bg-then-remove is mandatory.
+UI chrome elements — use the cutout asset pipeline. GPT Image 2 CAN produce
+real transparent backgrounds: pass `--bg transparent` and the asset comes back
+as an RGBA PNG, no keying pass required.
+
+```bash
+ima2 gen "3D render of [subject], [material], [composition]" \
+  --bg transparent --quality high --mode direct -o concept-01.png
+```
+
+Fall back to solid-bg-then-remove when you need a matte for a chroma-key
+pipeline, or when a subject refuses to isolate cleanly.
 
 **Cutout asset prompt template (concept pass):**
 
@@ -467,8 +476,10 @@ ima2 gen "[subject], centered. PURE SOLID background hex #[target]. \
 - Wrap in `isolation: isolate` container to prevent bleed
 - Programmatic: `sharp`, ImageMagick, `rembg`. Interactive: ima2 Canvas Mode.
 
-**Anti-pattern:** requesting "transparent background" or "PNG with alpha" in
-the prompt. The model produces fake checkerboard burned into the image.
+**Anti-pattern:** hand-writing "transparent background" or "PNG with alpha"
+into the prompt WITHOUT `--bg transparent` — bare wording can bake a fake
+checkerboard into an opaque image. Verify alpha (`channels: 4`) rather than
+trusting the preview.
 
 Full pipeline reference: `ima2-front/references/asset-requirements.md`
 § Asset Background Strategy (FE-ASSET-BG-01).

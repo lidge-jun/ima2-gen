@@ -28,6 +28,8 @@ import { errInfo } from "./errInfo.js";
 import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
 import { STORYBOARD_PREFIX } from "./storyboardPrefix.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "./backgroundPresets.js";
+import { resolveImageBackgroundParams, validateTransparentFormat, validateTransparentProvider, verifyBufferAlpha, makeTransparentResultError } from "./imageBackgroundParam.js";
+import { decodeRawForAlpha } from "./alphaDecode.js";
 import { validateModeration, imageFormatFromMime, upstreamErrorFields } from "./routeHelpers.js";
 import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
@@ -156,6 +158,15 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         return fail(400, { error: backgroundParse.error, code: backgroundParse.code });
       }
       const backgroundPreset = backgroundParse.preset;
+      // `format` is the canonical request field (default "png"). Validating
+      // req.body.outputFormat instead would let format:"jpeg" slip past and
+      // then get transcoded to JPEG on save, destroying the alpha channel.
+      const formatConflict = validateTransparentFormat(backgroundPreset, format);
+      if (formatConflict) {
+        return fail(400, { error: formatConflict.error, code: formatConflict.code });
+      }
+      // Atlas Cloud talks to the gpt-image-2 API directly and accepts the
+      // forced value; the OAuth proxy does not (see lib/imageBackgroundParam.ts).
       const composerPrompt = normalizeComposerPrompt(req.body?.composerPrompt);
       const composerInsertedPrompts = normalizeComposerInsertedPrompts(
         req.body?.composerInsertedPrompts,
@@ -176,6 +187,23 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       const effectiveSize = providerOptions.size;
       const webSearchEnabled = providerOptions.webSearchEnabled;
       const activeProvider = providerOptions.provider;
+      // Resolved AFTER provider resolution on purpose: the raw request `provider`
+      // defaults to "auto", so only `activeProvider` names the lane that will
+      // actually run. Atlas Cloud talks to the gpt-image-2 API directly and
+      // accepts a forced transparent background; the OAuth proxy rejects it
+      // (see lib/imageBackgroundParam.ts).
+      const backgroundParams = resolveImageBackgroundParams({
+        preset: backgroundPreset,
+        supportsForcedTransparent: activeProvider === "atlascloud",
+        requestedFormat: typeof format === "string" ? format : undefined,
+      });
+      // Grok/Gemini/Agy/MiniMax have no background parameter and their branches
+      // force JPEG, so a transparent request there would return an opaque image
+      // recorded as a cutout. Refuse instead of billing for a wrong result.
+      const providerConflict = validateTransparentProvider(backgroundPreset, activeProvider);
+      if (providerConflict) {
+        return fail(400, { error: providerConflict.error, code: providerConflict.code });
+      }
 
       // --- Element injection (after provider resolution) ---
       const rawElementIds: string[] = Array.isArray(req.body?.elementIds)
@@ -351,7 +379,13 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       });
       const startTime = Date.now();
       const mimeMap: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
-      const effectiveFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : String(format);
+      const providerForcesJpeg = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax";
+      // An alpha-bearing result must never be persisted through a lossy opaque
+      // format: embedImageMetadata re-encodes with sharp.toFormat(), so a JPEG
+      // here silently flattens the transparency we just asked for.
+      const effectiveFormat = backgroundParams
+        ? (backgroundParams.outputFormat ?? "png")
+        : (providerForcesJpeg ? "jpeg" : String(format));
       const mime = mimeMap[effectiveFormat] || "image/png";
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
       const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
@@ -397,6 +431,8 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             signal: cancelController.signal,
             requestId,
             references: refCheck.refDetails,
+            ...(backgroundParams ? { background: backgroundParams.background } : {}),
+            ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
           });
           throwIfJobCanceled(requestId);
           return r;
@@ -447,6 +483,8 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
                 webSearchEnabled,
                 signal: cancelController.signal,
                 allowPromptOnlyOAuthFallback: activeProvider !== "api",
+                ...(backgroundParams ? { background: backgroundParams.background } : {}),
+                ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
               },
             );
             throwIfJobCanceled(requestId);
@@ -469,6 +507,21 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       };
       const results = await Promise.allSettled(Array.from({ length: count }, generateOne));
       throwIfJobCanceled(requestId);
+      // Alpha is verified for EVERY result before anything is written. Doing it
+      // inside the write loop would let an earlier image land on disk before a
+      // later opaque one failed the batch, so the error would claim "nothing was
+      // saved" while an orphan file existed (adversarial review 260821 round 4).
+      if (backgroundParams) {
+        for (const r of results) {
+          if (r.status !== "fulfilled" || !r.value.b64) continue;
+          const verdict = await verifyBufferAlpha(Buffer.from(r.value.b64, "base64"), decodeRawForAlpha);
+          if (verdict.hasAlpha === false) {
+            const { reason } = verdict;
+            logEvent("generate", "transparent_result_opaque", { requestId, provider: activeProvider, reason });
+            throw makeTransparentResultError(activeProvider, reason);
+          }
+        }
+      }
       const images: Array<{
         image: string;
         filename: string;
@@ -483,10 +536,25 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         if (r.status === "fulfilled" && r.value.b64) {
           throwIfJobCanceled(requestId);
           const valueWithMime = r.value as typeof r.value & { mime?: string };
-          const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax"
-            ? (valueWithMime.mime || detectImageMimeFromB64(r.value.b64) || mime)
-            : mime;
-          const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(resultMime) : effectiveFormat;
+          // When alpha was requested, trust the BYTES, never a provider-supplied
+          // Content-Type. Atlas reads its mime from the download response header
+          // (lib/atlasCloudImageAdapter.ts), and a transparent PNG mislabeled
+          // "image/jpeg" would otherwise be re-encoded to JPEG by
+          // embedImageMetadata's sharp.toFormat() and lose its alpha channel.
+          const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax";
+          // Lazily decoded: only alpha requests always need the byte check, and
+          // the provider-mime path keeps its original short-circuit order.
+          const detectMime = () => detectImageMimeFromB64(r.value.b64);
+          const resultMime = backgroundParams
+            ? (detectMime() || mime)
+            : providerReportsMime
+              ? (valueWithMime.mime || detectMime() || mime)
+              : mime;
+          const resultFormat = backgroundParams
+            ? imageFormatFromMime(resultMime)
+            : providerReportsMime
+              ? imageFormatFromMime(resultMime)
+              : effectiveFormat;
           const retryValue = r.value as typeof r.value & {
             retryKind?: string | undefined;
             initialEventCount?: number | undefined;

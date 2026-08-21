@@ -39,6 +39,8 @@ export async function retryPromptOnlyJsonImage({
   referenceInputs = [],
   webSearchDroppedOnRetry,
   reasoningEffort,
+  background,
+  outputFormat,
 }: {
   postResponses: PostResponses;
   ctx: RouteRuntimeContext;
@@ -55,6 +57,9 @@ export async function retryPromptOnlyJsonImage({
   referenceInputs?: ReferenceInput[];
   webSearchDroppedOnRetry: boolean;
   reasoningEffort?: string;
+  /** Carried through so a retry cannot silently drop the alpha request. */
+  background?: string | undefined;
+  outputFormat?: string | undefined;
 }) {
   if (provider === "api") return null;
   const developerPrompt = webSearchDroppedOnRetry
@@ -116,7 +121,13 @@ export async function retryPromptOnlyJsonImage({
             ...(plan.developerPromptDroppedOnRetry ? [] : [{ role: "developer", content: developerPrompt }]),
             { role: "user", content: userContent },
           ],
-          tools: tools(false, { quality, size, moderation }),
+          tools: tools(false, {
+            quality,
+            size,
+            moderation,
+            ...(background ? { background } : {}),
+            ...(outputFormat ? { output_format: outputFormat } : {}),
+          }),
           tool_choice: imageToolChoice(true),
           reasoning: { effort: reasoningEffort || "low" },
           // OAuth/Codex proxy returns empty output[] for non-stream image requests; SSE required.

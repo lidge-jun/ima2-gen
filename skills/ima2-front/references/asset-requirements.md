@@ -322,10 +322,25 @@ When generating images with Korean text:
 
 ### Asset Background Strategy (FE-ASSET-BG-01, DEFAULT)
 
-GPT Image 2 does not reliably produce true transparent (alpha) backgrounds.
-Requesting "transparent background" or "PNG with alpha" yields unpredictable
-results — sometimes a faint checkerboard pattern, sometimes a solid color
-pretending to be transparent. Use the solid-background-then-remove strategy:
+GPT Image 2 CAN produce true transparent (alpha) backgrounds. For cutout
+assets, reach for `--bg transparent` FIRST:
+
+```bash
+ima2 gen "3D render of a liquid chrome splash blob, organic starburst shape, \
+  mirror-polished surface with iridescent cyan and gold reflections." \
+  --bg transparent --model oauth/luna --quality high --mode direct -o chrome-splash.png
+```
+
+The flag sends the real API background parameter plus a tuned cutout suffix,
+and the asset is saved as PNG (JPEG is refused — it cannot carry alpha).
+Verified 2026-08-21 on the live OAuth path: 5/5 generations returned RGBA with
+corners at alpha 0 and 42-56% fully transparent pixels, preserving PARTIAL
+alpha on glass and foliage. Always confirm with `sharp(file).metadata()`
+(`channels: 4, hasAlpha: true`) rather than trusting a preview.
+
+**Still use the solid-background-then-remove strategy when** you specifically
+need a matte (chroma-key video pipelines, compositing tools that expect green
+screen), or when one generation refuses to isolate its subject cleanly:
 
 **Generation: pure solid background.**
 
@@ -393,10 +408,10 @@ ima2 gen "Flat illustration of a coffee cup with steam, centered. \
 **`ima2 gen` fallback:** same solid-background prompting strategy applies.
 No Canvas Mode available; use CSS blend modes or programmatic removal only.
 
-**Anti-pattern:** requesting "transparent background" or "PNG with alpha channel"
-directly in the prompt. The model will often produce a fake checkerboard pattern
-burned into the image, or ignore the request entirely. Always use the
-solid-background strategy above.
+**Anti-pattern:** hand-writing "transparent background" or "PNG with alpha
+channel" into a prompt WITHOUT `--bg transparent`. Bare wording can still bake
+a fake checkerboard into an opaque image; the flag pairs the API parameter with
+the tuned suffix. Verify the alpha channel instead of eyeballing the preview.
 
 ### Prompt Iteration
 

@@ -225,7 +225,15 @@ export const useAppStore = create<AppState>((set, get, store) => ({
   retryAssetGenSave: (requestId) => retryAssetGenSaveImpl(requestId, set, get),
   setAssetGenPrompt: (v) => set({ assetGenPrompt: v }),
   setAssetGenBackground: (v) => set({ assetGenBackground: v }),
-  setAssetGenProvider: (v) => set({ assetGenProvider: v }),
+  setAssetGenProvider: (v) => set((state) => ({
+    assetGenProvider: v,
+    // Grok has no transparent-background parameter, so switching to it must
+    // not leave a stale "transparent" selection that silently returns an
+    // opaque image.
+    ...((v === "grok" || v === "grok-api") && state.assetGenBackground === "transparent"
+      ? { assetGenBackground: "chroma-green" as const }
+      : {}),
+  })),
   setAssetGenKind: (v) => set({ assetGenKind: v }),
   generateAssetGen: () => generateAssetGenImpl(set, get),
   loadAssets: (reset) => loadAssetsImpl(reset, set, get),

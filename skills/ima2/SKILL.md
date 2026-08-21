@@ -263,8 +263,29 @@ discouraged.
 
 ### Cutout Assets and Background Strategy
 
-GPT Image 2 does not reliably produce true transparent (alpha) backgrounds.
-Use the solid-background-then-remove strategy for cutout assets:
+GPT Image 2 CAN produce true transparent (alpha) backgrounds. Prefer
+`--bg transparent` for cutout assets:
+
+```bash
+ima2 gen "a minimal geometric fox head logo mark, flat vector style" \
+  --bg transparent --quality high --mode direct -o logo.png
+```
+
+This asks for a real alpha channel instead of a matte you have to key out
+later. Verified on the live OAuth path 2026-08-21: 5/5 generations returned
+RGBA PNGs with all four corners at alpha 0 and 42-56% fully transparent
+pixels, including genuine PARTIAL alpha on glass and leaf veins. Saved as PNG;
+JPEG is refused because it cannot carry alpha.
+
+Mechanics worth knowing: ChatGPT-session models pin the image tool to the
+`gpt-image-2-codex` variant, which rejects a FORCED `background: "transparent"`
+with a 400. ima2 therefore sends `background: "auto"` and puts the cutout
+intent in the prompt, which is what actually produces the alpha. You do not
+need to hand-write that suffix — `--bg transparent` adds it.
+
+**Use the solid-background-then-remove strategy only when you need a matte**
+(chroma keying a video, compositing pipelines that expect green screen), or
+when a specific generation refuses to isolate the subject cleanly:
 
 **Generate on a pure solid background:**
 - **Black** (`#000000`) for reflective/metallic/glass subjects
@@ -288,8 +309,11 @@ ima2 gen "3D chrome splash on PURE SOLID BLACK background hex #000000. \
 - `ima2 edit asset.png --prompt "remove the background, keep only the subject"`
 - Programmatic: `sharp` / ImageMagick / `rembg`
 
-**Anti-pattern:** requesting "transparent background" or "PNG with alpha" in the
-prompt — the model often produces a fake checkerboard burned into the image.
+**Anti-pattern:** hand-writing "transparent background" into a prompt WITHOUT
+`--bg transparent`. Bare prompt wording sometimes yields a checkerboard
+pattern painted into an opaque image; the flag sends the real API parameter and
+the tuned suffix together. Always verify alpha rather than trusting the look of
+a preview: `sharp(file).metadata()` should report `channels: 4, hasAlpha: true`.
 
 ### Korean Text in Images
 

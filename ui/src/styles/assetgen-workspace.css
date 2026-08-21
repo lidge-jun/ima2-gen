@@ -13,6 +13,16 @@
 .assetgen-bg-picker button.is-active { color: var(--accent-bright); background: var(--accent-soft); border-color: var(--accent); }
 .assetgen-bg-picker button:disabled { opacity: .45; cursor: not-allowed; }
 .assetgen-bg-picker__swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--hairline-soft); }
+/* Alpha swatch: the standard 2-tone checkerboard that reads as "transparent"
+   rather than "light grey", drawn with gradients so it needs no asset. */
+.assetgen-bg-picker__swatch--alpha {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #c8ccd4 25%, transparent 25%, transparent 75%, #c8ccd4 75%),
+    linear-gradient(45deg, #c8ccd4 25%, transparent 25%, transparent 75%, #c8ccd4 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
 .assetgen-generate { position: sticky; bottom: 0; z-index: 5; padding: 10px 12px; border: 0; border-radius: 9px; background: var(--accent); color: var(--accent-ink, #0b0b0f); font-weight: 650; cursor: pointer; box-shadow: 0 -8px 16px -6px var(--shadow-soft); }
 .assetgen-generate:disabled { opacity: .5; cursor: not-allowed; }
 .assetgen-results { min-width: 0; min-height: 0; display: flex; overflow: hidden; }
@@ -47,6 +57,12 @@
 .assetgen-tile__media video { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--bg); pointer-events: none; }
 .assetgen-tile.is-keyed .assetgen-tile__media { background: repeating-conic-gradient(var(--surface-2) 0% 25%, var(--bg) 0% 50%) 0 0 / 18px 18px; }
 .assetgen-tile.is-keyed .assetgen-tile__media img { background: transparent; }
+/* Alpha generations get the same checkerboard treatment as keyed results. */
+.assetgen-tile.is-alpha .assetgen-tile__media { background: repeating-conic-gradient(var(--surface-2) 0% 25%, var(--bg) 0% 50%) 0 0 / 18px 18px; }
+.assetgen-tile.is-alpha .assetgen-tile__media img { background: transparent; }
+/* Alpha assets must not be cropped to a square: a cutout's silhouette is the
+   content, so letterbox it against the checkerboard instead of cover-cropping. */
+.assetgen-tile.is-alpha .assetgen-tile__media img { object-fit: contain; }
 .assetgen-tile__media:hover .assetgen-tile__open-hint, .assetgen-tile__media:focus-visible .assetgen-tile__open-hint { opacity: 1; }
 .assetgen-tile__media:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 .assetgen-tile__open-hint { position: absolute; z-index: 2; right: 8px; bottom: 8px; padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--text) 18%, transparent); border-radius: calc(var(--radius) - 5px); background: color-mix(in srgb, var(--bg) 82%, transparent); color: var(--on-scrim); font-size: 10px; font-weight: 650; opacity: 0; transition: opacity 120ms ease; pointer-events: none; }

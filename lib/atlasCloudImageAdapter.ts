@@ -17,7 +17,9 @@ type AtlasGenerateOptions = {
   model?: string | undefined;
   size?: string | undefined;
   quality?: string | undefined;
-  outputFormat?: "jpeg" | "png" | undefined;
+  outputFormat?: "jpeg" | "png" | "webp" | undefined;
+  /** "auto" | "opaque" | "transparent" — forwarded to the gpt-image-2 API. */
+  background?: string | undefined;
   references?: AtlasReference[] | undefined;
   signal?: AbortSignal | undefined;
   requestId?: string | undefined;
@@ -203,7 +205,10 @@ export async function generateViaAtlasCloud(
     prompt,
     size: options.size || "1024x1024",
     quality: options.quality || "medium",
-    output_format: options.outputFormat || "jpeg",
+    // JPEG cannot carry an alpha channel, so a transparent request must never
+    // fall back to it. gpt-image-2 accepts png/webp with transparency.
+    output_format: options.outputFormat || (options.background === "transparent" ? "png" : "jpeg"),
+    ...(options.background ? { background: options.background } : {}),
     enable_base64_output: false,
     enable_sync_mode: false,
   };
@@ -214,6 +219,8 @@ export async function generateViaAtlasCloud(
     model,
     size: body.size,
     refs: imageUrls.length,
+    background: options.background ?? null,
+    outputFormat: body.output_format,
   });
   const predictionId = await submitGeneration(apiKey, body, options.signal);
   const output = await pollOutputUrl(apiKey, predictionId, options.signal);
