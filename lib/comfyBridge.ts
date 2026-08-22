@@ -183,6 +183,36 @@ async function readGeneratedImage(ctx: ComfyCtx, filename: unknown): Promise<Gen
   };
 }
 
+/**
+ * Uploads bytes into a ComfyUI instance's input/ folder and returns the name it
+ * assigned — which may differ from what we sent, since ComfyUI appends " (n)"
+ * on a name clash unless overwrite is set.
+ *
+ * Extracted from exportImageToComfy so the generate path can stage a reference
+ * image for a LoadImage node without going through the saved-image reader:
+ * i2i references arrive as base64 in a request, not as files on disk.
+ */
+export async function uploadBufferToComfy(
+  origin: string,
+  buffer: Buffer,
+  baseName: string,
+  timeoutMs: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const imageType = sniffImage(buffer);
+  return postToComfy(
+    origin,
+    {
+      buffer,
+      imageType,
+      sourceFilename: baseName,
+      uploadFilename: `ima2_${Date.now()}_${sanitizeBaseName(baseName)}.${imageType.ext}`,
+    },
+    timeoutMs,
+    fetchImpl,
+  );
+}
+
 async function postToComfy(origin: string, image: GeneratedImage, timeoutMs: number, fetchImpl: typeof fetch = fetch): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);

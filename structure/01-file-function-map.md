@@ -205,11 +205,12 @@ routes/
 | `lib/imageMetadata.ts` | 124 | `ima2.generation.v1` payload schema, XMP build/parse, embed limits |
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
 | `lib/canvasVersionStore.ts` | 331 | Canvas version snapshot storage, list, restore, and pruning |
-| `lib/comfyBridge.ts` | 236 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
+| `lib/comfyBridge.ts` | 266 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 219 | Comfy lane model registry: workflow records with per-record origin, id validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 234 | API-format graph parsing, class_type binding inference with ambiguity flags, non-mutating value injection, parameter-contract derivation |
 | `lib/comfyPngWorkflow.ts` | 100 | PNG tEXt/zTXt/iTXt reader that extracts ComfyUI's embedded API graph |
+| `lib/comfyImageAdapter.ts` | 450 | Comfy lane runtime: /prompt submit with bound graph, /history polling cross-checked against /queue, /view download with bounded parameters, state-split cancel, parallel per-origin health |
 | `lib/cardNewsTemplateStore.ts` | 253 | Card-news image template registry and preview reads |
 | `lib/cardNewsRoleTemplateStore.ts` | 48 | Built-in role-template list (`mid-5`, etc.) |
 | `lib/cardNewsManifestStore.ts` | 149 | Per-set manifest and sidecar persistence under `~/.ima2/generated/cardnews/` |

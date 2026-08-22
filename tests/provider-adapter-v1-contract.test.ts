@@ -14,11 +14,35 @@ import type { RuntimeContext } from "../lib/runtimeContext.js";
  * remembering to extend this file. That automatic coverage is one of #150's
  * acceptance criteria.
  */
+/**
+ * Minimal workflow record: the assertions read only `id` and
+ * `bind.refImage` (which decides whether the lane reports edit support).
+ */
+const FIXTURE_COMFY_WORKFLOW = {
+  id: "fixture-workflow",
+  label: "Fixture",
+  origin: "http://127.0.0.1:8188",
+  graph: {},
+  bind: { prompt: { node: "6", input: "text" }, output: { node: "9" } },
+  params: [],
+  createdAt: 0,
+  updatedAt: 0,
+};
+
 function contextWith(key: string | undefined): RuntimeContext {
   // One shared key value per registered lane. Note the spelling split the
   // adapters have to survive: atlasCloudApiKey (capital C) vs lane id
   // "atlascloud".
-  return { minimaxApiKey: key, atlasCloudApiKey: key } as unknown as RuntimeContext;
+  //
+  // The comfy lane has no credential at all: what decides whether it is usable
+  // is whether a workflow is registered, so its two-state rides the same switch
+  // as the keys. That state must arrive through RuntimeContext — a module-level
+  // store cache could not be empty and non-empty for the two calls below.
+  return {
+    minimaxApiKey: key,
+    atlasCloudApiKey: key,
+    comfyWorkflows: key ? [FIXTURE_COMFY_WORKFLOW] : [],
+  } as unknown as RuntimeContext;
 }
 
 const withKey = contextWith("test-key");
@@ -32,6 +56,7 @@ const withoutKey = contextWith(undefined);
 const EXPECTED_AUTH_REASON: Record<string, RegExp> = {
   minimax: /MiniMax API key missing/,
   atlascloud: /Atlas Cloud API key missing/,
+  comfy: /workflow/i,
 };
 
 test("at least one adapter is registered", () => {
@@ -56,9 +81,27 @@ test("every adapter lane exists in the capability registry", () => {
 
 test("listModels comes from the registry, not a hand-written list", () => {
   for (const adapter of listProviderAdapters(withKey)) {
+    const manifest = getProvider(adapter.laneId);
+    if (manifest.catalogAccess === "runtime") {
+      // A runtime-catalog lane's registry models are [] by construction, so
+      // comparing the two would pass vacuously and assert nothing. Branch
+      // explicitly and check the invariant that actually holds: the adapter
+      // projects exactly the workflows its context carries.
+      assert.deepEqual(
+        adapter.listModels().map((model) => model.id),
+        (withKey.comfyWorkflows ?? []).map((workflow) => workflow.id),
+        `${adapter.laneId} must report exactly the runtime catalog`,
+      );
+      assert.deepEqual(
+        getProviderAdapter(withoutKey, adapter.laneId)!.listModels(),
+        [],
+        `${adapter.laneId} must report nothing when its catalog is empty`,
+      );
+      continue;
+    }
     assert.deepEqual(
       adapter.listModels().map((model) => model.id),
-      getProvider(adapter.laneId).models.map((model) => model.id),
+      manifest.models.map((model) => model.id),
       `${adapter.laneId} must report exactly the registry's models`,
     );
   }

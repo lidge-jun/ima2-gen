@@ -8,6 +8,7 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
 import type { CoreProviderId } from "../registry.js";
 import { createAtlasCloudAdapter } from "./atlascloud.js";
+import { createComfyAdapter } from "./comfy.js";
 import { createMinimaxAdapter } from "./minimax.js";
 import type { ProviderAdapterV1 } from "./types.js";
 
@@ -16,6 +17,7 @@ type AdapterFactory = (ctx: RuntimeContext) => ProviderAdapterV1;
 const ADAPTER_FACTORIES: Partial<Record<CoreProviderId, AdapterFactory>> = {
   minimax: createMinimaxAdapter,
   atlascloud: createAtlasCloudAdapter,
+  comfy: createComfyAdapter,
 };
 
 export function getProviderAdapter(ctx: RuntimeContext, laneId: CoreProviderId): ProviderAdapterV1 | null {
