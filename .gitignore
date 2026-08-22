@@ -43,3 +43,7 @@ cache/
 
 !devlog/_plan/260821_260821d-release-train/
 !devlog/_plan/260821_260821d-release-train/*.md
+
+# ComfyUI provider lane unit (260823): plan docs plus live-probe evidence.
+!devlog/_plan/260823_comfy_provider_lane/
+!devlog/_plan/260823_comfy_provider_lane/**
