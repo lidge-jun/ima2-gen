@@ -116,7 +116,7 @@ routes/
 | `bin/commands/annotate.ts` | 120 | CLI annotation read/write/delete client |
 | `bin/commands/canvas-versions.ts` | 81 | CLI canvas version list/save client |
 | `bin/commands/metadata.ts` | 49 | CLI image metadata read client |
-| `bin/commands/comfy.ts` | 55 | CLI ComfyUI bridge export client |
+| `bin/commands/comfy.ts` | 292 | CLI ComfyUI bridge export client |
 | `bin/commands/cardnews.ts` | 250 | CLI dev-gated card-news client |
 | `bin/commands/config.ts` | 187 | CLI config get/set client |
 | `bin/commands/observability.ts` | 177 | Shared CLI handler for `storage`, `billing`, `providers`, `oauth`, and `inflight` aliases (`ima2.ts` routes those commands here) |

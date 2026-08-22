@@ -73,7 +73,7 @@ Since 3.0.0, `ima2 gen` and generate-mode `ima2 video` are **fail-closed**: they
 target through the lane catalog (`GET /api/models`) and exit 2 with `NO_DEFAULT_MODEL` when no
 `--model <lane>/<model>`, `--provider <lane>`, or persisted `ima2 defaults set image|video`
 target applies. Their `--provider` accepts explicit lanes only
-(`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|runway|higgsfield`); `--provider auto` exits 2 with
+(`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|comfy|runway|higgsfield`); `--provider auto` exits 2 with
 `PROVIDER_AUTO_REMOVED`. Inspect lanes and models with `ima2 models [--kind image|video] [--lane <lane>] [--json]`.
 
 `edit`, `multimode`, and `node generate` keep the legacy surface for now: `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>`, `--reasoning-effort {none\|low\|medium\|high\|xhigh\|max}`, `--web-search` / `--no-web-search`, `--model`, `--mode`, `--moderation`, `--ref <file>` (repeatable, up to 5 where supported), `-q low|medium|high`, `-n <count>`, `-o <file>`.
@@ -392,7 +392,7 @@ grokProvider.plannerModel     grokProvider.plannerTimeoutMs
 grokProvider.defaultImageModel
 log.level                    features.cardNews
 cardNewsPlanner.{enabled,model,timeoutMs,deterministicFallback}
-comfy.{defaultUrl,uploadTimeoutMs,maxUploadBytes}
+comfy.{defaultUrl,uploadTimeoutMs,maxUploadBytes,healthTimeoutMs,pollIntervalMs,generationTimeoutMs,maxDownloadBytes}
 storage.{generatedDir,generatedDirName}
 server.{port,host,bodyLimit}
 oauth.{proxyPort,statusTimeoutMs,restartDelayMs}
@@ -407,6 +407,10 @@ To change `provider` / `apiKey`, run `ima2 setup` or `ima2 login` instead.
 | Command | Description |
 |---|---|
 | `ima2 comfy export <filename>` | Export a ComfyUI workflow (`POST /api/comfy/export-image`) |
+| `ima2 comfy workflow ls` | List registered workflows with per-origin health |
+| `ima2 comfy workflow inspect <file>` | Show nodes and binding candidates without saving |
+| `ima2 comfy workflow add <file> --id <id>` | Register a workflow from an API-format JSON export or a ComfyUI PNG |
+| `ima2 comfy workflow rm <id>` | Remove a registered workflow |
 
 ## Discovery
 
