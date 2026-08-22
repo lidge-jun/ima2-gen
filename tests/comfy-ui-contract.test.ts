@@ -1,0 +1,98 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it } from "node:test";
+
+const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+
+describe("comfy UI model routing", () => {
+  it("never falls back to the OpenAI option list for comfy", () => {
+    // The default branch returns OPENAI_IMAGE_MODEL_OPTIONS, so without an
+    // explicit arm a ComfyUI selection would show gpt-5.6-luna and send a
+    // model the lane cannot execute.
+    const source = read("ui/src/lib/imageModels.ts");
+    const fn = source.slice(source.indexOf("export function getImageModelOptionsForProvider"));
+    const body = fn.slice(0, fn.indexOf("\n}"));
+    const comfyAt = body.indexOf('provider === "comfy"');
+    const fallbackAt = body.indexOf("return OPENAI_IMAGE_MODEL_OPTIONS");
+    assert.ok(comfyAt > 0, "comfy must have its own branch");
+    assert.ok(comfyAt < fallbackAt, "the comfy branch must precede the OpenAI fallback");
+    assert.match(body.slice(comfyAt, fallbackAt), /return \[\]/, "comfy returns an empty static list");
+  });
+
+  it("clears the model when switching to comfy instead of keeping a GPT one", () => {
+    // ImageModel is a literal union generated from the static registry, so a
+    // workflow id can never be a legal value; keeping the old model would make
+    // the first generation 400.
+    const source = read("ui/src/store/storeSettingsImpl.ts");
+    const fn = source.slice(source.indexOf("export function setProviderImpl"));
+    const body = fn.slice(0, fn.indexOf("\n}"));
+    assert.match(body, /provider === "comfy"/);
+    const comfyArm = body.slice(body.indexOf('provider === "comfy"'));
+    const arm = comfyArm.slice(0, comfyArm.indexOf("} else if") + 1 || 1200);
+    assert.match(arm, /comfyWorkflow: null/, "the workflow selection is reset");
+    // No auto-pick: registration order carries no meaning.
+    assert.doesNotMatch(arm, /workflows\[0\]/);
+  });
+
+  it("reads comfy models from the live lane catalog, not the generated list", () => {
+    const source = read("ui/src/components/GenProviderModelSelect.tsx");
+    assert.match(source, /getComfyLaneModels/, "the selector fetches the lane catalog");
+    assert.match(source, /value: "comfy", label: "ComfyUI"/, "comfy is offered as a provider");
+    // An offline workflow stays listed but unselectable: removing it reads as
+    // "my workflow disappeared", leaving it live starts a doomed generation.
+    assert.match(source, /disabled: Boolean\(entry\.description\?\.endsWith\("\(offline\)"\)\)/);
+  });
+});
+
+describe("comfy workflow manager", () => {
+  const source = read("ui/src/components/settings/ComfyWorkflowManager.tsx");
+
+  it("detects the workflow file by magic bytes, like the CLI", () => {
+    assert.match(source, /PNG_SIGNATURE/);
+    assert.match(source, /0x89, 0x50, 0x4e, 0x47/);
+  });
+
+  it("blocks submit until every ambiguous binding is chosen", () => {
+    // Preselecting a guess would let a user click through with positive and
+    // negative swapped, which surfaces much later as "the model ignores my
+    // prompt" with nothing pointing back at this dialog.
+    assert.match(source, /if \(candidate\.unambiguous\) preset\[candidate\.field\]/);
+    assert.match(source, /unresolved\.length === 0/);
+    assert.match(source, /disabled=\{!canSubmit\}/);
+  });
+
+  it("probes the origin through the server rather than fetching a typed URL", () => {
+    assert.match(source, /probeComfyOrigin/);
+    assert.doesNotMatch(source, /fetch\(origin/, "the browser must not fetch a typed origin directly");
+    // A malformed address and an unreachable one are different problems.
+    assert.match(source, /originUnreachable/);
+    assert.match(source, /originInvalid/);
+  });
+
+  it("does not encode status by colour alone", () => {
+    assert.match(source, /t\("comfy\.statusReady"\)/);
+    assert.match(source, /t\("comfy\.statusOffline"\)/);
+    assert.match(source, /aria-describedby=\{statusId\}/);
+  });
+});
+
+describe("comfy i18n", () => {
+  it("carries the comfy section in all four dictionaries with matching keys", () => {
+    const locales = ["en", "ko", "zh-Hans", "zh-Hant"];
+    const sections = locales.map((locale) => JSON.parse(read(`ui/src/i18n/${locale}.json`)).comfy);
+    for (const [index, section] of sections.entries()) {
+      assert.ok(section, `${locales[index]} is missing the comfy section`);
+    }
+    const reference = JSON.stringify(Object.keys(sections[0]).sort());
+    for (const [index, section] of sections.entries()) {
+      assert.equal(JSON.stringify(Object.keys(section).sort()), reference, `${locales[index]} key set differs`);
+    }
+    // Empty state must name the next action, not just report emptiness.
+    for (const [index, section] of sections.entries()) {
+      assert.match(section.empty, /Export \(API\)/, `${locales[index]} empty state must tell the user what to do`);
+    }
+  });
+});

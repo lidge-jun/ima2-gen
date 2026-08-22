@@ -2226,5 +2226,42 @@
     "refRemove": "消除",
     "refRemoved": "參考已刪除。",
     "refUndo": "撤銷"
+  },
+  "comfy": {
+    "workflowsTitle": "ComfyUI 工作流",
+    "addTitle": "註冊工作流",
+    "loading": "正在載入工作流…",
+    "empty": "尚未註冊工作流。請在 ComfyUI 中使用 Workflow > Export (API) 匯出，或上傳 ComfyUI 產生的 PNG。",
+    "colId": "工作流",
+    "colOrigin": "實例",
+    "colStatus": "狀態",
+    "colActions": "操作",
+    "statusReady": "正常",
+    "statusOffline": "無回應",
+    "remove": "刪除",
+    "fileLabel": "工作流檔案（API 匯出或 ComfyUI PNG）",
+    "originLabel": "ComfyUI 位址",
+    "checkOrigin": "檢查",
+    "originReachable": "已連線",
+    "originUnreachable": "沒有回應。ComfyUI 正在執行嗎？",
+    "originInvalid": "必須是帶連接埠的本機回環 http 位址，例如 http://127.0.0.1:8188",
+    "idLabel": "工作流 id",
+    "labelLabel": "顯示名稱",
+    "bindTitle": "請求欄位要寫入哪個節點？",
+    "bindAmbiguous": "有些欄位對應到多個節點。請逐一選擇——選錯會讓正負提示詞悄悄互換。",
+    "choose": "請選擇…",
+    "register": "註冊",
+    "inspectFailed": "無法讀取該工作流檔案。",
+    "registerFailed": "無法註冊該工作流。",
+    "removeFailed": "無法刪除該工作流。",
+    "field": {
+      "prompt": "提示詞",
+      "negativePrompt": "負面提示詞",
+      "width": "寬",
+      "height": "高",
+      "seed": "種子",
+      "refImage": "參考圖",
+      "output": "輸出節點"
+    }
   }
 }

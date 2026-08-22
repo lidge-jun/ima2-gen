@@ -91,6 +91,11 @@ export function getImageModelOptionsForProvider(provider: Provider) {
   if (provider === "agy" || provider === "gemini-api") return GEMINI_IMAGE_MODEL_OPTIONS;
   if (provider === "atlascloud") return ATLASCLOUD_IMAGE_MODEL_OPTIONS;
   if (provider === "minimax") return MINIMAX_IMAGE_MODEL_OPTIONS;
+  // Comfy has no static option rows: its models are workflows fetched from
+  // /api/models at runtime. Falling through to the OpenAI list would show
+  // gpt-5.6-luna under a ComfyUI selection and send a model the lane cannot
+  // execute.
+  if (provider === "comfy") return [];
   return OPENAI_IMAGE_MODEL_OPTIONS;
 }
 

@@ -209,6 +209,7 @@ export type GenerationDefaults = Partial<{
   provider: Provider;
   mcpProvider: string | null;
   mcpModel: string | null;
+  comfyWorkflow: string | null;
   mcpMediaKind: "image" | "video";
   mcpRatio: string | null;
   mcpParameters: Record<string, McpPresetValue>;
@@ -485,6 +486,14 @@ export type AppState = PresetState & ReferenceTraySlice & {
   /** Hydrated lazily by the sidebar MCP selector until the store bootstrap owns this lane. */
   mcpProvider?: string | null;
   mcpModel?: string | null;
+  /**
+   * Selected comfy workflow id.
+   *
+   * Separate from imageModel because that field is a literal union generated
+   * from the static registry, and a user-registered workflow id can never be a
+   * member of it. Mirrors how mcpModel carries a runtime-catalog selection.
+   */
+  comfyWorkflow?: string | null;
   mcpMediaKind?: "image" | "video";
   mcpRatio?: string | null;
   mcpParameters?: Record<string, McpPresetValue>;

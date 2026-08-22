@@ -2226,5 +2226,42 @@
     "refRemove": "Remove",
     "refRemoved": "Reference removed.",
     "refUndo": "Undo"
+  },
+  "comfy": {
+    "workflowsTitle": "ComfyUI workflows",
+    "addTitle": "Register a workflow",
+    "loading": "Loading workflows…",
+    "empty": "No workflow registered yet. Export one from ComfyUI with Workflow > Export (API), or drop a PNG ComfyUI generated.",
+    "colId": "Workflow",
+    "colOrigin": "Instance",
+    "colStatus": "Status",
+    "colActions": "Actions",
+    "statusReady": "ready",
+    "statusOffline": "offline",
+    "remove": "Remove",
+    "fileLabel": "Workflow file (API export or ComfyUI PNG)",
+    "originLabel": "ComfyUI address",
+    "checkOrigin": "Check",
+    "originReachable": "Reachable",
+    "originUnreachable": "No answer — is ComfyUI running?",
+    "originInvalid": "Must be a loopback http address with a port, e.g. http://127.0.0.1:8188",
+    "idLabel": "Workflow id",
+    "labelLabel": "Display name",
+    "bindTitle": "Where do the request fields go?",
+    "bindAmbiguous": "Some fields matched more than one node. Pick each one — a wrong choice swaps your prompts silently.",
+    "choose": "Choose…",
+    "register": "Register",
+    "inspectFailed": "Could not read that workflow file.",
+    "registerFailed": "Could not register the workflow.",
+    "removeFailed": "Could not remove the workflow.",
+    "field": {
+      "prompt": "Prompt",
+      "negativePrompt": "Negative prompt",
+      "width": "Width",
+      "height": "Height",
+      "seed": "Seed",
+      "refImage": "Reference image",
+      "output": "Output node"
+    }
   }
 }

@@ -2226,5 +2226,42 @@
     "refRemove": "삭제",
     "refRemoved": "참조 이미지를 지웠어요.",
     "refUndo": "되돌리기"
+  },
+  "comfy": {
+    "workflowsTitle": "ComfyUI 워크플로",
+    "addTitle": "워크플로 등록",
+    "loading": "워크플로를 불러오는 중…",
+    "empty": "등록된 워크플로가 없습니다. ComfyUI에서 Workflow > Export (API)로 내보내거나, ComfyUI가 만든 PNG를 올리세요.",
+    "colId": "워크플로",
+    "colOrigin": "인스턴스",
+    "colStatus": "상태",
+    "colActions": "동작",
+    "statusReady": "정상",
+    "statusOffline": "응답 없음",
+    "remove": "삭제",
+    "fileLabel": "워크플로 파일 (API 내보내기 또는 ComfyUI PNG)",
+    "originLabel": "ComfyUI 주소",
+    "checkOrigin": "확인",
+    "originReachable": "연결됨",
+    "originUnreachable": "응답이 없습니다. ComfyUI가 켜져 있나요?",
+    "originInvalid": "포트가 있는 루프백 http 주소여야 합니다. 예: http://127.0.0.1:8188",
+    "idLabel": "워크플로 id",
+    "labelLabel": "표시 이름",
+    "bindTitle": "요청 값을 어느 노드에 넣을까요?",
+    "bindAmbiguous": "후보가 여럿인 항목이 있습니다. 직접 고르세요. 잘못 고르면 프롬프트가 조용히 뒤바뀝니다.",
+    "choose": "선택하세요",
+    "register": "등록",
+    "inspectFailed": "워크플로 파일을 읽지 못했습니다.",
+    "registerFailed": "워크플로를 등록하지 못했습니다.",
+    "removeFailed": "워크플로를 삭제하지 못했습니다.",
+    "field": {
+      "prompt": "프롬프트",
+      "negativePrompt": "네거티브 프롬프트",
+      "width": "가로",
+      "height": "세로",
+      "seed": "시드",
+      "refImage": "참조 이미지",
+      "output": "출력 노드"
+    }
   }
 }

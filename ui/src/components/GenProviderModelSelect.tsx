@@ -13,6 +13,7 @@ import {
   type McpMediaKind,
 } from "../lib/mcpSelection";
 import { useAppStore } from "../store/useAppStore";
+import { getComfyLaneModels, type ComfyLaneModel } from "../lib/api-comfy";
 import {
   hydrateMcpSelectionImpl,
   reconcileMcpPresetStateImpl,
@@ -31,6 +32,7 @@ const CORE_PROVIDER_OPTIONS: ReadonlyArray<{ value: Provider; label: string }> =
   { value: "gemini-api", label: "Gem API" },
   { value: "atlascloud", label: "Atlas" },
   { value: "minimax", label: "MiniMax" },
+  { value: "comfy", label: "ComfyUI" },
 ];
 
 const MCP_PREFIX = "mcp:";
@@ -74,6 +76,16 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   const [catalogError, setCatalogError] = useState(false);
   const [catalogRetryToken, setCatalogRetryToken] = useState(0);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [comfyLane, setComfyLane] = useState<ComfyLaneModel[]>([]);
+
+  useEffect(() => {
+    if (provider !== "comfy") { setComfyLane([]); return; }
+    const controller = new AbortController();
+    void getComfyLaneModels(controller.signal)
+      .then((models) => { if (!controller.signal.aborted) setComfyLane(models); })
+      .catch(() => { if (!controller.signal.aborted) setComfyLane([]); });
+    return () => controller.abort();
+  }, [provider]);
 
   useEffect(() => {
     hydrateMcpSelectionImpl(useAppStore.setState, useAppStore.getState);
@@ -124,6 +136,16 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   );
   const providerValue = mcpProvider ? `${MCP_PREFIX}${mcpProvider}` : `${CORE_PREFIX}${provider}`;
   const coreModels = getImageModelOptionsForProvider(provider);
+  // An offline workflow stays listed but unselectable: removing it reads as
+  // "my workflow disappeared", while leaving it live would start a generation
+  // that is guaranteed to fail.
+  const comfyWorkflows = provider === "comfy"
+    ? comfyLane.map((entry) => ({
+      id: entry.id,
+      label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
+      disabled: Boolean(entry.description?.endsWith("(offline)")),
+    }))
+    : [];
   const coreModelValue = videoModel ? `${VIDEO_PREFIX}${videoModel}` : imageModel;
   const modelValue = mcpProvider
     ? (mcpModel ? encodeMcpModelValue(mcpMediaKind, mcpModel) : "")
@@ -239,10 +261,22 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
     const providerSupportsVideo = provider === "grok" || provider === "grok-api";
     modelGroups.push({
       label: t("mcp.imageModels"),
-      items: coreModels.map((option) => ({
-        value: option.value,
-        label: option.shortLabel,
-      })),
+      // Comfy models are registered workflows, so they come from the live
+      // /api/models catalog rather than the generated static list — the same
+      // runtime-catalog path the MCP lanes above already use. getImageModel
+      // OptionsForProvider returns [] for comfy precisely so this branch is
+      // the only source, instead of GPT rows leaking in under a ComfyUI
+      // selection.
+      items: provider === "comfy"
+        ? comfyWorkflows.map((entry) => ({
+          value: entry.id,
+          label: entry.label,
+          ...(entry.disabled ? { disabled: true } : {}),
+        }))
+        : coreModels.map((option) => ({
+          value: option.value,
+          label: option.shortLabel,
+        })),
     });
     if (providerSupportsVideo || videoModel) {
       modelGroups.push({

@@ -10,6 +10,7 @@ import { HistoryStripLayoutToggle } from "./HistoryStripLayoutToggle";
 import { WorkspaceProfileSettings } from "./settings/WorkspaceProfileSettings";
 import { GrokPlannerSelect } from "./settings/GrokPlannerSelect";
 import { McpProviderConnections } from "./settings/McpProviderConnections";
+import { ComfyWorkflowManager } from "./settings/ComfyWorkflowManager";
 import { useAppStore } from "../store/useAppStore";
 import type { GalleryScope } from "../store/useAppStore";
 import { useI18n } from "../i18n";
@@ -189,6 +190,7 @@ export function SettingsWorkspace() {
             <SettingsSectionBlock id="providers" setRef={setSectionRef}>
               <AccountSettings />
               <McpProviderConnections />
+              <ComfyWorkflowManager />
               <article className="settings-row">
                 <div className="settings-row__copy">
                   <h4>{t("readiness.settingsTitle")}</h4>

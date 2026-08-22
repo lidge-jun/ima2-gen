@@ -380,6 +380,22 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
     const minimaxModel = "image-01";
     saveImageModel(minimaxModel);
     set({ provider, imageModel: minimaxModel });
+  } else if (provider === "comfy") {
+    /**
+     * Switch the lane and leave imageModel alone.
+     *
+     * ImageModel is a literal union generated from the static registry, so a
+     * comfy workflow id can never be a legal value for it and there is nothing
+     * honest to write here. The selector reads the comfy catalog from
+     * /api/models and holds its own selection, showing "unselected" until the
+     * user picks a workflow; that is why setComfyWorkflowImpl exists rather
+     * than widening this field.
+     *
+     * No auto-pick either: the order workflows were registered in carries no
+     * meaning, so choosing "the first" would run a graph nobody asked for on
+     * the user's GPU.
+     */
+    set({ provider, comfyWorkflow: null });
   } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && provider !== "minimax" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel) || isMinimaxImageModel(currentModel))) {
     set({ provider, imageModel: DEFAULT_IMAGE_MODEL });
     saveImageModel(DEFAULT_IMAGE_MODEL);

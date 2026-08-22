@@ -2226,5 +2226,42 @@
     "refRemove": "消除",
     "refRemoved": "参考已删除。",
     "refUndo": "撤消"
+  },
+  "comfy": {
+    "workflowsTitle": "ComfyUI 工作流",
+    "addTitle": "注册工作流",
+    "loading": "正在加载工作流…",
+    "empty": "尚未注册工作流。请在 ComfyUI 中使用 Workflow > Export (API) 导出，或上传 ComfyUI 生成的 PNG。",
+    "colId": "工作流",
+    "colOrigin": "实例",
+    "colStatus": "状态",
+    "colActions": "操作",
+    "statusReady": "正常",
+    "statusOffline": "无响应",
+    "remove": "删除",
+    "fileLabel": "工作流文件（API 导出或 ComfyUI PNG）",
+    "originLabel": "ComfyUI 地址",
+    "checkOrigin": "检查",
+    "originReachable": "已连接",
+    "originUnreachable": "没有响应。ComfyUI 正在运行吗？",
+    "originInvalid": "必须是带端口的本地回环 http 地址，例如 http://127.0.0.1:8188",
+    "idLabel": "工作流 id",
+    "labelLabel": "显示名称",
+    "bindTitle": "请求字段写入哪个节点？",
+    "bindAmbiguous": "有些字段匹配到多个节点。请逐一选择——选错会让正负提示词悄悄互换。",
+    "choose": "请选择…",
+    "register": "注册",
+    "inspectFailed": "无法读取该工作流文件。",
+    "registerFailed": "无法注册该工作流。",
+    "removeFailed": "无法删除该工作流。",
+    "field": {
+      "prompt": "提示词",
+      "negativePrompt": "负面提示词",
+      "width": "宽",
+      "height": "高",
+      "seed": "种子",
+      "refImage": "参考图",
+      "output": "输出节点"
+    }
   }
 }

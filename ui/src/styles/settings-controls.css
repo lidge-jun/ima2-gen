@@ -200,3 +200,88 @@
 .settings-row__control .ctl-select {
   min-width: 220px;
 }
+
+/* ── ComfyUI workflow manager ────────────────────────────────────────────
+   A D8 expert surface: the user is reading node ids and origins, so this is
+   a dense table with real column separation rather than decorated cards. */
+.comfy-workflow-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.comfy-workflow-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-dim);
+  padding: 4px 12px 4px 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.comfy-workflow-table td {
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.05));
+  vertical-align: middle;
+}
+
+.comfy-workflow-table td:last-child,
+.comfy-workflow-table th:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+
+.comfy-workflow-table .mono {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: var(--text-dim);
+}
+
+.comfy-origin-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Label above control. Without this the label and its input are inline
+   siblings, and "ComfyUI address" wraps into the file row above it. */
+.comfy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.comfy-field > label {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.comfy-origin-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comfy-bind-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.comfy-bind-row label {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.comfy-bind-row select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 60%;
+}
+
+/* An unconfirmed ambiguous binding is marked by more than colour. */
+.comfy-bind-row select[aria-invalid="true"] {
+  border-color: var(--warn, #d08c3a);
+}
