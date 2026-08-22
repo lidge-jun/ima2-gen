@@ -23,6 +23,8 @@ import {
 } from "../lib/mcp/providerRegistry.js";
 import type { McpConnectionStatus } from "../lib/mcp/types.js";
 import { deriveModels } from "../lib/providers/derive.js";
+import { listWorkflows } from "../lib/comfyWorkflowStore.js";
+import { probeComfyOrigins } from "../lib/comfyImageAdapter.js";
 import type { CoreProviderId } from "../lib/providers/registry.js";
 import {
   requireRuntimeContext,
@@ -234,7 +236,54 @@ function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
   });
 }
 
-function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
+/**
+ * The comfy lane, whose catalog and liveness both come from runtime state.
+ *
+ * The lane status folds the way grokLaneState does, but partial availability is
+ * normal here in a way it is not for a hosted provider: 8188 can be up while
+ * 8189 is down, and marking the whole lane disconnected would hide four usable
+ * workflows because of one dead box. So the lane stays ready while each
+ * workflow carries its own liveness in its description.
+ */
+async function comfyLane(ctx: RuntimeContext): Promise<ModelLaneDto> {
+  const workflows = await listWorkflows();
+  if (workflows.length === 0) {
+    return lane(
+      { status: "disconnected", reason: "No ComfyUI workflow registered" },
+      {},
+      { image: [], video: [] },
+    );
+  }
+  const health = await probeComfyOrigins(
+    workflows.map((workflow) => workflow.origin),
+    ctx.config.comfy.healthTimeoutMs,
+  );
+  const liveness = [...health.values()];
+  const anyLive = liveness.some((entry) => entry.ok);
+  const allLive = liveness.every((entry) => entry.ok);
+  const state: LaneState = anyLive
+    ? { status: "ready", ...(allLive ? {} : { reason: "Some ComfyUI instances are offline" }) }
+    : { status: "disconnected", reason: "No ComfyUI instance responded" };
+  const first = workflows[0]!;
+  return lane(state, { image: first.id }, {
+    image: workflows.map((workflow) => ({
+      id: workflow.id,
+      label: workflow.label,
+      description: health.get(workflow.origin)?.ok
+        ? workflow.origin
+        : `${workflow.origin} (offline)`,
+      capabilities: {
+        source: "verified-contract" as const,
+        aspectRatios: [],
+        parameters: [],
+        inputRoles: workflow.bind.refImage ? ["text", "image_references"] : ["text"],
+      },
+    })),
+    video: [],
+  });
+}
+
+async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
   const gptModels = entries(ctx.config.imageModels.valid);
   return {
     oauth: oauthLane(ctx, gptModels),
@@ -245,6 +294,7 @@ function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
     "gemini-api": geminiLane(ctx),
     atlascloud: atlasCloudLane(ctx),
     minimax: minimaxLane(ctx),
+    comfy: await comfyLane(ctx),
   };
 }
 
@@ -388,10 +438,10 @@ export function registerModelsRoutes(
         resolveAgyStatus(deps.detectAgyInstalled ?? cachedAgyDetection),
         buildMcpLanes(ctx),
       ]);
-      res.json({ ok: true, lanes: { ...buildCoreLanes(ctx, agyInstalled), ...mcp } });
+      res.json({ ok: true, lanes: { ...(await buildCoreLanes(ctx, agyInstalled)), ...mcp } });
     } catch {
       const mcp = await buildMcpLanes(ctx);
-      res.json({ ok: true, lanes: { ...buildCoreLanes(ctx, false), ...mcp } });
+      res.json({ ok: true, lanes: { ...(await buildCoreLanes(ctx, false)), ...mcp } });
     }
   });
 }

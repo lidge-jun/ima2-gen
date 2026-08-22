@@ -1,6 +1,6 @@
 import type { RuntimeContext } from "./runtimeContext.js";
 import { ATLASCLOUD_TEXT_TO_IMAGE_MODEL } from "./atlasCloudImageAdapter.js";
-import { FALLBACK_IMAGE_MODEL, normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel, normalizeMinimaxImageModel } from "./imageModels.js";
+import { FALLBACK_IMAGE_MODEL, normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel, normalizeMinimaxImageModel, normalizeComfyWorkflowModel } from "./imageModels.js";
 
 export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   provider = "oauth",
@@ -50,6 +50,20 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
     return {
       provider: "minimax" as const,
       model: minimaxModelCheck.model,
+      reasoningEffort: "none",
+      size: rawSize || "1024x1024",
+      webSearchEnabled: false,
+    };
+  }
+
+  if (provider === "comfy") {
+    // Shape only here; the pipeline confirms the workflow exists because that
+    // read is async and this function is not.
+    const comfyCheck = normalizeComfyWorkflowModel(rawModel);
+    if (comfyCheck.error) return { error: comfyCheck.error, code: comfyCheck.code, status: comfyCheck.status };
+    return {
+      provider: "comfy" as const,
+      model: comfyCheck.model,
       reasoningEffort: "none",
       size: rawSize || "1024x1024",
       webSearchEnabled: false,

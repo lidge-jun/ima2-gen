@@ -87,7 +87,7 @@ describe("core provider registry parity", () => {
 
     assert.deepEqual(
       maskRejectedLanes.sort(),
-      ["agy", "atlascloud", "gemini-api", "grok", "grok-api", "minimax"],
+      ["agy", "atlascloud", "comfy", "gemini-api", "grok", "grok-api", "minimax"],
       "the edit route's mask-rejection list changed; update the manifest to match",
     );
 

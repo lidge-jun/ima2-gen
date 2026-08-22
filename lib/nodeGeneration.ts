@@ -66,6 +66,19 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
         ? rawContextMode
         : "parent-plus-refs";
       const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "on";
+      // Node mode has no comfy dispatch in this unit; without this the request
+      // falls through to generateViaResponses and bills OAuth. The envelope is
+      // this file's nested shape, not the flat one generate uses.
+      // Removed in wp7.
+      if (provider === "comfy") {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "COMFY_SURFACE_UNSUPPORTED";
+        return res.status(400).json({
+          error: { code: "COMFY_SURFACE_UNSUPPORTED", message: "provider 'comfy' is not supported on this surface yet" },
+          parentNodeId,
+        });
+      }
       const providerOptions = resolveProviderOptions(ctx, {
         provider,
         rawModel,

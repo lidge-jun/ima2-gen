@@ -116,7 +116,7 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
     const body = await response.json() as ModelsBody;
     assert.equal(body.ok, true);
     assert.deepEqual(Object.keys(body.lanes), [
-      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "runway", "higgsfield",
+      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "comfy", "runway", "higgsfield",
     ]);
 
     assert.equal(body.lanes.oauth.status, "ready");

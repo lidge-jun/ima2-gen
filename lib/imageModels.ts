@@ -133,6 +133,41 @@ export function normalizeMinimaxImageModel(rawModel: unknown) {
   return { model: rawModel };
 }
 
+/**
+ * The comfy lane has no compile-time model set: a "model" is a workflow the
+ * user registered, so deriveModels("comfy", "image") is empty BY DESIGN and a
+ * membership check would reject every valid id.
+ *
+ * This validates SHAPE only — the same closed alphabet the workflow store
+ * enforces — and existence is checked in the pipeline, which can await the
+ * store. Splitting it keeps this module synchronous and free of storage
+ * dependencies.
+ *
+ * There is deliberately no fallback model. Every other lane defaults an empty
+ * input to a sensible flagship; comfy has no such thing, because the order the
+ * user registered workflows in carries no meaning. Picking "the first one"
+ * would silently run a graph nobody asked for on a local GPU.
+ */
+const COMFY_WORKFLOW_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+
+export function normalizeComfyWorkflowModel(rawModel: unknown) {
+  if (typeof rawModel !== "string" || rawModel.length === 0) {
+    return {
+      error: "provider 'comfy' requires an explicit workflow id as the model",
+      code: "COMFY_WORKFLOW_REQUIRED" as const,
+      status: 400 as const,
+    };
+  }
+  if (!COMFY_WORKFLOW_ID_RE.test(rawModel)) {
+    return {
+      error: "ComfyUI workflow id must be 1-64 chars of lowercase letters, digits, '-' or '_'",
+      code: "INVALID_COMFY_WORKFLOW_ID" as const,
+      status: 400 as const,
+    };
+  }
+  return { model: rawModel };
+}
+
 // ── Grok video (T2V/I2V) ─────────────────────────────────────────────────
 // Video is a separate generation kind, not an image model. Keep it out of the
 // image model unions/helpers above so `grok-` image classification is unaffected.

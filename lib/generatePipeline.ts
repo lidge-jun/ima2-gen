@@ -17,6 +17,7 @@ import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
+import { generateViaComfy } from "./comfyImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, setJobPhase, INFLIGHT_RETRY_AFTER_SECONDS, } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
@@ -448,6 +449,31 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           throwIfJobCanceled(requestId);
           return r;
         }
+        if (activeProvider === "comfy") {
+          const r = await generateViaComfy(generationPrompt, requireRuntimeContext(ctx), {
+            model: imageModel,
+            size: effectiveSize,
+            signal: cancelController.signal,
+            requestId,
+            references: refCheck.refDetails,
+            ...(typeof req.body?.seed === "number" ? { seed: req.body.seed } : {}),
+            ...(req.body?.comfyParams && typeof req.body.comfyParams === "object"
+              ? { params: req.body.comfyParams as Record<string, number | string | boolean> }
+              : {}),
+            // A local GPU queue is real user-visible waiting. Without this the
+            // UI would show "streaming" while the job sits behind three other
+            // prompts on someone's workstation.
+            onQueue: (info) => {
+              const phase = info.running ? "streaming" : "queued";
+              setJobPhase(requestId, phase);
+              if (asyncMode) {
+                publish(requestId, "phase", { requestId, phase, queuePosition: info.position });
+              }
+            },
+          });
+          throwIfJobCanceled(requestId);
+          return r;
+        }
         if (activeProvider === "grok" || activeProvider === "grok-api") {
           const grokModel = resolveGrokQualityModel(imageModel, quality);
           const r = await generateViaGrok(generationPrompt, ctx, {
@@ -541,7 +567,10 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           // (lib/atlasCloudImageAdapter.ts), and a transparent PNG mislabeled
           // "image/jpeg" would otherwise be re-encoded to JPEG by
           // embedImageMetadata's sharp.toFormat() and lose its alpha channel.
-          const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax";
+          // Comfy is in this list but deliberately NOT in providerForcesJpeg: a
+          // workflow may end in a background-removal node, and forcing JPEG
+          // would flatten the alpha it just produced.
+          const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "comfy";
           // Lazily decoded: only alpha requests always need the byte check, and
           // the provider-mime path keeps its original short-circuit order.
           const detectMime = () => detectImageMimeFromB64(r.value.b64);
@@ -588,6 +617,20 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           const providerUrl = typeof valueWithProviderUrl.providerUrl === "string"
             ? valueWithProviderUrl.providerUrl
             : undefined;
+          // Read through one widened view, the way providerUrl above is: the
+          // adapters return a union and only the comfy arm carries these.
+          const comfyValue = r.value as typeof r.value & {
+            promptId?: unknown;
+            origin?: unknown;
+            effectiveModel?: unknown;
+          };
+          const comfyMeta = activeProvider === "comfy" && typeof comfyValue.promptId === "string"
+            ? {
+              comfyPromptId: comfyValue.promptId,
+              comfyOrigin: typeof comfyValue.origin === "string" ? comfyValue.origin : undefined,
+              comfyWorkflow: typeof comfyValue.effectiveModel === "string" ? comfyValue.effectiveModel : undefined,
+            }
+            : {};
           const meta = {
             kind: "classic",
             requestId,
@@ -613,6 +656,10 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             webSearchEnabled,
            refsCount: providerRefCount,
            ...(backgroundPreset ? { backgroundPreset } : {}),
+            // Paired on purpose: a ComfyUI prompt_id is instance-local, so
+            // asking a second instance about an id from the first returns
+            // "not found" and reads as a job that vanished.
+            ...comfyMeta,
             ...(Array.isArray(req.body?.presetIds) && req.body.presetIds.length > 0 ? { presetIds: req.body.presetIds } : {}),
             ...(appliedElementIds.length > 0 ? { elementIds: appliedElementIds } : {}),
             ...(elementDroppedRefs.length > 0 ? { droppedRefs: elementDroppedRefs } : {}),

@@ -15,6 +15,7 @@ import { generateViaAgy } from "../lib/agyImageAdapter.js";
 import { generateViaGeminiApi } from "../lib/geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../lib/atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../lib/minimaxImageAdapter.js";
+import { generateViaComfy } from "../lib/comfyImageAdapter.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, INFLIGHT_RETRY_AFTER_SECONDS } from "../lib/inflight.js";
 import {
   isGenerationCanceledError,
@@ -182,11 +183,13 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         finishErrorCode = "INVALID_EDIT_INPUT";
         return res.status(400).json({ error: "Prompt and image are required" });
       }
-      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax") && rawMask) {
+      // Comfy joins this list because inpainting needs a LoadImageMask node,
+      // which is a binding-schema extension rather than a request flag.
+      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "comfy") && rawMask) {
         finishStatus = "error";
         finishHttpStatus = 400;
-        const code = activeProvider === "agy" ? "AGY_MASK_UNSUPPORTED" : activeProvider === "gemini-api" ? "GEMINI_API_MASK_UNSUPPORTED" : activeProvider === "atlascloud" ? "ATLASCLOUD_MASK_UNSUPPORTED" : activeProvider === "minimax" ? "MINIMAX_MASK_UNSUPPORTED" : "GROK_MASK_UNSUPPORTED";
-        const label = activeProvider === "agy" ? "Agy" : activeProvider === "gemini-api" ? "Gemini API" : activeProvider === "atlascloud" ? "Atlas Cloud" : activeProvider === "minimax" ? "MiniMax" : "Grok";
+        const code = activeProvider === "agy" ? "AGY_MASK_UNSUPPORTED" : activeProvider === "gemini-api" ? "GEMINI_API_MASK_UNSUPPORTED" : activeProvider === "atlascloud" ? "ATLASCLOUD_MASK_UNSUPPORTED" : activeProvider === "minimax" ? "MINIMAX_MASK_UNSUPPORTED" : activeProvider === "comfy" ? "COMFY_MASK_UNSUPPORTED" : "GROK_MASK_UNSUPPORTED";
+        const label = activeProvider === "agy" ? "Agy" : activeProvider === "gemini-api" ? "Gemini API" : activeProvider === "atlascloud" ? "Atlas Cloud" : activeProvider === "minimax" ? "MiniMax" : activeProvider === "comfy" ? "ComfyUI" : "Grok";
         return res.status(400).json({ error: `${label} provider does not support mask editing`, code, ...errorEnvelopeFields({ code, status: 400 }) });
       }
       const maskCheck: any = validateEditMask(imageB64, rawMask);
@@ -269,6 +272,25 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         resultMimeFromProvider = r.mime;
       } else if (activeProvider === "minimax") {
         const r = await generateViaMinimax(`Edit this image: ${prompt}`, requireRuntimeContext(ctx), {
+          model: imageModel,
+          size: effectiveSize,
+          signal: cancelController.signal,
+          requestId,
+          references: [{ b64: imageB64, declaredMime: null, detectedMime: detectImageMimeFromB64(imageB64) || null }],
+        });
+        resultB64 = r.b64;
+        providerUrl = r.providerUrl ?? null;
+        usage = r.usage;
+        revisedPrompt = r.revisedPrompt ?? undefined;
+        webSearchCalls = r.webSearchCalls;
+        resultMimeFromProvider = r.mime;
+      } else if (activeProvider === "comfy") {
+        // i2i goes through the same adapter as generate: the reference is
+        // uploaded to the instance and its filename injected into the
+        // workflow's LoadImage binding. A graph without that binding refuses
+        // with COMFY_WORKFLOW_BIND_INVALID rather than silently ignoring the
+        // input image.
+        const r = await generateViaComfy(`Edit this image: ${prompt}`, requireRuntimeContext(ctx), {
           model: imageModel,
           size: effectiveSize,
           signal: cancelController.signal,

@@ -154,6 +154,21 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       const maxImages = normalizeMaxImages(maxImagesResult.value, maxAllowedImages);
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
+      // Multimode has no comfy dispatch in this unit. Without this guard the
+      // request would reach generateViaResponses and bill OAuth for an image
+      // the user asked ComfyUI to make — silently, with no error to trace.
+      // Removed in wp7 when this surface gains a real comfy branch.
+      if (provider === "comfy") {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "COMFY_SURFACE_UNSUPPORTED";
+        return respondMultimodeValidationError(res, requestId, asyncMode, 400, {
+          error: "provider 'comfy' is not supported on this surface yet",
+          code: "COMFY_SURFACE_UNSUPPORTED",
+          status: 400,
+          requestId,
+        });
+      }
       const providerOptions = resolveProviderOptions(ctx, {
         provider,
         rawModel,

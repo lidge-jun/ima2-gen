@@ -77,6 +77,15 @@ async function generateAgentImage(
 ) {
   const requestId = options.requestId ?? `agent_${ulid()}`;
   const grokPlannerModel = isAgentGrokPlannerModel(options.model) ? options.model : undefined;
+  // Agent Mode has no comfy dispatch in this unit. This surface has no response
+  // object, so it throws the way its other provider failures do. Without it the
+  // run reaches generateViaResponses and bills OAuth. Removed in wp7.
+  if ((options.provider ?? "oauth") === "comfy") {
+    const err = new Error("provider 'comfy' is not supported on this surface yet") as Error & { code?: string | undefined; status?: number | undefined };
+    err.code = "COMFY_SURFACE_UNSUPPORTED";
+    err.status = 400;
+    throw err;
+  }
   const providerOptions = resolveProviderOptions(ctx, {
     provider: options.provider ?? "oauth",
     rawModel: grokPlannerModel ? undefined : options.model,
