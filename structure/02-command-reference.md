@@ -71,7 +71,22 @@ The CLI surface was expanded to near-feature-parity with the server API in #45 (
 | `ima2 annotate <subcommand>` | `/api/annotations/:filename` | Get/put/delete canvas annotations |
 | `ima2 canvas-versions <subcommand>` | `/api/canvas-versions*` | List/save canvas version snapshots |
 | `ima2 metadata <subcommand>` | `/api/metadata/read` | Read embedded XMP metadata from images |
-| `ima2 comfy <subcommand>` | `/api/comfy/export-image` | Export images to a ComfyUI bridge workspace |
+| `ima2 comfy export <filename>` | `/api/comfy/export-image` | Upload a generated image into ComfyUI's `input/` |
+| `ima2 comfy workflow ls` | `GET /api/comfy/workflows` | List registered workflows with per-origin health |
+| `ima2 comfy workflow inspect <file>` | `POST /api/comfy/inspect` | Show nodes and binding candidates without saving |
+| `ima2 comfy workflow add <file> --id <id>` | `POST /api/comfy/workflows` | Register from an API-format export or a ComfyUI PNG |
+| `ima2 comfy workflow rm <id>` | `DELETE /api/comfy/workflows/:id` | Remove a registered workflow |
+
+`workflow add` identifies the file by magic bytes rather than extension, and
+refuses ambiguous bindings even with `--yes` — `--yes` only accepts candidates
+that were already unambiguous. Two `CLIPTextEncode` nodes is the ordinary
+shape and a wrong guess swaps positive and negative silently.
+
+`ima2 gen --provider comfy --model <workflow>` needs no separate wiring:
+`bin/lib/modelResolver.ts` resolves against the live `GET /api/models`
+catalog, so a registered workflow is selectable and an unregistered id fails
+with `MODEL_NOT_FOUND` while an all-offline lane fails with
+`LANE_UNAVAILABLE`.
 | `ima2 cardnews <subcommand>` | `/api/cardnews/*` | Dev-gated card-news templates/sets/jobs |
 | `ima2 config <get\|set>` | local | Read/write `~/.ima2/config.json` |
 | `ima2 defaults <subcommand>` | local or `/api/capabilities` | Inspect/change persistent model and reasoning defaults |

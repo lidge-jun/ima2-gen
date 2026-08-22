@@ -196,10 +196,61 @@ Folder writes preserve tree integrity with stable errors: `INVALID_PARENT` rejec
 | `PUT` | `/api/canvas-versions/:filename` | raw PNG payload + canvas metadata headers | `{ item }` |
 | `POST` | `/api/metadata/read` | `{ image }` | `{ metadata, missing? }` |
 | `POST` | `/api/comfy/export-image` | `{ filename, origin? }` | `{ ok, uploadedFilename }` |
+| `GET` | `/api/comfy/workflows` | none | `{ ok, workflows: [{ …record, health }] }` |
+| `POST` | `/api/comfy/workflows` | `{ id, label?, origin?, graph? \| pngBase64?, bind, params?, replace? }` | `{ ok, workflow }` |
+| `DELETE` | `/api/comfy/workflows/:id` | none | `{ ok, id }` |
+| `POST` | `/api/comfy/inspect` | `{ graph? \| pngBase64? }` | `{ ok, nodes, candidates, needsConfirmation }` |
+| `POST` | `/api/comfy/probe` | `{ origin }` | `{ ok, origin, health }` |
 
 Canvas annotation and canvas-version routes are internal editor persistence surfaces. Canvas versions are hidden from the normal Gallery and HistoryStrip visible domain; navigation should prefer source images and only display a matching canvas version inside Canvas Mode.
 
 `/api/comfy/export-image` accepts a generated filename only, validates local-loopback ComfyUI origins, and uploads the selected image to ComfyUI without exposing arbitrary filesystem paths.
+
+### ComfyUI provider lane (260823)
+
+The workflow routes back the `comfy` provider lane, which is the reverse
+direction of `export-image`: ima2 CALLS a user-run ComfyUI
+(`POST /prompt` → `GET /history/{id}` → `GET /view`) instead of uploading into
+it. There is no OpenAI-compatible `/v1` shim and no supervised child process —
+unlike the grok lane, no ready-made proxy binary exists to bundle, so a shim
+would duplicate the workflow-binding work and add spawn, port and restart
+supervision for nothing.
+
+A registered workflow IS a model: it appears in the selector where
+`grok-imagine-image-2.0` sits in the grok lane. Because that set is
+user-authored, the lane's registry manifest carries `models: []` with
+`catalogAccess: "runtime"`, and `comfyLane()` fills the real list from the
+workflow store. That field is deliberately NOT the same one as
+`lib/mcp/providerRegistry.ts`'s `McpCatalogAccess`, which solves a similar
+problem for remote MCP servers in a different module.
+
+Each record carries its OWN origin, so single-instance and multi-instance
+setups (8188 for SDXL, 8189 for Flux) share one code path;
+`config.comfy.defaultUrl` is only what the registration form starts with.
+`normalizeComfyOrigin` gates every write, so a record can never hold an
+address the bridge would refuse later.
+
+`/inspect` deliberately does not persist: it is the input to the confirmation
+step. Binding candidates are inferred by `class_type`, but a field matched by
+several nodes stays `unambiguous: false` — two `CLIPTextEncode` nodes is the
+ordinary shape and `_meta.title` is free text the user can rename, so guessing
+would swap positive and negative silently.
+
+`/probe` normalizes before it fetches, so the browser never issues a request
+to a typed string. A malformed origin is 400 while an unreachable one is 200
+with `health.ok === false` — telling someone to start ComfyUI when their URL
+has no port sends them looking in the wrong place.
+
+Queueing splits by responsibility: ComfyUI owns GPU scheduling through its own
+`/prompt` queue, while ima2 owns admission and tracking through
+`lib/inflight.ts` and the SSE bus. The sidecar records `comfyPromptId` PAIRED
+with `comfyOrigin`, because a prompt_id is instance-local and looking one up
+on another instance returns "not found".
+
+Multimode, node mode and Agent Mode refuse this lane with
+`COMFY_SURFACE_UNSUPPORTED` (400) until they gain a real dispatch branch;
+without that guard they fall through to `generateViaResponses` and bill OAuth
+for an image the user asked ComfyUI to make.
 
 ## Inflight Jobs
 

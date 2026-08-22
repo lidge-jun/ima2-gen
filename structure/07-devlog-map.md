@@ -119,3 +119,19 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 1. Check `_plan/` for active work before starting a new initiative — there may be prior research.
 2. When finishing an initiative, move its `_plan/` entry to `_fin/` with a `README.md` summary.
 3. Keep related architecture, audit, and evidence documents inside the owning unit folder.
+
+## Active units
+
+| Unit | Status |
+|---|---|
+| `260823_comfy_provider_lane/` | ComfyUI provider lane. wp0-wp6 landed on `dev`; wp7 (multimode/node/agent surfaces) deferred past the merge boundary |
+
+`260823_comfy_provider_lane` is worth reading as a worked example of the
+documentation routine rather than only for its subject. It carries the
+docs-first Phase-0 roadmap (`000` plus diff-level `010`-`070`), a live protocol
+probe (`001`) that promoted second-party protocol claims to first-party and
+corrected one assumption the roadmap had made, two audit syntheses
+(`002`, `003`) recording 22 reviewer findings across three rounds with zero
+rebuttals, and per-cycle evidence documents (`004`-`007`) — including `006`,
+which records two places where the pre-written plan was wrong about the code
+and following it literally would have removed validation.
