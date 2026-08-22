@@ -9,7 +9,7 @@ import { REGISTRY } from "../lib/providers/registry.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
-const CORE_IDS = ["oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax"];
+const CORE_IDS = ["oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "comfy"];
 const OPENAI_MODELS = ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
 const CLI_IMAGE_MODELS = [
   ...OPENAI_MODELS,
@@ -52,7 +52,7 @@ describe("core provider registry parity", () => {
   it("preserves all four reference-capacity layers", () => {
     assert.equal(config.limits.maxRefCount, 5);
     assert.deepEqual(referenceLimits("image"), {
-      grok: 3, "grok-api": 3, agy: 3, "gemini-api": 3, atlascloud: 10, minimax: 1,
+      grok: 3, "grok-api": 3, agy: 3, "gemini-api": 3, atlascloud: 10, minimax: 1, comfy: 4,
     });
     assert.deepEqual(referenceLimits("video"), { grok: 7, "grok-api": 7 });
     assert.deepEqual(ELEMENT_CAPACITY_DEFAULTS, {

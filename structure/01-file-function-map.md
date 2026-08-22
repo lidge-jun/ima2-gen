@@ -73,7 +73,7 @@ routes/
 | File | Lines | Responsibility |
 |---|---:|---|
 | `server.ts` | 602 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
-| `config.ts` | 430 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
+| `config.ts` | 453 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 93 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 34 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
@@ -195,7 +195,7 @@ routes/
 | `lib/promptSafetyPolicy.ts` | 3 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
 | `lib/responsesImageAdapter.ts` | 497 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
 | `lib/providerOptions.ts` | 120 | Per-provider option assembly (provider, model, size, reasoning effort, web search) |
-| `lib/runtimeContext.ts` | 209 | Per-request runtime context plumbing for routes and lib helpers |
+| `lib/runtimeContext.ts` | 225 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
 | `lib/oauthNormalize.ts` | 31 | Upstream OAuth response field normalization |
 | `lib/openDirectory.ts` | 48 | Cross-platform open of the generated directory (used by `/api/storage/open-generated-dir`) |
@@ -206,7 +206,10 @@ routes/
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
 | `lib/canvasVersionStore.ts` | 331 | Canvas version snapshot storage, list, restore, and pruning |
 | `lib/comfyBridge.ts` | 236 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
-| `lib/pngInfo.ts` | 27 | PNG-info text-chunk parsing for ComfyUI/A1111 metadata interop |
+| `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
+| `lib/comfyWorkflowStore.ts` | 219 | Comfy lane model registry: workflow records with per-record origin, id validation, corrupt-file tolerance |
+| `lib/comfyGraphBind.ts` | 234 | API-format graph parsing, class_type binding inference with ambiguity flags, non-mutating value injection, parameter-contract derivation |
+| `lib/comfyPngWorkflow.ts` | 100 | PNG tEXt/zTXt/iTXt reader that extracts ComfyUI's embedded API graph |
 | `lib/cardNewsTemplateStore.ts` | 253 | Card-news image template registry and preview reads |
 | `lib/cardNewsRoleTemplateStore.ts` | 48 | Built-in role-template list (`mid-5`, etc.) |
 | `lib/cardNewsManifestStore.ts` | 149 | Per-set manifest and sidecar persistence under `~/.ima2/generated/cardnews/` |
@@ -226,7 +229,7 @@ routes/
 | `lib/capabilities.ts` | 181 | Runtime provider and feature capability resolution |
 | `lib/characterBindings.ts` | 112 | Character provider binding validation, refs preservation guard, and drift detection |
 | `lib/composerSnapshot.ts` | 34 | Composer state snapshot normalization |
-| `lib/configKeys.ts` | 69 | Runtime configuration key definitions and validation |
+| `lib/configKeys.ts` | 73 | Runtime configuration key definitions and validation |
 | `lib/elementCompiler.ts` | 200 | Structured element prompt compilation and validation |
 | `lib/geminiApiImageAdapter.ts` | 265 | Gemini API image-generation provider adapter |
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |

@@ -721,6 +721,7 @@
     "geminiApiKeyRequired": "Gemini API 需要密钥",
     "atlasCloudApiKeyRequired": "Atlas Cloud 需要 API 密钥",
     "minimaxApiKeyRequired": "MiniMax API 需要密钥",
+    "comfyNoWorkflow": "尚未注册 ComfyUI 工作流",
     "comingSoon": "即将推出",
     "agyCompatTitle": "Gemini (agy)",
     "agyCompatBody": "1024x1024 固定，JPEG 输出，最多 3 个参考。没有质量/尺寸控制。",

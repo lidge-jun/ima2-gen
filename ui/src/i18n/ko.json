@@ -721,6 +721,7 @@
     "geminiApiKeyRequired": "Gemini API 키 필요",
     "atlasCloudApiKeyRequired": "Atlas Cloud API 키 필요",
     "minimaxApiKeyRequired": "MiniMax API 키 필요",
+    "comfyNoWorkflow": "등록된 ComfyUI 워크플로가 없습니다",
     "comingSoon": "준비 중",
     "agyCompatTitle": "Gemini (agy)",
     "agyCompatBody": "1024x1024 고정, JPEG 출력, 최대 3개 참조. 품질/크기 조절 없음.",

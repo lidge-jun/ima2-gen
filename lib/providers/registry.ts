@@ -178,6 +178,31 @@ export const REGISTRY = [
     limits: { timeoutMs: 120_000, maxInputBytes: 50 * 1024 * 1024 },
     errorPrefix: "MINIMAX_",
   },
+  {
+    id: "comfy",
+    vendor: "comfy",
+    credentials: [{
+      kind: "local-http",
+      envVars: ["IMA2_COMFY_URL"],
+      configKey: "comfy",
+    }],
+    // Empty BY CONSTRUCTION, not by omission. A comfy "model" is a workflow the
+    // user registered at runtime, so no compile-time list can be correct — see
+    // catalogAccess below. deriveModelsFrom() returns an empty Set for [] rather
+    // than throwing (lib/providers/deriveCore.ts), so the derive layer already
+    // tolerates this; the lane builder in routes/models.ts supplies the real list.
+    models: [],
+    catalogAccess: "runtime",
+    // A defensive request-level cap, not a workflow property: how many
+    // references a given graph accepts is decided by its LoadImage bindings.
+    referenceLimits: { image: 4, edit: 4 },
+    elementTaxonomy: null,
+    // Local GPUs are slower than hosted APIs and the job may sit in ComfyUI's
+    // own queue first. Grok video carries the same 30-minute ceiling for the
+    // same reason (config.ts:353).
+    limits: { timeoutMs: 1_800_000 },
+    errorPrefix: "COMFY_",
+  },
 ] as const satisfies readonly CoreProviderManifestBase[];
 
 export type CoreProviderId = (typeof REGISTRY)[number]["id"];

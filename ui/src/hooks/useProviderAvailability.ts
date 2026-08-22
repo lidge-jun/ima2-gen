@@ -82,5 +82,15 @@ export function useProviderAvailability(): Record<Provider, ProviderAvailability
       ok: minimaxKeyOk,
       reason: minimaxKeyOk ? "" : t("provider.minimaxApiKeyRequired"),
     },
+    comfy: {
+      // The comfy lane has no credential: what makes it usable is a registered
+      // workflow reachable on its own origin. The models endpoint already folds
+      // that into a lane status, so this reports the lane's own verdict rather
+      // than inventing a second source of truth. Filled in properly by wp5;
+      // until then the lane is reported unavailable rather than silently ok,
+      // because an "ok" lane with no workflow would 400 on every generation.
+      ok: false,
+      reason: t("provider.comfyNoWorkflow"),
+    },
   };
 }

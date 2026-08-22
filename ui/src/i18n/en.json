@@ -721,6 +721,7 @@
     "geminiApiKeyRequired": "Gemini API key required",
     "atlasCloudApiKeyRequired": "Atlas Cloud API key required",
     "minimaxApiKeyRequired": "MiniMax API key required",
+    "comfyNoWorkflow": "No ComfyUI workflow registered",
     "comingSoon": "Coming soon",
     "agyCompatTitle": "Gemini (agy)",
     "agyCompatBody": "1024x1024 fixed, JPEG output, max 3 refs. No quality/size control.",

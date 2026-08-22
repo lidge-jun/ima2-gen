@@ -2,6 +2,7 @@ import type OpenAI from "openai";
 import { config as runtimeConfigDefault } from "../config.js";
 import type { McpConnectionManager } from "./mcp/connectionManager.js";
 import type { GrokProxyHandle } from "./grokProxyLauncher.js";
+import type { ComfyWorkflowRecord } from "./comfyWorkflowStore.js";
 
 export type AppConfig = typeof runtimeConfigDefault;
 export type ApiKeySource = "env" | "oauth" | "config" | "none" | undefined;
@@ -56,6 +57,21 @@ export interface RuntimeContext {
   geminiAuthMode?: string | undefined;
   /** Lazily attached by routes/mcpConnections.ts (030 WP3); undefined until MCP routes register. */
   mcpConnectionManager?: McpConnectionManager | undefined;
+  /**
+   * Registered comfy workflows, hydrated at boot and refreshed whenever
+   * routes/comfy.ts writes one.
+   *
+   * Lives on the context rather than behind a store read because
+   * ProviderAdapterV1.validateAuth() and listModels() are both SYNCHRONOUS
+   * while the store is async, and because the adapter contract suite injects
+   * lane state exclusively through RuntimeContext — a module-level cache could
+   * not be empty and non-empty for the two calls that suite makes.
+   *
+   * Generation does NOT read this: lib/comfyImageAdapter reads the store
+   * directly, so a context that lags by one write can never produce a wrong
+   * image. This projection exists for the adapter contract and lane display.
+   */
+  comfyWorkflows?: readonly ComfyWorkflowRecord[] | undefined;
 }
 
 /** A partial used during boot when only some fields are known, or by callers

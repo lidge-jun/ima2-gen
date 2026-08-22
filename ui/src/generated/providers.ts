@@ -8,7 +8,8 @@ export const CORE_PROVIDER_IDS = [
   "agy",
   "gemini-api",
   "atlascloud",
-  "minimax"
+  "minimax",
+  "comfy"
 ] as const;
 export type CoreProviderId = typeof CORE_PROVIDER_IDS[number];
 export const CORE_PROVIDER_ID_SET: ReadonlySet<string> = new Set(CORE_PROVIDER_IDS);
@@ -91,6 +92,10 @@ export const PROVIDER_MODELS = {
       "image-01-live"
     ],
     "video": []
+  },
+  "comfy": {
+    "image": [],
+    "video": []
   }
 } as const;
 export const IMAGE_MODEL_IDS = [
@@ -149,5 +154,9 @@ export const PROVIDER_REFERENCE_LIMITS = {
   "minimax": {
     "image": 1,
     "edit": 1
+  },
+  "comfy": {
+    "image": 4,
+    "edit": 4
   }
 } as const;

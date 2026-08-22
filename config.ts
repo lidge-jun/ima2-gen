@@ -396,6 +396,29 @@ export const config = {
       fileCfg.comfy?.maxUploadBytes,
       50 * 1024 * 1024,
     ),
+    // Health probe. Short by design: a settings surface listing workflows
+    // across two instances must not stall on the dead one.
+    healthTimeoutMs: pickPositiveInt(
+      env.IMA2_COMFY_HEALTH_TIMEOUT_MS,
+      fileCfg.comfy?.healthTimeoutMs,
+      2_000,
+    ),
+    pollIntervalMs: pickPositiveInt(
+      env.IMA2_COMFY_POLL_INTERVAL_MS,
+      fileCfg.comfy?.pollIntervalMs,
+      1_000,
+    ),
+    // Whole-job ceiling including queue wait. Local GPU queues run long.
+    generationTimeoutMs: pickPositiveInt(
+      env.IMA2_COMFY_GENERATION_TIMEOUT_MS,
+      fileCfg.comfy?.generationTimeoutMs,
+      1_800_000,
+    ),
+    maxDownloadBytes: pickPositiveInt(
+      env.IMA2_COMFY_MAX_DOWNLOAD_BYTES,
+      fileCfg.comfy?.maxDownloadBytes,
+      100 * 1024 * 1024,
+    ),
   },
   dev: {
     viteDevMode: pickBool(env.VITE_IMA2_DEV, fileCfg.dev?.viteDevMode, false),

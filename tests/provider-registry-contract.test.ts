@@ -15,7 +15,7 @@ describe("core provider registry contract", () => {
     const ids = REGISTRY.map((provider) => provider.id);
     assert.equal(new Set(ids).size, ids.length);
     assert.deepEqual(ids, [
-      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax",
+      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "comfy",
     ]);
   });
 

@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { detectCodexAuth } from "../../lib/codexDetect.js";
 import { config as runtimeConfig } from "../../config.js";
+import { normalizeComfyOrigin } from "../../lib/comfyBridge.js";
 import type { DoctorCheckLine } from "./doctor-checks.js";
 
 export type ProviderDoctorLine = DoctorCheckLine & { lane: string };
@@ -78,11 +79,31 @@ function inspectLocalCli(lane: string, credential: Extract<ProviderCredential, {
   return { lane, kind: "warn", text: `${lane}: local CLI env unset` };
 }
 
+/**
+ * A local-http lane has no binary and no key: its env var holds a URL, so the
+ * local-cli fallthrough would existsSync() an origin and report a missing file
+ * for a perfectly good address.
+ *
+ * Synchronous like its siblings — doctor lines are built in one pass — so this
+ * reports CONFIGURATION, never liveness. It opens no socket; reachability
+ * belongs to the settings surface, which probes /system_stats.
+ */
+function inspectLocalHttp(lane: string, credential: Extract<ProviderCredential, { kind: "local-http" }>): ProviderDoctorLine {
+  const raw = firstEnv(credential.envVars) ?? runtimeConfig.comfy.defaultUrl;
+  try {
+    const origin = normalizeComfyOrigin(raw);
+    return { lane, kind: "pass", text: `${lane}: origin ${origin}` };
+  } catch {
+    return { lane, kind: "fail", text: `${lane}: invalid origin ${raw}` };
+  }
+}
+
 export function inspectProviderLane(provider: CoreProviderManifest, fileConfig: Record<string, unknown>): ProviderDoctorLine[] {
   return provider.credentials.map((credential) => {
     if (credential.kind === "api-key") return inspectApiKey(provider.id, credential, fileConfig);
     if (credential.kind === "oauth-proxy") return inspectOauth(provider.id);
     if (credential.kind === "service-account") return inspectServiceAccount(provider.id, credential, fileConfig);
+    if (credential.kind === "local-http") return inspectLocalHttp(provider.id, credential);
     return inspectLocalCli(provider.id, credential);
   });
 }
