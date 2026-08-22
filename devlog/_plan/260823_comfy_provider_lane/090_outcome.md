@@ -58,6 +58,33 @@ ima2가 로컬 ComfyUI를 **호출해서** 이미지를 받는다. `/v1` shim �
 | 파이프라인 왕복 + 사이드카 쌍 저장 (3.6초) | 005 |
 | CLI 등록·거부·생성 (2.9초) | 006 |
 | 설정 UI 렌더 + 부분 오프라인 | 007 |
+| **취소가 ComfyUI 큐를 실제로 비움** | 완료 감사 (아래) |
+
+### 완료 감사 재현 (2026-08-23, 최종 트리)
+
+wp6 종료 후 **처음부터 다시** 확인했다. 소스 재빌드 → 새 스크래치 config로
+서버 기동 → 빈 레인 → PNG에서 워크플로 등록 → 생성 → 거부 경로들.
+
+    1) 빈 레인          "No workflow registered. Add one with: ..."
+    2) PNG에서 등록      ✓ audit -> http://127.0.0.1:18188
+    3) /api/models      status=ready  models=['audit']  desc=['http://127.0.0.1:18188']
+    4) CLI 생성          ✓ 2.9s
+    5) 사이드카          provider=comfy  comfyPromptId=d3384c30-...  comfyOrigin=http://127.0.0.1:18188
+                        comfyWorkflow=audit  format=png
+    6) 미등록 id         COMFY_WORKFLOW_NOT_FOUND
+    7a) multimode       COMFY_SURFACE_UNSUPPORTED (SSE error, status 400)
+    7b) node            COMFY_SURFACE_UNSUPPORTED [400] + parentNodeId
+    8) probe 형식오류    COMFY_URL_NOT_LOCAL [400]
+       probe 도달불가    {ok:true, health:{ok:false}} [200]
+
+**취소 실기 승격**: 1536x1536 / 60 steps 작업을 3.5초 뒤 abort했다.
+
+    threw code = GENERATION_CANCELED status = 499 after 4436 ms
+    queue_running after cancel = 0
+    queue_pending after cancel = 0
+
+ComfyUI 큐가 실제로 비었다 — wp2에서 고친 sleep 버그가 남아 있었다면
+GPU가 계속 돌았을 것이다. 이로써 취소는 stub이 아니라 **1차 근거**다.
 
 **2차 근거 (미검증으로 남음)**
 
