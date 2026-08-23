@@ -47,3 +47,5 @@ cache/
 # ComfyUI provider lane unit (260823): plan docs plus live-probe evidence.
 !devlog/_plan/260823_comfy_provider_lane/
 !devlog/_plan/260823_comfy_provider_lane/**
+!devlog/_plan/260823_minimax_h3/
+!devlog/_plan/260823_minimax_h3/**
