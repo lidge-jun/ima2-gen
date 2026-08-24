@@ -23,6 +23,8 @@ MemoryMax=20G와 `--disable-pinned-memory --cache-none`는 유지한다. GPU pow
 | Path | Action | Content |
 |---|---|---|
 | `devlog/_plan/260824_minimax_h3_pruned_nvfp4/evidence/020_t2v_api.json` | NEW | current object_info에 맞춘 flat `/prompt` graph |
+| `.../evidence/020_run_t2v.py` | NEW | submit, queue/history poll, raw JSON and `/view` download |
+| `.../evidence/020_run_t2v.sh` | NEW | 500W/service/metrics/cancel/teardown trap owner |
 | `.../evidence/020_submit.json` | NEW | prompt_id/node_errors receipt |
 | `.../evidence/020_history.json` | NEW | terminal history |
 | `.../evidence/020_metrics.csv` | NEW | timestamp, GPU memory/power/utilization, host available RAM |
@@ -47,36 +49,46 @@ Apply these exact semantic changes:
   VAELoader(minimax_h3_audio_vae_fp32.safetensors)
 - MiniMaxH3ImageToVideo(..., width=864, height=480, length=73)
 + MiniMaxH3ImageToVideo(..., width=864, height=480, length=243)
-  MiniMaxH3SigmaShift(shift_video=12, shift_audio=3)
   KSamplerSelect(res_multistep)
 - BasicScheduler(simple, steps=8, denoise=1.0)
 + BasicScheduler(simple, steps=10, denoise=1.0)
   SamplerCustomAdvanced -> VAEDecode + VAEDecodeAudio -> CreateVideo(fps=24) -> SaveVideo
 ```
 
-No custom Sage node appears in the graph. Node IDs are deterministic strings in the
-checked-in fixture, but every class/input is validated against 010's current
-`object_info` before submission.
+No custom Sage or SigmaShift node appears in the graph. Current official local-weight
+template `video_minimax_h3_t2v.json` (workflow package 2026-08-24) contains neither;
+its subgraph wires BasicScheduler directly to the selected UNET. Node IDs are
+deterministic strings in the checked-in fixture, and every class/input is validated
+against 010's current `object_info` before submission.
 
 ## Procedure
 
-1. Confirm `llama-server-qwen38.service` remains inactive and no GPU peer exists,
-   record `nvidia-smi -q -d POWER`, apply
-   `sudo nvidia-smi -pl 500`, and start only `comfyui.service`.
-2. Record a log cursor (`journalctl -u comfyui.service -n 0 --show-cursor`) and start
-   one-second GPU/RAM sampling to `020_metrics.csv`.
-3. POST the flat graph to actual 8188. Reject any non-empty `node_errors`.
-4. Poll `/history/{prompt_id}` and `/queue` every 3s. Terminal success requires
-   `status.completed:true`; history existence alone is insufficient.
-5. At first `Requested to load MiniMaxH3`, capture the new log segment. The segment
-   must include `nvfp4` in Native ops and not in Emulated ops.
-6. On success, locate the bound `SaveVideo` output. Comfy 0.33.3 may expose video
-   files under an `images` array with `animated:true`; preserve the raw JSON rather
-   than normalizing it before the 030 implementation.
-7. Fetch `/view` from filename/subfolder/type. Verify with `file`, first 16 bytes,
-   and `ffprobe` duration/streams. Copy receipts back into the local evidence folder.
-8. Stop ComfyUI, stop sampling, restore power limit to the recorded 600W, and assert
-   `llama-server-qwen38.service` remains inactive per user steering.
+1. Build the three evidence files and run local static checks before SSH:
+
+```bash
+bash -n evidence/020_run_t2v.sh
+python3 -m py_compile evidence/020_run_t2v.py
+node -e 'JSON.parse(require("fs").readFileSync("evidence/020_t2v_api.json"))'
+```
+
+2. `020_run_t2v.sh` owns one remote lifecycle and installs EXIT/INT/TERM cleanup
+   before any mutation. It records original power (`600.00` in stale-check), confirms
+   llama peer inactive/GPU apps empty, applies 500W, starts only `comfyui.service`,
+   fail-closed polls real 8188, starts one-second GPU/RAM metrics, then runs Python.
+3. `020_run_t2v.py` POSTs the graph, rejects non-empty `node_errors`, writes prompt id
+   immediately, polls `/history/{id}` plus `/queue` every 3s, and requires
+   `status.completed:true`. History existence alone is insufficient.
+4. On success Python preserves raw history, locates the bound SaveVideo output even
+   when represented under `images` with `animated:true`, and downloads `/view` to the
+   remote evidence dir.
+5. The shell captures the current journal segment. It requires `nvfp4` in Native ops
+   and absent from Emulated ops for the fresh MiniMaxH3 load.
+6. The cleanup trap, on success or any failure, best-effort calls both cancel endpoints
+   when a prompt id exists, stops metrics, stops Comfy, restores the recorded 600W,
+   keeps llama inactive, and then asserts all postconditions. Cleanup/assert failure
+   overrides the original return with exit 72.
+7. Copy raw receipts to the local evidence folder. Verify output with `file`, first
+   16 bytes, and `ffprobe` duration/streams.
 
 ## Success evidence
 
@@ -117,5 +129,6 @@ figure of ~175s and ~26.9GB VRAM is a comparison target, not a pass condition.
 ## Rollback
 
 `POST /queue {delete:[prompt_id]}` and `POST /interrupt {prompt_id}` are both issued on
-cancel. Stop the protected unit. Preserve output/error receipts. Keep the user-stopped
-llama peer inactive. Do not delete either DiT.
+cancel from the wrapper trap. The same trap stops the protected unit, stops metrics,
+restores 600W, keeps llama inactive, and verifies those states. Preserve output/error
+receipts. Do not delete either DiT.

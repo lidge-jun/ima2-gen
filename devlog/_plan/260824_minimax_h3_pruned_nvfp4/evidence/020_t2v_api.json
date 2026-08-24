@@ -1,0 +1,97 @@
+{
+  "119": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "minimax_h3_video_vae_fp16.safetensors" },
+    "_meta": { "title": "MiniMax H3 video VAE" }
+  },
+  "120": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "minimax_h3_audio_vae_fp32.safetensors" },
+    "_meta": { "title": "MiniMax H3 audio VAE" }
+  },
+  "121": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": { "samples": ["125", 0], "vae": ["120", 0] }
+  },
+  "122": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["125", 0], "vae": ["119", 0] }
+  },
+  "123": {
+    "class_type": "KSamplerSelect",
+    "inputs": { "sampler_name": "res_multistep" }
+  },
+  "124": {
+    "class_type": "BasicScheduler",
+    "inputs": {
+      "model": ["127", 0],
+      "scheduler": "simple",
+      "steps": 10,
+      "denoise": 1.0
+    }
+  },
+  "125": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": ["129", 0],
+      "guider": ["126", 0],
+      "sampler": ["123", 0],
+      "sigmas": ["124", 0],
+      "latent_image": ["131", 1]
+    }
+  },
+  "126": {
+    "class_type": "BasicGuider",
+    "inputs": { "model": ["127", 0], "conditioning": ["131", 0] }
+  },
+  "127": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "minimax_h3_fl2va_pruned_nvfp4.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": { "title": "MiniMax H3 FL2VA pruned NVFP4" }
+  },
+  "128": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    }
+  },
+  "129": {
+    "class_type": "RandomNoise",
+    "inputs": { "noise_seed": 42 }
+  },
+  "130": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": ["122", 0],
+      "audio": ["121", 0],
+      "fps": 24.0,
+      "bit_depth": 8
+    }
+  },
+  "131": {
+    "class_type": "MiniMaxH3ImageToVideo",
+    "inputs": {
+      "clip": ["128", 0],
+      "vae": ["119", 0],
+      "prompt": "A single continuous ten-second wide shot of small ocean waves rolling onto a quiet black-sand beach at dawn. The camera remains locked at eye level while soft blue morning light gradually warms the horizon. Natural stereo audio: gentle surf, a light coastal breeze, and distant seabirds; no music, no dialogue. Stable realistic motion, no cuts, no text, no logos, no watermark.",
+      "width": 864,
+      "height": 480,
+      "length": 243
+    }
+  },
+  "92": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": ["130", 0],
+      "filename_prefix": "video/ima2_minimax_h3_pruned_nvfp4",
+      "format": "auto",
+      "codec": "auto"
+    },
+    "_meta": { "title": "Save MiniMax H3 proof" }
+  }
+}
