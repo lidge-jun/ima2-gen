@@ -14,6 +14,7 @@ import { generateViaGrok, type GrokReferenceImage } from "./grokImageAdapter.js"
 import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
+import { generateViaNai } from "./naiImageAdapter.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 import { generateVideoViaGrok, type GrokVideoGenerateResult } from "./grokVideoAdapter.js";
 import { GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, resolveGrokQualityModel, validateVideoResolutionForRequest } from "./imageModels.js";
@@ -126,6 +127,16 @@ async function generateAgentImage(
         ...(options.signal ? { signal: options.signal } : {}),
         references: await loadAgentCurrentImageReferences(ctx, sessionId, options.sourceImagePolicy ?? "none"),
       })
+    : activeProvider === "nai"
+    ? await generateViaNai(`${manifest}\n\nUser request:\n${prompt}`, ctx, {
+        model: effectiveModel,
+        size: providerOptions.size,
+        requestId,
+        ...(options.signal ? { signal: options.signal } : {}),
+        // Intentionally no references: the adapter is text-to-image only, and
+        // silently forwarding the session's current image would misrepresent
+        // the result as an edit.
+      })
     : activeProvider === "grok"
     ? await generateViaGrok(`${manifest}\n\nUser request:\n${prompt}`, ctx, {
         model: effectiveModel,
@@ -152,7 +163,7 @@ async function generateAgentImage(
           signal: options.signal,
         },
       );
-  const format = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "atlascloud" || activeProvider === "minimax"
+  const format = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai"
     ? imageFormatFromMime(("mime" in response ? response.mime : undefined) || detectImageMimeFromB64(response.b64) || "image/jpeg")
     : options.format ?? "png";
   const image = await persistAgentImage(ctx, sessionId, prompt, format, providerOptions.size, requestId, response, {

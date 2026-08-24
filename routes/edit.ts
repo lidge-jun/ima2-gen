@@ -195,6 +195,20 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         const label = activeProvider === "agy" ? "Agy" : activeProvider === "gemini-api" ? "Gemini API" : activeProvider === "atlascloud" ? "Atlas Cloud" : activeProvider === "minimax" ? "MiniMax" : activeProvider === "nai" ? "NovelAI" : activeProvider === "comfy" ? "ComfyUI" : "Grok";
         return res.status(400).json({ error: `${label} provider does not support mask editing`, code, ...errorEnvelopeFields({ code, status: 400 }) });
       }
+      // The edit route always carries a source image, and lib/naiImageAdapter.ts
+      // is text-to-image only. Dispatching here would ignore that image and
+      // return an unrelated generation, so the lane refuses instead. NovelAI's
+      // img2img and infill are separate actions and a follow-on unit.
+      if (activeProvider === "nai") {
+        finishStatus = "error";
+        finishHttpStatus = 400;
+        finishErrorCode = "NAI_EDIT_UNSUPPORTED";
+        return res.status(400).json({
+          error: "NovelAI image editing is not supported yet",
+          code: "NAI_EDIT_UNSUPPORTED",
+          ...errorEnvelopeFields({ code: "NAI_EDIT_UNSUPPORTED", status: 400 }),
+        });
+      }
       const maskCheck: any = validateEditMask(imageB64, rawMask);
       if (maskCheck.error) {
         finishStatus = "error";
@@ -351,10 +365,10 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       const elapsed = +((Date.now() - startTime) / 1000).toFixed(1);
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
       throwIfJobCanceled(requestId);
-      const editMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax"
+      const editMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai"
         ? (resultMimeFromProvider || detectImageMimeFromB64(resultB64) || "image/png")
         : "image/png";
-      const editExt = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(editMime) : "png";
+      const editExt = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai" ? imageFormatFromMime(editMime) : "png";
       const editBuffer = Buffer.from(resultB64, "base64");
       const createdAt = Date.now();
       // Semantic alpha verification: at least one pixel with alpha < 255.

@@ -77,6 +77,7 @@ export function buildIma2Capabilities({
         geminiSupported: ["nano-banana-2", "nano-banana-pro"],
         atlasCloudSupported: ["openai/gpt-image-2/text-to-image", "openai/gpt-image-2/edit"],
         minimaxSupported: ["image-01", "image-01-live"],
+        naiSupported: ["nai-diffusion-5-full", "nai-diffusion-5-curated", "nai-diffusion-4-5-full", "nai-diffusion-4-5-curated"],
       },
       videoModels: {
         supported: ["grok-imagine-video", "grok-imagine-video-1.5"],

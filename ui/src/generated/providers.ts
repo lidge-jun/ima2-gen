@@ -169,10 +169,7 @@ export const PROVIDER_REFERENCE_LIMITS = {
     "image": 1,
     "edit": 1
   },
-  "nai": {
-    "image": 1,
-    "edit": 1
-  },
+  "nai": {},
   "comfy": {
     "image": 4,
     "edit": 4

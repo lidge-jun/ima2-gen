@@ -17,6 +17,7 @@ import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
+import { generateViaNai } from "./naiImageAdapter.js";
 import { generateViaComfy } from "./comfyImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, setJobPhase, INFLIGHT_RETRY_AFTER_SECONDS, } from "./inflight.js";
@@ -315,6 +316,16 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           requestId,
         });
       }
+      // Refuse loudly rather than dropping the input: lib/naiImageAdapter.ts is
+      // text-to-image only, so a reference passed here would be ignored and the
+      // user would get an unrelated image back believing they had edited one.
+      if (activeProvider === "nai" && providerRefCount > 0) {
+        return fail(400, {
+          error: "NovelAI image generation does not accept reference images yet",
+          code: "NAI_REF_UNSUPPORTED",
+          requestId,
+        });
+      }
       const started = startJob({
         requestId,
         kind: "classic",
@@ -449,6 +460,26 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           throwIfJobCanceled(requestId);
           return r;
         }
+        if (activeProvider === "nai") {
+          // No references argument: the adapter is text-to-image only, and the
+          // guard above already refused any reference input rather than letting
+          // it be silently discarded here.
+          const r = await generateViaNai(generationPrompt, requireRuntimeContext(ctx), {
+            model: imageModel,
+            size: effectiveSize,
+            signal: cancelController.signal,
+            requestId,
+            ...(typeof req.body?.straightAlpha === "boolean" ? { straightAlpha: req.body.straightAlpha } : {}),
+            ...(typeof req.body?.negativePrompt === "string" ? { negativePrompt: req.body.negativePrompt } : {}),
+            ...(typeof req.body?.steps === "number" ? { steps: req.body.steps } : {}),
+            ...(typeof req.body?.scale === "number" ? { scale: req.body.scale } : {}),
+            ...(typeof req.body?.sampler === "string" ? { sampler: req.body.sampler } : {}),
+            ...(typeof req.body?.noiseSchedule === "string" ? { noiseSchedule: req.body.noiseSchedule } : {}),
+            ...(typeof req.body?.seed === "number" ? { seed: req.body.seed } : {}),
+          });
+          throwIfJobCanceled(requestId);
+          return r;
+        }
         if (activeProvider === "comfy") {
           const r = await generateViaComfy(generationPrompt, requireRuntimeContext(ctx), {
             model: imageModel,
@@ -570,7 +601,11 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
           // Comfy is in this list but deliberately NOT in providerForcesJpeg: a
           // workflow may end in a background-removal node, and forcing JPEG
           // would flatten the alpha it just produced.
-          const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "comfy";
+          // nai is here and deliberately NOT in providerForcesJpeg above: V5's
+          // straight_alpha returns a real RGBA PNG (measured 42.1% transparent
+          // pixels), and forcing jpeg would flatten it during the toFormat()
+          // re-encode in embedImageMetadata.
+          const providerReportsMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai" || activeProvider === "comfy";
           // Lazily decoded: only alpha requests always need the byte check, and
           // the provider-mime path keeps its original short-circuit order.
           const detectMime = () => detectImageMimeFromB64(r.value.b64);

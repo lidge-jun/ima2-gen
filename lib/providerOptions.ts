@@ -1,6 +1,6 @@
 import type { RuntimeContext } from "./runtimeContext.js";
 import { ATLASCLOUD_TEXT_TO_IMAGE_MODEL } from "./atlasCloudImageAdapter.js";
-import { FALLBACK_IMAGE_MODEL, normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel, normalizeMinimaxImageModel, normalizeComfyWorkflowModel } from "./imageModels.js";
+import { FALLBACK_IMAGE_MODEL, normalizeImageModel, normalizeReasoningEffort, normalizeGrokImageModel, normalizeGeminiApiModel, normalizeMinimaxImageModel, normalizeNaiImageModel, normalizeComfyWorkflowModel } from "./imageModels.js";
 
 export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   provider = "oauth",
@@ -52,6 +52,22 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
       model: minimaxModelCheck.model,
       reasoningEffort: "none",
       size: rawSize || "1024x1024",
+      webSearchEnabled: false,
+    };
+  }
+
+  if (provider === "nai") {
+    const naiCfg: { defaultImageModel?: string } = (ctx?.config as any)?.naiProvider || {}; // justified: resolveProviderOptions takes a loosely-typed ctx; every sibling provider branch reads its config block through the same cast
+    const naiModelCheck = normalizeNaiImageModel(rawModel || naiCfg.defaultImageModel);
+    if (naiModelCheck.error) return { error: naiModelCheck.error, code: naiModelCheck.code, status: naiModelCheck.status };
+    return {
+      provider: "nai" as const,
+      model: naiModelCheck.model,
+      reasoningEffort: "none",
+      // NovelAI's native portrait aspect, and the reference client's default.
+      // rawSize carries a "1024x1024" default parameter, so an explicit
+      // comparison is needed for the caller-didn't-choose case.
+      size: !rawSize || rawSize === "1024x1024" ? "832x1216" : rawSize,
       webSearchEnabled: false,
     };
   }

@@ -76,7 +76,9 @@ against that guard, so the two could not land separately.
 > `provider-canary-parity` asserts `CANARY_ENDPOINTS[lane]` equals the URL in
 > `routes/keys.ts`. Patching `laneForVendor` alone leaves the endpoint
 > undefined and the test red: add
-> `nai: "https://api.novelai.net/user/data"` to `scripts/provider-canary.mjs:25`.
+> `nai: "https://image.novelai.net/user/data"` to `scripts/provider-canary.mjs:25`.
+> **The image host, not `api.novelai.net`** — the latter 400s every `/user/*`
+> call (`004_live_api_probe.md`, audit W3-H2).
 
 > `error-class-coverage` is not merely a red test: its regex is what scans for
 > provider error codes, so without `NAI` in the alternation every `NAI_*` code
@@ -215,22 +217,27 @@ it in the lanes object at L307:
 
 ## 6. `routes/edit.ts`
 
-Mask rejection (L188-192): add `nai` to the rejected-mask condition, with code
-`NAI_MASK_UNSUPPORTED` and label `"NovelAI"`. NAI infill exists as a separate
-action but is out of this unit's scope, so a mask must fail loudly rather than
-be silently dropped.
+Mask rejection: **already landed in wp1** (it had to, because
+`provider-registry-parity` verifies the registry's `mask:false` claim against
+that guard).
 
-Dispatch (L273): add a `nai` branch calling `generateViaNai` with the reference
-image attached. MIME lines (L351/L354): add `nai` to the PNG-preserving side,
-not the JPEG side.
+**Dispatch: do NOT call `generateViaNai` here (audit W3-H1).** The adapter is
+text-to-image only and has no `references` parameter, so attaching the user's
+image would either fail typecheck or discard it and generate from the prompt
+alone. `nai` returns `400 NAI_EDIT_UNSUPPORTED` in this phase; img2img is the
+follow-on unit `000` already scoped.
+
+MIME lines: see the normative table for current numbers. Prose line numbers in
+this section are superseded by that table.
 
 ## 7-9. `multimodePipeline.ts`, `nodeGeneration.ts`, `agentImageVideoGen.ts`
 
-Each gets: the `generateViaNai` import, a dispatch branch mirroring its
-existing `minimax` branch (multimode L400, node L313, agent L121), and `nai`
-added to the **MIME-reporting** side of its format conditional (multimode
-L291/294, node L261/373, agent L155). `nodeGeneration` L176 also gets the
-reference-count guard.
+Each gets the `generateViaNai` import, a dispatch branch mirroring its existing
+`minimax` branch, and `nai` on the **MIME-reporting** side only — never the
+JPEG-forcing side. Use the normative table for which line is which; do not copy
+the MiniMax branch's `references` argument, which `generateViaNai` does not
+accept (audit W3-H1). Where a reference or parent image is present for `nai`,
+refuse with `400 NAI_REF_UNSUPPORTED` instead of dropping it.
 
 ## 10. `tests/nai-routing-contract.test.ts` (NEW)
 

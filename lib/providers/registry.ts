@@ -197,12 +197,21 @@ export const REGISTRY = [
       configKey: "naiApiKey",
     }],
     models: [
+      // EDIT rather than UNSUPPORTED, deliberately. `supports` has no "generate"
+      // bit, so an all-false triple means "listed but cannot produce images at
+      // all" (that is what gpt-5.3-codex-spark is) and would push these models
+      // into UNSUPPORTED_IMAGE_MODEL_IDS — wrong, since V5 generates fine.
+      // Reference input is refused at the ROUTES (NAI_REF_UNSUPPORTED /
+      // NAI_EDIT_UNSUPPORTED) and `referenceLimits` below declares no capacity,
+      // so nothing here advertises an img2img path the adapter lacks.
       { id: "nai-diffusion-5-full", aliases: ["nai-v5-full"], kind: "image", supports: EDIT },
       { id: "nai-diffusion-5-curated", aliases: ["nai-v5-curated"], kind: "image", supports: EDIT },
       { id: "nai-diffusion-4-5-full", aliases: ["nai-v45-full"], kind: "image", supports: EDIT },
       { id: "nai-diffusion-4-5-curated", aliases: ["nai-v45-curated"], kind: "image", supports: EDIT },
     ],
-    referenceLimits: { image: 1, edit: 1 },
+    // Empty because the lane accepts no reference input at all; the routes
+    // refuse it with NAI_REF_UNSUPPORTED rather than dropping it silently.
+    referenceLimits: {},
     elementTaxonomy: "gpt",
     // Diffusion at V5 resolutions is slower than a hosted REST image call, so
     // this sits above MiniMax's 120s while staying well under Comfy's local-GPU

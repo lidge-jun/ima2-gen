@@ -28,6 +28,9 @@ export const CANARY_ENDPOINTS = {
   "gemini-api": "https://generativelanguage.googleapis.com/v1beta/models",
   atlascloud: "https://api.atlascloud.ai/api/v1/models",
   minimax: "https://api.minimax.io/v1/models",
+  // The IMAGE host, not api.novelai.net: the latter answers every /user/* call
+  // with 400 telling third-party tools to use the image URL.
+  nai: "https://image.novelai.net/user/data",
 };
 
 /** Never let a key, token, or credential-bearing URL reach the log. */

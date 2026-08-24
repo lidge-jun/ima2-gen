@@ -16,6 +16,7 @@ import { generateViaAgy } from "./agyImageAdapter.js";
 import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
+import { generateViaNai } from "./naiImageAdapter.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, INFLIGHT_RETRY_AFTER_SECONDS } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
 import { logEvent, logError } from "./logger.js";
@@ -288,10 +289,12 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       const persistAndSendImage = async ( image: MultimodeImage, index: number, totalReturned: number, status: ReturnType<typeof sequenceStatus>, ) => {
         if (persistedIndexes.has(index)) return;
         throwIfJobCanceled(requestId);
-        const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax"
+        // nai is here but NOT in mmFormat above: forcing jpeg would flatten
+        // V5's straight_alpha transparency.
+        const resultMime = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai"
           ? (image.mime || detectImageMimeFromB64(image.b64) || mime)
           : mime;
-        const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? imageFormatFromMime(resultMime) : mmFormat;
+        const resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai" ? imageFormatFromMime(resultMime) : mmFormat;
         const createdAt = Date.now();
         const baseName = buildFilename({
           model: (activeProvider === "grok" || activeProvider === "grok-api") ? resolveGrokQualityModel(imageModel, quality) : imageModel,
@@ -406,6 +409,22 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           references: refCheck.refDetails,
         });
         generated = {
+          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
+          usage: r.usage,
+          webSearchCalls: r.webSearchCalls,
+        };
+      } else if (activeProvider === "nai") {
+        // No references: the adapter is text-to-image only (see the refusal in
+        // lib/generatePipeline.ts), so none are forwarded here either.
+        const r = await generateViaNai(prompt, requireRuntimeContext(ctx), {
+          model: imageModel,
+          size: effectiveSize,
+          signal: cancelController.signal,
+          requestId,
+        });
+        generated = {
+          // No mime field on this shape; the persist step below detects PNG
+          // from the magic bytes, which is authoritative anyway.
           images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
           usage: r.usage,
           webSearchCalls: r.webSearchCalls,

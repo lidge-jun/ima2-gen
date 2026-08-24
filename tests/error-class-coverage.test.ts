@@ -61,6 +61,7 @@ const LEXICAL_EXCEPTIONS = new Set([
   // NovelAI constants, not error codes: config/model/enum names that share the
   // NAI_ prefix (lib/naiImageAdapter.ts, lib/naiZip.ts).
   "NAI_DEFAULT_IMAGE_MODEL",
+  "NAI_FALLBACK_IMAGE_MODEL",
   "NAI_NOISE_SCHEDULES",
   "NAI_QUALITY_PRESET_IDS",
   "NAI_SAMPLERS",

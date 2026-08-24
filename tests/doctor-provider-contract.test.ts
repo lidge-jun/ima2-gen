@@ -22,7 +22,7 @@ describe("070 doctor provider contract", () => {
   it("lists every registry lane", () => {
     const lanes = expectedLaneIds();
     assert.deepEqual(lanes, listProviders().map((provider) => provider.id));
-    assert.equal(lanes.length, 9);
+    assert.equal(lanes.length, 10);
     const lines = buildProviderDoctorLines({});
     for (const lane of lanes) {
       assert.ok(lines.some((line) => line.lane === lane), `missing lane ${lane}`);

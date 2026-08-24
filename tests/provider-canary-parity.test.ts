@@ -32,6 +32,7 @@ test("canary endpoints match VALIDATE_URL_MAP in routes/keys.ts", () => {
     gemini: "gemini-api",
     atlascloud: "atlascloud",
     minimax: "minimax",
+    nai: "nai",
   };
 
   for (const [vendor, url] of routeUrls) {

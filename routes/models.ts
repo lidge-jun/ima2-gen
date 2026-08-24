@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import { buildAgyPathEnv, resolveAgyBin } from "../lib/agyCli.js";
 import { ATLASCLOUD_TEXT_TO_IMAGE_MODEL } from "../lib/atlasCloudImageAdapter.js";
 import { MINIMAX_TEXT_TO_IMAGE_MODEL } from "../lib/minimaxImageAdapter.js";
+import { NAI_DEFAULT_IMAGE_MODEL } from "../lib/naiImageAdapter.js";
 import { getProviderAdapter } from "../lib/providers/adapters/index.js";
 import {
   MAX_VIDEO_DURATION,
@@ -240,6 +241,25 @@ function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
   });
 }
 
+function naiLane(ctx: RuntimeContext): ModelLaneDto {
+  const adapter = getProviderAdapter(ctx, "nai");
+  if (!adapter) {
+    const fallback: LaneState = ctx.naiApiKey
+      ? { status: "ready" }
+      : { status: "key-missing", reason: "NovelAI API token missing" };
+    return lane(fallback, { image: NAI_DEFAULT_IMAGE_MODEL }, {
+      image: entries(deriveModels("nai", "image")), video: [],
+    });
+  }
+  const auth = adapter.validateAuth();
+  const state: LaneState = auth.ok
+    ? { status: "ready" }
+    : { status: "key-missing", reason: auth.reason ?? "NovelAI API token missing" };
+  return lane(state, { image: NAI_DEFAULT_IMAGE_MODEL }, {
+    image: entries(adapter.listModels().map((model) => model.id)), video: [],
+  });
+}
+
 /**
  * The comfy lane, whose catalog and liveness both come from runtime state.
  *
@@ -305,6 +325,7 @@ async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean, deps: 
     "gemini-api": geminiLane(ctx),
     atlascloud: atlasCloudLane(ctx),
     minimax: minimaxLane(ctx),
+    nai: naiLane(ctx),
     comfy: await comfyLane(ctx, deps),
   };
 }
