@@ -7,7 +7,7 @@
 //
 // Model ids, the V5 parameter names (straight_alpha / ucPresetId /
 // qualityPresetId), and the sampler-gated fields are documented in
-// devlog/_plan/260824_novelai_provider_lane/001_nai_api_surface.md.
+// devlog/_fin/260825_novelai_provider_lane/001_nai_api_surface.md.
 import type { RuntimeContext } from "./runtimeContext.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { logEvent } from "./logger.js";
