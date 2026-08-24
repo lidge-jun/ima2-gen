@@ -79,8 +79,11 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   // 040 error table. These stay NovelAI-specific instead of collapsing into the
   // generic auth/billing class cards, which tell the user to "sign in again" —
   // wrong advice for a lane authenticated by a pasted persistent token.
-  NAI_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.naiApiKeyMissing", cta: "dismiss" },
-  NAI_AUTH_FAILED: { surface: "card", cardKey: "errorCard.naiAuthFailed", cta: "dismiss" },
+  // "reauth" is the only CTA Toast wires to openSettings("providers"), which is
+  // exactly where the token is pasted. The copy stays NovelAI-specific, so the
+  // user is not told to re-run a sign-in flow this lane does not have.
+  NAI_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.naiApiKeyMissing", cta: "reauth" },
+  NAI_AUTH_FAILED: { surface: "card", cardKey: "errorCard.naiAuthFailed", cta: "reauth" },
   NAI_SUBSCRIPTION_REQUIRED: { surface: "card", cardKey: "errorCard.naiSubscriptionRequired", cta: "dismiss" },
   NAI_RATE_LIMITED: { surface: "toast", toastKey: "toast.naiRateLimited", cta: "retry" },
   NAI_BAD_REQUEST: { surface: "toast", toastKey: "toast.naiBadRequest" },

@@ -120,6 +120,32 @@ test("every NAI_* code the server can throw has UI text", () => {
   }
 });
 
+test("every registered NAI_* code resolves to real copy in all four locales", () => {
+  // Registry membership alone still lets the dictionary leaves be deleted, which
+  // renders the raw key. Follow each spec to the leaves it actually reads.
+  const naiCodes = (Object.keys(errorCodes) as ImaErrorCode[]).filter((code) => code.startsWith("NAI_"));
+  assert.ok(naiCodes.length >= 15, `expected the nai codes to be registered, found ${naiCodes.length}`);
+  for (const locale of LOCALES) {
+    const dict = dictionary(locale);
+    for (const code of naiCodes) {
+      const spec = errorCodes[code];
+      const leaves = spec.surface === "card"
+        ? [`${spec.cardKey}.title`, `${spec.cardKey}.body`]
+        : [String(spec.toastKey)];
+      if (spec.surface === "card" && (spec.cta === "reauth" || spec.cta === "reload")) {
+        leaves.push(`${spec.cardKey}.cta`);
+      }
+      for (const leaf of leaves) {
+        const value = leaf.split(".").reduce<unknown>((node, part) => {
+          return node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined;
+        }, dict);
+        assert.equal(typeof value, "string", `${locale} is missing ${leaf} for ${code}`);
+        assert.notEqual(String(value).trim(), "", `${locale} has an empty ${leaf} for ${code}`);
+      }
+    }
+  }
+});
+
 test("nai auth and billing failures keep NovelAI copy instead of the sign-in card", () => {
   // The server tags these with an errorClass, and the priority class card says
   // "sign in again from Settings" — wrong for a lane that uses a pasted token.

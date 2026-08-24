@@ -17,8 +17,9 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   MINIMAX_MODEL_REQUIRES_REFERENCE: "fix-input",
   NAI_REF_UNSUPPORTED: "fix-input",
   NAI_EDIT_UNSUPPORTED: "fix-input",
-  NAI_API_KEY_MISSING: "fix-input",
-  NAI_AUTH_FAILED: "fix-input",
+  // cta "reauth" routes the node card to Settings, where the token is pasted.
+  NAI_API_KEY_MISSING: "auth",
+  NAI_AUTH_FAILED: "auth",
   NAI_SUBSCRIPTION_REQUIRED: "fix-input",
   NAI_RATE_LIMITED: "retry",
   NAI_BAD_REQUEST: "fix-input",

@@ -80,3 +80,16 @@ cd ui && npm run build     built in 1.30s
 a NovelAI *session JWT* can exceed the cap. The UI placeholder steers to persistent tokens,
 so this is documented rather than changed here.
 
+## Round-2 audit residuals (all closed)
+
+Reviewer verdict on `fc3057b6`: **GO-WITH-FIXES (blockers=0)**. Three residuals, all fixed here:
+
+| Residual | Fix |
+| --- | --- |
+| Medium — live `ima2 doctor` still printed the MiniMax sentence because `bin/lib/doctor-providers.js` is gitignored and was stale | Ran `npm run build:cli`; `ima2 doctor` now prints `✓ nai: api-key present (no prefix check; this lane has no fixed key prefix)`. Same stale-artifact class as the original screenshot. |
+| Medium — the new copy was not in the i18n oracle, so deleting it stayed green | Added the seven `errorCard.nai*` roots and five `toast.nai*` keys to `tests/i18n-dictionary-contract.test.ts`, and added a case to the nai contract test that follows each spec to the leaves it actually reads, in all four locales. |
+| Low — AC3 never photographed the four model labels | `wp4-ac3-model-list.png`: with NovelAI selected, the model list shows `nai v5`, `nai v5 cur`, `nai v4.5`, `nai v4.5 cur`. |
+| Low — `cta: "dismiss"` made the "Open settings" string dead, since Toast only draws a CTA for reauth/reload | `NAI_API_KEY_MISSING` and `NAI_AUTH_FAILED` now use `cta: "reauth"`, which opens Settings → providers, exactly where the token is pasted. Node retry action follows to `auth`. |
+
+Final gates: typecheck clean, typecheck:tests clean, `npm test` 2545 pass / 0 fail / 2 skipped, provider registry 10 pass.
+

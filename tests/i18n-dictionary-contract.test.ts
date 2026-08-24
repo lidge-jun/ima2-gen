@@ -172,6 +172,8 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "toast.refTooLarge", "toast.refNotBase64", "toast.refEmpty",
     "toast.refLimitExceeded", "toast.generateFailed",
     "toast.minimaxModelRequiresReference",
+    "toast.naiRefUnsupported", "toast.naiEditUnsupported",
+    "toast.naiRateLimited", "toast.naiBadRequest", "toast.naiMaskUnsupported",
     "toast.errorClass.rateLimited", "toast.errorClass.providerTimeout",
     "toast.errorClass.networkFailure", "toast.errorClass.contentRejected",
     "toast.errorClass.capabilityUnsupported", "toast.errorClass.modelUnavailable",
@@ -181,6 +183,8 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "toast.refTooLarge", "toast.refNotBase64", "toast.refEmpty",
     "toast.refLimitExceeded", "toast.generateFailed",
     "toast.minimaxModelRequiresReference",
+    "toast.naiRefUnsupported", "toast.naiEditUnsupported",
+    "toast.naiRateLimited", "toast.naiBadRequest", "toast.naiMaskUnsupported",
     "toast.errorClass.rateLimited", "toast.errorClass.providerTimeout",
     "toast.errorClass.networkFailure", "toast.errorClass.contentRejected",
     "toast.errorClass.capabilityUnsupported", "toast.errorClass.modelUnavailable",
@@ -199,6 +203,9 @@ const ERROR_CARD_ROOTS = [
   "errorCard.invalidRequest", "errorCard.apikeyDisabled", "errorCard.agyGenerationFailed",
   "errorCard.agyTimeout", "errorCard.agyProcessError", "errorCard.agyQuotaExhausted",
   "errorCard.authClass", "errorCard.billingRequired",
+  "errorCard.naiApiKeyMissing", "errorCard.naiAuthFailed", "errorCard.naiSubscriptionRequired",
+  "errorCard.naiZipInvalid", "errorCard.naiResponseNotZip", "errorCard.naiImageInvalid",
+  "errorCard.naiUpstreamError",
 ] as const;
 
 // Toast.tsx has no static template head because cardKey precedes the literal suffix. Its finite
@@ -209,7 +216,7 @@ const DYNAMIC_T_TEMPLATES = new Map<string, readonly string[]>([
   ["ui/src/components/Toast.tsx :: `${cardKey}.body`",
     ERROR_CARD_ROOTS.map((root) => `${root}.body`)],
   ["ui/src/components/Toast.tsx :: `${row.cardKey ?? \"errorCard.unknown\"}.cta`",
-    ["errorCard.moderationRefused.cta", "errorCard.emptyResponse.cta", "errorCard.streamParseFailed.cta", "errorCard.imageToolNotCalled.cta", "errorCard.webSearchOnlyResponse.cta", "errorCard.imageToolFailed.cta", "errorCard.imageToolNoResult.cta", "errorCard.oauthImageCapabilityUnavailable.cta", "errorCard.responsesStreamError.cta", "errorCard.upstream5xx.cta", "errorCard.authChatgptExpired.cta", "errorCard.authApiKeyInvalid.cta", "errorCard.networkFailed.cta", "errorCard.oauthUnavailable.cta", "errorCard.invalidRequest.cta", "errorCard.apikeyDisabled.cta", "errorCard.agyGenerationFailed.cta", "errorCard.agyTimeout.cta", "errorCard.agyProcessError.cta", "errorCard.agyQuotaExhausted.cta", "errorCard.authClass.cta"]],
+    ["errorCard.moderationRefused.cta", "errorCard.emptyResponse.cta", "errorCard.streamParseFailed.cta", "errorCard.imageToolNotCalled.cta", "errorCard.webSearchOnlyResponse.cta", "errorCard.imageToolFailed.cta", "errorCard.imageToolNoResult.cta", "errorCard.oauthImageCapabilityUnavailable.cta", "errorCard.responsesStreamError.cta", "errorCard.upstream5xx.cta", "errorCard.authChatgptExpired.cta", "errorCard.authApiKeyInvalid.cta", "errorCard.networkFailed.cta", "errorCard.oauthUnavailable.cta", "errorCard.invalidRequest.cta", "errorCard.apikeyDisabled.cta", "errorCard.agyGenerationFailed.cta", "errorCard.agyTimeout.cta", "errorCard.agyProcessError.cta", "errorCard.agyQuotaExhausted.cta", "errorCard.authClass.cta", "errorCard.naiApiKeyMissing.cta", "errorCard.naiAuthFailed.cta", "errorCard.naiSubscriptionRequired.cta", "errorCard.naiZipInvalid.cta", "errorCard.naiResponseNotZip.cta", "errorCard.naiImageInvalid.cta", "errorCard.naiUpstreamError.cta"]],
   ["ui/src/lib/agentQueueError.ts :: `${resolved.spec.cardKey}.title`",
     ERROR_CARD_ROOTS.map((root) => `${root}.title`)],
 ]);
