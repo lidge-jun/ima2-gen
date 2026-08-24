@@ -20,6 +20,7 @@ the registry/parity/key tests pass.
 | `routes/keys.ts` | MODIFY — `nai` KeyProvider through validate/set/clear |
 | `tests/provider-registry-contract.test.ts` | MODIFY — id list oracle (**audit B3**) |
 | `tests/provider-registry-parity.test.ts` | MODIFY — `CORE_IDS` + `CLI_IMAGE_MODELS` (**audit B3**) |
+| `tests/provider-registry-parity.test.ts` | MODIFY — `referenceLimits("image")` deepEqual (**audit R2-H3**) |
 | `ui/src/generated/providers.ts` | REGENERATE — `node scripts/generate-provider-types.mjs` |
 | `tests/nai-key-validation-route.test.ts` | NEW |
 
@@ -103,14 +104,9 @@ under the Opus free-tier ceiling of 28 (001 §Anlas). If `pickNum` does not
 exist in `config.ts`, use `pickInt` for scale and document the integer
 restriction instead of adding a helper.
 
-Also register the key source alongside the other API keys:
-
-```diff
-+  naiApiKey: pickStr(env.NOVELAI_API_KEY, fileCfg.naiApiKey, undefined),
-```
-
-following whatever shape the existing `minimaxApiKey` resolution uses in the
-same file.
+**Do NOT add a `naiApiKey` to `config.ts`** (audit R2). MiniMax has no key
+there — API keys are resolved in `server.ts` (§4 below). Adding one would
+create a second source of truth for the same value.
 
 ## 4. `server.ts` — boot-time key loading (audit B1)
 
@@ -214,6 +210,7 @@ a tenth lane. They must change in the SAME commit as the registry:
 | `tests/provider-registry-contract.test.ts` | `assert.deepEqual(ids, [...])` (~L17) | append `"nai"` in registry order |
 | `tests/provider-registry-parity.test.ts` | `CORE_IDS` (~L12) | append `"nai"` |
 | `tests/provider-registry-parity.test.ts` | `CLI_IMAGE_MODELS` (~L14) | append the four NAI model ids |
+| `tests/provider-registry-parity.test.ts` | `referenceLimits("image")` (~L54) | append `nai: 1` |
 
 ## 9. `tests/nai-key-validation-route.test.ts` (NEW)
 
@@ -237,5 +234,6 @@ Mirrors `tests/minimax-key-validation-route.test.ts`. Asserts:
 
 ## Scope boundary
 
-IN: the eight files above. OUT: any adapter logic, any request to the image
-host, any UI component edit (the generated catalog is not a component).
+IN: the files listed in the change map above. OUT: any adapter logic, any
+request to the image host, any UI component edit (the generated catalog is not
+a component).

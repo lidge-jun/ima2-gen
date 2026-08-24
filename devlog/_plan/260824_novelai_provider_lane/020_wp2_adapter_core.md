@@ -17,6 +17,14 @@ path and every error branch with no network and no token.
 | `lib/errors/providerMap.ts` | MODIFY — map every `NAI_*` code to a UI class |
 | `tests/nai-zip-decode.test.ts` | NEW |
 | `tests/nai-provider-contract.test.ts` | NEW |
+| `tests/provider-adapter-v1-contract.test.ts` | MODIFY — `EXPECTED_AUTH_REASON` + fixture key (**audit R2-H1**) |
+
+> `provider-adapter-v1-contract` is named in this phase's accept criteria but
+> was missing from the map: `EXPECTED_AUTH_REASON` (`:57`) requires a row per
+> registered adapter, and the fixture context (`:43`) must set `naiApiKey` or
+> the two-state auth assertion is vacuous. Add
+> `nai: /NovelAI API token missing/` and `naiApiKey: key` in the same commit
+> as the `adapters/index.ts` registration.
 
 `naiZip.ts` is split out from the adapter deliberately: it is pure
 `Buffer -> Buffer` with no HTTP, which is what makes it directly testable
@@ -174,6 +182,16 @@ if (sampler === "k_euler_ancestral") {
 
 ```ts
 const raw = Buffer.from(await res.arrayBuffer());
+// Branch on the container FIRST (audit R2): calling extractFirstZipEntry on a
+// msgpack/JSON body can only ever report NAI_ZIP_INVALID, which hides the real
+// cause. This names the received Content-Type instead.
+if (!looksLikeZip(raw)) {
+  throw naiError(
+    `NovelAI returned a non-ZIP body (content-type: ${res.headers.get("content-type") ?? "unknown"})`,
+    502,
+    "NAI_RESPONSE_NOT_ZIP",
+  );
+}
 const png = extractFirstZipEntry(raw);
 const b64 = png.toString("base64");
 const detected = detectImageMimeFromB64(b64);
@@ -276,6 +294,7 @@ Stubs `globalThis.fetch`; no network, no token.
 | ctx without key | `generateViaNai` throws `NAI_API_KEY_MISSING` |
 | 200 + valid ZIP | resolves with base64 PNG and `effectiveModel` |
 | 201 + valid ZIP | also treated as success |
+| 200 + JSON body | throws `NAI_RESPONSE_NOT_ZIP` naming the content-type |
 | 401 / 402 / 429 / 500 | throw the mapped `NAI_*` codes |
 | request body | `model`, `action:"generate"`, `n_samples:1`, `params_version:3` present |
 | `straightAlpha: true` | body carries `straight_alpha: true` |
@@ -294,5 +313,5 @@ otherwise never executes in a default run.
 
 ## Scope boundary
 
-IN: the seven files above. OUT: pipeline/route wiring (wp3), UI (wp4), img2img
-or inpaint actions, Anlas estimation.
+IN: the files listed in the change map above. OUT: pipeline/route wiring (wp3),
+UI (wp4), img2img or inpaint actions, Anlas estimation.

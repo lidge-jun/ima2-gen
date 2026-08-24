@@ -72,7 +72,7 @@ the registry, so it cannot be written before the registry is correct.
 | c5 | `GET /api/models` includes the nai lane | live curl |
 | c6 | Provider selectable in built UI | rendered screenshot |
 | c7 | Upstream errors map to `NAI_*` | error-mapping test driving 401/402/429/500 |
-| c8 | Full gate sweep green | typecheck, typecheck:tests, test, test:inventory |
+| c8 | Gate sweep: typecheck/typecheck:tests/inventory/generator green, and `npm test` shows no NEW failures vs the recorded carve-out | see §Pre-existing failure carve-out |
 | c9 | UI production build green | `cd ui && npm run build` |
 | c10 | Landed on origin/dev | push output + SHA parity |
 

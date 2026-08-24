@@ -113,9 +113,19 @@ by exporting `NOVELAI_API_KEY`. Until then the lane correctly reports
 `key-missing`. First real generation is the user's own end-to-end confirmation;
 this unit deliberately never spends their Anlas.
 
+**One open question rides on that first generation.** The V5 reference client
+sends `parameters.stream = "msgpack"`; this adapter omits it and expects the
+documented ZIP attachment. If NAI actually requires it, the first generation
+fails with `NAI_RESPONSE_NOT_ZIP` naming the received Content-Type — that
+error, not a confusing parser failure, is the signal. The fix is one line in
+the request body (`020` §Open risk).
+
 ## Accept criteria
 
-1. Every command in §1 exits 0, output captured.
+1. `typecheck`, `typecheck:tests`, `generate-provider-types --check`,
+   `test:inventory`, and the UI build all exit 0. `npm test` shows every NAI
+   test passing and **no new failures** beyond the two named
+   `cli-models-command-contract` cases. Output captured.
 2. §2 curl output matches expectations, captured verbatim.
 3. §3 screenshot exists and was read back.
 4. §4 docs patched.

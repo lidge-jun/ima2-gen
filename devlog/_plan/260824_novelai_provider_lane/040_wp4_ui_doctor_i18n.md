@@ -62,6 +62,7 @@ Provider display name: **NovelAI**. Lane id stays `nai`.
 | `NAI_RATE_LIMITED` | NovelAI is rate limiting requests. Try again shortly. |
 | `NAI_BAD_REQUEST` | NovelAI rejected the generation parameters. |
 | `NAI_ZIP_INVALID` / `NAI_ZIP_UNSUPPORTED` / `NAI_ZIP_TOO_LARGE` | NovelAI returned an unreadable image archive. |
+| `NAI_RESPONSE_NOT_ZIP` | NovelAI returned an unexpected response format. |
 | `NAI_IMAGE_INVALID` / `NAI_EMPTY_IMAGE` | NovelAI returned no usable image. |
 | `NAI_MASK_UNSUPPORTED` | NovelAI editing does not support masks yet. |
 | `NAI_UPSTREAM_ERROR` | NovelAI request failed. |

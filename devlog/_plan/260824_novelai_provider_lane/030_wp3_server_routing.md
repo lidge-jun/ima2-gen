@@ -57,7 +57,13 @@ flattened alpha in node mode with every test green.
 | `tests/models-endpoint-contract.test.ts` | MODIFY — lane-key oracle (**audit B3**) |
 | `tests/error-class-coverage.test.ts` | MODIFY — add `NAI` to `PROVIDER_CODE_PATTERN` (**audit B3**) |
 | `tests/provider-canary-parity.test.ts` | MODIFY — `laneForVendor` (**audit B3**) |
+| `scripts/provider-canary.mjs` | MODIFY — `CANARY_ENDPOINTS` (**audit R2-H2**) |
 | `tests/provider-registry-parity.test.ts` | MODIFY — `maskRejectedLanes` (**audit B3**) |
+
+> `provider-canary-parity` asserts `CANARY_ENDPOINTS[lane]` equals the URL in
+> `routes/keys.ts`. Patching `laneForVendor` alone leaves the endpoint
+> undefined and the test red: add
+> `nai: "https://api.novelai.net/user/data"` to `scripts/provider-canary.mjs:25`.
 
 > `error-class-coverage` is not merely a red test: its regex is what scans for
 > provider error codes, so without `NAI` in the alternation every `NAI_*` code
@@ -166,7 +172,9 @@ alpha decision above).
 ```diff
 +function naiLane(ctx: RuntimeContext): ModelLaneDto {
 +  const adapter = getProviderAdapter(ctx, "nai");
-+  const fallback: LaneState = ctx.naiApiKey ? "ready" : "key-missing";
++  const fallback: LaneState = ctx.naiApiKey
++    ? { status: "ready" }
++    : { status: "key-missing", reason: "NovelAI API token missing" };
 +  return {
 +    image: entries(deriveModels("nai", "image")),
 +    video: [],
@@ -221,12 +229,15 @@ reference-count guard.
 | `normalizeNaiImageModel("")` | falls back, no error |
 | `GET /api/models` | contains a `nai` lane with 4 image models, 0 video |
 | lane state without key | `key-missing` |
-| alpha guard | source-regex over ALL FIVE sites in the normative table: `nai` absent from all four JPEG-forcing conditionals, present in all five MIME-reporting ones |
+| alpha guard | source-regex over the whole normative table: `nai` absent from all **three** JPEG-forcing conditionals, present in all **five** MIME-reporting sites |
 
 The last row is the regression test for the alpha decision. It must cover every
 row of the normative table, not just the generate path — a generate-only regex
-is a false green (audit B4). `tests/provider-registry-parity.test.ts` already
-reads route source with regexes, so the pattern is established in-repo.
+is a false green (audit B4). Concretely: **three JPEG-forcing conditionals**
+(`generatePipeline:383`, `multimodePipeline:271`, `nodeGeneration:261`) where
+`nai` must be ABSENT, and **five MIME-reporting sites** across four files where
+it must be PRESENT. `tests/provider-registry-parity.test.ts` already reads
+route source with regexes, so the pattern is established in-repo.
 
 ## Accept criteria
 
@@ -237,4 +248,5 @@ reads route source with regexes, so the pattern is established in-repo.
 
 ## Scope boundary
 
-IN: the ten files above. OUT: UI components, doctor, i18n (wp4).
+IN: the files listed in the change map above. OUT: UI components, doctor, i18n
+(wp4).

@@ -165,3 +165,58 @@ as an assumption, and named in the handoff.
 
 All five High blockers folded into the roadmap as concrete amendments; five
 Medium/Low likewise. Re-audit follows with the same reviewer per AUDIT-LOOP-01.
+
+---
+
+# Round 2 (re-audit of `ab2c5916`)
+
+The same reviewer confirmed B1-B4 closed and B5 closed in narrative. It found
+**three new High** gaps — all test oracles the round-1 sweep had not reached —
+plus contradictions the amendments themselves introduced. All verified against
+real code and accepted.
+
+## R2-H1 (ACCEPTED) — `provider-adapter-v1-contract` oracle
+
+Verified `tests/provider-adapter-v1-contract.test.ts:57`:
+`EXPECTED_AUTH_REASON` is `{minimax, atlascloud, comfy}` with the comment
+*"A new adapter must add its row here"*, and the fixture context at `:43-44`
+sets only `minimaxApiKey`/`atlasCloudApiKey`.
+
+`020` lists this file in its accept criteria but not its change map — so the
+phase would fail its own gate. **Amendment to `020`:** add the file, with a
+`nai: /NovelAI API token missing/` row and `naiApiKey: key` on the fixture.
+
+## R2-H2 (ACCEPTED) — `CANARY_ENDPOINTS` in the canary script
+
+Verified `scripts/provider-canary.mjs:25`: a five-entry map, and
+`tests/provider-canary-parity.test.ts` asserts it matches `VALIDATE_URL_MAP`.
+`030` patched `laneForVendor` but not the endpoint table, so parity still fails.
+**Amendment to `030`:** add `nai: "https://api.novelai.net/user/data"` to
+`CANARY_ENDPOINTS`, matching `routes/keys.ts` exactly.
+
+## R2-H3 (ACCEPTED) — parity `referenceLimits("image")` map
+
+Verified `tests/provider-registry-parity.test.ts:54`: a deepEqual over the
+whole image ref-limit map. The wp1 manifest's `{image:1}` breaks it immediately.
+**Amendment to `010`:** append `nai: 1` to that map in the registry commit.
+
+## Medium/Low round 2 (all accepted)
+
+- **Green-gate contradiction.** `000`'s c8 row and `050`'s accept #1 still
+  implied a green `npm test` while the carve-out said otherwise. Both reworded.
+- **`NAI_RESPONSE_NOT_ZIP` was prose-only.** The `020` snippet still called
+  `extractFirstZipEntry` directly, which can only throw `NAI_ZIP_INVALID`. The
+  snippet now branches on `looksLikeZip` first, and `040` gains the UI string.
+- **JPEG-force count.** Said "four"; the table has **three** (383, 271, 261).
+- **`010` invented `config.naiApiKey`.** MiniMax has no key in `config.ts` —
+  keys load in `server.ts`. The `pickStr` line is removed; `naiProvider`
+  tunables stay.
+- **`030` `naiLane` snippet** assigned a bare string to `LaneState`; the real
+  shape is `{status, reason?}`.
+- **Scope-boundary counts** ("eight files", "ten files") no longer matched their
+  tables; both now say "the files listed above".
+- **msgpack handoff** was claimed in `003` but absent from `050`; now added.
+
+## Round 2 disposition
+
+Three High + seven Medium/Low folded. Nothing rebutted.
