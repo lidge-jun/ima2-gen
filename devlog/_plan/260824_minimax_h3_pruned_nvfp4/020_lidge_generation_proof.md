@@ -23,7 +23,7 @@ MemoryMax=20G와 `--disable-pinned-memory --cache-none`는 유지한다. GPU pow
 | Path | Action | Content |
 |---|---|---|
 | `devlog/_plan/260824_minimax_h3_pruned_nvfp4/evidence/020_t2v_api.json` | NEW | current object_info에 맞춘 flat `/prompt` graph |
-| `.../evidence/020_run_t2v.py` | NEW | submit, queue/history poll, raw JSON and `/view` download |
+| `.../evidence/020_run_t2v.py` | NEW | submit, queue/history poll, raw JSON, `/view` download and PyAV probe |
 | `.../evidence/020_run_t2v.sh` | NEW | 500W/service/metrics/cancel/teardown trap owner |
 | `.../evidence/020_submit.json` | NEW | prompt_id/node_errors receipt |
 | `.../evidence/020_history.json` | NEW | terminal history |
@@ -88,7 +88,8 @@ node -e 'JSON.parse(require("fs").readFileSync("evidence/020_t2v_api.json"))'
    keeps llama inactive, and then asserts all postconditions. Cleanup/assert failure
    overrides the original return with exit 72.
 7. Copy raw receipts to the local evidence folder. Verify output with `file`, first
-   16 bytes, and `ffprobe` duration/streams.
+   16 bytes, and Comfy venv PyAV duration/streams. lidge has no `ffprobe`; PyAV 18.0.0
+   is the verified existing media parser and adds no dependency.
 
 ## Success evidence
 
@@ -96,7 +97,7 @@ node -e 'JSON.parse(require("fs").readFileSync("evidence/020_t2v_api.json"))'
 prompt submit: HTTP 200/202, prompt_id, node_errors={}
 history: status_str=success, completed=true
 runtime: fresh Native ops contains nvfp4; fresh Emulated ops does not
-output: file identifies MP4/WebM; ffprobe sees video stream and expected duration range
+output: file identifies MP4/WebM; PyAV sees video stream and expected duration range
 metrics: peak VRAM < physical total; host and service remain reachable
 elapsed: monotonic start/end timestamps
 teardown: comfy service stopped; user-stopped llama peer remains inactive
@@ -124,7 +125,7 @@ figure of ~175s and ~26.9GB VRAM is a comparison target, not a pass condition.
 - `/prompt`, `/queue`, `/history`, `/view` directly exercise the real graph.
 - `journalctl` from the saved cursor proves the current request's model-load branch.
 - `nvidia-smi`/`free` sampling observes the requested 5090/RAM behavior.
-- `file` and `ffprobe` read the actual output artifact.
+- `file` and PyAV read the actual output artifact.
 
 ## Rollback
 

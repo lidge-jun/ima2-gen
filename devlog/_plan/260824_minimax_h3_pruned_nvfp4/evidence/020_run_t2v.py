@@ -63,6 +63,28 @@ def download_media(origin: str, descriptor: dict, output_dir: Path) -> Path:
     return output
 
 
+def probe_media(path: Path, output_dir: Path) -> dict:
+    import av
+    with av.open(str(path)) as container:
+        probe = {
+            "durationSeconds": None if container.duration is None else float(container.duration * av.time_base),
+            "format": container.format.name,
+            "streams": [
+                {
+                    "type": stream.type,
+                    "codec": stream.codec_context.name,
+                    "width": getattr(stream.codec_context, "width", 0),
+                    "height": getattr(stream.codec_context, "height", 0),
+                }
+                for stream in container.streams
+            ],
+        }
+    if not any(stream["type"] == "video" for stream in probe["streams"]):
+        raise RuntimeError("downloaded artifact has no video stream")
+    write_json(output_dir / "020_av_probe.json", probe)
+    return probe
+
+
 def wait_for_terminal(origin: str, prompt_id: str, output_dir: Path, timeout_s: int) -> dict:
     started = time.monotonic()
     missing_rounds = 0
@@ -114,11 +136,13 @@ def main() -> int:
     entry = wait_for_terminal(args.origin, prompt_id, output_dir, args.timeout)
     descriptor = find_media(entry, "92")
     output = download_media(args.origin, descriptor, output_dir)
+    probe = probe_media(output, output_dir)
     summary = {
         "promptId": prompt_id,
         "elapsedSeconds": round(time.time() - started_at, 3),
         "output": str(output),
         "bytes": output.stat().st_size,
+        "probe": probe,
     }
     write_json(output_dir / "020_result.json", summary)
     print(json.dumps(summary, ensure_ascii=False))

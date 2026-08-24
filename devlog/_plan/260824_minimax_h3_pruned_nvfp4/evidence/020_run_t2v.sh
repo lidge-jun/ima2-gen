@@ -53,8 +53,8 @@ trap on_exit EXIT INT TERM
 test "$original_power" = "600.00"
 command -v curl >/dev/null
 command -v file >/dev/null
-command -v ffprobe >/dev/null
 command -v xxd >/dev/null
+/home/lidgeai/ComfyUI/venv/bin/python -c 'import av; print(av.__version__)' > "$task_tmp/020_pyav_version.txt"
 sudo -n true
 test "$(systemctl --user is-active "$peer" || true)" = "inactive"
 test -z "$(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | tr -d '[:space:]')"
@@ -64,7 +64,7 @@ rm -f \
   "$task_tmp/020_comfy_tail.log" "$task_tmp/020_combined.log" "$task_tmp/020_submit.json" \
   "$task_tmp/020_history.json" "$task_tmp/020_media_descriptor.json" "$task_tmp/020_result.json" \
   "$task_tmp/020_output.mp4" "$task_tmp/020_output.webm" "$task_tmp/020_output.bin" \
-  "$task_tmp/020_file.txt" "$task_tmp/020_magic.txt" "$task_tmp/020_ffprobe.json" \
+  "$task_tmp/020_file.txt" "$task_tmp/020_magic.txt" "$task_tmp/020_av_probe.json" \
   "$task_tmp/020_post_state.txt"
 
 start_iso="$(date -Ins)"
@@ -117,4 +117,3 @@ if grep -E 'Emulated ops:.*nvfp4' "$task_tmp/020_combined.log" >/dev/null; then 
 output="$(/home/lidgeai/ComfyUI/venv/bin/python -c 'import json; print(json.load(open("/home/lidgeai/tmp/ima2-h3-pruned/020_result.json"))["output"])')"
 file "$output" | tee "$task_tmp/020_file.txt"
 xxd -l 16 -p "$output" | tee "$task_tmp/020_magic.txt"
-ffprobe -v error -show_entries format=duration,size -show_streams -of json "$output" > "$task_tmp/020_ffprobe.json"
