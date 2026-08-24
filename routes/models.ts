@@ -71,6 +71,14 @@ function capabilities(
   return { source: "verified-contract", aspectRatios, parameters, inputRoles };
 }
 
+/**
+ * Text-only lanes. The default in `entries` advertises image_references, which
+ * would be a lie for a lane whose routes answer NAI_REF_UNSUPPORTED.
+ */
+function textOnlyCapabilities(): McpModelCapabilities {
+  return capabilities(["text"]);
+}
+
 function entries(ids: Iterable<string>, caps?: McpModelCapabilities): McpModelEntry[] {
   return [...ids].map((id) => ({
     id,
@@ -248,7 +256,7 @@ function naiLane(ctx: RuntimeContext): ModelLaneDto {
       ? { status: "ready" }
       : { status: "key-missing", reason: "NovelAI API token missing" };
     return lane(fallback, { image: NAI_DEFAULT_IMAGE_MODEL }, {
-      image: entries(deriveModels("nai", "image")), video: [],
+      image: entries(deriveModels("nai", "image"), textOnlyCapabilities()), video: [],
     });
   }
   const auth = adapter.validateAuth();
@@ -256,7 +264,7 @@ function naiLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: auth.reason ?? "NovelAI API token missing" };
   return lane(state, { image: NAI_DEFAULT_IMAGE_MODEL }, {
-    image: entries(adapter.listModels().map((model) => model.id)), video: [],
+    image: entries(adapter.listModels().map((model) => model.id), textOnlyCapabilities()), video: [],
   });
 }
 
