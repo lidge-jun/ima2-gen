@@ -44,10 +44,14 @@ export interface ModelLaneDto {
 
 interface ModelsRouteDeps {
   detectAgyInstalled?: () => Promise<boolean>;
+  listComfyWorkflows?: typeof listWorkflows;
+  probeComfyOrigins?: typeof probeComfyOrigins;
 }
 
 type LaneState = { status: ModelLaneStatus; reason?: string | undefined };
 type CatalogResult = { models: McpProviderModels; reason?: string | undefined; disconnected?: boolean | undefined };
+
+const COMFY_VIDEO_LOCK_REASON = "ComfyUI video execution is not supported yet";
 
 const MCP_LANES = new Set<ModelLaneId>(["runway", "higgsfield"]);
 const MCP_PROVIDER_FALLBACKS = listProviders([])
@@ -245,8 +249,8 @@ function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
  * workflows because of one dead box. So the lane stays ready while each
  * workflow carries its own liveness in its description.
  */
-async function comfyLane(ctx: RuntimeContext): Promise<ModelLaneDto> {
-  const workflows = await listWorkflows();
+async function comfyLane(ctx: RuntimeContext, deps: ModelsRouteDeps = {}): Promise<ModelLaneDto> {
+  const workflows = await (deps.listComfyWorkflows ?? listWorkflows)();
   if (workflows.length === 0) {
     return lane(
       { status: "disconnected", reason: "No ComfyUI workflow registered" },
@@ -254,7 +258,7 @@ async function comfyLane(ctx: RuntimeContext): Promise<ModelLaneDto> {
       { image: [], video: [] },
     );
   }
-  const health = await probeComfyOrigins(
+  const health = await (deps.probeComfyOrigins ?? probeComfyOrigins)(
     workflows.map((workflow) => workflow.origin),
     ctx.config.comfy.healthTimeoutMs,
   );
@@ -264,9 +268,10 @@ async function comfyLane(ctx: RuntimeContext): Promise<ModelLaneDto> {
   const state: LaneState = anyLive
     ? { status: "ready", ...(allLive ? {} : { reason: "Some ComfyUI instances are offline" }) }
     : { status: "disconnected", reason: "No ComfyUI instance responded" };
-  const first = workflows[0]!;
-  return lane(state, { image: first.id }, {
-    image: workflows.map((workflow) => ({
+  const imageWorkflows = workflows.filter((workflow) => workflow.mediaKind === "image");
+  const videoWorkflows = workflows.filter((workflow) => workflow.mediaKind === "video");
+  const firstImage = imageWorkflows[0];
+  const projectWorkflow = (workflow: (typeof workflows)[number]): McpModelEntry => ({
       id: workflow.id,
       label: workflow.label,
       description: health.get(workflow.origin)?.ok
@@ -278,12 +283,18 @@ async function comfyLane(ctx: RuntimeContext): Promise<ModelLaneDto> {
         parameters: [],
         inputRoles: workflow.bind.refImage ? ["text", "image_references"] : ["text"],
       },
+    });
+  return lane(state, firstImage ? { image: firstImage.id } : {}, {
+    image: imageWorkflows.map(projectWorkflow),
+    video: videoWorkflows.map((workflow) => ({
+      ...projectWorkflow(workflow),
+      executable: false,
+      lockReason: COMFY_VIDEO_LOCK_REASON,
     })),
-    video: [],
   });
 }
 
-async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
+async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean, deps: ModelsRouteDeps = {}) {
   const gptModels = entries(ctx.config.imageModels.valid);
   return {
     oauth: oauthLane(ctx, gptModels),
@@ -294,7 +305,7 @@ async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean) {
     "gemini-api": geminiLane(ctx),
     atlascloud: atlasCloudLane(ctx),
     minimax: minimaxLane(ctx),
-    comfy: await comfyLane(ctx),
+    comfy: await comfyLane(ctx, deps),
   };
 }
 
@@ -438,10 +449,10 @@ export function registerModelsRoutes(
         resolveAgyStatus(deps.detectAgyInstalled ?? cachedAgyDetection),
         buildMcpLanes(ctx),
       ]);
-      res.json({ ok: true, lanes: { ...(await buildCoreLanes(ctx, agyInstalled)), ...mcp } });
+      res.json({ ok: true, lanes: { ...(await buildCoreLanes(ctx, agyInstalled, deps)), ...mcp } });
     } catch {
       const mcp = await buildMcpLanes(ctx);
-      res.json({ ok: true, lanes: { ...(await buildCoreLanes(ctx, false)), ...mcp } });
+      res.json({ ok: true, lanes: { ...(await buildCoreLanes(ctx, false, deps)), ...mcp } });
     }
   });
 }

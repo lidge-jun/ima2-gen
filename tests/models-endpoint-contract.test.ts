@@ -69,6 +69,7 @@ async function withApp(
     minimaxApiKey?: string;
     atlasCloudApiKey?: string;
     grokProxyState?: string;
+    comfyWorkflows?: Array<import("../lib/comfyWorkflowStore.ts").ComfyWorkflowRecord>;
   } = {},
   run: (base: string, manager: FakeMcpManager) => Promise<void>,
 ) {
@@ -95,10 +96,13 @@ async function withApp(
         defaultVideoModel: "grok-imagine-video-1.5",
       },
       mcp: { enabledProviders: ["runway", "higgsfield"] },
+      comfy: { healthTimeoutMs: 10 },
     },
   };
   registerModelsRoutes(app, ctx as never, {
     detectAgyInstalled: async () => options.agyInstalled ?? false,
+    listComfyWorkflows: async () => options.comfyWorkflows ?? [],
+    probeComfyOrigins: async (origins) => new Map(origins.map((origin) => [origin, { ok: false, reason: "fixture offline" }])),
   });
   registerMcpConnectionRoutes(app, ctx as never);
   const server = await new Promise<Server>((resolve) => {
@@ -161,6 +165,27 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
     assert.deepEqual(body.lanes.higgsfield.models, { image: [], video: [] });
     assert.equal(manager.calls.length, 0, "disconnected lanes must not browse a dynamic catalog");
   });
+});
+
+test("the Comfy lane separates image and locked video workflows without inventing an image default", async () => {
+  const bind = { prompt: { node: "1", input: "text" }, output: { node: "2" } };
+  const workflow = {
+      id: "h3", label: "MiniMax H3 FL2VA pruned NVFP4", mediaKind: "video",
+      origin: "http://127.0.0.1:9", graph: {
+        "1": { class_type: "MiniMaxH3ImageToVideo", inputs: { prompt: "x" } },
+        "2": { class_type: "SaveVideo", inputs: {} },
+      }, bind, params: [], createdAt: 1, updatedAt: 1,
+    } as import("../lib/comfyWorkflowStore.ts").ComfyWorkflowRecord;
+    await withApp({ comfyWorkflows: [workflow] }, async (base) => {
+      const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+      assert.deepEqual(body.lanes.comfy.defaults, {});
+      assert.deepEqual(body.lanes.comfy.models.image, []);
+      const h3 = body.lanes.comfy.models.video[0];
+      assert.equal(h3?.id, "h3");
+      assert.equal(h3?.label, "MiniMax H3 FL2VA pruned NVFP4");
+      assert.equal(h3?.executable, false);
+      assert.match(h3?.lockReason ?? "", /video execution is not supported/);
+    });
 });
 
 test("catalog failures degrade per lane and provider listings expose registry state", async () => {

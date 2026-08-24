@@ -61,6 +61,14 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
     // read is async and this function is not.
     const comfyCheck = normalizeComfyWorkflowModel(rawModel);
     if (comfyCheck.error) return { error: comfyCheck.error, code: comfyCheck.code, status: comfyCheck.status };
+    const workflow = ctx?.comfyWorkflows?.find((entry) => entry.id === comfyCheck.model);
+    if (workflow?.mediaKind === "video") {
+      return {
+        error: "ComfyUI video execution is not supported yet",
+        code: "COMFY_VIDEO_EXECUTION_LOCKED",
+        status: 400,
+      };
+    }
     return {
       provider: "comfy" as const,
       model: comfyCheck.model,

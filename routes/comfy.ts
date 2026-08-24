@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { exportImageToComfy, isComfyBridgeError, normalizeComfyOrigin } from "../lib/comfyBridge.js";
 import { probeComfyOrigins } from "../lib/comfyImageAdapter.js";
-import { deriveParams, inferBindCandidates, parseApiGraph } from "../lib/comfyGraphBind.js";
+import { deriveParams, inferBindCandidates, inferComfyMediaKind, parseApiGraph } from "../lib/comfyGraphBind.js";
 import { extractComfyApiGraph, isPngBuffer } from "../lib/comfyPngWorkflow.js";
 import {
   deleteWorkflow,
@@ -12,6 +12,7 @@ import {
   ComfyWorkflowError,
   type ComfyGraph,
   type ComfyWorkflowBindings,
+  validateComfyMediaKind,
 } from "../lib/comfyWorkflowStore.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 
@@ -105,6 +106,7 @@ export function registerComfyRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
     try {
       const graph = graphFromBody(req.body);
       const candidates = inferBindCandidates(graph);
+      const mediaKind = inferComfyMediaKind(graph);
       return res.json({
         ok: true,
         nodes: Object.entries(graph).map(([id, node]) => ({
@@ -113,6 +115,7 @@ export function registerComfyRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
           title: node._meta?.title ?? null,
         })),
         candidates,
+        ...(mediaKind ? { mediaKind } : {}),
         needsConfirmation: candidates.some((candidate) => !candidate.unambiguous),
       });
     } catch (error) {
@@ -145,7 +148,7 @@ export function registerComfyRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   app.post("/api/comfy/workflows", async (req: Request, res: Response) => {
     const body = (req.body ?? {}) as {
       id?: unknown; label?: unknown; origin?: unknown;
-      bind?: ComfyWorkflowBindings; params?: unknown; replace?: unknown;
+      bind?: ComfyWorkflowBindings; params?: unknown; replace?: unknown; mediaKind?: unknown;
     };
     try {
       const graph = graphFromBody(req.body);
@@ -156,10 +159,21 @@ export function registerComfyRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
           "A prompt binding and an output node are required. Call /api/comfy/inspect first and confirm the candidates.",
         ));
       }
+      const inferredMediaKind = inferComfyMediaKind(graph, bind.output.node);
+      const mediaKind = body.mediaKind === undefined
+        ? inferredMediaKind ?? "image"
+        : validateComfyMediaKind(body.mediaKind);
+      if (inferredMediaKind && mediaKind !== inferredMediaKind) {
+        throw new ComfyWorkflowError(
+          COMFY_WORKFLOW_ERROR.MEDIA_KIND_MISMATCH,
+          `Workflow output node '${bind.output.node}' is ${inferredMediaKind}, not ${mediaKind}.`,
+        );
+      }
       const record = await putWorkflow({
         id: typeof body.id === "string" ? body.id : "",
         label: typeof body.label === "string" ? body.label : String(body.id ?? ""),
         origin: typeof body.origin === "string" ? body.origin : ctx.config.comfy.defaultUrl,
+        mediaKind,
         graph,
         bind,
         params: Array.isArray(body.params) ? body.params : deriveParams(graph, bind),

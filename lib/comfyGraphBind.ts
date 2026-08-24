@@ -5,6 +5,7 @@ import {
   ComfyWorkflowError,
   type ComfyGraph,
   type ComfyGraphNode,
+  type ComfyMediaKind,
   type ComfyWorkflowBindings,
   type ComfyWorkflowParam,
 } from "./comfyWorkflowStore.js";
@@ -80,11 +81,16 @@ function isLink(value: unknown): boolean {
 
 const FIELD_RULES: ReadonlyArray<{ field: ComfyBindField; classType: string; input: string }> = [
   { field: "prompt", classType: "CLIPTextEncode", input: "text" },
+  { field: "prompt", classType: "MiniMaxH3ImageToVideo", input: "prompt" },
   { field: "width", classType: "EmptyLatentImage", input: "width" },
+  { field: "width", classType: "MiniMaxH3ImageToVideo", input: "width" },
   { field: "height", classType: "EmptyLatentImage", input: "height" },
+  { field: "height", classType: "MiniMaxH3ImageToVideo", input: "height" },
   { field: "seed", classType: "KSampler", input: "seed" },
+  { field: "seed", classType: "RandomNoise", input: "noise_seed" },
   { field: "refImage", classType: "LoadImage", input: "image" },
   { field: "output", classType: "SaveImage", input: "" },
+  { field: "output", classType: "SaveVideo", input: "" },
 ];
 
 /**
@@ -99,13 +105,15 @@ const FIELD_RULES: ReadonlyArray<{ field: ComfyBindField; classType: string; inp
  */
 export function inferBindCandidates(graph: ComfyGraph): BindCandidate[] {
   const candidates: BindCandidate[] = [];
-  for (const rule of FIELD_RULES) {
-    const matches = Object.entries(graph).filter(([, node]) => {
-      if (node.class_type !== rule.classType) return false;
-      if (!rule.input) return true;
-      return rule.input in node.inputs && !isLink(node.inputs[rule.input]);
-    });
-    for (const [nodeId, node] of matches) {
+  const fields = [...new Set(FIELD_RULES.map((rule) => rule.field))];
+  for (const field of fields) {
+    const matches = FIELD_RULES
+      .filter((rule) => rule.field === field)
+      .flatMap((rule) => Object.entries(graph)
+        .filter(([, node]) => node.class_type === rule.classType
+          && (!rule.input || (rule.input in node.inputs && !isLink(node.inputs[rule.input]))))
+        .map(([nodeId, node]) => ({ rule, nodeId, node })));
+    for (const { rule, nodeId, node } of matches) {
       const candidate: BindCandidate = {
         field: rule.field,
         node: nodeId,
@@ -118,6 +126,17 @@ export function inferBindCandidates(graph: ComfyGraph): BindCandidate[] {
     }
   }
   return candidates;
+}
+
+/** Infers only when one concrete SaveImage/SaveVideo output decides the lane. */
+export function inferComfyMediaKind(graph: ComfyGraph, outputNode?: string): ComfyMediaKind | undefined {
+  if (outputNode !== undefined) {
+    const classType = graph[outputNode]?.class_type;
+    return classType === "SaveVideo" ? "video" : classType === "SaveImage" ? "image" : undefined;
+  }
+  const outputs = Object.values(graph).filter((node) => node.class_type === "SaveImage" || node.class_type === "SaveVideo");
+  if (outputs.length !== 1) return undefined;
+  return outputs[0]!.class_type === "SaveVideo" ? "video" : "image";
 }
 
 /** The subset of candidates that can be accepted without asking the user. */

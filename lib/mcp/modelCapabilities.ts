@@ -28,6 +28,8 @@ export interface McpModelEntry {
   id: string;
   label: string;
   description?: string | undefined;
+  executable?: boolean | undefined;
+  lockReason?: string | undefined;
   capabilities: McpModelCapabilities;
 }
 

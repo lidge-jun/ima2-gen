@@ -7,6 +7,7 @@ import { describe, it } from "node:test";
 import {
   bindGraph,
   deriveParams,
+  inferComfyMediaKind,
   inferBindCandidates,
   parseApiGraph,
   unambiguousBindings,
@@ -57,6 +58,12 @@ const BIND: ComfyWorkflowBindings = {
   output: { node: "9" },
 };
 
+const H3_GRAPH = {
+  "129": { class_type: "RandomNoise", inputs: { noise_seed: 42 } },
+  "131": { class_type: "MiniMaxH3ImageToVideo", inputs: { prompt: "waves", width: 864, height: 480, length: 243 } },
+  "92": { class_type: "SaveVideo", inputs: { video: ["130", 0], filename_prefix: "video/h3" } },
+};
+
 describe("comfy graph parsing", () => {
   it("accepts an API-format export", () => {
     const graph = parseApiGraph(LIVE_GRAPH);
@@ -85,6 +92,28 @@ describe("comfy graph parsing", () => {
 });
 
 describe("comfy binding inference", () => {
+  it("infers H3 scalar bindings, SaveVideo output, and video media kind", () => {
+    const graph = parseApiGraph(H3_GRAPH);
+    const candidates = inferBindCandidates(graph);
+    for (const [field, node, input] of [
+      ["prompt", "131", "prompt"], ["width", "131", "width"],
+      ["height", "131", "height"], ["seed", "129", "noise_seed"],
+      ["output", "92", ""],
+    ]) {
+      assert.ok(candidates.some((candidate) => candidate.field === field && candidate.node === node && candidate.input === input && candidate.unambiguous));
+    }
+    assert.equal(inferComfyMediaKind(graph), "video");
+    assert.equal(inferComfyMediaKind(graph, "92"), "video");
+  });
+
+  it("keeps output kind ambiguous when both image and video savers exist", () => {
+    const graph = parseApiGraph({ ...H3_GRAPH, "93": { class_type: "SaveImage", inputs: { images: ["1", 0] } } });
+    const outputs = inferBindCandidates(graph).filter((candidate) => candidate.field === "output");
+    assert.equal(outputs.length, 2);
+    assert.ok(outputs.every((candidate) => !candidate.unambiguous));
+    assert.equal(inferComfyMediaKind(graph), undefined);
+  });
+
   it("marks single-match fields unambiguous and CLIPTextEncode ambiguous", () => {
     const candidates = inferBindCandidates(parseApiGraph(LIVE_GRAPH));
     const prompts = candidates.filter((c) => c.field === "prompt");

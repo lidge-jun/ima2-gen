@@ -23,6 +23,8 @@ export const COMFY_WORKFLOW_ERROR = {
   GRAPH_INVALID: "COMFY_WORKFLOW_GRAPH_INVALID",
   BIND_INVALID: "COMFY_WORKFLOW_BIND_INVALID",
   STORE_CORRUPT: "COMFY_WORKFLOW_STORE_CORRUPT",
+  MEDIA_KIND_INVALID: "COMFY_WORKFLOW_MEDIA_KIND_INVALID",
+  MEDIA_KIND_MISMATCH: "COMFY_WORKFLOW_MEDIA_KIND_MISMATCH",
 } as const;
 
 export class ComfyWorkflowError extends Error {
@@ -48,6 +50,7 @@ export interface ComfyGraphNode {
 }
 
 export type ComfyGraph = Record<string, ComfyGraphNode>;
+export type ComfyMediaKind = "image" | "video";
 
 /** Where one request field is injected into the graph. */
 export interface ComfyBinding {
@@ -81,6 +84,7 @@ export interface ComfyWorkflowRecord {
   id: string;
   label: string;
   origin: string;
+  mediaKind: ComfyMediaKind;
   graph: ComfyGraph;
   bind: ComfyWorkflowBindings;
   params: ComfyWorkflowParam[];
@@ -117,18 +121,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * as a selector entry that fails only once a generation is billed. Anything
  * that does not carry an id, an origin, and a prompt/output binding is dropped.
  */
-function isWorkflowRecord(value: unknown): value is ComfyWorkflowRecord {
-  if (!isRecord(value)) return false;
-  if (typeof value.id !== "string" || !ID_RE.test(value.id)) return false;
-  if (typeof value.origin !== "string" || !value.origin) return false;
-  if (!isRecord(value.graph)) return false;
+function normalizeWorkflowRecord(value: unknown): ComfyWorkflowRecord | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== "string" || !ID_RE.test(value.id)) return null;
+  if (typeof value.origin !== "string" || !value.origin) return null;
+  if (!isRecord(value.graph)) return null;
   const bind = value.bind;
-  if (!isRecord(bind)) return false;
+  if (!isRecord(bind)) return null;
   const prompt = bind.prompt;
   const output = bind.output;
-  if (!isRecord(prompt) || typeof prompt.node !== "string" || typeof prompt.input !== "string") return false;
-  if (!isRecord(output) || typeof output.node !== "string") return false;
-  return true;
+  if (!isRecord(prompt) || typeof prompt.node !== "string" || typeof prompt.input !== "string") return null;
+  if (!isRecord(output) || typeof output.node !== "string") return null;
+  if (value.mediaKind !== undefined && value.mediaKind !== "image" && value.mediaKind !== "video") return null;
+  return {
+    ...(value as unknown as ComfyWorkflowRecord),
+    label: typeof value.label === "string" && value.label.trim() ? value.label : value.id,
+    mediaKind: value.mediaKind === "video" ? "video" : "image",
+    params: Array.isArray(value.params) ? value.params as ComfyWorkflowParam[] : [],
+    createdAt: typeof value.createdAt === "number" ? value.createdAt : 0,
+    updatedAt: typeof value.updatedAt === "number" ? value.updatedAt : 0,
+  };
+}
+
+export function validateComfyMediaKind(value: unknown): ComfyMediaKind {
+  if (value !== "image" && value !== "video") {
+    throw new ComfyWorkflowError(
+      COMFY_WORKFLOW_ERROR.MEDIA_KIND_INVALID,
+      "Workflow media kind must be 'image' or 'video'.",
+    );
+  }
+  return value;
 }
 
 /**
@@ -149,7 +171,9 @@ export async function listWorkflows(): Promise<ComfyWorkflowRecord[]> {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isWorkflowRecord);
+    return parsed
+      .map(normalizeWorkflowRecord)
+      .filter((record): record is ComfyWorkflowRecord => record !== null);
   } catch (error: unknown) {
     logError("comfy", "workflow_store:parse", error);
     return [];
@@ -181,7 +205,8 @@ async function writeAll(records: ComfyWorkflowRecord[]): Promise<void> {
  * rule is enforced once, at the boundary, instead of at every call site.
  */
 export async function putWorkflow(
-  input: Omit<ComfyWorkflowRecord, "createdAt" | "updatedAt"> & Partial<Pick<ComfyWorkflowRecord, "createdAt">>,
+  input: Omit<ComfyWorkflowRecord, "createdAt" | "updatedAt" | "mediaKind">
+    & Partial<Pick<ComfyWorkflowRecord, "createdAt" | "mediaKind">>,
   options: { allowReplace?: boolean } = {},
 ): Promise<ComfyWorkflowRecord> {
   const id = validateWorkflowId(input.id);
@@ -192,10 +217,14 @@ export async function putWorkflow(
     throw new ComfyWorkflowError(COMFY_WORKFLOW_ERROR.ID_TAKEN, `Workflow '${id}' already exists.`, 409);
   }
   const now = Date.now();
+  const mediaKind = input.mediaKind === undefined
+    ? existing?.mediaKind ?? "image"
+    : validateComfyMediaKind(input.mediaKind);
   const record: ComfyWorkflowRecord = {
     id,
     label: typeof input.label === "string" && input.label.trim() ? input.label.trim() : id,
     origin,
+    mediaKind,
     graph: input.graph,
     bind: input.bind,
     params: input.params ?? [],

@@ -63,12 +63,38 @@ describe("comfy workflow store", () => {
       const saved = await store.putWorkflow(record());
       assert.equal(saved.id, "sdxl-base");
       assert.equal(saved.origin, "http://127.0.0.1:8188");
+      assert.equal(saved.mediaKind, "image");
       assert.ok(saved.createdAt > 0 && saved.updatedAt > 0);
 
       const all = await store.listWorkflows();
       assert.equal(all.length, 1);
       assert.equal((await store.getWorkflow("sdxl-base"))?.label, "SDXL base");
       assert.equal(await store.getWorkflow("nope"), null);
+    });
+  });
+
+  it("round-trips video kind and preserves it when replacement omits the field", async () => {
+    await withScratchStore(async () => {
+      const store = await import("../lib/comfyWorkflowStore.ts");
+      const video = await store.putWorkflow(record({ mediaKind: "video" }));
+      assert.equal(video.mediaKind, "video");
+      const replaced = await store.putWorkflow(record({ label: "renamed" }), { allowReplace: true });
+      assert.equal(replaced.mediaKind, "video");
+      assert.equal((await store.getWorkflow("sdxl-base"))?.mediaKind, "video");
+    });
+  });
+
+  it("rejects invalid media kind and defaults a legacy stored record to image", async () => {
+    await withScratchStore(async () => {
+      const store = await import("../lib/comfyWorkflowStore.ts");
+      await assert.rejects(
+        () => store.putWorkflow(record({ mediaKind: "audio" })),
+        (error: any) => error?.code === "COMFY_WORKFLOW_MEDIA_KIND_INVALID",
+      );
+      const dir = join(config.storage.configDir, "comfy");
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, "workflows.json"), JSON.stringify([record()]), "utf8");
+      assert.equal((await store.listWorkflows())[0]?.mediaKind, "image");
     });
   });
 

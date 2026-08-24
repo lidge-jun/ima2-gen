@@ -25,6 +25,7 @@ const FIXTURE_COMFY_WORKFLOW = {
   graph: {},
   bind: { prompt: { node: "6", input: "text" }, output: { node: "9" } },
   params: [],
+  mediaKind: "image",
   createdAt: 0,
   updatedAt: 0,
 };
@@ -141,6 +142,15 @@ test("validateAuth reflects live credentials from the runtime context", () => {
     assert.equal(result.ok, false, `${adapter.laneId} without key`);
     assert.match(result.reason ?? "", expectedReason);
   }
+});
+
+test("the Comfy image adapter ignores catalog-only video workflows", () => {
+  const videoOnly = {
+    comfyWorkflows: [{ ...FIXTURE_COMFY_WORKFLOW, id: "h3", mediaKind: "video" }],
+  } as unknown as RuntimeContext;
+  const adapter = getProviderAdapter(videoOnly, "comfy");
+  assert.deepEqual(adapter?.validateAuth(), { ok: false, reason: "No ComfyUI workflow registered" });
+  assert.deepEqual(adapter?.listModels(), []);
 });
 
 test("normalizeError owns the lane's error vocabulary", () => {

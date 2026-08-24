@@ -18,6 +18,12 @@ const GRAPH = {
   "9": { class_type: "SaveImage", inputs: { filename_prefix: "x" } },
 };
 const BIND = { prompt: { node: "6", input: "text" }, output: { node: "9" } };
+const VIDEO_GRAPH = {
+  "129": { class_type: "RandomNoise", inputs: { noise_seed: 42 } },
+  "131": { class_type: "MiniMaxH3ImageToVideo", inputs: { prompt: "waves", width: 864, height: 480, length: 243 } },
+  "92": { class_type: "SaveVideo", inputs: { video: ["130", 0], filename_prefix: "video/h3" } },
+};
+const VIDEO_BIND = { prompt: { node: "131", input: "prompt" }, output: { node: "92" } };
 
 const originalConfigDir = config.storage.configDir;
 const scratch: string[] = [];
@@ -68,6 +74,26 @@ describe("comfy workflow routes", () => {
       // Inspect must not persist: it is the confirm step's input, not a write.
       const listed = await (await fetch(base + "/api/comfy/workflows")).json();
       assert.deepEqual(listed.workflows, []);
+    });
+  });
+
+  it("infers and stores a video workflow, and rejects an explicit kind mismatch", async () => {
+    await withServer(async (base) => {
+      const inspected = await post(base, "/api/comfy/inspect", { graph: VIDEO_GRAPH });
+      const inspectBody = await inspected.json();
+      assert.equal(inspectBody.mediaKind, "video");
+      assert.ok(inspectBody.candidates.some((candidate: any) => candidate.field === "prompt" && candidate.node === "131"));
+      const created = await post(base, "/api/comfy/workflows", {
+        id: "minimax-h3", label: "MiniMax H3", mediaKind: "video",
+        origin: "http://127.0.0.1:8188", graph: VIDEO_GRAPH, bind: VIDEO_BIND,
+      });
+      assert.equal(created.status, 200);
+      assert.equal((await created.json()).workflow.mediaKind, "video");
+      const mismatch = await post(base, "/api/comfy/workflows", {
+        id: "bad-kind", mediaKind: "image", graph: VIDEO_GRAPH, bind: VIDEO_BIND,
+      });
+      assert.equal(mismatch.status, 400);
+      assert.equal((await mismatch.json()).error.code, "COMFY_WORKFLOW_MEDIA_KIND_MISMATCH");
     });
   });
 
@@ -143,6 +169,14 @@ describe("comfy workflow routes", () => {
 });
 
 describe("comfy provider option resolution", () => {
+  it("blocks a registered video workflow from the classic image path", () => {
+    const result = resolveProviderOptions({
+      comfyWorkflows: [{ id: "minimax-h3", mediaKind: "video" }],
+    } as never, { provider: "comfy", rawModel: "minimax-h3" });
+    assert.equal(result.code, "COMFY_VIDEO_EXECUTION_LOCKED");
+    assert.equal(result.status, 400);
+  });
+
   it("requires an explicit workflow id and invents no default", () => {
     // Every other lane defaults an empty model to a flagship. Comfy has no
     // meaningful "first" workflow, so a silent pick would run a graph on a
