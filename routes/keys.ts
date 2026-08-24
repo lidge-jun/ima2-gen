@@ -54,9 +54,11 @@ const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
   // Fallback only. The MiniMax branch resolves a region-aware URL at call time
   // via resolveMinimaxValidateUrl so a cn_zh workspace validates against the CN host.
   minimax: "https://api.minimax.io/v1/models",
-  // Account host, not the image host: validating against generation would bill
-  // Anlas on every key save.
-  nai: "https://api.novelai.net/user/data",
+  // The image host serves account endpoints too: api.novelai.net now answers
+  // /user/* with 400 and tells third-party tools to use the image URL
+  // (verified live 2026-08-25). /user/data costs nothing, while probing
+  // generation would bill Anlas on every key save.
+  nai: "https://image.novelai.net/user/data",
 };
 
 // Same region rule as lib/minimaxImageAdapter.ts resolveBaseUrl.

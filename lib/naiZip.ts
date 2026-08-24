@@ -16,6 +16,8 @@
 import { inflateRawSync } from "node:zlib";
 
 const LOCAL_FILE_HEADER_SIG = 0x04034b50;
+const CENTRAL_DIRECTORY_SIG = 0x02014b50;
+const EOCD_SIG = 0x06054b50;
 const FLAG_ENCRYPTED = 0x1;
 const FLAG_DATA_DESCRIPTOR = 0x8;
 const METHOD_STORED = 0;
@@ -44,6 +46,41 @@ export function looksLikeZip(buffer: Buffer): boolean {
 }
 
 /**
+ * Reads the first entry's real sizes from the central directory.
+ *
+ * NovelAI streams its response, which sets the data-descriptor flag and leaves
+ * the local header's CRC and sizes zero (verified against a live V5 response:
+ * flags 0x8, local sizes 0, true sizes only in the central directory). The
+ * authoritative values therefore live at the end of the archive.
+ *
+ * Returns null when the trailer is absent or malformed, so callers can fail
+ * with a precise error instead of reading arbitrary bytes.
+ */
+function readCentralDirectorySizes(
+  buffer: Buffer,
+): { compressedSize: number; uncompressedSize: number; method: number } | null {
+  // The EOCD is variable-length because of its comment field, so scan back for
+  // the signature. 22 bytes is the minimum record size.
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= 0; i--) {
+    if (buffer.readUInt32LE(i) === EOCD_SIG) { eocd = i; break; }
+  }
+  if (eocd < 0) return null;
+
+  const cdOffset = buffer.readUInt32LE(eocd + 16);
+  // +46 is the fixed central-directory header size; a truncated trailer must
+  // not read past the buffer.
+  if (cdOffset + 46 > buffer.length) return null;
+  if (buffer.readUInt32LE(cdOffset) !== CENTRAL_DIRECTORY_SIG) return null;
+
+  return {
+    method: buffer.readUInt16LE(cdOffset + 10),
+    compressedSize: buffer.readUInt32LE(cdOffset + 20),
+    uncompressedSize: buffer.readUInt32LE(cdOffset + 24),
+  };
+}
+
+/**
  * Extracts the first entry of a single-entry ZIP archive.
  *
  * Returns the decompressed bytes. Throws an operational NAI_ZIP_* error for
@@ -58,19 +95,29 @@ export function extractFirstZipEntry(buffer: Buffer): Buffer {
   }
 
   const flags = buffer.readUInt16LE(6);
-  const method = buffer.readUInt16LE(8);
-  const compressedSize = buffer.readUInt32LE(18);
-  const uncompressedSize = buffer.readUInt32LE(22);
+  let method = buffer.readUInt16LE(8);
+  let compressedSize = buffer.readUInt32LE(18);
+  let uncompressedSize = buffer.readUInt32LE(22);
   const nameLength = buffer.readUInt16LE(26);
   const extraLength = buffer.readUInt16LE(28);
 
   if (flags & FLAG_ENCRYPTED) {
     throw naiZipError("NovelAI ZIP entry is encrypted", "NAI_ZIP_UNSUPPORTED");
   }
-  // Bit 3 moves the sizes into a trailing data descriptor, leaving the header
-  // values zero; locating the entry would need the central directory.
+  // Bit 3 means the sizes were not known when the header was written, which is
+  // exactly what a streaming server produces — NovelAI sets it on every
+  // response. The real values are in the central directory at the end.
   if (flags & FLAG_DATA_DESCRIPTOR) {
-    throw naiZipError("NovelAI ZIP entry uses a data descriptor", "NAI_ZIP_UNSUPPORTED");
+    const central = readCentralDirectorySizes(buffer);
+    if (!central) {
+      throw naiZipError(
+        "NovelAI ZIP entry has no readable central directory",
+        "NAI_ZIP_INVALID",
+      );
+    }
+    method = central.method;
+    compressedSize = central.compressedSize;
+    uncompressedSize = central.uncompressedSize;
   }
   if (compressedSize === ZIP64_SENTINEL || uncompressedSize === ZIP64_SENTINEL) {
     throw naiZipError("NovelAI ZIP entry is ZIP64", "NAI_ZIP_UNSUPPORTED");

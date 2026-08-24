@@ -23,6 +23,10 @@ type ZipOptions = {
   uncompressedSize?: number;
   name?: string;
   signature?: number;
+  /** Emit a streaming archive: zeroed local sizes + a central directory. */
+  streaming?: boolean;
+  /** Omit the trailer so the streaming path has nothing authoritative to read. */
+  omitCentralDirectory?: boolean;
 };
 
 /** Builds a single-entry archive with the exact header fields under test. */
@@ -41,6 +45,61 @@ function buildZip(payload: Buffer, options: ZipOptions = {}): Buffer {
   header.writeUInt16LE(name.length, 26);
   header.writeUInt16LE(0, 28);
   return Buffer.concat([header, name, body]);
+}
+
+/**
+ * Builds the archive shape NovelAI actually returns.
+ *
+ * Its server streams the response, so the local header carries flag bit 3 with
+ * zeroed CRC and sizes, and the real values appear only in the central
+ * directory (verified against a live V5 response: 734550 bytes, local sizes 0,
+ * central sizes 734414/735841).
+ */
+function buildStreamingZip(payload: Buffer, options: ZipOptions = {}): Buffer {
+  const method = options.method ?? 8;
+  const body = method === 8 ? deflateRawSync(payload) : payload;
+  const name = Buffer.from(options.name ?? "image_0.png", "utf8");
+
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(0x8, 6); // data-descriptor flag
+  local.writeUInt16LE(method, 8);
+  local.writeUInt32LE(0, 14); // crc unknown at write time
+  local.writeUInt32LE(0, 18); // compressed size unknown
+  local.writeUInt32LE(0, 22); // uncompressed size unknown
+  local.writeUInt16LE(name.length, 26);
+  local.writeUInt16LE(0, 28);
+
+  const descriptor = Buffer.alloc(16);
+  descriptor.writeUInt32LE(0x08074b50, 0);
+  descriptor.writeUInt32LE(0, 4);
+  descriptor.writeUInt32LE(body.length, 8);
+  descriptor.writeUInt32LE(payload.length, 12);
+
+  const head = Buffer.concat([local, name, body, descriptor]);
+  if (options.omitCentralDirectory) return head;
+
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(0x8, 8);
+  central.writeUInt16LE(method, 10);
+  central.writeUInt32LE(0, 16);
+  central.writeUInt32LE(options.compressedSize ?? body.length, 20);
+  central.writeUInt32LE(options.uncompressedSize ?? payload.length, 24);
+  central.writeUInt16LE(name.length, 28);
+  central.writeUInt32LE(0, 42);
+
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(46 + name.length, 12);
+  eocd.writeUInt32LE(head.length, 16);
+
+  return Buffer.concat([head, central, name, eocd]);
 }
 
 function codeOf(fn: () => unknown): string {
@@ -82,10 +141,24 @@ describe("nai zip decode", () => {
     );
   });
 
-  it("rejects a data-descriptor entry whose header sizes are absent", () => {
+  it("reads a streaming archive via the central directory", () => {
+    // This is the real NovelAI shape. An earlier version rejected it outright,
+    // which live traffic immediately disproved.
+    const out = extractFirstZipEntry(buildStreamingZip(PNG_BYTES));
+    assert.deepEqual(out, PNG_BYTES);
+  });
+
+  it("rejects a streaming archive with no readable trailer", () => {
     assert.equal(
-      codeOf(() => extractFirstZipEntry(buildZip(PNG_BYTES, { flags: 0x8 }))),
-      "NAI_ZIP_UNSUPPORTED",
+      codeOf(() => extractFirstZipEntry(buildStreamingZip(PNG_BYTES, { omitCentralDirectory: true }))),
+      "NAI_ZIP_INVALID",
+    );
+  });
+
+  it("honours the size cap using central-directory sizes", () => {
+    assert.equal(
+      codeOf(() => extractFirstZipEntry(buildStreamingZip(PNG_BYTES, { uncompressedSize: 60 * 1024 * 1024 }))),
+      "NAI_ZIP_TOO_LARGE",
     );
   });
 

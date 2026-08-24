@@ -369,7 +369,8 @@ export const config = {
   naiProvider: {
     defaultImageModel: pickStr(env.IMA2_NAI_IMAGE_MODEL_DEFAULT, fileCfg.naiProvider?.defaultImageModel, "nai-diffusion-5-full"),
     baseUrl: pickStr(env.IMA2_NAI_BASE_URL, fileCfg.naiProvider?.baseUrl, "https://image.novelai.net"),
-    accountBaseUrl: pickStr(env.IMA2_NAI_ACCOUNT_BASE_URL, fileCfg.naiProvider?.accountBaseUrl, "https://api.novelai.net"),
+    // Same host as generation: NovelAI migrated /user/* onto the image host.
+    accountBaseUrl: pickStr(env.IMA2_NAI_ACCOUNT_BASE_URL, fileCfg.naiProvider?.accountBaseUrl, "https://image.novelai.net"),
     generationTimeoutMs: pickInt(env.IMA2_NAI_GENERATION_TIMEOUT_MS, fileCfg.naiProvider?.generationTimeoutMs, 180_000),
     // 23 matches the reference client's V4.5/V5 preset and stays under the
     // Opus free-tier ceiling of 28 steps.

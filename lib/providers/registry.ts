@@ -188,7 +188,12 @@ export const REGISTRY = [
       // No keyPrefix by design: NovelAI accepts both a persistent API token and
       // a session JWT and publishes no prefix for either, so a format rule here
       // would reject valid tokens.
-      validateUrl: "https://api.novelai.net/user/data",
+      // Account endpoints now live on the IMAGE host. api.novelai.net answers
+      // every /user/* call with 400 "Please refresh NovelAI.net. If using a
+      // third-party tool, update to the image URL." (verified live 2026-08-25);
+      // validating there would reject every valid token. This host returns 200
+      // for a good token and 401 for a bad one.
+      validateUrl: "https://image.novelai.net/user/data",
       configKey: "naiApiKey",
     }],
     models: [
