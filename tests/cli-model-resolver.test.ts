@@ -38,6 +38,13 @@ function makeCatalog(): ModelCatalog {
         { image: [{ id: "image-01" }] },
         { image: "image-01" },
       ),
+      comfy: ready(
+        {
+          image: [{ id: "sdxl" }],
+          video: [{ id: "minimax-h3", executable: false, lockReason: "catalog only" }],
+        },
+        { image: "sdxl" },
+      ),
       runway: ready(
         { image: [{ id: "gen-4" }], video: [{ id: "veo-3.1" }] },
         { image: "gen-4", video: "veo-3.1" },
@@ -66,6 +73,17 @@ describe("resolveTarget", () => {
     });
     assert.deepStrictEqual(resolveTarget("video", { model: "runway/veo-3.1" }, makeCatalog(), {}), {
       ok: true, lane: "runway", model: "veo-3.1", transport: "mcp",
+    });
+  });
+
+  it("returns MODEL_LOCKED for a catalog-only Comfy video workflow", () => {
+    const failure = expectFailure(
+      resolveTarget("video", { model: "comfy/minimax-h3" }, makeCatalog(), {}),
+      "MODEL_LOCKED",
+    );
+    assert.equal(failure?.extra?.reason, "catalog only");
+    assert.deepStrictEqual(resolveTarget("image", { model: "comfy/sdxl" }, makeCatalog(), {}), {
+      ok: true, lane: "comfy", model: "sdxl", transport: "core",
     });
   });
 

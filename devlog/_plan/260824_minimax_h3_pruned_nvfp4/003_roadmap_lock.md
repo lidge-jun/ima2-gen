@@ -13,7 +13,7 @@ Docs-only B에서 감사 반영 후 아래 문서를 implementation SSOT로 잠�
 002_audit_synthesis.md                   b2e1c65690d4b8ae9f9684fd7d996088957822d256d49e7da246ee36ea640e5a
 010_lidge_pruned_artifact_native.md       8aaaea3e3e2ad6fd5f43cef44b482272558549d1964c972b67b61345454a90c8
 020_lidge_generation_proof.md             d25f0efcf91a0fe16fece5daa1cb376afad9740cd315a28f218e9350082c3e0d
-030_ima2_comfy_video_visibility.md        8c1745382844f09146bc55c151a39223afa6bbf737f01e7f4fde93fce066cdc5
+030_ima2_comfy_video_visibility.md        5e4009adcd425810d52d6d2fe2bfc7fbe28644fc68683b9c5272d28cdef4a73a
 040_integrated_verification_closeout.md   e33cfd354bf74794e4f02580c82ae843cd63db5c54a4450cb814c89e83b9d409
 ```
 
@@ -28,7 +28,10 @@ wp1 P stale-check에서 010/020의 GPU peer unit과 power-limit restore 절차�
 wp1 B의 user steering으로 llama-server restore를 제거하고 010/020 checksum을
 갱신했다. 근거는 `015_wp1_user_steering.md`다.
 
-wp2 P stale-check에서 official local-weight subgraph를 13-node vanilla graph로
+wp2 P stale-check에서 official local-weight subgraph를 14-node vanilla graph로
 고정하고 020 cleanup을 single-wrapper trap 계약으로 승격했다. 근거는 `022`다.
+
+wp3 P stale-check에서 model-level lock을 CLI resolver까지 연결하고 H3 graph
+binding inference를 추가했다. baseline targeted suite는 72 pass다. 근거는 `027`이다.
 
 이 cycle에서 production code·lidge 서비스·원격 모델 파일은 변경하지 않았다.

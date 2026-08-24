@@ -43,7 +43,15 @@ describe("comfy UI model routing", () => {
     assert.match(source, /value: "comfy", label: "ComfyUI"/, "comfy is offered as a provider");
     // An offline workflow stays listed but unselectable: removing it reads as
     // "my workflow disappeared", leaving it live starts a doomed generation.
-    assert.match(source, /disabled: Boolean\(entry\.description\?\.endsWith\("\(offline\)"\)\)/);
+    assert.match(source, /disabled: entry\.executable === false \|\| Boolean\(entry\.description\?\.endsWith\("\(offline\)"\)\)/);
+  });
+
+  it("shows catalog-only Comfy video workflows as disabled rows", () => {
+    const source = read("ui/src/components/GenProviderModelSelect.tsx");
+    assert.match(source, /comfyLane\.video/);
+    assert.match(source, /COMFY_VIDEO_PREFIX/);
+    assert.match(source, /disabled: true/);
+    assert.match(source, /entry\.lockReason/);
   });
 });
 
@@ -76,6 +84,12 @@ describe("comfy workflow manager", () => {
     assert.match(source, /t\("comfy\.statusReady"\)/);
     assert.match(source, /t\("comfy\.statusOffline"\)/);
     assert.match(source, /aria-describedby=\{statusId\}/);
+  });
+
+  it("carries media kind through inspect and create", () => {
+    assert.match(source, /setMediaKind\(result\.mediaKind \?\? "image"\)/);
+    assert.match(source, /mediaKind,/);
+    assert.match(source, /comfy\.videoCatalogOnly/);
   });
 });
 

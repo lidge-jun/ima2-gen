@@ -65,12 +65,15 @@ scope. The disabled selector proves the value cannot reach `routes/video.ts`.
   - `putWorkflow` input validates media kind; unknown string gets
     `COMFY_WORKFLOW_MEDIA_KIND_INVALID` 400.
 - MODIFY `lib/comfyGraphBind.ts`
+  - candidates are grouped by field across node classes so ambiguity is global.
+  - H3 prompt/width/height/seed map from `MiniMaxH3ImageToVideo` and `RandomNoise`.
   - output candidate accepts both `SaveImage` and core `SaveVideo`.
   - NEW pure `inferComfyMediaKind(graph)` returns `video` only when the bound/output
     node class is SaveVideo; mixed/ambiguous output requires explicit kind.
 - MODIFY `routes/comfy.ts`
   - inspect response includes inferred media kind.
   - create forwards validated `mediaKind` to store.
+  - explicit kind that contradicts an unambiguous SaveImage/SaveVideo output is 400.
 - MODIFY `bin/commands/comfy.ts`
   - help/flag parser adds `--kind image|video`.
   - `workflow inspect` prints inferred kind.
@@ -82,6 +85,8 @@ scope. The disabled selector proves the value cannot reach `routes/video.ts`.
 - MODIFY `ui/src/components/settings/ComfyWorkflowManager.tsx`
   - add an image/video select using existing controls.
   - inspection preselects unambiguous media kind; user can override before save.
+- MODIFY `ui/src/i18n/{en,ko,zh-Hans,zh-Hant}.json`
+  - add matching kind column/label/image/video/locked strings.
 
 ### Catalog lock and visible name
 
@@ -94,6 +99,14 @@ scope. The disabled selector proves the value cannot reach `routes/video.ts`.
   - project H3 and every other video workflow into `models.video` with
     `executable:false` and reason `ComfyUI video execution is not supported yet`.
   - keep image workflow defaults and liveness behavior unchanged.
+  - derive `defaults.image` from the first image workflow only; a leading/only H3
+    video record must never become an image default.
+- MODIFY `lib/providers/adapters/comfy.ts`
+  - image adapter auth/model projection sees only `mediaKind:image` workflows.
+  - H3 video cannot leak into edit/image capability enumeration.
+- MODIFY `lib/providerOptions.ts`
+  - when runtime context identifies the selected workflow as video, classic image
+    dispatch fails with `COMFY_VIDEO_EXECUTION_LOCKED` before `comfyImageAdapter`.
 - MODIFY `ui/src/lib/api-comfy.ts`
   - replace image-only `getComfyLaneModels()` return with `{image, video}`.
 - MODIFY `ui/src/components/GenProviderModelSelect.tsx`
@@ -105,7 +118,9 @@ scope. The disabled selector proves the value cannot reach `routes/video.ts`.
   - label `MiniMax H3 FL2VA pruned NVFP4` appears in non-JSON output.
 - MODIFY `bin/lib/modelResolver.ts`
   - mirror optional model-level `executable` and `lockReason` fields in the catalog
-    DTO consumed by `bin/commands/models.ts`; resolution semantics remain unchanged.
+    DTO consumed by `bin/commands/models.ts`.
+  - `resolveLaneModel` returns `MODEL_LOCKED` with the server reason before returning
+    an executable target. This blocks `ima2 video` and `defaults set video` bypasses.
 
 ### H3 registration artifact
 
@@ -137,8 +152,12 @@ not hide the row; it adds the existing offline marker in addition to execution l
 - MODIFY `tests/comfy-ui-contract.test.ts`: separate groups and disabled video row.
 - MODIFY `tests/models-endpoint-contract.test.ts` or nearest runtime-catalog test:
   image workflow stays image, video workflow is video + locked.
-- MODIFY `tests/cli-model-resolver.test.ts`: additive executable fields do not change
-  existing resolution behavior because locked Comfy video is never selected.
+- MODIFY `tests/cli-model-resolver.test.ts`: executable Comfy image still resolves;
+  locked H3 video returns `MODEL_LOCKED`; kind mismatch remains distinct.
+- MODIFY `tests/provider-adapter-v1-contract.test.ts`: image adapter filters locked
+  video workflows and reports no image auth when only video exists.
+- MODIFY `tests/comfy-routes-contract.test.ts`: direct classic image resolution of a
+  video workflow returns `COMFY_VIDEO_EXECUTION_LOCKED`.
 
 ## Activation scenarios
 
@@ -148,7 +167,8 @@ not hide the row; it adds the existing offline marker in addition to execution l
 | explicit video | valid SaveVideo graph + `--kind video` | models.video row is visible and locked |
 | invalid kind | arbitrary string | 400/exit 2 with stable error code |
 | offline origin | health probe false | visible row says offline and remains disabled |
-| attempted selection | pointer/keyboard on locked row | no state change, no request |
+| attempted UI selection | pointer/keyboard on locked row | no state change, no request |
+| attempted CLI/default selection | executable false | `MODEL_LOCKED` + lockReason |
 | existing image workflow | `mediaKind:image` or legacy | same image group and execution path |
 
 ## Bypass record

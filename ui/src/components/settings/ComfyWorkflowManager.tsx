@@ -8,6 +8,7 @@ import {
   type ComfyBindCandidate,
   type ComfyBindField,
   type ComfyInspectResult,
+  type ComfyMediaKind,
   type ComfyWorkflowBindings,
   type ComfyWorkflowRecord,
 } from "../../lib/api-comfy";
@@ -47,6 +48,7 @@ export function ComfyWorkflowManager() {
   const [selection, setSelection] = useState<Partial<Record<ComfyBindField, string>>>({});
   const [workflowId, setWorkflowId] = useState("");
   const [label, setLabel] = useState("");
+  const [mediaKind, setMediaKind] = useState<ComfyMediaKind>("image");
   const [origin, setOrigin] = useState("http://127.0.0.1:8188");
   const [originState, setOriginState] = useState<{ kind: "idle" | "ok" | "unreachable" | "invalid"; detail?: string }>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export function ComfyWorkflowManager() {
       const result = await inspectComfyWorkflow(parsed);
       setSource(parsed);
       setInspection(result);
+      setMediaKind(result.mediaKind ?? "image");
       // Unambiguous candidates are preselected; ambiguous ones stay empty on
       // purpose so the user has to look at them.
       const preset: Partial<Record<ComfyBindField, string>> = {};
@@ -134,6 +137,7 @@ export function ComfyWorkflowManager() {
         id: workflowId,
         ...(label ? { label } : {}),
         origin,
+        mediaKind,
         bind: bind as ComfyWorkflowBindings,
       });
       setInspection(null);
@@ -141,6 +145,7 @@ export function ComfyWorkflowManager() {
       setSelection({});
       setWorkflowId("");
       setLabel("");
+      setMediaKind("image");
       if (fileRef.current) fileRef.current.value = "";
       await refresh();
     } catch (cause) {
@@ -179,6 +184,7 @@ export function ComfyWorkflowManager() {
               <thead>
                 <tr>
                   <th scope="col">{t("comfy.colId")}</th>
+                  <th scope="col">{t("comfy.colKind")}</th>
                   <th scope="col">{t("comfy.colOrigin")}</th>
                   <th scope="col">{t("comfy.colStatus")}</th>
                   <th scope="col"><span className="sr-only">{t("comfy.colActions")}</span></th>
@@ -191,6 +197,7 @@ export function ComfyWorkflowManager() {
                   return (
                     <tr key={workflow.id}>
                       <td>{workflow.label || workflow.id}</td>
+                      <td>{t(workflow.mediaKind === "video" ? "comfy.kindVideo" : "comfy.kindImage")}</td>
                       <td className="mono">{workflow.origin}</td>
                       {/* Status is never encoded by colour alone. */}
                       <td id={statusId}>
@@ -258,6 +265,19 @@ export function ComfyWorkflowManager() {
               <div className="comfy-field">
                 <label htmlFor="comfy-label">{t("comfy.labelLabel")}</label>
                 <input id="comfy-label" value={label} onChange={(event) => setLabel(event.target.value)} />
+              </div>
+
+              <div className="comfy-field">
+                <label htmlFor="comfy-kind">{t("comfy.kindLabel")}</label>
+                <select
+                  id="comfy-kind"
+                  value={mediaKind}
+                  onChange={(event) => setMediaKind(event.target.value as ComfyMediaKind)}
+                >
+                  <option value="image">{t("comfy.kindImage")}</option>
+                  <option value="video">{t("comfy.kindVideo")}</option>
+                </select>
+                {mediaKind === "video" ? <div className="muted">{t("comfy.videoCatalogOnly")}</div> : null}
               </div>
 
               <div className="section-title">{t("comfy.bindTitle")}</div>

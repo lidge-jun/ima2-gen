@@ -44,6 +44,19 @@ describe("comfy CLI surface", () => {
     assert.match(source, /--id is required/);
     assert.match(source, /a prompt binding and an output node are required/);
   });
+
+  it("supports media kind and keeps video workflows catalog-only", () => {
+    assert.match(source, /--kind image\|video/);
+    assert.match(source, /mediaKind/);
+    assert.match(source, /catalog-only: ComfyUI video execution is not supported yet/);
+  });
+
+  it("prints workflow labels and model-level lock status", () => {
+    const models = read("bin/commands/models.ts");
+    assert.match(models, /label: "label"/);
+    assert.match(models, /label: "model-status"/);
+    assert.match(models, /item\.executable \? "ready" : "locked"/);
+  });
 });
 
 describe("comfy CLI docs parity", () => {

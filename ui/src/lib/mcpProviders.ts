@@ -180,6 +180,8 @@ export type McpModelEntry = {
   label: string;
   description?: string;
   capabilities: McpModelCapabilities;
+  executable?: boolean;
+  lockReason?: string;
 };
 export type McpModelCatalog = { image: McpModelEntry[]; video: McpModelEntry[] };
 

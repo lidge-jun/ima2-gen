@@ -53,6 +53,8 @@ function flatten(catalog: Catalog, kind: Kind, laneFilter?: string) {
       id: model.id,
       label: model.label ?? model.id,
       status: info.status,
+      executable: model.executable !== false,
+      lockReason: model.lockReason,
       capabilities: model.capabilities ?? {},
     })));
 }
@@ -84,10 +86,15 @@ export default async function modelsCmd(argv: string[]): Promise<void> {
   if (isJson) { json({ ok: true, kinds }); return; }
   const rows = ([...kinds.image.map((item) => ({ ...item, kind: "image" })),
     ...kinds.video.map((item) => ({ ...item, kind: "video" }))])
-    .map((item) => ({ ...item, caps: capText(item.capabilities) }));
+    .map((item) => ({
+      ...item,
+      modelStatus: item.executable ? "ready" : "locked",
+      caps: capText(item.capabilities),
+    }));
   table(rows, [
     { key: "lane", label: "lane" }, { key: "kind", label: "kind" },
-    { key: "id", label: "model-id" }, { key: "status", label: "status" },
+    { key: "id", label: "model-id" }, { key: "label", label: "label" },
+    { key: "status", label: "status" }, { key: "modelStatus", label: "model-status" },
     { key: "caps", label: "caps" },
   ]);
 }

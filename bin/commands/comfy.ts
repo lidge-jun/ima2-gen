@@ -10,7 +10,7 @@ const HELP = `
     export <filename> [-o <out>] [--force]
     workflow ls [--json]
     workflow inspect <file> [--json]
-    workflow add <file> --id <id> [--label <text>] [--origin <url>]
+    workflow add <file> --id <id> [--label <text>] [--kind image|video] [--origin <url>]
                         [--prompt <node.input>] [--negative <node.input>]
                         [--width <node.input>] [--height <node.input>]
                         [--seed <node.input>] [--ref <node.input>]
@@ -35,6 +35,7 @@ const WORKFLOW_FLAGS = {
   ...FLAGS,
   id: { type: "string" },
   label: { type: "string" },
+  kind: { type: "string" },
   origin: { type: "string" },
   prompt: { type: "string" },
   negative: { type: "string" },
@@ -133,14 +134,14 @@ async function workflowLs(args: any): Promise<void> {
   const pad = (value: string, width: number) => value.padEnd(width);
   const idWidth = Math.max(4, ...workflows.map((w) => w.id.length));
   const labelWidth = Math.max(5, ...workflows.map((w) => String(w.label ?? "").length));
-  out(`${pad("ID", idWidth)}  ${pad("LABEL", labelWidth)}  ORIGIN`);
+  out(`${pad("ID", idWidth)}  ${pad("LABEL", labelWidth)}  KIND   ORIGIN`);
   for (const workflow of workflows) {
     // Liveness is per origin, not per lane: one instance can be down while
     // another serves fine.
     const health = workflow.health?.ok
       ? color.green("ready")
       : color.yellow(`offline${workflow.health?.reason ? ` (${workflow.health.reason})` : ""}`);
-    out(`${pad(workflow.id, idWidth)}  ${pad(String(workflow.label ?? ""), labelWidth)}  ${workflow.origin}  ${health}`);
+    out(`${pad(workflow.id, idWidth)}  ${pad(String(workflow.label ?? ""), labelWidth)}  ${pad(String(workflow.mediaKind ?? "image"), 6)} ${workflow.origin}  ${health}`);
   }
 }
 
@@ -161,6 +162,7 @@ async function workflowInspect(args: any): Promise<void> {
     const target = candidate.input ? `${candidate.node}.${candidate.input}` : candidate.node;
     out(`  ${mark}  ${candidate.field.padEnd(15)} ${target.padEnd(12)} ${candidate.classType}${candidate.title ? `  "${candidate.title}"` : ""}`);
   }
+  out(`  kind             ${resp.mediaKind ?? "image"}`);
   if (resp.needsConfirmation) {
     out("");
     out("Some fields have several candidates; pass them explicitly when adding, e.g. --prompt 6.text");
@@ -179,6 +181,11 @@ async function workflowAdd(args: any): Promise<void> {
       const err = e as { message?: string; code?: string };
       die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`);
     });
+  const explicitKind = args.kind === undefined ? undefined : String(args.kind);
+  if (explicitKind && explicitKind !== "image" && explicitKind !== "video") {
+    die(2, "--kind must be image or video");
+  }
+  const mediaKind = explicitKind ?? inspected.mediaKind ?? "image";
 
   const explicit = {
     prompt: parseBinding(args.prompt, "prompt"),
@@ -236,6 +243,7 @@ async function workflowAdd(args: any): Promise<void> {
       id: args.id,
       ...(args.label ? { label: args.label } : {}),
       ...(args.origin ? { origin: args.origin } : {}),
+      mediaKind,
       bind,
       ...(args.replace ? { replace: true } : {}),
     },
@@ -245,7 +253,11 @@ async function workflowAdd(args: any): Promise<void> {
   });
   if (args.json) { json(resp); return; }
   out(color.green("✓ ") + `${resp.workflow.id} -> ${resp.workflow.origin}`);
-  out(`  use it with: ima2 gen "<prompt>" --provider comfy --model ${resp.workflow.id}`);
+  if (resp.workflow.mediaKind === "video") {
+    out("  catalog-only: ComfyUI video execution is not supported yet");
+  } else {
+    out(`  use it with: ima2 gen "<prompt>" --provider comfy --model ${resp.workflow.id}`);
+  }
 }
 
 async function workflowRm(args: any): Promise<void> {

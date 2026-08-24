@@ -10,6 +10,8 @@ export interface ModelEntry {
   id: string;
   label?: string;
   capabilities?: unknown;
+  executable?: boolean;
+  lockReason?: string;
 }
 
 export interface LaneInfo {
@@ -47,6 +49,10 @@ function modelExists(info: LaneInfo | undefined, kind: "image" | "video", model:
   return info?.models[kind].some((entry) => entry.id === model) ?? false;
 }
 
+function findModel(info: LaneInfo | undefined, kind: "image" | "video", model: string): ModelEntry | undefined {
+  return info?.models[kind].find((entry) => entry.id === model);
+}
+
 function resolveLaneModel(
   kind: "image" | "video",
   lane: Lane,
@@ -55,12 +61,19 @@ function resolveLaneModel(
 ): ResolveResult {
   const info = catalog.lanes[lane];
   if (!info) return failure("UNKNOWN_LANE", `Unknown lane: ${lane}`);
-  if (!modelExists(info, kind, model)) {
+  const entry = findModel(info, kind, model);
+  if (!entry) {
     const otherKind = kind === "image" ? "video" : "image";
     if (modelExists(info, otherKind, model)) {
       return failure("KIND_MISMATCH", `${lane}/${model} is a ${otherKind} model, not ${kind}`);
     }
     return failure("MODEL_NOT_FOUND", `${lane}/${model} is not available for ${kind}`);
+  }
+  if (entry.executable === false) {
+    const reason = entry.lockReason ?? "model execution is locked";
+    return failure("MODEL_LOCKED", `${lane}/${model} is locked: ${reason}`, {
+      lane, model, reason,
+    });
   }
   if (info.status !== "ready") {
     const reason = info.reason ? `: ${info.reason}` : "";

@@ -13,7 +13,7 @@ import {
   type McpMediaKind,
 } from "../lib/mcpSelection";
 import { useAppStore } from "../store/useAppStore";
-import { getComfyLaneModels, type ComfyLaneModel } from "../lib/api-comfy";
+import { getComfyLaneModels, type ComfyLaneModels } from "../lib/api-comfy";
 import {
   hydrateMcpSelectionImpl,
   reconcileMcpPresetStateImpl,
@@ -39,6 +39,7 @@ const MCP_PREFIX = "mcp:";
 const CORE_PREFIX = "core:";
 const VIDEO_PREFIX = "video:";
 const EFFORT_PREFIX = "effort:";
+const COMFY_VIDEO_PREFIX = "comfy-video:";
 
 function applyMcpProvider(provider: string | null): void {
   setMcpProviderImpl(provider, useAppStore.setState, useAppStore.getState);
@@ -53,6 +54,7 @@ function applyMcpModelWithKind(model: string, kind: McpMediaKind, capabilities?:
 }
 
 const EMPTY_CATALOG: McpModelCatalog = { image: [], video: [] };
+const EMPTY_COMFY_CATALOG: ComfyLaneModels = { image: [], video: [] };
 
 function displayProviderId(id: string): string {
   return id.replace(/(^|-)([a-z])/g, (_match, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
@@ -76,14 +78,14 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   const [catalogError, setCatalogError] = useState(false);
   const [catalogRetryToken, setCatalogRetryToken] = useState(0);
   const [modelsLoading, setModelsLoading] = useState(false);
-  const [comfyLane, setComfyLane] = useState<ComfyLaneModel[]>([]);
+  const [comfyLane, setComfyLane] = useState<ComfyLaneModels>(EMPTY_COMFY_CATALOG);
 
   useEffect(() => {
-    if (provider !== "comfy") { setComfyLane([]); return; }
+    if (provider !== "comfy") { setComfyLane(EMPTY_COMFY_CATALOG); return; }
     const controller = new AbortController();
     void getComfyLaneModels(controller.signal)
       .then((models) => { if (!controller.signal.aborted) setComfyLane(models); })
-      .catch(() => { if (!controller.signal.aborted) setComfyLane([]); });
+      .catch(() => { if (!controller.signal.aborted) setComfyLane(EMPTY_COMFY_CATALOG); });
     return () => controller.abort();
   }, [provider]);
 
@@ -139,11 +141,19 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   // An offline workflow stays listed but unselectable: removing it reads as
   // "my workflow disappeared", while leaving it live would start a generation
   // that is guaranteed to fail.
-  const comfyWorkflows = provider === "comfy"
-    ? comfyLane.map((entry) => ({
+  const comfyImageWorkflows = provider === "comfy"
+    ? comfyLane.image.map((entry) => ({
       id: entry.id,
       label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
-      disabled: Boolean(entry.description?.endsWith("(offline)")),
+      disabled: entry.executable === false || Boolean(entry.description?.endsWith("(offline)")),
+      reason: entry.lockReason,
+    }))
+    : [];
+  const comfyVideoWorkflows = provider === "comfy"
+    ? comfyLane.video.map((entry) => ({
+      id: entry.id,
+      label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
+      reason: entry.lockReason ?? t("comfy.videoCatalogOnly"),
     }))
     : [];
   const coreModelValue = videoModel ? `${VIDEO_PREFIX}${videoModel}` : imageModel;
@@ -184,6 +194,7 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   };
 
   const onModelChange = (value: string) => {
+    if (value.startsWith(COMFY_VIDEO_PREFIX)) return;
     if (value.startsWith(EFFORT_PREFIX)) {
       setReasoningEffort(value.slice(EFFORT_PREFIX.length) as ReasoningEffort);
       return;
@@ -268,9 +279,10 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
       // the only source, instead of GPT rows leaking in under a ComfyUI
       // selection.
       items: provider === "comfy"
-        ? comfyWorkflows.map((entry) => ({
+        ? comfyImageWorkflows.map((entry) => ({
           value: entry.id,
           label: entry.label,
+          sub: entry.reason,
           ...(entry.disabled ? { disabled: true } : {}),
         }))
         : coreModels.map((option) => ({
@@ -278,6 +290,17 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
           label: option.shortLabel,
         })),
     });
+    if (provider === "comfy" && comfyVideoWorkflows.length > 0) {
+      modelGroups.push({
+        label: t("mcp.videoModels"),
+        items: comfyVideoWorkflows.map((entry) => ({
+          value: `${COMFY_VIDEO_PREFIX}${entry.id}`,
+          label: entry.label,
+          sub: entry.reason,
+          disabled: true,
+        })),
+      });
+    }
     if (providerSupportsVideo || videoModel) {
       modelGroups.push({
         label: t("mcp.videoModels"),

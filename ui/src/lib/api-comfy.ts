@@ -1,5 +1,7 @@
 import { jsonFetch } from "./api-core";
 
+export type ComfyMediaKind = "image" | "video";
+
 export interface ComfyHealth {
   ok: boolean;
   version?: string;
@@ -37,6 +39,7 @@ export interface ComfyWorkflowRecord {
   id: string;
   label: string;
   origin: string;
+  mediaKind: ComfyMediaKind;
   bind: ComfyWorkflowBindings;
   params: ComfyWorkflowParam[];
   createdAt: number;
@@ -61,6 +64,7 @@ export interface ComfyInspectResult {
   nodes: Array<{ id: string; classType: string; title: string | null }>;
   candidates: ComfyBindCandidate[];
   needsConfirmation: boolean;
+  mediaKind?: ComfyMediaKind;
 }
 
 export function listComfyWorkflows(): Promise<{ ok: true; workflows: ComfyWorkflowRecord[] }> {
@@ -88,6 +92,7 @@ export function createComfyWorkflow(input: {
   id: string;
   label?: string;
   origin?: string;
+  mediaKind: ComfyMediaKind;
   bind: ComfyWorkflowBindings;
   graph?: unknown;
   pngBase64?: string;
@@ -105,6 +110,13 @@ export interface ComfyLaneModel {
   label: string;
   /** The origin, or "<origin> (offline)" when that instance did not answer. */
   description?: string;
+  executable?: boolean;
+  lockReason?: string;
+}
+
+export interface ComfyLaneModels {
+  image: ComfyLaneModel[];
+  video: ComfyLaneModel[];
 }
 
 /**
@@ -114,10 +126,14 @@ export interface ComfyLaneModel {
  * workflows are on an instance that answered — rather than a second opinion
  * assembled from the workflow list.
  */
-export async function getComfyLaneModels(signal?: AbortSignal): Promise<ComfyLaneModel[]> {
-  const response = await jsonFetch<{ lanes?: Record<string, { models?: { image?: ComfyLaneModel[] } }> }>(
+export async function getComfyLaneModels(signal?: AbortSignal): Promise<ComfyLaneModels> {
+  const response = await jsonFetch<{ lanes?: Record<string, { models?: Partial<ComfyLaneModels> }> }>(
     "/api/models",
     signal ? { signal } : {},
   );
-  return response.lanes?.comfy?.models?.image ?? [];
+  const models = response.lanes?.comfy?.models;
+  return {
+    image: Array.isArray(models?.image) ? models.image : [],
+    video: Array.isArray(models?.video) ? models.video : [],
+  };
 }
