@@ -42,6 +42,7 @@ function contextWith(key: string | undefined): RuntimeContext {
   return {
     minimaxApiKey: key,
     atlasCloudApiKey: key,
+    naiApiKey: key,
     comfyWorkflows: key ? [FIXTURE_COMFY_WORKFLOW] : [],
   } as unknown as RuntimeContext;
 }
@@ -58,6 +59,7 @@ const EXPECTED_AUTH_REASON: Record<string, RegExp> = {
   minimax: /MiniMax API key missing/,
   atlascloud: /Atlas Cloud API key missing/,
   comfy: /workflow/i,
+  nai: /NovelAI API token missing/,
 };
 
 test("at least one adapter is registered", () => {

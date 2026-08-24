@@ -31,7 +31,7 @@ function serverSourceFiles(): string[] {
 
 const ADAPTER_FILES = serverSourceFiles();
 
-const PROVIDER_CODE_PATTERN = /\b(?:MINIMAX|GEMINI_API|GROK|AGY|ATLASCLOUD)_[A-Z0-9_]+\b/g;
+const PROVIDER_CODE_PATTERN = /\b(?:MINIMAX|GEMINI_API|GROK|AGY|ATLASCLOUD|NAI)_[A-Z0-9_]+\b/g;
 const LEXICAL_EXCEPTIONS = new Set([
   "AGY_MAX_OUTPUT_BYTES",
   "AGY_OUTPUT_RESOLUTION",
@@ -58,6 +58,15 @@ const LEXICAL_EXCEPTIONS = new Set([
   "GROK_VIDEO_MODEL_15_PREVIEW_ALIAS",
   "GROK_VIDEO_MODEL_BASE",
   "MINIMAX_API_KEY",
+  // NovelAI constants, not error codes: config/model/enum names that share the
+  // NAI_ prefix (lib/naiImageAdapter.ts, lib/naiZip.ts).
+  "NAI_DEFAULT_IMAGE_MODEL",
+  "NAI_NOISE_SCHEDULES",
+  "NAI_QUALITY_PRESET_IDS",
+  "NAI_SAMPLERS",
+  "NAI_TIMEOUT_MS",
+  "NAI_UC_PRESET_IDS",
+  "NAI_ZIP_",
   "MINIMAX_FALLBACK_IMAGE_MODEL",
   "MINIMAX_IMAGE_TO_IMAGE_MODEL",
   "MINIMAX_TEXT_TO_IMAGE_MODEL",

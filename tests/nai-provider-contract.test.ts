@@ -1,0 +1,198 @@
+// Activation evidence for the NovelAI adapter (C-ACTIVATION-GROUNDING-01).
+//
+// fetch is stubbed throughout: no network, no token, no Anlas spent. Every
+// error branch and the sampler-gated request fields are driven explicitly,
+// because none of them execute on a default run.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { deflateRawSync } from "node:zlib";
+
+import { generateViaNai, NAI_DEFAULT_IMAGE_MODEL } from "../lib/naiImageAdapter.ts";
+import { createNaiAdapter } from "../lib/providers/adapters/nai.ts";
+import { createTestRuntimeContext } from "../lib/runtimeContext.ts";
+
+const originalFetch = globalThis.fetch;
+
+const PNG_BYTES = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+]);
+
+test.afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
+
+function zipOf(payload: Buffer): Buffer {
+  const body = deflateRawSync(payload);
+  const name = Buffer.from("image_0.png", "utf8");
+  const header = Buffer.alloc(30);
+  header.writeUInt32LE(0x04034b50, 0);
+  header.writeUInt16LE(20, 4);
+  header.writeUInt16LE(0, 6);
+  header.writeUInt16LE(8, 8);
+  header.writeUInt32LE(body.length, 18);
+  header.writeUInt32LE(payload.length, 22);
+  header.writeUInt16LE(name.length, 26);
+  header.writeUInt16LE(0, 28);
+  return Buffer.concat([header, name, body]);
+}
+
+function naiCtx(over: Record<string, unknown> = {}) {
+  return createTestRuntimeContext({
+    naiApiKey: "nai-test-token",
+    config: {
+      naiProvider: {
+        defaultImageModel: "nai-diffusion-5-full",
+        baseUrl: "https://image.novelai.net",
+        accountBaseUrl: "https://api.novelai.net",
+        generationTimeoutMs: 180_000,
+        defaultSteps: 23,
+        defaultScale: 5,
+        defaultSampler: "k_euler_ancestral",
+        defaultNoiseSchedule: "karras",
+      },
+    },
+    ...over,
+  } as never);
+}
+
+/** Captures the outgoing request so the body can be asserted. */
+function stubFetch(response: { status: number; body: Buffer | string; contentType?: string }) {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  globalThis.fetch = (async (url: string, init: RequestInit) => {
+    calls.push({ url: String(url), init });
+    const buf = typeof response.body === "string" ? Buffer.from(response.body) : response.body;
+    return {
+      status: response.status,
+      headers: new Headers({ "content-type": response.contentType ?? "application/x-zip-compressed" }),
+      arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+      text: async () => buf.toString("utf8"),
+    };
+  }) as never;
+  return calls;
+}
+
+async function codeOf(fn: () => Promise<unknown>): Promise<string> {
+  try {
+    await fn();
+  } catch (err) {
+    return (err as { code?: string }).code ?? "NO_CODE";
+  }
+  return "NO_THROW";
+}
+
+test("nai adapter refuses to call upstream without a token", async () => {
+  const ctx = naiCtx({ naiApiKey: undefined });
+  let called = false;
+  globalThis.fetch = (async () => { called = true; return {} as never; }) as never;
+  assert.equal(await codeOf(() => generateViaNai("cat", ctx)), "NAI_API_KEY_MISSING");
+  assert.equal(called, false, "must fail before spending a request");
+});
+
+test("nai adapter decodes a 200 ZIP response into a PNG", async () => {
+  stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  const out = await generateViaNai("cat", naiCtx());
+  assert.equal(out.mime, "image/png");
+  assert.equal(out.effectiveModel, NAI_DEFAULT_IMAGE_MODEL);
+  assert.deepEqual(Buffer.from(out.b64, "base64"), PNG_BYTES);
+});
+
+test("nai adapter accepts 201 as success", async () => {
+  // The OpenAPI documents 201; working clients observe 200.
+  stubFetch({ status: 201, body: zipOf(PNG_BYTES) });
+  const out = await generateViaNai("cat", naiCtx());
+  assert.deepEqual(Buffer.from(out.b64, "base64"), PNG_BYTES);
+});
+
+test("nai adapter maps upstream status codes to NAI_ codes", async () => {
+  const cases: Array<[number, string]> = [
+    [401, "NAI_AUTH_FAILED"],
+    [402, "NAI_SUBSCRIPTION_REQUIRED"],
+    [429, "NAI_RATE_LIMITED"],
+    [400, "NAI_BAD_REQUEST"],
+    [409, "NAI_BAD_REQUEST"],
+    [500, "NAI_UPSTREAM_ERROR"],
+  ];
+  for (const [status, expected] of cases) {
+    stubFetch({ status, body: JSON.stringify({ statusCode: status, message: "upstream said no" }) });
+    assert.equal(await codeOf(() => generateViaNai("cat", naiCtx())), expected, `status ${status}`);
+  }
+});
+
+test("nai adapter names the container when a 2xx body is not a ZIP", async () => {
+  // Guards the open msgpack question: the failure must say what arrived.
+  stubFetch({ status: 200, body: JSON.stringify({ ptr: 1 }), contentType: "application/json" });
+  assert.equal(await codeOf(() => generateViaNai("cat", naiCtx())), "NAI_RESPONSE_NOT_ZIP");
+});
+
+test("nai adapter rejects an empty 200 body", async () => {
+  stubFetch({ status: 200, body: Buffer.alloc(0) });
+  assert.equal(await codeOf(() => generateViaNai("cat", naiCtx())), "NAI_EMPTY_IMAGE");
+});
+
+test("nai adapter sends the documented V5 request shape", async () => {
+  const calls = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("a cat", naiCtx(), { straightAlpha: true, size: "1024x1024" });
+
+  assert.equal(calls[0].url, "https://image.novelai.net/ai/generate-image");
+  assert.match(String((calls[0].init.headers as Record<string, string>).Authorization), /^Bearer /);
+
+  const body = JSON.parse(String(calls[0].init.body));
+  assert.equal(body.input, "a cat");
+  assert.equal(body.action, "generate");
+  assert.equal(body.model, "nai-diffusion-5-full");
+  assert.equal(body.parameters.params_version, 3);
+  assert.equal(body.parameters.n_samples, 1, "free-tier eligibility depends on this");
+  assert.equal(body.parameters.width, 1024);
+  assert.equal(body.parameters.height, 1024);
+  assert.equal(body.parameters.straight_alpha, true, "V5 native alpha must reach the wire");
+  assert.equal(body.parameters.ucPresetId, "heavy", "V5 uses string preset ids, not V4 numbers");
+  assert.equal(body.parameters.qualityPresetId, "standard");
+});
+
+test("nai adapter gates the ancestral-noise fields on the sampler", async () => {
+  // This branch is invisible on a default run, so drive both sides.
+  const ancestral = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { sampler: "k_euler_ancestral" });
+  const withAncestral = JSON.parse(String(ancestral[0].init.body));
+  assert.equal(withAncestral.parameters.prefer_brownian, true);
+  assert.equal(withAncestral.parameters.deliberate_euler_ancestral_bug, false);
+
+  const plain = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { sampler: "k_euler" });
+  const withoutAncestral = JSON.parse(String(plain[0].init.body));
+  assert.equal("prefer_brownian" in withoutAncestral.parameters, false);
+  assert.equal("deliberate_euler_ancestral_bug" in withoutAncestral.parameters, false);
+});
+
+test("nai lane adapter reports auth state and registry models", () => {
+  const withKey = createNaiAdapter(naiCtx());
+  assert.equal(withKey.laneId, "nai");
+  assert.equal(withKey.validateAuth().ok, true);
+
+  const withoutKey = createNaiAdapter(naiCtx({ naiApiKey: undefined }));
+  const auth = withoutKey.validateAuth();
+  assert.equal(auth.ok, false);
+  assert.match(String(auth.reason), /NovelAI API token missing/);
+
+  const ids = withKey.listModels().map((m) => m.id);
+  assert.deepEqual(ids, [
+    "nai-diffusion-5-full",
+    "nai-diffusion-5-curated",
+    "nai-diffusion-4-5-full",
+    "nai-diffusion-4-5-curated",
+  ]);
+});
+
+test("nai lane adapter normalizes errors under the NAI_ prefix", () => {
+  const adapter = createNaiAdapter(naiCtx());
+  const known = adapter.normalizeError(Object.assign(new Error("nope"), { status: 429, code: "NAI_RATE_LIMITED" }));
+  assert.equal(known.code, "NAI_RATE_LIMITED");
+  assert.equal(known.retryable, true, "429 is transient");
+
+  const foreign = adapter.normalizeError(Object.assign(new Error("odd"), { status: 400, code: "WEIRD" }));
+  assert.equal(foreign.code, "NAI_WEIRD");
+  assert.equal(foreign.retryable, false);
+
+  assert.equal(adapter.normalizeError(new Error("bare")).code, "NAI_UNKNOWN");
+});

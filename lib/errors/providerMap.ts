@@ -19,6 +19,24 @@ export const PROVIDER_ERROR_MAP = {
   // Emitted by the shared routes rather than the adapter (routes/edit.ts).
   MINIMAX_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
 
+  NAI_API_KEY_MISSING: "AUTH_INVALID",
+  NAI_AUTH_FAILED: "AUTH_INVALID",
+  // NovelAI answers 402 when the account has no active subscription, which is
+  // a billing state rather than a bad token.
+  NAI_SUBSCRIPTION_REQUIRED: "BILLING_REQUIRED",
+  NAI_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
+  NAI_RATE_LIMITED: "RATE_LIMITED",
+  NAI_UPSTREAM_ERROR: "NETWORK_FAILURE",
+  NAI_EMPTY_IMAGE: "INTERNAL_STATE_ERROR",
+  NAI_IMAGE_INVALID: "INTERNAL_STATE_ERROR",
+  // The response container was not what the lane expects; see lib/naiZip.ts.
+  NAI_RESPONSE_NOT_ZIP: "INTERNAL_STATE_ERROR",
+  NAI_ZIP_INVALID: "INTERNAL_STATE_ERROR",
+  NAI_ZIP_UNSUPPORTED: "INTERNAL_STATE_ERROR",
+  NAI_ZIP_TOO_LARGE: "CAPABILITY_UNSUPPORTED",
+  // Emitted by the shared routes rather than the adapter (routes/edit.ts).
+  NAI_MASK_UNSUPPORTED: "CAPABILITY_UNSUPPORTED",
+
   GEMINI_API_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
   GEMINI_API_KEY_MISSING: "AUTH_INVALID",
   GEMINI_API_NETWORK_FAILED: "NETWORK_FAILURE",
