@@ -81,6 +81,53 @@ test("nai refuses reference input rather than discarding it", () => {
   assert.match(read("routes/edit.ts"), /NAI_EDIT_UNSUPPORTED/);
 });
 
+test("no nai dispatch forwards references to the adapter", () => {
+  // generateViaNai has no references parameter. A copied MiniMax branch would
+  // either fail typecheck or, behind a cast, drop the user's image silently.
+  for (const file of [
+    "lib/generatePipeline.ts",
+    "lib/multimodePipeline.ts",
+    "lib/nodeGeneration.ts",
+    "lib/agentImageVideoGen.ts",
+  ]) {
+    const source = read(file);
+    let index = source.indexOf("generateViaNai(");
+    while (index !== -1) {
+      const call = source.slice(index, source.indexOf("})", index) + 2);
+      assert.ok(
+        !/\breferences\s*:/.test(call),
+        `${file}: a generateViaNai call passes references, which the adapter cannot use`,
+      );
+      index = source.indexOf("generateViaNai(", index + 1);
+    }
+  }
+});
+
+test("every NAI_ code the lane can emit is classified", () => {
+  // An unmapped code degrades to an unclassified failure in the UI.
+  const map = read("lib/errors/providerMap.ts");
+  for (const code of [
+    "NAI_API_KEY_MISSING", "NAI_AUTH_FAILED", "NAI_SUBSCRIPTION_REQUIRED",
+    "NAI_BAD_REQUEST", "NAI_RATE_LIMITED", "NAI_UPSTREAM_ERROR",
+    "NAI_EMPTY_IMAGE", "NAI_IMAGE_INVALID", "NAI_RESPONSE_NOT_ZIP",
+    "NAI_ZIP_INVALID", "NAI_ZIP_UNSUPPORTED", "NAI_ZIP_TOO_LARGE",
+    "NAI_REF_UNSUPPORTED", "NAI_EDIT_UNSUPPORTED", "NAI_MASK_UNSUPPORTED",
+  ]) {
+    assert.match(map, new RegExp(`\\b${code}:`), `${code} is not in PROVIDER_ERROR_MAP`);
+  }
+});
+
+test("the nai lane advertises no capability the routes refuse", () => {
+  // A catalog that promises image_references while the route answers
+  // NAI_REF_UNSUPPORTED is worse than one that omits the feature.
+  const models = read("routes/models.ts");
+  const laneStart = models.indexOf("function naiLane(");
+  assert.notEqual(laneStart, -1);
+  const lane = models.slice(laneStart, models.indexOf("\n}", laneStart));
+  assert.match(lane, /textOnlyCapabilities\(\)/);
+  assert.ok(!/image_references/.test(lane));
+});
+
 test("nai never joins a JPEG-forcing conditional", () => {
   // Three sites, each isolated so a nearby MIME line cannot produce a false pass.
   const sites: Array<[string, string]> = [
