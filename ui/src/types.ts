@@ -18,6 +18,7 @@ export type GrokImageModel = Extract<ImageModelId, `grok-${string}`>;
 export type GeminiImageModel = Extract<ImageModelId, `nano-${string}`>;
 export type AtlasCloudImageModel = Extract<ImageModelId, `openai/${string}`>;
 export type MinimaxImageModel = Extract<ImageModelId, `image-${string}`>;
+export type NaiImageModel = Extract<ImageModelId, `nai-diffusion-${string}`>;
 export type ImageModel = ImageModelId;
 export type VideoModel = VideoModelId;
 export type VideoResolutionUI = "480p" | "720p" | "1080p";

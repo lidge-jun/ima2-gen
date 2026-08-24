@@ -342,7 +342,10 @@ export function getCustomSizeConfirmation(
   state: AppState,
   continuation: NonNullable<CustomSizeConfirmState>["continuation"],
 ): CustomSizeConfirmState {
-  if (state.provider === "grok" || state.provider === "grok-api" || state.provider === "agy" || state.provider === "gemini-api" || state.provider === "atlascloud" || state.provider === "minimax") return null;
+  // Hosted lanes take a size string rather than a free-form pixel pair, so the
+  // custom-size confirmation dialog does not apply to them. nai is included
+  // for the same reason: its sizes are fixed presets on NovelAI's side.
+  if (state.provider === "grok" || state.provider === "grok-api" || state.provider === "agy" || state.provider === "gemini-api" || state.provider === "atlascloud" || state.provider === "minimax" || state.provider === "nai") return null;
   if (state.sizePreset !== "custom") return null;
   const result = normalizeCustomSizePairDetailed(
     state.customW,

@@ -9,6 +9,21 @@ export type ImaErrorCode =
   | "REF_EMPTY"
   | "REF_TOO_MANY"
   | "MINIMAX_MODEL_REQUIRES_REFERENCE"
+  | "NAI_REF_UNSUPPORTED"
+  | "NAI_EDIT_UNSUPPORTED"
+  | "NAI_API_KEY_MISSING"
+  | "NAI_AUTH_FAILED"
+  | "NAI_SUBSCRIPTION_REQUIRED"
+  | "NAI_RATE_LIMITED"
+  | "NAI_BAD_REQUEST"
+  | "NAI_ZIP_INVALID"
+  | "NAI_ZIP_UNSUPPORTED"
+  | "NAI_ZIP_TOO_LARGE"
+  | "NAI_RESPONSE_NOT_ZIP"
+  | "NAI_IMAGE_INVALID"
+  | "NAI_EMPTY_IMAGE"
+  | "NAI_MASK_UNSUPPORTED"
+  | "NAI_UPSTREAM_ERROR"
   | "MODERATION_REFUSED"
   | "SAFETY_REFUSAL"
   | "EMPTY_RESPONSE"
@@ -57,6 +72,26 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   REF_EMPTY: { surface: "toast", toastKey: "toast.refEmpty" },
   REF_TOO_MANY: { surface: "toast", toastKey: "toast.refLimitExceeded" },
   MINIMAX_MODEL_REQUIRES_REFERENCE: { surface: "toast", toastKey: "toast.minimaxModelRequiresReference" },
+  // Thrown by lib/generatePipeline.ts and routes/edit.ts: the NovelAI lane is
+  // text-to-image only, so an attached image is refused rather than dropped.
+  NAI_REF_UNSUPPORTED: { surface: "toast", toastKey: "toast.naiRefUnsupported" },
+  NAI_EDIT_UNSUPPORTED: { surface: "toast", toastKey: "toast.naiEditUnsupported" },
+  // 040 error table. These stay NovelAI-specific instead of collapsing into the
+  // generic auth/billing class cards, which tell the user to "sign in again" —
+  // wrong advice for a lane authenticated by a pasted persistent token.
+  NAI_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.naiApiKeyMissing", cta: "dismiss" },
+  NAI_AUTH_FAILED: { surface: "card", cardKey: "errorCard.naiAuthFailed", cta: "dismiss" },
+  NAI_SUBSCRIPTION_REQUIRED: { surface: "card", cardKey: "errorCard.naiSubscriptionRequired", cta: "dismiss" },
+  NAI_RATE_LIMITED: { surface: "toast", toastKey: "toast.naiRateLimited", cta: "retry" },
+  NAI_BAD_REQUEST: { surface: "toast", toastKey: "toast.naiBadRequest" },
+  NAI_ZIP_INVALID: { surface: "card", cardKey: "errorCard.naiZipInvalid", cta: "retry" },
+  NAI_ZIP_UNSUPPORTED: { surface: "card", cardKey: "errorCard.naiZipInvalid", cta: "retry" },
+  NAI_ZIP_TOO_LARGE: { surface: "card", cardKey: "errorCard.naiZipInvalid", cta: "retry" },
+  NAI_RESPONSE_NOT_ZIP: { surface: "card", cardKey: "errorCard.naiResponseNotZip", cta: "retry" },
+  NAI_IMAGE_INVALID: { surface: "card", cardKey: "errorCard.naiImageInvalid", cta: "retry" },
+  NAI_EMPTY_IMAGE: { surface: "card", cardKey: "errorCard.naiImageInvalid", cta: "retry" },
+  NAI_MASK_UNSUPPORTED: { surface: "toast", toastKey: "toast.naiMaskUnsupported" },
+  NAI_UPSTREAM_ERROR: { surface: "card", cardKey: "errorCard.naiUpstreamError", cta: "retry" },
   MODERATION_REFUSED: { surface: "card", cardKey: "errorCard.moderationRefused", cta: "dismiss" },
   SAFETY_REFUSAL: { surface: "card", cardKey: "errorCard.moderationRefused", cta: "dismiss" },
   EMPTY_RESPONSE: { surface: "card", cardKey: "errorCard.emptyResponse", cta: "dismiss" },
@@ -159,6 +194,16 @@ export function classifyError(message: string): ImaErrorCode {
 
 export type ModerationStage = "input" | "output" | "unknown";
 
+/**
+ * Codes whose own copy already names the provider and the exact remedy, so the
+ * generic AUTH_INVALID / BILLING_REQUIRED class card must not override them.
+ */
+const SELF_DESCRIBING_AUTH_CODES: readonly ImaErrorCode[] = [
+  "NAI_API_KEY_MISSING",
+  "NAI_AUTH_FAILED",
+  "NAI_SUBSCRIPTION_REQUIRED",
+];
+
 export function classifyModerationStage(msg: string): ModerationStage {
   const s = (msg || "").toLowerCase();
   if (s.includes("request was rejected") || s.includes("prompt was rejected")) return "input";
@@ -198,12 +243,19 @@ export function resolveErrorSpec(err: unknown): ResolvedErrorSpec {
       ? incomingRawCode as ImaErrorCode
       : undefined;
   const priority = isPriorityErrorClass(incomingClass) ? classSpec(incomingClass) : undefined;
+  // WP4 audit blocker: the priority class card says "sign in again from Settings",
+  // which is wrong for a lane authenticated by a pasted persistent token. A code
+  // that already carries its own auth/billing copy keeps it.
+  const selfDescribing = registered ? SELF_DESCRIBING_AUTH_CODES.includes(registered) : false;
   const fallbackClass = classSpec(incomingClass);
   let code: ImaErrorCode;
   let spec: ErrorSpec;
-  if (priority) {
+  if (priority && !selfDescribing) {
     code = registered ?? "UNKNOWN";
     spec = priority;
+  } else if (selfDescribing && registered) {
+    code = registered;
+    spec = errorCodes[registered];
   } else if (registered) {
     code = registered;
     spec = errorCodes[registered];

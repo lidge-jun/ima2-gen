@@ -16,6 +16,7 @@ const PROVIDER_LABELS: Record<Provider, string> = {
   "gemini-api": "Gemini API",
   atlascloud: "Atlas Cloud",
   minimax: "MiniMax",
+  nai: "NovelAI",
   comfy: "ComfyUI",
 };
 

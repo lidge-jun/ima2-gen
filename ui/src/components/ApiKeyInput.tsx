@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useI18n } from "../i18n";
 
 type ApiKeyInputProps = {
-  provider: "openai" | "xai" | "gemini" | "atlascloud" | "minimax";
+  provider: "openai" | "xai" | "gemini" | "atlascloud" | "minimax" | "nai";
   label: string;
   placeholder: string;
   maskedKey: string | null;

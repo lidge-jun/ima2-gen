@@ -99,7 +99,12 @@
       "capabilityUnsupported": "当前服务商不支持此请求。",
       "modelUnavailable": "所选模型暂时不可用。",
       "internalState": "内部状态异常，请重新加载页面。"
-    }
+    },
+    "naiRefUnsupported": "NovelAI 暂不支持参考图像。",
+    "naiEditUnsupported": "NovelAI 暂不支持图像编辑。",
+    "naiRateLimited": "NovelAI 正在限流，请稍后再试。",
+    "naiBadRequest": "NovelAI 拒绝了生成参数。",
+    "naiMaskUnsupported": "NovelAI 编辑暂不支持蒙版。"
   },
   "inflight": {
     "queued": "排队",
@@ -730,7 +735,8 @@
     "geminiApiCompatBody": "Google Gemini API。支持从 512px 到 4K 的宽高比和分辨率控制。",
     "geminiApiCompatBodyLong": "Google Gemini API 直接。支持 nano-banana-2 (Flash) 和 nano-banana-pro (Pro)，宽高比和分辨率控制范围为 512px 至 4K。",
     "gptCompatTitle": "GPT Image",
-    "gptCompatBody": "OpenAI 通过响应 API 生成图像。支持质量、大小、格式、审核和网络搜索设置。"
+    "gptCompatBody": "OpenAI 通过响应 API 生成图像。支持质量、大小、格式、审核和网络搜索设置。",
+    "naiApiKeyRequired": "NovelAI API 需要令牌"
   },
   "mcp": {
     "connectionsTitle": "MCP 提供商连接",
@@ -1311,7 +1317,11 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 不支持图像",
-      "unsupportedHelp": "Grok 模型通过捆绑的本地代理使用 xAI 的图像 API。 GPT 模型使用 OpenAI 响应图像生成。"
+      "unsupportedHelp": "Grok 模型通过捆绑的本地代理使用 xAI 的图像 API。 GPT 模型使用 OpenAI 响应图像生成。",
+      "naiDiffusion5Full": "NAI Diffusion V5 Full",
+      "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
+      "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
+      "naiDiffusion45Curated": "NAI Diffusion V4.5 Curated"
     },
     "apiKeys": {
       "accordionTitle": "API 密钥",
@@ -1354,6 +1364,10 @@
       "status": {
         "valid": "有效的",
         "notConfigured": "未配置"
+      },
+      "nai": {
+        "label": "NovelAI",
+        "placeholder": "粘贴您的 NovelAI 永久 API 令牌"
       }
     },
     "videoModel": {
@@ -1544,6 +1558,41 @@
     "billingRequired": {
       "title": "需要充值",
       "body": "该服务商账户余额不足。请前往服务商控制台确认后重试。"
+    },
+    "naiApiKeyMissing": {
+      "title": "未设置 NovelAI 令牌",
+      "body": "请在设置中粘贴 NovelAI 永久 API 令牌（以 pst- 开头）。此通道不使用登录会话。",
+      "cta": "打开设置"
+    },
+    "naiAuthFailed": {
+      "title": "NovelAI 拒绝了该令牌",
+      "body": "已保存的令牌无效或已被吊销。请在 NovelAI 账户设置中重新签发永久令牌并再次保存。",
+      "cta": "打开设置"
+    },
+    "naiSubscriptionRequired": {
+      "title": "需要 NovelAI 订阅",
+      "body": "图像生成需要有效订阅（Opus、Scroll 或 Tablet）。令牌有效，但当前套餐不包含此请求。",
+      "cta": "关闭"
+    },
+    "naiZipInvalid": {
+      "title": "无法读取 NovelAI 图像压缩包",
+      "body": "返回的压缩包无法解码。通常是暂时性问题，请重试。",
+      "cta": "重试"
+    },
+    "naiResponseNotZip": {
+      "title": "NovelAI 返回了意外格式",
+      "body": "返回的不是图像压缩包。请重试；若持续失败，可能是 NovelAI 服务故障。",
+      "cta": "重试"
+    },
+    "naiImageInvalid": {
+      "title": "未返回可用图像",
+      "body": "请求成功但不含有效 PNG。请重试，或调整模型与尺寸。",
+      "cta": "重试"
+    },
+    "naiUpstreamError": {
+      "title": "NovelAI 请求失败",
+      "body": "未能完成生成。请稍后重试；反复失败通常意味着上游故障。",
+      "cta": "重试"
     }
   },
   "promptLibrary": {

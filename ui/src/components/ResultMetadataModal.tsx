@@ -25,6 +25,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   "gemini-api": "Gemini API / Vertex",
   atlascloud: "Atlas Cloud API",
   minimax: "MiniMax API",
+  nai: "NovelAI API",
 };
 
 function present(value: unknown): value is string | number | boolean {

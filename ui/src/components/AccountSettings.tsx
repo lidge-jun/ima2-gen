@@ -198,6 +198,15 @@ export function AccountSettings() {
                 configured={keyStatus.minimax?.configured ?? false}
                 onSaved={mutateKeys}
               />
+              <ApiKeyInput
+                provider="nai"
+                label={t("settings.apiKeys.nai.label")}
+                placeholder={t("settings.apiKeys.nai.placeholder")}
+                maskedKey={keyStatus.nai?.maskedKey ?? null}
+                source={keyStatus.nai?.source ?? "none"}
+                configured={keyStatus.nai?.configured ?? false}
+                onSaved={mutateKeys}
+              />
               <GeminiKeySection
                 keyStatus={keyStatus}
                 onSaved={mutateKeys}

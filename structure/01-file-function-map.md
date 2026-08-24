@@ -305,7 +305,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 |---|---|---:|---|
 | App shell | `ui/src/App.tsx` | 200 | Initial hydration, polling, classic/node/card-news canvas switch, Canvas Mode workspace mount, prompt library overlay, mobile shell (dark-only since Phase 010) |
 | Entry | `ui/src/main.tsx` | 48 | React mount |
-| Types | `ui/src/types.ts` | 286 | Provider, quality, size, image model, embedded metadata, response types, alpha verification fields, web-search, reasoning effort, multimode |
+| Types | `ui/src/types.ts` | 287 | Provider, quality, size, image model, embedded metadata, response types, alpha verification fields, web-search, reasoning effort, multimode |
 | Canvas types | `ui/src/types/canvas.ts` | 98 | Canvas Mode shared types (annotations, versions, masks, brushes) |
 | Store | `ui/src/store/useAppStore.ts` | 663 | Zustand facade; classic/node/video/multimode/inflight/history/asset-gen logic split into `ui/src/store/store*Impl.ts` modules |
 | Persistence registry | `ui/src/store/persistenceRegistry.ts` | 84 | Single source of truth for `ima2.*` localStorage key names — covers gallery scope, gallery default scope, and settings keys (theme keys removed in Phase 010); prevents drift between hydration helpers and setters (#43) |
@@ -327,9 +327,9 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Image helpers | `ui/src/lib/image.ts` | 42 | Browser image utilities |
 | Compression | `ui/src/lib/compress.ts` | 159 | Browser-side image compression for references and uploads |
 | Cost | `ui/src/lib/cost.ts` | 91 | Quality/size cost estimation |
-| Error codes | `ui/src/lib/errorCodes.ts` | 229 | Stable error code → translation key mapping |
+| Error codes | `ui/src/lib/errorCodes.ts` | 281 | Stable error code → translation key mapping |
 | Error handler | `ui/src/lib/errorHandler.ts` | 24 | Routes errors to toast or persistent `ErrorCard` |
-| Image models | `ui/src/lib/imageModels.ts` | 149 | UI-side image model labels |
+| Image models | `ui/src/lib/imageModels.ts` | 168 | UI-side image model labels |
 | Video source count | `ui/src/lib/videoSourceCount.ts` | 52 | Effective video source counter for 1080p UI enablement; treats provider URL and node parent still/video sources as single I2V anchors |
 | Storage | `ui/src/lib/storage.ts` | 26 | localStorage helpers |
 | Gallery utils | `ui/src/lib/galleryUtils.ts` | 18 | Gallery navigation helpers |

@@ -99,7 +99,12 @@
       "capabilityUnsupported": "This request is not supported by the current provider.",
       "modelUnavailable": "The selected model is unavailable right now.",
       "internalState": "Internal state is inconsistent. Reload the page."
-    }
+    },
+    "naiRefUnsupported": "NovelAI does not accept reference images yet.",
+    "naiEditUnsupported": "NovelAI image editing is not supported yet.",
+    "naiRateLimited": "NovelAI is rate limiting requests. Try again shortly.",
+    "naiBadRequest": "NovelAI rejected the generation parameters.",
+    "naiMaskUnsupported": "NovelAI editing does not support masks yet."
   },
   "inflight": {
     "queued": "Queued",
@@ -730,7 +735,8 @@
     "geminiApiCompatBody": "Google Gemini API. Supports aspect ratio and resolution control from 512px to 4K.",
     "geminiApiCompatBodyLong": "Google Gemini API direct. Supports nano-banana-2 (Flash) and nano-banana-pro (Pro), with aspect ratio and resolution control from 512px to 4K.",
     "gptCompatTitle": "GPT Image",
-    "gptCompatBody": "OpenAI image generation via Responses API. Supports quality, size, format, moderation, and web search settings."
+    "gptCompatBody": "OpenAI image generation via Responses API. Supports quality, size, format, moderation, and web search settings.",
+    "naiApiKeyRequired": "NovelAI API token required"
   },
   "mcp": {
     "connectionsTitle": "MCP provider connections",
@@ -1311,7 +1317,11 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — unsupported for images",
-      "unsupportedHelp": "Grok models use xAI's Images API through the bundled local proxy. GPT models use OpenAI Responses image generation."
+      "unsupportedHelp": "Grok models use xAI's Images API through the bundled local proxy. GPT models use OpenAI Responses image generation.",
+      "naiDiffusion5Full": "NAI Diffusion V5 Full",
+      "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
+      "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
+      "naiDiffusion45Curated": "NAI Diffusion V4.5 Curated"
     },
     "apiKeys": {
       "accordionTitle": "API Keys",
@@ -1354,6 +1364,10 @@
       "status": {
         "valid": "Valid",
         "notConfigured": "Not configured"
+      },
+      "nai": {
+        "label": "NovelAI",
+        "placeholder": "Paste your NovelAI persistent API token"
       }
     },
     "videoModel": {
@@ -1544,6 +1558,41 @@
     "billingRequired": {
       "title": "Billing required",
       "body": "This provider account has no remaining credit. Check the provider console, then try again."
+    },
+    "naiApiKeyMissing": {
+      "title": "NovelAI token not set",
+      "body": "Open Settings and paste your NovelAI persistent API token (starts with pst-). This lane does not use a sign-in session.",
+      "cta": "Open settings"
+    },
+    "naiAuthFailed": {
+      "title": "NovelAI rejected the token",
+      "body": "The saved NovelAI token is invalid or has been revoked. Issue a new persistent token in NovelAI account settings and save it again.",
+      "cta": "Open settings"
+    },
+    "naiSubscriptionRequired": {
+      "title": "NovelAI subscription required",
+      "body": "Image generation needs an active NovelAI subscription (Opus, Scroll, or Tablet). Your token is valid but the plan does not cover this request.",
+      "cta": "Close"
+    },
+    "naiZipInvalid": {
+      "title": "NovelAI image archive was unreadable",
+      "body": "NovelAI returned an archive this build could not decode. This is usually transient — retry the generation.",
+      "cta": "Retry"
+    },
+    "naiResponseNotZip": {
+      "title": "Unexpected response from NovelAI",
+      "body": "NovelAI answered with something other than an image archive. Retry; if it persists, NovelAI may be having an incident.",
+      "cta": "Retry"
+    },
+    "naiImageInvalid": {
+      "title": "NovelAI returned no usable image",
+      "body": "The request succeeded but carried no valid PNG. Retry, or adjust the model and size.",
+      "cta": "Retry"
+    },
+    "naiUpstreamError": {
+      "title": "NovelAI request failed",
+      "body": "NovelAI could not complete the generation. Retry shortly; repeated failures usually mean an upstream incident.",
+      "cta": "Retry"
     }
   },
   "promptLibrary": {

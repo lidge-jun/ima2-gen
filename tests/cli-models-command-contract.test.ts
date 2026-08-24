@@ -59,9 +59,9 @@ describe("ima2 models command", () => {
   it("renders a lane/model/status/capability table", async () => {
     const result = await runCli(["models", "--server", base]);
     assert.equal(result.code, 0);
-    assert.match(result.stdout, /lane\s+kind\s+model-id\s+status\s+caps/);
-    assert.match(result.stdout, /oauth\s+image\s+gpt-5\.6-luna\s+ready/);
-    assert.match(result.stdout, /runway\s+video\s+veo-3\.1\s+disconnected/);
+    assert.match(result.stdout, /lane\s+kind\s+model-id\s+label\s+status\s+model-status\s+caps/);
+    assert.match(result.stdout, /oauth\s+image\s+gpt-5\.6-luna\s+Luna\s+ready/);
+    assert.match(result.stdout, /runway\s+video\s+veo-3\.1\s+Veo 3\.1\s+disconnected/);
     assert.match(result.stdout, /duration:4\|6\|8/);
     assert.match(result.stdout, /ratio:16:9\|9:16/);
   });
@@ -72,7 +72,7 @@ describe("ima2 models command", () => {
     const payload = JSON.parse(result.stdout);
     assert.deepEqual(payload.kinds.image, []);
     assert.equal(payload.ok, true);
-    assert.deepEqual(Object.keys(payload.kinds.video[0]), ["lane", "id", "label", "status", "capabilities"]);
+    assert.deepEqual(Object.keys(payload.kinds.video[0]), ["lane", "id", "label", "status", "executable", "capabilities"]);
     assert.equal(payload.kinds.video[0].lane, "runway");
     assert.equal(payload.kinds.video[0].status, "disconnected");
   });

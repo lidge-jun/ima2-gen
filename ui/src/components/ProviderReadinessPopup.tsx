@@ -4,6 +4,23 @@ import { useAppStore } from "../store/useAppStore";
 import { useProviderAvailability } from "../hooks/useProviderAvailability";
 import { useModalFocus } from "../hooks/useModalFocus";
 
+/**
+ * Short readiness-facts label per lane. Kept exhaustive rather than a ternary
+ * chain so a newly registered lane (nai) never silently renders "GPT API".
+ */
+const PROVIDER_READINESS_LABELS: Record<string, string> = {
+  oauth: "GPT OAuth",
+  api: "GPT API",
+  grok: "Grok OAuth",
+  "grok-api": "Grok API",
+  agy: "Gemini",
+  "gemini-api": "Gemini API",
+  atlascloud: "Atlas Cloud",
+  minimax: "MiniMax",
+  nai: "NovelAI",
+  comfy: "ComfyUI",
+};
+
 export function ProviderReadinessPopup() {
   const { t } = useI18n();
   const open = useAppStore((s) => s.readinessPopupOpen);
@@ -51,7 +68,7 @@ export function ProviderReadinessPopup() {
           <dl className="provider-readiness__facts">
             <div>
               <dt>{t("readiness.provider")}</dt>
-              <dd>{provider === "agy" ? "Gemini" : provider === "grok" ? "Grok OAuth" : provider === "oauth" ? "GPT OAuth" : "GPT API"}</dd>
+              <dd>{PROVIDER_READINESS_LABELS[provider] ?? "GPT API"}</dd>
             </div>
             <div>
               <dt>{t("readiness.model")}</dt>

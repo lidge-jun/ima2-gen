@@ -33,7 +33,9 @@ function inspectApiKey(lane: string, credential: Extract<ProviderCredential, { k
     return { lane, kind: "fail", text: `${lane}: api-key prefix mismatch (expected ${credential.keyPrefix})` };
   }
   if (!credential.keyPrefix) {
-    return { lane, kind: "pass", text: `${lane}: api-key present (no prefix check; MiniMax format is region-specific)` };
+    // Several lanes (minimax region-specific, nai persistent tokens) have no
+    // stable prefix, so the message must stay vocabulary-neutral.
+    return { lane, kind: "pass", text: `${lane}: api-key present (no prefix check; this lane has no fixed key prefix)` };
   }
   return { lane, kind: "pass", text: `${lane}: api-key present` };
 }

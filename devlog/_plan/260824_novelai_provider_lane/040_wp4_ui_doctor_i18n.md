@@ -8,6 +8,34 @@ screenshot shows NovelAI selectable with its four models.
 
 ## What the registry already did for us
 
+### Stale check, wp4 P-phase (2026-08-25)
+
+Re-verified the change map against the tree after wp1-wp3 landed
+(LOOP-CONTINUITY-01). The generated catalog already carries `nai` and its four
+models, so the surviving work is the hand-written maps only. Confirmed sites:
+
+| File | Site |
+|------|------|
+| `ui/src/lib/imageModels.ts` | model option rows (L27-28 pattern), `*_MODEL_VALUES` set (L33), `optionsFor` (L93), label resolver (L109) |
+| `ui/src/hooks/useKeyStatus.ts` | `KeyStatus` union (L10) |
+| `ui/src/components/ApiKeyInput.tsx` | `provider` prop union (L5) |
+| `ui/src/hooks/useProviderAvailability.ts` | key check + availability entry (L52, L81-83) |
+| `ui/src/components/GenProviderModelSelect.tsx` | provider option list (L34) |
+| `ui/src/components/settings/ProviderStatusSelect.tsx` | provider/method row (L28) |
+| `ui/src/components/AccountSettings.tsx` | key card (L193-198) |
+| `ui/src/components/home/HomePromptComposer.tsx` | provider label map (L18) |
+| `ui/src/components/ResultMetadataModal.tsx` | provider display map (L27) |
+| `ui/src/store/storeSettingsImpl.ts` | model coercion on provider switch (L379-382), reset guard (L399), default patch (L470-474) |
+| `ui/src/store/storeHelpers.ts` | reference-capability guard (L345) |
+
+Locales are `ui/src/i18n/{en,ko,zh-Hans,zh-Hant}.json` — **four**, not "all
+locales" as originally written; every new key must land in all four or
+`i18n-dictionary-contract` fails.
+
+`storeHelpers.ts:345` returns `null` (no reference support) for the hosted
+lanes. `nai` belongs in that list: wp3 refuses references outright, so the UI
+must not offer an attach affordance the server will reject.
+
 `ui/src/generated/providers.ts` is produced by
 `scripts/generate-provider-types.mjs` from `lib/providers/registry.ts`. After
 wp1 regenerated it, the UI already knows `"nai"`, its four models, and its

@@ -32,6 +32,7 @@ const CORE_PROVIDER_OPTIONS: ReadonlyArray<{ value: Provider; label: string }> =
   { value: "gemini-api", label: "Gem API" },
   { value: "atlascloud", label: "Atlas" },
   { value: "minimax", label: "MiniMax" },
+  { value: "nai", label: "NovelAI" },
   { value: "comfy", label: "ComfyUI" },
 ];
 

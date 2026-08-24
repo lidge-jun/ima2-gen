@@ -261,6 +261,12 @@ export function useCanvasModeSession({
     try {
       const memosForPrompt = annotations.memos;
       let editImage = lastCleanDataUrlRef.current;
+      // The NovelAI lane is text-to-image only and answers NAI_EDIT_UNSUPPORTED,
+      // so fail here with an explanation rather than after a round trip.
+      if (provider === "nai") {
+        showToast(t("toast.naiEditUnsupported"), true);
+        return;
+      }
       if (annotations.isDirty || annotations.hasAnnotations) {
         const saved = await saveCanvasVersionAndUseReference();
         if (!saved) return;

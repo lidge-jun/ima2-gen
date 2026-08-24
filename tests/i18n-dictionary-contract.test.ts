@@ -79,6 +79,8 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "settings.imageModel.nanoBanana2", "settings.imageModel.nanoBanana2Api",
     "settings.imageModel.nanoBananaPro", "settings.imageModel.gpt53CodexSpark",
     "settings.imageModel.minimaxImage01", "settings.imageModel.minimaxImage01Live",
+    "settings.imageModel.naiDiffusion5Full", "settings.imageModel.naiDiffusion5Curated",
+    "settings.imageModel.naiDiffusion45Full", "settings.imageModel.naiDiffusion45Curated",
     "settings.videoModel.grokImagine", "settings.videoModel.grokImagine15",
     "settings.reasoning.none", "settings.reasoning.low", "settings.reasoning.medium",
     "settings.reasoning.high", "settings.reasoning.xhigh", "settings.reasoning.max",
@@ -95,6 +97,8 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "settings.imageModel.nanoBanana2", "settings.imageModel.nanoBanana2Api",
     "settings.imageModel.nanoBananaPro",
     "settings.imageModel.minimaxImage01", "settings.imageModel.minimaxImage01Live",
+    "settings.imageModel.naiDiffusion5Full", "settings.imageModel.naiDiffusion5Curated",
+    "settings.imageModel.naiDiffusion45Full", "settings.imageModel.naiDiffusion45Curated",
   ]],
   // REASONING_EFFORT_OPTIONS fullLabelKey literals in ui/src/lib/reasoning.ts.
   ["ui/src/components/ReasoningEffortSelect.tsx :: option.fullLabelKey", reasoningKeys()],

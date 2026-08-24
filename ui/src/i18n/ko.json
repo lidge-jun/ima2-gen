@@ -99,7 +99,12 @@
       "capabilityUnsupported": "이 요청은 현재 공급자에서 지원되지 않습니다.",
       "modelUnavailable": "선택한 모델을 지금은 쓸 수 없습니다.",
       "internalState": "내부 상태가 깨졌습니다. 페이지를 새로고침해 주세요."
-    }
+    },
+    "naiRefUnsupported": "NovelAI는 아직 참조 이미지를 지원하지 않습니다.",
+    "naiEditUnsupported": "NovelAI 이미지 편집은 아직 지원되지 않습니다.",
+    "naiRateLimited": "NovelAI가 요청 속도를 제한하고 있습니다. 잠시 후 다시 시도해 주세요.",
+    "naiBadRequest": "NovelAI가 생성 파라미터를 거부했습니다.",
+    "naiMaskUnsupported": "NovelAI 편집은 아직 마스크를 지원하지 않습니다."
   },
   "inflight": {
     "queued": "대기 중",
@@ -730,7 +735,8 @@
     "geminiApiCompatBody": "Google Gemini API. 512px부터 4K까지 종횡비와 해상도를 조절할 수 있습니다.",
     "geminiApiCompatBodyLong": "Google Gemini API 직접 호출. nano-banana-2(Flash), nano-banana-pro(Pro)를 지원하며 512px부터 4K까지 종횡비와 해상도를 조절할 수 있습니다.",
     "gptCompatTitle": "GPT Image",
-    "gptCompatBody": "OpenAI Responses API를 통한 이미지 생성. 품질, 크기, 형식, 모더레이션, 웹 검색 설정 지원."
+    "gptCompatBody": "OpenAI Responses API를 통한 이미지 생성. 품질, 크기, 형식, 모더레이션, 웹 검색 설정 지원.",
+    "naiApiKeyRequired": "NovelAI API 토큰 필요"
   },
   "mcp": {
     "connectionsTitle": "MCP 프로바이더 연결",
@@ -1311,7 +1317,11 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 이미지 생성 미지원",
-      "unsupportedHelp": "Grok 모델은 번들된 로컬 프록시를 통해 xAI Images API를 사용합니다. GPT 모델은 OpenAI Responses 이미지 생성을 사용합니다."
+      "unsupportedHelp": "Grok 모델은 번들된 로컬 프록시를 통해 xAI Images API를 사용합니다. GPT 모델은 OpenAI Responses 이미지 생성을 사용합니다.",
+      "naiDiffusion5Full": "NAI Diffusion V5 Full",
+      "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
+      "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
+      "naiDiffusion45Curated": "NAI Diffusion V4.5 Curated"
     },
     "apiKeys": {
       "accordionTitle": "API Keys",
@@ -1354,6 +1364,10 @@
       "status": {
         "valid": "유효",
         "notConfigured": "미설정"
+      },
+      "nai": {
+        "label": "NovelAI",
+        "placeholder": "NovelAI 영구 API 토큰 붙여넣기"
       }
     },
     "videoModel": {
@@ -1544,6 +1558,41 @@
     "billingRequired": {
       "title": "잔액이 부족합니다",
       "body": "이 공급자 계정에 사용 가능한 크레딧이 없습니다. 공급자 콘솔에서 잔액을 확인한 뒤 다시 시도해 주세요."
+    },
+    "naiApiKeyMissing": {
+      "title": "NovelAI 토큰이 없습니다",
+      "body": "설정에서 NovelAI 영구 API 토큰(pst-로 시작)을 붙여넣어 주세요. 이 레인은 로그인 세션을 쓰지 않습니다.",
+      "cta": "설정 열기"
+    },
+    "naiAuthFailed": {
+      "title": "NovelAI가 토큰을 거부했습니다",
+      "body": "저장된 토큰이 유효하지 않거나 폐기됐습니다. NovelAI 계정 설정에서 영구 토큰을 새로 발급해 다시 저장해 주세요.",
+      "cta": "설정 열기"
+    },
+    "naiSubscriptionRequired": {
+      "title": "NovelAI 구독이 필요합니다",
+      "body": "이미지 생성에는 활성 구독(Opus, Scroll, Tablet)이 필요합니다. 토큰은 정상이지만 요금제가 이 요청을 포함하지 않습니다.",
+      "cta": "닫기"
+    },
+    "naiZipInvalid": {
+      "title": "NovelAI 이미지 아카이브를 읽지 못했습니다",
+      "body": "이 빌드가 해석하지 못하는 아카이브가 돌아왔습니다. 대개 일시적이니 다시 시도해 주세요.",
+      "cta": "다시 시도"
+    },
+    "naiResponseNotZip": {
+      "title": "NovelAI 응답 형식이 예상과 다릅니다",
+      "body": "이미지 아카이브가 아닌 응답이 왔습니다. 다시 시도해 보고 계속 실패하면 NovelAI 장애일 수 있습니다.",
+      "cta": "다시 시도"
+    },
+    "naiImageInvalid": {
+      "title": "쓸 수 있는 이미지가 없습니다",
+      "body": "요청은 성공했지만 유효한 PNG가 들어있지 않았습니다. 다시 시도하거나 모델과 크기를 바꿔 보세요.",
+      "cta": "다시 시도"
+    },
+    "naiUpstreamError": {
+      "title": "NovelAI 요청이 실패했습니다",
+      "body": "생성을 끝내지 못했습니다. 잠시 후 다시 시도해 주세요. 반복되면 대개 업스트림 장애입니다.",
+      "cta": "다시 시도"
     }
   },
   "promptLibrary": {

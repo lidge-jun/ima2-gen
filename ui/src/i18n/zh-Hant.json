@@ -99,7 +99,12 @@
       "capabilityUnsupported": "目前服務商不支援此請求。",
       "modelUnavailable": "所選模型暫時無法使用。",
       "internalState": "內部狀態異常，請重新載入頁面。"
-    }
+    },
+    "naiRefUnsupported": "NovelAI 暫不支援參考影像。",
+    "naiEditUnsupported": "NovelAI 暫不支援影像編輯。",
+    "naiRateLimited": "NovelAI 正在限流，請稍後再試。",
+    "naiBadRequest": "NovelAI 拒絕了生成參數。",
+    "naiMaskUnsupported": "NovelAI 編輯暫不支援遮罩。"
   },
   "inflight": {
     "queued": "排隊",
@@ -730,7 +735,8 @@
     "geminiApiCompatBody": "Google Gemini API。支援從 512px 到 4K 的寬高比和解析度控制。",
     "geminiApiCompatBodyLong": "Google Gemini API 直接。支援 nano-banana-2 (Flash) 和 nano-banana-pro (Pro)，寬高比和解析度控制範圍為 512px 至 4K。",
     "gptCompatTitle": "GPT Image",
-    "gptCompatBody": "OpenAI 透過回應 API 產生影像。支援品質、大小、格式、審核和網路搜尋設定。"
+    "gptCompatBody": "OpenAI 透過回應 API 產生影像。支援品質、大小、格式、審核和網路搜尋設定。",
+    "naiApiKeyRequired": "NovelAI API 需要權杖"
   },
   "mcp": {
     "connectionsTitle": "MCP 提供者連接",
@@ -1311,7 +1317,11 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 不支援影像",
-      "unsupportedHelp": "Grok 模型透過捆綁的本地代理使用 xAI 的圖像 API。 GPT 模型使用 OpenAI 回應影像產生。"
+      "unsupportedHelp": "Grok 模型透過捆綁的本地代理使用 xAI 的圖像 API。 GPT 模型使用 OpenAI 回應影像產生。",
+      "naiDiffusion5Full": "NAI Diffusion V5 Full",
+      "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
+      "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
+      "naiDiffusion45Curated": "NAI Diffusion V4.5 Curated"
     },
     "apiKeys": {
       "accordionTitle": "API 密鑰",
@@ -1354,6 +1364,10 @@
       "status": {
         "valid": "有效的",
         "notConfigured": "未配置"
+      },
+      "nai": {
+        "label": "NovelAI",
+        "placeholder": "貼上您的 NovelAI 永久 API 權杖"
       }
     },
     "videoModel": {
@@ -1544,6 +1558,41 @@
     "billingRequired": {
       "title": "需要儲值",
       "body": "此服務商帳戶餘額不足。請前往服務商主控台確認後重試。"
+    },
+    "naiApiKeyMissing": {
+      "title": "未設定 NovelAI 權杖",
+      "body": "請在設定中貼上 NovelAI 永久 API 權杖（以 pst- 開頭）。此通道不使用登入工作階段。",
+      "cta": "開啟設定"
+    },
+    "naiAuthFailed": {
+      "title": "NovelAI 拒絕了該權杖",
+      "body": "已儲存的權杖無效或已被撤銷。請在 NovelAI 帳號設定重新簽發永久權杖並再次儲存。",
+      "cta": "開啟設定"
+    },
+    "naiSubscriptionRequired": {
+      "title": "需要 NovelAI 訂閱",
+      "body": "影像生成需要有效訂閱（Opus、Scroll 或 Tablet）。權杖有效，但目前方案不含此請求。",
+      "cta": "關閉"
+    },
+    "naiZipInvalid": {
+      "title": "無法讀取 NovelAI 影像壓縮檔",
+      "body": "回傳的壓縮檔無法解碼。通常是暫時性問題，請重試。",
+      "cta": "重試"
+    },
+    "naiResponseNotZip": {
+      "title": "NovelAI 回傳了非預期格式",
+      "body": "回傳的並非影像壓縮檔。請重試；若持續失敗，可能是 NovelAI 服務異常。",
+      "cta": "重試"
+    },
+    "naiImageInvalid": {
+      "title": "未回傳可用影像",
+      "body": "請求成功但不含有效 PNG。請重試，或調整模型與尺寸。",
+      "cta": "重試"
+    },
+    "naiUpstreamError": {
+      "title": "NovelAI 請求失敗",
+      "body": "未能完成生成。請稍後重試；反覆失敗通常表示上游異常。",
+      "cta": "重試"
     }
   },
   "promptLibrary": {

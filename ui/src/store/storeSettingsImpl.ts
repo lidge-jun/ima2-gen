@@ -1,6 +1,6 @@
 import type { Provider, Quality, SizePreset, Format, Moderation, ImageModel, Count } from "../types";
 import type { ReasoningEffort } from "../lib/reasoning";
-import { DEFAULT_IMAGE_MODEL, GROK_VIDEO_MODEL_15, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, isMinimaxImageModel, normalizeVideoModelValue } from "../lib/imageModels";
+import { DEFAULT_IMAGE_MODEL, GROK_VIDEO_MODEL_15, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, isMinimaxImageModel, isNaiImageModel, normalizeVideoModelValue } from "../lib/imageModels";
 import { parseRequestedCustomSide } from "../lib/size";
 import { getEffectiveVideoSourceCount } from "../lib/videoSourceCount";
 import {
@@ -380,6 +380,12 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
     const minimaxModel = "image-01";
     saveImageModel(minimaxModel);
     set({ provider, imageModel: minimaxModel });
+  } else if (provider === "nai" && !isNaiImageModel(currentModel)) {
+    // Coerce to V5 Full, otherwise the selector would keep e.g. a grok model
+    // under a NovelAI selection and the request would be rejected upstream.
+    const naiModel = "nai-diffusion-5-full";
+    saveImageModel(naiModel as ImageModel);
+    set({ provider, imageModel: naiModel as ImageModel });
   } else if (provider === "comfy") {
     /**
      * Switch the lane and leave imageModel alone.
@@ -396,7 +402,7 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
      * the user's GPU.
      */
     set({ provider, comfyWorkflow: null });
-  } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && provider !== "minimax" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel) || isMinimaxImageModel(currentModel))) {
+  } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && provider !== "minimax" && provider !== "nai" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel) || isMinimaxImageModel(currentModel) || isNaiImageModel(currentModel))) {
     set({ provider, imageModel: DEFAULT_IMAGE_MODEL });
     saveImageModel(DEFAULT_IMAGE_MODEL);
   } else {
@@ -471,7 +477,12 @@ export function setImageModelImpl(imageModel: ImageModel, set: StoreSet, get: St
     set({ provider: "minimax", imageModel });
     return;
   }
-  if (get().provider === "grok" || get().provider === "agy" || get().provider === "gemini-api" || get().provider === "atlascloud" || get().provider === "minimax") {
+  if (isNaiImageModel(imageModel)) {
+    saveGenerationDefaultsPatch({ provider: "nai" });
+    set({ provider: "nai", imageModel });
+    return;
+  }
+  if (get().provider === "grok" || get().provider === "agy" || get().provider === "gemini-api" || get().provider === "atlascloud" || get().provider === "minimax" || get().provider === "nai") {
     saveGenerationDefaultsPatch({ provider: "oauth" });
     set({ provider: "oauth", imageModel });
     return;
