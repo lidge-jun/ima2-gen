@@ -67,7 +67,7 @@ def probe_media(path: Path, output_dir: Path) -> dict:
     import av
     with av.open(str(path)) as container:
         probe = {
-            "durationSeconds": None if container.duration is None else float(container.duration * av.time_base),
+            "durationSeconds": None if container.duration is None else float(container.duration / av.time_base),
             "format": container.format.name,
             "streams": [
                 {

@@ -1,0 +1,24 @@
+{
+  "promptId": "b71f9c78-07bf-4691-9a59-a7c85f84789f",
+  "elapsedSeconds": 105.138,
+  "output": "/home/lidgeai/tmp/ima2-h3-pruned/020_output.mp4",
+  "bytes": 695184,
+  "probe": {
+    "durationSeconds": 10.125,
+    "format": "mov,mp4,m4a,3gp,3g2,mj2",
+    "streams": [
+      {
+        "type": "video",
+        "codec": "h264",
+        "width": 864,
+        "height": 480
+      },
+      {
+        "type": "audio",
+        "codec": "aac",
+        "width": 0,
+        "height": 0
+      }
+    ]
+  }
+}

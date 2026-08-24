@@ -91,7 +91,7 @@ fi
   while true; do
     gpu="$(nvidia-smi --query-gpu=memory.used,memory.free,utilization.gpu,power.draw --format=csv,noheader,nounits | head -1 | tr -d ' ')"
     mem="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
-    printf '%s,%s,%s\n' "$(date -Ins)" "$gpu" "$mem"
+    printf '%s,%s,%s\n' "$(date +%Y-%m-%dT%H:%M:%S%z)" "$gpu" "$mem"
     sleep 1
   done
 ) > "$task_tmp/020_metrics.csv" &

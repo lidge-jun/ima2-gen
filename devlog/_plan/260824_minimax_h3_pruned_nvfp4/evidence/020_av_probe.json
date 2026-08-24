@@ -1,0 +1,18 @@
+{
+  "durationSeconds": 10.125,
+  "format": "mov,mp4,m4a,3gp,3g2,mj2",
+  "streams": [
+    {
+      "type": "video",
+      "codec": "h264",
+      "width": 864,
+      "height": 480
+    },
+    {
+      "type": "audio",
+      "codec": "aac",
+      "width": 0,
+      "height": 0
+    }
+  ]
+}
