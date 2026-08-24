@@ -145,11 +145,21 @@ enumerates the adapter's codes and fails if a new one lacks a message.
 ## Accept criteria
 
 1. `cd ui && npm run build` = 0.
-2. `node --test tests/nai-ui-registration-contract.test.ts tests/i18n-dictionary-contract.test.ts tests/doctor-provider-contract.test.ts` = 0.
+2. `npm test` = 0. Bare `node --test` cannot run these files: they import
+   `ui/src/lib/errorCodes.ts`, whose own `./errorClassSpecs` import is
+   extensionless, so node resolves it to nothing and reports a failed test with
+   exit 0. `scripts/run-tests.mjs` is the real gate — it always loads the whole
+   suite, so a per-file invocation is not meaningful here either.
 3. **Render grounding (C-RENDER-GROUNDING-01):** serve the built UI, open the
    provider selector, screenshot at 1280x720, and read the screenshot back —
    NovelAI present with four correctly-labelled models. Screenshot persisted to
    this unit folder (C4 = STRICT).
+
+## Landed
+
+`fc3057b6` (lane selectable end-to-end, full `NAI_*` error table) and
+`7d02fd4a` (copy pinned in the i18n oracle, settings CTA wired, AC3 model-list
+shot). Evidence and the two audit rounds are recorded in `evidence/README.md`.
 
 ## Scope boundary
 
