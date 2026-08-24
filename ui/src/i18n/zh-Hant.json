@@ -2252,6 +2252,7 @@
     "kindImage": "圖片",
     "kindVideo": "影片",
     "videoCatalogOnly": "僅顯示於目錄 — 尚不支援執行 ComfyUI 影片。",
+    "videoCatalogShort": "僅目錄",
     "bindTitle": "請求欄位要寫入哪個節點？",
     "bindAmbiguous": "有些欄位對應到多個節點。請逐一選擇——選錯會讓正負提示詞悄悄互換。",
     "choose": "請選擇…",

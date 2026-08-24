@@ -2252,6 +2252,7 @@
     "kindImage": "Image",
     "kindVideo": "Video",
     "videoCatalogOnly": "Catalog only — ComfyUI video execution is not supported yet.",
+    "videoCatalogShort": "Catalog only",
     "bindTitle": "Where do the request fields go?",
     "bindAmbiguous": "Some fields matched more than one node. Pick each one — a wrong choice swaps your prompts silently.",
     "choose": "Choose…",

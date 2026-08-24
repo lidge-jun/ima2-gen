@@ -113,6 +113,12 @@ scope. The disabled selector proves the value cannot reach `routes/video.ts`.
   - render Comfy image and video groups separately.
   - video rows remain visible but disabled; `title`/subtext exposes lock reason.
   - do not touch `videoModelSelected` or call `storeVideoImpl` for disabled items.
+- MODIFY `ui/src/components/controls/Select.tsx`
+  - optional item title preserves the full lock reason when a compact row uses a
+    short localized sub-label; no global menu-width change.
+- MODIFY `ui/src/styles/controls.css`
+  - opt-in stacked item mode gives the H3 label the full option width while keeping
+    the short lock state on a second line.
 - MODIFY `bin/commands/models.ts`
   - table adds `label` and per-model `model-status` columns.
   - label `MiniMax H3 FL2VA pruned NVFP4` appears in non-JSON output.

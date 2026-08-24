@@ -2252,6 +2252,7 @@
     "kindImage": "图像",
     "kindVideo": "视频",
     "videoCatalogOnly": "仅在目录中显示 — ComfyUI 视频执行尚不受支持。",
+    "videoCatalogShort": "仅目录",
     "bindTitle": "请求字段写入哪个节点？",
     "bindAmbiguous": "有些字段匹配到多个节点。请逐一选择——选错会让正负提示词悄悄互换。",
     "choose": "请选择…",

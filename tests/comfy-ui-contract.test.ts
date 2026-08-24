@@ -52,6 +52,9 @@ describe("comfy UI model routing", () => {
     assert.match(source, /COMFY_VIDEO_PREFIX/);
     assert.match(source, /disabled: true/);
     assert.match(source, /entry\.lockReason/);
+    assert.match(source, /videoCatalogShort/);
+    assert.match(source, /title: entry\.reason/);
+    assert.match(source, /stacked: true/);
   });
 });
 

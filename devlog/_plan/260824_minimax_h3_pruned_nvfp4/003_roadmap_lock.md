@@ -13,7 +13,7 @@ Docs-only B에서 감사 반영 후 아래 문서를 implementation SSOT로 잠�
 002_audit_synthesis.md                   b2e1c65690d4b8ae9f9684fd7d996088957822d256d49e7da246ee36ea640e5a
 010_lidge_pruned_artifact_native.md       8aaaea3e3e2ad6fd5f43cef44b482272558549d1964c972b67b61345454a90c8
 020_lidge_generation_proof.md             d25f0efcf91a0fe16fece5daa1cb376afad9740cd315a28f218e9350082c3e0d
-030_ima2_comfy_video_visibility.md        5e4009adcd425810d52d6d2fe2bfc7fbe28644fc68683b9c5272d28cdef4a73a
+030_ima2_comfy_video_visibility.md        2167dfe26e6e90fa4648556de343cbc8decafdb37097c6f1378619b84565201d
 040_integrated_verification_closeout.md   e33cfd354bf74794e4f02580c82ae843cd63db5c54a4450cb814c89e83b9d409
 ```
 

@@ -15,6 +15,8 @@ export type SelectItem<V extends string> = {
   label: ReactNode;
   sub?: ReactNode;
   disabled?: boolean;
+  title?: string;
+  stacked?: boolean;
   /** Plain-text used for keyboard typeahead when `label` is not a string. */
   searchText?: string;
 };
@@ -307,9 +309,10 @@ export function Select<V extends string>({
                   data-index={index}
                   aria-selected={it.value === value}
                   aria-disabled={it.disabled || undefined}
+                  title={it.title}
                   className={`ctl-select__item${it.value === value ? " is-selected" : ""}${
                     index === activeIndex ? " is-active" : ""
-                  }${it.disabled ? " is-disabled" : ""}`}
+                  }${it.disabled ? " is-disabled" : ""}${it.stacked ? " is-stacked" : ""}`}
                   onPointerEnter={() => setActiveIndex(index)}
                   onClick={() => commit(index)}
                 >

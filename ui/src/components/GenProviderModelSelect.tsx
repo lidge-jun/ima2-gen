@@ -296,7 +296,9 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         items: comfyVideoWorkflows.map((entry) => ({
           value: `${COMFY_VIDEO_PREFIX}${entry.id}`,
           label: entry.label,
-          sub: entry.reason,
+          sub: t("comfy.videoCatalogShort"),
+          title: entry.reason,
+          stacked: true,
           disabled: true,
         })),
       });

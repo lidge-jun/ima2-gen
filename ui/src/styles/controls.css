@@ -94,6 +94,18 @@
   opacity: 0.45;
   cursor: default;
 }
+.ctl-select__item.is-stacked {
+  align-items: stretch;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+.ctl-select__item.is-stacked .ctl-select__item-label {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.25;
+}
 .ctl-select__item-sub {
   color: var(--text-muted);
   font-family: var(--mono);
