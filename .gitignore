@@ -49,3 +49,7 @@ cache/
 !devlog/_plan/260823_comfy_provider_lane/**
 !devlog/_plan/260823_minimax_h3/
 !devlog/_plan/260823_minimax_h3/**
+
+# NovelAI provider lane unit (260824): plan docs plus render evidence.
+!devlog/_plan/260824_novelai_provider_lane/
+!devlog/_plan/260824_novelai_provider_lane/**
