@@ -125,6 +125,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 | Unit | Status |
 |---|---|
 | `260823_comfy_provider_lane/` | ComfyUI provider lane. wp0-wp6 landed on `dev`; wp7 (multimode/node/agent surfaces) deferred past the merge boundary |
+| `260824_minimax_h3_pruned_nvfp4/` | lidge RTX 5090 pruned NVFP4 실기와 ima2의 locked Comfy video workflow catalog 노출. 000~040 diff-level roadmap |
 
 `260823_comfy_provider_lane` is worth reading as a worked example of the
 documentation routine rather than only for its subject. It carries the

@@ -27,6 +27,11 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 | `260815_open_issues_platform/` | v3.5.0으로 완료. 이관 판정은 다음 사이클 |
 | `260814_issue_pr_zeroing_release/` | v3.1.0으로 완료. 이관 판정은 다음 사이클 |
 | `260814b_maturity_ops_measurement/` | v3.2.0으로 완료. 이관 판정은 다음 사이클 |
+| `260824_minimax_h3_pruned_nvfp4/` | docs-only 로드맵 잠금 완료 후 lidge pruned NVFP4 실기와 ima2 Comfy 비디오 workflow 노출 진행 중 |
+
+`260824_minimax_h3_pruned_nvfp4/003_roadmap_lock.md`가 감사 반영 후 000~040
+문서의 SHA-256을 기록한다. 다음 implementation cycle은 해당 decade 문서를
+stale-check한 뒤 시작한다.
 
 ### 2026-08-15 — 260815 사이클 결과
 
