@@ -179,6 +179,33 @@ export const REGISTRY = [
     errorPrefix: "MINIMAX_",
   },
   {
+    id: "nai",
+    vendor: "novelai",
+    credentials: [{
+      kind: "api-key",
+      keyVocabulary: "nai",
+      envVars: ["NOVELAI_API_KEY"],
+      // No keyPrefix by design: NovelAI accepts both a persistent API token and
+      // a session JWT and publishes no prefix for either, so a format rule here
+      // would reject valid tokens.
+      validateUrl: "https://api.novelai.net/user/data",
+      configKey: "naiApiKey",
+    }],
+    models: [
+      { id: "nai-diffusion-5-full", aliases: ["nai-v5-full"], kind: "image", supports: EDIT },
+      { id: "nai-diffusion-5-curated", aliases: ["nai-v5-curated"], kind: "image", supports: EDIT },
+      { id: "nai-diffusion-4-5-full", aliases: ["nai-v45-full"], kind: "image", supports: EDIT },
+      { id: "nai-diffusion-4-5-curated", aliases: ["nai-v45-curated"], kind: "image", supports: EDIT },
+    ],
+    referenceLimits: { image: 1, edit: 1 },
+    elementTaxonomy: "gpt",
+    // Diffusion at V5 resolutions is slower than a hosted REST image call, so
+    // this sits above MiniMax's 120s while staying well under Comfy's local-GPU
+    // ceiling.
+    limits: { timeoutMs: 180_000, maxInputBytes: 50 * 1024 * 1024 },
+    errorPrefix: "NAI_",
+  },
+  {
     id: "comfy",
     vendor: "comfy",
     credentials: [{

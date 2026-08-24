@@ -140,6 +140,24 @@ async function loadMinimaxApiKey(): Promise<ApiKeyLoadResult> {
   return { apiKey: null, apiKeySource: "none" };
 }
 
+async function loadNaiApiKey(): Promise<ApiKeyLoadResult> {
+  if (process.env.NOVELAI_API_KEY) {
+    return { apiKey: process.env.NOVELAI_API_KEY, apiKeySource: "env" };
+  }
+  const candidates = [
+    config.storage.configFile,
+    join(rootDir, ".ima2", "config.json"),
+  ];
+  for (const cfgPath of candidates) {
+    if (!existsSync(cfgPath)) continue;
+    try {
+      const cfg = JSON.parse(await readFile(cfgPath, "utf-8")) as { naiApiKey?: string };
+      if (cfg.naiApiKey) return { apiKey: cfg.naiApiKey, apiKeySource: "config" };
+    } catch {}
+  }
+  return { apiKey: null, apiKeySource: "none" };
+}
+
 type VertexKeyLoadResult = { json: string | null; projectId: string | null; source: ApiKeySource };
 
 async function loadVertexKey(): Promise<VertexKeyLoadResult> {
@@ -378,6 +396,7 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
   const loadedGeminiKey = await loadGeminiApiKey();
   const loadedAtlasCloudKey = await loadAtlasCloudApiKey();
   const loadedMinimaxKey = await loadMinimaxApiKey();
+  const loadedNaiKey = await loadNaiApiKey();
   const loadedVertexKey = await loadVertexKey();
   const geminiAuthMode = await loadGeminiAuthMode();
   const apiKey = loadedKey.apiKey;
@@ -420,6 +439,9 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
     minimaxApiKey: loadedMinimaxKey.apiKey ?? undefined,
     minimaxApiKeySource: loadedMinimaxKey.apiKeySource as ApiKeySource,
     hasMinimaxApiKey: !!loadedMinimaxKey.apiKey,
+    naiApiKey: loadedNaiKey.apiKey ?? undefined,
+    naiApiKeySource: loadedNaiKey.apiKeySource as ApiKeySource,
+    hasNaiApiKey: !!loadedNaiKey.apiKey,
     vertexServiceAccountJson: loadedVertexKey.json ?? undefined,
     vertexProjectId: loadedVertexKey.projectId ?? undefined,
     hasVertexKey: !!loadedVertexKey.json,

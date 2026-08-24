@@ -33,7 +33,7 @@ async function updateConfigFile(
   });
 }
 
-type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud" | "minimax";
+type KeyProvider = "openai" | "xai" | "gemini" | "atlascloud" | "minimax" | "nai";
 
 const KEY_PREFIX_MAP: Record<KeyProvider, string[]> = {
   openai: ["sk-"],
@@ -41,6 +41,9 @@ const KEY_PREFIX_MAP: Record<KeyProvider, string[]> = {
   gemini: ["AI"],
   atlascloud: ["apikey-"],
   minimax: [],
+  // NovelAI accepts a persistent API token or a session JWT and publishes no
+  // prefix for either, so any format rule here would reject valid tokens.
+  nai: [],
 };
 
 const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
@@ -51,6 +54,9 @@ const VALIDATE_URL_MAP: Record<KeyProvider, string> = {
   // Fallback only. The MiniMax branch resolves a region-aware URL at call time
   // via resolveMinimaxValidateUrl so a cn_zh workspace validates against the CN host.
   minimax: "https://api.minimax.io/v1/models",
+  // Account host, not the image host: validating against generation would bill
+  // Anlas on every key save.
+  nai: "https://api.novelai.net/user/data",
 };
 
 // Same region rule as lib/minimaxImageAdapter.ts resolveBaseUrl.
@@ -75,10 +81,11 @@ const CONFIG_KEY_MAP: Record<KeyProvider, string> = {
   gemini: "geminiApiKey",
   atlascloud: "atlasCloudApiKey",
   minimax: "minimaxApiKey",
+  nai: "naiApiKey",
 };
 
 function isKeyProvider(v: string): v is KeyProvider {
-  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud" || v === "minimax";
+  return v === "openai" || v === "xai" || v === "gemini" || v === "atlascloud" || v === "minimax" || v === "nai";
 }
 
 function maskKey(key: string): string {
@@ -92,13 +99,14 @@ function keySourceForProvider(ctx: RuntimeContext, provider: KeyProvider): { key
   if (provider === "gemini") return { key: ctx.geminiApiKey, source: ctx.geminiApiKeySource || "none" };
   if (provider === "atlascloud") return { key: ctx.atlasCloudApiKey, source: ctx.atlasCloudApiKeySource || "none" };
   if (provider === "minimax") return { key: ctx.minimaxApiKey, source: ctx.minimaxApiKeySource || "none" };
+  if (provider === "nai") return { key: ctx.naiApiKey, source: ctx.naiApiKeySource || "none" };
   return { key: undefined, source: "none" };
 }
 
 export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
   app.get("/api/keys/status", (_req: Request, res: Response) => {
     const status: Record<string, unknown> = {};
-    for (const provider of ["openai", "xai", "gemini", "atlascloud", "minimax"] as const) {
+    for (const provider of ["openai", "xai", "gemini", "atlascloud", "minimax", "nai"] as const) {
       const { key, source } = keySourceForProvider(ctx, provider);
       status[provider] = {
         configured: !!key,
@@ -303,6 +311,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).minimaxApiKey = trimmed;
       (ctx as any).minimaxApiKeySource = "config";
       (ctx as any).hasMinimaxApiKey = true;
+    } else if (provider === "nai") {
+      (ctx as any).naiApiKey = trimmed; // justified: RuntimeContext fields are readonly at the type level; every sibling key branch hot-updates through the same cast
+      (ctx as any).naiApiKeySource = "config"; // justified: same hot-update path as the minimax branch above
+      (ctx as any).hasNaiApiKey = true; // justified: same hot-update path as the minimax branch above
     }
 
     return res.json({ ok: true, provider, source: "config", valid: true });
@@ -344,6 +356,10 @@ export function mountKeyRoutes(app: Express, ctx: RuntimeContext) {
       (ctx as any).minimaxApiKey = undefined;
       (ctx as any).minimaxApiKeySource = "none";
       (ctx as any).hasMinimaxApiKey = false;
+    } else if (provider === "nai") {
+      (ctx as any).naiApiKey = undefined; // justified: RuntimeContext fields are readonly at the type level; every sibling key branch clears through the same cast
+      (ctx as any).naiApiKeySource = "none"; // justified: same clear path as the minimax branch above
+      (ctx as any).hasNaiApiKey = false; // justified: same clear path as the minimax branch above
     }
 
     return res.json({ ok: true, provider, removed: true });

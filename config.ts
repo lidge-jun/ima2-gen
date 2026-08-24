@@ -363,6 +363,21 @@ export const config = {
     cnBaseUrl: pickStr(env.IMA2_MINIMAX_CN_BASE_URL, fileCfg.minimaxProvider?.cnBaseUrl, "https://api.minimaxi.com/v1"),
     generationTimeoutMs: pickInt(env.IMA2_MINIMAX_GENERATION_TIMEOUT_MS, fileCfg.minimaxProvider?.generationTimeoutMs, 120_000),
   },
+  // Direct NovelAI image-generation provider. Generation lives on the image
+  // host; account/subscription and key validation live on the api host, so a
+  // key check never spends Anlas.
+  naiProvider: {
+    defaultImageModel: pickStr(env.IMA2_NAI_IMAGE_MODEL_DEFAULT, fileCfg.naiProvider?.defaultImageModel, "nai-diffusion-5-full"),
+    baseUrl: pickStr(env.IMA2_NAI_BASE_URL, fileCfg.naiProvider?.baseUrl, "https://image.novelai.net"),
+    accountBaseUrl: pickStr(env.IMA2_NAI_ACCOUNT_BASE_URL, fileCfg.naiProvider?.accountBaseUrl, "https://api.novelai.net"),
+    generationTimeoutMs: pickInt(env.IMA2_NAI_GENERATION_TIMEOUT_MS, fileCfg.naiProvider?.generationTimeoutMs, 180_000),
+    // 23 matches the reference client's V4.5/V5 preset and stays under the
+    // Opus free-tier ceiling of 28 steps.
+    defaultSteps: pickInt(env.IMA2_NAI_DEFAULT_STEPS, fileCfg.naiProvider?.defaultSteps, 23),
+    defaultScale: pickInt(env.IMA2_NAI_DEFAULT_SCALE, fileCfg.naiProvider?.defaultScale, 5),
+    defaultSampler: pickStr(env.IMA2_NAI_DEFAULT_SAMPLER, fileCfg.naiProvider?.defaultSampler, "k_euler_ancestral"),
+    defaultNoiseSchedule: pickStr(env.IMA2_NAI_DEFAULT_NOISE_SCHEDULE, fileCfg.naiProvider?.defaultNoiseSchedule, "karras"),
+  },
   log: {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
     pretty: env.NODE_ENV !== "production",

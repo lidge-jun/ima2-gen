@@ -185,11 +185,14 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       }
       // Comfy joins this list because inpainting needs a LoadImageMask node,
       // which is a binding-schema extension rather than a request flag.
-      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "comfy") && rawMask) {
+      // NovelAI joins this list because its infill is a distinct action with its
+      // own model ids, not a mask flag on generate; accepting a mask here would
+      // silently drop it.
+      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai" || activeProvider === "comfy") && rawMask) {
         finishStatus = "error";
         finishHttpStatus = 400;
-        const code = activeProvider === "agy" ? "AGY_MASK_UNSUPPORTED" : activeProvider === "gemini-api" ? "GEMINI_API_MASK_UNSUPPORTED" : activeProvider === "atlascloud" ? "ATLASCLOUD_MASK_UNSUPPORTED" : activeProvider === "minimax" ? "MINIMAX_MASK_UNSUPPORTED" : activeProvider === "comfy" ? "COMFY_MASK_UNSUPPORTED" : "GROK_MASK_UNSUPPORTED";
-        const label = activeProvider === "agy" ? "Agy" : activeProvider === "gemini-api" ? "Gemini API" : activeProvider === "atlascloud" ? "Atlas Cloud" : activeProvider === "minimax" ? "MiniMax" : activeProvider === "comfy" ? "ComfyUI" : "Grok";
+        const code = activeProvider === "agy" ? "AGY_MASK_UNSUPPORTED" : activeProvider === "gemini-api" ? "GEMINI_API_MASK_UNSUPPORTED" : activeProvider === "atlascloud" ? "ATLASCLOUD_MASK_UNSUPPORTED" : activeProvider === "minimax" ? "MINIMAX_MASK_UNSUPPORTED" : activeProvider === "nai" ? "NAI_MASK_UNSUPPORTED" : activeProvider === "comfy" ? "COMFY_MASK_UNSUPPORTED" : "GROK_MASK_UNSUPPORTED";
+        const label = activeProvider === "agy" ? "Agy" : activeProvider === "gemini-api" ? "Gemini API" : activeProvider === "atlascloud" ? "Atlas Cloud" : activeProvider === "minimax" ? "MiniMax" : activeProvider === "nai" ? "NovelAI" : activeProvider === "comfy" ? "ComfyUI" : "Grok";
         return res.status(400).json({ error: `${label} provider does not support mask editing`, code, ...errorEnvelopeFields({ code, status: 400 }) });
       }
       const maskCheck: any = validateEditMask(imageB64, rawMask);

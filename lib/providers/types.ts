@@ -1,6 +1,6 @@
-export type KeyProviderId = "openai" | "xai" | "gemini" | "atlascloud" | "minimax";
+export type KeyProviderId = "openai" | "xai" | "gemini" | "atlascloud" | "minimax" | "nai";
 
-export type ProviderVendor = "openai" | "xai" | "google" | "atlascloud" | "minimax" | "comfy";
+export type ProviderVendor = "openai" | "xai" | "google" | "atlascloud" | "minimax" | "novelai" | "comfy";
 export type ProviderModelKind = "image" | "video";
 export type ProviderReferenceMode = "image" | "edit" | "video";
 export type ElementTaxonomy = "gpt" | "gemini" | "grok";
