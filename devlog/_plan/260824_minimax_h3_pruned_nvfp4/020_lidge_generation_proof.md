@@ -15,7 +15,8 @@ ima2 코드 변경.
 
 Resource bound: 120분. 단일 생성만 제출한다. 해상도 864x480, length 243,
 steps 10, Sage off, LoRA 미적용, sampler `res_multistep`, scheduler `simple`.
-MemoryMax=20G와 `--disable-pinned-memory --cache-none`는 유지한다.
+MemoryMax=20G와 `--disable-pinned-memory --cache-none`는 유지한다. GPU power limit은
+실측 600W에서 사용자 지정 500W로 생성 직전에 낮추고 teardown에서 600W로 복원한다.
 
 ## Artifact delta
 
@@ -59,7 +60,9 @@ checked-in fixture, but every class/input is validated against 010's current
 
 ## Procedure
 
-1. Confirm no GPU peer and start only `comfyui.service`.
+1. Confirm `llama-server-qwen38.service` remains inactive and no GPU peer exists,
+   record `nvidia-smi -q -d POWER`, apply
+   `sudo nvidia-smi -pl 500`, and start only `comfyui.service`.
 2. Record a log cursor (`journalctl -u comfyui.service -n 0 --show-cursor`) and start
    one-second GPU/RAM sampling to `020_metrics.csv`.
 3. POST the flat graph to actual 8188. Reject any non-empty `node_errors`.
@@ -72,8 +75,8 @@ checked-in fixture, but every class/input is validated against 010's current
    than normalizing it before the 030 implementation.
 7. Fetch `/view` from filename/subfolder/type. Verify with `file`, first 16 bytes,
    and `ffprobe` duration/streams. Copy receipts back into the local evidence folder.
-8. Stop ComfyUI, stop sampling, restore the peer unit only if it was active at 010
-   entry.
+8. Stop ComfyUI, stop sampling, restore power limit to the recorded 600W, and assert
+   `llama-server-qwen38.service` remains inactive per user steering.
 
 ## Success evidence
 
@@ -84,7 +87,8 @@ runtime: fresh Native ops contains nvfp4; fresh Emulated ops does not
 output: file identifies MP4/WebM; ffprobe sees video stream and expected duration range
 metrics: peak VRAM < physical total; host and service remain reachable
 elapsed: monotonic start/end timestamps
-teardown: comfy service stopped; original GPU peer restored
+teardown: comfy service stopped; user-stopped llama peer remains inactive
+power: 500W during job; original 600W restored
 ```
 
 Expected duration is near 10s for 243 frames at 24fps. The user-provided community
@@ -113,5 +117,5 @@ figure of ~175s and ~26.9GB VRAM is a comparison target, not a pass condition.
 ## Rollback
 
 `POST /queue {delete:[prompt_id]}` and `POST /interrupt {prompt_id}` are both issued on
-cancel. Stop the protected unit. Preserve output/error receipts. Restore the original
-GPU peer. Do not delete either DiT.
+cancel. Stop the protected unit. Preserve output/error receipts. Keep the user-stopped
+llama peer inactive. Do not delete either DiT.
