@@ -91,7 +91,7 @@ asserts on transparency.
 
 The `030` "alpha guard" test is also insufficient as specified: it described
 one set pair, but there are **five** sites. It becomes a source-regex test
-asserting the full table above — `nai` absent from all four JPEG-forcing
+asserting the full table above — `nai` absent from all three JPEG-forcing
 conditionals and present in all five MIME-reporting ones. `provider-registry-parity`
 already reads route source with regexes, so this pattern is established.
 
@@ -220,3 +220,31 @@ whole image ref-limit map. The wp1 manifest's `{image:1}` breaks it immediately.
 ## Round 2 disposition
 
 Three High + seven Medium/Low folded. Nothing rebutted.
+
+---
+
+# Round 3 (final) — `665c4ed2`
+
+**VERDICT: GO-WITH-FIXES (blockers=0).** The reviewer confirmed R2-H1/H2/H3
+closed and found no remaining defect that would break compilation, boot, a
+predicted test, or V5 alpha. Three one-line residuals were raised and fixed:
+
+- `tests/doctor-provider-contract.test.ts:25` hardcodes `lanes.length === 9`;
+  the `deepEqual` above it is registry-derived and stays honest, but the count
+  goes red when `nai` lands. Mapped into `040`.
+- `010`'s change-map cell still said "+ `naiApiKey` source" while its body said
+  do not add one. Cell corrected.
+- `pickNum` remained in the `010` snippet though the prose already said to use
+  `pickInt`. Snippet corrected.
+
+## Audit loop closed
+
+Three rounds, same reviewer throughout (AUDIT-LOOP-01 / DISPATCH-ACTOR-01),
+LOOP-REPAIR-01 cap respected. Round 1: FAIL, 5 High. Round 2: FAIL, 3 new High.
+Round 3: GO-WITH-FIXES, 0 blockers. Every finding across all rounds was
+reproduced against real code before acceptance; none were rebutted, and none
+were taken on the reviewer's word alone.
+
+The single highest-value catch was B4: an earlier draft would have led an
+implementer to add `nai` to `nodeGeneration:261`, silently flattening V5's
+alpha channel in node mode while every test stayed green.

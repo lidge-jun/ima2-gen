@@ -15,7 +15,7 @@ the registry/parity/key tests pass.
 | `lib/providers/types.ts` | MODIFY — widen `KeyProviderId`, `ProviderVendor` |
 | `lib/providers/registry.ts` | MODIFY — add `nai` manifest |
 | `server.ts` | MODIFY — `loadNaiApiKey()` + ctx wiring (**audit B1**) |
-| `config.ts` | MODIFY — add `naiProvider` block + `naiApiKey` source |
+| `config.ts` | MODIFY — add `naiProvider` tunables only (**no `naiApiKey`** — see §3) |
 | `lib/runtimeContext.ts` | MODIFY — `naiApiKey`/`naiApiKeySource`/`hasNaiApiKey` |
 | `routes/keys.ts` | MODIFY — `nai` KeyProvider through validate/set/clear |
 | `tests/provider-registry-contract.test.ts` | MODIFY — id list oracle (**audit B3**) |
@@ -93,14 +93,14 @@ Add after the `minimaxProvider` block (~line 364):
 +    accountBaseUrl: pickStr(env.IMA2_NAI_ACCOUNT_BASE_URL, fileCfg.naiProvider?.accountBaseUrl, "https://api.novelai.net"),
 +    generationTimeoutMs: pickInt(env.IMA2_NAI_GENERATION_TIMEOUT_MS, fileCfg.naiProvider?.generationTimeoutMs, 180_000),
 +    defaultSteps: pickInt(env.IMA2_NAI_DEFAULT_STEPS, fileCfg.naiProvider?.defaultSteps, 23),
-+    defaultScale: pickNum(env.IMA2_NAI_DEFAULT_SCALE, fileCfg.naiProvider?.defaultScale, 5),
++    defaultScale: pickInt(env.IMA2_NAI_DEFAULT_SCALE, fileCfg.naiProvider?.defaultScale, 5),
 +    defaultSampler: pickStr(env.IMA2_NAI_DEFAULT_SAMPLER, fileCfg.naiProvider?.defaultSampler, "k_euler_ancestral"),
 +    defaultNoiseSchedule: pickStr(env.IMA2_NAI_DEFAULT_NOISE_SCHEDULE, fileCfg.naiProvider?.defaultNoiseSchedule, "karras"),
 +  },
 ```
 
 `defaultSteps: 23` matches the reference client's V4.5/V5 preset and stays
-under the Opus free-tier ceiling of 28 (001 §Anlas). If `pickNum` does not
+under the Opus free-tier ceiling of 28 (001 §Anlas). Scale is an integer here because `config.ts` has no float helper; `pickNum` does not
 exist in `config.ts`, use `pickInt` for scale and document the integer
 restriction instead of adding a helper.
 

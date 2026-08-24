@@ -40,6 +40,11 @@ hand-written maps do.
 | i18n dictionaries | MODIFY — every new string key, all locales |
 | `tests/nai-ui-registration-contract.test.ts` | NEW |
 | `tests/i18n-dictionary-contract.test.ts` | MODIFY — add the four `settings.imageModel.nai*` keys to the model-label oracle (**audit B3**) |
+| `tests/doctor-provider-contract.test.ts` | MODIFY — `assert.equal(lanes.length, 9)` → `10` (**audit R3**) |
+
+> `doctor-provider-contract` derives the lane list from the registry, so the
+> `deepEqual` stays honest — but the hardcoded count at `:25` goes red the
+> moment `nai` lands. One line, same commit as the doctor row.
 
 ## Display labels
 
