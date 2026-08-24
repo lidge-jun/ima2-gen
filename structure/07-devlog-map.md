@@ -126,7 +126,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 |---|---|
 | `260823_comfy_provider_lane/` | ComfyUI provider lane. wp0-wp6 landed on `dev`; wp7 (multimode/node/agent surfaces) deferred past the merge boundary |
 | `260824_minimax_h3_pruned_nvfp4/` | lidge RTX 5090 pruned NVFP4 실기와 ima2의 locked Comfy video workflow catalog 노출. 000~040 diff-level roadmap |
-| `260824_novelai_provider_lane/` | NovelAI (NAI) image provider lane. Phase-0 docs-only cycle complete: research `000`-`003` plus diff-level `010`-`050` for five implementation work-phases. Not yet implemented |
+| `260824_novelai_provider_lane/` | NovelAI (NAI) image provider lane. wp0 docs (`000`-`003`) and wp1-wp2 landed on `dev`: registry, key plumbing, adapter, ZIP reader. `004` records a live V5 probe that corrected two roadmap assumptions. wp3-wp5 (routing, UI, verification) remain |
 
 `260823_comfy_provider_lane` is worth reading as a worked example of the
 documentation routine rather than only for its subject. It carries the

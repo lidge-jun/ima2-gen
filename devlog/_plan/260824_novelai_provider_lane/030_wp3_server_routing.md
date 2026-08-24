@@ -38,7 +38,20 @@ flattened alpha in node mode with every test green.
 | `lib/nodeGeneration.ts` | 261 `resultFormat` init | JPEG-forcing | **NO** |
 | `lib/nodeGeneration.ts` | 373 overwrite | MIME-reporting | YES |
 | `lib/agentImageVideoGen.ts` | 155 | MIME-from-bytes | YES |
-| `routes/edit.ts` | 351, 354 | MIME-reporting | YES |
+| `routes/edit.ts` | 354, 357 | MIME-reporting | YES |
+
+### Stale check, wp3 P-phase (2026-08-25)
+
+Re-verified every line number against the tree after wp1/wp2 landed
+(LOOP-CONTINUITY-01). Only `routes/edit.ts` moved: the mask-rejection guard
+added in wp1 pushed the MIME lines from 351/354 to **354/357**. All other rows
+are unchanged. Dispatch anchors also re-confirmed: generatePipeline 311/441,
+multimodePipeline 400, nodeGeneration 176/313, agentImageVideoGen 121,
+edit 276.
+
+`routes/edit.ts` mask rejection is **already done** — it landed early in wp1
+because `provider-registry-parity` verifies the registry's `mask:false` claim
+against that guard, so the two could not land separately.
 
 ## File change map
 
