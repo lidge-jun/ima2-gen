@@ -14,7 +14,7 @@ Docs-only B에서 감사 반영 후 아래 문서를 implementation SSOT로 잠�
 010_lidge_pruned_artifact_native.md       8aaaea3e3e2ad6fd5f43cef44b482272558549d1964c972b67b61345454a90c8
 020_lidge_generation_proof.md             d25f0efcf91a0fe16fece5daa1cb376afad9740cd315a28f218e9350082c3e0d
 030_ima2_comfy_video_visibility.md        2167dfe26e6e90fa4648556de343cbc8decafdb37097c6f1378619b84565201d
-040_integrated_verification_closeout.md   e33cfd354bf74794e4f02580c82ae843cd63db5c54a4450cb814c89e83b9d409
+040_integrated_verification_closeout.md   3b9cfbdb364bd425bc62f19f928df6264b7cdd0134cf0ff8c8945a310400cef4
 ```
 
 다음 cycle의 P는 해당 decade 문서를 현재 tree와 다시 대조하고 stale이면 문서와

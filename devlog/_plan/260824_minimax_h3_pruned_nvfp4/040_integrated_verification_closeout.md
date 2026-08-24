@@ -29,6 +29,10 @@ Resource bound: 60분. 실패 시 해당 delta만 수리하고 재검증한다. 
 - NEW `090_outcome.md`: DONE/NOOP/BLOCKED/UNSAFE/NEEDS_HUMAN/BUDGET_EXHAUSTED 중
   실제 결과, 남은 비목표, 되돌리기 정보.
 
+이 unit은 `.gitignore` 대상이므로 `041`, `042`, `043`, `090`과 새 evidence를
+explicit `git add -f`한다. commit 전후 `git ls-files`로 각 경로가 tracked인지
+확인한다. staged 목록 확인만으로 c-6을 충족했다고 보지 않는다.
+
 ## Static and contract gates
 
 Run from repo root unless noted:
@@ -62,6 +66,18 @@ Comfy origin. Register one legacy image fixture and the H3 video fixture through
 | CLI human table | label and `locked` visible |
 | no tunnel | rows remain visible with offline reason |
 | bad media kind | stable 400 and CLI exit 2 |
+
+## Fresh remote terminal state
+
+Closeout 직전에 read-only SSH receipt가 다음을 모두 assert한다:
+
+```text
+comfyui.service inactive
+llama-server-qwen38.service inactive
+RTX 5090 power.limit 600.00
+GPU compute process list empty
+pruned DiT size/SHA unchanged
+```
 
 ## Render grounding
 
@@ -109,3 +125,5 @@ Local commits only, excluding user-owned dirty paths:
 
 Before each commit, inspect `git diff --cached --name-only`. Never stage
 `docs/grok-video-i2v-research.md` unless it becomes explicitly in scope. No push.
+After the final commit, `git ls-files` must print every 041/042/043/090 and evidence
+path named by the closeout.

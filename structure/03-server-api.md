@@ -197,9 +197,9 @@ Folder writes preserve tree integrity with stable errors: `INVALID_PARENT` rejec
 | `POST` | `/api/metadata/read` | `{ image }` | `{ metadata, missing? }` |
 | `POST` | `/api/comfy/export-image` | `{ filename, origin? }` | `{ ok, uploadedFilename }` |
 | `GET` | `/api/comfy/workflows` | none | `{ ok, workflows: [{ …record, health }] }` |
-| `POST` | `/api/comfy/workflows` | `{ id, label?, origin?, graph? \| pngBase64?, bind, params?, replace? }` | `{ ok, workflow }` |
+| `POST` | `/api/comfy/workflows` | `{ id, label?, origin?, mediaKind?, graph? \| pngBase64?, bind, params?, replace? }` | `{ ok, workflow }` |
 | `DELETE` | `/api/comfy/workflows/:id` | none | `{ ok, id }` |
-| `POST` | `/api/comfy/inspect` | `{ graph? \| pngBase64? }` | `{ ok, nodes, candidates, needsConfirmation }` |
+| `POST` | `/api/comfy/inspect` | `{ graph? \| pngBase64? }` | `{ ok, nodes, candidates, mediaKind?, needsConfirmation }` |
 | `POST` | `/api/comfy/probe` | `{ origin }` | `{ ok, origin, health }` |
 
 Canvas annotation and canvas-version routes are internal editor persistence surfaces. Canvas versions are hidden from the normal Gallery and HistoryStrip visible domain; navigation should prefer source images and only display a matching canvas version inside Canvas Mode.
@@ -251,6 +251,20 @@ Multimode, node mode and Agent Mode refuse this lane with
 `COMFY_SURFACE_UNSUPPORTED` (400) until they gain a real dispatch branch;
 without that guard they fall through to `generateViaResponses` and bill OAuth
 for an image the user asked ComfyUI to make.
+
+### Comfy video workflow catalog lock (260824)
+
+Workflow records carry `mediaKind: image | video`; legacy records missing the field
+normalize to image. Inspect groups candidates across node classes, so SDXL's two
+CLIPTextEncode nodes remain ambiguous while MiniMax H3's
+MiniMaxH3ImageToVideo prompt/width/height, RandomNoise seed and SaveVideo output infer
+unambiguously. Explicit kind that contradicts the selected SaveImage/SaveVideo output
+is rejected.
+
+`GET /api/models` partitions Comfy workflows by media kind. Video workflows are visible
+with `executable:false` and a stable `lockReason`; they never become the image default.
+The classic image resolver returns `COMFY_VIDEO_EXECUTION_LOCKED`, and the CLI resolver
+returns `MODEL_LOCKED`. This is a truthful catalog surface, not Comfy video execution.
 
 ## Inflight Jobs
 
