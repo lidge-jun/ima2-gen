@@ -39,6 +39,7 @@ hand-written maps do.
 | `bin/lib/doctor-providers.ts` | MODIFY — NAI doctor branch |
 | i18n dictionaries | MODIFY — every new string key, all locales |
 | `tests/nai-ui-registration-contract.test.ts` | NEW |
+| `tests/i18n-dictionary-contract.test.ts` | MODIFY — add the four `settings.imageModel.nai*` keys to the model-label oracle (**audit B3**) |
 
 ## Display labels
 
@@ -75,19 +76,15 @@ NAI. Both accepted token kinds (persistent token, session JWT) have no
 published prefix (001 §Authentication); a hint would mislead and a check would
 reject valid tokens. Placeholder text: "NovelAI persistent API token".
 
-## `bin/lib/doctor-providers.ts`
+## `bin/lib/doctor-providers.ts` (audit L4)
 
-Existing shape at L116 branches on `credential.keyVocabulary`. Add:
+**Verify before editing.** The MiniMax branch at L116 exists only because
+MiniMax rewrites its validate URL per region. NAI is a plain bearer provider, so
+the generic `credential.validateUrl` path should already render its row.
 
-```diff
-+  if (credential.keyVocabulary === "nai") {
-+    const cfg = runtimeConfig.naiProvider;
-+    // report base URL, default model, and whether NOVELAI_API_KEY / config key resolves
-+  }
-```
-
-matching the MiniMax branch's output shape so `tests/doctor-provider-contract.test.ts`
-stays satisfied.
+Run the doctor first. Add a `keyVocabulary === "nai"` branch **only if** the
+generic path omits or misreports the lane. Adding an unnecessary special case
+is the drift this check exists to prevent.
 
 ## i18n
 

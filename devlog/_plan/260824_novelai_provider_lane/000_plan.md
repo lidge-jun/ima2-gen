@@ -82,16 +82,32 @@ Commands were run before being written here:
 
 | Command | Exit | Observes this unit's target? |
 |---------|------|------------------------------|
-| `npm run typecheck` | 0 (pre-change baseline) | YES — `tsconfig.json` includes `lib/**/*.ts`, `routes/**/*.ts` |
-| `npm run typecheck:tests` | 0 | YES — `tsconfig.tests.json` includes `tests/**/*.ts` |
-| `npm test` | 0 | YES — `scripts/run-tests.mjs` discovers `tests/*.test.ts` |
-| `npm run test:inventory` | 0 | YES — registry check over `tests/` |
+| `npm run typecheck` | 0 (pre-change baseline) | YES — `tsconfig.json` includes `server.ts`, `config.ts`, `lib/**/*.ts`, `routes/**/*.ts`, `bin/**/*.ts` |
+| `npm run typecheck:tests` | 0 | YES — `tsconfig.tests.json` includes `tests/**/*.test.ts` |
+| `npm test` | **1** — see carve-out below | YES — `scripts/run-tests.mjs` discovers `tests/*.test.ts` |
+| `npm run test:inventory` | 0 | YES — `scripts/classify-tests.mjs --check`; **new NAI test files make it stale unless regenerated** |
 | `node scripts/generate-provider-types.mjs --check` | 0 | YES — diffs `ui/src/generated/providers.ts` against `lib/providers/registry.ts` |
 | `cd ui && npm run build` | 0 | YES — Vite compiles `ui/src/**` including the generated provider module |
 
 `node scripts/generate-provider-types.mjs --check` is the load-bearing one: it
 fails the build if the registry and the UI's generated provider list disagree,
 so it mechanically protects the wp1↔wp4 seam.
+
+### Pre-existing failure carve-out (audit B5)
+
+`npm test` does **not** exit 0 at HEAD, and no NAI work can make it do so.
+Measured on this branch: **2502 pass / 2 fail / 2 skip**. Both failures are in
+`tests/cli-models-command-contract.test.ts` — a header regex still expecting
+`lane kind model-id status caps`, and a JSON shape that now includes an
+`executable` field. They come from earlier CLI/catalog work, not from this unit.
+
+A third failure (`tests/structure-line-counts-contract.test.js`, 8 files drifted
++1 line after the comfy H3 commits) existed when this plan's baseline was first
+measured and was fixed mechanically in `13bc101c` before implementation began.
+
+**Therefore criterion c8 is defined as: no NEW failures versus that recorded set,
+and every NAI test passing.** Claiming a green `npm test` would be false, and
+quietly folding an unrelated CLI fix into this unit would be scope creep.
 
 ## Bypass disclosure (PLAN-BYPASS-NAMED-01)
 

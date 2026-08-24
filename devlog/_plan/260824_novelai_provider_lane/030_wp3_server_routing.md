@@ -22,6 +22,24 @@ is invisible unless stated: adding `|| activeProvider === "nai"` to the wrong
 one of two adjacent conditionals destroys the feature while all tests still
 pass.
 
+### Normative per-site table (audit B4 — supersedes any prose below)
+
+There are **five** sites, not one pair. The A-phase audit caught that an
+earlier draft conflated `nodeGeneration:261` (JPEG-forcing) with
+`nodeGeneration:373` (MIME overwrite); following it literally would have
+flattened alpha in node mode with every test green.
+
+| File | Line | Group | Add `nai`? |
+|------|------|-------|------------|
+| `lib/generatePipeline.ts` | 383 `providerForcesJpeg` | JPEG-forcing | **NO** |
+| `lib/generatePipeline.ts` | 573 `providerReportsMime` | MIME-reporting | YES |
+| `lib/multimodePipeline.ts` | 271 `mmFormat` | JPEG-forcing | **NO** |
+| `lib/multimodePipeline.ts` | 291, 294 | MIME-reporting | YES |
+| `lib/nodeGeneration.ts` | 261 `resultFormat` init | JPEG-forcing | **NO** |
+| `lib/nodeGeneration.ts` | 373 overwrite | MIME-reporting | YES |
+| `lib/agentImageVideoGen.ts` | 155 | MIME-from-bytes | YES |
+| `routes/edit.ts` | 351, 354 | MIME-reporting | YES |
+
 ## File change map
 
 | Path | Action |
@@ -36,6 +54,14 @@ pass.
 | `lib/nodeGeneration.ts` | MODIFY — dispatch + ref cap + MIME |
 | `lib/agentImageVideoGen.ts` | MODIFY — dispatch + format |
 | `tests/nai-routing-contract.test.ts` | NEW |
+| `tests/models-endpoint-contract.test.ts` | MODIFY — lane-key oracle (**audit B3**) |
+| `tests/error-class-coverage.test.ts` | MODIFY — add `NAI` to `PROVIDER_CODE_PATTERN` (**audit B3**) |
+| `tests/provider-canary-parity.test.ts` | MODIFY — `laneForVendor` (**audit B3**) |
+| `tests/provider-registry-parity.test.ts` | MODIFY — `maskRejectedLanes` (**audit B3**) |
+
+> `error-class-coverage` is not merely a red test: its regex is what scans for
+> provider error codes, so without `NAI` in the alternation every `NAI_*` code
+> is invisible to the coverage and dead-code checks.
 
 ## 1. `lib/imageModels.ts`
 
@@ -140,7 +166,7 @@ alpha decision above).
 ```diff
 +function naiLane(ctx: RuntimeContext): ModelLaneDto {
 +  const adapter = getProviderAdapter(ctx, "nai");
-+  const fallback: LaneState = ctx.naiApiKey ? "ready" : "needs-key";
++  const fallback: LaneState = ctx.naiApiKey ? "ready" : "key-missing";
 +  return {
 +    image: entries(deriveModels("nai", "image")),
 +    video: [],
@@ -194,11 +220,13 @@ reference-count guard.
 | unknown model | `INVALID_NAI_IMAGE_MODEL`, status 400 |
 | `normalizeNaiImageModel("")` | falls back, no error |
 | `GET /api/models` | contains a `nai` lane with 4 image models, 0 video |
-| lane state without key | `needs-key` |
-| alpha guard | `nai` absent from the JPEG-forcing set, present in MIME-reporting set |
+| lane state without key | `key-missing` |
+| alpha guard | source-regex over ALL FIVE sites in the normative table: `nai` absent from all four JPEG-forcing conditionals, present in all five MIME-reporting ones |
 
-The last row is a regression test for the alpha decision: it fails if a future
-edit adds `nai` to the wrong conditional.
+The last row is the regression test for the alpha decision. It must cover every
+row of the normative table, not just the generate path — a generate-only regex
+is a false green (audit B4). `tests/provider-registry-parity.test.ts` already
+reads route source with regexes, so the pattern is established in-repo.
 
 ## Accept criteria
 

@@ -14,12 +14,18 @@ the registry/parity/key tests pass.
 |------|--------|
 | `lib/providers/types.ts` | MODIFY — widen `KeyProviderId`, `ProviderVendor` |
 | `lib/providers/registry.ts` | MODIFY — add `nai` manifest |
+| `server.ts` | MODIFY — `loadNaiApiKey()` + ctx wiring (**audit B1**) |
 | `config.ts` | MODIFY — add `naiProvider` block + `naiApiKey` source |
-| `lib/configKeys.ts` | MODIFY — register `naiApiKey` config key |
 | `lib/runtimeContext.ts` | MODIFY — `naiApiKey`/`naiApiKeySource`/`hasNaiApiKey` |
 | `routes/keys.ts` | MODIFY — `nai` KeyProvider through validate/set/clear |
+| `tests/provider-registry-contract.test.ts` | MODIFY — id list oracle (**audit B3**) |
+| `tests/provider-registry-parity.test.ts` | MODIFY — `CORE_IDS` + `CLI_IMAGE_MODELS` (**audit B3**) |
 | `ui/src/generated/providers.ts` | REGENERATE — `node scripts/generate-provider-types.mjs` |
 | `tests/nai-key-validation-route.test.ts` | NEW |
+
+> Amended after the A-phase audit (see `003_audit_amendments.md`). `server.ts`
+> and the two registry oracles were missing; `lib/configKeys.ts` was removed
+> because `minimaxApiKey` is not registered there either.
 
 ## 1. `lib/providers/types.ts`
 
@@ -106,10 +112,34 @@ Also register the key source alongside the other API keys:
 following whatever shape the existing `minimaxApiKey` resolution uses in the
 same file.
 
-## 4. `lib/configKeys.ts`
+## 4. `server.ts` — boot-time key loading (audit B1)
 
-Add `naiApiKey` to the key registry next to `minimaxApiKey`, matching the
-existing entry's shape exactly (secret-masking behavior depends on it).
+Without this, `NOVELAI_API_KEY` and a `config.json` `naiApiKey` never reach
+`ctx`: the lane reports key-missing forever and only a live
+`PUT /api/keys/nai` can authenticate it. Mirror the MiniMax loader exactly.
+
+```diff
++async function loadNaiApiKey(): Promise<ApiKeyLoadResult> {
++  // env first, then config.json naiApiKey — same order as loadMinimaxApiKey (server.ts:125)
++}
+```
+
+```diff
+   const loadedMinimaxKey = await loadMinimaxApiKey();
++  const loadedNaiKey = await loadNaiApiKey();
+```
+
+```diff
+     minimaxApiKey: loadedMinimaxKey.apiKey ?? undefined,
+     minimaxApiKeySource: loadedMinimaxKey.apiKeySource as ApiKeySource,
+     hasMinimaxApiKey: !!loadedMinimaxKey.apiKey,
++    naiApiKey: loadedNaiKey.apiKey ?? undefined,
++    naiApiKeySource: loadedNaiKey.apiKeySource as ApiKeySource,
++    hasNaiApiKey: !!loadedNaiKey.apiKey,
+```
+
+`lib/configKeys.ts` needs **no** edit: `minimaxApiKey` is not registered there
+either, and redaction already matches `/apikey/i`.
 
 ## 5. `lib/runtimeContext.ts`
 
@@ -174,7 +204,18 @@ This rewrites `ui/src/generated/providers.ts` (marked *Do not edit*), adding
 Committing the registry without regenerating fails
 `npm run test:provider-registry`.
 
-## 8. `tests/nai-key-validation-route.test.ts` (NEW)
+## 8. Registry oracles (audit B3)
+
+Two tests hardcode the provider id list and fail the moment the registry gains
+a tenth lane. They must change in the SAME commit as the registry:
+
+| File | Site | Change |
+|------|------|--------|
+| `tests/provider-registry-contract.test.ts` | `assert.deepEqual(ids, [...])` (~L17) | append `"nai"` in registry order |
+| `tests/provider-registry-parity.test.ts` | `CORE_IDS` (~L12) | append `"nai"` |
+| `tests/provider-registry-parity.test.ts` | `CLI_IMAGE_MODELS` (~L14) | append the four NAI model ids |
+
+## 9. `tests/nai-key-validation-route.test.ts` (NEW)
 
 Mirrors `tests/minimax-key-validation-route.test.ts`. Asserts:
 

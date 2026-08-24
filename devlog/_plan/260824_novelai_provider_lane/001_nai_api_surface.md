@@ -72,7 +72,7 @@ Both V5 strings are confirmed by two independent clients:
 | V4.5 Full | `nai-diffusion-4-5-full` | both |
 | V4.5 Curated | `nai-diffusion-4-5-curated` | both |
 | V4 Full | `nai-diffusion-4-full` | both |
-| V4 Curated | `nai-diffusion-4-curated-preview` | Auto-NovelAI `MODELS` list |
+| V4 Curated | `nai-diffusion-4-curated-preview` **or** `nai-diffusion-4-curated` | **clients DISAGREE**: Auto-NovelAI uses `-preview`, novelai-sdk uses the bare id. Not in the ship list; resolve before ever adding V4 (audit L3) |
 | V3 | `nai-diffusion-3` | swagger + both |
 
 Inpaint variants exist (`nai-diffusion-5-full-inpainting`) but are out of scope

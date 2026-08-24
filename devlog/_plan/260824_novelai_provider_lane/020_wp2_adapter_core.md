@@ -197,8 +197,23 @@ adapter reads the body as text and parses defensively:
 | 400 / 409 | as-is | `NAI_BAD_REQUEST` |
 | other non-OK | 502 | `NAI_UPSTREAM_ERROR` |
 | empty body | 502 | `NAI_EMPTY_IMAGE` |
+| 2xx body is not a ZIP | 502 | `NAI_RESPONSE_NOT_ZIP` |
 | non-PNG after decode | 502 | `NAI_IMAGE_INVALID` |
 | (from `naiZip`) | 502 | `NAI_ZIP_INVALID` / `NAI_ZIP_UNSUPPORTED` / `NAI_ZIP_TOO_LARGE` |
+
+### Open risk: `stream: "msgpack"` (audit M1)
+
+The V5 reference client sends `parameters.stream = "msgpack"`. This adapter
+omits it and expects the documented ZIP attachment. Which behavior the live
+image host requires cannot be settled here, because proving it needs a real
+credentialed 200 response and this unit is forbidden from spending the user's
+Anlas.
+
+Containment rather than assumption: on a 2xx whose body fails `looksLikeZip`,
+throw `NAI_RESPONSE_NOT_ZIP` with the received `Content-Type` in the message.
+If NAI ever answers msgpack/SSE instead, the first real generation says exactly
+that, instead of surfacing a confusing `NAI_ZIP_INVALID` from the parser. The
+fix would then be a one-line body addition.
 
 402 gets its own code because "you have no active subscription" is the single
 most likely first-run failure and deserves an actionable message rather than a

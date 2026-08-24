@@ -21,8 +21,27 @@ cd ui && npm run build
 plus the registry tests, but run it explicitly too — it is the gate that pairs
 the registry with the generated UI catalog.
 
-Expected: all exit 0, and `npm test` reports strictly more passing cases than
-the pre-change baseline (new NAI tests), with zero failures.
+Expected: typecheck, typecheck:tests, generator check, and the UI build all exit
+0. `npm test` reports strictly more passing cases than the pre-change baseline
+(the new NAI tests) and **no new failures** beyond the recorded carve-out:
+
+> 2 pre-existing failures in `tests/cli-models-command-contract.test.ts`
+> (header regex + `executable` field), unrelated to this unit. See
+> `000_plan.md` §Pre-existing failure carve-out and `003_audit_amendments.md` B5.
+
+Do NOT fix those two here — that is unrelated scope. Do NOT claim a green
+`npm test`.
+
+### Test inventory (audit M2)
+
+New `tests/nai-*.test.ts` files make the generated inventory stale, so
+`npm run test:inventory` (which runs `--check`) fails until it is regenerated:
+
+```
+node scripts/classify-tests.mjs
+```
+
+Commit the regenerated `docs/migration/runtime-test-inventory.md`.
 
 ## 2. Live server proof (goalplan c5)
 
@@ -36,7 +55,7 @@ curl -s localhost:<port>/api/keys/status | jq '.nai'
 Expected:
 
 - `.lanes.nai.image` lists the four model ids, `.video` empty.
-- `.lanes.nai` state is `needs-key` (not `ready`, not missing).
+- `.lanes.nai` state is `key-missing` (not `ready`, not missing).
 - `.nai` key status is `{configured:false, source:"none", valid:false}`.
 
 This is the activation proof for the wp1 nine-site key chain and the wp3 lane
@@ -91,7 +110,7 @@ forcing.
 
 The user supplies the NovelAI token after waking, via Settings → API keys, or
 by exporting `NOVELAI_API_KEY`. Until then the lane correctly reports
-`needs-key`. First real generation is the user's own end-to-end confirmation;
+`key-missing`. First real generation is the user's own end-to-end confirmation;
 this unit deliberately never spends their Anlas.
 
 ## Accept criteria
