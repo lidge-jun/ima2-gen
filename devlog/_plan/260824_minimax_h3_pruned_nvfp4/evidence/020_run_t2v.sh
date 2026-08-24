@@ -27,13 +27,14 @@ cleanup() {
     curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"prompt_id\":\"$prompt_id\"}" http://127.0.0.1:8188/interrupt >/dev/null 2>&1 || true
   fi
   if [[ -n "$metrics_pid" ]]; then kill "$metrics_pid" >/dev/null 2>&1 || true; wait "$metrics_pid" 2>/dev/null || true; fi
-  sudo systemctl stop comfyui.service || rc=1
-  sudo nvidia-smi -pl "$original_power" >/dev/null || rc=1
+  sudo -n systemctl stop comfyui.service || rc=1
+  sudo -n nvidia-smi -pl "$original_power" >/dev/null || rc=1
   systemctl --user stop "$peer" || rc=1
   if systemctl is-active --quiet comfyui.service; then rc=1; fi
   if systemctl --user is-active --quiet "$peer"; then rc=1; fi
   current_power="$(nvidia-smi --query-gpu=power.limit --format=csv,noheader,nounits | awk 'NR==1 {print $1}')"
   if [[ "$current_power" != "$original_power" ]]; then rc=1; fi
+  if [[ -n "$(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | tr -d '[:space:]')" ]]; then rc=1; fi
   record_post || rc=1
   return "$rc"
 }
@@ -50,17 +51,29 @@ on_exit() {
 trap on_exit EXIT INT TERM
 
 test "$original_power" = "600.00"
+command -v curl >/dev/null
+command -v file >/dev/null
+command -v ffprobe >/dev/null
+command -v xxd >/dev/null
+sudo -n true
 test "$(systemctl --user is-active "$peer" || true)" = "inactive"
 test -z "$(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | tr -d '[:space:]')"
-rm -f "$prompt_file" "$task_tmp/020_cleanup_failure.txt"
+rm -f \
+  "$prompt_file" "$task_tmp/020_cleanup_failure.txt" "$task_tmp/020_start_failure.txt" \
+  "$task_tmp/020_system_stats.json" "$task_tmp/020_metrics.csv" "$task_tmp/020_journal.log" \
+  "$task_tmp/020_comfy_tail.log" "$task_tmp/020_combined.log" "$task_tmp/020_submit.json" \
+  "$task_tmp/020_history.json" "$task_tmp/020_media_descriptor.json" "$task_tmp/020_result.json" \
+  "$task_tmp/020_output.mp4" "$task_tmp/020_output.webm" "$task_tmp/020_output.bin" \
+  "$task_tmp/020_file.txt" "$task_tmp/020_magic.txt" "$task_tmp/020_ffprobe.json" \
+  "$task_tmp/020_post_state.txt"
 
 start_iso="$(date -Ins)"
 log=/home/lidgeai/logs/comfyui.log
 log_size_before=0
 if [[ -f "$log" ]]; then log_size_before="$(stat -c %s "$log")"; fi
 printf '%s\n' "$start_iso" > "$task_tmp/020_started_at.txt"
-sudo nvidia-smi -pl 500 >/dev/null
-sudo systemctl start comfyui.service
+sudo -n nvidia-smi -pl 500 >/dev/null
+sudo -n systemctl start comfyui.service
 
 ready=0
 for _ in $(seq 1 60); do
@@ -85,6 +98,7 @@ fi
 metrics_pid=$!
 
 /home/lidgeai/ComfyUI/venv/bin/python "$runner" --graph "$graph" --output-dir "$task_tmp" --timeout 6600
+test "$(wc -l < "$task_tmp/020_metrics.csv")" -gt 2
 
 journalctl -u comfyui.service --since "$start_iso" --no-pager > "$task_tmp/020_journal.log" 2>&1 || true
 if [[ -f "$log" ]]; then
@@ -97,6 +111,7 @@ if [[ -f "$log" ]]; then
 fi
 cat "$task_tmp/020_journal.log" "$task_tmp/020_comfy_tail.log" 2>/dev/null > "$task_tmp/020_combined.log" || true
 grep -E 'Native ops:.*nvfp4' "$task_tmp/020_combined.log" >/dev/null
+grep -F 'Requested to load MiniMaxH3' "$task_tmp/020_combined.log" >/dev/null
 if grep -E 'Emulated ops:.*nvfp4' "$task_tmp/020_combined.log" >/dev/null; then exit 73; fi
 
 output="$(/home/lidgeai/ComfyUI/venv/bin/python -c 'import json; print(json.load(open("/home/lidgeai/tmp/ima2-h3-pruned/020_result.json"))["output"])')"

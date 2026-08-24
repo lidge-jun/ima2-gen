@@ -74,14 +74,17 @@ def wait_for_terminal(origin: str, prompt_id: str, output_dir: Path, timeout_s: 
             status = entry.get("status") or {}
             if status.get("completed") is True and status.get("status_str") == "success":
                 return entry
-            if status.get("status_str") in ("error", "failed") or status.get("completed") is False:
+            if status.get("status_str") in ("error", "failed"):
                 raise RuntimeError(f"terminal ComfyUI status: {json.dumps(status, ensure_ascii=False)}")
         queue = request_json(f"{origin}/queue")
         if queue_contains(queue, prompt_id):
             missing_rounds = 0
         else:
             missing_rounds += 1
-            if missing_rounds >= 5 and not entry:
+            if missing_rounds >= 5:
+                if entry:
+                    status = entry.get("status") or {}
+                    raise RuntimeError(f"non-success history left the queue: {json.dumps(status, ensure_ascii=False)}")
                 raise RuntimeError("prompt disappeared from both queue and history")
         time.sleep(3)
     raise TimeoutError(f"generation exceeded {timeout_s} seconds")
