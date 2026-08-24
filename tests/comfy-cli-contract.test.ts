@@ -65,7 +65,7 @@ describe("comfy CLI docs parity", () => {
 
     // ima2 gen resolves through the live /api/models catalog, so a registered
     // workflow is selectable there.
-    assert.match(docs, /oauth\|api\|grok\|grok-api\|agy\|gemini-api\|atlascloud\|minimax\|comfy\|runway\|higgsfield/);
+    assert.match(docs, /oauth\|api\|grok\|grok-api\|agy\|gemini-api\|atlascloud\|minimax\|nai\|comfy\|runway\|higgsfield/);
 
     // edit/multimode/node deliberately refuse comfy with
     // COMFY_SURFACE_UNSUPPORTED until wp7, so documenting it on that legacy

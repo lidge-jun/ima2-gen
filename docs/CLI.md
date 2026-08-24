@@ -73,10 +73,10 @@ Since 3.0.0, `ima2 gen` and generate-mode `ima2 video` are **fail-closed**: they
 target through the lane catalog (`GET /api/models`) and exit 2 with `NO_DEFAULT_MODEL` when no
 `--model <lane>/<model>`, `--provider <lane>`, or persisted `ima2 defaults set image|video`
 target applies. Their `--provider` accepts explicit lanes only
-(`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|comfy|runway|higgsfield`); `--provider auto` exits 2 with
+(`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield`); `--provider auto` exits 2 with
 `PROVIDER_AUTO_REMOVED`. Inspect lanes and models with `ima2 models [--kind image|video] [--lane <lane>] [--json]`.
 
-`edit`, `multimode`, and `node generate` keep the legacy surface for now: `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>`, `--reasoning-effort {none\|low\|medium\|high\|xhigh\|max}`, `--web-search` / `--no-web-search`, `--model`, `--mode`, `--moderation`, `--ref <file>` (repeatable, up to 5 where supported), `-q low|medium|high`, `-n <count>`, `-o <file>`.
+`edit`, `multimode`, and `node generate` keep the legacy surface for now: `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai>`, `--reasoning-effort {none\|low\|medium\|high\|xhigh\|max}`, `--web-search` / `--no-web-search`, `--model`, `--mode`, `--moderation`, `--ref <file>` (repeatable, up to 5 where supported), `-q low|medium|high`, `-n <count>`, `-o <file>`.
 
 Provider override semantics:
 
@@ -136,7 +136,7 @@ mockup`.
 For dense or critical text, keep the text large and explicit. Exact placement,
 small text, and pixel-perfect typography can still need iteration or post-editing.
 
-Multimode-specific flags include `--max-images <1..24>` by default (configurable through `IMA2_MAX_GENERATED_IMAGES`), `--ref <file>` (repeatable, max 5), `--mode <auto|direct>`, `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax>`, and `--show-partial`. `ima2 edit --mask` remains intentionally deferred to #31 because current mask plumbing is guided edit rather than guaranteed true masked/inpaint semantics.
+Multimode-specific flags include `--max-images <1..24>` by default (configurable through `IMA2_MAX_GENERATED_IMAGES`), `--ref <file>` (repeatable, max 5), `--mode <auto|direct>`, `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai>`, and `--show-partial`. `ima2 edit --mask` remains intentionally deferred to #31 because current mask plumbing is guided edit rather than guaranteed true masked/inpaint semantics.
 
 ## Video
 

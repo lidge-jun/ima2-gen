@@ -98,6 +98,11 @@ README may still mention a different Node baseline. The operational baseline is 
 | Variable | Default or meaning |
 |---|---|
 | `OPENAI_API_KEY` | May be used for billing probes and legacy provider config |
+| `NOVELAI_API_KEY` | NovelAI persistent API token (`pst-...`) for the `nai` lane; an env-sourced key is immutable from the UI (`ENV_KEY_IMMUTABLE`) |
+| `IMA2_NAI_IMAGE_MODEL_DEFAULT` | NovelAI default image model, default `nai-diffusion-5-full` |
+| `IMA2_NAI_BASE_URL` / `IMA2_NAI_ACCOUNT_BASE_URL` | NovelAI image and account hosts, both default `https://image.novelai.net` — account endpoints moved to the image host, so `api.novelai.net` rejects valid tokens |
+| `IMA2_NAI_GENERATION_TIMEOUT_MS` | NovelAI request timeout, default `180000` |
+| `IMA2_NAI_DEFAULT_STEPS` / `IMA2_NAI_DEFAULT_SCALE` | NovelAI sampling defaults, `23` and `5` |
 | `IMA2_PORT` / `PORT` | Server preferred port, default `3333`; falls back to next free port when occupied |
 | `IMA2_HOST` | Server bind host, default `127.0.0.1` |
 | `IMA2_OAUTH_PROXY_PORT` / `OAUTH_PORT` | OAuth proxy preferred port, default `10531`; the actual ready URL is captured when the proxy falls back |
@@ -159,7 +164,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `IMA2_STATIC_MAX_AGE` | Static asset Cache-Control max-age |
 | `VITE_IMA2_DEV` | UI build-time dev flag; pairs with `VITE_IMA2_CARD_NEWS=1` to expose the dev-only card-news workspace in the bundle |
 
-Generation and edit endpoints support OAuth, API-key, and Grok providers. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path. `provider: "grok"` uses bundled progrok; classic, Node, and Agent generation perform mandatory xAI Web Search and then a `grok-4.5` custom-tool planner call before executing xAI Images API. If Grok generation includes references, a Node parent image, or an Agent current image, those images are sent into the planner and the final image call uses xAI `/v1/images/edits` with the same references instead of the text-only generation endpoint. Grok Node requests are capped at three total input images, and Agent Grok turns force web search on because the planner depends on it.
+Generation and edit endpoints support OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, and ComfyUI providers. `provider: "nai"` calls the NovelAI image API with a saved persistent token, decodes the returned ZIP archive to PNG, and is text-to-image only — references and edits are refused rather than downgraded. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path. `provider: "grok"` uses bundled progrok; classic, Node, and Agent generation perform mandatory xAI Web Search and then a `grok-4.5` custom-tool planner call before executing xAI Images API. If Grok generation includes references, a Node parent image, or an Agent current image, those images are sent into the planner and the final image call uses xAI `/v1/images/edits` with the same references instead of the text-only generation endpoint. Grok Node requests are capped at three total input images, and Agent Grok turns force web search on because the planner depends on it.
 
 Runtime port fallback is intentional. If a preferred backend or OAuth proxy port is occupied, the server records the actual bound URL in `~/.ima2/server.json` and health/status responses. CLI clients and split Vite dev proxy resolution should consume that actual URL instead of reconstructing `localhost:${configuredPort}`.
 

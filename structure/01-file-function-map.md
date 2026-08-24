@@ -209,6 +209,12 @@ routes/
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
 | `lib/canvasVersionStore.ts` | 331 | Canvas version snapshot storage, list, restore, and pruning |
 | `lib/comfyBridge.ts` | 266 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
+| `lib/naiImageAdapter.ts` | 247 | NovelAI image-generation provider adapter: request build, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
+| `lib/naiZip.ts` | 153 | Minimal ZIP reader for NovelAI responses: stored/deflate entries, ZIP64 and encryption refusal, 50MB entry cap |
+| `lib/providers/adapters/nai.ts` | 77 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
+| `lib/providers/registry.ts` | 274 | Provider lane manifests: the single declaration every generated catalog, capability list, and CLI enum derives from |
+| `lib/providers/types.ts` | 77 | Provider manifest and credential type definitions |
+| `lib/providers/derive.ts` | 69 | Derives provider id lists, credential lookups, and catalog projections from the registry |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 248 | Comfy lane model registry: per-record origin and image/video kind, legacy image normalization, id/kind validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 253 | API-format graph parsing, grouped SDXL/H3 binding inference, SaveImage/SaveVideo kind inference, non-mutating value injection, parameter derivation |

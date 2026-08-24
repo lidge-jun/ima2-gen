@@ -94,7 +94,7 @@ describe("CLI feature parity contract", () => {
   it("public CLI docs describe provider semantics and multimode parity", () => {
     const docs = readSource("docs/CLI.md");
 
-    assert.match(docs, /--provider <auto\|oauth\|api\|grok\|grok-api\|agy\|gemini-api\|atlascloud\|minimax>/);
+    assert.match(docs, /--provider <auto\|oauth\|api\|grok\|grok-api\|agy\|gemini-api\|atlascloud\|minimax\|nai>/);
     assert.match(docs, /api` forces the API-key Responses path/);
     assert.match(docs, /oauth` forces the local OAuth proxy path/);
     assert.match(docs, /auto` preserves route default behavior/);

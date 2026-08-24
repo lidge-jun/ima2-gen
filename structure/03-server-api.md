@@ -57,7 +57,7 @@ graph TD
 | `GET` | `/api/billing` | `{ oauth, apiKeyValid, apiKeySource, credits?, costs? }` | Probes billing/model state when an API key exists |
 | `GET` | `/api/quota` | `{ codex?, grok? }` | Grok Build weekly credits percentage/reset via `billing?format=credits`; optional legacy monthly dollar fallback; web-UI only |
 | `GET` | `/api/keys/status` | masked key status + `geminiAuthMode` | Settings > API Keys aggregate |
-| `PUT` | `/api/keys/:provider` | `{ apiKey }` | Save `openai` / `xai` / `gemini` key |
+| `PUT` | `/api/keys/:provider` | `{ apiKey }` | Save an `openai` / `xai` / `gemini` / `atlascloud` / `minimax` / `nai` key. Unknown ids answer 400 `INVALID_PROVIDER`. Lanes with no fixed key prefix (`minimax`, `nai`) skip the format check and rely on the upstream validation call. |
 | `DELETE` | `/api/keys/:provider` | none | Remove config-sourced key |
 | `PUT` | `/api/keys/vertex` | `{ serviceAccountJson }` | Save Vertex service account |
 | `DELETE` | `/api/keys/vertex` | none | Remove Vertex credentials |
@@ -71,7 +71,7 @@ graph TD
 
 `/api/billing` reports `apiKeySource` as `"none"`, `"env"`, or `"config"`. API-key generation requires a configured key and returns `API_KEY_REQUIRED` before upstream when `provider: "api"` is requested without one.
 
-The live generation/edit provider can be OAuth, API-key, or Grok based. OAuth and API-key paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs. The Grok path uses the bundled progrok xAI proxy: classic, Node, and Agent generation first run mandatory xAI Web Search through `/v1/responses`, then call `grok-4.5` with a forced local `generate_image` function, then the server executes xAI `/v1/images/generations`; `grok-4.3` remains an explicit compatibility override. When Grok references, a Node parent image, or an Agent current image are explicitly attached, the planner also receives those images as multimodal inputs and the final step switches to xAI `/v1/images/edits` with the same reference images so i2i context survives the planner phase. Agent image plans now carry `sourceImagePolicy: "none" | "current" | "auto"`; plain image requests default to fresh generation (`none`), while current-image edit/reference use requires explicit planner or prompt intent (`current`). Grok video uses separate routes: `/api/video/generate` for T2V/I2V/Ref2V plus branch-local continuation, `/api/video/edit`, `/api/video/extend`, `/api/video/frame`, and `/api/video/analyze`.
+The live generation/edit provider can be OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, or ComfyUI based. The NovelAI (`nai`) lane is text-to-image only: `/api/generate` refuses attached references with `NAI_REF_UNSUPPORTED` and `/api/edit` refuses outright with `NAI_EDIT_UNSUPPORTED`, so the capability is never silently downgraded. OAuth and API-key paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs. The Grok path uses the bundled progrok xAI proxy: classic, Node, and Agent generation first run mandatory xAI Web Search through `/v1/responses`, then call `grok-4.5` with a forced local `generate_image` function, then the server executes xAI `/v1/images/generations`; `grok-4.3` remains an explicit compatibility override. When Grok references, a Node parent image, or an Agent current image are explicitly attached, the planner also receives those images as multimodal inputs and the final step switches to xAI `/v1/images/edits` with the same reference images so i2i context survives the planner phase. Agent image plans now carry `sourceImagePolicy: "none" | "current" | "auto"`; plain image requests default to fresh generation (`none`), while current-image edit/reference use requires explicit planner or prompt intent (`current`). Grok video uses separate routes: `/api/video/generate` for T2V/I2V/Ref2V plus branch-local continuation, `/api/video/edit`, `/api/video/extend`, `/api/video/frame`, and `/api/video/analyze`.
 
 Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` never accepts a browser-supplied path; it opens `ctx.config.storage.generatedDir` only.
 
@@ -96,7 +96,7 @@ Each live client is identified internally by `{ generation, epoch }`. Expected c
 
 Shutdown starts HTTP accept-stop and MCP shutdown together. MCP aborts restores, cancels reconnect timers, advances generations, and closes clients with a 2-second internal bound; the coordinator has a 2.9-second grace.
 
-`/api/capabilities` exists for agents and CLI discovery. It reports provider-specific defaults, supported versus unsupported image model ids, valid reasoning efforts, valid quality values, reference/image limits, and advisory parallel queue metadata. The endpoint must never serialize the full runtime config. It uses an allowlist projection and converts `Set` values to arrays so JSON clients receive stable arrays instead of `{}`.
+`/api/capabilities` exists for agents and CLI discovery. It reports provider-specific defaults, supported versus unsupported image model ids (including `imageModels.naiSupported` with the four NovelAI ids), valid reasoning efforts, valid quality values, reference/image limits, and advisory parallel queue metadata. The endpoint must never serialize the full runtime config. It uses an allowlist projection and converts `Set` values to arrays so JSON clients receive stable arrays instead of `{}`.
 
 ## Classic Generate And Edit
 
@@ -265,6 +265,8 @@ is rejected.
 with `executable:false` and a stable `lockReason`; they never become the image default.
 The classic image resolver returns `COMFY_VIDEO_EXECUTION_LOCKED`, and the CLI resolver
 returns `MODEL_LOCKED`. This is a truthful catalog surface, not Comfy video execution.
+
+`GET /api/models` exposes the NovelAI lane as `.lanes.nai` with four compile-time image ids (`nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, `nai-diffusion-4-5-curated`) and `defaults.image = nai-diffusion-5-full`. Every entry declares `inputRoles: ["text"]` only — the catalog must not advertise `image_references` for a lane whose routes answer `NAI_REF_UNSUPPORTED`. Status is `key-missing` until a token is saved, then `ready`.
 
 ## Inflight Jobs
 
@@ -479,6 +481,10 @@ Implementation lives in `lib/cardNews*.ts`: `cardNewsTemplateStore`, `cardNewsRo
 | Unsupported OAuth model for image generation | 400 | `IMAGE_MODEL_UNSUPPORTED` |
 | Upstream request/validation error | 400 | `INVALID_REQUEST` |
 | Unsupported node context mode | 400 | `CONTEXT_MODE_UNSUPPORTED` |
+| Reference attached to the NovelAI lane | 400 | `NAI_REF_UNSUPPORTED` |
+| Edit or mask requested on the NovelAI lane | 400 | `NAI_EDIT_UNSUPPORTED` / `NAI_MASK_UNSUPPORTED` |
+| NovelAI token missing, rejected, or unsubscribed | 401 / 402 | `NAI_API_KEY_MISSING`, `NAI_AUTH_FAILED`, `NAI_SUBSCRIPTION_REQUIRED` |
+| NovelAI archive unreadable or empty | 502 | `NAI_ZIP_INVALID`, `NAI_ZIP_UNSUPPORTED`, `NAI_ZIP_TOO_LARGE`, `NAI_RESPONSE_NOT_ZIP`, `NAI_IMAGE_INVALID`, `NAI_EMPTY_IMAGE`, `NAI_UPSTREAM_ERROR` |
 | Multiple incoming parent edges | 409 | `GRAPH_PARENT_CONFLICT` |
 | API-key provider requested without a configured key | 401 | `API_KEY_REQUIRED` |
 | Safety refusal | 422 | `SAFETY_REFUSAL` |
@@ -510,8 +516,11 @@ Node retry diagnostics include safe context such as `operation`, `clientNodeId`,
 - [ ] If error shape is standardized, check all error tables and UI toast handling.
 - [ ] If the session graph contract changes, update `[[05-node-mode]]`.
 - [ ] If `server.ts` is split into route files, update line counts in `[[01-file-function-map]]`.
+- [ ] If a provider lane is added to `lib/providers/registry.ts`, update the keys row, the generation-provider paragraph, the error table, the `/api/models` contract, `[[00-structure-hub]]`, `[[02-command-reference]]`, `[[04-frontend-architecture]]`, `[[06-infra-operations]]`, `docs/API.md`, `docs/CLI.md`, and the README env table. The CLI enum derives itself; the prose does not.
 
 ## Change Log
+
+- 2026-08-24: Documented the NovelAI (`nai`) lane: keys row widened to every key-bearing provider, text-to-image-only refusal codes, the `.lanes.nai` catalog contract, and a Sync Checklist row for future provider lanes.
 
 - 2026-07-17: Documented bound MCP credential restore after the actual server port, truthful state/HTTP mapping, generation/epoch recovery, and coordinated shutdown.
 

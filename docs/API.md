@@ -757,8 +757,8 @@ API key management endpoints for configuring provider credentials at runtime thr
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/keys/status` | GET | Returns configured/valid/maskedKey status for all providers (openai, xai, gemini, vertex) plus `geminiAuthMode` (`"apikey"` or `"vertex"`) |
-| `/api/keys/:provider` | PUT | Save an API key. Body: `{ "apiKey": "..." }`. Validates key format and upstream before saving to config.json. Provider: `openai`, `xai`, or `gemini`. |
+| `/api/keys/status` | GET | Returns configured/valid/maskedKey status for all providers (openai, xai, gemini, atlascloud, minimax, nai, vertex) plus `geminiAuthMode` (`"apikey"` or `"vertex"`) |
+| `/api/keys/:provider` | PUT | Save an API key. Body: `{ "apiKey": "..." }`. Validates key format and upstream before saving to config.json. Provider: `openai`, `xai`, `gemini`, `atlascloud`, `minimax`, or `nai`. `minimax` and `nai` have no fixed key prefix, so only the upstream validation call gates them; a NovelAI persistent token looks like `pst-...`. |
 | `/api/keys/:provider` | DELETE | Remove a config-sourced API key. Env-sourced keys cannot be removed (`ENV_KEY_IMMUTABLE`). |
 | `/api/keys/vertex` | PUT | Save a Vertex AI service account JSON. Body: `{ "serviceAccountJson": "..." }`. Validates JSON structure (`type: "service_account"`, `project_id` required). |
 | `/api/keys/vertex` | DELETE | Remove a config-sourced Vertex AI service account. |
@@ -957,7 +957,7 @@ Delete a staged temp-reference batch after the MCP job finishes.
 
 Canonical lane catalog for CLI/agent routing. Returns
 `{ ok, lanes: { [lane]: { status, reason?, defaults: { image?, video? }, models: { image[], video[] } } } }`
-for the six core lanes (`oauth|api|grok|grok-api|agy|gemini-api`) plus MCP lanes
+for the ten core lanes (`oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy`) plus MCP lanes
 (`runway|higgsfield`). Status is one of `ready|locked|disconnected|key-missing`
 with precedence `locked > key-missing|disconnected > ready`. MCP static snapshot
 models are always listed; dynamic (`models_explore`) models appear only while

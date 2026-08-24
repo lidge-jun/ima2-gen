@@ -156,6 +156,7 @@ Image generation can run through the local Codex/ChatGPT OAuth path, a configure
 - `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool.
 - `provider: "grok"` starts bundled `progrok` on `127.0.0.1:18645`, runs mandatory xAI Web Search plus a planner pass (default: `grok-4.5`, configurable in settings or via `--planner-model`), then calls xAI Images API through the local proxy. `grok-4.3` remains available as an explicit compatibility override.
 - `provider: "grok-api"` calls the xAI Images API directly with `XAI_API_KEY` (no bundled progrok OAuth proxy).
+- `provider: "nai"` calls the NovelAI image API with a persistent API token (`pst-...`, saved in Settings > API Keys or `NOVELAI_API_KEY`). Four models: `nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, `nai-diffusion-4-5-curated`. Responses arrive as a ZIP archive that ima2 decodes to PNG. Text-to-image only — reference images and edits are refused rather than silently dropped, and image generation requires an active NovelAI subscription.
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool (model: `nano-banana-2`). Output is fixed at 1024×1024 JPEG, max 3 reference images. No web search, quality, or size controls.
 - `provider: "gemini-api"` calls the Google Generative Language API directly. Supports two models: `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Auth is via `GEMINI_API_KEY` env var, web UI key management, or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON`). When both an API key and Vertex credentials are configured, Vertex takes priority. Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K); these controls are only honored on the direct API path — the Vertex AI endpoint ignores aspect/size because it does not accept the `response_format` field. Per-model cost differs: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
 - API-key generation supports classic generate, edit, mask-guided edit, multimode, and node generation.
@@ -317,6 +318,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_INFLIGHT_TERMINAL_TTL_MS` | `300000` | Recent terminal job retention for debug views |
 | `OPENAI_API_KEY` | — | API key for the `provider: "api"` Responses API image path and auxiliary API-key features |
 | `XAI_API_KEY` | — | API key for `provider: "grok-api"` direct xAI Images API path |
+| `NOVELAI_API_KEY` | — | NovelAI persistent API token for `provider: "nai"` |
+| `IMA2_NAI_IMAGE_MODEL_DEFAULT` | `nai-diffusion-5-full` | Default NovelAI image model |
 | `IMA2_API_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | Default image model for `provider: "api"` |
 | `IMA2_API_REASONING_EFFORT` | `low` | Default reasoning effort for `provider: "api"` |
 | `IMA2_API_IMAGE_SIZE` | `1024x1024` | Default size for `provider: "api"` |

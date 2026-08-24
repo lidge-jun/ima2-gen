@@ -123,7 +123,7 @@ with `MODEL_NOT_FOUND` while an all-offline lane fails with
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Override server discovery |
 | `--model <id>` | `gpt-5.6-luna` | Image model: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
-| `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI |
+| `--provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api`/`atlascloud`/`minimax`/`nai` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI; `nai` is text-to-image only. The enum is derived from `lib/providers/registry.ts`, so it is never hand-maintained in code. |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
 | `--reasoning-effort <none|low|medium|high|xhigh>` | server default | Reasoning effort hint for prompt-aware models |
@@ -132,7 +132,7 @@ with `MODEL_NOT_FOUND` while an all-offline lane fails with
 
 Web-search note: `--web-search` and `--no-web-search` set the request-level `webSearchEnabled` field. For `provider: "api"`, the request still respects the global API-provider gate (`IMA2_API_ALLOW_WEB_SEARCH` / `apiProvider.allowWebSearch`); a globally disabled API web-search setting cannot be re-enabled by one CLI call.
 
-Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the bundled progrok xAI path, and `auto` preserves route default behavior. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.5` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
+Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the bundled progrok xAI path, `nai` forces the NovelAI image API (text-to-image only — `--ref` is refused with `NAI_REF_UNSUPPORTED` rather than dropped), and `auto` preserves route default behavior on the legacy `edit`/`multimode`/`node` surface. `ima2 gen` removed `auto` and exits 2 with `PROVIDER_AUTO_REMOVED`. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.5` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
 
 ## `video` Options
 
@@ -168,7 +168,7 @@ with one image/frame source. Ref2V/multi-ref, edit, and extension remain base-mo
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Target server URL |
 | `--model <id>` | `gpt-5.6-luna` | Image model: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
-| `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI |
+| `--provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api`/`atlascloud`/`minimax`/`nai` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI; `nai` is text-to-image only. The enum is derived from `lib/providers/registry.ts`, so it is never hand-maintained in code. |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
 | `--reasoning-effort <none|low|medium|high|xhigh>` | server default | Reasoning effort hint for prompt-aware models |
@@ -180,7 +180,7 @@ with one image/frame source. Ref2V/multi-ref, edit, and extension remain base-mo
 | Option | Default | Description |
 |---|---|---|
 | `--max-images <1..24>` | `4` | Maximum separate stage images by default; configurable through `IMA2_MAX_GENERATED_IMAGES` |
-| `--provider <auto|oauth|api|grok>` | server default | Per-request provider override |
+| `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai>` | server default | Per-request provider override |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--ref <file>` | none | Attach a reference image; repeatable, max 5 |
 | `--web-search` / `--no-web-search` | server default | Toggle Responses-API web search for the request |
@@ -230,7 +230,7 @@ Issue #61 tracks the parity slice after the browser/server surface moved ahead o
 Verified current behavior:
 
 - `ima2 gen`, `ima2 edit`, `ima2 multimode`, and `ima2 node generate` expose `--web-search` / `--no-web-search`.
-- Those commands expose `--provider <auto|oauth|api|grok>` and pass it to matching server routes.
+- Those commands expose `--provider <auto|oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai>` and pass it to matching server routes. `gen` drops `auto` (fail-closed lane routing) and adds `runway`/`higgsfield`.
 - `ima2 multimode` exposes `--ref <file>` and `--mode <auto|direct>`.
 - `ima2 ps` / `ima2 inflight ls` document `classic|node|multimode`.
 - `ima2 ls --favorites` uses server-side `favoritesOnly=1` before its defensive client-side favorite filter.
