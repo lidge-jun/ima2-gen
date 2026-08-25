@@ -307,7 +307,11 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         items: comfyVideoWorkflows.map((entry) => ({
           value: `${COMFY_VIDEO_PREFIX}${entry.id}`,
           label: entry.label,
-          ...(entry.reason ? { sub: t("comfy.videoCatalogShort"), title: entry.reason, stacked: true } : {}),
+          // Stacked regardless of the reason line: workflow names are
+          // user-chosen and routinely outrun the 300px portal, and this is what
+          // lets the label wrap instead of truncating mid-word.
+          stacked: true,
+          ...(entry.reason ? { sub: t("comfy.videoCatalogShort"), title: entry.reason } : {}),
           ...(entry.disabled ? { disabled: true } : {}),
         })),
       });

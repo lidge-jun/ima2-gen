@@ -308,3 +308,115 @@ server+lib tsconfig 범위이므로 `ui/src` 변경을 관측하지 **않는다*
 C에서 `structure/03-server-api.md` (video route provider 계약),
 `structure/04-frontend-architecture.md` (selector 동작),
 `structure/01-file-function-map.md` (신규 모듈)을 갱신한다.
+
+---
+
+## A 라운드 2 수정사항 (012_wp1_audit_synthesis.md, blockers=8)
+
+두 번째 독립 감사의 결과를 반영한다. 아래가 **위 본문보다 우선한다.**
+
+### A2-1. UI 선택 체인 (B1, High) — scope 추가
+
+`ui/src/store/storeSettingsImpl.ts`를 scope IN에 추가한다.
+
+- `selectVideoModelImpl` (:493): 현재 `normalizeVideoModelValue(model) || GROK_VIDEO_MODEL_15`가
+  comfy id를 grok으로 **치환**하고, :498이 lane까지 grok으로 되돌린다.
+- `setProviderImpl` (:362-364): `supportsVideo`가 grok 전용이라 comfy 진입 시
+  `videoModelSelected`를 지운다.
+
+**결정: 별도 store 필드 `comfyVideoWorkflow: string | null`을 신설한다.**
+`videoModelSelected`의 grok 리터럴 유니온을 넓히지 않는다 — 그 타입은
+`normalizeVideoModelValue`를 경유하는 모든 소비자(agent-mode 계약 테스트 포함)의
+의미를 결정하므로, 넓히면 파급이 wp1 범위를 넘는다.
+
+`comfy-video:` 클릭은 `selectVideoModel`이 아니라 새 `setComfyVideoWorkflow`로 간다.
+`setProviderImpl`의 comfy 분기는 `comfyVideoWorkflow`를 보존하고, comfy를 떠날 때 비운다.
+
+### A2-2. route 분기는 클로저 안에 남는다 (B2, High) — §4 대체
+
+§4의 "`:188`에서 별도 함수로 return" 스케치를 **폐기한다.** handler는 하나의 큰
+클로저이고 `startJob`(:367), `registerJobAbortController`(:386), 202 응답(:387),
+`finishJob`(finally :554)이 전부 그 안에 있다. 밖으로 빼면 inflight 등록도, abort
+controller도, terminal finishJob도 없이 실행된다 — UI 취소가 어댑터 signal에 도달하지
+못한다.
+
+올바른 형태:
+
+- `:188`의 provider 게이트는 comfy를 **통과**시키기만 한다 (거절하지 않는다).
+- grok 전용 정규화(`normalizeGrokVideoModel` :226 등)는 comfy일 때 건너뛴다.
+- admission(`startJob`) **이후** 실행 지점에서 comfy 분기로 갈라진다.
+- `cancelController.signal`을 `generateVideoViaComfy(options.signal)`로 전달한다 (필수).
+- 어댑터의 `onQueue` 콜백을 SSE progress 이벤트로 매핑한다 (필수).
+- storyboard/continuity/planner 축이 comfy와 함께 오면 400으로 거절한다.
+
+### A2-3. 수집 순서와 any-node 폴백 (B3, High) — §3 보강
+
+main이 원문을 직접 확인해 리뷰어의 `videos` 키 주장은 기각했다
+(`_ui.py:432-437` `PreviewVideo.as_dict()` → `{"images": ..., "animated": (True,)}`,
+`_ui.py` 전체에 `videos` 정의 없음). 그러나 하위 발견은 실재하는 버그다:
+`collectImages`의 any-node 폴백(:241-243)이 모든 노드를 훑으므로, 그래프에
+PreviewImage/SaveImage가 하나라도 있으면 **PNG가 먼저 잡혀** video 검증에서 죽는다.
+
+video 수집 순서:
+
+1. 바인딩된 output 노드를 먼저 본다.
+2. 그 노드 안에서 `images` → `gifs` → `videos` 순으로 본다.
+3. any-node 폴백에서는 `animated` 플래그가 있거나 `gifs`/`videos` 키인 항목만 받는다.
+   (플래그 없는 순수 `images`는 정지 이미지로 간주해 건너뛴다.)
+
+`videos` 키는 미래/커스텀 호환으로 계속 읽되, core 계약은 `images`+`animated`임을
+주석에 명시한다.
+
+### A2-4. WebM은 거절한다 (B4, Medium) — §3 매직바이트 표 대체
+
+`routes/video.ts:462`가 파일명을 `.mp4`로 고정하고 `videoContinuity.ts:48`이 `.mp4`가
+아니면 400을 던진다. webm을 `.mp4`로 저장하면 하위 소비자 전체에 컨테이너를 거짓
+신고한다.
+
+**wp1은 MP4만 수용한다.** EBML(webm/mkv)은 검출하되 명시적 에러로 거절한다:
+"ComfyUI returned WebM; ima2 currently stores MP4 only. Set the SaveVideo format to mp4."
+거짓 신고보다 정직한 거절이 낫다.
+
+### A2-5. binding vs param 배제 조건 (B5, Medium) — 정정
+
+위 본문의 "바인딩 대상 입력은 params 적용에서 제외"는 **너무 넓다.**
+`assign`(:197-198)은 값이 undefined면 조용히 return하므로, 요청에 length가 없고
+저장 param에는 있는 경우 튜닝값을 잃는다 (이미지 workflow에도 동일 회귀).
+
+정정: **바인딩이 실제로 정의된 값을 받은 입력만** params 적용에서 제외한다.
+binding-present / value-absent / param-present 케이스 테스트를 §8에 추가한다.
+
+### A2-6. race 처리는 011의 메커니즘, video 한정 (B6, Medium) — §3 정정
+
+위 본문의 "missing 3 → 6 상향"을 **폐기한다.** 그 카운터는 job 소멸 감지도 겸하므로
+올리면 소멸 감지가 둔해진다. 대신 `entry.status.completed === true`인데 outputs가 빈
+경우를 **별도 분기**로 다루고, `kind === "video"`로 **한정**한다. 이미지 경로의
+즉시 `NO_IMAGE`(:405-406) 계약은 그대로 둔다 — 바꾸면 §Scope의 OUT 위반이다.
+
+### A2-7. c-3 증명 대상 정정 (B7, Medium)
+
+H3의 origin(127.0.0.1:18188)이 죽어 있으므로, lock을 걷어도 H3는 `(offline)` 접미와
+함께 disabled로 남는다. 따라서 c-3은 두 개의 관측으로 나눈다:
+
+1. **stub origin에 등록한 video workflow**가 선택 가능하다 → lock 제거의 증명.
+2. **H3는 offline-disabled이지 lock-disabled가 아니다** → 실제로 바뀐 계약의 증명.
+
+이건 기준 완화가 아니라 정확화다. 사용자의 GPU 박스를 켜는 것은 이 루프의 쓰기
+범위 밖이다.
+
+### A2-8. 잔존 산문 정리 (B8, Low) — 파일 맵 추가
+
+- `ui/src/components/settings/ComfyWorkflowManager.tsx:280` — video workflow에 무조건
+  렌더되는 `t("comfy.videoCatalogOnly")`를 조건부/문구 교정.
+- `ui/src/i18n/{en,ko,zh-Hans,zh-Hant}.json:2303-2304` — 실행 미지원 문구 교정.
+- `tests/comfy-ui-contract.test.ts:95`가 그 사용을 고정하므로 **다섯 번째 파손 지점**이다.
+
+### 갱신된 파손 테스트 목록 (총 5개)
+
+| 파일 | 이유 |
+|---|---|
+| tests/models-endpoint-contract.test.ts:186-187 | lock 제거 |
+| tests/comfy-ui-contract.test.ts:49-57 | selector 소스 hunk 재작성 |
+| tests/comfy-ui-contract.test.ts:95 | videoCatalogOnly 사용 고정 |
+| tests/comfy-routes-contract.test.ts:176 | providerOptions 사유 교정 |
+| tests/comfy-cli-contract.test.ts:51 | CLI 산문 교정 |
