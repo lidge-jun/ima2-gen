@@ -30,6 +30,7 @@ import { errInfo } from "./errInfo.js";
 import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
 import { STORYBOARD_PREFIX } from "./storyboardPrefix.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "./backgroundPresets.js";
+import { sizeNudgeSuffix } from "./sizeNudge.js";
 import { resolveImageBackgroundParams, validateTransparentFormat, validateTransparentProvider, verifyBufferAlpha, makeTransparentResultError } from "./imageBackgroundParam.js";
 import { decodeRawForAlpha } from "./alphaDecode.js";
 import { validateModeration, imageFormatFromMime, upstreamErrorFields } from "./routeHelpers.js";
@@ -275,8 +276,13 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
 
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
       const elementSuffix = elementNotesFragment ? `\n${elementNotesFragment}` : "";
+      // Restating the size in the prompt measurably improves the odds on lanes
+      // that treat `size` as a hint (#173). Opt out with sizeNudge: false when
+      // the extra sentence would fight the prompt.
+      const sizeNudge = req.body?.sizeNudge === false ? null : sizeNudgeSuffix(req.body?.size);
       const generationPrompt = storyboardPrefix + prompt + elementSuffix
-        + (backgroundPreset ? ` ${backgroundPromptSuffix(backgroundPreset, "image")}` : "");
+        + (backgroundPreset ? ` ${backgroundPromptSuffix(backgroundPreset, "image")}` : "")
+        + (sizeNudge ? ` ${sizeNudge}` : "");
       const moderationCheck = validateModeration(ctx, moderation);
       if (moderationCheck.error) return fail(400, { error: moderationCheck.error });
       const referencePayload = summarizeReferencePayload(mergedReferences as string[]);

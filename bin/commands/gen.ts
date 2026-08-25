@@ -1,6 +1,8 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { config } from "../../config.js";
+import { parsePngInfo } from "../../lib/pngInfo.js";
+import { sizeDrifted } from "../../lib/sizeNudge.js";
 import { errInfo } from "../../lib/errInfo.js";
 import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { wasFlagPassed } from "../lib/argsExplicit.js";
@@ -31,6 +33,7 @@ const SPEC = {
   flags: {
     quality: { short: "q", type: "string", default: "low" },
     size: { short: "s", type: "string", default: "1024x1024" },
+    "no-size-nudge": { type: "boolean" },
     count: { short: "n", type: "string", default: "1" },
     ref: { type: "string", repeatable: true },
     out: { short: "o", type: "string" },
@@ -59,6 +62,7 @@ const HELP = `
   Options:
     -q, --quality <low|medium|high>         Core lanes only. Default: low
     -s, --size <WxH | auto>                 Core lanes only. Default: 1024x1024
+        --no-size-nudge                     Do not restate --size in the prompt
     -n, --count <1..${MAX_GENERATION_COUNT}>                     MCP lanes: 1 only
         --ref <file|generated-file[:tag]>   Local file on core; generated filename on MCP
         --character <element-id|name>       MCP lanes only: character binding element
@@ -120,6 +124,30 @@ function resolveOutTarget(out: string, outDir: string | null): string {
 /** Absolute path for the success line, so "where did it go" is never a question. */
 function displayPath(target: string): string {
   return isAbsolute(target) ? target : resolve(target);
+}
+
+/**
+ * Reads the delivered pixel size back off disk.
+ *
+ * The requested size is a hint on some lanes, and the CLI used to print a bare
+ * checkmark either way, so a rotated or resampled image looked identical to a
+ * correct one until someone ran `sips` (#173).
+ */
+async function measureSaved(path: string): Promise<{ width: number; height: number } | null> {
+  try {
+    const info = parsePngInfo(await readFile(path));
+    if ("error" in info || typeof info.width !== "number") return null;
+    return { width: info.width, height: info.height };
+  } catch {
+    return null;
+  }
+}
+
+/** "✓ /abs/path.png  (1254x1254)" plus a drift line when it is not what was asked. */
+function savedLine(path: string, actual: { width: number; height: number } | null, requested: unknown): string[] {
+  const head = color.green("✓ ") + displayPath(path) + (actual ? `  (${actual.width}x${actual.height})` : "");
+  if (!actual || !sizeDrifted(requested, actual)) return [head];
+  return [head, color.dim(`  ! requested ${String(requested)}; the provider returned a different size`)];
 }
 
 function failServer(jsonMode: boolean, error: unknown): never {
@@ -270,6 +298,7 @@ function validateCoreFlags(args: ParsedArgs): void {
 async function requestCoreImage(args: ParsedArgs, context: ImageContext, n: number, requestId: string) {
   const references = await Promise.all(context.refs.map((path: string) => fileToDataUri(path)));
   const body: Record<string, unknown> = { prompt: context.prompt, quality: args.quality, size: args.size, n, references,
+    ...(args["no-size-nudge"] ? { sizeNudge: false } : {}),
     model: context.target.model, mode: args.mode, moderation: args.moderation, sessionId: args.session,
     provider: context.target.lane };
   body.requestId = requestId;
@@ -324,9 +353,19 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
     await dataUriToFile(String(image.image), target);
     paths.push(target);
   }
+  const measured = await Promise.all(paths.map((path) => measureSaved(path)));
   if (args.json) json({ ok: true, requestId: norm.requestId, elapsed: norm.elapsed,
-    images: paths.map((path, index) => ({ path, filename: norm.images[index]?.filename })) });
-  else { for (const path of paths) out(color.green("✓ ") + displayPath(path)); if (norm.elapsed) out(color.dim(`elapsed ${norm.elapsed}s`)); }
+    images: paths.map((path, index) => ({
+      path,
+      filename: norm.images[index]?.filename,
+      // Split so an agent can spot drift without opening the file (#173).
+      requestedSize: args.size ? String(args.size) : null,
+      actualSize: measured[index] ? `${measured[index]!.width}x${measured[index]!.height}` : null,
+    })) });
+  else {
+    paths.forEach((path, index) => { for (const line of savedLine(path, measured[index] ?? null, args.size)) out(line); });
+    if (norm.elapsed) out(color.dim(`elapsed ${norm.elapsed}s`));
+  }
 }
 
 export default async function genCmd(argv: string[]): Promise<void> {

@@ -20,7 +20,9 @@ describe("gen output path resolution (#170)", () => {
   it("prints the absolute saved path so a misplaced file is visible", () => {
     const src = read("bin/commands/gen.ts");
     assert.match(src, /function displayPath\(target: string\): string/);
-    assert.match(src, /out\(color\.green\("✓ "\) \+ displayPath\(path\)\)/);
+    // The success line is built by savedLine now (#173 added the pixel size and
+    // the drift warning), but it still leads with the absolute path.
+    assert.match(src, /color\.green\("✓ "\) \+ displayPath\(path\)/);
   });
 
   it("applies the same rule when recovering outputs after a stream drop", () => {
