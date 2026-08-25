@@ -57,3 +57,7 @@ cache/
 # Comfy video / provider UX / capability unit (260825): plan docs plus evidence.
 !devlog/_plan/260825_comfy_video_provider_ux/
 !devlog/_plan/260825_comfy_video_provider_ux/**
+
+# Issue batch #170-#173 (260825): plan docs plus evidence.
+!devlog/_plan/260825_issue_batch_170_173/
+!devlog/_plan/260825_issue_batch_170_173/**
