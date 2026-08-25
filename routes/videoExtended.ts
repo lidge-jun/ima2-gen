@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { basename, join } from "node:path";
-import { mkdir, readFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import type { RouteRuntimeContext, RuntimeContext } from "../lib/runtimeContext.js";
 import { requireRuntimeContext } from "../lib/runtimeContext.js";
@@ -411,6 +411,38 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
   });
 
   // --- Video Frame Extraction ---
+  /**
+   * Frame extraction for a video the SERVER cannot see.
+   *
+   * The GET form resolves its file inside the generated directory, which is the
+   * right containment rule but means a clip the caller saved elsewhere with
+   * `-o` is unreachable — the CLI reported "video file not found" for a file
+   * sitting right there on disk (#171). The bytes come over the wire instead.
+   */
+  app.post("/api/video/frame", async (req: Request, res: Response) => {
+    const tmpIn = join(ctx.config.storage.generatedDir, `frame_in_${randomBytes(4).toString("hex")}.mp4`);
+    const tmpOut = join(ctx.config.storage.generatedDir, `frame_tmp_${randomBytes(4).toString("hex")}.png`);
+    try {
+      const b64 = typeof req.body?.video === "string" ? req.body.video : "";
+      const position = typeof req.body?.position === "string" ? req.body.position : "last";
+      if (!b64) return res.status(400).json({ error: "video (base64) required" });
+      const buffer = Buffer.from(b64.replace(/^data:[^;,]+;base64,/, ""), "base64");
+      if (buffer.byteLength === 0) return res.status(400).json({ error: "video payload is empty" });
+      await writeFile(tmpIn, buffer);
+      // Same byte-level validation the generated-file path gets: the container
+      // is trusted from its header, never from a filename.
+      await assertLocalMp4(tmpIn);
+      await extractVideoFrame(tmpIn, tmpOut, position);
+      res.type("png").send(await readFile(tmpOut));
+    } catch (err: any) {
+      logError("video", "frame:upload-error", err);
+      sendError(res, err);
+    } finally {
+      await unlink(tmpIn).catch(() => {});
+      await unlink(tmpOut).catch(() => {});
+    }
+  });
+
   app.get("/api/video/frame", async (req: Request, res: Response) => {
     try {
       const file = req.query.file as string | undefined;

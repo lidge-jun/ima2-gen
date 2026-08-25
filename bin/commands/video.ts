@@ -2,7 +2,7 @@ import { parseArgs } from "../lib/args.js";
 import { resolveServer } from "../lib/client.js";
 import { streamSse } from "../lib/sse.js";
 import { out, die, color, exitCodeForError } from "../lib/output.js";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, readFile, stat } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { runVideoGenerate } from "../lib/videoMcp.js";
 import {
@@ -347,7 +347,7 @@ async function videoFrameCmd(argv: string[]) {
   const spec = { flags: { last: { type: "boolean" }, position: { type: "string" }, out: { short: "o", type: "string" }, output: { type: "string" }, timeout: { type: "string", default: "60" }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
   const args = parseArgs(argv, spec);
   rejectUnknownFlags(args);
-  if (args.help) { out(`  ima2 video frame <generated-file> [--last] [--position <sec>] [-o, --out <path>]\n\n  Extract a frame from a generated video file.\n\n  Options:\n        --last            Extract last frame (default)\n        --position <sec>  Extract frame at specific second\n    -o, --out <path>      Output file path\n        --output <path>   Alias for --out\n        --timeout <sec>   Default: 60\n        --server <url>    Override server URL`); return; }
+  if (args.help) { out(`  ima2 video frame <local-file|generated-file> [--last] [--position <sec>] [-o, --out <path>]\n\n  Extract a frame from a video. Accepts a path to a local .mp4 (uploaded to the\n  server for extraction) or a generated filename from 'ima2 ls'.\n\n  Options:\n        --last            Extract last frame (default)\n        --position <sec>  Extract frame at specific second\n    -o, --out <path>      Output file path\n        --output <path>   Alias for --out\n        --timeout <sec>   Default: 60\n        --server <url>    Override server URL`); return; }
   const file = args.positional[0];
   if (!file) die(2, "file argument required");
   if (args.last && args.position) die(2, "use either --last or --position, not both");
@@ -356,9 +356,31 @@ async function videoFrameCmd(argv: string[]) {
   parseTimeoutSeconds(args.timeout);
   let server;
   try { server = await resolveServer({ serverFlag: args.server }); } catch (e: unknown) { die(exitCodeForError(e), (e as Error).message); throw e; }
-  const url = `${server.base}/api/video/frame?file=${encodeURIComponent(file)}&position=${encodeURIComponent(position)}`;
-  const res = await fetch(url, { signal: timeoutSignal(args.timeout) });
-  if (!res.ok) { const d = await readJsonResponse(res, "frame extraction"); die(1, `frame extraction failed: ${(d as any).error || res.status}`); }
+  // A path that exists on disk is uploaded; anything else is treated as a
+  // generated filename the server can resolve itself. Before this, a clip saved
+  // with -o was rejected as "not found" while sitting in the current directory,
+  // and the only way through was parsing `ima2 ls --json` for the internal name.
+  let localBytes: Buffer | null = null;
+  try {
+    const info = await stat(file);
+    if (info.isFile()) localBytes = await readFile(file);
+  } catch { /* not a local path; fall through to the generated-file lookup */ }
+  const res = localBytes
+    ? await fetch(`${server.base}/api/video/frame`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ video: localBytes.toString("base64"), position }),
+      signal: timeoutSignal(args.timeout),
+    })
+    : await fetch(`${server.base}/api/video/frame?file=${encodeURIComponent(file)}&position=${encodeURIComponent(position)}`, { signal: timeoutSignal(args.timeout) });
+  if (!res.ok) {
+    const payload = await readJsonResponse(res, "frame extraction") as { error?: string };
+    const detail = payload.error ?? String(res.status);
+    const hint = localBytes
+      ? ""
+      : `\n  '${file}' is neither a file on disk nor a generated filename. Pass a local path, or run 'ima2 ls --json' for generated names.`;
+    die(1, `frame extraction failed: ${detail}${hint}`);
+  }
   const buf = Buffer.from(await res.arrayBuffer());
   const outPath = (args.out ?? args.output) as string || `frame-${basename(file).replace(/\.[^.]+$/, "")}.png`;
   await writeBuffer(outPath, buf);
