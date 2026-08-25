@@ -153,6 +153,12 @@ test("/api/video/generate streams progress and saves mp4 + sidecar", async () =>
     assert.equal(sidecar.video.requestedModel, "grok-imagine-video");
     assert.equal(sidecar.video.effectiveModel, "grok-imagine-video");
     assert.equal(sidecar.video.modelFallback, null);
+    // #172: the resolved mode must outlive the job. inflight carried it and
+    // then vanished on completion, leaving no way to tell an i2v clip from a
+    // t2v one — and a --ref run that quietly falls back to t2v renders a
+    // different person.
+    assert.equal(sidecar.video.mode, "text-to-video");
+    assert.equal(sidecar.video.refsCount, 0);
     assert.equal(sidecar.videoContinuity.entries[0].revisedPrompt, "english clip");
   } finally {
     await new Promise((r) => server.close(r));
@@ -162,6 +168,39 @@ test("/api/video/generate streams progress and saves mp4 + sidecar", async () =>
 });
 
 test("/api/video/generate uses configured Grok Video 1.5 default when model is omitted", async () => {
+
+test("/api/video/generate records image-to-video mode when a reference is given", async () => {
+  const proxy = makeProxy({});
+  const proxyUrl = await listen(proxy);
+  const proxyPort = Number(new URL(proxyUrl).port);
+  const generatedDir = await mkdtemp(join(tmpdir(), "ima2-video-route-i2v-"));
+  const { server, url } = await videoApp(generatedDir, proxyPort);
+  try {
+    // A 1x1 PNG as the opening frame. One reference and no --as-reference is
+    // the documented image-to-video shape.
+    const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const res = await fetch(`${url}/api/video/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "animate this still", provider: "grok", model: "grok-imagine-video", duration: 1, resolution: "480p", sourceImage: png, requestId: "req_video_i2v" }),
+    });
+    const events = parseSse(await res.text());
+    const done = events.find((e) => e.event === "done");
+    assert.ok(done, "has done");
+
+    const files = await readdir(generatedDir);
+    const mp4 = files.find((f) => f.endsWith(".mp4"));
+    assert.ok(mp4, "mp4 written");
+    const sidecar = JSON.parse(await readFile(join(generatedDir, `${mp4}.json`), "utf8"));
+    // The whole point of #172: this is what tells i2v from t2v after the fact.
+    assert.equal(sidecar.video.mode, "image-to-video");
+    assert.equal(sidecar.video.refsCount, 1);
+  } finally {
+    await new Promise((r) => server.close(r));
+    await new Promise((r) => proxy.close(r));
+    await rm(generatedDir, { recursive: true, force: true });
+  }
+});
   let startBody: any = null;
   const proxy = makeProxy({ captureStart: (body) => { startBody = body; } });
   const proxyUrl = await listen(proxy);

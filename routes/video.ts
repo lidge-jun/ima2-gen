@@ -460,6 +460,8 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
           usage: null,
           webSearchCalls: 0,
           video: {
+            mode,
+            refsCount: resolved.length,
             sourceImageFilename: sourceFilename,
             comfyPromptId: comfyResult.promptId,
             comfyOrigin: comfyResult.origin,
@@ -590,6 +592,13 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
           duration: result.duration,
           resolution: result.resolution,
           aspectRatio: result.aspectRatio,
+          // The resolved mode was computed for the request and then thrown
+          // away: inflight carried it, but inflight is gone the moment the job
+          // finishes, so nothing could answer "was this i2v or t2v" afterwards
+          // (#172). A --ref run that silently falls back to t2v produces a
+          // different person, which is the failure this makes detectable.
+          mode,
+          refsCount: resolved.length,
           sourceImageFilename: sourceFilename,
           xaiVideoRequestId: result.xaiVideoRequestId,
           requestedModel: result.requestedModel,
