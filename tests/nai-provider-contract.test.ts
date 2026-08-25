@@ -165,6 +165,67 @@ test("nai adapter gates the ancestral-noise fields on the sampler", async () => 
   assert.equal("deliberate_euler_ancestral_bug" in withoutAncestral.parameters, false);
 });
 
+test("nai adapter exposes cfg_rescale instead of pinning it to zero", async () => {
+  const tuned = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { cfgRescale: 0.7 });
+  assert.equal(JSON.parse(String(tuned[0].init.body)).parameters.cfg_rescale, 0.7);
+
+  const untouched = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), {});
+  assert.equal(JSON.parse(String(untouched[0].init.body)).parameters.cfg_rescale, 0);
+});
+
+test("nai adapter computes Variety+ from the V4.5/V5 coefficient", async () => {
+  const on = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { varietyPlus: true, size: "832x1216" });
+  const withVariety = JSON.parse(String(on[0].init.body));
+  assert.ok(
+    Math.abs(withVariety.parameters.skip_cfg_above_sigma - Math.sqrt(832 * 1216) * 0.05766) < 1e-9,
+    "matches CLIsu's coefficient for the registered model family",
+  );
+
+  const off = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { size: "832x1216" });
+  assert.equal("skip_cfg_above_sigma" in JSON.parse(String(off[0].init.body)).parameters, false);
+});
+
+test("nai adapter refuses V5-only parameters on a V4.5 model", async () => {
+  // Stale client state, not intent: imageModel and the option overrides hydrate
+  // from independent persisted keys, so a V4.5 model can arrive alongside a
+  // straightAlpha the user set while on V5.
+  const stale = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), {
+    model: "nai-diffusion-4-5-full",
+    straightAlpha: true,
+    qualityPresetId: "light",
+  });
+  const staleBody = JSON.parse(String(stale[0].init.body));
+
+  const clean = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { model: "nai-diffusion-4-5-full" });
+  const cleanBody = JSON.parse(String(clean[0].init.body));
+
+  assert.equal(staleBody.parameters.straight_alpha, false);
+  assert.equal(staleBody.parameters.qualityPresetId, "standard");
+  assert.deepEqual(
+    staleBody.parameters,
+    cleanBody.parameters,
+    "a V4.5 request carrying stale V5 state must be indistinguishable from one that sent neither",
+  );
+});
+
+test("nai adapter still honors V5-only parameters on a V5 model", async () => {
+  const calls = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), {
+    model: "nai-diffusion-5-curated",
+    straightAlpha: true,
+    qualityPresetId: "light",
+  });
+  const body = JSON.parse(String(calls[0].init.body));
+  assert.equal(body.parameters.straight_alpha, true);
+  assert.equal(body.parameters.qualityPresetId, "light");
+});
+
 test("nai lane adapter reports auth state and registry models", () => {
   const withKey = createNaiAdapter(naiCtx());
   assert.equal(withKey.laneId, "nai");

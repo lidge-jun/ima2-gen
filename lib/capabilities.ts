@@ -88,6 +88,16 @@ export function buildIma2Capabilities({
         model: appConfig.grokProvider.defaultImageModel,
         plannerModel: appConfig.grokProvider.plannerModel,
       },
+      // Display only. The web UI shows these so its panel matches whatever the
+      // operator configured, but it never re-sends an untouched value: an
+      // absent field lets lib/naiImageAdapter.ts resolve it from config, which
+      // is what keeps IMA2_NAI_DEFAULT_* authoritative.
+      nai: {
+        sampler: appConfig.naiProvider.defaultSampler,
+        noiseSchedule: appConfig.naiProvider.defaultNoiseSchedule,
+        steps: appConfig.naiProvider.defaultSteps,
+        scale: appConfig.naiProvider.defaultScale,
+      },
     },
     valid: {
       imageModels: {
