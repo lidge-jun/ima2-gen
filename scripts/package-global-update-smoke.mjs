@@ -29,7 +29,11 @@ export const DEADLINES = {
   "npm-root": 60_000,
   "shim-version": 60_000,
   "baseline-install": 420_000,
-  "tarball-install": 300_000,
+  // Same work as baseline-install: a full global install of this package with
+  // native builds. It had the smaller budget for no reason the distribution
+  // supports, and a slow Windows runner hit exactly that gap at 300s while the
+  // node 22 leg of the same run finished the step in 141s.
+  "tarball-install": 420_000,
   "pack": 900_000,
   "codex-login-status": 120_000,
   "ima2-status": 120_000,
