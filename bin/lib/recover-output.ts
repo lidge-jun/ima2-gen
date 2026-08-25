@@ -1,5 +1,5 @@
 import { copyFile, mkdir } from "node:fs/promises";
-import { join, dirname, basename } from "node:path";
+import { join, dirname, basename, isAbsolute } from "node:path";
 import { config } from "../../config.js";
 import { request } from "./client.js";
 
@@ -50,7 +50,11 @@ async function copyFilesToTarget(
     const src = join(generatedDir, name);
     let dest: string;
     if (target.explicitOut && i === 0) {
-      dest = target.explicitOut;
+      // Same resolution rule as the normal save path (#170): a relative --out
+      // belongs under --out-dir when the caller named one.
+      dest = target.outDir && !isAbsolute(target.explicitOut)
+        ? join(target.outDir, target.explicitOut)
+        : target.explicitOut;
     } else if (target.outDir) {
       dest = join(target.outDir, name);
     } else {

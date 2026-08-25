@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { config } from "../../config.js";
 import { errInfo } from "../../lib/errInfo.js";
 import { parseArgs, type ParsedArgs } from "../lib/args.js";
@@ -101,6 +101,26 @@ type ImageContext = {
   explicitOut: string | null;
   outDir: string | null;
 };
+
+/**
+ * Resolves --out against --out-dir.
+ *
+ * These two used to be mutually exclusive by accident: a ternary took --out and
+ * never looked at --out-dir, so a relative name landed in the process cwd and a
+ * caller who named a directory got their file somewhere else entirely, under a
+ * success line that showed only the bare filename (#170).
+ *
+ * An absolute --out still wins, because someone who typed a full path means it.
+ */
+function resolveOutTarget(out: string, outDir: string | null): string {
+  if (!outDir || isAbsolute(out)) return out;
+  return join(outDir, out);
+}
+
+/** Absolute path for the success line, so "where did it go" is never a question. */
+function displayPath(target: string): string {
+  return isAbsolute(target) ? target : resolve(target);
+}
 
 function failServer(jsonMode: boolean, error: unknown): never {
   const message = (error as Error)?.message || "server unreachable";
@@ -222,10 +242,12 @@ async function runMcpImage(argv: string[], args: ParsedArgs, context: ImageConte
   try {
     const result = await runMcpJob({ serverBase: context.server.base, kind: "image", body, requestId,
       timeoutMs: MCP_IMAGE_TIMEOUT_MS, json: Boolean(args.json), onProgress: (phase: unknown) => err(`[${String(phase)}]`) });
-    const target = args.out ? String(args.out) : args["out-dir"] ? join(String(args["out-dir"]), result.filename) : undefined;
+    const target = args.out
+      ? resolveOutTarget(String(args.out), args["out-dir"] ? String(args["out-dir"]) : null)
+      : args["out-dir"] ? join(String(args["out-dir"]), result.filename) : undefined;
     if (target) await downloadMcpResult(context.server.base, result.url, target);
     if (args.json) json({ ok: true, requestId, filename: result.filename, url: result.url, ...(target ? { path: target } : {}) });
-    else out(color.green("✓ ") + (target ?? `${context.server.base}${result.url}`));
+    else out(color.green("✓ ") + (target ? displayPath(target) : `${context.server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string | undefined };
     fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: 1 });
@@ -294,7 +316,7 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
   const paths: string[] = [];
   for (let i = 0; i < norm.images.length; i += 1) {
     let target: string;
-    if (context.explicitOut) target = context.explicitOut;
+    if (context.explicitOut) target = resolveOutTarget(context.explicitOut, context.outDir);
     else if (context.outDir) target = `${context.outDir}/${defaultOutName(i, norm.images.length)}`;
     else target = `${config.storage.generatedDir}/${defaultOutName(i, norm.images.length)}`;
     const image = norm.images[i];
@@ -304,7 +326,7 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
   }
   if (args.json) json({ ok: true, requestId: norm.requestId, elapsed: norm.elapsed,
     images: paths.map((path, index) => ({ path, filename: norm.images[index]?.filename })) });
-  else { for (const path of paths) out(color.green("✓ ") + path); if (norm.elapsed) out(color.dim(`elapsed ${norm.elapsed}s`)); }
+  else { for (const path of paths) out(color.green("✓ ") + displayPath(path)); if (norm.elapsed) out(color.dim(`elapsed ${norm.elapsed}s`)); }
 }
 
 export default async function genCmd(argv: string[]): Promise<void> {

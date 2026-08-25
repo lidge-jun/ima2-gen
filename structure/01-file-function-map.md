@@ -107,7 +107,7 @@ routes/
 | `ui/src/lib/eventChannel.ts` | 164 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
 | `ui/src/lib/sseStreamError.ts` | 66 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
 | `bin/ima2.ts` | 540 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
-| `bin/commands/gen.ts` | 332 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
+| `bin/commands/gen.ts` | 354 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
 | `bin/commands/edit.ts` | 168 | CLI image-edit client with provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, and output options |
 | `bin/commands/multimode.ts` | 214 | CLI multimode SSE client with provider override, references, prompt mode, incremental image save, timeout recovery, web-search, reasoning-effort, and session options |
 | `bin/commands/node.ts` | 173 | CLI node-mode generate/show client with references, provider override, parent node, web-search, reasoning-effort, and SSE support |
