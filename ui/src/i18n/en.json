@@ -2331,6 +2331,7 @@
       "hint": "Tags to steer away from. Combines with the preset below."
     },
     "panel": {
+      "modelTitle": "Model",
       "sizeTitle": "Size",
       "samplingTitle": "Sampling",
       "presetTitle": "Presets",

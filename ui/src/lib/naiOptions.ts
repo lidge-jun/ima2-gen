@@ -60,7 +60,7 @@ export const COMPILED_FALLBACK: NaiOptions = {
 export const NAI_STEPS_RANGE = { min: 1, max: 50 } as const;
 export const NAI_SCALE_RANGE = { min: 1, max: 10 } as const;
 export const NAI_CFG_RESCALE_RANGE = { min: 0, max: 1 } as const;
-const MAX_SEED = 2 ** 32 - 1;
+export const NAI_MAX_SEED = 2 ** 32 - 1;
 
 export function resolveNaiOptions(
   serverDefaults: NaiOptionOverrides | null,
@@ -121,11 +121,10 @@ export function coerceNaiOverrides(value: unknown): NaiOptionOverrides {
     typeof raw.seed === "number" &&
     Number.isInteger(raw.seed) &&
     raw.seed >= 0 &&
-    raw.seed <= MAX_SEED
+    raw.seed <= NAI_MAX_SEED
   ) {
     out.seed = raw.seed;
   }
 
   return out;
 }
-

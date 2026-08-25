@@ -23,7 +23,7 @@ import {
   stripDataUrlPrefix,
   isCanceledGenerationError,
 } from "./storeHelpers";
-import { naiPayloadFields } from "./storeGenImpl";
+import { naiPayloadFields } from "../lib/naiPayload";
 import type { AppState } from "./storeTypes";
 import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 import { getAssetById } from "../lib/api-assets";
@@ -223,7 +223,7 @@ export async function runGenerateNodeInPlaceImpl(
       contextMode: "parent-plus-refs",
       searchMode: s.webSearchEnabled ? "on" : "off",
       webSearchEnabled: s.webSearchEnabled,
-      ...naiPayloadFields(s),
+      ...naiPayloadFields(s, { provider: nodeProvider, imageModel: nodeModel }),
       ...(nodeRefs.length
         ? { references: nodeRefs.map(stripDataUrlPrefix) }
         : {}),

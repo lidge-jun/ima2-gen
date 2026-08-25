@@ -5,6 +5,7 @@ import { useI18n } from "../../i18n";
 import { Select } from "../controls";
 import {
   NAI_CFG_RESCALE_RANGE,
+  NAI_MAX_SEED,
   NAI_SCALE_RANGE,
   NAI_STEPS_RANGE,
   NAI_UI_NOISE_SCHEDULES,
@@ -14,6 +15,7 @@ import {
   isNaiV5Model,
 } from "../../lib/naiOptions";
 import type { SizePreset } from "../../types";
+import { NAI_IMAGE_MODEL_OPTIONS } from "../../lib/imageModels";
 
 /** NovelAI prices per resolution tier, so these are presets rather than a
  *  free-form pair — storeHelpers already exempts nai from custom sizing.
@@ -34,6 +36,7 @@ export function NaiControlsPanel() {
   const setNaiOption = useAppStore((s) => s.setNaiOption);
   const resetNaiOptions = useAppStore((s) => s.resetNaiOptions);
   const imageModel = useAppStore((s) => s.imageModel);
+  const setImageModel = useAppStore((s) => s.setImageModel);
   const sizePreset = useAppStore((s) => s.sizePreset);
   const setSizePreset = useAppStore((s) => s.setSizePreset);
   const isV5 = isNaiV5Model(imageModel);
@@ -42,6 +45,28 @@ export function NaiControlsPanel() {
 
   return (
     <>
+      <div className="option-group nai-controls">
+        <div className="section-title">{t("nai.panel.modelTitle")}</div>
+        <Select
+          items={NAI_IMAGE_MODEL_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.shortLabel,
+          }))}
+          value={imageModel}
+          onChange={(value) => {
+            // Reset the V5-only options when leaving V5 so a hidden control's
+            // value is not silently in effect. The payload and adapter guard
+            // this too; this is the coherence half (005 R2-B2).
+            if (!isNaiV5Model(value)) {
+              setNaiOption("straightAlpha", false);
+              setNaiOption("qualityPresetId", "standard");
+            }
+            setImageModel(value as typeof imageModel);
+          }}
+          ariaLabel={t("nai.panel.modelTitle")}
+        />
+      </div>
+
       <div className="option-group nai-controls">
         <div className="section-title">{t("nai.panel.sizeTitle")}</div>
         <div className="option-row">
@@ -196,7 +221,9 @@ export function NaiControlsPanel() {
               const digits = e.target.value.replace(/\D/g, "");
               // Empty maps to null, never 0: zero is a valid NovelAI seed and
               // would silently pin every generation to the same image.
-              setNaiOption("seed", digits === "" ? null : Number(digits));
+              // Clamped here rather than dropped on reload — an out-of-range
+              // value used to display for the session and then vanish.
+              setNaiOption("seed", digits === "" ? null : Math.min(Number(digits), NAI_MAX_SEED));
             }}
           />
         </label>

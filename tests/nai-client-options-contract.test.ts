@@ -22,6 +22,7 @@ import {
 } from "../lib/naiImageAdapter.ts";
 import { readNaiOptions } from "../lib/naiOptions.ts";
 import { PERSISTED_KEYS, PERSISTED_REGISTRY } from "../ui/src/store/persistenceRegistry.ts";
+import { naiPayloadFields } from "../ui/src/lib/naiPayload.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (rel: string) => readFileSync(join(repoRoot, rel), "utf8");
@@ -107,14 +108,76 @@ test("coerceNaiOverrides keeps a null seed and a zero seed apart", () => {
   assert.deepEqual(coerceNaiOverrides({ seed: 0 }), { seed: 0 });
 });
 
+// A minimal AppState stand-in: naiPayloadFields reads exactly four fields.
+function stateOf(over: Record<string, unknown> = {}) {
+  return {
+    provider: "nai",
+    imageModel: "nai-diffusion-5-full",
+    naiOptionOverrides: {},
+    negativePrompt: "",
+    ...over,
+  } as never;
+}
+
 test("the payload sends overrides, never the resolved options", () => {
-  const source = read("ui/src/store/storeGenImpl.ts");
-  assert.match(source, /if \(s\.provider !== "nai"\) return \{\};/, "gated on the lane");
-  assert.match(source, /\{ \.\.\.s\.naiOptionOverrides \}/, "spreads the sparse overrides");
-  assert.equal(
-    source.includes("selectResolvedNaiOptions(s)"),
-    false,
-    "sending resolved options would re-send defaults the client did not author",
+  // Untouched fields are absent so the server resolves them from config; a
+  // resolved-options payload would re-send defaults the client never authored.
+  assert.deepEqual(naiPayloadFields(stateOf()), {});
+  assert.deepEqual(
+    naiPayloadFields(stateOf({ naiOptionOverrides: { steps: 40 } })),
+    { steps: 40 },
+  );
+  assert.deepEqual(
+    naiPayloadFields(stateOf({ negativePrompt: "  blurry  " })),
+    { negativePrompt: "blurry" },
+  );
+  assert.deepEqual(naiPayloadFields(stateOf({ negativePrompt: "   " })), {});
+});
+
+test("the payload contributes nothing to a non-nai lane", () => {
+  const loaded = { naiOptionOverrides: { steps: 40, straightAlpha: true }, negativePrompt: "blurry" };
+  for (const provider of ["oauth", "api", "grok", "gemini-api", "minimax", "comfy"]) {
+    assert.deepEqual(naiPayloadFields(stateOf({ ...loaded, provider })), {}, provider);
+  }
+});
+
+test("a null seed is omitted rather than sent as a literal zero", () => {
+  assert.deepEqual(naiPayloadFields(stateOf({ naiOptionOverrides: { seed: null } })), {});
+  // 0 is a real NovelAI seed and must survive.
+  assert.deepEqual(naiPayloadFields(stateOf({ naiOptionOverrides: { seed: 0 } })), { seed: 0 });
+});
+
+test("node mode gates on the node's own lane, not the global one", () => {
+  // Node variants carry a per-node provider/model (higgsfield 120). Gating on
+  // global state either starves a NAI node or leaks NAI fields into another
+  // lane's request — found by the wp5 adversarial audit.
+  const overrides = { steps: 40, straightAlpha: true };
+
+  // Global lane is GPT, the node is NAI: the node's options must still ride.
+  assert.deepEqual(
+    naiPayloadFields(
+      stateOf({ provider: "oauth", imageModel: "gpt-image-1", naiOptionOverrides: overrides, negativePrompt: "blurry" }),
+      { provider: "nai", imageModel: "nai-diffusion-5-full" },
+    ),
+    { steps: 40, straightAlpha: true, negativePrompt: "blurry" },
+  );
+
+  // Global lane is NAI, the node is not: nothing may leak into that request.
+  assert.deepEqual(
+    naiPayloadFields(
+      stateOf({ naiOptionOverrides: overrides, negativePrompt: "blurry" }),
+      { provider: "oauth", imageModel: "gpt-image-1" },
+    ),
+    {},
+  );
+
+  // Global model is V5, the node is V4.5: the V5-only field is stripped.
+  assert.deepEqual(
+    naiPayloadFields(
+      stateOf({ naiOptionOverrides: overrides }),
+      { provider: "nai", imageModel: "nai-diffusion-4-5-full" },
+    ),
+    { steps: 40 },
   );
 });
 
@@ -124,16 +187,24 @@ test("all three client payload builders carry the nai fields", () => {
   // classic + multimode live in storeGenImpl; node has its own builder and its
   // own request type, so it is easy to forget.
   assert.equal(gen.split("...naiPayloadFields(s)").length - 1, 2, "classic and multimode");
-  assert.match(node, /\.\.\.naiPayloadFields\(s\)/, "node mode");
+  // Node passes its effective lane explicitly (see the behavioral case below).
+  assert.match(node, /\.\.\.naiPayloadFields\(s, \{ provider: nodeProvider, imageModel: nodeModel \}\)/, "node mode");
 });
 
 test("V5-only fields are stripped for a V4.5 model", () => {
-  const source = read("ui/src/store/storeGenImpl.ts");
-  assert.match(source, /if \(!isNaiV5Model\(s\.imageModel\)\)/);
-  assert.match(source, /delete o\.straightAlpha/);
-  assert.match(source, /delete o\.qualityPresetId/);
-  assert.equal(isNaiV5Model("nai-diffusion-5-full"), true);
-  assert.equal(isNaiV5Model("nai-diffusion-4-5-full"), false);
+  const stale = { straightAlpha: true, qualityPresetId: "light", steps: 30 };
+  // Model and options hydrate from independent persisted keys, so V4.5 can
+  // arrive alongside a flag the user set on V5.
+  assert.deepEqual(
+    naiPayloadFields(stateOf({ imageModel: "nai-diffusion-4-5-full", naiOptionOverrides: stale })),
+    { steps: 30 },
+  );
+  assert.deepEqual(
+    naiPayloadFields(stateOf({ imageModel: "nai-diffusion-5-full", naiOptionOverrides: stale })),
+    stale,
+  );
+  assert.equal(isNaiV5Model("nai-diffusion-5-curated"), true);
+  assert.equal(isNaiV5Model("nai-diffusion-4-5-curated"), false);
 });
 
 test("nai forces one image and skips the multimode path", () => {
@@ -178,4 +249,3 @@ test("capabilities hydrate the server defaults through the same coercion", () =>
   const source = read("ui/src/store/storeCapabilitiesImpl.ts");
   assert.match(source, /naiServerDefaults: coerceNaiOverrides\(capabilities\.defaults\?\.nai/);
 });
-

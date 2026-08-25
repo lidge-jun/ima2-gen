@@ -2331,6 +2331,7 @@
       "hint": "피하고 싶은 태그를 적습니다. 아래 프리셋과 함께 적용됩니다."
     },
     "panel": {
+      "modelTitle": "모델",
       "sizeTitle": "크기",
       "samplingTitle": "샘플링",
       "presetTitle": "프리셋",

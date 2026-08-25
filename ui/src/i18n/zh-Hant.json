@@ -2331,6 +2331,7 @@
       "hint": "想要避開的標籤。與下方預設一同生效。"
     },
     "panel": {
+      "modelTitle": "模型",
       "sizeTitle": "尺寸",
       "samplingTitle": "取樣",
       "presetTitle": "預設",
