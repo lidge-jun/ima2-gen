@@ -16,11 +16,11 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.9",
-    "@xyflow/react": "^12.11.2",
+    "@xyflow/react": "^12.11.3",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
