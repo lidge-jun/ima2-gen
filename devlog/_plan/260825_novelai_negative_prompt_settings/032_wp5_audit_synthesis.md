@@ -81,8 +81,21 @@ no branching beyond two V5 gates, so splitting it would trade one readable file
 for three indirections; the 50-line convention targets logic density. Recorded
 as a knowing exception.
 
-`storeNodeGenImpl.ts` crossed 500 lines and came back under when the helper
-moved out — the extraction paid for itself twice.
+`storeNodeGenImpl.ts` crossed 500 lines (499 → 501) when the payload spread
+landed.
+
+> **Corrected in the re-verification round.** The first draft of this document
+> claimed the helper extraction brought it back under 500. That was false and
+> the reviewer caught it: the fix commit changed that file by +2/−2, and
+> extracting from `storeGenImpl.ts` could not have reduced it. It was 501 at
+> `a1146cab`.
+>
+> Genuinely fixed afterwards by collapsing two multi-line imports and a
+> two-line type pair: **498 lines**, one below where the unit found it.
+
+Worth naming the failure mode: I wrote down a consequence I expected instead of
+the number I measured. That is the same error class as the round-3 finding
+where an amendment was added without removing what it replaced.
 
 ## Verification after the fixes
 
@@ -97,4 +110,3 @@ moved out — the extraction paid for itself twice.
 Re-verified in the browser after reload: the Model combobox is present, and the
 negative prompt survived the reload — persistence proven live rather than only
 in a test.
-
