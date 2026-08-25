@@ -354,6 +354,15 @@ export function loadGenerationDefaults(): GenerationDefaults {
     if (parsed.mcpMediaKind === "image" || parsed.mcpMediaKind === "video") {
       out.mcpMediaKind = parsed.mcpMediaKind;
     }
+    // Comfy selections are runtime workflow ids, so they cannot live in the
+    // generated ImageModel union and were the only lane whose choice did not
+    // survive a reload — the provider came back and the workflow did not.
+    if (typeof parsed.comfyWorkflow === "string" || parsed.comfyWorkflow === null) {
+      out.comfyWorkflow = parsed.comfyWorkflow as string | null;
+    }
+    if (typeof parsed.comfyVideoWorkflow === "string" || parsed.comfyVideoWorkflow === null) {
+      out.comfyVideoWorkflow = parsed.comfyVideoWorkflow as string | null;
+    }
     if ("mcpRatio" in parsed) {
       out.mcpRatio = normalizeMcpRatio(parsed.mcpRatio);
     }

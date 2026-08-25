@@ -401,7 +401,12 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
      * meaning, so choosing "the first" would run a graph nobody asked for on
      * the user's GPU.
      */
-    set({ provider, comfyWorkflow: null, comfyVideoWorkflow: null });
+    // Clear only when arriving from ANOTHER lane. Re-selecting comfy while
+    // already on it (or hydrating a restored selection) must not throw the
+    // user's workflow away, which is what made the choice look unselectable
+    // again after a reload.
+    if (get().provider === "comfy") set({ provider });
+    else set({ provider, comfyWorkflow: null, comfyVideoWorkflow: null });
   } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && provider !== "minimax" && provider !== "nai" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel) || isMinimaxImageModel(currentModel) || isNaiImageModel(currentModel))) {
     set({ provider, imageModel: DEFAULT_IMAGE_MODEL });
     saveImageModel(DEFAULT_IMAGE_MODEL);
@@ -512,6 +517,7 @@ export function setComfyVideoWorkflowImpl(workflowId: string | null, set: StoreS
   // request carries exactly one of them.
   set({ comfyVideoWorkflow: workflowId, videoModelSelected: false });
   saveVideoDefaults({ model: false });
+  saveGenerationDefaultsPatch({ comfyVideoWorkflow: workflowId });
 }
 
 export function activeVideoRefCountImpl(get: StoreGet): number {
