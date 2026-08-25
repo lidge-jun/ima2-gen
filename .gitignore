@@ -53,3 +53,7 @@ cache/
 # NovelAI provider lane unit (260824): plan docs plus render evidence.
 !devlog/_plan/260824_novelai_provider_lane/
 !devlog/_plan/260824_novelai_provider_lane/**
+
+# Comfy video / provider UX / capability unit (260825): plan docs plus evidence.
+!devlog/_plan/260825_comfy_video_provider_ux/
+!devlog/_plan/260825_comfy_video_provider_ux/**
