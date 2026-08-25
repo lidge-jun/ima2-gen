@@ -167,8 +167,6 @@ test("/api/video/generate streams progress and saves mp4 + sidecar", async () =>
   }
 });
 
-test("/api/video/generate uses configured Grok Video 1.5 default when model is omitted", async () => {
-
 test("/api/video/generate records image-to-video mode when a reference is given", async () => {
   const proxy = makeProxy({});
   const proxyUrl = await listen(proxy);
@@ -201,6 +199,8 @@ test("/api/video/generate records image-to-video mode when a reference is given"
     await rm(generatedDir, { recursive: true, force: true });
   }
 });
+
+test("/api/video/generate uses configured Grok Video 1.5 default when model is omitted", async () => {
   let startBody: any = null;
   const proxy = makeProxy({ captureStart: (body) => { startBody = body; } });
   const proxyUrl = await listen(proxy);
@@ -416,8 +416,6 @@ test("/api/video/generate continueFromVideo extracts parent frame and stores bra
   }
 });
 
-test("/api/video/generate rejects non-grok provider and bad params", async () => {
-
 test("/api/video/generate accepts the comfy lane and refuses grok-only options", async () => {
   const generatedDir = await mkdtemp(join(tmpdir(), "ima2-video-comfy-"));
   const { server, url } = await videoApp(generatedDir, 18646);
@@ -458,6 +456,8 @@ test("/api/video/generate accepts the comfy lane and refuses grok-only options",
     await rm(generatedDir, { recursive: true, force: true });
   }
 });
+
+test("/api/video/generate rejects non-grok provider and bad params", async () => {
   const generatedDir = await mkdtemp(join(tmpdir(), "ima2-video-route-"));
   const { server, url } = await videoApp(generatedDir, 18645);
   try {

@@ -304,9 +304,15 @@ describe("comfy health probing", () => {
       if (String(input).startsWith(live)) {
         return json({ system: { comfyui_version: "0.27.0" } });
       }
-      // Never settles: only the short timeout ends this call.
+      // Stands in for a box that accepts the socket and never answers. The
+      // guard timer is a real ref'd timer so the loop cannot drain out from
+      // under this promise on runtimes where AbortSignal.timeout is unref'd.
       return new Promise((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => reject(new Error("timed out")), { once: true });
+        const guard = setTimeout(() => reject(new Error("timed out")), 200);
+        init?.signal?.addEventListener("abort", () => {
+          clearTimeout(guard);
+          reject(new Error("timed out"));
+        }, { once: true });
       });
     }) as unknown as typeof fetch;
 
