@@ -61,8 +61,11 @@ describe("governance files", () => {
     assert.match(codeql, /build-mode: none/);
     assert.doesNotMatch(codeql, /uses:\s*[^\s]+@v\d/);
     const nix = read(".github/workflows/nix.yml");
-    assert.match(nix, /cachix\/install-nix-action@08dcb3a5e62fa31e2da3d490afc4176ef55ecd72/);
-    assert.doesNotMatch(nix, /install-nix-action@v30(?!-)/);
+    // The rule is "pinned to an immutable commit", not "pinned to one specific
+    // commit forever": hardcoding the SHA made every Dependabot bump fail this
+    // gate even when the bump was correctly pinned (#162).
+    assert.match(nix, /cachix\/install-nix-action@[0-9a-f]{40}\b/);
+    assert.doesNotMatch(nix, /install-nix-action@v\d/);
   });
 
   it("groups Dependabot updates and caps open PRs at 5", () => {
@@ -82,4 +85,3 @@ describe("governance files", () => {
     assert.match(bug, /Do not attach cookies/);
   });
 });
-
