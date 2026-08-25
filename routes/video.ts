@@ -13,6 +13,7 @@ import { logEvent, logError } from "../lib/logger.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "../lib/backgroundPresets.js";
 import { invalidateHistoryIndex } from "../lib/historyIndex.js";
 import { generateVideoViaGrok, type GrokVideoEvent } from "../lib/grokVideoAdapter.js";
+import { generateVideoViaComfy, type ComfyQueueInfo } from "../lib/comfyImageAdapter.js";
 import { getVideoSeriesChain } from "../lib/videoSeriesChain.js";
 import {
   ACTIVE_VIDEO_PROMPT_GUIDANCE,
@@ -185,7 +186,21 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       const clientNodeId = typeof req.body?.clientNodeId === "string" ? req.body.clientNodeId : null;
       const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
 
-      if (provider !== "grok" && provider !== "grok-api") return fail(400, provider === "agy" ? "AGY_VIDEO_UNSUPPORTED" : "VIDEO_PROVIDER_UNSUPPORTED", provider === "agy" ? "Gemini (agy) does not support video generation" : "video generation requires provider 'grok' or 'grok-api'");
+      const isComfy = provider === "comfy";
+      if (!isComfy && provider !== "grok" && provider !== "grok-api") return fail(400, provider === "agy" ? "AGY_VIDEO_UNSUPPORTED" : "VIDEO_PROVIDER_UNSUPPORTED", provider === "agy" ? "Gemini (agy) does not support video generation" : "video generation requires provider 'grok', 'grok-api' or 'comfy'");
+      // Grok-only axes are refused rather than ignored. Accepting a storyboard
+      // or continuation request and silently dropping it would hand back a clip
+      // that quietly is not what was asked for.
+      if (isComfy) {
+        const unsupported = ["storyboard", "continueFromVideo", "continuityLineage", "topic", "plannerModel", "referenceAudios"]
+          .filter((key) => {
+            const value = (req.body ?? {})[key];
+            return value !== undefined && value !== null && value !== false && value !== "";
+          });
+        if (unsupported.length > 0) {
+          return fail(400, "COMFY_VIDEO_OPTION_UNSUPPORTED", `the comfy lane does not support: ${unsupported.join(", ")}`);
+        }
+      }
       const storyboardActive = req.body?.storyboard === true;
       const storyboardPrefix = storyboardActive
         ? [
@@ -223,7 +238,16 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       const activePrompt = requireActiveVideoPrompt(prompt);
       if (!activePrompt) return fail(400, "PROMPT_REQUIRED", "Prompt is required", { guidance: ACTIVE_VIDEO_PROMPT_GUIDANCE });
 
-      const modelCheck = normalizeGrokVideoModel(rawModel || ctx.config.grokProvider.defaultVideoModel);
+      // A comfy workflow id is not a grok model id, so the grok normalizer would
+      // reject it. The branch has to happen here, before normalization, while the
+      // actual comfy run stays below with admission and cancellation.
+      const comfyWorkflowId = isComfy ? String(rawModel ?? "").trim() : "";
+      if (isComfy && !comfyWorkflowId) {
+        return fail(400, "COMFY_WORKFLOW_REQUIRED", "provider 'comfy' requires a workflow id as the model.");
+      }
+      const modelCheck = isComfy
+        ? { model: comfyWorkflowId }
+        : normalizeGrokVideoModel(rawModel || ctx.config.grokProvider.defaultVideoModel);
       if (isNormalizeError(modelCheck)) return fail(modelCheck.status, modelCheck.code, modelCheck.error);
       const durationCheck = normalizeVideoDuration(req.body?.duration);
       if (isNormalizeError(durationCheck)) return fail(durationCheck.status, durationCheck.code, durationCheck.error);
@@ -389,6 +413,78 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
 
       logEvent("video", "request", { requestId, mode, duration, resolution: resolutionCheck.resolution, aspectRatio: aspectCheck.aspectRatio });
       const startTime = Date.now();
+
+      if (isComfy) {
+        // Deliberately inside the handler closure, after startJob and
+        // registerJobAbortController: cancelController.signal is what carries a
+        // UI cancel into the adapter's poll loop, and finishJob in the finally
+        // below is what releases the inflight slot. A separate top-level handler
+        // would have had neither.
+        setJobPhase(requestId, "streaming");
+        dualEmitVideo(res, requestId, "submitted", { requestId, requestedModel: comfyWorkflowId, effectiveModel: comfyWorkflowId });
+        const comfyResult = await generateVideoViaComfy(activePrompt, ctx, {
+          model: comfyWorkflowId,
+          signal: cancelController.signal,
+          requestId,
+          ...(sourceB64 ? { references: [{ b64: sourceB64 }] } : {}),
+          onQueue: (info: ComfyQueueInfo) => {
+            dualEmitVideo(res, requestId, "progress", {
+              requestId,
+              progress: null,
+              queuePosition: info.position,
+              running: info.running,
+            });
+          },
+        });
+        const comfyRand = randomBytes(ctx.config.ids.generatedHexBytes).toString("hex");
+        const comfyFilename = `${Date.now()}_${comfyRand}.mp4`;
+        const comfyElapsed = +((Date.now() - startTime) / 1000).toFixed(1);
+        const comfyBuffer = Buffer.from(comfyResult.b64, "base64");
+        const comfyMeta = {
+          kind: "video",
+          mediaType: "video",
+          providerUrl: comfyResult.providerUrl ?? null,
+          requestId,
+          sessionId,
+          clientNodeId,
+          prompt: activePrompt,
+          userPrompt: activePrompt,
+          revisedPrompt: null,
+          presetIds,
+          provider,
+          model: comfyResult.effectiveModel,
+          requestedModel: comfyWorkflowId,
+          effectiveModel: comfyResult.effectiveModel,
+          createdAt: Date.now(),
+          elapsed: comfyElapsed,
+          usage: null,
+          webSearchCalls: 0,
+          video: {
+            sourceImageFilename: sourceFilename,
+            comfyPromptId: comfyResult.promptId,
+            comfyOrigin: comfyResult.origin,
+          },
+        };
+        await saveGeneratedVideoArtifact(ctx, comfyFilename, comfyBuffer, comfyMeta);
+        generateVideoThumbnail(join(ctx.config.storage.generatedDir, comfyFilename)).catch(() => {});
+        invalidateHistoryIndex();
+        finishMeta = { filename: comfyFilename };
+        logEvent("comfy", "video:saved", { requestId, filename: comfyFilename, bytes: comfyBuffer.length, elapsedMs: Date.now() - startTime });
+        dualEmitVideo(res, requestId, "done", {
+          requestId,
+          filename: comfyFilename,
+          url: `/generated/${encodeURIComponent(comfyFilename)}`,
+          providerUrl: comfyResult.providerUrl ?? null,
+          mediaType: "video",
+          revisedPrompt: null,
+          elapsed: comfyElapsed,
+          usage: null,
+          requestedModel: comfyWorkflowId,
+          effectiveModel: comfyResult.effectiveModel,
+          video: comfyMeta.video,
+        });
+        return;
+      }
 
       const onEvent = (ev: GrokVideoEvent) => {
         if (ev.phase === "submitted") {

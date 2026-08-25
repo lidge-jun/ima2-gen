@@ -65,6 +65,10 @@ export interface ComfyWorkflowBindings {
   height?: ComfyBinding;
   seed?: ComfyBinding;
   refImage?: ComfyBinding;
+  /** Frame count for video graphs. H3 uses the 17n+5 grid at 24fps. */
+  length?: ComfyBinding;
+  /** Frames per second, when the graph exposes it as a scalar. */
+  fps?: ComfyBinding;
   /** SaveImage-like node whose outputs are collected. No input key. */
   output: { node: string };
 }

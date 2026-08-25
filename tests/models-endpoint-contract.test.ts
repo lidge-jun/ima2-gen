@@ -183,8 +183,10 @@ test("the Comfy lane separates image and locked video workflows without inventin
       const h3 = body.lanes.comfy.models.video[0];
       assert.equal(h3?.id, "h3");
       assert.equal(h3?.label, "MiniMax H3 FL2VA pruned NVFP4");
-      assert.equal(h3?.executable, false);
-      assert.match(h3?.lockReason ?? "", /video execution is not supported/);
+      // Video workflows are executable now. A dead origin still reads through
+      // the description, which is availability rather than a capability lock.
+      assert.notEqual(h3?.executable, false);
+      assert.equal(h3?.lockReason, undefined);
     });
 });
 

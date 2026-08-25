@@ -10,8 +10,8 @@
 import { basename } from "node:path";
 import { uploadBufferToComfy } from "./comfyBridge.js";
 import { bindGraph } from "./comfyGraphBind.js";
-import { getWorkflow, type ComfyGraph, type ComfyWorkflowRecord } from "./comfyWorkflowStore.js";
-import { detectImageMimeFromB64 } from "./refs.js";
+import { getWorkflow, type ComfyGraph, type ComfyMediaKind, type ComfyWorkflowRecord } from "./comfyWorkflowStore.js";
+import { detectImageMimeFromB64, detectVideoMimeFromB64 } from "./refs.js";
 import { logEvent } from "./logger.js";
 import type { RuntimeContext } from "./runtimeContext.js";
 
@@ -25,9 +25,20 @@ export const COMFY_ERR = {
   DOWNLOAD_FAILED: "COMFY_DOWNLOAD_FAILED",
   TIMEOUT: "COMFY_TIMEOUT",
   IMAGE_INVALID: "COMFY_IMAGE_INVALID",
+  NO_VIDEO: "COMFY_NO_VIDEO",
+  VIDEO_INVALID: "COMFY_VIDEO_INVALID",
+  VIDEO_FORMAT_UNSUPPORTED: "COMFY_VIDEO_FORMAT_UNSUPPORTED",
 } as const;
 
 const CANCELED_CODE = "GENERATION_CANCELED";
+
+/**
+ * Polls a completed-but-empty history entry a few more times.
+ *
+ * ComfyUI can report a run complete a beat before its outputs are readable, and
+ * video files are the ones large enough to lose that race.
+ */
+const MAX_EMPTY_OUTPUT_RETRIES = 5;
 
 export function comfyError(code: string, message: string, status = 502): Error {
   const err = new Error(message) as Error & { code?: string; status?: number; isOperational?: boolean };
@@ -71,6 +82,12 @@ export interface ComfyGenerateOptions {
   requestId?: string | undefined;
   onQueue?: ((info: ComfyQueueInfo) => void) | undefined;
   fetchImpl?: typeof fetch | undefined;
+}
+
+export interface ComfyVideoGenerateOptions extends ComfyGenerateOptions {
+  /** Frame count. H3 wants the 17n+5 grid at 24fps. */
+  length?: number | undefined;
+  fps?: number | undefined;
 }
 
 export interface ComfyImageResult {
@@ -206,7 +223,15 @@ export async function probeComfyOrigins(
 
 interface HistoryEntry {
   status?: { status_str?: string; completed?: boolean; messages?: unknown[] };
-  outputs?: Record<string, { images?: Array<Record<string, unknown>> }>;
+  outputs?: Record<string, {
+    images?: Array<Record<string, unknown>>;
+    /** VideoHelperSuite's output key. Not a ComfyUI core contract. */
+    gifs?: Array<Record<string, unknown>>;
+    /** Read for forward/custom-node compatibility; core does not emit it. */
+    videos?: Array<Record<string, unknown>>;
+    /** PreviewVideo sets this; it is what separates a clip from a still. */
+    animated?: unknown;
+  }>;
 }
 
 /** Locates a prompt in the queue so a caller can report real waiting. */
@@ -244,9 +269,53 @@ function collectImages(entry: HistoryEntry, outputNode: string): Array<Record<st
   return [];
 }
 
-async function downloadImage(
+/**
+ * Collects video descriptors from a history entry.
+ *
+ * ComfyUI core does not have a "videos" output key. SaveVideo and SaveWEBM both
+ * return `ui.PreviewVideo`, which serializes as
+ * `{"images": [...], "animated": (True,)}` (verified 2026-08-25 against
+ * comfy_api/latest/_ui.py:432-437 and comfy_extras/nodes_video.py:73,202). So a
+ * saved video arrives under the SAME key an image does, and the `animated` flag
+ * is what tells them apart.
+ *
+ * `gifs` is VideoHelperSuite's key and `videos` is read only for forward and
+ * custom-node compatibility; neither is a core contract.
+ *
+ * The bound node is authoritative. The any-node fallback that the image path
+ * uses is deliberately stricter here: it accepts an entry only when something
+ * marks it as moving footage, because a graph carrying a PreviewImage alongside
+ * its SaveVideo would otherwise hand back a still frame that then dies as an
+ * invalid video.
+ */
+function collectVideos(entry: HistoryEntry, outputNode: string): Array<Record<string, unknown>> {
+  const outputs = entry.outputs ?? {};
+  const bound = outputs[outputNode];
+  if (bound) {
+    for (const key of ["images", "gifs", "videos"] as const) {
+      const list = bound[key];
+      if (Array.isArray(list) && list.length > 0) return list;
+    }
+  }
+  for (const value of Object.values(outputs)) {
+    if (!value) continue;
+    for (const key of ["gifs", "videos"] as const) {
+      const list = value[key];
+      if (Array.isArray(list) && list.length > 0) return list;
+    }
+    // Plain `images` from an unbound node only counts when the node itself said
+    // the payload is animated.
+    if (value.animated && Array.isArray(value.images) && value.images.length > 0) {
+      return value.images;
+    }
+  }
+  return [];
+}
+
+async function downloadArtifact(
   url: string,
   maxBytes: number,
+  kind: ComfyMediaKind,
   signal: AbortSignal | undefined,
   fetchImpl: typeof fetch,
 ): Promise<{ b64: string; mime: string }> {
@@ -258,7 +327,7 @@ async function downloadImage(
     throw comfyError(COMFY_ERR.DOWNLOAD_FAILED, `Could not download the ComfyUI output: ${error instanceof Error ? error.message : "unknown error"}`);
   }
   if (!res.ok) {
-    throw comfyError(COMFY_ERR.DOWNLOAD_FAILED, `ComfyUI returned HTTP ${res.status} for the generated image.`);
+    throw comfyError(COMFY_ERR.DOWNLOAD_FAILED, `ComfyUI returned HTTP ${res.status} for the generated ${kind}.`);
   }
   const declared = Number(res.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > maxBytes) {
@@ -271,6 +340,24 @@ async function downloadImage(
   const b64 = buffer.toString("base64");
   // Trust the bytes, not the Content-Type: an HTML error page saved as .png is
   // the failure this guards against.
+  if (kind === "video") {
+    const detected = detectVideoMimeFromB64(b64);
+    if (!detected) {
+      throw comfyError(COMFY_ERR.VIDEO_INVALID, "ComfyUI returned something that is not a video.");
+    }
+    // Naming the container we did get beats a generic refusal: every downstream
+    // consumer here is anchored to .mp4 (routes/video.ts mints the filename,
+    // videoContinuity rejects other extensions, frame extraction assumes it), so
+    // storing WebM under an .mp4 name would misdeclare it to all of them.
+    if (detected !== "video/mp4" && detected !== "video/quicktime") {
+      throw comfyError(
+        COMFY_ERR.VIDEO_FORMAT_UNSUPPORTED,
+        `ComfyUI returned ${detected}; ima2 stores MP4 only. Set the SaveVideo format to mp4.`,
+        400,
+      );
+    }
+    return { b64, mime: detected };
+  }
   const mime = detectImageMimeFromB64(b64);
   if (!mime) {
     throw comfyError(COMFY_ERR.IMAGE_INVALID, "ComfyUI returned something that is not an image.");
@@ -300,6 +387,32 @@ export async function generateViaComfy(
   ctx: RuntimeContext,
   options: ComfyGenerateOptions = {},
 ): Promise<ComfyImageResult> {
+  return runComfyWorkflow(prompt, ctx, options, "image");
+}
+
+/**
+ * Runs one video generation on the workflow named by `options.model`.
+ *
+ * Shares every step with the image path — submit, queue reporting, polling,
+ * cancellation, download limits — and differs only in which history key it
+ * reads and which magic bytes it accepts. Splitting the whole runtime would
+ * have duplicated the cancel discipline, which is the part most expensive to
+ * get wrong.
+ */
+export async function generateVideoViaComfy(
+  prompt: string,
+  ctx: RuntimeContext,
+  options: ComfyVideoGenerateOptions = {},
+): Promise<ComfyImageResult> {
+  return runComfyWorkflow(prompt, ctx, options, "video");
+}
+
+async function runComfyWorkflow(
+  prompt: string,
+  ctx: RuntimeContext,
+  options: ComfyVideoGenerateOptions,
+  mediaKind: ComfyMediaKind,
+): Promise<ComfyImageResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const workflowId = options.model;
   if (!workflowId) {
@@ -325,6 +438,8 @@ export async function generateViaComfy(
     width,
     height,
     seed: options.seed,
+    length: options.length,
+    fps: options.fps,
     refImageName,
     params: options.params,
   }, workflow.params);
@@ -371,6 +486,7 @@ export async function generateViaComfy(
 
   const deadline = Date.now() + cfg.generationTimeoutMs;
   let missing = 0;
+  let emptyOutputRetries = 0;
   let lastQueue: string | null = null;
 
   for (;;) {
@@ -400,13 +516,29 @@ export async function generateViaComfy(
         const tail = JSON.stringify(messages.slice(-1)).slice(0, 300);
         throw comfyError(COMFY_ERR.EXECUTION_FAILED, `ComfyUI reported '${entry.status?.status_str ?? "unknown"}': ${tail}`);
       }
-      const images = collectImages(entry, workflow.bind.output.node);
-      const first = images[0];
+      const outputs = mediaKind === "video"
+        ? collectVideos(entry, workflow.bind.output.node)
+        : collectImages(entry, workflow.bind.output.node);
+      const first = outputs[0];
       if (!first) {
+        if (mediaKind === "video") {
+          // A completed run whose outputs are still empty is the documented
+          // history-persistence race, not a failure. It is answered by retrying
+          // the poll, NOT by loosening `missing`: that counter also detects a
+          // job vanishing from queue and history, and raising it would blunt
+          // both. Scoped to video so the image path keeps failing fast.
+          if (emptyOutputRetries < MAX_EMPTY_OUTPUT_RETRIES) {
+            emptyOutputRetries += 1;
+            logEvent("comfy", "video:outputs-empty-retry", { requestId, promptId, attempt: emptyOutputRetries });
+            await sleep(cfg.pollIntervalMs);
+            continue;
+          }
+          throw comfyError(COMFY_ERR.NO_VIDEO, "The workflow finished but produced no video. Check that its output node saves a video.");
+        }
         throw comfyError(COMFY_ERR.NO_IMAGE, "The workflow finished but produced no image. Check that its output node saves an image.");
       }
       const url = buildViewUrl(origin, first);
-      const downloaded = await downloadImage(url, cfg.maxDownloadBytes, options.signal, fetchImpl);
+      const downloaded = await downloadArtifact(url, cfg.maxDownloadBytes, mediaKind, options.signal, fetchImpl);
       logEvent("comfy", "generate:done", { requestId, workflow: workflowId, origin, promptId });
       return {
         b64: downloaded.b64,

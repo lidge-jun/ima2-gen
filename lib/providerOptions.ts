@@ -80,8 +80,11 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
     const workflow = ctx?.comfyWorkflows?.find((entry) => entry.id === comfyCheck.model);
     if (workflow?.mediaKind === "video") {
       return {
-        error: "ComfyUI video execution is not supported yet",
-        code: "COMFY_VIDEO_EXECUTION_LOCKED",
+        // The workflow is runnable; it just belongs on the other endpoint. The
+        // old wording said execution was unsupported, which stopped being true
+        // once the video path landed.
+        error: "This ComfyUI workflow produces video. Send it to /api/video/generate instead.",
+        code: "COMFY_VIDEO_WRONG_ENDPOINT",
         status: 400,
       };
     }

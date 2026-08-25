@@ -89,6 +89,11 @@ const FIELD_RULES: ReadonlyArray<{ field: ComfyBindField; classType: string; inp
   { field: "seed", classType: "KSampler", input: "seed" },
   { field: "seed", classType: "RandomNoise", input: "noise_seed" },
   { field: "refImage", classType: "LoadImage", input: "image" },
+  // Measured against the registered H3 graph on 2026-08-25: length lives on the
+  // task node and fps on CreateVideo. SaveVideo carries neither, so a rule
+  // pointed at it could never produce a candidate.
+  { field: "length", classType: "MiniMaxH3ImageToVideo", input: "length" },
+  { field: "fps", classType: "CreateVideo", input: "fps" },
   { field: "output", classType: "SaveImage", input: "" },
   { field: "output", classType: "SaveVideo", input: "" },
 ];
@@ -190,6 +195,8 @@ export interface BindValues {
   width?: number | undefined;
   height?: number | undefined;
   seed?: number | undefined;
+  length?: number | undefined;
+  fps?: number | undefined;
   refImageName?: string | undefined;
   params?: Record<string, number | string | boolean> | undefined;
 }
@@ -221,11 +228,23 @@ export function bindGraph(
   params: readonly ComfyWorkflowParam[] = [],
 ): ComfyGraph {
   const copy = structuredClone(graph) as ComfyGraph;
-  assign(copy, bind.prompt, values.prompt, "prompt");
-  assign(copy, bind.negativePrompt, values.negativePrompt, "negative prompt");
-  assign(copy, bind.width, values.width, "width");
-  assign(copy, bind.height, values.height, "height");
-  assign(copy, bind.seed, values.seed, "seed");
+  // Inputs a binding actually wrote. A stored param naming the same input must
+  // not overwrite the request's value afterwards — but a param whose binding
+  // stayed silent keeps applying, so a tuned value is never lost just because a
+  // binding exists for that input.
+  const written = new Set<string>();
+  const put = (binding: ComfyBinding | undefined, value: unknown, label: string) => {
+    if (!binding || value === undefined) return;
+    assign(copy, binding, value, label);
+    written.add(`${binding.node}.${binding.input}`);
+  };
+  put(bind.prompt, values.prompt, "prompt");
+  put(bind.negativePrompt, values.negativePrompt, "negative prompt");
+  put(bind.width, values.width, "width");
+  put(bind.height, values.height, "height");
+  put(bind.seed, values.seed, "seed");
+  put(bind.length, values.length, "length");
+  put(bind.fps, values.fps, "fps");
   if (values.refImageName !== undefined) {
     if (!bind.refImage) {
       throw new ComfyWorkflowError(
@@ -233,12 +252,13 @@ export function bindGraph(
         "This workflow has no reference-image binding, so it cannot accept an input image.",
       );
     }
-    assign(copy, bind.refImage, values.refImageName, "reference image");
+    put(bind.refImage, values.refImageName, "reference image");
   }
   if (values.params) {
     for (const [name, value] of Object.entries(values.params)) {
       const param = params.find((entry) => entry.name === name);
       if (!param) continue;
+      if (written.has(`${param.node}.${param.input}`)) continue;
       assign(copy, { node: param.node, input: param.input }, value, name);
     }
   }

@@ -169,12 +169,16 @@ describe("comfy workflow routes", () => {
 });
 
 describe("comfy provider option resolution", () => {
-  it("blocks a registered video workflow from the classic image path", () => {
+  // The guard survives the video lane landing, but its meaning narrowed: the
+  // workflow is runnable, just not on the image endpoint. The old code said
+  // execution was unsupported, which is no longer true.
+  it("redirects a registered video workflow off the classic image path", () => {
     const result = resolveProviderOptions({
       comfyWorkflows: [{ id: "minimax-h3", mediaKind: "video" }],
     } as never, { provider: "comfy", rawModel: "minimax-h3" });
-    assert.equal(result.code, "COMFY_VIDEO_EXECUTION_LOCKED");
+    assert.equal(result.code, "COMFY_VIDEO_WRONG_ENDPOINT");
     assert.equal(result.status, 400);
+    assert.match(result.error ?? "", /\/api\/video\/generate/);
   });
 
   it("requires an explicit workflow id and invents no default", () => {

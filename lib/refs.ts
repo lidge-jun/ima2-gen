@@ -38,6 +38,37 @@ export function detectImageMimeFromB64(b64: string | null | undefined) {
   return null;
 }
 
+/**
+ * Identifies a video container from its leading bytes.
+ *
+ * ComfyUI reports a filename and a folder, never a trustworthy content type, so
+ * the bytes are the only honest source: an HTML error page saved as .mp4 is the
+ * exact failure this guards against.
+ *
+ * Returns the detected container even when ima2 cannot store it, so the caller
+ * can say "this is WebM and we only keep MP4" instead of the useless "not a
+ * video". Storage support is the caller's decision, not this function's.
+ */
+export function detectVideoMimeFromB64(b64: string | null | undefined) {
+  if (!b64) return null;
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(b64, "base64");
+  } catch {
+    return null;
+  }
+  // ISO base media (MP4/MOV): a size field, then 'ftyp' at offset 4.
+  if (buf.length >= 12 && buf.toString("ascii", 4, 8) === "ftyp") {
+    const brand = buf.toString("ascii", 8, 12);
+    return brand.startsWith("qt") ? "video/quicktime" : "video/mp4";
+  }
+  // EBML header shared by WebM and Matroska.
+  if (buf.length >= 4 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) {
+    return "video/webm";
+  }
+  return null;
+}
+
 export function safeReferenceDiagnostics(refDetails: any[] = []) {
   if (!Array.isArray(refDetails)) return [];
   return refDetails.map((ref: any) => ({

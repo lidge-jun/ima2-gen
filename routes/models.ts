@@ -52,7 +52,6 @@ interface ModelsRouteDeps {
 type LaneState = { status: ModelLaneStatus; reason?: string | undefined };
 type CatalogResult = { models: McpProviderModels; reason?: string | undefined; disconnected?: boolean | undefined };
 
-const COMFY_VIDEO_LOCK_REASON = "ComfyUI video execution is not supported yet";
 
 const MCP_LANES = new Set<ModelLaneId>(["runway", "higgsfield"]);
 const MCP_PROVIDER_FALLBACKS = listProviders([])
@@ -314,11 +313,11 @@ async function comfyLane(ctx: RuntimeContext, deps: ModelsRouteDeps = {}): Promi
     });
   return lane(state, firstImage ? { image: firstImage.id } : {}, {
     image: imageWorkflows.map(projectWorkflow),
-    video: videoWorkflows.map((workflow) => ({
-      ...projectWorkflow(workflow),
-      executable: false,
-      lockReason: COMFY_VIDEO_LOCK_REASON,
-    })),
+    // Video workflows run for real now, so they carry no blanket lock. A dead
+    // origin still shows through the "(offline)" description that
+    // projectWorkflow attaches, which the selector reads to disable the row —
+    // that is an availability fact, not a capability lock.
+    video: videoWorkflows.map(projectWorkflow),
   });
 }
 
