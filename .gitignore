@@ -61,3 +61,7 @@ cache/
 # Issue batch #170-#173 (260825): plan docs plus evidence.
 !devlog/_plan/260825_issue_batch_170_173/
 !devlog/_plan/260825_issue_batch_170_173/**
+
+# NovelAI negative prompt + native settings panel (260825): plan docs plus evidence.
+!devlog/_plan/260825_novelai_negative_prompt_settings/
+!devlog/_plan/260825_novelai_negative_prompt_settings/**
