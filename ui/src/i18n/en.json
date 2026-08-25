@@ -2300,7 +2300,7 @@
     "kindLabel": "Media kind",
     "kindImage": "Image",
     "kindVideo": "Video",
-    "videoCatalogOnly": "Catalog only — ComfyUI video execution is not supported yet.",
+    "videoKindHint": "Video workflows run through the video endpoint.",
     "videoCatalogShort": "Catalog only",
     "bindTitle": "Where do the request fields go?",
     "bindAmbiguous": "Some fields matched more than one node. Pick each one — a wrong choice swaps your prompts silently.",

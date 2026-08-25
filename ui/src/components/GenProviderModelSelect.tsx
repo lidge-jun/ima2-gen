@@ -72,6 +72,8 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   const setProvider = useAppStore((state) => state.setProvider);
   const setImageModel = useAppStore((state) => state.setImageModel);
   const selectVideoModel = useAppStore((state) => state.selectVideoModel);
+  const setComfyVideoWorkflow = useAppStore((state) => state.setComfyVideoWorkflow);
+  const comfyVideoWorkflow = useAppStore((state) => state.comfyVideoWorkflow);
   const setReasoningEffort = useAppStore((state) => state.setReasoningEffort);
   const reasoningEffort = useAppStore((state) => state.reasoningEffort);
   const { providers, loading, error } = useMcpProviders();
@@ -154,10 +156,15 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
     ? comfyLane.video.map((entry) => ({
       id: entry.id,
       label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
-      reason: entry.lockReason ?? t("comfy.videoCatalogOnly"),
+      // No invented reason: if the server does not lock the row, there is
+      // nothing to explain. Offline is a separate, real condition below.
+      reason: entry.lockReason,
+      disabled: entry.executable === false || Boolean(entry.description?.endsWith("(offline)")),
     }))
     : [];
-  const coreModelValue = videoModel ? `${VIDEO_PREFIX}${videoModel}` : imageModel;
+  const coreModelValue = comfyVideoWorkflow
+    ? `${COMFY_VIDEO_PREFIX}${comfyVideoWorkflow}`
+    : videoModel ? `${VIDEO_PREFIX}${videoModel}` : imageModel;
   const modelValue = mcpProvider
     ? (mcpModel ? encodeMcpModelValue(mcpMediaKind, mcpModel) : "")
     : coreModelValue;
@@ -195,7 +202,10 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   };
 
   const onModelChange = (value: string) => {
-    if (value.startsWith(COMFY_VIDEO_PREFIX)) return;
+    if (value.startsWith(COMFY_VIDEO_PREFIX)) {
+      setComfyVideoWorkflow(value.slice(COMFY_VIDEO_PREFIX.length));
+      return;
+    }
     if (value.startsWith(EFFORT_PREFIX)) {
       setReasoningEffort(value.slice(EFFORT_PREFIX.length) as ReasoningEffort);
       return;
@@ -297,10 +307,8 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         items: comfyVideoWorkflows.map((entry) => ({
           value: `${COMFY_VIDEO_PREFIX}${entry.id}`,
           label: entry.label,
-          sub: t("comfy.videoCatalogShort"),
-          title: entry.reason,
-          stacked: true,
-          disabled: true,
+          ...(entry.reason ? { sub: t("comfy.videoCatalogShort"), title: entry.reason, stacked: true } : {}),
+          ...(entry.disabled ? { disabled: true } : {}),
         })),
       });
     }

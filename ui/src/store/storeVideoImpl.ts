@@ -29,6 +29,22 @@ function selectedElementIds(state: AppState): string[] {
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
 }
 
+/**
+ * Resolves which lane a video request belongs to.
+ *
+ * Both call sites used to cast the provider to grok unconditionally, so a comfy
+ * workflow selected in the UI still submitted a Grok generation. Lanes that
+ * cannot do video keep folding to grok, which is the historical behavior.
+ */
+function videoLaneFields(state: AppState): { provider: "grok" | "grok-api" | "comfy"; model?: string } {
+  if (state.provider === "comfy" && state.comfyVideoWorkflow) {
+    return { provider: "comfy", model: state.comfyVideoWorkflow };
+  }
+  const provider = state.provider === "grok-api" ? "grok-api" : "grok";
+  const model = typeof state.videoModelSelected === "string" ? state.videoModelSelected : undefined;
+  return model ? { provider, model } : { provider };
+}
+
 function toPresetProvider(provider: AppState["provider"]): PresetProvider {
   if (provider === "grok" || provider === "grok-api") return "grok";
   if (provider === "gemini-api") return "gemini";
@@ -126,8 +142,7 @@ export async function runVideoGenerateImpl(
     const payload = {
       prompt,
       requestId: flightId,
-      provider: (get().provider === "grok-api" ? "grok-api" : "grok") as "grok" | "grok-api",
-      model: (typeof get().videoModelSelected === "string" && get().videoModelSelected) || undefined,
+      ...videoLaneFields(get()),
       // One attachment is ambiguous and the user owns the answer: animate this exact
       // picture (first frame) or carry its subject into a new scene (reference). Two or
       // more can only be references. v3.8.0 forced every count into the reference slot,
@@ -294,7 +309,7 @@ export async function animateImageImpl(
       presetIds: compiled.appliedPresetIds,
       elementIds: selectedElementIds(get()),
       requestId: flightId,
-      provider: (get().provider === "grok-api" ? "grok-api" : "grok") as "grok" | "grok-api",
+      ...videoLaneFields(get()),
       mode: "image-to-video" as const,
       sourceFilename: filename,
       duration: 5,

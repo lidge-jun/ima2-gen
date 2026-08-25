@@ -401,7 +401,7 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
      * meaning, so choosing "the first" would run a graph nobody asked for on
      * the user's GPU.
      */
-    set({ provider, comfyWorkflow: null });
+    set({ provider, comfyWorkflow: null, comfyVideoWorkflow: null });
   } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && provider !== "minimax" && provider !== "nai" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel) || isMinimaxImageModel(currentModel) || isNaiImageModel(currentModel))) {
     set({ provider, imageModel: DEFAULT_IMAGE_MODEL });
     saveImageModel(DEFAULT_IMAGE_MODEL);
@@ -497,6 +497,21 @@ export function selectVideoModelImpl(model: string | undefined, set: StoreSet, g
   saveVideoDefaults({ model: m });
   const provider = get().provider;
   if (provider !== "grok" && provider !== "grok-api") get().setProvider("grok");
+}
+
+/**
+ * Selects a Comfy video workflow.
+ *
+ * Deliberately not routed through selectVideoModelImpl: that path normalizes
+ * through normalizeVideoModelValue, which rewrites any non-Grok id to
+ * grok-imagine-video-1.5 and then drags the provider back to grok. A comfy
+ * workflow sent there would silently become a Grok generation.
+ */
+export function setComfyVideoWorkflowImpl(workflowId: string | null, set: StoreSet): void {
+  // A comfy video selection and a grok video model are mutually exclusive; the
+  // request carries exactly one of them.
+  set({ comfyVideoWorkflow: workflowId, videoModelSelected: false });
+  saveVideoDefaults({ model: false });
 }
 
 export function activeVideoRefCountImpl(get: StoreGet): number {

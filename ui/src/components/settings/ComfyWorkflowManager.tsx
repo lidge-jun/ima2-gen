@@ -277,7 +277,7 @@ export function ComfyWorkflowManager() {
                   <option value="image">{t("comfy.kindImage")}</option>
                   <option value="video">{t("comfy.kindVideo")}</option>
                 </select>
-                {mediaKind === "video" ? <div className="muted">{t("comfy.videoCatalogOnly")}</div> : null}
+                {mediaKind === "video" ? <div className="muted">{t("comfy.videoKindHint")}</div> : null}
               </div>
 
               <div className="section-title">{t("comfy.bindTitle")}</div>

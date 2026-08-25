@@ -92,7 +92,7 @@ describe("comfy workflow manager", () => {
   it("carries media kind through inspect and create", () => {
     assert.match(source, /setMediaKind\(result\.mediaKind \?\? "image"\)/);
     assert.match(source, /mediaKind,/);
-    assert.match(source, /comfy\.videoCatalogOnly/);
+    assert.match(source, /comfy\.videoKindHint/);
   });
 });
 

@@ -210,6 +210,7 @@ export type GenerationDefaults = Partial<{
   mcpProvider: string | null;
   mcpModel: string | null;
   comfyWorkflow: string | null;
+  comfyVideoWorkflow: string | null;
   mcpMediaKind: "image" | "video";
   mcpRatio: string | null;
   mcpParameters: Record<string, McpPresetValue>;
@@ -494,6 +495,15 @@ export type AppState = PresetState & ReferenceTraySlice & {
    * member of it. Mirrors how mcpModel carries a runtime-catalog selection.
    */
   comfyWorkflow?: string | null;
+  /**
+   * Selected comfy VIDEO workflow id.
+   *
+   * Kept apart from videoModelSelected because that field is normalized through
+   * normalizeVideoModelValue, which only recognizes Grok ids and rewrites
+   * anything else. Widening it would change what every consumer of that
+   * normalizer means by "video model".
+   */
+  comfyVideoWorkflow?: string | null;
   mcpMediaKind?: "image" | "video";
   mcpRatio?: string | null;
   mcpParameters?: Record<string, McpPresetValue>;
@@ -517,6 +527,7 @@ export type AppState = PresetState & ReferenceTraySlice & {
   videoContinuityLineage: VideoContinuityLineage | null;
   videoProgress: number | null;
   selectVideoModel: (model?: string) => void;
+  setComfyVideoWorkflow: (workflowId: string | null) => void;
   setVideoDuration: (n: number) => void;
   setVideoResolution: (r: VideoResolutionUI) => void;
   setVideoAspectRatio: (a: string) => void;
