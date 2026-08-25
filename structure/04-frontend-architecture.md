@@ -225,3 +225,17 @@ localized `Catalog only` second line, full server lock reason in the option titl
 the exact model name wrap at desktop and mobile widths without widening every portal.
 Workflow manager registration carries media kind in all four locales. This surface does
 not imply video dispatch: server and CLI locks remain authoritative.
+
+Snapshot note, 2026-08-25: **Comfy video becomes selectable and dispatchable**
+(`260825_comfy_video_provider_ux`). The catalog-only lock is gone, so a video row is
+selectable whenever its origin answers; `MiniMax H3 FL2VA pruned NVFP4` still reads
+disabled, but now because it is offline rather than because video execution is refused.
+Clicking a video row was previously discarded four times over: `onModelChange` returned
+early on the `comfy-video:` prefix, the rows were rendered permanently disabled,
+`selectVideoModelImpl` rewrote any non-Grok id to `grok-imagine-video-1.5` and dragged
+the provider back to grok, and both payload builders cast the provider to grok. The
+selection now lives in its own `comfyVideoWorkflow` field rather than in
+`videoModelSelected`, whose values pass through a normalizer that recognizes only Grok
+ids. Video rows stay stacked whether or not they carry a reason line: that flag is what
+enables `white-space: normal`, and user-named workflows routinely outrun the 300px
+portal — a truncation this unit reintroduced and caught only by reading the render.

@@ -261,10 +261,25 @@ MiniMaxH3ImageToVideo prompt/width/height, RandomNoise seed and SaveVideo output
 unambiguously. Explicit kind that contradicts the selected SaveImage/SaveVideo output
 is rejected.
 
-`GET /api/models` partitions Comfy workflows by media kind. Video workflows are visible
-with `executable:false` and a stable `lockReason`; they never become the image default.
-The classic image resolver returns `COMFY_VIDEO_EXECUTION_LOCKED`, and the CLI resolver
-returns `MODEL_LOCKED`. This is a truthful catalog surface, not Comfy video execution.
+`GET /api/models` partitions Comfy workflows by media kind. Video workflows carry no
+blanket lock since 2026-08-25 (devlog unit `260825_comfy_video_provider_ux`): they are
+executable, and a dead origin shows through the `(offline)` description instead, which
+is an availability fact rather than a capability lock. They still never become the image
+default. The classic image resolver returns `COMFY_VIDEO_WRONG_ENDPOINT` — the workflow
+is runnable, it just belongs on `POST /api/video/generate`.
+
+`POST /api/video/generate` accepts `provider: "comfy"` with a registered video workflow
+id as `model`. The branch runs inside the same handler closure as the Grok path, after
+`startJob` and `registerJobAbortController`, so a UI cancel reaches the adapter's poll
+loop and `finishJob` still releases the inflight slot. Grok-only axes (storyboard,
+continuation, planner, topic, reference audio) are refused with
+`COMFY_VIDEO_OPTION_UNSUPPORTED` rather than silently dropped.
+
+Comfy video output arrives under the history `images` key with an `animated` flag —
+core `SaveVideo` and `SaveWEBM` both return `ui.PreviewVideo`, which serializes that way
+(verified against `comfy_api/latest/_ui.py`). `gifs` (VideoHelperSuite) and `videos`
+are read for compatibility only. Output is validated by magic bytes; MP4/MOV are stored
+and WebM is refused by name, because the persistence chain is anchored to `.mp4`.
 
 `GET /api/models` exposes the NovelAI lane as `.lanes.nai` with four compile-time image ids (`nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, `nai-diffusion-4-5-curated`) and `defaults.image = nai-diffusion-5-full`. Every entry declares `inputRoles: ["text"]` only — the catalog must not advertise `image_references` for a lane whose routes answer `NAI_REF_UNSUPPORTED`. Status is `key-missing` until a token is saved, then `ready`.
 
