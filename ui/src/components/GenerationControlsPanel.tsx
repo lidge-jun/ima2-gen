@@ -9,6 +9,7 @@ import { ProviderStatusSelect } from "./settings/ProviderStatusSelect";
 import { GrokSizePicker } from "./GrokSizePicker";
 import { GrokModelPicker } from "./GrokModelPicker";
 import { VideoControlsPanel } from "./VideoControlsPanel";
+import { NaiControlsPanel } from "./settings/NaiControlsPanel";
 import { McpGenerationControls } from "./settings/McpGenerationControls";
 import { useMcpProviders } from "../lib/mcpProviders";
 import type { Format, GeminiImageModel, Moderation, Quality } from "../types";
@@ -108,7 +109,10 @@ export function GenerationControlsPanel() {
   const isAgyOnly = provider === "agy";
   const isGeminiApi = provider === "gemini-api";
   const isAnyGemini = isAgyOnly || isGeminiApi;
-  const hideFormatControls = isGrok || isAnyGemini;
+  const isNai = provider === "nai";
+  // NovelAI always returns PNG and reads none of the GPT-shaped controls, so
+  // format and moderation would be inert switches.
+  const hideFormatControls = isGrok || isAnyGemini || isNai;
 
   const currentSize = sizePreset === "custom" ? `${customW}x${customH}` : "1024x1024";
   const isGeminiAuto = isGeminiApi && sizePreset === "auto";
@@ -162,7 +166,9 @@ export function GenerationControlsPanel() {
       ? { title: t("provider.agyCompatTitle"), body: t("provider.agyCompatBody") }
       : isGeminiApi
         ? { title: t("provider.geminiApiCompatTitle"), body: t("provider.geminiApiCompatBody") }
-        : { title: t("provider.gptCompatTitle"), body: t("provider.gptCompatBody") };
+        : isNai
+          ? { title: t("nai.compatTitle"), body: t("nai.compatBody") }
+          : { title: t("provider.gptCompatTitle"), body: t("provider.gptCompatBody") };
 
   const handleModeSwitch = (mode: "image" | "video") => {
     if (mode === "video") {
@@ -219,6 +225,8 @@ export function GenerationControlsPanel() {
         <GrokModelPicker />
         <GrokSizePicker />
         </>
+      ) : isNai ? (
+        <NaiControlsPanel />
       ) : isGeminiApi ? (
         <>
         <OptionGroup<GeminiImageModel>
@@ -356,7 +364,7 @@ export function GenerationControlsPanel() {
           </p>
         </>
       )}
-      {showMultimodeControls && !isAnyGemini && (
+      {showMultimodeControls && !isAnyGemini && !isNai && (
         <div className="option-group multimode-toggle">
           <button
             type="button"
@@ -370,8 +378,11 @@ export function GenerationControlsPanel() {
           </button>
         </div>
       )}
-      {isAnyGemini ? null : <CountPicker />}
-      <CostEstimate />
+      {/* Both are hidden because the behavior is already forced: the payload
+          sends n:1 for nai and generation bypasses multimode, and the cost
+          model is priced for OpenAI rather than Anlas. */}
+      {isAnyGemini || isNai ? null : <CountPicker />}
+      {isNai ? null : <CostEstimate />}
       </>
       )}
     </div>

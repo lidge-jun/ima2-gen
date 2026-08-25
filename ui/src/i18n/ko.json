@@ -2323,5 +2323,57 @@
       "refImage": "참조 이미지",
       "output": "출력 노드"
     }
+  },
+  "nai": {
+    "negativePrompt": {
+      "label": "제외할 요소",
+      "placeholder": "저화질, 어색한 손, 워터마크…",
+      "hint": "피하고 싶은 태그를 적습니다. 아래 프리셋과 함께 적용됩니다."
+    },
+    "panel": {
+      "sizeTitle": "크기",
+      "samplingTitle": "샘플링",
+      "presetTitle": "프리셋",
+      "outputTitle": "출력"
+    },
+    "field": {
+      "sampler": "샘플러",
+      "noiseSchedule": "노이즈 스케줄",
+      "steps": "스텝",
+      "scale": "가이던스",
+      "cfgRescale": "CFG 리스케일",
+      "ucPreset": "제외 프리셋",
+      "qualityPreset": "품질 프리셋",
+      "varietyPlus": "Variety+",
+      "straightAlpha": "배경 투명",
+      "seed": "시드",
+      "seedRandom": "무작위"
+    },
+    "help": {
+      "varietyPlus": "가이던스가 높을 때 구도가 단조로워지는 것을 막습니다.",
+      "straightAlpha": "V5 네이티브 알파입니다. 프롬프트에 투명 배경 태그를 함께 넣으세요.",
+      "cfgRescale": "가이던스가 높을 때 생기는 과채도를 완화합니다. 0이면 사용하지 않습니다.",
+      "seed": "비워 두면 매번 새로운 시드를 씁니다."
+    },
+    "size": {
+      "portrait": "세로",
+      "landscape": "가로",
+      "square": "정사각"
+    },
+    "ucPreset": {
+      "heavy": "강하게",
+      "light": "약하게",
+      "furryFocus": "퍼리 중심",
+      "humanFocus": "인물 중심",
+      "none": "사용 안 함"
+    },
+    "qualityPreset": {
+      "standard": "표준",
+      "light": "가볍게",
+      "none": "사용 안 함"
+    },
+    "resetDefaults": "기본값으로 되돌리기",
+    "compatTitle": "NovelAI 레인",
+    "compatBody": "텍스트로 이미지를 만드는 것만 됩니다. 참조 이미지, 편집, 여러 장 생성은 이 레인에서 지원하지 않습니다."
   }
 }
