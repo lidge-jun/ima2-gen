@@ -744,6 +744,11 @@
     "providerLabel": "發電商",
     "modelLabel": "生成模型",
     "coreProviders": "核心提供者",
+    "lane": {
+      "keyMissing": "缺少金鑰",
+      "offline": "離線",
+      "locked": "已鎖定"
+    },
     "connectedProviders": "連接的 MCP 供應商",
     "imageModels": "影像模型",
     "videoModels": "視訊模型",

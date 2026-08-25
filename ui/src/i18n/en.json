@@ -744,6 +744,11 @@
     "providerLabel": "Generation provider",
     "modelLabel": "Generation model",
     "coreProviders": "Core providers",
+    "lane": {
+      "keyMissing": "key missing",
+      "offline": "offline",
+      "locked": "locked"
+    },
     "connectedProviders": "Connected MCP providers",
     "imageModels": "Image models",
     "videoModels": "Video models",

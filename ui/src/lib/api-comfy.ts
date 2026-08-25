@@ -137,3 +137,48 @@ export async function getComfyLaneModels(signal?: AbortSignal): Promise<ComfyLan
     video: Array.isArray(models?.video) ? models.video : [],
   };
 }
+
+/** The four states the server publishes per lane. */
+export type LaneStatus = "ready" | "locked" | "disconnected" | "key-missing";
+
+export interface LaneCatalogEntry {
+  status: LaneStatus;
+  /** Human-readable detail. Present on some ready lanes too. */
+  reason?: string;
+  models: ComfyLaneModels;
+}
+
+export type LaneCatalog = Record<string, LaneCatalogEntry>;
+
+/**
+ * Reads every lane out of /api/models.
+ *
+ * The selector used to hardcode which lanes exist and which of them do video,
+ * while the server was already publishing both — along with a reason for every
+ * lane that cannot run. This is the same endpoint getComfyLaneModels reads,
+ * widened from one lane to all of them.
+ */
+export async function getLaneCatalog(signal?: AbortSignal): Promise<LaneCatalog> {
+  const response = await jsonFetch<{ lanes?: Record<string, {
+    status?: string;
+    reason?: string;
+    models?: Partial<ComfyLaneModels>;
+  }> }>("/api/models", signal ? { signal } : {});
+  const lanes = response.lanes ?? {};
+  const catalog: LaneCatalog = {};
+  for (const [id, lane] of Object.entries(lanes)) {
+    catalog[id] = {
+      status: isLaneStatus(lane?.status) ? lane.status : "disconnected",
+      ...(typeof lane?.reason === "string" && lane.reason ? { reason: lane.reason } : {}),
+      models: {
+        image: Array.isArray(lane?.models?.image) ? lane.models.image : [],
+        video: Array.isArray(lane?.models?.video) ? lane.models.video : [],
+      },
+    };
+  }
+  return catalog;
+}
+
+function isLaneStatus(value: unknown): value is LaneStatus {
+  return value === "ready" || value === "locked" || value === "disconnected" || value === "key-missing";
+}

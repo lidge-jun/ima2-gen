@@ -744,6 +744,11 @@
     "providerLabel": "생성 프로바이더",
     "modelLabel": "생성 모델",
     "coreProviders": "기본 프로바이더",
+    "lane": {
+      "keyMissing": "키 없음",
+      "offline": "연결 끊김",
+      "locked": "잠김"
+    },
     "connectedProviders": "연결된 MCP 프로바이더",
     "imageModels": "이미지 모델",
     "videoModels": "비디오 모델",

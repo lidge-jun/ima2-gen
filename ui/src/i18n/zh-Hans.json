@@ -744,6 +744,11 @@
     "providerLabel": "发电商",
     "modelLabel": "生成模型",
     "coreProviders": "核心提供商",
+    "lane": {
+      "keyMissing": "缺少密钥",
+      "offline": "离线",
+      "locked": "已锁定"
+    },
     "connectedProviders": "连接的 MCP 提供商",
     "imageModels": "图像模型",
     "videoModels": "视频模型",

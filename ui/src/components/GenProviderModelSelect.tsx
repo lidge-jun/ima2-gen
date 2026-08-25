@@ -13,7 +13,7 @@ import {
   type McpMediaKind,
 } from "../lib/mcpSelection";
 import { useAppStore } from "../store/useAppStore";
-import { getComfyLaneModels, type ComfyLaneModels } from "../lib/api-comfy";
+import { getComfyLaneModels, getLaneCatalog, type ComfyLaneModels, type LaneCatalog } from "../lib/api-comfy";
 import {
   hydrateMcpSelectionImpl,
   reconcileMcpPresetStateImpl,
@@ -23,6 +23,13 @@ import {
 } from "../store/storeSettingsImpl";
 import { useI18n } from "../i18n";
 
+/**
+ * Short display labels. This is a LABEL map, not the list of lanes that exist —
+ * that comes from /api/models, so a lane the server grows cannot go missing
+ * here. A lane with no entry falls back to its id and renders unselectable,
+ * because `Provider` is a generated literal union and the store's coercion
+ * branches only know these ids.
+ */
 const CORE_PROVIDER_OPTIONS: ReadonlyArray<{ value: Provider; label: string }> = [
   { value: "oauth", label: "GPT" },
   { value: "api", label: "GPT API" },
@@ -35,6 +42,18 @@ const CORE_PROVIDER_OPTIONS: ReadonlyArray<{ value: Provider; label: string }> =
   { value: "nai", label: "NovelAI" },
   { value: "comfy", label: "ComfyUI" },
 ];
+
+const KNOWN_PROVIDER_LABELS = new Map<string, string>(
+  CORE_PROVIDER_OPTIONS.map((option) => [option.value as string, option.label]),
+);
+
+/**
+ * Lanes the MCP group already owns. They arrive in the same /api/models
+ * response as core lanes but select through a different path (`mcp:` prefix,
+ * setMcpProviderImpl), so listing them here too would show one lane twice with
+ * two different meanings.
+ */
+const MCP_OWNED_LANES = new Set(["runway", "higgsfield"]);
 
 const MCP_PREFIX = "mcp:";
 const CORE_PREFIX = "core:";
@@ -61,6 +80,20 @@ function displayProviderId(id: string): string {
   return id.replace(/(^|-)([a-z])/g, (_match, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
 }
 
+/**
+ * Short badge for a lane that cannot run right now.
+ *
+ * Ready lanes get nothing: labelling the normal case is noise on a dense
+ * surface, and the exception is the only thing worth a second line. A ready
+ * lane that still carries a reason keeps it on the row title.
+ */
+function laneStatusBadge(status: string, translate: (key: string) => string): string | null {
+  if (status === "key-missing") return translate("mcp.lane.keyMissing");
+  if (status === "disconnected") return translate("mcp.lane.offline");
+  if (status === "locked") return translate("mcp.lane.locked");
+  return null;
+}
+
 export function GenProviderModelSelect({ compact = false }: { compact?: boolean } = {}) {
   const { t } = useI18n();
   const provider = useAppStore((state) => state.provider);
@@ -82,6 +115,17 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   const [catalogRetryToken, setCatalogRetryToken] = useState(0);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [comfyLane, setComfyLane] = useState<ComfyLaneModels>(EMPTY_COMFY_CATALOG);
+  const [laneCatalog, setLaneCatalog] = useState<LaneCatalog>({});
+
+  // The catalog decides which lanes exist, what state each is in, and which do
+  // video. All three used to be hardcoded here while the server published them.
+  useEffect(() => {
+    const controller = new AbortController();
+    void getLaneCatalog(controller.signal)
+      .then((catalog) => { if (!controller.signal.aborted) setLaneCatalog(catalog); })
+      .catch(() => { if (!controller.signal.aborted) setLaneCatalog({}); });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (provider !== "comfy") { setComfyLane(EMPTY_COMFY_CATALOG); return; }
@@ -192,7 +236,11 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
 
   const onProviderChange = (value: string) => {
     if (value.startsWith(CORE_PREFIX)) {
-      setProvider(value.slice(CORE_PREFIX.length) as Provider);
+      const laneId = value.slice(CORE_PREFIX.length);
+      // Guard the cast: Provider is a generated literal union, and an id the
+      // label map does not know is one setProviderImpl cannot route either.
+      if (!KNOWN_PROVIDER_LABELS.has(laneId)) return;
+      setProvider(laneId as Provider);
       return;
     }
     const next = value.slice(MCP_PREFIX.length);
@@ -227,13 +275,33 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
     setImageModel(value as Parameters<typeof setImageModel>[0]);
   };
 
+  // Lane existence comes from the catalog; the label map only shortens names.
+  // Until the catalog answers, the label map stands in, so the control is never
+  // empty on first paint.
+  const catalogLaneIds = Object.keys(laneCatalog).filter((id) => !MCP_OWNED_LANES.has(id));
+  const coreLaneIds = catalogLaneIds.length > 0
+    ? catalogLaneIds
+    : CORE_PROVIDER_OPTIONS.map((option) => option.value as string);
   const providerGroups: SelectGroup<string>[] = [
     {
       label: t("mcp.coreProviders"),
-      items: CORE_PROVIDER_OPTIONS.map((option) => ({
-        value: `${CORE_PREFIX}${option.value}`,
-        label: option.label,
-      })),
+      items: coreLaneIds.map((laneId) => {
+        const lane = laneCatalog[laneId];
+        const known = KNOWN_PROVIDER_LABELS.get(laneId);
+        const badge = lane ? laneStatusBadge(lane.status, t) : null;
+        return {
+          value: `${CORE_PREFIX}${laneId}`,
+          label: known ?? displayProviderId(laneId),
+          ...(badge ? { sub: badge } : {}),
+          ...(lane?.reason ? { title: lane.reason } : {}),
+          // A lane the client has no label for is also a lane the store cannot
+          // route: Provider is a generated union and setProviderImpl has no
+          // branch for it. Showing it disabled beats hiding it (the user can
+          // see their server grew a lane) and beats enabling it (which would
+          // pin a GPT model to it and revert on reload).
+          ...(known ? {} : { disabled: true }),
+        };
+      }),
     },
   ];
   if (connectedMcpProviders.length > 0) {
@@ -279,8 +347,13 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
       })),
     });
   } else {
-    // Video-capable core providers list both kinds, mirroring the MCP lane.
-    const providerSupportsVideo = provider === "grok" || provider === "grok-api";
+    // Whether this lane does video is the catalog's answer, not a hardcoded
+    // list. The Grok rows below stay gated to the Grok lanes on purpose: they
+    // route through selectVideoModel, which normalizes to a Grok id, so
+    // offering them under another lane would silently switch the provider.
+    // Comfy has its own group and its own prefix for exactly that reason.
+    const laneVideoCount = laneCatalog[provider]?.models.video.length ?? 0;
+    const providerSupportsVideo = (provider === "grok" || provider === "grok-api") && laneVideoCount > 0;
     modelGroups.push({
       label: t("mcp.imageModels"),
       // Comfy models are registered workflows, so they come from the live
@@ -351,6 +424,11 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         onChange={onProviderChange}
         ariaLabel={t("mcp.providerLabel")}
         title={unavailableReason ?? t("mcp.providerLabel")}
+        // The closed control says which lane is selected, not why another one
+        // cannot run. State belongs in the open list, where it informs the
+        // choice; on the trigger it would just crowd a control that is already
+        // narrow enough to truncate.
+        triggerSub=""
         portal
       />
 
