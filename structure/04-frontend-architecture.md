@@ -239,3 +239,19 @@ selection now lives in its own `comfyVideoWorkflow` field rather than in
 ids. Video rows stay stacked whether or not they carry a reason line: that flag is what
 enables `white-space: normal`, and user-named workflows routinely outrun the 300px
 portal — a truncation this unit reintroduced and caught only by reading the render.
+
+Snapshot note, 2026-08-25b: **provider lane state becomes catalog-derived**
+(`260825_comfy_video_provider_ux` wp2). `GenProviderModelSelect` no longer decides
+which lanes exist, what state they are in, or which do video — `getLaneCatalog` reads
+all of it from `/api/models`, which had been publishing a status and a human-readable
+reason per lane all along. `CORE_PROVIDER_OPTIONS` is now only a short-label map, so a
+lane the server grows still appears. Three deliberate narrowings: MCP lanes
+(runway/higgsfield) are excluded from the core group because they select through the
+`mcp:` path and would otherwise render twice with two meanings; the Grok video rows stay
+gated to the Grok lanes because they normalize through `normalizeVideoModelValue` and
+would switch the provider under any other lane; and a lane with no label renders
+disabled, since `Provider` is a generated union enforced again by `storePersistence`.
+Badges name only the exception (`mcp.lane.*`), ready lanes stay unlabelled, and
+`triggerSub=""` keeps the closed control showing the selection rather than the reason.
+Follow-up debt: `ProviderStatusSelect.tsx` still hardcodes nine core entries and omits
+comfy, so the two provider dropdowns disagree about which lanes exist.
