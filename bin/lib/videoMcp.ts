@@ -100,7 +100,7 @@ function modelCapabilities(entry: ModelEntry | undefined): ModelCapabilities {
   };
 }
 
-function validateCoreOptions(args: ParsedArgs, refs: string[], model: string) {
+function validateCoreOptions(args: ParsedArgs, refs: string[], model: string, lane: string) {
   const duration = parseInteger(args.duration, 5, "--duration");
   if (duration < 1 || duration > 15) die(2, "--duration must be between 1 and 15");
   const resolution = String(args.resolution ?? "480p");
@@ -114,6 +114,10 @@ function validateCoreOptions(args: ParsedArgs, refs: string[], model: string) {
     : refs.length === 1 && !asReference
       ? ("image-to-video" as const)
       : ("reference-to-video" as const);
+  // Resolution rules belong to Grok's model roster. A comfy workflow's frame
+  // size is whatever its own graph says, so checking it against that table
+  // would reject perfectly valid workflows by name alone.
+  if (lane === "comfy") return { duration, resolution, aspectRatio };
   const check = validateVideoResolutionForRequest(model, resolution as VideoResolution, mode, { allowTextCanvasShim: true });
   if (!("ok" in check)) die(2, check.error);
   return { duration, resolution, aspectRatio };
@@ -194,7 +198,7 @@ async function consumeCoreSse(url: string, body: Record<string, unknown>, args: 
 
 async function runCoreVideo(args: ParsedArgs, context: VideoContext): Promise<void> {
   const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
-  const options = validateCoreOptions(args, refs, context.target.model);
+  const options = validateCoreOptions(args, refs, context.target.model, context.target.lane);
   const references = await coreReferences(context.server.base, refs);
   const requestId = createCliRequestId("req_cli_video");
   const done = await consumeCoreSse(`${context.server.base}/api/video/generate`, coreBody(args, context, options, references, requestId), args, requestId);

@@ -127,7 +127,7 @@ const HELP = `
         --resolution <480p|720p|1080p>  Default: 480p. Default model: grok-imagine-video-1.5; prompt-only 1080p uses a white-canvas I2V shim
         --aspect-ratio <ratio|auto>     1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto. Default: auto
         --model <model|lane/model>      Bare IDs must be unique across lanes; Grok preview alias accepted
-        --provider <grok|grok-api|runway|higgsfield>
+        --provider <grok|grok-api|comfy|runway|higgsfield>
                                         'auto' was removed; choose a lane explicitly
         --planner-model <name>          Planner model override (e.g. grok-4.5, gpt-5.6-luna)
         --storyboard                    Enable storyboard mode (maintains character/scene continuity)

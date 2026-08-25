@@ -378,6 +378,47 @@ test("/api/video/generate continueFromVideo extracts parent frame and stores bra
 });
 
 test("/api/video/generate rejects non-grok provider and bad params", async () => {
+
+test("/api/video/generate accepts the comfy lane and refuses grok-only options", async () => {
+  const generatedDir = await mkdtemp(join(tmpdir(), "ima2-video-comfy-"));
+  const { server, url } = await videoApp(generatedDir, 18646);
+  try {
+    // The lane is reachable now: an unregistered workflow gets a comfy-specific
+    // failure, not the old blanket "video requires grok" refusal.
+    const unknown = parseSse(await (await fetch(`${url}/api/video/generate`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "a clip", provider: "comfy", model: "not-registered" }),
+    })).text());
+    const unknownError = unknown.find((e) => e.event === "error")?.data;
+    assert.notEqual(unknownError.code, "VIDEO_PROVIDER_UNSUPPORTED");
+    assert.equal(unknownError.code, "COMFY_WORKFLOW_NOT_FOUND");
+
+    const noModel = parseSse(await (await fetch(`${url}/api/video/generate`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "a clip", provider: "comfy" }),
+    })).text());
+    assert.equal(noModel.find((e) => e.event === "error")?.data.code, "COMFY_WORKFLOW_REQUIRED");
+
+    // Grok-only axes are refused rather than silently dropped, so nobody gets a
+    // clip that quietly ignored the option they asked for.
+    const storyboard = parseSse(await (await fetch(`${url}/api/video/generate`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "a clip", provider: "comfy", model: "wf", storyboard: true }),
+    })).text());
+    const sbError = storyboard.find((e) => e.event === "error")?.data;
+    assert.equal(sbError.code, "COMFY_VIDEO_OPTION_UNSUPPORTED");
+    assert.match(sbError.error, /storyboard/);
+
+    const oauth = parseSse(await (await fetch(`${url}/api/video/generate`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "x", provider: "oauth" }),
+    })).text());
+    assert.equal(oauth.find((e) => e.event === "error")?.data.code, "VIDEO_PROVIDER_UNSUPPORTED");
+  } finally {
+    await new Promise((r) => server.close(r));
+    await rm(generatedDir, { recursive: true, force: true });
+  }
+});
   const generatedDir = await mkdtemp(join(tmpdir(), "ima2-video-route-"));
   const { server, url } = await videoApp(generatedDir, 18645);
   try {

@@ -123,7 +123,7 @@ Status values to handle:
 | default aspect ratio | `16:9` for T2V, source image ratio for I2V |
 | `resolution` | `480p`, `720p` |
 | default resolution | `480p` |
-| video edit input max | 8.7 seconds |
+| video edit input max | 8.7 seconds — **owner-measured, not documented by xAI.** Re-verified as still-believed 2026-08-20; no public source states this number, so do not drop it just because doc sweeps come back empty |
 | video extension input | 2-15 seconds |
 | extension duration | 2-10 seconds |
 | generated URL | temporary; download promptly |

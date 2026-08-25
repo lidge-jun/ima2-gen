@@ -222,3 +222,34 @@ describe("comfy PNG metadata", () => {
     assert.equal(readPngTextChunks(Buffer.from("not a png")).size, 0);
   });
 });
+
+describe("binding and param precedence", () => {
+  const NODE_GRAPH = {
+    "6": { class_type: "CLIPTextEncode", inputs: { text: "" } },
+    "131": { class_type: "MiniMaxH3ImageToVideo", inputs: { prompt: "", width: 768, height: 768, length: 245 } },
+    "9": { class_type: "SaveVideo", inputs: { filename_prefix: "ima2" } },
+  } as never;
+  const NODE_BIND = {
+    prompt: { node: "6", input: "text" },
+    length: { node: "131", input: "length" },
+    output: { node: "9" },
+  } as never;
+  const LENGTH_PARAM = [{ name: "MiniMaxH3ImageToVideo.length", node: "131", input: "length", type: "number", default: 245 }] as never;
+
+  it("lets a request value win over a stored param for the same input", () => {
+    const bound = bindGraph(NODE_GRAPH, NODE_BIND, {
+      prompt: "x", length: 101, params: { "MiniMaxH3ImageToVideo.length": 245 },
+    }, LENGTH_PARAM);
+    assert.equal(bound["131"].inputs.length, 101);
+  });
+
+  it("keeps a tuned param when the binding carried no value", () => {
+    // The binding exists but the request said nothing about length. Excluding
+    // the param on the mere existence of a binding would silently discard the
+    // value the user tuned and fall back to the graph default.
+    const bound = bindGraph(NODE_GRAPH, NODE_BIND, {
+      prompt: "x", params: { "MiniMaxH3ImageToVideo.length": 197 },
+    }, LENGTH_PARAM);
+    assert.equal(bound["131"].inputs.length, 197);
+  });
+});
