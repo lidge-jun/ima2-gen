@@ -11,7 +11,10 @@ export async function generateImpl(set: StoreSet, get: StoreGet): Promise<void> 
   if (!prompt) return;
   if (missingElementsBlock(get)) return;
   if (s.videoModelSelected) return get().runVideoGenerate();
-  const useMultimode = s.uiMode === "classic" && s.multimode;
+  // NovelAI never takes the multimode path: the persisted preference is left
+  // untouched so other lanes keep it, but a hidden toggle must not steer this
+  // one (devlog 004 B4).
+  const useMultimode = s.uiMode === "classic" && s.multimode && s.provider !== "nai";
   const pending = getCustomSizeConfirmation(s, { kind: useMultimode ? "multimode" : "classic" });
   if (pending) {
     set({ customSizeConfirm: pending });

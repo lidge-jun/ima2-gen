@@ -26,6 +26,7 @@ import { DEFAULT_WEB_SEARCH_ENABLED } from "../lib/webSearch";
 import { ENABLE_AGENT_MODE, ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
 import { normalizeGenerationCount } from "../lib/generationLimits";
 import { parseRequestedCustomSide } from "../lib/size";
+import { coerceNaiOverrides, type NaiOptionOverrides } from "../lib/naiOptions";
 import {
   ACTIVE_SESSION_ID_STORAGE_KEY,
   CANVAS_EXPORT_BG_KEY,
@@ -33,6 +34,7 @@ import {
   HISTORY_STRIP_LAYOUT_STORAGE_KEY,
   IMAGE_MODEL_STORAGE_KEY,
   REASONING_EFFORT_STORAGE_KEY,
+  NAI_OPTIONS_STORAGE_KEY,
   RIGHT_PANEL_OPEN_STORAGE_KEY,
   SELECTED_FILENAME_STORAGE_KEY,
   UI_MODE_STORAGE_KEY,
@@ -193,6 +195,28 @@ export function loadReasoningEffort(): ReasoningEffort {
 export function saveReasoningEffort(effort: ReasoningEffort): void {
   try {
     localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, effort);
+  } catch {}
+}
+
+/**
+ * Sparse by design: an absent key means the user never touched that field, so
+ * it keeps following the operator's configured default rather than a compiled
+ * constant. See devlog 260825_novelai_negative_prompt_settings/020.
+ */
+export function loadNaiOverrides(): NaiOptionOverrides {
+  try {
+    const raw = localStorage.getItem(NAI_OPTIONS_STORAGE_KEY);
+    return raw ? coerceNaiOverrides(JSON.parse(raw)) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Best-effort, like every other writer here: a quota failure is swallowed and
+ *  the caller still updates in-memory state. */
+export function saveNaiOverrides(overrides: NaiOptionOverrides): void {
+  try {
+    localStorage.setItem(NAI_OPTIONS_STORAGE_KEY, JSON.stringify(overrides));
   } catch {}
 }
 
@@ -386,6 +410,7 @@ export function loadGenerationDefaults(): GenerationDefaults {
     }
     if (isPromptMode(parsed.promptMode)) out.promptMode = parsed.promptMode;
     if (typeof parsed.prompt === "string") out.prompt = parsed.prompt;
+    if (typeof parsed.negativePrompt === "string") out.negativePrompt = parsed.negativePrompt;
     const insertedPrompts = normalizeInsertedPromptArray(parsed.insertedPrompts);
     if (insertedPrompts) out.insertedPrompts = insertedPrompts;
     // presetIds is deliberately dropped on load. The preset grid was removed

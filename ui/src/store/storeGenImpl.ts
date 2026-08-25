@@ -25,6 +25,34 @@ import {
 } from "./storeHelpers";
 import { addHistory } from "./storeGraphSave";
 import type { AppState } from "./storeTypes";
+import { isNaiV5Model, type NaiOptionOverrides } from "../lib/naiOptions";
+
+/**
+ * The NovelAI fields a request carries.
+ *
+ * Sends the OVERRIDES, not the resolved options: a field the user never touched
+ * is absent, so lib/naiImageAdapter.ts resolves it from config.naiProvider —
+ * whether or not /api/capabilities has answered yet. That dissolves the
+ * hydration race instead of racing it (devlog 020).
+ *
+ * For any other provider this contributes nothing, so their payloads are
+ * byte-identical to what they were before this lane had controls.
+ */
+export function naiPayloadFields(s: AppState): Record<string, unknown> {
+  if (s.provider !== "nai") return {};
+  const o: NaiOptionOverrides = { ...s.naiOptionOverrides };
+  // straight_alpha and qualityPresetId are V5-only. Model and options hydrate
+  // from independent persisted keys, so a V4.5 model can arrive alongside a
+  // flag the user set while on V5. The adapter guards this too; stripping here
+  // keeps the wire body honest about intent.
+  if (!isNaiV5Model(s.imageModel)) {
+    delete o.straightAlpha;
+    delete o.qualityPresetId;
+  }
+  if (o.seed === null) delete o.seed;   // null means "let the server pick"
+  const negativePrompt = s.negativePrompt.trim();
+  return { ...o, ...(negativePrompt ? { negativePrompt } : {}) };
+}
 import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 import { compilePresets, type PresetProvider } from "../../../lib/presetCompiler.js";
 import { getAllPresets } from "../lib/presets";
@@ -118,6 +146,7 @@ export async function generateMultimodeImpl(
       composerInsertedPrompts,
       presetIds: compiled.appliedPresetIds,
       elementIds: selectedElementIds(s),
+      ...naiPayloadFields(s),
       ...(s.providerUrlReference
         ? { providerUrl: s.providerUrlReference }
         : s.referenceImages.length
@@ -311,7 +340,10 @@ export async function runGenerateImpl(
       format: s.format,
       moderation: s.moderation,
       provider: s.provider,
-      n: s.count,
+      // NovelAI's Opus free tier covers one image per request, and the server
+      // fans this out into n separate upstream calls. Forcing 1 is the behavior
+      // that makes hiding CountPicker honest instead of cosmetic.
+      n: s.provider === "nai" ? 1 : s.count,
       model: s.imageModel,
       reasoningEffort: s.reasoningEffort,
       storyboard: s.storyboardActive || undefined,
@@ -322,6 +354,7 @@ export async function runGenerateImpl(
       composerInsertedPrompts,
       presetIds: compiled.appliedPresetIds,
       elementIds: selectedElementIds(s),
+      ...naiPayloadFields(s),
       ...(s.providerUrlReference
         ? { providerUrl: s.providerUrlReference }
         : s.referenceImages.length
