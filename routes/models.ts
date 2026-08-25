@@ -484,3 +484,72 @@ export function registerModelsRoutes(
     }
   });
 }
+
+/**
+ * Builds the whole lane map: the single source of lane truth.
+ *
+ * /api/models and /api/capabilities both call THIS, rather than each deriving
+ * lane state its own way. Two implementations of "is this lane usable" would be
+ * the exact drift the capability surface exists to remove.
+ */
+export async function buildLaneMap(
+  ctx: RuntimeContext,
+  deps: ModelsRouteDeps = {},
+): Promise<Record<string, ModelLaneDto>> {
+  try {
+    const [agyInstalled, mcp] = await Promise.all([
+      resolveAgyStatus(deps.detectAgyInstalled ?? cachedAgyDetection),
+      buildMcpLanes(ctx),
+    ]);
+    return { ...(await buildCoreLanes(ctx, agyInstalled, deps)), ...mcp };
+  } catch {
+    const mcp = await buildMcpLanes(ctx);
+    return { ...(await buildCoreLanes(ctx, false, deps)), ...mcp };
+  }
+}
+
+/**
+ * Lane summary for the capability surface, behind a short TTL.
+ *
+ * The UI polls /api/capabilities, and a lane map costs a ComfyUI origin probe
+ * plus an agy binary spawn — fine once, wasteful per request. A few seconds of
+ * staleness is invisible next to how fast a credential or a GPU box changes.
+ *
+ * Counts, not model ids: choosing a lane is the decision at this layer, and
+ * `ima2 models` already answers which models it holds. Repeating that list here
+ * would just be a second copy to drift.
+ */
+const LANE_SUMMARY_TTL_MS = 5_000;
+let laneSummaryCache: { at: number; value: Record<string, LaneSummary> } | null = null;
+
+export interface LaneSummary {
+  status: ModelLaneStatus;
+  reason?: string;
+  models: { image: number; video: number };
+}
+
+export async function buildLaneSummary(
+  ctx: RuntimeContext,
+  deps: ModelsRouteDeps = {},
+): Promise<Record<string, LaneSummary>> {
+  const now = Date.now();
+  if (laneSummaryCache && now - laneSummaryCache.at < LANE_SUMMARY_TTL_MS) {
+    return laneSummaryCache.value;
+  }
+  const lanes = await buildLaneMap(ctx, deps);
+  const summary: Record<string, LaneSummary> = {};
+  for (const [id, dto] of Object.entries(lanes)) {
+    summary[id] = {
+      status: dto.status,
+      ...(dto.reason ? { reason: dto.reason } : {}),
+      models: { image: dto.models.image.length, video: dto.models.video.length },
+    };
+  }
+  laneSummaryCache = { at: now, value: summary };
+  return summary;
+}
+
+/** Test seam: the TTL would otherwise leak state between cases. */
+export function _resetLaneSummaryCache(): void {
+  laneSummaryCache = null;
+}

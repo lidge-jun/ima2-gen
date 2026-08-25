@@ -48,7 +48,11 @@ describe("CLI feature parity contract", () => {
     assert.match(src, /fileToDataUri/);
     assert.match(src, /provider:\s*\{\s*type:\s*"string"\s*\}/);
     assert.match(src, /--provider <\$\{PROVIDER_VALUES\.join\("\|"\)\}>/);
-    assert.match(src, /nano-banana-2\|nano-banana-pro/);
+    // The model list is derived from the registry now, the way edit.ts does it,
+    // so pinning literal ids here would just re-freeze what we unfroze. Pin the
+    // derivation instead.
+    assert.match(src, /deriveCliImageModelSet\(\)/);
+    assert.match(src, /KNOWN_IMAGE_MODELS/);
     assert.match(src, /mode:\s*\{\s*type:\s*"string",\s*default:\s*"auto"\s*\}/);
     assert.match(src, /ref:\s*\{\s*type:\s*"string",\s*repeatable:\s*true\s*\}/);
     assert.match(src, /VALID_PROVIDERS = new Set\(PROVIDER_VALUES\)/);

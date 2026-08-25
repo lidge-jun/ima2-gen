@@ -11,6 +11,13 @@ import { deriveProviderIds } from "./providers/derive.js";
 
 type CapabilitySource = "local" | "server";
 
+/** Runtime state for one lane. Counts, not ids: `ima2 models` owns the lists. */
+export interface LaneCapability {
+  status: "ready" | "locked" | "disconnected" | "key-missing";
+  reason?: string;
+  models: { image: number; video: number };
+}
+
 const VALID_MODES = ["auto", "direct"] as const;
 const VALID_PROVIDERS = ["auto", ...deriveProviderIds()] as const;
 const AGENT_COMMANDS = [
@@ -40,11 +47,23 @@ export function buildIma2Capabilities({
   packageVersion,
   source,
   server = null,
+  lanes,
 }: {
   appConfig?: AppConfig;
   packageVersion: string;
   source: CapabilitySource;
   server?: string | null;
+  /**
+   * Per-lane runtime state, keyed by the /api/models lane id set.
+   *
+   * Distinct from `valid.providers`, which is the CLI flag vocabulary: that one
+   * carries `auto` and omits the MCP lanes, while this mirrors the lane map.
+   *
+   * Omitted entirely when no server answered. `source` is the disambiguator —
+   * absent lanes under `source: "local"` means nobody could know, not that no
+   * lane exists, and inventing a state here would be worse than saying nothing.
+   */
+  lanes?: Record<string, LaneCapability> | undefined;
 }) {
   return {
     ok: true,
@@ -52,6 +71,7 @@ export function buildIma2Capabilities({
     source,
     server,
     version: packageVersion,
+    ...(lanes ? { lanes } : {}),
     commands: AGENT_COMMANDS,
     defaults: {
       oauth: {

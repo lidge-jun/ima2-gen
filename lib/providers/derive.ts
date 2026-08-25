@@ -26,6 +26,25 @@ export function deriveProviderIdSet(registry: RegistryInput = REGISTRY): Set<Cor
   return new Set(deriveIdsFrom(registry) as CoreProviderId[]);
 }
 
+/**
+ * Core lane ids that can produce video.
+ *
+ * A lane qualifies by declaring a `kind: "video"` model, or by holding its
+ * catalog at runtime — a comfy workflow is registered by the user, so its
+ * models list is empty by construction and a compile-time check would wrongly
+ * call the lane image-only.
+ *
+ * This exists so help text stops being hand-maintained. Listing every provider
+ * would advertise `--provider oauth` for video, which the resolver rejects:
+ * a stale list replaced by a misleading one.
+ */
+export function deriveVideoProviderIds(registry: RegistryInput = REGISTRY): CoreProviderId[] {
+  return registry
+    .filter((provider) => provider.catalogAccess === "runtime"
+      || provider.models.some((model) => model.kind === "video"))
+    .map((provider) => provider.id as CoreProviderId);
+}
+
 export function deriveModels(
   providerId: string,
   kind: ProviderModelKind,

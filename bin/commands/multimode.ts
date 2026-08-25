@@ -6,11 +6,13 @@ import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { config } from "../../config.js";
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
 import { canonicalizeImageModel } from "../lib/model-aliases.js";
-import { deriveProviderIds } from "../../lib/providers/derive.js";
+import { deriveCliImageModelSet, deriveProviderIds } from "../../lib/providers/derive.js";
 
 const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGeneratedImages) || 24));
 const MAX_REFERENCE_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxRefCount) || 5));
 const PROVIDER_VALUES = ["auto", ...deriveProviderIds()];
+// Same derivation edit.ts already uses; this list was hand-maintained until now.
+const KNOWN_IMAGE_MODELS = deriveCliImageModelSet();
 
 const SPEC = {
   flags: {
@@ -50,7 +52,7 @@ const HELP = `
     -o, --out <file>                    First image (implies --max-images 1)
     -d, --out-dir <dir>                 Output dir for multiple images
         --json
-        --model <gpt-5.5|gpt-5.4|gpt-5.4-mini|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark|grok-imagine-image-2.0|grok-imagine-image|grok-imagine-image-quality|nano-banana-2|nano-banana-pro>  Default: gpt-5.6-luna
+        --model <${[...KNOWN_IMAGE_MODELS].join("|")}>  Default: gpt-5.6-luna
                                       Aliases: luna, sol, terra, spark
         --provider <${PROVIDER_VALUES.join("|")}>
                                       Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini)

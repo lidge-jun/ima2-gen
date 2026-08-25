@@ -281,6 +281,19 @@ core `SaveVideo` and `SaveWEBM` both return `ui.PreviewVideo`, which serializes 
 are read for compatibility only. Output is validated by magic bytes; MP4/MOV are stored
 and WebM is refused by name, because the persistence chain is anchored to `.mp4`.
 
+`GET /api/capabilities` carries an optional `lanes` map since 2026-08-25
+(`260825_comfy_video_provider_ux` wp3). Its keys are the `/api/models` lane id set, and
+each entry is `{ status, reason?, models: { image, video } }` — counts rather than ids,
+because `ima2 models` already answers which models a lane holds and a second copy of
+that list is a second thing to drift. `buildLaneSummary` in `routes/models.ts` is the
+single source: both endpoints call it, behind a 5s TTL because each build costs a
+ComfyUI origin probe and an agy binary spawn while the UI polls capabilities.
+
+`lanes` is present only when `source === "server"`, and is omitted entirely otherwise —
+lane state is something only a running server can know, so absence means unknown rather
+than unavailable. Do not confuse it with `valid.providers`, which is the CLI `--provider`
+flag vocabulary: that one carries `auto` and omits the MCP lanes.
+
 `GET /api/models` exposes the NovelAI lane as `.lanes.nai` with four compile-time image ids (`nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, `nai-diffusion-4-5-curated`) and `defaults.image = nai-diffusion-5-full`. Every entry declares `inputRoles: ["text"]` only — the catalog must not advertise `image_references` for a lane whose routes answer `NAI_REF_UNSUPPORTED`. Status is `key-missing` until a token is saved, then `ready`.
 
 ## Inflight Jobs

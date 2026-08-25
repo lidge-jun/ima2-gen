@@ -56,6 +56,35 @@ async function readCapabilities(args: ReturnType<typeof parseArgs>) {
   }
 }
 
+/**
+ * Prints which lanes can actually run right now.
+ *
+ * `valid.providers` above is the flag vocabulary — every id the CLI accepts.
+ * This is the runtime answer, and the two differ constantly: four lanes are
+ * usually missing a key. Without it an agent reads the vocabulary as
+ * availability and picks a lane that cannot work.
+ */
+function printLanes(capabilities: any): void {
+  const lanes = capabilities.lanes;
+  if (!lanes || typeof lanes !== "object") {
+    // Only a running server knows this, and `source` already says which we got.
+    if (capabilities.source !== "server") {
+      out(color.dim("lanes: unknown (no server; run 'ima2 serve' for live lane state)"));
+      out("");
+    }
+    return;
+  }
+  out("lanes:");
+  for (const [id, lane] of Object.entries(lanes as Record<string, any>)) {
+    const counts = `image=${lane?.models?.image ?? 0} video=${lane?.models?.video ?? 0}`;
+    const detail = lane?.status === "ready"
+      ? counts
+      : `${lane?.status}${lane?.reason ? ` — ${lane.reason}` : ""}, ${counts}`;
+    out(`  ${id.padEnd(12)} ${detail}`);
+  }
+  out("");
+}
+
 function printText(capabilities: any): void {
   out(`ima2 capabilities (${capabilities.source})`);
   out(`version: ${capabilities.version}`);
@@ -86,6 +115,7 @@ function printText(capabilities: any): void {
   out(`  moderation: ${capabilities.valid?.moderation?.join(", ")}`);
   out(`  providers: ${capabilities.valid?.providers?.join(", ")}`);
   out("");
+  printLanes(capabilities);
   out(`config keys: ${capabilities.configKeys?.writable?.length ?? 0} writable`);
   out(color.dim("run: ima2 config keys --json"));
   out("");

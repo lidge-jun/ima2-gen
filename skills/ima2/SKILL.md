@@ -692,7 +692,9 @@ ima2 video "cinematic" --ref a.png --ref b.png      # 2+ refs are always referen
 
 Targets use `--model <lane>/<model>`; a bare ID is accepted only when it is
 unique across lanes. Generate-mode `video` also accepts an explicit
-`--provider <grok|grok-api|runway|higgsfield>`. `--provider auto` is removed.
+`--provider <lane>`; run `ima2 video --help` for the lanes this build supports,
+since that list is derived from the provider registry rather than written here.
+`--provider auto` is removed.
 
 Runway and Higgsfield are MCP lanes. They submit `POST /api/mcp/generate` (202)
 and the CLI waits on SSE until completion. MCP generation supports `-n 1` only,
@@ -706,8 +708,12 @@ a provider binding for the selected lane (Runway: stateless refs + optional
 `CAPABILITY_MISMATCH` (core lane or model without `image_references`),
 `BINDING_NOT_READY`, and server-side `CHARACTER_ELEMENT_CONFLICT` /
 `CHARACTER_REFS_EXCEED_PROVIDER_CAP`.
-Runway is available when connected; Higgsfield remains locked until its paid
-lane is enabled. Inspect current state with `ima2 models --kind video`.
+Lane availability is runtime state, so it is not recorded here: a lane can be
+ready, missing a key, disconnected, or locked, and only a running server knows
+which. Read it with `ima2 capabilities` (per-lane status with the reason) or
+`ima2 models --kind video` (per-model rows). When `ima2 capabilities` reports
+`source: local`, no server answered and it carries no lane state at all —
+absence there means unknown, not unavailable.
 
 `ima2 upscale <generated-file>` upscales through the MCP media-action pipeline:
 images take `--scale-factor 2|4|8|16` (above 2 requires `--flavor sublime`),

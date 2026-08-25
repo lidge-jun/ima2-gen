@@ -14,6 +14,20 @@ import {
   type VideoResolution,
 } from "../../lib/imageModels.js";
 import { VIDEO_CLIENT_TIMEOUT_SEC } from "../../lib/videoClientTimeouts.js";
+import { deriveVideoProviderIds } from "../../lib/providers/derive.js";
+import { listProviders } from "../../lib/mcp/providerRegistry.js";
+
+/**
+ * Video-capable lanes, derived rather than typed out.
+ *
+ * Core lanes qualify by declaring a video model or by holding their catalog at
+ * runtime; MCP lanes come from the discovery layer. Hand-maintaining this was
+ * how comfy went missing from the skill docs after it gained video support.
+ */
+const VIDEO_PROVIDER_VALUES = [
+  ...deriveVideoProviderIds(),
+  ...listProviders([]).map((provider) => provider.id),
+];
 
 const VALID_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);
 const VALID_ASPECT_RATIOS = new Set(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"]);
@@ -127,7 +141,7 @@ const HELP = `
         --resolution <480p|720p|1080p>  Default: 480p. Default model: grok-imagine-video-1.5; prompt-only 1080p uses a white-canvas I2V shim
         --aspect-ratio <ratio|auto>     1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, auto. Default: auto
         --model <model|lane/model>      Bare IDs must be unique across lanes; Grok preview alias accepted
-        --provider <grok|grok-api|comfy|runway|higgsfield>
+        --provider <${VIDEO_PROVIDER_VALUES.join("|")}>
                                         'auto' was removed; choose a lane explicitly
         --planner-model <name>          Planner model override (e.g. grok-4.5, gpt-5.6-luna)
         --storyboard                    Enable storyboard mode (maintains character/scene continuity)
