@@ -192,7 +192,7 @@ describe("comfy graph binding", () => {
 describe("comfy PNG metadata", () => {
   // Not a synthesized fixture: this is the file ComfyUI 0.27.0 returned from
   // /view during the 2026-08-23 live probe recorded in 001.
-  const livePng = join(repoRoot, "devlog/_plan/260823_comfy_provider_lane/evidence/001_live_generate_768.png");
+  const livePng = join(repoRoot, "devlog/_fin/260823_comfy_provider_lane/evidence/001_live_generate_768.png");
 
   it("reads the API graph out of a real ComfyUI PNG", () => {
     const buffer = readFileSync(livePng);
