@@ -30,3 +30,10 @@ v3.11.0 stable release.
 - Issue #150 stays open (3/6 acceptance criteria unmet)
 - .gitignore, _plan/README.md, structure/07-devlog-map.md updated
 - Commit: ca695f81
+
+## wp1 completion record
+
+- Push: 7e504f32..27498cff origin/dev
+- PR: #174 (dev→main)
+- CI: Analyze JS/TS x2, CodeQL, PR fast gate, frontend e2e, test node22, test node24 — all pass
+- Merge: 98984597 at 2026-08-26T13:54:30Z
