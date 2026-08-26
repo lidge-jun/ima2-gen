@@ -1,0 +1,211 @@
+Failed to parse timestamp: 2026-08-24T22:12:06,621913497+09:00
+[32m[INFO][0m setup plugin alembic.autogenerate.schemas
+[32m[INFO][0m setup plugin alembic.autogenerate.tables
+[32m[INFO][0m setup plugin alembic.autogenerate.types
+[32m[INFO][0m setup plugin alembic.autogenerate.constraints
+[32m[INFO][0m setup plugin alembic.autogenerate.defaults
+[32m[INFO][0m setup plugin alembic.autogenerate.comments
+[32m[INFO][0m [ComfyUI-Manager] Using `uv` as Python module for pip operations.
+Using Python 3.12.3 environment at: venv
+[START] Security scan
+[DONE] Security scan
+## ComfyUI-Manager: installing dependencies done.
+** ComfyUI startup time: 2026-08-24 22:12:07.273
+** Platform: Linux
+** Python version: 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]
+** Python executable: /home/lidgeai/ComfyUI/venv/bin/python
+** ComfyUI Path: /home/lidgeai/ComfyUI
+** ComfyUI Base Folder Path: /home/lidgeai/ComfyUI
+** User directory: /home/lidgeai/ComfyUI/user
+** ComfyUI-Manager config path: /home/lidgeai/ComfyUI/user/__manager/config.ini
+** Log path: /home/lidgeai/ComfyUI/user/comfyui.log
+Using Python 3.12.3 environment at: venv
+Using Python 3.12.3 environment at: venv
+[32m[INFO][0m 
+Prestartup times for custom nodes:
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Easy-Use
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/rgthree-comfy
+[32m[INFO][0m    0.4 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyui-manager
+[32m[INFO][0m 
+/home/lidgeai/ComfyUI/venv/lib/python3.12/site-packages/torch/cuda/__init__.py:64: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[32m[INFO][0m Found comfy_kitchen backend hip: {'available': False, 'disabled': False, 'unavailable_reason': 'PyTorch ROCm/HIP runtime not available', 'capabilities': []}
+[32m[INFO][0m Found comfy_kitchen backend eager: {'available': True, 'disabled': False, 'unavailable_reason': None, 'capabilities': ['adaln', 'apply_rope', 'apply_rope1', 'apply_rope1_', 'apply_rope_', 'apply_rope_split_half', 'apply_rope_split_half1', 'apply_rope_split_half1_', 'apply_rope_split_half_', 'convrot_w4a4_linear', 'dequantize_convrot_w4a4_weight', 'dequantize_int8_convrot_weight', 'dequantize_int8_convrot_weight_dtype', 'dequantize_int8_embedding', 'dequantize_int8_simple', 'dequantize_int8_simple_dtype', 'dequantize_mxfp8', 'dequantize_nvfp4', 'dequantize_per_tensor_fp8', 'dequantize_w4a8_int8_weight', 'gemv_awq_w4a16', 'int8_linear', 'na3d', 'prepare_int4_weight_for_int8_linear', 'quantize_and_rotate_rowwise', 'quantize_convrot_w4a4_weight', 'quantize_int8_convrot_weight', 'quantize_int8_rowwise', 'quantize_int8_tensorwise', 'quantize_mxfp8', 'quantize_nvfp4', 'quantize_per_tensor_fp8', 'quantize_svdquant_w4a4', 'quantize_w4a8_int8_weight', 'rms_adaln', 'rms_rope', 'rms_rope1', 'rms_rope1_', 'rms_rope_', 'rms_rope_split_half', 'rms_rope_split_half1', 'rms_rope_split_half1_', 'rms_rope_split_half_', 'rotate_int8_convrot_weight', 'scaled_mm_mxfp8', 'scaled_mm_nvfp4', 'scaled_mm_svdquant_w4a4', 'stochastic_rounding_fp8', 'w4a8_int8_linear']}
+[32m[INFO][0m Found comfy_kitchen backend triton: {'available': True, 'disabled': True, 'unavailable_reason': None, 'capabilities': ['adaln', 'apply_rope', 'apply_rope1', 'apply_rope1_', 'apply_rope_', 'apply_rope_split_half', 'apply_rope_split_half1', 'apply_rope_split_half1_', 'apply_rope_split_half_', 'dequantize_nvfp4', 'dequantize_per_tensor_fp8', 'int8_linear', 'na3d', 'quantize_and_rotate_rowwise', 'quantize_int8_rowwise', 'quantize_mxfp8', 'quantize_nvfp4', 'quantize_per_tensor_fp8', 'rms_adaln', 'rms_rope', 'rms_rope1', 'rms_rope1_', 'rms_rope_', 'rms_rope_split_half', 'rms_rope_split_half1', 'rms_rope_split_half1_', 'rms_rope_split_half_', 'w4a8_int8_linear']}
+[32m[INFO][0m Found comfy_kitchen backend cuda: {'available': True, 'disabled': False, 'unavailable_reason': None, 'capabilities': ['adaln', 'apply_rope', 'apply_rope1', 'apply_rope1_', 'apply_rope_', 'apply_rope_split_half', 'apply_rope_split_half1', 'apply_rope_split_half1_', 'apply_rope_split_half_', 'convrot_w4a4_linear', 'dequantize_convrot_w4a4_weight', 'dequantize_int8_convrot_weight', 'dequantize_int8_convrot_weight_dtype', 'dequantize_int8_simple', 'dequantize_int8_simple_dtype', 'dequantize_nvfp4', 'dequantize_per_tensor_fp8', 'dequantize_w4a8_int8_weight', 'gemv_awq_w4a16', 'int8_linear', 'na3d', 'prepare_int4_weight_for_int8_linear', 'quantize_and_rotate_rowwise', 'quantize_convrot_w4a4_weight', 'quantize_int8_convrot_weight', 'quantize_int8_rowwise', 'quantize_int8_tensorwise', 'quantize_mxfp8', 'quantize_nvfp4', 'quantize_per_tensor_fp8', 'quantize_svdquant_w4a4', 'quantize_w4a8_int8_weight', 'rms_adaln', 'rms_rope', 'rms_rope1', 'rms_rope1_', 'rms_rope_', 'rms_rope_split_half', 'rms_rope_split_half1', 'rms_rope_split_half1_', 'rms_rope_split_half_', 'rotate_int8_convrot_weight', 'scaled_mm_nvfp4', 'scaled_mm_svdquant_w4a4', 'stochastic_rounding_fp8', 'w4a8_int8_linear']}
+[32m[INFO][0m Checkpoint files will always be loaded safely.
+[32m[INFO][0m Total VRAM 32087 MB, total RAM 31134 MB
+[32m[INFO][0m pytorch version: 2.13.0+cu130
+[32m[INFO][0m Set vram state to: NORMAL_VRAM
+[32m[INFO][0m Device: cuda:0 NVIDIA GeForce RTX 5090 : cudaMallocAsync
+[32m[INFO][0m Using async weight offloading with 2 streams
+[32m[INFO][0m Using pytorch attention
+[32m[INFO][0m aimdo: /project/src/control.c:276:INFO:comfy-aimdo inited for GPU: NVIDIA GeForce RTX 5090 (VRAM: 32086 MB)
+[32m[INFO][0m DynamicVRAM support detected and enabled
+[32m[INFO][0m Python version: 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]
+[32m[INFO][0m ComfyUI version: 0.33.3
+[32m[INFO][0m comfy-aimdo version: 0.4.13
+[32m[INFO][0m comfy-kitchen version: 0.2.31
+[32m[INFO][0m comfyui-frontend-package version: 1.49.6
+[32m[INFO][0m comfyui-workflow-templates version: 0.11.44
+[32m[INFO][0m comfyui-embedded-docs version: 0.5.9
+[32m[INFO][0m comfy-kitchen version: 0.2.31
+[32m[INFO][0m comfy-aimdo version: 0.4.13
+[32m[INFO][0m [Prompt Server] web root: /home/lidgeai/ComfyUI/venv/lib/python3.12/site-packages/comfyui_frontend_package/static
+[32m[INFO][0m Asset seeder disabled
+[32m[INFO][0m No OpenGL_accelerate module loaded: No module named 'OpenGL_accelerate'
+/home/lidgeai/ComfyUI/venv/lib/python3.12/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+
+[92m[rgthree-comfy] Loaded 48 epic nodes. 🎉[0m
+
+[33m[rgthree-comfy] ComfyUI's new Node 2.0 rendering may be incompatible with some rgthree-comfy nodes and features, breaking some rendering as well as losing the ability to access a node's properties (a vital part of many nodes). It also appears to run MUCH more slowly spiking CPU usage and causing jankiness and unresponsiveness, especially with large workflows. Personally I am not planning to use the new Nodes 2.0 and, unfortunately, am not able to invest the time to investigate and overhaul rgthree-comfy where needed. If you have issues when Nodes 2.0 is enabled, I'd urge you to switch it off as well and join me in hoping ComfyUI is not planning to deprecate the existing, stable canvas rendering all together.
+[0m
+[32m[INFO][0m ### Loading: ComfyUI-Impact-Pack (V8.28.3)
+[32m[INFO][0m [Impact Pack] Wildcard total size (0.00 MB) is within cache limit (50.00 MB). Using full cache mode.
+[32m[INFO][0m [Impact Pack] Wildcards loading done.
+[32m[INFO][0m ### Loading: ComfyUI-Manager (V3.41)
+[32m[INFO][0m [ComfyUI-Manager] network_mode: public
+[32m[INFO][0m [ComfyUI-Manager] ComfyUI per-queue preview override detected (PR #11261). Manager's preview method feature is disabled. Use ComfyUI's --preview-method CLI option or 'Settings > Execution > Live preview method'.
+[32m[INFO][0m ### ComfyUI Revision: 5781 [4da9e2db] *DETACHED | Released on '2026-08-20'
+[32m[INFO][0m [mod-guidance] module loaded: sigma-film v5 (fp32 head, two-step t_emb)
+[32m[INFO][0m CNS: registered sampler 'er_sde_cns' (Anima-calibrated colored ER-SDE)
+[32m[INFO][0m ### Loading: ComfyUI-Impact-Subpack (V1.3.5)
+[32m[INFO][0m [Impact Pack/Subpack] Using folder_paths to determine whitelist path: /home/lidgeai/ComfyUI/user/default/ComfyUI-Impact-Subpack/model-whitelist.txt
+[32m[INFO][0m [Impact Pack/Subpack] Ensured whitelist directory exists: /home/lidgeai/ComfyUI/user/default/ComfyUI-Impact-Subpack
+[32m[INFO][0m [Impact Pack/Subpack] Loaded 0 model(s) from whitelist: /home/lidgeai/ComfyUI/user/default/ComfyUI-Impact-Subpack/model-whitelist.txt
+[32m[INFO][0m [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/alter-list.json
+[32m[INFO][0m [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/model-list.json
+[32m[INFO][0m [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/extension-node-map.json
+[32m[INFO][0m [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json
+[32m[INFO][0m [Impact Subpack] ultralytics_bbox: /home/lidgeai/ComfyUI/models/ultralytics/bbox
+[32m[INFO][0m [Impact Subpack] ultralytics_segm: /home/lidgeai/ComfyUI/models/ultralytics/segm
+[36;20m[/home/lidgeai/ComfyUI/custom_nodes/comfyui_controlnet_aux] | INFO -> Using ckpts path: /home/lidgeai/ComfyUI/custom_nodes/comfyui_controlnet_aux/ckpts[0m
+[36;20m[/home/lidgeai/ComfyUI/custom_nodes/comfyui_controlnet_aux] | INFO -> Using symlinks: False[0m
+[36;20m[/home/lidgeai/ComfyUI/custom_nodes/comfyui_controlnet_aux] | INFO -> Using ort providers: ['CUDAExecutionProvider', 'DirectMLExecutionProvider', 'OpenVINOExecutionProvider', 'ROCMExecutionProvider', 'CPUExecutionProvider', 'CoreMLExecutionProvider'][0m
+[32m[INFO][0m [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json
+/home/lidgeai/ComfyUI/custom_nodes/comfyui_controlnet_aux/node_wrappers/dwpose.py:26: UserWarning: DWPose: Onnxruntime not found or doesn't come with acceleration providers, switch to OpenCV with CPU device. DWPose might run very slowly
+  warnings.warn("DWPose: Onnxruntime not found or doesn't come with acceleration providers, switch to OpenCV with CPU device. DWPose might run very slowly")
+(pysssss:WD14Tagger) [DEBUG] Available ORT providers: AzureExecutionProvider, CPUExecutionProvider
+(pysssss:WD14Tagger) [DEBUG] Using ORT providers: CUDAExecutionProvider, CPUExecutionProvider
+[32m[INFO][0m Workflow to API converter endpoint registered at /workflow/convert
+[WorkflowToAPIConverter] API endpoint registered at /workflow/convert
+[34m[ComfyUI-Easy-Use] server: [0mv1.3.7 [92mLoaded[0m
+[34m[ComfyUI-Easy-Use] web root: [0m/home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Easy-Use/web_version/v2 [92mLoaded[0m
+[Crystools [0;32mINFO[0m] Crystools version: 1.27.4
+[Crystools [0;32mINFO[0m] Platform release: 7.0.0-30-generic
+[Crystools [0;32mINFO[0m] JETSON: Not detected.
+[Crystools [0;32mINFO[0m] CPU: AMD Ryzen 7 9800X3D 8-Core Processor - Arch: x86_64 - OS: Linux 7.0.0-30-generic
+[Crystools [0;32mINFO[0m] pynvml (NVIDIA) initialized.
+[Crystools [0;32mINFO[0m] GPU/s:
+[Crystools [0;32mINFO[0m] 0) NVIDIA GeForce RTX 5090
+[Crystools [0;32mINFO[0m] NVIDIA Driver: 580.173.02
+[32m[INFO][0m Installed Qwen2D VAE custom-node patch.
+[32m[INFO][0m [LoRA-Manager] Found LoRA roots:
+ - /home/lidgeai/ComfyUI/models/loras
+[32m[INFO][0m [LoRA-Manager] Found checkpoint roots:
+ - /home/lidgeai/ComfyUI/models/checkpoints
+ - /home/lidgeai/ComfyUI/models/diffusion_models
+ - /home/lidgeai/ComfyUI/models/unet
+[32m[INFO][0m [LoRA-Manager] Found embedding roots:
+ - /home/lidgeai/ComfyUI/models/embeddings
+[32m[INFO][0m [LoRA-Manager] Symlink cache loaded with 0 mappings
+[32m[INFO][0m [LoRA-Manager] Symlink mappings restored from cache in 0.39 ms
+[32m[INFO][0m [LoRA-Manager] Updated 'comfyui' library with current folder paths
+[32m[INFO][0m [LoRA-Manager] Detected async ComfyUI execution, installing async metadata hooks
+[32m[INFO][0m [LoRA-Manager] Metadata collection hooks installed for runtime values
+[32m[INFO][0m [LoRA-Manager] ComfyUI Metadata Collector initialized
+[32m[INFO][0m [LoRA-Manager] Example images path: 
+[32m[INFO][0m [LoRA-Manager] Added static route for locales: /locales -> /home/lidgeai/ComfyUI/custom_nodes/comfyui-lora-manager/locales
+[32m[INFO][0m ('Looking for cached Spacy xx_sent_ud_sm.',)
+[1;35m
+### [START] ComfyUI AlekPet Nodes [1;34mv1.1.7[0m[1;35m ###[0m
+[92mNode -> ExtrasNode: [93mPreviewTextNode, HexToHueNode, ColorsCorrectNode[0m [92m[92m[Loading][0m[0m
+[92mNode -> PoseNode: [93mPoseNode[0m [92m[92m[Loading][0m[0m
+[92mNode -> ArgosTranslateNode: [93mArgosTranslateCLIPTextEncodeNode, ArgosTranslateTextNode[0m [92m[92m[Loading][0m[0m
+[92mNode -> DeepTranslatorNode: [93mDeepTranslatorCLIPTextEncodeNode, DeepTranslatorTextNode[0m [92m[92m[Loading][0m[0m
+[92mNode -> IDENode: [93mIDENode[0m [92m[92m[Loading][0m[0m
+[92mNode -> GoogleTranslateNode: [93mGoogleTranslateCLIPTextEncodeNode, GoogleTranslateTextNode[0m [92m[92m[Loading][0m[0m
+[92mNode -> PainterNode: [93mPainterNode[0m [92m[92m[Loading][0m[0m
+[92mNode -> ChatGLMNode: [93mChatGLM4TranslateCLIPTextEncodeNode, ChatGLM4TranslateTextNode, ChatGLM4InstructNode, ChatGLM4InstructMediaNode, ChatGLMImageGenerateNode, ChatGLMVideoGenerateNode[0m [92m[92m[Loading][0m[0m
+[1;35m### [END] ComfyUI AlekPet Nodes ###[0m
+[32m[INFO][0m 
+Import times for custom nodes:
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-DCW
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/websocket_image_save.py
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/anzhc-qwen2d-comfyui
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyui-workflow-to-api-converter-endpoint
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-post-processing-nodes
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-WD14-Tagger
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Custom-Scripts
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyUI-Spectrum-KSampler
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-segment-anything-2
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyui-instant-lora_v_soya
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/rgthree-comfy
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI_IPAdapter_plus
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-KJNodes
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyui_controlnet_aux
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Impact-Pack
+[32m[INFO][0m    0.0 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyui-manager
+[32m[INFO][0m    0.1 seconds: /home/lidgeai/ComfyUI/custom_nodes/comfyui-lora-manager
+[32m[INFO][0m    0.1 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Crystools
+[32m[INFO][0m    0.1 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Impact-Subpack
+[32m[INFO][0m    0.2 seconds: /home/lidgeai/ComfyUI/custom_nodes/Comfyui-soya-custom-nodes
+[32m[INFO][0m    0.5 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI_Custom_Nodes_AlekPet
+[32m[INFO][0m    0.5 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-SAM2
+[32m[INFO][0m    0.6 seconds: /home/lidgeai/ComfyUI/custom_nodes/ComfyUI-Easy-Use
+[32m[INFO][0m 
+[32m[INFO][0m Context impl SQLiteImpl.
+[32m[INFO][0m Will assume non-transactional DDL.
+[32m[INFO][0m Disabling intermediate node cache.
+[32m[INFO][0m [LoRA-Manager] Deduplicate: removed 0 history rows, 0 queue rows, 0 orphaned queue rows
+[32m[INFO][0m Starting server
+
+[32m[INFO][0m To see the GUI go to: http://127.0.0.1:8188
+[32m[INFO][0m [LoRA-Manager] Lora cache hydrated from persisted snapshot with 5 models
+[32m[INFO][0m [LoRA-Manager] Checkpoint cache hydrated from persisted snapshot with 4 models
+[32m[INFO][0m [LoRA-Manager] Recipe cache miss: performing full directory scan
+[32m[INFO][0m [LoRA-Manager] Embedding cache initialized in 0.00 seconds. Found 0 models
+[32m[INFO][0m [LoRA-Manager] Recipe cache initialized in 0.00 seconds. Found 0 recipes
+[32m[INFO][0m [LoRA-Manager] FTS index validated, reusing existing index with 0 recipes
+[32m[INFO][0m got prompt
+[32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float32
+[32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float16
+[32m[INFO][0m Found quantization metadata version 1
+[32m[INFO][0m Using MixedPrecisionOps for text encoder
+FETCH ComfyRegistry Data: 5/177
+[32m[INFO][0m CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+[32m[INFO][0m Requested to load MiniMaxH3TEModel_
+[32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+[32m[INFO][0m Found quantization metadata version 1
+[32m[INFO][0m Detected mixed precision quantization
+[32m[INFO][0m Using mixed precision operations
+[32m[INFO][0m Native ops: mxfp8, nvfp4, asym_w4a8_int8, int8_tensorwise, float8_e5m2, float8_e4m3fn, convrot_w4a4 
+[32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+[32m[INFO][0m model_type FLOW_AV
+[32m[INFO][0m Requested to load MiniMaxH3
+[32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 11944MB Staged. 0 patches attached. Force pre-loaded 210 weights: 1175 KB.
+  0%|          | 0/10 [00:00<?, ?it/s]  0%|          | 0/10 [00:00<?, ?it/s,   Model Initializing ...  ]FETCH ComfyRegistry Data: 10/177
+  0%|          | 0/10 [00:08<?, ?it/s,  Model Initialization complete!  ] 10%|█         | 1/10 [00:08<01:20,  8.97s/it,  Model Initialization complete!  ]FETCH ComfyRegistry Data: 15/177
+FETCH ComfyRegistry Data: 20/177
+ 10%|█         | 1/10 [00:15<01:20,  8.97s/it]                                    20%|██        | 2/10 [00:15<01:03,  7.94s/it]FETCH ComfyRegistry Data: 25/177
+ 30%|███       | 3/10 [00:23<00:55,  7.93s/it]FETCH ComfyRegistry Data: 30/177
+ 40%|████      | 4/10 [00:31<00:47,  7.96s/it]FETCH ComfyRegistry Data: 35/177
+FETCH ComfyRegistry Data: 40/177
+ 50%|█████     | 5/10 [00:39<00:39,  7.97s/it]FETCH ComfyRegistry Data: 45/177
+FETCH ComfyRegistry Data: 50/177
+ 60%|██████    | 6/10 [00:47<00:31,  7.97s/it]FETCH ComfyRegistry Data: 55/177
+ 70%|███████   | 7/10 [00:55<00:23,  7.99s/it]FETCH ComfyRegistry Data: 60/177
+FETCH ComfyRegistry Data: 65/177
+ 80%|████████  | 8/10 [01:03<00:15,  7.99s/it]FETCH ComfyRegistry Data: 70/177
+FETCH ComfyRegistry Data: 75/177
+ 90%|█████████ | 9/10 [01:11<00:07,  7.99s/it]FETCH ComfyRegistry Data: 80/177
+100%|██████████| 10/10 [01:19<00:00,  8.00s/it]100%|██████████| 10/10 [01:19<00:00,  7.97s/it]
+[32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+[32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+[32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+[32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 348 KB.
+FETCH ComfyRegistry Data: 85/177
+FETCH ComfyRegistry Data: 90/177
+[32m[INFO][0m [32mPrompt executed in 102.26 seconds[0m
+FETCH ComfyRegistry Data: 95/177

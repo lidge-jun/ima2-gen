@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-08-13
+updated: 2026-08-26
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -36,12 +36,10 @@ architecture and audit records are not kept as loose top-level duplicates.
 
 Files in `_plan/` are work-in-progress. They use the format `YYMMDD_<topic>` to aid chronological sorting. Each plan typically maps to a GitHub issue or a standalone initiative.
 
-As of 2026-08-13, `_plan/` has two active lanes: `260812_navrail_grok_autotag/`
-(release automation shipped but never observed green — see its
-`060_release_activation_residual.md`) and `260813_maturity_roadmap/` (the patch
-roadmap derived from the external 58/80 maturity assessment). The authoritative
-table is `devlog/_plan/README.md` §현재 Active Lane; external-blocked follow-ups
-and `_future` handoffs also remain outside `_fin`.
+As of 2026-08-26, `_plan/` has one active lane:
+`260819c_grok_proxy_supervision/` (research + roadmap complete, implementation
+pending). The authoritative table is `devlog/_plan/README.md` §현재 Active Lane;
+external-blocked follow-ups and `_future` handoffs also remain outside `_fin`.
 
 Deferred items live in `_plan/_future/` (canvas exports, masked edit, batch
 matrix, storyboard planner skill).
@@ -123,17 +121,9 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 ## Active units
 
-| Unit | Status |
-|---|---|
-| `260823_comfy_provider_lane/` | ComfyUI provider lane. wp0-wp6 landed on `dev`; wp7 (multimode/node/agent surfaces) deferred past the merge boundary |
-| `260824_minimax_h3_pruned_nvfp4/` | lidge RTX 5090 pruned NVFP4 실기와 ima2의 locked Comfy video workflow catalog 노출. 000~040 diff-level roadmap |
+| Unit | Status | Open issue |
+|---|---|---|
+| `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
 
-`260823_comfy_provider_lane` is worth reading as a worked example of the
-documentation routine rather than only for its subject. It carries the
-docs-first Phase-0 roadmap (`000` plus diff-level `010`-`070`), a live protocol
-probe (`001`) that promoted second-party protocol claims to first-party and
-corrected one assumption the roadmap had made, two audit syntheses
-(`002`, `003`) recording 22 reviewer findings across three rounds with zero
-rebuttals, and per-cycle evidence documents (`004`-`007`) — including `006`,
-which records two places where the pre-written plan was wrong about the code
-and following it literally would have removed validation.
+Open issue #150 (Provider Adapter v1 RFC) is tracked in `_plan/README.md` but
+has no owning devlog unit yet — its scope is architectural and cross-cutting.
