@@ -6,10 +6,12 @@ generated/
 !ui/src/generated/
 !ui/src/generated/providers.ts
 .DS_Store
-# Keep ad-hoc devlog output ignored, except the reviewed subscription-MCP plan.
+# Keep ad-hoc devlog output ignored; tracked units live in _plan/ or _fin/.
 devlog/*
 !devlog/_plan/
+!devlog/_fin/
 devlog/_plan/*
+devlog/_fin/*
 !devlog/_plan/260715_subscription-mcp-providers/
 !devlog/_plan/260715_subscription-mcp-providers/**
 ui/dist/
@@ -41,23 +43,35 @@ tests/experiments/
 # Runtime thumbnail/project cache
 cache/
 
-!devlog/_plan/260821_260821d-release-train/
-!devlog/_plan/260821_260821d-release-train/*.md
+# Grok proxy supervision: planned but not yet implemented.
+!devlog/_plan/260819c_grok_proxy_supervision/
+!devlog/_plan/260819c_grok_proxy_supervision/**
 
-# ComfyUI provider lane unit (260823): plan docs plus live-probe evidence.
-!devlog/_plan/260823_comfy_provider_lane/
-!devlog/_plan/260823_comfy_provider_lane/**
-!devlog/_plan/260823_minimax_h3/
-!devlog/_plan/260823_minimax_h3/**
+# Completed units tracked in _fin/.
+!devlog/_fin/260817_grok_video_planner_timeout/
+!devlog/_fin/260817_grok_video_planner_timeout/**
+!devlog/_fin/260818_platform_contracts_closeout/
+!devlog/_fin/260818_platform_contracts_closeout/**
+!devlog/_fin/260819_kling_provider_feasibility/
+!devlog/_fin/260819_kling_provider_feasibility/**
+!devlog/_fin/260819_log_detail_modal/
+!devlog/_fin/260819_log_detail_modal/**
+!devlog/_fin/260819_release_speed/
+!devlog/_fin/260819_release_speed/**
+!devlog/_fin/260821_release_train/
+!devlog/_fin/260821_release_train/**
+!devlog/_fin/260823_comfy_provider_lane/
+!devlog/_fin/260823_comfy_provider_lane/**
+!devlog/_fin/260823_minimax_h3/
+!devlog/_fin/260823_minimax_h3/**
+!devlog/_fin/260824_minimax_h3_pruned_nvfp4/
+!devlog/_fin/260824_minimax_h3_pruned_nvfp4/**
+!devlog/_fin/260825_comfy_video_provider_ux/
+!devlog/_fin/260825_comfy_video_provider_ux/**
+!devlog/_fin/260825_issue_batch_170_173/
+!devlog/_fin/260825_issue_batch_170_173/**
+!devlog/_fin/260825_novelai_negative_prompt_settings/
+!devlog/_fin/260825_novelai_negative_prompt_settings/**
+!devlog/_fin/260825_novelai_provider_lane/
+!devlog/_fin/260825_novelai_provider_lane/**
 
-# NovelAI provider lane unit (260824): plan docs plus render evidence.
-!devlog/_plan/260824_novelai_provider_lane/
-!devlog/_plan/260824_novelai_provider_lane/**
-
-# Comfy video / provider UX / capability unit (260825): plan docs plus evidence.
-!devlog/_plan/260825_comfy_video_provider_ux/
-!devlog/_plan/260825_comfy_video_provider_ux/**
-
-# Issue batch #170-#173 (260825): plan docs plus evidence.
-!devlog/_plan/260825_issue_batch_170_173/
-!devlog/_plan/260825_issue_batch_170_173/**

@@ -17,6 +17,7 @@ import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
 import { generateViaNai } from "./naiImageAdapter.js";
+import { composerNegativePromptMeta, readNaiOptions } from "./naiOptions.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, INFLIGHT_RETRY_AFTER_SECONDS } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
 import { logEvent, logError } from "./logger.js";
@@ -320,6 +321,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           promptMode: normalizedPromptMode,
           composerPrompt,
           composerInsertedPrompts,
+          ...composerNegativePromptMeta(activeProvider, req.body),
           quality,
           size: effectiveSize,
           format: resultFormat,
@@ -421,6 +423,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
           size: effectiveSize,
           signal: cancelController.signal,
           requestId,
+          ...readNaiOptions(req.body),
         });
         generated = {
           // No mime field on this shape; the persist step below detects PNG

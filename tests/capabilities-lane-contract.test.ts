@@ -39,4 +39,21 @@ describe("capability lane contract", () => {
     assert.ok(providers.includes("auto"));
     assert.equal(providers.includes("runway"), false);
   });
+
+  it("publishes the NovelAI display defaults from runtime config", () => {
+    const built = buildIma2Capabilities({ packageVersion: "0.0.0-test", source: "local" });
+    const nai = (built.defaults as Record<string, Record<string, unknown>>).nai;
+    // Display only. The web UI shows these so its panel matches the operator's
+    // configuration; it never re-sends an untouched value, which is what keeps
+    // IMA2_NAI_DEFAULT_* authoritative at the adapter.
+    assert.ok(nai, "defaults.nai must exist");
+    assert.deepEqual(Object.keys(nai).sort(), ["noiseSchedule", "sampler", "scale", "steps"]);
+    assert.equal(typeof nai.sampler, "string");
+    assert.equal(typeof nai.noiseSchedule, "string");
+    assert.equal(typeof nai.steps, "number");
+    assert.equal(typeof nai.scale, "number");
+    // No model: NaiOptions has no model member, and publishing a field nothing
+    // consumes is the drift this unit exists to remove.
+    assert.equal("model" in nai, false);
+  });
 });

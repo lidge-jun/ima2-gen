@@ -2323,5 +2323,58 @@
       "refImage": "参考图",
       "output": "输出节点"
     }
+  },
+  "nai": {
+    "negativePrompt": {
+      "label": "排除内容",
+      "placeholder": "低画质、结构错误、水印…",
+      "hint": "想要避开的标签。与下方预设一同生效。"
+    },
+    "panel": {
+      "modelTitle": "模型",
+      "sizeTitle": "尺寸",
+      "samplingTitle": "采样",
+      "presetTitle": "预设",
+      "outputTitle": "输出"
+    },
+    "field": {
+      "sampler": "采样器",
+      "noiseSchedule": "噪声调度",
+      "steps": "步数",
+      "scale": "引导强度",
+      "cfgRescale": "CFG 重缩放",
+      "ucPreset": "排除预设",
+      "qualityPreset": "质量预设",
+      "varietyPlus": "Variety+",
+      "straightAlpha": "透明背景",
+      "seed": "种子",
+      "seedRandom": "随机"
+    },
+    "help": {
+      "varietyPlus": "在高引导强度下增加构图多样性。",
+      "straightAlpha": "V5 原生 alpha。请在提示词中一并加入透明背景标签。",
+      "cfgRescale": "缓解高引导强度下的过饱和。设为 0 即关闭。",
+      "seed": "留空则每次使用新的种子。"
+    },
+    "size": {
+      "portrait": "竖版",
+      "landscape": "横版",
+      "square": "方形"
+    },
+    "ucPreset": {
+      "heavy": "强",
+      "light": "弱",
+      "furryFocus": "兽人向",
+      "humanFocus": "人物向",
+      "none": "不使用"
+    },
+    "qualityPreset": {
+      "standard": "标准",
+      "light": "轻量",
+      "none": "不使用"
+    },
+    "resetDefaults": "恢复默认值",
+    "compatTitle": "NovelAI 通道",
+    "compatBody": "仅支持文生图。该通道不支持参考图、编辑与批量生成。"
   }
 }

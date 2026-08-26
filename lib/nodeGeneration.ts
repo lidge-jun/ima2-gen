@@ -15,6 +15,7 @@ import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
 import { generateViaNai } from "./naiImageAdapter.js";
+import { readNaiOptions } from "./naiOptions.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { logEvent, logError } from "./logger.js";
 import { errInfo } from "./errInfo.js";
@@ -341,6 +342,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
                 size: effectiveSize,
                 signal: cancelController.signal,
                 requestId,
+                ...readNaiOptions(req.body),
               })
             : activeProvider === "grok" || activeProvider === "grok-api"
             ? await generateViaGrok(generationPrompt, ctx, {

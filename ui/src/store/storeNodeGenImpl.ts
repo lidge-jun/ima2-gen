@@ -1,9 +1,7 @@
 import type { ClientNodeId } from "../lib/graph";
 import { postNodeGenerateStream } from "../lib/api";
 import { deriveParentServerNodeIds } from "../lib/nodeGraph";
-import {
-  getSelectedNodeIds,
-} from "../lib/nodeSelection";
+import { getSelectedNodeIds } from "../lib/nodeSelection";
 import {
   getDirectUnselectedChildren,
   getUnselectedDownstreamIds,
@@ -23,6 +21,7 @@ import {
   stripDataUrlPrefix,
   isCanceledGenerationError,
 } from "./storeHelpers";
+import { naiPayloadFields } from "../lib/naiPayload";
 import type { AppState } from "./storeTypes";
 import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 import { getAssetById } from "../lib/api-assets";
@@ -31,8 +30,7 @@ import { elementReferenceFilenames, upsertElementCatalog } from "../lib/elementC
 import { collectElementInputs, type ElementInputNode } from "../lib/nodeElementInputs";
 import { fetchAsDataUrl } from "../lib/image";
 
-type StoreSet = (p: Partial<AppState>) => void;
-type StoreGet = () => AppState;
+type StoreSet = (p: Partial<AppState>) => void; type StoreGet = () => AppState;
 
 const nodeGenerationLocks = new Set<string>();
 
@@ -222,6 +220,7 @@ export async function runGenerateNodeInPlaceImpl(
       contextMode: "parent-plus-refs",
       searchMode: s.webSearchEnabled ? "on" : "off",
       webSearchEnabled: s.webSearchEnabled,
+      ...naiPayloadFields(s, { provider: nodeProvider, imageModel: nodeModel }),
       ...(nodeRefs.length
         ? { references: nodeRefs.map(stripDataUrlPrefix) }
         : {}),

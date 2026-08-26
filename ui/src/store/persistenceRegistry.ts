@@ -29,6 +29,9 @@ export const PERSISTED_KEYS = [
   // agent
   // retired 2607: agent pane preference — rail is the only desktop mode; key kept as historical registry member
   "ima2.agentPanePreference",
+  // nai — APPEND ONLY: the constants below index into this array, so inserting
+  // anywhere but the end silently repoints an existing exported key.
+  "ima2.naiOptions",
 ] as const;
 
 export type PersistedKey = (typeof PERSISTED_KEYS)[number];
@@ -52,6 +55,7 @@ export const WORKSPACE_PROFILE_STORAGE_KEY = PERSISTED_KEYS[15];
 export const WORKSPACE_OVERRIDES_STORAGE_KEY = PERSISTED_KEYS[16];
 export const VIDEO_DEFAULTS_STORAGE_KEY = PERSISTED_KEYS[17];
 export const AGENT_PANE_PREFERENCE_STORAGE_KEY = PERSISTED_KEYS[18];
+export const NAI_OPTIONS_STORAGE_KEY = PERSISTED_KEYS[19];
 
 export const PERSISTED_REGISTRY: Record<
   PersistedKey,
@@ -80,4 +84,7 @@ export const PERSISTED_REGISTRY: Record<
   "ima2.workspaceProfile": { domain: "layout", shape: "string", resetSafe: true },
   "ima2.workspaceOverrides": { domain: "layout", shape: "json:WorkspaceOverrides", resetSafe: true },
   "ima2.videoDefaults": { domain: "generation", shape: "json:{model,duration,resolution,aspectRatio}", resetSafe: true },
+  // Sparse: only the fields the user changed. An absent field keeps following
+  // the operator's configuration instead of a compiled-in constant.
+  "ima2.naiOptions": { domain: "generation", shape: "json:NaiOptionOverrides", resetSafe: true },
 };

@@ -13,16 +13,15 @@ import { ElementMentionChips } from "./composer/ElementMentionChips";
 import { DeadTagMirror } from "./composer/DeadTagMirror";
 import { PromptComposerToolbar } from "./composer/PromptComposerToolbar";
 import { usePromptPaste } from "./composer/usePromptPaste";
+import { NegativePromptField } from "./NegativePromptField";
 import { elementPreviewPath, loadAllElementAssets } from "../lib/elementMembership";
-import type { AssetItem } from "../store/storeTypes";
+import type { AssetItem } from "../store/storeTypes"; import type { TrayItem } from "../lib/referenceTray";
 import { addTrayElementImpl, syncElementCatalogImpl } from "../store/storeReferenceImpl";
 import { findElementTrayItem } from "../lib/elementCatalog";
-import type { TrayItem } from "../lib/referenceTray";
 type PromptComposerProps = { variant?: "sidebar" | "bottom" };
 type ElementSelectionState = {
-  addElementId?: (id: string) => void; removeElementId?: (id: string) => void;
-  elementCatalog?: AssetItem[] | null; missingElementIds?: string[];
-  addElementFromMention?: (asset: AssetItem) => TrayItem | null; syncElementCatalog?: (records: AssetItem[]) => void;
+  addElementId?: (id: string) => void; removeElementId?: (id: string) => void; elementCatalog?: AssetItem[] | null;
+  missingElementIds?: string[]; addElementFromMention?: (asset: AssetItem) => TrayItem | null; syncElementCatalog?: (records: AssetItem[]) => void;
 };
 type InternalRefDragItem = VideoReferenceDragPayload;
 const TRAY_MENTION_PREFIX = "tray:";
@@ -411,6 +410,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
           }}
         />
       </div>
+      <NegativePromptField variant="classic" />
       <ElementMentionMenu
         open={mentionQuery !== null}
         textareaRef={textareaRef}

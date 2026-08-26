@@ -26,6 +26,7 @@ import {
   loadVideoDefaults,
   saveVideoDefaults,
   loadGenerationDefaults,
+  loadNaiOverrides,
 } from "./storePersistence";
 import {
   HISTORY_LIMIT,
@@ -122,6 +123,7 @@ import {
   setImageModelImpl, selectVideoModelImpl, setComfyVideoWorkflowImpl, activeVideoRefCountImpl,
   setReasoningEffortImpl, setWebSearchEnabledImpl, setCountImpl,
   setMultimodeImpl, setMultimodeMaxImagesImpl, setPromptModeImpl, setPromptImpl,
+  setNegativePromptImpl, setNaiOptionImpl, resetNaiOptionsImpl,
   getResolvedSizeImpl,
 } from "./storeSettingsImpl";
 import {
@@ -263,6 +265,9 @@ export const useAppStore = create<AppState>((set, get, store) => ({
   multimodePreviewFlightId: null,
   promptMode: storedGenerationDefaults.promptMode ?? "auto",
   prompt: storedGenerationDefaults.prompt ?? "",
+  negativePrompt: storedGenerationDefaults.negativePrompt ?? "",
+  naiOptionOverrides: loadNaiOverrides(),
+  naiServerDefaults: null,
   insertedPrompts: storedGenerationDefaults.insertedPrompts ?? [],
   mcpInputRoles: [],
   mcpReferenceSelection: emptyMcpReferenceSelection(),
@@ -570,6 +575,9 @@ addChildNodeAt: (parentClientId, position, sourceHandle) => addChildNodeAtImpl(p
   setMultimodeMaxImages: (count) => setMultimodeMaxImagesImpl(count, set),
   setPromptMode: (promptMode) => setPromptModeImpl(promptMode, set),
   setPrompt: (prompt) => setPromptImpl(prompt, set),
+  setNegativePrompt: (value) => setNegativePromptImpl(value, set),
+  setNaiOption: (key, value) => setNaiOptionImpl(key, value, set, get),
+  resetNaiOptions: () => resetNaiOptionsImpl(set),
   insertPromptToComposer: (prompt) => insertPromptToComposerImpl(prompt, set),
   removeInsertedPromptFromComposer: (id) => removeInsertedPromptFromComposerImpl(id, set),
   moveInsertedPromptInComposer: (id, direction) => moveInsertedPromptInComposerImpl(id, direction, set),

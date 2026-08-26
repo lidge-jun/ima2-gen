@@ -7,8 +7,14 @@ import type { RuntimeContext } from "./runtimeContext.js";
 import { writeSse } from "./routeHelpers.js";
 import { publishJobEvent } from "./ssePublish.js";
 import { errorEnvelopeFields } from "./errors/envelope.js";
+import type { NaiRequestOptions } from "./naiOptions.js";
 
-export interface NodeGenerateBody {
+/**
+ * The NovelAI tuning fields ride along here so the node lane has the same
+ * typed surface as /api/generate. readNaiOptions() still validates them at
+ * dispatch; this stops the next contributor from re-adding a private ladder.
+ */
+export interface NodeGenerateBody extends Partial<NaiRequestOptions> {
   prompt?: string;
   parentNodeId?: string;
   requestId?: string;

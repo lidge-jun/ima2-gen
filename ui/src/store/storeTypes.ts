@@ -18,6 +18,7 @@ import type {
   HistoryStripLayout,
 } from "../types";
 import type { SpriteCuratorTarget } from "../types/spriteAtlas";
+import type { NaiOptions, NaiOptionOverrides } from "../lib/naiOptions";
 import type { HistoryCursor, SessionSummary, PromptItem, PromptFolder } from "../lib/api";
 import type { ClientNodeId } from "../lib/graph";
 import type { NodeBatchMode } from "../lib/nodeBatch";
@@ -225,6 +226,7 @@ export type GenerationDefaults = Partial<{
   multimodeMaxImages: Count;
   promptMode: "auto" | "direct";
   prompt: string;
+  negativePrompt: string;
   insertedPrompts: InsertedPrompt[];
   presetIds: string[];
 }>;
@@ -338,6 +340,11 @@ export type AppState = PresetState & ReferenceTraySlice & {
   multimodePreviewFlightId: string | null;
   promptMode: "auto" | "direct";
   prompt: string;
+  negativePrompt: string;
+  /** Sparse: only the NovelAI fields the user explicitly changed (020). */
+  naiOptionOverrides: NaiOptionOverrides;
+  /** Display defaults from /api/capabilities; null until it answers. */
+  naiServerDefaults: NaiOptionOverrides | null;
   referenceLimit: number;
   providerUrlReference: string | null;
   canvasReferenceImage: string | null;
@@ -538,6 +545,9 @@ export type AppState = PresetState & ReferenceTraySlice & {
   runVideoGenerate: (nodeId?: string) => Promise<void>;
   animateImage: (filename: string, prompt?: string) => Promise<boolean>;
   setReasoningEffort: (e: ReasoningEffort) => void;
+  setNaiOption: <K extends keyof NaiOptions>(key: K, value: NaiOptions[K]) => void;
+  resetNaiOptions: () => void;
+  setNegativePrompt: (value: string) => void;
   setWebSearchEnabled: (enabled: boolean) => void;
   setCount: (c: Count) => void;
   setMultimode: (enabled: boolean) => void;

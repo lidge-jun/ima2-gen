@@ -29,6 +29,19 @@ export type NodeGenerateRequest = {
   sessionId?: string | null;
   clientNodeId?: string | null;
   storyboard?: boolean;
+  // NovelAI tuning. Node has its own request type — it does not derive from
+  // GenerateRequest — so the fields are declared explicitly here too.
+  negativePrompt?: string;
+  steps?: number;
+  scale?: number;
+  cfgRescale?: number;
+  sampler?: string;
+  noiseSchedule?: string;
+  seed?: number;
+  straightAlpha?: boolean;
+  varietyPlus?: boolean;
+  ucPresetId?: string;
+  qualityPresetId?: string;
 };
 
 export type NodeGenerateResponse = {

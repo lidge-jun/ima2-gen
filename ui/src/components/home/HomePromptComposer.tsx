@@ -6,6 +6,7 @@ import type { Provider } from "../../types";
 import type { ProviderAvailability } from "../../hooks/useProviderAvailability";
 import { Chip, ChipRow } from "../controls";
 import { Select, type SelectItem } from "../controls/Select";
+import { NegativePromptField } from "../NegativePromptField";
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   oauth: "GPT OAuth",
@@ -109,6 +110,8 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
         placeholder={t("prompt.placeholder")}
         onChange={(event) => setPrompt(event.target.value)}
       />
+
+      <NegativePromptField variant="home" />
 
       <div className="home-prompt__footer">
         <Select

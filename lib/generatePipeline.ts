@@ -18,6 +18,7 @@ import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "./minimaxImageAdapter.js";
 import { generateViaNai } from "./naiImageAdapter.js";
+import { composerNegativePromptMeta, readNaiOptions } from "./naiOptions.js";
 import { generateViaComfy } from "./comfyImageAdapter.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, setJobPhase, INFLIGHT_RETRY_AFTER_SECONDS, } from "./inflight.js";
@@ -475,13 +476,9 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             size: effectiveSize,
             signal: cancelController.signal,
             requestId,
-            ...(typeof req.body?.straightAlpha === "boolean" ? { straightAlpha: req.body.straightAlpha } : {}),
-            ...(typeof req.body?.negativePrompt === "string" ? { negativePrompt: req.body.negativePrompt } : {}),
-            ...(typeof req.body?.steps === "number" ? { steps: req.body.steps } : {}),
-            ...(typeof req.body?.scale === "number" ? { scale: req.body.scale } : {}),
-            ...(typeof req.body?.sampler === "string" ? { sampler: req.body.sampler } : {}),
-            ...(typeof req.body?.noiseSchedule === "string" ? { noiseSchedule: req.body.noiseSchedule } : {}),
-            ...(typeof req.body?.seed === "number" ? { seed: req.body.seed } : {}),
+            // One normalizer for every request-driven lane: the multimode and
+            // node branches spread the same call, so the three cannot drift.
+            ...readNaiOptions(req.body),
           });
           throwIfJobCanceled(requestId);
           return r;
@@ -683,6 +680,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
             promptMode: normalizedPromptMode,
             composerPrompt,
             composerInsertedPrompts,
+            ...composerNegativePromptMeta(activeProvider, req.body),
             quality,
             size: effectiveSize,
             format: resultFormat,

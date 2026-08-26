@@ -246,6 +246,18 @@ export type GenerateRequest = {
   composerInsertedPrompts?: ComposerInsertedPromptSnapshot[];
   providerUrl?: string;
   backgroundPreset?: AssetGenBackgroundPreset;
+  // NovelAI tuning; emitted only for the nai lane (see naiPayloadFields).
+  negativePrompt?: string;
+  steps?: number;
+  scale?: number;
+  cfgRescale?: number;
+  sampler?: string;
+  noiseSchedule?: string;
+  seed?: number;
+  straightAlpha?: boolean;
+  varietyPlus?: boolean;
+  ucPresetId?: string;
+  qualityPresetId?: string;
 };
 
 export type MultimodeGenerateRequest = Omit<GenerateRequest, "n"> & {

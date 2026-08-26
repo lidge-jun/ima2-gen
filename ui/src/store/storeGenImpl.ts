@@ -25,6 +25,7 @@ import {
 } from "./storeHelpers";
 import { addHistory } from "./storeGraphSave";
 import type { AppState } from "./storeTypes";
+import { naiPayloadFields } from "../lib/naiPayload";
 import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 import { compilePresets, type PresetProvider } from "../../../lib/presetCompiler.js";
 import { getAllPresets } from "../lib/presets";
@@ -118,6 +119,7 @@ export async function generateMultimodeImpl(
       composerInsertedPrompts,
       presetIds: compiled.appliedPresetIds,
       elementIds: selectedElementIds(s),
+      ...naiPayloadFields(s),
       ...(s.providerUrlReference
         ? { providerUrl: s.providerUrlReference }
         : s.referenceImages.length
@@ -311,7 +313,10 @@ export async function runGenerateImpl(
       format: s.format,
       moderation: s.moderation,
       provider: s.provider,
-      n: s.count,
+      // NovelAI's Opus free tier covers one image per request, and the server
+      // fans this out into n separate upstream calls. Forcing 1 is the behavior
+      // that makes hiding CountPicker honest instead of cosmetic.
+      n: s.provider === "nai" ? 1 : s.count,
       model: s.imageModel,
       reasoningEffort: s.reasoningEffort,
       storyboard: s.storyboardActive || undefined,
@@ -322,6 +327,7 @@ export async function runGenerateImpl(
       composerInsertedPrompts,
       presetIds: compiled.appliedPresetIds,
       elementIds: selectedElementIds(s),
+      ...naiPayloadFields(s),
       ...(s.providerUrlReference
         ? { providerUrl: s.providerUrlReference }
         : s.referenceImages.length

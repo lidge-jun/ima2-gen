@@ -39,7 +39,7 @@ export const NAI_QUALITY_PRESET_IDS = ["standard", "light", "none"] as const;
 const DEFAULT_WIDTH = 832;
 const DEFAULT_HEIGHT = 1216;
 
-type NaiGenerateOptions = {
+export type NaiGenerateOptions = {
   model?: string | undefined;
   size?: string | undefined;
   signal?: AbortSignal | undefined;
@@ -52,6 +52,10 @@ type NaiGenerateOptions = {
   seed?: number | undefined;
   /** V5 native alpha. Prompt tags like "transparent background" pair with it. */
   straightAlpha?: boolean | undefined;
+  /** 0-1. CLIsu exposes this; the previous hardcoded 0 made it unreachable. */
+  cfgRescale?: number | undefined;
+  /** V4.5/V5 "Variety+": lifts skip_cfg_above_sigma off its absent default. */
+  varietyPlus?: boolean | undefined;
   ucPresetId?: string | undefined;
   qualityPresetId?: string | undefined;
 };
@@ -114,6 +118,10 @@ export async function generateViaNai(
   const { width, height } = parseSize(options.size);
   const sampler = options.sampler || cfg.defaultSampler;
   const negativePrompt = options.negativePrompt ?? "";
+  // straight_alpha and qualityPresetId are V5 features. A V4.5 request carrying
+  // a user value is stale client state, not intent, so both are pinned to the
+  // values this adapter has always sent for non-V5 models.
+  const isV5 = model === "nai-diffusion-5-full" || model === "nai-diffusion-5-curated";
 
   const parameters: Record<string, unknown> = {
     params_version: 3,
@@ -125,7 +133,7 @@ export async function generateViaNai(
     // Kept at 1: NovelAI's Opus free tier only covers single-image requests.
     n_samples: 1,
     ucPresetId: options.ucPresetId ?? "heavy",
-    qualityPresetId: options.qualityPresetId ?? "standard",
+    qualityPresetId: isV5 ? (options.qualityPresetId ?? "standard") : "standard",
     autoSmea: false,
     dynamic_thresholding: false,
     controlnet_strength: 1,
@@ -133,13 +141,13 @@ export async function generateViaNai(
     legacy_v3_extend: false,
     legacy_uc: false,
     add_original_image: true,
-    cfg_rescale: 0,
+    cfg_rescale: options.cfgRescale ?? 0,
     noise_schedule: options.noiseSchedule || cfg.defaultNoiseSchedule,
     use_coords: false,
     normalize_reference_strength_multiple: true,
     inpaintImg2ImgStrength: 1,
     negative_prompt: negativePrompt,
-    straight_alpha: options.straightAlpha === true,
+    straight_alpha: isV5 && options.straightAlpha === true,
     characterPrompts: [],
     v4_prompt: {
       caption: { base_caption: prompt, char_captions: [] },
@@ -153,6 +161,12 @@ export async function generateViaNai(
   };
   if (typeof options.seed === "number" && Number.isFinite(options.seed)) {
     parameters.seed = options.seed;
+  }
+  // CLIsu's coefficient for the V4.5/V5 family (stableDiff.ts:416-419). The
+  // V4-and-older 0.01889 branch is unreachable here: no V4/V3/V2 model is
+  // registered, so a single coefficient is the honest shape.
+  if (options.varietyPlus === true) {
+    parameters.skip_cfg_above_sigma = Math.sqrt(width * height) * 0.05766;
   }
   // Only this sampler carries the ancestral-noise switches, matching the
   // reference client; sending them unconditionally is not the documented shape.

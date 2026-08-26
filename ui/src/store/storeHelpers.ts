@@ -10,6 +10,7 @@ import {
 import { compressToBase64 } from "../lib/compress";
 import { IN_FLIGHT_STORAGE_KEY } from "./persistenceRegistry";
 import { normalizeCustomSizePairDetailed } from "../lib/size";
+import { resolveNaiOptions, type NaiOptions } from "../lib/naiOptions";
 import {
   normalizeInsertedPromptArray,
   cloneInsertedPrompts,
@@ -336,6 +337,19 @@ export function saveInFlight(list: PersistedInFlight[]): void {
       console.warn("[ima2] localStorage write failed:", err);
     }
   }
+}
+
+/**
+ * The displayed NovelAI options: compiled fallback, then the operator's
+ * published defaults, then whatever the user explicitly changed. There is no
+ * naiOptions state field — this resolves at read time so an untouched field
+ * keeps tracking the server (020).
+ *
+ * Consume it with useShallow: it returns a fresh object per call and Zustand 5
+ * hands selector output straight to useSyncExternalStore.
+ */
+export function selectResolvedNaiOptions(state: AppState): NaiOptions {
+  return resolveNaiOptions(state.naiServerDefaults, state.naiOptionOverrides);
 }
 
 export function getCustomSizeConfirmation(

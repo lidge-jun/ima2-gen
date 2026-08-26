@@ -2,6 +2,7 @@ import type { Provider, Quality, SizePreset, Format, Moderation, ImageModel, Cou
 import type { ReasoningEffort } from "../lib/reasoning";
 import { DEFAULT_IMAGE_MODEL, GROK_VIDEO_MODEL_15, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, isMinimaxImageModel, isNaiImageModel, normalizeVideoModelValue } from "../lib/imageModels";
 import { parseRequestedCustomSide } from "../lib/size";
+import type { NaiOptions, NaiOptionOverrides } from "../lib/naiOptions";
 import { getEffectiveVideoSourceCount } from "../lib/videoSourceCount";
 import {
   composePrompt,
@@ -12,6 +13,7 @@ import {
   saveWebSearchEnabled,
   saveVideoDefaults,
   saveGenerationDefaultsPatch,
+  saveNaiOverrides,
   normalizeCount,
 } from "./storePersistence";
 import type { StoreSet, StoreGet } from "./storeTypes";
@@ -565,6 +567,37 @@ export function setPromptModeImpl(promptMode: "auto" | "direct", set: StoreSet):
 export function setPromptImpl(prompt: string, set: StoreSet): void {
   saveGenerationDefaultsPatch({ prompt });
   set({ prompt });
+}
+
+export function setNegativePromptImpl(negativePrompt: string, set: StoreSet): void {
+  // Persisted with the composer draft: an image whose undesired-content prompt
+  // is unrecoverable cannot be reproduced.
+  saveGenerationDefaultsPatch({ negativePrompt });
+  set({ negativePrompt });
+}
+
+/**
+ * Records ONE override. Fields the user never touches stay absent, so they keep
+ * resolving from the operator's configuration rather than freezing at whatever
+ * this client shipped with (020).
+ */
+export function setNaiOptionImpl<K extends keyof NaiOptions>(
+  key: K,
+  value: NaiOptions[K],
+  set: StoreSet,
+  get: StoreGet,
+): void {
+  const naiOptionOverrides: NaiOptionOverrides = { ...get().naiOptionOverrides, [key]: value };
+  saveNaiOverrides(naiOptionOverrides);
+  // In-memory update is unconditional: a quota failure must not cost the user
+  // their current session's choice.
+  set({ naiOptionOverrides });
+}
+
+/** Clears every override, returning all ten fields to operator configuration. */
+export function resetNaiOptionsImpl(set: StoreSet): void {
+  saveNaiOverrides({});
+  set({ naiOptionOverrides: {} });
 }
 
 export function getResolvedSizeImpl(get: StoreGet): string {

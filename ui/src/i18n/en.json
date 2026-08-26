@@ -2323,5 +2323,58 @@
       "refImage": "Reference image",
       "output": "Output node"
     }
+  },
+  "nai": {
+    "negativePrompt": {
+      "label": "Undesired content",
+      "placeholder": "lowres, bad anatomy, watermark…",
+      "hint": "Tags to steer away from. Combines with the preset below."
+    },
+    "panel": {
+      "modelTitle": "Model",
+      "sizeTitle": "Size",
+      "samplingTitle": "Sampling",
+      "presetTitle": "Presets",
+      "outputTitle": "Output"
+    },
+    "field": {
+      "sampler": "Sampler",
+      "noiseSchedule": "Noise schedule",
+      "steps": "Steps",
+      "scale": "Guidance",
+      "cfgRescale": "CFG rescale",
+      "ucPreset": "Undesired preset",
+      "qualityPreset": "Quality preset",
+      "varietyPlus": "Variety+",
+      "straightAlpha": "Transparent background",
+      "seed": "Seed",
+      "seedRandom": "Random"
+    },
+    "help": {
+      "varietyPlus": "Adds diversity to compositions at high guidance.",
+      "straightAlpha": "V5 native alpha. Pair with a transparent-background tag in the prompt.",
+      "cfgRescale": "Softens over-saturation at high guidance. 0 disables it.",
+      "seed": "Leave empty for a new seed every time."
+    },
+    "size": {
+      "portrait": "Portrait",
+      "landscape": "Landscape",
+      "square": "Square"
+    },
+    "ucPreset": {
+      "heavy": "Heavy",
+      "light": "Light",
+      "furryFocus": "Furry focus",
+      "humanFocus": "Human focus",
+      "none": "None"
+    },
+    "qualityPreset": {
+      "standard": "Standard",
+      "light": "Light",
+      "none": "None"
+    },
+    "resetDefaults": "Reset to defaults",
+    "compatTitle": "NovelAI lane",
+    "compatBody": "Text-to-image only. Reference images, editing, and batch counts are not available on this lane."
   }
 }
