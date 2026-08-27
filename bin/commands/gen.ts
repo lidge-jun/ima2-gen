@@ -19,7 +19,6 @@ import { listProviders } from "../../lib/mcp/providerRegistry.js";
 import { BACKGROUND_PRESETS } from "../../lib/backgroundPresets.js";
 import { NAI_CLI_FLAGS, NAI_CLI_HELP, finalizeNaiCliTarget, parseNaiCliOptions,
   unwrapNaiCliResult, type NaiCliPreflight } from "../lib/nai-options.js";
-
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
 const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGeneratedImages) || 24));

@@ -91,9 +91,8 @@ function assertPayload(body: Record<string, unknown>): void {
   assert.equal(body.straightAlpha, true);
 }
 
-test("built gen, multimode, and node CLIs send the same NovelAI payload", async (t) => {
-  const bodies = new Map<string, Record<string, unknown>>();
-  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+function recorderServer(bodies: Map<string, Record<string, unknown>>) {
+  return createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.url === "/api/health") {
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ ok: true, version: "test" }));
@@ -124,6 +123,28 @@ test("built gen, multimode, and node CLIs send the same NovelAI payload", async 
     res.statusCode = 404;
     res.end();
   });
+}
+
+async function runGenerationSmoke(
+  root: string,
+  base: string,
+  env: NodeJS.ProcessEnv,
+): Promise<void> {
+  const genOut = join(root, "gen.png");
+  const gen = await runCli(["gen", "cat", ...naiFlags(), "--server", base, "--out", genOut, "--json"], env);
+  assert.equal(gen.code, 0, gen.stderr);
+  assert.equal((await readFile(genOut)).length > 0, true);
+  const multiOut = join(root, "multi.png");
+  const multi = await runCli(["multimode", "cat", ...explicitTarget, ...naiFlags(), "--server", base, "--out", multiOut, "--json"], env);
+  assert.equal(multi.code, 0, multi.stderr);
+  assert.equal((await readFile(multiOut)).length > 0, true);
+  const node = await runCli(["node", "generate", "cat", ...explicitTarget, ...naiFlags(), "--server", base, "--no-stream", "--json"], env);
+  assert.equal(node.code, 0, node.stderr);
+}
+
+test("built gen, multimode, and node CLIs send the same NovelAI payload", async (t) => {
+  const bodies = new Map<string, Record<string, unknown>>();
+  const server = recorderServer(bodies);
   const port = await listen(server);
   t.after(() => close(server));
   const root = await mkdtemp(join(tmpdir(), "ima2-nai-cli-"));
@@ -132,20 +153,7 @@ test("built gen, multimode, and node CLIs send the same NovelAI payload", async 
   await mkdir(env.IMA2_CONFIG_DIR, { recursive: true });
   await writeFile(join(env.IMA2_CONFIG_DIR, "config.json"), JSON.stringify({ defaults: { image: `nai/${MODEL}` } }));
   const base = `http://127.0.0.1:${port}`;
-
-  const genOut = join(root, "gen.png");
-  const gen = await runCli(["gen", "cat", ...naiFlags(), "--server", base, "--out", genOut, "--json"], env);
-  assert.equal(gen.code, 0, gen.stderr);
-  assert.equal((await readFile(genOut)).length > 0, true);
-
-  const multiOut = join(root, "multi.png");
-  const multi = await runCli(["multimode", "cat", ...explicitTarget, ...naiFlags(), "--server", base, "--out", multiOut, "--json"], env);
-  assert.equal(multi.code, 0, multi.stderr);
-  assert.equal((await readFile(multiOut)).length > 0, true);
-
-  const node = await runCli(["node", "generate", "cat", ...explicitTarget, ...naiFlags(), "--server", base, "--no-stream", "--json"], env);
-  assert.equal(node.code, 0, node.stderr);
-
+  await runGenerationSmoke(root, base, env);
   assertPayload(bodies.get("/api/generate")!);
   assertPayload(bodies.get("/api/generate/multimode")!);
   assertPayload(bodies.get("/api/node/generate")!);
