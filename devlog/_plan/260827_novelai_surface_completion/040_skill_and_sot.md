@@ -41,7 +41,7 @@ Add a `## NovelAI Image Generation` section near core image generation:
 After repository skill verification and CLI build:
 
 ```text
-node bin/ima2.js skill install --dir /Users/jun/.codex/skills
+node bin/ima2.js skill install ima2 --dir /Users/jun/.codex/skills
 cmp skills/ima2/SKILL.md /Users/jun/.codex/skills/ima2/SKILL.md
 ```
 
@@ -52,8 +52,9 @@ files by hand.
 
 ```text
 node bin/ima2.js skill --json
-node bin/ima2.js skill install --dir /Users/jun/.codex/skills
+node bin/ima2.js skill install ima2 --dir /Users/jun/.codex/skills
 cmp skills/ima2/SKILL.md /Users/jun/.codex/skills/ima2/SKILL.md
 npm run docs:refresh-line-counts
-npm test -- relevant docs/structure contracts through repository runner
+node --test tests/cli-skill-command-contract.test.js tests/cli-feature-parity-contract.test.js tests/api-docs-contract.test.js
+node --import tsx --test tests/contract-docs-projection.test.ts
 ```
