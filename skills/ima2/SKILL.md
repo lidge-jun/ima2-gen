@@ -166,6 +166,11 @@ References, edits, and masks fail closed with `NAI_REF_UNSUPPORTED`,
 Primary product references, checked 2026-08-27: the official
 [NovelAI V5 release](https://journal.novelai.net/image-generation-novelai-diffusion-v5-is-here-c2df7c6b8d2d/)
 and [NovelAI subscription documentation](https://docs.novelai.net/en/subscription/).
+Native control details come from the official
+[sampling](https://docs.novelai.net/en/image/sampling/),
+[steps and guidance](https://docs.novelai.net/en/image/stepsguidance/),
+[quality tags](https://docs.novelai.net/en/image/qualitytags/), and
+[seed](https://docs.novelai.net/en/image/seed/) pages, checked the same date.
 
 ## Prompting Guidance
 

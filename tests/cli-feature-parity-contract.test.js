@@ -22,13 +22,19 @@ describe("CLI feature parity contract", () => {
 
   it("public CLI docs describe NovelAI native flags and target rules", () => {
     const docs = readSource("docs/CLI.md");
-    for (const flag of ["--nai-negative-prompt", "--nai-auto-smea", "--nai-decrisper", "--nai-straight-alpha"]) {
+    for (const flag of [
+      "--nai-negative-prompt", "--nai-sampler", "--nai-noise-schedule",
+      "--nai-steps", "--nai-scale", "--nai-cfg-rescale", "--nai-seed",
+      "--nai-uc-preset", "--nai-quality-preset", "--nai-auto-smea",
+      "--nai-decrisper", "--nai-variety-plus", "--nai-straight-alpha",
+    ]) {
       assert.match(docs, new RegExp(flag));
     }
     assert.match(docs, /gen[\s\S]+persisted NovelAI default/i);
     assert.match(docs, /multimode[\s\S]+explicit NovelAI target/i);
     assert.match(docs, /node generate[\s\S]+explicit NovelAI target/i);
     assert.match(docs, /NAI_V5_MODEL_REQUIRED/);
+    assert.match(docs, /defaults set image nai\/nai-diffusion-5-full/);
     assert.match(docs, /text-to-image only/i);
   });
 
