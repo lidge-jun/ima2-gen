@@ -18,8 +18,8 @@ Exports only:
 ```ts
 export const NAI_CLI_FLAGS;
 export const NAI_CLI_HELP: string;
-export function hasNaiCliOptions(args: ParsedArgs): boolean;
-export function naiCliPayload(args: ParsedArgs, target?: { provider?: string; model?: string }): Record<string, unknown>;
+export function parseNaiCliOptions(args: ParsedArgs, policy: "allow-unknown" | "require-explicit"): NaiCliResult;
+export function finalizeNaiCliTarget(preflight: NaiCliPreflight, target: { lane: string; model: string }): NaiCliResult;
 ```
 
 The parser validates the existing server alphabets and numeric ranges before any
@@ -45,7 +45,7 @@ Value flags:
 Target classification is deterministic and pure:
 
 ```text
-explicit provider=nai OR model starts nai-diffusion-* -> NAI
+explicit provider=nai OR model is an exact registry NAI ID OR model is nai/<exact-id> -> NAI
 explicit non-nai provider/model -> NON_NAI
 provider/model disagree -> CONFLICT
 neither explicit -> UNKNOWN
@@ -66,11 +66,16 @@ neither explicit -> UNKNOWN
  const SPEC = { flags: {
 +  ...NAI_CLI_FLAGS,
  }};
-+const naiPreflight = classifyAndParseNaiCliOptions(args);
++const naiPreflight = parseNaiCliOptions(args, "allow-unknown");
++if (!naiPreflight.ok) fail({ json: Boolean(args.json), code: naiPreflight.code,
++  message: naiPreflight.message, extra: naiPreflight.flag ? { flag: naiPreflight.flag } : undefined });
 +// explicit conflicts and malformed values fail here, before fetchCatalog()
  ...
++const naiFinal = finalizeNaiCliTarget(naiPreflight.value, target);
++if (!naiFinal.ok) fail({ json: Boolean(args.json), code: naiFinal.code,
++  message: naiFinal.message, extra: naiFinal.flag ? { flag: naiFinal.flag } : undefined });
  const body = { ...,
-+  ...naiCliPayloadForResolvedTarget(naiPreflight, target),
++  ...naiFinal.value.payload,
  };
 ```
 
@@ -91,7 +96,8 @@ are rejected. Do not duplicate enum/range logic.
   `multimode`/`node` unknown-target rejection, model-only/provider-only NAI acceptance,
   no generation POST on failure, and parity across all three commands.
 - `tests/cli-feature-parity-contract.test.js`: document the new flags.
-- Inventory is refreshed only if the repository classifier requires it.
+- Run `node scripts/classify-tests.mjs` after adding runtime-importing CLI tests, then
+  require `npm run test:inventory` green. This update is mandatory, not conditional.
 
 ### Generated artifacts
 
