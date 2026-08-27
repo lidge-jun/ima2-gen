@@ -157,7 +157,7 @@ test("node mode gates on the node's own lane, not the global one", () => {
   // Node variants carry a per-node provider/model (higgsfield 120). Gating on
   // global state either starves a NAI node or leaks NAI fields into another
   // lane's request — found by the wp5 adversarial audit.
-  const overrides = { steps: 40, straightAlpha: true };
+  const overrides = { steps: 40, straightAlpha: true, autoSmea: true, decrisper: true };
 
   // Global lane is GPT, the node is NAI: the node's options must still ride.
   assert.deepEqual(
@@ -165,7 +165,7 @@ test("node mode gates on the node's own lane, not the global one", () => {
       stateOf({ provider: "oauth", imageModel: "gpt-image-1", naiOptionOverrides: overrides, negativePrompt: "blurry" }),
       { provider: "nai", imageModel: "nai-diffusion-5-full" },
     ),
-    { steps: 40, straightAlpha: true, negativePrompt: "blurry" },
+    { steps: 40, straightAlpha: true, autoSmea: true, decrisper: true, negativePrompt: "blurry" },
   );
 
   // Global lane is NAI, the node is not: nothing may leak into that request.
@@ -183,7 +183,7 @@ test("node mode gates on the node's own lane, not the global one", () => {
       stateOf({ naiOptionOverrides: overrides }),
       { provider: "nai", imageModel: "nai-diffusion-4-5-full" },
     ),
-    { steps: 40 },
+    { steps: 40, autoSmea: true, decrisper: true },
   );
 });
 

@@ -2340,9 +2340,11 @@
     "field": {
       "sampler": "取樣器",
       "noiseSchedule": "雜訊排程",
+      "autoSmea": "自動 SMEA",
       "steps": "步數",
       "scale": "引導強度",
       "cfgRescale": "CFG 重縮放",
+      "decrisper": "去脆化",
       "ucPreset": "排除預設",
       "qualityPreset": "品質預設",
       "varietyPlus": "Variety+",
@@ -2351,6 +2353,8 @@
       "seedRandom": "隨機"
     },
     "help": {
+      "autoSmea": "在高解析度下自動套用 SMEA，以提高整體一致性。",
+      "decrisper": "減少色彩與視覺瑕疵，尤其適用於高引導強度。",
       "varietyPlus": "在高引導強度下增加構圖多樣性。",
       "straightAlpha": "V5 原生 alpha。請在提示詞中一併加入透明背景標籤。",
       "cfgRescale": "緩解高引導強度下的過飽和。設為 0 即關閉。",

@@ -28,7 +28,8 @@ new color tokens, or a second settings abstraction.
 ## Current path check
 
 - `ui/src/components/settings/NaiControlsPanel.tsx:92-154` is the sampling group.
-- Existing toggle grammar is `NaiControlsPanel.tsx:187-209`; no new CSS is needed.
+- Existing toggle grammar is
+  `ui/src/components/settings/NaiControlsPanel.tsx:187-209`; no new CSS is needed.
 - `ui/src/lib/naiOptions.ts:26-62,90-137` already contains both fields from wp1.
 - `ui/src/lib/naiPayload.ts:23-48` spreads sparse overrides and strips only
   `straightAlpha` / `qualityPresetId` for V4.5. Auto SMEA and Decrisper intentionally

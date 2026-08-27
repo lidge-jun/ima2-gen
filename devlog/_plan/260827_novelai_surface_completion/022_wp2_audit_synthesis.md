@@ -19,5 +19,5 @@ before implementation.
 
 The reviewer correctly noted that “browser QA” alone was not executable. `021` now
 records the isolated server environment/port, inspection states, narrow-overflow check,
-and teardown. The app's `serve --help` confirms `serve --force`; `config.ts:92-93`
+and teardown. The app's `serve --help` confirms `serve --force`; `./config.ts:92-93`
 confirms `IMA2_PORT`.

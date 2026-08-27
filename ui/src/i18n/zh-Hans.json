@@ -2340,9 +2340,11 @@
     "field": {
       "sampler": "采样器",
       "noiseSchedule": "噪声调度",
+      "autoSmea": "自动 SMEA",
       "steps": "步数",
       "scale": "引导强度",
       "cfgRescale": "CFG 重缩放",
+      "decrisper": "去脆化",
       "ucPreset": "排除预设",
       "qualityPreset": "质量预设",
       "varietyPlus": "Variety+",
@@ -2351,6 +2353,8 @@
       "seedRandom": "随机"
     },
     "help": {
+      "autoSmea": "在高分辨率下自动应用 SMEA，以提高整体一致性。",
+      "decrisper": "减少色彩与视觉伪影，尤其适用于高引导强度。",
       "varietyPlus": "在高引导强度下增加构图多样性。",
       "straightAlpha": "V5 原生 alpha。请在提示词中一并加入透明背景标签。",
       "cfgRescale": "缓解高引导强度下的过饱和。设为 0 即关闭。",

@@ -17,7 +17,7 @@ files; the known changes are expected to be disjoint (`devlog` evidence vs
 
 ## Path and signature revalidation
 
-- `config.ts:369-381` owns `naiProvider`; the existing boolean helper is `pickBool`,
+- `./config.ts:369-381` owns `naiProvider`; the existing boolean helper is `pickBool`,
   so 010 was corrected from the nonexistent `envBool` name.
 - `lib/capabilities.ts:95-100` owns the UI display defaults projection.
 - `lib/naiOptions.ts:29-41,80-118` owns request-boundary normalization.

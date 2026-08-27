@@ -112,6 +112,16 @@ export function NaiControlsPanel() {
           />
         </label>
 
+        <label className="nai-controls__row nai-controls__row--toggle">
+          <input
+            type="checkbox"
+            checked={options.autoSmea}
+            onChange={(e) => setNaiOption("autoSmea", e.target.checked)}
+          />
+          <span>{t("nai.field.autoSmea")}</span>
+        </label>
+        <p className="option-help">{t("nai.help.autoSmea")}</p>
+
         <label className="nai-controls__row nai-controls__row--slider">
           <span>{t("nai.field.steps")}</span>
           <input
@@ -151,6 +161,16 @@ export function NaiControlsPanel() {
           <output>{options.cfgRescale.toFixed(2)}</output>
         </label>
         <p className="option-help">{t("nai.help.cfgRescale")}</p>
+
+        <label className="nai-controls__row nai-controls__row--toggle">
+          <input
+            type="checkbox"
+            checked={options.decrisper}
+            onChange={(e) => setNaiOption("decrisper", e.target.checked)}
+          />
+          <span>{t("nai.field.decrisper")}</span>
+        </label>
+        <p className="option-help">{t("nai.help.decrisper")}</p>
       </div>
 
       <div className="option-group nai-controls">
