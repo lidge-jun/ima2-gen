@@ -10,7 +10,7 @@ import {
 import type { ParsedArgs } from "../bin/lib/args.js";
 
 function args(over: Record<string, unknown> = {}): ParsedArgs {
-  return { positional: [], _unknown: [], ...over } as ParsedArgs;
+  return { positional: [], _unknown: [], _present: [], ...over } as ParsedArgs;
 }
 
 function parsed(over: Record<string, unknown>, policy: "allow-unknown" | "require-explicit" = "require-explicit") {
@@ -70,6 +70,21 @@ test("rejects malformed enum, number, prompt, and boolean-pair values", () => {
     const result = parseNaiCliOptions(args(input), "require-explicit");
     assert.equal(result.ok, false, JSON.stringify(input));
     if (!result.ok) assert.equal(result.code, code);
+  }
+});
+
+test("rejects a present value-taking flag whose argv value is missing", () => {
+  for (const key of [
+    "nai-negative-prompt", "nai-sampler", "nai-noise-schedule", "nai-steps",
+    "nai-scale", "nai-cfg-rescale", "nai-seed", "nai-uc-preset", "nai-quality-preset",
+  ]) {
+    const result = parseNaiCliOptions(args({ provider: "nai", _present: [key] }), "require-explicit");
+    assert.equal(result.ok, false, key);
+    if (!result.ok) {
+      assert.equal(result.code, "NAI_FLAG_INVALID");
+      assert.equal(result.flag, `--${key}`);
+      assert.match(result.message, /requires a value/);
+    }
   }
 });
 

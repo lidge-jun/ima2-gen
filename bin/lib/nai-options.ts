@@ -69,6 +69,9 @@ const NAI_MODEL_IDS = new Set(
 );
 const V5_MODEL_IDS = new Set(["nai-diffusion-5-full", "nai-diffusion-5-curated"]);
 const OPTION_KEYS = Object.keys(NAI_CLI_FLAGS);
+const VALUE_OPTION_KEYS = Object.entries(NAI_CLI_FLAGS)
+  .filter(([, definition]) => definition.type !== "boolean")
+  .map(([key]) => key);
 
 function failure(code: string, message: string, flag?: string): NaiCliFailure {
   return { ok: false, code, message, ...(flag ? { flag } : {}) };
@@ -189,8 +192,13 @@ export function parseNaiCliOptions(
   args: ParsedArgs,
   policy: "allow-unknown" | "require-explicit",
 ): NaiCliResult {
-  const hasOptions = OPTION_KEYS.some((key) => args[key] !== undefined);
+  const present = new Set(args._present ?? []);
+  const hasOptions = OPTION_KEYS.some((key) => present.has(key) || args[key] !== undefined);
   if (!hasOptions) return { ok: true, value: { hasOptions: false, payload: {}, target: "unknown" } };
+  const missingValue = VALUE_OPTION_KEYS.find((key) => present.has(key) && args[key] === undefined);
+  if (missingValue) {
+    return failure("NAI_FLAG_INVALID", `--${missingValue} requires a value`, `--${missingValue}`);
+  }
   const built = buildPayload(args);
   if (isFailure(built)) return built;
   const target = classifyTarget(args);

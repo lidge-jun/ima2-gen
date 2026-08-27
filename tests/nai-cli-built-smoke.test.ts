@@ -185,3 +185,20 @@ test("built CLI preflight failures are exit 2 before an unreachable server", asy
     message: "NovelAI flags require --provider nai or --model nai-diffusion-*",
   });
 });
+
+test("built CLIs reject missing NovelAI flag values before server discovery", async () => {
+  const unreachable = "http://127.0.0.1:1";
+  const commands = [
+    ["gen", "cat", "--provider", "nai", "--server", unreachable, "--nai-steps"],
+    ["multimode", "cat", "--provider", "nai", "--server", unreachable, "--nai-steps"],
+    ["node", "generate", "cat", "--provider", "nai", "--server", unreachable, "--nai-steps"],
+  ];
+  for (const command of commands) {
+    const text = await runCli(command, {});
+    assert.equal(text.code, 2, `${command[0]}: ${text.stderr}`);
+    assert.match(text.stderr, /--nai-steps requires a value/);
+    const json = await runCli([...command.slice(0, -1), "--json", command.at(-1)!], {});
+    assert.equal(json.code, 2, `${command[0]} json: ${json.stderr}`);
+    assert.equal(JSON.parse(json.stdout).code, "NAI_FLAG_INVALID");
+  }
+});
