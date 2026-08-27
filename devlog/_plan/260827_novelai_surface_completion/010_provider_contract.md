@@ -86,11 +86,11 @@ node --import tsx --test tests/nai-options-contract.test.ts tests/nai-provider-c
 npm run typecheck
 npm run typecheck:tests
 npm run build:server
-node --test tests/nai-built-runtime-contract.test.js
+node --import tsx --test tests/nai-built-runtime-contract.test.ts
 git diff --check
 ```
 
-### NEW `tests/nai-built-runtime-contract.test.js`
+### NEW `tests/nai-built-runtime-contract.test.ts`
 
 Import the generated `config.js`, `lib/naiOptions.js`, and
 `lib/naiImageAdapter.js` after `npm run build:server`. Assert the generated config

@@ -9,6 +9,7 @@ Reviewer verdict: GO-WITH-FIXES, blockers=1.
 - Impact: source could pass while installed/server behavior remains hardcoded false.
 - Accepted. `010` now requires `npm run build:server` and a new JS runtime contract that
   imports generated artifacts and proves config defaults plus true/false wire behavior.
+  The test itself uses `.test.ts`, as required by the runtime test inventory.
 
 ## Merge precondition
 

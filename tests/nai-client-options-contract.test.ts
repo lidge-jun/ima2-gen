@@ -57,6 +57,8 @@ test("every field the client can emit is a field the server reads", () => {
     qualityPresetId: "none",
     varietyPlus: true,
     straightAlpha: true,
+    autoSmea: true,
+    decrisper: true,
     seed: 7,
     negativePrompt: "blurry",
   };
@@ -78,6 +80,8 @@ test("compiled fallback matches the server's configured defaults", () => {
   assert.equal(COMPILED_FALLBACK.scale, 5);
   assert.equal(COMPILED_FALLBACK.sampler, "k_euler_ancestral");
   assert.equal(COMPILED_FALLBACK.noiseSchedule, "karras");
+  assert.equal(COMPILED_FALLBACK.autoSmea, false);
+  assert.equal(COMPILED_FALLBACK.decrisper, false);
 });
 
 test("resolve order is fallback, then server, then the user's override", () => {
@@ -98,6 +102,8 @@ test("coerceNaiOverrides rejects wrong types and out-of-range numbers", () => {
   assert.deepEqual(coerceNaiOverrides({ scale: -1 }), {});
   assert.deepEqual(coerceNaiOverrides({ cfgRescale: 2 }), {});
   assert.deepEqual(coerceNaiOverrides({ straightAlpha: "yes" }), {});
+  assert.deepEqual(coerceNaiOverrides({ autoSmea: "yes" }), {});
+  assert.deepEqual(coerceNaiOverrides({ decrisper: 1 }), {});
   assert.deepEqual(coerceNaiOverrides({ seed: -1 }), {});
   assert.deepEqual(coerceNaiOverrides(null), {});
   assert.deepEqual(coerceNaiOverrides([1, 2]), {});

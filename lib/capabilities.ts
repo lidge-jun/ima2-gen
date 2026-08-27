@@ -97,6 +97,8 @@ export function buildIma2Capabilities({
         noiseSchedule: appConfig.naiProvider.defaultNoiseSchedule,
         steps: appConfig.naiProvider.defaultSteps,
         scale: appConfig.naiProvider.defaultScale,
+        autoSmea: appConfig.naiProvider.defaultAutoSmea,
+        decrisper: appConfig.naiProvider.defaultDecrisper,
       },
     },
     valid: {

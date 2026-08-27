@@ -50,6 +50,8 @@ function naiCtx(over: Record<string, unknown> = {}) {
         defaultScale: 5,
         defaultSampler: "k_euler_ancestral",
         defaultNoiseSchedule: "karras",
+        defaultAutoSmea: false,
+        defaultDecrisper: false,
       },
     },
     ...over,
@@ -173,6 +175,35 @@ test("nai adapter exposes cfg_rescale instead of pinning it to zero", async () =
   const untouched = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
   await generateViaNai("cat", naiCtx(), {});
   assert.equal(JSON.parse(String(untouched[0].init.body)).parameters.cfg_rescale, 0);
+});
+
+test("nai adapter exposes Auto SMEA and Decrisper with explicit false overrides", async () => {
+  const configured = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx({
+    config: {
+      naiProvider: {
+        defaultImageModel: "nai-diffusion-5-full",
+        baseUrl: "https://image.novelai.net",
+        accountBaseUrl: "https://image.novelai.net",
+        generationTimeoutMs: 180_000,
+        defaultSteps: 23,
+        defaultScale: 5,
+        defaultSampler: "k_euler_ancestral",
+        defaultNoiseSchedule: "karras",
+        defaultAutoSmea: true,
+        defaultDecrisper: true,
+      },
+    },
+  }), { autoSmea: false, decrisper: false });
+  const explicitFalse = JSON.parse(String(configured[0].init.body)).parameters;
+  assert.equal(explicitFalse.autoSmea, false);
+  assert.equal(explicitFalse.dynamic_thresholding, false);
+
+  const requested = stubFetch({ status: 200, body: zipOf(PNG_BYTES) });
+  await generateViaNai("cat", naiCtx(), { autoSmea: true, decrisper: true });
+  const explicitTrue = JSON.parse(String(requested[0].init.body)).parameters;
+  assert.equal(explicitTrue.autoSmea, true);
+  assert.equal(explicitTrue.dynamic_thresholding, true);
 });
 
 test("nai adapter computes Variety+ from the V4.5/V5 coefficient", async () => {

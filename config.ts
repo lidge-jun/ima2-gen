@@ -378,6 +378,8 @@ export const config = {
     defaultScale: pickInt(env.IMA2_NAI_DEFAULT_SCALE, fileCfg.naiProvider?.defaultScale, 5),
     defaultSampler: pickStr(env.IMA2_NAI_DEFAULT_SAMPLER, fileCfg.naiProvider?.defaultSampler, "k_euler_ancestral"),
     defaultNoiseSchedule: pickStr(env.IMA2_NAI_DEFAULT_NOISE_SCHEDULE, fileCfg.naiProvider?.defaultNoiseSchedule, "karras"),
+    defaultAutoSmea: pickBool(env.IMA2_NAI_DEFAULT_AUTO_SMEA, fileCfg.naiProvider?.defaultAutoSmea, false),
+    defaultDecrisper: pickBool(env.IMA2_NAI_DEFAULT_DECRISPER, fileCfg.naiProvider?.defaultDecrisper, false),
   },
   log: {
     level: pickStr(env.IMA2_LOG_LEVEL, fileCfg.log?.level, defaultLogLevelForEnv(env)),
