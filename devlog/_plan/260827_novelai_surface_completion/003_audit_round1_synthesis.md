@@ -13,7 +13,8 @@ roadmap audit. No reviewer edited the worktree.
 ### H1 — CLI pre-network claim contradicted current command order
 
 - Evidence: `bin/commands/gen.ts:378-379` fetches the catalog before target
-  resolution; `multimode.ts:93-100` and `node.ts:73-75` resolve the server first.
+  resolution; `bin/commands/multimode.ts:93-100` and
+  `bin/commands/node.ts:73-75` resolve the server first.
 - Root cause: the roadmap described payload insertion but did not distinguish pure
   explicit-target validation from persisted-default resolution.
 - Accepted. `030` now defines pure target states and exact validation order. Explicit
