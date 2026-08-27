@@ -1,5 +1,7 @@
 # Execution contract
 
+> Status: steps 1-4 reached the v3.12.0 candidate, but preview publication failed before npm/tag mutation. Recovery supersedes the remaining rows; see `011_recovery_plan.md`.
+
 ## Planned mutations
 
 | Order | Target | Before | After | Mechanism |
@@ -10,6 +12,13 @@
 | 4 | `origin/main`, `origin/preview` | bootstrap/old release | generated v3.12.0 SHA | `release.yml` non-force pushes |
 | 5 | `origin/dev`, `v3.12.0` | bootstrap/absent | generated v3.12.0 SHA | `release.yml` atomic push after preview proof |
 | 6 | npm `preview`, npm `latest` | v3.11.0-derived channels | v3.12.0-derived preview and v3.12.0 stable | `publish.yml` OIDC trusted publishing |
+
+## Attempt outcome
+
+- Bootstrap commit: `85ab1a4223352a8511728dff62c8e48411a61d55` on dev/main; CI 33072478945 and CodeQL 33072478779 succeeded.
+- Release run: 33072885524 created v3.12.0 candidate `3d111149b470eb1513648b1fe01fc0858ce223f7`; candidate CI 33073171620 succeeded.
+- Main/preview moved to the candidate. Preview publish run 33073607259 failed before OIDC publication because Windows Node 22 job 98523042246 hit the step's 15-minute outer timeout.
+- Stable job was skipped; dev stayed at the bootstrap SHA; no v3.12.0 tag or npm version exists.
 
 ## Before/after contract
 

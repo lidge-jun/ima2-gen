@@ -52,7 +52,55 @@ export const ASYNC_LABELS = [
 ];
 export const SYNC_LABELS = ["npm-version", "npm-root", "shim-version"];
 
+// publish.yml supplies a prepacked tarball, so `pack` is not part of this path.
+// Keep the sequence explicit: the workflow's outer timeout must be large enough
+// for every labeled child deadline to fire and clean up first.
+export const PREPACKED_CI_SEQUENCE = [
+  "npm-version",
+  "tarball-install",
+  "npm-root",
+  "npm-version",
+  "baseline-install",
+  "shim-version",
+  "npm-version",
+  "tarball-install",
+  "npm-root",
+  "codex-login-status",
+  "ima2-status",
+  "ima2-doctor",
+  "shim-version",
+];
+
+export function minimumPrepackedWorkflowTimeoutMinutes() {
+  const childBudgetMs = PREPACKED_CI_SEQUENCE.reduce((total, label) => total + DEADLINES[label], 0);
+  const cleanupMarginMinutes = 1;
+  return Math.ceil(childBudgetMs / 60_000) + cleanupMarginMinutes;
+}
+
+let deadlineTrace = null;
+
+export function beginDeadlineTrace(expected) {
+  assert.equal(deadlineTrace, null, "deadline trace already active");
+  deadlineTrace = { expected: [...expected], index: 0 };
+}
+
+export function finishDeadlineTrace() {
+  const trace = deadlineTrace;
+  deadlineTrace = null;
+  assert.ok(trace, "deadline trace is not active");
+  assert.equal(trace.index, trace.expected.length, `deadline trace stopped before ${trace.expected[trace.index]}`);
+}
+
+function traceDeadline(label) {
+  if (!deadlineTrace) return;
+  const expected = deadlineTrace.expected[deadlineTrace.index];
+  if (label !== expected) deadlineTrace = null;
+  assert.equal(label, expected, `deadline trace expected ${expected || "end"}, got ${label}`);
+  deadlineTrace.index += 1;
+}
+
 function deadlineFor(label) {
+  traceDeadline(label);
   const override = Number(process.env.IMA2_SMOKE_TIMEOUT_MS);
   if (Number.isFinite(override) && override > 0) return override;
   const value = DEADLINES[label];
@@ -183,6 +231,8 @@ async function main() {
     writeFileSync(join(config, "config.json"), JSON.stringify({ provider: "oauth" }));
 
     const tarball = await candidateTarball(root);
+    const tracesPrepackedPath = Boolean(process.env.IMA2_PACKAGE_TARBALL);
+    if (tracesPrepackedPath) beginDeadlineTrace(PREPACKED_CI_SEQUENCE);
     const cleanPrefix = join(root, "clean-prefix");
     await installGlobal(cleanPrefix, tarball, "tarball-install");
     assertPackagedZod(cleanPrefix);
@@ -242,6 +292,7 @@ async function main() {
 
     const updatedVersion = runGlobalShim(prefix, ["--version"], { cwd: unrelatedCwd }).stdout.trim();
     assert.equal(updatedVersion, installed.version);
+    if (tracesPrepackedPath) finishDeadlineTrace();
     console.log(JSON.stringify({ baselineVersion, updatedVersion, packageRoot, oauthProbe: "unauthed" }));
   } finally {
     rmSync(root, { recursive: true, force: true });
