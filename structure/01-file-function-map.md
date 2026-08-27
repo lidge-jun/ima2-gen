@@ -137,7 +137,7 @@ routes/
 | `bin/commands/ping.ts` | 32 | Server health probe client |
 | `bin/lib/client.ts` | 179 | Server discovery, HTTP request wrapper (connection: close, cleared timeouts), response normalization |
 | `bin/lib/platform.ts` | 129 | Browser-open and binary-resolution helpers |
-| `bin/lib/args.ts` | 94 | Dependency-free argv parser |
+| `bin/lib/args.ts` | 97 | Dependency-free argv parser |
 | `bin/lib/files.ts` | 40 | Data URI file conversion and output naming |
 | `bin/lib/output.ts` | 121 | Terminal output, JSON, exit-code mapping, natural-exit (no process.exit — Windows safe) |
 | `bin/lib/error-hints.ts` | 24 | CLI error hint formatting |
