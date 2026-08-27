@@ -20,8 +20,8 @@ After:
 ```diff
  naiProvider: {
    defaultNoiseSchedule: env(...),
-+  defaultAutoSmea: envBool("IMA2_NAI_DEFAULT_AUTO_SMEA", false),
-+  defaultDecrisper: envBool("IMA2_NAI_DEFAULT_DECRISPER", false),
++  defaultAutoSmea: pickBool(env.IMA2_NAI_DEFAULT_AUTO_SMEA, fileCfg.naiProvider?.defaultAutoSmea, false),
++  defaultDecrisper: pickBool(env.IMA2_NAI_DEFAULT_DECRISPER, fileCfg.naiProvider?.defaultDecrisper, false),
  }
 ```
 
@@ -85,8 +85,18 @@ can display operator defaults without freezing compiled values.
 node --import tsx --test tests/nai-options-contract.test.ts tests/nai-provider-contract.test.ts tests/nai-client-options-contract.test.ts tests/capabilities-lane-contract.test.ts
 npm run typecheck
 npm run typecheck:tests
+npm run build:server
+node --test tests/nai-built-runtime-contract.test.js
 git diff --check
 ```
+
+### NEW `tests/nai-built-runtime-contract.test.js`
+
+Import the generated `config.js`, `lib/naiOptions.js`, and
+`lib/naiImageAdapter.js` after `npm run build:server`. Assert the generated config
+publishes both defaults and drive the built normalizer/adapter through a fetch recorder
+to prove true and explicit-false override semantics. This is production-artifact proof;
+the TypeScript-focused suite alone cannot substitute for it.
 
 ## Non-goals and rollback
 
