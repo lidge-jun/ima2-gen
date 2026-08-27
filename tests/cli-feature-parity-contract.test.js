@@ -7,6 +7,19 @@ function readSource(path) {
 }
 
 describe("CLI feature parity contract", () => {
+  it("gen, multimode, and node share the NovelAI option contract", () => {
+    const helper = readSource("bin/lib/nai-options.ts");
+    for (const flag of ["nai-negative-prompt", "nai-auto-smea", "nai-decrisper", "nai-straight-alpha"]) {
+      assert.match(helper, new RegExp(`"${flag}"`));
+    }
+    for (const command of ["gen", "multimode", "node"]) {
+      const src = readSource(`bin/commands/${command}.ts`);
+      assert.match(src, /\.\.\.NAI_CLI_FLAGS/);
+      assert.match(src, /parseNaiCliOptions/);
+      assert.match(src, /NAI_CLI_HELP/);
+    }
+  });
+
   it("gen exposes provider and preserves web-search request mapping", () => {
     const src = readSource("bin/commands/gen.ts");
 

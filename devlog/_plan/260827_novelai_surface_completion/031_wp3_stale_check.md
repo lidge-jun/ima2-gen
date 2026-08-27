@@ -28,10 +28,13 @@ export type NaiCliPreflight = { hasOptions: boolean; payload: NaiRequestOptions;
 export type NaiCliResult = { ok: true; value: NaiCliPreflight } | { ok: false; code: string; message: string; flag?: string };
 export function parseNaiCliOptions(args: ParsedArgs, policy: "allow-unknown" | "require-explicit"): NaiCliResult;
 export function finalizeNaiCliTarget(preflight: NaiCliPreflight, target: { lane: string; model: string }): NaiCliResult;
+export function unwrapNaiCliResult(result: NaiCliResult, jsonMode: boolean): NaiCliPreflight;
 ```
 
 Commands translate a failure result with their existing `fail({json,...})` surface.
-No new generic CLI framework or dependency.
+`unwrapNaiCliResult` is the single shared translation so `gen.ts` stays at the
+400-line limit and all three commands emit the same error shape. Parsing/finalization
+remain pure result APIs. No new generic CLI framework or dependency.
 
 ## Target rules
 

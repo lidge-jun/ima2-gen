@@ -17,6 +17,8 @@ import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from 
 import { deriveProviderIds } from "../../lib/providers/derive.js";
 import { listProviders } from "../../lib/mcp/providerRegistry.js";
 import { BACKGROUND_PRESETS } from "../../lib/backgroundPresets.js";
+import { NAI_CLI_FLAGS, NAI_CLI_HELP, finalizeNaiCliTarget, parseNaiCliOptions,
+  unwrapNaiCliResult, type NaiCliPreflight } from "../lib/nai-options.js";
 
 const VALID_MODES = new Set(["auto", "direct"]);
 const VALID_MODERATION = new Set(["auto", "low"]);
@@ -45,6 +47,7 @@ const SPEC = {
     character: { type: "string" },
     "reasoning-effort": { type: "string" }, "web-search": { type: "boolean" },
     "no-web-search": { type: "boolean" }, help: { short: "h", type: "boolean" },
+    ...NAI_CLI_FLAGS,
   },
 };
 
@@ -86,6 +89,7 @@ const HELP = `
         --reasoning-effort <none|low|medium|high|xhigh|max>
                                             Core lanes only
         --web-search / --no-web-search      Core lanes only
+${NAI_CLI_HELP}
 
   Examples:
     ima2 defaults set image oauth/gpt-5.6-luna
@@ -93,6 +97,7 @@ const HELP = `
     ima2 gen "poster" --model oauth/luna --mode direct
     ima2 gen "fox logo mark" --bg transparent -o logo.png
     ima2 gen "campaign still" --model runway/gen-4 --ref 1780000000000_abcd.png
+    ima2 gen "transparent character sprite" --provider nai --model nai-diffusion-5-full --nai-straight-alpha --nai-negative-prompt "watermark"
 `;
 
 type ResolvedTarget = Extract<ResolveResult, { ok: true }>;
@@ -104,6 +109,7 @@ type ImageContext = {
   refs: string[];
   explicitOut: string | null;
   outDir: string | null;
+  naiOptions: NaiCliPreflight["payload"];
 };
 
 /**
@@ -300,7 +306,7 @@ async function requestCoreImage(args: ParsedArgs, context: ImageContext, n: numb
   const body: Record<string, unknown> = { prompt: context.prompt, quality: args.quality, size: args.size, n, references,
     ...(args["no-size-nudge"] ? { sizeNudge: false } : {}),
     model: context.target.model, mode: args.mode, moderation: args.moderation, sessionId: args.session,
-    provider: context.target.lane };
+    provider: context.target.lane, ...context.naiOptions };
   body.requestId = requestId;
   if (args.bg) body.backgroundPreset = String(args.bg);
   if (args["reasoning-effort"]) body.reasoningEffort = args["reasoning-effort"];
@@ -371,19 +377,21 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
 export default async function genCmd(argv: string[]): Promise<void> {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
+  const naiPreflight = unwrapNaiCliResult(parseNaiCliOptions(args, "allow-unknown"), Boolean(args.json));
   let prompt = args.positional.join(" ");
   if (!prompt && !args.stdin) die(2, "prompt is required (positional or via --stdin)");
   const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
   if (refs.length > MAX_REFERENCE_COUNT) die(2, `max ${MAX_REFERENCE_COUNT} --ref attachments`);
   const { server, catalog } = await fetchCatalog(args.server, Boolean(args.json));
   const target = resolveImageTarget(args, catalog);
+  const naiFinal = unwrapNaiCliResult(finalizeNaiCliTarget(naiPreflight, target), Boolean(args.json));
   if (args.character && target.transport !== "mcp") {
     fail({ json: Boolean(args.json), code: "CAPABILITY_MISMATCH",
       message: "--character is only supported on MCP lanes (runway/higgsfield); core lanes use element mentions",
       exitCode: 2 });
   }
   let context = { server, catalog, target, prompt, refs, explicitOut: args.out ? String(args.out) : null,
-    outDir: args["out-dir"] ? String(args["out-dir"]) : null };
+    outDir: args["out-dir"] ? String(args["out-dir"]) : null, naiOptions: naiFinal.payload };
   if (target.transport === "mcp") return runMcpImage(argv, args, context);
   if (args.stdin) { const piped = await readStdin(); if (piped) prompt = prompt ? `${prompt} ${piped}` : piped; }
   if (!prompt) die(2, "prompt is required (positional or via --stdin)");
