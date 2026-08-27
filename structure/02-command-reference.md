@@ -134,6 +134,19 @@ Web-search note: `--web-search` and `--no-web-search` set the request-level `web
 
 Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the bundled progrok xAI path, `nai` forces the NovelAI image API (text-to-image only — `--ref` is refused with `NAI_REF_UNSUPPORTED` rather than dropped), and `auto` preserves route default behavior on the legacy `edit`/`multimode`/`node` surface. `ima2 gen` removed `auto` and exits 2 with `PROVIDER_AUTO_REMOVED`. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.5` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
 
+NovelAI native options are shared by `gen`, `multimode`, and `node generate`:
+
+| Option family | Flags |
+|---|---|
+| Prompt/sampling | `--nai-negative-prompt`, `--nai-sampler`, `--nai-noise-schedule`, `--nai-steps`, `--nai-scale`, `--nai-cfg-rescale`, `--nai-seed` |
+| Presets | `--nai-uc-preset`, `--nai-quality-preset` (V5 only) |
+| Toggles | `--nai-auto-smea`, `--nai-decrisper`, `--nai-variety-plus`, `--nai-straight-alpha` plus matching `--no-nai-*` forms |
+
+`gen` may use a persisted `nai/<model>` default after catalog resolution.
+`multimode` and `node generate` require an explicit NAI provider/model with native
+flags. Target conflicts, malformed values, and V5-only fields on V4.5 exit 2 before
+generation network I/O.
+
 ## `video` Options
 
 | Command | Role |

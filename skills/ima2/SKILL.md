@@ -100,6 +100,73 @@ Grok requests with reference images use the edit/image-to-image path so the
 references remain attached after planning. Keep Grok references to three total
 input images.
 
+## NovelAI Image Generation
+
+Discover the live NovelAI lane before choosing a model:
+
+```bash
+ima2 models --kind image --lane nai --json
+ima2 defaults set image nai/nai-diffusion-5-full
+```
+
+The four exact model IDs are:
+
+- `nai-diffusion-5-full`
+- `nai-diffusion-5-curated`
+- `nai-diffusion-4-5-full`
+- `nai-diffusion-4-5-curated`
+
+Use a persistent NovelAI token from Settings > API Keys or `NOVELAI_API_KEY`.
+NovelAI does not publish one mandatory token prefix, so never reject a token based
+on a guessed prefix. Check the lane state through `ima2 models` instead.
+
+The same NovelAI options work on `ima2 gen`, `ima2 multimode`, and
+`ima2 node generate`. Run `ima2 gen --help` for the live enum/range list. Example:
+
+```bash
+ima2 gen "1girl, blue hair, city at night" \
+  --provider nai --model nai-diffusion-5-full \
+  --nai-negative-prompt "lowres, watermark" \
+  --nai-steps 28 --nai-scale 5 \
+  --nai-auto-smea --nai-decrisper --nai-variety-plus
+```
+
+For V5 native alpha, pair the request flag with an alpha-aware prompt:
+
+```bash
+ima2 gen "character sprite, transparent background, has alpha" \
+  --model nai/nai-diffusion-5-full \
+  --nai-straight-alpha -o sprite.png
+```
+
+Supported request controls include sampler, noise schedule, steps, guidance,
+CFG rescale, seed, undesired-content/UC preset, quality preset, Auto SMEA,
+Decrisper, Variety+, and V5 native alpha. `--nai-quality-preset` and enabled
+`--nai-straight-alpha` require an explicit V5 model on CLI surfaces that cannot
+resolve a saved catalog default. `multimode` and `node generate` require an
+explicit NovelAI provider or model whenever NAI-native flags are used; `gen`
+can use a persisted NovelAI CLI default.
+
+NovelAI V5 officially supports English and Japanese prompts. Natural language
+and tags both work; quote text that should appear in the image, and use tags such
+as `transparent background`, `has alpha`, or `alpha transparency` with the alpha
+flag. Other languages may work but are not the officially supported prompt pair.
+
+Do not assume a generation costs no Anlas. Check the current account and usage
+limit. The no-Anlas Opus conditions include one image, no base or source image,
+a normal resolution up to 1024x1024, and at most 28 steps; V5 usage limits can
+still apply.
+
+The ima2 NovelAI lane is text-to-image only. NovelAI itself has additional product
+features, but ima2 does not currently expose reference/img2img, masks/inpainting,
+Character Positioning, Director Reference, Vibe Transfer, or Max Enhance.
+References, edits, and masks fail closed with `NAI_REF_UNSUPPORTED`,
+`NAI_EDIT_UNSUPPORTED`, or `NAI_MASK_UNSUPPORTED` rather than being dropped.
+
+Primary product references, checked 2026-08-27: the official
+[NovelAI V5 release](https://journal.novelai.net/image-generation-novelai-diffusion-v5-is-here-c2df7c6b8d2d/)
+and [NovelAI subscription documentation](https://docs.novelai.net/en/subscription/).
+
 ## Prompting Guidance
 
 GPT Image 2 can follow detailed visual instructions and can render visible text

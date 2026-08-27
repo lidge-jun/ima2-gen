@@ -60,4 +60,23 @@ describe("API docs contract", () => {
       assert.match(apiDoc, new RegExp(needle.replace(/\//g, "\\/")));
     }
   });
+
+  it("docs/API.md pins the NovelAI request, defaults, models, and refusal contract", () => {
+    const apiDoc = readSource("docs/API.md");
+    for (const key of [
+      "negativePrompt", "sampler", "noiseSchedule", "steps", "scale",
+      "cfgRescale", "seed", "ucPresetId", "qualityPresetId", "autoSmea",
+      "decrisper", "varietyPlus", "straightAlpha",
+    ]) assert.match(apiDoc, new RegExp(`\\b${key}\\b`), `missing NovelAI request key ${key}`);
+    for (const key of ["defaultAutoSmea", "defaultDecrisper"]) {
+      assert.match(apiDoc, new RegExp(key));
+    }
+    for (const model of [
+      "nai-diffusion-5-full", "nai-diffusion-5-curated",
+      "nai-diffusion-4-5-full", "nai-diffusion-4-5-curated",
+    ]) assert.match(apiDoc, new RegExp(model));
+    for (const code of ["NAI_REF_UNSUPPORTED", "NAI_EDIT_UNSUPPORTED", "NAI_MASK_UNSUPPORTED"]) {
+      assert.match(apiDoc, new RegExp(code));
+    }
+  });
 });

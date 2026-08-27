@@ -45,6 +45,7 @@ live list.
 - `structure/03-server-api.md`: NAI capabilities defaults and request body projection.
 - `structure/04-frontend-architecture.md`: NaiControlsPanel, negative prompt, sparse
   payload and V4.5/V5 control matrix.
+- `structure/06-infra-operations.md`: remove the stale fixed-prefix token claim.
 - `structure/01-file-function-map.md`: refresh line counts after skill/source docs only
   if the script reports drift.
 
