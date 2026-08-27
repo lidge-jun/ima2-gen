@@ -99,7 +99,7 @@ uv run --with pyyaml python /Users/jun/.codex/skills/.system/skill-creator/scrip
 npm run build:cli
 node bin/ima2.js skill install ima2 --dir /Users/jun/.codex/skills
 cmp skills/ima2/SKILL.md /Users/jun/.codex/skills/ima2/SKILL.md
-node scripts/check-devlog-citations.mjs devlog/_plan/260827_novelai_surface_completion
+node scripts/check-devlog-citations.mjs devlog/_fin/260827_novelai_surface_completion
 git diff --check
 ```
 

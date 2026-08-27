@@ -54,27 +54,24 @@ Serve the built UI in an isolated process. Observe and read back screenshots:
 
 Use the native browser QA ladder; record process teardown and screenshot paths.
 
-### Optional live generation
+### Live generation disposition
 
-Only if the existing credential is valid and the request is covered by a no-Anlas/free
-allowance, make one 1024x1024-or-smaller, <=28-step, single-image call. Otherwise the
-local wire recorder is sufficient and the skip reason is recorded.
-
-## Independent final review
-
-A fresh reviewer checks the base-to-head diff, field creation-to-consumer chain,
-non-NAI regression risk, CLI validation, docs/runtime agreement, secret handling, and
-every changed file. Any High/Critical finding blocks delivery.
+Do not make another live NovelAI generation. Existing V5/alpha live proof plus this
+unit's fetch-recorder, built CLI recorder, and browser activation close the changed
+paths without spending provider allowance.
 
 ## Closeout and delivery
 
-1. Write numbered evidence/outcome docs and fill all goalplan criteria.
-2. Move this whole unit from `_plan` to `_fin` with `git mv`.
-3. Commit the archive only after full gates pass.
-4. Fetch and verify remote ancestry; merge/retest if needed.
-5. `git push origin dev` (non-force).
-6. Prove `git rev-parse HEAD == git rev-parse origin/dev` and clean status.
-7. Inspect the current GitHub run for the exact SHA; wait for success or report a
+1. Write `090_outcome.md` with completed implementation evidence and explicit pending
+   remote proof.
+2. Move this whole unit from `_plan` to `_fin` with `git mv` and commit the archive.
+3. Run the full session-bound receipt at that archive HEAD.
+4. A fresh reviewer checks that exact archive HEAD, field chains, non-NAI regressions,
+   CLI validation, docs/runtime agreement, secret handling, and every changed file.
+5. Fetch and verify remote ancestry; merge/retest/re-review interdiff if needed.
+6. `git push origin dev` (non-force).
+7. Prove `git rev-parse HEAD == git rev-parse origin/dev` and clean status.
+8. Inspect the current GitHub run for the exact SHA; wait for success or report a
    real external blocker.
 
 ## Terminal outcomes
