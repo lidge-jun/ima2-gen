@@ -395,6 +395,7 @@
 }
 
 .agent-message__tool-label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -408,7 +409,6 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-dim);
-  font-family: var(--font);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -478,8 +478,8 @@
 }
 
 .agent-tool-call-row__toggle {
-  height: 28px;
-  padding: 3px 7px;
+  min-height: 28px;
+  padding: 4px 7px;
 }
 
 .agent-tool-call-details dd > span {
@@ -487,12 +487,6 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-}
-
-.agent-tool-call-details dd,
-.agent-tool-call-details dd.is-expanded {
-  max-height: none;
-  overflow: visible;
 }
 
 .agent-tool-call-details dd.is-expanded > span {

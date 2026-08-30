@@ -443,9 +443,16 @@
 .agent-tool-call-row__toggle {
   min-width: 0;
   display: grid;
+  /* Every child is placed explicitly. Pinning only the badges to row 1 let grid
+     auto-place them into the first free cells, which pushed the status dot and
+     tool name to the right of the duration. */
   grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas:
+    "status name count duration chevron"
+    ". preview preview preview preview";
   align-items: center;
-  gap: 7px;
+  column-gap: 7px;
+  row-gap: 3px;
   padding: 7px 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -470,7 +477,12 @@
   background: var(--red);
 }
 
+.agent-tool-call-row__status {
+  grid-area: status;
+}
+
 .agent-tool-call-row__name,
+.agent-tool-call-row__preview,
 .agent-tool-call-row__meta {
   min-width: 0;
   overflow: hidden;
@@ -479,15 +491,36 @@
 }
 
 .agent-tool-call-row__name {
+  grid-area: name;
   color: var(--text);
 }
 
+/* The argument preview is what makes a collapsed row auditable, so it gets its
+   own full-width line: sharing the name's line left it ~137px of a 395px row,
+   which truncated most prompts after a few words. */
+.agent-tool-call-row__preview {
+  grid-area: preview;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
 .agent-tool-call-row__meta {
+  grid-area: count;
   padding: 1px 5px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-family: var(--font);
   font-size: 10px;
+}
+
+.agent-tool-call-row__meta--duration {
+  grid-area: duration;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-tool-call-row__toggle > svg {
+  grid-area: chevron;
 }
 
 .agent-tool-call-details {
@@ -510,8 +543,9 @@
 
 .agent-tool-call-details dt {
   color: var(--text-dim);
-  font-family: var(--font);
   font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .agent-tool-call-details dd {
@@ -521,8 +555,12 @@
   font-size: 11px;
   overflow-wrap: anywhere;
   white-space: normal;
-  max-height: 120px;
-  overflow-y: auto;
+}
+
+/* Payload text is technical: monospace keeps ids, paths, and JSON legible. */
+.agent-tool-call-details dd > span {
+  font-family: var(--mono);
+  line-height: 1.5;
 }
 
 .agent-tool-call-details__artifacts {
