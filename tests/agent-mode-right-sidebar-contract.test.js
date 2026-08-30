@@ -36,7 +36,6 @@ describe("Agent Mode right sidebar contract", () => {
     assert.doesNotMatch(chat, /agent-model-chip/);
     assert.doesNotMatch(chat, /formatModelSummary/);
     assert.match(sidebar, /AgentImagePane/);
-    assert.match(sidebar, /agent-dialog--tools/);
     assert.match(sidebar, /useAgentDialogFocus/);
     assert.match(sidebar, /SidebarBody/);
     assert.match(sidebar, /AgentPromptLibraryPanel/);
@@ -63,6 +62,43 @@ describe("Agent Mode right sidebar contract", () => {
     assert.match(css, /\.agent-sidebar-tabs/);
     assert.match(en, /"quickSettingsMenu": "Model and reasoning quick settings"/);
     assert.match(ko, /"quickSettingsMenu": "모델 및 추론 빠른 설정"/);
+  });
+
+  it("renders the tools inspector as a non-modal side panel", () => {
+    const sidebar = readSource("ui/src/components/agent/AgentRightSidebar.tsx");
+    const focus = readSource("ui/src/components/agent/useAgentDialogFocus.ts");
+    const stage = readSource("ui/src/components/agent/AgentStagePane.tsx");
+    const workspace = readSource("ui/src/components/agent/AgentWorkspace.tsx");
+    const tabs = readSource("ui/src/components/agent/AgentSidebarTabs.tsx");
+    const css = readSource("ui/src/styles/agent-stage.css");
+
+    // A non-blocking inspector must not claim modal semantics, must not put a
+    // full-viewport scrim over the workspace, and must not swallow an outside
+    // click as cancellation.
+    assert.doesNotMatch(sidebar, /aria-modal=/);
+    assert.doesNotMatch(sidebar, /agent-dialog__backdrop/);
+    assert.doesNotMatch(sidebar, /agent-dialog--tools/);
+    assert.match(sidebar, /aria-labelledby="agent-tools-panel-title"/);
+    assert.match(sidebar, /<h2 id="agent-tools-panel-title"/);
+    assert.match(sidebar, /\{ modal: false \}/);
+
+    // Focus trap stays opt-in for genuinely modal drawers only.
+    assert.match(focus, /options: Options = \{\}/);
+    assert.match(focus, /if \(!modal \|\| event\.key !== "Tab"\) return;/);
+    assert.match(focus, /data-autofocus/);
+
+    // The trigger is a disclosure control, so it reports its own state.
+    assert.match(stage, /aria-expanded=\{toolsPanelOpen === true\}/);
+    assert.match(workspace, /toggleToolsPanel/);
+    assert.match(workspace, /toolsPanelOpen=\{toolsPanelOpen\}/);
+
+    // APG tabs: one tab stop, arrow keys move selection.
+    assert.match(tabs, /tabIndex=\{activeTab === tab \? 0 : -1\}/);
+    assert.match(tabs, /ArrowRight/);
+    assert.match(tabs, /onKeyDown=\{handleKeyDown\}/);
+
+    assert.match(css, /\.agent-right-sidebar--overlay/);
+    assert.doesNotMatch(css, /\.agent-dialog--tools/);
   });
 
   it("syncs sidebar settings and queue actions through the server-backed workspace", () => {

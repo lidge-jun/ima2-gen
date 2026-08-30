@@ -14,7 +14,7 @@ type Props = {
   onOpenPanel: () => void;
 };
 
-export function AgentStagePane({ currentImage, images, onImageSelect, onOpenPanel }: Props) {
+export function AgentStagePane({ currentImage, images, onImageSelect, onOpenPanel, toolsPanelOpen }: Props & { toolsPanelOpen?: boolean }) {
   const { t } = useI18n();
   const thumbRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const currentIndex = useMemo(
@@ -52,7 +52,15 @@ export function AgentStagePane({ currentImage, images, onImageSelect, onOpenPane
           <span>{t("agent.imagePane")}</span>
           <strong>{t("agent.currentImage")}</strong>
         </div>
-        <button type="button" className="agent-stage__tools" onClick={onOpenPanel} aria-label={t("agent.openTools")} title={t("agent.openTools")}>
+        <button
+          type="button"
+          className="agent-stage__tools"
+          onClick={onOpenPanel}
+          aria-expanded={toolsPanelOpen === true}
+          aria-controls="agent-tools-panel-title"
+          aria-label={toolsPanelOpen ? t("agent.closeTools") : t("agent.openTools")}
+          title={toolsPanelOpen ? t("agent.closeTools") : t("agent.openTools")}
+        >
           <SlidersIcon size={16} />
         </button>
       </header>

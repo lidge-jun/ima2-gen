@@ -1065,6 +1065,7 @@
     "filename": "文件",
     "prompt": "提示詞",
     "stageEmptyHint": "在此處發送您的第一個查看圖片的請求",
+    "toolsPanel": "工具",
     "openTools": "打開工具面板",
     "closeTools": "關閉工具面板"
   },

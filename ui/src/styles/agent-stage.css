@@ -101,19 +101,22 @@
   outline-offset: 1px;
 }
 
-.agent-dialog--tools .agent-right-sidebar--overlay {
-  position: absolute;
-  inset: 0 0 0 auto;
-  width: min(420px, 90vw);
-  height: 100%;
-  z-index: 30;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  overflow-y: auto;
-}
-
+/* Non-modal inspector: no page scrim, so the chat and stage behind it stay
+   readable and clickable. Depth comes from the panel's own shadow. */
 .agent-right-sidebar--overlay {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(420px, 92vw);
+  height: 100dvh;
+  z-index: 60;
+  display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border-strong, var(--border));
+  box-shadow: -18px 0 48px var(--shadow-strong, rgba(0, 0, 0, 0.4));
+  overflow: hidden;
 }
 
 .agent-right-sidebar__overlay-header {
@@ -125,10 +128,16 @@
   border-bottom: 1px solid var(--border);
 }
 
-.agent-right-sidebar__overlay-header strong {
-  font-size: 12px;
-  color: var(--text-dim);
+.agent-right-sidebar__overlay-header h2 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
   font-weight: 600;
+}
+
+.agent-right-sidebar__overlay-header h2:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .agent-right-sidebar__overlay-header button {

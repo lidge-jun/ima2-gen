@@ -148,6 +148,7 @@ export function AgentWorkspace() {
 
   const errorMessage = useCallback((error: unknown) => error instanceof Error ? error.message : String(error), []);
   const closeToolsPanel = useCallback(() => setToolsPanelOpen(false), []);
+  const toggleToolsPanel = useCallback(() => setToolsPanelOpen((open) => !open), []);
   const reportMutationError = useCallback((error: unknown) => {
     showToast(t("agent.workspaceActionFailed", { reason: errorMessage(error) }), true);
   }, [errorMessage, showToast, t]);
@@ -448,7 +449,7 @@ export function AgentWorkspace() {
           onRetryRun={retryFailedRun}
         />
         {isDesktop ? (
-          <AgentStagePane currentImage={currentImage} images={images} onImageSelect={selectImage} onOpenPanel={() => setToolsPanelOpen(true)} />
+          <AgentStagePane currentImage={currentImage} images={images} onImageSelect={selectImage} onOpenPanel={toggleToolsPanel} toolsPanelOpen={toolsPanelOpen} />
         ) : showRightSidebar ? (
           <AgentRightSidebar
             currentImage={currentImage}
