@@ -57,7 +57,7 @@ export function AgentStagePane({ currentImage, images, onImageSelect, onOpenPane
           className="agent-stage__tools"
           onClick={onOpenPanel}
           aria-expanded={toolsPanelOpen === true}
-          aria-controls="agent-tools-panel-title"
+          aria-controls="agent-tools-panel"
           aria-label={toolsPanelOpen ? t("agent.closeTools") : t("agent.openTools")}
           title={toolsPanelOpen ? t("agent.closeTools") : t("agent.openTools")}
         >

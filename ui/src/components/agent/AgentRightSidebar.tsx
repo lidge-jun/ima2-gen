@@ -112,6 +112,7 @@ export function AgentRightSidebar({ overlay, onClose, ...rest }: Props) {
     return (
       <section
         ref={panelRef}
+        id="agent-tools-panel"
         className="agent-right-sidebar agent-right-sidebar--overlay"
         role="dialog"
         aria-labelledby="agent-tools-panel-title"

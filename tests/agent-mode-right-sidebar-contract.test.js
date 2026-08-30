@@ -99,6 +99,37 @@ describe("Agent Mode right sidebar contract", () => {
 
     assert.match(css, /\.agent-right-sidebar--overlay/);
     assert.doesNotMatch(css, /\.agent-dialog--tools/);
+
+    // The disclosure must control the panel, not its heading.
+    assert.match(sidebar, /id="agent-tools-panel"/);
+    assert.match(stage, /aria-controls="agent-tools-panel"/);
+    assert.doesNotMatch(stage, /aria-controls="agent-tools-panel-title"/);
+  });
+
+  it("docks the tools panel into its own column instead of covering the stage", () => {
+    const workspace = readSource("ui/src/components/agent/AgentWorkspace.tsx");
+    const stageCss = readSource("ui/src/styles/agent-stage.css");
+
+    // A non-modal panel leaves the background focusable, so overlaying the stage
+    // would let Shift+Tab reach a control hidden underneath (WCAG 2.4.11).
+    assert.match(workspace, /agent-workspace--tools-docked/);
+    assert.match(stageCss, /\.agent-workspace--tools-docked \.agent-workspace__body/);
+    assert.match(stageCss, /\.agent-workspace--tools-docked \.agent-right-sidebar--overlay/);
+
+    // The panel must render inside the body grid for the docked column to apply.
+    const bodyStart = workspace.indexOf('<div className="agent-workspace__body">');
+    const bodyEnd = workspace.indexOf("<AgentSessionDrawer");
+    const overlayIndex = workspace.indexOf("{isDesktop && toolsPanelOpen ? (");
+    assert.ok(bodyStart > 0, "the workspace body element must exist");
+    assert.ok(
+      overlayIndex > bodyStart && overlayIndex < bodyEnd,
+      "the overlay panel must render inside the workspace body grid",
+    );
+
+    // The filmstrip must stay inside its grid track or trailing thumbs remain
+    // focusable while clipped out of view under the docked panel.
+    const filmBlock = stageCss.slice(stageCss.indexOf(".agent-stage__filmstrip {"));
+    assert.match(filmBlock.slice(0, filmBlock.indexOf("}")), /min-width: 0/);
   });
 
   it("syncs sidebar settings and queue actions through the server-backed workspace", () => {

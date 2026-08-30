@@ -443,7 +443,13 @@
 .agent-tool-call-row__toggle {
   min-width: 0;
   display: grid;
+  /* Every child is placed explicitly. Pinning only the badges to row 1 let grid
+     auto-place them into the first free cells, which pushed the status dot and
+     tool name to the right of the duration. */
   grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas:
+    "status name count duration chevron"
+    ". preview preview preview preview";
   align-items: center;
   column-gap: 7px;
   row-gap: 3px;
@@ -471,6 +477,10 @@
   background: var(--red);
 }
 
+.agent-tool-call-row__status {
+  grid-area: status;
+}
+
 .agent-tool-call-row__name,
 .agent-tool-call-row__preview,
 .agent-tool-call-row__meta {
@@ -481,6 +491,7 @@
 }
 
 .agent-tool-call-row__name {
+  grid-area: name;
   color: var(--text);
 }
 
@@ -488,14 +499,14 @@
    own full-width line: sharing the name's line left it ~137px of a 395px row,
    which truncated most prompts after a few words. */
 .agent-tool-call-row__preview {
-  grid-column: 2 / -1;
+  grid-area: preview;
   color: var(--text-dim);
   font-family: var(--mono);
   font-size: 11px;
 }
 
 .agent-tool-call-row__meta {
-  grid-row: 1;
+  grid-area: count;
   padding: 1px 5px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -503,8 +514,13 @@
 }
 
 .agent-tool-call-row__meta--duration {
+  grid-area: duration;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
+}
+
+.agent-tool-call-row__toggle > svg {
+  grid-area: chevron;
 }
 
 .agent-tool-call-details {

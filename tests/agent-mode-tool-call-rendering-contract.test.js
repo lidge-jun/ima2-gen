@@ -45,7 +45,14 @@ describe("Agent Mode tool call rendering contract", () => {
     assert.match(row, /aria-hidden="true"/);
     assert.match(css, /\.agent-tool-call-row__preview/);
     // The preview needs its own line; sharing the name's row left it ~137px.
-    assert.match(css, /grid-column: 2 \/ -1/);
+    // Every child is placed by name: pinning only the badges to a row let grid
+    // auto-place them into the first free cells, which measured the tool name
+    // pushed to x=265 with the duration stretched across the flexible column.
+    assert.match(css, /grid-template-areas:\s*\n\s*"status name count duration chevron"\s*\n\s*"\. preview preview preview preview"/);
+    for (const area of ["status", "name", "preview", "count", "duration", "chevron"]) {
+      assert.match(css, new RegExp(`grid-area: ${area}`), `${area} must be placed explicitly`);
+    }
+    assert.doesNotMatch(css, /\.agent-tool-call-row__meta \{[^}]*grid-row: 1/);
 
     // A fixed row height clipped the preview line by 4px in the chat pane.
     const panelCss = readSource("ui/src/styles/agent-workspace-panels.css");
