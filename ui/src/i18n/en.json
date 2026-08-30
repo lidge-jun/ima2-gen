@@ -1065,6 +1065,7 @@
     "filename": "File",
     "prompt": "Prompt",
     "stageEmptyHint": "Send your first request to see the image here",
+    "toolsPanel": "Tools",
     "openTools": "Open tools panel",
     "closeTools": "Close tools panel"
   },

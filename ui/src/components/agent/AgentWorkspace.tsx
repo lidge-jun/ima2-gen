@@ -148,6 +148,7 @@ export function AgentWorkspace() {
 
   const errorMessage = useCallback((error: unknown) => error instanceof Error ? error.message : String(error), []);
   const closeToolsPanel = useCallback(() => setToolsPanelOpen(false), []);
+  const toggleToolsPanel = useCallback(() => setToolsPanelOpen((open) => !open), []);
   const reportMutationError = useCallback((error: unknown) => {
     showToast(t("agent.workspaceActionFailed", { reason: errorMessage(error) }), true);
   }, [errorMessage, showToast, t]);
@@ -412,7 +413,11 @@ export function AgentWorkspace() {
   }
 
   return (
-    <main className={`agent-workspace agent-workspace--${layoutMode}`} data-layout={layoutMode} aria-label={t("agent.workspace")}>
+    <main
+      className={`agent-workspace agent-workspace--${layoutMode}${isDesktop && toolsPanelOpen ? " agent-workspace--tools-docked" : ""}`}
+      data-layout={layoutMode}
+      aria-label={t("agent.workspace")}
+    >
       {useSessionRail ? (
         <div className="agent-session-rail-wrap">
           <AgentSessionRail sessions={workspace.sessions} selectedId={selectedSessionId ?? ""} imagesById={workspace.imagesById} runSummaryBySession={workspace.runSummaryBySession} onCreate={createSession} onSelect={selectSession} onOpenDrawer={() => setDrawerOpen(true)} />
@@ -448,7 +453,7 @@ export function AgentWorkspace() {
           onRetryRun={retryFailedRun}
         />
         {isDesktop ? (
-          <AgentStagePane currentImage={currentImage} images={images} onImageSelect={selectImage} onOpenPanel={() => setToolsPanelOpen(true)} />
+          <AgentStagePane currentImage={currentImage} images={images} onImageSelect={selectImage} onOpenPanel={toggleToolsPanel} toolsPanelOpen={toolsPanelOpen} />
         ) : showRightSidebar ? (
           <AgentRightSidebar
             currentImage={currentImage}
@@ -467,27 +472,29 @@ export function AgentWorkspace() {
             onRetryQueue={retryQueue}
           />
         ) : null}
+        {/* Rendered inside the body so the docked layout can give it a column
+            instead of covering the stage. */}
+        {isDesktop && toolsPanelOpen ? (
+          <AgentRightSidebar
+            overlay
+            onClose={closeToolsPanel}
+            currentImage={currentImage}
+            images={images}
+            contextTab={activeTab}
+            sidebarTab={sidebarTab}
+            queueItems={queueItems}
+            runSummary={selectedRunSummary}
+            settings={selectedSettings}
+            onContextTabChange={setActiveTab}
+            onSidebarTabChange={setSidebarTab}
+            onImageSelect={selectImage}
+            onSettingsChange={updateGenerationSettings}
+            onInsertPrompt={insertPrompt}
+            onCancelQueue={cancelQueue}
+            onRetryQueue={retryQueue}
+          />
+        ) : null}
       </div>
-      {isDesktop && toolsPanelOpen ? (
-        <AgentRightSidebar
-          overlay
-          onClose={closeToolsPanel}
-          currentImage={currentImage}
-          images={images}
-          contextTab={activeTab}
-          sidebarTab={sidebarTab}
-          queueItems={queueItems}
-          runSummary={selectedRunSummary}
-          settings={selectedSettings}
-          onContextTabChange={setActiveTab}
-          onSidebarTabChange={setSidebarTab}
-          onImageSelect={selectImage}
-          onSettingsChange={updateGenerationSettings}
-          onInsertPrompt={insertPrompt}
-          onCancelQueue={cancelQueue}
-          onRetryQueue={retryQueue}
-        />
-      ) : null}
       <AgentSessionDrawer open={drawerOpen} sessions={workspace.sessions} selectedId={selectedSessionId ?? ""} imagesById={workspace.imagesById} runSummaryBySession={workspace.runSummaryBySession} onClose={() => setDrawerOpen(false)} onCreate={createSession} onSelect={selectSession} onRename={renameSession} onDelete={deleteSession} />
       <AgentImageSheet open={imageSheetOpen} currentImage={currentImage} images={images} activeTab={activeTab} onTabChange={setActiveTab} onImageSelect={selectImage} onClose={() => setImageSheetOpen(false)} />
       <AgentQueueSheet open={queueSheetOpen} items={queueItems} summary={selectedRunSummary} onCancel={cancelQueue} onRetry={retryQueue} onClose={() => setQueueSheetOpen(false)} />
