@@ -66,16 +66,22 @@ export function AgentMessageList({ turns, imagesById, currentImageId, onImageSel
     else setShowJump(true);
   }, [turns.length]);
 
+  // role="log" is the append-only semantic for a transcript: implicitly polite
+  // and non-atomic, so assistive tech reads new entries instead of re-reading
+  // the whole thread on each append. The jump control lives outside the log so
+  // showing it does not announce a button as transcript content.
   return (
-    <div ref={listRef} className="agent-message-list" aria-live="polite" onScroll={updateScrollPosition}>
-      {turns.length === 0 ? <div className="agent-message-list__empty">{t("agent.emptyChat")}</div> : null}
-      {groups.map((group) =>
-        group.kind === "run" ? (
-          <AgentRunGroup key={group.key} turns={group.turns} imagesById={imagesById} currentImageId={currentImageId} onImageSelect={onImageSelect} />
-        ) : (
-          <AgentMessage key={group.turn.id} turn={group.turn} imagesById={imagesById} currentImageId={currentImageId} onImageSelect={onImageSelect} />
-        ),
-      )}
+    <div className="agent-message-list-wrap">
+      <div ref={listRef} className="agent-message-list" role="log" aria-label={t("agent.workspace")} onScroll={updateScrollPosition}>
+        {turns.length === 0 ? <div className="agent-message-list__empty">{t("agent.emptyChat")}</div> : null}
+        {groups.map((group) =>
+          group.kind === "run" ? (
+            <AgentRunGroup key={group.key} turns={group.turns} imagesById={imagesById} currentImageId={currentImageId} onImageSelect={onImageSelect} />
+          ) : (
+            <AgentMessage key={group.turn.id} turn={group.turn} imagesById={imagesById} currentImageId={currentImageId} onImageSelect={onImageSelect} />
+          ),
+        )}
+      </div>
       {showJump ? <button type="button" className="agent-message-list__jump" onClick={jumpToLatest}>{t("agent.emptyJumpLatest")}</button> : null}
     </div>
   );

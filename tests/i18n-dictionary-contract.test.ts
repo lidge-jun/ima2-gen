@@ -192,6 +192,19 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
   ]],
   // toastKey's local complete/partial literals in storeGenImpl.ts.
   ["ui/src/store/storeGenImpl.ts :: toastKey", ["multimode.complete", "multimode.partial"]],
+  // agentToolLabelKey() in ui/src/lib/agentToolFormatting.ts returns exactly these
+  // literals (TOOL_LABEL_KEYS) or null, and null short-circuits to the raw tool name.
+  ["ui/src/components/agent/AgentToolCallRow.tsx :: labelKey", [
+    "agent.toolLabel.getImageContext", "agent.toolLabel.webSearch",
+    "agent.toolLabel.generateImage", "agent.toolLabel.generateVideo",
+    "agent.toolLabel.getGenerationErrors",
+  ]],
+  // Same resolver, mapped over the group's distinct tool names.
+  ["ui/src/components/agent/AgentToolGroup.tsx :: key", [
+    "agent.toolLabel.getImageContext", "agent.toolLabel.webSearch",
+    "agent.toolLabel.generateImage", "agent.toolLabel.generateVideo",
+    "agent.toolLabel.getGenerationErrors",
+  ]],
 ]);
 
 const ERROR_CARD_ROOTS = [

@@ -557,3 +557,13 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* WCAG C39: an indefinite pulse/spin must stop under reduced motion. These two
+   indicators animate only while a run is live, so they were missed by the
+   existing sweep in agent-workspace-panels.css. Colour still carries state. */
+@media (prefers-reduced-motion: reduce) {
+  .agent-session-spinner > span,
+  .agent-tool-call-row--running .agent-tool-call-row__status {
+    animation: none;
+  }
+}
