@@ -21,7 +21,11 @@ function groupTurns(turns: AgentTurn[]): MessageGroup[] {
 
   const flushRun = () => {
     if (runBatch.length === 0) return;
-    groups.push({ kind: "run", turns: runBatch, key: runBatch.map((t) => t.id).join("+") });
+    // Key on the run's first turn, not every turn id. A concatenated key changes
+    // whenever the run grows, so React remounted the whole group: inside the
+    // transcript log that re-announces settled content, and it also threw away
+    // any tool details the user had expanded mid-run.
+    groups.push({ kind: "run", turns: runBatch, key: `run-${runBatch[0].id}` });
     runBatch = [];
   };
 

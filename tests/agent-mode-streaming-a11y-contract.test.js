@@ -66,4 +66,14 @@ describe("Agent Mode streaming a11y contract", () => {
     assert.match(jumpRule, /position: absolute/);
     assert.doesNotMatch(jumpRule, /position: sticky/);
   });
+
+  it("keys a run by its first turn so appending does not remount the group", () => {
+    const list = readSource("ui/src/components/agent/AgentMessageList.tsx");
+
+    // A key built from every turn id changed whenever the run grew, remounting
+    // the whole AgentRunGroup: inside role="log" that re-announces settled
+    // content, and it discarded tool details the user had expanded mid-run.
+    assert.doesNotMatch(list, /runBatch\.map\(\(t\) => t\.id\)\.join/);
+    assert.match(list, /key: `run-\$\{runBatch\[0\]\.id\}`/);
+  });
 });
