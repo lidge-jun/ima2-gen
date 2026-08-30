@@ -445,7 +445,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   align-items: center;
-  gap: 7px;
+  column-gap: 7px;
+  row-gap: 3px;
   padding: 7px 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -471,6 +472,7 @@
 }
 
 .agent-tool-call-row__name,
+.agent-tool-call-row__preview,
 .agent-tool-call-row__meta {
   min-width: 0;
   overflow: hidden;
@@ -482,12 +484,27 @@
   color: var(--text);
 }
 
+/* The argument preview is what makes a collapsed row auditable, so it gets its
+   own full-width line: sharing the name's line left it ~137px of a 395px row,
+   which truncated most prompts after a few words. */
+.agent-tool-call-row__preview {
+  grid-column: 2 / -1;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
 .agent-tool-call-row__meta {
+  grid-row: 1;
   padding: 1px 5px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-family: var(--font);
   font-size: 10px;
+}
+
+.agent-tool-call-row__meta--duration {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .agent-tool-call-details {
@@ -510,8 +527,9 @@
 
 .agent-tool-call-details dt {
   color: var(--text-dim);
-  font-family: var(--font);
   font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .agent-tool-call-details dd {
@@ -521,8 +539,12 @@
   font-size: 11px;
   overflow-wrap: anywhere;
   white-space: normal;
-  max-height: 120px;
-  overflow-y: auto;
+}
+
+/* Payload text is technical: monospace keeps ids, paths, and JSON legible. */
+.agent-tool-call-details dd > span {
+  font-family: var(--mono);
+  line-height: 1.5;
 }
 
 .agent-tool-call-details__artifacts {

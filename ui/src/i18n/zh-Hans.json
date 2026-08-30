@@ -1065,6 +1065,13 @@
     "filename": "文件",
     "prompt": "提示词",
     "stageEmptyHint": "在此处发送您的第一个查看图片的请求",
+    "toolLabel": {
+      "getImageContext": "读取图片上下文",
+      "webSearch": "网页搜索",
+      "generateImage": "生成图片",
+      "generateVideo": "生成视频",
+      "getGenerationErrors": "查询生成错误"
+    },
     "toolsPanel": "工具",
     "openTools": "打开工具面板",
     "closeTools": "关闭工具面板"
