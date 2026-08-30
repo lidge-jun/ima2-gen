@@ -54,6 +54,18 @@
   animation: agent-pulse 1s ease-in-out infinite;
 }
 
+/* The jump control sits outside the transcript log so that showing it does not
+   announce a button as new log content. The wrapper owns the grid row the list
+   used to occupy and provides the positioning context for that control. */
+.agent-message-list-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
 .agent-message-list {
   position: relative;
   min-height: 0;
@@ -66,9 +78,11 @@
 }
 
 .agent-message-list__jump {
-  position: sticky;
-  bottom: 4px;
-  justify-self: center;
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid var(--border-strong);
