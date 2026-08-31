@@ -8,49 +8,112 @@
 // "the whole ref token is exactly 40 lowercase hex characters", checked
 // positively over every external `uses:` in the file rather than by blacklisting
 // `@vN`.
+//
+// The refs are read from the parsed YAML document, not by scanning lines. A
+// line scanner is defeated by valid YAML: `- { uses: attacker/action@main }` in
+// flow style has no `uses:` at line start, and a `run: |` block scalar can
+// contain text that looks exactly like a pinned step. Both were found by review
+// against an earlier line-based version of this file, and actionlint accepted
+// the crafted workflow, so this is reachable YAML rather than a hypothetical.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseDocument, isAlias, isMap, isSeq, isScalar, visit } from "yaml";
 
-// `- uses: owner/repo@ref` or `uses: owner/repo@ref`, with an optional trailing
-// comment. Anchored to the whole line at both ends so nothing trails the ref.
-const USES_LINE = /^[\t ]*(?:-[\t ]+)?uses:[\t ]*(\S+)[\t ]*(?:#.*)?$/;
-// Any line whose YAML key is `uses:`. Every one of these must parse, or the
-// sweep below is silently skipping refs.
-const USES_KEY_LINE = /^[\t ]*(?:-[\t ]+)?uses:/;
 const PINNED_REF = /^[0-9a-f]{40}$/;
 // Local composite actions (`./.github/actions/x`) and reusable local workflows
 // carry no ref and are covered by this repo's own review, not by pinning.
 const LOCAL_USE = /^\.{1,2}\//;
 
-function unquote(value) {
-  const first = value[0];
-  if ((first === '"' || first === "'") && value.at(-1) === first) return value.slice(1, -1);
-  return value;
-}
-
 /**
- * Parse every `uses:` entry in one workflow file.
- * Throws if a `uses:` key line does not parse, so a future YAML shape cannot
- * quietly drop out of the pin sweep.
+ * Every `uses:` in one workflow, read from the parsed document.
+ *
+ * Uses the YAML AST so flow-style steps and quoted keys are found, block
+ * scalars are not mistaken for steps, and aliases resolve to their anchor.
+ * Throws on a parse error or on a `uses:` whose value is not a plain string,
+ * so nothing can drop out of the sweep silently.
  */
 export function parseActionUses(text, label = "workflow") {
+  const doc = parseDocument(text, { merge: true });
+  assert.deepEqual(
+    doc.errors.map((error) => error.message),
+    [],
+    `${label} is not parseable YAML, so the pin sweep cannot see its steps`,
+  );
   const entries = [];
-  text.split(/\r?\n/).forEach((line, index) => {
-    if (!USES_KEY_LINE.test(line)) return;
-    const match = USES_LINE.exec(line);
-    assert.ok(match, `${label}:${index + 1} has a \`uses:\` key this gate cannot parse: ${line.trim()}`);
-    const value = unquote(match[1]);
+  const seen = new Set();
+  // An alias node carries no value of its own; resolve it to the anchor so the
+  // ref that Actions would actually run is what gets checked.
+  const deref = (node) => (isAlias(node) ? node.resolve(doc) : node);
+  const record = (node, where) => {
+    node = deref(node);
+    assert.ok(
+      isScalar(node) && typeof node.value === "string",
+      `${label} ${where} has a \`uses:\` whose value is not a plain string; this gate cannot verify it`,
+    );
+    // An alias points back at its anchor, so the same declaration can be
+    // reached twice. Dedupe by source offset to keep this a count of
+    // declarations rather than of references.
+    const offset = node.range ? node.range[0] : null;
+    if (offset !== null && seen.has(offset)) return;
+    if (offset !== null) seen.add(offset);
+    const value = node.value.trim();
     const at = value.lastIndexOf("@");
     entries.push({
       label,
-      line: index + 1,
-      raw: line.trim(),
+      where,
+      line: offset === null ? 0 : text.slice(0, offset).split(/\r?\n/).length,
+      offset,
+      raw: value,
       action: at === -1 ? value : value.slice(0, at),
       ref: at === -1 ? null : value.slice(at + 1),
       local: LOCAL_USE.test(value),
     });
+  };
+
+  // Walk the two structural positions Actions actually honours: a step's
+  // `uses`, and a job-level `uses` for a reusable workflow. Reading the
+  // structure rather than every `uses` key anywhere means a `uses` under
+  // `with:` cannot masquerade as a step, and vice versa.
+  const jobs = doc.get("jobs", true);
+  if (isMap(jobs)) {
+    for (const jobPair of jobs.items) {
+      const jobName = isScalar(jobPair.key) ? String(jobPair.key.value) : "?";
+      const job = jobPair.value;
+      if (!isMap(job)) continue;
+      const jobUses = job.get("uses", true);
+      if (jobUses !== undefined && jobUses !== null) record(jobUses, `jobs.${jobName}.uses`);
+      const steps = job.get("steps", true);
+      if (!isSeq(steps)) continue;
+      steps.items.forEach((stepNode, index) => {
+        if (!isMap(stepNode)) return;
+        const stepUses = stepNode.get("uses", true);
+        if (stepUses !== undefined && stepUses !== null) {
+          record(stepUses, `jobs.${jobName}.steps[${index}].uses`);
+        }
+      });
+    }
+  }
+
+  // Nothing may carry the `uses` key outside those positions. Without this a
+  // reviewer reading the structural walk above cannot tell whether a `uses`
+  // somewhere unexpected is unreachable or merely unchecked - so fail instead
+  // of guessing. Block scalars (`run: |`) are not Pair nodes and never reach
+  // here, which is what stops crafted `run:` text from being counted as a step.
+  visit(doc, {
+    Pair(_key, pair) {
+      if (!isScalar(pair.key) || pair.key.value !== "uses") return;
+      const node = deref(pair.value);
+      const offset = isScalar(node) && node.range ? node.range[0] : null;
+      assert.ok(
+        offset !== null && seen.has(offset),
+        `${label} declares \`uses:\` outside a step or job position, where this gate cannot verify it: ${
+          isScalar(node) ? String(node.value) : "(non-scalar)"
+        }`,
+      );
+    },
   });
+  entries.sort((a, b) => a.line - b.line);
   return entries;
 }
 

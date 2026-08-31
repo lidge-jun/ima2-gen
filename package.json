@@ -117,6 +117,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.1",
     "tsx": "^4.23.12",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "yaml": "2.9.0"
   }
 }

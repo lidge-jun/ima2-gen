@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   assertActionPinned,
@@ -12,10 +12,57 @@ import {
 const SHA = "a".repeat(40);
 const WORKFLOW_DIR = ".github/workflows";
 
+// Workflows that legitimately declare no actions. ci-timing-report.yml is a
+// workflow_run observer that only shells out to gh, and it never checks out
+// source. Naming them explicitly is the point: a numeric ref-count threshold
+// would let someone convert pages.yml into a run-only workflow and still pass.
+const RUN_ONLY_WORKFLOWS = new Set(["ci-timing-report.yml"]);
+
 function workflowFiles(): string[] {
   return readdirSync(WORKFLOW_DIR)
     .filter((name) => /\.ya?ml$/.test(name))
     .sort();
+}
+
+/** Executable sources under the given roots, walked recursively. */
+function sourceFiles(roots: string[]): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir).sort()) {
+      const path = join(dir, entry);
+      if (statSync(path).isDirectory()) {
+        walk(path);
+      } else if (/\.[cm]?[jt]sx?$/.test(entry)) {
+        out.push(path);
+      }
+    }
+  };
+  for (const root of roots) walk(root);
+  return out;
+}
+
+/**
+ * Zero-based indices of lines inside a `run:` block scalar.
+ * The independent scan below must skip these, or crafted `run:` text would
+ * inflate its count and make the comparison fail for the wrong reason.
+ */
+function runBlockLines(text: string): Set<number> {
+  const lines = text.split(/\r?\n/);
+  const inside = new Set<number>();
+  let indent = -1;
+  lines.forEach((line, index) => {
+    if (indent >= 0) {
+      const width = line.length - line.trimStart().length;
+      if (line.trim() === "" || width > indent) {
+        inside.add(index);
+        return;
+      }
+      indent = -1;
+    }
+    const open = /^([\t ]*)(?:-[\t ]+)?[\w"']+[\t ]*:[\t ]*[|>][-+]?[\t ]*$/.exec(line);
+    if (open) indent = open[1].length;
+  });
+  return inside;
 }
 
 function step(ref: string): string {
@@ -66,12 +113,72 @@ describe("action pin gate", () => {
     const quoted = `jobs:\n  a:\n    steps:\n      - uses: "actions/checkout@${SHA}"`;
     assert.doesNotThrow(() => assertAllActionsPinned(quoted, "fixture"));
     const smuggled = `jobs:\n  a:\n    steps:\n      - uses: actions/checkout@${SHA} extra`;
-    assert.throws(() => assertAllActionsPinned(smuggled, "fixture"), /cannot parse/);
+    // YAML reads this as one plain scalar, so the ref is "<sha> extra" and the
+    // whole-token check is what rejects it.
+    assert.throws(() => assertAllActionsPinned(smuggled, "fixture"), /not pinned to an immutable/);
   });
 
   it("fails loudly rather than passing vacuously", () => {
     assert.throws(() => assertAllActionsPinned("jobs:\n  a:\n    steps: []\n", "fixture"), /no .*uses.* steps/);
     assert.throws(() => assertActionPinned(step(SHA), "github/codeql-action/init", "fixture"), /does not use/);
+  });
+
+  // A line scanner passed both of these. actionlint accepts them, so they are
+  // reachable YAML, not a hypothetical.
+  it("sees flow-style steps a line scanner misses", () => {
+    const flow = `jobs:\n  a:\n    steps: [{ uses: attacker/action@main }]`;
+    assert.throws(() => assertAllActionsPinned(flow, "fixture"), /not pinned to an immutable/);
+    const inlineMap = `jobs:\n  a:\n    steps:\n      - { uses: attacker/action@main }`;
+    assert.throws(() => assertAllActionsPinned(inlineMap, "fixture"), /not pinned to an immutable/);
+    const quotedKey = `jobs:\n  a:\n    steps:\n      - "uses": attacker/action@main`;
+    assert.throws(() => assertAllActionsPinned(quotedKey, "fixture"), /not pinned to an immutable/);
+  });
+
+  it("does not count block-scalar text as a step", () => {
+    const decoy = [
+      "jobs:",
+      "  a:",
+      "    steps:",
+      `      - { uses: attacker/action@main }`,
+      "      - run: |",
+      `          uses: actions/checkout@${SHA}`,
+      `          uses: actions/setup-node@${SHA}`,
+    ].join("\n");
+    const entries = parseActionUses(decoy, "fixture");
+    assert.equal(entries.length, 1, "run: block text must not be parsed as steps");
+    assert.equal(entries[0].ref, "main");
+    assert.throws(() => assertAllActionsPinned(decoy, "fixture"), /not pinned to an immutable/);
+  });
+
+  it("checks a job-level reusable-workflow uses", () => {
+    const reusable = `jobs:\n  a:\n    uses: owner/repo/.github/workflows/x.yml@main`;
+    assert.throws(() => assertAllActionsPinned(reusable, "fixture"), /not pinned to an immutable/);
+    const pinned = `jobs:\n  a:\n    uses: owner/repo/.github/workflows/x.yml@${SHA}`;
+    assert.doesNotThrow(() => assertAllActionsPinned(pinned, "fixture"));
+  });
+
+  it("resolves an alias to the ref it actually points at", () => {
+    const aliased = [
+      "jobs:",
+      "  a:",
+      "    steps:",
+      "      - uses: &pin attacker/action@main",
+      "  b:",
+      "    steps:",
+      "      - uses: *pin",
+    ].join("\n");
+    assert.throws(() => assertAllActionsPinned(aliased, "fixture"), /not pinned to an immutable/);
+  });
+
+  it("refuses to silently ignore a uses key in an unverifiable position", () => {
+    const hidden = `jobs:\n  a:\n    steps:\n      - with:\n          uses: attacker/action@main`;
+    assert.throws(() => assertAllActionsPinned(hidden, "fixture"), /outside a step or job position/);
+    const nonScalar = `jobs:\n  a:\n    steps:\n      - uses:\n          - attacker/action@main`;
+    assert.throws(() => assertAllActionsPinned(nonScalar, "fixture"), /not a plain string/);
+  });
+
+  it("refuses unparseable YAML rather than reading zero refs from it", () => {
+    assert.throws(() => assertAllActionsPinned("jobs:\n  a: [unclosed\n", "fixture"), /not parseable YAML/);
   });
 
   it("skips local composite actions, which carry no ref", () => {
@@ -85,27 +192,32 @@ describe("action pin gate", () => {
   it("pins every external action in every workflow", () => {
     const files = workflowFiles();
     assert.ok(files.length >= 11, `expected the full workflow set, found ${files.length}`);
-    let external = 0;
     for (const name of files) {
       const text = readFileSync(join(WORKFLOW_DIR, name), "utf8");
-      // requireUses is off here on purpose: ci-timing-report.yml is a run-only
-      // observer with no actions. The tree-wide total below is what stops this
-      // sweep from passing on an empty parse.
-      const entries = assertAllActionsPinned(text, `${WORKFLOW_DIR}/${name}`, { requireUses: false });
-      external += entries.filter((entry) => !entry.local).length;
+      const runOnly = RUN_ONLY_WORKFLOWS.has(name);
+      const entries = assertAllActionsPinned(text, `${WORKFLOW_DIR}/${name}`, { requireUses: !runOnly });
+      const external = entries.filter((entry) => !entry.local).length;
+      if (runOnly) {
+        assert.equal(external, 0, `${name} is listed as run-only but declares ${external} actions; drop it from the allowlist`);
+      } else {
+        assert.ok(external > 0, `${name} declares no external action; add it to RUN_ONLY_WORKFLOWS if that is intended`);
+      }
     }
-    assert.ok(external >= 40, `expected the full pin surface, swept ${external} refs`);
   });
 
-  it("leaves no literal action SHA frozen in any test file", () => {
+  // Hygiene check, not a guarantee: it catches the accidental copy-paste that
+  // caused #162 and #178, and cannot catch a SHA built by concatenation. The
+  // real gate is that assertActionPinned exists and is easier to reach for.
+  it("leaves no literal action SHA frozen in test or script sources", () => {
+    const SELF = "tests/action-pin-contract.test.ts";
     const offenders: string[] = [];
-    for (const name of readdirSync("tests").sort()) {
-      if (!/\.test\.[cm]?[jt]s$/.test(name)) continue;
-      if (name === "action-pin-contract.test.ts") continue;
-      const text = readFileSync(join("tests", name), "utf8");
-      text.split(/\r?\n/).forEach((line, index) => {
-        if (/[\w./-]+@[0-9a-f]{40}/.test(line)) offenders.push(`tests/${name}:${index + 1}`);
-      });
+    for (const path of sourceFiles(["tests", "scripts"])) {
+      if (path === SELF) continue;
+      readFileSync(path, "utf8")
+        .split(/\r?\n/)
+        .forEach((line, index) => {
+          if (/[\w./-]+@[0-9a-f]{40}(?![0-9a-f])/.test(line)) offenders.push(`${path}:${index + 1}`);
+        });
     }
     assert.deepEqual(
       offenders,
@@ -114,11 +226,20 @@ describe("action pin gate", () => {
     );
   });
 
-  it("parses the same ref count the raw grep sees", () => {
+  // Independent cross-check so the sweep cannot narrow without anyone noticing.
+  // Counting with a different method than the parser uses is the whole point:
+  // comparing the parser against its own regex family would be circular. Today
+  // every real step is block style, so the two agree exactly; if a workflow
+  // adopts flow style this test is the one that must be updated deliberately.
+  it("parses at least every uses: line a plain scan can see", () => {
     for (const name of workflowFiles()) {
       const text = readFileSync(join(WORKFLOW_DIR, name), "utf8");
-      const rawCount = text.split(/\r?\n/).filter((line) => /^[\t ]*(?:-[\t ]+)?uses:/.test(line)).length;
-      assert.equal(parseActionUses(text, name).length, rawCount, `${name} lost a uses: entry during parsing`);
+      const inRunBlock = runBlockLines(text);
+      const scanned = text
+        .split(/\r?\n/)
+        .filter((line, index) => !inRunBlock.has(index) && /^[\t ]*(?:-[\t ]+)?["']?uses["']?:/.test(line)).length;
+      const parsed = parseActionUses(text, name).length;
+      assert.ok(parsed >= scanned, `${name}: parser saw ${parsed} uses, a plain scan saw ${scanned}`);
     }
   });
 });
