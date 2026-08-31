@@ -18,7 +18,7 @@
 .element-mention-menu__copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .element-mention-menu__copy small { color: var(--text-muted); font-size: 10px; text-transform: capitalize; }
 .element-mention-menu__empty { padding: 14px 10px; color: var(--text-muted); font-size: 12px; }
-.element-mention-chip { display: inline-flex; align-items: stretch; max-width: 100%; overflow: hidden; border: 1px solid var(--hairline-soft); border-radius: var(--r-pill); background: var(--control-bg); }
+.element-mention-chip { display: inline-flex; align-items: stretch; max-width: 100%; min-height: 44px; overflow: hidden; border: 1px solid var(--hairline-soft); border-radius: var(--r-pill); background: var(--control-bg); }
 .element-mention-chip:hover { background: var(--control-hover); border-color: var(--hairline); }
 .element-mention-chip.is-missing { border-color: color-mix(in srgb, var(--amber) 60%, var(--hairline)); }
 .element-mention-chip__body { display: inline-flex; align-items: center; min-width: 0; gap: 6px; padding: 3px 5px 3px 4px; color: var(--text-dim); cursor: pointer; }
@@ -27,7 +27,7 @@
 .element-mention-chip__kind, .element-mention-chip__remove svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
 .element-mention-chip__warning { display: grid; width: 14px; height: 14px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--amber) 72%, var(--bg)); color: var(--on-scrim); font-size: 10px; font-weight: 800; }
 .element-mention-chip__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.element-mention-chip__remove { display: inline-grid; width: 30px; place-items: center; color: var(--text-muted); cursor: pointer; }
+.element-mention-chip__remove { display: inline-grid; width: 44px; place-items: center; color: var(--text-muted); cursor: pointer; }
 .element-mention-chip__remove:hover, .element-mention-chip__remove:focus-visible { color: var(--text); background: var(--accent-soft); }
 .element-mention-menu__option:focus-visible, .element-mention-chip__body:focus-visible, .element-mention-chip__remove:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (max-width: 640px) { .element-mention-menu.is-mobile { right: 0; bottom: 0; left: 0; width: auto; max-height: min(48dvh, 360px); border-radius: var(--r-xl) var(--r-xl) 0 0; padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); } .element-mention-menu.is-mobile .element-mention-menu__option { min-height: 48px; } }

@@ -186,3 +186,7 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* wp6: 44px hit area */
+.agent-right-sidebar__overlay-header button { position: relative; }
+.agent-right-sidebar__overlay-header button::after { content: ""; position: absolute; inset: 50% auto auto 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }

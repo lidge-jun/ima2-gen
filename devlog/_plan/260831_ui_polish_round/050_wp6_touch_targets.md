@@ -201,3 +201,13 @@ document.elementFromPoint로 각 C표 컨트롤의 네 모서리 안쪽을 찍�
 C표 18개 전부 44px 유효 히트 영역, 세션 액션 2개는 24px AA + 면제 근거,
 D표 2건 24px 이상, 면제 전부 이유 기재, elementFromPoint로 겹침/클리핑 없음 확인,
 npm test 무회귀.
+
+## Implementation Log (B-phase)
+
+Two commits on codex/ui-polish-wp6-touch-targets:
+- 76f7e511: fix(ui): 17 CSS files, 18 icon-only controls → 44px, 2 text controls → 24px
+- test commit: 20-assertion contract test
+
+PR → dev. 2732/0/2 tests.
+
+# wp6 verified: 2732/0/2 tests, typecheck clean
