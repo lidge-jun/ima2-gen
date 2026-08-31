@@ -302,7 +302,7 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
     "ui/src/components/ElementMentionMenu.tsx",
     ['mirror.style.cssText += ";position:fixed;visibility:hidden;white-space:pre-wrap;overflow-wrap:break-word;top:0;left:-9999px;"'],
   ]]);
-  const CSS_INJECTION_APIS = new Set(["insertRule", "addRule", "replaceSync", "replace"]);
+  const CSS_INJECTION_APIS = new Set(["insertRule", "addRule", "replaceSync"]);
   const cssWrites: { file: string; text: string }[] = [];
   // Third-party stylesheets the round does not own. @xyflow/react ships its own
   // radius (border-radius: 1px on the resize handle) and is not ours to restyle;
@@ -317,6 +317,30 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
     const source = readFileSync(file, "utf8");
     const rel = normalize(file);
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+    // Names this file declares as a stylesheet or style element. Reading the
+    // annotation beats guessing from the identifier, which both misses aliases and
+    // flags ordinary strings that happen to be named styleName (audit wp2c4-F1).
+    const cssomNames = new Set<string>();
+    const collectTypes = (node: import("typescript").Node): void => {
+      if (ts.isVariableDeclaration(node) || ts.isParameter(node) || ts.isPropertyDeclaration(node)) {
+        const typeText = node.type ? node.type.getText(sourceFile) : "";
+        if (/CSSStyleSheet|HTMLStyleElement|StyleSheetList/.test(typeText) && ts.isIdentifier(node.name)) {
+          cssomNames.add(node.name.text);
+        }
+      }
+      // const x = document.styleSheets[0] carries no annotation, so the initializer
+      // is what identifies it.
+      if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name)) {
+        if (/styleSheets|CSSStyleSheet|adoptedStyleSheets|createElement\(\s*["']style["']\s*\)/.test(node.initializer.getText(sourceFile))) {
+          cssomNames.add(node.name.text);
+        }
+      }
+      ts.forEachChild(node, collectTypes);
+    };
+    collectTypes(sourceFile);
+    const isCssomReceiver = (receiver: string) =>
+      cssomNames.has(receiver) || /styleSheets|CSSStyleSheet|adoptedStyleSheets/.test(receiver);
 
     const visit = (node: import("typescript").Node): void => {
       if (ts.isPropertyAssignment(node)) {
@@ -337,26 +361,40 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
       }
       // Any CSSOM entry point, regardless of where the CSS string was built. The
       // earlier text-proximity check missed a rule hoisted into a variable first
-      // (audit wp2c2-F2). A file-wide exemption then let the allowlisted file
-      // inject anything at all (audit wp2c3-F1), so the allowlist now pins the
-      // exact text of the one permitted write.
+      // (audit wp2c2-F2), and a file-wide exemption let the allowlisted file inject
+      // anything at all (audit wp2c3-F1), so the allowlist pins the exact text of
+      // the one permitted write.
       //
-      // String.prototype.replace shares a name with CSSStyleSheet.replace, and
-      // textContent is set on plenty of non-style elements, so the receiver has to
-      // look like a stylesheet or a style element before a call counts.
+      // insertRule, addRule, and replaceSync exist only on stylesheets, so they are
+      // refused outright: a receiver-name heuristic is bypassed by any alias such as
+      // const x = document.styleSheets[0] (audit wp2c4-F1). replace and textContent
+      // collide with String.prototype.replace and ordinary element text, so those
+      // two consult the declared CSSOM types collected above rather than guessing
+      // from the receiver's name.
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
         const method = node.expression.name.text;
         const receiver = node.expression.expression.getText(sourceFile);
-        const stylesheetish = /sheet|style|css/i.test(receiver);
-        if (CSS_INJECTION_APIS.has(method) && stylesheetish) {
+        if (CSS_INJECTION_APIS.has(method)) {
+          cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
+        } else if (method === "replace" && isCssomReceiver(receiver)) {
+          cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
+        }
+        // A style element is the other way to install CSS, and naming it anything
+        // defeats a receiver test, so the creation itself is what gets refused.
+        if (
+          method === "createElement" &&
+          node.arguments.length > 0 &&
+          ts.isStringLiteralLike(node.arguments[0]) &&
+          node.arguments[0].text.toLowerCase() === "style"
+        ) {
           cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
         }
       }
       if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "CSSStyleSheet") {
         cssWrites.push({ file: rel, text: "new CSSStyleSheet()" });
       }
-      // cssText always installs CSS. textContent and innerHTML only matter on a
-      // receiver that looks like a style element.
+      // cssText always installs CSS. textContent and innerHTML are only a CSS sink
+      // on a style element, which the declared-type set identifies.
       if (
         ts.isBinaryExpression(node) &&
         node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
@@ -365,28 +403,31 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
       ) {
         const sink = node.left.name.text;
         const receiver = node.left.expression.getText(sourceFile);
-        const isSink =
-          sink === "cssText" ||
-          ((sink === "textContent" || sink === "innerHTML") && /styleel|stylee|stylet|styleta|sheet|styleNode|styleTag/i.test(receiver));
-        if (isSink) cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
+        if (sink === "cssText" || ((sink === "textContent" || sink === "innerHTML") && isCssomReceiver(receiver))) {
+          cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
+        }
       }
-      if (
-        ts.isPropertyAccessExpression(node) &&
-        node.name.text === "adoptedStyleSheets"
-      ) {
+      if (ts.isPropertyAccessExpression(node) && node.name.text === "adoptedStyleSheets") {
         cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
       }
-      // Stylesheets outside ui/src never reach the manifest.
+      // Stylesheets outside ui/src never reach the manifest. A bare specifier is a
+      // package path, so joining it onto the importer's directory made
+      // "evil-package/style.css" resolve inside ui/src and pass (audit wp2c4-F2).
       if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
         const target = node.moduleSpecifier.text;
-        if (target.endsWith(".css") && !VENDOR_CSS_ALLOWED.has(target)) {
-          // Nested components legitimately reach back with ../../styles/, so resolve
-          // the specifier and require the result to land inside the audited tree.
-          const resolved = normalize(join(dirname(file), target));
-          assert.ok(
-            resolved.startsWith("ui/src/"),
-            "CSS imports must stay inside ui/src: " + rel + " -> " + target,
-          );
+        if (target.endsWith(".css")) {
+          if (target.startsWith("./") || target.startsWith("../")) {
+            const resolved = normalize(join(dirname(file), target));
+            assert.ok(
+              resolved.startsWith("ui/src/"),
+              "CSS imports must stay inside ui/src: " + rel + " -> " + target,
+            );
+          } else {
+            assert.ok(
+              VENDOR_CSS_ALLOWED.has(target),
+              "package CSS must be allowlisted: " + rel + " -> " + target,
+            );
+          }
         }
       }
       ts.forEachChild(node, visit);

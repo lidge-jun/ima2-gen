@@ -549,6 +549,40 @@ Tailwind 검사도 소스 텍스트 전체를 훑던 방식을 버렸습니다. 
 
 54개 전부 잡히고, 반대 방향 확인으로 주석/문장의 "rounded"는 통과합니다.
 
+### 구현 감사 4라운드(wp2c4)로 추가된 6개 (합계 60개)
+
+3라운드에서 도입한 "수신자 이름이 sheet/style/css처럼 보이는지" 휴리스틱이 양쪽으로
+틀렸습니다. `const x = document.styleSheets[0]`처럼 별칭을 쓰면 놓치고,
+`styleName.replace(...)` 같은 정상 문자열은 오탐합니다.
+
+그래서 이름 추측을 버렸습니다. `insertRule`/`addRule`/`replaceSync`는
+stylesheet에만 있는 메서드라 수신자와 무관하게 거부합니다. 이름이 겹치는
+`replace`와 `textContent`만 **선언된 타입**을 봅니다 — 파일 안에서
+`CSSStyleSheet`/`HTMLStyleElement`로 선언된 이름과
+`document.styleSheets[0]` 같은 초기화식을 미리 수집합니다.
+`createElement("style")` 자체도 거부합니다 — 변수 이름을 뭐로 붙이든
+style 엘리먼트를 만드는 순간이 CSS 주입 경로이기 때문입니다.
+
+두 번째는 제 버그였습니다. bare specifier를 상대 경로처럼 `join()`해서
+`import "evil-package/style.css"`가 `ui/src/components/evil-package/style.css`로
+계산되어 검사를 통과했습니다. 벤더 allowlist가 1건이어도 다른 패키지 CSS는 전부
+우회한 셈입니다. 이제 `./`나 `../`로 시작하는 것만 경로 해석하고,
+bare specifier는 allowlist에 정확히 있어야 합니다.
+
+| # | 변형 | 잡는 검사 |
+|---|---|---|
+| 55 | 별칭 변수로 `insertRule` | 메서드 무조건 거부 |
+| 56 | `createElement("style")` + `textContent` | 생성 자체 거부 |
+| 57 | 별칭 변수로 `addRule` | 메서드 무조건 거부 |
+| 58 | 별칭 변수로 `replaceSync` | 같음 |
+| 59 | `import "evil-package/style.css"` | bare specifier allowlist |
+| 60 | 다른 파일에서 같은 시도 | 같음 |
+
+반대 방향도 확인했습니다: `styleName.replace()`/`cssLabel.replace()` 같은
+정상 문자열 처리와 `createElement("div")` + `textContent`는 통과합니다.
+
+5개 배치 60개 전부 잡힙니다.
+
 남은 이론적 구멍은 런타임 변수로 계산한 computed key와 외부 패키지에서 가져온
 style 객체입니다. 현재 코드에 없고 여기서 더 추적하는 것은 감사자도 과잉이라고
 판단했습니다. wp2의 목적은 스케일 정합이고, 계약은 실용적으로 닫혔습니다.
