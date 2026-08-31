@@ -275,7 +275,7 @@
   border-radius: var(--r-xl);
   padding: 18px 20px;
   background: color-mix(in srgb, var(--surface-2, var(--surface-2)) 88%, transparent);
-  color: var(--text, var(--text-primary));
+  color: var(--text);
   font: 500 18px/1.6 var(--font);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }

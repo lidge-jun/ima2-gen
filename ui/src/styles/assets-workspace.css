@@ -17,8 +17,8 @@
 .assets-folder-row__actions { position: absolute; right: 3px; display: none; align-items: center; background: var(--surface); }
 .assets-folder-row:hover .assets-folder-row__actions, .assets-folder-row:focus-within .assets-folder-row__actions { display: flex; }
 .assets-folder-row__actions button { width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center; }
-.assets-folder-row__actions .is-danger, .assets-tile__delete.is-danger { color: var(--danger, #ff6262); }
-.assets-folder-row__actions button.is-armed { width: auto; padding: 0 8px; font-size: 11px; font-weight: 650; border: 1px solid var(--danger, #ff6262); }
+.assets-folder-row__actions .is-danger, .assets-tile__delete.is-danger { color: var(--red); }
+.assets-folder-row__actions button.is-armed { width: auto; padding: 0 8px; font-size: 11px; font-weight: 650; border: 1px solid var(--red); }
 .assets-folder-input { width: 100%; min-width: 0; padding: 6px 7px; border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--control-bg); color: var(--text); }
 .assets-folder-input--new { margin-top: 4px; }
 .assets-workspace__main { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
@@ -125,4 +125,4 @@
   .assets-tile .asset-element-toggle.is-active { color: Highlight; }
 }
 .assets-clear-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: transparent; color: var(--text-muted); font: 500 11px/1 var(--mono); cursor: pointer; transition: color 160ms, border-color 160ms; }
-.assets-clear-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+.assets-clear-btn:hover { color: var(--red); border-color: var(--red); }

@@ -28,7 +28,7 @@
 .sprite-rail__thumb { display: block; max-width: 68px; max-height: 62px; background-repeat: no-repeat; image-rendering: pixelated; transform: scale(.7); transform-origin: center; }
 .sprite-rail__actions { position: absolute; inset: 3px 3px auto; display: flex; justify-content: space-between; pointer-events: none; }
 .sprite-rail__actions button { min-block-size: 26px; padding-inline: 5px; font-size: .66rem; pointer-events: auto; }
-.sprite-curator__error { margin: 10px 16px 0; color: #ff9c9c; }
+.sprite-curator__error { margin: 10px 16px 0; color: var(--red); }
 @media (max-width: 720px) {
   .sprite-curator { padding: 0; }
   .sprite-curator__panel { width: 100%; height: 100dvh; max-height: none; border-radius: 0; }

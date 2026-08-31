@@ -192,8 +192,8 @@
 
 .prompt-builder__attachment button:hover,
 .prompt-builder__attachment button:focus-visible {
-  border-color: color-mix(in srgb, #ff4d4d 70%, var(--border));
-  color: #ff6b6b;
+  border-color: color-mix(in srgb, var(--red) 70%, var(--border));
+  color: var(--red);
 }
 
 .prompt-builder__composer-actions {

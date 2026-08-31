@@ -166,10 +166,10 @@
   background: var(--control-bg);
 }
 .generation-log-detail__badge.is-success {
-  color: var(--success, #4caf50);
+  color: var(--green);
 }
 .generation-log-detail__badge.is-error {
-  color: var(--error, #e05555);
+  color: var(--red);
 }
 .generation-log-detail__close {
   background: none;
@@ -198,13 +198,13 @@
   word-break: break-all;
 }
 .generation-log-detail__mono.is-error {
-  color: var(--error, #e05555);
+  color: var(--red);
 }
 .generation-log-detail__reason {
   font-size: 13px;
   line-height: 1.4;
   word-break: break-word;
-  color: var(--error, #e05555);
+  color: var(--red);
 }
 .generation-log-detail__section {
   display: flex;
@@ -281,10 +281,10 @@
   border-radius: var(--r-xs);
 }
 .generation-request-log__count.is-success {
-  color: var(--success, var(--green));
+  color: var(--green);
 }
 .generation-request-log__count.is-error {
-  color: var(--error, var(--red));
+  color: var(--red);
 }
 @media (prefers-reduced-motion: reduce) {
   .right-panel {

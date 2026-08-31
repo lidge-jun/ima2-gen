@@ -223,7 +223,7 @@
 .image-model-select__retry {
   font: inherit;
   font-size: 10px;
-  color: var(--amber, #d9a12e);
+  color: var(--amber);
   background: none;
   border: 0;
   padding: 0;

@@ -67,7 +67,7 @@
   z-index: 40;
   max-width: 440px;
   padding: 24px;
-  background: var(--bg-primary);
+  background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
 }
