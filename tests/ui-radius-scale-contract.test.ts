@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { join, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { createRequire } from "node:module";
 
 // wp2 (devlog/_plan/260831_ui_polish_round/010_wp2_radius_scale.md): every
@@ -259,6 +259,12 @@ test("the HTML shell carries no radius of its own", () => {
     !/border[a-z-]*radius/i.test(withoutFavicon),
     "index.html must not declare radius outside the audited tree",
   );
+  // A stylesheet link here would load CSS the manifest never parsed (audit
+  // wp2c2-F3). The shell links fonts and an icon, never a stylesheet.
+  assert.ok(
+    !/rel="stylesheet"/i.test(withoutFavicon),
+    "index.html must not link a stylesheet outside the audited tree",
+  );
 });
 
 test("the retired radius tokens and calc pattern are gone", () => {
@@ -288,7 +294,19 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
   // makes the check independent of how the value is spelled.
   const ts = require("../ui/node_modules/typescript") as typeof import("typescript");
   const ALLOWED = new Map([["ui/src/components/settings/QuotaCard.tsx", 'borderRadius: "var(--r-sm)"']]);
+  // CSSOM injection assembles a stylesheet the postcss walk never sees. This is the
+  // one existing caller, a caret-position mirror that copies font and box metrics
+  // and declares no radius.
+  const CSS_INJECTION_ALLOWED = new Set(["ui/src/components/ElementMentionMenu.tsx"]);
+  const CSS_INJECTION_APIS = ["insertRule", "addRule", "replaceSync", "replace"];
+  // Third-party stylesheets the round does not own. @xyflow/react ships its own
+  // radius (border-radius: 1px on the resize handle) and is not ours to restyle;
+  // it is out of the manifest scope rather than a bypass of it.
+  const VENDOR_CSS_ALLOWED = new Set(["@xyflow/react/dist/style.css"]);
   const hits: { file: string; text: string }[] = [];
+
+  const isRadiusName = (name: string) =>
+    /^([A-Za-z]*[Bb]order[A-Za-z]*Radius)$/.test(name) || /^--r-/.test(name);
 
   for (const file of tsFiles()) {
     const source = readFileSync(file, "utf8");
@@ -297,33 +315,79 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
 
     const visit = (node: import("typescript").Node): void => {
       if (ts.isPropertyAssignment(node)) {
-        const name = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) ? node.name.text : "";
-        // Covers borderRadius, borderTopLeftRadius, WebkitBorderRadius, and the
-        // custom-property form "--r-lg".
-        if (/^([A-Za-z]*[Bb]order[A-Za-z]*Radius)$/.test(name) || /^--r-/.test(name)) {
-          hits.push({ file: rel, text: name + ": " + node.initializer.getText(sourceFile) });
+        let name = "";
+        if (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) name = node.name.text;
+        // { ["borderRadius"]: "999px" } carries the same meaning through a
+        // computed key (audit wp2c2-F1).
+        else if (ts.isComputedPropertyName(node.name)) {
+          const key = node.name.expression;
+          if (ts.isStringLiteral(key) || ts.isNoSubstitutionTemplateLiteral(key)) name = key.text;
+        }
+        if (isRadiusName(name)) hits.push({ file: rel, text: name + ": " + node.initializer.getText(sourceFile) });
+      }
+      // const borderRadius = "999px"; { borderRadius } is the shorthand form of the
+      // same assignment and reaches the DOM identically.
+      if (ts.isShorthandPropertyAssignment(node) && isRadiusName(node.name.text)) {
+        hits.push({ file: rel, text: node.name.text + ": (shorthand)" });
+      }
+      // Any CSSOM entry point, regardless of where the CSS string was built. The
+      // earlier text proximity check missed a rule assembled into a variable first.
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+        const method = node.expression.name.text;
+        if (CSS_INJECTION_APIS.includes(method) && !CSS_INJECTION_ALLOWED.has(rel)) {
+          assert.ok(
+            method !== "replace" || node.arguments.length !== 1 || !ts.isStringLiteralLike(node.arguments[0]) ||
+              !/border[a-z-]*radius/i.test(node.arguments[0].text),
+            "radius CSS must not be injected from script: " + rel + " (" + method + ")",
+          );
+          if (method !== "replace") {
+            assert.fail("CSS injection API " + method + " is not allowlisted in " + rel);
+          }
+        }
+      }
+      if (ts.isPropertyAccessExpression(node) && (node.name.text === "cssText" || node.name.text === "textContent")) {
+        if (node.name.text === "cssText" && !CSS_INJECTION_ALLOWED.has(rel)) {
+          assert.fail("cssText assembly is not allowlisted in " + rel);
+        }
+      }
+      // Stylesheets outside ui/src never reach the manifest.
+      if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+        const target = node.moduleSpecifier.text;
+        if (target.endsWith(".css") && !VENDOR_CSS_ALLOWED.has(target)) {
+          // Nested components legitimately reach back with ../../styles/, so resolve
+          // the specifier and require the result to land inside the audited tree.
+          const resolved = normalize(join(dirname(file), target));
+          assert.ok(
+            resolved.startsWith("ui/src/"),
+            "CSS imports must stay inside ui/src: " + rel + " -> " + target,
+          );
         }
       }
       ts.forEachChild(node, visit);
     };
     visit(sourceFile);
 
-    // setProperty is the other inline route; ElementReferenceNode.tsx already
-    // passes custom properties inline, so the bypass is real here.
     assert.ok(
       !/setProperty\(\s*["'`](--r-|border[a-zA-Z-]*radius)/i.test(source),
       "radius must not be set from script: " + rel,
-    );
-    // A CSS string assembled in TS bypasses the postcss walk entirely.
-    assert.ok(
-      !/(cssText|innerHTML|insertRule)[\s\S]{0,120}border[a-z-]*radius/i.test(source),
-      "radius CSS must not be injected from script: " + rel,
     );
   }
 
   assert.equal(hits.length, ALLOWED.size, "unexpected radius properties in TS/TSX: " + JSON.stringify(hits));
   for (const hit of hits) {
     assert.equal(ALLOWED.get(hit.file), hit.text, "radius property not allowlisted in " + hit.file);
+  }
+});
+
+test("no Tailwind rounded utility generates radius outside the manifest", () => {
+  // index.css pulls in Tailwind, so a rounded-* class would emit radius CSS the
+  // source manifest never parsed (audit wp2c2-F3). There are none today.
+  for (const file of tsFiles()) {
+    const source = readFileSync(file, "utf8");
+    assert.ok(
+      !/\b(rounded|rounded-(none|sm|md|lg|xl|2xl|3xl|full)|rounded-[trbl][a-z]*(-[a-z0-9]+)?)\b/.test(source),
+      "use the radius scale instead of a Tailwind rounded utility: " + normalize(file),
+    );
   }
 });
 

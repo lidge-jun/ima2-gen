@@ -486,6 +486,39 @@ TypeScript AST로 **속성 이름**을 봅니다. 벤더 프리픽스는 목록 
 
 실측 결과 35개 전부 잡힙니다(원래 22 + 신규 13).
 
+### 구현 감사 2라운드(wp2c2)로 추가된 9개 (합계 44개)
+
+값 문법 대신 속성 이름을 보게 고쳤는데도 AST 검사가 `PropertyAssignment`만
+방문해서 두 형태를 놓쳤습니다. CSS 주입 검사는 API 이름 뒤 120자 안을 보는
+텍스트 근접 방식이라 룰 문자열을 변수에 먼저 담으면 통과했습니다. 그리고
+`ui/index.html`의 stylesheet 링크와 Tailwind `rounded-*` 유틸리티는
+아직 열려 있었습니다.
+
+| # | 변형 | 잡는 검사 |
+|---|---|---|
+| 36 | `const borderRadius = "999px"; { borderRadius }` | ShorthandPropertyAssignment |
+| 37 | `{ ["borderRadius"]: "999px" }` | ComputedPropertyName |
+| 38 | computed 키를 템플릿 리터럴로 | 같음 |
+| 39 | 룰 문자열을 변수에 담고 `insertRule` | AST CallExpression |
+| 40 | `replaceSync`로 시트 교체 | 같음 |
+| 41 | `cssText` 대입 | AST PropertyAccess |
+| 42 | `index.html`에 `rel="stylesheet"` | HTML 셸 검사 |
+| 43 | `className="rounded-full"` | Tailwind 유틸리티 금지 |
+| 44 | `ui/src` 밖 CSS를 TS에서 import | ImportDeclaration 경로 해석 |
+
+CSS 주입 검사는 전면 금지가 아니라 allowlist 하나를 둡니다.
+`ui/src/components/ElementMentionMenu.tsx:42`가 캐럿 위치 계산용 미러 엘리먼트에
+`cssText`를 쓰는데 폰트/박스 지표만 복사하고 radius는 선언하지 않습니다.
+벤더 CSS도 마찬가지로 `@xyflow/react/dist/style.css` 하나만 허용합니다 —
+리사이즈 핸들에 `border-radius: 1px`이 있지만 우리가 재스타일할 대상이 아니라
+매니페스트 범위 밖입니다.
+
+import 경로는 `./`로 시작하는지가 아니라 **해석 결과가 `ui/src/` 안인지**를
+봅니다. 중첩 컴포넌트가 `../../styles/`로 정상 참조하기 때문입니다.
+
+AST 순회 비용은 TS/TSX 401개에 약 255ms, 계약 테스트 전체 0.48초로 스위트에
+부담이 되지 않습니다(감사 실측).
+
 ## 완료 조건
 
 원시 px 단일값 0개, 정의 없는 radius 토큰 0개, `npm test` 무회귀, 그리고
