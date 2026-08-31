@@ -481,3 +481,7 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* wp6: 44px hit area */
+.image-node__del { position: relative; }
+.image-node__del::after { content: ""; position: absolute; inset: 50% auto auto 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }

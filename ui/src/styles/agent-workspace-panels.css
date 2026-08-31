@@ -476,8 +476,8 @@
 }
 
 .agent-result-thumb--compact {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-xs);
 }
 

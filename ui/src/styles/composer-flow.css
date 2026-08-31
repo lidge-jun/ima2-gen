@@ -46,3 +46,7 @@
   font-size: 10px;
   font-weight: 700;
 }
+
+/* wp6: 44px hit area */
+.composer__prompt-chip-remove { position: relative; }
+.composer__prompt-chip-remove::after { content: ""; position: absolute; inset: 50% auto auto 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }

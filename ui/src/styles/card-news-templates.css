@@ -67,7 +67,7 @@
 .card-news-render-mode {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
+  min-height: 24px;
   padding: 2px 7px;
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
@@ -285,7 +285,7 @@
 }
 .gallery-card-news-actions span,
 .gallery-card-news-actions button {
-  min-height: 22px;
+  min-height: 24px;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 3px 6px;
@@ -308,4 +308,3 @@
     border-bottom: 1px solid var(--border);
   }
 }
-
