@@ -36,11 +36,11 @@ const allFiles = [...cssFiles, ...collectAll(join(UI_SRC, "components"), [".css"
 function extractVarRefs(file: string) {
   const content = readFileSync(file, "utf8");
   const lines = content.split("\n");
-  const refs: { name: string; file: string; line: number; hasFallback: boolean }[] = [];
+  const refs: { name: string; file: string; line: number }[] = [];
   for (let i = 0; i < lines.length; i++) {
     const matches = lines[i].matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)/g);
     for (const m of matches) {
-      refs.push({ name: m[1], file, line: i + 1, hasFallback: false });
+      refs.push({ name: m[1], file, line: i + 1 });
     }
   }
   return refs;
