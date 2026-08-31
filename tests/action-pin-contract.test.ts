@@ -7,6 +7,7 @@ import {
   assertAllActionsPinned,
   isImmutablePin,
   parseActionUses,
+  pinnedManifestPaths,
 } from "./_actionPins.mjs";
 
 const SHA = "a".repeat(40);
@@ -50,17 +51,28 @@ function runBlockLines(text: string): Set<number> {
   const lines = text.split(/\r?\n/);
   const inside = new Set<number>();
   let indent = -1;
+  let explicit = 0;
   lines.forEach((line, index) => {
     if (indent >= 0) {
       const width = line.length - line.trimStart().length;
-      if (line.trim() === "" || width > indent) {
+      const floor = explicit > 0 ? indent + explicit : indent + 1;
+      if (line.trim() === "" || width >= floor) {
         inside.add(index);
         return;
       }
       indent = -1;
+      explicit = 0;
     }
-    const open = /^([\t ]*)(?:-[\t ]+)?[\w"']+[\t ]*:[\t ]*[|>][-+]?[\t ]*$/.exec(line);
-    if (open) indent = open[1].length;
+    // Block header, with the full YAML indicator grammar: `|`, `>`, an optional
+    // explicit indentation digit, and an optional chomping `-`/`+` in either
+    // order. `run: |2`, `|2-`, and `>2+` are all valid and actionlint accepts
+    // them, so a scanner that only knows `|` and `|-` mistakes their content
+    // for real steps.
+    const open = /^([\t ]*)(?:-[\t ]+)?[\w"']+[\t ]*:[\t ]*[|>](?:([1-9])[-+]?|[-+]([1-9])?)?[\t ]*(?:#.*)?$/.exec(line);
+    if (open) {
+      indent = open[1].length;
+      explicit = Number(open[2] ?? open[3] ?? 0);
+    }
   });
   return inside;
 }
@@ -170,11 +182,72 @@ describe("action pin gate", () => {
     assert.throws(() => assertAllActionsPinned(aliased, "fixture"), /not pinned to an immutable/);
   });
 
-  it("refuses to silently ignore a uses key in an unverifiable position", () => {
-    const hidden = `jobs:\n  a:\n    steps:\n      - with:\n          uses: attacker/action@main`;
-    assert.throws(() => assertAllActionsPinned(hidden, "fixture"), /outside a step or job position/);
+  it("rejects a uses value that is not a plain string", () => {
     const nonScalar = `jobs:\n  a:\n    steps:\n      - uses:\n          - attacker/action@main`;
     assert.throws(() => assertAllActionsPinned(nonScalar, "fixture"), /not a plain string/);
+  });
+
+  // A key named `uses` is legal in non-executable positions and means nothing to
+  // the runner. An earlier version of this gate rejected these, which would have
+  // failed a correctly pinned workflow.
+  it("ignores a uses key in a position the runner never executes", () => {
+    const workflowCallInput = [
+      "on:",
+      "  workflow_call:",
+      "    inputs:",
+      "      uses:",
+      "        type: string",
+      "jobs:",
+      "  a:",
+      "    steps:",
+      `      - uses: actions/checkout@${SHA}`,
+    ].join("\n");
+    assert.doesNotThrow(() => assertAllActionsPinned(workflowCallInput, "fixture"));
+    assert.equal(parseActionUses(workflowCallInput, "fixture").length, 1);
+
+    const matrixDimension = [
+      "jobs:",
+      "  a:",
+      "    strategy:",
+      "      matrix:",
+      "        uses: [one, two]",
+      "    steps:",
+      `      - uses: actions/checkout@${SHA}`,
+      "        with:",
+      "          uses: not-an-action",
+    ].join("\n");
+    assert.doesNotThrow(() => assertAllActionsPinned(matrixDimension, "fixture"));
+    assert.equal(parseActionUses(matrixDimension, "fixture").length, 1);
+  });
+
+  it("sweeps a composite action manifest, not just workflows", () => {
+    const composite = [
+      "name: setup",
+      "runs:",
+      "  using: composite",
+      "  steps:",
+      "    - uses: attacker/action@main",
+    ].join("\n");
+    assert.throws(() => assertAllActionsPinned(composite, "fixture"), /not pinned to an immutable/);
+    const pinned = composite.replace("@main", `@${SHA}`);
+    assert.doesNotThrow(() => assertAllActionsPinned(pinned, "fixture"));
+  });
+
+  it("understands explicit block indentation indicators", () => {
+    for (const indicator of ["|", "|-", "|+", ">", ">-", "|2", "|2-", ">2+"]) {
+      const decoy = [
+        "jobs:",
+        "  a:",
+        "    steps:",
+        `      - uses: actions/checkout@${SHA}`,
+        `      - run: ${indicator}`,
+        "          uses: attacker/action@main",
+      ].join("\n");
+      const entries = parseActionUses(decoy, "fixture");
+      assert.equal(entries.length, 1, `${indicator}: run block content must not parse as a step`);
+      const inRun = runBlockLines(decoy);
+      assert.ok(inRun.has(5), `${indicator}: line 6 must be recognised as block content`);
+    }
   });
 
   it("refuses unparseable YAML rather than reading zero refs from it", () => {
@@ -202,6 +275,23 @@ describe("action pin gate", () => {
       } else {
         assert.ok(external > 0, `${name} declares no external action; add it to RUN_ONLY_WORKFLOWS if that is intended`);
       }
+    }
+  });
+
+  // Discovered, not listed: a composite action added later is swept without
+  // anyone remembering to register it here.
+  it("sweeps every discovered manifest, including composite actions", () => {
+    const paths = pinnedManifestPaths();
+    const workflows = paths.filter((path) => path.startsWith(WORKFLOW_DIR));
+    assert.deepEqual(
+      workflows.map((path) => path.slice(WORKFLOW_DIR.length + 1)),
+      workflowFiles(),
+      "discovery must find exactly the workflow files on disk",
+    );
+    for (const path of paths) {
+      const name = path.split("/").pop() as string;
+      const runOnly = path.startsWith(WORKFLOW_DIR) && RUN_ONLY_WORKFLOWS.has(name);
+      assertAllActionsPinned(readFileSync(path, "utf8"), path, { requireUses: !runOnly });
     }
   });
 

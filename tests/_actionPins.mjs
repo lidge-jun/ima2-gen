@@ -16,11 +16,19 @@
 // against an earlier line-based version of this file, and actionlint accepted
 // the crafted workflow, so this is reachable YAML rather than a hypothetical.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parseDocument, isAlias, isMap, isSeq, isScalar, visit } from "yaml";
 
-const PINNED_REF = /^[0-9a-f]{40}$/;
+// A commit-SHAPED ref: exactly 40 lowercase hex characters. This is a shape
+// check, not a provenance check. It does not prove the value resolves to a
+// commit object in the referenced repository, and a 40-hex string is a legal
+// git ref name, so a repository could in principle publish a branch or tag with
+// that name. Proving object identity needs an upstream lookup or GitHub's own
+// sha_pinning_required setting, both outside a source-text test. What this gate
+// does buy: no tag, no branch name that is not 40-hex, and no ref that merely
+// starts with a SHA.
+const COMMIT_SHAPED_REF = /^[0-9a-f]{40}$/;
 // Local composite actions (`./.github/actions/x`) and reusable local workflows
 // carry no ref and are covered by this repo's own review, not by pinning.
 const LOCAL_USE = /^\.{1,2}\//;
@@ -79,13 +87,15 @@ export function parseActionUses(text, label = "workflow") {
   if (isMap(jobs)) {
     for (const jobPair of jobs.items) {
       const jobName = isScalar(jobPair.key) ? String(jobPair.key.value) : "?";
-      const job = jobPair.value;
+      const job = deref(jobPair.value);
       if (!isMap(job)) continue;
       const jobUses = job.get("uses", true);
       if (jobUses !== undefined && jobUses !== null) record(jobUses, `jobs.${jobName}.uses`);
       const steps = job.get("steps", true);
-      if (!isSeq(steps)) continue;
-      steps.items.forEach((stepNode, index) => {
+      const stepSeq = deref(steps);
+      if (!isSeq(stepSeq)) continue;
+      stepSeq.items.forEach((rawStep, index) => {
+        const stepNode = deref(rawStep);
         if (!isMap(stepNode)) return;
         const stepUses = stepNode.get("uses", true);
         if (stepUses !== undefined && stepUses !== null) {
@@ -95,31 +105,41 @@ export function parseActionUses(text, label = "workflow") {
     }
   }
 
-  // Nothing may carry the `uses` key outside those positions. Without this a
-  // reviewer reading the structural walk above cannot tell whether a `uses`
-  // somewhere unexpected is unreachable or merely unchecked - so fail instead
-  // of guessing. Block scalars (`run: |`) are not Pair nodes and never reach
-  // here, which is what stops crafted `run:` text from being counted as a step.
-  visit(doc, {
-    Pair(_key, pair) {
-      if (!isScalar(pair.key) || pair.key.value !== "uses") return;
-      const node = deref(pair.value);
-      const offset = isScalar(node) && node.range ? node.range[0] : null;
-      assert.ok(
-        offset !== null && seen.has(offset),
-        `${label} declares \`uses:\` outside a step or job position, where this gate cannot verify it: ${
-          isScalar(node) ? String(node.value) : "(non-scalar)"
-        }`,
-      );
-    },
-  });
+  // A composite action manifest carries its steps under `runs.steps`, so the
+  // same external actions hide one level down. A workflow that calls
+  // ./.github/actions/x is treated as local and never inspected, which is
+  // exactly how an unpinned third-party action would slip in.
+  const runs = deref(doc.get("runs", true));
+  if (isMap(runs)) {
+    const runSteps = deref(runs.get("steps", true));
+    if (isSeq(runSteps)) {
+      runSteps.items.forEach((rawStep, index) => {
+        const stepNode = deref(rawStep);
+        if (!isMap(stepNode)) return;
+        const stepUses = stepNode.get("uses", true);
+        if (stepUses !== undefined && stepUses !== null) record(stepUses, `runs.steps[${index}].uses`);
+      });
+    }
+  }
+
+  // Only the executable positions above are checked. A key literally named
+  // `uses` is legal elsewhere and means nothing to the runner: a `workflow_call`
+  // input, a matrix dimension, or a `with:` value can all be called `uses`, and
+  // actionlint accepts every one. An earlier version of this file rejected them
+  // and would have failed a correctly pinned workflow, so the structural walk is
+  // deliberately the whole story. Block scalars (`run: |`) are not Pair nodes,
+  // which is what keeps crafted `run:` text out of the step list.
   entries.sort((a, b) => a.line - b.line);
   return entries;
 }
 
-/** True only when the whole ref token is an exact 40-char lowercase commit. */
+/**
+ * True only when the whole ref token is commit-shaped: exactly 40 lowercase hex
+ * characters. See COMMIT_SHAPED_REF - this is a shape check, not proof that the
+ * ref resolves to a commit upstream.
+ */
 export function isImmutablePin(ref) {
-  return typeof ref === "string" && PINNED_REF.test(ref);
+  return typeof ref === "string" && COMMIT_SHAPED_REF.test(ref);
 }
 
 /**
@@ -166,4 +186,31 @@ export function assertActionPinned(text, action, label = "workflow") {
 /** Every workflow file under .github/workflows, read from the repo root. */
 export function readWorkflow(name, root = process.cwd()) {
   return readFileSync(join(root, ".github/workflows", name), "utf8");
+}
+
+/**
+ * Every pin-bearing manifest in the repo: workflows plus composite-action
+ * manifests under .github/actions. Discovered rather than listed, so adding a
+ * composite action puts it under the gate without anyone remembering to.
+ */
+export function pinnedManifestPaths(root = process.cwd()) {
+  const paths = [];
+  const workflowDir = join(root, ".github/workflows");
+  if (existsSync(workflowDir)) {
+    for (const name of readdirSync(workflowDir).sort()) {
+      if (/\.ya?ml$/.test(name)) paths.push(join(".github/workflows", name));
+    }
+  }
+  const actionsDir = join(root, ".github/actions");
+  if (existsSync(actionsDir)) {
+    const walk = (relDir) => {
+      for (const entry of readdirSync(join(root, relDir)).sort()) {
+        const rel = join(relDir, entry);
+        if (statSync(join(root, rel)).isDirectory()) walk(rel);
+        else if (/^action\.ya?ml$/.test(entry)) paths.push(rel);
+      }
+    };
+    walk(".github/actions");
+  }
+  return paths;
 }
