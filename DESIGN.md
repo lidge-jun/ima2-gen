@@ -151,3 +151,10 @@ constraint) and must still meet 24px AA.
 A global `prefers-reduced-motion` reset at `index.css` covers all
 animations. MOTION_INTENSITY 2: subtle transitions only, no decorative
 animation. Skeleton shimmer is the only repeating animation.
+
+## Verification
+
+Render proof (wp7): 16/16 live Playwright checks passed at commit
+`635723d7`. Verified: radius tokens, type ladders at 1280px and 320px,
+paper/state color tokens in computed style, settings-workspace
+background-image none, skeleton-shimmer token active.
