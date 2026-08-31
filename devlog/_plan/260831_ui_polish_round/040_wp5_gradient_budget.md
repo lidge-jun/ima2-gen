@@ -225,3 +225,18 @@ All changes in two commits on codex/ui-polish-wp5-gradient-budget:
 
 Final: 40 gradients (functional 18 / state 6 / scrim 2 / decorative 14).
 PR #188 -> dev. 2712/0/2 tests.
+
+## Test Scope Amendment (audit round 2)
+
+The contract test uses file-level gradient counting, not per-declaration
+PostCSS parsing. This is a deliberate scoping decision:
+
+- File-level counts catch additions, removals, and file-level regressions
+- Shimmer consumers are pinned by file list (4 files) and total count (6)
+- Category totals are manifest constants that match measured CSS reality
+- Per-declaration PostCSS manifest is deferred as future hardening
+
+Settings render: live Playwright probe confirmed dark theme at 1280px
+shows backgroundColor=rgb(11,11,15) (var(--bg)), backgroundImage=none.
+Light theme and before/after comparison deferred to wp7 render proof
+which already owns the full screenshot archive.
