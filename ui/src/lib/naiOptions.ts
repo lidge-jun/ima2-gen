@@ -33,6 +33,8 @@ export type NaiOptions = {
   qualityPresetId: string;
   varietyPlus: boolean;
   straightAlpha: boolean;
+  autoSmea: boolean;
+  decrisper: boolean;
   /** null means "let the server pick a seed". 0 is a real NovelAI seed. */
   seed: number | null;
 };
@@ -54,6 +56,8 @@ export const COMPILED_FALLBACK: NaiOptions = {
   qualityPresetId: "standard",
   varietyPlus: false,
   straightAlpha: false,
+  autoSmea: false,
+  decrisper: false,
   seed: null,
 };
 
@@ -115,6 +119,8 @@ export function coerceNaiOverrides(value: unknown): NaiOptionOverrides {
 
   if (typeof raw.varietyPlus === "boolean") out.varietyPlus = raw.varietyPlus;
   if (typeof raw.straightAlpha === "boolean") out.straightAlpha = raw.straightAlpha;
+  if (typeof raw.autoSmea === "boolean") out.autoSmea = raw.autoSmea;
+  if (typeof raw.decrisper === "boolean") out.decrisper = raw.decrisper;
 
   if (raw.seed === null) out.seed = null;
   else if (

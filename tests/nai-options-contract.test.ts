@@ -25,6 +25,8 @@ test("readNaiOptions round-trips every valid field", () => {
     seed: 12345,
     straightAlpha: true,
     varietyPlus: true,
+    autoSmea: true,
+    decrisper: true,
     ucPresetId: "light",
     qualityPresetId: "none",
   };
@@ -68,6 +70,8 @@ test("readNaiOptions does not coerce wrong types", () => {
   assert.deepEqual(readNaiOptions({ negativePrompt: 12345 }), {});
   assert.deepEqual(readNaiOptions({ straightAlpha: "true" }), {});
   assert.deepEqual(readNaiOptions({ varietyPlus: 1 }), {});
+  assert.deepEqual(readNaiOptions({ autoSmea: "true" }), {});
+  assert.deepEqual(readNaiOptions({ decrisper: 1 }), {});
 });
 
 test("readNaiOptions truncates an oversized negative prompt", () => {
@@ -121,4 +125,3 @@ test("composerNegativePromptMeta trims what it records", () => {
     { composerNegativePrompt: "blurry" },
   );
 });
-

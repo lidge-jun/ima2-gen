@@ -56,6 +56,10 @@ export type NaiGenerateOptions = {
   cfgRescale?: number | undefined;
   /** V4.5/V5 "Variety+": lifts skip_cfg_above_sigma off its absent default. */
   varietyPlus?: boolean | undefined;
+  /** Automatically enables SMEA for high-resolution generations. */
+  autoSmea?: boolean | undefined;
+  /** NovelAI's artifact-reduction switch (dynamic_thresholding on the wire). */
+  decrisper?: boolean | undefined;
   ucPresetId?: string | undefined;
   qualityPresetId?: string | undefined;
 };
@@ -134,8 +138,8 @@ export async function generateViaNai(
     n_samples: 1,
     ucPresetId: options.ucPresetId ?? "heavy",
     qualityPresetId: isV5 ? (options.qualityPresetId ?? "standard") : "standard",
-    autoSmea: false,
-    dynamic_thresholding: false,
+    autoSmea: options.autoSmea ?? cfg.defaultAutoSmea,
+    dynamic_thresholding: options.decrisper ?? cfg.defaultDecrisper,
     controlnet_strength: 1,
     legacy: false,
     legacy_v3_extend: false,

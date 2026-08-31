@@ -37,3 +37,14 @@ v3.11.0 stable release.
 - PR: #174 (dev→main)
 - CI: Analyze JS/TS x2, CodeQL, PR fast gate, frontend e2e, test node22, test node24 — all pass
 - Merge: 98984597 at 2026-08-26T13:54:30Z
+
+## wp2 completion record
+
+- release.yml dispatch: run 32977626624 → success
+- publish.yml (preview): run 32978455287 → success
+- publish.yml (stable): run 32980120392 → success
+- Approvals: 2x npm-stable environment gates approved
+- npm latest: 3.11.0
+- npm gitHead: d18e56caabd03d5019dbfffa8c9686c9be225e4f
+- GitHub Release: v3.11.0
+- SHA parity: origin/main = origin/dev = origin/preview = v3.11.0 = d18e56ca

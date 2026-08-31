@@ -1065,6 +1065,14 @@
     "filename": "File",
     "prompt": "Prompt",
     "stageEmptyHint": "Send your first request to see the image here",
+    "toolLabel": {
+      "getImageContext": "Read image context",
+      "webSearch": "Search the web",
+      "generateImage": "Generate image",
+      "generateVideo": "Generate video",
+      "getGenerationErrors": "Check generation errors"
+    },
+    "toolsPanel": "Tools",
     "openTools": "Open tools panel",
     "closeTools": "Close tools panel"
   },
@@ -2340,9 +2348,11 @@
     "field": {
       "sampler": "Sampler",
       "noiseSchedule": "Noise schedule",
+      "autoSmea": "Auto SMEA",
       "steps": "Steps",
       "scale": "Guidance",
       "cfgRescale": "CFG rescale",
+      "decrisper": "Decrisper",
       "ucPreset": "Undesired preset",
       "qualityPreset": "Quality preset",
       "varietyPlus": "Variety+",
@@ -2351,6 +2361,8 @@
       "seedRandom": "Random"
     },
     "help": {
+      "autoSmea": "Automatically applies SMEA at high resolutions to improve coherence.",
+      "decrisper": "Reduces color and visual artifacts, especially at high guidance.",
       "varietyPlus": "Adds diversity to compositions at high guidance.",
       "straightAlpha": "V5 native alpha. Pair with a transparent-background tag in the prompt.",
       "cfgRescale": "Softens over-saturation at high guidance. 0 disables it.",

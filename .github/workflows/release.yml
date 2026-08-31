@@ -39,7 +39,9 @@ jobs:
   cut:
     name: Cut the version commit and prove the preview build
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # Envelopes candidate verification (45), candidate CI (45), preview publish
+    # wait (100), and setup/cleanup margin. Child gates retain shorter deadlines.
+    timeout-minutes: 240
     permissions:
       contents: write
       actions: write
@@ -124,6 +126,7 @@ jobs:
           node scripts/wait-ci-gate.mjs wait
           "${{ steps.ci_mark.outputs.id }}"
           "${{ steps.commit.outputs.sha }}"
+          45
       - name: Clean up the candidate ref
         if: ${{ always() && inputs.dry_run != 'true' }}
         env:
@@ -159,7 +162,8 @@ jobs:
         if: ${{ inputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/wait-publish-run.mjs wait "${{ steps.preview_mark.outputs.id }}" "preview@${{ steps.commit.outputs.sha }}"
+        # package source gate (25) + Windows consumer (40) + publish margin.
+        run: node scripts/wait-publish-run.mjs wait "${{ steps.preview_mark.outputs.id }}" "preview@${{ steps.commit.outputs.sha }}" 100
       - name: Require the npm preview proof before tagging
         if: ${{ inputs.dry_run == 'false' }}
         run: >-

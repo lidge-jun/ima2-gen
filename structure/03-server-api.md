@@ -96,7 +96,7 @@ Each live client is identified internally by `{ generation, epoch }`. Expected c
 
 Shutdown starts HTTP accept-stop and MCP shutdown together. MCP aborts restores, cancels reconnect timers, advances generations, and closes clients with a 2-second internal bound; the coordinator has a 2.9-second grace.
 
-`/api/capabilities` exists for agents and CLI discovery. It reports provider-specific defaults, supported versus unsupported image model ids (including `imageModels.naiSupported` with the four NovelAI ids), valid reasoning efforts, valid quality values, reference/image limits, and advisory parallel queue metadata. The endpoint must never serialize the full runtime config. It uses an allowlist projection and converts `Set` values to arrays so JSON clients receive stable arrays instead of `{}`.
+`/api/capabilities` exists for agents and CLI discovery. It reports provider-specific defaults, supported versus unsupported image model ids (including `imageModels.naiSupported` with the four NovelAI ids), valid reasoning efforts, valid quality values, reference/image limits, and advisory parallel queue metadata. NovelAI display defaults include sampler, noise schedule, steps, scale, `autoSmea`, and `decrisper`; sparse clients do not echo untouched defaults back. The endpoint must never serialize the full runtime config. It uses an allowlist projection and converts `Set` values to arrays so JSON clients receive stable arrays instead of `{}`.
 
 ## Classic Generate And Edit
 
@@ -106,6 +106,12 @@ Shutdown starts HTTP accept-stop and MCP shutdown together. MCP aborts restores,
 | `POST` | `/api/generate` | same body | For `n>1`: `{ images, elapsed, count, requestId, usage, provider, webSearchCalls, quality, size, moderation }` |
 | `POST` | `/api/edit` | `{ prompt, image, mask?, quality?, size?, moderation?, model?, provider?, sessionId?, requestId?, reasoningEffort?, webSearchEnabled? }` | `{ image, elapsed, filename, usage, provider, moderation, model, requestId }` |
 | `POST` | `/api/generate/multimode` | `{ prompt, maxImages?, references?, quality?, size?, moderation?, model?, provider?, mode?, sessionId?, requestId?, reasoningEffort?, webSearchEnabled? }` | SSE events: `phase`, `partial`, `image`, `done`, `error` |
+
+NovelAI requests on classic, multimode, and node surfaces also accept the sparse
+provider-native fields `negativePrompt`, `sampler`, `noiseSchedule`, `steps`, `scale`,
+`cfgRescale`, `seed`, `ucPresetId`, `qualityPresetId`, `autoSmea`, `decrisper`,
+`varietyPlus`, and `straightAlpha`. Enabled alpha and quality preset are V5-only.
+References/edit/masks remain explicit `NAI_*_UNSUPPORTED` failures.
 
 `/api/generate` accepts up to 5 `references`. `n` is clamped from 1 to `limits.maxGeneratedImages` (default 24, configurable through `IMA2_MAX_GENERATED_IMAGES`). Result files are written to the configured generated directory, usually `~/.ima2/generated`, and sidecar JSON stores prompt, quality, size, format, moderation, model, provider, usage, web search counts, generation time (`elapsed`, numeric seconds), and `reasoningEffort`. `elapsed` and `reasoningEffort` are also embedded in the PNG XMP and returned by `/api/history`, so per-image metadata survives reload (#79, forward-fix — only items generated after the fix carry them).
 

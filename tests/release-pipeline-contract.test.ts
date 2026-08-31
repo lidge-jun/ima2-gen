@@ -16,6 +16,7 @@ import {
 } from "../scripts/release-contract.mjs";
 import { gypfileNames, validateBundleParity, validateInstallPolicy } from "../scripts/check-install-policy.mjs";
 import { npmInvocation } from "../scripts/npm-subprocess.mjs";
+import { assertActionPinned, assertAllActionsPinned } from "./_actionPins.mjs";
 
 const SHA = "a".repeat(40);
 
@@ -327,9 +328,11 @@ describe("package install policy contract", () => {
     assert.match(workflow, /publish-stable:[\s\S]{0,700}?channel == 'latest'/);
     assert.match(workflow, /publish-preview:[\s\S]{0,300}?channel == 'preview'/);
     assert.match(workflow, /create-github-release:[\s\S]*id-token:\s*write[\s\S]*attestations:\s*write/);
-    assert.match(workflow, /actions\/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8/);
+    // Pin property, not commit identity: freezing the SHA here would fail the
+    // next Dependabot bump the same way #162 and #178 did.
+    assertActionPinned(workflow, "actions/attest-build-provenance", ".github/workflows/publish.yml");
     assert.doesNotMatch(workflow, /package:[\s\S]{0,400}id-token:\s*write/, "package job stays OIDC-free");
-    assert.doesNotMatch(workflow, /uses:\s*[^\s]+@v\d/, "release actions must use immutable commit SHAs");
+    assertAllActionsPinned(workflow, ".github/workflows/publish.yml");
     assert.match(workflow, /verify-artifact release-artifact\/release-manifest\.json/);
     assert.match(workflow, /TARBALL=.*'\.\/release-artifact\/'[\s\S]*npm publish "\$TARBALL"/);
     assert.match(workflow, /verify-existing:/);
@@ -424,7 +427,7 @@ describe("package install policy contract", () => {
     assert.doesNotMatch(release, /npm publish/);
     assert.doesNotMatch(release, /^\s+id-token:\s*write/m, "only publish.yml may request an OIDC token");
     assert.doesNotMatch(release, /gh release create/);
-    assert.doesNotMatch(release, /uses:\s*[^\s]+@v\d/, "release actions must use immutable commit SHAs");
+    assertAllActionsPinned(release, ".github/workflows/release.yml");
     assert.match(release, /gh workflow run publish\.yml/);
     assert.match(release, /git push --atomic origin/);
 
