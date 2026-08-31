@@ -262,7 +262,7 @@ test("the HTML shell carries no radius of its own", () => {
   // A stylesheet link here would load CSS the manifest never parsed (audit
   // wp2c2-F3). The shell links fonts and an icon, never a stylesheet.
   assert.ok(
-    !/rel="stylesheet"/i.test(withoutFavicon),
+    !/rel\s*=\s*["\']stylesheet["\']/i.test(withoutFavicon),
     "index.html must not link a stylesheet outside the audited tree",
   );
 });
@@ -294,11 +294,16 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
   // makes the check independent of how the value is spelled.
   const ts = require("../ui/node_modules/typescript") as typeof import("typescript");
   const ALLOWED = new Map([["ui/src/components/settings/QuotaCard.tsx", 'borderRadius: "var(--r-sm)"']]);
-  // CSSOM injection assembles a stylesheet the postcss walk never sees. This is the
-  // one existing caller, a caret-position mirror that copies font and box metrics
-  // and declares no radius.
-  const CSS_INJECTION_ALLOWED = new Set(["ui/src/components/ElementMentionMenu.tsx"]);
-  const CSS_INJECTION_APIS = ["insertRule", "addRule", "replaceSync", "replace"];
+  // CSSOM injection assembles a stylesheet the postcss walk never sees. The one
+  // permitted write is pinned by exact text, not by file: exempting the whole file
+  // would let that same caret-measurement mirror add radius later (audit wp2c3-F1).
+  // It copies font and box metrics and declares no radius.
+  const CSS_WRITES_ALLOWED = new Map([[
+    "ui/src/components/ElementMentionMenu.tsx",
+    ['mirror.style.cssText += ";position:fixed;visibility:hidden;white-space:pre-wrap;overflow-wrap:break-word;top:0;left:-9999px;"'],
+  ]]);
+  const CSS_INJECTION_APIS = new Set(["insertRule", "addRule", "replaceSync", "replace"]);
+  const cssWrites: { file: string; text: string }[] = [];
   // Third-party stylesheets the round does not own. @xyflow/react ships its own
   // radius (border-radius: 1px on the resize handle) and is not ours to restyle;
   // it is out of the manifest scope rather than a bypass of it.
@@ -331,24 +336,45 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
         hits.push({ file: rel, text: node.name.text + ": (shorthand)" });
       }
       // Any CSSOM entry point, regardless of where the CSS string was built. The
-      // earlier text proximity check missed a rule assembled into a variable first.
+      // earlier text-proximity check missed a rule hoisted into a variable first
+      // (audit wp2c2-F2). A file-wide exemption then let the allowlisted file
+      // inject anything at all (audit wp2c3-F1), so the allowlist now pins the
+      // exact text of the one permitted write.
+      //
+      // String.prototype.replace shares a name with CSSStyleSheet.replace, and
+      // textContent is set on plenty of non-style elements, so the receiver has to
+      // look like a stylesheet or a style element before a call counts.
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
         const method = node.expression.name.text;
-        if (CSS_INJECTION_APIS.includes(method) && !CSS_INJECTION_ALLOWED.has(rel)) {
-          assert.ok(
-            method !== "replace" || node.arguments.length !== 1 || !ts.isStringLiteralLike(node.arguments[0]) ||
-              !/border[a-z-]*radius/i.test(node.arguments[0].text),
-            "radius CSS must not be injected from script: " + rel + " (" + method + ")",
-          );
-          if (method !== "replace") {
-            assert.fail("CSS injection API " + method + " is not allowlisted in " + rel);
-          }
+        const receiver = node.expression.expression.getText(sourceFile);
+        const stylesheetish = /sheet|style|css/i.test(receiver);
+        if (CSS_INJECTION_APIS.has(method) && stylesheetish) {
+          cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
         }
       }
-      if (ts.isPropertyAccessExpression(node) && (node.name.text === "cssText" || node.name.text === "textContent")) {
-        if (node.name.text === "cssText" && !CSS_INJECTION_ALLOWED.has(rel)) {
-          assert.fail("cssText assembly is not allowlisted in " + rel);
-        }
+      if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "CSSStyleSheet") {
+        cssWrites.push({ file: rel, text: "new CSSStyleSheet()" });
+      }
+      // cssText always installs CSS. textContent and innerHTML only matter on a
+      // receiver that looks like a style element.
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+        node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+        ts.isPropertyAccessExpression(node.left)
+      ) {
+        const sink = node.left.name.text;
+        const receiver = node.left.expression.getText(sourceFile);
+        const isSink =
+          sink === "cssText" ||
+          ((sink === "textContent" || sink === "innerHTML") && /styleel|stylee|stylet|styleta|sheet|styleNode|styleTag/i.test(receiver));
+        if (isSink) cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
+      }
+      if (
+        ts.isPropertyAccessExpression(node) &&
+        node.name.text === "adoptedStyleSheets"
+      ) {
+        cssWrites.push({ file: rel, text: node.getText(sourceFile).replace(/\s+/g, " ") });
       }
       // Stylesheets outside ui/src never reach the manifest.
       if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
@@ -373,6 +399,19 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
     );
   }
 
+  const allowedWrites = [...CSS_WRITES_ALLOWED.values()].reduce((n, list) => n + list.length, 0);
+  assert.equal(
+    cssWrites.length,
+    allowedWrites,
+    "unexpected CSS injection in TS/TSX: " + JSON.stringify(cssWrites),
+  );
+  for (const write of cssWrites) {
+    const permitted = CSS_WRITES_ALLOWED.get(write.file) ?? [];
+    assert.ok(
+      permitted.includes(write.text),
+      "CSS injection not allowlisted in " + write.file + ": " + write.text,
+    );
+  }
   assert.equal(hits.length, ALLOWED.size, "unexpected radius properties in TS/TSX: " + JSON.stringify(hits));
   for (const hit of hits) {
     assert.equal(ALLOWED.get(hit.file), hit.text, "radius property not allowlisted in " + hit.file);
@@ -381,13 +420,49 @@ test("TS and TSX carry exactly one allowlisted radius property", () => {
 
 test("no Tailwind rounded utility generates radius outside the manifest", () => {
   // index.css pulls in Tailwind, so a rounded-* class would emit radius CSS the
-  // source manifest never parsed (audit wp2c2-F3). There are none today.
+  // source manifest never parsed (audit wp2c2-F3). Scanning raw source text also
+  // failed on the word "rounded" in a comment or a sentence (audit wp2c3-F3), so
+  // this reads className/class values out of the AST instead. None exist today.
+  const ts = require("../ui/node_modules/typescript") as typeof import("typescript");
+  const ROUNDED = /(^|\s)rounded(-(none|full|sm|md|lg|xl|2xl|3xl|[trbl][a-z]*(-[a-z0-9]+)?))?(\s|$)/;
+
   for (const file of tsFiles()) {
-    const source = readFileSync(file, "utf8");
-    assert.ok(
-      !/\b(rounded|rounded-(none|sm|md|lg|xl|2xl|3xl|full)|rounded-[trbl][a-z]*(-[a-z0-9]+)?)\b/.test(source),
-      "use the radius scale instead of a Tailwind rounded utility: " + normalize(file),
+    const sourceFile = ts.createSourceFile(
+      file,
+      readFileSync(file, "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
     );
+    const rel = normalize(file);
+    const check = (value: string, where: string) => {
+      assert.ok(
+        !ROUNDED.test(value),
+        "use the radius scale instead of a Tailwind rounded utility: " + rel + " (" + where + ")",
+      );
+    };
+    const visit = (node: import("typescript").Node): void => {
+      if (ts.isJsxAttribute(node) && ts.isIdentifier(node.name) && /^class(Name)?$/.test(node.name.text)) {
+        const initializer = node.initializer;
+        if (initializer && ts.isStringLiteral(initializer)) check(initializer.text, "className");
+        else if (initializer && ts.isJsxExpression(initializer) && initializer.expression) {
+          // Covers template literals and conditional class assembly.
+          for (const literal of initializer.expression.getText(sourceFile).match(/["'`]([^"'`]*)["'`]/g) ?? []) {
+            check(literal.slice(1, -1), "className expression");
+          }
+        }
+      }
+      if (
+        ts.isPropertyAssignment(node) &&
+        (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) &&
+        /^class(Name)?$/.test(node.name.text) &&
+        ts.isStringLiteralLike(node.initializer)
+      ) {
+        check(node.initializer.text, "class property");
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
   }
 });
 

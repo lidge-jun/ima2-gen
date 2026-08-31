@@ -519,6 +519,40 @@ import 경로는 `./`로 시작하는지가 아니라 **해석 결과가 `ui/src
 AST 순회 비용은 TS/TSX 401개에 약 255ms, 계약 테스트 전체 0.48초로 스위트에
 부담이 되지 않습니다(감사 실측).
 
+### 구현 감사 3라운드(wp2c3)로 추가된 10개 (합계 54개)
+
+핵심 지적은 allowlist를 **파일 단위**로 둔 것이었습니다. 그러면 허용된 파일
+안에서는 무엇이든 주입할 수 있어서, 바로 그 `cssText` 한 줄에 radius를
+덧붙이면 통과했습니다. 그래서 허용 단위를 **정확한 문자열 한 줄**로 좁혔습니다.
+
+`String.prototype.replace`가 `CSSStyleSheet.replace`와 이름이 겹치고
+`textContent`는 style 아닌 엘리먼트에도 흔히 쓰이므로, 메서드 이름만 보면
+정상 코드 45곳이 걸립니다(실측). 그래서 수신자가 stylesheet/style처럼 보이는지를
+함께 봅니다.
+
+Tailwind 검사도 소스 텍스트 전체를 훑던 방식을 버렸습니다. 주석의 "rounded"나
+`const copy = "rounded"` 같은 정상 코드가 걸렸기 때문입니다. 이제 AST에서
+`className`/`class` 값만 읽습니다.
+
+| # | 변형 | 잡는 검사 |
+|---|---|---|
+| 45 | allowlist된 `cssText` 줄에 radius 덧붙이기 | 값 정확 allowlist |
+| 46 | allowlist된 파일에 `insertRule` 추가 | 같음 |
+| 47 | `sheet.replace(변수)` | AST + 수신자 판정 |
+| 48 | `styleEl.textContent =` | 같음 |
+| 49 | `adoptedStyleSheets` 대입 | PropertyAccess |
+| 50 | `new CSSStyleSheet()` | NewExpression |
+| 51 | 홑따옴표 stylesheet 링크 | 인용부호 허용 정규식 |
+| 52 | `rel = "stylesheet"` (공백) | 같음 |
+| 53 | `className="rounded-full"` | AST className |
+| 54 | 템플릿 className의 `rounded-t-lg` | 같음 |
+
+54개 전부 잡히고, 반대 방향 확인으로 주석/문장의 "rounded"는 통과합니다.
+
+남은 이론적 구멍은 런타임 변수로 계산한 computed key와 외부 패키지에서 가져온
+style 객체입니다. 현재 코드에 없고 여기서 더 추적하는 것은 감사자도 과잉이라고
+판단했습니다. wp2의 목적은 스케일 정합이고, 계약은 실용적으로 닫혔습니다.
+
 ## 완료 조건
 
 원시 px 단일값 0개, 정의 없는 radius 토큰 0개, `npm test` 무회귀, 그리고
