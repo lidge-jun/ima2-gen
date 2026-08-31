@@ -135,6 +135,8 @@
   --chrome: linear-gradient(180deg, #ffffff 0%, #c8ccd8 35%, #6f7484 60%, #e8eaf1 100%);
   --glass: rgba(255, 255, 255, 0.04);
   --glass-line: rgba(255, 255, 255, 0.1);
+  --paper: #14161b;
+  --paper-edge: #1b1e25;
   /* Canvas-mode stage surfaces: the stage keeps its own plate system so
      floating chrome stays legible over arbitrary artwork in both themes. */
   --canvas-stage-bg: #0d0d0d;
@@ -203,6 +205,8 @@
   --red: #cc3340;
   --glass: rgba(20, 20, 28, 0.04);
   --glass-line: rgba(20, 20, 28, 0.1);
+  --paper: #ffffff;
+  --paper-edge: #f8fafc;
   --canvas-stage-bg: #e6e6ec;
   --canvas-dot: rgba(29, 111, 209, 0.22);
   --canvas-topscrim: rgba(242, 242, 246, 0.85);

@@ -36,7 +36,7 @@
 }
 
 .provider-status-line[data-tone="warn"] .provider-status-line__value {
-  color: var(--amber, #d9a12e);
+  color: var(--amber);
 }
 
 .provider-status-line[data-tone="bad"] .provider-status-line__value {
@@ -84,8 +84,8 @@
 /* Warn tone shared by MCP/auth states (moved from the retired status strip,
    060 audit A4). */
 .status-dot--warn {
-  background: var(--amber, #d9a12e);
-  box-shadow: 0 0 6px var(--amber, #d9a12e);
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber);
 }
 
 .provider-helper {

@@ -99,7 +99,7 @@
 .generation-request-log__empty {
   padding: 24px 16px;
   text-align: center;
-  color: var(--text-secondary, #888);
+  color: var(--text-muted);
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -166,10 +166,10 @@
   background: var(--control-bg);
 }
 .generation-log-detail__badge.is-success {
-  color: var(--success, #4caf50);
+  color: var(--green);
 }
 .generation-log-detail__badge.is-error {
-  color: var(--error, #e05555);
+  color: var(--red);
 }
 .generation-log-detail__close {
   background: none;
@@ -193,18 +193,18 @@
   letter-spacing: 0.03em;
 }
 .generation-log-detail__mono {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--mono);
   font-size: 12px;
   word-break: break-all;
 }
 .generation-log-detail__mono.is-error {
-  color: var(--error, #e05555);
+  color: var(--red);
 }
 .generation-log-detail__reason {
   font-size: 13px;
   line-height: 1.4;
   word-break: break-word;
-  color: var(--error, #e05555);
+  color: var(--red);
 }
 .generation-log-detail__section {
   display: flex;
@@ -237,7 +237,7 @@
   cursor: pointer;
 }
 .generation-log-detail__copy:hover {
-  background: var(--control-bg-hover, var(--control-bg));
+  background: var(--control-hover);
 }
 .gallery__limit-notice {
   margin: 8px 12px;
@@ -264,7 +264,7 @@
   transition: background 0.15s;
 }
 .generation-request-log__item:hover {
-  background: var(--surface-hover, rgba(128, 128, 128, 0.1));
+  background: var(--control-hover);
 }
 .generation-request-log__prompt {
   flex: 1;
@@ -281,10 +281,10 @@
   border-radius: var(--r-xs);
 }
 .generation-request-log__count.is-success {
-  color: var(--success, var(--green));
+  color: var(--green);
 }
 .generation-request-log__count.is-error {
-  color: var(--error, var(--red));
+  color: var(--red);
 }
 @media (prefers-reduced-motion: reduce) {
   .right-panel {

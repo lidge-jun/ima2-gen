@@ -35,8 +35,8 @@
 }
 
 .agent-run-status--error .agent-run-status__spinner {
-  border-color: color-mix(in srgb, var(--danger) 24%, transparent);
-  border-top-color: var(--danger);
+  border-color: color-mix(in srgb, var(--red) 24%, transparent);
+  border-top-color: var(--red);
 }
 
 .agent-run-status__label {

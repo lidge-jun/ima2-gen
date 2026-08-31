@@ -30,9 +30,9 @@ interface SwitchState {
 }
 
 function barColor(pct: number): string {
-  if (pct > 80) return "var(--error, #e53935)";
-  if (pct > 50) return "var(--warning, #f59e0b)";
-  return "var(--info, #3b82f6)";
+  if (pct > 80) return "var(--red)";
+  if (pct > 50) return "var(--amber)";
+  return "var(--blue)";
 }
 
 function formatReset(iso: string | null): string {
@@ -176,7 +176,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
 
   if (state.phase === "complete") {
     return (
-      <div className="quota-card__hint" style={{ textAlign: "center", marginTop: "6px", color: "var(--success, #22c55e)" }}>
+      <div className="quota-card__hint" style={{ textAlign: "center", marginTop: "6px", color: "var(--green)" }}>
         {t("settings.quota.switchComplete")}
       </div>
     );
@@ -185,7 +185,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
   if (state.phase === "error") {
     return (
       <div style={{ marginTop: "6px" }}>
-        <div className="quota-card__hint" style={{ color: "var(--error, #e53935)", marginBottom: "4px" }}>
+        <div className="quota-card__hint" style={{ color: "var(--red)", marginBottom: "4px" }}>
           {state.error || t("settings.quota.switchFailed")}
         </div>
         <button

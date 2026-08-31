@@ -232,7 +232,7 @@
 }
 
 .comfy-workflow-table .mono {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--mono);
   color: var(--text-dim);
 }
 
@@ -283,5 +283,5 @@
 
 /* An unconfirmed ambiguous binding is marked by more than colour. */
 .comfy-bind-row select[aria-invalid="true"] {
-  border-color: var(--warn, #d08c3a);
+  border-color: var(--amber);
 }

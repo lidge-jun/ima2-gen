@@ -127,7 +127,7 @@
   border-radius: var(--r-md);
 }
 .prompt-library-panel__drop-message {
-  background: var(--bg-raised);
+  background: var(--surface-2);
   border: 2px dashed var(--accent);
   border-radius: var(--r-md);
   padding: 24px 32px;
