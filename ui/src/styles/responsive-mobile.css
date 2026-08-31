@@ -116,7 +116,6 @@
     }
     .settings-header h2 {
       font-size: 28px;
-      letter-spacing: -0.04em;
     }
     .settings-header p:not(.settings-eyebrow) {
       max-width: 30ch;
@@ -164,7 +163,6 @@
     }
     .settings-section__header h3 {
       font-size: 17px;
-      letter-spacing: -0.02em;
     }
     .settings-section__header p {
       font-size: 10px;

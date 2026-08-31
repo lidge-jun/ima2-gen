@@ -276,7 +276,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  letter-spacing: -0.3px;
   box-shadow: 0 10px 28px var(--accent-shadow);
 }
 .generate-btn:hover {
