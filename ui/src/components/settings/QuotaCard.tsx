@@ -135,7 +135,7 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
 
   if (state.phase === "waiting") {
     return (
-      <div style={{ marginTop: "6px", padding: "8px", background: "var(--surface, #f5f5f5)", borderRadius: "6px", fontSize: "12px" }}>
+      <div style={{ marginTop: "6px", padding: "8px", background: "var(--surface, #f5f5f5)", borderRadius: "var(--r-sm)", fontSize: "12px" }}>
         <div style={{ textAlign: "center", marginBottom: "4px" }}>
           {t("settings.quota.enterCode")}
         </div>

@@ -3,7 +3,7 @@
   gap: 5px;
   padding: 9px 10px;
   border: 1px solid var(--border);
-  border-radius: 13px;
+  border-radius: var(--r-xl);
   background: color-mix(in srgb, var(--bg) 74%, var(--surface));
 }
 
@@ -43,7 +43,7 @@
 .prompt-builder__structured-notes {
   padding: 9px 10px;
   border: 1px solid color-mix(in srgb, var(--border-strong) 52%, var(--border));
-  border-radius: 11px;
+  border-radius: var(--r-lg);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 82%, transparent), transparent 90%),
     color-mix(in srgb, var(--bg) 48%, transparent);
@@ -62,7 +62,7 @@
   gap: 7px;
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 28%, transparent), transparent 88%),
     color-mix(in srgb, var(--surface-2) 78%, var(--bg));
@@ -89,7 +89,7 @@
 .prompt-builder__structured-card-header span {
   padding: 2px 6px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--text-dim);
   font-family: var(--mono);
   font-size: 9px;
@@ -100,7 +100,7 @@
   min-height: 26px;
   padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   color: var(--text-dim);
   font: inherit;
@@ -131,7 +131,7 @@
   gap: 6px;
   padding: 4px 6px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--bg) 62%, transparent);
   color: var(--text-dim);
   font-size: 10px;
@@ -148,7 +148,7 @@
   width: 26px;
   height: 26px;
   display: block;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   object-fit: cover;
   background: var(--bg);
 }
@@ -159,7 +159,7 @@
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   color: var(--text-muted);
   font-size: 8px;
@@ -181,7 +181,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   color: var(--text-dim);
   font-family: var(--mono);
@@ -210,7 +210,7 @@
   min-height: 28px;
   padding: 0 9px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   color: var(--text-dim);
   font: inherit;
@@ -241,7 +241,7 @@
   max-height: 104px;
   padding: 9px 10px;
   border: 1px solid var(--border);
-  border-radius: 13px;
+  border-radius: var(--r-xl);
   background: color-mix(in srgb, var(--bg) 72%, var(--surface));
   color: var(--text);
   font: inherit;

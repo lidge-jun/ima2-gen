@@ -15,7 +15,7 @@
   content: "";
   position: absolute;
   inset: -9px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 .image-node__handle--source {
   background: var(--accent-bright) !important;
@@ -67,7 +67,7 @@
   color: var(--on-scrim);
   background: var(--chip-scrim);
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid color-mix(in srgb, var(--on-scrim) 16%, transparent);
   box-shadow: 0 8px 24px var(--shadow-soft);
   pointer-events: none;
@@ -77,7 +77,7 @@
 .react-flow__controls {
   background: var(--surface-2) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 .react-flow__controls-button {
@@ -131,7 +131,7 @@
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: var(--radius, 6px);
+  border-radius: var(--r-lg);
   padding: 7px 10px;
   font: inherit;
   font-size: 12px;
@@ -150,7 +150,7 @@
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: var(--radius, 6px);
+  border-radius: var(--r-lg);
   padding: 0 10px;
   font: inherit;
   font-size: 13px;
@@ -165,7 +165,7 @@
   margin: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius, 6px);
+  border-radius: var(--r-lg);
   max-height: 220px;
   overflow-y: auto;
 }
@@ -173,7 +173,7 @@
   display: flex;
   align-items: stretch;
   gap: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
 }
 .session-list li:hover { background: var(--control-bg); }
 .session-list li.is-active { background: var(--accent-soft); }
@@ -249,7 +249,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--red);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   max-width: 440px;
   width: 100%;
   padding: 20px 22px;
@@ -285,7 +285,7 @@
   padding: 8px 10px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-family: var(--mono);
   font-size: 11px;
   white-space: pre-wrap;

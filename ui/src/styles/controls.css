@@ -14,7 +14,7 @@
   padding: 7px 10px;
   background: var(--control-bg);
   border: 1px solid var(--hairline-soft);
-  border-radius: calc(var(--radius) - 3px);
+  border-radius: var(--r-md);
   color: var(--text);
   font-size: 12.5px;
   cursor: pointer;
@@ -64,7 +64,7 @@
   list-style: none;
   background: var(--surface);
   border: 1px solid var(--glass-line);
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: var(--r-md);
   box-shadow: 0 12px 32px var(--shadow-strong);
 }
 .ctl-select__item {
@@ -74,7 +74,7 @@
   gap: 10px;
   min-height: 44px;
   padding: 6px 8px;
-  border-radius: calc(var(--radius) - 5px);
+  border-radius: var(--r-xs);
   font-size: 12.5px;
   color: var(--text-dim);
   cursor: pointer;
@@ -188,11 +188,11 @@
 .ctl-duration__range:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 .ctl-duration__range::-webkit-slider-runnable-track {
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--r-xs);
   background: var(--border-strong);
 }
 .ctl-duration__range::-webkit-slider-thumb {
@@ -211,7 +211,7 @@
 }
 .ctl-duration__range::-moz-range-track {
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--r-xs);
   background: var(--border-strong);
 }
 .ctl-duration__range::-moz-range-thumb {
@@ -271,7 +271,7 @@
   flex: none;
   width: 30px;
   height: 17px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-3);
   border: 1px solid var(--hairline-soft);
   position: relative;
@@ -309,7 +309,7 @@
   display: inline-flex;
   align-items: stretch;
   border: 1px solid var(--hairline-soft);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--control-bg);
   overflow: hidden;
   transition: background 0.15s ease, border-color 0.15s ease;

@@ -30,7 +30,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   color: var(--text-muted);
   cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease;
@@ -60,7 +60,7 @@
   pointer-events: none;
   padding: 5px 9px;
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface-2);
   box-shadow: 0 6px 20px var(--shadow-soft);
   color: var(--text);

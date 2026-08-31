@@ -12,9 +12,6 @@
 }
 
 .agent-workspace {
-  --agent-r-lg: 12px;
-  --agent-r-md: 10px;
-  --agent-r-sm: 8px;
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
@@ -123,7 +120,7 @@
 .agent-session-drawer header button,
 .agent-composer__actions button {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--control-bg);
   color: var(--text-dim);
   cursor: pointer;
@@ -175,7 +172,7 @@
   gap: 10px;
   padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
 }
 
@@ -195,7 +192,7 @@
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 700;
@@ -214,7 +211,7 @@
   gap: 10px;
   padding: 14px;
   overflow: hidden;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
   background: var(--surface);
   box-shadow: 0 20px 70px var(--shadow-strong);
 }
@@ -233,7 +230,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--control-bg);
   color: var(--text-dim);
   cursor: pointer;
@@ -316,7 +313,7 @@
   justify-content: center;
   gap: 7px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 700;
@@ -331,7 +328,7 @@
   gap: 6px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg);
   color: var(--text-dim);
 }
@@ -360,7 +357,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface-2);
 }
 
@@ -390,7 +387,7 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--bg);
   color: var(--text-faint);
 }
@@ -428,7 +425,7 @@
   height: 18px;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--control-bg);
   font-style: normal;
   font-family: var(--mono);
@@ -464,7 +461,7 @@
 }
 
 .agent-rail > button {
-  border-radius: var(--agent-r-sm, 8px);
+  border-radius: var(--r-md);
 }
 
 .agent-rail > button:hover {
@@ -494,7 +491,7 @@
 .agent-rail__sessions button {
   position: relative;
   overflow: hidden;
-  border-radius: var(--agent-r-md, 10px);
+  border-radius: var(--r-lg);
 }
 
 .agent-rail__sessions button.is-active {
@@ -508,6 +505,6 @@
   top: 4px;
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--amber);
 }

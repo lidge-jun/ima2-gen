@@ -59,6 +59,47 @@ export function assertBaseline({ head, main, dev, preview, contains }) {
 }
 
 /**
+ * Units this release line may not ship without. The list lives in code, not in the
+ * JSON file: iterating the file would let an empty {} pass zero checks and read as
+ * success, so the code names what is required and the file only supplies SHAs.
+ */
+export const REQUIRED_UNITS = ["wp9"];
+const FULL_OID = /^[0-9a-f]{40}$/i;
+
+/**
+ * A UI-polish release may only be cut from a HEAD that already contains the modal
+ * accessibility unit; cutting earlier would ship a version whose provenance does not
+ * match the round it claims to close.
+ *
+ * Fail-closed by construction. A missing file, a missing key, null, a symbolic ref, or
+ * an abbreviated hash are all refusals. Symbolic refs matter because git resolves
+ * "HEAD" and "dev" happily, so contains() would return true for a value that proves
+ * nothing - the full-oid test runs first for exactly that reason.
+ */
+export function assertUnitProvenance({ head, requiredCommits, contains }) {
+  const problems = [];
+  const map = requiredCommits && typeof requiredCommits === "object" && !Array.isArray(requiredCommits)
+    ? requiredCommits
+    : null;
+  if (!map) return [".release/required-units.json must be a JSON object"];
+  for (const label of REQUIRED_UNITS) {
+    if (!Object.prototype.hasOwnProperty.call(map, label)) {
+      problems.push(`required unit ${label} is missing from .release/required-units.json`);
+      continue;
+    }
+    const sha = map[label];
+    if (typeof sha !== "string" || !sha) {
+      problems.push(`required unit ${label} has no recorded merge commit`);
+    } else if (!FULL_OID.test(sha)) {
+      problems.push(`required unit ${label} must be a full 40-hex commit id, got "${sha}"`);
+    } else if (!contains(sha, head)) {
+      problems.push(`HEAD does not contain ${label} (${sha})`);
+    }
+  }
+  return problems;
+}
+
+/**
  * npm versions and git tags are both immutable, so a cut onto an already-published or
  * already-tagged version is refused before anything is pushed.
  */
@@ -93,7 +134,16 @@ function fail(problems) {
   throw new Error(problems.join("; "));
 }
 
-function preflight() {
+function readRequiredUnits() {
+  try {
+    return JSON.parse(readFileSync(".release/required-units.json", "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/** Ancestry-only portion of preflight, for readiness runs that must not publish. */
+function baseline() {
   const problems = assertBaseline({
     head: git(["rev-parse", "HEAD"]),
     main: git(["rev-parse", "origin/main"]),
@@ -103,6 +153,17 @@ function preflight() {
   });
   if (problems.length) fail(problems);
   console.log("[release] baseline verified");
+}
+
+function preflight() {
+  baseline();
+  const problems = assertUnitProvenance({
+    head: git(["rev-parse", "HEAD"]),
+    requiredCommits: readRequiredUnits(),
+    contains,
+  });
+  if (problems.length) fail(problems);
+  console.log(`[release] required units present: ${REQUIRED_UNITS.join(", ")}`);
 }
 
 function commit(bump) {
@@ -169,6 +230,7 @@ function remotesUnmoved(sha) {
 
 const COMMANDS = {
   preflight: () => preflight(),
+  "assert-baseline": () => baseline(),
   commit: (args) => commit(args[0] || "patch"),
   "assert-clean": () => assertClean(),
   "assert-remotes-unmoved": (args) => remotesUnmoved(args[0]),
@@ -180,7 +242,7 @@ if (isMain) {
   const [command, ...args] = process.argv.slice(2);
   try {
     const run = COMMANDS[command];
-    if (!run) throw new Error("usage: release-cut.mjs preflight | commit <bump> | assert-clean | assert-remotes-unmoved <sha> | assert-preview-proof <version> <sha>");
+    if (!run) throw new Error("usage: release-cut.mjs preflight | assert-baseline | commit <bump> | assert-clean | assert-remotes-unmoved <sha> | assert-preview-proof <version> <sha>");
     run(args);
   } catch (error) {
     console.error(`[release-cut] ${error.message}`);

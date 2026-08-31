@@ -63,7 +63,7 @@
   margin: 14px 0 0;
   padding: 5px 11px 5px 9px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--control-bg);
   color: var(--text-muted);
   font: 500 11px/1 var(--mono);
@@ -197,7 +197,7 @@
   margin: 0;
   padding: 16px 18px;
   border: 1px solid var(--glass-line, var(--border));
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   background: var(--surface);
   color: var(--text-muted);
   line-height: 1.5;
@@ -207,7 +207,7 @@
 .home-prompt {
   padding: clamp(20px, 3vw, 32px);
   border: 1px solid var(--glass-line, var(--border));
-  border-radius: 20px;
+  border-radius: var(--r-3xl);
   background: color-mix(in srgb, var(--surface, var(--surface)) 86%, transparent);
   box-shadow: 0 24px 64px var(--shadow-soft);
   backdrop-filter: blur(12px);
@@ -239,7 +239,7 @@
   place-items: center;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--text-muted);
   font: 600 12px/1 var(--mono);
@@ -273,7 +273,7 @@
   min-height: 168px;
   resize: vertical;
   border: 1px solid var(--border-strong, var(--border));
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   padding: 18px 20px;
   background: color-mix(in srgb, var(--surface-2, var(--surface-2)) 88%, transparent);
   color: var(--text, var(--text-primary));
@@ -309,7 +309,7 @@
   min-width: 168px;
   min-height: 50px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   padding: 0 28px;
   background: var(--accent);
   color: var(--accent-ink, var(--bg));
@@ -333,7 +333,7 @@
   min-width: 0;
   min-height: 0;
   margin: 0;
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--glass-line, var(--border));
@@ -378,7 +378,7 @@
 
 @media (max-width: 480px) {
   .home-workspace { padding: 20px 14px calc(44px + env(safe-area-inset-bottom)); }
-  .home-prompt { padding: 16px; border-radius: 16px; }
+  .home-prompt { padding: 16px; border-radius: var(--r-2xl); }
   .home-prompt__textarea { min-height: 144px; padding: 14px; font-size: 16px; }
   .home-prompt__footer { align-items: stretch; flex-direction: column; }
   .home-prompt__generate { width: 100%; min-height: 52px; }

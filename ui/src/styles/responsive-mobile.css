@@ -48,7 +48,7 @@
   .settings-shell {
     height: calc(100dvh - 24px);
     min-height: 0;
-    border-radius: 16px;
+    border-radius: var(--r-2xl);
   }
   .settings-header {
     padding: 20px;
@@ -176,7 +176,7 @@
     .settings-row,
     .settings-note {
       padding: 14px;
-      border-radius: 12px;
+      border-radius: var(--r-xl);
     }
     .settings-row {
       gap: 12px;
@@ -219,7 +219,7 @@
     transform: none;
     width: 40px;
     height: 40px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: 1px solid var(--border);
     z-index: 60;
   }

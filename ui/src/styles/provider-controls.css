@@ -50,7 +50,7 @@
   justify-self: start;
   padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   font-family: var(--mono);
   font-size: 11px;
@@ -101,7 +101,7 @@
   gap: 4px;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: var(--surface-2);
   color: var(--text-dim);
   font-size: 12px;
@@ -115,7 +115,7 @@
 
 .provider-compat-details {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: var(--surface-2);
   color: var(--text-dim);
   font-size: 12px;
@@ -212,7 +212,7 @@
   resize: vertical;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--text);
   font-size: 12px;

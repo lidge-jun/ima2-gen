@@ -7,7 +7,7 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--r-2xl);
   background: var(--surface);
   box-shadow: 0 18px 60px var(--shadow-strong);
   overflow: hidden;
@@ -17,7 +17,7 @@
   height: auto;
   max-height: none;
   min-height: 220px;
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   box-shadow: none;
 }
 .right-panel .prompt-builder--sidebar .prompt-builder__messages {
@@ -49,7 +49,7 @@
   margin-top: 7px;
   padding: 3px 7px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--text-dim);
   font-size: 10px;
   line-height: 1.2;
@@ -67,7 +67,7 @@
   gap: 8px;
   padding: 5px 6px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   background: color-mix(in srgb, var(--bg) 62%, transparent);
 }
 
@@ -75,7 +75,7 @@
   width: 34px;
   height: 34px;
   display: block;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   object-fit: cover;
   background: var(--bg);
 }
@@ -96,7 +96,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   color: var(--text-dim);
   font-family: var(--mono);
@@ -142,7 +142,7 @@
 .prompt-builder__thinking {
   padding: 10px;
   border: 1px dashed var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.45;
@@ -164,7 +164,7 @@
 .prompt-builder__thinking-dots span {
   width: 5px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: currentColor;
   opacity: 0.35;
   transform: translateY(0) scale(0.78);

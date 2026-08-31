@@ -11,14 +11,14 @@
   margin-left: auto;
   padding: 2px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
 }
 
 .gallery__scope button {
   min-height: 28px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 4px 10px;
   background: transparent;
   color: var(--text-dim);

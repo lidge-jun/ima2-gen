@@ -50,7 +50,7 @@
   min-width: 0;
   min-height: 32px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--control-bg);
   color: var(--text-dim);
   cursor: pointer;
@@ -101,7 +101,7 @@
   min-height: 36px;
   border: 1px solid var(--border);
   background: var(--control-bg);
-  border-radius: var(--agent-r-sm, 8px);
+  border-radius: var(--r-md);
 }
 
 .agent-model-select .image-model-select__trigger--pill:hover,
@@ -122,7 +122,7 @@
   place-items: center;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--control-bg);
   color: var(--text-dim);
   cursor: pointer;
@@ -198,7 +198,7 @@
   min-width: 0;
   height: 34px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -212,7 +212,7 @@
   gap: 3px;
   padding: 2px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--control-bg);
 }
 
@@ -222,7 +222,7 @@
   padding: 3px 5px;
   overflow: hidden;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font: inherit;
@@ -243,7 +243,7 @@
   grid-template-columns: 34px minmax(0, 1fr) 34px;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg);
   overflow: hidden;
 }
@@ -282,7 +282,7 @@
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface-2);
 }
 
@@ -324,7 +324,7 @@
   width: fit-content;
   padding: 2px 6px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--control-bg);
 }
 
@@ -385,7 +385,7 @@
   height: 10px;
   border: 2px solid color-mix(in srgb, var(--green) 30%, transparent);
   border-top-color: var(--green);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   animation: agent-spin 0.8s linear infinite;
 }
 
@@ -455,7 +455,7 @@
   row-gap: 3px;
   padding: 7px 8px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--text-dim);
   cursor: pointer;
@@ -465,7 +465,7 @@
 .agent-tool-call-row__status {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--green);
 }
 
@@ -509,7 +509,7 @@
   grid-area: count;
   padding: 1px 5px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 10px;
 }
 

@@ -18,7 +18,7 @@
 .result-container > .result-preview-frame {
   position: relative;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--r-md);
 }
 
 .result-container > .canvas-annotation-frame--zoomed {
@@ -47,7 +47,7 @@
   gap: 5px;
   padding: 5px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--bg) 74%, transparent);
   color: var(--text);
   box-shadow: 0 12px 30px var(--shadow-strong);
@@ -61,7 +61,7 @@
   display: inline-grid;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--surface-2) 84%, transparent);
   color: var(--text);
   font-family: var(--mono);

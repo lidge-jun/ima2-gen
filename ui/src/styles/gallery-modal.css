@@ -1,7 +1,7 @@
 .composer__dropzone {
   position: absolute;
   inset: 0;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--control-bg);
   border: 2px dashed var(--accent);
   display: flex;
@@ -28,7 +28,7 @@
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
@@ -54,7 +54,7 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--text-dim);
   cursor: pointer;
   transition: color 0.12s ease, background 0.12s ease;
@@ -104,7 +104,7 @@
 .gallery {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   width: min(1280px, 94vw);
   height: min(860px, 90vh);
   display: flex;
@@ -139,7 +139,7 @@
 .gallery__search {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 7px 10px;
   color: var(--text);
   font-size: 13px;
@@ -157,7 +157,7 @@
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   width: 44px;
   min-width: 44px;
   height: 44px;
@@ -214,7 +214,7 @@
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 600;
@@ -290,7 +290,7 @@
   padding: 0;
   border: 2px solid transparent;
   background: var(--surface-2);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   overflow: hidden;
   cursor: pointer;
   aspect-ratio: 1;
@@ -325,7 +325,7 @@
   color: #fff;
   font-size: 10px;
   padding: 2px 5px;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
   pointer-events: none;
 }
 .history-thumb__play-badge,
@@ -337,7 +337,7 @@
   color: #fff;
   font-size: 8px;
   padding: 1px 4px;
-  border-radius: 2px;
+  border-radius: var(--r-xs);
   pointer-events: none;
 }
 .history-thumb--video {
@@ -438,7 +438,7 @@
   margin-left: auto;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 2px;
 }
 .gallery__favorite-filter {
@@ -451,7 +451,7 @@
   color: var(--text-dim);
   padding: 4px 10px;
   font-size: 12px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .gallery__favorite-filter button.active,
@@ -466,7 +466,7 @@
   transform: translateX(-50%);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 8px 14px;
   display: flex;
   align-items: center;
@@ -479,7 +479,7 @@
   background: var(--accent);
   color: var(--accent-ink);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
@@ -504,7 +504,7 @@
 .gallery__load-more button {
   min-height: 36px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--text);
   padding: 0 14px;

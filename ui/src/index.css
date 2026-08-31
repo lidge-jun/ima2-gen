@@ -111,7 +111,18 @@
   --amber: #f59e0b;
   --red: #ef4444;
   --blue: #4a9eff;
-  --radius: 10px;
+  /* Radius scale (UI/UX round 2, wp2). Single source of truth: these eight
+     steps are defined here and nowhere else. No component or theme block may
+     redefine them, and no raw px border-radius may reappear —
+     tests/ui-radius-scale-contract.test.ts enforces both. */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 12px;
+  --r-2xl: 16px;
+  --r-3xl: 20px;
+  --r-pill: 999px;
   --font: "Satoshi", "Pretendard Variable", system-ui, sans-serif;
   --font-display: "Clash Display", "Pretendard Variable", system-ui, sans-serif;
   --mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
@@ -231,7 +242,7 @@ body::after {
 :focus-visible {
   outline: 2px solid var(--focus-ring-strong, rgba(122, 215, 255, 0.65));
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--r-xs);
 }
 
 /* Global reduced-motion safety net (WP2). Individual stylesheets still declare their
@@ -279,13 +290,13 @@ body::after {
 .node-studio-empty-overlay { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 72px 16px 24px; pointer-events: none; }
 .node-studio-empty-overlay > * { pointer-events: auto; }
 .node-studio-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: min(520px, calc(100vw - 280px)); margin-right: 52px; position: relative; z-index: 11; }
-.node-studio-toolbar button, .node-element-tray button { min-height: 32px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); cursor: pointer; }
+.node-studio-toolbar button, .node-element-tray button { min-height: 32px; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2); color: var(--text); cursor: pointer; }
 .node-studio-toolbar button:disabled, .node-element-tray button:disabled { cursor: not-allowed; opacity: .5; }
 .node-studio-element-panel { width: 230px; margin-top: 56px !important; }
-.node-element-tray { max-height: min(380px, calc(100vh - 200px)); overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); backdrop-filter: blur(10px); color: var(--text); box-shadow: 0 10px 30px var(--shadow-soft); }
+.node-element-tray { max-height: min(380px, calc(100vh - 200px)); overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: var(--r-xl); background: var(--surface); backdrop-filter: blur(10px); color: var(--text); box-shadow: 0 10px 30px var(--shadow-soft); }
 .node-element-tray header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }.node-element-tray header span, .node-element-tray p { color: var(--text-muted); font-size: 11px; }
-.node-element-tray__list { display: grid; gap: 7px; }.node-element-tray__item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 7px; align-items: center; padding: 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); font-size: 11px; }.node-element-tray__item img, .node-element-tray__placeholder { width: 34px; height: 34px; border-radius: 7px; background: var(--surface-3); object-fit: cover; }.node-element-tray__item > span:not(.node-element-tray__placeholder) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.node-element-tray__item button { grid-column: 1 / -1; width: 100%; }
+.node-element-tray__list { display: grid; gap: 7px; }.node-element-tray__item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 7px; align-items: center; padding: 6px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2); font-size: 11px; }.node-element-tray__item img, .node-element-tray__placeholder { width: 34px; height: 34px; border-radius: var(--r-sm); background: var(--surface-3); object-fit: cover; }.node-element-tray__item > span:not(.node-element-tray__placeholder) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.node-element-tray__item button { grid-column: 1 / -1; width: 100%; }
 .node-studio-dialog-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, #05070a 72%, transparent); }
-.node-studio-dialog-backdrop fieldset { display: grid; gap: 8px; margin: 0; padding: 12px; }.node-studio-dialog-backdrop select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); }
+.node-studio-dialog-backdrop fieldset { display: grid; gap: 8px; margin: 0; padding: 12px; }.node-studio-dialog-backdrop select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2); color: var(--text); }
 .node-studio-status { position: absolute; z-index: 5; font-family: var(--font); inset-inline: 50%; bottom: 18px; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
 @media (max-width: 680px) { .node-studio-element-panel { width: calc(100% - 24px); margin-top: 86px !important; }.node-element-tray { max-height: 118px; }.node-element-tray__list { display: flex; overflow-x: auto; }.node-element-tray__item { flex: 0 0 150px; }.node-studio-toolbar { max-width: calc(100vw - 100px); }.node-studio-empty-overlay { align-items: start; padding-top: 250px; overflow-y: auto; }.node-studio-dialog-backdrop { align-items: end; padding: 10px; }.node-studio-dialog-backdrop .node-template-picker { max-height: calc(100dvh - 20px); } }

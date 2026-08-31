@@ -7,7 +7,7 @@
   padding: 0;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--border-strong) 74%, transparent);
-  border-radius: 9px;
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   color: var(--on-scrim);
   cursor: pointer;

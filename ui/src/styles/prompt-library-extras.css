@@ -7,7 +7,7 @@
   width: min(360px, 90vw);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   z-index: 100;
   padding: 20px;
@@ -44,7 +44,7 @@
 .save-prompt-popover__body input,
 .save-prompt-popover__body textarea {
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -57,7 +57,7 @@
 }
 .save-prompt-popover__save {
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: none;
   background: var(--accent);
   color: var(--accent-ink);
@@ -119,7 +119,7 @@
 .prompt-library-row__insert {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -194,7 +194,7 @@
   width: min(400px, 90vw);
   max-height: 70vh;
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -235,7 +235,7 @@
   overflow-y: auto;
   padding: 12px;
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -251,7 +251,7 @@
 .prompt-detail-modal__tag {
   font-size: 11px;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   background: var(--bg);
   color: var(--text-dim);
   border: 1px solid var(--border);
@@ -269,7 +269,7 @@
 .prompt-detail-modal__favorite,
 .prompt-detail-modal__delete {
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: none;
   font-size: 12px;
   cursor: pointer;
@@ -308,7 +308,7 @@
 .prompt-library-panel__import {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -363,7 +363,7 @@
   color: var(--text-dim);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -378,7 +378,7 @@
   top: 12px;
   right: 12px;
   padding: 4px 10px;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--r-md);
   background: var(--surface);
   color: var(--text);
   border: 0.5px solid var(--border);

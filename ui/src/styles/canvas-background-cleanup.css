@@ -9,7 +9,7 @@
 .canvas-mode-topbar__stack .canvas-toolbar__zoom {
   padding: 3px;
   border: 1px solid var(--tint-14);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--canvas-plate-soft);
   backdrop-filter: blur(12px);
 }
@@ -30,7 +30,7 @@
   overflow: hidden;
   padding: 0;
   border: 1px solid var(--minimap-border, var(--tint-18));
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--minimap-bg, var(--canvas-plate-strong));
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
   cursor: pointer;
@@ -65,7 +65,7 @@
   min-width: 150px;
   padding: 5px;
   border: 1px solid var(--tint-14);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--canvas-plate);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(14px);
@@ -79,7 +79,7 @@
   min-height: 34px;
   padding: 0 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--tint-72);
   font-size: 12px;
@@ -139,7 +139,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-dim);
   font-weight: 750;
@@ -175,7 +175,7 @@
   width: 278px;
   padding: 10px;
   border: 1px solid var(--tint-14);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--canvas-plate);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
   color: var(--text);
@@ -235,7 +235,7 @@
   min-height: 28px;
   padding: 0 8px;
   border: 1px solid var(--tint-12);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--tint-06);
   color: var(--tint-78);
   font-size: 11px;
@@ -273,14 +273,14 @@
   min-width: 0;
   padding: 2px;
   border: 1px solid var(--tint-12);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--tint-05);
 }
 
 .canvas-toolbar__segmented-button {
   min-height: 26px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   background: transparent;
   color: var(--text-dim);
   font-size: 11px;

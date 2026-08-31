@@ -4,7 +4,7 @@
 .card-news-preview__error {
   width: 100%;
   height: 100%;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   object-fit: cover;
   background: var(--bg);
   border: 1px dashed var(--border);
@@ -42,7 +42,7 @@
   display: grid;
   gap: 9px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 9px;
   background: var(--surface);
 }
@@ -70,7 +70,7 @@
   min-height: 22px;
   padding: 2px 7px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--text-dim);
   font-size: 11px;
 }
@@ -85,7 +85,7 @@
   max-width: 70%;
   padding: 5px 7px;
   border: 1px solid var(--accent);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%);
   color: var(--text);
   font-size: 11px;
@@ -140,7 +140,7 @@
   min-height: 28px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--text-dim);
   font-size: 12px;
@@ -152,7 +152,7 @@
 .card-news-result-actions button,
 .card-news-result-actions a {
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   padding: 7px 9px;
   background: var(--surface);
   color: var(--text);
@@ -166,7 +166,7 @@
   gap: 5px;
   width: fit-content;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 3px 6px;
   color: var(--text-dim);
   font-size: 11px;
@@ -195,12 +195,12 @@
   width: 100%;
   height: 28px;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: var(--r-xs);
 }
 .card-news-generated-meta {
   justify-content: space-between;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   padding: 8px;
   color: var(--text-dim);
   font-size: 11px;
@@ -237,7 +237,7 @@
   margin: 12px;
   padding: 10px;
   border: 1px solid var(--red);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   color: var(--red);
 }
 .gallery-card-news-set .gallery__tile {
@@ -255,7 +255,7 @@
   min-width: 18px;
   height: 18px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   color: var(--text-dim);
   font-size: 10px;
   line-height: 18px;
@@ -270,7 +270,7 @@
   position: absolute;
   inset: auto 1px 1px auto;
   min-width: 12px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   background: color-mix(in srgb, var(--bg) 74%, transparent);
   color: var(--text);
   font-size: 9px;
@@ -287,7 +287,7 @@
 .gallery-card-news-actions button {
   min-height: 22px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 3px 6px;
   background: var(--surface);
   color: var(--text-dim);

@@ -10,7 +10,7 @@
   max-width: 100%;
   padding: 2px 6px;
   border: 1px solid color-mix(in srgb, var(--border-strong) 60%, transparent);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   color: var(--text-dim);
   font-size: 11px;
