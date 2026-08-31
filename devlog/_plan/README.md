@@ -1,6 +1,6 @@
 ---
 created: 2026-04-23
-updated: 2026-08-26
+updated: 2026-08-31
 tags: [ima2-gen, devlog, roadmap]
 aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 ---
@@ -30,7 +30,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 이슈 | 상태 | 사유 |
 |---|---|---|
-| #150 Provider Adapter v1 RFC | **OPEN** | 수용 조건 6개 중 3개 미충족. `ProviderAdapterV1` 인터페이스 존재하나 구현 어댑터 0개, UI provider 분기 17곳, `packages/` 미존재. |
+| #150 Provider Adapter v1 RFC | **OPEN** | 2026-08-31 재확인. 수용 조건 6개 중 3개 미충족 + 1개 부분. registry 10 lane 중 어댑터 4개(minimax, atlascloud, comfy, nai), `generateImage`/`editImage` 구현 0건, UI provider 분기 17곳, `packages/` 미존재. 근거 코멘트를 이슈에 기록. |
 
 ## 외부 차단으로 미완료인 항목
 
@@ -54,6 +54,14 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 이 둘은 숫자를 맞추려고 `_fin`으로 옮기지 않았다. 대응 이슈가 없고 구현 착수도
 없어서, 옮기면 그건 정리가 아니라 은폐다.
+
+## 2026-08-31 아카이브 기록
+
+`_fin`으로 이동 (1개 유닛):
+
+- `260831_dependabot_issue_triage/` — dependabot 4건 머지 + #150 유지 판정으로 완료.
+  게이트 리터럴 SHA 재발(#162 -> #178)을 YAML AST 기반 핀 검사로 교체. 감사 6라운드.
+  종료 시점에 열린 PR 0건, `origin/main` = `origin/dev` = `d950b605`, 릴리스 preflight 통과.
 
 ## 2026-08-26 아카이브 기록
 
@@ -84,4 +92,3 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 2026-08-25까지의 아카이브 기록은 이전 버전 히스토리에 있다.
 2026-07-25 archival sweep과 그 이전 이력은
 `_fin/260725_devlog_archival/000_archival_record.md`에 있다.
-
