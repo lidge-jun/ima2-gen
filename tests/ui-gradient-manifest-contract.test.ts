@@ -97,20 +97,35 @@ describe("ui-gradient-manifest-contract", () => {
     const indexContent = readFileSync(INDEX_CSS, "utf8");
     const defs = (indexContent.match(/--skeleton-shimmer\s*:/g) || []).length;
     assert.equal(defs, 1, "--skeleton-shimmer should be defined exactly once");
+
+    const expectedConsumers = [
+      "styles/node-workspace.css",
+      "styles/right-panel.css",
+      "styles/sidebar-history.css",
+      "styles/progress-composer.css",
+    ];
+    const actualConsumers: string[] = [];
     let refs = 0;
     for (const file of cssFiles) {
       if (file === INDEX_CSS) continue;
       const content = readFileSync(file, "utf8");
-      refs += (content.match(/var\(--skeleton-shimmer\)/g) || []).length;
+      const count = (content.match(/var\(--skeleton-shimmer\)/g) || []).length;
+      if (count > 0) actualConsumers.push(relative(UI_SRC, file));
+      refs += count;
     }
     assert.equal(refs, 6, "--skeleton-shimmer should be referenced by 6 consumers");
+    assert.deepStrictEqual(
+      actualConsumers.sort(),
+      expectedConsumers.sort(),
+      "shimmer consumers must be exactly these 4 files"
+    );
   });
 
   it(".canvas__blank-sheet has background in exactly one file", () => {
     const filesWithBg: string[] = [];
     for (const file of cssFiles) {
       const content = readFileSync(file, "utf8");
-      if (/\.canvas__blank-sheet\s*\{[^}]*background\s*:/.test(content)) {
+      if (/\.canvas__blank-sheet\s*\{[^}]*(?:background|background-image)\s*:/.test(content)) {
         filesWithBg.push(relative(UI_SRC, file));
       }
     }
