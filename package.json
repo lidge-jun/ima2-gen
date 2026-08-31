@@ -18,7 +18,7 @@
     "ui:build": "cd ui && npm run build",
     "build": "npm run ui:build",
     "test": "node scripts/run-tests.mjs",
-    "test:native-deps": "node -e \"require('better-sqlite3'); require('sharp')\"",
+    "test:native-deps": "node -e \"require('better-sqlite3'); require('sharp'); require('@neplex/vectorizer')\"",
     "test:install-policy": "node scripts/check-install-policy.mjs",
     "test:install-policy:npm12": "node scripts/check-install-policy.mjs --npm-pending",
     "test:package-install": "node --test tests/package-install-smoke.mjs",
@@ -89,6 +89,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
+    "@neplex/vectorizer": "0.1.0",
     "@openai/codex": "0.149.1",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
