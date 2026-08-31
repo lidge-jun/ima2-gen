@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -398,6 +398,44 @@ describe("action pin gate", () => {
       assert.deepEqual(offenders, ["deeper/action.yml"]);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // A symlinked directory has a repo-relative name but can resolve anywhere, so
+  // the textual `..` filter alone does not bound the walk.
+  it("does not follow a local reference that resolves outside the repo", () => {
+    const base = mkdtempSync(join(tmpdir(), "pin-containment-"));
+    try {
+      const root = join(base, "repo");
+      const outside = join(base, "outside");
+      mkdirSync(join(root, ".github/workflows"), { recursive: true });
+      mkdirSync(outside, { recursive: true });
+      writeFileSync(
+        join(outside, "action.yml"),
+        ["runs:", "  using: composite", "  steps:", "    - uses: attacker/action@main"].join("\n"),
+      );
+      writeFileSync(
+        join(root, ".github/workflows/a.yml"),
+        [
+          "jobs:",
+          "  j:",
+          "    steps:",
+          "      - uses: ./link",
+          "      - uses: ./sub/../../outside",
+          "      - uses: ../../../../etc",
+        ].join("\n"),
+      );
+      let linked = true;
+      try {
+        symlinkSync(outside, join(root, "link"));
+      } catch {
+        linked = false; // Some filesystems refuse symlinks; the textual cases still apply.
+      }
+      const found = pinnedManifestPaths(root);
+      assert.deepEqual(found, [".github/workflows/a.yml"], `discovery escaped the repo: ${found.join(", ")}`);
+      if (linked) assert.ok(!found.some((path) => path.startsWith("link")), "a symlinked local action must not be followed");
+    } finally {
+      rmSync(base, { recursive: true, force: true });
     }
   });
 

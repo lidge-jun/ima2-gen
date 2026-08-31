@@ -16,8 +16,8 @@
 // against an earlier line-based version of this file, and actionlint accepted
 // the crafted workflow, so this is reachable YAML rather than a hypothetical.
 import assert from "node:assert/strict";
-import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { join, sep } from "node:path";
 import { parseDocument, isAlias, isMap, isSeq, isScalar } from "yaml";
 
 // A commit-SHAPED ref: exactly 40 lowercase hex characters. This is a shape
@@ -238,7 +238,8 @@ export function pinnedManifestPaths(root = process.cwd()) {
       for (const entry of entries) {
         if (!entry.local) continue;
         for (const candidate of localManifestCandidates(entry.raw)) {
-          if (!existsSync(join(root, candidate)) || paths.has(candidate)) continue;
+          if (paths.has(candidate)) continue;
+          if (!containedInRoot(root, candidate)) continue;
           paths.add(candidate);
           next.push(candidate);
         }
@@ -260,4 +261,26 @@ function localManifestCandidates(use) {
   // Drop anything that climbs out: a manifest outside the repo is not ours to
   // police, and reading it would take the walk somewhere unbounded.
   return candidates.filter((path) => !path.startsWith("..") && !path.startsWith("/"));
+}
+
+/**
+ * True when `rel` exists and its real location is inside `root`.
+ *
+ * The textual `..` filter above is not enough on its own: a symlinked directory
+ * has a repo-relative name yet can resolve anywhere, so `uses: ./link` would
+ * pull a manifest from outside the tree into the sweep. Comparing resolved
+ * paths is what actually bounds the walk.
+ */
+function containedInRoot(root, rel) {
+  const target = join(root, rel);
+  if (!existsSync(target)) return false;
+  let realRoot;
+  let realTarget;
+  try {
+    realRoot = realpathSync(root);
+    realTarget = realpathSync(target);
+  } catch {
+    return false;
+  }
+  return realTarget === realRoot || realTarget.startsWith(realRoot + sep);
 }
