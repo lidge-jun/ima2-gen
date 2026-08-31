@@ -36,7 +36,7 @@
   z-index: 4;
   padding: 8px 18px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--bg) 85%, transparent);
   color: var(--text-dim);
   font-family: var(--mono);

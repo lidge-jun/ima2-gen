@@ -73,7 +73,7 @@
   width: 72px;
   height: 72px;
   flex: none;
-  border-radius: var(--agent-r-md, 10px);
+  border-radius: var(--r-lg);
 }
 
 .agent-stage__filmstrip .agent-result-thumb.is-selected {
@@ -87,7 +87,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: var(--agent-r-sm, 8px);
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
@@ -170,7 +170,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: var(--agent-r-sm, 8px);
+  border-radius: var(--r-md);
   background: var(--control-bg);
   color: var(--text-dim);
   cursor: pointer;

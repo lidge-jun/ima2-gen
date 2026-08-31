@@ -17,6 +17,7 @@ import {
 import { gypfileNames, validateBundleParity, validateInstallPolicy } from "../scripts/check-install-policy.mjs";
 import { npmInvocation } from "../scripts/npm-subprocess.mjs";
 import { assertActionPinned, assertAllActionsPinned } from "./_actionPins.mjs";
+import { assertUnitProvenance, REQUIRED_UNITS } from "../scripts/release-cut.mjs";
 
 const SHA = "a".repeat(40);
 
@@ -576,5 +577,114 @@ describe("package install policy contract", () => {
     ];
     assert.equal(pickRun(runs, 10, sha)?.databaseId, 13);
     assert.equal(pickRun(runs, 10, "d".repeat(40)), undefined);
+  });
+});
+
+describe("release provenance guard (wp2)", () => {
+  const HEAD = "f".repeat(40);
+  const MERGED = "a".repeat(40);
+  const containsAll = () => true;
+  const containsNone = () => false;
+
+  it("passes only for a full 40-hex commit that HEAD contains", () => {
+    assert.deepEqual(
+      assertUnitProvenance({ head: HEAD, requiredCommits: { wp9: MERGED }, contains: containsAll }),
+      [],
+    );
+  });
+
+  it("fails closed for null, a missing key, an empty object, and a non-object file", () => {
+    for (const value of [{ wp9: null }, {}, { other: MERGED }]) {
+      assert.equal(
+        assertUnitProvenance({ head: HEAD, requiredCommits: value, contains: containsAll }).length,
+        1,
+        "expected one problem for " + JSON.stringify(value),
+      );
+    }
+    // An empty {} is the case a file-iterating guard would pass with zero checks.
+    assert.match(
+      assertUnitProvenance({ head: HEAD, requiredCommits: {}, contains: containsAll })[0],
+      /missing from \.release\/required-units\.json/,
+    );
+    for (const value of [null, undefined, [], true, "", 3]) {
+      assert.deepEqual(
+        assertUnitProvenance({ head: HEAD, requiredCommits: value as never, contains: containsAll }),
+        [".release/required-units.json must be a JSON object"],
+        "expected object rejection for " + JSON.stringify(value ?? null),
+      );
+    }
+  });
+
+  it("rejects symbolic refs and abbreviated hashes before asking git", () => {
+    // git resolves HEAD and dev, so contains() would answer true for a value that
+    // proves nothing. A throwing contains() proves the oid test runs first.
+    const explode = () => {
+      throw new Error("contains must not run for a non-oid value");
+    };
+    for (const sha of ["HEAD", "dev", "origin/dev", "v3.12.1", MERGED.slice(0, 8), MERGED.slice(0, 39), MERGED + "0"]) {
+      const problems = assertUnitProvenance({ head: HEAD, requiredCommits: { wp9: sha }, contains: explode });
+      assert.equal(problems.length, 1, sha + " must be refused");
+      assert.match(problems[0], /full 40-hex commit id/);
+    }
+  });
+
+  it("fails when the recorded commit is not an ancestor of HEAD", () => {
+    assert.deepEqual(
+      assertUnitProvenance({ head: HEAD, requiredCommits: { wp9: MERGED }, contains: containsNone }),
+      ["HEAD does not contain wp9 (" + MERGED + ")"],
+    );
+  });
+
+  it("names the required units in code, not in the JSON file", () => {
+    assert.deepEqual(REQUIRED_UNITS, ["wp9"]);
+    const source = readFileSync(join(repoRoot(), "scripts/release-cut.mjs"), "utf8");
+    assert.ok(
+      !/Object\.(entries|keys)\(\s*(map|requiredCommits)/.test(source),
+      "iterating the file would let {} read as success",
+    );
+  });
+
+  it("ships the required-units file fail-closed until wp9 lands", () => {
+    const file = JSON.parse(readFileSync(join(repoRoot(), ".release/required-units.json"), "utf8"));
+    for (const unit of REQUIRED_UNITS) {
+      assert.ok(Object.prototype.hasOwnProperty.call(file, unit), unit + " must be present");
+    }
+    // A recorded SHA is only meaningful if it is a real commit this repo can reach.
+    // Accepting any 40-hex string would let 9999... read as merged provenance.
+    const realContains = (ancestor: string, descendant: string) => {
+      try {
+        execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
+          cwd: repoRoot(),
+          stdio: "ignore",
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot(), encoding: "utf8" }).trim();
+    const problems = assertUnitProvenance({ head, requiredCommits: file, contains: realContains });
+    for (const unit of REQUIRED_UNITS) {
+      if (file[unit] === null) {
+        assert.ok(problems.length > 0, unit + " is unmerged, so the guard must refuse");
+        continue;
+      }
+      assert.deepEqual(problems, [], "a recorded " + unit + " SHA must be a real ancestor of HEAD");
+    }
+  });
+
+  it("keeps the guard on the publishing path and off the readiness path", () => {
+    const source = readFileSync(join(repoRoot(), "scripts/release-cut.mjs"), "utf8");
+    const preflight = source.slice(source.indexOf("function preflight()"));
+    assert.match(preflight.slice(0, 400), /assertUnitProvenance/, "preflight must run the guard");
+    const baseline = source.slice(source.indexOf("function baseline()"), source.indexOf("function preflight()"));
+    assert.ok(!baseline.includes("assertUnitProvenance"), "assert-baseline must stay provenance-free");
+    assert.match(source, /"assert-baseline": \(\) => baseline\(\)/, "the subcommand must be registered");
+    assert.match(source, /usage: release-cut\.mjs preflight \| assert-baseline \|/, "usage must list it");
+    // release.yml stays on full preflight: the publishing path must not be able to
+    // opt into the baseline-only command.
+    const release = readFileSync(join(repoRoot(), ".github/workflows/release.yml"), "utf8");
+    assert.match(release, /release-cut\.mjs preflight/);
+    assert.ok(!release.includes("release-cut.mjs assert-baseline"), "release.yml must not use the readiness command");
   });
 });

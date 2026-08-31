@@ -24,7 +24,7 @@
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--bg);
   color: var(--text);
   padding: 8px 9px;
@@ -85,14 +85,14 @@
   gap: 9px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
 }
 .card-news-inspector-empty__mock span,
 .card-news-inspector-empty__mock strong,
 .card-news-inspector-empty__mock i {
   display: block;
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   background: color-mix(in srgb, var(--text-dim) 22%, transparent);
 }
 .card-news-inspector-empty__mock span {
@@ -136,7 +136,7 @@
   width: 28px;
   height: 28px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--text-dim);
 }
@@ -148,7 +148,7 @@
 .card-news-role-row button,
 .card-news-deck-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
   color: var(--text);
 }
@@ -163,7 +163,7 @@
 .card-news-template img {
   width: 44px;
   height: 44px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   object-fit: cover;
 }
 .card-news-template__body {
@@ -226,7 +226,7 @@
   gap: 18px;
   padding: 22px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--surface));
   box-shadow: 0 20px 58px rgba(0, 0, 0, 0.28);
@@ -248,7 +248,7 @@
 .card-news-empty__card strong,
 .card-news-empty__card em {
   display: block;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 .card-news-empty__card span {
   border: 1px solid color-mix(in srgb, var(--accent) 54%, var(--border));
@@ -324,7 +324,7 @@
   width: min(420px, 82%);
   aspect-ratio: 1;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
   padding: 22px;
   display: grid;

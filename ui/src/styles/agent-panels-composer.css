@@ -30,7 +30,7 @@
   flex: 0 0 auto;
   border: 2px solid color-mix(in srgb, var(--text-dim) 26%, transparent);
   border-top-color: var(--accent);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   animation: agent-spin 0.9s linear infinite;
 }
 
@@ -58,7 +58,7 @@
   max-height: 160px;
   resize: vertical;
   border: 1px solid var(--border);
-  border-radius: var(--agent-r-md, 10px);
+  border-radius: var(--r-lg);
   background: var(--bg);
   color: var(--text);
   padding: 10px;
@@ -83,7 +83,7 @@
   padding: 4px 0;
   list-style: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: 0 -8px 20px var(--shadow-strong, rgba(0,0,0,.4));
   z-index: 20;
@@ -129,7 +129,7 @@
   justify-content: center;
   gap: 7px;
   padding: 0 10px;
-  border-radius: var(--agent-r-sm, 8px);
+  border-radius: var(--r-md);
 }
 
 .agent-composer__actions button.is-active {
@@ -144,7 +144,7 @@
   background: var(--accent);
   border-color: var(--accent);
   font-weight: 700;
-  border-radius: var(--agent-r-sm, 8px);
+  border-radius: var(--r-md);
   padding: 0 16px;
 }
 
@@ -214,7 +214,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
   padding: 14px;
   overflow-y: auto;
 }
@@ -225,7 +225,7 @@
   height: min(88dvh, 760px);
   display: grid;
   grid-template-rows: minmax(0, 1fr);
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
   padding: 0;
   overflow: hidden;
 }
@@ -233,7 +233,7 @@
 .agent-image-sheet .agent-image {
   height: 100%;
   border: 0;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
 
 .agent-image-sheet .agent-image__preview {

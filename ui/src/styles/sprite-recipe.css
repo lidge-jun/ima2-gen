@@ -7,7 +7,7 @@
   margin: 12px 0;
   padding: 3px;
   border: 1px solid var(--hairline-soft);
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: var(--r-md);
   background: var(--control-bg);
 }
 .assetgen-workflow-tabs button,
@@ -18,7 +18,7 @@
   min-width: 0;
   padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: calc(var(--radius) - 5px);
+  border-radius: var(--r-xs);
   background: transparent;
   color: var(--text-dim);
   overflow: hidden;

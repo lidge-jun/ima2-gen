@@ -80,7 +80,7 @@
 }
 .history-strip::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 2px;
+  border-radius: var(--r-xs);
 }
 
 .history-thumb {
@@ -89,7 +89,7 @@
   min-height: 52px;
   max-height: 84px;
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   object-fit: cover;
   cursor: pointer;
   border: 2px solid transparent;
@@ -154,7 +154,7 @@
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   opacity: 1;
 }
@@ -206,7 +206,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   border: 1px solid var(--border);
   background: var(--surface);
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -271,7 +271,7 @@
   max-width: 100%;
   padding: 4px 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--border));
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface));
   color: var(--accent-bright);
   font-family: var(--mono);
@@ -288,7 +288,7 @@
   max-width: 100%;
   padding: 4px 8px;
   border: 1px solid color-mix(in srgb, var(--green) 58%, var(--border));
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: color-mix(in srgb, var(--green) 14%, var(--surface));
   color: var(--green);
   font-family: var(--mono);
@@ -306,7 +306,7 @@
   max-width: 100%;
   padding: 4px 8px;
   border: 1px solid color-mix(in srgb, #a855f7 62%, var(--border));
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: color-mix(in srgb, #a855f7 16%, var(--surface));
   color: #c084fc;
   font-family: var(--mono);
@@ -327,7 +327,7 @@
   width: 7px;
   height: 7px;
   flex: 0 0 auto;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: #a855f7;
   box-shadow: 0 0 0 3px color-mix(in srgb, #a855f7 20%, transparent);
 }
@@ -368,7 +368,7 @@
   justify-content: center;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg);
 }
 .composer__tray-thumbnail img {
@@ -427,7 +427,7 @@
   align-items: center;
   justify-content: center;
   border: 1px dashed var(--border-strong, var(--border));
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
@@ -455,7 +455,7 @@
   gap: 6px;
   min-height: 32px;
   padding: 4px 5px 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
@@ -466,7 +466,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   border: 1px solid var(--accent);
   background: var(--accent-soft);
   color: var(--text);
@@ -483,7 +483,7 @@
 .composer__prompt-chip-remove {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: none;
   background: transparent;
   color: var(--text-dim);
@@ -514,7 +514,7 @@
 .composer__prompt-mirror .dead-tag {
   position: absolute;
   pointer-events: none;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   background: color-mix(in srgb, var(--text-muted) 24%, transparent);
   color: transparent;
   text-decoration-line: line-through;
@@ -590,7 +590,7 @@
   color: var(--text-dim);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   transition: border-color 0.12s, color 0.12s;
 }

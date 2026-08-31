@@ -1,0 +1,3334 @@
+[
+  {
+    "file": "ui/src/index.css",
+    "atRule": null,
+    "selector": ":focus-visible",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/index.css",
+    "atRule": null,
+    "selector": ".node-element-tray",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/index.css",
+    "atRule": null,
+    "selector": ".node-element-tray__item",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/index.css",
+    "atRule": null,
+    "selector": ".node-element-tray__item img, .node-element-tray__placeholder",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/index.css",
+    "atRule": null,
+    "selector": ".node-studio-dialog-backdrop select",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/index.css",
+    "atRule": null,
+    "selector": ".node-studio-toolbar button, .node-element-tray button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-composer textarea",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-composer__actions .agent-composer__send",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-composer__actions button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-image-sheet",
+    "expected": "var(--r-xl) var(--r-xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-image-sheet .agent-image",
+    "expected": "var(--r-xl) var(--r-xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-model-sheet",
+    "expected": "var(--r-xl) var(--r-xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".agent-run-status__spinner",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-panels-composer.css",
+    "atRule": null,
+    "selector": ".slash-command-menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-stage.css",
+    "atRule": null,
+    "selector": ".agent-right-sidebar__overlay-header button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-stage.css",
+    "atRule": null,
+    "selector": ".agent-stage__filmstrip .agent-result-thumb",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-stage.css",
+    "atRule": null,
+    "selector": ".agent-stage__tools",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-image.css",
+    "atRule": null,
+    "selector": ".agent-context-tabs button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-image.css",
+    "atRule": null,
+    "selector": ".agent-image__empty",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-image.css",
+    "atRule": null,
+    "selector": ".agent-image__preview img",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-image.css",
+    "atRule": null,
+    "selector": ".agent-video-preview",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-image.css",
+    "atRule": null,
+    "selector": ".agent-video-preview__error button,\n.agent-video-preview__toolbar a",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message__stream-progress span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message__tool-count",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message__tool-dot",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message__tool-toggle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message-list__jump",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message.is-error .agent-message__role::before",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-message.is-streaming .agent-message__role::after",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-result-thumb",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-result-thumb--compact",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-run__step-marker",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-run-status__indicator",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-run-status__queue",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-run-status__retry",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-status",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-status em",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-panels.css",
+    "atRule": null,
+    "selector": ".agent-status__dot",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-model-select .image-model-select__trigger--pill",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-model-select__open-tab",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-prompt-library-row,\n.agent-queue-row",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-queue-row__badge",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-segment-control",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-segment-control button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-session-spinner > span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-settings-grid select,\n.agent-settings-grid input,\n.agent-sidebar-search input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-sidebar-tabs button,\n.agent-queue-row__actions button,\n.agent-prompt-library-row button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-stepper",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-tool-call-row__meta",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-tool-call-row__status",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace-sidebar.css",
+    "atRule": null,
+    "selector": ".agent-tool-call-row__toggle",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-queue-sheet",
+    "expected": "var(--r-xl) var(--r-xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-queue-sheet > header button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-rail > button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-rail__sessions button",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-rail__sessions span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-session-row",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-session-row__badges em",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-session-row__thumb",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-sessions__create",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-sessions__search",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-topbar__icon,\n.agent-topbar__image,\n.agent-topbar__back,\n.agent-topbar__queue,\n.agent-rail button,\n.agent-session-row__actions button,\n.agent-image-sheet header button,\n.agent-session-drawer header button,\n.agent-composer__actions button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-workspace__boot-error",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/agent-workspace.css",
+    "atRule": null,
+    "selector": ".agent-workspace__boot-error button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-bg-picker button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-bg-picker__swatch",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-empty__cta",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-error",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-error__dismiss",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-field textarea",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-generate",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-lightbox__control, .assetgen-lightbox__zoom",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-lightbox__panel",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-popup",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-popup input",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-popup ul li button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-popup__close",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-project__menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-project__menu li button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-project__trigger",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-rail__tile",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-tile",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-tile__badge",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-tile__key",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-tile__open-hint",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".assetgen-tile__retry",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__advanced",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__error button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__modes",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__modes button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__reset",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__stage",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": null,
+    "selector": ".keying-panel__undo",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assetgen-workspace.css",
+    "atRule": "media (max-width: 480px)",
+    "selector": ".assetgen-lightbox__panel",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-clear-btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-empty__cta",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-folder-all, .assets-folder-row__name",
+    "expected": "var(--r-sm)",
+    "important": true
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-folder-elements__glyph",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-folder-input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-folder-row__actions button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-folders__heading button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-load-more",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tag-filter button",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile .asset-element-toggle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile__delete",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile__media",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile__preview",
+    "expected": "inherit",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile__preview-hint",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-tile__tags span",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-toolbar input, .assets-toolbar select",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-workspace__detail-close",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/assets-workspace.css",
+    "atRule": null,
+    "selector": ".assets-workspace__detail-rename",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".gen-provider-model .ctl-select__trigger",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".image-model-select__item",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".image-model-select__menu",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".image-model-select__trigger--pill",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".image-model-select--settings select",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".settings-status",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".settings-status span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-accordion.css",
+    "atRule": null,
+    "selector": ".vertex-json-textarea",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas__drop-hint",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas__drop-overlay",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-export-menu__item",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-export-menu__list",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-memo",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-save-state",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-style-popover",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-style-swatch",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-style-trigger__swatch",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-style-trigger__width",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-style-width",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-style-width span",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__bg input[type=\"color\"]",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__bg-tab",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__button--split-main",
+    "expected": "var(--r-sm) 0 0 var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__button--split-menu",
+    "expected": "0 var(--r-sm) var(--r-sm) 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__eraser-menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__eraser-menu-item",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__spinner",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-annotations.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__split-button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-mode-topbar__stack .canvas-toolbar__zoom",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-tool-picker__item",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-tool-picker__menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__cleanup-actions button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__cleanup-panel",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__segmented",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__segmented-button",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-toolbar__zoom-button,\n.canvas-toolbar__zoom-value",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-background-cleanup.css",
+    "atRule": null,
+    "selector": ".canvas-viewport-minimap",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-mode.css",
+    "atRule": null,
+    "selector": ".canvas-mode-blank",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-mode.css",
+    "atRule": null,
+    "selector": ".canvas-mode-blank kbd",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-mode.css",
+    "atRule": null,
+    "selector": ".canvas-mode-close",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-mode.css",
+    "atRule": null,
+    "selector": ".canvas-mode-close kbd",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-mode.css",
+    "atRule": null,
+    "selector": ".canvas-mode-topbar__label",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-viewer.css",
+    "atRule": null,
+    "selector": ".api-key-input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-viewer.css",
+    "atRule": null,
+    "selector": ".settings-action-btn",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-viewer.css",
+    "atRule": null,
+    "selector": ".settings-close",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-viewer.css",
+    "atRule": null,
+    "selector": ".settings-mobile-nav__item",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-viewer.css",
+    "atRule": null,
+    "selector": ".settings-nav__item",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/canvas-viewer.css",
+    "atRule": null,
+    "selector": ".settings-shell",
+    "expected": "var(--r-3xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-empty__card",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-empty__card span,\n.card-news-empty__card strong,\n.card-news-empty__card em",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-field input,\n.card-news-field textarea",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-inspector-empty__mock",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-inspector-empty__mock span,\n.card-news-inspector-empty__mock strong,\n.card-news-inspector-empty__mock i",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-panel__head button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-preview",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-template img",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-layout.css",
+    "atRule": null,
+    "selector": ".card-news-template,\n.card-news-role-row button,\n.card-news-deck-card",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-deck-card__thumb",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-error",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-generated-meta",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-inline-status",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-placement-chip,\n.card-news-render-mode",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-preview img,\n.card-news-preview__slot,\n.card-news-preview__loading,\n.card-news-preview__error",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-result-actions button,\n.card-news-result-actions a",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-spinner",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-stage-overlay__field",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-status-badge,\n.card-news-planner-badge",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".card-news-text-field-card",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".gallery-card-news-actions span,\n.gallery-card-news-actions button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".gallery-card-news-strip em",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/card-news-templates.css",
+    "atRule": null,
+    "selector": ".gallery-card-news-strip span",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/classic-workspace.css",
+    "atRule": null,
+    "selector": ".composer--bottom",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/composer-flow.css",
+    "atRule": null,
+    "selector": ".composer__prompt-chip-move,\n.composer__prompt-chip-remove",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-chip",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-duration__range::-moz-range-thumb",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-duration__range::-moz-range-track",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-duration__range::-webkit-slider-runnable-track",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-duration__range::-webkit-slider-thumb",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-duration__range:focus-visible",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-select__item",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-select__list",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-select__trigger",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-toggle__thumb",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".ctl-toggle__track",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/controls.css",
+    "atRule": null,
+    "selector": ".foil-hover::after",
+    "expected": "inherit",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-detail input, .element-detail textarea",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-detail__actions button, .element-ref-card button, .element-ref-grid__undo button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-detail__note-preview",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-detail__status",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-ref-card",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-ref-card__image",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-ref-card__image span",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-detail.css",
+    "atRule": null,
+    "selector": ".element-ref-grid__undo",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": null,
+    "selector": ".element-mention-chip",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": null,
+    "selector": ".element-mention-chip__thumbnail",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": null,
+    "selector": ".element-mention-chip__warning",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": null,
+    "selector": ".element-mention-menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": null,
+    "selector": ".element-mention-menu__option",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": null,
+    "selector": ".element-mention-menu__thumbnail, .element-mention-chip__thumbnail",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/element-mention.css",
+    "atRule": "media (max-width: 640px)",
+    "selector": ".element-mention-menu.is-mobile",
+    "expected": "var(--r-xl) var(--r-xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/favorite-star.css",
+    "atRule": null,
+    "selector": ".favorite-star.favorite-star",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".count-picker__input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".generate-btn",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".generate-btn__count",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".generate-row__readiness",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".multimode-toggle__button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".option-btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".prompt-area",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".size-picker__preview",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/form-controls.css",
+    "atRule": null,
+    "selector": ".size-picker__ratio,\n.size-picker__replace,\n.count-picker__step,\n.size-picker__save",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-controls.css",
+    "atRule": null,
+    "selector": ".gallery__scope",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-controls.css",
+    "atRule": null,
+    "selector": ".gallery__scope button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".composer__dropzone",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__chain-btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__chain-overlay",
+    "expected": "0 0 var(--r-sm) var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__close",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__delete",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__favorite-filter button,\n.gallery__group-toggle button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__favorite-filter,\n.gallery__group-toggle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__load-more button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__play-badge",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__search",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__storage-button",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__tile",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__undo",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".gallery__undo button",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".history-thumb__play-badge,\n.sidebar-history__play-badge",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/gallery-modal.css",
+    "atRule": null,
+    "selector": ".video-thumb-placeholder",
+    "expected": "inherit",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-hero__dot",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-hero__readiness",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-prompt",
+    "expected": "var(--r-3xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-prompt__generate",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-prompt__reference-thumb",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-prompt__textarea",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-recent-card",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": null,
+    "selector": ".home-recent-empty",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/home-workspace.css",
+    "atRule": "media (max-width: 480px)",
+    "selector": ".home-prompt",
+    "expected": "var(--r-2xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".in-flight-placeholder",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".in-flight-progress",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".in-flight-rich-item",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".in-flight-rich-item + .in-flight-rich-item",
+    "expected": "0 0 var(--r-md) var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".inflight-badge",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".inflight-badge__spinner",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".inflight-popup",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/inflight-tray.css",
+    "atRule": null,
+    "selector": ".inflight-popup__close",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/nav-rail.css",
+    "atRule": null,
+    "selector": ".nav-rail__btn",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/nav-rail.css",
+    "atRule": null,
+    "selector": ".nav-rail__label",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/nav-rail.css",
+    "atRule": null,
+    "selector": ".nav-rail--mobile .nav-rail__label",
+    "expected": "0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".element-reference-node",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".element-reference-node__thumbnail",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-command-palette",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-command-palette__list button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-empty-state__choice",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-template-picker",
+    "expected": "var(--r-2xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-template-picker header button, .node-template-picker footer button, .node-template-picker__card-actions button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-template-picker__card",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-template-picker__preview-node",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-template-picker__search input, .node-command-palette__search",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-canvas-extras.css",
+    "atRule": null,
+    "selector": ".node-template-picker__tags span",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".error-card",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".error-card__details pre",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".image-node__handle::before",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".node-canvas__hint",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".react-flow__controls",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".session-btn",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".session-current",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".session-list",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-polish.css",
+    "atRule": null,
+    "selector": ".session-list li",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__actions button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__attach",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__composer",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__preview",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__prompt",
+    "expected": "0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__ref-chip",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__ref-remove",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__retry",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node__skeleton",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".image-node--pending::before,\n.image-node--reconciling::before",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".in-flight-cancel",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".in-flight-item",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".in-flight-spinner",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".node-batch-bar",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".node-batch-bar button",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".node-canvas__add-root",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".node-canvas__plus",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".node-mode-ref-warning",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/node-workspace.css",
+    "atRule": null,
+    "selector": ".node-mode-ref-warning button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__direct-badge",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__mode-badge",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__prompt-chip",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__prompt-chip-plus",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__prompt-chip-remove",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__prompt-mirror .dead-tag",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__tool",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__tray-remove",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__tray-slot--add",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__tray-thumbnail",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__url-ref-badge",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".composer__url-ref-dot",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".history-strip::-webkit-scrollbar-thumb",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".history-thumb",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/progress-composer.css",
+    "atRule": null,
+    "selector": ".history-thumb--skeleton",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__attach,\n.prompt-builder__clear,\n.prompt-builder__send",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__attachment button",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__composer textarea",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__message",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__message-attachment > span,\n.prompt-builder__attachment > span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__message-attachment img,\n.prompt-builder__attachment img",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__message-attachment,\n.prompt-builder__attachment",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__structured-actions button",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__structured-card",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__structured-card-header span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder-messages.css",
+    "atRule": null,
+    "selector": ".prompt-builder__structured-summary,\n.prompt-builder__structured-notes",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder",
+    "expected": "var(--r-2xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder__empty,\n.prompt-builder__thinking",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder__scope",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder__scope-card",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder__scope-remove",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder__scope-thumb",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".prompt-builder__thinking-dots span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-builder.css",
+    "atRule": null,
+    "selector": ".right-panel .prompt-builder--sidebar",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__discovery-actions input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__discovery-candidate",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__dropzone",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__error",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__folder-file",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__folder-warning",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__github input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__panel",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__results,\n.prompt-import-dialog__candidate-preview",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__score",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__search-results input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__source",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__warning",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-library-panel__drop-message",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-library-panel__drop-overlay",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-library-panel__filter-toggle",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-core.css",
+    "atRule": null,
+    "selector": ".prompt-library-panel__search input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__candidate",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__empty",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__hint-chip",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__result-card",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-import-dialog__result-meta em,\n.prompt-import-dialog__preview-chips em,\n.prompt-import-dialog__preview-chips b",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-library-row",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-library-row__load,\n.prompt-library-row__delete",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-detail.css",
+    "atRule": null,
+    "selector": ".prompt-library-row__tag",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".prompt-detail-modal__content",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".prompt-detail-modal__load,\n.prompt-detail-modal__copy,\n.prompt-detail-modal__insert,\n.prompt-detail-modal__favorite,\n.prompt-detail-modal__delete",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".prompt-detail-modal__prompt",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".prompt-detail-modal__tag",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".prompt-library-panel__add,\n.prompt-library-panel__import",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".prompt-library-row__insert",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".save-prompt-popover",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".save-prompt-popover__body input,\n.save-prompt-popover__body textarea",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".save-prompt-popover__save",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".video-controls__pill",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/prompt-library-extras.css",
+    "atRule": null,
+    "selector": ".video-progress",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/provenance-chip.css",
+    "atRule": null,
+    "selector": ".provenance-chip",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/provider-controls.css",
+    "atRule": null,
+    "selector": ".negative-prompt__textarea",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/provider-controls.css",
+    "atRule": null,
+    "selector": ".provider-auth-chip",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/provider-controls.css",
+    "atRule": null,
+    "selector": ".provider-compat-details",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/provider-controls.css",
+    "atRule": null,
+    "selector": ".provider-compat-note",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/provider-controls.css",
+    "atRule": null,
+    "selector": ".status-dot",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/quota-card.css",
+    "atRule": null,
+    "selector": ".quota-bar__fill",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/quota-card.css",
+    "atRule": null,
+    "selector": ".quota-bar__track",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".compose-sheet",
+    "expected": "var(--r-3xl) var(--r-3xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".compose-sheet__handle",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".compose-sheet__inflight",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".compose-sheet__panel--prompt .composer__tray-remove::before",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".mobile-app-bar .image-model-select__trigger",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".mobile-app-bar__icon-button,\n  .mobile-app-bar__generate",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".mobile-sheet-tabs",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-layout.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".mobile-sheet-tabs__button",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-mobile.css",
+    "atRule": "media (max-width: 600px)",
+    "selector": ".settings-row,\n    .settings-note",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-mobile.css",
+    "atRule": "media (max-width: 600px)",
+    "selector": ".settings-shell",
+    "expected": "0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-mobile.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".right-panel-toggle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/responsive-mobile.css",
+    "atRule": "media (max-width: 800px)",
+    "selector": ".settings-shell",
+    "expected": "var(--r-2xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/result-preview.css",
+    "atRule": null,
+    "selector": ".result-drag-handle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".action-btn",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".canvas__blank-button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".canvas__blank-sheet",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".gallery__limit-notice",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-log-detail__badge",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-log-detail__content",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-log-detail__copy",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-log-detail__prompt",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-request-log__count",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-request-log__empty button,\n.gallery__empty button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".generation-request-log__item",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".mcp-reference-slot__reference input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".multimode-sequence__badge",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".multimode-sequence__skeleton",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".multimode-sequence__slot",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".result-actions__menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".result-actions__menu-item",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".result-img",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".result-prompt",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".right-panel-tabs",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".right-panel-tabs__button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".right-panel-toggle",
+    "expected": "var(--r-sm) 0 0 var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/right-panel.css",
+    "atRule": null,
+    "selector": ".secondary-btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/settings-controls.css",
+    "atRule": null,
+    "selector": ".provider-card",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/settings-controls.css",
+    "atRule": null,
+    "selector": ".provider-chip",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/settings-controls.css",
+    "atRule": null,
+    "selector": ".provider-chip::before",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/settings-controls.css",
+    "atRule": null,
+    "selector": ".settings-radio-option",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/settings-controls.css",
+    "atRule": null,
+    "selector": ".settings-radio-option input",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar-history.css",
+    "atRule": null,
+    "selector": ".sidebar-history__delete",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar-history.css",
+    "atRule": null,
+    "selector": ".sidebar-history__gallery-button,\n.sidebar-history__toggle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar-history.css",
+    "atRule": null,
+    "selector": ".sidebar-history__gallery-card,\n.sidebar-history__thumb,\n.sidebar-history__sequence,\n.sidebar-history__empty",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar-history.css",
+    "atRule": null,
+    "selector": ".sidebar-history__sequence-badge",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar-history.css",
+    "atRule": null,
+    "selector": ".sidebar-history__sequence-grid img,\n.sidebar-history__sequence-placeholder",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar-history.css",
+    "atRule": null,
+    "selector": ".sidebar-history__toggle",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".billing-bar",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".history-layout-toggle",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".history-layout-toggle__btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".lang-toggle",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".logo-mark",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".logo-mark::after",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".settings-button",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".theme-toggle__btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".theme-toggle__family-dot",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".theme-toggle__family-menu",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".theme-toggle__family-option",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".theme-toggle__family-trigger",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".theme-toggle__mode",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sidebar.css",
+    "atRule": null,
+    "selector": ".web-search-toggle",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-curator.css",
+    "atRule": null,
+    "selector": ".sprite-curator button, .sprite-curator select, .sprite-curator input",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-curator.css",
+    "atRule": null,
+    "selector": ".sprite-curator__inspector",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-curator.css",
+    "atRule": null,
+    "selector": ".sprite-curator__panel",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-curator.css",
+    "atRule": null,
+    "selector": ".sprite-curator__preview",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-curator.css",
+    "atRule": null,
+    "selector": ".sprite-rail__track",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-curator.css",
+    "atRule": "media (max-width: 720px)",
+    "selector": ".sprite-curator__panel",
+    "expected": "0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-recipe.css",
+    "atRule": null,
+    "selector": ".assetgen-workflow-tabs",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/sprite-recipe.css",
+    "atRule": null,
+    "selector": ".assetgen-workflow-tabs button",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".custom-size-input",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-modal__close",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-modal__raw",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-modal__raw pre",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-modal__row",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-modal__row button,\n.metadata-modal__raw button",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-modal__summary span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".metadata-restore__preview img",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".modal",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".modal__btn",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".provider-readiness__status span",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".size-confirm__pair",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".status-dot",
+    "expected": "50%",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".toast",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".toast__dismiss",
+    "expected": "var(--r-xs)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".trash-undo-toast",
+    "expected": "var(--r-lg)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
+    "selector": ".trash-undo-toast button",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": "media (max-width: 720px)",
+    "selector": ".metadata-modal",
+    "expected": "var(--r-xl) var(--r-xl) 0 0",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/viewer-workflow.css",
+    "atRule": null,
+    "selector": ".result-container > .result-preview-frame",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/viewer-workflow.css",
+    "atRule": null,
+    "selector": ".viewer-control-btn",
+    "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/viewer-workflow.css",
+    "atRule": null,
+    "selector": ".viewer-controls",
+    "expected": "var(--r-pill)",
+    "important": false
+  }
+]

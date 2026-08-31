@@ -31,7 +31,7 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--control-bg);
   color: var(--text);
   cursor: pointer;
@@ -55,7 +55,7 @@
   height: 16px;
   margin: 2px 0 0;
   border: 1.5px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface);
   cursor: inherit;
 }
@@ -107,7 +107,7 @@
 .provider-card {
   background: var(--glass);
   border: 1px solid var(--glass-line);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   padding: 14px 16px;
   margin-bottom: 10px;
 }
@@ -149,7 +149,7 @@
   align-items: center;
   gap: 6px;
   padding: 2px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--hairline-soft);
   background: var(--control-bg);
   font-family: var(--mono);

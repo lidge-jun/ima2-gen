@@ -6,7 +6,7 @@
   resize: vertical;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -49,7 +49,7 @@
   padding: 6px 4px;
   background: var(--control-bg);
   border: 1px solid var(--hairline-soft);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--text-dim);
   font-family: var(--mono);
   font-size: 11px;
@@ -105,7 +105,7 @@
 .count-picker__step,
 .size-picker__save {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--bg);
   color: var(--text-dim);
   font-family: var(--mono);
@@ -140,7 +140,7 @@
   min-height: 22px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--text-dim);
   font-family: var(--mono);
   font-size: 11px;
@@ -200,7 +200,7 @@
   padding: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--text);
   font-family: var(--mono);
   font-size: 12px;
@@ -217,7 +217,7 @@
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--bg);
   color: var(--text-dim);
   font-family: var(--mono);
@@ -270,7 +270,7 @@
   background: var(--accent-bright);
   color: var(--accent-ink);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   font-family: var(--font);
   font-size: 15px;
   font-weight: 600;
@@ -305,7 +305,7 @@
   height: 20px;
   margin-left: 8px;
   padding: 0 6px;
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: rgba(0, 0, 0, 0.2);
   color: inherit;
   font-size: 11px;
@@ -315,7 +315,7 @@
 }
 .generate-row__readiness {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--surface-2);
   color: var(--text);
   font: inherit;

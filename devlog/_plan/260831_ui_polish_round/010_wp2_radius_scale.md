@@ -120,7 +120,7 @@ wp2에서 삭제하지 않습니다.
 | `ui/src/styles/inflight-tray.css:18` | `.inflight-badge` | 10px | `var(--r-lg)` |
 | `ui/src/styles/node-polish.css:248` | `.error-card` | 10px | `var(--r-lg)` |
 | `ui/src/styles/progress-composer.css:201` | `.composer` | 10px | `var(--r-lg)` |
-| `ui/src/styles/responsive-layout.css:2` | `@media (max-width: 800px)` 내부 | 10px | `var(--r-lg)` |
+| `ui/src/styles/responsive-layout.css:264` | `.compose-sheet__inflight` (`@media (max-width: 800px)` 안) | 10px | `var(--r-lg)` |
 | `ui/src/styles/settings-controls.css:24` | `.settings-radio-option` | 10px | `var(--r-lg)` |
 | `ui/src/styles/settings-controls.css:107` | `.provider-card` | 10px | `var(--r-lg)` |
 | `ui/src/styles/sidebar.css:425` | `.billing-bar` | 10px | `var(--r-lg)` |
@@ -128,7 +128,7 @@ wp2에서 삭제하지 않습니다.
 | `ui/src/styles/toast-modal.css:70` | `.trash-undo-toast` | 10px | `var(--r-lg)` |
 | `ui/src/styles/toast-modal.css:201` | `.modal` | 10px | `var(--r-lg)` |
 | `ui/src/styles/node-polish.css:126` | `.session-current` | 10px (fallback 6px 모순) | `var(--r-lg)` |
-| `ui/src/styles/node-polish.css:149` | `.session-btn` | 10px (같은 모순) | `var(--r-md)` — 버튼은 부모보다 한 단계 작게 |
+| `ui/src/styles/node-polish.css:149` | `.session-btn` | 10px (같은 모순) | `var(--r-lg)` 10px — 형제 관계, 아래 참조 |
 | `ui/src/styles/node-polish.css:162` | `.session-list` | 10px (같은 모순) | `var(--r-lg)` |
 
 ### calc 11곳 → 부모/자식 관계로 확정
@@ -147,17 +147,22 @@ wp2에서 삭제하지 않습니다.
 | `ui/src/styles/sprite-recipe.css:1` | `.assetgen-workflow-tabs` | 8px | `var(--r-md)` 8px | 무변경 |
 | `ui/src/styles/sprite-recipe.css:17` | `.assetgen-workflow-tabs button` | 5px | `var(--r-xs)` 4px | 탭 자식 |
 
-8단계 스케일에서 위 32행의 이동을 다시 세면 **증가 1, 감소 9, 무변경 22**입니다.
+`.session-btn`은 `--r-md`(8px)가 아니라 `--r-lg`(10px)입니다(감사 wp2-F1).
+`ui/src/components/SessionPicker.tsx:30`을 보면 `.session-current`와 `.session-btn`
+두 개가 `.session-picker-row` 안의 **형제**이고 지금 셋 다 10px을 씁니다.
+"버튼은 부모보다 한 단계 작게"는 중첩 관계에만 맞는 규칙이라 여기서는 틀렸습니다.
+형제는 같은 반경을 씁니다.
+
+8단계 스케일에서 위 32행의 이동을 다시 세면 **증가 1, 감소 8, 무변경 23**이고
+값이 움직이는 행은 **9곳**입니다.
 7단계안의 "증가 20"이 사라졌습니다. `--radius`(10px) 직접 참조 19곳이
 `--r-lg`(10px)로 값 그대로 가기 때문입니다.
 
-감소 9곳의 출처는 셋으로 갈립니다. calc 오프셋 유래 7곳(5px -> 4px, 9px -> 8px),
-직접 참조 1곳(`ui/src/styles/node-polish.css:149` `.session-btn` 10px -> 8px,
-버튼은 부모보다 한 단계 작게), 정의 없는 토큰 1곳
-(`ui/src/styles/canvas-annotations.css:385` `.canvas__drop-overlay`
-fallback 14px -> 12px). 최대 이동폭 2px입니다.
+감소 8곳의 출처는 둘로 갈립니다. calc 오프셋 유래 7곳(5px -> 4px, 9px -> 8px),
+정의 없는 토큰 1곳(`ui/src/styles/canvas-annotations.css:385`
+`.canvas__drop-overlay` fallback 14px -> 12px). 최대 이동폭 2px입니다.
 증가 1곳은 `ui/src/styles/controls.css:9` `.ctl-select__trigger`(7px -> 8px)로
-calc 유래입니다. 즉 값이 움직이는 매핑 행은 **총 10곳**입니다.
+calc 유래입니다. 즉 값이 움직이는 매핑 행은 **총 9곳**입니다.
 
 그래도 wp7 렌더 증거에 `.modal`, `.toast`, `.gallery`, `.provider-card`의
 before/after를 넣습니다. 무변경이 예상되므로, 차이가 보이면 그게 회귀 신호입니다.
@@ -168,6 +173,84 @@ before/after를 넣습니다. 무변경이 예상되므로, 차이가 보이면 
 |---|---|---|---|
 | `ui/src/styles/canvas-annotations.css:385` | `.canvas__drop-overlay` | `var(--radius-lg, 14px)` → fallback 14px로 렌더 | `var(--r-xl)` 12px |
 | `ui/src/styles/prompt-library-extras.css:376` | `.video-progress` | `var(--radius-md, 8px)` → fallback 8px | `var(--r-md)` 8px |
+
+## 이 유닛에 함께 들어가는 릴리스 가드 (감사 wp2r4-F1)
+
+radius와 무관해 보이지만 여기서 해야 합니다. 릴리스 프로베넌스 가드를 wp10에서
+만들면 wp8이 무방비 워크플로를 먼저 호출할 수 있습니다. 통제는 보호 대상보다
+먼저 존재해야 하므로 **첫 구현 사이클인 wp2에 넣습니다.**
+
+- `scripts/release-cut.mjs`에 순수 함수 `assertUnitProvenance({ head,
+  requiredCommits, contains })`를 추가하고 `preflight()`에서 `assertBaseline`
+  다음에 호출합니다.
+- **필수 유닛 이름은 코드에 둡니다.** JSON을 순회하는 방식은 파일이 `{}`이면
+  `Object.entries({})`가 아무것도 검사하지 않아 problems `[]`로 **fail-open**
+  됩니다(감사 wp2r5-F1). 그래서 코드에 `const REQUIRED_UNITS = ["wp9"]`를 두고
+  JSON은 값만 제공합니다. 키가 없으면 그것도 problems입니다.
+
+심볼릭 ref도 막아야 합니다(감사 wp2r6-F2). `{"wp9": "HEAD"}`나 `{"wp9": "dev"}`는
+git이 정상 해석하므로 `contains(ref, head)`가 true를 돌려주고 가드가 통과합니다.
+실측 확인: `git merge-base --is-ancestor HEAD HEAD`와
+`git merge-base --is-ancestor dev HEAD` 둘 다 성공합니다. 그래서
+`contains`를 부르기 **전에** 40자 16진수 object id인지 검사합니다.
+
+```js
+export const REQUIRED_UNITS = ["wp9"];
+const FULL_OID = /^[0-9a-f]{40}$/i;
+
+export function assertUnitProvenance({ head, requiredCommits, contains }) {
+  const problems = [];
+  const map = requiredCommits && typeof requiredCommits === "object" && !Array.isArray(requiredCommits)
+    ? requiredCommits
+    : null;
+  if (!map) return [`.release/required-units.json must be a JSON object`];
+  for (const label of REQUIRED_UNITS) {
+    if (!Object.prototype.hasOwnProperty.call(map, label)) {
+      problems.push(`required unit ${label} is missing from .release/required-units.json`);
+      continue;
+    }
+    const sha = map[label];
+    if (typeof sha !== "string" || !sha) {
+      problems.push(`required unit ${label} has no recorded merge commit`);
+    } else if (!FULL_OID.test(sha)) {
+      problems.push(`required unit ${label} must be a full 40-hex commit id, got "${sha}"`);
+    } else if (!contains(sha, head)) {
+      problems.push(`HEAD does not contain ${label} (${sha})`);
+    }
+  }
+  return problems;
+}
+```
+
+- `.release/required-units.json`을 추가하고 `{"wp9": null}`로 시작합니다.
+  `null`은 미머지를 뜻하고 가드는 **fail-closed**입니다.
+- 릴리스 가드 단위 테스트는 이미 이 파이프라인을 소유한
+  `tests/release-pipeline-contract.test.ts:417`에 붙입니다(감사 wp2r7-F3).
+  radius 매니페스트 계약은 새 `tests/ui-radius-scale-contract.test.ts`에만 두어
+  경계를 섞지 않습니다. 케이스: 포함된 40자 SHA면 problems `[]`, 미포함 SHA면 1건,
+  `null`이면 1건, 키 누락이면 1건, `{}`이면 1건, `undefined`면 1건,
+  `"HEAD"`/`"dev"` 같은 심볼릭 ref면 1건, 짧은 해시면 1건, `true`면 1건,
+  배열이면 1건.
+
+### wp8용 baseline-only 명령
+
+`node scripts/release-cut.mjs preflight`에는 부분 모드가 없어서, `wp9`가 `null`인
+동안 wp8이 그걸 부르면 (의도대로) 실패합니다(감사 wp2r5-F4). 그래서 wp2에서
+**baseline 전용 서브커맨드**를 추가합니다:
+
+```
+node scripts/release-cut.mjs assert-baseline
+```
+
+`assertBaseline`만 실행하고 프로베넌스는 보지 않습니다. wp8은 이걸 씁니다.
+등록 지점은 두 곳입니다: `scripts/release-cut.mjs:170`의 `COMMANDS` 맵과,
+`scripts/release-cut.mjs:183`의 usage 문자열. usage를 같이 고치지 않으면 오타로
+들어온 명령이 새 서브커맨드를 안내하지 못합니다.
+`.github/workflows/release.yml:69`는 **전체 `preflight`에 그대로 묶어 둡니다** —
+발행 경로는 가드를 반드시 통과해야 합니다.
+
+상세 근거와 wp8/wp10 분담은 `devlog/_plan/260831_ui_polish_round/070_wp8_release.md`
+에 있습니다.
 
 ## 적용 순서
 
@@ -211,21 +294,163 @@ before/after를 넣습니다. 무변경이 예상되므로, 차이가 보이면 
 ## 테스트: tests/ui-radius-scale-contract.test.ts
 
 테스트가 "스케일 토큰이면 통과"로만 짜이면 잘못된 토큰을 잘못된 셀렉터에 붙여도
-통과합니다(감사 F2). 그래서 오라클을 두 층으로 둡니다.
+통과합니다. 감사 wp2-F2가 실제 통과 경로를 셋 제시했습니다: 원시 5px을
+`--r-pill`로 매핑, `ui/src/styles/agent-panels-composer.css:217`의 12px 축약을
+`--r-xs`로 매핑, `--r-lg`를 12px로 정의. 셋 다 "유효한 스케일 토큰"이라 이름만
+보는 검사를 통과합니다.
 
-- **셀렉터 매니페스트**: 위 32행 표를 상수 배열로 테스트 파일에 넣고, 각
-  셀렉터가 **지정된 그 토큰**을 쓰는지 단언합니다. 다른 스케일 토큰이면 실패.
-- CSS 전체를 파싱해 `border-radius` 값이 스케일 토큰, `50%`, `0`,
-  `inherit`, 또는 스케일 토큰만으로 된 다중값 축약인지 단언합니다.
-  **원시 px 축약(`12px 12px 0 0`)도 실패**입니다 — 축약 12개는 위 처분 표대로
-  토큰 조합으로 바뀌어야 합니다.
+그래서 오라클을 **동결된 마이그레이션 매니페스트**로 둡니다. 이름 검사가 아니라
+"이 선언은 정확히 이 토큰"을 봅니다.
+
+### 토큰 정의: 값 + **정의 위치 유일성**
+
+8개 토큰의 **값**을 단언합니다: `--r-xs` 4px, `--r-sm` 6px, `--r-md` 8px,
+`--r-lg` 10px, `--r-xl` 12px, `--r-2xl` 16px, `--r-3xl` 20px, `--r-pill` 999px.
+`--r-lg`를 12px로 바꾸면 실패해야 합니다.
+
+값만 고정하면 **스코프 재정의로 우회**됩니다(감사 wp2r3-F1). 예를 들어
+`.modal { --r-lg: 999px; }`를 추가하면 476행 매니페스트도, `:root`의 정의도
+그대로라 전부 통과하는데 실제 렌더는 틀립니다. 지금 저장소에 바로 그 패턴이
+있습니다: `ui/src/styles/agent-workspace.css:15`가 `.agent-workspace` 스코프에서
+`--agent-r-lg`를 재정의합니다(wp2가 삭제 대상으로 잡은 것).
+
+그래서 **정의 유일성**을 함께 단언합니다.
+
+- 8개 스케일 토큰 각각은 `ui/src` 전체에서 정의가 **정확히 1개**여야 하고, 그
+  위치는 `ui/src/index.css`의 표준 `:root` 블록이어야 합니다.
+- 테마 블록(`:root[data-theme="light"]`)에도 radius 토큰을 두지 않습니다. radius는
+  테마 종속이 아닙니다.
+- 컴포넌트/유틸 셀렉터에서의 재정의는 실패입니다.
+- `@property --r-lg { initial-value: ... }` 등록도 실패입니다. `@property`의
+  `initial-value`는 `:root` 정의를 남겨둔 채 계산값을 바꿀 수 있습니다. 현재
+  저장소에 `@property` 사용은 0건입니다(확인함).
+- TS/TSX의 radius 관련 표현은 **동결 allowlist** 하나만 허용합니다. 전면 금지로
+  적으면 올바른 구현조차 실패합니다 — `QuotaCard.tsx`가
+  `borderRadius: "var(--r-sm)"`를 담아야 하기 때문입니다(감사 wp2r5-F2).
+  반대로 "원시 px만 금지"로 풀면 `var(--r-pill)` 같은 잘못된 토큰이 통과합니다.
+  그래서 값까지 포함한 정확 목록으로 고정합니다.
+
+| 허용되는 유일한 항목 | 값 |
+|---|---|
+| `ui/src/components/settings/QuotaCard.tsx` `borderRadius` | `var(--r-sm)` 정확히 |
+
+이 목록 밖의 `borderRadius`, `border*Radius`, `--r-*` 등장은 TS/TSX 어디에서든
+실패입니다. `style.setProperty("--r-...")`도 포함합니다. 이 저장소는
+`ui/src/components/node-canvas/ElementReferenceNode.tsx:27`에서 이미 커스텀
+프로퍼티를 인라인으로 넘기는 패턴을 쓰므로 우회 경로가 실재합니다.
+
+### border-radius 외의 경로도 막는다 (감사 wp2r4-F3)
+
+매니페스트가 `border-radius` 선언만 보면 다음 두 경로로 렌더를 바꾸면서 통과합니다.
+
+**CSS longhand.** `border-top-left-radius` 같은 물리/논리 longhand는 shorthand를
+덮어씁니다. 현재 저장소에 longhand 사용은 **0건**(확인함)이므로, 매니페스트에
+명시 등재되지 않은 longhand는 전부 실패로 둡니다. 대상 속성:
+`border-top-left-radius`, `border-top-right-radius`,
+`border-bottom-left-radius`, `border-bottom-right-radius`,
+`border-start-start-radius`, `border-start-end-radius`,
+`border-end-start-radius`, `border-end-end-radius`.
+
+**벤더 프리픽스도 막습니다**(감사 wp2r5-F3). `-webkit-border-radius`와
+`-moz-border-radius`는 표준 shorthand 뒤에 오면 계산값을 덮습니다
+(`border-radius: 6px; -webkit-border-radius: 999px` -> 999px). 현재 저장소에
+사용은 0건(확인함)이고, 프리픽스 shorthand/longhand 전부 실패로 둡니다.
+
+**JSX 인라인 `borderRadius`.** 현재 **1건** 있습니다:
+`ui/src/components/settings/QuotaCard.tsx:138`이
+`borderRadius: "6px"`를 인라인으로 넘깁니다. 이 유닛에서 `var(--r-sm)`으로
+바꾸고, 이후 TS/TSX에 원시 px `borderRadius`가 나타나면 실패하게 합니다.
+
+| 위치 | 현재 | 이후 |
+|---|---|---|
+| `ui/src/components/settings/QuotaCard.tsx:138` | `borderRadius: "6px"` | `borderRadius: "var(--r-sm)"` |
+
+### 마이그레이션 매니페스트 스키마
+
+행 하나가 선언 하나를 유일하게 지목해야 합니다(감사 wp2-F3). 셀렉터만으로는
+미디어쿼리 안팎이 구분되지 않습니다.
+
+```ts
+type RadiusRow = {
+  file: string;          // 저장소 루트 기준 경로
+  atRule: string | null; // "media (max-width: 800px)" 또는 null
+  selector: string;      // 정규화된 셀렉터 문자열
+  expected: string;      // "var(--r-lg)" 또는 "var(--r-sm) 0 0 var(--r-sm)"
+  important: boolean;    // PostCSS decl.important. value와 별도로 저장되므로 필수
+};
+```
+
+`important`가 별도 필드인 이유(감사 wp2r2-F2): PostCSS는 `7px !important`를
+`decl.value = "7px"`과 `decl.important = true`로 나눠 담습니다. 따라서
+`expected` 문자열만 비교하면 `!important`를 **지워도 통과**합니다. 실제로 통과하는
+잘못된 구현이므로 필드로 올려 정확히 단언합니다.
+
+### 분할이 476을 정확히 덮는지 (감사 wp2r2-F1)
+
+앞선 판은 "395 + 12 + 1(important) + 32(토큰 참조)"로 적었는데 두 곳이 틀렸습니다.
+`!important` 선언(`ui/src/styles/assets-workspace.css:11` = `7px`)은 **이미 395개
+원시 안에 들어 있어** 중복 계산이었고, 토큰 참조는 32개가 아니라 **43개**입니다
+(`--radius` 계열 32 + `--agent-r-*` 11). 32로 두면 agent 11행이 미등재가 되어
+올바른 구현이 실패합니다.
+
+PostCSS로 실측한 정확한 분할:
+
+| 묶음 | 개수 |
+|---|---|
+| 원시 단일 px (`!important` 1개 포함) | 395 |
+| shorthand | 12 |
+| 토큰 참조 (`--radius` 32 + `--agent-r-*` 11) | 43 |
+| 퍼센트(`50%` 등) | 19 |
+| `0` | 4 |
+| `inherit` | 3 |
+| **합** | **476** |
+
+매니페스트는 이 476행을 전수 담습니다. `!important`는 별도 행이 아니라 해당 원시
+행의 `important: true` 메타데이터입니다.
+
+원시 395행의 `expected`는 원래 값에서 가장 가까운 스케일 단계로 결정되며, 표는
+구현 전에 생성 스크립트로 만들어 동결 커밋합니다(수작업 395행 금지).
+퍼센트/`0`/`inherit` 26행은 `expected`를 원값 그대로 등재합니다.
+
+### 검사 절차
+
+PostCSS로 파싱해 각 `border-radius` 선언의 (file, atRule, selector)로 매니페스트를
+조회하고, `value`가 `expected`와 **문자 단위로** 같고 `important` 플래그도 같은지
+봅니다. 매니페스트에 없는 `border-radius` 선언이 있으면 실패(신규 선언이 검사를
+우회하지 못하게). 반대로 매니페스트에 있는데 CSS에 없으면 실패.
+
+- **동결 매니페스트 대조**: 위 스키마대로 전수 대조. 다른 스케일 토큰이면 실패.
+- **토큰 정의 값 단언**: 8개 토큰의 px 값이 위와 정확히 일치하는지.
+- 원시 px 단일값과 원시 px 축약이 하나도 남지 않았는지.
 - `--radius`와 `calc(var(--radius)` 패턴이 CSS에 남아 있으면 실패.
 - 스케일 토큰 8개가 `ui/src/index.css`에 정의돼 있는지 단언.
 - `--agent-r-sm/md/lg`가 CSS에 남아 있지 않은지 단언(정의와 참조 모두).
 - 정의 없는 radius 토큰 참조가 없는지 단언(`--radius-md` 재발 방지).
-- 변형 증명 4개: 아무 radius를 `7px`로 되돌리면 실패, 매니페스트 셀렉터에
-  **다른** 스케일 토큰을 붙이면 실패, 원시 축약 `12px 12px 0 0`을 되살리면 실패,
-  `--radius`를 별칭으로 재도입하면 실패.
+- 변형 증명 **22개 사례 / 19개 실패 모드**(감사 wp2r7-F1): 아래 22개를 각각 돌리되
+  독립 불변식으로는 19종입니다 — 스코프 재정의와 theme-block 정의, 키 누락과
+  `{}`, 심볼릭 ref와 짧은 해시는 같은 검사 분기의 다른 표본입니다.
+  아무 radius를 `7px`로 되돌리면 실패, 매니페스트 행에 **다른**
+  스케일 토큰을 붙이면 실패(원시 5px 자리에 `--r-pill`), 축약 한 행에 잘못된
+  토큰을 붙이면 실패(`ui/src/styles/agent-panels-composer.css:217`에 `--r-xs`),
+  `--r-lg` **정의를 12px로** 바꾸면 실패, 원시 축약 `12px 12px 0 0`을 되살리면
+  실패, `--radius`를 별칭으로 재도입하면 실패,
+  `ui/src/styles/assets-workspace.css:11`에서 **`!important`만 지우면** 실패,
+  임의 셀렉터에 **스코프 재정의**(`.modal { --r-lg: 999px; }`)를 추가하면 실패,
+  `:root[data-theme="light"]`에 radius 토큰을 추가하면 실패,
+  `@property --r-lg`를 `initial-value: 999px`로 등록하면 실패,
+  JSX에 `style={{ "--r-lg": "999px" }}`를 넣으면 실패,
+  CSS에 `border-top-left-radius: 999px`를 넣으면 실패,
+  TSX에 `borderRadius: "999px"`를 넣으면 실패,
+  `ui/src/components/settings/QuotaCard.tsx`의 `var(--r-sm)`을 `var(--r-pill)`로
+  바꾸면 실패(allowlist는 값까지 고정),
+  CSS에 `-webkit-border-radius: 999px`를 추가하면 실패,
+  `.release/required-units.json`에 미포함 SHA를 넣으면 preflight 실패,
+  같은 파일에서 `wp9` 키를 지우면 실패,
+  같은 파일을 `{}`로 만들면 실패,
+  같은 파일에 `"wp9": "HEAD"`를 넣으면 실패,
+  같은 파일에 짧은 해시를 넣으면 실패,
+  같은 파일을 배열로 만들면 실패,
+  `ui/src/index.css`에서 스케일 토큰 하나의 정의를 지우면 실패.
 
 ## 완료 조건
 

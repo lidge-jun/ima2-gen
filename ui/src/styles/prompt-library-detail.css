@@ -39,7 +39,7 @@
   gap: 8px;
   padding: 9px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--surface);
 }
 .prompt-import-dialog__result-card.active {
@@ -86,7 +86,7 @@
   display: inline-flex;
   width: fit-content;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 2px 6px;
   color: var(--text-dim);
   background: var(--bg);
@@ -165,7 +165,7 @@
 .prompt-import-dialog__empty {
   padding: 22px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   color: var(--text-dim);
   text-align: center;
   font-size: 13px;
@@ -177,7 +177,7 @@
   padding: 10px;
   margin-bottom: 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg);
   cursor: pointer;
 }
@@ -210,7 +210,7 @@
   width: fit-content;
   margin-top: 6px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 2px 6px;
   color: var(--text-dim);
   font-size: 10px;
@@ -229,7 +229,7 @@
 }
 .prompt-library-row {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   border: 1px solid var(--border);
   margin-bottom: 8px;
   background: var(--bg);
@@ -267,7 +267,7 @@
   cursor: pointer;
   font-size: 12px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   color: var(--text-dim);
 }
 .prompt-library-row__load:hover,
@@ -291,7 +291,7 @@
 .prompt-library-row__tag {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   background: var(--surface);
   color: var(--text-dim);
 }
