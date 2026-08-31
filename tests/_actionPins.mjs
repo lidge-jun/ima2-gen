@@ -18,7 +18,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { parseDocument, isAlias, isMap, isSeq, isScalar, visit } from "yaml";
+import { parseDocument, isAlias, isMap, isSeq, isScalar } from "yaml";
 
 // A commit-SHAPED ref: exactly 40 lowercase hex characters. This is a shape
 // check, not a provenance check. It does not prove the value resolves to a
@@ -194,23 +194,61 @@ export function readWorkflow(name, root = process.cwd()) {
  * composite action puts it under the gate without anyone remembering to.
  */
 export function pinnedManifestPaths(root = process.cwd()) {
-  const paths = [];
+  const paths = new Set();
   const workflowDir = join(root, ".github/workflows");
   if (existsSync(workflowDir)) {
     for (const name of readdirSync(workflowDir).sort()) {
-      if (/\.ya?ml$/.test(name)) paths.push(join(".github/workflows", name));
+      if (/\.ya?ml$/.test(name)) paths.add(join(".github/workflows", name));
     }
   }
-  const actionsDir = join(root, ".github/actions");
-  if (existsSync(actionsDir)) {
-    const walk = (relDir) => {
-      for (const entry of readdirSync(join(root, relDir)).sort()) {
-        const rel = join(relDir, entry);
-        if (statSync(join(root, rel)).isDirectory()) walk(rel);
-        else if (/^action\.ya?ml$/.test(entry)) paths.push(rel);
-      }
-    };
-    walk(".github/actions");
+  // A repo-root action.yml is how a published action is declared, and GitHub
+  // honours a local `uses: ./anywhere` too - so .github/actions is a convention,
+  // not a boundary.
+  for (const name of ["action.yml", "action.yaml"]) {
+    if (existsSync(join(root, name))) paths.add(name);
   }
-  return paths;
+  const walk = (relDir) => {
+    for (const entry of readdirSync(join(root, relDir)).sort()) {
+      const rel = join(relDir, entry);
+      if (statSync(join(root, rel)).isDirectory()) walk(rel);
+      else if (/^action\.ya?ml$/.test(entry)) paths.add(rel);
+    }
+  };
+  if (existsSync(join(root, ".github/actions"))) walk(".github/actions");
+
+  // Follow every local `uses: ./path` to the manifest it names. A local action
+  // may live anywhere, and its own steps can pull in an unpinned third-party
+  // action, so resolving the reference is what closes the gap rather than
+  // trusting a directory convention. Iterates to a fixed point because a local
+  // action can itself call another one.
+  let frontier = [...paths];
+  while (frontier.length > 0) {
+    const next = [];
+    for (const rel of frontier) {
+      let entries;
+      try {
+        entries = parseActionUses(readFileSync(join(root, rel), "utf8"), rel);
+      } catch {
+        continue; // A malformed manifest is reported by the sweep, not here.
+      }
+      for (const entry of entries) {
+        if (!entry.local) continue;
+        for (const candidate of localManifestCandidates(entry.raw)) {
+          if (!existsSync(join(root, candidate)) || paths.has(candidate)) continue;
+          paths.add(candidate);
+          next.push(candidate);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return [...paths].sort();
+}
+
+/** `./x` or `./x/action.yml` -> the manifest paths that could satisfy it. */
+function localManifestCandidates(use) {
+  const rel = use.replace(/^\.\//, "").replace(/\/+$/, "");
+  if (!rel || rel.startsWith("..")) return [];
+  if (/\/action\.ya?ml$/.test(rel)) return [rel];
+  return [join(rel, "action.yml"), join(rel, "action.yaml")];
 }

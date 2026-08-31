@@ -1,7 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import {
   assertActionPinned,
   assertAllActionsPinned,
@@ -68,10 +69,17 @@ function runBlockLines(text: string): Set<number> {
     // order. `run: |2`, `|2-`, and `>2+` are all valid and actionlint accepts
     // them, so a scanner that only knows `|` and `|-` mistakes their content
     // for real steps.
-    const open = /^([\t ]*)(?:-[\t ]+)?[\w"']+[\t ]*:[\t ]*[|>](?:([1-9])[-+]?|[-+]([1-9])?)?[\t ]*(?:#.*)?$/.exec(line);
+    //
+    // The two captured widths differ and both matter. Explicit indentation is
+    // measured from the block scalar's own key column, so `- name: |2` inside a
+    // sequence must count from the key, not from the dash - otherwise a sibling
+    // `uses:` at the key's indent gets swallowed as scalar content.
+    const open = /^([\t ]*)(-[\t ]+)?[\w"']+[\t ]*:[\t ]*[|>](?:([1-9])[-+]?|[-+]([1-9])?)?[\t ]*(?:#.*)?$/.exec(line);
     if (open) {
       indent = open[1].length;
-      explicit = Number(open[2] ?? open[3] ?? 0);
+      const keyColumn = indent + (open[2]?.length ?? 0);
+      const digit = Number(open[3] ?? open[4] ?? 0);
+      explicit = digit > 0 ? keyColumn + digit - indent : 0;
     }
   });
   return inside;
@@ -250,6 +258,26 @@ describe("action pin gate", () => {
     }
   });
 
+  // The floor has to come from the block scalar's key column, not from the
+  // sequence dash, or a sibling key at the same indent as `uses:` gets counted
+  // as scalar content and the independent scan under-reports.
+  it("measures explicit indentation from the key, not the sequence dash", () => {
+    const workflow = [
+      "jobs:",
+      "  a:",
+      "    steps:",
+      "      - name: |2",
+      "          two line",
+      "          title",
+      `        uses: actions/checkout@${SHA}`,
+    ].join("\n");
+    const entries = parseActionUses(workflow, "fixture");
+    assert.equal(entries.length, 1, "the real step must still parse");
+    const inRun = runBlockLines(workflow);
+    assert.ok(inRun.has(4) && inRun.has(5), "the two scalar lines belong to the block");
+    assert.ok(!inRun.has(6), "the sibling uses: line must not be swallowed by the block");
+  });
+
   it("refuses unparseable YAML rather than reading zero refs from it", () => {
     assert.throws(() => assertAllActionsPinned("jobs:\n  a: [unclosed\n", "fixture"), /not parseable YAML/);
   });
@@ -295,6 +323,56 @@ describe("action pin gate", () => {
     }
   });
 
+  // Discovery is filesystem behaviour, so it is checked against a tree built for
+  // the purpose. Asserting it against this repo alone would be tautological: the
+  // repo has no composite actions, so every branch below is untested there.
+  it("discovers manifests wherever a local action actually lives", () => {
+    const root = mkdtempSync(join(tmpdir(), "pin-discovery-"));
+    try {
+      const write = (rel: string, body: string): void => {
+        mkdirSync(join(root, dirname(rel)), { recursive: true });
+        writeFileSync(join(root, rel), body);
+      };
+      const composite = (uses: string): string =>
+        ["runs:", "  using: composite", "  steps:", `    - uses: ${uses}`].join("\n");
+
+      write(".github/workflows/a.yml", `jobs:\n  j:\n    steps:\n      - uses: ./tools/local`);
+      write(".github/workflows/b.yaml", `jobs:\n  j:\n    steps:\n      - uses: ./.github/actions/x/y`);
+      write(".github/actions/x/y/action.yaml", composite(`actions/checkout@${SHA}`));
+      // Outside .github/actions, reached only by following the local reference.
+      write("tools/local/action.yml", composite("./deeper"));
+      // One more hop, to prove discovery reaches a fixed point.
+      write("deeper/action.yml", composite("attacker/action@main"));
+      write("action.yml", composite(`actions/setup-node@${SHA}`));
+
+      const found = pinnedManifestPaths(root);
+      for (const expected of [
+        ".github/workflows/a.yml",
+        ".github/workflows/b.yaml",
+        ".github/actions/x/y/action.yaml",
+        "tools/local/action.yml",
+        "deeper/action.yml",
+        "action.yml",
+      ]) {
+        assert.ok(found.includes(expected), `discovery missed ${expected}; found ${found.join(", ")}`);
+      }
+
+      // The unpinned ref is two hops from any workflow, so this is what proves
+      // the sweep is worth running over discovered paths at all.
+      const offenders = found.filter((path) => {
+        try {
+          assertAllActionsPinned(readFileSync(join(root, path), "utf8"), path, { requireUses: false });
+          return false;
+        } catch {
+          return true;
+        }
+      });
+      assert.deepEqual(offenders, ["deeper/action.yml"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   // Hygiene check, not a guarantee: it catches the accidental copy-paste that
   // caused #162 and #178, and cannot catch a SHA built by concatenation. The
   // real gate is that assertActionPinned exists and is easier to reach for.
@@ -331,5 +409,16 @@ describe("action pin gate", () => {
       const parsed = parseActionUses(text, name).length;
       assert.ok(parsed >= scanned, `${name}: parser saw ${parsed} uses, a plain scan saw ${scanned}`);
     }
+  });
+
+  // `parsed >= scanned` alone would stay green if the parser silently stopped
+  // reading a whole position, so each position is asserted to still work.
+  it("still reads every position it claims to cover", () => {
+    const step = parseActionUses(`jobs:\n  a:\n    steps:\n      - uses: o/r@${SHA}`, "f");
+    assert.deepEqual(step.map((entry) => entry.where), ["jobs.a.steps[0].uses"]);
+    const job = parseActionUses(`jobs:\n  a:\n    uses: o/r/.github/workflows/x.yml@${SHA}`, "f");
+    assert.deepEqual(job.map((entry) => entry.where), ["jobs.a.uses"]);
+    const runs = parseActionUses(`runs:\n  using: composite\n  steps:\n    - uses: o/r@${SHA}`, "f");
+    assert.deepEqual(runs.map((entry) => entry.where), ["runs.steps[0].uses"]);
   });
 });
