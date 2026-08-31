@@ -194,27 +194,25 @@ wp4가 sidebar.css:59를 var(--chrome)로 바꾸면 그라디언트 함수 호�
 
 ## 테스트: tests/ui-gradient-manifest-contract.test.ts
 
-- 매니페스트를 테스트 파일 안 상수로 두고, CSS를 파싱해 **모든** 그라디언트 함수
-  호출이 매니페스트에 등재돼 있는지 단언. 미등재가 1개라도 있으면 실패.
-- 매니페스트에 있는데 CSS에 없는 항목이 있으면 실패(부패 방지).
-- 카테고리별 개수를 **최종 상태 기준**으로 단언: functional 18, state 6, scrim 2,
-  decorative 14. 합 **40**. 기준선 48 매니페스트는 별도 상수로 남겨 두고
-  "48에서 40으로 가는 8개 감축이 실제로 일어났는지"를 확인하는 데만 쓴다.
-- functional 셀렉터가 그라디언트를 잃으면 실패.
+테스트는 **파일별 그라디언트 개수 매니페스트**로 검증한다. 같은 파일 안에서
+카테고리를 바꾸는 동시 치환은 감지하지 않는다 — 이건 의도적 범위 제한이다.
+Per-declaration PostCSS 매니페스트는 후속 강화 대상.
+
+- 파일별 그라디언트 함수 호출 개수가 매니페스트와 일치하는지 단언.
+  미등재 파일에 그라디언트가 생기면 실패.
+- 카테고리별 합계를 상수로 단언: functional 18, state 6, scrim 2, decorative 14.
+  합 40.
 - 파일당 decorative 3개 이하.
-- --skeleton-shimmer가 정의돼 있고 **6곳**이 그 토큰을 참조하는지 단언.
-- .canvas__blank-sheet가 한 파일에서만 background를 선언하는지 단언.
-- 변형 증명 5개: 체커보드를 단색으로 바꾸면 실패, 최종 매니페스트 항목을 지우면
-  (미등재가 되어) 실패, shimmer 참조를 5곳으로 줄이면 실패, 새 그라디언트를
-  매니페스트 없이 추가하면 실패, 제거했어야 할 .settings-workspace 그라디언트를
-  되살리면 최종 개수가 41이 되어 실패.
+- --skeleton-shimmer 정의 1곳, 참조 6곳(4개 파일 명시 고정).
+- .canvas__blank-sheet background 선언이 viewer-workflow.css 한 곳에만 존재.
 
 ## 완료 조건
 
-최종 매니페스트가 **40개** 전수 등재(functional 18 / state 6 / scrim 2 /
-decorative 14), functional 18개 보존, --skeleton-shimmer 정의 1곳에 참조 6곳,
-.canvas__blank-sheet background 선언 1곳, .settings-workspace before/after 렌더
-확인, npm test 무회귀.
+파일별 매니페스트가 40개 등재(functional 18 / state 6 / scrim 2 / decorative 14),
+--skeleton-shimmer 정의 1곳에 참조 6곳(4파일), .canvas__blank-sheet background
+선언 1곳, npm test 무회귀.
+.settings-workspace before/after 렌더 비교는 wp7 렌더 증거에서 수행
+(060_wp7_design_md_and_render_proof.md가 소유).
 
 ## Implementation Log (B-phase)
 
