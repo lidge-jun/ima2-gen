@@ -41,8 +41,7 @@
   overflow: hidden;
   padding: 24px;
   background:
-    radial-gradient(circle at 14% 12%, var(--accent-soft), transparent 34%),
-    linear-gradient(135deg, var(--bg), var(--surface-2));
+    var(--bg);
 }
 
 .settings-shell {

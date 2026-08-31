@@ -147,12 +147,7 @@
 }
 
 .sidebar-history__thumb--skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--surface-2) 25%,
-    color-mix(in srgb, var(--amber) 18%, var(--surface-2)) 50%,
-    var(--surface-2) 75%
-  );
+  background: var(--skeleton-shimmer);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   opacity: 1;
@@ -169,12 +164,7 @@
 }
 .sidebar-collection-mini--skeleton {
   aspect-ratio: 1/1;
-  background: linear-gradient(
-    90deg,
-    var(--surface-2) 25%,
-    color-mix(in srgb, var(--amber) 18%, var(--surface-2)) 50%,
-    var(--surface-2) 75%
-  );
+  background: var(--skeleton-shimmer);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
