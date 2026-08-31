@@ -15,7 +15,7 @@ import { createRequire } from "node:module";
 // the migration lands.
 const require = createRequire(import.meta.url);
 type PostcssNode = { type: string; name?: string; params?: string; selector?: string; parent?: PostcssNode };
-type PostcssDecl = PostcssNode & { prop: string; value: string; source?: { start?: { line: number } } };
+type PostcssDecl = PostcssNode & { prop: string; value: string; important?: boolean; source?: { start?: { line: number } } };
 const postcss = require("../ui/node_modules/postcss") as {
   parse(css: string, opts?: { from?: string }): {
     walkDecls(cb: (decl: PostcssDecl) => void): void;
@@ -119,10 +119,18 @@ test("no negative letter-spacing survives anywhere in ui/src", () => {
     const root = postcss.parse(readFileSync(file, "utf8"), { from: file });
     root.walkDecls((decl) => {
       if (decl.prop.trim() !== "letter-spacing") return;
-      const numeric = Number.parseFloat(decl.value);
+      const value = decl.value.trim();
+      const numeric = Number.parseFloat(value);
       assert.ok(
         !(numeric < 0),
-        "negative letter-spacing at " + normalize(file) + ":" + (decl.source?.start?.line ?? 0) + ": " + decl.value,
+        "negative letter-spacing at " + normalize(file) + ":" + (decl.source?.start?.line ?? 0) + ": " + value,
+      );
+      // parseFloat returns NaN for calc(-0.01em) and for a custom property
+      // reference, so both would read as compliant (audit wp3c1-F3). Spacing is
+      // either a plain length or normal; nothing here needs computation.
+      assert.ok(
+        /^(normal|0|[0-9.]+(px|em|rem|ch|%)?)$/.test(value),
+        "letter-spacing must be a plain length or normal: " + normalize(file) + ":" + (decl.source?.start?.line ?? 0) + ": " + value,
       );
     });
   }
@@ -158,6 +166,83 @@ test("each ladder resolves to the fixed value at every checked width", () => {
       const step = ladder.steps.find((s) => s.maxWidth === null || width <= s.maxWidth);
       assert.equal(px, step?.px, ladder.selector + " at " + width + "px resolves to " + px + ", expected " + step?.px);
     }
+  }
+});
+
+test("only the frozen declarations size the four ladder selectors", () => {
+  // An earlier version resolved the cascade itself: file order, max-width only,
+  // ignoring min-width. That simulator was incomplete, so a min-width query, a
+  // later-loaded file, higher specificity, or !important all read as green
+  // (audit wp3c1-F1). Freezing the full declaration set and refusing anything
+  // else is stronger than extending the simulator.
+  const ALLOWED = new Set([
+    "ui/src/styles/home-workspace.css|null|.home-hero__mark|font|700 176px / 0.78 var(--font-display)|false",
+    "ui/src/styles/home-workspace.css|media (max-width: 1279px)|.home-hero__mark|font-size|150px|false",
+    "ui/src/styles/home-workspace.css|media (max-width: 1024px)|.home-hero__mark|font-size|125px|false",
+    "ui/src/styles/home-workspace.css|media (max-width: 480px)|.home-hero__mark|font-size|100px|false",
+    "ui/src/styles/home-workspace.css|null|.home-hero__title|font|700 34px / 1.08 var(--font-display)|false",
+    "ui/src/styles/home-workspace.css|media (max-width: 1279px)|.home-hero__title|font-size|30px|false",
+    "ui/src/styles/home-workspace.css|media (max-width: 480px)|.home-hero__title|font-size|28px|false",
+    "ui/src/styles/home-workspace.css|null|.home-workspace h2|font-size|26px|false",
+    "ui/src/styles/home-workspace.css|media (max-width: 1279px)|.home-workspace h2|font-size|22px|false",
+    "ui/src/styles/assets-workspace.css|null|.assets-tile__glyph|font-size|72px|false",
+    "ui/src/styles/assets-workspace.css|media (max-width: 1279px)|.assets-tile__glyph|font-size|64px|false",
+    "ui/src/styles/assets-workspace.css|media (max-width: 768px)|.assets-tile__glyph|font-size|52px|false",
+    "ui/src/styles/assets-workspace.css|media (max-width: 480px)|.assets-tile__glyph|font-size|40px|false",
+  ]);
+  const LADDER_SELECTORS = [".home-hero__mark", ".home-hero__title", ".home-workspace h2", ".assets-tile__glyph"];
+  const found = new Set<string>();
+
+  for (const file of cssFiles()) {
+    const root = postcss.parse(readFileSync(file, "utf8"), { from: file });
+    root.walkDecls((decl) => {
+      const prop = decl.prop.trim();
+      if (prop !== "font" && prop !== "font-size") return;
+      const selector = (decl.parent?.selector ?? "").trim();
+      // Match on the ladder class names so a compound or higher-specificity form
+      // that would win the cascade is caught too. A bare tag match such as an h2
+      // in another panel is not a ladder element.
+      const CLASSES = [".home-hero__mark", ".home-hero__title", ".home-workspace", ".assets-tile__glyph"];
+      if (!CLASSES.some((c) => selector.includes(c))) return;
+      if (!LADDER_SELECTORS.includes(selector)) {
+        assert.fail("unexpected selector sizing a ladder element: " + normalize(file) + " " + selector);
+      }
+      let atRule: string | null = null;
+      let parent = decl.parent;
+      while (parent) {
+        if (parent.type === "atrule") atRule = String(parent.name) + " " + String(parent.params);
+        parent = parent.parent;
+      }
+      const key = [normalize(file), atRule ?? "null", selector, prop, decl.value.trim(), String(Boolean(decl.important))].join("|");
+      assert.ok(ALLOWED.has(key), "unfrozen ladder declaration: " + key);
+      found.add(key);
+    });
+  }
+  for (const key of ALLOWED) {
+    assert.ok(found.has(key), "frozen ladder declaration missing from CSS: " + key);
+  }
+  assert.equal(found.size, ALLOWED.size);
+});
+
+test("ladder values are plain px, never a computed or relative length", () => {
+  // font-size: calc(100px + 1rem) starts with 100px, so a leading-number match
+  // reads it as compliant (audit wp3c1-F1).
+  for (const file of cssFiles()) {
+    const root = postcss.parse(readFileSync(file, "utf8"), { from: file });
+    root.walkDecls((decl) => {
+      const prop = decl.prop.trim();
+      if (prop !== "font" && prop !== "font-size") return;
+      const selector = (decl.parent?.selector ?? "").trim();
+      if (![".home-hero__mark", ".home-hero__title", ".home-workspace h2", ".assets-tile__glyph"].includes(selector)) return;
+      assert.ok(
+        !/\b(calc|clamp|min|max)\s*\(/.test(decl.value),
+        "ladder size must not be computed: " + normalize(file) + ":" + (decl.source?.start?.line ?? 0) + " " + decl.value,
+      );
+      assert.ok(
+        !/\d\s*(rem|em|ch|ex|%)/.test(decl.value),
+        "ladder size must be absolute px: " + normalize(file) + ":" + (decl.source?.start?.line ?? 0) + " " + decl.value,
+      );
+    });
   }
 });
 
