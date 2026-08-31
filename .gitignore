@@ -74,4 +74,5 @@ cache/
 !devlog/_fin/260825_novelai_negative_prompt_settings/**
 !devlog/_fin/260825_novelai_provider_lane/
 !devlog/_fin/260825_novelai_provider_lane/**
-
+!devlog/_plan/260831_vectorize_assets/
+!devlog/_plan/260831_vectorize_assets/**
