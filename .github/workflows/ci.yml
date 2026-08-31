@@ -40,6 +40,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
       - name: Assert the checked-out SHA is the dispatched one
         if: ${{ github.event.inputs.sha != '' && github.event.inputs.sha != null }}
         shell: bash
