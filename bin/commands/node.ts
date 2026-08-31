@@ -6,6 +6,8 @@ import { out, die, color, json, exitCodeForError } from "../lib/output.js";
 import { canonicalizeImageModel } from "../lib/model-aliases.js";
 import { config } from "../../config.js";
 import { deriveProviderIds } from "../../lib/providers/derive.js";
+import { NAI_CLI_FLAGS, NAI_CLI_HELP, parseNaiCliOptions,
+  unwrapNaiCliResult } from "../lib/nai-options.js";
 
 const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGeneratedImages) || 24));
 const PROVIDER_VALUES = ["auto", ...deriveProviderIds()];
@@ -18,7 +20,8 @@ const HELP = `
     show <nodeId> [--json]
 
   Generate options:
-        --provider <${PROVIDER_VALUES.join("|")}>  Provider for this request
+    --provider <${PROVIDER_VALUES.join("|")}>  Provider for this request
+${NAI_CLI_HELP}
 `;
 
 const GEN_FLAGS = {
@@ -40,6 +43,7 @@ const GEN_FLAGS = {
   session: { type: "string" },
   "no-stream": { type: "boolean" },
   help: { short: "h", type: "boolean" },
+  ...NAI_CLI_FLAGS,
 };
 
 const SHOW_FLAGS = {
@@ -56,6 +60,7 @@ async function getServer(args: ParsedArgs) {
 async function generateSub(argv: string[]) {
   const args = parseArgs(argv, { flags: GEN_FLAGS });
   if (args.help) { out(HELP); return; }
+  const naiPreflight = unwrapNaiCliResult(parseNaiCliOptions(args, "require-explicit"), Boolean(args.json));
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
   const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
@@ -80,6 +85,7 @@ async function generateSub(argv: string[]) {
     references,
     moderation: args.moderation,
     sessionId: args.session,
+    ...naiPreflight.payload,
   };
   const model = canonicalizeImageModel(args.model);
   if (model) body.model = model;

@@ -1065,6 +1065,14 @@
     "filename": "파일",
     "prompt": "프롬프트",
     "stageEmptyHint": "첫 요청을 보내면 여기에서 이미지를 확인할 수 있습니다",
+    "toolLabel": {
+      "getImageContext": "이미지 맥락 읽기",
+      "webSearch": "웹 검색",
+      "generateImage": "이미지 생성",
+      "generateVideo": "영상 생성",
+      "getGenerationErrors": "생성 오류 조회"
+    },
+    "toolsPanel": "도구",
     "openTools": "도구 패널 열기",
     "closeTools": "도구 패널 닫기"
   },
@@ -2340,9 +2348,11 @@
     "field": {
       "sampler": "샘플러",
       "noiseSchedule": "노이즈 스케줄",
+      "autoSmea": "Auto SMEA",
       "steps": "스텝",
       "scale": "가이던스",
       "cfgRescale": "CFG 리스케일",
+      "decrisper": "디크리스퍼",
       "ucPreset": "제외 프리셋",
       "qualityPreset": "품질 프리셋",
       "varietyPlus": "Variety+",
@@ -2351,6 +2361,8 @@
       "seedRandom": "무작위"
     },
     "help": {
+      "autoSmea": "고해상도에서 SMEA를 자동으로 적용해 전체 구도의 일관성을 높입니다.",
+      "decrisper": "특히 가이던스가 높을 때 생기는 색 번짐과 시각적 아티팩트를 줄입니다.",
       "varietyPlus": "가이던스가 높을 때 구도가 단조로워지는 것을 막습니다.",
       "straightAlpha": "V5 네이티브 알파입니다. 프롬프트에 투명 배경 태그를 함께 넣으세요.",
       "cfgRescale": "가이던스가 높을 때 생기는 과채도를 완화합니다. 0이면 사용하지 않습니다.",

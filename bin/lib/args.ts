@@ -17,6 +17,7 @@ export interface ParseSpec {
 export interface ParsedArgs {
   positional: string[];
   _unknown: string[];
+  _present: string[];
   [key: string]: FlagValue;
 }
 
@@ -26,7 +27,7 @@ export function parseArgs(argv: string[], spec: any = {}): ParsedArgs {
     if (def.short) shortMap[def.short] = name;
   }
 
-  const out: any = { positional: [], _unknown: [] };
+  const out: any = { positional: [], _unknown: [], _present: [] };
   for (const [name, def] of Object.entries<any>(spec.flags || {})) {
     if (def.repeatable) out[name] = [];
     else if ("default" in def) out[name] = def.default;
@@ -56,6 +57,7 @@ export function parseArgs(argv: string[], spec: any = {}): ParsedArgs {
         i++;
         continue;
       }
+      out._present.push(name);
       if (def.type === "boolean") {
         out[name] = true;
         i++;
@@ -74,6 +76,7 @@ export function parseArgs(argv: string[], spec: any = {}): ParsedArgs {
         i++;
         continue;
       }
+      out._present.push(name);
       const def = spec.flags[name];
       if (def.type === "boolean") {
         out[name] = true;

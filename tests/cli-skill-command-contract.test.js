@@ -70,6 +70,30 @@ describe("CLI packaged skill contract", () => {
     assert.match(skill, /Video edit\/extend: grok-imagine-video only/);
   });
 
+  it("documents the complete NovelAI lane without overstating ima2 surfaces", () => {
+    const skill = readSource("skills/ima2/SKILL.md");
+    for (const model of [
+      "nai-diffusion-5-full",
+      "nai-diffusion-5-curated",
+      "nai-diffusion-4-5-full",
+      "nai-diffusion-4-5-curated",
+    ]) assert.match(skill, new RegExp(model));
+    assert.match(skill, /models --kind image --lane nai --json/);
+    assert.match(skill, /defaults set image nai\/nai-diffusion-5-full/);
+    assert.match(skill, /--nai-negative-prompt/);
+    assert.match(skill, /--nai-auto-smea/);
+    assert.match(skill, /--nai-decrisper/);
+    assert.match(skill, /--nai-straight-alpha/);
+    assert.match(skill, /English and Japanese/i);
+    assert.match(skill, /natural language\s+and tags/i);
+    assert.match(skill, /no base|no source image/i);
+    assert.match(skill, /28 steps/);
+    assert.match(skill, /usage limit/i);
+    assert.match(skill, /text-to-image only/i);
+    assert.match(skill, /Character Positioning/);
+    assert.match(skill, /Vibe Transfer/);
+  });
+
   it("skill command wraps Markdown content instead of inventing a schema skill", () => {
     const src = readSource("bin/commands/skill.ts");
 

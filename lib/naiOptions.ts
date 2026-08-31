@@ -36,6 +36,8 @@ export type NaiRequestOptions = {
   seed?: number;
   straightAlpha?: boolean;
   varietyPlus?: boolean;
+  autoSmea?: boolean;
+  decrisper?: boolean;
   ucPresetId?: string;
   qualityPresetId?: string;
 };
@@ -108,6 +110,12 @@ export function readNaiOptions(body: unknown): NaiRequestOptions {
 
   const varietyPlus = pickBoolean(raw.varietyPlus);
   if (varietyPlus !== undefined) out.varietyPlus = varietyPlus;
+
+  const autoSmea = pickBoolean(raw.autoSmea);
+  if (autoSmea !== undefined) out.autoSmea = autoSmea;
+
+  const decrisper = pickBoolean(raw.decrisper);
+  if (decrisper !== undefined) out.decrisper = decrisper;
 
   const ucPresetId = pickEnum(raw.ucPresetId, NAI_UC_PRESET_IDS);
   if (ucPresetId !== undefined) out.ucPresetId = ucPresetId;

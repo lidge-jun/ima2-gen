@@ -98,7 +98,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | Variable | Default or meaning |
 |---|---|
 | `OPENAI_API_KEY` | May be used for billing probes and legacy provider config |
-| `NOVELAI_API_KEY` | NovelAI persistent API token (`pst-...`) for the `nai` lane; an env-sourced key is immutable from the UI (`ENV_KEY_IMMUTABLE`) |
+| `NOVELAI_API_KEY` | NovelAI persistent API token for the `nai` lane; no fixed prefix is required, and an env-sourced key is immutable from the UI (`ENV_KEY_IMMUTABLE`) |
 | `IMA2_NAI_IMAGE_MODEL_DEFAULT` | NovelAI default image model, default `nai-diffusion-5-full` |
 | `IMA2_NAI_BASE_URL` / `IMA2_NAI_ACCOUNT_BASE_URL` | NovelAI image and account hosts, both default `https://image.novelai.net` — account endpoints moved to the image host, so `api.novelai.net` rejects valid tokens |
 | `IMA2_NAI_GENERATION_TIMEOUT_MS` | NovelAI request timeout, default `180000` |

@@ -7,6 +7,8 @@ import { config } from "../../config.js";
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
 import { canonicalizeImageModel } from "../lib/model-aliases.js";
 import { deriveCliImageModelSet, deriveProviderIds } from "../../lib/providers/derive.js";
+import { NAI_CLI_FLAGS, NAI_CLI_HELP, parseNaiCliOptions,
+  unwrapNaiCliResult } from "../lib/nai-options.js";
 
 const MAX_GENERATION_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxGeneratedImages) || 24));
 const MAX_REFERENCE_COUNT = Math.max(1, Math.trunc(Number(config.limits.maxRefCount) || 5));
@@ -36,6 +38,7 @@ const SPEC = {
     session: { type: "string" },
     "show-partial": { type: "boolean" },
     help: { short: "h", type: "boolean" },
+    ...NAI_CLI_FLAGS,
   },
 };
 
@@ -65,6 +68,7 @@ const HELP = `
         --show-partial                  Print [partial #N received] notices
         --timeout <sec>                 Default: 600
         --server <url>                  Override server URL
+${NAI_CLI_HELP}
 `;
 
 export default async function multimodeCmd(argv: string[]) {
@@ -73,6 +77,7 @@ export default async function multimodeCmd(argv: string[]) {
   if (hasCount && hasMaxImages) die(2, "--count and --max-images are mutually exclusive");
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
+  const naiPreflight = unwrapNaiCliResult(parseNaiCliOptions(args, "require-explicit"), Boolean(args.json));
   const prompt = args.positional.join(" ");
   if (!prompt) die(2, "prompt required");
 
@@ -113,6 +118,7 @@ export default async function multimodeCmd(argv: string[]) {
     moderation: args.moderation,
     sessionId: args.session,
     requestId,
+    ...naiPreflight.payload,
   };
   const model = canonicalizeImageModel(args.model);
   if (model) body.model = model;

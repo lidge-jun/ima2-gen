@@ -64,6 +64,30 @@ test("every nai label key resolves in all four dictionaries", () => {
   }
 });
 
+test("NovelAI native Auto SMEA and Decrisper controls have panel wiring and localized copy", () => {
+  const panel = read("ui/src/components/settings/NaiControlsPanel.tsx");
+  for (const key of ["autoSmea", "decrisper"]) {
+    assert.match(panel, new RegExp(`setNaiOption\\("${key}"`), `${key} has no setter wiring`);
+    assert.match(panel, new RegExp(`nai\\.field\\.${key}`), `${key} has no field label`);
+    assert.match(panel, new RegExp(`nai\\.help\\.${key}`), `${key} has no help copy`);
+  }
+
+  const keys = [
+    "nai.field.autoSmea",
+    "nai.help.autoSmea",
+    "nai.field.decrisper",
+    "nai.help.decrisper",
+  ];
+  for (const locale of LOCALES) {
+    const dict = dictionary(locale);
+    for (const key of keys) {
+      const value = lookup(dict, key);
+      assert.equal(typeof value, "string", `${locale} is missing ${key}`);
+      assert.notEqual(String(value).trim(), "", `${locale} has an empty ${key}`);
+    }
+  }
+});
+
 test("the provider is offered everywhere a user picks one", () => {
   assert.match(read("ui/src/components/GenProviderModelSelect.tsx"), /value: "nai", label: "NovelAI"/);
   assert.match(read("ui/src/components/settings/ProviderStatusSelect.tsx"), /value: "nai"/);

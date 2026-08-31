@@ -103,19 +103,26 @@ const noop = () => {};
 
 export function AgentRightSidebar({ overlay, onClose, ...rest }: Props) {
   const { t } = useI18n();
-  const panelRef = useAgentDialogFocus(overlay === true, onClose ?? noop);
+  // The tools inspector is a non-modal side panel: the chat and stage behind it
+  // stay usable, so it must not trap focus, must not claim aria-modal, and must
+  // not treat an outside click as cancellation (APG dialog pattern + Fluent 2
+  // non-modal guidance). Escape closes it and focus returns to the trigger.
+  const panelRef = useAgentDialogFocus(overlay === true, onClose ?? noop, { modal: false });
   if (overlay) {
     return (
-      <div className="agent-dialog agent-dialog--tools" role="presentation">
-        <button type="button" className="agent-dialog__backdrop" onClick={onClose} aria-label={t("agent.closeTools")} />
-        <section ref={panelRef} className="agent-right-sidebar agent-right-sidebar--overlay" role="dialog" aria-modal="true" aria-label={t("agent.openTools")}>
-          <header className="agent-right-sidebar__overlay-header">
-            <strong>{t("agent.openTools")}</strong>
-            <button type="button" onClick={onClose} aria-label={t("agent.closeTools")}><CloseIcon size={17} /></button>
-          </header>
-          <SidebarBody {...rest} />
-        </section>
-      </div>
+      <section
+        ref={panelRef}
+        id="agent-tools-panel"
+        className="agent-right-sidebar agent-right-sidebar--overlay"
+        role="dialog"
+        aria-labelledby="agent-tools-panel-title"
+      >
+        <header className="agent-right-sidebar__overlay-header">
+          <h2 id="agent-tools-panel-title" tabIndex={-1} data-autofocus>{t("agent.toolsPanel")}</h2>
+          <button type="button" onClick={onClose} aria-label={t("agent.closeTools")}><CloseIcon size={17} /></button>
+        </header>
+        <SidebarBody {...rest} />
+      </section>
     );
   }
   return (

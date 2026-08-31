@@ -57,6 +57,8 @@ test("every field the client can emit is a field the server reads", () => {
     qualityPresetId: "none",
     varietyPlus: true,
     straightAlpha: true,
+    autoSmea: true,
+    decrisper: true,
     seed: 7,
     negativePrompt: "blurry",
   };
@@ -78,6 +80,8 @@ test("compiled fallback matches the server's configured defaults", () => {
   assert.equal(COMPILED_FALLBACK.scale, 5);
   assert.equal(COMPILED_FALLBACK.sampler, "k_euler_ancestral");
   assert.equal(COMPILED_FALLBACK.noiseSchedule, "karras");
+  assert.equal(COMPILED_FALLBACK.autoSmea, false);
+  assert.equal(COMPILED_FALLBACK.decrisper, false);
 });
 
 test("resolve order is fallback, then server, then the user's override", () => {
@@ -98,6 +102,8 @@ test("coerceNaiOverrides rejects wrong types and out-of-range numbers", () => {
   assert.deepEqual(coerceNaiOverrides({ scale: -1 }), {});
   assert.deepEqual(coerceNaiOverrides({ cfgRescale: 2 }), {});
   assert.deepEqual(coerceNaiOverrides({ straightAlpha: "yes" }), {});
+  assert.deepEqual(coerceNaiOverrides({ autoSmea: "yes" }), {});
+  assert.deepEqual(coerceNaiOverrides({ decrisper: 1 }), {});
   assert.deepEqual(coerceNaiOverrides({ seed: -1 }), {});
   assert.deepEqual(coerceNaiOverrides(null), {});
   assert.deepEqual(coerceNaiOverrides([1, 2]), {});
@@ -151,7 +157,7 @@ test("node mode gates on the node's own lane, not the global one", () => {
   // Node variants carry a per-node provider/model (higgsfield 120). Gating on
   // global state either starves a NAI node or leaks NAI fields into another
   // lane's request — found by the wp5 adversarial audit.
-  const overrides = { steps: 40, straightAlpha: true };
+  const overrides = { steps: 40, straightAlpha: true, autoSmea: true, decrisper: true };
 
   // Global lane is GPT, the node is NAI: the node's options must still ride.
   assert.deepEqual(
@@ -159,7 +165,7 @@ test("node mode gates on the node's own lane, not the global one", () => {
       stateOf({ provider: "oauth", imageModel: "gpt-image-1", naiOptionOverrides: overrides, negativePrompt: "blurry" }),
       { provider: "nai", imageModel: "nai-diffusion-5-full" },
     ),
-    { steps: 40, straightAlpha: true, negativePrompt: "blurry" },
+    { steps: 40, straightAlpha: true, autoSmea: true, decrisper: true, negativePrompt: "blurry" },
   );
 
   // Global lane is NAI, the node is not: nothing may leak into that request.
@@ -177,7 +183,7 @@ test("node mode gates on the node's own lane, not the global one", () => {
       stateOf({ naiOptionOverrides: overrides }),
       { provider: "nai", imageModel: "nai-diffusion-4-5-full" },
     ),
-    { steps: 40 },
+    { steps: 40, autoSmea: true, decrisper: true },
   );
 });
 

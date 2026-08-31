@@ -47,11 +47,13 @@ describe("capability lane contract", () => {
     // configuration; it never re-sends an untouched value, which is what keeps
     // IMA2_NAI_DEFAULT_* authoritative at the adapter.
     assert.ok(nai, "defaults.nai must exist");
-    assert.deepEqual(Object.keys(nai).sort(), ["noiseSchedule", "sampler", "scale", "steps"]);
+    assert.deepEqual(Object.keys(nai).sort(), ["autoSmea", "decrisper", "noiseSchedule", "sampler", "scale", "steps"]);
     assert.equal(typeof nai.sampler, "string");
     assert.equal(typeof nai.noiseSchedule, "string");
     assert.equal(typeof nai.steps, "number");
     assert.equal(typeof nai.scale, "number");
+    assert.equal(typeof nai.autoSmea, "boolean");
+    assert.equal(typeof nai.decrisper, "boolean");
     // No model: NaiOptions has no model member, and publishing a field nothing
     // consumes is the drift this unit exists to remove.
     assert.equal("model" in nai, false);

@@ -90,6 +90,47 @@ Provider override semantics:
 - `runway` / `higgsfield` (gen/video only) route through the MCP async pipeline (`POST /api/mcp/generate` + SSE wait). Runway requires an MCP connection; Higgsfield stays catalog-only (`locked`) until a paid plan. MCP lanes accept `-n 1` only, gallery filenames for `--ref`, and reject core-only flags with `FLAG_NOT_SUPPORTED`.
 - `auto` preserves route default behavior and currently resolves to GPT OAuth unless server routing changes (edit/multimode/node only; removed from gen/video in 3.0.0).
 
+### NovelAI native generation options
+
+`ima2 gen`, `ima2 multimode`, and `ima2 node generate` share these request-only
+flags. They do not change saved defaults.
+
+| Flag | Request field | Rule |
+|---|---|---|
+| `--nai-negative-prompt <text>` | `negativePrompt` | Undesired content, max 10,000 characters |
+| `--nai-sampler <id>` | `sampler` | Modern NovelAI sampler enum |
+| `--nai-noise-schedule <id>` | `noiseSchedule` | `native`, `karras`, `exponential`, or `polyexponential` |
+| `--nai-steps <1..50>` | `steps` | Integer |
+| `--nai-scale <1..10>` | `scale` | Prompt guidance |
+| `--nai-cfg-rescale <0..1>` | `cfgRescale` | Guidance rescale |
+| `--nai-seed <0..4294967295>` | `seed` | Integer; zero is valid |
+| `--nai-uc-preset <id>` | `ucPresetId` | `heavy`, `light`, `furryFocus`, `humanFocus`, or `none` |
+| `--nai-quality-preset <id>` | `qualityPresetId` | `standard`, `light`, or `none`; V5 only |
+| `--nai-auto-smea` / `--no-nai-auto-smea` | `autoSmea` | Explicit true/false |
+| `--nai-decrisper` / `--no-nai-decrisper` | `decrisper` | Explicit true/false |
+| `--nai-variety-plus` / `--no-nai-variety-plus` | `varietyPlus` | Explicit true/false |
+| `--nai-straight-alpha` / `--no-nai-straight-alpha` | `straightAlpha` | Enabled alpha is V5 only |
+
+`gen` may resolve a persisted NovelAI default set with
+`ima2 defaults set image nai/nai-diffusion-5-full`. `multimode` requires an
+explicit NovelAI target when any `--nai-*` flag is used, and `node generate`
+likewise requires an explicit NovelAI target. Provider/model conflicts fail before
+network I/O. V5-only values on V4.5 fail with `NAI_V5_MODEL_REQUIRED`; malformed
+values and non-NAI targets also exit 2. The ima2 NovelAI lane is text-to-image only:
+references, edits, and masks remain explicitly unsupported.
+
+```bash
+ima2 gen "character sprite, transparent background, has alpha" \
+  --model nai/nai-diffusion-5-full --nai-straight-alpha \
+  --nai-negative-prompt "watermark" -o sprite.png
+
+ima2 multimode "city at night" --provider nai --model nai-diffusion-5-full \
+  --nai-auto-smea --nai-decrisper --max-images 2
+
+ima2 node generate "portrait" --provider nai --model nai-diffusion-5-curated \
+  --nai-uc-preset light --nai-quality-preset light
+```
+
 `ima2 serve` starts the bundled Grok proxy automatically. No separate `progrok`
 install is required. Use `ima2 grok login` once to authorize xAI OAuth. Login
 defaults to `--manual-paste` so PowerShell, Terminal, and remote shells all use

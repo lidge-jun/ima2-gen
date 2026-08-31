@@ -200,7 +200,10 @@ describe("Agent Mode frontend shell contract", () => {
     assert.match(statusBar, /agent-run-status__retry/);
     assert.match(runProgress, /labelKey: "pendingQueued" \| "pendingPlanning" \| "pendingGenerating" \| "runError"/);
     assert.match(runProgress, /turn\.role === "tool"/);
-    assert.match(list, /aria-live="polite"/);
+    // The transcript is append-only: role="log" is implicitly polite and
+    // non-atomic, so streamed appends are announced without re-reading the
+    // whole thread. See tests/agent-mode-streaming-a11y-contract.test.js.
+    assert.match(list, /role="log"/);
     assert.match(list, /kind: "run"/);
     assert.match(list, /turn\.role === "user"/);
     assert.match(list, /<AgentRunGroup/);
