@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useModalFocus, type CloseReason } from "../../hooks/useModalFocus";
+import { useModalFocus } from "../../hooks/useModalFocus";
 import type { CanvasAnnotationStyle } from "../../types/canvas";
 import { CANVAS_STROKE_WIDTHS, CANVAS_STYLE_COLORS } from "../../hooks/useCanvasAnnotations";
 import { useI18n } from "../../i18n";
@@ -12,7 +12,7 @@ interface CanvasStylePopoverProps {
 export function CanvasStylePopover({ style, onStyleChange }: CanvasStylePopoverProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const popoverRef = useModalFocus<HTMLDivElement>(open, (reason?: CloseReason) => {
+  const popoverRef = useModalFocus<HTMLDivElement>(open, () => {
     setOpen(false);
   }, { trap: false, restoreFocus: (reason) => reason !== "outsidePointer" });
   const ref = useRef<HTMLDivElement>(null);
