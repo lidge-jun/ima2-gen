@@ -9,6 +9,7 @@ import { BackgroundPresetPicker } from "./BackgroundPresetPicker";
 import { AssetGenModelPicker } from "./AssetGenModelPicker";
 import { ProjectSelect } from "./ProjectSelect";
 import { KeyingPanel } from "./KeyingPanel";
+import { VectorizePanel } from "./VectorizePanel";
 import { useTablistKeys } from "../../hooks/useTablistKeys";
 import "../../styles/sprite-recipe.css";
 const SpriteRecipeWorkspace = lazy(() => import("./SpriteRecipeWorkspace").then((module) => ({ default: module.SpriteRecipeWorkspace })));
@@ -32,6 +33,7 @@ export function AssetGenWorkspace() {
   const saveFailures = useAppStore((s) => s.assetGenSaveFailures);
   const retrySave = useAppStore((s) => s.retryAssetGenSave);
   const setKeyingTarget = useAppStore((s) => s.setKeyingTarget);
+  const setVectorizeTarget = useAppStore((s) => s.setVectorizeTarget);
   const lastError = useAppStore((s) => s.assetGenLastError);
   const setLastError = useAppStore((s) => s.setAssetGenLastError);
   const setUIMode = useAppStore((s) => s.setUIMode);
@@ -250,6 +252,11 @@ export function AssetGenWorkspace() {
                     {t("keying.open")}
                   </button>
                 ) : null}
+                {!isVideo ? (
+                  <button type="button" className="assetgen-tile__key" onClick={() => setVectorizeTarget(item)}>
+                    {t("vectorize.open")}
+                  </button>
+                ) : null}
                 {!isKeyed && item.requestId && saveFailures.includes(item.requestId) ? (
                   <button
                     type="button"
@@ -269,6 +276,7 @@ export function AssetGenWorkspace() {
         <AssetGenProjectRail selectedAssetId={railSelectedId} onPreview={openRailPreview} onAssetsLoaded={setProjectAssetCount} />
       </main>
       <KeyingPanel />
+      <VectorizePanel />
       {previewItem ? <AssetMediaLightbox item={previewItem} onClose={closePreview} /> : null}
     </section>
   );

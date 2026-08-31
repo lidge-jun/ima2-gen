@@ -35,6 +35,7 @@ export function AssetMediaLightbox({ item, onClose }: Props) {
   const [assetMetadata, setAssetMetadata] = useState<Record<string, unknown> | null>(inlineMetadata);
   const titleId = useId();
   const setKeyingTarget = useAppStore((s) => s.setKeyingTarget);
+  const setVectorizeTarget = useAppStore((s) => s.setVectorizeTarget);
   const setCuratorTarget = useAppStore((s) => s.setCuratorTarget);
   const close = useCallback(() => onClose(), [onClose]);
   const panelRef = useAgentDialogFocus(true, close);
@@ -46,12 +47,19 @@ export function AssetMediaLightbox({ item, onClose }: Props) {
   const spriteRunId = typeof metadata?.spriteRunId === "string" ? metadata.spriteRunId : null;
   const manifestPath = typeof metadata?.manifestPath === "string" ? metadata.manifestPath : null;
   const canCurate = Boolean(spriteRunId && manifestPath && item.filename);
+  // Tracing needs a raster source, so an existing vector is excluded rather than
+  // re-traced into itself.
+  const canVectorize = !isVideo && Boolean(item.filename) && !/\.svg$/i.test(item.filename ?? "");
   const fallback = t(isVideo ? "assetGen.videoFallback" : "assetGen.imageFallback");
   const prompt = item.prompt?.trim() || fallback;
   const openKeying = useCallback(() => {
     setKeyingTarget(item);
     onClose();
   }, [item, onClose, setKeyingTarget]);
+  const openVectorize = useCallback(() => {
+    setVectorizeTarget(item);
+    onClose();
+  }, [item, onClose, setVectorizeTarget]);
   const openCurator = useCallback(() => {
     if (!spriteRunId || !manifestPath || !item.filename) return;
     setCuratorTarget({ runId: spriteRunId, atlasFile: item.filename, manifestFile: manifestPath });
@@ -145,6 +153,15 @@ export function AssetMediaLightbox({ item, onClose }: Props) {
                 onClick={openKeying}
               >
                 {t("keying.open")}
+              </button>
+            ) : null}
+            {canVectorize ? (
+              <button
+                type="button"
+                className="assetgen-lightbox__zoom assetgen-lightbox__vectorbtn"
+                onClick={openVectorize}
+              >
+                {t("vectorize.open")}
               </button>
             ) : null}
             {!isVideo ? (

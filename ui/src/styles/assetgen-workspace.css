@@ -104,6 +104,7 @@
 .keying-panel__reset { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--control-bg); color: var(--text); cursor: pointer; font-size: 12px; }
 .keying-panel__actions { display: flex; justify-content: flex-end; gap: 8px; }
 .keying-panel__actions { align-items: center; flex-wrap: wrap; }
+.vectorize-panel__stats { margin: 0; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .keying-panel__save-error { margin-right: auto; color: var(--red); font-size: 12px; }
 .assetgen-project { position: relative; }
 .assetgen-project__trigger { display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--control-bg); color: var(--text); cursor: pointer; font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

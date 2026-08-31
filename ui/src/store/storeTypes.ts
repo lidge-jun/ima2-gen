@@ -298,6 +298,8 @@ export type AppState = PresetState & ReferenceTraySlice & {
   setAssetGenLastError: (v: string | null) => void;
   keyingTarget: GenerateItem | null;
   setKeyingTarget: (item: GenerateItem | null) => void;
+  vectorizeTarget: GenerateItem | null;
+  setVectorizeTarget: (item: GenerateItem | null) => void;
   spriteCuratorTarget: SpriteCuratorTarget | null;
   setCuratorTarget: (target: SpriteCuratorTarget | null) => void;
   addAssetGenDerivedItem: (item: GenerateItem) => void;

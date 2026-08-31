@@ -210,6 +210,8 @@ export const useAppStore = create<AppState>((set, get, store) => ({
   setAssetGenLastError: (v) => set({ assetGenLastError: v }),
   keyingTarget: null,
   setKeyingTarget: (item) => set({ keyingTarget: item }),
+  vectorizeTarget: null,
+  setVectorizeTarget: (item) => set({ vectorizeTarget: item }),
   spriteCuratorTarget: null,
   setCuratorTarget: (target) => set({ spriteCuratorTarget: target }),
   addAssetGenDerivedItem: (item) => set((state) => (

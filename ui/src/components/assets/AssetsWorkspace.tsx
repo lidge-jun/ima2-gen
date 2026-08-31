@@ -10,6 +10,7 @@ import { EditIcon } from "../controls";
 import { Select, type SelectItem } from "../controls/Select";
 import { AssetMediaLightbox } from "../assetgen/AssetMediaLightbox";
 import { KeyingPanel } from "../assetgen/KeyingPanel";
+import { VectorizePanel } from "../assetgen/VectorizePanel";
 import { AssetsFolderTree } from "./AssetsFolderTree";
 import { AssetsGrid } from "./AssetsGrid";
 import { useModalFocus } from "../../hooks/useModalFocus";
@@ -147,6 +148,7 @@ export function AssetsWorkspace() {
       {selectedElement ? <ElementDetail element={selectedElement} saving={false} testing={false} onSave={saveElement} onSaveBindings={saveElementBindings} onDelete={deleteElement} onRunTestSheet={runTestSheet} /> : <AssetMetaDetail asset={selectedAsset} onRename={(name) => renameAsset(selectedAsset.id, name)} />}
     </aside>}
     <KeyingPanel />
+    <VectorizePanel />
     {previewItem ? <AssetMediaLightbox item={previewItem} onClose={closePreview} /> : null}
   </section>;
 }

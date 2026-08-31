@@ -139,3 +139,32 @@ new component must come from `t()`.
 - C-RENDER-GROUNDING-01: the panel is rendered in a real browser at 1280x720,
   screenshotted, **read back**, and the screenshot persisted into this unit's
   `evidence/` directory.
+## wp4 C-phase rendered observation (evidence/)
+
+Driven in a real Chrome at 1280x720 against a live server, not asserted from CSS.
+
+**Defect found by rendering, invisible to every static gate:** the panel always sent
+its three slider values, and the server treats ANY numeric value as an override that
+promotes the tuned preset to a hand-built config. The same asset traced **9430 paths /
+1583KB through the UI versus 722 paths / 585KB through the API** at the identical
+"Auto" preset. tsc, lint and the whole suite were green throughout — only the rendered
+number exposed it. Fixed by sending a knob only when it differs from its default;
+re-measured through the UI afterwards: **722 paths / 585KB**, matching the API exactly.
+`tests/vectorize-panel-contract.test.ts` locks the behaviour.
+
+Screenshots: `evidence/wp4_panel_before_fix.png` (9430) and
+`evidence/wp4_panel_after_fix.png` (722).
+
+Two further corrections from the same session:
+
+- The plan deferred `AssetsWorkspace` wiring, but the Assets library is where a user
+  actually meets a saved asset — deferring it would have shipped a feature reachable
+  only from a transient generation grid. Both workspaces now mount the panel and the
+  lightbox carries the entry point.
+- My first CSS added new `border-radius` declarations and failed the frozen 476-row
+  radius manifest (478 !== 476). Rather than grow the design system for one panel, the
+  presets reuse `keying-panel__modes` and the tile action reuses `assetgen-tile__key` —
+  which is what the design read asked for anyway.
+
+`canVectorize` excludes `.svg`, verified live: after tracing, the Vectorize button
+correctly disappears for the resulting vector asset.
