@@ -357,6 +357,9 @@ function showHelp() {
     stop           Stop the running server safely (graceful, then signals)
     service        Background service management (install/status/... ; -h)
 
+  Local commands (no running server needed):
+    vectorize <image>  Trace a raster image into SVG   (ima2 vectorize --help)
+
   Agent skills (SKILL.md + references/):
     skill ls                         List packaged skills (ima2, front, uiux)
     skill [front|uiux]               Print a skill's SKILL.md
@@ -418,7 +421,7 @@ if (args.includes("-v") || args.includes("--version")) {
   exitFlushed(0);
 }
 
-const helpOwningCommands = ["doctor", "gen", "video", "edit", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs", "service"];
+const helpOwningCommands = ["doctor", "gen", "video", "edit", "vectorize", "ls", "show", "ps", "cancel", "session", "history", "prompt", "multimode", "node", "annotate", "canvas-versions", "metadata", "comfy", "cardnews", "inflight", "storage", "billing", "providers", "oauth", "grok", "config", "defaults", "models", "capabilities", "tools", "skill", "ping", "backfill-thumbs", "service"];
 if (!command) {
   showHelp();
   exitFlushed(1);
@@ -483,6 +486,7 @@ switch (command) {
   case "video":
   case "upscale":
   case "edit":
+  case "vectorize":
   case "ls":
   case "show":
   case "ps":

@@ -387,6 +387,43 @@ pattern painted into an opaque image; the flag sends the real API parameter and
 the tuned suffix together. Always verify alpha rather than trusting the look of
 a preview: `sharp(file).metadata()` should report `channels: 4, hasAlpha: true`.
 
+### Raster-to-Vector (SVG)
+
+`ima2 gen` always produces raster. When you need a REAL vector — a logo that
+scales, an icon for a design system, a brand-safe SVG asset — trace the raster
+afterwards. `flat vector style` in a prompt only produces a bitmap that LOOKS
+vector; it has no paths.
+
+```bash
+# 1. generate a cutout, 2. trace it
+ima2 gen "a minimal geometric fox head logo mark, flat vector style" \
+  --bg transparent --quality high --mode direct -o logo.png
+ima2 vectorize logo.png -o logo.svg --json
+```
+
+Runs fully local — no server, no provider, no network. `--json` reports
+`pathCount`, `bytes`, and `elapsedMs` so an agent can check the result
+programmatically.
+
+Presets: `auto` (default, best colour fidelity), `flat` (fewer colour layers),
+`detailed`, and `mono` (binary silhouette). Tune with `--color-precision 1-8`,
+`--filter-speckle 0-128`, `--corner-threshold 0-180`; pass a knob only when you
+actually want to override the preset, since any value replaces the tuned config.
+
+**Where it works and where it does not.** Measured on a 1254x1254 keyed
+character asset: `auto` produced 722 paths at 585KB and is visually
+indistinguishable from the source. Cutouts, icons, logos, flat art, and sprite
+frames trace cleanly. Photographs and small text do NOT — text becomes
+illegible smudges and gradients fragment into hundreds of bands. Key or
+generate a clean cutout FIRST; tracing quality follows input flatness.
+
+`mono` has no alpha channel, so a transparent cutout becomes a silhouette on a
+black field. Use it for stencils and line art, not for cutouts.
+
+In the app, the same operation is the "Convert to SVG" action on any image
+asset (generation grid tile or Assets library preview), which saves the SVG
+into the current project.
+
 ### Korean Text in Images
 
 When generating images with Korean text:

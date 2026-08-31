@@ -106,9 +106,10 @@ routes/
 | `lib/ssePublish.ts` | 32 | `publishJobEvent` — terminal `done` suppression after cancel (cancel↔done race guard) plus the publish-time envelope snapshot |
 | `ui/src/lib/eventChannel.ts` | 164 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
 | `ui/src/lib/sseStreamError.ts` | 66 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
-| `bin/ima2.ts` | 540 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
+| `bin/ima2.ts` | 544 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
 | `bin/commands/gen.ts` | 400 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
 | `bin/commands/edit.ts` | 168 | CLI image-edit client with provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, and output options |
+| `bin/commands/vectorize.ts` | 110 | Local CLI raster-to-SVG tracing; no server or provider roundtrip |
 | `bin/commands/multimode.ts` | 220 | CLI multimode SSE client with provider override, references, prompt mode, incremental image save, timeout recovery, web-search, reasoning-effort, and session options |
 | `bin/commands/node.ts` | 179 | CLI node-mode generate/show client with references, provider override, parent node, web-search, reasoning-effort, and SSE support |
 | `bin/commands/session.ts` | 267 | CLI session list/load/save/rename/delete client |
@@ -258,6 +259,7 @@ routes/
 | `lib/imageThumb.ts` | 50 | Image thumbnail generation helpers |
 | `lib/multimodeHelpers.ts` | 48 | Shared multimode generation helpers |
 | `lib/nodeHelpers.ts` | 119 | Node workflow graph and payload helpers |
+| `lib/vectorizeImage.ts` | 179 | Raster-to-SVG tracing (VTracer) with named presets, size/dimension guards, and SVG optimization |
 | `lib/nodeTemplateSeeds.ts` | 84 | Built-in node workflow template seed definitions |
 | `lib/nodeTemplateStore.ts` | 127 | Node workflow template persistence and lookup |
 | `lib/presetCompiler.ts` | 67 | Named preset prompt compilation helpers |

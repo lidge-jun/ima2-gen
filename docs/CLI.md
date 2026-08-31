@@ -322,6 +322,7 @@ Windows DNS/fragmentation bypass tool such as SecretDNS is in use.
 | `ima2 history favorite <name>` | Toggle favorite (sends `X-Ima2-Browser-Id`) |
 | `ima2 history import <file>` | Import a local image (raw PNG/JPEG/WEBP) into history |
 | `ima2 metadata <file>` | Read embedded metadata from any local image (no server roundtrip needed for the read itself, but the route lives on the server) |
+| `ima2 vectorize <image> [-o <file>] [--preset auto\|flat\|detailed\|mono] [--json]` | Trace a local raster (png/jpeg/webp) into a real SVG. Runs fully local. Best on cutouts, icons, logos and flat art; photographs and small text smear |
 
 ## Sessions and graphs
 

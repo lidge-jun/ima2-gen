@@ -585,7 +585,7 @@ Grok视频 API 使用的提示界面：
 | `GET` | `/api/assets/:id` |通过ID获取一项资产；回报`404 ASSET_NOT_FOUND`当缺席时|
 | `POST` | `/api/assets` |推广/创建资产（`filePath`, `kind`, `name?`, `folderId?`, `tags?`, `metadata?`) |
 | `POST` | `/api/assets/promote-element` |将图库结果推广到`element`资产 （`result.path`或者`filePath`, `elementKind`, `name?`, `notes?`, `folderId?`, `tags?`) |
-| `POST` | `/api/assets/derived` |保存派生资产（原始资产`image/png`身体;询问`source`, `kind=keyed-png`, `projectId?`, `name?`, `meta?` JSON）——写道`<src>-keyed-<ts>.png`+ 边车与`derivedFrom`并登记资产记录|
+| `POST` | `/api/assets/derived` |保存派生资产（原始资产`image/png`身体;询问`source`, `kind=keyed-png`, `projectId?`, `name?`, `meta?` JSON）——写道`<src>-keyed-<ts>.png`+ 边车与`derivedFrom`并登记资产记录 `kind=vector-svg` 不发送请求体：服务器直接读取已校验的 `source` 并通过 `lib/vectorizeImage.ts` 转换，写出 `<src>-vector-<ts>.svg`（查询参数 `preset?`、`colorPrecision?`、`filterSpeckle?`、`cornerThreshold?`；非栅格源以 `DERIVED_SOURCE_NOT_RASTER` 拒绝）。生成的 SVG 附带严格 CSP 与 `nosniff`。 |
 | `POST` | `/api/video/keying` |从生成的绿屏 mp4 导出 alpha WebM (`source`, `keyParams{tolerance,softness,keyColor?}`, `projectId?`, `name?`) — 回应`202 {requestId, filePath}`，发布`keying-start/progress/done/error`在事件总线上，写入 sidecar`derivedFrom`并注册视频资产|
 | `PATCH` | `/api/assets/:id` |更新名称/文件夹/注释/标签/元数据|
 | `POST` | `/api/assets/:id/test-sheet` |运行元素测试表；目前返回`501 TEST_SHEET_NOT_IMPLEMENTED`验证元素资产后|

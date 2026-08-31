@@ -89,6 +89,7 @@ with `MODEL_NOT_FOUND` while an all-offline lane fails with
 `LANE_UNAVAILABLE`.
 | `ima2 cardnews <subcommand>` | `/api/cardnews/*` | Dev-gated card-news templates/sets/jobs |
 | `ima2 config <get\|set>` | local | Read/write `~/.ima2/config.json` |
+| `ima2 vectorize <image>` | local | Trace a raster image into SVG via `lib/vectorizeImage.ts`; no server or provider needed |
 | `ima2 defaults <subcommand>` | local or `/api/capabilities` | Inspect/change persistent model and reasoning defaults |
 | `ima2 capabilities` | `/api/capabilities` or local fallback | Print agent-facing capability metadata |
 | `ima2 skill [ima2\|front\|uiux]` | local package | List or print the three packaged Markdown agent skills and their reference modules |
