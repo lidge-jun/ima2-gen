@@ -218,3 +218,13 @@ wp5가 `ui/src/styles/viewer-workflow.css:13`의 하드코딩 흰색을 치환�
 도달 가능한 미정의 토큰 0개, 상태색 리터럴 0개, 하드코딩 색 총계가 167 이하,
 `.sprite-anchor-dialog`가 실제 앱 브라우저에서 불투명 배경으로 렌더되고 에러
 스피너가 빨강으로 나오는 것을 computed style로 확인, 라이트/다크 양쪽 캡처.
+
+## Implementation Log (B-phase)
+
+All changes landed in two commits on codex/ui-polish-wp4-color-tokens:
+
+- 506cb027: fix(ui): 20 files, 4 undefined refs, state colors, paper tokens
+- c88336d2: test(ui): 6-assertion contract test
+
+Verified: npm test 2707/0/2, typecheck clean, UI build OK.
+PR #187 -> dev.
