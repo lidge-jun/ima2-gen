@@ -1,0 +1,23 @@
+<!doctype html><html><head><style>
+:root { --text-dim: #888; --accent: #44aa99; --border-strong:#444; --surface-2:#222; --text:#eee; }
+/* --bg-primary, --danger, --shadow deliberately UNDEFINED, exactly as in the repo */
+.modal { position: fixed; inset: 50% auto auto 50%; transform: translate(-50%,-50%); max-width:440px; padding:24px; background: var(--bg-primary); }
+.spin-ok { width:20px;height:20px;border: 2px solid color-mix(in srgb, var(--text-dim) 26%, transparent); border-top-color: var(--accent); }
+.spin-err { width:20px;height:20px;border: 2px solid color-mix(in srgb, var(--text-dim) 26%, transparent); border-color: color-mix(in srgb, var(--danger) 24%, transparent); border-top-color: var(--danger); }
+.card { box-shadow: 0 4px 12px var(--shadow); background: var(--surface-2); }
+#out { font-family: monospace; white-space: pre; }
+</style></head><body>
+<div class="modal" id="m">modal</div><div class="spin-ok" id="a"></div><div class="spin-err" id="b"></div><div class="card" id="c">card</div>
+<div id="out"></div>
+<script>
+var g = function(id, prop){ return getComputedStyle(document.getElementById(id)).getPropertyValue(prop); };
+var rows = [
+ 'modal_background_color=' + g('m','background-color'),
+ 'spinner_OK_border_top=' + g('a','border-top-color'),
+ 'spinner_ERR_border_top=' + g('b','border-top-color'),
+ 'spinner_ERR_border_left=' + g('b','border-left-color'),
+ 'card_box_shadow=' + g('c','box-shadow')
+];
+document.getElementById('out').textContent = 'PROBE_RESULT\n' + rows.join('\n');
+</script>
+</body></html>
