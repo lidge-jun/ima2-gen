@@ -68,10 +68,6 @@ const RADIUS_LONGHANDS = [
   "border-end-end-radius",
 ];
 
-// -webkit-/-moz- prefixed radius overrides the standard shorthand when it comes
-// after it, so a prefixed declaration is a live bypass of the manifest.
-const PREFIXED = ["-webkit-border-radius", "-moz-border-radius"];
-
 function cssFiles(dir = "ui/src"): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -202,13 +198,20 @@ test("the eight scale tokens hold their values and are defined exactly once", ()
 });
 
 test("no radius longhand, vendor prefix, or @property registration exists", () => {
+  // A prefixed longhand such as -webkit-border-top-left-radius overrides the
+  // standard shorthand in Chrome (reproduced: border-radius 6px followed by
+  // -webkit-border-top-left-radius 999px computes to 999px), and it appears in
+  // neither the standard-longhand nor the prefixed-shorthand list. Strip the
+  // prefix first, then compare against the standard names, so any current or
+  // future vendor spelling of a radius longhand is refused.
   for (const decl of radiusDecls()) {
+    const bare = decl.prop.replace(/^-(webkit|moz|ms|o)-/, "");
     assert.ok(
-      !RADIUS_LONGHANDS.includes(decl.prop),
+      !RADIUS_LONGHANDS.includes(bare),
       "radius longhand overrides the shorthand: " + decl.file + ":" + decl.line + " " + decl.prop,
     );
     assert.ok(
-      !PREFIXED.includes(decl.prop),
+      bare === decl.prop,
       "prefixed radius overrides the shorthand: " + decl.file + ":" + decl.line + " " + decl.prop,
     );
   }
@@ -223,6 +226,39 @@ test("no radius longhand, vendor prefix, or @property registration exists", () =
       );
     });
   }
+});
+
+test("stylesheet imports stay inside the audited ui/src tree", () => {
+  // The manifest only covers ui/src/**/*.css. An @import pointing at a URL or at
+  // a path outside that tree would ship radius the contract never parsed.
+  for (const file of cssFiles()) {
+    const root = postcss.parse(readFileSync(file, "utf8"), { from: file });
+    root.walkAtRules("import", (rule) => {
+      const target = rule.params.trim().replace(/^(url\()?["']?/, "").replace(/["']?\)?$/, "");
+      if (target === "tailwindcss") return; // package entry, resolved by the bundler
+      assert.ok(
+        target.startsWith("./") || target.startsWith("styles/"),
+        "@import must stay inside ui/src: " + normalize(file) + " -> " + target,
+      );
+      assert.ok(
+        !target.includes(".."),
+        "@import must not escape ui/src: " + normalize(file) + " -> " + target,
+      );
+    });
+  }
+});
+
+test("the HTML shell carries no radius of its own", () => {
+  // index.html sits outside ui/src, so a <style> block or a style attribute there
+  // would never reach the manifest.
+  const html = readFileSync("ui/index.html", "utf8");
+  const withoutFavicon = html.replace(/href="data:image\/svg\+xml[^"]*"/g, "");
+  assert.ok(!/<style[\s>]/i.test(withoutFavicon), "index.html must not carry a <style> block");
+  assert.ok(!/\sstyle=/i.test(withoutFavicon), "index.html must not carry inline style attributes");
+  assert.ok(
+    !/border[a-z-]*radius/i.test(withoutFavicon),
+    "index.html must not declare radius outside the audited tree",
+  );
 });
 
 test("the retired radius tokens and calc pattern are gone", () => {
@@ -245,31 +281,49 @@ test("every radius token reference resolves to a defined scale token", () => {
   }
 });
 
-test("TS and TSX carry exactly one allowlisted radius expression", () => {
-  // A blanket ban would fail the correct implementation, and a raw-px-only ban
-  // would pass a wrong token, so the allowlist fixes the value too.
+test("TS and TSX carry exactly one allowlisted radius property", () => {
+  // The earlier regex only matched double-quoted values, so borderRadius: '999px',
+  // borderRadius: 999, a template literal, and WebkitBorderRadius all slipped past
+  // (audit wp2c1-F1). Walk the TypeScript AST and key on the property NAME, which
+  // makes the check independent of how the value is spelled.
+  const ts = require("../ui/node_modules/typescript") as typeof import("typescript");
   const ALLOWED = new Map([["ui/src/components/settings/QuotaCard.tsx", 'borderRadius: "var(--r-sm)"']]);
   const hits: { file: string; text: string }[] = [];
+
   for (const file of tsFiles()) {
     const source = readFileSync(file, "utf8");
     const rel = normalize(file);
-    for (const match of source.match(/border[A-Za-z]*Radius\s*:\s*"[^"]*"/g) ?? []) {
-      hits.push({ file: rel, text: match });
-    }
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+    const visit = (node: import("typescript").Node): void => {
+      if (ts.isPropertyAssignment(node)) {
+        const name = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) ? node.name.text : "";
+        // Covers borderRadius, borderTopLeftRadius, WebkitBorderRadius, and the
+        // custom-property form "--r-lg".
+        if (/^([A-Za-z]*[Bb]order[A-Za-z]*Radius)$/.test(name) || /^--r-/.test(name)) {
+          hits.push({ file: rel, text: name + ": " + node.initializer.getText(sourceFile) });
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+
     // setProperty is the other inline route; ElementReferenceNode.tsx already
     // passes custom properties inline, so the bypass is real here.
     assert.ok(
-      !/setProperty\(\s*["']--r-/.test(source),
-      "radius tokens must not be set from script: " + rel,
+      !/setProperty\(\s*["'`](--r-|border[a-zA-Z-]*radius)/i.test(source),
+      "radius must not be set from script: " + rel,
     );
+    // A CSS string assembled in TS bypasses the postcss walk entirely.
     assert.ok(
-      !/["']--r-[a-z0-9]+["']\s*:/.test(source),
-      "radius tokens must not be assigned in inline style objects: " + rel,
+      !/(cssText|innerHTML|insertRule)[\s\S]{0,120}border[a-z-]*radius/i.test(source),
+      "radius CSS must not be injected from script: " + rel,
     );
   }
-  assert.equal(hits.length, ALLOWED.size, "unexpected radius expressions in TS/TSX: " + JSON.stringify(hits));
+
+  assert.equal(hits.length, ALLOWED.size, "unexpected radius properties in TS/TSX: " + JSON.stringify(hits));
   for (const hit of hits) {
-    assert.equal(ALLOWED.get(hit.file), hit.text, "radius expression not allowlisted in " + hit.file);
+    assert.equal(ALLOWED.get(hit.file), hit.text, "radius property not allowlisted in " + hit.file);
   }
 });
 

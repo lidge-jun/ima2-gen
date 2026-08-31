@@ -452,6 +452,40 @@ PostCSS로 파싱해 각 `border-radius` 선언의 (file, atRule, selector)로 �
   같은 파일을 배열로 만들면 실패,
   `ui/src/index.css`에서 스케일 토큰 하나의 정의를 지우면 실패.
 
+### 구현 감사(wp2c1)로 추가된 13개 (합계 35개)
+
+구현 후 감사가 실제로 통과하는 우회 셋을 찾아냈습니다. 정규식이 큰따옴표 값만
+봤고, prefixed **longhand**는 표준 longhand 목록에도 prefixed shorthand 목록에도
+없었고, 계약이 `ui/src` 밖을 아예 안 봤습니다. 감사자가 Chrome에서
+`border-radius: 6px` 뒤의 `-webkit-border-top-left-radius: 999px`가
+실제로 999px로 계산되는 것을 재현했습니다.
+
+수정 방향은 셋 다 "값 문법에 의존하지 않기"입니다. TSX는 정규식을 버리고
+TypeScript AST로 **속성 이름**을 봅니다. 벤더 프리픽스는 목록 대조 대신 프리픽스를
+떼고 표준 이름과 비교하므로 앞으로 나올 철자도 걸립니다.
+
+| # | 변형 | 잡는 검사 |
+|---|---|---|
+| 23 | TSX에 홑따옴표 `'999px'` | AST 속성명 |
+| 24 | TSX에 숫자 리터럴 `999` | AST 속성명 |
+| 25 | TSX에 템플릿 리터럴 | AST 속성명 |
+| 26 | TSX에 `WebkitBorderRadius` | AST 속성명 |
+| 27 | TSX에 `borderTopLeftRadius` | AST 속성명 |
+| 28 | CSS에 `-webkit-border-top-left-radius` | 프리픽스 제거 후 longhand 대조 |
+| 29 | CSS에 `-moz-border-radius-topleft` | 같음 |
+| 30 | `ui/src` 밖으로 나가는 `@import` | import 경로 검사 |
+| 31 | 원격 URL `@import` | 같음 |
+| 32 | `ui/index.html`에 `<style>` 블록 | HTML 셸 검사 |
+| 33 | `ui/index.html`에 inline `style=` | 같음 |
+| 34 | TS에서 `cssText`로 radius 주입 | 스크립트 주입 금지 |
+| 35 | TS에서 `setProperty("--r-lg", ...)` | 같음 |
+
+`ui/index.html` 검사는 파비콘 data URI를 먼저 제외합니다. 그 SVG에
+`rx='7'`이 들어 있는데 CSS radius가 아니라 SVG 도형 속성이라 스케일 대상이
+아닙니다.
+
+실측 결과 35개 전부 잡힙니다(원래 22 + 신규 13).
+
 ## 완료 조건
 
 원시 px 단일값 0개, 정의 없는 radius 토큰 0개, `npm test` 무회귀, 그리고
