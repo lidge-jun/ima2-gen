@@ -152,7 +152,11 @@ async function generateAgentImage(
         options.quality ?? "medium",
         providerOptions.size,
         options.moderation ?? "low",
-        [],
+        // The session image must reach the model here too. atlascloud/minimax/grok
+        // all forward it; this branch used to pass [], so on the default OAuth/API
+        // path the model was asked to edit an image it could not see and answered in
+        // prose - which classifies as a retryable no-image result (issue #192).
+        await loadAgentCurrentImageReferences(ctx, sessionId, options.sourceImagePolicy ?? "none"),
         requestId,
         "auto",
         ctx,
@@ -166,6 +170,15 @@ async function generateAgentImage(
   const format = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai"
     ? imageFormatFromMime(("mime" in response ? response.mime : undefined) || detectImageMimeFromB64(response.b64) || "image/jpeg")
     : options.format ?? "png";
+  if (!response.b64) {
+    // agy and atlascloud can resolve with an empty payload (0-byte artifact or a
+    // 0-byte HTTP 200 body). Without this guard persistAgentImage writes a 0-byte
+    // file and registers it as a real image, which is worse than an error.
+    const emptyErr = new Error("Provider returned an empty image.") as Error & { code?: string | undefined; status?: number | undefined };
+    emptyErr.code = "PROVIDER_EMPTY_IMAGE";
+    emptyErr.status = 502;
+    throw emptyErr;
+  }
   const image = await persistAgentImage(ctx, sessionId, prompt, format, providerOptions.size, requestId, response, {
     provider: String(activeProvider),
     model: String(effectiveModel),

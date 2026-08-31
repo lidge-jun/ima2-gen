@@ -39,6 +39,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   WEB_SEARCH_ONLY_RESPONSE: "retry",
   IMAGE_TOOL_FAILED: "retry",
   IMAGE_TOOL_COMPLETED_WITHOUT_RESULT: "retry",
+  PROVIDER_EMPTY_IMAGE: "retry",
   OAUTH_IMAGE_CAPABILITY_UNAVAILABLE: "fix-input",
   RESPONSES_STREAM_ERROR: "retry",
   UPSTREAM_5XX: "retry",

@@ -1498,6 +1498,11 @@
       "body": "The image tool call completed but did not include image data. This can point to an unsupported option combination or account capability issue.",
       "cta": "Retry"
     },
+    "providerEmptyImage": {
+      "title": "The provider returned an empty image",
+      "body": "The generation service sent back an image with no content. This is usually transient, so trying again normally fixes it.",
+      "cta": "Try again"
+    },
     "oauthImageCapabilityUnavailable": {
       "title": "This account may not have image-tool access",
       "body": "GPT OAuth is connected, but this account/model combination may not be entitled to use image generation. Compare with API-key mode or another model.",

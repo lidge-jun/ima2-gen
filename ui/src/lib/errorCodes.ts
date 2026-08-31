@@ -32,6 +32,7 @@ export type ImaErrorCode =
   | "WEB_SEARCH_ONLY_RESPONSE"
   | "IMAGE_TOOL_FAILED"
   | "IMAGE_TOOL_COMPLETED_WITHOUT_RESULT"
+  | "PROVIDER_EMPTY_IMAGE"
   | "OAUTH_IMAGE_CAPABILITY_UNAVAILABLE"
   | "RESPONSES_STREAM_ERROR"
   | "UPSTREAM_5XX"
@@ -103,6 +104,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   WEB_SEARCH_ONLY_RESPONSE: { surface: "card", cardKey: "errorCard.webSearchOnlyResponse", cta: "retry" },
   IMAGE_TOOL_FAILED: { surface: "card", cardKey: "errorCard.imageToolFailed", cta: "retry" },
   IMAGE_TOOL_COMPLETED_WITHOUT_RESULT: { surface: "card", cardKey: "errorCard.imageToolNoResult", cta: "retry" },
+  PROVIDER_EMPTY_IMAGE: { surface: "card", cardKey: "errorCard.providerEmptyImage", cta: "retry" },
   OAUTH_IMAGE_CAPABILITY_UNAVAILABLE: { surface: "card", cardKey: "errorCard.oauthImageCapabilityUnavailable", cta: "dismiss" },
   RESPONSES_STREAM_ERROR: { surface: "card", cardKey: "errorCard.responsesStreamError", cta: "retry" },
   UPSTREAM_5XX: { surface: "card", cardKey: "errorCard.upstream5xx", cta: "retry" },

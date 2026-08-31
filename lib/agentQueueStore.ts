@@ -24,6 +24,7 @@ type AgentQueueRow = {
   resultImageIds: string;
   errorCode: string | null;
   errorClass: string | null;
+  errorRawCode: string | null;
   errorMessage: string | null;
   progressStage: AgentQueueItem["progressStage"];
   createdAt: number;
@@ -78,6 +79,7 @@ export function getAgentQueueItem(id: string) {
       result_image_ids AS resultImageIds,
       error_code AS errorCode,
       error_class AS errorClass,
+      error_raw_code AS errorRawCode,
       error_message AS errorMessage,
       progress_stage AS progressStage,
       created_at AS createdAt,
@@ -104,6 +106,7 @@ export function listAgentQueueItems(sessionId?: string | null) {
       result_image_ids AS resultImageIds,
       error_code AS errorCode,
       error_class AS errorClass,
+      error_raw_code AS errorRawCode,
       error_message AS errorMessage,
       progress_stage AS progressStage,
       created_at AS createdAt,
@@ -145,6 +148,7 @@ export function claimNextAgentQueueItem(limits: AgentQueueLimits) {
       result_image_ids AS resultImageIds,
       error_code AS errorCode,
       error_class AS errorClass,
+      error_raw_code AS errorRawCode,
       error_message AS errorMessage,
       progress_stage AS progressStage,
       created_at AS createdAt,
@@ -160,7 +164,7 @@ export function claimNextAgentQueueItem(limits: AgentQueueLimits) {
     if (countRunningItems(row.sessionId) >= limits.maxSessionRunning) continue;
     const res = getDb().prepare(`
       UPDATE agent_queue_items
-      SET status = 'running', started_at = ?, progress_stage = NULL, error_code = NULL, error_class = NULL, error_message = NULL
+      SET status = 'running', started_at = ?, progress_stage = NULL, error_code = NULL, error_class = NULL, error_raw_code = NULL, error_message = NULL
       WHERE id = ? AND status = 'queued'
     `).run(Date.now(), row.id);
     if (res.changes > 0) return getAgentQueueItem(row.id);
@@ -177,28 +181,30 @@ export function completeAgentQueueItem(id: string, imageIds: readonly string[]) 
         progress_stage = NULL,
         error_code = NULL,
         error_class = NULL,
+        error_raw_code = NULL,
         error_message = NULL
     WHERE id = ? AND status = 'running'
   `).run(JSON.stringify([...imageIds]), Date.now(), id);
 }
 
-export function failAgentQueueItem(id: string, error: { code?: string | null | undefined; errorClass?: string | null | undefined; message: string }) {
+export function failAgentQueueItem(id: string, error: { code?: string | null | undefined; errorClass?: string | null | undefined; rawCode?: string | null | undefined; message: string }) {
   getDb().prepare(`
     UPDATE agent_queue_items
     SET status = 'failed',
         error_code = ?,
         error_class = ?,
+        error_raw_code = ?,
         error_message = ?,
         finished_at = ?,
         progress_stage = NULL
     WHERE id = ? AND status = 'running'
-  `).run(error.code ?? "AGENT_QUEUE_FAILED", error.errorClass ?? null, error.message, Date.now(), id);
+  `).run(error.code ?? "AGENT_QUEUE_FAILED", error.errorClass ?? null, error.rawCode ?? null, error.message, Date.now(), id);
 }
 
 export function cancelAgentQueueItem(id: string, reason = "Canceled by user") {
   const res = getDb().prepare(`
     UPDATE agent_queue_items
-    SET status = 'canceled', error_code = 'canceled', error_class = NULL, error_message = ?, finished_at = ?, progress_stage = NULL
+    SET status = 'canceled', error_code = 'canceled', error_class = NULL, error_raw_code = NULL, error_message = ?, finished_at = ?, progress_stage = NULL
     WHERE id = ? AND status IN ('queued', 'running')
   `).run(reason, Date.now(), id);
   return res.changes > 0;
@@ -275,6 +281,7 @@ export function retryAgentQueueItem(id: string) {
         result_image_ids = '[]',
         error_code = NULL,
         error_class = NULL,
+        error_raw_code = NULL,
         error_message = NULL,
         progress_stage = NULL,
         started_at = NULL,
@@ -299,6 +306,8 @@ function queueItemFromRow(row: AgentQueueRow): AgentQueueItem {
     // (cancellation, timeout) must carry no class at all, matching the rule
     // that nothing invents a class for non-provider errors.
     ...(row.errorClass ? { errorClass: row.errorClass } : {}),
+    // Same omit-rather-than-null rule: only a real provider cause carries a rawCode.
+    ...(row.errorRawCode ? { errorRawCode: row.errorRawCode } : {}),
     errorMessage: row.errorMessage,
     progressStage: row.progressStage ?? null,
     createdAt: row.createdAt,

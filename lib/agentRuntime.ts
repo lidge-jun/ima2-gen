@@ -376,6 +376,10 @@ const RETRYABLE_NO_IMAGE_CODES = new Set([
   "WEB_SEARCH_ONLY_RESPONSE",
   "IMAGE_TOOL_COMPLETED_WITHOUT_RESULT",
   "IMAGE_TOOL_FAILED",
+  // A 0-byte provider payload is the same class of transient as IMAGE_TOOL_FAILED:
+  // an empty CDN download usually succeeds on an immediate retry. If the second
+  // attempt is also empty the user still gets this specific code.
+  "PROVIDER_EMPTY_IMAGE",
 ]);
 
 export function isTextOnlyResult(error: unknown) {

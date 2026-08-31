@@ -246,6 +246,9 @@ function migrate(database: Database.Database) {
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "result_image_ids", "TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_code", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_class", "TEXT");
+  // The wrapper code alone (AGENT_TEXT_ONLY_RESULT) tells the user nothing about WHY.
+  // The worker already computes rawCode; without this column it was dropped here.
+  addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_raw_code", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "error_message", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "progress_stage", "TEXT");
   addColumnIfMissing(database, agentQueueColumns, "agent_queue_items", "started_at", "INTEGER");

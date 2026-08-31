@@ -69,6 +69,7 @@ export interface AgentQueueItem {
   resultImageIds: string[];
   errorCode?: string | null | undefined;
   errorClass?: string | null | undefined;
+  errorRawCode?: string | null | undefined;
   errorMessage?: string | null | undefined;
   createdAt: number;
   startedAt: number | null;

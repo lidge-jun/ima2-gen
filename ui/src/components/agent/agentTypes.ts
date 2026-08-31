@@ -82,6 +82,7 @@ export type AgentQueueItem = {
   resultImageIds: string[];
   errorCode?: string | null;
   errorClass?: string | null;
+  errorRawCode?: string | null;
   errorMessage?: string | null;
   createdAt: number;
   startedAt?: number | null;

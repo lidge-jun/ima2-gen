@@ -179,7 +179,12 @@ async function runClaimedQueueItem(ctx: RuntimeContext, itemId: string) {
     }
     const err = errInfo(error);
     const timedOut = timeoutController.signal.aborted;
-    const failure = timedOut ? { code: "timeout", message: "timeout" } : { code: err.code, message: err.message, ...errorEnvelopeFields(err.raw) };
+    const envelope = errorEnvelopeFields(err.raw) as { errorClass?: string; rawCode?: string };
+    const failure = timedOut
+      ? { code: "timeout", message: "timeout" }
+      // rawCode must reach the DB: the Agent composer reads the QUEUE, so without it
+      // the user only ever sees the generic wrapper code (issue #192).
+      : { code: err.code, message: err.message, ...envelope };
     failAgentQueueItem(item.id, failure);
     // The chat pane must never fail silently — surface the failure as an
     // assistant error turn unless the runtime already recorded one.
