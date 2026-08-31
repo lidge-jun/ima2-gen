@@ -1,5 +1,6 @@
 // wp5 054: upscale parameter popover for image results (video takes none).
 import { useState } from "react";
+import { useModalFocus } from "../hooks/useModalFocus";
 import { upscaleParamsError, type UpscaleParams } from "../lib/upscaleAction";
 import { useI18n } from "../i18n";
 
@@ -14,6 +15,10 @@ const FLAVORS = ["sublime", "photo", "photo_denoiser"] as const;
 
 export function UpscalePopover({ pending, onSubmit, onClose }: Props) {
   const { t } = useI18n();
+  const popoverRef = useModalFocus<HTMLDivElement>(true, onClose, {
+    trap: false,
+    restoreFocus: (reason) => reason !== "outsidePointer",
+  });
   const [scaleFactor, setScaleFactor] = useState<2 | 4 | 8 | 16>(2);
   const [flavor, setFlavor] = useState<"sublime" | "photo" | "photo_denoiser" | "">("");
   const [sharpen, setSharpen] = useState(10);
@@ -28,7 +33,7 @@ export function UpscalePopover({ pending, onSubmit, onClose }: Props) {
   const error = upscaleParamsError("image", params);
 
   return (
-    <div className="upscale-popover" role="dialog" aria-label={t("result.upscaleTitle")}>
+    <div ref={popoverRef} className="upscale-popover" role="dialog" aria-label={t("result.upscaleTitle")}>
       <div className="option-row" role="group" aria-label="scaleFactor">
         {SCALE_FACTORS.map((value) => (
           <button key={value} type="button"

@@ -105,7 +105,7 @@ describe("canvas annotation style contract", () => {
     const src = readSource("ui/src/components/canvas-mode/CanvasStylePopover.tsx");
     assert.match(src, /CANVAS_STROKE_WIDTHS/);
     assert.match(src, /CANVAS_STYLE_COLORS/);
-    assert.match(src, /event\.stopPropagation\(\)/);
+    assert.match(src, /useModalFocus/);
   });
 
   it("i18n exposes style/color/strokeWidth keys (en + ko)", () => {

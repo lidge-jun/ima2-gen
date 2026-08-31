@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { lazy, Suspense, useCallback, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useModalFocus } from "../hooks/useModalFocus";
 import {
   commitPromptImport,
   getPromptImportCuratedSources,
@@ -36,8 +37,7 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
   const { t } = useI18n();
   const showToast = useAppStore((s) => s.showToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useModalFocus<HTMLDivElement>(open, onClose);
   const [githubInput, setGithubInput] = useState("");
   const [candidates, setCandidates] = useState<PromptImportCandidate[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -55,13 +55,6 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
 
   const hasResults = candidates.length > 0;
   const showUpperSections = !hasResults || forceShowSources;
-
-  useEffect(() => {
-    if (!open) return;
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    window.setTimeout(() => dialogRef.current?.focus(), 0);
-    return () => previousFocusRef.current?.focus();
-  }, [open]);
 
   const loadCuratedSources = useCallback(async () => {
     const data = await getPromptImportCuratedSources();
@@ -274,9 +267,6 @@ export function PromptImportDialog({ open, onClose, onImported }: PromptImportDi
         aria-modal="true"
         aria-labelledby="prompt-import-title"
         tabIndex={-1}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") onClose();
-        }}
       >
         <div className="prompt-import-dialog__header">
           <h3 id="prompt-import-title">{t("promptLibrary.importTitle")}</h3>

@@ -65,7 +65,7 @@ test("close edge restores a connected opener once and clears ownership", () => {
 });
 
 test("Escape, inflight focus restoration, and touch targets remain intact", () => {
-  assert.match(sheet, /if \(e\.key === "Escape"\) close\(\)/);
+  assert.match(sheet, /useModalFocus/);
   assert.match(sheet, /previousInFlightCountRef\.current > 0 && inFlightCount === 0/);
   assert.match(sheet, /inflightHadFocusRef\.current[\s\S]*?querySelector<HTMLButtonElement>\("\.generate-btn"\)\?\.focus\(\)/);
   assert.match(responsiveCss, /\.mobile-sheet-tabs__button\s*\{[\s\S]*?min-height:\s*44px/);

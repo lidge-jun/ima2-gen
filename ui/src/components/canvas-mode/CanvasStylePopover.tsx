@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useModalFocus, type CloseReason } from "../../hooks/useModalFocus";
 import type { CanvasAnnotationStyle } from "../../types/canvas";
 import { CANVAS_STROKE_WIDTHS, CANVAS_STYLE_COLORS } from "../../hooks/useCanvasAnnotations";
 import { useI18n } from "../../i18n";
@@ -11,6 +12,9 @@ interface CanvasStylePopoverProps {
 export function CanvasStylePopover({ style, onStyleChange }: CanvasStylePopoverProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const popoverRef = useModalFocus<HTMLDivElement>(open, (reason?: CloseReason) => {
+    setOpen(false);
+  }, { trap: false, restoreFocus: (reason) => reason !== "outsidePointer" });
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,13 +30,6 @@ export function CanvasStylePopover({ style, onStyleChange }: CanvasStylePopoverP
     <div
       ref={ref}
       className={`canvas-toolbar__split-button${open ? " canvas-toolbar__split-button--active" : ""}`}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          event.preventDefault();
-          event.stopPropagation();
-          setOpen(false);
-        }
-      }}
     >
       <button
         type="button"
@@ -55,7 +52,7 @@ export function CanvasStylePopover({ style, onStyleChange }: CanvasStylePopoverP
         />
       </button>
       {open ? (
-        <div className="canvas-style-popover" role="dialog" aria-label={t("canvas.toolbar.style")}>
+        <div ref={popoverRef} className="canvas-style-popover" role="dialog" aria-label={t("canvas.toolbar.style")}>
           <div
             className="canvas-style-popover__row"
             role="group"

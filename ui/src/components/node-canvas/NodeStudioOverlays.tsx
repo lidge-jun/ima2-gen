@@ -1,6 +1,7 @@
-import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Panel } from "@xyflow/react";
 import { useI18n } from "../../i18n";
+import { useModalFocus } from "../../hooks/useModalFocus";
 import type { useNodeStudioController } from "./useNodeStudioController";
 import { NodeBranchDialog } from "./NodeBranchDialog";
 import { NodeCommandPalette } from "./NodeCommandPalette";
@@ -16,22 +17,9 @@ export interface NodeStudioOverlaysProps {
   onAddRoot(): void;
 }
 
-function focusable(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])")];
-}
-
 function DialogFrame({ children, onClose }: { children: ReactNode; onClose(): void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); return; }
-    if (event.key !== "Tab" || !ref.current) return;
-    const items = focusable(ref.current);
-    if (!items.length) return;
-    const first = items[0]; const last = items[items.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-  };
-  return <div ref={ref} className="node-studio-dialog-backdrop" onKeyDown={onKeyDown} onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>{children}</div>;
+  const ref = useModalFocus<HTMLDivElement>(true, onClose);
+  return <div ref={ref} className="node-studio-dialog-backdrop" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>{children}</div>;
 }
 
 export function NodeStudioOverlays({ studio, graphEmpty, disabled, onAddRoot }: NodeStudioOverlaysProps) {

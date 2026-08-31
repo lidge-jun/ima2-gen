@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useId, useRef, type RefObject } from "react";
 
 const FOCUSABLE = [
   "a[href]",
@@ -9,16 +9,38 @@ const FOCUSABLE = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+/* ---- Modal stack: only the topmost entry receives Escape and Tab ---- */
+const modalStack: string[] = [];
+function isTopmost(id: string): boolean {
+  return modalStack.length > 0 && modalStack[modalStack.length - 1] === id;
+}
+
+export type CloseReason = "escape" | "closeButton" | "outsidePointer" | "programmatic";
+
+export interface ModalFocusOptions {
+  /** Set false for non-modal panels that should not trap Tab. Default true. */
+  trap?: boolean;
+  /** Set false to skip auto-focus on open. Default true. */
+  autoFocus?: boolean;
+  /** Control whether focus returns to the trigger on close. Default true.
+      Can be a predicate receiving the close reason. */
+  restoreFocus?: boolean | ((reason: CloseReason) => boolean);
+}
+
 export function useModalFocus<T extends HTMLElement>(
   open: boolean,
-  onClose: () => void,
+  onClose: (reason?: CloseReason) => void,
+  options: ModalFocusOptions = {},
 ): RefObject<T | null> {
   const containerRef = useRef<T>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const stackId = useId();
+  const { trap = true, autoFocus = true, restoreFocus = true } = options;
 
   useEffect(() => {
     if (!open) return;
+    modalStack.push(stackId);
     const previousFocus = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
@@ -27,20 +49,28 @@ export function useModalFocus<T extends HTMLElement>(
       container?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
     ).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
 
-    window.requestAnimationFrame(() => {
-      const initial = container?.querySelector<HTMLElement>("[data-modal-initial-focus]")
-        ?? focusable()[0]
-        ?? container;
-      initial?.focus();
-    });
+    if (autoFocus) {
+      window.requestAnimationFrame(() => {
+        const initial = container?.querySelector<HTMLElement>("[data-modal-initial-focus]")
+          ?? focusable()[0]
+          ?? container;
+        initial?.focus();
+      });
+    }
+
+    const shouldRestore = (reason: CloseReason): boolean => {
+      if (typeof restoreFocus === "function") return restoreFocus(reason);
+      return restoreFocus;
+    };
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!isTopmost(stackId)) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        onCloseRef.current();
+        onCloseRef.current("escape");
         return;
       }
-      if (event.key !== "Tab") return;
+      if (!trap || event.key !== "Tab") return;
       const elements = focusable();
       if (elements.length === 0) {
         event.preventDefault();
@@ -59,11 +89,21 @@ export function useModalFocus<T extends HTMLElement>(
     };
 
     document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      window.requestAnimationFrame(() => previousFocus?.focus());
+    let closeReason: CloseReason = "programmatic";
+    const origClose = onCloseRef.current;
+    onCloseRef.current = (reason?: CloseReason) => {
+      closeReason = reason ?? "programmatic";
+      origClose(reason);
     };
-  }, [open]);
+    return () => {
+      const idx = modalStack.indexOf(stackId);
+      if (idx !== -1) modalStack.splice(idx, 1);
+      document.removeEventListener("keydown", onKeyDown);
+      if (shouldRestore(closeReason)) {
+        window.requestAnimationFrame(() => previousFocus?.focus());
+      }
+    };
+  }, [open, stackId, trap, autoFocus, restoreFocus]);
 
   return containerRef;
 }

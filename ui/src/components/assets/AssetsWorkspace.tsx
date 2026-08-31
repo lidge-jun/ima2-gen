@@ -12,52 +12,13 @@ import { AssetMediaLightbox } from "../assetgen/AssetMediaLightbox";
 import { KeyingPanel } from "../assetgen/KeyingPanel";
 import { AssetsFolderTree } from "./AssetsFolderTree";
 import { AssetsGrid } from "./AssetsGrid";
+import { useModalFocus } from "../../hooks/useModalFocus";
 import { ElementDetail, type ElementDefinition, type ElementDraft } from "./ElementDetail";
 
 const kinds = ["image", "video", "element", "preset", "template"] as const;
 type KindValue = "" | typeof kinds[number];
-const ASSET_DETAIL_FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
-
 function useMobileAssetDetailDialog(open: boolean, onClose: () => void) {
-  const panelRef = useRef<HTMLElement>(null);
-  const restoreRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    restoreRef.current = document.activeElement as HTMLElement | null;
-    const focusTimer = window.setTimeout(() => {
-      panelRef.current?.querySelector<HTMLElement>(ASSET_DETAIL_FOCUSABLE)?.focus();
-    }, 0);
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const nodes = Array.from(
-        panelRef.current?.querySelectorAll<HTMLElement>(ASSET_DETAIL_FOCUSABLE) ?? [],
-      ).filter((node) => !node.hasAttribute("disabled") && node.getClientRects().length > 0);
-      if (nodes.length === 0) return;
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener("keydown", onKeyDown);
-      restoreRef.current?.focus();
-    };
-  }, [onClose, open]);
-
-  return panelRef;
+  return useModalFocus<HTMLElement>(open, onClose);
 }
 
 export function AssetsWorkspace() {
