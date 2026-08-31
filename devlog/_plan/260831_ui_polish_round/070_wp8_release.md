@@ -146,3 +146,10 @@ install policy, audit gate).
 2차 fast-forward, `assertBaseline` problems `[]`, 3.12.2가 npm에 올라가고,
 `main`/`dev`/태그가 한 SHA를 공유하고, 설치한 패키지에서 버전이 확인되고,
 그 태그 커밋이 wp9 머지 커밋의 후손이며, 열린 PR이 0건.
+
+## Implementation Log (B-phase)
+
+Gate chain: typecheck, typecheck:tests, npm test (2732/0/2), UI build all green.
+assertBaseline: verified.
+main fast-forwarded: 79ca516e -> 0b22d7a4.
+No publishing: package.json 3.12.1, npm latest 3.12.1, tag v3.12.1.
