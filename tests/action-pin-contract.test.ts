@@ -241,6 +241,29 @@ describe("action pin gate", () => {
     assert.doesNotThrow(() => assertAllActionsPinned(pinned, "fixture"));
   });
 
+  // A JavaScript, Docker, or shell-only action has nothing external to pin, and
+  // a workflow may reference only local actions. Both are valid and must not be
+  // rejected for having no external ref.
+  it("accepts manifests that legitimately declare nothing external", () => {
+    const jsAction = ['name: probe', "runs:", "  using: node20", "  main: index.js"].join("\n");
+    assert.doesNotThrow(() => assertAllActionsPinned(jsAction, "fixture", { requireUses: false }));
+    assert.equal(parseActionUses(jsAction, "fixture").length, 0);
+
+    const shellOnly = [
+      "runs:",
+      "  using: composite",
+      "  steps:",
+      "    - run: echo hi",
+      "      shell: bash",
+    ].join("\n");
+    assert.doesNotThrow(() => assertAllActionsPinned(shellOnly, "fixture", { requireUses: false }));
+
+    const localOnly = `jobs:\n  a:\n    steps:\n      - uses: ./tools/local`;
+    const entries = assertAllActionsPinned(localOnly, "fixture");
+    assert.equal(entries.length, 1);
+    assert.equal(entries.filter((entry) => !entry.local).length, 0);
+  });
+
   it("understands explicit block indentation indicators", () => {
     for (const indicator of ["|", "|-", "|+", ">", ">-", "|2", "|2-", ">2+"]) {
       const decoy = [
@@ -297,11 +320,12 @@ describe("action pin gate", () => {
       const text = readFileSync(join(WORKFLOW_DIR, name), "utf8");
       const runOnly = RUN_ONLY_WORKFLOWS.has(name);
       const entries = assertAllActionsPinned(text, `${WORKFLOW_DIR}/${name}`, { requireUses: !runOnly });
-      const external = entries.filter((entry) => !entry.local).length;
+      // The allowlist claim is "declares no actions at all", so that is what is
+      // checked. A non-listed workflow must declare at least one action, but it
+      // may legitimately be entirely local (`uses: ./tools/x`) - requiring an
+      // EXTERNAL action would reject that valid shape.
       if (runOnly) {
-        assert.equal(external, 0, `${name} is listed as run-only but declares ${external} actions; drop it from the allowlist`);
-      } else {
-        assert.ok(external > 0, `${name} declares no external action; add it to RUN_ONLY_WORKFLOWS if that is intended`);
+        assert.equal(entries.length, 0, `${name} is listed as run-only but declares ${entries.length} uses; drop it from the allowlist`);
       }
     }
   });
@@ -318,8 +342,12 @@ describe("action pin gate", () => {
     );
     for (const path of paths) {
       const name = path.split("/").pop() as string;
-      const runOnly = path.startsWith(WORKFLOW_DIR) && RUN_ONLY_WORKFLOWS.has(name);
-      assertAllActionsPinned(readFileSync(path, "utf8"), path, { requireUses: !runOnly });
+      // Action manifests are swept with requireUses off: a JavaScript, Docker,
+      // or shell-only composite action declares no `uses:` at all and has
+      // nothing to pin. Every entry that IS present is still checked.
+      const isWorkflow = path.startsWith(WORKFLOW_DIR);
+      const requireUses = isWorkflow && !RUN_ONLY_WORKFLOWS.has(name);
+      assertAllActionsPinned(readFileSync(path, "utf8"), path, { requireUses });
     }
   });
 

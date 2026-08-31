@@ -16,7 +16,7 @@
 // against an earlier line-based version of this file, and actionlint accepted
 // the crafted workflow, so this is reachable YAML rather than a hypothetical.
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseDocument, isAlias, isMap, isSeq, isScalar } from "yaml";
 
@@ -210,7 +210,11 @@ export function pinnedManifestPaths(root = process.cwd()) {
   const walk = (relDir) => {
     for (const entry of readdirSync(join(root, relDir)).sort()) {
       const rel = join(relDir, entry);
-      if (statSync(join(root, rel)).isDirectory()) walk(rel);
+      // lstat, not stat: a symlinked directory can point at its own parent, and
+      // following it would walk forever.
+      const stats = lstatSync(join(root, rel));
+      if (stats.isSymbolicLink()) continue;
+      if (stats.isDirectory()) walk(rel);
       else if (/^action\.ya?ml$/.test(entry)) paths.add(rel);
     }
   };
@@ -249,6 +253,11 @@ export function pinnedManifestPaths(root = process.cwd()) {
 function localManifestCandidates(use) {
   const rel = use.replace(/^\.\//, "").replace(/\/+$/, "");
   if (!rel || rel.startsWith("..")) return [];
-  if (/\/action\.ya?ml$/.test(rel)) return [rel];
-  return [join(rel, "action.yml"), join(rel, "action.yaml")];
+  const candidates = /\/action\.ya?ml$/.test(rel)
+    ? [rel]
+    : [join(rel, "action.yml"), join(rel, "action.yaml")];
+  // join() normalizes, so `./sub/../../outside` collapses to `../outside/...`.
+  // Drop anything that climbs out: a manifest outside the repo is not ours to
+  // police, and reading it would take the walk somewhere unbounded.
+  return candidates.filter((path) => !path.startsWith("..") && !path.startsWith("/"));
 }
