@@ -59,6 +59,9 @@
 }
 
 .agent-stage__filmstrip {
+  /* Without min-width the flex row grows past its grid track, so trailing
+     thumbs stay focusable while being clipped by .agent-stage's overflow. */
+  min-width: 0;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -101,19 +104,43 @@
   outline-offset: 1px;
 }
 
-.agent-dialog--tools .agent-right-sidebar--overlay {
-  position: absolute;
+/* Non-modal inspector: no page scrim, so the chat and stage behind it stay
+   readable and clickable. */
+.agent-right-sidebar--overlay {
+  position: fixed;
   inset: 0 0 0 auto;
-  width: min(420px, 90vw);
-  height: 100%;
-  z-index: 30;
+  width: min(420px, 92vw);
+  height: 100dvh;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
   background: var(--surface);
-  border-left: 1px solid var(--border);
-  overflow-y: auto;
+  border-left: 1px solid var(--border-strong, var(--border));
+  box-shadow: -18px 0 48px var(--shadow-strong, rgba(0, 0, 0, 0.4));
+  overflow: hidden;
 }
 
-.agent-right-sidebar--overlay {
-  grid-template-rows: auto auto minmax(0, 1fr);
+/* Where there is room, the panel takes its own column instead of covering the
+   stage. A non-modal panel leaves the background focusable, so overlaying it
+   would let Shift+Tab land on a control hidden underneath (WCAG 2.4.11). */
+@media (min-width: 1180px) {
+  .agent-workspace--tools-docked .agent-workspace__body {
+    grid-template-columns:
+      minmax(320px, 0.34fr)
+      minmax(360px, 0.46fr)
+      min(420px, 32vw);
+  }
+
+  .agent-workspace--tools-docked .agent-right-sidebar--overlay {
+    position: relative;
+    inset: auto;
+    width: auto;
+    height: 100%;
+    z-index: 1;
+    box-shadow: none;
+  }
 }
 
 .agent-right-sidebar__overlay-header {
@@ -125,10 +152,16 @@
   border-bottom: 1px solid var(--border);
 }
 
-.agent-right-sidebar__overlay-header strong {
-  font-size: 12px;
-  color: var(--text-dim);
+.agent-right-sidebar__overlay-header h2 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
   font-weight: 600;
+}
+
+.agent-right-sidebar__overlay-header h2:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .agent-right-sidebar__overlay-header button {
