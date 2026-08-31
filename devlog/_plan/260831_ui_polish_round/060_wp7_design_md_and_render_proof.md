@@ -70,6 +70,8 @@ style과 기하를 뽑습니다. agbrowse의 `screenshot`은 이 기계에서 �
 
 - `.home-hero__mark`, `.home-hero__title`, `.home-workspace h2`,
   `.assets-tile__glyph` **네 셀렉터**의 computed `font-size`를
+  (h2는 `.home-workspace__recent > h2`만 사다리 대상;
+  `.home-modes__title`은 의도적 11px 별도 스타일.)
   **320/480/481/767/768/769/1024/1025/1279/1280/1920 열한 폭 전부**에서 기록하고,
   사다리 표와 일치하며 경계에서 감소하지 않는지 확인. h2는 앞선 판에서 빠져 있었고,
   1024/1025는 wp3가 mark 경계를 768에서 1024로 옮겨서 추가됐습니다.
@@ -78,6 +80,9 @@ style과 기하를 뽑습니다. agbrowse의 `screenshot`은 이 기계에서 �
   밖으로 내보내지 않는지 확인합니다.
 - 같은 열한 폭에서 네 요소의 `scrollWidth`가 부모 `clientWidth`를 넘지 않는지.
   히어로 마크는 100~176px 단일 글자라 특히 481, 1025, 1280에서 확인이 필요합니다.
+  **예외 (wp3c3에서 확정):** mark는 `overflow:hidden`이므로 scrollWidth > clientWidth는
+  의도된 클리핑. glyph는 wp3에서 빈 스토어로 computed 미측정, wp7에서 에셋 fixture로
+  최초 computed font-size 검증 수행.
   binary overflow 판정 자체는 wp3 C단계 게이트이고(`devlog/_plan/260831_ui_polish_round/020_wp3_typography.md:236`),
   여기서는 캡처 아카이브와 before/after 비교를 남깁니다.
 - letter-spacing 0으로 바뀐 7곳에서 텍스트가 부모를 넘지 않는지.

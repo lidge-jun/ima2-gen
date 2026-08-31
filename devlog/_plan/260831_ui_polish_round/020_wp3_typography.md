@@ -275,3 +275,7 @@ mark 25.5 / title 6.5 / h2 4.5 / glyph 16.5입니다. 0.5는
 위 열한 폭 x 네 로케일에서 computed font-size 일치와 overflow 0건.
 위 예외 3건은 근거가 확인된 것으로 overflow 0건 집계에서 제외.
 스크린샷 아카이브는 wp7.
+
+**wp3에서 검증하는 computed font-size**: mark, title, .home-workspace__recent > h2
+(3개). glyph는 빈 스토어로 렌더 불가하므로 computed 측정을 wp7로 이관.
+CSS 선언은 정적 매니페스트로 wp3에서 잠금.
