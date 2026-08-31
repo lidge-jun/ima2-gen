@@ -38,7 +38,7 @@
   background: rgba(255, 246, 179, 0.96);
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
   color: #2f2a13;
-  font: 500 14px/1.35 var(--font-ui, sans-serif);
+  font: 500 14px/1.35 var(--font);
   line-height: 1.35;
   pointer-events: auto;
   resize: both;
@@ -63,7 +63,7 @@
 
 .canvas-save-state--error {
   border-color: rgba(248, 113, 113, 0.5);
-  color: #fecaca;
+  color: var(--red);
 }
 
 .canvas-memo:focus {
@@ -350,7 +350,7 @@
   position: absolute;
   right: 4px;
   bottom: 3px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--mono);
   font-size: 9px;
   font-weight: 600;
   line-height: 1;

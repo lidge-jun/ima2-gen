@@ -232,7 +232,7 @@
 }
 
 .comfy-workflow-table .mono {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--mono);
   color: var(--text-dim);
 }
 

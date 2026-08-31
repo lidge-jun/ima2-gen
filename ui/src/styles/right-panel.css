@@ -99,7 +99,7 @@
 .generation-request-log__empty {
   padding: 24px 16px;
   text-align: center;
-  color: var(--text-secondary, #888);
+  color: var(--text-muted);
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -193,7 +193,7 @@
   letter-spacing: 0.03em;
 }
 .generation-log-detail__mono {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--mono);
   font-size: 12px;
   word-break: break-all;
 }
@@ -237,7 +237,7 @@
   cursor: pointer;
 }
 .generation-log-detail__copy:hover {
-  background: var(--control-bg-hover, var(--control-bg));
+  background: var(--control-hover);
 }
 .gallery__limit-notice {
   margin: 8px 12px;
@@ -264,7 +264,7 @@
   transition: background 0.15s;
 }
 .generation-request-log__item:hover {
-  background: var(--surface-hover, rgba(128, 128, 128, 0.1));
+  background: var(--control-hover);
 }
 .generation-request-log__prompt {
   flex: 1;

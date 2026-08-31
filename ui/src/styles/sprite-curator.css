@@ -5,7 +5,7 @@
 .sprite-curator__header { border-bottom: 1px solid var(--border, #343843); }
 .sprite-curator__header h2 { margin: 0 auto 0 0; font-size: 1rem; }
 .sprite-curator__footer { justify-content: flex-end; border-top: 1px solid var(--border, #343843); }
-.sprite-curator button, .sprite-curator select, .sprite-curator input { min-block-size: 36px; border: 1px solid var(--border, #3d414d); border-radius: var(--r-sm); color: inherit; background: var(--surface-raised, #22252d); }
+.sprite-curator button, .sprite-curator select, .sprite-curator input { min-block-size: 36px; border: 1px solid var(--border, #3d414d); border-radius: var(--r-sm); color: inherit; background: var(--surface-2); }
 .sprite-curator button { padding-inline: 12px; cursor: pointer; }
 .sprite-curator button:focus-visible, .sprite-curator select:focus-visible, .sprite-curator input:focus-visible { outline: 2px solid var(--accent, #78a8ff); outline-offset: 2px; }
 .sprite-curator button:disabled { cursor: default; opacity: .5; }

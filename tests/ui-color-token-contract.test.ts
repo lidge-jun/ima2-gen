@@ -63,14 +63,6 @@ const RUNTIME_INJECTED = new Set([
   "--inflight-caret-top",
   "--node-preview-h",
   "--node-preview-w",
-  // Pre-existing undefined aliases — out of wp4 scope, tracked for future cleanup
-  "--font-ui",
-  "--font-mono",
-  "--surface-4",
-  "--text-secondary",
-  "--control-bg-hover",
-  "--surface-hover",
-  "--surface-raised",
 ]);
 
 // Deleted aliases that must not reappear
@@ -83,6 +75,7 @@ const DELETED_ALIASES = [
 // State color hex literals that should now be tokens
 const STATE_COLOR_LITERALS = [
   "#ff6262", "#e05555", "#e53935", "#ff6b6b", "#ff9c9c",
+  "#fecaca",
   "#d9a12e", "#d08c3a", "#4caf50", "#3b82f6",
 ];
 
@@ -145,18 +138,21 @@ describe("ui-color-token-contract", () => {
 
   it("--paper and --paper-edge are defined in both themes", () => {
     const content = readFileSync(INDEX_CSS, "utf8");
-    // Dark theme (first occurrence)
-    assert.ok(content.includes("--paper:"), "--paper not defined");
-    assert.ok(content.includes("--paper-edge:"), "--paper-edge not defined");
-    // Should appear at least twice (dark + light)
-    const paperCount = (content.match(/--paper:/g) || []).length;
-    const edgeCount = (content.match(/--paper-edge:/g) || []).length;
-    assert.ok(paperCount >= 2, `--paper defined ${paperCount} times, need >=2 for both themes`);
-    assert.ok(edgeCount >= 2, `--paper-edge defined ${edgeCount} times, need >=2 for both themes`);
+    // Split into :root (dark) and [data-theme="light"] blocks
+    const darkMatch = content.match(/:root\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/);
+    const lightMatch = content.match(/\[data-theme="light"\]\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/);
+    assert.ok(darkMatch, ":root block not found");
+    assert.ok(lightMatch, '[data-theme="light"] block not found');
+    const dark = darkMatch![1];
+    const light = lightMatch![1];
+    assert.ok(/--paper:\s*#14161b/.test(dark), "--paper not #14161b in :root (dark)");
+    assert.ok(/--paper-edge:\s*#1b1e25/.test(dark), "--paper-edge not #1b1e25 in :root (dark)");
+    assert.ok(/--paper:\s*#ffffff/.test(light), "--paper not #ffffff in light theme");
+    assert.ok(/--paper-edge:\s*#f8fafc/.test(light), "--paper-edge not #f8fafc in light theme");
   });
 
   it("hardcoded hex count does not regress above snapshot", () => {
-    const SNAPSHOT = 167; // plan baseline; must not increase
+    const SNAPSHOT = 70; // tightened after wp4; actual is 67
     let total = 0;
     for (const file of cssFiles) {
       const content = readFileSync(file, "utf8");

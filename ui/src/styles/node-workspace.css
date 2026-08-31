@@ -362,7 +362,7 @@
   cursor: pointer;
 }
 .image-node__retry:hover:not(:disabled) {
-  background: var(--surface-4, var(--surface-3));
+  background: var(--surface-3);
 }
 .image-node__error-cta {
   flex: 1 1 100%;

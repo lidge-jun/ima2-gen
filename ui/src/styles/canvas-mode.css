@@ -87,7 +87,7 @@
   border-radius: var(--r-xs);
   background: var(--tint-32);
   border: 1px solid var(--tint-26);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--mono);
   font-size: 11px;
   font-weight: 600;
 }
@@ -117,7 +117,7 @@
   border-radius: var(--r-xs);
   background: var(--tint-20);
   border: 1px solid var(--tint-32);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--mono);
   font-size: 12px;
 }
 

@@ -102,7 +102,7 @@
 .canvas-tool-picker__item kbd {
   min-width: 18px;
   color: var(--tint-50);
-  font: 700 11px/1 var(--font-mono, monospace);
+  font: 700 11px/1 var(--mono);
   text-align: right;
 }
 
