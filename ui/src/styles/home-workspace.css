@@ -21,7 +21,7 @@
   top: clamp(-12px, -1vh, -4px);
   left: -0.06em;
   right: 0;
-  font: 700 clamp(84px, 13vw, 176px) / 0.78 var(--font-display);
+  font: 700 176px / 0.78 var(--font-display);
   color: transparent;
   -webkit-text-stroke: 1px rgba(244, 244, 246, 0.13);
   white-space: nowrap;
@@ -37,8 +37,7 @@
 
 .home-hero__title {
   margin: 0;
-  font: 700 clamp(24px, 2.8vw, 34px) / 1.08 var(--font-display);
-  letter-spacing: -0.02em;
+  font: 700 34px / 1.08 var(--font-display);
   text-wrap: balance;
   word-break: keep-all;
   color: var(--text);
@@ -185,7 +184,7 @@
 
 .home-workspace h2 {
   font-family: var(--font-display);
-  font-size: clamp(20px, 2.5vw, 26px);
+  font-size: 26px;
   font-weight: 600;
   line-height: 1.2;
   text-wrap: balance;
@@ -367,10 +366,29 @@
   font: 400 13px/1.4 var(--font);
 }
 
+/* Stepped type ladder (wp3). The wordmark, hero title, and section heading
+   used viewport-proportional clamp(), which made the same content render at a
+   different size on every window width. Steps change only at boundaries, so a
+   capture at one width is reproducible.
+
+   The mark uses 480/1024/1279 rather than the shared 480/768/1279: the old CSS
+   dropped from 150px at 768 to 100px at 769, and moving the boundary to 1024
+   cuts the worst deviation from the old curve from 44px to 25px without adding
+   a band. Ordering is load-bearing: these equal-specificity rules resolve by
+   source order, so 1279 precedes 1024, which precedes the 480 block below. */
+@media (max-width: 1279px) {
+  .home-hero__mark { font-size: 150px; }
+  .home-hero__title { font-size: 30px; }
+  .home-workspace h2 { font-size: 22px; }
+}
+
+@media (max-width: 1024px) {
+  .home-hero__mark { font-size: 125px; }
+}
+
 @media (max-width: 768px) {
   .home-workspace { padding: 28px 20px 56px; }
   .home-hero { padding: 20px 0 18px; }
-  .home-hero__mark { font-size: clamp(84px, 22vw, 150px); }
   .home-recent-row { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
   .home-modes { margin-top: 40px; }
   .home-modes__item { grid-template-columns: 24px minmax(0, 6.5rem) minmax(0, 1fr) auto; gap: 12px; }
@@ -395,8 +413,8 @@
   /* The hero shrinks so the composer stays inside the first screen on a
      390x844 phone; the wordmark keeps the frame without owning it. */
   .home-hero { padding: 14px 0 14px; }
-  .home-hero__mark { top: -2px; font-size: clamp(64px, 26vw, 104px); }
-  .home-hero__title { font-size: clamp(26px, 8vw, 32px); }
+  .home-hero__mark { top: -2px; font-size: 100px; }
+  .home-hero__title { font-size: 28px; }
   .home-hero__lede { margin-top: 8px; font-size: 14px; }
   .home-hero__readiness { margin-top: 12px; }
   .home-modes__item { grid-template-columns: 22px minmax(0, 1fr) auto; row-gap: 3px; }
