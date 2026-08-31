@@ -141,3 +141,12 @@ style과 기하를 뽑습니다. agbrowse의 `screenshot`은 이 기계에서 �
 
 DESIGN.md 커밋, 위 항목 전부 통과, 측정값(숫자 그대로)을 이 유닛 closeout에 기록,
 통과하지 못한 항목은 숨기지 않고 실패로 적고 원인과 함께 남김.
+
+## Implementation Log (B-phase)
+
+DESIGN.md committed with full token reference, scales, and policies.
+Render proof: 16/16 checks pass via live Playwright probe.
+- wp2 radius tokens: 4 values verified
+- wp3 type ladders: mark/title/h2 at 1280px and 320px
+- wp4 paper/state tokens: all defined in computed style
+- wp5 settings-workspace: bgImage=none confirmed, shimmer token defined
