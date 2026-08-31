@@ -1,6 +1,6 @@
 {
   "name": "ima2-gen",
-  "version": "3.11.0",
+  "version": "3.12.1",
   "packageManager": "npm@11.18.0",
   "description": "Local-first visual generation runtime and studio for people and coding agents, with reproducible image and video workflows across multiple providers.",
   "type": "module",
@@ -117,6 +117,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.1",
     "tsx": "^4.23.12",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "yaml": "2.9.0"
   }
 }

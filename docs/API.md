@@ -18,6 +18,7 @@ Image generation supports OAuth, API-key, Grok, and Gemini (`agy` and `gemini-ap
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool. Model is `nano-banana-2`. Output is fixed at 1024×1024 JPEG. Max 3 reference images (i2i). No web search, quality, size, or mask controls. Multimode returns a single image. Video is unsupported (`AGY_VIDEO_UNSUPPORTED`).
 - `provider: "grok-api"` uses a direct xAI API key instead of the bundled progrok OAuth proxy. Same pipeline as `grok` (Web Search → planner → `/v1/images/generations`), same aspect ratio and resolution options. Requires an xAI API key configured via the web UI key management or `XAI_API_KEY` env var. Also supports video generation.
 - `provider: "gemini-api"` calls the Google Generative Language API directly (or Vertex AI with a service account JSON). Supports models `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K) on both auth paths — the direct API path sends `generation_config.response_format.image` (snake_case) while the Vertex AI endpoint (`aiplatform.googleapis.com`) sends `generationConfig.imageConfig` (camelCase). With `size: "auto"` the image config is omitted entirely and the model decides ratio/size. Auth: `GEMINI_API_KEY` env var, web UI key management (`/api/keys/gemini`), or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON` or `/api/keys/vertex`). When both Vertex credentials and an API key are configured, Vertex takes priority. The chosen auth mode (`apikey` or `vertex`) persists to `~/.ima2/config.json` as `geminiAuthMode` and is restored on server startup. Per-model cost: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
+- `provider: "nai"` calls NovelAI text-to-image generation with one of `nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, or `nai-diffusion-4-5-curated`. It accepts the provider-native request fields documented below and returns a ZIP that ima2 decodes to PNG. References, edits, and masks are explicitly refused.
 - API-key generation covers classic generate, edit, mask-guided edit, multimode, and node generation.
 - If `provider: "api"` is requested without an API key, routes fail before upstream with `401` and `API_KEY_REQUIRED`.
 - Grok generation maps `size` to xAI `aspect_ratio` and `resolution`; it does not send an OpenAI-style `size` field upstream. Grok edit uses xAI `/v1/images/edits`; Grok mask edit remains unsupported and returns `GROK_MASK_UNSUPPORTED`.
@@ -215,6 +216,19 @@ When `storyboard` is `true`, the server prepends storyboard keyframe instruction
 generations maintain character and scene continuity for multi-shot video production.
 
 Current app default: `gpt-5.6-luna`. `gpt-5.5` and the other supported GPT image models remain available when callers explicitly select them.
+
+When `provider` is `"nai"`, classic, multimode, and node generation accept the
+same 13 provider-native fields: `negativePrompt`, `sampler`, `noiseSchedule`,
+`steps`, `scale`, `cfgRescale`, `seed`, `ucPresetId`, `qualityPresetId`,
+`autoSmea`, `decrisper`, `varietyPlus`, and `straightAlpha`. Missing values stay
+sparse and resolve from `config.naiProvider`; operator defaults `defaultAutoSmea`
+and `defaultDecrisper` are `false` unless overridden by config or
+`IMA2_NAI_DEFAULT_AUTO_SMEA` / `IMA2_NAI_DEFAULT_DECRISPER`. Quality preset and
+enabled alpha are V5-only. The four exact image models are
+`nai-diffusion-5-full`, `nai-diffusion-5-curated`,
+`nai-diffusion-4-5-full`, and `nai-diffusion-4-5-curated`. The lane is
+text-to-image only: `NAI_REF_UNSUPPORTED`, `NAI_EDIT_UNSUPPORTED`, and
+`NAI_MASK_UNSUPPORTED` fail closed rather than discarding input.
 
 When `provider` is `"grok"`, supported models are `grok-imagine-image` and
 `grok-imagine-image-quality`. The server uses `grok-4.5` as the search/planner
@@ -758,7 +772,7 @@ API key management endpoints for configuring provider credentials at runtime thr
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/keys/status` | GET | Returns configured/valid/maskedKey status for all providers (openai, xai, gemini, atlascloud, minimax, nai, vertex) plus `geminiAuthMode` (`"apikey"` or `"vertex"`) |
-| `/api/keys/:provider` | PUT | Save an API key. Body: `{ "apiKey": "..." }`. Validates key format and upstream before saving to config.json. Provider: `openai`, `xai`, `gemini`, `atlascloud`, `minimax`, or `nai`. `minimax` and `nai` have no fixed key prefix, so only the upstream validation call gates them; a NovelAI persistent token looks like `pst-...`. |
+| `/api/keys/:provider` | PUT | Save an API key. Body: `{ "apiKey": "..." }`. Validates key format and upstream before saving to config.json. Provider: `openai`, `xai`, `gemini`, `atlascloud`, `minimax`, or `nai`. `minimax` and `nai` have no fixed key prefix, so only the upstream validation call gates them. |
 | `/api/keys/:provider` | DELETE | Remove a config-sourced API key. Env-sourced keys cannot be removed (`ENV_KEY_IMMUTABLE`). |
 | `/api/keys/vertex` | PUT | Save a Vertex AI service account JSON. Body: `{ "serviceAccountJson": "..." }`. Validates JSON structure (`type: "service_account"`, `project_id` required). |
 | `/api/keys/vertex` | DELETE | Remove a config-sourced Vertex AI service account. |

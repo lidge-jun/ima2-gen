@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
+import { assertActionPinned, assertAllActionsPinned } from "./_actionPins.mjs";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { scripts: Record<string, string> };
@@ -55,17 +56,20 @@ describe("governance files", () => {
 
   it("pins CodeQL and nix actions to immutable SHAs", () => {
     const codeql = read(".github/workflows/codeql.yml");
-    assert.match(codeql, /github\/codeql-action\/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd/);
-    assert.match(codeql, /github\/codeql-action\/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd/);
+    // The rule is "pinned to an immutable commit", not "pinned to one specific
+    // commit forever". Hardcoding the SHA here made every Dependabot bump fail
+    // this gate even when the bump was correctly pinned (#162, then #178 again).
+    // assertActionPinned checks the property and leaves the commit identity to
+    // Dependabot; assertAllActionsPinned covers the rest of the file positively,
+    // which also rejects branch pins like @main that a @vN blacklist let through.
+    assertActionPinned(codeql, "github/codeql-action/init", ".github/workflows/codeql.yml");
+    assertActionPinned(codeql, "github/codeql-action/analyze", ".github/workflows/codeql.yml");
     assert.match(codeql, /languages: javascript-typescript/);
     assert.match(codeql, /build-mode: none/);
-    assert.doesNotMatch(codeql, /uses:\s*[^\s]+@v\d/);
+    assertAllActionsPinned(codeql, ".github/workflows/codeql.yml");
     const nix = read(".github/workflows/nix.yml");
-    // The rule is "pinned to an immutable commit", not "pinned to one specific
-    // commit forever": hardcoding the SHA made every Dependabot bump fail this
-    // gate even when the bump was correctly pinned (#162).
-    assert.match(nix, /cachix\/install-nix-action@[0-9a-f]{40}\b/);
-    assert.doesNotMatch(nix, /install-nix-action@v\d/);
+    assertActionPinned(nix, "cachix/install-nix-action", ".github/workflows/nix.yml");
+    assertAllActionsPinned(nix, ".github/workflows/nix.yml");
   });
 
   it("groups Dependabot updates and caps open PRs at 5", () => {

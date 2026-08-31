@@ -193,7 +193,9 @@ jobs:
           $manifest = Get-Content release-artifact/release-manifest.json | ConvertFrom-Json
           $env:IMA2_PACKAGE_TARBALL = Join-Path $PWD "release-artifact/$($manifest.filename)"
           npm run test:package-global-update
-        timeout-minutes: 15
+        # The smoke owns labeled 1-7 minute child deadlines. Keep this wrapper
+        # outside their full prepacked sequence so it never hides the culprit.
+        timeout-minutes: 40
 
   publish-preview:
     needs: [prepare, package, windows-consumer]

@@ -26,6 +26,13 @@ describe("args parser", () => {
     assert.deepStrictEqual(out.ref, ["x.png", "y.png"]);
     assert.strictEqual(out.count, "2");
     assert.strictEqual(out.json, true);
+    assert.deepStrictEqual(out._present, ["quality", "ref", "ref", "count", "json"]);
+  });
+
+  it("records a recognized value flag even when its value is missing", () => {
+    const out = parseArgs(["--quality"], spec);
+    assert.deepStrictEqual(out._present, ["quality"]);
+    assert.strictEqual(out.quality, undefined);
   });
 
   it("parses --key=val form", () => {
