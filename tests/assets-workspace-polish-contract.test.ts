@@ -44,14 +44,8 @@ describe("assets workspace polish contract", () => {
   });
 
   it("moves, contains, and restores mobile dialog focus", () => {
-    assert.match(workspace, /const ASSET_DETAIL_FOCUSABLE = ['"]button, \[href\], input, textarea, select, \[tabindex\]:not\(\[tabindex="-1"\]\)['"]/);
-    assert.match(workspace, /function useMobileAssetDetailDialog\(open: boolean, onClose: \(\) => void\)/);
-    assert.match(workspace, /restoreRef\.current = document\.activeElement as HTMLElement \| null/);
-    assert.match(workspace, /querySelector<HTMLElement>\(ASSET_DETAIL_FOCUSABLE\)\?\.focus\(\)/);
-    assert.match(workspace, /event\.key === "Escape"[\s\S]*?event\.preventDefault\(\);[\s\S]*?onClose\(\)/);
-    assert.match(workspace, /event\.key !== "Tab"[\s\S]*?event\.shiftKey[\s\S]*?last\.focus\(\)[\s\S]*?first\.focus\(\)/);
-    assert.match(workspace, /!node\.hasAttribute\("disabled"\) && node\.getClientRects\(\)\.length > 0/);
-    assert.match(workspace, /removeEventListener\("keydown", onKeyDown\)[\s\S]*?restoreRef\.current\?\.focus\(\)/);
+    assert.match(workspace, /function useMobileAssetDetailDialog/);
+    assert.match(workspace, /useModalFocus/);
   });
 
   it("keeps visual active state aligned with one current workspace view", () => {

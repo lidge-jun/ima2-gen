@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useModalFocus } from "../hooks/useModalFocus";
 import { useI18n } from "../i18n";
 import type { GenerateItem } from "../types";
 
@@ -135,6 +136,7 @@ export function ResultMetadataModal({
   onCopy: (value: string) => void;
 }) {
   const { t, locale } = useI18n();
+  const containerRef = useModalFocus<HTMLElement>(true, onClose);
   const rawJson = useMemo(() => JSON.stringify(item, null, 2), [item]);
   const latestContinuity = item.videoContinuity?.entries?.[item.videoContinuity.entries.length - 1] ?? null;
   const provider = providerLabel(item.provider);
@@ -232,7 +234,7 @@ export function ResultMetadataModal({
 
   return (
     <div className="modal-backdrop metadata-modal-backdrop" onClick={onClose}>
-      <section
+      <section ref={containerRef}
         className="modal metadata-modal"
         role="dialog"
         aria-modal="true"

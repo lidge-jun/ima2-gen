@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useI18n } from "../../i18n";
+import { useModalFocus } from "../../hooks/useModalFocus";
 import { useAppStore } from "../../store/useAppStore";
 
 type Props = { onClose: () => void; onSelect: (id: string | null) => void };
@@ -9,15 +10,7 @@ export function ProjectSearchPopup({ onClose, onSelect }: Props) {
   const folders = useAppStore((s) => s.assetsFolders);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
 
   const results = useMemo(() => {
     const roots = folders.filter((f) => f.parentId === null);
@@ -27,7 +20,7 @@ export function ProjectSearchPopup({ onClose, onSelect }: Props) {
 
   return (
     <div className="assetgen-popup-backdrop" onClick={onClose}>
-      <div
+      <div ref={dialogRef}
         className="assetgen-popup"
         role="dialog"
         aria-modal="true"

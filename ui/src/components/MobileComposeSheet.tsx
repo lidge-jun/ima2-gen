@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useModalFocus } from "../hooks/useModalFocus";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -63,16 +64,12 @@ export function MobileComposeSheet() {
     focusTab(target);
   };
 
+  const sheetRef = useModalFocus<HTMLDivElement>(open, close, { autoFocus: false });
+
   useEffect(() => {
     if (!open || activeTab !== "prompt" || !isMobile || settingsOpen || uiMode !== "classic") {
       setInflightExpanded(false);
     }
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
   }, [open, activeTab, close, isMobile, settingsOpen, uiMode]);
 
   useLayoutEffect(() => {
@@ -122,6 +119,7 @@ export function MobileComposeSheet() {
         />
       ) : null}
       <section
+        ref={sheetRef}
         id="mobile-generate-sheet"
         inert={!open}
         className={`compose-sheet${open ? " compose-sheet--open" : ""}`}

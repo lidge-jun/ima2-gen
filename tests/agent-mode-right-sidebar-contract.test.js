@@ -84,8 +84,8 @@ describe("Agent Mode right sidebar contract", () => {
 
     // Focus trap stays opt-in for genuinely modal drawers only.
     assert.match(focus, /options: Options = \{\}/);
-    assert.match(focus, /if \(!modal \|\| event\.key !== "Tab"\) return;/);
-    assert.match(focus, /data-autofocus/);
+    assert.match(focus, /useModalFocus/);
+    assert.match(focus, /trap: options\.modal !== false/);
 
     // The trigger is a disclosure control, so it reports its own state.
     assert.match(stage, /aria-expanded=\{toolsPanelOpen === true\}/);

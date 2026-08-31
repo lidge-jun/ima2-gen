@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../i18n";
+import { useModalFocus } from "../../hooks/useModalFocus";
 import { useAppStore } from "../../store/useAppStore";
 import { uploadDerivedAsset, requestVideoKeying } from "../../lib/api-assets";
 import { subscribe } from "../../lib/eventChannel";
@@ -40,6 +41,7 @@ export function KeyingPanel() {
   const { t } = useI18n();
   const item = useAppStore((s) => s.keyingTarget);
   const close = useAppStore((s) => s.setKeyingTarget);
+  const dialogRef = useModalFocus<HTMLDivElement>(!!item, () => close(null));
   const addDerivedItem = useAppStore((s) => s.addAssetGenDerivedItem);
   const selectedProjectId = useAppStore((s) => s.selectedProjectId);
   const showToast = useAppStore((s) => s.showToast);
@@ -275,19 +277,11 @@ export function KeyingPanel() {
     }, "image/png");
   }, [item, saving, isVideo, keyColor, selectedProjectId, tolerance, softness, spill, clearKeyingSubscription, addDerivedItem, showToast, close, t]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
-
   if (!item) return null;
 
   return (
     <div className="assetgen-popup-backdrop" onClick={() => close(null)}>
-      <div className="keying-panel" role="dialog" aria-modal="true" aria-label={t("keying.title")} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="keying-panel" role="dialog" aria-modal="true" aria-label={t("keying.title")} onClick={(e) => e.stopPropagation()}>
         <header className="keying-panel__head">
           <h2>{t("keying.title")}</h2>
           {keyColor ? (
