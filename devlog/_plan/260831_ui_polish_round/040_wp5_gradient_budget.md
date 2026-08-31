@@ -215,3 +215,13 @@ wp4가 sidebar.css:59를 var(--chrome)로 바꾸면 그라디언트 함수 호�
 decorative 14), functional 18개 보존, --skeleton-shimmer 정의 1곳에 참조 6곳,
 .canvas__blank-sheet background 선언 1곳, .settings-workspace before/after 렌더
 확인, npm test 무회귀.
+
+## Implementation Log (B-phase)
+
+All changes in two commits on codex/ui-polish-wp5-gradient-budget:
+
+- f385a5a0: fix(ui): shimmer consolidation, settings-workspace pruning, paper tokens
+- 2891a87e: test(ui): 5-assertion gradient manifest contract
+
+Final: 40 gradients (functional 18 / state 6 / scrim 2 / decorative 14).
+PR #188 -> dev. 2712/0/2 tests.
