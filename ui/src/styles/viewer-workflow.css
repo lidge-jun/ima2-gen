@@ -10,8 +10,8 @@
       rgba(var(--canvas-empty-dot-rgb), calc(0.08 * var(--canvas-empty-dot-alpha-scale))) 1px,
       transparent 1.4px
     ),
-    linear-gradient(#ffffff, #f8fafc),
-    #ffffff;
+    linear-gradient(var(--paper), var(--paper-edge)),
+    var(--paper);
   background-size: 14px 14px, auto, auto;
 }
 

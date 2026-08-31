@@ -137,6 +137,7 @@
   --glass-line: rgba(255, 255, 255, 0.1);
   --paper: #14161b;
   --paper-edge: #1b1e25;
+  --skeleton-shimmer: linear-gradient(90deg, var(--surface-2) 25%, color-mix(in srgb, var(--amber) 18%, var(--surface-2)) 50%, var(--surface-2) 75%);
   /* Canvas-mode stage surfaces: the stage keeps its own plate system so
      floating chrome stays legible over arbitrary artwork in both themes. */
   --canvas-stage-bg: #0d0d0d;

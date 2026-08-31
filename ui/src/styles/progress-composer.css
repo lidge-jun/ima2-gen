@@ -146,12 +146,7 @@
 
 /* Gallery skeleton shimmer */
 .history-thumb--skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--surface-2) 25%,
-    color-mix(in srgb, var(--amber) 18%, var(--surface-2)) 50%,
-    var(--surface-2) 75%
-  );
+  background: var(--skeleton-shimmer);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: var(--r-sm);
@@ -187,12 +182,7 @@
   object-fit: cover;
 }
 .collection-mini--skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--surface-2) 25%,
-    color-mix(in srgb, var(--amber) 18%, var(--surface-2)) 50%,
-    var(--surface-2) 75%
-  );
+  background: var(--skeleton-shimmer);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
