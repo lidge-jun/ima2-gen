@@ -25,11 +25,11 @@ export const VECTOR_PRESETS = ["auto", "flat", "detailed", "mono"] as const;
 export type VectorPreset = (typeof VECTOR_PRESETS)[number];
 
 export type VectorizeOptions = {
-  preset?: VectorPreset;
-  colorPrecision?: number;
-  filterSpeckle?: number;
-  cornerThreshold?: number;
-  optimize?: boolean;
+  preset?: VectorPreset | undefined;
+  colorPrecision?: number | undefined;
+  filterSpeckle?: number | undefined;
+  cornerThreshold?: number | undefined;
+  optimize?: boolean | undefined;
 };
 
 export type VectorizeResult = {

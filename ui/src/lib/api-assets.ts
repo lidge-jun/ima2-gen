@@ -97,6 +97,47 @@ export async function uploadDerivedAsset(blob: Blob, input: {
   return res.json() as Promise<{ filePath: string; asset: AssetItem }>;
 }
 
+export type VectorizeResponse = {
+  filePath: string;
+  asset: AssetItem;
+  pathCount: number;
+  bytes: number;
+  elapsedMs: number;
+  preset: string;
+};
+
+/**
+ * Trace an existing generated raster into SVG.
+ *
+ * Sends no body: the server already has the source file, so re-uploading it would
+ * double the transfer for nothing.
+ */
+export async function requestVectorize(input: {
+  source: string;
+  preset?: string;
+  colorPrecision?: number;
+  filterSpeckle?: number;
+  cornerThreshold?: number;
+  projectId?: string | null;
+  name?: string;
+}): Promise<VectorizeResponse> {
+  const params = new URLSearchParams();
+  params.set("source", input.source);
+  params.set("kind", "vector-svg");
+  if (input.preset) params.set("preset", input.preset);
+  if (input.colorPrecision !== undefined) params.set("colorPrecision", String(input.colorPrecision));
+  if (input.filterSpeckle !== undefined) params.set("filterSpeckle", String(input.filterSpeckle));
+  if (input.cornerThreshold !== undefined) params.set("cornerThreshold", String(input.cornerThreshold));
+  if (input.projectId) params.set("projectId", input.projectId);
+  if (input.name) params.set("name", input.name);
+  const res = await fetch(`/api/assets/derived?${params.toString()}`, { method: "POST" });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error((detail as { error?: string }).error || `vectorize failed (${res.status})`);
+  }
+  return res.json() as Promise<VectorizeResponse>;
+}
+
 export function requestVideoKeying(input: {
   source: string;
   keyParams: { tolerance: number; softness: number; keyColor?: { r: number; g: number; b: number } };

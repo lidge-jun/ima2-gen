@@ -27,7 +27,10 @@ describe("Asset Gen media lightbox contract", () => {
     assert.match(workspace, /useState<GenerateItem \| null>\(null\)/);
     assert.match(workspace, /onPreviewAsset=\{\(asset\) => setPreviewItem\(assetToPreviewItem\(asset\)\)\}/);
     assert.match(workspace, /previewItem \? <AssetMediaLightbox item=\{previewItem\} onClose=\{closePreview\} \/>/);
-    assert.match(assetPreview, /derivedKind\.startsWith\("keyed-"\) \? "edit" : "imported"/);
+    assert.match(
+      assetPreview,
+      /\(derivedKind\.startsWith\("keyed-"\) \|\| derivedKind === "vector-svg"\) \? "edit" : "imported"/,
+    );
     assert.match(grid, /className="assets-tile__preview" aria-label=\{previewLabel\}/);
     assert.match(grid, /event\.stopPropagation\(\); onSelect\?\.\(item\.id\); onPreview\?\.\(item\)/);
     assert.match(grid, /className=\{`assets-tile__delete[\s\S]*event\.stopPropagation\(\); void remove\(\)/);

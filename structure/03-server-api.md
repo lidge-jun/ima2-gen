@@ -186,8 +186,19 @@ When `groupBy=session` is used, session groups include `title` and `label` when 
 | `PATCH` | `/api/assets/folders/:id` | `{ name?, parentId? }` | `{ folder }` |
 | `DELETE` | `/api/assets/folders/:id` | none | `{ ok: true }` |
 | `GET` | `/api/assets/tags` | none | `{ tags }` |
+| `POST` | `/api/assets/derived` | `kind=keyed-png` + raw `image/png` body, or `kind=vector-svg` (bodyless) with `source`, `preset?`, `colorPrecision?`, `filterSpeckle?`, `cornerThreshold?` | `201 { filePath, asset, ... }` |
 
 `routes/assets.ts` and `lib/assetsStore.ts` implement a SQLite catalog over files already stored in the configured generated directory; the catalog does not duplicate image or video bytes. Asset kinds are the closed enum `image | video | element | preset | template`. Image and video creation requires a validated regular file under generated storage, while the other kinds may be metadata-only. Listing supports kind, folder, tag, and name/notes search filters with opaque `(createdAt, id)` cursor pagination (default 50, maximum 500).
+
+`routes/assetDerived.ts` registers `POST /api/assets/derived`, which writes a derived
+file next to its source and registers it as an `image` asset carrying a `derivedKind`
+metadata marker. `keyed-png` uploads a client-composited alpha PNG as a raw body.
+`vector-svg` sends NO body: the server reads the already-validated source from generated
+storage and traces it to SVG via `lib/vectorizeImage.ts`, rejecting a non-raster source
+with `DERIVED_SOURCE_NOT_RASTER` so a vector can never be re-traced. Traced SVGs are
+served from `/generated` with `Content-Security-Policy: default-src 'none'` and
+`X-Content-Type-Options: nosniff`, since SVG is an active document under top-level
+navigation and `/generated` sits outside the LAN token guard.
 
 Folder writes preserve tree integrity with stable errors: `INVALID_PARENT` rejects a missing parent, `FOLDER_CYCLE` rejects moving a folder beneath itself or a descendant, and `FOLDER_NOT_EMPTY` rejects deletion while assets or child folders remain. `INVALID_FOLDER` covers asset assignment to a missing folder. Deleting an asset removes only its SQLite catalog row (and cascading tag rows); the generated file is deliberately preserved. File deletion remains owned by the history/asset lifecycle endpoints above.
 

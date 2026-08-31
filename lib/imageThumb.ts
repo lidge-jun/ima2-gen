@@ -6,12 +6,18 @@ const THUMB_QUALITY = 70;
 // Guard against decompression-bomb memory exhaustion (default sharp limit is 268M px).
 const MAX_INPUT_PIXELS = 100_000_000; // 100MP (e.g. ~10000x10000)
 
+const RASTERIZABLE = /\.(png|jpe?g|webp)$/i;
+
 export function thumbPathForImage(imagePath: string): string {
-  return imagePath.replace(/\.(png|jpe?g|webp)$/i, ".thumb.jpg");
+  // A non-raster path must never map onto itself: returning the input unchanged
+  // would make callers treat the original as its own thumbnail and overwrite it.
+  if (!RASTERIZABLE.test(imagePath)) return `${imagePath}.thumb.jpg`;
+  return imagePath.replace(RASTERIZABLE, ".thumb.jpg");
 }
 
 export function thumbUrlForImage(imageUrl: string): string {
-  return imageUrl.replace(/\.(png|jpe?g|webp)$/i, ".thumb.jpg");
+  if (!RASTERIZABLE.test(imageUrl)) return `${imageUrl}.thumb.jpg`;
+  return imageUrl.replace(RASTERIZABLE, ".thumb.jpg");
 }
 
 export async function generateImageThumbnail(imagePath: string): Promise<string> {

@@ -35,6 +35,19 @@ test("/generated serves media files but never generated sidecar metadata", async
     const sidecar = await fetch(`${base}/generated/clip.mp4.json`);
     assert.equal(sidecar.status, 404);
     assert.equal(await sidecar.text(), "Generated metadata is not public");
+
+    // A traced SVG is an active document under top-level navigation, and
+    // /generated sits outside the LAN token guard, so the serving layer must
+    // neuter it regardless of who wrote the file.
+    await writeFile(join(generatedDir, "traced.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h1v1z\"/></svg>");
+    const vector = await fetch(`${base}/generated/traced.svg`);
+    assert.equal(vector.status, 200);
+    assert.equal(vector.headers.get("content-security-policy"), "default-src 'none'; style-src 'unsafe-inline'");
+    assert.equal(vector.headers.get("x-content-type-options"), "nosniff");
+
+    // Raster media must not gain the restrictive policy.
+    const raster = await fetch(`${base}/generated/clip.mp4`);
+    assert.equal(raster.headers.get("content-security-policy"), null);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(generatedDir, { recursive: true, force: true });

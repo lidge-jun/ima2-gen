@@ -279,6 +279,14 @@ export function buildApp(ctx: RuntimeContext) {
   });
   app.use("/generated", (req, res, next) => {
     if (req.path.endsWith(".json")) return res.status(404).type("text/plain").send("Generated metadata is not public");
+    if (req.path.toLowerCase().endsWith(".svg")) {
+      // SVG is an active document under top-level navigation, and /generated sits
+      // outside the LAN token guard (which only covers /api). Traced output is
+      // machine-generated, but the guarantee should not rest on writer discipline:
+      // this neuters script execution for any .svg served from here, now or later.
+      res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    }
     return next();
   }, express.static(ctx.config.storage.generatedDir, {
     maxAge: ctx.config.storage.staticMaxAge,

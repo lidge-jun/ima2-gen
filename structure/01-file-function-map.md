@@ -72,7 +72,7 @@ routes/
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `server.ts` | 624 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
+| `server.ts` | 632 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
 | `config.ts` | 471 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 93 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
@@ -255,7 +255,7 @@ routes/
 | `lib/grokVideoDownload.ts` | 65 | Grok video download and persistence helpers |
 | `lib/grokVideoPlannerPrompt.ts` | 225 | Grok video planner prompt construction |
 | `lib/historyIndex.ts` | 57 | Generated-history index construction and lookup |
-| `lib/imageThumb.ts` | 44 | Image thumbnail generation helpers |
+| `lib/imageThumb.ts` | 50 | Image thumbnail generation helpers |
 | `lib/multimodeHelpers.ts` | 48 | Shared multimode generation helpers |
 | `lib/nodeHelpers.ts` | 119 | Node workflow graph and payload helpers |
 | `lib/nodeTemplateSeeds.ts` | 84 | Built-in node workflow template seed definitions |

@@ -28,6 +28,8 @@ export function assetToPreviewItem(asset: AssetItem): GenerateItem {
     createdAt: asset.createdAt,
     requestId: `asset:${asset.id}`,
     ...(storedPreset === "transparent" ? { backgroundPreset: "transparent" as const } : {}),
-    kind: typeof derivedKind === "string" && derivedKind.startsWith("keyed-") ? "edit" : "imported",
+    // A traced vector has no raster alpha to key, and keying it would silently
+    // rasterize the asset - so it joins keyed output in suppressing that entry.
+    kind: typeof derivedKind === "string" && (derivedKind.startsWith("keyed-") || derivedKind === "vector-svg") ? "edit" : "imported",
   };
 }
