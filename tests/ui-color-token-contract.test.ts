@@ -38,9 +38,9 @@ function extractVarRefs(file: string) {
   const lines = content.split("\n");
   const refs: { name: string; file: string; line: number; hasFallback: boolean }[] = [];
   for (let i = 0; i < lines.length; i++) {
-    const matches = lines[i].matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)(?:\s*,\s*([^)]+))?\)/g);
+    const matches = lines[i].matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)/g);
     for (const m of matches) {
-      refs.push({ name: m[1], file, line: i + 1, hasFallback: !!m[2] });
+      refs.push({ name: m[1], file, line: i + 1, hasFallback: false });
     }
   }
   return refs;
@@ -108,8 +108,9 @@ describe("ui-color-token-contract", () => {
       const content = readFileSync(file, "utf8");
       const lines = content.split("\n");
       for (let i = 0; i < lines.length; i++) {
+        const lower = lines[i].toLowerCase();
         for (const hex of STATE_COLOR_LITERALS) {
-          if (lines[i].includes(hex)) {
+          if (lower.includes(hex.toLowerCase())) {
             hits.push(`${relative(UI_SRC, file)}:${i + 1} ${hex}`);
           }
         }
@@ -152,7 +153,7 @@ describe("ui-color-token-contract", () => {
   });
 
   it("hardcoded hex count does not regress above snapshot", () => {
-    const SNAPSHOT = 70; // tightened after wp4; actual is 67
+    const SNAPSHOT = 67; // frozen at wp4 completion
     let total = 0;
     for (const file of cssFiles) {
       const content = readFileSync(file, "utf8");
