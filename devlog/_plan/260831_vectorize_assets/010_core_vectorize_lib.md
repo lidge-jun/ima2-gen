@@ -135,3 +135,19 @@ Then run `node scripts/classify-tests.mjs` and commit the regenerated
   the CLI takes any local file), `DECODE_FAILED` (garbage bytes with a raster
   extension), `OUTPUT_TOO_LARGE` (1254² Poster already emits 1.36 MB; an 8000²
   noisy input scales ~40x past the 24 MB ceiling).
+## wp2 C-phase render observation (evidence/)
+
+Real keyed asset (1254x1254 RGBA) traced through the SHIPPED module, rendered back
+to PNG with sharp and visually observed:
+
+| preset | paths | bytes | ms |
+|--------|-------|-------|----|
+| auto | 722 | 598,990 | 1360 |
+| flat | 1478 | 578,299 | 915 |
+| mono | 12 | 64,338 | 93 |
+
+`auto` is visually faithful with alpha intact. **`mono` fills transparent regions
+black** — binary tracing has no alpha channel, so a cutout becomes a silhouette on a
+black field. That is inherent to binary mode, not a defect, but it means the GUI must
+describe `mono` as a silhouette/line-art option rather than offering it as a general
+cutout preset. Recorded here so wp4 copy does not mislead.
