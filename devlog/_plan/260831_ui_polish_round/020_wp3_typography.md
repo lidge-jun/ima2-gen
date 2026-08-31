@@ -255,6 +255,17 @@ mark 25.5 / title 6.5 / h2 4.5 / glyph 16.5입니다. 0.5는
 - 네 사다리 요소와 letter-spacing 7곳에서 `scrollWidth <= clientWidth`
 - 최소 en / ko / zh-Hans / zh-Hant 네 로케일의 실제 문자열로
 
+**예외 (감사 wp3c3에서 확정):**
+
+- **.home-hero__mark 320px clipping**: scrollWidth(269) > clientWidth(246)이지만
+  이 요소는 `overflow: hidden; position: absolute; z-index: -1; aria-hidden: true;
+  color: transparent`인 장식용 워터마크. 의도된 클리핑이며 레이아웃에 영향 없음.
+- **.assets-tile__glyph null**: 빈 에셋 스토어에서는 타일이 렌더되지 않음.
+  CSS 선언은 정적 계약 매니페스트(ui-typography-rules-contract.test.ts:188)로 잠금.
+  실제 computed 측정은 에셋 fixture가 있는 wp7 렌더 증거에서 수행.
+- **.home-workspace h2 선택자**: `.home-workspace__recent > h2`만 사다리 대상.
+  `.home-modes__title`(11px, `!important`)는 의도적 별도 스타일.
+
 스크린샷 보관과 before/after 종합 비교는 wp7에 남깁니다. 여기서 필요한 것은
 판정이고, 아카이브가 아닙니다.
 
@@ -262,4 +273,5 @@ mark 25.5 / title 6.5 / h2 4.5 / glyph 16.5입니다. 0.5는
 
 두 규칙 위반 0개, 사다리 값이 표와 일치(네 셀렉터 전부), 이탈/점프 상한 통과,
 위 열한 폭 x 네 로케일에서 computed font-size 일치와 overflow 0건.
+위 예외 3건은 근거가 확인된 것으로 overflow 0건 집계에서 제외.
 스크린샷 아카이브는 wp7.
