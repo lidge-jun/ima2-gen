@@ -666,6 +666,16 @@ Style-sheet extraction can require an API key/openai client. Image generation al
 
 ## Prompt Library
 
+## Prompt Builder
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/prompt-builder/config` | Current builder backend/model, per-backend model catalog, auto order, and env-lock bits |
+| `PUT` | `/api/prompt-builder/config` | Persist `{ backend, model }` to `~/.ima2/config.json` (`promptBuilder.*`); 400 on a cross-backend pair, 409 when env-locked, 500 `PROMPT_BUILDER_CONFIG_UNREADABLE` when the file cannot be parsed |
+| `POST` | `/api/prompt-builder/chat` | Multi-turn prompt refinement; body may carry a per-request `backend` override; the reply reports `backend` (the lane that answered) and `requestedBackend` |
+
+Backends: `auto` (first ready lane in the order oauth, grok, api, grok-api), `oauth`, `api`, `grok`, `grok-api`. An explicit backend never falls back; it returns a typed 503/401 error instead.
+
 Backed by `routes/prompts.ts` and SQLite prompt tables in `lib/db.ts`.
 
 | Method | Path | Notes |

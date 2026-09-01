@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 const source = (path) => readFileSync(path, "utf8");
 
 test("key config mutations use a process-wide queue and unique temp names", () => {
-  const keys = source("routes/keys.ts");
+  // The queue/atomic-write helper moved from routes/keys.ts to the shared owner so the
+  // Prompt Builder config route can reuse it (devlog 260902_studio_surfaces/020).
+  const keys = source("lib/configFileStore.ts");
   assert.match(keys, /let configMutationQueue: Promise<void>/);
   assert.match(keys, /serializeConfigMutation/);
   assert.match(keys, /randomBytes\(8\)\.toString\("hex"\)/);
