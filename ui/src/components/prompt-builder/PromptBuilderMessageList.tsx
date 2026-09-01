@@ -35,7 +35,7 @@ export function PromptBuilderMessageList() {
         </div>
       )}
       {error ? (
-        <div className="prompt-builder__error" role="alert">{error}</div>
+        <div className="prompt-builder__empty prompt-builder__error" role="alert">{error}</div>
       ) : null}
     </div>
   );

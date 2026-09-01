@@ -3,14 +3,14 @@ export type PromptBuilderBackend = (typeof PROMPT_BUILDER_BACKENDS)[number];
 export type ResolvedPromptBuilderBackend = Exclude<PromptBuilderBackend, "auto">;
 
 const GPT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini"] as const;
-const GROK_MODELS = ["grok-4.3", "grok-4.6", "grok-4.5"] as const;
+const grokModels = ["grok-4.3", "grok-4.6", "grok-4.5"] as const;
 
 export const PROMPT_BUILDER_MODELS: Record<PromptBuilderBackend, readonly string[]> = {
   auto: ["auto"],
   oauth: GPT_MODELS,
-  grok: GROK_MODELS,
+  grok: grokModels,
   api: GPT_MODELS,
-  "grok-api": GROK_MODELS,
+  "grok-api": grokModels,
 };
 export const DEFAULT_PROMPT_BUILDER_MODELS: Record<PromptBuilderBackend, string> = {
   auto: "auto",

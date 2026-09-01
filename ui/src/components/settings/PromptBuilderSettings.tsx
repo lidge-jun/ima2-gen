@@ -6,8 +6,15 @@ import {
 } from "../../store/promptBuilderStore";
 import { Select } from "../controls";
 
-function backendLabelKey(backend: PromptBuilderBackend): string {
-  return `promptBuilder.backends.${backend === "grok-api" ? "grokApi" : backend}`;
+function backendLabel(
+  backend: PromptBuilderBackend,
+  t: (key: string) => string,
+): string {
+  if (backend === "auto") return t("promptBuilder.backends.auto");
+  if (backend === "oauth") return t("promptBuilder.backends.oauth");
+  if (backend === "grok") return t("promptBuilder.backends.grok");
+  if (backend === "api") return t("promptBuilder.backends.api");
+  return t("promptBuilder.backends.grokApi");
 }
 
 export function PromptBuilderSettings() {
@@ -52,7 +59,7 @@ export function PromptBuilderSettings() {
             value={backend}
             items={backendOptions.map((value) => ({
               value,
-              label: t(backendLabelKey(value)),
+              label: backendLabel(value, t),
             }))}
             onChange={(value) => void updateConfig(value)}
             ariaLabel={t("settings.promptBuilder.backendLabel")}

@@ -29,7 +29,7 @@ export function PromptBuilderPanel({ variant = "panel" }: PromptBuilderPanelProp
           <span className="section-title">{t("promptBuilder.title")}</span>
           <PromptBuilderScopeBadge />
           {lastBackend ? (
-            <span className="prompt-builder__backend-badge">
+            <span className="prompt-builder__scope prompt-builder__backend-badge">
               {t("promptBuilder.viaBackend", {
                 backend: t(
                   `promptBuilder.backends.${lastBackend === "grok-api" ? "grokApi" : lastBackend}`,
