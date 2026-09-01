@@ -38,7 +38,7 @@ export function NegativePromptField({ variant, onSubmit }: NegativePromptFieldPr
       </label>
       <textarea
         id={id}
-        className="negative-prompt__textarea"
+        className={`negative-prompt__textarea${variant === "home" ? " home-prompt__textarea" : ""}`}
         rows={5}
         value={value}
         placeholder={t("nai.negativePrompt.placeholder")}

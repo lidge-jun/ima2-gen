@@ -505,7 +505,7 @@
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  clip-path: inset(0 round var(--r-md));
   background: var(--surface-2);
 }
 .composer__prompt-pane-label {

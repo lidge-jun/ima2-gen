@@ -108,7 +108,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     : trayItems.length > 0
       ? t("prompt.placeholderWithRefs")
       : t("prompt.placeholder");
-  const submitPrompt = () => { if (missingElementIds.length === 0) void generate(); };
+  const submitPrompt = () => { if (missingElementIds.length > 0) return; void generate(); };
 
   const captureAttachmentCaret = (): number => {
     const textarea = textareaRef.current;
