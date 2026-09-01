@@ -44,16 +44,39 @@ describe("prompt studio UI contract", () => {
     assert.ok(lineCount("ui/src/styles/prompt-builder-messages.css") < 500);
   });
 
-  it("uses the shared portaled Select for the Luna-first prompt builder model menu", () => {
+  it("uses the server-projected backend model list in the shared portaled Select", () => {
     const menu = readSource("ui/src/components/prompt-builder/PromptBuilderModelMenu.tsx");
     const css = readSource("ui/src/styles/prompt-builder.css");
 
-    assert.match(menu, /Select<PromptBuilderModel>/);
+    assert.match(menu, /Select<string>/);
     assert.match(menu, /portal/);
-    assert.match(menu, /\["gpt-5\.6-luna", "gpt-5\.6-terra", "gpt-5\.6-sol"/);
+    assert.match(menu, /modelOptions\.map/);
+    assert.match(menu, /updateConfig\(backend, value\)/);
+    assert.doesNotMatch(menu, /const MODELS|const MODEL_ITEMS|gpt-5\.6-luna/);
     assert.doesNotMatch(menu, /useState|role="listbox"|prompt-builder__model-option/);
     assert.match(css, /\.prompt-builder__model-picker \.ctl-select__trigger/);
     assert.doesNotMatch(css, /\.prompt-builder__model-(?:trigger|menu|option)/);
+  });
+
+  it("wires Prompt Builder settings, hydration guard, backend badge, and visible errors", () => {
+    const settings = readSource("ui/src/components/SettingsWorkspace.tsx");
+    const builderSettings = readSource("ui/src/components/settings/PromptBuilderSettings.tsx");
+    const store = readSource("ui/src/store/promptBuilderStore.ts");
+    const panel = readSource("ui/src/components/prompt-builder/PromptBuilderPanel.tsx");
+    const composer = readSource("ui/src/components/prompt-builder/PromptBuilderComposer.tsx");
+    const messages = readSource("ui/src/components/prompt-builder/PromptBuilderMessageList.tsx");
+
+    assert.match(settings, /<PromptBuilderSettings \/>/);
+    assert.match(builderSettings, /settings\.promptBuilder\.title/);
+    assert.match(builderSettings, /locked\.backend \|\| locked\.model/);
+    assert.match(store, /getPromptBuilderConfig/);
+    assert.match(store, /putPromptBuilderConfig/);
+    assert.match(store, /if \(!state\.configLoaded\)/);
+    assert.match(composer, /!configLoaded/);
+    assert.match(panel, /lastBackend/);
+    assert.match(panel, /prompt-builder__backend-badge/);
+    assert.match(messages, /prompt-builder__error/);
+    assert.match(messages, /role="alert"/);
   });
 
   it("keeps functional panels solid while preserving semantic media gradients", () => {

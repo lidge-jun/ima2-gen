@@ -81,9 +81,8 @@ describe("gpt-5.6 rollout: surface contracts", () => {
       assert.ok(src.includes(`"${model}"`), `prompt builder constants missing ${model}`);
     }
     const menu = readSource("ui/src/components/prompt-builder/PromptBuilderModelMenu.tsx");
-    for (const model of GPT56_MODELS) {
-      assert.ok(menu.includes(`"${model}"`), `prompt builder menu missing ${model}`);
-    }
+    assert.match(menu, /modelOptions/);
+    assert.doesNotMatch(menu, /const MODELS|const MODEL_ITEMS/);
   });
 
   it("UI unions and pickers carry the 5.6 slugs and max", () => {

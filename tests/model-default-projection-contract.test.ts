@@ -62,9 +62,17 @@ describe("current model defaults: runtime contract", () => {
   });
 
   it("projects current defaults into UI stores and public documentation", () => {
+    const promptBuilderConfig = readSource("config.ts");
+    const promptBuilderConstants = readSource("lib/promptBuilder/constants.ts");
+    const promptBuilderStore = readSource("ui/src/store/promptBuilderStore.ts");
+    assert.match(promptBuilderConfig, /selectedPromptBuilderModel/);
+    assert.match(promptBuilderConfig, /DEFAULT_PROMPT_BUILDER_MODELS/);
+    assert.match(promptBuilderConstants, /gpt-5\.6-luna/);
+    assert.match(promptBuilderConstants, /grok-4\.3/);
+    assert.match(promptBuilderStore, /getPromptBuilderConfig/);
+    assert.match(promptBuilderStore, /modelOptions/);
+
     for (const path of [
-      "ui/src/store/promptBuilderStore.ts",
-      "ui/src/components/prompt-builder/PromptBuilderModelMenu.tsx",
       "README.md",
       "docs/API.md",
       "docs/CLI.md",
