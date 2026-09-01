@@ -1,22 +1,84 @@
 import {
-  VALID_PROMPT_BUILDER_MODELS,
-  DEFAULT_PROMPT_BUILDER_MODEL,
+  DEFAULT_PROMPT_BUILDER_MODELS,
   MAX_MESSAGES,
   MAX_MESSAGE_CHARS,
+  PROMPT_BUILDER_AUTO_ORDER,
+  PROMPT_BUILDER_BACKENDS,
+  PROMPT_BUILDER_MODELS,
+  type PromptBuilderBackend,
+  type ResolvedPromptBuilderBackend,
 } from "./constants.js";
 import { promptBuilderError } from "./errors.js";
 import { normalizeAttachments } from "./attachments.js";
-import type { PromptBuilderMessage } from "./types.js";
+import type { PromptBuilderConfig, PromptBuilderMessage } from "./types.js";
 
-export function normalizeModel(raw: unknown): string {
-  if (typeof raw !== "string" || raw.trim().length === 0) return DEFAULT_PROMPT_BUILDER_MODEL;
-  if (!VALID_PROMPT_BUILDER_MODELS.has(raw)) {
+export function normalizePromptBuilderBackend(
+  raw: unknown,
+  fallback: PromptBuilderBackend = "auto",
+): PromptBuilderBackend {
+  if (raw === undefined || raw === null) return fallback;
+  if (typeof raw === "string") {
+    const candidate = raw.trim();
+    if (!candidate) return fallback;
+    if (PROMPT_BUILDER_BACKENDS.includes(candidate as PromptBuilderBackend)) {
+      return candidate as PromptBuilderBackend;
+    }
+  }
+  throw promptBuilderError(
+    `backend must be one of: ${PROMPT_BUILDER_BACKENDS.join(", ")}`,
+    "PROMPT_BUILDER_BAD_BACKEND",
+  );
+}
+
+export function normalizePromptBuilderModel(
+  backend: PromptBuilderBackend,
+  raw: unknown,
+): string {
+  const candidate = typeof raw === "string" && raw.trim()
+    ? raw.trim()
+    : DEFAULT_PROMPT_BUILDER_MODELS[backend];
+  if (!PROMPT_BUILDER_MODELS[backend].includes(candidate)) {
     throw promptBuilderError(
-      `model must be one of: ${[...VALID_PROMPT_BUILDER_MODELS].join(", ")}`,
+      `model for ${backend} must be one of: ${PROMPT_BUILDER_MODELS[backend].join(", ")}`,
       "PROMPT_BUILDER_BAD_MODEL",
     );
   }
-  return raw;
+  return candidate;
+}
+
+export function normalizeRequestModel(
+  backend: PromptBuilderBackend,
+  raw: unknown,
+): string {
+  const candidate = typeof raw === "string" && raw.trim() ? raw.trim() : "";
+  if (backend === "auto" && candidate && candidate !== "auto") {
+    if (!lanesForModel(candidate).length) {
+      throw promptBuilderError(
+        `model ${candidate} is not in any Prompt Builder catalog`,
+        "PROMPT_BUILDER_BAD_MODEL",
+      );
+    }
+    return candidate;
+  }
+  return normalizePromptBuilderModel(backend, candidate || undefined);
+}
+
+export function lanesForModel(model: string): ResolvedPromptBuilderBackend[] {
+  return PROMPT_BUILDER_AUTO_ORDER.filter(
+    (lane) => PROMPT_BUILDER_MODELS[lane].includes(model),
+  );
+}
+
+export function normalizePromptBuilderConfig(
+  raw: unknown,
+  current: PromptBuilderConfig,
+): PromptBuilderConfig {
+  const body = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  const backend = normalizePromptBuilderBackend(body.backend, current.backend);
+  const modelInput = body.model === undefined && backend !== current.backend
+    ? DEFAULT_PROMPT_BUILDER_MODELS[backend]
+    : body.model ?? current.model;
+  return { backend, model: normalizePromptBuilderModel(backend, modelInput) };
 }
 
 export function normalizeMessages(raw: unknown): PromptBuilderMessage[] {

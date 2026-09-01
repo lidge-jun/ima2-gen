@@ -1,6 +1,8 @@
 export const AUTH_CONFIG_KEYS = new Set(["provider", "apiKey"]);
 
 export const WRITABLE_CONFIG_KEYS = new Set([
+  "promptBuilder.backend",
+  "promptBuilder.model",
   "imageModels.default",
   "imageModels.reasoningEffort",
   "apiProvider.defaultImageModel",
@@ -39,6 +41,8 @@ export const WRITABLE_CONFIG_KEYS = new Set([
 ]);
 
 export const KEY_TO_ENV: Record<string, string> = {
+  "promptBuilder.backend": "IMA2_PROMPT_BUILDER_BACKEND",
+  "promptBuilder.model": "IMA2_PROMPT_BUILDER_MODEL",
   "imageModels.default": "IMA2_IMAGE_MODEL_DEFAULT",
   "imageModels.reasoningEffort": "IMA2_REASONING_EFFORT",
   "apiProvider.defaultImageModel": "IMA2_API_IMAGE_MODEL_DEFAULT",

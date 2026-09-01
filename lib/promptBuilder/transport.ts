@@ -1,5 +1,8 @@
 import { attachmentText, hasImageAttachments } from "./attachments.js";
-import { PROMPT_BUILDER_RESPONSE_MAX_OUTPUT_TOKENS } from "./constants.js";
+import {
+  PROMPT_BUILDER_RESPONSE_MAX_OUTPUT_TOKENS,
+  type ResolvedPromptBuilderBackend,
+} from "./constants.js";
 import { PROMPT_BUILDER_SYSTEM_PROMPT } from "./systemPrompt.js";
 import { contextText } from "./context.js";
 import type {
@@ -51,6 +54,7 @@ export type TransportPayload = {
 };
 
 export function buildTransportPayload(
+  backend: ResolvedPromptBuilderBackend,
   model: string,
   messages: PromptBuilderMessage[],
   context: PromptBuilderContext | undefined,
@@ -63,7 +67,8 @@ export function buildTransportPayload(
     .filter(Boolean)
     .join("\n\n");
 
-  const useResponses = hasImageAttachments(messages);
+  const useResponses = backend === "api"
+    || (backend === "oauth" && hasImageAttachments(messages));
   const endpoint = useResponses ? "responses" : "chat";
 
   const body = useResponses
@@ -87,7 +92,7 @@ export function buildTransportPayload(
           })),
         ],
         stream: false,
-        reasoning_effort: "low",
+        ...(backend === "oauth" ? { reasoning_effort: "low" } : {}),
       };
 
   return { endpoint, body };

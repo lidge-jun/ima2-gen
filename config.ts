@@ -16,6 +16,12 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
 import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
+import {
+  DEFAULT_PROMPT_BUILDER_MODELS,
+  PROMPT_BUILDER_BACKENDS,
+  PROMPT_BUILDER_MODELS,
+  type PromptBuilderBackend,
+} from "./lib/promptBuilder/constants.js";
 
 // 4.6 rewrites prompts in ways that read worse than 4.3 for this planner's job, which
 // is judged by the result rather than a benchmark. 4.6 stays selectable below.
@@ -82,6 +88,21 @@ function pickBool(envVal: Pickable, fileVal: Pickable, fallback: boolean): boole
   const s = String(v).toLowerCase();
   return s === "1" || s === "true" || s === "yes";
 }
+
+function promptBuilderBackend(raw: string): PromptBuilderBackend {
+  return PROMPT_BUILDER_BACKENDS.includes(raw as PromptBuilderBackend)
+    ? raw as PromptBuilderBackend
+    : "auto";
+}
+
+const selectedPromptBuilderBackend = promptBuilderBackend(
+  pickStr(env.IMA2_PROMPT_BUILDER_BACKEND, fileCfg.promptBuilder?.backend, "auto"),
+);
+const selectedPromptBuilderModel = pickStr(
+  env.IMA2_PROMPT_BUILDER_MODEL,
+  fileCfg.promptBuilder?.model,
+  DEFAULT_PROMPT_BUILDER_MODELS[selectedPromptBuilderBackend],
+);
 
 export function defaultLogLevelForEnv(runtimeEnv = env) {
   return runtimeEnv.IMA2_DEV === "1" ? "debug" : "info";
@@ -228,6 +249,12 @@ export const config = {
         ? fileCfg.oauth.validModeration
         : ["auto", "low"],
     ),
+  },
+  promptBuilder: {
+    backend: selectedPromptBuilderBackend,
+    model: PROMPT_BUILDER_MODELS[selectedPromptBuilderBackend].includes(selectedPromptBuilderModel)
+      ? selectedPromptBuilderModel
+      : DEFAULT_PROMPT_BUILDER_MODELS[selectedPromptBuilderBackend],
   },
   github: {
     token: pickStr(env.IMA2_GITHUB_TOKEN, fileCfg.github?.token, ""),

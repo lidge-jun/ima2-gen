@@ -1,3 +1,8 @@
+import type {
+  PromptBuilderBackend,
+  ResolvedPromptBuilderBackend,
+} from "./constants.js";
+
 export type PromptBuilderRole = "user" | "assistant";
 
 export type PromptBuilderAttachment = {
@@ -23,6 +28,7 @@ export type PromptBuilderContext = {
 };
 
 export type PromptBuilderRequest = {
+  backend?: unknown | undefined;
   model?: unknown | undefined;
   messages?: unknown | undefined;
   context?: PromptBuilderContext | undefined;
@@ -102,8 +108,20 @@ export type ResponsesContentPart =
   | { type: "input_image"; image_url: string };
 
 export type PromptBuilderChatResult = {
-  provider: "oauth";
+  provider: ResolvedPromptBuilderBackend;
+  backend: ResolvedPromptBuilderBackend;
+  requestedBackend: PromptBuilderBackend;
   model: string;
   message: { role: "assistant"; content: string };
   usage: Record<string, unknown> | null;
 };
+
+export type PromptBuilderConfig = {
+  backend: PromptBuilderBackend;
+  model: string;
+};
+
+export type PromptBuilderLaneSummary = Record<string, {
+  status: "ready" | "locked" | "disconnected" | "key-missing";
+  reason?: string;
+}>;

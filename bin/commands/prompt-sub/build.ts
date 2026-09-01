@@ -13,7 +13,8 @@ const BUILD_HELP = `
     --message <text>          User message (required unless --messages)
     --messages <file|@file|-> Multi-turn conversation as JSON array
     --ref <image>             Image reference (repeatable)
-    --model <model>           Builder model (gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna)
+    --backend <backend>       Backend override (auto, oauth, api, grok, grok-api)
+    --model <model>           Model for the configured Prompt Builder backend
     --language <ko|en|both>   Preferred output language hint
     --server <url>            Override server URL
     --json                    Output raw JSON
@@ -29,6 +30,7 @@ const FLAGS = {
   message: { type: "string" },
   messages: { type: "string" },
   ref: { type: "string", repeatable: true },
+  backend: { type: "string" },
   model: { type: "string" },
   language: { type: "string" },
   server: { type: "string" },
@@ -64,6 +66,7 @@ export default async function buildSub(argv: string[]) {
 
   const messages = await resolveMessages(args);
   const body: Record<string, unknown> = { messages };
+  if (args.backend) body.backend = args.backend;
   if (args.model) body.model = args.model;
 
   let server: { base: string };
