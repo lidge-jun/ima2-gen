@@ -2364,10 +2364,15 @@
     }
   },
   "nai": {
+    "positivePrompt": {
+      "label": "正向提示詞",
+      "placeholder": "描述想要生成的主體、場景、風格與細節…",
+      "hint": "{count} 個字元。輸入 @ 可加入參考。"
+    },
     "negativePrompt": {
       "label": "排除內容",
       "placeholder": "低畫質、結構錯誤、浮水印…",
-      "hint": "想要避開的標籤。與下方預設一同生效。"
+      "hint": "{count} 個字元。用於避開的標籤，並與下方預設一起生效。"
     },
     "panel": {
       "modelTitle": "模型",

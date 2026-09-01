@@ -2364,10 +2364,15 @@
     }
   },
   "nai": {
+    "positivePrompt": {
+      "label": "포지티브 프롬프트",
+      "placeholder": "원하는 피사체, 장면, 스타일과 세부 요소를 입력하세요…",
+      "hint": "{count}자. @를 입력해 레퍼런스를 추가할 수 있습니다."
+    },
     "negativePrompt": {
       "label": "제외할 요소",
       "placeholder": "저화질, 어색한 손, 워터마크…",
-      "hint": "피하고 싶은 태그를 적습니다. 아래 프리셋과 함께 적용됩니다."
+      "hint": "{count}자. 피하고 싶은 태그이며 아래 프리셋과 함께 적용됩니다."
     },
     "panel": {
       "modelTitle": "모델",

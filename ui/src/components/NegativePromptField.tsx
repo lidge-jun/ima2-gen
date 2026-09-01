@@ -1,6 +1,10 @@
-import { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
+
+type NegativePromptFieldProps = {
+  variant: "classic" | "home";
+  onSubmit: () => void;
+};
 
 /**
  * NovelAI's undesired-content prompt.
@@ -13,20 +17,19 @@ import { useI18n } from "../i18n";
  * The typed value stays in the store when the user switches lanes — losing it
  * on a provider toggle would be worse than showing a stale field.
  *
- * Mounted outside the classic composer's prompt stack: inside it the field
- * would inherit the @-mention keydown handling, which is wrong for a tag list.
+ * Receives only the shared submit callback. Mention parsing remains owned by
+ * the positive field, so an @ typed here stays literal text.
  */
-export function NegativePromptField({ variant }: { variant: "classic" | "home" }) {
+export function NegativePromptField({ variant, onSubmit }: NegativePromptFieldProps) {
   const provider = useAppStore((s) => s.provider);
   const value = useAppStore((s) => s.negativePrompt);
   const setValue = useAppStore((s) => s.setNegativePrompt);
   const { t } = useI18n();
-  const [focused, setFocused] = useState(false);
 
   if (provider !== "nai") return null;
 
-  const expanded = focused || value.length > 0;
   const id = `negative-prompt-${variant}`;
+  const hintId = `${id}-hint`;
 
   return (
     <div className={`negative-prompt negative-prompt--${variant}`}>
@@ -35,19 +38,21 @@ export function NegativePromptField({ variant }: { variant: "classic" | "home" }
       </label>
       <textarea
         id={id}
-        className={`negative-prompt__textarea${expanded ? " negative-prompt__textarea--expanded" : ""}`}
-        rows={expanded ? 3 : 1}
+        className="negative-prompt__textarea"
+        rows={5}
         value={value}
         placeholder={t("nai.negativePrompt.placeholder")}
+        aria-describedby={hintId}
         onChange={(event) => setValue(event.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        // No submit-on-Enter: the positive prompt owns that shortcut, and two
-        // different Enter semantics in adjacent fields is a trap.
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+          event.preventDefault();
+          onSubmit();
+        }}
       />
-      {expanded ? (
-        <p className="negative-prompt__hint">{t("nai.negativePrompt.hint")}</p>
-      ) : null}
+      <p id={hintId} className="negative-prompt__hint">
+        {t("nai.negativePrompt.hint", { count: value.length })}
+      </p>
     </div>
   );
 }

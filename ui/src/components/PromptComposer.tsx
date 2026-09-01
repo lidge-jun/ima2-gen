@@ -42,6 +42,7 @@ function parseCssPixelValue(value: string): number | null { const parsed = Numbe
 export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const prompt = useAppStore((s) => s.prompt);
   const setPrompt = useAppStore((s) => s.setPrompt);
+  const provider = useAppStore((s) => s.provider);
   const insertedPrompts = useAppStore((s) => s.insertedPrompts);
   const removeInsertedPrompt = useAppStore((s) => s.removeInsertedPromptFromComposer);
   const moveInsertedPrompt = useAppStore((s) => s.moveInsertedPromptInComposer);
@@ -94,13 +95,10 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const multimode = useAppStore((s) => s.multimode);
   const multimodeMaxImages = useAppStore((s) => s.multimodeMaxImages);
   const isDirectMode = promptMode === "direct";
+  const isNai = provider === "nai";
   const beforePrompts = insertedPrompts.filter((item) => item.placement !== "after");
   const afterPrompts = insertedPrompts.filter((item) => item.placement === "after");
-  const visualPromptIds = [
-    ...beforePrompts.map((item) => item.id),
-    "__main_prompt__",
-    ...afterPrompts.map((item) => item.id),
-  ];
+  const visualPromptIds = [...beforePrompts.map((item) => item.id), "__main_prompt__", ...afterPrompts.map((item) => item.id)];
 
   const canAddMore = trayItems.length < maxRefs;
   const placeholder = multimode
@@ -110,6 +108,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     : trayItems.length > 0
       ? t("prompt.placeholderWithRefs")
       : t("prompt.placeholder");
+  const submitPrompt = () => { if (missingElementIds.length === 0) void generate(); };
 
   const captureAttachmentCaret = (): number => {
     const textarea = textareaRef.current;
@@ -204,10 +203,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     if (files.length > 0) void handleImageFiles(files);
   };
 
-  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!dragOver) setDragOver(true);
-  };
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); if (!dragOver) setDragOver(true); };
 
   const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
     if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
@@ -287,11 +283,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     <div
       className={`composer composer--${variant}${dragOver ? " composer--drag" : ""}${isDirectMode ? " composer--direct" : ""}${multimode ? " composer--multimode" : ""}${isDirectMode && multimode ? " composer--combined-modes" : ""}`}
       role="group"
-      aria-label={
-        multimode
-          ? t("multimode.composerAriaLabel", { count: multimodeMaxImages })
-          : t("prompt.label")
-      }
+      aria-label={multimode ? t("multimode.composerAriaLabel", { count: multimodeMaxImages }) : t("prompt.label")}
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -371,46 +363,53 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
         onRemove={(elementId) => elementSelection.removeElementId?.(elementId)}
       />
 
-      <div className="composer__prompt-stack">
-        <DeadTagMirror prompt={prompt} retiredTags={retiredTags} textareaRef={textareaRef} />
-        <textarea
-          ref={textareaRef}
-          className="prompt-area composer__textarea"
-          value={prompt}
-          placeholder={placeholder}
-          onCompositionStart={() => {
-            composingRef.current = true;
-            setMentionQuery(null);
-          }}
-          onCompositionEnd={(e) => {
-            composingRef.current = false;
-            compositionCommitRef.current = e.currentTarget.value;
-            queueMicrotask(() => { compositionCommitRef.current = null; });
-            updateMentionAtCaret(e.currentTarget.value, e.currentTarget.selectionStart);
-          }}
-          onChange={(e) => {
-            dismissedMentionKeyRef.current = null;
-            setPrompt(e.target.value);
-            if (compositionCommitRef.current === e.target.value) return;
-            updateMentionAtCaret(e.target.value, e.target.selectionStart);
-          }}
-          onClick={(e) => updateMentionAtCaret(e.currentTarget.value, e.currentTarget.selectionStart)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && mentionQuery) {
-              e.preventDefault();
-              dismissedMentionKeyRef.current = mentionKey(mentionQuery);
-              setMentionQuery(null);
-              return;
-            }
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              if (missingElementIds.length > 0) return;
-              void generate();
-            }
-          }}
-        />
+      <div className={`composer__prompt-panes${isNai ? " composer__prompt-panes--dual" : ""}`}>
+        <div className="composer__prompt-pane">
+          {isNai ? <label className="composer__prompt-pane-label" htmlFor={`positive-prompt-${variant}`}>{t("nai.positivePrompt.label")}</label> : null}
+          <div className="composer__prompt-stack">
+            <DeadTagMirror prompt={prompt} retiredTags={retiredTags} textareaRef={textareaRef} />
+            <textarea
+              id={`positive-prompt-${variant}`}
+              ref={textareaRef}
+              className="prompt-area composer__textarea"
+              value={prompt}
+              placeholder={isNai ? t("nai.positivePrompt.placeholder") : placeholder}
+              aria-describedby={isNai ? `positive-prompt-${variant}-hint` : undefined}
+              onCompositionStart={() => {
+                composingRef.current = true;
+                setMentionQuery(null);
+              }}
+              onCompositionEnd={(e) => {
+                composingRef.current = false;
+                compositionCommitRef.current = e.currentTarget.value;
+                queueMicrotask(() => { compositionCommitRef.current = null; });
+                updateMentionAtCaret(e.currentTarget.value, e.currentTarget.selectionStart);
+              }}
+              onChange={(e) => {
+                dismissedMentionKeyRef.current = null;
+                setPrompt(e.target.value);
+                if (compositionCommitRef.current === e.target.value) return;
+                updateMentionAtCaret(e.target.value, e.target.selectionStart);
+              }}
+              onClick={(e) => updateMentionAtCaret(e.currentTarget.value, e.currentTarget.selectionStart)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && mentionQuery) {
+                  e.preventDefault();
+                  dismissedMentionKeyRef.current = mentionKey(mentionQuery);
+                  setMentionQuery(null);
+                  return;
+                }
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  submitPrompt();
+                }
+              }}
+            />
+          </div>
+          {isNai ? <p id={`positive-prompt-${variant}-hint`} className="composer__prompt-hint">{t("nai.positivePrompt.hint", { count: prompt.length })}</p> : null}
+        </div>
+        <NegativePromptField variant="classic" onSubmit={submitPrompt} />
       </div>
-      <NegativePromptField variant="classic" />
       <ElementMentionMenu
         open={mentionQuery !== null}
         textareaRef={textareaRef}

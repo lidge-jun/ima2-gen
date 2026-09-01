@@ -2364,10 +2364,15 @@
     }
   },
   "nai": {
+    "positivePrompt": {
+      "label": "Positive prompt",
+      "placeholder": "Describe the subject, scene, style, and details you want…",
+      "hint": "{count} characters. Type @ to add a reference."
+    },
     "negativePrompt": {
       "label": "Undesired content",
       "placeholder": "lowres, bad anatomy, watermark…",
-      "hint": "Tags to steer away from. Combines with the preset below."
+      "hint": "{count} characters. Tags to steer away from; combines with the preset below."
     },
     "panel": {
       "modelTitle": "Model",

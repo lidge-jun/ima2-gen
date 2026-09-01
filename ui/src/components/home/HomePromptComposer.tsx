@@ -48,6 +48,12 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
   const selectedIdSet = new Set(selectedPresetIds);
   const selectedPresets = getAllPresets().filter((preset) => selectedIdSet.has(preset.id));
   const isGenerating = activeGenerations > 0;
+  const isNai = provider === "nai";
+  const submitPrompt = () => {
+    if (isGenerating || prompt.trim().length === 0) return;
+    void generate();
+    useAppStore.getState().setUIMode("classic");
+  };
   const providerItems = Object.entries(PROVIDER_LABELS).map(([value, label]) => {
     const providerValue = value as Provider;
     const availability = providerAvailability[providerValue];
@@ -99,19 +105,29 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
         </div>
       ) : null}
 
-      <label className="home-prompt__label" htmlFor="home-prompt-input">
-        {t("prompt.label")}
-      </label>
-      <textarea
-        id="home-prompt-input"
-        className="home-prompt__textarea"
-        rows={5}
-        value={prompt}
-        placeholder={t("prompt.placeholder")}
-        onChange={(event) => setPrompt(event.target.value)}
-      />
-
-      <NegativePromptField variant="home" />
+      <div className={`home-prompt__panes${isNai ? " home-prompt__panes--dual" : ""}`}>
+        <div className="home-prompt__pane">
+          <label className="home-prompt__label" htmlFor="home-prompt-input">
+            {isNai ? t("nai.positivePrompt.label") : t("prompt.label")}
+          </label>
+          <textarea
+            id="home-prompt-input"
+            className="home-prompt__textarea"
+            rows={5}
+            value={prompt}
+            placeholder={isNai ? t("nai.positivePrompt.placeholder") : t("prompt.placeholder")}
+            aria-describedby={isNai ? "home-prompt-hint" : undefined}
+            onChange={(event) => setPrompt(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+              event.preventDefault();
+              submitPrompt();
+            }}
+          />
+          {isNai ? <p id="home-prompt-hint" className="home-prompt__hint">{t("nai.positivePrompt.hint", { count: prompt.length })}</p> : null}
+        </div>
+        <NegativePromptField variant="home" onSubmit={submitPrompt} />
+      </div>
 
       <div className="home-prompt__footer">
         <Select
@@ -125,12 +141,7 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
           type="button"
           className="home-prompt__generate"
           disabled={isGenerating || prompt.trim().length === 0}
-          onClick={() => {
-            void generate();
-            // Switch to classic mode so the user sees inflight/results
-            const setUIMode = useAppStore.getState().setUIMode;
-            setUIMode("classic");
-          }}
+          onClick={submitPrompt}
         >
           {isGenerating
             ? t("generate.buttonLoading", { n: activeGenerations })

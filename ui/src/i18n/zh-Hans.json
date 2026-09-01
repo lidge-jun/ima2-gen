@@ -2364,10 +2364,15 @@
     }
   },
   "nai": {
+    "positivePrompt": {
+      "label": "正面提示词",
+      "placeholder": "描述想要生成的主体、场景、风格和细节…",
+      "hint": "{count} 个字符。输入 @ 可添加参考。"
+    },
     "negativePrompt": {
       "label": "排除内容",
       "placeholder": "低画质、结构错误、水印…",
-      "hint": "想要避开的标签。与下方预设一同生效。"
+      "hint": "{count} 个字符。用于避开的标签，并与下方预设一起生效。"
     },
     "panel": {
       "modelTitle": "模型",

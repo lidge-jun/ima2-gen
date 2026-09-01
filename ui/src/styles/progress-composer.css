@@ -190,6 +190,7 @@
 /* ── Prompt composer (chat-style w/ inline references) ── */
 .composer {
   position: relative;
+  container-type: inline-size;
   --composer-textarea-min-height: 80px;
   --composer-textarea-max-height: 218px;
   display: flex;
@@ -487,9 +488,44 @@
   background: var(--red);
   color: #fff;
 }
+.composer__prompt-panes,
+.composer__prompt-pane {
+  display: contents;
+}
+.composer__prompt-panes--dual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+.composer__prompt-panes--dual .composer__prompt-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.composer__prompt-pane-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font: 600 11px/1.3 var(--font);
+}
+.composer__prompt-hint {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font: 500 11px/1.4 var(--font);
+}
 .composer__prompt-stack {
   position: relative;
   min-width: 0;
+}
+.composer__prompt-panes--dual .composer__prompt-stack {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .composer__prompt-mirror {
   position: absolute;
@@ -551,6 +587,10 @@
     min-height: 0;
     overflow: hidden;
   }
+  .composer--sidebar .composer__prompt-panes--dual {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
   .composer--sidebar .composer__prompt-stack {
     display: flex;
     flex-direction: column;
@@ -562,6 +602,11 @@
     min-height: 0;
     max-height: none;
     flex: 1 1 auto;
+  }
+}
+@container (max-width: 719px) {
+  .composer__prompt-panes--dual {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .composer__toolbar {
