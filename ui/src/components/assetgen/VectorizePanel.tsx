@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../i18n";
 import { useModalFocus } from "../../hooks/useModalFocus";
 import { useAppStore } from "../../store/useAppStore";
@@ -35,10 +35,20 @@ export function VectorizePanel() {
   const { t } = useI18n();
   const item = useAppStore((s) => s.vectorizeTarget);
   const close = useAppStore((s) => s.setVectorizeTarget);
-  const dialogRef = useModalFocus<HTMLDivElement>(!!item, () => close(null));
   const addDerivedItem = useAppStore((s) => s.addAssetGenDerivedItem);
   const selectedProjectId = useAppStore((s) => s.selectedProjectId);
   const showToast = useAppStore((s) => s.showToast);
+  const abortRef = useRef<AbortController | null>(null);
+  // Written synchronously during render so the promise guards see the NEW target
+  // even before the passive abort effect below has run.
+  const targetRef = useRef<string | null>(item?.filename ?? null);
+  targetRef.current = item?.filename ?? null;
+  const closePanel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    close(null);
+  }, [close]);
+  const dialogRef = useModalFocus<HTMLDivElement>(!!item, closePanel);
   const [preset, setPreset] = useState<Preset>("auto");
   const [colorPrecision, setColorPrecision] = useState(DEFAULTS.colorPrecision);
   const [filterSpeckle, setFilterSpeckle] = useState(DEFAULTS.filterSpeckle);
@@ -47,9 +57,21 @@ export function VectorizePanel() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TraceResult | null>(null);
 
+  useEffect(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setRunning(false);
+    setError(null);
+    setResult(null);
+  }, [item?.filename]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const onRun = useCallback(() => {
     if (!item?.filename || running) return;
     const filename = item.filename;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setRunning(true);
     setError(null);
     // Only send a knob the user actually moved. Sending the defaults would count
@@ -62,18 +84,27 @@ export function VectorizePanel() {
       ...(filterSpeckle !== DEFAULTS.filterSpeckle ? { filterSpeckle } : {}),
       ...(cornerThreshold !== DEFAULTS.cornerThreshold ? { cornerThreshold } : {}),
       projectId: selectedProjectId,
+      signal: controller.signal,
     })
       .then((res) => {
-        // A late response must not apply to a target the user already switched away from.
+        if (abortRef.current !== controller || targetRef.current !== filename) return; // stale: newer trace, close, or target change
         if (!res.filePath) throw new Error(t("vectorize.saveError"));
         setResult({ filePath: res.filePath, pathCount: res.pathCount, bytes: res.bytes });
         addDerivedItem(makeDerivedItem(item, res.filePath));
         showToast(t("vectorize.saved"));
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : t("vectorize.saveError"));
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (abortRef.current !== controller || targetRef.current !== filename) return; // stale failure must not paint the new run
+        const message = err instanceof Error ? err.message : t("vectorize.saveError");
+        setError(message);
+        showToast(message, true);
       })
-      .finally(() => setRunning(false));
+      .finally(() => {
+        if (abortRef.current !== controller || targetRef.current !== filename) return; // a newer run or target owns `running`
+        abortRef.current = null;
+        setRunning(false);
+      });
   }, [item, running, preset, colorPrecision, filterSpeckle, cornerThreshold, selectedProjectId, addDerivedItem, showToast, t]);
 
   if (!item) return null;
@@ -81,7 +112,7 @@ export function VectorizePanel() {
   const resultUrl = result ? `/generated/${encodeURIComponent(result.filePath)}` : null;
 
   return (
-    <div className="assetgen-popup-backdrop" onClick={() => close(null)}>
+    <div className="assetgen-popup-backdrop" onClick={closePanel}>
       <div
         ref={dialogRef}
         className="keying-panel vectorize-panel"
@@ -170,7 +201,7 @@ export function VectorizePanel() {
               {t("vectorize.download")}
             </a>
           ) : null}
-          <button type="button" className="assetgen-popup__close" onClick={() => close(null)}>{t("project.close")}</button>
+          <button type="button" className="assetgen-popup__close" onClick={closePanel}>{t("project.close")}</button>
         </footer>
       </div>
     </div>

@@ -120,6 +120,7 @@ export async function requestVectorize(input: {
   cornerThreshold?: number;
   projectId?: string | null;
   name?: string;
+  signal?: AbortSignal;
 }): Promise<VectorizeResponse> {
   const params = new URLSearchParams();
   params.set("source", input.source);
@@ -130,7 +131,10 @@ export async function requestVectorize(input: {
   if (input.cornerThreshold !== undefined) params.set("cornerThreshold", String(input.cornerThreshold));
   if (input.projectId) params.set("projectId", input.projectId);
   if (input.name) params.set("name", input.name);
-  const res = await fetch(`/api/assets/derived?${params.toString()}`, { method: "POST" });
+  const res = await fetch(`/api/assets/derived?${params.toString()}`, {
+    method: "POST",
+    signal: input.signal,
+  });
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));
     throw new Error((detail as { error?: string }).error || `vectorize failed (${res.status})`);

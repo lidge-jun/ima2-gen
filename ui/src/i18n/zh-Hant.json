@@ -506,6 +506,7 @@
       "export": "匯出圖片",
       "exporting": "出口...",
       "exportFailed": "匯出失敗",
+      "tracePrepareFailed": "無法準備畫布以進行 SVG 描摹",
       "undo": "撤銷",
       "redo": "重做",
       "deleteSelected": "刪除所選內容",
@@ -525,7 +526,8 @@
       "exportFormat": "導出格式",
       "exportAs": {
         "png": "PNG 影像",
-        "svg": "SVG 向量",
+        "svg": "SVG（內嵌點陣圖）",
+        "vector": "描摹為 SVG（向量）",
         "pptx": "PowerPoint 投影片"
       }
     },

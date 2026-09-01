@@ -506,6 +506,7 @@
       "export": "이미지 내보내기",
       "exporting": "내보내는 중...",
       "exportFailed": "내보내기 실패",
+      "tracePrepareFailed": "SVG 추적용 캔버스를 준비하지 못했습니다",
       "undo": "실행 취소",
       "redo": "다시 실행",
       "deleteSelected": "선택 삭제",
@@ -525,7 +526,8 @@
       "exportFormat": "내보내기 형식",
       "exportAs": {
         "png": "PNG 이미지",
-        "svg": "SVG 벡터",
+        "svg": "SVG (래스터 포함)",
+        "vector": "SVG로 추적 (벡터)",
         "pptx": "PowerPoint 슬라이드"
       }
     },

@@ -506,6 +506,7 @@
       "export": "Export image",
       "exporting": "Exporting...",
       "exportFailed": "Export failed",
+      "tracePrepareFailed": "Could not prepare the canvas for tracing",
       "undo": "Undo",
       "redo": "Redo",
       "deleteSelected": "Delete selected",
@@ -525,7 +526,8 @@
       "exportFormat": "Export format",
       "exportAs": {
         "png": "PNG image",
-        "svg": "SVG vector",
+        "svg": "SVG (embedded raster)",
+        "vector": "Trace to SVG (vector)",
         "pptx": "PowerPoint slide"
       }
     },

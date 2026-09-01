@@ -11,6 +11,7 @@ import {
 import { useAppStore } from "../store/useAppStore";
 import { useCreateBlankCanvas } from "../hooks/useCreateBlankCanvas";
 import { ResultActions } from "./ResultActions";
+import { VectorizePanel } from "./assetgen/VectorizePanel";
 import { ResultPromptSummary } from "./ResultPromptSummary";
 import { MultimodeSequencePreview } from "./MultimodeSequencePreview";
 import { ViewerControls } from "./viewer/ViewerControls";
@@ -170,9 +171,12 @@ export function Canvas() {
 
   if (canvasOpen && currentImage) {
     return (
-      <Suspense fallback={<main className="canvas canvas--mode-open" aria-busy="true" />}>
-        <LazyCanvasModeWorkspace currentImage={currentImage} />
-      </Suspense>
+      <>
+        <Suspense fallback={<main className="canvas canvas--mode-open" aria-busy="true" />}>
+          <LazyCanvasModeWorkspace currentImage={currentImage} />
+        </Suspense>
+        <VectorizePanel />
+      </>
     );
   }
 

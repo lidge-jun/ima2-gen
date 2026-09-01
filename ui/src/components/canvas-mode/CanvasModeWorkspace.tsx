@@ -276,7 +276,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
     [importLocalImageToHistory],
   );
 
-  const { handleApplyCanvas, handleRevertAnnotations, handleCloseCanvas, handleExportCanvas, handleEditWithMask, handleGptTransparency } = useCanvasModeSession({
+  const { handleApplyCanvas, handleRevertAnnotations, handleCloseCanvas, handleExportCanvas, handleTraceCanvas, handleEditWithMask, handleGptTransparency } = useCanvasModeSession({
     imageElementRef,
     currentImage,
     canvasDisplayImage,
@@ -487,6 +487,7 @@ export function CanvasModeWorkspace(_props: CanvasModeWorkspaceProps) {
                 handleApplyCanvas,
                 handleRevertAnnotations,
                 handleExportCanvas,
+                handleTraceCanvas,
                 handleEditWithMask,
                 handleGptTransparency,
                 setExportBackground,

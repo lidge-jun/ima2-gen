@@ -2,7 +2,15 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useI18n } from "../../i18n";
 import type { CanvasExportFormat } from "../../lib/canvas/exportRenderer";
 
-const FORMATS: CanvasExportFormat[] = ["png", "svg", "pptx"];
+const ACTIONS = [
+  { id: "png", kind: "export" },
+  { id: "svg", kind: "export" },
+  { id: "vector", kind: "trace" },
+  { id: "pptx", kind: "export" },
+] as const satisfies ReadonlyArray<
+  | { id: CanvasExportFormat; kind: "export" }
+  | { id: "vector"; kind: "trace" }
+>;
 
 /**
  * Export format picker for the canvas toolbar.
@@ -13,10 +21,12 @@ const FORMATS: CanvasExportFormat[] = ["png", "svg", "pptx"];
  */
 export function CanvasExportMenu({
   onExport,
+  onTrace,
   disabled,
   isExporting,
 }: {
   onExport: (format: CanvasExportFormat) => void;
+  onTrace: () => void;
   disabled: boolean;
   isExporting: boolean;
 }) {
@@ -91,18 +101,19 @@ export function CanvasExportMenu({
           aria-label={t("canvas.toolbar.exportFormat")}
           onKeyDown={onMenuKeyDown}
         >
-          {FORMATS.map((format) => (
+          {ACTIONS.map((action) => (
             <button
-              key={format}
+              key={action.id}
               type="button"
               role="menuitem"
               className="canvas-export-menu__item"
               onClick={() => {
                 close(true);
-                onExport(format);
+                if (action.kind === "trace") onTrace();
+                else onExport(action.id);
               }}
             >
-              {t(`canvas.toolbar.exportAs.${format}`)}
+              {t(`canvas.toolbar.exportAs.${action.id}`)}
             </button>
           ))}
         </div>

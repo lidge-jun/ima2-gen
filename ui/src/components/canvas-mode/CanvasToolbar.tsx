@@ -32,6 +32,7 @@ interface CanvasToolbarProps {
   onApply?: () => void;
   onRevertAnnotations?: () => void;
   onExport?: (format: CanvasExportFormat) => void;
+  onTrace?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -84,6 +85,7 @@ export function CanvasToolbar({
   onApply,
   onRevertAnnotations,
   onExport,
+  onTrace,
   onUndo,
   onRedo,
   canUndo,
@@ -125,7 +127,8 @@ export function CanvasToolbar({
   const { t } = useI18n();
   const [eraserMenuOpen, setEraserMenuOpen] = useState(false);
   const eraserRef = useRef<HTMLDivElement>(null);
-  const canExport = hasExportableContent ?? hasAnnotations ?? false;
+  const canClear = hasAnnotations ?? false;
+  const canExport = hasExportableContent ?? canClear;
   const eraserLabel = eraserMode === "object"
     ? t("canvas.toolbar.objectEraser")
     : t("canvas.toolbar.brushEraser");
@@ -227,7 +230,7 @@ export function CanvasToolbar({
             isApplying ? " canvas-toolbar__button--busy" : ""
           }`}
           onClick={onApply}
-          disabled={!canExport || isApplying}
+          disabled={!canClear || isApplying}
           aria-label={t("canvas.toolbar.apply")}
           title={t("canvas.toolbar.apply")}
         >
@@ -351,9 +354,10 @@ export function CanvasToolbar({
           {isTransparencyRunning ? <span className="canvas-toolbar__spinner" aria-hidden="true" /> : <TransparencyIcon />}
         </button>
       ) : null}
-      {onExport ? (
+      {onExport && onTrace ? (
         <CanvasExportMenu
           onExport={onExport}
+          onTrace={onTrace}
           disabled={!canExport}
           isExporting={Boolean(isExporting)}
         />
@@ -362,7 +366,7 @@ export function CanvasToolbar({
         type="button"
         className="canvas-toolbar__button canvas-toolbar__button--danger"
         onClick={onClear}
-        disabled={!canExport}
+        disabled={!canClear}
         aria-label={t("canvas.toolbar.clear")}
         title={t("canvas.toolbar.clear")}
       >

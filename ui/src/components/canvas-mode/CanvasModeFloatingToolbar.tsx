@@ -19,6 +19,7 @@ interface CanvasModeFloatingToolbarProps {
     handleApplyCanvas: () => Promise<void>;
     handleRevertAnnotations: () => Promise<void>;
     handleExportCanvas: (format?: CanvasExportFormat) => Promise<void>;
+    handleTraceCanvas: () => Promise<void>;
     handleEditWithMask: () => Promise<void>;
     handleGptTransparency: () => Promise<void>;
     setExportBackground: (mode: CanvasExportBackground) => void;
@@ -40,7 +41,8 @@ export function CanvasModeFloatingToolbar({
       onEraserModeChange={annotations.setEraserMode}
       style={{ color: annotations.toolColor, strokeWidth: annotations.strokeWidth }}
       onStyleChange={annotations.setStyle}
-      hasExportableContent={annotations.hasAnnotations}
+      hasAnnotations={annotations.hasAnnotations}
+      hasExportableContent
       onToolChange={annotations.setTool}
       onClear={annotations.clear}
       onApply={() => void actions.handleApplyCanvas()}
@@ -48,6 +50,7 @@ export function CanvasModeFloatingToolbar({
         ? () => void actions.handleRevertAnnotations()
         : undefined}
       onExport={(format) => void actions.handleExportCanvas(format)}
+      onTrace={() => void actions.handleTraceCanvas()}
       onUndo={annotations.undo}
       onRedo={annotations.redo}
       canUndo={annotations.canUndo}

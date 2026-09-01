@@ -17,6 +17,7 @@ import { buildMemoEditInstructions } from "../../lib/canvas/memoPrompt";
 import {
   downloadCanvasBlob,
   exportCanvasAs,
+  exportCanvasImage,
   makeCanvasExportFilename,
   type CanvasExportFormat,
 } from "../../lib/canvas/exportRenderer";
@@ -255,6 +256,36 @@ export function useCanvasModeSession({
     }
   };
 
+  const handleTraceCanvas = async (): Promise<void> => {
+    if (!imageElementRef.current || !currentImage?.filename) return;
+    setIsExporting(true);
+    try {
+      const matte = exportBackground === "matte";
+      const blob = await exportCanvasImage({
+        imageElement: imageElementRef.current,
+        paths: annotations.paths,
+        boxes: annotations.boxes,
+        memos: annotations.memos,
+        background: matte
+          ? { mode: "matte", color: exportMatteColor }
+          : { mode: "alpha" },
+      });
+      const { item: target } = await createCanvasVersion({
+        sourceFilename: canvasSourceImageRef.current?.filename ?? currentImage.filename,
+        image: blob,
+        prompt: currentImage.prompt,
+      });
+      useAppStore.getState().setVectorizeTarget(target);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : t("canvas.toolbar.tracePrepareFailed");
+      showToast(message, true);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleEditWithMask = async (): Promise<void> => {
     if (!imageElementRef.current || !canvasDisplayImage || annotations.boxes.length === 0) return;
     setIsEditingWithMask(true);
@@ -387,6 +418,7 @@ export function useCanvasModeSession({
     handleRevertAnnotations,
     handleCloseCanvas,
     handleExportCanvas,
+    handleTraceCanvas,
     handleEditWithMask,
     handleGptTransparency,
   };
