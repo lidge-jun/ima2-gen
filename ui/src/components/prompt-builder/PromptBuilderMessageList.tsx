@@ -6,6 +6,7 @@ import { PromptBuilderMessage } from "./PromptBuilderMessage";
 export function PromptBuilderMessageList() {
   const messages = usePromptBuilderStore((s) => s.messages);
   const loading = usePromptBuilderStore((s) => s.loading);
+  const error = usePromptBuilderStore((s) => s.error);
   const messagesRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
 
@@ -33,6 +34,9 @@ export function PromptBuilderMessageList() {
           <span>{t("promptBuilder.thinking")}</span>
         </div>
       )}
+      {error ? (
+        <div className="prompt-builder__error" role="alert">{error}</div>
+      ) : null}
     </div>
   );
 }

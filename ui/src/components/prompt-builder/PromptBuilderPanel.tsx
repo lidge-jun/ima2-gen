@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useI18n } from "../../i18n";
+import { usePromptBuilderStore } from "../../store/promptBuilderStore";
 import { PromptBuilderScopeBadge } from "./PromptBuilderScopeBadge";
 import { PromptBuilderModelMenu } from "./PromptBuilderModelMenu";
 import { PromptBuilderMessageList } from "./PromptBuilderMessageList";
@@ -10,6 +12,12 @@ type PromptBuilderPanelProps = {
 
 export function PromptBuilderPanel({ variant = "panel" }: PromptBuilderPanelProps) {
   const { t } = useI18n();
+  const lastBackend = usePromptBuilderStore((state) => state.lastBackend);
+  const loadConfig = usePromptBuilderStore((state) => state.loadConfig);
+
+  useEffect(() => {
+    void loadConfig();
+  }, [loadConfig]);
 
   return (
     <section
@@ -20,6 +28,15 @@ export function PromptBuilderPanel({ variant = "panel" }: PromptBuilderPanelProp
         <div>
           <span className="section-title">{t("promptBuilder.title")}</span>
           <PromptBuilderScopeBadge />
+          {lastBackend ? (
+            <span className="prompt-builder__backend-badge">
+              {t("promptBuilder.viaBackend", {
+                backend: t(
+                  `promptBuilder.backends.${lastBackend === "grok-api" ? "grokApi" : lastBackend}`,
+                ),
+              })}
+            </span>
+          ) : null}
         </div>
         <div className="prompt-builder__header-actions">
           <PromptBuilderModelMenu />

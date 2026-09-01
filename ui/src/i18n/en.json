@@ -1260,6 +1260,14 @@
         "hint": "Language"
       }
     },
+    "promptBuilder": {
+      "title": "Prompt Builder backend",
+      "body": "Choose the text backend that refines prompts. Auto tries OAuth, Grok, OpenAI API, then Grok API, and every successful reply shows the backend used.",
+      "backendLabel": "Builder backend",
+      "modelLabel": "Builder model",
+      "modelBody": "Only models supported by the selected backend are shown.",
+      "envLocked": "Managed by environment variables."
+    },
     "account": {
       "primaryEyebrow": "Active provider",
       "oauthTitle": "GPT OAuth",
@@ -1711,6 +1719,15 @@
     "scopeImageFallback": "Current image",
     "newWorkTitle": "Start a new work without image context",
     "model": "Builder model",
+    "modelAuto": "Backend default",
+    "viaBackend": "via {backend}",
+    "backends": {
+      "auto": "Auto",
+      "oauth": "GPT OAuth",
+      "api": "OpenAI API",
+      "grok": "Grok",
+      "grokApi": "Grok API"
+    },
     "empty": "Describe the direction you want. I will include your current prompt and settings as context.",
     "user": "You",
     "assistant": "Builder",
@@ -1727,6 +1744,8 @@
     "applied": "Builder suggestion applied to the main prompt",
     "inserted": "Builder suggestion inserted as a prompt block",
     "failed": "Prompt builder request failed",
+    "configLoading": "Loading builder settings...",
+    "configUnreadable": "Could not save: ~/.ima2/config.json is unreadable. Fix or move the file, then retry.",
     "removeScopeImage": "Remove selected image from builder context",
     "removeAttachment": "Remove attachment {name}",
     "attach": "Attach file",

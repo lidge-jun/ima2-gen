@@ -11,6 +11,7 @@ import { WorkspaceProfileSettings } from "./settings/WorkspaceProfileSettings";
 import { GrokPlannerSelect } from "./settings/GrokPlannerSelect";
 import { McpProviderConnections } from "./settings/McpProviderConnections";
 import { ComfyWorkflowManager } from "./settings/ComfyWorkflowManager";
+import { PromptBuilderSettings } from "./settings/PromptBuilderSettings";
 import { useAppStore } from "../store/useAppStore";
 import type { GalleryScope } from "../store/useAppStore";
 import { useI18n } from "../i18n";
@@ -214,6 +215,7 @@ export function SettingsWorkspace() {
                   <ImageModelSelect variant="settings" />
                 </div>
               </article>
+              <PromptBuilderSettings />
               {provider === "grok" ? (
                 <>
                   <article className="settings-row">

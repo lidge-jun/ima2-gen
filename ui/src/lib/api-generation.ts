@@ -204,6 +204,7 @@ export async function importLocalImage(file: File): Promise<GenerateItem> {
 }
 
 export type PromptBuilderChatRequest = {
+  backend?: PromptBuilderBackend;
   model?: string;
   messages: Array<{
     role: string;
@@ -225,8 +226,23 @@ export type PromptBuilderChatRequest = {
   };
 };
 
+export type PromptBuilderBackend = "auto" | "oauth" | "grok" | "api" | "grok-api";
+
+export type PromptBuilderConfigResponse = {
+  backend: PromptBuilderBackend;
+  model: string;
+  options: {
+    backends: PromptBuilderBackend[];
+    models: Record<PromptBuilderBackend, string[]>;
+    autoOrder: Exclude<PromptBuilderBackend, "auto">[];
+  };
+  locked: { backend: boolean; model: boolean };
+};
+
 export type PromptBuilderChatResponse = {
   provider: string;
+  backend: Exclude<PromptBuilderBackend, "auto">;
+  requestedBackend: PromptBuilderBackend;
   model: string;
   message: { role: "assistant"; content: string };
   usage: Record<string, unknown> | null;
@@ -237,6 +253,20 @@ export function postPromptBuilderChat(
 ): Promise<PromptBuilderChatResponse> {
   return jsonFetch<PromptBuilderChatResponse>("/api/prompt-builder/chat", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function getPromptBuilderConfig(): Promise<PromptBuilderConfigResponse> {
+  return jsonFetch<PromptBuilderConfigResponse>("/api/prompt-builder/config");
+}
+
+export function putPromptBuilderConfig(
+  body: Pick<PromptBuilderConfigResponse, "backend" | "model">,
+): Promise<PromptBuilderConfigResponse> {
+  return jsonFetch<PromptBuilderConfigResponse>("/api/prompt-builder/config", {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });

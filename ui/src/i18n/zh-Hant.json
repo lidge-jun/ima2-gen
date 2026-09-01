@@ -1260,6 +1260,14 @@
         "hint": "語言"
       }
     },
+    "promptBuilder": {
+      "title": "提示建構器後端",
+      "body": "選擇用於最佳化提示詞的文字後端。自動模式會依序嘗試 OAuth、Grok、OpenAI API 和 Grok API；每次成功回覆都會顯示實際使用的後端。",
+      "backendLabel": "建構器後端",
+      "modelLabel": "建構器模型",
+      "modelBody": "僅顯示所選後端支援的模型。",
+      "envLocked": "由環境變數管理。"
+    },
     "account": {
       "primaryEyebrow": "活躍的提供者",
       "oauthTitle": "GPT OAuth",
@@ -1711,6 +1719,15 @@
     "scopeImageFallback": "目前影像",
     "newWorkTitle": "在沒有圖像上下文的情況下開始新的工作",
     "model": "建造者模型",
+    "modelAuto": "使用後端預設模型",
+    "viaBackend": "經由 {backend}",
+    "backends": {
+      "auto": "自動",
+      "oauth": "GPT OAuth",
+      "api": "OpenAI API",
+      "grok": "Grok",
+      "grokApi": "Grok API"
+    },
     "empty": "描述一下你想要的方向。我將包括您當前的提示和設定作為上下文。",
     "user": "你",
     "assistant": "建設者",
@@ -1727,6 +1744,8 @@
     "applied": "建構器建議應用於主提示",
     "inserted": "作為提示區塊插入的建構器建議",
     "failed": "提示建構器請求失敗",
+    "configLoading": "正在載入建構器設定...",
+    "configUnreadable": "無法儲存：~/.ima2/config.json 無法讀取。請修正或移動該檔案後再試一次。",
     "removeScopeImage": "從建構器上下文中刪除選定的影像",
     "removeAttachment": "刪除附件 {name}",
     "attach": "附加文件",

@@ -58,6 +58,18 @@
   white-space: nowrap;
 }
 
+.prompt-builder__backend-badge {
+  display: inline-flex;
+  margin: 7px 0 0 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
 .prompt-builder__scope-card {
   max-width: 100%;
   margin-top: 7px;
@@ -146,6 +158,14 @@
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.45;
+}
+.prompt-builder__error {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 55%, var(--border));
+  border-radius: var(--r-xl);
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.4;
 }
 .prompt-builder__thinking {
   display: flex;

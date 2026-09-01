@@ -1260,6 +1260,14 @@
         "hint": "语言"
       }
     },
+    "promptBuilder": {
+      "title": "提示构建器后端",
+      "body": "选择用于优化提示词的文本后端。自动模式会依次尝试 OAuth、Grok、OpenAI API 和 Grok API；每次成功回复都会显示实际使用的后端。",
+      "backendLabel": "构建器后端",
+      "modelLabel": "构建器模型",
+      "modelBody": "仅显示所选后端支持的模型。",
+      "envLocked": "由环境变量管理。"
+    },
     "account": {
       "primaryEyebrow": "活跃的提供商",
       "oauthTitle": "GPT OAuth",
@@ -1711,6 +1719,15 @@
     "scopeImageFallback": "当前图像",
     "newWorkTitle": "在没有图像上下文的情况下开始新的工作",
     "model": "建造者模型",
+    "modelAuto": "使用后端默认模型",
+    "viaBackend": "经由 {backend}",
+    "backends": {
+      "auto": "自动",
+      "oauth": "GPT OAuth",
+      "api": "OpenAI API",
+      "grok": "Grok",
+      "grokApi": "Grok API"
+    },
     "empty": "描述一下你想要的方向。我将包括您当前的提示和设置作为上下文。",
     "user": "你",
     "assistant": "建设者",
@@ -1727,6 +1744,8 @@
     "applied": "构建器建议应用于主提示",
     "inserted": "作为提示块插入的构建器建议",
     "failed": "提示构建器请求失败",
+    "configLoading": "正在加载构建器设置...",
+    "configUnreadable": "无法保存：~/.ima2/config.json 无法读取。请修复或移动该文件后重试。",
     "removeScopeImage": "从构建器上下文中删除选定的图像",
     "removeAttachment": "删除附件 {name}",
     "attach": "附加文件",

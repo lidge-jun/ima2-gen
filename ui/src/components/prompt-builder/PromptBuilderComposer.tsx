@@ -8,6 +8,7 @@ export function PromptBuilderComposer() {
   const draft = usePromptBuilderStore((s) => s.draft);
   const setDraft = usePromptBuilderStore((s) => s.setDraft);
   const loading = usePromptBuilderStore((s) => s.loading);
+  const configLoaded = usePromptBuilderStore((s) => s.configLoaded);
   const addAttachments = usePromptBuilderStore((s) => s.addAttachments);
   const sendMessage = usePromptBuilderStore((s) => s.sendMessage);
   const messages = usePromptBuilderStore((s) => s.messages);
@@ -24,7 +25,7 @@ export function PromptBuilderComposer() {
   const { t } = useI18n();
 
   const submit = () => {
-    if ((!draft.trim() && attachments.length === 0) || loading) return;
+    if ((!draft.trim() && attachments.length === 0) || loading || !configLoaded) return;
     void sendMessage({
       currentPrompt: prompt,
       insertedPrompts: insertedPrompts.map((p) => ({ name: p.name, text: p.text })),
@@ -93,7 +94,7 @@ export function PromptBuilderComposer() {
           type="button"
           className="prompt-builder__send"
           onClick={submit}
-          disabled={(!draft.trim() && attachments.length === 0) || loading}
+          disabled={(!draft.trim() && attachments.length === 0) || loading || !configLoaded}
         >
           {loading ? t("promptBuilder.sending") : t("promptBuilder.send")}
         </button>
