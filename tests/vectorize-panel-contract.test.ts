@@ -21,8 +21,18 @@ test("an existing vector is never offered for re-tracing", () => {
 });
 
 test("the vectorize request targets the vector-svg derived kind without a body", () => {
+  const request = api.slice(api.indexOf("export async function requestVectorize"));
   assert.match(api, /params\.set\("kind", "vector-svg"\)/);
-  assert.match(api, /method: "POST" \}\);/);
+  assert.match(request, /method: "POST"/);
+  assert.doesNotMatch(request.slice(0, request.indexOf("\n}")), /body:/);
+});
+
+test("closing a running trace aborts the client wait and HTTP failures toast", () => {
+  assert.match(api, /signal: input\.signal/);
+  assert.match(panel, /new AbortController\(\)/);
+  assert.match(panel, /abortRef\.current\?\.abort\(\)/);
+  assert.match(panel, /err instanceof DOMException && err\.name === "AbortError"/);
+  assert.match(panel, /showToast\(message, true\)/);
 });
 
 test("every user-facing string in the panel resolves through i18n", () => {
