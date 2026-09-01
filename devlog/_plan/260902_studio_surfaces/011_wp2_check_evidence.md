@@ -2,6 +2,7 @@
 
 Commits: 8610f31b (test contracts), dc97f8b5 (dual panes), dfcdb2e6 (style contracts).
 Verifiers (worker run, exit 0 each): typecheck, typecheck:tests, test (skipped 2), test:inventory, ui build. Re-run by main at C: see receipt.
+Main re-run at C (2026-09-02): npm test pass 2763 / fail 0 / skipped 2, exit 0; npm run typecheck, typecheck:tests, test:inventory exit 0.
 `ui/src/components/PromptComposer.tsx` = 498 lines.
 
 ## Render grounding (fresh `IMA2_PORT=3461 node bin/ima2.js serve --force`, agbrowse CDP)
