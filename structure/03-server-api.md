@@ -418,10 +418,24 @@ Agent generation settings accept `provider: "oauth" | "api" | "grok"`. With `pro
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| `POST` | `/api/prompt-builder/chat` | prompt-builder chat turn (see `lib/promptBuilder/client.ts`) | builder chat result |
-| `GET` | `/api/grok/status` | bundled progrok status/model probe | status, proxy URL, visible xAI models |
+| `POST` | `/api/prompt-builder/chat` | `{ messages, backend?, model?, context? }`; omitted backend/model use `config.promptBuilder` | `{ provider, requestedBackend, backend, model, message, usage }` |
+| `GET` | `/api/prompt-builder/config` | none | configured `{ backend, model }`, backend/model catalogs, `autoOrder`, env-lock bits |
+| `PUT` | `/api/prompt-builder/config` | `{ backend, model? }` | atomically persisted config payload; a backend change without model selects that backend's default |
 
-`/api/prompt-builder/chat` powers the prompt-builder assistant used by the UI and `ima2 prompt build`. Errors normalize to `PROMPT_BUILDER_UNKNOWN` when no specific upstream code is available. Agent Mode remains web-UI-only with no CLI wrapper.
+`/api/prompt-builder/chat` powers the UI and `ima2 prompt build`. The persisted keys are
+`promptBuilder.backend` and `promptBuilder.model`; the CLI may override either for one
+request. `auto` selects the first ready lane in the order `oauth -> grok -> api ->
+grok-api`. An explicit backend never falls back and returns a typed readiness/key error;
+Auto with no ready lane returns `PROMPT_BUILDER_NO_BACKEND_READY`. Chat responses keep
+`requestedBackend` separate from the answering `backend`, which drives the UI's
+`via <backend>` badge.
+
+Fallback is a pre-request readiness decision, not an upstream retry. A non-first Auto
+selection emits the safe `prompt-builder.backend_fallback` event with requested/from/to/
+reason metadata. Once a request is sent, an upstream failure remains
+`PROMPT_BUILDER_UPSTREAM_FAILED`; it is not replayed on another backend. Environment
+variables lock their matching config fields, and conflicting PUTs return 409
+`PROMPT_BUILDER_CONFIG_ENV_LOCKED`.
 
 ## Session DB API
 

@@ -100,7 +100,7 @@ routes/
 | `routes/generationRequestLog.ts` | 19 | `GET /api/generation-requests` — ring buffer of last 200 generation attempts (#95) |
 | `lib/generationRequestLog.ts` | 44 | In-memory generation request log store |
 | `routes/agent.ts` | 331 | Agent Mode API — sessions, turns, durable queue, compact, manifest, tools (`/api/agent/*`); backed by `lib/agent*.ts`; no CLI wrapper |
-| `routes/promptBuilder.ts` | 107 | `POST /api/prompt-builder/chat` prompt-builder assistant (`lib/promptBuilder/client.ts`); wrapped by `ima2 prompt build` |
+| `routes/promptBuilder.ts` | 107 | `POST /api/prompt-builder/chat` plus `GET/PUT /api/prompt-builder/config`; chat uses `lib/promptBuilder/*`, config persists the backend/model pair, and `ima2 prompt build` wraps chat |
 | `routes/events.ts` | 95 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat; serializes `jobSeq` and the job envelope |
 | `lib/eventBus.ts` | 147 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, per-job `jobSeq` (LRU-bounded), `replaySince`, `hasReplayGap` |
 | `lib/ssePublish.ts` | 32 | `publishJobEvent` — terminal `done` suppression after cancel (cancel↔done race guard) plus the publish-time envelope snapshot |
@@ -307,6 +307,9 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `lib/agentGenerationPlanner.ts` | 356 | Generation plan assembly |
 | `lib/agentImageVideoGen.ts` | 477 | Image/video generation caller for agent turns |
 | `lib/agentQuestionResponder.ts` | 275 | `/question` responder |
+| `lib/promptBuilder/constants.ts` | 32 | Prompt Builder backend/model catalogs, defaults, and deterministic Auto order |
+| `lib/promptBuilder/router.ts` | 117 | Ready-lane selection, explicit-backend fail-closed errors, and transport targets |
+| `lib/promptBuilder/client.ts` | 201 | Request normalization, backend/model resolution, safe fallback logging, one-shot upstream request, and resolved-backend response metadata |
 
 ## UI File Map
 
@@ -367,7 +370,9 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `GalleryImageTile.tsx` | 67 | Per-image gallery thumbnail and selection state |
 | `CardNewsGalleryTile.tsx` | 58 | Card-news set tile in the gallery |
 | `HistoryStrip.tsx` / `HistoryStripLayoutToggle.tsx` | n/a | Inline history strip with rail/grid layout toggle |
-| `PromptComposer.tsx` | 250 | Prompt input, reference handling, style-sheet entry, save-to-library |
+| `PromptComposer.tsx` | 498 | Prompt input, reference handling, style-sheet entry, save-to-library, and provider-gated NovelAI Positive prompt pane |
+| `NegativePromptField.tsx` | 58 | Self-gated NovelAI Undesired content pane shared by Classic, Home, and mobile compose surfaces |
+| `home/HomePromptComposer.tsx` | 153 | Home composer with the same provider-gated NovelAI dual-pane contract |
 | `PromptLibraryPanel.tsx` | 152 | Prompt library overlay/embedded panel with favorites, search, insert/load, and dialog-first import entry |
 | `PromptImportDialog.tsx` | 409 | Prompt import modal/dropzone with local/GitHub preview, folder section composition, curated/discovery source tabs, candidate selection, warnings, and commit |
 | `PromptImportCandidatePreview.tsx` | n/a | Candidate prompt preview surface used inside the import dialog |
@@ -380,6 +385,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `NodeCanvas.tsx` | 172 | React Flow graph canvas, directional handle connection routing, edge disconnect routing |
 | `NodeBatchBar.tsx` | 80 | Selection-mode batch action bar inside the canvas |
 | `RightPanel.tsx` | 114 | Quality, size, format, moderation, count controls |
+| `prompt-builder/*`, `settings/PromptBuilderSettings.tsx`, `store/promptBuilderStore.ts` | n/a | Conversational prompt refinement, persisted backend/model catalogs, settings hydration, typed failures, and the successful response's `via <backend>` badge |
 | `ImageNode.tsx` | 355 | Node-mode image card, four-direction source/target handles, fixed-height preview, partial preview, node-local references, compact footer, regenerate/new-variant actions |
 | `MultimodeSequencePreview.tsx` | 99 | Multimode sequence preview/result strip with partial, complete, canceled, and error states |
 | `GenerateButton.tsx` | n/a | Shared generate-action button (classic + multimode) |
@@ -387,7 +393,9 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `OptionGroup.tsx` | n/a | Reusable option-group control |
 | `ResultActions.tsx` | 180 | Per-result action bar (download, save, send to canvas, related image actions) |
 | `Toast.tsx` / `TrashUndoToast.tsx` | n/a | Toast surface and OS-trash undo notification |
-| `MobileAppBar.tsx` / `MobileComposeSheet.tsx` / `MobileSettingsToggle.tsx` | n/a | Mobile shell: top bar, compose bottom sheet, settings entry |
+| `MobileAppBar.tsx` / `MobileComposeSheet.tsx` / `MobileSettingsToggle.tsx` | n/a | Mobile shell: top bar, compose bottom sheet (including the shared provider-gated dual prompt), settings entry |
+| `canvas-mode/CanvasExportMenu.tsx` / `canvas-mode/useCanvasModeSession.ts` | n/a | Embedded-raster SVG export versus Canvas flatten-to-PNG staging for shared vector tracing |
+| `assetgen/VectorizePanel.tsx` | 209 | Shared AssetGen, Assets, and Canvas raster-to-vector preset/tuning modal |
 | `InFlightList.tsx` | n/a | Active-job list surface |
 | `BillingBar.tsx` / `AccountSettings.tsx` | n/a | Billing summary bar and account settings panel |
 | `settings/ProviderStatusSelect.tsx` | 183 | Variant D grouped provider dropdown (CORE+MCP) with status line and auth chip |

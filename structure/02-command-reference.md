@@ -14,6 +14,12 @@ Before using client commands, make sure a server is running. `ima2 serve` starts
 
 Not every server surface has a CLI wrapper. **Agent Mode** (`/api/agent/*`) is a server + web-UI feature with no `ima2` subcommand. The prompt-builder assistant (`POST /api/prompt-builder/chat`) is available through `ima2 prompt build`. For agent-facing discovery, `ima2 capabilities --json` reports supported models, valid quality/reasoning/moderation/provider/mode values, writable config keys, limits, and the package/server version, and `ima2 skill` prints the packaged agent skill.
 
+`ima2 prompt build --backend <backend> --model <model>` sends its request through the
+configured or per-request Prompt Builder backend. `promptBuilder.backend=auto` chooses
+the first ready lane in the order `oauth -> grok -> api -> grok-api`; an explicit value
+stays pinned and fails with a typed error when unavailable. The response exposes
+`requestedBackend` and the answering `backend`; the UI badge renders the latter.
+
 ---
 
 ## Execution Flow

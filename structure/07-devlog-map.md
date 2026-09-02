@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-08-26
+updated: 2026-09-02
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -36,10 +36,9 @@ architecture and audit records are not kept as loose top-level duplicates.
 
 Files in `_plan/` are work-in-progress. They use the format `YYMMDD_<topic>` to aid chronological sorting. Each plan typically maps to a GitHub issue or a standalone initiative.
 
-As of 2026-08-26, `_plan/` has one active lane:
-`260819c_grok_proxy_supervision/` (research + roadmap complete, implementation
-pending). The authoritative table is `devlog/_plan/README.md` §현재 Active Lane;
-external-blocked follow-ups and `_future` handoffs also remain outside `_fin`.
+Current active units are listed below. The authoritative full ledger is
+`devlog/_plan/README.md` §현재 Active Lane; external-blocked follow-ups and `_future`
+handoffs also remain outside `_fin`.
 
 Deferred items live in `_plan/_future/` (canvas exports, masked edit, batch
 matrix, storyboard planner skill).
@@ -124,6 +123,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 | Unit | Status | Open issue |
 |---|---|---|
 | `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
+| `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 
 Open issue #150 (Provider Adapter v1 RFC) is tracked in `_plan/README.md` but
 has no owning devlog unit yet — its scope is architectural and cross-cutting.

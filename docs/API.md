@@ -666,16 +666,6 @@ Style-sheet extraction can require an API key/openai client. Image generation al
 
 ## Prompt Library
 
-## Prompt Builder
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/prompt-builder/config` | Current builder backend/model, per-backend model catalog, auto order, and env-lock bits |
-| `PUT` | `/api/prompt-builder/config` | Persist `{ backend, model }` to `~/.ima2/config.json` (`promptBuilder.*`); 400 on a cross-backend pair, 409 when env-locked, 500 `PROMPT_BUILDER_CONFIG_UNREADABLE` when the file cannot be parsed |
-| `POST` | `/api/prompt-builder/chat` | Multi-turn prompt refinement; body may carry a per-request `backend` override; the reply reports `backend` (the lane that answered) and `requestedBackend` |
-
-Backends: `auto` (first ready lane in the order oauth, grok, api, grok-api), `oauth`, `api`, `grok`, `grok-api`. An explicit backend never falls back; it returns a typed 503/401 error instead.
-
 Backed by `routes/prompts.ts` and SQLite prompt tables in `lib/db.ts`.
 
 | Method | Path | Notes |
@@ -820,6 +810,26 @@ Agent Mode is a conversational image workspace (web UI only — no CLI). All rou
 | `POST` | `/api/agent/queue/:itemId/cancel` | Cancel queued item |
 | `POST` | `/api/agent/queue/:itemId/retry` | Retry failed item |
 
+## Prompt Builder
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| `POST` | `/api/prompt-builder/chat` | `{ messages, backend?, model?, context? }` | `{ provider, backend, requestedBackend, model, message, usage }` |
+| `GET` | `/api/prompt-builder/config` | none | `{ backend, model, options: { backends, models, autoOrder }, locked }` |
+| `PUT` | `/api/prompt-builder/config` | `{ backend, model? }` | Same config payload after atomic persistence |
+
+The persisted keys are `promptBuilder.backend` and `promptBuilder.model`; the corresponding
+environment locks are `IMA2_PROMPT_BUILDER_BACKEND` and `IMA2_PROMPT_BUILDER_MODEL`.
+`backend=auto` tries `oauth -> grok -> api -> grok-api` and selects the first ready lane.
+An explicit backend stays pinned and never falls back. Chat responses separate
+`requestedBackend` from the answering `backend`, which the UI renders as `via <backend>`.
+
+Invalid backend/model pairs return typed 400 errors. An unavailable explicit lane returns its
+typed 401/503 error, no ready Auto lane returns 503 `PROMPT_BUILDER_NO_BACKEND_READY`, and
+environment-locked config writes return 409 `PROMPT_BUILDER_CONFIG_ENV_LOCKED`. Auto selection
+happens before sending upstream; an accepted or failed upstream request is not retried on another
+backend.
+
 ## Endpoint → CLI Mapping
 
 Most server routes under `/api/*` have a CLI wrapper. The exception is **Agent Mode** (`/api/agent/*`), which is server + web-UI-only and has no `ima2` subcommand. The prompt builder HTTP route (`POST /api/prompt-builder/chat`) is wrapped by `ima2 prompt build`. Use this table to find the command that calls a given endpoint. (See README.md "Client" section for full flag lists.)
@@ -872,6 +882,7 @@ Most server routes under `/api/*` have a CLI wrapper. The exception is **Agent M
 | `GET /api/keys/status`, `PUT/DELETE /api/keys/:provider`, `PUT/DELETE /api/keys/vertex` | Web UI only (Settings > API Keys) |
 | `GET/POST/PATCH/DELETE /api/agent/*` (sessions, turns, queue) | — (Agent Mode; web UI only, no CLI) |
 | `POST /api/prompt-builder/chat` | `ima2 prompt build` |
+| `GET/PUT /api/prompt-builder/config` | Web UI only (Settings > Providers > Prompt Builder backend / Builder model) |
 
 Notes:
 - `ima2 history favorite` and `ima2 annotate …` send `X-Ima2-Browser-Id: cli-<sha1prefix>` derived from the config dir, so CLI activity does not collide with browser sessions.

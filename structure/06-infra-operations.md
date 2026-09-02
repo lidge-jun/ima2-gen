@@ -98,6 +98,8 @@ README may still mention a different Node baseline. The operational baseline is 
 | Variable | Default or meaning |
 |---|---|
 | `OPENAI_API_KEY` | May be used for billing probes and legacy provider config |
+| `IMA2_PROMPT_BUILDER_BACKEND` | Prompt Builder backend, default `auto`; accepted values are `auto`, `oauth`, `grok`, `api`, `grok-api`. Locks `promptBuilder.backend` in Settings. |
+| `IMA2_PROMPT_BUILDER_MODEL` | Backend-scoped Prompt Builder model, default `auto` for the Auto backend. Locks `promptBuilder.model` in Settings. |
 | `NOVELAI_API_KEY` | NovelAI persistent API token for the `nai` lane; no fixed prefix is required, and an env-sourced key is immutable from the UI (`ENV_KEY_IMMUTABLE`) |
 | `IMA2_NAI_IMAGE_MODEL_DEFAULT` | NovelAI default image model, default `nai-diffusion-5-full` |
 | `IMA2_NAI_BASE_URL` / `IMA2_NAI_ACCOUNT_BASE_URL` | NovelAI image and account hosts, both default `https://image.novelai.net` — account endpoints moved to the image host, so `api.novelai.net` rejects valid tokens |

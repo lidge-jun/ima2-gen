@@ -23,6 +23,8 @@ function runCli(args) {
 describe("CLI packaged skill contract", () => {
   it("ships a Markdown ima2 skill with agent usage guidance", () => {
     const skill = readSource("skills/ima2/SKILL.md");
+    const en = JSON.parse(readSource("ui/src/i18n/en.json"));
+    const configKeys = readSource("lib/configKeys.ts");
 
     assert.match(skill, /name:\s*ima2/);
     assert.match(skill, /ima2 capabilities --json/);
@@ -38,6 +40,16 @@ describe("CLI packaged skill contract", () => {
     assert.match(skill, /webtoon style/);
     assert.match(skill, /photorealistic product photo/);
     assert.match(skill, /not a typesetting engine/);
+    for (const label of [
+      en.canvas.toolbar.exportAs.vector,
+      en.canvas.toolbar.exportAs.svg,
+      en.nai.positivePrompt.label,
+      en.nai.negativePrompt.label,
+    ]) assert.ok(skill.includes(label), `packaged skill missing runtime label: ${label}`);
+    for (const key of ["promptBuilder.backend", "promptBuilder.model"]) {
+      assert.ok(configKeys.includes(`"${key}"`), `runtime config key missing: ${key}`);
+      assert.ok(skill.includes(key), `packaged skill missing runtime config key: ${key}`);
+    }
   });
 
   it("documents Grok video continuity contracts and audio prompt controls", () => {
