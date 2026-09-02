@@ -16,7 +16,7 @@
 
 `ima2-gen` is a local-first visual generation runtime and studio for people and coding agents, with reproducible image and video workflows across multiple providers.
 
-Install globally and generate images and videos from eight core lanes: OpenAI OAuth/API, Grok OAuth/API, Antigravity CLI, Gemini API, AtlasCloud, and MiniMax. Runway and Higgsfield remain separate MCP-backed integrations. Iterate with history, references, node branches, multimode batches, and Canvas Mode cleanup — now with one-click GPT background transparency (server-verified real alpha), annotation hover feedback, and a full light/dark/system theme.
+Install globally and generate images and videos through the core registry: OpenAI OAuth/API, Grok OAuth/API, Antigravity CLI, Gemini API, AtlasCloud, MiniMax, NovelAI, and registered ComfyUI workflows. Runway and Higgsfield remain separate MCP-backed integrations. Iterate with history, references, node branches, multimode batches, and Canvas Mode cleanup — now with one-click GPT background transparency (server-verified real alpha), annotation hover feedback, and a full light/dark/system theme.
 
 ![ima2-gen classic workspace in light mode with a transparent-background result on the canvas.](assets/screenshots/classic-generate-lightmode.png)
 
@@ -107,6 +107,9 @@ Ctrl+C now performs a clean shutdown — closing the database, stopping child pr
 - **Video generation**: create short videos from text, a single image, or multiple reference images via Grok video models. SSE streaming shows planning → submitted → progress % → done. Video frame copy buttons (First/Mid/Last) let you extract and copy keyframes from generated videos.
 - **Storyboard mode**: toggle storyboard mode in the composer to maintain character and scene continuity across sequential frames. Works with both image and video generation — image keyframes are composed for video production, and video clips inherit character/environment lock rules.
 - **Canvas Mode**: zoom, pan, annotate (with hover highlighting), erase, clean backgrounds, keep transparent previews, and export either alpha or matte-backed versions. A one-click **GPT transparency** button sends the current image through the i2i edit lane and reports honestly whether the result carries real pixel alpha — verified on the server, never trusted from provider metadata.
+- **Raster-to-vector SVG**: trace flat raster art into real SVG paths with `ima2 vectorize`, from AssetGen/Assets, or from Canvas Export. Canvas labels its older self-contained wrapper as **SVG (embedded raster)** so it cannot be mistaken for a trace.
+- **NovelAI dual prompt**: when NovelAI is selected, Classic, Home, and the mobile compose sheet show **Positive prompt** and **Undesired content** as peer panes; they stack below a 719px composer container. Other providers keep the normal single prompt.
+- **Prompt Builder backend choice**: Settings > Providers can keep Builder routing on **Auto** or pin a supported text backend and model, and the **via &lt;backend&gt;** badge shows which backend actually answered.
 - **Light & dark themes**: a token-based light mode with tinted neutrals and AA contrast, switchable between light / dark / system in Settings, with no flash on load.
 - **Local gallery**: keep generated assets on your machine with session-aware history. By default the gallery shows the current session and an All Images toggle reveals the full history; the default scope is sticky across sessions. Each image records its generation time and reasoning effort in the result metadata, so they persist across reloads.
 - **Reference images**: drag, drop, paste, and attach up to 5 references (images) or up to 7 references (video); large images are compressed before upload.
@@ -172,9 +175,9 @@ Grok video generation defaults to canonical `grok-imagine-video-1.5`; `grok-imag
 
 ## Model Guidance
 
-The app defaults to **`gpt-5.6-luna`** for image generation and Prompt Builder planning. Older supported models remain explicit compatibility choices.
+Image generation defaults to **`gpt-5.6-luna`** on the GPT lane. Prompt Builder backend selection is separate: **Auto** chooses the first ready supported text backend, while Settings can pin one explicitly. The `via <backend>` badge reports the backend that actually answered.
 
-- `gpt-5.6-luna` — current image and Prompt Builder default.
+- `gpt-5.6-luna` — current default image model on the GPT lane and the default GPT Builder model when that backend is selected.
 - `gpt-5.6-terra` / `gpt-5.6-sol` — current GPT-5.6 alternatives when your account exposes them.
 - `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini` — supported compatibility choices.
 
@@ -187,6 +190,7 @@ The app also exposes quality (`low`, `medium`, `high`) and moderation (`auto`, `
 Use Classic when you want one strong result quickly.
 
 1. Write a prompt.
+   With NovelAI, use **Positive prompt** for desired content and **Undesired content** for what the image should avoid.
 2. Attach or paste references if needed.
 3. Pick model, quality, size, format, and moderation.
 4. Generate one image, or enable multimode to fan out several candidate slots from the same prompt.
@@ -214,6 +218,7 @@ Use Canvas Mode when a generated image is close but needs targeted cleanup befor
 - Use annotation, eraser, multiselect, grouping, undo/redo, and sticky notes while keeping the original gallery image available.
 - Pick background-cleanup seeds, preview the mask, and save the cleanup as a canvas version.
 - Detect transparent images and show a checkerboard preview; export with preserved alpha or with a chosen matte color.
+- Choose **SVG (embedded raster)** for a self-contained canvas document, or **Trace to SVG (vector)** to flatten the composition and open the shared real-vector tracing panel.
 - Saved canvas versions stay hidden from Gallery and HistoryStrip, but Canvas Mode can reuse them and attach a canvas version as the next reference.
 - Hover any annotation with the select tool to see a live outline and a move cursor before you click.
 - Press the **GPT transparency** button in the canvas toolbar to remove the background through the OAuth i2i lane in one click. The server decodes the returned bytes and reports `alphaVerified` — the toast tells you whether real transparency actually landed, instead of assuming.
@@ -237,6 +242,7 @@ be treated as a stable public feature yet.
 ### Settings
 
 The settings workspace keeps account, model, appearance, and language controls away from the generation sidebar.
+Prompt Builder backend lives under Providers: Auto tries GPT OAuth, Grok, OpenAI API, then Grok API and uses the first ready lane. An explicit choice stays pinned and returns a typed error when unavailable; the Builder surface displays the backend that actually answered.
 Appearance now includes a light / dark / system theme toggle; the light palette uses tinted neutrals with AA contrast and applies before first paint.
 
 ![Settings workspace with account navigation and generation model controls.](assets/screenshots/settings-workspace.png)
@@ -270,6 +276,8 @@ These require a running `ima2 serve`. The CLI covers every server route. The mos
 | `ima2 defaults reset image\|video` | Remove a persisted CLI generation target |
 | `ima2 gen <prompt> [--model <lane>/<model>]` | Generate from the CLI; requires an explicit target or saved image default |
 | `ima2 edit <file> --prompt <text>` | Edit an existing image |
+| `ima2 vectorize <input.png> [-o output.svg]` | Trace PNG/JPEG/WebP into a real SVG locally; no server or provider required |
+| `ima2 prompt build --message <text> [--backend <backend>] [--model <model>]` | Refine prompt intent through the configured or explicitly selected Prompt Builder backend; requires the local server |
 | `ima2 multimode <prompt>` | Multi-image SSE generation |
 | `ima2 video <prompt> [--model <lane>/<model>]` | Generate video through a Grok or MCP lane; requires an explicit target or saved video default |
 | `ima2 ls [--session <id>] [--favorites]` | List recent history |
@@ -284,6 +292,9 @@ The server advertises its actual port at `~/.ima2/server.json`. If `3333` is bus
 ```bash
 ima2 models --kind image
 ima2 gen "poster" --model oauth/gpt-5.6-luna --reasoning-effort high
+ima2 gen "1girl, blue hair" --model nai/nai-diffusion-5-full --nai-negative-prompt "lowres, watermark"
+ima2 vectorize logo.png -o logo.svg --json
+ima2 prompt build --message "Make this prompt production-ready" --backend auto --model auto
 ima2 edit input.png --prompt "make it rainy" --web-search
 ima2 multimode "two cats playing" -n 2
 ima2 video "a cat playing piano" --model grok/grok-imagine-video-1.5 --duration 5 --resolution 720p
@@ -312,6 +323,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_ADVERTISE_FILE` | `~/.ima2/server.json` | Runtime discovery file |
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | Generated image directory |
 | `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | Server fallback image model |
+| `IMA2_PROMPT_BUILDER_BACKEND` | `auto` | Prompt Builder text backend (`auto`, `oauth`, `grok`, `api`, or `grok-api`); Settings persists the same value as `promptBuilder.backend` |
+| `IMA2_PROMPT_BUILDER_MODEL` | `auto` with Auto backend | Backend-scoped Builder model; Settings persists the same value as `promptBuilder.model` |
 | `IMA2_REASONING_EFFORT` | `medium` | Default reasoning effort for the default (GPT OAuth) path; one of `none`, `low`, `medium`, `high`, `xhigh` |
 | `IMA2_NO_OAUTH_PROXY` | — | Set `1` to disable the auto-started OAuth proxy |
 | `IMA2_LOG_LEVEL` | `info` | Normal serve defaults to `info`; dev mode defaults to `debug`; supports `debug`, `info`, `warn`, `error`, or `silent` |
@@ -351,6 +364,7 @@ Use `ima2 serve --dev`, `npm run dev`, or `IMA2_LOG_LEVEL=debug ima2 serve` when
 ## API Reference
 
 The endpoint list moved to [docs/API.md](docs/API.md) so this README can stay focused on first-run use.
+The relevant feature groups are `POST /api/assets/derived` with `kind=vector-svg`, NovelAI's `negativePrompt` generation field, `POST /api/prompt-builder/chat`, and `GET`/`PUT /api/prompt-builder/config`.
 
 Useful references:
 
