@@ -31,6 +31,8 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
       <tr><td><code>IMA2_ADVERTISE_FILE</code></td><td><code>~/.ima2/server.json</code></td><td>런타임 탐색 파일.</td></tr>
       <tr><td><code>IMA2_GENERATED_DIR</code></td><td><code>~/.ima2/generated</code></td><td>생성 이미지 디렉터리.</td></tr>
       <tr><td><code>IMA2_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td><td>서버 폴백 이미지 모델.</td></tr>
+      <tr><td><code>IMA2_PROMPT_BUILDER_BACKEND</code></td><td><code>auto</code></td><td>Prompt Builder 텍스트 백엔드. 자동 선택은 준비된 지원 경로 가운데 하나를 고릅니다.</td></tr>
+      <tr><td><code>IMA2_PROMPT_BUILDER_MODEL</code></td><td>자동 백엔드에서는 <code>auto</code></td><td>선택한 백엔드 전용 Builder model. 백엔드를 바꾸면 해당 경로의 기본 모델로 함께 바뀝니다.</td></tr>
       <tr><td><code>IMA2_REASONING_EFFORT</code></td><td><code>medium</code></td><td>기본(OAuth) 경로의 reasoning effort 기본값; none·low·medium·high·xhigh 중 하나.</td></tr>
       <tr><td><code>IMA2_NO_OAUTH_PROXY</code></td><td>—</td><td><code>1</code>로 설정하면 자동 시작 OAuth 프록시 비활성화.</td></tr>
       <tr><td><code>IMA2_LOG_LEVEL</code></td><td><code>info</code></td><td>serve는 info, dev는 debug 기본; debug·info·warn·error·silent 지원.</td></tr>
@@ -60,7 +62,8 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     덮어쓰면 경고합니다. 인증은 <code>ima2 setup</code> 또는 <code>ima2 login</code>으로 바꾸세요.
   </p>
   <h4>주요 쓰기 가능 키</h4>
-  <pre><code>imageModels.default              imageModels.reasoningEffort
+  <pre><code>promptBuilder.backend            promptBuilder.model
+imageModels.default              imageModels.reasoningEffort
 apiProvider.defaultImageModel    apiProvider.defaultReasoningEffort
 grokProvider.plannerModel        grokProvider.plannerTimeoutMs
 grokProvider.defaultImageModel  grokProvider.defaultVideoModel

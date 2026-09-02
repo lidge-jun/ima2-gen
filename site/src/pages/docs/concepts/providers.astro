@@ -9,14 +9,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   lang="en"
   active="concepts/providers"
   title="Providers & Models"
-  description="Choose among eight core provider lanes, pick a model, and set quality, moderation, and reasoning defaults."
+  description="Choose an ima2-gen provider lane, pick a model, and set quality, moderation, and reasoning defaults."
 >
   <p class="docs-eyebrow">Concepts</p>
   <h1>Providers &amp; Models</h1>
   <p class="lead">
-    The core registry contains eight provider lanes: OpenAI OAuth and API, Grok OAuth and API,
-    Gemini/Antigravity CLI, direct Gemini API, AtlasCloud API, and MiniMax API. Runway and
-    Higgsfield are separate MCP-backed integrations described below.
+    The core registry includes OpenAI OAuth and API, Grok OAuth and API,
+    Gemini/Antigravity CLI, direct Gemini API, AtlasCloud, MiniMax, NovelAI, and registered
+    ComfyUI workflows. Runway and Higgsfield are separate MCP-backed integrations described below.
   </p>
 
   <h2>Provider paths</h2>
@@ -29,11 +29,13 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
     <li><code>provider: "agy"</code> — spawns the Antigravity CLI (<code>agy -p</code>) to generate via Google Gemini (<code>nano-banana-2</code>). Fixed 1024×1024 JPEG output, max 3 refs. Free (no token cost).</li>
     <li><code>provider: "atlascloud"</code> — calls AtlasCloud with <code>ATLASCLOUD_API_KEY</code> for GPT Image 2 generation and edit, with up to 10 references.</li>
     <li><code>provider: "minimax"</code> — calls MiniMax with <code>MINIMAX_API_KEY</code> for <code>image-01</code> and <code>image-01-live</code>, with one reference.</li>
+    <li><code>provider: "nai"</code> — calls NovelAI with a persistent token. It is text-to-image only and exposes a dedicated <code>negativePrompt</code> plus native sampling controls; references and edits fail closed.</li>
+    <li><code>provider: "comfy"</code> — executes a registered ComfyUI image workflow; each workflow is a runtime-discovered model.</li>
   </ul>
   <p>The core lanes cover Classic, Node, and Agent Mode. Agent Mode is web-UI only; Classic and Node also have CLI commands.</p>
 
   <h2>Per-request override</h2>
-  <p>Generation commands use the eight explicit core lane IDs below. Where a command still accepts <code>auto</code>, it is a routing mode, not a ninth provider lane.</p>
+  <p>Generation commands use the explicit core lane IDs below. Where a command still accepts <code>auto</code>, it is a routing mode, not a provider lane.</p>
   <table>
     <thead><tr><th>Value</th><th>Behavior</th></tr></thead>
     <tbody>
@@ -46,18 +48,29 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
       <tr><td><code>agy</code></td><td>Spawn Antigravity CLI for Gemini image generation. Requires <code>agy</code> binary installed. 1024×1024 fixed, JPEG, max 3 refs, no quality/size/mask controls.</td></tr>
       <tr><td><code>atlascloud</code></td><td>Direct AtlasCloud API. Requires <code>ATLASCLOUD_API_KEY</code>.</td></tr>
       <tr><td><code>minimax</code></td><td>Direct MiniMax API. Requires <code>MINIMAX_API_KEY</code>.</td></tr>
+      <tr><td><code>nai</code></td><td>Direct NovelAI text-to-image lane. Requires <code>NOVELAI_API_KEY</code>; references and edits are unsupported.</td></tr>
+      <tr><td><code>comfy</code></td><td>Registered ComfyUI image workflow. Availability and models come from the runtime workflow catalog.</td></tr>
     </tbody>
   </table>
 
+  <h2>Prompt Builder backend</h2>
+  <p>
+    Prompt Builder routing is independent from the current image provider. Settings &gt; Providers
+    offers Auto plus GPT OAuth, OpenAI API, Grok, and Grok API, along with a backend-scoped Builder
+    model. Auto chooses the first ready backend in the order <code>oauth → grok → api → grok-api</code>.
+    An explicit selection pins routing and returns a typed error, such as a missing-key error, instead
+    of falling back. The <code>via &lt;backend&gt;</code> badge reports the answering backend.
+  </p>
+
   <h2>Models</h2>
   <p>
-    The app defaults to <code>gpt-5.6-luna</code> for image generation and Prompt Builder planning.
-    Older supported models remain explicit compatibility choices.
+    The GPT image lane defaults to <code>gpt-5.6-luna</code>. Prompt Builder has a separate backend
+    preference; when its backend resolves to GPT, Luna is the default GPT Builder model.
   </p>
   <table>
     <thead><tr><th>Model</th><th>Use</th></tr></thead>
     <tbody>
-      <tr><td><code>gpt-5.6-luna</code></td><td>Current image and Prompt Builder default.</td></tr>
+      <tr><td><code>gpt-5.6-luna</code></td><td>Current GPT image default and default GPT Builder model when the Builder uses a GPT backend.</td></tr>
       <tr><td><code>gpt-5.6-terra</code> / <code>gpt-5.6-sol</code></td><td>Current GPT-5.6 alternatives when available.</td></tr>
       <tr><td><code>gpt-5.4-mini</code></td><td>Compatibility model.</td></tr>
       <tr><td><code>gpt-5.4</code></td><td>Recommended balanced choice.</td></tr>

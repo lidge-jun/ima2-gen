@@ -62,7 +62,7 @@ const genBody = `{
   <pre><code>{genBody}</code></pre>
   <p>
     Quality: low, medium, high. Moderation: auto, low. Provider: auto, oauth, api, grok, grok-api,
-    agy, gemini-api. The app default is <code>gpt-5.6-luna</code>. Grok image models: <code>grok-imagine-image</code> and
+    agy, gemini-api, atlascloud, minimax, nai, comfy. The app default is <code>gpt-5.6-luna</code>. Grok image models: <code>grok-imagine-image</code> and
     <code>grok-imagine-image-quality</code>. Gemini API models: <code>nano-banana-2</code>
     (default) and <code>nano-banana-pro</code>. The web UI uses <code>GET /api/events</code>
     (SSE multiplexing) for all generation progress: POST routes accept
@@ -70,6 +70,11 @@ const genBody = `{
     events (<code>phase</code>, <code>partial</code>, <code>done</code>, <code>error</code>)
     are multiplexed through the shared event bus. CLI clients that send
     <code>Accept: text/event-stream</code> still receive per-request SSE.
+  </p>
+  <p>
+    NovelAI requests use <code>provider: "nai"</code> and may include
+    <code>negativePrompt</code> plus provider-native sampling controls. NovelAI is text-to-image only;
+    references and edits return explicit <code>NAI_*_UNSUPPORTED</code> errors.
   </p>
   <div class="docs-callout docs-callout-info">
     <strong>Video generation.</strong> <code>POST /api/video/generate</code> (SSE) generates videos
@@ -92,6 +97,14 @@ const genBody = `{
       <tr><td><code>GET /api/history</code></td><td>List generated assets; <code>?groupBy=session</code> groups by session title.</td></tr>
       <tr><td><code>DELETE /api/history/:filename</code></td><td>Tombstone a generated asset.</td></tr>
       <tr><td><code>POST /api/history/:filename/restore</code></td><td>Restore a recently deleted asset.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Assets &amp; vectorize</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /api/assets/derived</code></td><td><code>kind=vector-svg</code> traces a stored PNG/JPEG/WebP with <code>source</code>, <code>preset</code>, and optional tuning query parameters. The request body is empty.</td></tr>
     </tbody>
   </table>
 
@@ -125,7 +138,8 @@ const genBody = `{
       <tr><td><code>GET · PATCH · DELETE /api/agent/sessions/:id</code></td><td>Load, update, or delete a session.</td></tr>
       <tr><td><code>POST /api/agent/sessions/:id/turns</code></td><td>Run an agent turn; supports slash commands and <code>/question</code>.</td></tr>
       <tr><td><code>GET · POST /api/agent/sessions/:id/queue</code></td><td>Inspect or enqueue durable queue work (<code>/api/agent/queue/:itemId/cancel</code> · <code>retry</code> manage items).</td></tr>
-      <tr><td><code>POST /api/prompt-builder/chat</code></td><td>Prompt-builder assistant (<code>ima2 prompt build</code>).</td></tr>
+      <tr><td><code>POST /api/prompt-builder/chat</code></td><td>Prompt Builder assistant (<code>ima2 prompt build</code>). The response returns <code>requestedBackend</code>, the answering <code>backend</code>, and <code>model</code>.</td></tr>
+      <tr><td><code>GET · PUT /api/prompt-builder/config</code></td><td>Read or update the persisted Prompt Builder backend/model pair. GET returns backend/model catalogs, <code>autoOrder</code>, and environment-lock bits.</td></tr>
     </tbody>
   </table>
 

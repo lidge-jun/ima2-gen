@@ -9,14 +9,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
   lang="ko"
   active="concepts/providers"
   title="프로바이더 & 모델"
-  description="8개 core provider lane 선택, 모델 선택, 품질·moderation·reasoning 기본값 설정."
+  description="ima2-gen 프로바이더 레인 선택, 모델 선택, 품질·moderation·reasoning 기본값 설정."
 >
   <p class="docs-eyebrow">핵심 개념</p>
   <h1>프로바이더 &amp; 모델</h1>
   <p class="lead">
     core registry에는 OpenAI OAuth/API, Grok OAuth/API, Gemini/Antigravity CLI,
-    Gemini 직접 API, AtlasCloud API, MiniMax API로 구성된 provider lane 8개가 있습니다.
-    Runway와 Higgsfield는 아래에서 따로 설명하는 MCP-backed integration입니다.
+    Gemini 직접 API, AtlasCloud, MiniMax, NovelAI, 등록된 ComfyUI 워크플로가 있습니다.
+    Runway와 Higgsfield는 아래에서 따로 설명하는 MCP 연동입니다.
   </p>
 
   <h2>프로바이더 경로</h2>
@@ -29,11 +29,13 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
     <li><code>provider: "gemini-api"</code> — Google Generative Language API 또는 Vertex AI를 직접 호출합니다. 모델 <code>nano-banana-2</code>(Gemini 3.1 Flash Image)와 <code>nano-banana-pro</code>(Gemini 3 Pro Image) 지원. 가변 화면비와 해상도(512px–4K) 지원. <code>GEMINI_API_KEY</code> 또는 Vertex AI 서비스 계정 JSON이 필요합니다.</li>
     <li><code>provider: "atlascloud"</code> — <code>ATLASCLOUD_API_KEY</code>로 AtlasCloud GPT Image 2 생성·편집을 호출하며 참조는 최대 10장입니다.</li>
     <li><code>provider: "minimax"</code> — <code>MINIMAX_API_KEY</code>로 MiniMax <code>image-01</code>과 <code>image-01-live</code>를 호출하며 참조는 1장입니다.</li>
+    <li><code>provider: "nai"</code> — 저장된 토큰으로 NovelAI를 호출합니다. 텍스트 생성 전용이며 <code>negativePrompt</code>와 고유 샘플링 옵션을 제공합니다. 레퍼런스와 편집 요청은 다른 동작으로 바꾸지 않고 오류로 끝냅니다.</li>
+    <li><code>provider: "comfy"</code> — 등록된 ComfyUI 이미지 워크플로를 실행합니다. 워크플로 하나가 런타임 모델 하나로 등록됩니다.</li>
   </ul>
   <p>core lane은 Classic, Node, Agent Mode를 지원합니다. Agent Mode는 웹 UI 전용이고, Classic과 Node는 CLI도 있습니다.</p>
 
   <h2>요청 단위 오버라이드</h2>
-  <p>생성 명령은 아래 core lane ID 8개를 명시합니다. 일부 명령이 받는 <code>auto</code>는 아홉 번째 lane이 아니라 routing mode입니다.</p>
+  <p>생성 명령은 아래 core lane ID를 명시합니다. 일부 명령이 받는 <code>auto</code>는 별도 프로바이더가 아니라 라우팅 모드입니다.</p>
   <table>
     <thead><tr><th>값</th><th>동작</th></tr></thead>
     <tbody>
@@ -46,18 +48,29 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
       <tr><td><code>gemini-api</code></td><td>Google Generative Language API 또는 Vertex AI 직접 호출. 모델 <code>nano-banana-2</code>/<code>nano-banana-pro</code>. 가변 화면비·해상도 지원. API key 또는 Vertex 서비스 계정 JSON 필요.</td></tr>
       <tr><td><code>atlascloud</code></td><td>AtlasCloud API 직접 호출. <code>ATLASCLOUD_API_KEY</code> 필요.</td></tr>
       <tr><td><code>minimax</code></td><td>MiniMax API 직접 호출. <code>MINIMAX_API_KEY</code> 필요.</td></tr>
+      <tr><td><code>nai</code></td><td>NovelAI 텍스트 생성 전용 레인. <code>NOVELAI_API_KEY</code>가 필요하며 레퍼런스와 편집은 지원하지 않습니다.</td></tr>
+      <tr><td><code>comfy</code></td><td>등록된 ComfyUI 이미지 워크플로. 사용할 수 있는 모델은 런타임 워크플로 카탈로그에서 가져옵니다.</td></tr>
     </tbody>
   </table>
 
+  <h2>Prompt Builder 백엔드</h2>
+  <p>
+    Prompt Builder의 라우팅은 현재 이미지 프로바이더와 별개입니다. Settings &gt; Providers에서 자동
+    선택이나 GPT OAuth, OpenAI API, Grok, Grok API를 고르고, 그 백엔드가 지원하는 Builder model을
+    선택합니다. 자동 선택은 <code>oauth → grok → api → grok-api</code> 순서로 준비된 경로를 찾습니다.
+    백엔드를 직접 고르면 다른 경로로 넘어가지 않으며, 사용할 수 없을 때는 키 누락 같은 명시적인 오류를
+    돌려줍니다. 실제로 응답한 백엔드는 <code>via &lt;backend&gt;</code> 배지에서 확인할 수 있습니다.
+  </p>
+
   <h2>모델</h2>
   <p>
-    이미지 생성과 Prompt Builder는 <code>gpt-5.6-luna</code>를 기본값으로 씁니다.
-    이전 지원 모델은 호환 선택지로 남아 있습니다.
+    GPT 이미지 레인의 기본 모델은 <code>gpt-5.6-luna</code>입니다. Prompt Builder는 별도 백엔드
+    설정을 따르며, GPT 백엔드를 쓸 때 Luna가 기본 Builder model입니다.
   </p>
   <table>
     <thead><tr><th>모델</th><th>용도</th></tr></thead>
     <tbody>
-      <tr><td><code>gpt-5.6-luna</code></td><td>현재 이미지·Prompt Builder 기본값.</td></tr>
+      <tr><td><code>gpt-5.6-luna</code></td><td>현재 GPT 이미지 기본값. Prompt Builder가 GPT 백엔드를 쓸 때도 기본 모델입니다.</td></tr>
       <tr><td><code>gpt-5.6-terra</code> / <code>gpt-5.6-sol</code></td><td>계정에서 지원할 때 고를 수 있는 GPT-5.6 대안.</td></tr>
       <tr><td><code>gpt-5.4-mini</code></td><td>호환 모델.</td></tr>
       <tr><td><code>gpt-5.4</code></td><td>권장 균형 선택지.</td></tr>

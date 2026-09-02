@@ -31,6 +31,8 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
       <tr><td><code>IMA2_ADVERTISE_FILE</code></td><td><code>~/.ima2/server.json</code></td><td>Runtime discovery file.</td></tr>
       <tr><td><code>IMA2_GENERATED_DIR</code></td><td><code>~/.ima2/generated</code></td><td>Generated image directory.</td></tr>
       <tr><td><code>IMA2_IMAGE_MODEL_DEFAULT</code></td><td><code>gpt-5.6-luna</code></td><td>Server fallback image model.</td></tr>
+      <tr><td><code>IMA2_PROMPT_BUILDER_BACKEND</code></td><td><code>auto</code></td><td>Prompt Builder text backend; Auto selects the first ready supported backend.</td></tr>
+      <tr><td><code>IMA2_PROMPT_BUILDER_MODEL</code></td><td><code>auto</code> with Auto backend</td><td>Backend-scoped Builder model. Changing backend resets this to that backend's default.</td></tr>
       <tr><td><code>IMA2_REASONING_EFFORT</code></td><td><code>medium</code></td><td>Default reasoning effort for the default (OAuth) path; one of none, low, medium, high, xhigh.</td></tr>
       <tr><td><code>IMA2_NO_OAUTH_PROXY</code></td><td>—</td><td>Set <code>1</code> to disable the auto-started OAuth proxy.</td></tr>
       <tr><td><code>IMA2_LOG_LEVEL</code></td><td><code>info</code></td><td>serve defaults to info, dev to debug; accepts debug, info, warn, error, silent.</td></tr>
@@ -63,7 +65,8 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     <code>ima2 login</code> instead.
   </p>
   <h4>Common writable keys</h4>
-  <pre><code>imageModels.default              imageModels.reasoningEffort
+  <pre><code>promptBuilder.backend            promptBuilder.model
+imageModels.default              imageModels.reasoningEffort
 apiProvider.defaultImageModel    apiProvider.defaultReasoningEffort
 grokProvider.plannerModel        grokProvider.plannerTimeoutMs
 grokProvider.defaultImageModel  grokProvider.defaultVideoModel

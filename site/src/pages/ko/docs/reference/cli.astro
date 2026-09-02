@@ -43,6 +43,8 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     <tbody>
       <tr><td><code>ima2 gen &lt;prompt&gt; [--model &lt;lane&gt;/&lt;model&gt;]</code></td><td>저장했거나 직접 지정한 이미지 레인으로 생성.</td></tr>
       <tr><td><code>ima2 edit &lt;file&gt; --prompt &lt;text&gt;</code></td><td>기존 이미지 편집.</td></tr>
+      <tr><td><code>ima2 vectorize &lt;input&gt; [-o output.svg]</code></td><td>PNG/JPEG/WebP를 로컬에서 실제 SVG 패스로 변환합니다. 서버와 프로바이더가 필요 없습니다.</td></tr>
+      <tr><td><code>ima2 prompt build --message &lt;text&gt; [--backend &lt;backend&gt;] [--model &lt;model&gt;]</code></td><td>설정했거나 직접 고른 Prompt Builder 백엔드로 프롬프트를 다듬습니다. <code>ima2 serve</code>가 필요합니다.</td></tr>
       <tr><td><code>ima2 multimode &lt;prompt&gt;</code></td><td>멀티 이미지 SSE 생성 (<code>phase</code> / <code>partial</code> / <code>image</code> 스트리밍).</td></tr>
       <tr><td><code>ima2 video &lt;prompt&gt; [--model &lt;lane&gt;/&lt;model&gt;]</code></td><td>저장했거나 직접 지정한 Grok/MCP 레인으로 비디오 생성.</td></tr>
       <tr><td><code>ima2 video edit &lt;prompt&gt; --video &lt;value&gt;</code></td><td>비디오-투-비디오 편집. HTTPS URL, xAI file_id, data URL, generated MP4 지원.</td></tr>
@@ -62,6 +64,11 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     생성 모드 <code>video</code>는 <code>--provider &lt;grok|grok-api|runway|higgsfield&gt;</code>를 받습니다.
     Grok 비디오 명령에는 <code>--planner-model &lt;name&gt;</code>(기본 <code>grok-4.5</code>, Grok 4.3은 호환 선택지)와
     순차 클립 간 연속성을 위한 <code>--storyboard</code>도 있습니다.
+  </p>
+  <p>
+    NovelAI 생성은 <code>--nai-negative-prompt</code>와 고유 샘플링 옵션을 받습니다. 웹 컴포저에서도
+    NovelAI를 고르면 ‘포지티브 프롬프트’와 ‘제외할 요소’ 입력창이 함께 열리고, 컴포저 너비가
+    719px 이하이면 위아래로 쌓입니다.
   </p>
   <p><code>ima2 grok login</code>은 manual-paste 로그인 흐름을 기본으로 씁니다.</p>
   <pre><code>ima2 gen "a poster of a samurai cat" --model api/gpt-5.4 --reasoning-effort high

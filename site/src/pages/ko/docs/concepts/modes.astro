@@ -19,7 +19,9 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
   <p>
     한 프롬프트, 한 장의 강한 프레임. 프롬프트를 쓰고, 레퍼런스를 다섯 장까지 붙이고,
     모델·품질·크기·포맷·moderation을 고른 뒤 생성합니다. 복사·다운로드하거나, 결과에서 이어가거나,
-    Canvas Mode로 보냅니다.
+    Canvas Mode로 보냅니다. NovelAI를 고르면 ‘포지티브 프롬프트’와 ‘제외할 요소’ 입력창이
+    나란히 열리고, 컴포저 너비가 719px 이하이면 위아래로 쌓입니다. 다른 프로바이더에서는 기존
+    입력창 하나만 보입니다.
   </p>
 
   <h2>Node</h2>
@@ -41,7 +43,9 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
   <p>
     마음에 든 프레임 정리하기. 확대된 이미지를 선택과 분리해 이동하고, 수정 지점을 표시하고,
     미리보기 마스크로 배경을 정리한 뒤 투명(alpha) 또는 matte 버전으로 export합니다. 저장된 canvas
-    버전은 갤러리에서 숨겨지지만 다음 레퍼런스로 다시 쓸 수 있습니다.
+    버전은 갤러리에서 숨겨지지만 다음 레퍼런스로 다시 쓸 수 있습니다. 비트맵 바탕을 그대로 둔
+    자체 포함 문서가 필요하면 “SVG (래스터 포함)”, 실제 패스로 변환하려면 “SVG로 추적 (벡터)”을
+    고르세요. 벡터 추적은 기존 변환 패널에서 세부 값을 조정합니다.
   </p>
 
   <h2>Video</h2>
@@ -78,6 +82,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
     살아남습니다. 슬래시 명령과 <code>/question</code>을 지원하며 웹 UI에서 동작합니다
     (<code>ima2 agent</code> CLI 명령은 없습니다). <code>provider: "grok"</code>일 때 Agent Mode는
     Classic·Node와 같은 search + planner + xAI Images API 경로를 사용합니다.
+  </p>
+
+  <h2>Prompt Builder</h2>
+  <p>
+    Prompt Builder는 이미지를 만들지 않고 프롬프트를 다듬고 검토합니다. Settings &gt; Providers에서
+    백엔드와 Builder model을 고를 수 있습니다. 자동 선택은 GPT OAuth, Grok, OpenAI API, Grok API
+    순서로 준비된 경로를 찾습니다. 직접 고른 백엔드는 다른 경로로 넘어가지 않으며, 사용할 수 없으면
+    오류를 표시합니다. 실제로 응답한 백엔드는 <code>via &lt;backend&gt;</code> 배지에서 확인할 수 있습니다.
   </p>
 
   <h2>프롬프트 라이브러리 &amp; 가져오기</h2>

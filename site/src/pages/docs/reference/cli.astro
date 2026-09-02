@@ -43,6 +43,8 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     <tbody>
       <tr><td><code>ima2 gen &lt;prompt&gt; [--model &lt;lane&gt;/&lt;model&gt;]</code></td><td>Generate through a saved or explicit image lane.</td></tr>
       <tr><td><code>ima2 edit &lt;file&gt; --prompt &lt;text&gt;</code></td><td>Edit an existing image.</td></tr>
+      <tr><td><code>ima2 vectorize &lt;input&gt; [-o output.svg]</code></td><td>Trace PNG/JPEG/WebP into real SVG paths locally. No server or provider is required.</td></tr>
+      <tr><td><code>ima2 prompt build --message &lt;text&gt; [--backend &lt;backend&gt;] [--model &lt;model&gt;]</code></td><td>Refine a prompt through the configured or explicitly selected Prompt Builder backend. Requires <code>ima2 serve</code>.</td></tr>
       <tr><td><code>ima2 multimode &lt;prompt&gt;</code></td><td>Multi-image SSE generation (streams <code>phase</code> / <code>partial</code> / <code>image</code>).</td></tr>
       <tr><td><code>ima2 video &lt;prompt&gt; [--model &lt;lane&gt;/&lt;model&gt;]</code></td><td>Generate through a saved or explicit Grok/MCP video lane.</td></tr>
       <tr><td><code>ima2 video edit &lt;prompt&gt; --video &lt;value&gt;</code></td><td>Video-to-video edit; supports HTTPS URL, xAI file_id, data URL, or generated MP4.</td></tr>
@@ -64,6 +66,11 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
     Grok video commands also accept <code>--planner-model &lt;name&gt;</code> (default
     <code>grok-4.5</code>; Grok 4.3 remains a compatibility override) and <code>--storyboard</code> for character/scene continuity across
     sequential clips.
+  </p>
+  <p>
+    NovelAI generation accepts <code>--nai-negative-prompt</code> and native sampling flags. The web
+    composer presents the same Positive prompt and Undesired content split when NovelAI is selected;
+    the panes stack below a 719px composer container.
   </p>
   <p><code>ima2 grok login</code> uses the manual-paste login flow by default.</p>
   <pre><code>ima2 gen "a poster of a samurai cat" --model api/gpt-5.4 --reasoning-effort high

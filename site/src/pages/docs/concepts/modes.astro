@@ -19,7 +19,9 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   <p>
     One prompt, one strong frame. Write a prompt, attach up to five references, pick model, quality,
     size, format, and moderation, then generate. Copy, download, continue from the result, or send
-    it into Canvas Mode.
+    it into Canvas Mode. When NovelAI is selected, the composer splits into Positive prompt and
+    Undesired content panes; they stack below a 719px composer container. Other providers keep one
+    prompt field.
   </p>
 
   <h2>Node</h2>
@@ -42,7 +44,8 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
     Clean up the winning frame. Pan a zoomed image separately from selection, annotate target areas,
     clean backgrounds with a previewed mask, and export transparent (alpha) or matte-backed
     versions. Saved canvas versions stay hidden from the gallery but can be reused as the next
-    reference.
+    reference. Export “SVG (embedded raster)” when the bitmap base should remain intact, or choose
+    “Trace to SVG (vector)” to flatten the composition and open the shared path-tracing panel.
   </p>
 
   <h2>Video</h2>
@@ -83,6 +86,14 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
     <code>/question</code>, and runs in the web UI (there is no <code>ima2 agent</code> CLI command).
     With <code>provider: "grok"</code>, Agent Mode uses the same search + planner + xAI Images API
     path as Classic and Node.
+  </p>
+
+  <h2>Prompt Builder</h2>
+  <p>
+    Prompt Builder improves and discusses prompts without generating an image. Choose its backend
+    and Builder model in Settings &gt; Providers. Auto selects the first ready lane in the order GPT
+    OAuth, Grok, OpenAI API, then Grok API. An explicit backend stays pinned and fails visibly when
+    unavailable, while the <code>via &lt;backend&gt;</code> badge shows which backend actually answered.
   </p>
 
   <h2>Prompt library &amp; imports</h2>

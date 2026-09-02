@@ -59,7 +59,7 @@ const genBody = `{
   <h4>POST /api/generate — 요청 바디</h4>
   <pre><code>{genBody}</code></pre>
   <p>
-    품질: low, medium, high. Moderation: auto, low. Provider: auto, oauth, api, grok, grok-api, agy, gemini-api.
+    품질: low, medium, high. Moderation: auto, low. Provider: auto, oauth, api, grok, grok-api, agy, gemini-api, atlascloud, minimax, nai, comfy.
     앱 기본 OpenAI 모델은 <code>gpt-5.6-luna</code>입니다.
     Grok 모델은 <code>grok-imagine-image</code>와 <code>grok-imagine-image-quality</code>입니다.
     Gemini 모델은 <code>nano-banana-2</code>(Flash)와 <code>nano-banana-pro</code>(Pro)입니다.
@@ -68,6 +68,11 @@ const genBody = `{
     이벤트 버스를 통해 <code>phase</code>, <code>partial</code>, <code>done</code>,
     <code>error</code> 이벤트가 멀티플렉싱됩니다. CLI에서
     <code>Accept: text/event-stream</code>을 보내면 기존 per-request SSE를 그대로 사용합니다.
+  </p>
+  <p>
+    NovelAI 요청은 <code>provider: "nai"</code>와 <code>negativePrompt</code>, 고유 샘플링 옵션을
+    받을 수 있습니다. 텍스트 생성만 지원하므로 레퍼런스와 편집은 명시적인
+    <code>NAI_*_UNSUPPORTED</code> 오류로 끝납니다.
   </p>
   <div class="docs-callout docs-callout-info">
     <strong>비디오 생성.</strong> <code>POST /api/video/generate</code> (SSE)는 Grok을 통해 비디오를
@@ -90,6 +95,14 @@ const genBody = `{
       <tr><td><code>GET /api/history</code></td><td>생성 에셋 목록; <code>?groupBy=session</code>은 세션 제목별 그룹.</td></tr>
       <tr><td><code>DELETE /api/history/:filename</code></td><td>생성 에셋 톰스톤(소프트 삭제).</td></tr>
       <tr><td><code>POST /api/history/:filename/restore</code></td><td>최근 삭제된 에셋 복원.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>에셋 &amp; 벡터 변환</h2>
+  <table>
+    <thead><tr><th>엔드포인트</th><th>설명</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /api/assets/derived</code></td><td><code>kind=vector-svg</code>로 저장된 PNG/JPEG/WebP를 추적합니다. <code>source</code>, <code>preset</code>, 선택 세부 값을 쿼리로 보내며 요청 본문은 비웁니다.</td></tr>
     </tbody>
   </table>
 
@@ -122,7 +135,8 @@ const genBody = `{
       <tr><td><code>GET · PATCH · DELETE /api/agent/sessions/:id</code></td><td>세션 로드·수정·삭제.</td></tr>
       <tr><td><code>POST /api/agent/sessions/:id/turns</code></td><td>에이전트 턴 실행; 슬래시 명령과 <code>/question</code> 지원.</td></tr>
       <tr><td><code>GET · POST /api/agent/sessions/:id/queue</code></td><td>durable 큐 조회·적재 (<code>/api/agent/queue/:itemId/cancel</code> · <code>retry</code>로 항목 관리).</td></tr>
-      <tr><td><code>POST /api/prompt-builder/chat</code></td><td>Prompt-builder 어시스턴트 (<code>ima2 prompt build</code>).</td></tr>
+      <tr><td><code>POST /api/prompt-builder/chat</code></td><td>설정했거나 요청에서 고른 백엔드로 Prompt Builder 요청을 보내고 <code>requestedBackend</code>, 실제 응답 <code>backend</code>, <code>model</code>을 반환합니다. CLI는 <code>ima2 prompt build</code>입니다.</td></tr>
+      <tr><td><code>GET · PUT /api/prompt-builder/config</code></td><td>Prompt Builder 백엔드·모델 설정을 읽거나 저장합니다. GET은 선택 가능한 백엔드·모델, <code>autoOrder</code>, 환경 변수 잠금 상태를 함께 반환합니다.</td></tr>
     </tbody>
   </table>
 
