@@ -45,6 +45,22 @@ usable asset.
 | 4 | CSS device frame + screenshot | App mockup heroes (Toss/카카오 style). Pure CSS phone/laptop frame wrapping a real screenshot or UI |
 | 5 | Placeholder service (last resort) | `picsum.photos/800/600`, `placehold.co`. Mark as TODO for replacement |
 
+### Raster vs real vector
+
+An image prompted as "flat vector style" is still a raster bitmap. When the shipped
+asset must contain scalable paths (logo mark, icon, simple sprite, stencil), generate a
+clean flat or transparent raster first, then run:
+
+```bash
+ima2 vectorize input.png -o output.svg --preset auto --json
+```
+
+The same tracer is available in AssetGen, Assets, and Canvas Mode. In Canvas Export,
+choose **Trace to SVG (vector)**; **SVG (embedded raster)** is self-contained but is
+not a pixel trace. Inspect path count and render the SVG back to PNG before shipping.
+Tracing works best for flat color, strong edges, cutouts, and logos; photographs,
+gradients, and small text are not acceptable vectorization targets.
+
 ### Korean Service Patterns
 
 Korean product pages almost always use concrete visual evidence in the first viewport:

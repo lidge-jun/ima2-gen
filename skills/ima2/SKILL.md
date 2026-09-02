@@ -131,6 +131,12 @@ ima2 gen "1girl, blue hair, city at night" \
   --nai-auto-smea --nai-decrisper --nai-variety-plus
 ```
 
+In the web app, selecting NovelAI changes the composer into two peer panes:
+**Positive prompt** and **Undesired content**. They sit side by side when the
+composer is wide enough and stack below a 719px container width. Other providers
+keep the normal single prompt because they do not share NovelAI's dedicated
+negative-prompt contract.
+
 For V5 native alpha, pair the request flag with an alpha-aware prompt:
 
 ```bash
@@ -171,6 +177,34 @@ Native control details come from the official
 [steps and guidance](https://docs.novelai.net/en/image/stepsguidance/),
 [quality tags](https://docs.novelai.net/en/image/qualitytags/), and
 [seed](https://docs.novelai.net/en/image/seed/) pages, checked the same date.
+
+## Prompt Builder
+
+The right-sidebar Prompt Builder refines prompts without generating an image. Open
+Settings > Providers > Prompt Builder backend to choose where its text request runs,
+and use Builder model to select a model from that backend's catalog. `Auto` is the
+default: it tries GPT OAuth, Grok, OpenAI API, then Grok API and selects the first
+ready backend. Each successful reply carries a `via <backend>` badge showing the
+backend that actually answered.
+
+Choose an explicit backend when cost, credentials, or model behavior must be stable.
+An unavailable explicit backend returns a typed error and never falls back. Only Auto
+performs readiness fallback, and there is no retry on a different backend after an
+upstream request has been sent.
+
+The CLI wrapper accepts the same per-request selection:
+
+```bash
+ima2 prompt build \
+  --message "Turn this rough idea into a production image prompt" \
+  --backend <auto|oauth|api|grok|grok-api> \
+  --model <model>
+```
+
+Run `ima2 config get promptBuilder.backend` and
+`ima2 config get promptBuilder.model` to inspect the persisted server preference.
+The Builder's model choices depend on the selected backend; do not assume the GPT
+model list applies to Grok.
 
 ## Prompting Guidance
 
@@ -420,9 +454,12 @@ generate a clean cutout FIRST; tracing quality follows input flatness.
 `mono` has no alpha channel, so a transparent cutout becomes a silhouette on a
 black field. Use it for stencils and line art, not for cutouts.
 
-In the app, the same operation is the "Convert to SVG" action on any image
-asset (generation grid tile or Assets library preview), which saves the SVG
-into the current project.
+In the app, the same operation is **Convert to SVG** on an AssetGen tile or Assets
+library preview. Canvas Mode also exposes **Trace to SVG (vector)** in Export: it
+flattens the current canvas composition to PNG, saves that hidden canvas version,
+then opens the same preset and fine-tuning panel. Do not confuse it with
+**SVG (embedded raster)**, which keeps the base image as bitmap data and vectorizes
+only Canvas annotations.
 
 ### Korean Text in Images
 
