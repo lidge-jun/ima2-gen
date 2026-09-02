@@ -365,6 +365,13 @@ Windows DNS/fragmentation bypass tool such as SecretDNS is in use.
 | `ima2 prompt build --message <text> [--ref <file>] [--model <id>] [--json]` | Build a structured image prompt through `/api/prompt-builder/chat` |
 | `ima2 prompt build --messages <file\|@file\|-> [--json]` | Build from a message transcript file or stdin |
 
+Prompt Builder uses the server's persisted `promptBuilder.backend` preference unless
+`--backend <auto|oauth|api|grok|grok-api>` overrides it for one request. `auto`
+chooses the first ready supported text backend (oauth, grok, api, grok-api); an explicit
+value pins routing and fails with a typed error instead of falling back. The result
+identifies `requestedBackend`, the answering `backend`, and `model`, so callers can
+detect an Auto fallback.
+
 ## Card News (gated)
 
 Card News requires the server to be started with `IMA2_CARD_NEWS=1` (or `features.cardNews: true` in `~/.ima2/config.json`). When disabled, the CLI exits 2 with a clear message instead of producing a 404.

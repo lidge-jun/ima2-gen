@@ -21,6 +21,15 @@ you want a reproducible way to report a workspace issue.
 | Gallery | Browses saved local images, All/Favorites tabs, and folders. | Favorite toggles should preserve the gallery viewport you were browsing. |
 | Prompt library | Imports saved prompt text into the composer intentionally. | Library insert/continue actions are explicit prompt imports; passive image selection is not. |
 
+### Provider-specific prompt surfaces
+
+NovelAI shows Positive prompt and Undesired content as separate panes in Classic, Home,
+and the mobile compose sheet (side by side when the composer is wider than 719px,
+stacked otherwise). Switching away from NovelAI restores the single prompt without
+deleting the saved undesired-content text. Prompt Builder routing is configured in
+Settings > Providers; the Builder badge shows the backend that actually answered,
+including an Auto selection or fallback.
+
 ## Multimode Prompting
 
 Multimode repeats one generation request shape across several candidate slots.
