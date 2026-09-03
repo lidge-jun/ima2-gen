@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.10",
-    "@xyflow/react": "^12.11.3",
+    "@xyflow/react": "^12.11.5",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
