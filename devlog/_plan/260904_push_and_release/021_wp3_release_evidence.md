@@ -77,3 +77,37 @@ candidate gate"). dev 푸시 후 실제 CI를 관찰하다 발견했다 — Wind
 (`package.json:39`). 릴리스 워크플로의 "Verify the release candidate before promoting it"
 단계가 실제로 통과한 것이 그 증거다.
 
+## 릴리스 종료 결과 (실행 완료 후 확정)
+
+| 항목 | 값 |
+|---|---|
+| release run 33885127085 | **success** |
+| preview publish 33885929065 | **success** |
+| stable publish 33887515799 | **success** |
+| 승인 게이트 | npm-stable **2회** — tag 잡, 그리고 stable publish 잡 |
+| GitHub Release | v3.13.1, 2026-09-04T14:41:27Z |
+| npm latest | 3.13.1 (gitHead d2afe6b2) |
+
+승인이 두 번인 것은 워크플로 설계대로다. `release.yml:181-188` 주석이 tag 잡에 게이트를
+두는 이유를 설명하고("a declined or ignored approval leaves main, dev, and the tag exactly
+where they were"), `release.yml:236-239` 주석이 stable publish 잡도 환경 게이트라 대기가
+두 번째 승인을 포함한다고 명시한다.
+
+자동 생성된 릴리스 노트가 이번 전달 범위를 정확히 담았다:
+
+```
+### Fixes
+- ci: clear the fast-uri advisory and the Windows action-pin sweep
+- ui: name a model selection this lane no longer lists
+- ui: stop a stranded comfy selection from blanking the model label
+```
+
+`CHANGELOG.md`는 3.0.0 이후 갱신이 중단된 상태라 이번 릴리스에서 건드리지 않았다.
+릴리스 노트는 커밋에서 생성되므로 사용자에게 보이는 기록은 이미 정확하다.
+
+## 남은 정직한 미검증
+
+Windows 네이티브 filesystem/symlink 동작. `ci.yml:161-162`가 Windows 잡을 `schedule`
+전용으로 두므로 이번 릴리스 경로에서는 실행되지 않았고, 다음 예약 실행(매일 03:17 UTC)이
+증거를 준다. 릴리스를 막지 않는 항목이라 완료를 보류할 이유는 아니다.
+
