@@ -3,6 +3,9 @@ import type { Provider } from "../types";
 import {
   getImageModelOptionsForProvider,
   VIDEO_MODEL_OPTIONS,
+  resolveCoreModelValue,
+  COMFY_VIDEO_VALUE_PREFIX,
+  VIDEO_VALUE_PREFIX,
 } from "../lib/imageModels";
 import { REASONING_EFFORT_OPTIONS, type ReasoningEffort } from "../lib/reasoning";
 import { Select, type SelectGroup } from "./controls/Select";
@@ -57,9 +60,11 @@ const MCP_OWNED_LANES = new Set(["runway", "higgsfield"]);
 
 const MCP_PREFIX = "mcp:";
 const CORE_PREFIX = "core:";
-const VIDEO_PREFIX = "video:";
 const EFFORT_PREFIX = "effort:";
-const COMFY_VIDEO_PREFIX = "comfy-video:";
+// Re-exported from the resolver module so the option rows below and the
+// selected-value computation can never drift onto two different encodings.
+const VIDEO_PREFIX = VIDEO_VALUE_PREFIX;
+const COMFY_VIDEO_PREFIX = COMFY_VIDEO_VALUE_PREFIX;
 
 function applyMcpProvider(provider: string | null): void {
   setMcpProviderImpl(provider, useAppStore.setState, useAppStore.getState);
@@ -206,9 +211,15 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
       disabled: entry.executable === false || Boolean(entry.description?.endsWith("(offline)")),
     }))
     : [];
-  const coreModelValue = comfyVideoWorkflow
-    ? `${COMFY_VIDEO_PREFIX}${comfyVideoWorkflow}`
-    : videoModel ? `${VIDEO_PREFIX}${videoModel}` : imageModel;
+  // Lane-gated: a value the current lane does not list would render the trigger
+  // with no label at all (Select falls back to ""), which is what a leftover
+  // comfy video workflow used to do under GPT.
+  const coreModelValue = resolveCoreModelValue({
+    provider,
+    imageModel,
+    videoModel,
+    comfyVideoWorkflow,
+  });
   const modelValue = mcpProvider
     ? (mcpModel ? encodeMcpModelValue(mcpMediaKind, mcpModel) : "")
     : coreModelValue;

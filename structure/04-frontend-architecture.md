@@ -258,3 +258,26 @@ Badges name only the exception (`mcp.lane.*`), ready lanes stay unlabelled, and
 `triggerSub=""` keeps the closed control showing the selection rather than the reason.
 Follow-up debt: `ProviderStatusSelect.tsx` still hardcodes nine core entries and omits
 comfy, so the two provider dropdowns disagree about which lanes exist.
+
+Snapshot note, 2026-09-04: **model-select value is lane-gated**
+(`260904_model_select_empty_label`). The selected value the model `Select` shows is
+computed by `resolveCoreModelValue` in `ui/src/lib/imageModels.ts`, not inline in the
+component. The previous inline expression preferred `comfyVideoWorkflow`, then
+`videoModelSelected`, then `imageModel` regardless of provider — and `Select` renders an
+EMPTY trigger label when its value matches none of the option rows it drew. So a comfy
+video workflow surviving a lane switch made the control read "GPT" with no model beside
+it, which looks like a rendering fault rather than stale state. The resolver returns only
+what the current lane also lists (`comfy-video:` under comfy, `video:` under the Grok
+lanes, `imageModel` otherwise), and `COMFY_VIDEO_VALUE_PREFIX`/`VIDEO_VALUE_PREFIX` live
+beside it so an option row cannot drift off the value that selects it.
+
+The state half is in `setProviderImpl`: LEAVING comfy now clears `comfyWorkflow` and
+`comfyVideoWorkflow` and, when the current `imageModel` is not a member of the
+`ImageModel` union, converges it to `DEFAULT_IMAGE_MODEL`. A comfy "model" is a
+registered workflow id — legal in that lane because the server reads it as the workflow
+to run (`lib/providerOptions.ts`, `lib/comfyImageAdapter.ts`) — so it used to ride out of
+the lane and go on to become the `model` of the next GPT request. Union membership is the
+test rather than another per-provider predicate, because the enumerated fallback below it
+is exactly what failed to catch a workflow id. Only the OUTBOUND transition clears:
+re-selecting comfy preserves the workflow (260823), and hydration never calls this
+function at all, since `useAppStore` projects stored values straight into initial state.

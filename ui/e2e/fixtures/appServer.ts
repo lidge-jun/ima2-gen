@@ -20,7 +20,18 @@ export function assertStubOnlyCalls(stub: StubHandle): void {
 
 export async function seedBrowser(
   page: Pick<Page, "addInitScript">,
-  options: { provider?: "minimax" | "oauth"; dismissOnboarding?: boolean; imageModel?: string } = {},
+  options: {
+    provider?: "minimax" | "oauth";
+    dismissOnboarding?: boolean;
+    imageModel?: string;
+    /**
+     * Extra generation defaults merged into the seeded blob. Some regressions
+     * only exist in state a user reaches by moving between lanes and reloading,
+     * which the app then restores verbatim; seeding it directly reproduces that
+     * without driving the whole journey first.
+     */
+    generationDefaults?: Record<string, unknown>;
+  } = {},
 ): Promise<void> {
   const provider = options.provider ?? "minimax";
   const dismissOnboarding = options.dismissOnboarding ?? false;
@@ -29,12 +40,21 @@ export async function seedBrowser(
   // stored GPT default reaches /api/generate and it fails closed with a 400
   // before any stub upstream call happens.
   const imageModel = options.imageModel ?? (provider === "minimax" ? "image-01" : "gpt-5.6-luna");
+  const generationDefaults = options.generationDefaults ?? {};
   await page.addInitScript((payload) => {
-    const next = JSON.parse(payload) as { provider: string; dismissOnboarding: boolean; imageModel: string };
+    const next = JSON.parse(payload) as {
+      provider: string;
+      dismissOnboarding: boolean;
+      imageModel: string;
+      generationDefaults: Record<string, unknown>;
+    };
     if (next.dismissOnboarding) localStorage.setItem("ima2.onboardingDismissed", "1");
-    localStorage.setItem("ima2.generationDefaults", JSON.stringify({ provider: next.provider }));
+    localStorage.setItem(
+      "ima2.generationDefaults",
+      JSON.stringify({ provider: next.provider, ...next.generationDefaults }),
+    );
     localStorage.setItem("ima2.imageModel", next.imageModel);
-  }, JSON.stringify({ provider, dismissOnboarding, imageModel }));
+  }, JSON.stringify({ provider, dismissOnboarding, imageModel, generationDefaults }));
 }
 
 function waitForLog(child: ChildProcess, needle: RegExp, timeoutMs = 20_000): Promise<string> {

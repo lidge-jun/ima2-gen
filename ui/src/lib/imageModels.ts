@@ -165,3 +165,50 @@ export function supportsVideoResolutionUI(model: string | false, resolution: str
   if (resolution !== "1080p") return true;
   return model === GROK_VIDEO_MODEL_15 && (mode === "text-to-video" || mode === "image-to-video");
 }
+
+// ── Model-select display value ───────────────────────────────────────────
+// Encodings the model Select uses to tell three kinds of selection apart in one
+// control. They live here rather than in the component because the resolver
+// below and the component's option rows must agree on them; two copies is how
+// a value stops matching its own option.
+export const COMFY_VIDEO_VALUE_PREFIX = "comfy-video:";
+export const VIDEO_VALUE_PREFIX = "video:";
+
+/**
+ * The value the model Select shows as selected, gated by the lane that is
+ * actually offering options.
+ *
+ * `Select` finds its trigger label by matching this value against the option
+ * rows it rendered; an unmatched value falls through to an empty label, so a
+ * control that says "GPT" ends up naming no model at all. That is exactly what
+ * happened: the previous inline version preferred `comfyVideoWorkflow` and then
+ * `videoModel` over `imageModel` REGARDLESS of provider, so a comfy video
+ * workflow left over from the comfy lane (which `setProviderImpl` did not clear
+ * on the way out, and which persists in generation defaults) kept winning under
+ * GPT — where no `comfy-video:` row exists.
+ *
+ * Gating every lane-specific value means the resolver can only ever return
+ * something the current lane also lists. That holds even if the store state is
+ * inconsistent, which makes the display safe independently of whether the state
+ * layer is: two separate defenses, not one restated twice.
+ */
+export function resolveCoreModelValue(input: {
+  provider: Provider;
+  imageModel: string;
+  // Widened to match what the store selectors actually hand over: these slices
+  // are optional on the persisted-defaults type, so a caller can legally read
+  // undefined before a value has ever been stored.
+  videoModel: string | false | null | undefined;
+  comfyVideoWorkflow: string | null | undefined;
+}): string {
+  const { provider, imageModel, videoModel, comfyVideoWorkflow } = input;
+  if (provider === "comfy") {
+    return comfyVideoWorkflow ? `${COMFY_VIDEO_VALUE_PREFIX}${comfyVideoWorkflow}` : imageModel;
+  }
+  // Grok video rows are the only ones `video:` values are rendered for, because
+  // selectVideoModel normalizes to a Grok id and would drag the provider along.
+  if (provider === "grok" || provider === "grok-api") {
+    return videoModel ? `${VIDEO_VALUE_PREFIX}${videoModel}` : imageModel;
+  }
+  return imageModel;
+}

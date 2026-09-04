@@ -1,6 +1,6 @@
 import type { Provider, Quality, SizePreset, Format, Moderation, ImageModel, Count } from "../types";
 import type { ReasoningEffort } from "../lib/reasoning";
-import { DEFAULT_IMAGE_MODEL, GROK_VIDEO_MODEL_15, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, isMinimaxImageModel, isNaiImageModel, normalizeVideoModelValue } from "../lib/imageModels";
+import { DEFAULT_IMAGE_MODEL, GROK_VIDEO_MODEL_15, isImageModel, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, isMinimaxImageModel, isNaiImageModel, normalizeVideoModelValue } from "../lib/imageModels";
 import { parseRequestedCustomSide } from "../lib/size";
 import type { NaiOptions, NaiOptionOverrides } from "../lib/naiOptions";
 import { getEffectiveVideoSourceCount } from "../lib/videoSourceCount";
@@ -365,6 +365,37 @@ export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet
   if (!supportsVideo && get().videoModelSelected) {
     set({ videoModelSelected: false });
     saveVideoDefaults({ model: false });
+  }
+  /**
+   * LEAVING comfy: drop the selections only that lane can express.
+   *
+   * A comfy "model" is a registered workflow id, which is legal in the comfy
+   * lane (the server reads it as the workflow to run) and meaningless in every
+   * other one. Both carriers used to survive the trip out: comfyVideoWorkflow
+   * because the branch below only clears on the way IN, and a workflow id
+   * sitting in imageModel because the fallback further down enumerates the
+   * OTHER providers' model predicates — and a workflow id matches none of them,
+   * so it slipped through every branch.
+   *
+   * Both then showed up as an empty model label under GPT, and the imageModel
+   * one also rode along as the `model` of the next GPT request. Membership in
+   * the ImageModel union is the honest test here, not another predicate to add
+   * to a list that already failed to be exhaustive once.
+   *
+   * Only the OUTBOUND transition clears. Re-selecting comfy while already on it
+   * keeps the user's workflow (260823), and hydration never reaches this
+   * function at all — useAppStore projects stored values straight into initial
+   * state — so a restored comfy selection is untouched.
+   */
+  if (get().provider === "comfy" && provider !== "comfy") {
+    const strandedModel = !isImageModel(currentModel);
+    saveGenerationDefaultsPatch({ comfyWorkflow: null, comfyVideoWorkflow: null });
+    if (strandedModel) saveImageModel(DEFAULT_IMAGE_MODEL);
+    set({
+      comfyWorkflow: null,
+      comfyVideoWorkflow: null,
+      ...(strandedModel ? { imageModel: DEFAULT_IMAGE_MODEL } : {}),
+    });
   }
   if ((provider === "grok" || provider === "grok-api") && !isGrokImageModel(currentModel)) {
     const grokModel = "grok-imagine-image-2.0";
