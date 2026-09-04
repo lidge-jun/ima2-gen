@@ -195,10 +195,20 @@ export function readWorkflow(name, root = process.cwd()) {
  */
 export function pinnedManifestPaths(root = process.cwd()) {
   const paths = new Set();
+  // Every path in this set is a POSIX-separated repo-relative path, on every OS.
+  //
+  // `join` emits the platform separator, but the local `uses: ./x` references
+  // resolved below are parsed out of YAML and are always POSIX. Mixing the two
+  // in one Set breaks the `paths.has(candidate)` dedup on Windows — the same
+  // manifest gets swept twice under two spellings — and leaves callers
+  // comparing against a value whose shape depends on the runner. Normalizing at
+  // insertion keeps one spelling per manifest; Windows Node accepts `/` when
+  // these are later joined back onto `root` for reads.
+  const rel = (path) => path.split(sep).join("/");
   const workflowDir = join(root, ".github/workflows");
   if (existsSync(workflowDir)) {
     for (const name of readdirSync(workflowDir).sort()) {
-      if (/\.ya?ml$/.test(name)) paths.add(join(".github/workflows", name));
+      if (/\.ya?ml$/.test(name)) paths.add(rel(join(".github/workflows", name)));
     }
   }
   // A repo-root action.yml is how a published action is declared, and GitHub
@@ -215,7 +225,7 @@ export function pinnedManifestPaths(root = process.cwd()) {
       const stats = lstatSync(join(root, rel));
       if (stats.isSymbolicLink()) continue;
       if (stats.isDirectory()) walk(rel);
-      else if (/^action\.ya?ml$/.test(entry)) paths.add(rel);
+      else if (/^action\.ya?ml$/.test(entry)) paths.add(rel.split(sep).join("/"));
     }
   };
   if (existsSync(join(root, ".github/actions"))) walk(".github/actions");
