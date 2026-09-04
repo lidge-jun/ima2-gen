@@ -67,3 +67,75 @@ test("all current locale dictionaries provide labels, placeholders, and characte
     }
   }
 });
+
+// Regression (260905): the sidebar min-height token (clamp(200px, 42vh, 520px))
+// leaked into the negative textarea, which had no counterpart to the positive
+// pane's sizing reset. The pane then overflowed the dual grid and sat on top
+// of the toolbar. Both textareas must share one reset scoped to the dual grid,
+// the grid must keep content-aware rows, and the sidebar spacer must yield.
+const sidebarCss = read("ui/src/styles/sidebar.css");
+const responsiveCss = read("ui/src/styles/responsive-layout.css");
+const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+const desktopBlock = (css: string) =>
+  stripComments(css).match(/@media \(min-width: 801px\)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/)?.[1] ?? "";
+
+test("sidebar dual panes give both textareas the same sizing reset with a usable floor", () => {
+  const desktop = desktopBlock(composerCss);
+  const reset = desktop.match(
+    /\.composer--sidebar \.composer__prompt-panes--dual \.composer__textarea,\s*\.composer--sidebar \.composer__prompt-panes--dual \.negative-prompt__textarea\s*\{([^{}]*)\}/,
+  );
+  assert.ok(reset, "dual-pane textarea reset must cover positive and negative together");
+  for (const declaration of [
+    /height:\s*100%\s*!important/,
+    /min-height:\s*72px/,
+    /max-height:\s*none/,
+    /flex:\s*1 1 auto/,
+  ]) {
+    assert.match(reset[1], declaration);
+  }
+  // The single-pane reset stays untouched so non-NAI lanes keep their geometry.
+  assert.match(desktop, /\.composer--sidebar \.composer__textarea\s*\{[^{}]*min-height:\s*0;/);
+});
+
+test("sidebar dual grid keeps content-aware rows and shrinkable panes", () => {
+  const desktop = desktopBlock(composerCss);
+  assert.match(
+    desktop,
+    /\.composer--sidebar \.composer__prompt-panes--dual\s*\{[^{}]*grid-auto-rows:\s*minmax\(min-content, 1fr\);[^{}]*overflow-y:\s*auto;/,
+  );
+  assert.match(
+    desktop,
+    /\.composer--sidebar \.composer__prompt-panes--dual > \.composer__prompt-pane,\s*\.composer--sidebar \.composer__prompt-panes--dual > \.negative-prompt\s*\{\s*min-height:\s*0;/,
+  );
+  assert.match(
+    desktopBlock(sidebarCss),
+    /\.sidebar__scroll:has\(> \.composer--sidebar \.composer__prompt-panes--dual\)::after\s*\{\s*flex:\s*0 0 0;/,
+  );
+});
+
+test("classic negative textarea follows the composer max-height token in bottom and mobile variants", () => {
+  assert.match(
+    providerCss,
+    /\.negative-prompt--classic \.negative-prompt__textarea\s*\{[^{}]*max-height:\s*var\(--composer-textarea-max-height, none\);[^{}]*resize:\s*none;[^{}]*overflow-y:\s*auto;/,
+  );
+  assert.match(
+    stripComments(responsiveCss),
+    /\.compose-sheet__panel--prompt \.composer__textarea,\s*\.compose-sheet__panel--prompt \.negative-prompt__textarea\s*\{[^{}]*height:\s*100% !important;/,
+  );
+});
+
+test("bottom dock lets NAI dual panes scroll instead of pushing the toolbar out", () => {
+  const classicCss = stripComments(read("ui/src/styles/classic-workspace.css"));
+  assert.match(
+    classicCss,
+    /\.classic-workspace__dock:has\(\.composer__prompt-panes--dual\)\s*\{\s*max-height:\s*min\(52dvh, 420px\);/,
+  );
+  assert.match(
+    classicCss,
+    /\.composer--bottom \.composer__prompt-panes--dual\s*\{[^{}]*flex:\s*1 1 auto;[^{}]*min-height:\s*0;[^{}]*overflow-y:\s*auto;[^{}]*grid-auto-rows:\s*minmax\(min-content, auto\);/,
+  );
+  assert.match(
+    classicCss,
+    /\.composer--bottom \.composer__prompt-panes--dual > \.composer__prompt-pane,\s*\.composer--bottom \.composer__prompt-panes--dual > \.negative-prompt\s*\{\s*min-height:\s*0;/,
+  );
+});

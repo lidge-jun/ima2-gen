@@ -27,6 +27,11 @@
     content: "";
     flex: 3 1 0;
   }
+
+  /* NAI dual prompt panes need the room the spacer usually reserves. */
+  .sidebar__scroll:has(> .composer--sidebar .composer__prompt-panes--dual)::after {
+    flex: 0 0 0;
+  }
 }
 
 .logo {

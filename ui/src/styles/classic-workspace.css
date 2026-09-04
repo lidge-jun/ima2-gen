@@ -136,6 +136,26 @@
   overflow-y: auto;
 }
 
+/* NAI dual panes in the bottom dock: the dock is capped for a single field, so
+   it grows a little when the second pane is present, and the pane grid takes
+   the remaining room and scrolls instead of pushing the toolbar out of the
+   composer's overflow:hidden box. Rows keep their content minimum. */
+.classic-workspace__dock:has(.composer__prompt-panes--dual) {
+  max-height: min(52dvh, 420px);
+}
+
+.composer--bottom .composer__prompt-panes--dual {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  grid-auto-rows: minmax(min-content, auto);
+}
+
+.composer--bottom .composer__prompt-panes--dual > .composer__prompt-pane,
+.composer--bottom .composer__prompt-panes--dual > .negative-prompt {
+  min-height: 0;
+}
+
 .classic-workspace__dock .generate-row {
   align-self: stretch;
   display: grid;

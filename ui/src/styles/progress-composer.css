@@ -603,6 +603,26 @@
     max-height: none;
     flex: 1 1 auto;
   }
+  /* NAI dual panes: the sidebar min-height token above is sized for the
+     single positive field, so both grid items get one reset scoped to the
+     dual grid instead. Rows keep their content minimum (label + floor + hint)
+     and the grid scrolls when the sidebar is too short, so nothing is ever
+     clipped by the pane's clip-path or stacked over the toolbar. */
+  .composer--sidebar .composer__prompt-panes--dual {
+    grid-auto-rows: minmax(min-content, 1fr);
+    overflow-y: auto;
+  }
+  .composer--sidebar .composer__prompt-panes--dual > .composer__prompt-pane,
+  .composer--sidebar .composer__prompt-panes--dual > .negative-prompt {
+    min-height: 0;
+  }
+  .composer--sidebar .composer__prompt-panes--dual .composer__textarea,
+  .composer--sidebar .composer__prompt-panes--dual .negative-prompt__textarea {
+    height: 100% !important;
+    min-height: 72px;
+    max-height: none;
+    flex: 1 1 auto;
+  }
 }
 @container (max-width: 719px) {
   .composer__prompt-panes--dual {

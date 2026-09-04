@@ -233,6 +233,9 @@
   border: 0;
   background: transparent;
   font-size: 13px;
+  max-height: var(--composer-textarea-max-height, none);
+  resize: none;
+  overflow-y: auto;
 }
 
 .negative-prompt__textarea:focus {
