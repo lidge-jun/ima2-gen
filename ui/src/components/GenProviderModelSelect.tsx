@@ -419,6 +419,34 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         })),
       });
     }
+    // Last line of defense for the blank-label failure, mirroring what the MCP
+    // branch above already does for an unknown model.
+    //
+    // Lane gating fixes selections that belong to ANOTHER lane; it cannot fix a
+    // selection that belongs to THIS lane but no longer exists in it — a comfy
+    // workflow the user deleted is still a legal comfyVideoWorkflow, and it is
+    // persisted verbatim with no membership check. Without a row to match, the
+    // trigger goes blank again and the control stops naming what it will send.
+    //
+    // Showing the raw id is strictly better than showing nothing: it is
+    // recognizable, it hints at where the selection came from, and it stays
+    // selectable so the user is not stuck. Disabled would leave the control
+    // looking broken for a value the store genuinely holds.
+    //
+    // The name carries no status badge. Reading the render showed why: this
+    // trigger is narrow enough that a `sub` pushed the id down to a couple of
+    // glyphs, so the row explained the problem and hid the one fact the user
+    // needs. The open list carries the explanation on the row title instead.
+    const listedValues = new Set(modelGroups.flatMap((group) => group.items.map((item) => item.value)));
+    if (coreModelValue && !listedValues.has(coreModelValue)) {
+      modelGroups.unshift({
+        items: [{
+          value: coreModelValue,
+          label: coreModelValue.includes(":") ? coreModelValue.split(":").slice(1).join(":") : coreModelValue,
+          title: t("mcp.unavailable"),
+        }],
+      });
+    }
   }
 
   const currentEffort = REASONING_EFFORT_OPTIONS.find((option) => option.value === reasoningEffort);

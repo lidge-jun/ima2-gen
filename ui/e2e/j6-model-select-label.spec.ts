@@ -85,3 +85,30 @@ test("J6-S2 leaving the comfy lane clears its selections and converges the model
     await app.close();
   }
 });
+
+
+test("J6-S3 a comfy workflow the catalog no longer lists still names itself", async ({ page }) => {
+  const app = await startApp("minimax", { provider: "oauth" });
+  try {
+    // The half lane gating cannot cover: this value belongs to the lane it is
+    // being shown in, it is simply gone from the catalog (deleted workflow, or
+    // a server that has not registered it in this session). It is persisted
+    // with no membership check, so without a fallback row the trigger goes
+    // blank again — the same failure, reached from the other direction.
+    await seedBrowser(page, {
+      provider: "oauth",
+      dismissOnboarding: true,
+      imageModel: "gpt-5.6-luna",
+      generationDefaults: { provider: "comfy", comfyVideoWorkflow: "wf-deleted-by-user" },
+    });
+    await openCreate(page, app.baseUrl);
+
+    const model = page.locator(`${MODEL_TRIGGER} .ctl-select__value`);
+    await expect(model).toBeVisible();
+    await expect(model).not.toHaveText("");
+    await expect(model).toHaveText("wf-deleted-by-user");
+    await page.screenshot({ path: `${ARTIFACTS}/j6-s3-unlisted-workflow.png` });
+  } finally {
+    await app.close();
+  }
+});

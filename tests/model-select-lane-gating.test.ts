@@ -91,6 +91,18 @@ describe("model select value: lane gating", () => {
     assert.match(component, /const VIDEO_PREFIX = VIDEO_VALUE_PREFIX;/);
     assert.match(component, /const COMFY_VIDEO_PREFIX = COMFY_VIDEO_VALUE_PREFIX;/);
   });
+
+  it("keeps a selection this lane no longer lists visible instead of blank", () => {
+    // Lane gating cannot save a value that belongs to the CURRENT lane but has
+    // disappeared from it: a deleted comfy workflow is still a legal
+    // comfyVideoWorkflow and is persisted with no membership check, so the
+    // trigger would go blank exactly like the original report. The component
+    // adds a row for an unlisted value, the way the MCP branch already does.
+    const component = readSource("ui/src/components/GenProviderModelSelect.tsx");
+    assert.match(component, /const listedValues = new Set\(modelGroups\.flatMap\(/);
+    assert.match(component, /if \(coreModelValue && !listedValues\.has\(coreModelValue\)\) \{/);
+    assert.match(component, /modelGroups\.unshift\(\{/);
+  });
 });
 
 describe("comfy lane exit: stranded selection cleanup", () => {
@@ -121,4 +133,3 @@ describe("comfy lane exit: stranded selection cleanup", () => {
     assert.match(settings, /else set\(\{ provider, comfyWorkflow: null, comfyVideoWorkflow: null \}\);/);
   });
 });
-
