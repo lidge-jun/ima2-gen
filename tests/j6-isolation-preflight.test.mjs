@@ -41,6 +41,7 @@ function load(state, overrides = {}) {
     "node:os": { homedir: () => runnerHome, userInfo: () => ({ homedir: runnerHome }), tmpdir: () => "/tmp" },
     "node:child_process": overrides.childProcess ?? { spawn: () => { throw Error("preflight must not spawn"); } },
     "node:http": overrides.http ?? { createServer: () => { throw Error("preflight must not open sockets"); } },
+    "node:net": overrides.net ?? { createConnection: () => { throw Error("preflight must not open sockets"); } },
   };
   const module = { exports: {} };
   const require = (name) => {
@@ -52,6 +53,49 @@ function load(state, overrides = {}) {
     { env: state.env, platform: "linux", cwd: () => checkout + "/ui", execPath: "/fixture/node" });
   return module.exports;
 }
+
+function fakeFallbackNet(outcome = "ECONNREFUSED") {
+  const calls = [];
+  return { calls, net: { createConnection(options) {
+    const record = { ...options, timeout: null, destroyed: false };
+    calls.push(record);
+    const socket = Object.assign(new EventEmitter(), {
+      setTimeout(ms) { record.timeout = ms; return this; },
+      destroy() { record.destroyed = true; return this; },
+    });
+    queueMicrotask(() => {
+      if (outcome === "connect" || outcome === "timeout") socket.emit(outcome);
+      else socket.emit("error", Object.assign(Error("synthetic socket outcome"), { code: outcome }));
+    });
+    return socket;
+  } } };
+}
+
+test("J6 probes only four fallback targets and destroys every refused synthetic socket", async () => {
+  const fixture = fakeFallbackNet();
+  const proof = await load(host(), fixture).assertJ6FallbackPorts();
+  const targets = ["127.0.0.1", "::1"].flatMap((host) => [10531, 18645].map((port) => ({ host, port })));
+  assert.deepEqual(proof, targets.map((target) => ({ ...target, outcome: "ECONNREFUSED" })));
+  assert.deepEqual(fixture.calls, targets.map((target) => ({ ...target, timeout: 750, destroyed: true })));
+});
+
+test("J6 refuses listeners, timeouts and unexpected socket errors without startup", async () => {
+  for (const [outcome, message] of [["connect", /fallback listener/], ["timeout", /probe timeout/], ["EACCES", /EACCES/]]) {
+    const fixture = fakeFallbackNet(outcome);
+    await assert.rejects(load(host(), fixture).startApp("minimax", { j6: true }), message);
+    assert.equal(fixture.calls.length, 4);
+    assert.ok(fixture.calls.every((call) => call.destroyed));
+  }
+});
+
+test("J6 fallback helper rejects non-hosted identity before allocating any socket", async () => {
+  for (const field of ["GITHUB_ACTIONS", "RUNNER_ENVIRONMENT"]) {
+    const state = host(); state.env[field] = "not-hosted";
+    const fixture = fakeFallbackNet();
+    await assert.rejects(load(state, fixture).assertJ6FallbackPorts(), /disposable GitHub-hosted/);
+    assert.deepEqual(fixture.calls, []);
+  }
+});
 
 test("J6 permits only verified hosted path metadata and reports it", () => {
   const proof = load(host()).assertJ6Isolation();
@@ -122,6 +166,7 @@ test("actual J6 startApp excludes both metadata variables from captured child op
     kill(signal) { this.signalCode = signal; queueMicrotask(() => this.emit("exit", null, signal)); return true; },
   });
   const api = load(state, {
+    net: fakeFallbackNet().net,
     fs: { mkdtempSync: () => "/tmp/wp02-synthetic", writeFileSync: (p, value) => writes.push([p, JSON.parse(value)]) },
     childProcess: { spawn: (...args) => {
       captured.push(args);
