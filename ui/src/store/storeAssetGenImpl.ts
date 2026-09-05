@@ -192,8 +192,9 @@ export async function generateAssetGenImpl(set: StoreSet, get: StoreGet): Promis
     get().showToast(t("toast.generatedSingle", { elapsed: res.elapsed }));
   } catch (err) {
     if (!isCanceledGenerationError(err)) {
-      handleError(err, get());
-      const message = err instanceof Error ? err.message : String(err);
+      const resolved = handleError(err, get());
+      const message = resolved.code === "JOB_TRACKING_TIMEOUT" ? resolved.message
+        : err instanceof Error ? err.message : String(err);
       set({ assetGenLastError: message });
     }
   } finally {

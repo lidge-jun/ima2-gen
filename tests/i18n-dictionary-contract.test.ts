@@ -250,9 +250,6 @@ const KNOWN_MISSING = new Set<string>([
   "node.animateTitle",
   // ReferenceTray.tsx references this provider-limit copy directly.
   "prompt.refOverProviderLimit",
-  // ResultActions.tsx uses ineffective nullish fallbacks after these missing t() calls.
-  "result.extend",
-  "result.extendTitle",
   // resultChaining.ts uses this missing fork-failure toast literal.
   "toast.forkFailed",
 ]);

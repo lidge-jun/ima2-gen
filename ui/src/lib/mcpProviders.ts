@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { jsonFetch } from "./api-core";
 import { armStreamTimeout, subscribe } from "./eventChannel";
+import { parseSseErrorPayload } from "./sseStreamError";
 
 export type McpConnectionState =
   | "disconnected"
@@ -240,11 +241,8 @@ function watchMcpJob(requestId: string, callbacks: McpJobCallbacks): () => void 
       return;
     }
     if (event === "error" && finish()) {
-      const error = new Error(
-        typeof data.message === "string" ? data.message : "MCP generation failed",
-      ) as Error & { code?: string };
-      if (typeof data.code === "string") error.code = data.code;
-      callbacks.onError?.(error);
+      callbacks.onError?.(parseSseErrorPayload(data,
+        typeof data.message === "string" ? data.message : "MCP generation failed"));
     }
   });
   const cancelTimeout = armStreamTimeout(() => {

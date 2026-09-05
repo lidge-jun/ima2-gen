@@ -72,6 +72,7 @@
     "generatedBatch": "Generated {count} images in {elapsed}s.",
     "generatedSingle": "Generated in {elapsed}s.",
     "generateFailed": "Generation failed.",
+    "jobTrackingTimeout": "Job tracking expired; upstream completion is unknown. Inspect history before retrying.",
     "sessionReloadedElsewhere": "Graph version changed, so the latest graph was reloaded.",
     "promptCopied": "Prompt copied",
     "metadataCopied": "Copied",
@@ -852,6 +853,8 @@
     "label": "Est. cost"
   },
   "result": {
+    "extend": "Extend video",
+    "extendTitle": "Continue this video from its last frame",
     "download": "Download",
     "copyImage": "Copy image",
     "copyLastFrame": "Last\nFrame",

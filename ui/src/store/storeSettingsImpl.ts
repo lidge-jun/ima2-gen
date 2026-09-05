@@ -36,6 +36,7 @@ import {
   type McpMediaKind,
 } from "../lib/mcpSelection";
 import { t } from "../i18n";
+import { resolveErrorSpec } from "../lib/errorCodes";
 
 let coreGenerateAction: ReturnType<StoreGet>["generate"] | null = null;
 type McpTempReferenceBatch = {
@@ -44,6 +45,7 @@ type McpTempReferenceBatch = {
   files: Array<{ filename: string; tag?: string }>;
 };
 function mcpGenerationErrorMessage(error: unknown): string {
+  if (resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT") return t("toast.jobTrackingTimeout");
   const candidate = error as { code?: string; message?: string };
   const code = candidate.code ?? candidate.message ?? "";
   if (code.startsWith("MCP_INPUT_ROLE_UNSUPPORTED") || candidate.message?.startsWith("MCP_INPUT_ROLE_UNSUPPORTED")) {
@@ -299,12 +301,7 @@ export function setMcpRatioImpl(ratio: string | null, set: StoreSet): void {
   set({ mcpRatio: ratio });
 }
 
-export function setMcpParameterImpl(
-  name: string,
-  value: McpPresetValue | null,
-  set: StoreSet,
-  get: StoreGet,
-): void {
+export function setMcpParameterImpl(name: string, value: McpPresetValue | null, set: StoreSet, get: StoreGet): void {
   if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(name)) return;
   const parameters = { ...(get().mcpParameters ?? {}) };
   if (value === null) delete parameters[name];
@@ -313,11 +310,7 @@ export function setMcpParameterImpl(
   set({ mcpParameters: parameters });
 }
 
-export function setMcpReferenceSelectionImpl(
-  selection: McpReferenceSelection,
-  set: StoreSet,
-  get: StoreGet,
-): void {
+export function setMcpReferenceSelectionImpl(selection: McpReferenceSelection, set: StoreSet, get: StoreGet): void {
   const next = reconcileMcpReferenceSelection(
     get().mcpInputRoles ?? [],
     normalizeMcpReferenceSelection(selection),
@@ -328,11 +321,7 @@ export function setMcpReferenceSelectionImpl(
 
 /** Called once by the sidebar catalog completion event. It is deliberately not
  * a state-watching effect, and writes only when persisted values are stale. */
-export function reconcileMcpPresetStateImpl(
-  capabilities: McpModelCapabilities,
-  set: StoreSet,
-  get: StoreGet,
-): void {
+export function reconcileMcpPresetStateImpl(capabilities: McpModelCapabilities, set: StoreSet, get: StoreGet): void {
   const current = { ratio: get().mcpRatio ?? null, parameters: get().mcpParameters ?? {} };
   const next = reconcileMcpPresetSelection(capabilities, current.ratio, current.parameters);
   const currentReferences = get().mcpReferenceSelection ?? emptyMcpReferenceSelection();

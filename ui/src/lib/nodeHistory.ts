@@ -73,6 +73,8 @@ const PENDING_FIELDS = [
   "pendingPhase",
   "pendingStartedAt",
   "partialImageUrl",
+  "error",
+  "errorInfo",
 ] as const;
 
 /**

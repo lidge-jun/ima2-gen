@@ -72,6 +72,7 @@
     "generatedBatch": "在 {elapsed}s 中產生 {count} 影像。",
     "generatedSingle": "在 {elapsed}s 中產生。",
     "generateFailed": "一代失敗。",
+    "jobTrackingTimeout": "工作追蹤已逾時，無法確認服務提供方是否已完成。重試前請先檢查歷史紀錄。",
     "sessionReloadedElsewhere": "圖表版本發生變化，因此重新載入最新圖表。",
     "promptCopied": "提示已複製",
     "metadataCopied": "已複製",
@@ -852,6 +853,8 @@
     "label": "預估成本"
   },
   "result": {
+    "extend": "延長影片",
+    "extendTitle": "從此影片的最後一幀繼續產生",
     "download": "下載",
     "copyImage": "複製影像",
     "copyLastFrame": "最後\n框架",

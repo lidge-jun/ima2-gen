@@ -72,6 +72,7 @@
     "generatedBatch": "{count}장을 {elapsed}초 만에 생성했습니다.",
     "generatedSingle": "{elapsed}초 만에 생성했습니다.",
     "generateFailed": "생성에 실패했습니다.",
+    "jobTrackingTimeout": "작업 추적 시간이 만료되어 제공자 측 완료 여부를 알 수 없습니다. 다시 시도하기 전에 기록을 확인하세요.",
     "sessionReloadedElsewhere": "그래프 버전이 달라져 최신 그래프를 다시 불러왔습니다.",
     "promptCopied": "프롬프트를 복사했습니다",
     "metadataCopied": "복사했습니다",
@@ -852,6 +853,8 @@
     "label": "예상 비용"
   },
   "result": {
+    "extend": "비디오 이어가기",
+    "extendTitle": "이 비디오의 마지막 프레임부터 이어서 생성",
     "download": "다운로드",
     "copyImage": "이미지 복사",
     "copyLastFrame": "마지막\n프레임",

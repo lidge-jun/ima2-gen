@@ -53,6 +53,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   APIKEY_DISABLED: "auth",
   AGY_GENERATION_FAILED: "retry",
   AGY_TIMEOUT: "retry",
+  JOB_TRACKING_TIMEOUT: "fix-input",
   AGY_PROCESS_ERROR: "retry",
   AGY_QUOTA_EXHAUSTED: "auth",
   AGY_PARSE_FAILED: "retry",
@@ -62,6 +63,16 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
 };
 
 describe("node error info contracts", () => {
+  it("tracking expiry wrappers remain safe and nonretryable", () => {
+    for (const code of ["JOB_TRACKING_TIMEOUT", "UNKNOWN", "UNREGISTERED_WRAPPER"]) {
+      const info = buildNodeErrorInfo({ code, rawCode: "JOB_TRACKING_TIMEOUT",
+        message: "secret request token", errorClass: "AUTH_EXPIRED" });
+      assert.equal(info.code, "JOB_TRACKING_TIMEOUT");
+      assert.equal(info.message, "Job tracking expired; upstream completion is unknown. Inspect history before retrying.");
+      assert.equal(info.action, "fix-input");
+      assert.equal(info.retryable, false);
+    }
+  });
   it("EI-00 exhaustively maps every registry code to the audited action", () => {
     for (const code of Object.keys(errorCodes) as ImaErrorCode[]) {
       assert.equal(nodeRetryAction(code), EXPECTED[code], `action mismatch for ${code}`);

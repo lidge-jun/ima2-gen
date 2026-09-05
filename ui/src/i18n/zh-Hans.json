@@ -72,6 +72,7 @@
     "generatedBatch": "在 {elapsed}s 中生成 {count} 图像。",
     "generatedSingle": "在 {elapsed}s 中生成。",
     "generateFailed": "一代失败。",
+    "jobTrackingTimeout": "任务跟踪已超时，无法确认服务提供方是否已完成。重试前请先检查历史记录。",
     "sessionReloadedElsewhere": "图表版本发生变化，因此重新加载最新图表。",
     "promptCopied": "提示已复制",
     "metadataCopied": "已复制",
@@ -852,6 +853,8 @@
     "label": "预计成本"
   },
   "result": {
+    "extend": "延长视频",
+    "extendTitle": "从此视频的最后一帧继续生成",
     "download": "下载",
     "copyImage": "复制图像",
     "copyLastFrame": "最后\n框架",
