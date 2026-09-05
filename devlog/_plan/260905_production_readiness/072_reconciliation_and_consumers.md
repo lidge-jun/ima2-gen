@@ -256,7 +256,7 @@ export function withJobTrackingUi<T>(
 
 JobTrackingUiRuntime is the actual export-type intersection for useAppStore,
 storeInflightImpl, storeHelpers, storeVideoImpl, storeSettingsImpl, mcpProviders,
-storeAssetGenImpl, storeSpriteRecipeImpl,
+storeAssetGenImpl, storeSpriteRecipeImpl, storeGraphSave (existing public exports),
 errorCodes/errorHandler/sseStreamError/nodeErrorInfo and eventChannel. The test
 entry exports needed existing functions explicitly; it does not add production
 exports. Components remain browser-driven in J7b, not privately exported handlers.
@@ -349,7 +349,8 @@ ui/playwright.config.ts testDir is ./e2e, workers1/retries0.
   _jobTrackingUiFixture and state/legacy-replacement tests.
 - UI presentation worker: errorCodes/errorHandler/sseStreamError, dictionaries,
   storeVideoImpl, ResultActions, mcpProviders/storeSettingsImpl, AssetGen/Sprite,
-  video-extend-ui-contract, timeout UI tests and075's hosted J7b/live SSE/media fixtures.
+  video-extend-ui-contract, nodeHistory/node-history-contract per076, timeout UI
+  tests and075's hosted J7b/live SSE/media fixtures.
   It consumes the state worker's fixture; no duplicate harness.
 - CLI worker: bin/lib/mcpJob and its two existing CLI/producer recovery tests.
 

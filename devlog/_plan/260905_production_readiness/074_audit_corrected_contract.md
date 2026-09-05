@@ -3,7 +3,7 @@
 Supersedes conflicting070–072 clauses; round1 synthesis is073. No production
 implementation until the same auditors approve. All original positive/negative
 acceptance rows remain unless their old mechanism is replaced explicitly below.
-075 specifies the native streaming browser fixture and exact acceptance responses.
+075 specifies the native browser fixture;076 folds round2 zero-cursor/Undo residuals.
 
 ## Added/changed ownership
 
@@ -99,7 +99,7 @@ Connection sequence:
 2. No supplied cursor starts at latestEventId(), preserving live-only subscription.
    Explicit0 replays from0; nonpositive parsed cursors normalize to0. Invalid/unsafe
    parsed values are ignored as a cursor. Valid future cursors retain the new gap
-   behavior. No numeric epoch protocol is added.
+   behavior.076 allows valid0 through eviction detection. No numeric epoch is added.
 3. Replay pump calls hasReplayGap(cursor). On a gap, emit the existing id-less gap
    control and rebase to oldestAvailableId-1, or current latest ID for an empty ring.
    Then read replaySince(cursor) and write in ascending ID order. Advance queued
@@ -178,8 +178,8 @@ legitimate settled historical error details must survive. Test tracking->admit->
 ordinary failure, tracking->success->ordinary failure, cancel and same-node retry.
 Drive the existing save serialization and reload mapper: pending/reconciling becomes
 empty+recoveryRequestId, and must not retain stale tracking information after its
-admission reset. Add a narrowly justified pending serialization reset only if an
-actual reachable stale path remains; do not invent a new recovery mechanism.
+admission reset.076 identifies Undo as the reachable restoring writer and adds
+live error/errorInfo to pending merge fields; no blanket serialization reset.
 
 Extension UI state is source-bound:
 

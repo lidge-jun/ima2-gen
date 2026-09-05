@@ -1,6 +1,6 @@
 # WP07 — Recoverable tracker termination and bounded event delivery
 
-Status: WP07 A; not implemented.071–075 are mandatory current amendments.
+Status: WP07 A near-pass per076; not implemented.071–076 are mandatory amendments.
 074 owns corrected residual cleanup/transport/presentation;075 owns native E2E.
 Historical baseline:
 [004_lifecycle_operations_research.md](004_lifecycle_operations_research.md).
@@ -358,7 +358,7 @@ Before `hasReplayGap`: returns false for empty ring and any future cursor.
 After full predicate:
 
 ```ts
-if (!Number.isSafeInteger(lastEventId) || lastEventId <= 0) return false;
+if (!Number.isSafeInteger(lastEventId) || lastEventId < 0) return false;
 if (lastEventId > seq) return true;
 const oldest = replayOldestId();
 return oldest !== null && lastEventId < oldest - 1;
