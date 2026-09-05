@@ -203,8 +203,8 @@ generated `PROVIDER_SURFACE_SUPPORT` for operation eligibility (never authentica
 export type ComfyDisplayCode = "loading" | "error" | "unavailable" | "empty"
   | "disconnected" | "choose" | "selected-missing" | "selected-offline"
   | "selected-locked" | "ready";
-export type ComfySelection = Pick<CoreSelectionState,
-  "comfyWorkflow" | "comfyVideoWorkflow">;
+export type ComfySelection = Partial<Pick<CoreSelectionState,
+  "comfyWorkflow" | "comfyVideoWorkflow">>;
 export interface ComfyDisplay {
   code: ComfyDisplayCode;
   laneAvailable: boolean;
@@ -219,6 +219,7 @@ export function deriveComfyDisplay(
 ): ComfyDisplay;
 ```
 
+Optional carriers match actual AppState; absent/undefined/null mean no choice, with no casts or new store requirements. Test these three inputs independently.
 Predicate: executable !== false AND !description?.endsWith("(offline)"). This
 preserves the current server's suffix convention; don't broaden string matching or
 pretend this is a typed per-origin health DTO. Counts count registered entries, not

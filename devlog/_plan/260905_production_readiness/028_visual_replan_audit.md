@@ -16,5 +16,7 @@ testqueries to the intended visiblepanel, assert unique newIDs across bothinstan
 R2: emptycatalogprecedence hid retainedmissingselectedID afterlastworkflowdelete.
 Checkselectedmissing beforeempty; empty applies onlywhen nochoiceisretained.
 D3/D8 receive separate independentliteral cases, with counts0 and no storageclear.
+Main additionally made ComfySelection a PartialPick to accept AppState's actual
+optional workflow carriers; absent/undefined/null cases are explicit, without casts.
 No current providerstatusimplementation or API changes; future085 remains mandatory
 underwp08c/c17 andwp13provider-display-gate. Reuse sameauditor for closure.
