@@ -13,6 +13,7 @@ const {
   finishJob,
   abortJob,
   isJobCanceled,
+  isJobTrackingExpired,
   listJobs,
   listTerminalJobs,
   purgeStaleJobs,
@@ -24,9 +25,7 @@ const {
 const { closeDb } = await import("../lib/db.ts");
 const { config } = await import("../config.ts");
 
-function publishJobEvent(requestId: string, event: string, _data = {}): boolean {
-  return event !== "done" || !isJobCanceled(requestId);
-}
+const { publishJobEvent } = await import("../lib/ssePublish.ts");
 
 beforeEach(() => {
   _resetForTests();
@@ -99,14 +98,14 @@ test("abortJob aborts the registered controller and records canceled terminal st
   assert.equal(terminal[0].errorCode, "GENERATION_CANCELED");
 });
 
-test("cancel after stale purge suppresses a late done event", () => {
+test("cancel after stale purge preserves tracking expiry and suppresses a late done event", () => {
   const startedAt = Date.now();
   startJob({ requestId: "req_purged_cancel", kind: "classic", meta: {} });
 
   purgeStaleJobs(startedAt + config.inflight.ttlMs + 1);
   abortJob("req_purged_cancel");
 
-  assert.equal(isJobCanceled("req_purged_cancel"), true);
+  assert.equal(isJobTrackingExpired("req_purged_cancel"), true);
   assert.equal(publishJobEvent("req_purged_cancel", "done", {}), false);
 });
 
