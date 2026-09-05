@@ -70,7 +70,7 @@ export function parseMcpReadinessData(providers: unknown, catalog: unknown | nul
 ```
 
 Field chain: store provider/model/kind → component selection snapshot → existing
-listMcpProviders/getMcpModelCatalog GET clients → consumed-field validation → local
+readMcpProviderObservation/readMcpModelObservation raw GET exports → consumed-field validation → local
 observation → pure display. McpMediaKind/McpConnectionState import their existing
 canonical type owners. The parser requires provider id/enabled/status.state and
 optional executable, model id/label/optional executable and both model arrays.
@@ -102,6 +102,12 @@ provider default, selected model missing/locked and refresh/error guidance. Pref
 existing labels where meanings match. Any dynamic key helper gets a finite
 i18n-dictionary-contract registration; do not add a wildcard scanner exemption.
 No claim that the existing global MCP cache/polling implementation is rewritten.
+
+095 clarifies that observation exports are additions in mcpProviders.ts using
+api-core.jsonGetObservation. They neither normalize malformed envelopes nor write
+providerCache; legacy getters retain their old compatibility. The parser requires
+ok:true envelopes before checking consumed rows. Include after-headers body abort
+and unchanged primed cache tests, not only pre-fetch cancellation.
 
 Pure tests `tests/mcp-readiness.test.ts` use independent literal observations:
 all codes, default-null, same-ID different kind, stale selection, error with stale

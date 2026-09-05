@@ -1,6 +1,6 @@
 # WP09 P — implementation order and audit packet
 
-Plan unit:090 plus current amendments091–093. Baseline7e2f084d (PR210), current
+Plan unit:090 plus current amendments091–093 and095. Baseline7e2f084d (PR210), current
 branchcodex/prod-wp09-journeys. No production implementation in this phase yet.
 The prior WP08c docs-head CI33994363407 is now successful as well.
 
@@ -113,3 +113,19 @@ parsing/listing is not guard startup, native UI, isolation or visual evidence.
 No A/B implementation is authorized by this document alone. Independent auditors
 must challenge reachability, contradictory old clauses, field chains, cleanup,
 build/public compatibility and permission limits before the persisted A→B edge.
+
+## Round1 ownership additions
+
+Main also owns tests/j6-isolation-preflight.test.mjs migration, ui/vite.config.ts
+and new ui/dev/fixtureTailwindSources.mjs/.d.mts. UI worker additionally owns
+api-core.ts/mcpProviders.ts observation exports and
+tests/mcp-readiness-observation.test.ts. All new receipt modules are in the source
+inventory. Both workflows' WP08_BUILD_COMMAND values change alongside the actual
+step to `npm --prefix ui run build:fixture`; emitted evidence must match.
+
+I6 source poison is split: pure synthetic inventory exclusions, actual contaminated-
+checkout preflight refusal (before resource allocation), and clean-checkout actual
+startup with post-projection runtime poison. Use exclusive owned sentinel files
+and restore only those files after the rejection case; no preflight bypass or
+spoofed runner identity. Missing/malformed primary config still exercises actual
+startup with a registered home and comma MCP override. See095 for full synthesis.

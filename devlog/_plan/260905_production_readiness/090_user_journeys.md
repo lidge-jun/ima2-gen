@@ -4,7 +4,8 @@ Status: WP09 P revalidation. Original WP00 baseline was
 `ecde2bc79cddc50ff0da38091c1ce0590383090c`; current implementation base is
 `7e2f084d82b8f7852be96636ced65d485c17076c` (WP08c/PR210).
 Current authoritative amendments are [091](091_revalidation.md),
-[092](092_runtime_contract.md), and [093](093_journey_contract.md). They preserve
+[092](092_runtime_contract.md), [093](093_journey_contract.md), and
+[095](095_audit_synthesis.md). They preserve
 the acceptance floor below while replacing stale caller counts, duplicate helper
 proposals, per-start compilation and the old test-only scope. WP00 amendment
 receipts at the end remain historical evidence, not current execution proof.
@@ -163,6 +164,7 @@ Set: `IMA2_CONFIG_DIR=home`, `IMA2_DB_PATH=home/sessions.db`,
 `IMA2_MINIMAX_REGION=global_en`, both MiniMax base URL variants=`stubUrl`,
 both `IMA2_NAI_BASE_URL` and `IMA2_NAI_ACCOUNT_BASE_URL`=`stubUrl` origin,
 `IMA2_MCP_TOKEN_DIR=home/mcp`, `IMA2_MCP_SNAPSHOT_DIR=home/mcp/snapshots`,
+`IMA2_MCP_PROVIDERS=,` in every mode (a separator-only value, not an empty string),
 `DOTENV_CONFIG_PATH=home/fixture.env`, `IMA2_E2E_HOME=home`,
 `IMA2_TEST_HOME=home`, `IMA2_TEST_EXEC_PATH=home/runtime/bin/node`,
 `IMA2_TEST_ARGV1=home/runtime/bin/ima2`, `TSX_DISABLE_CACHE=1`,
@@ -177,8 +179,9 @@ No fake keys for unsupported generation lanes just to show them ready.
 Reject a stub URL unless protocol is `http:`, hostname exactly `127.0.0.1`,
 explicit nonzero port exists and URL has no credentials. Store only origin in the
 guard variable. Do not accept all loopback ports: a real provider is also loopback.
-Config fixture must contain `mcp:{enabledProviders:[]}`; an empty env string is
-not reliable because `pickStr` ignores empty values (`config.ts:67-88`).
+Config fixture contains `mcp:{enabledProviders:[]}` but that alone is insufficient:
+the joined empty array is skipped by pickStr. The separator-only env override
+above is required even for missing/malformed primary config; it parses to[].
 Fixture config is written BEFORE spawn; this suppresses `config.ts:49`'s fallback
 only when parsed successfully. Server key loaders still continue on a missing key
 (`server.ts:52-203`), so a valid config is NOT the fallback-read barrier. The
@@ -398,6 +401,8 @@ files: `ui/index.html`, `ui/package.json`, `ui/package-lock.json`,
 root `package.json`, `package-lock.json`, `tsconfig.json`, `tsconfig.build.json`,
 `tsconfig.bin.json`, `scripts/fix-shebangs.mjs`,
 `scripts/write-ui-build-receipt.mjs`, `scripts/lib/uiBuildReceipt.mjs`,
+`scripts/lib/uiBuildReceiptSchema.mjs`, `scripts/lib/uiBuildReceiptFiles.mjs`,
+`scripts/lib/uiBuildReceiptTransaction.mjs`,
 `scripts/lib/uiBuildReceipt.d.mts`, `lib/presetCompiler.ts`,
 `lib/presetCompiler.js`, `lib/videoMotionPresets.ts`, `lib/videoMotionPresets.js`,
 `presets/camera-motion.json`, `presets/style.json`, `presets/lighting.json`.
@@ -705,6 +710,9 @@ classified before path redaction; all content/open/copy calls remain unexpected:
   including if a poisoned fallback really exists; record the refusal.
 - `stat` of `root/generated` or the four exact `/opt/homebrew|/usr/local` plus
   `/[lib/]node_modules/ima2-gen/generated` paths: reject before original stat.
+- `existsSync` of exact fixture-home `.npm-global/bin/agy` (`agy.cmd` on Windows)
+  is an expected discovery refusal: model lookup reaches this denied migration
+  subtree. Return false before native metadata; never permit content/open/copy.
 - `stat` of home legacy paths ending in `node_modules/ima2-gen/generated` and
   beginning in one of the forbidden home migration subtrees; `readdir` of the
   exact wildcard bases at `storageMigration.ts:153-166`, substituting fixture
@@ -1067,7 +1075,8 @@ No generic `.first()` to accidentally measure a hidden desktop composer on mobil
 | I3 / fixture-isolation | Invoke spawn, exec, execFile, fork, spawnSync, execSync, execFileSync and ChildProcess.prototype.spawn; create Worker; repeat public functions via named ESM imports | Every call throws `E2E_PROCESS_DENIED` before original native call, counter fires independently per API; fake executable creates no sentinel. No compiler/process allowlist. Separate I9 proves emitted app startup. |
 | I4 / fixture-isolation | Execute installed seed against synthetic storage twice, mutate draft between calls | Second call preserves edited value, first defaults applied once; different new context receives fresh defaults. |
 | I5 / fixture-isolation | Arm hold, send one owned stub generation, await submitted, inspect response gate, release; repeat with abort/close | Exactly one parsed request captured before submission resolves; no headers/body before release; one response after release when connected, no write after disconnect; double release harmless; second concurrent hold rejected; close settles waits without leaks. |
-| I6 / fixture-isolation | Disposable runner real startup, valid/missing/malformed primary config; poison source package `.env`, `.ima2/config.json`, generated media are excluded before projection copy. Separately inject synthetic `.ima2/config.json` into runtime AFTER projection and let the real key loaders call existsSync | Expected-discovery-metadata count increases; existsSync returns false BEFORE original call; poison content reads/copies are 0; real keys/status has no poison key, media/history unchanged. deniedFilesystem remains empty and ordinary assertClean PASSES. This tests the expected fallback probe, not a forbidden content-read path. |
+| I6-source / fixture-isolation | Synthetic source inventory contains `.env`, `.ima2/config.json` and generated poison; separately place owned harmless sentinels in disposable checkout for preflight rejection | Inventory never copies poison. Contaminated-checkout preflight rejects before stub/child allocation; no runtime startup is claimed for that case. Restore only owned sentinels, never relax preflight. |
+| I6 / fixture-isolation | Clean disposable checkout actual startup with valid/missing/malformed primary config; inject synthetic `.ima2/config.json` into runtime AFTER projection before real key loaders call existsSync | Expected-discovery-metadata count increases; existsSync returns false BEFORE original call; poison content reads/copies are0; real keys/status has no poison key, media/history unchanged. Actual MCP enabledProviders is[] from comma override in all three cases. Unexpected guard denials remain empty and assertClean PASSES. |
 | I6-content / fixture-isolation | Separate guarded child deliberately invokes readFileSync/readFile or copyFile on that same poisoned runtime `.ima2/config.json`, bypassing the loader's existsSync early return | E2E_FILESYSTEM_DENIED before content read/copy, category outside-fixture; unexpected deniedFilesystem count increases, original content/copy counters 0, ordinary assertClean FAILS as expected. Catch/assert cleanup rejection only after owned child exit; never reinterpret this as the ordinary startup outcome. |
 | I7 / fixture-isolation | Synthetic original home and runtime/global sources contain distinct poison markers; fixture home has only a neutral config marker and NO auth/version files; load real storageMigration, codexDetect and quota only AFTER preloader | Both default and named homedir yield fixture home; `codexAuthPaths` paths all use fixture home, no parent HOME/CODEX_HOME writes. Migration candidates from IMA2_TEST_HOME/EXEC_PATH/ARGV1 stay synthetic except four hardcoded globals; expected global stat denials occur before underlying calls. Candidate explicitly pointing at outside poison dir is refused; `copied===0`, destination inventory unchanged, original content-read/copy counters zero. |
 | I8 / fixture-isolation | Each guarded fs read API: direct path, sibling-prefix path, file URL, Buffer, symlink escape, copyFile/cp source and destination, supplied fd; callback/promises/Sync forms | Independent outside sentinel-read and copy counters remain zero; typed error/exists=false as specified. Allowed synthetic-home read and write succeed and cleanup works. Positive module read succeeds but dependency generated/auth/config reads deny. Remove guard only inside a fully synthetic test: same sentinel becomes readable, proving the negative oracle. |
@@ -1175,7 +1184,10 @@ startup + manifest/I6–I9 and UIR-1–10 checks are standalone, not retroactive
 proof. Only this E2E `Build ui` step invokes build:fixture. In pr-fast.yml, retain
 its already-present server/CLI builds and change its UI build invocation to
 `npm --prefix ui run build:fixture` before its browser tests. Add pr-fast.yml to
-this WP's explicit write map for that invocation only. Other CI matrix, package,
+this WP's explicit write map for that invocation and its WP08_BUILD_COMMAND
+evidence variable. Both CI workflows record the actual build:fixture command
+and step outcome; evidence must not keep the old ordinary-build command.
+Other CI matrix, package,
 release and operator source builds remain ordinary. The fixture producer is NOT
 deferred to WP12. Main aligns
 `120` to consume `.ima2-ui-build-receipt.json` through this existing validator,
