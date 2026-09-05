@@ -374,6 +374,7 @@ test("/api/video/frame rejects unsafe, invalid, and undecodable generated inputs
 
 test("/api/video/frame supports generated relative and absolute paths safely", async (t) => {
   if (!fixture.ffmpeg?.available) {
+    await fixture.finishCase();
     t.skip("ffmpeg is not installed in this environment");
     return;
   }
@@ -423,6 +424,7 @@ test("/api/video/analyze rejects remote URLs before frame extraction", async () 
 
 test("/api/video/analyze extracts first/last frames and sends input_image payload", async (t) => {
   if (!fixture.ffmpeg?.available) {
+    await fixture.finishCase();
     t.skip("ffmpeg is not installed in this environment");
     return;
   }

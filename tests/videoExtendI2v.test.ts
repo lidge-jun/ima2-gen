@@ -472,7 +472,7 @@ test("finishCase waits for whole last-frame work after cancel removes inflight",
 });
 
 test("real last-frame path sends PNG image.url to generations and never calls extensions", async (t) => {
-  if (!fixture.ffmpeg?.available) return t.skip("ffmpeg is not installed");
+  if (!fixture.ffmpeg?.available) { await fixture.finishCase(); return t.skip("ffmpeg is not installed"); }
   const dir = await mkdtemp(join(fixture.root, "ima2-extend-real-"));
   await fixture.ffmpeg.createClip(join(dir, "root.mp4"));
   await writeFile(join(dir, "root.mp4.json"), JSON.stringify({ userPrompt: "continue", provider: "grok", model: "grok-imagine-video", video: { duration: 1, resolution: "480p", aspectRatio: "auto" } }));

@@ -393,7 +393,7 @@ test("saveGeneratedVideoArtifact removes mp4 when sidecar write fails", async ()
 });
 
 test("/api/video/generate continueFromVideo extracts parent frame and stores branch lineage", async (t) => {
-  if (!fixture.ffmpeg?.available) { t.skip("ffmpeg is not installed in this environment"); return; }
+  if (!fixture.ffmpeg?.available) { await fixture.finishCase(); t.skip("ffmpeg is not installed in this environment"); return; }
   const firstAttempt = fixture.ffmpeg.attempts.length;
   const proxy = makeProxy();
   const proxyUrl = await listen(proxy);
