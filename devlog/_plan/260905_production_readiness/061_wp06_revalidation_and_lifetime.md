@@ -55,6 +55,10 @@ No shell launch, native process-tree manager, new config API or auth change.
    read, and before return. A late read abort must not return a successful result.
    If a validated known artifact was successfully read, run the existing exact-path
    cleanup before throwing499. Do not search or delete unknown abort-time artifacts.
+   Store the successful result instead of returning inside try: after awaited
+   reference cleanup finishes, check cancellation once more and return synchronously
+   with no subsequent await. A primary exception must keep its identity/status after
+   cleanup; do not throw cancellation unconditionally inside finally.
 
 MODIFY config.ts: export a readonly named `AGY_PROCESS_POLICY` object containing
 timeoutMs=360000, terminateGraceMs=1000 and maxOutputBytes=1048576. agyProcess imports
@@ -78,8 +82,15 @@ semantics, not mislabel TimeoutError handling as fixed.
 - Inject EIO only on owned ref_1: first write succeeded, process0, no ref directory
   after rejection. Remove the new catch in a real mutation: the test must fail.
 - Hold only the exact known artifact read; observe entry, abort, release, expect499
-  with refs removed and known artifact cleanup. Remove the post-read barrier in a
-  mutation: failure proves activation. Preserve caller no-persistence checks.
+  with refs removed and known artifact cleanup. The explicit compound mutation
+  removes every operation guard after that read (including the final post-cleanup
+  guard), so later guards cannot mask the mutation. Claim whole late-cancel
+  protection, not independent necessity of one redundant post-read line.
+- Independently hold removal of the exact staged-ref directory on a success path,
+  abort while cleanup awaits, release, expect499. Remove only the final post-cleanup
+  check: this later-window test must fail. Also inject a primary EIO, hold cleanup,
+  abort and release: original EIO remains the result, not cancellation. Preserve
+  caller no-persistence checks and always release the exact owned-rm barrier.
 - Concurrent close/error/abort and already-closed child: one settlement, timers and
   listeners drained. Uncooperative-process proof is distinct from fake cooperative
   event-emitter coverage. No timeout sleeps or leaked fixture processes.

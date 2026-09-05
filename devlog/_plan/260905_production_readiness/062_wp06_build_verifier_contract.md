@@ -156,6 +156,11 @@ failures leave no staged directory/spawn. Hold artifact read, abort and release:
 499, no successful native result, known artifact cleaned, refs removed. Prompt/log
 failure after staging is caught by the cleanup-owning finally. Tests explicitly
 release barriers and await all work before restoring hooks/closing harness.
+Add an exact ref-directory rm barrier: cancel while successful reference cleanup
+awaits, release, and require499 after cleanup; mutate only the final post-cleanup
+check for an independently failing oracle. A separate primary-EIO + held-cleanup
+case must preserve the original EIO despite cancellation. Held artifact-read
+ablation removes all later masking guards as a documented compound mutation.
 
 ## Main regression and publication gates
 
@@ -163,6 +168,9 @@ Retarget `_executionBoundaryProbe`, `_executionImportEdges`, import/node/prompt
 contracts to new actual owners. Add capture timing/effective refs assertions; keep
 non-Google exceptions intact. Update inventory and source function-map generated
 drift artifacts using existing scripts, not manual forged counts.
+Main specifically owns actual Agy node-route cap cases: P+A+B reaches the operation;
+P+A+B+C returns400 AGY_REF_TOO_MANY with operation/process0. Direct prepare/generate
+tests cannot substitute for this caller admission guard.
 
 Before C: main typecheck, tests typecheck, server/CLI/UI builds, inventory, diffcheck,
 focused new/existing files under env-i. No local full suite or hosted-only heavy

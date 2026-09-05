@@ -216,7 +216,7 @@ Observed in WP00: typecheck=0, typecheck:tests=0, test:inventory=0; seven-file f
 That includes gemini-api-wire-contract (public wire only), agy-artifact-fallback (explicit temporary roots) and agy-cli path tests. No real agy generation or Vertex token call was made.
 Future files are unavailable at WP00, so these commands have no invented success exit:
 ```sh
-node --experimental-test-module-mocks --import tsx --test tests/google-execution-parity.test.ts tests/agy-execution-process.test.ts tests/gemini-api-wire-contract.test.ts tests/agy-artifact-fallback.test.ts tests/agy-cli.test.ts tests/provider-execution-routes.test.ts tests/provider-execution-imports.test.ts
+node --experimental-test-module-mocks --import tsx --test tests/google-execution-parity.test.ts tests/gemini-transport-parity.test.ts tests/agy-execution-process.test.ts tests/agy-execution-cleanup.test.ts tests/gemini-api-wire-contract.test.ts tests/agy-artifact-fallback.test.ts tests/agy-cli.test.ts tests/provider-execution-routes.test.ts tests/provider-execution-imports.test.ts tests/provider-execution-node.test.ts tests/provider-surface-boundary.test.ts
 npm run typecheck
 npm run typecheck:tests
 npm run test:inventory

@@ -37,11 +37,16 @@ fault hooks; actual50MiB boundaries run only in exact-head hosted CI. Reassess a
 | NEW | lib/agyArtifactRead.ts | canonical-root/regular-file checks, descriptor-owned bounded read, identity receipt |
 | MODIFY | lib/agyArtifact.ts | skip symlink and nonregular scanner candidates before stat; retain parse/time/depth/order behavior |
 | MODIFY | lib/providers/adapters/agyOperations.ts | replace lexical stat/read sequence with trusted read; receipt-bound exact cleanup |
+| MODIFY | lib/errors/providerMap.ts | map AGY_ARTIFACT_TOO_LARGE to INTERNAL_STATE_ERROR |
 | MODIFY | config.ts | export AGY_ARTIFACT_POLICY maxBytes=52428800, chunkBytes=65536 |
 | NEW | tests/agy-artifact-confinement.test.ts | real owned symlink/junction/root/identity/cancel/cleanup negatives |
 | NEW | tests/agy-artifact-read-bounds.test.ts | small allocation guards plus explicitly hosted-only real byte-boundary cases |
 | MODIFY | tests/agy-artifact-fallback.test.ts | retain directory tests, add matching-file-symlink exclusion |
 | MODIFY | tests/agy-execution-process.test.ts | real operation consumes only accepted artifact and preserves499 cleanup |
+| MODIFY | tests/_agyFaultFixtures.ts, tests/agy-execution-cleanup.test.ts | retarget actual descriptor-read barrier; preserve inherited cancellation/cleanup cases |
+| NEW | .github/workflows/agy-artifact-check.yml | dispatch-only exact-SHA Linux/macOS/Windows filesystem gate |
+| NEW | scripts/run-agy-artifact-check.mjs | exact file/child-marker light and hosted-heavy driver |
+| NEW | tests/agy-artifact-check-contract.test.ts | parsed workflow/SHA/platform and real tiny driver selector/exit-code negatives |
 | MODIFY | tests/error-class-coverage.test.ts | only required named-policy/error contract updates |
 | MODIFY | docs/API.md | rejection/resource error vocabulary and allowed artifact boundary |
 | MODIFY | docs/migration/runtime-test-inventory.md | new tests |
@@ -57,6 +62,15 @@ return `{buffer:Buffer, canonicalPath:string, identity:{dev:number,ino:number},
 approvedRoots:readonly string[]}`. Internal data only; never serialize receipt or
 roots into API/SSE/history. Export a cleanup helper from the same owner or consume
 the receipt in agyOperations; do not split validation and use across raw paths.
+The reader owns a private validated receipt once pre-open/post-open trust checks
+pass, even before successful return. On cancellation after that point it first
+closes its descriptor, then invokes guarded receipt cleanup and rejects499. Policy
+rejection (including overflow), failed identity checks and replacements are not
+cleanup-authorized and remain untouched. On success, receipt ownership passes to
+the operation for its later guarded cleanup. Never attach the receipt to a public
+Error or serialize it. Abort during descriptor close is checked before returning;
+the reader handles that cleanup too. The operation retains WP06's final cancellation
+check after its own awaited ref cleanup, with no later asynchronous return gap.
 
 1. Pre-abort499; require an absolute path. Canonicalize existing approved roots
    from homedir/.gemini, homedir/.cache and tmpdir; missing roots do not broaden
@@ -82,6 +96,14 @@ the receipt in agyOperations; do not split validation and use across raw paths.
 Error contract: missing path preserves502 AGY_ARTIFACT_NOT_FOUND; path/symlink/
 nonregular/changed identity use502 AGY_PATH_REJECTED without outside path details.
 New bounded-overflow error502 AGY_ARTIFACT_TOO_LARGE; cancel499 GENERATION_CANCELED.
+Add AGY_ARTIFACT_TOO_LARGE:"INTERNAL_STATE_ERROR" to PROVIDER_ERROR_MAP. Direct
+operation/error envelope preserves that code/status; existing normalized generation
+failure deliberately keeps codeUNKNOWN/status502 but must decorate rawCode
+AGY_ARTIFACT_TOO_LARGE and errorClassINTERNAL_STATE_ERROR. Tests assert both actual
+consumer paths, not a new normalization rewrite. Main's in-memory map hypothesis
+probe at WP06 A confirmed this existing normalizer projection; implementation is
+still future. The emitted error is never a lexical coverage exception; only the
+central AGY_ARTIFACT_POLICY constant may join the non-error exception list.
 Safe messages do not echo artifact paths, provider stdout or sentinel contents.
 Verify real error normalizer/API envelopes, not only helper Error properties.
 
@@ -92,8 +114,11 @@ matching files enter existing age/depth selection. Direct RESULT/SAVED_PATH/rege
 paths all pass the same trusted reader; scanner filtering alone is insufficient.
 
 On accepted artifact consumption, re-lstat canonicalPath and compare the receipt
-before unlink. If identity changed, do not delete the replacement. Never delete an
-outside-root or rejected candidate/target. Parent cleanup must use nonrecursive
+before unlink. Re-resolve candidate/canonical path and approved-root containment
+again at cleanup, including parent mapping; unchanged inode alone cannot authorize
+a path now redirected outside. If identity or mapping changed, do not delete the
+replacement/target. Never delete an outside-root or policy-rejected candidate/target.
+Parent cleanup must use nonrecursive
 rmdir and only a contained subdirectory that is not an approved root; a race that
 adds unrelated files must yield ENOTEMPTY rather than recursive deletion. Retain
 best-effort cleanup without masking primary errors. Known accepted artifacts on
@@ -111,6 +136,10 @@ late abort follow the same guarded cleanup; unknown paths are not swept.
   survives. These are controlled mutation cases, not universal race elimination.
 - Tiny held handle.read followed by abort rejects499 and closes the handle; no
   operation/route persisted success. Controlled read errors preserve cleanup.
+  Replace inherited readFile hooks with the actual opened-handle read boundary.
+  EOF-then-abort and abort-during-close both reject499 and remove only the accepted
+  identity; a concurrent replacement survives. Retain post-ref-rm cancellation and
+  primary-error preservation from WP06 rather than skipping an unreachable barrier.
 - Hosted50MiB exact succeeds;50MiB+1 fails for both honest stat and a file grown
   after stat. Local runs must not select these cases; use the proven inline child
   marker/filter, not a parent filter that executionTestProcess discards.
@@ -124,6 +153,60 @@ late abort follow the same guarded cleanup; unknown paths are not swept.
 At this future P, read platform filesystem docs/current source before finalizing
 flag and error details. Revise the design if real platform constraints contradict
 it; do not implement a knowingly weaker fallback under the same criterion.
+
+## Exact-tip platform and local/heavy execution path
+
+NEW agy-artifact-check.yml has only workflow_dispatch, required string inputsha,
+contents:read permissions, no secrets/environment/publish step and fail-fast:false.
+Matrixos=[ubuntu-latest,macos-latest,windows-latest], Node24.17.0/npm12.0.0,20minute
+job bound. Reuse checkout3d3c42e5… and setup-node82076278… full pins from current CI.
+Checkoutref is inputs.sha, fetch-depth0. Before install/build, a shell-neutral Node
+assertion checks WANT_SHA against /^[a-f0-9]{40}$/ and git rev-parseHEAD exactly.
+Run npm install-g npm@12.0.0, npm ci, npm run build:server, then the driver below.
+No UI deps/browser/full suite required for this dedicated filesystem job.
+Ubuntu runs --hosted-heavy; macOS/Windows run --light. Always upload nonempty
+JSON/TAP artifacts named agy-artifact-${{matrix.os}}-${{inputs.sha}}, with current
+upload-artifact043fb46d… full pin. ExpectedSHA/platform/runtime and exit status are
+in each receipt. Separate canonical ci.yml at the same tip owns Node22/24 full
+suite and Linux-heavy cross-runtime proof. Do not rely on schedule-only Windows.
+
+Driver `node scripts/run-agy-artifact-check.mjs --light` runs the exact five files:
+agy-artifact-confinement, agy-artifact-read-bounds, agy-artifact-fallback,
+agy-execution-cleanup, agy-execution-process (all tests/*.test.ts). One child/file,
+argv=[--experimental-test-module-mocks,--import,tsx,--test,--test-concurrency=1,
+--test-skip-pattern=hosted CI,<absoluteFile>]. Set EXECUTION_TEST_FILE to that
+file's pathToFileURL href in an otherwise minimal PATH/platform/temp/locale env.
+Thus executionTestProcess executes inline and cannot discard the selector.
+Preflight requires the regex to match all four exact `[hosted CI]` bound-case
+labels, and not a small-case label; reject any heavy PASS row during --light.
+Node24 may omit filtered rows: require the expected small-case count instead of
+pretending absent rows are four explicit SKIPs. No blanket skip or count-only PASS.
+
+--hosted-heavy requires parent GITHUB_ACTIONS=true and omits only the skip flag;
+the child marker/flags remain identical. Record all four heavy case names and
+passing results. Actual50MiB cases execute only in the hosted job/canonical suite;
+they are not selected by local light commands. No global NODE_OPTIONS changes.
+The driver accepts --test-root (default repository tests/) and --output-dir
+(required fresh directory); it selects only those five fixed basenames, never
+discovers arbitrary files or shells out. CI uses the default test root and a fresh
+runner-temp output directory. Test-root override exists only for isolated driver
+contract fixtures, not a production provider switch. It writes per-file TAP plus
+JSON, forwards nonzero exit/signal, tracks child completion and has a bounded
+watchdog. Contract test runs the real driver against that controlled tiny root:
+a heavy-labeled body throws if selected in light mode, an
+ordinary body must execute, and deliberate ordinary failure propagates exit1.
+This tests selector forwarding without allocating a large buffer locally.
+
+Parsed YAML negative tests (existing yaml dependency) delete/change checkoutref,
+SHA guard, one platform, driver command/mode or artifact step and must fail the
+exact contract. Driver-copy mutations remove the native mock flag, child marker
+or light selector and must fail the real tiny-file invocation contract; these
+are JS driver mutations, not imaginary YAML fields. New SHA assertion belongs
+this small dedicated workflow;
+do not import not-yet-created WP11 assert-ci-sha or change WP11/12 ownership.
+At066 C dispatch both workflow names with the same verified full SHA; inspect each
+checkout and platform artifact, and require all three dedicated jobs plus both
+canonical Linux runtimes green. Explicit failure is a blocker, not a silent skip.
 
 ## Rollback and delivery
 
