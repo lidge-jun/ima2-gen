@@ -1,5 +1,6 @@
 import { expect, type Browser, type BrowserContext, type Locator, type Page, type Route, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { assertJ6Isolation, j6RunnerPathDiagnostics, startApp } from "./appServer";
 import type { ComfyLaneModels, LaneCatalog } from "../../src/lib/api-comfy";
 
@@ -18,6 +19,9 @@ export const J6_WORKFLOWS: ComfyLaneModels = {
 export type J6CatalogState = { mode: "ready" | "empty" | "offline" | "error" };
 export type J6Capture = {
   requests: Array<{ path: string; body: unknown }>;
+  deniedGeneration: Array<{ method: string; path: string }>;
+  nonGenerating: boolean;
+  continued: string[];
   unexpected: string[];
   catalog: J6CatalogState;
   submissionFailure?: "grok-api-key-missing" | "oauth-unavailable" | "invalid-request";
@@ -27,9 +31,16 @@ export type J6Seed = {
   provider?: string; imageModel?: string; videoModel?: string | false;
   generationDefaults?: Record<string, unknown>;
   expectedSubmissions?: number; // Harness-only assertion, never persisted into the app.
+  viewport?: { width: number; height: number };
+  profile?: "default" | "prompt-studio";
+  uiMode?: "classic" | "home";
+  theme?: "dark" | "light";
+  locale?: "en" | "ko";
+  evidencePrefix?: string;
+  nonGenerating?: boolean;
 };
 
-function modelCatalog(state: J6CatalogState): { ok: true; lanes: LaneCatalog } {
+function modelCatalog(state: J6CatalogState, composer = false): { ok: true; lanes: LaneCatalog } {
   const lane = (image: string[], video: string[] = []) => ({ status: "ready" as const,
     models: { image: image.map((id) => ({ id, label: id })), video: video.map((id) => ({ id, label: id })) } });
   const models = state.mode === "empty" ? { image: [], video: [] } : {
@@ -42,17 +53,18 @@ function modelCatalog(state: J6CatalogState): { ok: true; lanes: LaneCatalog } {
     grok: lane(["grok-imagine-image-2.0", "grok-imagine-image-quality"], ["grok-imagine-video-1.5"]),
     "grok-api": lane(["grok-imagine-image-2.0", "grok-imagine-image-quality"], ["grok-imagine-video-1.5"]),
     "gemini-api": lane(["nano-banana-pro", "nano-banana-2"]),
+    ...(composer ? { nai: lane(["nai-diffusion-5-full"]), minimax: lane(["image-01"]) } : {}),
     comfy: { status: state.mode === "offline" ? "disconnected" : "ready", models },
   } };
 }
 
-function readFixtures(catalog: J6CatalogState): Record<string, unknown> {
+function readFixtures(catalog: J6CatalogState, composer = false): Record<string, unknown> {
   // An already-saved empty session: version0 invokes the existing beforeunload
   // initialization PUT. Selection reloads do not exercise graph creation.
   const session = { id: "wp02-session", title: "Selection fixture", createdAt: 1, updatedAt: 1,
     graphVersion: 1, nodeCount: 0, nodes: [], edges: [] };
   return {
-    "/api/models": modelCatalog(catalog),
+    "/api/models": modelCatalog(catalog, composer),
     "/api/capabilities": { limits: { maxRefCount: 5 }, defaults: {} },
     "/api/oauth/status": { status: "ready", models: ["gpt-5.6-luna"] },
     "/api/grok/status": { status: "ready", models: ["grok-imagine-image-2.0"] },
@@ -79,6 +91,11 @@ export function requestObject(body: unknown): Record<string, unknown> {
 }
 
 async function captureSubmission(route: Route, capture: J6Capture, path: string): Promise<void> {
+  if (capture.nonGenerating) {
+    capture.deniedGeneration.push({ method: route.request().method(), path });
+    await route.abort("blockedbyclient");
+    return; // Before JSON parsing, correlation validation, or any 202 response.
+  }
   try {
     const body: unknown = route.request().postDataJSON();
     const record = requestObject(body);
@@ -116,6 +133,9 @@ async function serveJ6(route: Route, origin: string, capture: J6Capture): Promis
   if (url.origin !== origin || url.username || url.password) {
     capture.unexpected.push(`${method} non-fixture-origin`);
     await route.abort("blockedbyclient");
+  } else if (capture.nonGenerating && ["/api/generate", "/api/generate/multimode", "/api/node/generate",
+    "/api/edit", "/api/video/generate"].some((path) => url.pathname === path || url.pathname.startsWith(`${path}/`))) {
+    await captureSubmission(route, capture, url.pathname);
   } else if (method === "POST" && !url.search && ["/api/generate", "/api/video/generate"].includes(url.pathname)) {
     await captureSubmission(route, capture, url.pathname);
   } else if (method !== "GET") {
@@ -130,23 +150,26 @@ async function serveJ6(route: Route, origin: string, capture: J6Capture): Promis
       : { items: [], total: 0, nextCursor: null } });
   } else if (url.pathname === "/api/models" && capture.catalog.mode === "error") {
     await route.fulfill({ status: 503, json: { error: "Fixture catalog unavailable" } });
-  } else if (Object.hasOwn(readFixtures(capture.catalog), url.pathname)) {
-    await route.fulfill({ json: readFixtures(capture.catalog)[url.pathname] });
+  } else if (Object.hasOwn(readFixtures(capture.catalog, capture.nonGenerating), url.pathname)) {
+    await route.fulfill({ json: readFixtures(capture.catalog, capture.nonGenerating)[url.pathname] });
   } else if (url.pathname.startsWith("/api/")) {
     capture.unexpected.push("GET unexpected-api");
     await route.abort("blockedbyclient");
   } else {
+    capture.continued.push(`${method} ${url.pathname}`);
     await route.continue(); // Only same-origin static application resources.
   }
 }
 
-export async function installJ6SelectionCapture(context: BrowserContext, fixtureOrigin: string): Promise<J6Capture> {
+export async function installJ6SelectionCapture(context: BrowserContext, fixtureOrigin: string,
+  options: Pick<J6Seed, "nonGenerating"> = {}): Promise<J6Capture> {
   const url = new URL(fixtureOrigin);
   if (url.origin !== fixtureOrigin || url.hostname !== "127.0.0.1" || url.protocol !== "http:"
     || !url.port || url.port === "3333" || context.pages().length || context.serviceWorkers().length) {
     throw new Error("J6 BLOCKED: capture requires an unused context and ephemeral loopback origin");
   }
-  const capture: J6Capture = { requests: [], unexpected: [], catalog: { mode: "ready" },
+  const capture: J6Capture = { requests: [], deniedGeneration: [], continued: [],
+    nonGenerating: options.nonGenerating ?? false, unexpected: [], catalog: { mode: "ready" },
     dispose: () => context.unroute("**/*", handler) };
   const handler = async (route: Route) => {
     try { await serveJ6(route, fixtureOrigin, capture); }
@@ -160,8 +183,9 @@ export async function installJ6SelectionCapture(context: BrowserContext, fixture
 
 function seedEntries(seed: J6Seed): Array<{ name: string; value: string }> {
   return Object.entries({
-    "ima2.locale": "en", "ima2.onboardingDismissed": "1", "ima2.uiMode": "classic",
-    "ima2.workspaceProfile": "default", "ima2.activeSessionId": "wp02-session",
+    "ima2.locale": seed.locale ?? "en", "ima2.onboardingDismissed": "1", "ima2.uiMode": seed.uiMode ?? "classic",
+    "ima2.workspaceProfile": seed.profile ?? "default", "ima2.activeSessionId": "wp02-session",
+    ...(seed.theme ? { "ima2.themeMode": seed.theme } : {}),
     "ima2.imageModel": seed.imageModel ?? "gpt-5.6-luna",
     "ima2.videoDefaults": JSON.stringify({ model: seed.videoModel ?? false }),
     "ima2.generationDefaults": JSON.stringify({ provider: seed.provider ?? "oauth", multimode: false,
@@ -360,12 +384,19 @@ export async function selectionViewports(page: Page, info: TestInfo, name: strin
   } finally { if (original) await settleSelectionViewport(page, original); }
 }
 
-export async function preflightJ6(info: TestInfo): Promise<void> {
+export function j6EvidenceIdentity() {
+  return { sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    runner: process.env.RUNNER_NAME ?? null, runId: process.env.GITHUB_RUN_ID ?? null,
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
+    build: { command: process.env.WP08_BUILD_COMMAND ?? null, outcome: process.env.WP08_BUILD_OUTCOME ?? "unrecorded" } };
+}
+
+export async function preflightJ6(info: TestInfo, prefix = "wp02"): Promise<void> {
   try {
     const isolation = assertJ6Isolation();
-    await writeFile(info.outputPath("wp02-preflight.json"), JSON.stringify({ passed: true, isolation }));
+    await writeFile(info.outputPath(`${prefix}-preflight.json`), JSON.stringify({ passed: true, isolation, ...j6EvidenceIdentity() }));
   } catch (error) {
-    await writeFile(info.outputPath("wp02-preflight.json"), JSON.stringify({ passed: false,
+    await writeFile(info.outputPath(`${prefix}-preflight.json`), JSON.stringify({ passed: false,
       reason: error instanceof Error ? error.message : "Isolation preflight failed",
       runnerPathDiagnostics: j6RunnerPathDiagnostics() }));
     throw error;
@@ -380,9 +411,9 @@ export async function withJ6(browser: Browser, info: TestInfo, seed: J6Seed,
   const teardown = { contextClosed: false, childExitedAndStubClosed: false };
   try {
     // storageState seeds ONCE, not an init script that would overwrite a true reload.
-    context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1280, height: 800 },
+    context = await browser.newContext({ serviceWorkers: "block", viewport: seed.viewport ?? { width: 1280, height: 800 },
       storageState: { cookies: [], origins: [{ origin: app.baseUrl, localStorage: seedEntries(seed) }] } });
-    capture = await installJ6SelectionCapture(context, app.baseUrl);
+    capture = await installJ6SelectionCapture(context, app.baseUrl, seed);
     const guardedCapture = capture;
     await context.routeWebSocket(/.*/, async (socket) => {
       guardedCapture.unexpected.push("unexpected-websocket");
@@ -395,8 +426,7 @@ export async function withJ6(browser: Browser, info: TestInfo, seed: J6Seed,
         // Keep guards active while unloading every page; unexpected beacons still fail.
         try { for (const page of context.pages()) await page.close(); }
         finally {
-          try { if (capture) await capture.dispose(); }
-          finally { await context.close(); teardown.contextClosed = true; }
+          await context.close(); teardown.contextClosed = true;
         }
       }
     } finally {
@@ -406,14 +436,18 @@ export async function withJ6(browser: Browser, info: TestInfo, seed: J6Seed,
           const payload = requestObject(body);
           return { path, provider: payload.provider, model: payload.model, requestId: payload.requestId, async: payload.async };
         }) ?? [];
-        await writeFile(info.outputPath("wp02-evidence.json"), JSON.stringify({ isolation: app.isolation,
+        await writeFile(info.outputPath(`${seed.evidencePrefix ?? "wp02"}-evidence.json`), JSON.stringify({ isolation: app.isolation,
+          ...j6EvidenceIdentity(), viewport: seed.viewport ?? { width: 1280, height: 800 },
+          theme: seed.theme ?? "dark", locale: seed.locale ?? "en", profile: seed.profile ?? "default", uiMode: seed.uiMode ?? "classic",
           configPath: app.home, origin: app.baseUrl, routeScope: "context/all-pages; exact-origin; deny mutations/external; SW blocked",
-          requests, expectedSubmissions: seed.expectedSubmissions,
+          requests, expectedSubmissions: seed.expectedSubmissions, nonGenerating: seed.nonGenerating ?? false,
+          deniedGeneration: capture?.deniedGeneration ?? [], continued: capture?.continued ?? [],
           unexpected: capture?.unexpected ?? [], stubCalls: app.stub.calls.length,
           teardown, completionClaimed: false }, null, 2));
       }
     }
     expect(capture?.unexpected ?? []).toEqual([]);
+    expect(capture?.deniedGeneration ?? []).toEqual([]);
     expect(app.stub.calls).toEqual([]);
     expect(teardown).toEqual({ contextClosed: true, childExitedAndStubClosed: true });
     if (seed.expectedSubmissions !== undefined) expect(capture?.requests ?? []).toHaveLength(seed.expectedSubmissions);

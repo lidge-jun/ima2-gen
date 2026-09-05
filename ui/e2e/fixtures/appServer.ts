@@ -2,6 +2,7 @@ import { existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, realpath
 import { homedir, tmpdir, userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
+import { createConnection } from "node:net";
 import { startStubUpstream, type StubHandle, type StubMode } from "./stubUpstream";
 import type { Page } from "@playwright/test";
 
@@ -20,7 +21,34 @@ export type J6Isolation = {
   runnerPaths: { xdgConfigHome: string | null; azureExtensions: string | null };
   runnerPathMetadata: Record<string, unknown>;
   azureExtensionHandling: "absent" | "unused-public-tool-metadata";
+  fallbackPorts?: Array<{ host: string; port: number; outcome: "ECONNREFUSED" }>;
 };
+
+// No HTTP or payload: a listener, timeout or unexpected socket error fails closed.
+function refusedFallback(host: string, port: number): Promise<{ host: string; port: number; outcome: "ECONNREFUSED" }> {
+  return new Promise((resolveProbe, reject) => {
+    const socket = createConnection({ host, port });
+    const finish = (error?: Error) => {
+      socket.destroy();
+      if (error) reject(error);
+      else resolveProbe({ host, port, outcome: "ECONNREFUSED" });
+    };
+    socket.setTimeout(750);
+    socket.once("connect", () => finish(new Error(`J6 BLOCKED: fallback listener ${host}:${port}`)));
+    socket.once("timeout", () => finish(new Error(`J6 BLOCKED: fallback probe timeout ${host}:${port}`)));
+    socket.once("error", (error: NodeJS.ErrnoException) => finish(error.code === "ECONNREFUSED" ? undefined
+      : new Error(`J6 BLOCKED: fallback probe ${host}:${port}: ${error.code ?? "UNKNOWN"}`)));
+  });
+}
+
+export async function assertJ6FallbackPorts(): Promise<NonNullable<J6Isolation["fallbackPorts"]>> {
+  // This guard MUST precede any socket creation, including direct helper callers.
+  assertJ6Isolation();
+  try {
+    return await Promise.all(["127.0.0.1", "::1"].flatMap((host) =>
+      [10531, 18645].map((port) => refusedFallback(host, port))));
+  } catch (error) { throw error; }
+}
 
 function verifiedRunnerPath(key: string, value: string | undefined, osHome: string): boolean {
   const expected = key === "XDG_CONFIG_HOME" ? join(osHome, ".config")
@@ -197,6 +225,7 @@ export async function startApp(
 ): Promise<AppHandle> {
   const isolation = options.j6 ? assertJ6Isolation() : undefined;
   if (isolation && (options.home || mode !== "minimax")) throw new Error("J6 BLOCKED: custom home or upstream mode");
+  if (isolation) isolation.fallbackPorts = await assertJ6FallbackPorts();
   const stub = await startStubUpstream(mode);
   const home = options.home ?? mkdtempSync(join(tmpdir(), "ima2-e2e-"));
   const provider = options.provider ?? (mode === "oauth-expired" ? "oauth" : "minimax");

@@ -8,8 +8,8 @@ region is491–529 (mirror starts530, not532); provider negative region starts19
 (209 now belongs to mobile tabs). Move only complete identified rules with parsed
 selector/ancestor checks, not blindly slicing the stale ranges. Mirror remains.
 
-Main owns CSS+AST/radius/SoT. Aquinas01a072cd-4e07-79d2-bff8-b3bedecacb0c owns
-component fixture/inputspec/TSconfig. Popper01a072cd-4e74-7700-a3fc-b0c054883ec0
+Main owns CSS+AST/radius/SoT. Popper01a072cd-4e74-7700-a3fc-b0c054883ec0 owns
+component fixture/inputspec/TSconfig. Aquinas01a072cd-4e07-79d2-bff8-b3bedecacb0c
 owns J6/appServer/geometryspec/helpers/policyspec/workflowuploads. Neither worker
 may execute tests/builds/browser/project code or mutate git/FSM. Main serializes.
 Production input guard lane is intentionally not dispatched yet: obtain hosted
@@ -41,3 +41,18 @@ Main inspected numberedselectors, repaired both exact scoped rules and reran13
 PASS. Retained the failed restoration in css-ast-mutations.json; subsequent
 mutation patches include full selector contexts and byte-compare the complete
 file after every restoration. No browser was running from these source inputs.
+
+Worker return: Popper component4files132/245/299lineentry/harness/spec +e2etsconfig,
+77static cases. Aquinas geometry8files,16cases +policyselftest. Additional helper
+composerContrast.ts is the pre-authorized split. Locale en/ko optionalJ6seed maps
+toexistingima2.locale andi18n; existing defaulten unchanged. Bothworkersfrozen.
+Inputguardfiles intentionally still baseline for hostedRED. Main read allworker
+diffs/entries/specs; firstE2Etypecheck found stylehandle inferredNode removal in
+twohelpers; Aquinas changed to explicit HTMLStyleElement-producing evaluateHandle.
+SecondE2Etypecheck0. Main requested policybeforeAllpreflight beforebrowserfixture;
+added while keepingbodyguard. No localsafetyguard was bypassed.
+
+Main UIbuild0 (627modules; existingchunk/dynamicimportwarnings), direct compiler
+probe built1in-memorycomponentbundle1584539bytes/136inputs with write:false and
+NEVER executed it. Structurelinecount drift main48→49 regenerated; inventory0,
+actionlintbothworkflows0. Subsequent exactcheck/hostedbaseline still pending.

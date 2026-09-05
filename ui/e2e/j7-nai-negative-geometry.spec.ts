@@ -1,143 +1,143 @@
-import { test, expect, type Locator, type Page } from "@playwright/test";
-import { seedBrowser, startApp } from "./fixtures/appServer";
+import { test, expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { preflightJ6, PROVIDER_TRIGGER, selectOption, withJ6, type J6Seed } from "./fixtures/j6Selection";
+import { assertComposerGeometry, assertGeometryMutations, composerEvidence, composerGeometry, inspectPanes,
+  observeContainerBoundary, paneSelectors, reveal, scrollGrid, trialControls, type ComposerSurface } from "./fixtures/composerGeometry";
+import { assertContrasts, contrastMutations, inspectContrast } from "./fixtures/composerContrast";
 
-// Playwright runs from ui/; keep rendered evidence with the owning devlog unit.
-const ARTIFACTS = "../devlog/_artifacts/260905_nai_negative_geometry";
+type Scenario = { name: string; surface: ComposerSurface; viewport: { width: number; height: number }; locale?: "ko" };
+const CASES: Scenario[] = [
+  { name: "j7-s1-sidebar", surface: "sidebar", viewport: { width: 1157, height: 826 } },
+  { name: "j7-s2-bottom", surface: "bottom", viewport: { width: 1440, height: 1000 } },
+  { name: "j7-s3-mobile", surface: "mobile", viewport: { width: 390, height: 844 } },
+  { name: "sidebar-1024", surface: "sidebar", viewport: { width: 1024, height: 800 } },
+  { name: "sheet-768-ko", surface: "mobile", viewport: { width: 768, height: 1024 }, locale: "ko" },
+  { name: "sheet-320-ko", surface: "mobile", viewport: { width: 320, height: 740 }, locale: "ko" },
+  { name: "home-1440", surface: "home", viewport: { width: 1440, height: 1000 } },
+  { name: "home-390-ko", surface: "home", viewport: { width: 390, height: 844 }, locale: "ko" },
+];
 
-async function openCreate(page: Page, baseUrl: string) {
-  await seedBrowser(page, {
-    provider: "oauth",
-    dismissOnboarding: true,
-    imageModel: "nai-diffusion-5-full",
-    // The fixture's typed provider only accepts minimax/oauth; overrides win.
-    generationDefaults: { provider: "nai" },
-  });
-  await page.goto(baseUrl);
-  await page
-    .locator("nav[aria-label='Main navigation']")
-    .getByRole("button", { name: "Create", exact: true })
-    .click();
+async function openComposer(page: Page, origin: string, scenario: Scenario) {
+  await page.goto(origin);
+  await expect(page.locator(".app")).toHaveAttribute("data-ui-mode", scenario.surface === "home" ? "home" : "classic");
+  if (scenario.surface === "mobile") {
+    await page.locator("button.mobile-app-bar__generate").click();
+    const sheet = page.locator("#mobile-generate-sheet");
+    await expect(sheet).toHaveAttribute("aria-hidden", "false");
+    await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(sheet.getByRole("tab", { name: scenario.locale === "ko" ? "프롬프트" : "Prompt", exact: true })).toHaveAttribute("aria-selected", "true");
+  }
+  const selector = { sidebar: ".sidebar__scroll > .composer--sidebar", bottom: ".composer--bottom",
+    mobile: "#mobile-generate-sheet .composer:visible", home: ".home-prompt" }[scenario.surface];
+  const root = page.locator(selector);
+  await expect(root).toBeVisible();
+  await expect(root.locator(".negative-prompt__textarea")).toBeVisible();
+  await page.evaluate(async () => { await document.fonts.ready; });
+  return root;
 }
 
-function geometry(composer: Locator) {
-  return composer.evaluate((root) => {
-    const required = (selector: string): Element => {
-      const element = root.querySelector(selector);
-      if (!element) throw new Error(`Missing composer element: ${selector}`);
-      return element;
-    };
-    const positive = required(".composer__textarea").getBoundingClientRect();
-    const negative = required(".negative-prompt__textarea");
-    const pane = required(".negative-prompt--classic").getBoundingClientRect();
-    const dual = required(".composer__prompt-panes--dual").getBoundingClientRect();
-    const toolbar = required(".composer__toolbar").getBoundingClientRect();
-    const insidePane = (selector: string): boolean => {
-      const rect = required(selector).getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0
-        && rect.left >= pane.left && rect.right <= pane.right
-        && rect.top >= pane.top && rect.bottom <= pane.bottom;
-    };
-    const tools = Array.from(root.querySelectorAll(".composer__toolbar > *"));
-    return {
-      positiveHeightAtLeast72: positive.height >= 72,
-      negativeHeightAtLeast72: negative.getBoundingClientRect().height >= 72,
-      negativeMaxHeight: getComputedStyle(negative).maxHeight,
-      paneInsideDual: pane.bottom <= dual.bottom + 1,
-      paneAboveToolbar: pane.bottom <= toolbar.top + 1,
-      paneInsideComposer: pane.bottom <= root.getBoundingClientRect().bottom + 1,
-      // The bottom dock scrolls its pane grid, so the grid box (not the pane)
-      // is what must stay inside the composer and above the toolbar.
-      dualInsideComposer: dual.bottom <= root.getBoundingClientRect().bottom + 1,
-      dualAboveToolbar: dual.bottom <= toolbar.top + 1,
-      labelInsidePane: insidePane(".negative-prompt__label"),
-      hintInsidePane: insidePane(".negative-prompt__hint"),
-      toolbarHitTestable: tools.length > 0 && tools.every((element) => {
-        const rect = element.getBoundingClientRect();
-        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-        return rect.width > 0 && rect.height > 0 && hit !== null
-          && (hit === element || element.contains(hit));
-      }),
-    };
-  });
+async function observeGeometry(page: Page, info: TestInfo, root: Locator, scenario: Scenario, long: boolean) {
+  const suffix = `${scenario.name}-${long ? "long" : "short"}`;
+  const panes = await inspectPanes(root, scenario.surface, long);
+  const gridScroll = await scrollGrid(root, scenario.surface);
+  const geometry = await composerGeometry(root, scenario.surface);
+  // Capture independent metrics before asserting so a failed floor remains reviewable.
+  await composerEvidence(page, info, suffix, { geometry, panes, gridScroll });
+  assertComposerGeometry(geometry, scenario.surface);
+  return geometry;
 }
 
-test.describe("J7-S1 sidebar negative prompt geometry", () => {
-  test.use({ viewport: { width: 1157, height: 826 } });
+async function providerRoundTrip(page: Page, root: Locator, scenario: Scenario) {
+  const home = scenario.surface === "home", selectors = paneSelectors(scenario.surface);
+  const positive = root.locator(selectors[0].input), negative = root.locator(selectors[1].input);
+  const prompt = "Preserve positive draft / 포지티브 초안", undesired = "low quality, @literal / 제외할 요소";
+  await positive.fill(prompt); await negative.fill(undesired);
+  await expect(page.locator(".element-mention-menu")).toHaveCount(0);
+  const wrapper = root.locator(home ? ".home-prompt__panes" : ".composer__prompt-panes");
+  const trigger = home ? ".home-prompt__provider button" : PROVIDER_TRIGGER;
+  const selectProvider = async (label: string) => {
+    if (!home) { await selectOption(page, trigger, label); return; }
+    await page.locator(trigger).click();
+    // Home's option also contains the translated readiness sublabel.
+    await page.getByRole("option").filter({ has: page.getByText(label, { exact: true }) }).click();
+  };
+  await selectProvider("MiniMax");
+  await expect(negative).toHaveCount(0); await expect(positive).toHaveValue(prompt);
+  await expect(wrapper).toHaveCSS("display", "contents");
+  await expect(root.locator(selectors[0].pane)).toHaveCSS("display", "contents");
+  const single = await positive.evaluate((element) => ({ height: element.getBoundingClientRect().height,
+    minHeight: getComputedStyle(element).minHeight, padding: getComputedStyle(element.parentElement!).padding }));
+  if (home) {
+    const floor = scenario.viewport.width <= 480 ? 144 : 168;
+    expect(single.height).toBeGreaterThanOrEqual(floor); expect(single.minHeight).toBe(`${floor}px`);
+  }
+  else expect(single.minHeight).toBe("0px");
+  await selectProvider("NovelAI");
+  await expect(wrapper).toHaveCSS("display", "grid");
+  await expect(positive).toHaveValue(prompt); await expect(negative).toHaveValue(undesired);
+  return { single, positiveDraft: await positive.inputValue(), negativeDraft: await negative.inputValue() };
+}
 
-  test("both prompt panes fit without covering toolbar controls", async ({ page }) => {
-    const app = await startApp("minimax", { provider: "oauth" });
-    try {
-      await openCreate(page, app.baseUrl);
-      const composer = page.locator(".sidebar__scroll > .composer--sidebar");
-      await expect(composer).toBeVisible();
-      await expect.poll(() => geometry(composer)).toMatchObject({
-        positiveHeightAtLeast72: true,
-        negativeHeightAtLeast72: true,
-        paneInsideDual: true,
-        paneAboveToolbar: true,
-        toolbarHitTestable: true,
-        labelInsidePane: true,
-        hintInsidePane: true,
-      });
-      await page.screenshot({ path: `${ARTIFACTS}/j7-s1-sidebar.png` });
-    } finally {
-      await app.close();
+async function finishControls(page: Page, root: Locator, scenario: Scenario) {
+  await root.locator(paneSelectors(scenario.surface)[0].input).fill("Save enabled / 저장할 프롬프트");
+  const controls = await trialControls(root, scenario.surface);
+  if (scenario.surface === "mobile") {
+    const submit = page.locator("#mobile-generate-sheet .compose-sheet__actions .generate-btn");
+    const metrics = await reveal(submit, true);
+    await expect(submit).toBeEnabled(); await submit.click({ trial: true });
+    return { controls, submit: metrics };
+  }
+  return { controls };
+}
+
+async function exerciseScenario(page: Page, info: TestInfo, origin: string, scenario: Scenario, theme: "dark" | "light") {
+  const root = await openComposer(page, origin, scenario);
+  try {
+    expect(await page.evaluate(() => document.documentElement.dataset.theme ?? "dark")).toBe(theme);
+    await observeGeometry(page, info, root, scenario, false);
+    const contrast = await inspectContrast(root, scenario.surface, info, `${scenario.name}-${theme}`);
+    await composerEvidence(page, info, `${scenario.name}-${theme}-contrast`, contrast);
+    assertContrasts(contrast);
+    if (scenario.name === "home-1440" && theme === "dark") await observeContainerBoundary(page, info, root);
+    if (scenario.name === "j7-s1-sidebar" || scenario.name === "home-1440") {
+      const mutations = await contrastMutations(page, root, scenario.surface);
+      await composerEvidence(page, info, `${scenario.name}-${theme}-contrast-mutations`, mutations);
     }
-  });
-});
-
-test.describe("J7-S2 bottom negative prompt geometry", () => {
-  // prompt-studio selects ClassicWorkspace only above the 800px mobile breakpoint.
-  test.use({ viewport: { width: 1440, height: 1000 } });
-
-  test("the bottom composer caps negative input and keeps its toolbar reachable", async ({ page }) => {
-    const app = await startApp("minimax", { provider: "oauth" });
-    try {
-      await page.addInitScript(() => {
-        localStorage.setItem("ima2.workspaceProfile", "prompt-studio");
-      });
-      await openCreate(page, app.baseUrl);
-      const composer = page.locator(".composer--bottom");
-      await expect(composer).toBeVisible();
-      await expect.poll(() => geometry(composer)).toMatchObject({
-        negativeMaxHeight: "148px",
-        negativeHeightAtLeast72: true,
-        dualInsideComposer: true,
-        dualAboveToolbar: true,
-        toolbarHitTestable: true,
-      });
-      const negative = composer.locator(".negative-prompt__textarea");
-      await negative.scrollIntoViewIfNeeded();
-      await expect(negative).toBeInViewport();
-      await page.screenshot({ path: `${ARTIFACTS}/j7-s2-bottom.png` });
-    } finally {
-      await app.close();
+    if (scenario.name === "j7-s1-sidebar" && theme === "dark") {
+      const mutations = await assertGeometryMutations(page, root);
+      await composerEvidence(page, info, `${scenario.name}-geometry-mutations`, mutations);
     }
-  });
-});
-
-test.describe("J7-S3 mobile sheet negative prompt geometry", () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  test("negative input remains usable and the submit control can be scrolled into view", async ({ page }) => {
-    const app = await startApp("minimax", { provider: "oauth" });
-    try {
-      await openCreate(page, app.baseUrl);
-      await page.locator("button.mobile-app-bar__generate").click();
-      const sheet = page.locator("#mobile-generate-sheet");
-      await expect(sheet).toHaveAttribute("aria-hidden", "false");
-      const negative = sheet.locator(".negative-prompt__textarea");
-      await expect(negative).toBeVisible();
-      await expect.poll(() => negative.evaluate((element) =>
-        element.getBoundingClientRect().height,
-      )).toBeGreaterThanOrEqual(72);
-      const submit = sheet.locator(".compose-sheet__actions .generate-btn");
-      await submit.scrollIntoViewIfNeeded();
-      await expect(submit).toBeVisible();
-      await expect(submit).toBeInViewport();
-      await page.screenshot({ path: `${ARTIFACTS}/j7-s3-mobile.png` });
-    } finally {
-      await app.close();
+    if (scenario.surface === "sidebar" || scenario.surface === "home") {
+      const drafts = await providerRoundTrip(page, root, scenario);
+      await composerEvidence(page, info, `${scenario.name}-provider-toggle`, drafts);
     }
-  });
+    await observeGeometry(page, info, root, scenario, true);
+    const controls = await finishControls(page, root, scenario);
+    await composerEvidence(page, info, `${scenario.name}-${theme}-controls`, controls);
+    if (scenario.surface === "home") {
+      const metrics = await composerGeometry(root, "home");
+      expect(metrics.columns).toBe(scenario.viewport.width === 1440 ? 2 : 1);
+    }
+  } finally {
+    // Retain a PNG on failure without replacing the actual failing assertion.
+    await page.screenshot({ path: info.outputPath(`wp08-${scenario.name}-${theme}-final.png`) }).catch(() => {});
+    if (scenario.surface === "mobile") {
+      await page.locator("#mobile-generate-sheet .compose-sheet__handle").click();
+      await expect(page.locator("#mobile-generate-sheet")).toBeHidden();
+      await expect(page.locator("button.mobile-app-bar__generate")).toBeFocused();
+    }
+  }
+}
+
+test.describe("WP08 J7 non-generating composer geometry", () => {
+  test.beforeEach(async ({}, info) => { await preflightJ6(info, "wp08"); });
+  // Bounded coverage, not a Cartesian viewport/provider matrix. Both themes at
+  // each host, with the original 1157 sidebar and the five required widths.
+  for (const scenario of CASES) for (const theme of ["dark", "light"] as const) {
+    test(`${scenario.name} ${theme}: floors, labels, scrolling, contrast and controls`, async ({ browser }, info) => {
+      const seed: J6Seed = { provider: "nai", imageModel: "nai-diffusion-5-full", viewport: scenario.viewport,
+        profile: scenario.surface === "bottom" ? "prompt-studio" : "default", uiMode: scenario.surface === "home" ? "home" : "classic",
+        theme, locale: scenario.locale, evidencePrefix: "wp08", nonGenerating: true, expectedSubmissions: 0 };
+      await withJ6(browser, info, seed, async (page, _capture, origin) => exerciseScenario(page, info, origin, scenario, theme));
+    });
+  }
 });
