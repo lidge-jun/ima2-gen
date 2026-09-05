@@ -4,19 +4,22 @@ import type {
   KeyProviderId,
 } from "./types.js";
 
-const EDIT = { edit: true, mask: false, streaming: false } as const;
+const EDIT = { generate: true, edit: true, mask: false, streaming: false } as const;
 // OAuth/API image models edit, mask, and stream. Masks are real on the active
 // path: routes/edit.ts excludes only grok/agy/grok-api/gemini-api/atlascloud/
 // minimax from masking and then calls editViaResponses, whose options accept
 // `mask` (lib/responsesImageAdapter.ts). The legacy editViaOAuth path in
 // lib/oauthProxy/multimodeGenerators.ts rejects masks unconditionally, but no
 // route reaches it, so it does not describe current behavior.
-const RESPONSES = { edit: true, mask: true, streaming: true } as const;
-const UNSUPPORTED = { edit: false, mask: false, streaming: false } as const;
+const RESPONSES = { generate: true, edit: true, mask: true, streaming: true } as const;
+const UNSUPPORTED = { generate: false, edit: false, mask: false, streaming: false } as const;
+
+const GENERATE_ONLY = { generate: true, edit: false, mask: false, streaming: false } as const;
 
 export const REGISTRY = [
   {
     id: "oauth",
+    surfaces: ["generate", "edit", "multimode", "node"],
     vendor: "openai",
     credentials: [{
       kind: "oauth-proxy",
@@ -40,6 +43,7 @@ export const REGISTRY = [
   },
   {
     id: "api",
+    surfaces: ["generate", "edit", "multimode", "node"],
     vendor: "openai",
     credentials: [{
       kind: "api-key",
@@ -64,6 +68,7 @@ export const REGISTRY = [
   },
   {
     id: "grok",
+    surfaces: ["generate", "edit", "multimode", "node", "video"],
     vendor: "xai",
     credentials: [{ kind: "oauth-proxy", envVars: ["IMA2_GROK_PROXY_HOST", "IMA2_GROK_PROXY_PORT"], configKey: "grokProvider" }],
     models: [
@@ -80,6 +85,7 @@ export const REGISTRY = [
   },
   {
     id: "grok-api",
+    surfaces: ["generate", "edit", "multimode", "node", "video"],
     vendor: "xai",
     credentials: [{
       kind: "api-key",
@@ -103,6 +109,7 @@ export const REGISTRY = [
   },
   {
     id: "agy",
+    surfaces: ["generate", "edit", "multimode", "node"],
     vendor: "google",
     credentials: [{ kind: "local-cli", envVars: ["IMA2_AGY_BIN"], optionalApiKeyEnv: "GEMINI_API_KEY" }],
     models: [
@@ -116,6 +123,7 @@ export const REGISTRY = [
   },
   {
     id: "gemini-api",
+    surfaces: ["generate", "edit", "multimode", "node"],
     vendor: "google",
     credentials: [
       {
@@ -139,6 +147,7 @@ export const REGISTRY = [
   },
   {
     id: "atlascloud",
+    surfaces: ["generate", "edit", "multimode", "node"],
     vendor: "atlascloud",
     credentials: [{
       kind: "api-key",
@@ -159,6 +168,7 @@ export const REGISTRY = [
   },
   {
     id: "minimax",
+    surfaces: ["generate", "edit", "multimode", "node"],
     vendor: "minimax",
     credentials: [{
       kind: "api-key",
@@ -180,6 +190,7 @@ export const REGISTRY = [
   },
   {
     id: "nai",
+    surfaces: ["generate", "multimode", "node"],
     vendor: "novelai",
     credentials: [{
       kind: "api-key",
@@ -197,17 +208,11 @@ export const REGISTRY = [
       configKey: "naiApiKey",
     }],
     models: [
-      // EDIT rather than UNSUPPORTED, deliberately. `supports` has no "generate"
-      // bit, so an all-false triple means "listed but cannot produce images at
-      // all" (that is what gpt-5.3-codex-spark is) and would push these models
-      // into UNSUPPORTED_IMAGE_MODEL_IDS — wrong, since V5 generates fine.
-      // Reference input is refused at the ROUTES (NAI_REF_UNSUPPORTED /
-      // NAI_EDIT_UNSUPPORTED) and `referenceLimits` below declares no capacity,
-      // so nothing here advertises an img2img path the adapter lacks.
-      { id: "nai-diffusion-5-full", aliases: ["nai-v5-full"], kind: "image", supports: EDIT },
-      { id: "nai-diffusion-5-curated", aliases: ["nai-v5-curated"], kind: "image", supports: EDIT },
-      { id: "nai-diffusion-4-5-full", aliases: ["nai-v45-full"], kind: "image", supports: EDIT },
-      { id: "nai-diffusion-4-5-curated", aliases: ["nai-v45-curated"], kind: "image", supports: EDIT },
+      // Generation support does not imply reference editing or masks.
+      { id: "nai-diffusion-5-full", aliases: ["nai-v5-full"], kind: "image", supports: GENERATE_ONLY },
+      { id: "nai-diffusion-5-curated", aliases: ["nai-v5-curated"], kind: "image", supports: GENERATE_ONLY },
+      { id: "nai-diffusion-4-5-full", aliases: ["nai-v45-full"], kind: "image", supports: GENERATE_ONLY },
+      { id: "nai-diffusion-4-5-curated", aliases: ["nai-v45-curated"], kind: "image", supports: GENERATE_ONLY },
     ],
     // Empty because the lane accepts no reference input at all; the routes
     // refuse it with NAI_REF_UNSUPPORTED rather than dropping it silently.
@@ -221,6 +226,7 @@ export const REGISTRY = [
   },
   {
     id: "comfy",
+    surfaces: ["generate", "edit", "video"],
     vendor: "comfy",
     credentials: [{
       kind: "local-http",

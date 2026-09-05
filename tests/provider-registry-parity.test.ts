@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { config } from "../config.js";
 import { ELEMENT_CAPACITY_DEFAULTS } from "../lib/elementCompiler.js";
 import { REGISTRY } from "../lib/providers/registry.ts";
+import { deriveProviderSurfaceSupportFrom } from "../lib/providers/surfaceSupport.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -83,22 +84,22 @@ describe("core provider registry parity", () => {
     assert.match(editSource, /editViaResponses\(/);
     assert.match(adapterSource, /\bmask\?: string(?: \| undefined)?;/);
 
-    const guard = maskGuard(editSource);
+    assert.match(editSource, /getProviderSurfaceSupport\(activeProvider,\s*"edit"\)\?\.mask\s*===\s*false/);
     const maskRejectedLanes = REGISTRY
       .map((entry) => entry.id)
-      .filter((id) => new RegExp(`activeProvider === "${id}"`).test(guard));
+      .filter((id) => deriveProviderSurfaceSupportFrom(REGISTRY, id, "edit")?.mask === false);
 
     assert.deepEqual(
       maskRejectedLanes.sort(),
       ["agy", "atlascloud", "comfy", "gemini-api", "grok", "grok-api", "minimax", "nai"],
-      "the edit route's mask-rejection list changed; update the manifest to match",
+      "surface policy must preserve the existing mask rejection matrix",
     );
 
     for (const entry of REGISTRY) {
       const rejected = maskRejectedLanes.includes(entry.id);
       for (const model of entry.models) {
         if (model.kind !== "image") continue;
-        const expected = rejected ? false : Object.values(model.supports).some(Boolean);
+        const expected = rejected ? false : model.supports.generate;
         assert.equal(
           model.supports.mask,
           expected,
@@ -128,12 +129,3 @@ describe("core provider registry parity", () => {
     assert.equal(provider("oauth").limits.timeoutMs, config.oauth.generationTimeoutMs);
   });
 });
-
-// The single guard in routes/edit.ts that rejects masked edits, isolated so the
-// lane list is read from real control flow instead of a hand-copied array.
-function maskGuard(editSource: string): string {
-  const start = editSource.indexOf("&& rawMask)");
-  assert.ok(start > -1, "routes/edit.ts no longer has the rawMask rejection guard");
-  const lineStart = editSource.lastIndexOf("\n", editSource.lastIndexOf("if (", start));
-  return editSource.slice(lineStart, start);
-}
