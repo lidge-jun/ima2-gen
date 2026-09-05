@@ -127,15 +127,8 @@ export interface ComfyLaneModels {
  * assembled from the workflow list.
  */
 export async function getComfyLaneModels(signal?: AbortSignal): Promise<ComfyLaneModels> {
-  const response = await jsonFetch<{ lanes?: Record<string, { models?: Partial<ComfyLaneModels> }> }>(
-    "/api/models",
-    signal ? { signal } : {},
-  );
-  const models = response.lanes?.comfy?.models;
-  return {
-    image: Array.isArray(models?.image) ? models.image : [],
-    video: Array.isArray(models?.video) ? models.video : [],
-  };
+  const catalog = await getLaneCatalog(signal);
+  return catalog.comfy?.models ?? { image: [], video: [] };
 }
 
 /** The four states the server publishes per lane. */
@@ -159,26 +152,48 @@ export type LaneCatalog = Record<string, LaneCatalogEntry>;
  * widened from one lane to all of them.
  */
 export async function getLaneCatalog(signal?: AbortSignal): Promise<LaneCatalog> {
-  const response = await jsonFetch<{ lanes?: Record<string, {
-    status?: string;
-    reason?: string;
-    models?: Partial<ComfyLaneModels>;
-  }> }>("/api/models", signal ? { signal } : {});
-  const lanes = response.lanes ?? {};
-  const catalog: LaneCatalog = {};
-  for (const [id, lane] of Object.entries(lanes)) {
-    catalog[id] = {
-      status: isLaneStatus(lane?.status) ? lane.status : "disconnected",
-      ...(typeof lane?.reason === "string" && lane.reason ? { reason: lane.reason } : {}),
-      models: {
-        image: Array.isArray(lane?.models?.image) ? lane.models.image : [],
-        video: Array.isArray(lane?.models?.video) ? lane.models.video : [],
-      },
-    };
-  }
-  return catalog;
+  return parseLaneCatalog(await jsonFetch<unknown>("/api/models", signal ? { signal } : {}));
 }
 
 function isLaneStatus(value: unknown): value is LaneStatus {
   return value === "ready" || value === "locked" || value === "disconnected" || value === "key-missing";
+}
+
+function invalidCatalog(): never {
+  throw Object.assign(new Error("Invalid model catalog response"), { code: "MODEL_CATALOG_INVALID" });
+}
+
+function catalogRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function catalogModel(value: unknown): ComfyLaneModel {
+  if (!catalogRecord(value) || typeof value.id !== "string" || !value.id.trim()
+    || typeof value.label !== "string" || !value.label.trim()) return invalidCatalog();
+  const model: ComfyLaneModel = { id: value.id, label: value.label };
+  for (const key of ["description", "lockReason"] as const) {
+    if (value[key] === undefined) continue;
+    if (typeof value[key] !== "string") return invalidCatalog();
+    model[key] = value[key];
+  }
+  if (value.executable !== undefined) {
+    if (typeof value.executable !== "boolean") return invalidCatalog();
+    model.executable = value.executable;
+  }
+  return model;
+}
+
+/** Project only this client's consumed fields; defaults/surfaces are not selection instructions. */
+export function parseLaneCatalog(value: unknown): LaneCatalog {
+  if (!catalogRecord(value) || value.ok !== true || !catalogRecord(value.lanes)) return invalidCatalog();
+  return Object.fromEntries(Object.entries(value.lanes).map(([id, lane]) => {
+    if (!catalogRecord(lane) || !isLaneStatus(lane.status) || !catalogRecord(lane.models)
+      || !Array.isArray(lane.models.image) || !Array.isArray(lane.models.video)
+      || (lane.reason !== undefined && typeof lane.reason !== "string")) return invalidCatalog();
+    const entry: LaneCatalogEntry = { status: lane.status,
+      ...(typeof lane.reason === "string" ? { reason: lane.reason } : {}),
+      models: { image: lane.models.image.map(catalogModel), video: lane.models.video.map(catalogModel) } };
+    // fromEntries defines own properties even for unknown IDs such as __proto__.
+    return [id, entry];
+  }));
 }

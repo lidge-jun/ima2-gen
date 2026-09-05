@@ -75,6 +75,9 @@
   .mobile-app-bar__selection .gen-provider-model.is-compact .ctl-select__trigger {
     min-height: 44px;
   }
+  .mobile-app-bar__selection:has(.gen-provider-model__catalog-state) .gen-provider-model.is-compact {
+    flex-wrap: wrap;
+  }
   .mobile-app-bar .image-model-select__trigger,
   .mobile-app-bar__icon-button,
   .mobile-app-bar__generate {

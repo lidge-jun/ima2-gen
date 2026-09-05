@@ -292,6 +292,21 @@
   height: 8px;
 }
 
+.gen-provider-model__catalog-state {
+  flex: 0 0 100%;
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.gen-provider-model__catalog-state button {
+  min-height: 44px;
+  font: inherit;
+}
+
 .image-model-select--settings select {
   color: inherit;
   font: inherit;

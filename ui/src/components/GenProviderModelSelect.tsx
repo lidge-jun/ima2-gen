@@ -16,7 +16,10 @@ import {
   type McpMediaKind,
 } from "../lib/mcpSelection";
 import { useAppStore } from "../store/useAppStore";
-import { getComfyLaneModels, getLaneCatalog, type ComfyLaneModels, type LaneCatalog } from "../lib/api-comfy";
+import { useLaneCatalog } from "../hooks/useLaneCatalog";
+import { getLaneCatalogSnapshot } from "../lib/laneCatalog";
+import { comfyDisplayMessageKey, deriveComfyDisplay, isComfyModelAvailable } from "../lib/comfyDisplay";
+import type { ComfyLaneModel } from "../lib/api-comfy";
 import {
   hydrateMcpSelectionImpl,
   reconcileMcpPresetStateImpl,
@@ -79,8 +82,6 @@ function applyMcpModelWithKind(model: string, kind: McpMediaKind, capabilities?:
 }
 
 const EMPTY_CATALOG: McpModelCatalog = { image: [], video: [] };
-const EMPTY_COMFY_CATALOG: ComfyLaneModels = { image: [], video: [] };
-
 function displayProviderId(id: string): string {
   return id.replace(/(^|-)([a-z])/g, (_match, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
 }
@@ -121,27 +122,9 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   const [catalogError, setCatalogError] = useState(false);
   const [catalogRetryToken, setCatalogRetryToken] = useState(0);
   const [modelsLoading, setModelsLoading] = useState(false);
-  const [comfyLane, setComfyLane] = useState<ComfyLaneModels>(EMPTY_COMFY_CATALOG);
-  const [laneCatalog, setLaneCatalog] = useState<LaneCatalog>({});
-
-  // The catalog decides which lanes exist, what state each is in, and which do
-  // video. All three used to be hardcoded here while the server published them.
-  useEffect(() => {
-    const controller = new AbortController();
-    void getLaneCatalog(controller.signal)
-      .then((catalog) => { if (!controller.signal.aborted) setLaneCatalog(catalog); })
-      .catch(() => { if (!controller.signal.aborted) setLaneCatalog({}); });
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    if (provider !== "comfy") { setComfyLane(EMPTY_COMFY_CATALOG); return; }
-    const controller = new AbortController();
-    void getComfyLaneModels(controller.signal)
-      .then((models) => { if (!controller.signal.aborted) setComfyLane(models); })
-      .catch(() => { if (!controller.signal.aborted) setComfyLane(EMPTY_COMFY_CATALOG); });
-    return () => controller.abort();
-  }, [provider]);
+  const laneSnapshot = useLaneCatalog();
+  const laneCatalog = laneSnapshot.catalog ?? {};
+  const comfyLane = laneCatalog.comfy?.models ?? { image: [], video: [] };
 
   useEffect(() => {
     hydrateMcpSelectionImpl(useAppStore.setState, useAppStore.getState);
@@ -196,21 +179,21 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   // "my workflow disappeared", while leaving it live would start a generation
   // that is guaranteed to fail.
   const comfyImageWorkflows = provider === "comfy"
-    ? comfyLane.image.map((entry) => ({
+    ? comfyLane.image.map((entry: ComfyLaneModel) => ({
       id: entry.id,
       label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
-      disabled: entry.executable === false || Boolean(entry.description?.endsWith("(offline)")),
+      disabled: !isComfyModelAvailable(entry),
       reason: entry.lockReason,
     }))
     : [];
   const comfyVideoWorkflows = provider === "comfy"
-    ? comfyLane.video.map((entry) => ({
+    ? comfyLane.video.map((entry: ComfyLaneModel) => ({
       id: entry.id,
       label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
       // No invented reason: if the server does not lock the row, there is
       // nothing to explain. Offline is a separate, real condition below.
       reason: entry.lockReason,
-      disabled: entry.executable === false || Boolean(entry.description?.endsWith("(offline)")),
+      disabled: !isComfyModelAvailable(entry),
     }))
     : [];
   // Lane-gated: a value the current lane does not list would render the trigger
@@ -264,15 +247,11 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   };
 
   const onModelChange = (value: string) => {
-    if (value.startsWith(COMFY_VIDEO_PREFIX)) {
-      setComfyVideoWorkflow(value.slice(COMFY_VIDEO_PREFIX.length));
-      return;
-    }
-    if (value.startsWith(EFFORT_PREFIX)) {
-      setReasoningEffort(value.slice(EFFORT_PREFIX.length) as ReasoningEffort);
-      return;
-    }
-    if (mcpProvider) {
+    const current = useAppStore.getState();
+    if (current.provider !== provider || (current.mcpProvider ?? null) !== mcpProvider) return;
+    const currentSnapshot = getLaneCatalogSnapshot();
+    if (current.mcpProvider) {
+      if (value.startsWith(COMFY_VIDEO_PREFIX)) return;
       const parsed = parseMcpModelValue(value);
       if (parsed) {
         const entries = parsed.kind === "video" ? mcpCatalog.video : mcpCatalog.image;
@@ -282,24 +261,34 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
       else applyMcpModel(value || null);
       return;
     }
-    if (value.startsWith(VIDEO_PREFIX)) {
-      selectVideoModel(value.slice(VIDEO_PREFIX.length));
+    if (current.provider === "comfy") {
+      const video = value.startsWith(COMFY_VIDEO_PREFIX);
+      const id = video ? value.slice(COMFY_VIDEO_PREFIX.length) : value;
+      const display = deriveComfyDisplay(currentSnapshot, video
+        ? { comfyVideoWorkflow: id }
+        : { comfyWorkflow: id });
+      if (!display.selectedAvailable) return;
+      if (video) setComfyVideoWorkflow(id);
+      else setComfyWorkflow(id || null);
       return;
     }
-    if (provider === "comfy") {
-      setComfyWorkflow(value || null);
+    if (value.startsWith(COMFY_VIDEO_PREFIX)) return;
+    if (value.startsWith(EFFORT_PREFIX)) {
+      setReasoningEffort(value.slice(EFFORT_PREFIX.length) as ReasoningEffort);
+      return;
+    }
+    if (value.startsWith(VIDEO_PREFIX)) {
+      selectVideoModel(value.slice(VIDEO_PREFIX.length));
       return;
     }
     setImageModel(value as Parameters<typeof setImageModel>[0]);
   };
 
-  // Lane existence comes from the catalog; the label map only shortens names.
-  // Until the catalog answers, the label map stands in, so the control is never
-  // empty on first paint.
   const catalogLaneIds = Object.keys(laneCatalog).filter((id) => !MCP_OWNED_LANES.has(id));
   const coreLaneIds = catalogLaneIds.length > 0
     ? catalogLaneIds
     : CORE_PROVIDER_OPTIONS.map((option) => option.value as string);
+  if (!coreLaneIds.includes("comfy")) coreLaneIds.push("comfy");
   const providerGroups: SelectGroup<string>[] = [
     {
       label: t("mcp.coreProviders"),
@@ -426,24 +415,6 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         })),
       });
     }
-    // Last line of defense for the blank-label failure, mirroring what the MCP
-    // branch above already does for an unknown model.
-    //
-    // Lane gating fixes selections that belong to ANOTHER lane; it cannot fix a
-    // selection that belongs to THIS lane but no longer exists in it — a comfy
-    // workflow the user deleted is still a legal comfyVideoWorkflow, and it is
-    // persisted verbatim with no membership check. Without a row to match, the
-    // trigger goes blank again and the control stops naming what it will send.
-    //
-    // Showing the raw id is strictly better than showing nothing: it is
-    // recognizable, it hints at where the selection came from, and it stays
-    // selectable so the user is not stuck. Disabled would leave the control
-    // looking broken for a value the store genuinely holds.
-    //
-    // The name carries no status badge. Reading the render showed why: this
-    // trigger is narrow enough that a `sub` pushed the id down to a couple of
-    // glyphs, so the row explained the problem and hid the one fact the user
-    // needs. The open list carries the explanation on the row title instead.
     const listedValues = new Set(modelGroups.flatMap((group) => group.items.map((item) => item.value)));
     if (coreModelValue && !listedValues.has(coreModelValue)) {
       modelGroups.unshift({
@@ -451,12 +422,19 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
           value: coreModelValue,
           label: coreModelValue.includes(":") ? coreModelValue.split(":").slice(1).join(":") : coreModelValue,
           title: t("mcp.unavailable"),
+          ...(provider === "comfy" ? { disabled: true } : {}),
         }],
       });
     }
   }
 
   const currentEffort = REASONING_EFFORT_OPTIONS.find((option) => option.value === reasoningEffort);
+  const comfyDisplay = provider === "comfy" && !mcpProvider
+    ? deriveComfyDisplay(laneSnapshot, { comfyWorkflow, comfyVideoWorkflow })
+    : null;
+  const comfyCatalogMessage = comfyDisplay
+    ? t(comfyDisplayMessageKey(comfyDisplay, laneSnapshot))
+    : null;
 
   return (
     <div
@@ -494,9 +472,14 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         portal
       />
 
-      {(unavailableReason || lockedNotice || error || catalogError) ? (
-        <span className="image-model-select__trigger-effort" role="status">
-          {unavailableReason
+      {(unavailableReason || lockedNotice || error || catalogError || comfyCatalogMessage) ? (
+        <span className={comfyDisplay ? "gen-provider-model__catalog-state" : "image-model-select__trigger-effort"} role="status">
+          {comfyDisplay && comfyCatalogMessage ? (
+            <>
+              <span>{comfyCatalogMessage}</span>
+              {laneSnapshot.phase === "error" ? <button type="button" className="image-model-select__retry" onClick={() => void laneSnapshot.refresh()}>{t("comfy.display.refresh")}</button> : null}
+            </>
+          ) : (unavailableReason
             ?? lockedNotice
             ?? (catalogError ? (
               <button
@@ -506,7 +489,7 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
               >
                 {t("mcp.modelsLoadFailed")}
               </button>
-            ) : (loading ? t("mcp.loadingProviders") : t("mcp.providersLoadFailed")))}
+            ) : (loading ? t("mcp.loadingProviders") : t("mcp.providersLoadFailed"))))}
         </span>
       ) : null}
     </div>

@@ -27,11 +27,11 @@ describe("comfy UI model routing", () => {
 
   it("reads comfy models from the live lane catalog, not the generated list", () => {
     const source = read("ui/src/components/GenProviderModelSelect.tsx");
-    assert.match(source, /getComfyLaneModels/, "the selector fetches the lane catalog");
+    assert.match(source, /useLaneCatalog/, "the selector consumes the shared lane catalog");
     assert.match(source, /value: "comfy", label: "ComfyUI"/, "comfy is offered as a provider");
     // An offline workflow stays listed but unselectable: removing it reads as
     // "my workflow disappeared", leaving it live starts a doomed generation.
-    assert.match(source, /disabled: entry\.executable === false \|\| Boolean\(entry\.description\?\.endsWith\("\(offline\)"\)\)/);
+    assert.match(source, /isComfyModelAvailable\(entry\)/);
   });
 
   it("shows catalog-only Comfy video workflows as disabled rows", () => {
@@ -43,6 +43,8 @@ describe("comfy UI model routing", () => {
     assert.match(source, /videoCatalogShort/);
     assert.match(source, /title: entry\.reason/);
     assert.match(source, /stacked: true/);
+    assert.match(source, /disabled: true/);
+    assert.match(source, /gen-provider-model__catalog-state/);
   });
 });
 
