@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { MODEL_TRIGGER, PROVIDER_TRIGGER, openCreate, preflightJ6, selectionScreenshot, selectOption, withJ6 } from "./fixtures/j6Selection";
+import { MODEL_TRIGGER, PROVIDER_TRIGGER, openCreate, preflightJ6, selectionScreenshot,
+  selectionViewports, selectOption, withJ6 } from "./fixtures/j6Selection";
 
 // Guard before the browser fixture launches; no local runtime fallback.
 test.beforeAll(async ({}, info) => { await preflightJ6(info); });
@@ -16,6 +17,7 @@ test("J6-S1 a comfy workflow left in storage does not blank the GPT model label"
     await expect(model).toHaveText("5.6l");
     expect(capture.requests).toEqual([]);
     await selectionScreenshot(page, info, "j6-s1-gpt-label");
+    await selectionViewports(page, info, "replan027-j6-s1-gpt-label", { provider: "GPT", model: "5.6l" });
   });
 });
 
@@ -40,6 +42,8 @@ test("J6-S2 leaving the comfy lane clears its selections and converges the model
     await selectionScreenshot(page, info, "j6-s2-comfy-return");
     await page.setViewportSize({ width: 390, height: 844 });
     await selectionScreenshot(page, info, "j6-s2-comfy-return-narrow");
+    await selectionViewports(page, info, "replan027-j6-s2-comfy-return", { provider: "ComfyUI", model: "wf-anim-1" });
+    expect(capture.requests).toEqual([]);
   });
 });
 
@@ -60,5 +64,7 @@ test("J6-S3 a comfy workflow the catalog no longer lists still names itself", as
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(model).toHaveText("wf-deleted-by-user");
     await selectionScreenshot(page, info, "j6-s3-unlisted-workflow-narrow");
+    await selectionViewports(page, info, "replan027-j6-s3-unlisted-workflow", { provider: "ComfyUI", model: "wf-deleted-by-user" });
+    expect(capture.requests).toEqual([]);
   });
 });

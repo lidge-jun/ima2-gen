@@ -1,10 +1,14 @@
-import { expect, type Browser, type BrowserContext, type Page, type Route, type TestInfo } from "@playwright/test";
+import { expect, type Browser, type BrowserContext, type Locator, type Page, type Route, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { assertJ6Isolation, j6RunnerPathDiagnostics, startApp } from "./appServer";
 import type { ComfyLaneModels, LaneCatalog } from "../../src/lib/api-comfy";
 
 export const MODEL_TRIGGER = "#sidebar-generation-model:visible";
 export const PROVIDER_TRIGGER = "#sidebar-generation-provider:visible";
+export const WP02_VIEWPORTS = [
+  { width: 1440, height: 1000 }, { width: 1024, height: 800 }, { width: 768, height: 1024 },
+  { width: 390, height: 844 }, { width: 320, height: 740 },
+];
 export const J6_WORKFLOWS: ComfyLaneModels = {
   image: [{ id: "wf-first", label: "First image", executable: true },
     { id: "wf-selected", label: "Selected image", executable: true }],
@@ -21,6 +25,7 @@ export type J6Capture = {
 export type J6Seed = {
   provider?: string; imageModel?: string; videoModel?: string | false;
   generationDefaults?: Record<string, unknown>;
+  expectedSubmissions?: number; // Harness-only assertion, never persisted into the app.
 };
 
 function modelCatalog(state: J6CatalogState): { ok: true; lanes: LaneCatalog } {
@@ -161,8 +166,165 @@ export async function selectOption(page: Page, trigger: string, label: string): 
 
 export async function selectionScreenshot(page: Page, info: TestInfo, name: string): Promise<void> {
   await expect(page.locator(MODEL_TRIGGER)).toBeVisible();
+  await page.evaluate(async () => { await document.fonts.ready; });
   // The entire context contains only synthetic fixtures; no signed-in data is loaded.
   await page.screenshot({ path: info.outputPath(`wp02-${name}.png`) });
+}
+
+function labelGeometry(control: Locator, labelSelector: string) {
+  return control.evaluate(async (element, selector) => {
+    await document.fonts.ready;
+    const label = element.querySelector<HTMLElement>(selector);
+    if (!label) throw new Error("WP02 missing visible selection label");
+    const box = (rect: DOMRect) => ({ left: rect.left, right: rect.right, top: rect.top,
+      bottom: rect.bottom, width: rect.width, height: rect.height });
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const rect = element.getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
+    const clientBox = { left: labelRect.left + label.clientLeft, top: labelRect.top + label.clientTop,
+      right: labelRect.left + label.clientLeft + label.clientWidth,
+      bottom: labelRect.top + label.clientTop + label.clientHeight };
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return { text: label.textContent, control: box(rect), label: box(labelRect), clientBox,
+      clientWidth: label.clientWidth, scrollWidth: label.scrollWidth,
+      clientHeight: label.clientHeight, scrollHeight: label.scrollHeight,
+      controlClientWidth: element.clientWidth, controlScrollWidth: element.scrollWidth,
+      textRects: Array.from(range.getClientRects(), box),
+      hitTestable: hit !== null && element.contains(hit),
+      siblings: Array.from(element.querySelectorAll(".ctl-select__caret, .ctl-select__value-sub"),
+        (sibling) => box(sibling.getBoundingClientRect())) };
+  }, labelSelector);
+}
+
+function assertReadableLabel(metrics: Awaited<ReturnType<typeof labelGeometry>>, expected: string) {
+  expect(metrics.text).toBe(expected);
+  expect(metrics.hitTestable).toBe(true);
+  expect(metrics.control.width).toBeGreaterThan(0);
+  expect(metrics.control.height).toBeGreaterThan(0);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+  expect(metrics.controlScrollWidth).toBeLessThanOrEqual(metrics.controlClientWidth + 1);
+  expect(metrics.textRects.length).toBeGreaterThan(0);
+  for (const rect of metrics.textRects) {
+    expect(rect.width).toBeGreaterThan(0);
+    expect(rect.height).toBeGreaterThan(0);
+    for (const bounds of [metrics.control, metrics.label, metrics.clientBox]) {
+      expect(rect.left).toBeGreaterThanOrEqual(bounds.left - 1);
+      expect(rect.right).toBeLessThanOrEqual(bounds.right + 1);
+      expect(rect.top).toBeGreaterThanOrEqual(bounds.top - 1);
+      expect(rect.bottom).toBeLessThanOrEqual(bounds.bottom + 1);
+    }
+    for (const sibling of metrics.siblings) {
+      expect(rect.right <= sibling.left + 1 || rect.left >= sibling.right - 1
+        || rect.bottom <= sibling.top + 1 || rect.top >= sibling.bottom - 1).toBe(true);
+    }
+  }
+}
+
+export async function readableSelection(page: Page, info: TestInfo, name: string,
+  expected: { provider: string; model: string }): Promise<void> {
+  const controls = [page.locator(PROVIDER_TRIGGER), page.locator(MODEL_TRIGGER)];
+  for (const [index, label] of [expected.provider, expected.model].entries()) {
+    await expect(controls[index].locator(".ctl-select__value")).toHaveText(label);
+  }
+  const labels = await Promise.all(controls.map((control) => labelGeometry(control, ".ctl-select__value")));
+  const pageBounds = await page.evaluate(() => ({ width: innerWidth, height: innerHeight,
+    clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth,
+    headerButtons: Array.from(document.querySelectorAll<HTMLElement>(".mobile-app-bar button"))
+      .filter((button) => button.getClientRects().length > 0).map((button) => {
+        const { left, right, top, bottom, height } = button.getBoundingClientRect();
+        return { left, right, top, bottom, height };
+      }) }));
+  await writeFile(info.outputPath(`wp02-${name}-metrics.json`), JSON.stringify({ expected, labels, pageBounds }, null, 2));
+  await selectionScreenshot(page, info, name);
+  labels.forEach((label, index) => assertReadableLabel(label, [expected.provider, expected.model][index]));
+  expect(pageBounds.scrollWidth).toBeLessThanOrEqual(pageBounds.clientWidth + 1);
+  expect(labels[0].control.right).toBeLessThanOrEqual(labels[1].control.left + 1);
+  for (const { control } of labels) {
+    expect(control.left).toBeGreaterThanOrEqual(-1);
+    expect(control.right).toBeLessThanOrEqual(pageBounds.width + 1);
+    expect(control.top).toBeGreaterThanOrEqual(-1);
+    expect(control.bottom).toBeLessThanOrEqual(pageBounds.height + 1);
+    if (pageBounds.width <= 800) expect(control.height).toBeGreaterThanOrEqual(44);
+  }
+  for (const [index, button] of pageBounds.headerButtons.entries()) {
+    expect(button.height).toBeGreaterThanOrEqual(44);
+    for (const other of pageBounds.headerButtons.slice(index + 1)) {
+      expect(button.right <= other.left + 1 || button.left >= other.right - 1
+        || button.bottom <= other.top + 1 || button.top >= other.bottom - 1).toBe(true);
+    }
+  }
+}
+
+async function selectedMenu(page: Page, info: TestInfo, name: string, expected: string): Promise<void> {
+  const trigger = page.locator(MODEL_TRIGGER);
+  await trigger.click();
+  try {
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const selected = page.getByRole("option", { selected: true });
+    await expect(selected.locator(".ctl-select__item-label")).toHaveText(expected);
+    await expect(selected).toBeInViewport();
+    const metrics = await labelGeometry(selected, ".ctl-select__item-label");
+    await writeFile(info.outputPath(`wp02-${name}-menu-metrics.json`), JSON.stringify({ expected, metrics }, null, 2));
+    await selectionScreenshot(page, info, `${name}-menu`);
+    assertReadableLabel(metrics, expected);
+  } finally {
+    await page.keyboard.press("Escape");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  }
+}
+
+export async function composerMode(page: Page, info: TestInfo, name: string, sequence: boolean): Promise<void> {
+  const mobile = (page.viewportSize()?.width ?? 0) <= 800;
+  const opener = page.locator("button.mobile-app-bar__generate");
+  const sheet = page.locator("#mobile-generate-sheet");
+  if (mobile) {
+    await expect(opener).toHaveAccessibleName("Open prompt sheet to generate an image");
+    await opener.click();
+    await expect(sheet).toHaveAttribute("aria-hidden", "false");
+    await expect(sheet.getByRole("tab", { name: "Prompt", exact: true })).toHaveAttribute("aria-selected", "true");
+  }
+  try {
+    const composer = mobile ? sheet.locator(".composer:visible") : page.locator(".composer:visible");
+    await expect(composer).toBeVisible();
+    await expect(composer.locator(".composer__textarea")).toBeVisible();
+    const metrics = await composer.evaluate((element) => ({
+      sequence: element.classList.contains("composer--multimode"), ariaLabel: element.getAttribute("aria-label"),
+      badge: element.querySelector(".composer__mode-badge")?.textContent ?? null,
+      placeholder: element.querySelector("textarea")?.getAttribute("placeholder") }));
+    await writeFile(info.outputPath(`wp02-${name}-composer-metrics.json`), JSON.stringify({ mobile, expectedSequence: sequence, metrics }, null, 2));
+    await selectionScreenshot(page, info, `${name}-composer`);
+    expect(metrics).toEqual(sequence ? {
+      sequence: true, ariaLabel: "Sequence prompt composer, up to 4 separate stages", badge: "Sequence · up to 4",
+      placeholder: "Describe the sequence. Use Count with Sequence off for same-prompt batches.",
+    } : { sequence: false, ariaLabel: "Prompt", badge: null,
+      placeholder: "Describe the image you want. Drag & drop or paste to attach reference images..." });
+    await expect(composer.locator(".composer__mode-badge")).toHaveCount(sequence ? 1 : 0);
+    if (sequence) await expect(composer.locator(".composer__mode-badge")).toBeVisible();
+  } finally {
+    if (mobile) {
+      await sheet.locator(".compose-sheet__handle").click();
+      await expect(sheet).toHaveAttribute("aria-hidden", "true");
+      await expect(opener).toBeFocused();
+    }
+  }
+}
+
+export async function selectionViewports(page: Page, info: TestInfo, name: string,
+  expected: { provider: string; model: string; sequence?: boolean }): Promise<void> {
+  const original = page.viewportSize();
+  try {
+    for (const viewport of WP02_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      const frame = `${name}-${viewport.width}`;
+      await readableSelection(page, info, frame, expected);
+      await selectedMenu(page, info, frame, expected.model);
+      if (expected.sequence !== undefined) await composerMode(page, info, frame, expected.sequence);
+    }
+  } finally { if (original) await page.setViewportSize(original); }
 }
 
 export async function preflightJ6(info: TestInfo): Promise<void> {
@@ -213,12 +375,14 @@ export async function withJ6(browser: Browser, info: TestInfo, seed: J6Seed,
         }) ?? [];
         await writeFile(info.outputPath("wp02-evidence.json"), JSON.stringify({ isolation: app.isolation,
           configPath: app.home, origin: app.baseUrl, routeScope: "context/all-pages; exact-origin; deny mutations/external; SW blocked",
-          requests, unexpected: capture?.unexpected ?? [], stubCalls: app.stub.calls.length,
+          requests, expectedSubmissions: seed.expectedSubmissions,
+          unexpected: capture?.unexpected ?? [], stubCalls: app.stub.calls.length,
           teardown, completionClaimed: false }, null, 2));
       }
     }
     expect(capture?.unexpected ?? []).toEqual([]);
     expect(app.stub.calls).toEqual([]);
     expect(teardown).toEqual({ contextClosed: true, childExitedAndStubClosed: true });
+    if (seed.expectedSubmissions !== undefined) expect(capture?.requests ?? []).toHaveLength(seed.expectedSubmissions);
   }
 }

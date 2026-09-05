@@ -31,6 +31,13 @@ catalog IDs remain visible and new Comfy selections never auto-pick a workflow.
 `coreImageRequestModel` projects the image workflow into the existing wire `model`
 field, omitting it when absent. `generateImpl` sends active Comfy video to video
 generation and keeps unsupported Comfy/NAI multimode preferences inactive.
+`coreGenerationMode.ts` now owns that decision for both dispatch and the core
+composer's badge, placeholder, class and accessible label. Stored multimode remains
+unchanged; the MCP-specific renderer keeps its existing preference semantics.
+Generation selector labels wrap within their controls instead of losing identity
+to ellipsis. The mobile workspace header places the same selector in a full-width
+row beneath brand/actions; its existing bottom navigation and sheet focus owner
+remain separate and unchanged.
 
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 

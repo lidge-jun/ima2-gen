@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { MODEL_TRIGGER, PROVIDER_TRIGGER, J6_WORKFLOWS, openCreate, preflightJ6, requestObject,
-  selectionScreenshot, selectOption, withJ6, type J6Capture } from "./fixtures/j6Selection";
+  composerMode, selectionScreenshot, selectionViewports, selectOption, withJ6, type J6Capture } from "./fixtures/j6Selection";
 
 test.beforeAll(async ({}, info) => { await preflightJ6(info); });
 
@@ -42,6 +42,7 @@ test("WP02 Grok API survives true reload and another Grok image click", async ({
       await assertSelection(page, "xAI API", "grok+");
       await selectionScreenshot(page, info, "grok-api-reload-narrow");
       await page.setViewportSize({ width: 1280, height: 800 });
+      await selectionViewports(page, info, "replan027-grok-api-reload", { provider: "xAI API", model: "grok+" });
       await submitSelection(page, capture, origin, { path: "/api/generate", provider: "grok-api", model: "grok-imagine-image-quality" });
       await selectOption(page, MODEL_TRIGGER, "grok2");
       await assertSelection(page, "xAI API", "grok2");
@@ -81,6 +82,7 @@ test("WP02 missing Comfy image id survives empty, failed and offline catalogs", 
     await assertSelection(page, "ComfyUI", "wf-missing");
     await selectionScreenshot(page, info, "missing-comfy-image-narrow");
     await page.setViewportSize({ width: 1280, height: 800 });
+    await selectionViewports(page, info, "replan027-missing-comfy-image", { provider: "ComfyUI", model: "wf-missing" });
     await submitSelection(page, capture, origin, { path: "/api/generate", provider: "comfy", model: "wf-missing" });
   });
 });
@@ -107,6 +109,9 @@ test("WP02 Comfy video to image, leave and return sends the selected image workf
     await page.reload();
     await assertSelection(page, "ComfyUI", "Selected image");
     await selectionScreenshot(page, info, "comfy-image-return");
+    await selectionViewports(page, info, "replan027-comfy-image", { provider: "ComfyUI", model: "Selected image", sequence: false });
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ima2.generationDefaults") ?? "{}").multimode)).toBe(true);
+    expect(capture.requests).toEqual([]);
     await submitSelection(page, capture, origin, { path: "/api/generate", provider: "comfy", model: "wf-selected" });
   });
 });
@@ -124,10 +129,41 @@ test("WP02 Comfy video survives leave/return and bypasses saved multimode", asyn
     await page.reload();
     await assertSelection(page, "ComfyUI", "Selected video");
     await selectionScreenshot(page, info, "comfy-video-return");
+    await selectionViewports(page, info, "replan027-comfy-video", { provider: "ComfyUI", model: "Selected video", sequence: false });
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ima2.generationDefaults") ?? "{}").multimode)).toBe(true);
+    expect(capture.requests).toEqual([]);
     await submitSelection(page, capture, origin, { path: "/api/video/generate", provider: "comfy", model: "wf-video-selected" });
     expect(capture.requests.map(({ path }) => path)).toEqual(["/api/video/generate"]);
   });
 });
+
+for (const positive of [
+  { provider: "oauth", imageModel: "gpt-5.6-luna", label: "GPT", model: "5.6l" },
+  { provider: "grok-api", imageModel: "grok-imagine-image-quality", label: "xAI API", model: "grok+" },
+]) {
+  test(`WP02 ${positive.provider} Sequence renders and survives Comfy switch-return without submission`, async ({ browser }, info) => {
+    await withJ6(browser, info, { provider: positive.provider, imageModel: positive.imageModel, expectedSubmissions: 0,
+      generationDefaults: { multimode: true, multimodeMaxImages: 4 } }, async (page, capture, origin) => {
+      await openCreate(page, origin);
+      const expected = { provider: positive.label, model: positive.model, sequence: true };
+      await selectionViewports(page, info, `replan027-${positive.provider}-sequence`, expected);
+      await selectOption(page, PROVIDER_TRIGGER, "ComfyUI");
+      await selectOption(page, MODEL_TRIGGER, "Selected image");
+      await assertSelection(page, "ComfyUI", "Selected image");
+      await composerMode(page, info, `replan027-${positive.provider}-away`, false);
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ima2.generationDefaults") ?? "{}").multimode)).toBe(true);
+      await selectOption(page, PROVIDER_TRIGGER, positive.label);
+      await assertSelection(page, positive.label, positive.model);
+      await composerMode(page, info, `replan027-${positive.provider}-return`, true);
+      await page.reload();
+      await selectionViewports(page, info, `replan027-${positive.provider}-sequence-reload`, expected);
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ima2.generationDefaults") ?? "{}").multimode)).toBe(true);
+      // No Sequence endpoint allowance: both eligible lanes prove chrome only.
+      expect(capture.requests).toEqual([]);
+      expect(capture.unexpected).toEqual([]);
+    });
+  });
+}
 
 test("WP02 first visit to Comfy never auto-picks from a populated workflow catalog", async ({ browser }, info) => {
   await withJ6(browser, info, {}, async (page, capture, origin) => {
