@@ -29,3 +29,14 @@ pass the unchanged205assertion. Mainretains499linePromptComposer with whitespace
 reflowonly. Exactmention/NAI/feedbackcontracts andbothUItypes/build beforecommit.
 No localbrowser, providercall or reset. Currenta5CI mayfinishwithsameknownonefail;
 newfinalheadwillneeditsowncompleteproof/pixels includingcornerrepair.
+
+Nietzsche independently re-reviewed68source delta andreturnedPASS: reason travels
+directly and suppressionref is recorded synchronously beforeclear; existing205
+assertion remainsunchanged. Current77native cases stillpending, notsourceapproval
+asruntimeproof. Main40focusedPASS/UItypes+build0,17fileC164PASS bound68.
+
+QA artifact refinement: composerGeometry.revealedMetrics records DOMtext plus
+actualtextarea value/placeholder alongsideexistingrangeboxes/hits. This allows
+dualCJKvisualoracles to compare actualtext withpixels, not infer text solely from
+vision/staticdictionaries. No productioninput/CSS behaviorchange. FinalCI must
+include these richer JSONs. Existingphasefixture owns this field-only extension.

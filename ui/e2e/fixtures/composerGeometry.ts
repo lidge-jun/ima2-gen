@@ -92,7 +92,10 @@ function revealedMetrics(target: Locator) {
     const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
     const range = document.createRange(); range.selectNodeContents(element);
     const textRects = Array.from(range.getClientRects(), (box) => ({ left: box.left, right: box.right, top: box.top, bottom: box.bottom }));
-    return { hit: hit !== null && element.contains(hit), left, right, top, bottom, textRects,
+    return { text: element.textContent,
+      inputValue: element instanceof HTMLTextAreaElement ? element.value : null,
+      placeholder: element instanceof HTMLTextAreaElement ? element.placeholder : null,
+      hit: hit !== null && element.contains(hit), left, right, top, bottom, textRects,
       width: rect.width, height: rect.height, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth };
   });
 }
