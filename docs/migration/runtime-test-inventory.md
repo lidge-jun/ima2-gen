@@ -325,7 +325,7 @@ Total: 457 (runtime: 213, contract: 244)
 - `tests/execution-network-isolation.test.ts`
 - `tests/execution-process-isolation.test.ts`
 - `tests/frame-extraction-fallback.test.ts`
-- `tests/frontend-connection-state-contract.test.js`
+- `tests/frontend-connection-state-contract.test.ts`
 - `tests/frontend-sse-risk-contract.test.js`
 - `tests/gallery-hang-regression-contract.test.ts`
 - `tests/gallery-load-older-contract.test.js`
@@ -344,7 +344,7 @@ Total: 457 (runtime: 213, contract: 244)
 - `tests/health.test.js`
 - `tests/history-index-contract.test.js`
 - `tests/history-permanent-delete.test.js`
-- `tests/history-strip-duplicate-contract.test.js`
+- `tests/history-strip-duplicate-contract.test.ts`
 - `tests/i18n-coverage-contract.test.ts`
 - `tests/i18n-dictionary-contract.test.ts`
 - `tests/image-metadata-ui-contract.test.js`
@@ -448,7 +448,7 @@ Total: 457 (runtime: 213, contract: 244)
 - `tests/tools-cli-contract.test.ts`
 - `tests/transparent-background-ui-contract.test.js`
 - `tests/ui-color-token-contract.test.ts`
-- `tests/ui-error-code-contract.test.js`
+- `tests/ui-error-code-contract.test.ts`
 - `tests/ui-glyph-policy.test.ts`
 - `tests/ui-gradient-manifest-contract.test.ts`
 - `tests/ui-radius-scale-contract.test.ts`

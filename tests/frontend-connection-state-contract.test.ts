@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { withJobTrackingUi } from "./_jobTrackingUiFixture.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const read = (rel) => readFileSync(join(root, rel), "utf8");
+const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 
 test("eventChannel exports onConnectionStateChange and ConnectionState type", () => {
   const src = read("ui/src/lib/eventChannel.ts");
@@ -14,10 +15,14 @@ test("eventChannel exports onConnectionStateChange and ConnectionState type", ()
   assert.match(src, /"connected"\s*\|\s*"reconnecting"\s*\|\s*"failed"/);
 });
 
-test("eventChannel fires connected state on successful open", () => {
-  const src = read("ui/src/lib/eventChannel.ts");
-  assert.match(src, /source\.onopen[\s\S]*connectionStateCallback\?\.\("connected"\)/);
-});
+test("eventChannel fires connected state on successful open", () => withJobTrackingUi(async (f) => {
+  const states: string[] = [];
+  f.runtime.onConnectionStateChange(state => states.push(state));
+  f.runtime.ensureConnected();
+  assert.deepEqual(states, []);
+  f.openStream();
+  assert.deepEqual(states, ["connected"]);
+}));
 
 test("eventChannel fires failed state after threshold reconnect attempts", () => {
   const src = read("ui/src/lib/eventChannel.ts");
@@ -53,4 +58,3 @@ test("multimode partial writeSse checks res.writableEnded before write", () => {
   assert.match(partialBlock, /res\.writableEnded/);
   assert.match(partialBlock, /res\.destroyed/);
 });
-

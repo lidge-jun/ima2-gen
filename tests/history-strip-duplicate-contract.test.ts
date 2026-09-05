@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readStoreBundle } from "./_storeBundle.mjs";
+import { withJobTrackingUi } from "./_jobTrackingUiFixture.ts";
 
 const root = process.cwd();
 
-function readSource(path) {
+function readSource(path: string) {
   if (path === "ui/src/store/useAppStore.ts") return readStoreBundle();
   return readFileSync(join(root, path), "utf8");
 }
@@ -18,10 +19,34 @@ test("history state dedupes generation and polling races by filename/image key",
   assert.match(store, /const key = historyKey\(item\);[\s\S]*?history\.filter\(\(existing\) => historyKey\(existing\) !== key\)/);
   assert.match(store, /function findHistoryDuplicate\(/);
   assert.match(store, /function preserveHistoryMetadata\(/);
-  assert.match(store, /const seen = new Set\(s\.history\.map\(historyKey\)\);/);
-  assert.match(store, /if \(fresh\.length === 0\) return \{\};/);
+  // Actual polling concurrency/no-op behavior is exercised below, not variable spellings.
   assert.doesNotMatch(store, /const existing = get\(\)\.history;[\s\S]*?const fresh = arr\.filter/);
 });
+
+test("polling merges concurrent history once and keeps the history reference for an all-duplicate response", () => withJobTrackingUi(async (f) => {
+  const store = f.runtime.useAppStore;
+  const known = { filename: "known.png", image: "/known.png" };
+  store.setState({ history: [known], currentImage: known,
+    inFlight: [{ id: "owned", prompt: "owned", startedAt: 999_999 }], activeGenerations: 1 });
+  const entered = f.defer<void>(), held = f.defer<Response>();
+  f.route("GET", "/api/inflight", () => Response.json({ jobs: [], terminalJobs: [] }));
+  f.route("GET", "/api/history", () => { entered.resolve(); return held.promise; });
+  store.getState().startInFlightPolling();
+  const timer = [...f.timers].find(([, value]) => value.kind === "interval")!;
+  const work = f.track(f.runTimer(timer[0]));
+  await entered.promise;
+  const concurrent = { filename: "concurrent.png", image: "/concurrent.png" };
+  store.setState({ history: [concurrent, known] });
+  held.resolve(Response.json({ items: [known, concurrent,
+    { filename: "fresh.png", url: "/fresh.png" }, { filename: "fresh.png", url: "/fresh.png" }] }));
+  await work;
+  assert.deepEqual(store.getState().history.map(item => item.filename), ["fresh.png", "concurrent.png", "known.png"]);
+  assert.equal(store.getState().currentImage, known);
+  const prior = store.getState().history;
+  f.route("GET", "/api/history", () => Response.json({ items: prior }));
+  await f.runTimer(timer[0]);
+  assert.equal(store.getState().history, prior);
+}));
 
 test("addHistory paths upsert while preserving server-enriched metadata", () => {
   const store = readSource("ui/src/store/useAppStore.ts");

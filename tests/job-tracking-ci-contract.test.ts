@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { execFileSync, spawnSync } from "node:child_process";
 import { test } from "node:test";
 import { parseDocument } from "yaml";
+import { assertActionPinned } from "./_actionPins.mjs";
 
 interface Step {
   name?: string;
@@ -34,7 +35,7 @@ function verifyContract(candidate: Step[]): void {
   assert.ok(candidate.some(step => step.run === "npm --prefix ui run test:e2e"));
   const upload = candidate.find(step => step.with?.name === "wp07-job-tracking-evidence");
   assert.equal(upload?.if, "always()");
-  assert.equal(upload?.uses, "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a");
+  assertActionPinned(`jobs:\n  tracking:\n    steps:\n      - uses: ${upload?.uses}`, "actions/upload-artifact", "tracking upload");
   assert.deepEqual(String(upload?.with?.path).trim().split("\n"), [
     "ui/test-results/**/wp07-*.png", "ui/test-results/**/wp07-*.json",
   ]);
@@ -46,11 +47,13 @@ test("canonical E2E job checks the requested source and retains native tracking 
 });
 
 test("E2E contract rejects missing provenance and evidence controls", () => {
-  for (const target of ["checkout", "guard", "upload"] as const) {
+  for (const target of ["checkout", "guard", "upload", "mutable-action", "wrong-action"] as const) {
     const changed = structuredClone(steps);
     if (target === "checkout") delete changed.find(s => s.uses?.startsWith("actions/checkout@"))!.with!.ref;
     if (target === "guard") changed.splice(changed.findIndex(s => s.name === "Verify E2E source SHA"), 1);
     if (target === "upload") changed.find(s => s.with?.name === "wp07-job-tracking-evidence")!.with!.path = "ui/test-results/**/wrong.png";
+    if (target === "mutable-action") changed.find(s => s.with?.name === "wp07-job-tracking-evidence")!.uses = "actions/upload-artifact@main";
+    if (target === "wrong-action") changed.find(s => s.with?.name === "wp07-job-tracking-evidence")!.uses = `attacker/action@${"a".repeat(40)}`;
     assert.throws(() => verifyContract(changed), undefined, target);
   }
 });

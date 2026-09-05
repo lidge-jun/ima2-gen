@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { readSourceTree } from "./_readTree.mjs";
+import { withJobTrackingUi } from "./_jobTrackingUiFixture.ts";
 
 test("UI maps proxy and network errors to card surfaces", () => {
   const source = readFileSync("ui/src/lib/errorCodes.ts", "utf-8");
@@ -33,10 +34,31 @@ test("UI surfaces server terminal generation errors from inflight polling", () =
   assert.match(api, /cancelInflight/);
   assert.match(store, /includeTerminal: true/);
   assert.match(store, /terminalJobError/);
-  assert.match(store, /terminal\.status === "error"/);
-  assert.match(store, /handleError\(err, get\(\)\)/);
+  // Terminal delivery and removal are asserted through the real polling action below.
   assert.doesNotMatch(store, /if \(cur\.length === 0\) \{\s*await get\(\)\.reconcileInflight\(\);/);
 });
+
+test("polling delivers a terminal error once and removes its stored spinner", () => withJobTrackingUi(async (f) => {
+  const store = f.runtime.useAppStore;
+  const local = { id: "owned-terminal", prompt: "owned", startedAt: 1 };
+  store.setState({ locale: "en", inFlight: [local], activeGenerations: 1 });
+  f.runtime.saveInFlight([local]);
+  f.route("GET", "/api/inflight", () => Response.json({ jobs: [], terminalJobs: [{
+    requestId: local.id, kind: "classic", status: "error", startedAt: 1, finishedAt: 999_999,
+    durationMs: 999_998, phase: "queued", phaseAt: 1, errorCode: "JOB_TRACKING_TIMEOUT", httpStatus: 504,
+  }] }));
+  f.route("GET", "/api/history", () => Response.json({ items: [] }));
+  store.getState().startInFlightPolling();
+  const timer = [...f.timers].find(([, value]) => value.kind === "interval")!;
+  await f.runTimer(timer[0]);
+  assert.deepEqual(store.getState().toastLog.map(item => item.message), [
+    "Job tracking expired; upstream completion is unknown. Inspect history before retrying.",
+  ]);
+  assert.equal(store.getState().activeGenerations, 0);
+  assert.deepEqual(f.runtime.loadInFlight({ includeExpired: true }), []);
+  await f.runTimer(timer[0]);
+  assert.equal(store.getState().toastLog.length, 1);
+}));
 
 test("invalid request and open-folder feedback i18n keys exist", () => {
   const en = readFileSync("ui/src/i18n/en.json", "utf-8");

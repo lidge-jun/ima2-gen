@@ -269,9 +269,8 @@ if (executionTestProcess(import.meta.url)) describe("WP04 OpenAI real execution 
         if (callerCancel) { assert.equal(terminal.data.code, "GENERATION_CANCELED"); assert.equal(terminal.data.status, 499); }
         else { assert.equal(terminal.data.partial, true); assert.equal(terminal.data.returned, 1); assert.equal(terminal.data.status, "partial");
           assert.deepEqual(terminal.data.warning, { code: "RESPONSES_IMAGE_TIMEOUT", message: "The provider timed out after returning partial multimode results." }); }
-        // Baseline d039b587: abortJob publishes error, then the route catch publishes it again.
-        // Preserve that wire behavior; only the timeout path promises one terminal event.
-        assert.deepEqual(f.events.filter((e) => e.event === "done" || e.event === "error").map((e) => e.event), callerCancel ? ["error", "error"] : ["done"]);
+        // WP07 cancellation dominates the route's later catch; retain the prior partial bytes.
+        assert.deepEqual(f.events.filter((e) => e.event === "done" || e.event === "error").map((e) => e.event), callerCancel ? ["error"] : ["done"]);
         if (callerCancel) for (const event of f.events.filter((e) => e.event === "error")) {
           assert.equal(event.data.code, "GENERATION_CANCELED"); assert.equal(event.data.status, 499);
         }
