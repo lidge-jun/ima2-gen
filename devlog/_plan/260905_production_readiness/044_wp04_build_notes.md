@@ -39,3 +39,17 @@ updated harness13/13 passed, including three new direct-work ownership cases.
 Test compiler initially found a test-factory surface union requiring an explicit
 single-result narrowing; original runtime-test owner is fixing that test-only
 diagnostic. Full new parity and migrated contracts remain in progress.
+
+## Stable worker handoffs
+
+Operations/types/transport/family all complete; no remaining source worker.
+Contract migration:53source cases,69existing boundary cases,4registry cases and
+prompt-fidelity script passed. Runtime parity:24new route/execution cases plus
+31transport/layered-error cases passed (55total). Main test compiler nowexit0;
+test factories narrow result kind and fallback retryKind by actual shape.
+
+Observed current cancellation has two matching499 error events (inflight abort
+plus pipeline catch), no done; tests preserve this baseline. WP07 owns terminal
+deduplication, not this family relocation. API/OAuth partial andA,A,B persistence
+are tested for both lanes. No source/runtime failures remain at B handoff.
+Main still must run planned RED/restoredGREEN mutations and independent C/CI/QA.
