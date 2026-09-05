@@ -36,6 +36,11 @@ Canonical isCoreProviderId or existing typed fallback preserves unknown compatib
   reload/reselection behavior is asserted. Existing NAI lexical setter checks in
   tests/nai-ui-registration-contract.test.ts may be replaced by real action tests;
   no removed identifier may be restored as a comment to fake a pass.
+  Impact search also found superseded setter/hydration predicates in
+  tests/comfy-ui-contract.test.ts and tests/video-defaults-persistence-contract.test.js:
+  action worker owns replacing only those predicates with real behavior (or removal
+  only when stronger named action/reload tests cover each assertion); unrelated
+  workflow-manager, i18n, video-parameter and continue-from checks stay intact.
 - Display/request worker: imageModels.ts, GenProviderModelSelect.tsx,
   storeGenImpl.ts, storeGenerateEntryImpl.ts, ui/src/types.ts,
   tests/model-select-lane-gating.test.ts and NEW tests/core-selection-transport.test.mjs.
