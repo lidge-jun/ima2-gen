@@ -1,5 +1,19 @@
 [
   {
+    "file": "ui/src/styles/composer-panes.css",
+    "atRule": null,
+    "selector": ".composer__prompt-panes--dual .composer__prompt-pane",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/composer-panes.css",
+    "atRule": null,
+    "selector": ".negative-prompt--classic",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
     "file": "ui/src/index.css",
     "atRule": null,
     "selector": ":focus-visible",

@@ -183,6 +183,10 @@ test("moved pane rules have one owner and one late import, without host or mirro
 });
 
 test("enabled guidance and identifying boundaries use the readable theme role", () => {
+  for (const selector of [".composer__prompt-panes--dual .composer__prompt-pane", ".negative-prompt--classic"]) {
+    declaration(selector, "border-radius", "var(--r-md)");
+    declaration(selector, "clip-path", "inset(0 round var(--r-md))");
+  }
   for (const selector of [".composer__textarea", ".negative-prompt__textarea", ".home-prompt__textarea"]) {
     declaration(`${selector}:not(:disabled)::placeholder`, "color", "var(--text-muted)");
     declaration(`${selector}:not(:disabled)::placeholder`, "opacity", "1");
