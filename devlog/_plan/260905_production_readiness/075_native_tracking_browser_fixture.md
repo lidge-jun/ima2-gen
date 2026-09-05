@@ -142,6 +142,11 @@ after fonts/render settle; C downloads exact-head artifacts and directly views a
 new screenshots. Expect no unexpected requests, no provider-stub calls, no extra
 POST on warning/reload/reset, no lingering fixture resources. Keep the J6 evidence
 as well; main's072 CI upload includes all wp07 artifacts on success or failure.
+For the new long four-locale warning, additionally drive existing WP02_VIEWPORTS
+(1440/1024/768/390/320) against the persistent AssetGen inline alert after its live
+terminal. Record literal DOM text, alert/page containment metrics and each viewport
+PNG. Initial toast assertion remains; do not demand a transient toast survive all
+viewport captures or resubmit generation just to keep it visible.
 
 Commands after B: existing UI build and
 `npm --prefix ui run test:e2e -- e2e/j7b-tracking-timeout.spec.ts` on the guarded

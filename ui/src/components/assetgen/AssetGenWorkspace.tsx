@@ -175,7 +175,6 @@ export function AssetGenWorkspace() {
               <div className="assetgen-error__text">
                 <strong>{t("assetGen.errorTitle")}</strong>
                 <span>{lastError}</span>
-                <span className="assetgen-error__hint">{t("assetGen.errorHint")}</span>
               </div>
               <button type="button" className="assetgen-error__dismiss" onClick={() => setLastError(null)}>
                 {t("assetGen.errorDismiss")}

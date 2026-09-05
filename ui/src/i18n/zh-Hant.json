@@ -1857,7 +1857,7 @@
     "imageFallback": "生成的圖像",
     "videoFallback": "生成的視頻",
     "emptyCta": "寫下你的第一個提示",
-    "errorTitle": "生成失敗",
+    "errorTitle": "生成提示",
     "errorHint": "請檢查模型與 API 金鑰設定後再試一次。",
     "errorDismiss": "關閉",
     "savedHint": "結果會自動儲存到您的專案中。",

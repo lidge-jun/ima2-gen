@@ -1857,7 +1857,7 @@
     "imageFallback": "Generated image",
     "videoFallback": "Generated video",
     "emptyCta": "Write your first prompt",
-    "errorTitle": "Generation failed",
+    "errorTitle": "Generation notice",
     "errorHint": "Check the model and API key settings, then try again.",
     "errorDismiss": "Dismiss",
     "savedHint": "Results are saved to your project automatically.",

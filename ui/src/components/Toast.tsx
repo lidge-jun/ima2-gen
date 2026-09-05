@@ -110,7 +110,7 @@ export function Toast() {
   return (
     <div className="toast-stack" aria-live="polite" aria-relevant="additions removals">
       {rows.map((row) => {
-        const cls = ["toast", "visible", row.error ? "error" : "", row.kind === "error-card" ? "toast--card" : ""]
+        const cls = ["toast", "visible", row.error ? "error" : "", row.error ? "toast--card" : ""]
           .filter(Boolean)
           .join(" ");
         return (

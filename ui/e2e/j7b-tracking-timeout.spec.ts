@@ -1,6 +1,6 @@
-import { test, expect, type Page, type TestInfo } from "@playwright/test";
+import { test, expect, type Page, type TestInfo, type Request } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
-import { preflightJ6, withJ6, requestObject, type J6Capture } from "./fixtures/j6Selection";
+import { preflightJ6, withJ6, requestObject, WP02_VIEWPORTS, type J6Capture } from "./fixtures/j6Selection";
 import { startTrackingStream, type TrackingStream } from "./fixtures/jobTrackingStream";
 import { trackingVideoBytes, trackingVideoMime, trackingVideoFilename } from "./fixtures/jobTrackingMedia";
 
@@ -11,6 +11,7 @@ const warnings = {
   "zh-Hant": "工作追蹤已逾時，無法確認服務提供方是否已完成。重試前請先檢查歷史紀錄。",
 } as const;
 const poison = "WP07_SECRET_PROMPT_TOKEN";
+const noticeTitles: Record<string, string> = { en: "Generation notice", ko: "생성 안내", "zh-Hans": "生成提示", "zh-Hant": "生成提示" };
 const expiry = { code: "UNKNOWN", rawCode: "JOB_TRACKING_TIMEOUT", errorClass: "AUTH_EXPIRED", error: poison };
 // Same synthetic PNG used by the existing owned upstream fixture.
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -30,8 +31,11 @@ async function observeNative(page: Page): Promise<void> {
     const Native = window.EventSource;
     const descriptor = Object.getOwnPropertyDescriptor(Native.prototype, "onerror")!;
     window.__wp07Native = [];
+    document.addEventListener("DOMContentLoaded", () => window.__wp07Native.push({ kind: "domcontentloaded", at: performance.now() }), { once: true });
+    window.addEventListener("load", () => window.__wp07Native.push({ kind: "load", at: performance.now() }), { once: true });
     window.EventSource = new Proxy(Native, { construct(target, args) {
       const source = Reflect.construct(target, args) as EventSource;
+      window.__wp07Native.push({ kind: "construct", at: performance.now() });
       let errorContext = "none";
       const close = source.close.bind(source);
       source.close = () => { window.__wp07Native.push({ kind: "close", at: performance.now(), closeFrom: errorContext }); close(); };
@@ -153,6 +157,69 @@ async function assertNativeError(page: Page) {
   expect(observed.filter((event) => event.kind === "close")).toEqual([]);
   expect(observed.filter((event) => event.kind === "open")).toHaveLength(1);
 }
+async function assetWarningViewports(page: Page, info: TestInfo, locale: string, warning: string) {
+  const original = page.viewportSize();
+  const alert = page.locator(".assetgen-error[role=alert]");
+  const text = alert.locator(".assetgen-error__text > span").first();
+  try {
+    for (const viewport of WP02_VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      if (viewport.width <= 800) await expect(page.locator(".app")).toHaveAttribute("data-mobile", "1");
+      else await expect(page.locator(".app")).not.toHaveAttribute("data-mobile", "1");
+      await expect(alert).toBeVisible(); await expect(text).toHaveText(warning);
+      await alert.scrollIntoViewIfNeeded(); await expect(text).toBeInViewport({ ratio: 1 });
+      await page.evaluate(async () => { await document.fonts.ready; });
+      const metrics = await text.evaluate((element) => {
+        const box = (rect: DOMRect) => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height });
+        const range = document.createRange(); range.selectNodeContents(element);
+        const container = element.closest<HTMLElement>(".assetgen-error")!;
+        return { text: element.textContent, box: box(element.getBoundingClientRect()),
+          clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+          clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+          alert: { box: box(container.getBoundingClientRect()), clientWidth: container.clientWidth, scrollWidth: container.scrollWidth },
+          textRects: Array.from(range.getClientRects(), box),
+          page: { clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth } };
+      });
+      const name = `asset-${locale}-${viewport.width}`;
+      await writeFile(info.outputPath(`wp07-${name}-metrics.json`), JSON.stringify({ viewport, expected: warning, metrics }, null, 2));
+      await screenshot(page, info, name);
+      expect(metrics.text).toBe(warning);
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+      expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+      expect(metrics.alert.scrollWidth).toBeLessThanOrEqual(metrics.alert.clientWidth + 1);
+      expect(metrics.page.scrollWidth).toBeLessThanOrEqual(metrics.page.clientWidth + 1);
+      expect(metrics.box.width).toBeGreaterThan(0); expect(metrics.box.height).toBeGreaterThan(0);
+      expect(metrics.alert.box.left).toBeGreaterThanOrEqual(-1); expect(metrics.alert.box.right).toBeLessThanOrEqual(viewport.width + 1);
+      expect(metrics.textRects.length).toBeGreaterThan(0);
+      for (const rect of metrics.textRects) {
+        expect(rect.left).toBeGreaterThanOrEqual(metrics.box.left - 1); expect(rect.right).toBeLessThanOrEqual(metrics.box.right + 1);
+        expect(rect.top).toBeGreaterThanOrEqual(metrics.box.top - 1); expect(rect.bottom).toBeLessThanOrEqual(metrics.box.bottom + 1);
+      }
+    }
+  } finally { if (original) await page.setViewportSize(original); }
+}
+
+async function readableWarningToast(page: Page, info: TestInfo, locale: string, warning: string) {
+  const message = page.locator(".toast__message").filter({ hasText: warning });
+  await expect(message).toHaveText(warning);
+  await expect(message).toBeInViewport({ ratio: 1 });
+  const metrics = await message.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const range = document.createRange(); range.selectNodeContents(element);
+    return { clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+      clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+      whiteSpace: getComputedStyle(element).whiteSpace,
+      textOverflow: getComputedStyle(element).textOverflow,
+      textFits: Array.from(range.getClientRects()).every(r => r.left >= rect.left - 1 &&
+        r.right <= rect.right + 1 && r.top >= rect.top - 1 && r.bottom <= rect.bottom + 1) };
+  });
+  await writeFile(info.outputPath(`wp07-${locale}-toast-metrics.json`), JSON.stringify(metrics, null, 2));
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+  expect(metrics.whiteSpace).toBe("normal"); expect(metrics.textOverflow).not.toBe("ellipsis");
+  expect(metrics.textFits).toBe(true);
+  await expect(page.locator(".toast__cta")).toHaveCount(0);
+}
 async function finish(page: Page, scenario: Scenario, info: TestInfo, name: string, capture: J6Capture) {
   const observed = page.isClosed() ? [] : await page.evaluate(() => window.__wp07Native ?? []);
   const cleanup = { pagesClosed: false, streamClosed: false };
@@ -179,10 +246,14 @@ for (const [locale, warning] of Object.entries(warnings)) {
         await page.locator("#assetgen-prompt").fill("Owned synthetic asset");
         await page.locator(".assetgen-generate").click();
         await expect(page.locator(".assetgen-error[role=alert] .assetgen-error__text > span").first()).toHaveText(warning);
+        await expect(page.locator(".assetgen-error__text strong")).toHaveText(noticeTitles[locale]);
+        await expect(page.locator(".assetgen-error__hint")).toHaveCount(0);
         await expect(page.locator(".toast")).toContainText(warning);
+        await readableWarningToast(page, info, locale, warning);
         await expect(page.locator("body")).not.toContainText(poison);
         await expect(page.locator(".assetgen-tile")).toHaveCount(0);
         await assertNativeError(page); await screenshot(page, info, `asset-${locale}`);
+        await assetWarningViewports(page, info, locale, warning);
         expect(capture.requests).toHaveLength(1);
       } finally { await finish(page, scenario, info, `asset-${locale}`, capture); }
     });
@@ -210,18 +281,93 @@ for (const [locale, warning] of Object.entries(warnings)) {
   });
 }
 
+type NodeProgress = {
+  steps: Array<{ name: string; state: "started" | "passed" | "failed"; at: number; error?: string }>;
+  failures: string[];
+};
+const failureText = (error: unknown) => error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+
+async function nodeStep(name: string, run: () => Promise<unknown>, info: TestInfo, progress: NodeProgress) {
+  const entry: NodeProgress["steps"][number] = { name, state: "started", at: Date.now() };
+  progress.steps.push(entry);
+  await writeFile(info.outputPath("wp07-video-node-steps.json"), JSON.stringify(progress, null, 2));
+  try { await test.step(name, run, { timeout: 10_000 }); entry.state = "passed"; }
+  catch (error) { entry.state = "failed"; entry.error = failureText(error); throw error; }
+  finally { await writeFile(info.outputPath("wp07-video-node-steps.json"), JSON.stringify(progress, null, 2)); }
+}
+
+async function nodeCheckpoint(page: Page, info: TestInfo, name: string, pending: Set<Request>) {
+  const geometry = await page.evaluate(() => {
+    const bounds = (element: Element) => {
+      const { x, y, width, height, top, right, bottom, left } = element.getBoundingClientRect();
+      return { x, y, width, height, top, right, bottom, left };
+    };
+    return { readyState: document.readyState, url: location.href, fonts: document.fonts.status,
+      viewport: { width: innerWidth, height: innerHeight }, native: window.__wp07Native ?? [],
+      loadingOverlays: Array.from(document.querySelectorAll(".node-canvas__loading"), bounds),
+      buttons: Array.from(document.querySelectorAll<HTMLButtonElement>(".image-node__generate"), (button) => {
+        const rect = bounds(button); const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        const style = getComputedStyle(button);
+        return { rect, label: button.textContent, ariaLabel: button.getAttribute("aria-label"), disabled: button.disabled,
+          display: style.display, visibility: style.visibility, pointerEvents: style.pointerEvents,
+          centerHit: hit ? { tag: hit.tagName, className: hit.getAttribute("class"), label: hit.getAttribute("aria-label") } : null,
+          receivesCenter: hit !== null && button.contains(hit) };
+      }),
+      canvas: Array.from(document.querySelectorAll(".node-canvas, .react-flow__viewport"), (element) => ({ rect: bounds(element), transform: getComputedStyle(element).transform })),
+    };
+  });
+  await writeFile(info.outputPath(`wp07-video-node-${name}.json`), JSON.stringify({ ...geometry,
+    pendingRequests: [...pending].map((request) => ({ url: request.url(), method: request.method(), type: request.resourceType() })) }, null, 2));
+  await page.screenshot({ path: info.outputPath(`wp07-video-node-${name}.png`), timeout: 3_000 });
+}
+
+async function exerciseVideoNode(page: Page, info: TestInfo, scenario: Scenario,
+  context: { origin: string; capture: J6Capture; progress: NodeProgress; pending: Set<Request> }) {
+  const { origin, capture, progress, pending } = context;
+  // Retain the original load barrier: diagnose it independently of stream OPEN and click.
+  await nodeStep("node navigation reaches load", () => page.goto(origin + "#node", { waitUntil: "load", timeout: 8_000 }), info, progress);
+  await nodeStep("native stream headers are ready", () => scenario.stream.ready(), info, progress);
+  await nodeStep("Chromium observes native OPEN", async () => {
+    await expect.poll(() => page.evaluate(() => window.__wp07Native.filter((e) => e.kind === "open").length)).toBeGreaterThan(0);
+  }, info, progress);
+  await nodeStep("node pre-action geometry", () => nodeCheckpoint(page, info, "preaction", pending), info, progress);
+  const generate = page.locator(".image-node__generate");
+  await nodeStep("node Gen is visible", () => expect(generate).toBeVisible(), info, progress);
+  await nodeStep("node Gen is enabled", () => expect(generate).toBeEnabled(), info, progress);
+  await nodeStep("node Gen click", () => generate.click({ timeout: 5_000 }), info, progress);
+  await nodeStep("node generation POST captured", () => expect.poll(() => capture.requests.length).toBe(1), info, progress);
+  await nodeStep("node terminal warning and no Retry", async () => {
+    await expect(page.locator(".image-node__status")).toContainText(warnings.en);
+    await expect(page.locator(".image-node__retry")).toHaveCount(0);
+    await expect(page.locator(".image-node__status")).toHaveAttribute("title", /JOB_TRACKING_TIMEOUT/);
+    await assertNativeError(page); await screenshot(page, info, "video-node");
+  }, info, progress);
+}
+
 test("video node tracking failure has no Retry", async ({ browser }, info) => {
   await withJ6(browser, info, { provider: "grok", videoModel: "grok-imagine-video-1.5", expectedSubmissions: 1 }, async (page, capture, origin) => {
     const scenario = await installScenario(page, capture, origin);
     scenario.session.nodes = [{ id: "wp07-node", x: 0, y: 0, data: { prompt: "Owned synthetic video", status: "empty", imageUrl: null } }];
+    const pending = new Set<Request>(); const progress: NodeProgress = { steps: [], failures: [] };
+    page.on("request", (request) => pending.add(request));
+    page.on("requestfinished", (request) => pending.delete(request));
+    page.on("requestfailed", (request) => pending.delete(request));
+    const failures: unknown[] = []; let tracing = false;
     try {
-      await open(page, origin, scenario, "#node");
-      await page.locator(".image-node__generate").click();
-      await expect(page.locator(".image-node__status")).toContainText(warnings.en);
-      await expect(page.locator(".image-node__retry")).toHaveCount(0);
-      await expect(page.locator(".image-node__status")).toHaveAttribute("title", /JOB_TRACKING_TIMEOUT/);
-      await assertNativeError(page); await screenshot(page, info, "video-node");
-    } finally { await finish(page, scenario, info, "video-node", capture); }
+      await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true }); tracing = true;
+      await exerciseVideoNode(page, info, scenario, { origin, capture, progress, pending });
+    } catch (error) {
+      failures.push(error); progress.failures.push(failureText(error));
+      try { await nodeStep("node failure geometry", () => nodeCheckpoint(page, info, "failure", pending), info, progress); }
+      catch (diagnosticError) { progress.failures.push(failureText(diagnosticError)); }
+    } finally {
+      try { if (tracing) await page.context().tracing.stop({ path: info.outputPath("wp07-video-node-trace.zip") }); }
+      catch (error) { failures.push(error); progress.failures.push(failureText(error)); }
+      try { await finish(page, scenario, info, "video-node", capture); }
+      catch (error) { failures.push(error); progress.failures.push(failureText(error)); }
+      finally { await writeFile(info.outputPath("wp07-video-node-steps.json"), JSON.stringify(progress, null, 2)); }
+    }
+    if (failures.length) throw new AggregateError(failures, "WP07 node failure; see original errors in wp07-video-node-steps.json");
   });
 });
 
@@ -274,7 +420,7 @@ for (const outcome of ["tracking", "ordinary", "cancel", "success"] as const) {
           await expect(page.locator(".toast")).toContainText("Video ready. Check your history."); await playable(page);
         } else {
           await expect(animate).toBeEnabled();
-          await expect(page.locator(".toast")).not.toContainText("Video ready");
+          await expect(page.locator(".toast").filter({ hasText: "Video ready" })).toHaveCount(0);
           if (outcome === "tracking") await expect(page.locator(".toast")).toContainText(warnings.en);
           if (outcome === "ordinary") await expect(page.locator(".toast")).toContainText("Ordinary fixture failure");
           if (outcome === "cancel") await expect(page.locator(".toast")).toHaveCount(0);
