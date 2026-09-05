@@ -26,6 +26,14 @@ Replace obsolete lexical checks with real effectiveReferenceLimit expectations:
 NAI0, OAuth/API serverdefault, MCP precedence; retain unrelated UI/settings checks.
 This is not waiver of a failing behavioral assertion.
 
+The3976ce46 full run exposed two further obsolete lexical assertions in
+nai-routing-contract.test.ts (exact NAI if-condition and textOnlyCapabilities name).
+Impact search across tests for every removed identifier/predicate found only these
+remaining cases. They now execute the actual policy getter and injected lane-map
+builder. Actual HTTP refusals/order/zero calls remain covered by the new boundary
+suite; alpha/MIME/routing tests elsewhere in the same file are retained unchanged.
+Queued8a46771f CI was canceled as known-obsolete, not relabeled a success.
+
 ## Verification
 Run new consumer test RED before optional fix, then GREEN; rerun named old failed
 test and focused matrix, fresh UI/type/build plus exact-headCI. Reuse same C
