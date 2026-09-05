@@ -1,13 +1,21 @@
 # WP09 — isolated, persistence-honest composer journeys
 
-Status: WP00 design only. Baseline `ecde2bc79cddc50ff0da38091c1ce0590383090c`.
+Status: WP09 P revalidation. Original WP00 baseline was
+`ecde2bc79cddc50ff0da38091c1ce0590383090c`; current implementation base is
+`7e2f084d82b8f7852be96636ced65d485c17076c` (WP08c/PR210).
+Current authoritative amendments are [091](091_revalidation.md),
+[092](092_runtime_contract.md), and [093](093_journey_contract.md). They preserve
+the acceptance floor below while replacing stale caller counts, duplicate helper
+proposals, per-start compilation and the old test-only scope. WP00 amendment
+receipts at the end remain historical evidence, not current execution proof.
 Research: [003_visual_research.md](003_visual_research.md).
 Geometry contract: [080_composer_contract.md](080_composer_contract.md).
 
 ## Outcome, scope and dependency contracts
 
-Archetype: regression protection. Trigger: existing seven E2E files cover only
-eleven cases, reseed navigation state and inherit live environment/ports.
+Archetype: regression protection. Trigger: legacy start/seed paths still inherit
+environment or reseed on reload, while current179 cases in15 files require the
+updated ownership map and preserved fixture protections in091.
 Goal: reproduce actual cross-mode/provider/viewport edits and recovery without
 live provider traffic or a fixture overwriting the state under test.
 Non-goals: provider generation proof, another Playwright install, a universal
@@ -22,7 +30,7 @@ to main before widening implementation; this leaf cannot control FSM/git/release
 
 Semantic prerequisites: WP02 provider/model selection and WP08 retained DOM/input
 contract. J5 recovery consumes WP07, without modifying its lifecycle. Stack parent
-is WP08; WP03–06 appear by cumulative integration, not UI imports.
+is WP08c/PR210; WP03–06 appear by cumulative integration, not UI imports.
 WP09 owns fixture isolation and journey tests, WP12 consumes those fixtures and
 owns combined evidence/build verification. Main explicitly requested this bounded
 isolation scope on 2026-09-05. No fixture changes are made now.

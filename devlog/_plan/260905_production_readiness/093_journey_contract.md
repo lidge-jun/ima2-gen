@@ -54,19 +54,30 @@ export type McpReadinessObservation = {
   selection: McpReadinessSelection;
   phase: "loading" | "ready" | "error";
   observedAt: number | null;
-  providers: readonly McpProviderRecord[];
-  catalog: McpModelCatalog | null;
+  providers: readonly { id: string; enabled: boolean; executable?: boolean;
+    status: { state: McpConnectionState } }[];
+  catalog: { image: McpReadinessModel[]; video: McpReadinessModel[] } | null;
 };
+export type McpReadinessModel = { id: string; label: string; executable?: boolean };
 export type McpReadinessCode = "loading" | "error" | "missing" | "disabled" |
   "disconnected" | "locked" | "default" | "model-missing" | "model-locked" | "ready";
 export type McpReadiness = { code: McpReadinessCode; provider: string; kind: McpMediaKind;
   model: string | null; modelLabel: string | null; observedAt: number | null };
 export function deriveMcpReadiness(observation: McpReadinessObservation,
   selection: McpReadinessSelection): McpReadiness;
+export function parseMcpReadinessData(providers: unknown, catalog: unknown | null):
+  Pick<McpReadinessObservation, "providers" | "catalog">;
 ```
 
 Field chain: store provider/model/kind → component selection snapshot → existing
-listMcpProviders/getMcpModelCatalog GET clients → local observation → pure display.
+listMcpProviders/getMcpModelCatalog GET clients → consumed-field validation → local
+observation → pure display. McpMediaKind/McpConnectionState import their existing
+canonical type owners. The parser requires provider id/enabled/status.state and
+optional executable, model id/label/optional executable and both model arrays.
+Unknown extra fields are ignored; malformed consumed fields throw a fixed
+MCP_READINESS_INVALID error caught into the local error state. No endpoint,
+authorization URL, raw detail or capabilities object is copied into the display.
+This does not alter the existing client cache or globally reparse every MCP caller.
 No new persisted state, provider IDs, request payloads or server endpoints.
 
 Read providers first using an AbortController. Only an enabled, connected,

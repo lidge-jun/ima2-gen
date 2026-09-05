@@ -240,3 +240,93 @@ to the second owned origin. This prevents unloading after origin lease retiremen
 No extra seed is installed and no persistence assertion is removed. J6 already
 closes pages before the app; keep that ordering. Its owned native stream path is
 unchanged. All current app-starting specs adopt the cleanup-owning test import.
+
+## Guard and IPC precision
+
+090's policy remains exactly `{version:1,root,home,dependencyRoots}`. All values
+must match the issued canonical roots before installing guards. No cache path,
+command argv or arbitrary target can be smuggled in a new policy field. Runtime
+helpers export only the described installers/check functions, not app mutation APIs.
+
+IPC accepts only version1 ready, fixed filesystem denial, fixed process denial,
+and connection denial record shapes from090. Unknown fields/types or malformed
+records are protocol violations and fail startup/clean checks without echoing the
+message. Discovery enum is exactly agy-version/grok-version/codex-login-status or
+null, not arbitrary strings. Host/port records contain no URL path/query/credentials.
+All unexpected denials remain in the ledger even when the app catches the error.
+
+Network installer covers the socket connect overloads, rejects pipes/custom fd/
+lookup/socketPath, and permits only the exact HTTP stub address. Add explicit
+DNS resolver/lookup, TLS, HTTP2, UDP and global WebSocket traps patterned after
+the verified route-test fixture. No legacy caller lease is imported. A new app
+native stream is not authorized; the existing WP07 browser-only stream stays in
+its own parent fixture. Tests use harmless sentinels for every transport and an
+actual owned HTTP control request plus redirect denial in the hosted boundary.
+
+Path conversion rejects NUL, non-file URL and Buffer values that do not round-trip
+as UTF-8 before canonicalization. Otherwise an invalid-byte filename could be
+checked under replacement characters but passed unchanged to native fs. Preserve
+URL/Buffer/string safe forms and test an invalid-byte Buffer explicitly. Nearest-
+existing-parent traversal handles ENOENT/ENOTDIR only; permission/other errors deny.
+Check lexical policy and canonical target, including sibling-prefix and symlink
+escapes, before any native content/open/copy call.
+
+Descriptor registry exposes checked read/write/metadata checks, registers only
+native open results after path/mode admission, and removes entries on close. A
+FileHandle is admitted by object identity, not any object with an fd property;
+its methods retain the correct native receiver. readFile/readStream flags are
+checked just like open flags. cp preflight traverses only already-admitted source
+metadata, checking each effective destination and rejecting nested links before
+native recursive copy. No data source is opened during policy canonicalization.
+
+These additions harden exercised JavaScript paths; native bindings/internal
+loaders/new unpatched APIs remain outside the claim. Hosted cleanroom and trusted
+code/dependency assumptions are unchanged, so none grants permission for a local
+browser/server probe or an unreviewed new runtime allowance.
+
+## Reachable negative setup seam
+
+I6/I9 cannot poison a constructed runtime or remove an emitted entry through the
+old startApp options alone. Add a test-fixture-only option, preserving all old
+fields and defaults:
+
+```ts
+type AppStartOptions = {
+  provider?: "minimax" | "oauth";
+  home?: string;
+  withoutMinimaxKey?: boolean;
+  j6?: boolean;
+  prepareRuntime?: (paths: { runtimeRoot: string; home: string }) => Promise<void>;
+};
+```
+
+This callback runs in the already-required disposable parent AFTER projection
+construction and BEFORE child spawn. It is for owned synthetic fault setup, not
+an app runtime flag or permission bypass. Launcher still rechecks issued projection
+identity, manifest entry/guard bytes, policy and UI receipt after the callback;
+there is no custom command/argv/env/skip option. Missing/tampered compiled entries
+therefore fail before spawn, while an injected `.ima2/config.json` remains an
+explicit data-read denial tested by the actual child guard. The callback cannot
+make a corrupt projection valid; a thrown setup error follows normal cleanup.
+Trusted parent test code remains outside the JS child guard by definition.
+
+For missing/malformed primary config, issue a home through the ownership API and
+pass it via existing home option. An explicitly supplied registered home is never
+reseeded; only a default newly issued start initializes config. This preserves
+restart semantics and makes both I6 branches constructible without real-home edits.
+
+NEW `ui/e2e/fixtures/appGuardReport.ts` owns the typed IPC collector used by startApp
+and isolated guard probes. It exposes createGuardReport with accept(unknown), a
+ready promise, immutable diagnostic views and assertClean. Malformed IPC fails the
+ready promise/clean assertion with a fixed code, no raw payload. Probe-only result
+messages use a separate test-local handler and are never accepted as guard-ready.
+The MJS runtime protocol validator and this collector are checked against shared
+literal positive/negative JSON examples; no app imports or fake authentication.
+
+I8/I9 direct emitted-module probes run as separate parent-owned Node children with
+the same fixed --import guard before their test driver; the app child never spawns
+them. They invoke real codexDetect/quota/storageMigration only after guard-ready,
+report fixed synthetic observations and exit. Driver code is fixture-owned, not
+retrieved text or user input. Actual normal startApp plus models/keys/quota requests
+still separately prove server startup. Do not replace either with a hand-called
+mock that cannot activate the consumer.
