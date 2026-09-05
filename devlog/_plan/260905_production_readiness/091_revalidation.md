@@ -140,3 +140,25 @@ the auto-owned cleanup fixture, including newer specs omitted by old090.
 AppHandle.isolation's current J6 provenance fields must remain serializable for
 those evidence writers; new guard counters belong in an additive nested record.
 Never drop existing hosted preflight because a new JavaScript guard was installed.
+
+## Remaining architecture decisions before A
+
+The old projection design recompiles the entire server and CLI for every start.
+That was sized around eleven cases; the current suite starts many independent
+apps across179 cases. Do not silently add repeated whole-tree compiles to every
+journey. Main will specify one worker-owned verified emitted-source cache with
+fresh source/compiler/output binding checks, then a separate per-start runtime
+projection and owned home. Cache reuse must reject changed source/compiler/output;
+it must not be a stale emitted-JS fallback or a global persistent build service.
+No implementation or measured performance claim yet. The existing single-worker
+Playwright setting stays unchanged; resource budgeting is not a reason to skip
+any activation row.
+
+Guard installers need explicit submodule boundaries rather than squeezing all
+filesystem variants into one long module: canonical path/policy checks, descriptor
+tracking, filesystem API wrappers, process guard, network guard, and parent-only
+ownership/projection construction. Every runtime guard helper must be explicitly
+added to the positive source-copy manifest; parent builders must never be copied
+as preloads. Define the actual public signatures and file list before assigning B.
+Source test fixtures are examples, not permission to import node:test or provider
+adapters into the guarded runtime. No generic utils or unbounded module scan.
