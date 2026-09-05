@@ -76,3 +76,17 @@ already supply guidance. Assert no generic hint in that native case. The managem
 capture showed the top of Settings, not the below-fold manager: scroll the actual
 manager title into the viewport before taking its screenshot. These are separate
 display/capture defects, not a reason to change generation or navigation contracts.
+
+## Second candidate results and final spacing repair
+
+`0bf82adb`: CI33993001710 passed all3 jobs; each Node matrix ran3149 tests,
+3145 pass/0fail/4skip. Native179 passed; CodeQL33993002896 passed with93 exact
+existing alert identities, no additions/removals compared with WP08. Current
+40PNG/35scenario teardown manifest is clean. Main viewed8 current frames: provider
+identity, selected-video hint and management capture corrections are confirmed.
+However refresh-error sidebar text directly touches the Refresh button. The status
+owner mixes inline text and a44px button without a layout gap, creating an uneven
+baseline. Add flex-wrap/center/gap4px8px to this scoped status row and44px min width
+to its existing button; no global layout change. Native320 error case independently
+asserts that text/button rectangles are separated. Current screenshots remain
+candidate evidence until this last render delta has a fresh run.

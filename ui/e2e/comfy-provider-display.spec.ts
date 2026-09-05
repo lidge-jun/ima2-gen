@@ -179,6 +179,12 @@ test("320px catalog error keeps the recovery row and selection controls visible"
     const row = page.locator(".mobile-app-bar .gen-provider-model__catalog-state");
     await expect(row).toContainText("Could not read the workflow catalog.");
     const metrics = await readable(row);
+    const spacing = await row.evaluate((element) => {
+      const text = element.querySelector("span")!.getBoundingClientRect();
+      const button = element.querySelector("button")!.getBoundingClientRect();
+      return { separated: button.left >= text.right + 7 || button.top >= text.bottom + 3 };
+    });
+    expect(spacing.separated).toBe(true);
     await readable(row.getByRole("button", { name: "Refresh", exact: true }), true);
     await displayEvidence(page, info, "narrow-error", capture, page.locator(".mobile-app-bar"), metrics);
   });
