@@ -34,3 +34,22 @@ adversaries, all caller paths, hosted 50MiB bounds, Windows or final UI behavior
 Independent test/operation/CI workers and a read-only reader reviewer are active.
 Their remaining evidence must close before C/D. Existing scripts/recording/ is
 untouched user work. No stack merge or release occurred.
+
+## B reader review — primary EIO preservation
+
+Curie2 (01a071d8-ec44-7733-a3e3-94cdae631d0f) returned GO-WITH-FIXES with one
+Medium blocker: inspectCandidate/validateMapping catch-all branches replace
+native EIO with AGY_PATH_REJECTED, so outer openChecked cannot preserve it.
+Accepted: preserve the original EIO object at candidate/mapping boundaries;
+root-discovery failures stay safe policy rejection. This follows the audited
+primary-error contract and does not authorize cleanup or return on failed I/O.
+Add actual initial/post-read metadata EIO checks, then request same-reviewer
+closure. No other concrete reader blocker was reported by the read-only review.
+
+Main runtime evidence: reader-smoke.mjs --eio injects the same owned EIO object
+at initial and post-read candidate metadata visits. Before the correction both
+reported AGY_PATH_REJECTED/sameError=false and exited1 (metadata-eio-red.txt).
+After rejectPathOrIo and build:server exit0, identical invocations report
+EIO/sameError=true at both points and exit0 (metadata-eio-green.txt); the ordinary
+68-byte emitted smoke and cleanup checks still pass. Durable tests are being added
+by the artifact-test worker; final independent C evidence remains outstanding.

@@ -31,6 +31,11 @@ const receipts = new WeakMap<AgyArtifactRead, ArtifactSnapshot>();
 const pathRejected = () => agyError("Agy artifact path was rejected", 502, "AGY_PATH_REJECTED");
 const tooLarge = () => agyError("Agy artifact exceeds the size limit", 502, "AGY_ARTIFACT_TOO_LARGE");
 
+function rejectPathOrIo(error: unknown): never {
+  if (error instanceof Error && Reflect.get(error, "code") === "EIO") throw error;
+  throw pathRejected();
+}
+
 function abortIfNeeded(signal?: AbortSignal): void {
   if (signal?.aborted) throw agyError("Generation canceled", 499, "GENERATION_CANCELED");
 }
@@ -92,7 +97,7 @@ async function inspectCandidate(candidate: string): Promise<ArtifactSnapshot> {
     if (error instanceof Error && ["ENOENT", "ENOTDIR"].includes(String(Reflect.get(error, "code")))) {
       throw agyError("Agy artifact was not found", 502, "AGY_ARTIFACT_NOT_FOUND");
     }
-    throw pathRejected();
+    rejectPathOrIo(error);
   }
   try {
     if (info.isSymbolicLink() || !info.isFile()) throw pathRejected();
@@ -102,7 +107,7 @@ async function inspectCandidate(candidate: string): Promise<ArtifactSnapshot> {
     const parent = await lstat(dirname(canonicalPath), { bigint: true });
     if (!parent.isDirectory()) throw pathRejected();
     return { candidate, canonicalPath, roots, root, identity: identity(info), parentIdentity: identity(parent) };
-  } catch { throw pathRejected(); }
+  } catch (error) { rejectPathOrIo(error); }
 }
 
 async function validateMapping(snapshot: ArtifactSnapshot): Promise<void> {
@@ -116,7 +121,7 @@ async function validateMapping(snapshot: ArtifactSnapshot): Promise<void> {
       || !canonicalInfo.isFile() || canonicalInfo.isSymbolicLink()
       || !sameIdentity(canonicalInfo, snapshot.identity)
       || !contained(snapshot.root.canonical, canonical)) throw pathRejected();
-  } catch { throw pathRejected(); }
+  } catch (error) { rejectPathOrIo(error); }
 }
 
 async function openChecked(candidate: string): Promise<{ handle: FileHandle; snapshot: ArtifactSnapshot; size: bigint }> {
@@ -132,8 +137,7 @@ async function openChecked(candidate: string): Promise<{ handle: FileHandle; sna
   } catch (error) {
     if (handle) await handle.close().catch(() => {}); // Preserve the failed trust check.
     // No descriptor receipt exists until every trust check above succeeds.
-    if (error instanceof Error && Reflect.get(error, "code") === "EIO") throw error;
-    throw pathRejected();
+    rejectPathOrIo(error);
   }
 }
 
