@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
-import fs from "node:fs/promises";
+import fs, { type FileHandle } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { basename, dirname, join, resolve } from "node:path";
 import { mock } from "node:test";
 import { openAgyProcessFixture } from "./_agyProcessFixture.ts";
 
 type NativeFixture = Awaited<ReturnType<typeof openAgyProcessFixture>>;
-type IoMethod = "mkdir" | "writeFile" | "readFile" | "rm";
-type HoldPoint = "read" | "ref-rm";
+type IoMethod = "mkdir" | "writeFile" | "read" | "close" | "unlink" | "rmdir" | "rm";
+type HoldPoint = "read" | "eof" | "close" | "ref-rm";
 export interface AgyFaultPlan {
   fail?: "mkdir" | "second-ref" | "read";
   hold?: HoldPoint;
@@ -40,9 +40,10 @@ export class AgyFaults {
   private readonly restores: Array<() => void> = [];
   private activeIo = 0;
   private readBytes: Buffer | undefined;
+  private readonly handles = new Set<FileHandle>();
   private readonly originals = {
     mkdir: fs.mkdir, writeFile: fs.writeFile, readFile: fs.readFile, rm: fs.rm,
-    readdir: fs.readdir, stat: fs.stat,
+    readdir: fs.readdir, stat: fs.stat, open: fs.open, unlink: fs.unlink, rmdir: fs.rmdir,
   };
 
   constructor(readonly fixture: NativeFixture, readonly plan: AgyFaultPlan) {
@@ -52,7 +53,7 @@ export class AgyFaults {
 
   install(): void {
     try {
-      for (const method of ["mkdir", "writeFile", "readFile", "rm"] as const) {
+      for (const method of ["mkdir", "writeFile", "unlink", "rmdir", "rm"] as const) {
         const owner = this;
         const original = this.originals[method];
         const hooked = mock.method(fs, method, async function (this: unknown, ...args: unknown[]) {
@@ -62,8 +63,40 @@ export class AgyFaults {
         });
         this.restores.push(() => hooked.mock.restore());
       }
+      const opened = mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+        try {
+          const handle = await this.originals.open(...args);
+          if (args[0] === this.artifactPath) this.hookHandle(handle);
+          return handle;
+        } catch (error) { throw error; }
+      });
+      this.restores.push(() => opened.mock.restore());
       syncBuiltinESMExports();
     } catch (error) { this.restore(); throw error; }
+  }
+
+  private hookHandle(handle: FileHandle): void {
+    this.handles.add(handle);
+    const read = handle.read.bind(handle);
+    // Preserve native overloads and receiver; only the exact owned descriptor is hooked.
+    const hookedRead = mock.method(handle, "read", (...args: unknown[]) => this.intercept(
+      "read", [this.artifactPath], async () => {
+        const result = await Reflect.apply(read, handle, args);
+        this.readBytes = Buffer.concat([this.readBytes ?? Buffer.alloc(0),
+          Buffer.from(result.buffer.subarray(Number(args[1] ?? 0), Number(args[1] ?? 0) + result.bytesRead))]);
+        if (result.bytesRead === 0 && this.plan.hold === "eof") {
+          this.barrier.enter(); await this.barrier.released;
+        }
+        return result;
+      }));
+    const close = handle.close.bind(handle);
+    const hookedClose = mock.method(handle, "close", () => this.intercept(
+      "close", [this.artifactPath], async () => {
+        await close();
+        assert.equal(handle.fd, -1, "native descriptor actually closed");
+        this.handles.delete(handle);
+      }));
+    this.restores.push(() => hookedRead.mock.restore(), () => hookedClose.mock.restore());
   }
 
   private target(method: IoMethod, argument: unknown): string | undefined {
@@ -77,18 +110,20 @@ export class AgyFaults {
     if (method === "writeFile" && this.stageDirectories.has(dirname(argument))
       && /^ref_[0-2]\.(png|jpg|webp)$/.test(basename(argument))) return argument;
     if (method === "rm" && this.stageDirectories.has(argument)) return argument;
-    if ((method === "readFile" || method === "rm") && argument === this.artifactPath) return argument;
+    if (method === "rmdir" && argument === dirname(this.artifactPath)) return argument;
+    if (["read", "close", "unlink"].includes(method) && argument === this.artifactPath) return argument;
     return undefined;
   }
 
   private injects(method: IoMethod, path: string): boolean {
     return (this.plan.fail === "mkdir" && method === "mkdir")
       || (this.plan.fail === "second-ref" && method === "writeFile" && basename(path) === "ref_1.png")
-      || (this.plan.fail === "read" && method === "readFile");
+      || (this.plan.fail === "read" && method === "read");
   }
 
   private holds(method: IoMethod, path: string): boolean {
-    return (this.plan.hold === "read" && method === "readFile" && path === this.artifactPath)
+    return (this.plan.hold === "read" && method === "read" && path === this.artifactPath)
+      || (this.plan.hold === "close" && method === "close" && path === this.artifactPath)
       || (this.plan.hold === "ref-rm" && method === "rm" && this.stageDirectories.has(path));
   }
 
@@ -107,7 +142,6 @@ export class AgyFaults {
         throw this.error;
       }
       const result = await forward();
-      if (method === "readFile" && Buffer.isBuffer(result)) this.readBytes = result;
       this.receipts.push({ method, path, state: "completed" });
       return result;
     } catch (error) { throw error; }
@@ -120,6 +154,13 @@ export class AgyFaults {
     }));
     this.pending.push(work);
     // Register a rejection observer immediately; assertions still await the original promise.
+    void work.catch(() => {});
+    return work;
+  }
+
+  runNode() {
+    const work = this.fixture.node(this.controller.signal);
+    this.pending.push(work);
     void work.catch(() => {});
     return work;
   }
@@ -186,6 +227,7 @@ export class AgyFaults {
     try {
       await Promise.allSettled(this.pending);
       assert.equal(this.activeIo, 0, "owned filesystem hooks cannot restore with active I/O");
+      assert.equal(this.handles.size, 0, "all owned native descriptors closed before restoring hooks");
     } catch (error) { throw error; }
   }
 

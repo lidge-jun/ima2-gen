@@ -6,6 +6,7 @@ import { chmod, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promise
 import { dirname, delimiter, join, isAbsolute } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
 import { mock } from "node:test";
+import type { Request, Response } from "express";
 import type { RuntimeContext } from "../lib/runtimeContext.ts";
 import type { generateViaAgy } from "../lib/providers/adapters/agyOperations.ts";
 import type { prepareImageExecution } from "../lib/providers/execution/index.ts";
@@ -22,13 +23,16 @@ export interface AgyProcessFixture {
   observations(): readonly Record<string, unknown>[];
   track<T>(work: Promise<T>): Promise<T>;
   close(): Promise<void>;
+  node(signal?: AbortSignal): Promise<{ status: number; body: Record<string, unknown> }>;
 }
 
 const WATCHDOG_MS = 10_000;
 const DRAIN_MS = 3_000;
 const SCENARIOS = new Set(["success", "malformed-result", "no-artifact", "unparseable",
   "unparseable-with-recent-artifact", "error", "quota", "outside-path", "cooperative-wait",
-  "term-ignored-wait", "stderr-result", "saved-path", "nonzero", "raw-quota"]);
+  "term-ignored-wait", "stderr-result", "saved-path", "nonzero", "raw-quota", "tiny-overflow"]);
+type ArtifactPolicy = Readonly<{ maxBytes: number; chunkBytes: number }>;
+let policyKey: string | undefined;
 type Observation = Record<string, unknown>;
 type Isolation = Awaited<ReturnType<typeof isolateExecution>>;
 type NativeSpawn = typeof childProcess.spawn;
@@ -261,10 +265,17 @@ function isolateConfig(state: State, config: RuntimeContext["config"]): void {
   }
 }
 
-async function loadHandle(state: State): Promise<AgyProcessFixture> {
+async function loadHandle(state: State, artifactPolicy?: ArtifactPolicy): Promise<AgyProcessFixture> {
   try {
-    const { config } = await import("../config.ts");
+    const configModule = await import("../config.ts");
+    const { config } = configModule;
     isolateConfig(state, config);
+    if (artifactPolicy) {
+      const configured = mock.module(new URL("../config.ts", import.meta.url).href, {
+        namedExports: { ...configModule, AGY_ARTIFACT_POLICY: Object.freeze({ ...artifactPolicy }) },
+      });
+      state.restorations.push(() => configured.restore());
+    }
     const { configureLogger } = await import("../lib/logger.ts");
     configureLogger({ level: "silent" });
     state.restorations.push(() => configureLogger({ level: "silent" }));
@@ -292,11 +303,15 @@ async function loadHandle(state: State): Promise<AgyProcessFixture> {
       waitFor: (event) => waitFor(state, event), spawnCount: () => state.children.length,
       observations: () => state.observations.slice(state.cursor),
       track: (work) => track(state, work), close: () => close(state),
+      node: (signal) => track(state, runNode(state, ctx, signal)),
     };
   } catch (error) { throw error; }
 }
 
-export async function openAgyProcessFixture(): Promise<AgyProcessFixture> {
+export async function openAgyProcessFixture(artifactPolicy?: ArtifactPolicy): Promise<AgyProcessFixture> {
+  const key = JSON.stringify(artifactPolicy ?? null);
+  assert.ok(policyKey === undefined || policyKey === key, "Different policies require fresh isolated processes");
+  policyKey = key;
   const nativeSpawn = childProcess.spawn;
   const setTimer = globalThis.setTimeout;
   const clearTimer = globalThis.clearTimeout;
@@ -307,6 +322,10 @@ export async function openAgyProcessFixture(): Promise<AgyProcessFixture> {
     observations: [], listeners: new Set(), restorations: [], cursor: 0, closing: false, restored: false };
   try {
     state.restorations.push(isolateEnvironment(root));
+    const home = mock.method(os, "homedir", () => root);
+    const temp = mock.method(os, "tmpdir", () => root);
+    state.restorations.push(() => home.mock.restore(), () => temp.mock.restore());
+    syncBuiltinESMExports();
     assert.equal(os.homedir(), root); assert.equal(os.tmpdir(), root);
     await mkdir(dirname(state.executable));
     const source = await readFile(new URL("./fixtures/agy-fixture.mjs", import.meta.url), "utf8");
@@ -317,6 +336,32 @@ export async function openAgyProcessFixture(): Promise<AgyProcessFixture> {
     process.env.IMA2_AGY_BIN = state.executable;
     installSpawn(state);
     await configure(state, "success");
-    return await loadHandle(state);
+    return await loadHandle(state, artifactPolicy);
   } catch (error) { await close(state); throw error; }
+}
+
+/** Invoke the real node handler/normalizer/persistence boundary; only HTTP framing is synthetic. */
+async function runNode(state: State, ctx: RuntimeContext, signal?: AbortSignal) {
+  await mkdir(ctx.config.storage.generatedDir, { recursive: true });
+  const { runNodeGeneration } = await import("../lib/nodeGeneration.ts");
+  const { abortJob } = await import("../lib/inflight.ts");
+  const { closeDb } = await import("../lib/db.ts");
+  state.restorations.push(closeDb);
+  const requestId = "owned-agy-node";
+  const cancel = () => { abortJob(requestId); };
+  signal?.addEventListener("abort", cancel, { once: true });
+  let status = 200;
+  let body: Record<string, unknown> | undefined;
+  // The handler's consumed Request/Response members, not a mocked execution result.
+  const req = { body: { requestId, provider: "agy", prompt: "owned node prompt", mode: "direct",
+    searchMode: "off", references: ["iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="] },
+    headers: {}, get: () => undefined } as unknown as Request;
+  const res = { status(value: number) { status = value; return this; },
+    json(value: Record<string, unknown>) { assert.equal(body, undefined, "one HTTP response"); body = value; return this; },
+    setHeader() {}, headersSent: false } as unknown as Response;
+  try {
+    await runNodeGeneration(req, res, ctx);
+    assert.ok(body, "actual node handler produced an envelope");
+    return { status, body };
+  } finally { signal?.removeEventListener("abort", cancel); }
 }

@@ -71,19 +71,20 @@ export async function findRecentAgyArtifact(sinceMs: number, rootOverrides?: str
 
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
     for (const entry of entries) {
+      if (entry.isSymbolicLink()) continue;
       const p = join(dir, entry.name);
 
-      if (!entry.isSymbolicLink() && entry.isDirectory()) {
+      if (entry.isDirectory()) {
         await walk(p, depth + 1);
         continue;
       }
 
-      if (!/^ima2_generated.*\.(png|jpg|jpeg|webp)$/i.test(entry.name)) {
+      if (!entry.isFile() || !/^ima2_generated.*\.(png|jpg|jpeg|webp)$/i.test(entry.name)) {
         continue;
       }
 
       const s = await stat(p).catch(() => null);
-      if (!s) continue;
+      if (!s?.isFile()) continue;
 
       if (s.mtimeMs >= sinceMs - 5_000) {
         candidates.push({ path: p, mtimeMs: s.mtimeMs });

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
+import { readdir } from "node:fs/promises";
 import test from "node:test";
 import { withAgyFaults } from "./_agyFaultFixtures.ts";
 
@@ -23,7 +24,7 @@ test("Agy ordinary success activates exact staging/read/removal hooks", async ()
     await fixture.waitFor("close");
     assert.equal(faults.count("mkdir", "completed"), 1);
     assert.equal(faults.count("writeFile", "completed"), 2);
-    assert.equal(faults.count("readFile", "entered"), 1);
+    assert.equal(faults.count("read", "entered"), 1);
     assert.deepEqual((await faults.stagedFiles()).sort(), ["ref_0.png", "ref_1.png"]);
     for (const [index, reference] of REFERENCES.entries()) {
       assert.deepEqual(await faults.readKnown(join(faults.directory(), `ref_${index}.png`)),
@@ -38,8 +39,11 @@ test("Agy ordinary success activates exact staging/read/removal hooks", async ()
     assert.equal(result.revisedPrompt, "cleanup fixture prompt");
     assert.deepEqual(result.usage, { agy_artifact_bytes: expectedArtifact.length });
     assert.equal(result.webSearchCalls, 0);
-    assert.equal(faults.count("readFile", "completed"), 1);
-    assert.equal(faults.count("rm", "completed"), 2);
+    assert.equal(faults.count("read", "completed"), 2, "data read plus bounded EOF read");
+    assert.equal(faults.count("close", "completed"), 1);
+    assert.equal(faults.count("unlink", "completed"), 1);
+    assert.equal(faults.count("rmdir", "completed"), 1);
+    assert.equal(faults.count("rm", "completed"), 1, "reference staging only");
     await faults.assertAbsent(faults.directory());
     await faults.assertAbsent(faults.artifactPath);
   });
@@ -59,7 +63,7 @@ test("Agy second-reference EIO removes partial staging and preserves error ident
       [join(faults.directory(), "ref_1.png"), "injected"],
     ]);
     assert.equal(fixture.spawnCount(), 0);
-    assert.equal(faults.count("readFile", "entered"), 0);
+    assert.equal(faults.count("read", "entered"), 0);
     assert.equal(faults.count("rm", "completed"), 1);
     await faults.assertAbsent(faults.directory());
   });
@@ -71,7 +75,7 @@ test("Agy owned mkdir failure preserves EIO with no staged files or process", as
     assert.equal(faults.count("mkdir", "injected"), 1);
     assert.equal(faults.count("mkdir", "completed"), 0);
     assert.equal(faults.count("writeFile", "entered"), 0);
-    assert.equal(faults.count("readFile", "entered"), 0);
+    assert.equal(faults.count("read", "entered"), 0);
     assert.equal(fixture.spawnCount(), 0);
     await faults.assertAbsent(faults.directory());
   });
@@ -82,15 +86,18 @@ test("Agy abort during held artifact read rejects 499 and cleans the successfull
     const work = faults.run(REFERENCES);
     await faults.waitAt("read", work);
     await fixture.waitFor("close");
-    assert.equal(faults.count("readFile", "completed"), 0);
+    assert.equal(faults.count("read", "completed"), 0);
     const expectedArtifact = await faults.readKnown(faults.artifactPath);
     faults.controller.abort();
     faults.release();
     await assert.rejects(work, isCanceled);
     assert.equal(fixture.spawnCount(), 1);
-    assert.equal(faults.count("readFile", "completed"), 1);
+    assert.equal(faults.count("read", "completed"), 1);
     assert.deepEqual(faults.successfulRead(), expectedArtifact);
-    assert.equal(faults.count("rm", "completed"), 2);
+    assert.equal(faults.count("close", "completed"), 1);
+    assert.equal(faults.count("unlink", "completed"), 1);
+    assert.equal(faults.count("rmdir", "completed"), 1);
+    assert.equal(faults.count("rm", "completed"), 1);
     await faults.assertAbsent(faults.artifactPath);
     await faults.assertAbsent(faults.directory());
   });
@@ -101,14 +108,17 @@ test("Agy abort during successful held reference removal is caught after cleanup
     const work = faults.run(REFERENCES);
     await faults.waitAt("ref-rm", work);
     await fixture.waitFor("close");
-    assert.equal(faults.count("readFile", "completed"), 1);
+    assert.equal(faults.count("read", "completed"), 2);
+    assert.equal(faults.count("close", "completed"), 1);
     await faults.assertAbsent(faults.artifactPath);
     assert.deepEqual((await faults.stagedFiles()).sort(), ["ref_0.png", "ref_1.png"]);
     faults.controller.abort();
     faults.release();
     await assert.rejects(work, isCanceled);
     assert.equal(fixture.spawnCount(), 1);
-    assert.equal(faults.count("rm", "completed"), 2);
+    assert.equal(faults.count("unlink", "completed"), 1);
+    assert.equal(faults.count("rmdir", "completed"), 1);
+    assert.equal(faults.count("rm", "completed"), 1);
     await faults.assertAbsent(faults.directory());
   });
 });
@@ -118,8 +128,11 @@ test("Agy primary read EIO survives abort during held reference cleanup", async 
     const work = faults.run(REFERENCES);
     await faults.waitAt("ref-rm", work);
     await fixture.waitFor("close");
-    assert.equal(faults.count("readFile", "injected"), 1);
-    assert.equal(faults.count("readFile", "completed"), 0);
+    assert.equal(faults.count("read", "injected"), 1);
+    assert.equal(faults.count("read", "completed"), 0);
+    assert.equal(faults.count("close", "completed"), 1);
+    assert.equal(faults.count("unlink", "entered"), 0);
+    assert.equal(faults.count("rmdir", "entered"), 0);
     const unreadArtifact = await faults.readKnown(faults.artifactPath);
     faults.controller.abort();
     faults.release();
@@ -131,3 +144,48 @@ test("Agy primary read EIO survives abort during held reference cleanup", async 
     assert.deepEqual(await faults.readKnown(faults.artifactPath), unreadArtifact);
   });
 });
+
+for (const hold of ["eof", "close"] as const) {
+  test(`Agy abort during held ${hold} drains native close and prevents a successful result`, async () => {
+    await withAgyFaults({ hold }, async (faults, fixture) => {
+      const work = faults.run(REFERENCES);
+      await faults.waitAt(hold, work);
+      await fixture.waitFor("close");
+      faults.controller.abort();
+      faults.release();
+      await assert.rejects(work, isCanceled);
+      assert.equal(faults.count("close", "completed"), 1);
+      assert.equal(faults.count("unlink", "completed"), 1);
+      assert.equal(faults.count("rmdir", "completed"), 1);
+      assert.equal(faults.count("rm", "completed"), 1);
+      await faults.assertAbsent(faults.artifactPath);
+      await faults.assertAbsent(faults.directory());
+    });
+  });
+}
+
+for (const hold of ["read", "ref-rm"] as const) {
+  test(`Agy actual node cancellation during ${hold} returns 499 without persistence`, async () => {
+    await withAgyFaults({ hold }, async (faults, fixture) => {
+      const work = faults.runNode();
+      await faults.waitAt(hold, work);
+      const closed = await fixture.waitFor("close");
+      assert.deepEqual(closed.refsExist, [true]);
+      faults.controller.abort(); faults.release();
+      const result = await work;
+      assert.equal(result.status, 499);
+      // Existing node normalization projects unlisted 4xx codes to INVALID_REQUEST.
+      // Direct operation cases above still require GENERATION_CANCELED/499.
+      assert.deepEqual(result.body.error, { code: "INVALID_REQUEST", message: "Generation canceled" });
+      assert.equal(fixture.spawnCount(), 1);
+      assert.equal(faults.count("close", "completed"), 1);
+      assert.equal(faults.count("unlink", "completed"), 1);
+      assert.equal(faults.count("rmdir", "completed"), 1);
+      assert.equal(faults.count("rm", "completed"), 1);
+      await faults.assertAbsent(faults.artifactPath);
+      await faults.assertAbsent(faults.directory());
+      assert.deepEqual(await readdir(fixture.ctx.config.storage.generatedDir), []);
+      assert.ok(!JSON.stringify(result.body).includes(fixture.root));
+    });
+  });
+}

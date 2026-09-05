@@ -1,9 +1,10 @@
-import { readFile, readdir, rm, stat, writeFile, mkdir } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { homedir, tmpdir } from "node:os";
+import { rm, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { spawnAgy, agyError } from "../../agyProcess.js";
 import { parseAgyOutput, findRecentAgyArtifact } from "../../agyArtifact.js";
+import { readAgyArtifact, cleanupAgyArtifact } from "../../agyArtifactRead.js";
 import { logEvent } from "../../logger.js";
 import { SAFETY_INTENT_POLICY } from "../../promptSafetyPolicy.js";
 import { detectImageMimeFromB64 } from "../../refs.js";
@@ -96,17 +97,6 @@ async function writeRefsToTempFiles(refs: RefDetail[]): Promise<{ paths: string[
   }
 }
 
-async function cleanupAgyArtifact(artifactPath: string): Promise<void> {
-  try {
-    await rm(artifactPath, { force: true }).catch(() => {});
-    const dir = dirname(artifactPath);
-    const entries = await readdir(dir).catch(() => null);
-    if (entries && entries.length === 0) {
-      await rm(dir, { recursive: true, force: true }).catch(() => {});
-    }
-  } catch { /* best-effort */ }
-}
-
 function throwIfAgyAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
     throw agyError("Generation canceled", 499, "GENERATION_CANCELED");
@@ -144,46 +134,11 @@ async function resolveAgyArtifactPath(
   }
 }
 
-async function validateAgyArtifactPath(artifactPath: string): Promise<string> {
-  // Validate artifact path is within allowed directories
-  const resolvedPath = resolve(artifactPath);
-  const allowedPrefixes = [
-    join(homedir(), ".gemini"),
-    join(homedir(), ".cache"),
-    tmpdir(),
-  ];
-  const normalizedResolved = resolvedPath.replace(/\\/g, "/");
-  const isSafePath = allowedPrefixes.some((prefix) => {
-    const normalizedPrefix = prefix.replace(/\\/g, "/");
-    return normalizedResolved.startsWith(normalizedPrefix + "/") || normalizedResolved === normalizedPrefix;
-  });
-  if (!isSafePath) {
-    throw agyError(
-      `Agy artifact path outside allowed directories: ${resolvedPath}`,
-      502,
-      "AGY_PATH_REJECTED",
-    );
-  }
-
-  try {
-    await stat(resolvedPath);
-  } catch {
-    throw agyError(
-      `Agy artifact not found at parsed path: ${resolvedPath}`,
-      502,
-      "AGY_ARTIFACT_NOT_FOUND",
-    );
-  }
-
-  return resolvedPath;
-}
-
 async function readAgyArtifactResult(
   artifactPath: string, prompt: string, signal?: AbortSignal, requestId?: string,
 ): Promise<AgyGenerateResult> {
-  const resolvedPath = await validateAgyArtifactPath(artifactPath);
-  throwIfAgyAborted(signal);
-  const buffer = await readFile(resolvedPath);
+  const receipt = await readAgyArtifact(artifactPath, signal);
+  const { buffer } = receipt;
   let result: AgyGenerateResult;
   try {
     throwIfAgyAborted(signal);
@@ -204,8 +159,8 @@ async function readAgyArtifactResult(
       mime,
     };
   } finally {
-    // Only a validated, successfully read artifact is owned by this cleanup.
-    await cleanupAgyArtifact(resolvedPath);
+    // Only the trusted reader's issued receipt authorizes artifact cleanup.
+    await cleanupAgyArtifact(receipt);
   }
   throwIfAgyAborted(signal);
   return result;

@@ -3,17 +3,19 @@ import childProcess, { type SpawnOptions } from "node:child_process";
 import { createHash } from "node:crypto";
 import { getEventListeners } from "node:events";
 import { existsSync } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import test, { type TestContext } from "node:test";
 import type { ImageExecutionRequest, ExecutionSurface } from "../lib/providers/execution/types.ts";
 import { openAgyProcessFixture, type AgyProcessFixture } from "./_agyProcessFixture.ts";
+import { AgyFaults } from "./_agyFaultFixtures.ts";
 
 // Independently constructed 1x1 RGBA red/green/blue PNGs; never derived from DUT output.
 const P = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==";
 const A = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg+M/wHwAEAQH/cetH5QAAAABJRU5ErkJggg==";
 const B = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/5ncLrgAAAABJRU5ErkJggg==";
 const OUTPUT = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+const TINY_POLICY = Object.freeze({ maxBytes: 80, chunkBytes: 16 });
 const refs = (...images: string[]) => images.map((b64) => ({ b64, declaredMime: "image/png", detectedMime: "image/png" }));
 const hash = (b64: string) => createHash("sha256").update(Buffer.from(b64, "base64")).digest("hex");
 
@@ -40,7 +42,7 @@ function nativeResult(prompt: string) {
 function code(expected: string, status: number) {
   return (error: unknown) => {
     assert.ok(error instanceof Error);
-    assert.equal(Reflect.get(error, "code"), expected);
+    assert.equal(Reflect.get(error, "code"), expected, error.stack);
     assert.equal(Reflect.get(error, "status"), status);
     return true;
   };
@@ -239,6 +241,46 @@ async function timeoutCases(t: TestContext, fixture: AgyProcessFixture): Promise
   } catch (error) { throw error; }
 }
 
+async function windowsTermination(t: TestContext, fixture: AgyProcessFixture, timeout = false): Promise<void> {
+  await t.test(timeout ? "Windows Agy timeout keeps first reason through abrupt close"
+    : "Windows Agy cancellation closes before one rejection", async (parent) => {
+    for (const scenario of ["cooperative-wait", "term-ignored-wait"]) await parent.test(scenario, async (tc) => {
+      await fixture.configure(scenario);
+      const controller = new AbortController();
+      let child: childProcess.ChildProcess | undefined;
+      const restore = inspectSpawn(tc, (value) => { child = value; });
+      tc.mock.timers.enable({ apis: ["setTimeout"] });
+      let rejections = 0;
+      const work = fixture.generate("Windows lifecycle", { signal: controller.signal, references: refs(A) });
+      const rejected = assert.rejects(work, (error) => {
+        rejections++;
+        assert.ok(fixture.observations().some((entry) => entry.event === "close"));
+        return code(timeout ? "AGY_TIMEOUT" : "GENERATION_CANCELED", timeout ? 504 : 499)(error);
+      });
+      try {
+        await fixture.waitFor("ready");
+        if (timeout) tc.mock.timers.tick(360_000);
+        controller.abort("late abort preserves the first reason");
+        await rejected;
+        await assertInput(fixture, [A], "Windows lifecycle");
+        assert.equal(rejections, 1);
+        assert.deepEqual(fixture.observations().filter((entry) => entry.event === "kill").map((entry) => entry.signal), ["SIGTERM"]);
+        const before = fixture.observations();
+        tc.mock.timers.tick(361_000);
+        assert.deepEqual(fixture.observations(), before, "no late timer work");
+        assert.equal(rejections, 1);
+        assert.equal(child?.listenerCount("close"), 0);
+        assert.equal(child?.stdout?.listenerCount("data"), 0);
+        assert.equal(child?.stderr?.listenerCount("data"), 0);
+        assert.equal(getEventListeners(controller.signal, "abort").length, 0);
+      } finally {
+        controller.abort(); tc.mock.timers.reset();
+        await Promise.allSettled([work, rejected]); restore();
+      }
+    });
+  });
+}
+
 function inspectSpawn(t: TestContext, inspect: (child: childProcess.ChildProcess) => void) {
   const spawn = childProcess.spawn;
   const interception = t.mock.method(childProcess, "spawn", (command: string, args: string[], options: SpawnOptions) => {
@@ -310,37 +352,54 @@ async function alreadyClosed(t: TestContext, fixture: AgyProcessFixture): Promis
 }
 
 test("Agy native fixture Google-family and process contracts", { timeout: 120_000 }, async (t) => {
-  const fixture = await openAgyProcessFixture();
+  const fixture = await openAgyProcessFixture(TINY_POLICY);
   try {
     await familyCases(t, fixture);
     await contextCases(t, fixture);
     await captureCases(t, fixture);
     await outputCases(t, fixture);
     await preAbort(t, fixture);
-    await termination(t, fixture, false);
-    await termination(t, fixture, true);
-    await timeoutCases(t, fixture);
+    if (process.platform === "win32") {
+      await windowsTermination(t, fixture);
+      await windowsTermination(t, fixture, true);
+    } else {
+      await termination(t, fixture, false);
+      await termination(t, fixture, true);
+      await timeoutCases(t, fixture);
+    }
     await eventCases(t, fixture);
     await alreadyClosed(t, fixture);
   } finally { await fixture.close(); }
 });
 
-function suppressDutKill(t: TestContext) {
+function suppressDutKill() {
   const guardedSpawn = childProcess.spawn;
-  const interception = t.mock.method(childProcess, "spawn", (command: string, args: string[], options: SpawnOptions) => {
-    // Keep the exact executable/argv/env guard intact; ablate only the DUT's KILL delivery.
+  const suppressed: Array<NodeJS.Signals | number | undefined> = [];
+  let spawned: childProcess.ChildProcess | undefined;
+  // Explicit restoration: a test-context auto-restore after fixture.close would
+  // resurrect that closed fixture's guarded spawn for the next test.
+  childProcess.spawn = ((command: string, args: string[], options: SpawnOptions) => {
+    // Windows TERM is abrupt too. The fixture already captured its native watchdog kill.
     const child = guardedSpawn(command, args, options);
+    spawned = child;
     const kill = child.kill.bind(child);
-    child.kill = (signal) => signal === "SIGKILL" ? false : kill(signal);
+    child.kill = (signal) => {
+      if (signal === "SIGKILL" || (process.platform === "win32" && signal === "SIGTERM")) {
+        suppressed.push(signal); return false;
+      }
+      return kill(signal);
+    };
     return child;
-  });
+  }) as typeof childProcess.spawn;
   syncBuiltinESMExports();
-  return () => { interception.mock.restore(); syncBuiltinESMExports(); };
+  return { suppressed, child: () => spawned,
+    restore() { childProcess.spawn = guardedSpawn; syncBuiltinESMExports(); } };
 }
 
-test("native watchdog reaps a missing-DUT-KILL child and close fails its violation ledger", { timeout: 20_000 }, async (t) => {
-  const fixture = await openAgyProcessFixture();
-  const restore = suppressDutKill(t);
+test(process.platform === "win32" ? "Windows Agy watchdog reaps suppressed DUT termination"
+  : "native watchdog reaps a missing-DUT-KILL child and close fails its violation ledger", { timeout: 20_000 }, async (t) => {
+  const fixture = await openAgyProcessFixture(TINY_POLICY);
+  const interception = suppressDutKill();
   const controller = new AbortController();
   let work: Promise<unknown> | undefined;
   try {
@@ -349,18 +408,55 @@ test("native watchdog reaps a missing-DUT-KILL child and close fails its violati
     work = fixture.generate("watchdog proof", { signal: controller.signal, references: refs(A) });
     const rejected = assert.rejects(work, code("GENERATION_CANCELED", 499));
     await fixture.waitFor("ready"); controller.abort();
-    await fixture.waitFor("term"); t.mock.timers.tick(1000);
+    if (process.platform !== "win32") await fixture.waitFor("term");
+    t.mock.timers.tick(1000);
     await rejected; // Only the fixture's captured native watchdog can make this child close.
     const watchdog = await fixture.waitFor("watchdog");
     const closed = await fixture.waitFor("close");
     assert.equal(closed.pid, watchdog.pid);
-    assert.equal(closed.signal, "SIGKILL");
+    if (process.platform !== "win32") assert.equal(closed.signal, "SIGKILL");
     assert.ok(Number(watchdog.sequence) < Number(closed.sequence));
     await assertInput(fixture, [A], "watchdog proof");
+    assert.deepEqual(interception.suppressed, process.platform === "win32" ? ["SIGTERM", "SIGKILL"] : ["SIGKILL"]);
+    assert.equal(interception.child()?.listenerCount("close"), 0);
+    const before = fixture.observations();
+    t.mock.timers.tick(361_000);
+    assert.deepEqual(fixture.observations(), before);
   } finally {
     controller.abort(); t.mock.timers.reset();
     await Promise.allSettled(work ? [work] : []);
-    restore();
+    interception.restore();
     await assert.rejects(fixture.close(), /watchdog/i);
   }
+});
+
+test("Agy tiny overflow preserves direct code and actual normalized node error without persistence", async () => {
+  const fixture = await openAgyProcessFixture(TINY_POLICY);
+  const faults = new AgyFaults(fixture, {});
+  try {
+    faults.install();
+    await fixture.configure("tiny-overflow");
+    await assert.rejects(fixture.generate("overflow", { references: refs(A) }), code("AGY_ARTIFACT_TOO_LARGE", 502));
+    await assertInput(fixture, [A], "overflow");
+    const path = String((await fixture.waitFor("input")).artifactPath);
+    assert.deepEqual(await readFile(path), Buffer.alloc(81, 0x61), "policy rejection grants no cleanup");
+    await fixture.configure("tiny-overflow");
+    const before = fixture.spawnCount();
+    const result = await fixture.node();
+    assert.equal(result.status, 502);
+    assert.equal(fixture.spawnCount(), before + 1);
+    const error = result.body.error as Record<string, unknown>;
+    assert.equal(error.code, "UNKNOWN");
+    assert.equal(error.rawCode, "AGY_ARTIFACT_TOO_LARGE");
+    assert.equal(error.errorClass, "INTERNAL_STATE_ERROR");
+    assert.ok(!JSON.stringify(result.body).includes(fixture.root));
+    assert.deepEqual(await readdir(fixture.ctx.config.storage.generatedDir), []);
+    assert.deepEqual(await readFile(path), Buffer.alloc(81, 0x61));
+    await assertInput(fixture, [OUTPUT], "owned node prompt");
+    assert.equal(faults.count("read", "entered"), 0, "native fstat rejects before any artifact bytes");
+    assert.equal(faults.count("close", "completed"), 2, "both real artifact descriptors closed");
+    assert.equal(faults.count("unlink", "entered"), 0);
+    assert.equal(faults.count("rmdir", "entered"), 0);
+    assert.equal(faults.count("rm", "completed"), 2, "both staging directories removed");
+  } finally { await faults.drain(); faults.restore(); await fixture.close(); }
 });

@@ -76,9 +76,9 @@ async function input() {
 async function emitResult(scenario) {
   try {
     if (["success", "stderr-result", "saved-path", "malformed-result", "error", "quota",
-      "unparseable-with-recent-artifact"].includes(scenario)) {
+      "unparseable-with-recent-artifact", "tiny-overflow"].includes(scenario)) {
       await mkdir(dirname(artifactPath), { recursive: true });
-      await writeFile(artifactPath, Buffer.from(PNG, "base64"));
+      await writeFile(artifactPath, scenario === "tiny-overflow" ? Buffer.alloc(81, 0x61) : Buffer.from(PNG, "base64"));
     }
     const output = {
       success: `RESULT|${artifactPath}|png`, "stderr-result": `RESULT|${artifactPath}|png`,
@@ -87,6 +87,7 @@ async function emitResult(scenario) {
       "unparseable-with-recent-artifact": "no parseable output",
       error: "ERROR|fixture generation rejected", quota: "ERROR|Resource exhausted: fixture quota",
       "raw-quota": "resource exhausted: raw fixture quota",
+      "tiny-overflow": `RESULT|${artifactPath}|png`,
       "outside-path": `RESULT|${join(root, "..", "outside-agy-fixture.png")}|png`,
     };
     if (scenario === "nonzero") { process.stderr.write("fixture stderr diagnostic\n"); process.exitCode = 7; return; }
