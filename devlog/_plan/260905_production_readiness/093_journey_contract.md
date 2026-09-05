@@ -49,17 +49,17 @@ MCP footer's action opens existing Providers settings, never connects/logs in.
 Proposed pure contract:
 
 ```ts
-type McpReadinessSelection = { provider: string; model: string | null; kind: McpMediaKind };
-type McpReadinessObservation = {
+export type McpReadinessSelection = { provider: string; model: string | null; kind: McpMediaKind };
+export type McpReadinessObservation = {
   selection: McpReadinessSelection;
   phase: "loading" | "ready" | "error";
   observedAt: number | null;
   providers: readonly McpProviderRecord[];
   catalog: McpModelCatalog | null;
 };
-type McpReadinessCode = "loading" | "error" | "missing" | "disabled" |
+export type McpReadinessCode = "loading" | "error" | "missing" | "disabled" |
   "disconnected" | "locked" | "default" | "model-missing" | "model-locked" | "ready";
-type McpReadiness = { code: McpReadinessCode; provider: string; kind: McpMediaKind;
+export type McpReadiness = { code: McpReadinessCode; provider: string; kind: McpMediaKind;
   model: string | null; modelLabel: string | null; observedAt: number | null };
 export function deriveMcpReadiness(observation: McpReadinessObservation,
   selection: McpReadinessSelection): McpReadiness;

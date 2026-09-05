@@ -168,3 +168,75 @@ Finalize narrow method signatures for the parent registry/cache and explicit IPC
 schema; finish source audit of runtime method use and expected discovery patterns;
 write the production UI journey amendment; assign disjoint B files; run independent
 A review. This draft is not permission to start implementing unspecified edges.
+
+## Parent ownership API refinement
+
+The registry owns homes and app resource leases, not a generic resource service:
+
+```ts
+export type OwnedAppRecord = {
+  home: string;
+  appOrigin: string;
+  stubOrigin: string;
+  closeResources(): Promise<void>;
+  exited(): boolean;
+  verificationReported(): boolean;
+  verify(): void;
+};
+export function issueAppHome(): Promise<string>;
+export function requireAppHome(path: string): void;
+export function registerOwnedApp(record: OwnedAppRecord): void;
+export function isOwnedBrowserOrigin(origin: string): boolean;
+export function disposeOwnedApps(): Promise<void>;
+```
+
+issueAppHome uses mkdtemp and stores canonical path/dev/ino before returning.
+requireAppHome rejects unknown/changed/symlinked homes without content reads.
+registerOwnedApp checks that home and exact ephemeral loopback origins, then keeps
+the record through worker teardown; origin admission requires the record still be
+live. Native process exit is the authority, not an untrusted JSON flag.
+
+Separate closeResources from verification: public app.close awaits resources and
+then records/reports guard.assertClean. Worker teardown always awaits resources;
+it verifies records not already reported, then disposes homes only after every
+associated child exit is proven. This lets a negative I6-content case explicitly
+assert a rejected close without the worker reporting the same expected assertion
+again. It does NOT clear violations, label a dirty guard clean, or skip resource
+cleanup. Repeated guard.assertClean still throws. Unreported violations remain a
+worker failure. A failed resource close still fails cleanup and retains live roots.
+
+appServer's auto-worker finalizer calls disposeOwnedApps first, then a separately
+exported disposeRuntimeBuildCache from appRuntimeBuild. Ownership does not import
+the builder, avoiding a cycle. If any child exit is unproven, skip cache deletion
+and fail; the disposable runner remains the outer exposure bound.
+
+Runtime build API:
+
+```ts
+export type EmittedSnapshot = {
+  root: string;
+  sourceDigest: string;
+  compilerVersion: string;
+  files: readonly { sourcePath: string; sourceSha256: string;
+    emittedPath: string; emittedSha256: string }[];
+};
+export function getVerifiedRuntimeBuild(repoRoot: string): Promise<EmittedSnapshot>;
+export function disposeRuntimeBuildCache(): Promise<void>;
+```
+
+The builder returns only an internally registered snapshot, never accepts one
+from JSON/callers. Projection rehashes files before copying. Capture/check source
+inventory before and after staging/compile and compare current preceding build
+bytes. Changed root/head/source/output/compiler fails; no implicit cache refresh.
+The source list is positive and git-tracked; imported untracked TS cannot resolve
+inside staging. Server/CLI compiler output is bounded8MiB per command with120s
+deadline, matching the same bound for UI wrapper stages. Current source CI builds
+finish well below this bound; timeout is failure, not an automatic retry.
+
+Browser teardown additions to the exact old map: J1/J2/J3/J4 and provider-surface-
+affordance close their owned page before app.close. J5 navigates to about:blank
+while the first app is still alive before closing it, then navigates the same page
+to the second owned origin. This prevents unloading after origin lease retirement.
+No extra seed is installed and no persistence assertion is removed. J6 already
+closes pages before the app; keep that ordering. Its owned native stream path is
+unchanged. All current app-starting specs adopt the cleanup-owning test import.
