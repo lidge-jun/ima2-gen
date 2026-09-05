@@ -97,20 +97,8 @@ test("the provider is offered everywhere a user picks one", () => {
   assert.match(read("ui/src/components/AccountSettings.tsx"), /provider="nai"/);
 });
 
-test("switching to nai coerces the model, and away from nai clears it", () => {
-  // Without both halves a user can hold a model the selected provider cannot
-  // serve, which only surfaces as an upstream rejection.
-  const store = read("ui/src/store/storeSettingsImpl.ts");
-  assert.ok(
-    store.includes('provider === "nai" && !isNaiImageModel(currentModel)'),
-    "switching to nai does not coerce the model",
-  );
-  assert.ok(
-    store.includes("isNaiImageModel(imageModel)"),
-    "selecting a nai model does not switch the provider",
-  );
-  assert.ok(store.includes('provider !== "nai"'), "the reset guard does not exclude nai");
-});
+// Provider/model transitions now run as real actions in core-selection-actions.test.ts:
+// "NovelAI provider fallback and model action preserve count/multimode preferences".
 
 test("the UI offers no reference attachment for nai", () => {
   const base = { serverLimit: 12, videoModelSelected: false, mcpProvider: null };

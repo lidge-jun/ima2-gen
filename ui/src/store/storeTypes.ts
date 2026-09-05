@@ -536,6 +536,7 @@ export type AppState = PresetState & ReferenceTraySlice & {
   videoContinuityLineage: VideoContinuityLineage | null;
   videoProgress: number | null;
   selectVideoModel: (model?: string) => void;
+  setComfyWorkflow: (workflowId: string | null) => void;
   setComfyVideoWorkflow: (workflowId: string | null) => void;
   setVideoDuration: (n: number) => void;
   setVideoResolution: (r: VideoResolutionUI) => void;

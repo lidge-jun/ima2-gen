@@ -21,7 +21,6 @@ import {
   UI_MODE_STORAGE_KEY,
 } from "./persistenceRegistry";
 import {
-  loadImageModel,
   loadSelectedFilename,
   loadVideoDefaults,
   persistCanvasExportBackground,
@@ -37,6 +36,7 @@ import type { ImaErrorCode } from "../lib/errorCodes";
 import type { CanvasExportBackground, HexColor } from "../types/canvas";
 import type { HistoryStripLayout, UIMode } from "../types";
 import { abortFlight } from "./flightAbortRegistry";
+import { loadCoreSelectionSnapshot } from "./coreSelectionPersistence";
 
 export async function cancelInFlightJobImpl(
   requestId: string,
@@ -63,7 +63,7 @@ export async function cancelInFlightJobImpl(
 export function syncFromStorageImpl(set: StoreSet, get: StoreGet): void {
   const nextInflight = loadInFlight();
   const nextSelected = loadSelectedFilename();
-  const nextImageModel = loadImageModel();
+  const nextSelection = loadCoreSelectionSnapshot();
   const nextVideo = loadVideoDefaults();
   set((s) => {
     const matched = nextSelected
@@ -79,8 +79,7 @@ export function syncFromStorageImpl(set: StoreSet, get: StoreGet): void {
     return {
       inFlight: nextInflight,
       activeGenerations: nextInflight.length,
-      imageModel: nextImageModel,
-      videoModelSelected: nextVideo.model,
+      ...nextSelection,
       videoDuration: nextVideo.duration,
       videoResolution: nextVideo.resolution as VideoResolutionUI,
       videoAspectRatio: nextVideo.aspectRatio,
