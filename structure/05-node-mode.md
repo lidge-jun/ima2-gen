@@ -85,8 +85,8 @@ Visual edges are the canonical parent graph. `parentServerNodeId` is a derived g
 ## Streaming And Recovery
 
 The node pipeline calls `prepareImageExecution` once and executes one provider
-attempt per iteration. `openaiExecution.ts` owns OAuth/API dispatch and
-`legacyNode.ts` owns the remaining provider dispatch, neither owning node retries. Root requests
+attempt per iteration. `openaiExecution.ts` and `grokExecution.ts` own their
+respective families; `legacyNode.ts` owns remaining providers. None owns node retries. Root requests
 without input images may attempt twice on an existing retryable error; parent/ref
 requests attempt once. Responses empty422 remains non-retryable, while Grok
 empty502 can reach the second root attempt. Cancellation checks, retry logs,
@@ -103,6 +103,11 @@ presence, refusing a removed key with GROK_API_KEY_MISSING rather than switching
 to the proxy. Replacing a nonblank key does not rebind the active execution.
 Before admission, missing/blank keys return the node's nested error plus code,
 parentNodeId and requestId; an already admitted failure finishes its owned job.
+
+Grok Node honors both searchMode=off and webSearchEnabled=false by passing the
+resolved flag to its planner. Search stops, planning/image execution continues.
+Returned image retrieval follows the image-only pinned destination/deadline/cap
+policy; it does not alter video or remaining Google/reference semantics.
 
 Root node generation requests use `postNodeGenerateStream()` and ask the server for `Accept: text/event-stream`. The server relays upstream partial images as `partial` events before the canonical `done` event. Child/edit nodes currently use the same route but remain final-only, because combining parent-edit semantics with extra progressive previews needs separate provider validation. SSE `error` events carry `status` and upstream diagnostics so client-side handling can distinguish invalid request parameters from moderation and network failures.
 

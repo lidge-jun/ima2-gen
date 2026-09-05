@@ -185,7 +185,7 @@ routes/
 | `lib/oauthProxy/multimodeGenerators.ts` | 304 | OAuth Responses multimode and edit generators, masked-edit guard |
 | `lib/generatePipeline.ts` | 724 | Classic admission/idempotency, shared execution facade, persistence, background-preset prompt shaping, and event publication |
 | `lib/backgroundPresets.ts` | 78 | Background preset contract for asset generation: enum parse, prompt suffixes, planner constraint |
-| `lib/multimodePipeline.ts` | 521 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
+| `lib/multimodePipeline.ts` | 522 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
 | `lib/comparisonRunner.ts` | 111 | Per-cell generation orchestrator with bounded concurrency, isolated failures, single-cell retry, and two-level cancel |
 | `lib/nodeGeneration.ts` | 511 | Node admission and execution facade, caller-owned retry, persistence, and SSE publication |
@@ -224,12 +224,12 @@ routes/
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
 | `lib/providers/execution/admission.ts` | 38 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
-| `lib/providers/execution/index.ts` | 33 | Public prepare/execute facade with current direct-key presence checks |
-| `lib/providers/execution/legacy.ts` | 29 | Four-surface dispatcher with OAuth/API excluded from legacy request types |
-| `lib/providers/execution/legacyClassic.ts` | 136 | Remaining-provider classic dispatch and shared Grok plan/captured key; OpenAI lives in its family owner |
-| `lib/providers/execution/legacyNode.ts` | 80 | One node transport attempt; caller owns retry, partials and persistence |
-| `lib/providers/execution/legacyEdit.ts` | 51 | Remaining-provider single edit dispatch and native result metadata |
-| `lib/providers/execution/legacyMultimode.ts` | 60 | Native sequence dispatch and existing one-image projections |
+| `lib/providers/execution/index.ts` | 35 | Public prepare/execute facade with current direct-key presence checks |
+| `lib/providers/execution/legacy.ts` | 30 | Four-surface dispatcher with OAuth/API excluded from legacy request types |
+| `lib/providers/execution/legacyClassic.ts` | 102 | Remaining-provider classic dispatch; OpenAI/Grok live in family owners |
+| `lib/providers/execution/legacyNode.ts` | 67 | One node transport attempt; caller owns retry, partials and persistence |
+| `lib/providers/execution/legacyEdit.ts` | 41 | Remaining-provider single edit dispatch and native result metadata |
+| `lib/providers/execution/legacyMultimode.ts` | 47 | Native sequence dispatch and existing one-image projections |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 252 | Comfy lane model registry: per-record origin and image/video kind, legacy image normalization, id/kind validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 273 | API-format graph parsing, grouped SDXL/H3 binding inference, SaveImage/SaveVideo kind inference, non-mutating value injection, parameter derivation |
@@ -259,11 +259,17 @@ routes/
 | `lib/geminiApiImageAdapter.ts` | 265 | Gemini API image-generation provider adapter |
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
-| `lib/grokImageCore.ts` | 252 | Shared Grok image request and response handling |
-| `lib/grokMultimodeAdapter.ts` | 115 | Grok multimode generation provider adapter |
+| `lib/grokImageCore.ts` | 194 | Shared Grok image request and response handling |
+| `lib/grokImagePlanner.ts` | 353 | Actual Grok search/planner operations, payload builders and plan parser |
+| `lib/providers/adapters/grokExecution.ts` | 140 | Four-surface Grok/proxy and direct execution, captured keys and search forwarding |
+| `lib/providers/adapters/grokOperations.ts` | 99 | Actual generate/edit operations with scoped artifact-origin policy |
+| `lib/providers/adapters/grokMultimodeOperations.ts` | 124 | Ordered per-image planning and sparse original-index result identity |
+| `lib/grokImageDownloadPolicy.ts` | 114 | Conservative address policy, exact-origin exception and abort-aware pinned DNS resolution |
+| `lib/grokImageDownload.ts` | 267 | Pinned HTTP GET, monotone redirect trust, overall deadline, bounded streamed body and cleanup |
+| `lib/grokMultimodeAdapter.ts` | 6 | Compatibility re-exports of actual Grok multimode operation/type |
 | `lib/grokProxyLauncher.ts` | 326 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
-| `lib/grokUpstreamRetry.ts` | 158 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
+| `lib/grokUpstreamRetry.ts` | 165 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
 | `lib/grokSizeMapper.ts` | 86 | Grok model image-size mapping and validation |
 | `lib/grokVideoCanvas.ts` | 41 | Grok video canvas/source preparation helpers |
 | `lib/grokVideoDownload.ts` | 65 | Grok video download and persistence helpers |
@@ -548,7 +554,7 @@ The `tests/` directory now contains roughly 125 `*.test.js` / `*.test.mjs` / `*.
 
 | File | Function / surface | Model | Role | Continuity impact |
 |---|---|---|---|---|
-| `lib/grokImageAdapter.ts` | `buildGrokPlannerPayload`, `buildGrokSearchPayload` | `grok-4.5` | Image planner/search | Document only in this phase |
+| `lib/grokImagePlanner.ts` | `buildGrokPlannerPayload`, `buildGrokSearchPayload` | configured; default `grok-4.3` | Image planner/search | Search off skips search, not planning |
 | `lib/grokVideoAdapter.ts` | `buildGrokVideoPlannerPayload`, `planGrokVideo` | `grok-4.5` | Video planner | Receives numbered `videoContinuity` lineage and active audio/dialogue/ending-frame prompt guidance |
 | `routes/videoExtended.ts` | `/api/video/analyze` first/last-frame prompt | `grok-4.5` | Video analysis | Documents first/last-frame inferred motion; does not mutate lineage |
 | `lib/agentRuntime.ts` | video generation caller/delegator | — | Calls generation surfaces | Not a direct Grok planner prompt owner |

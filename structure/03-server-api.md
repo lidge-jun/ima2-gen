@@ -72,7 +72,7 @@ graph TD
 
 `/api/billing` reports `apiKeySource` as `"none"`, `"env"`, or `"config"`. API-key generation requires a configured key and returns `API_KEY_REQUIRED` before upstream when `provider: "api"` is requested without one.
 
-The live generation/edit provider can be OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, or ComfyUI based. The NovelAI (`nai`) lane is text-to-image only: `/api/generate` refuses attached references with `NAI_REF_UNSUPPORTED` and `/api/edit` refuses outright with `NAI_EDIT_UNSUPPORTED`, so the capability is never silently downgraded. OAuth and API-key paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs. The Grok path uses the bundled progrok xAI proxy: classic, Node, and Agent generation first run mandatory xAI Web Search through `/v1/responses`, then call `grok-4.5` with a forced local `generate_image` function, then the server executes xAI `/v1/images/generations`; `grok-4.3` remains an explicit compatibility override. When Grok references, a Node parent image, or an Agent current image are explicitly attached, the planner also receives those images as multimodal inputs and the final step switches to xAI `/v1/images/edits` with the same reference images so i2i context survives the planner phase. Agent image plans now carry `sourceImagePolicy: "none" | "current" | "auto"`; plain image requests default to fresh generation (`none`), while current-image edit/reference use requires explicit planner or prompt intent (`current`). Grok video uses separate routes: `/api/video/generate` for T2V/I2V/Ref2V plus branch-local continuation, `/api/video/edit`, `/api/video/extend`, `/api/video/frame`, and `/api/video/analyze`.
+The live generation/edit provider can be OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, or ComfyUI based. The NovelAI (`nai`) lane is text-to-image only: `/api/generate` refuses attached references with `NAI_REF_UNSUPPORTED` and `/api/edit` refuses outright with `NAI_EDIT_UNSUPPORTED`, so the capability is never silently downgraded. OAuth and API-key paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs. Grok image generation uses the configured planner (default grok-4.3); search is enabled by default but classic, node and multimode honor the resolved off flag without skipping planning. Classic shares one plan per batch, while multimode plans each item; the edit route remains direct. Agent's omitted-option search default is unchanged. When Grok references, a Node parent image, or an Agent current image are explicitly attached, the planner also receives those images as multimodal inputs and the final step switches to xAI `/v1/images/edits` with the same reference images so i2i context survives the planner phase. Agent image plans now carry `sourceImagePolicy: "none" | "current" | "auto"`; plain image requests default to fresh generation (`none`), while current-image edit/reference use requires explicit planner or prompt intent (`current`). Grok video uses separate routes: `/api/video/generate` for T2V/I2V/Ref2V plus branch-local continuation, `/api/video/edit`, `/api/video/extend`, `/api/video/frame`, and `/api/video/analyze`.
 
 Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` never accepts a browser-supplied path; it opens `ctx.config.storage.generatedDir` only.
 
@@ -93,7 +93,11 @@ OAuth/API execution now belongs to `providers/adapters/openaiExecution.ts`.
 the endpoint/auth/readiness, redaction, abort and response-parser boundary.
 `responsesImageAdapter.ts` is a compatibility re-export for existing agent/sprite
 and other consumers; it contains no duplicate operation implementation.
-Other providers remain in the four `legacy*` helpers, whose types exclude OAuth/API.
+Grok/proxy and directGrok execution now belongs to `grokExecution.ts`, with actual
+operations in `grokOperations.ts`/`grokMultimodeOperations.ts` and planning in
+`grokImagePlanner.ts`. Compatibility facades retain old function/type exports.
+Other providers remain in the four `legacy*` helpers, whose types exclude both
+OpenAI and Grok lanes.
 
 Classic prepares its Grok plan once per batch and retains its existing Responses
 retry loop in the OpenAI execution owner. API empty422 is not retried; retryable
@@ -128,6 +132,19 @@ refusals keep their previous codes and bookkeeping.
 `tests/provider-execution-*.test.ts` cover real route/fixture behavior and the
 typed dispatch boundary. The import guard checks the four selected callers,
 not arbitrary future barrels or the intentionally unchanged agent/sprite routes.
+
+Grok node/multimode now forward resolved search policy: false skips search but
+keeps the planner. Classic still plans once per batch, edit stays direct.
+Multimode carries successful original attempt indices in-process into the final
+sweep, preventing sparse duplicates without content dedupe or new serialized fields.
+
+Returned Grok images use `grokImageDownload.ts` and its address policy: validated
+per-hop DNS pinned into the actual connection, agent:false, conservative IPv4/IPv6
+ranges, max5redirects, streamed50MiB and one overall deadline. Only an initially
+matching configured proxy origin gets local trust; leaving it permanently drops
+the exception. Request/response error listeners remain owned through close.
+Artifact GET carries no API key/cookie/referrer. The exact address policy and
+safe502/504/499 error contract are in docs/API.md. Video/MCP policies are separate.
 
 ## MCP Connection Lifecycle
 
