@@ -26,7 +26,7 @@ import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
 import { type NodeGenerateBody, asUpstream, wantsSse, writeNodeError, loadParentNodeB64, toGrokReferences, nodeErrorDetails, } from "./nodeHelpers.js";
 import { normalizeBodyRequestId, validateGenerationPrompt } from "./generationInputValidation.js";
-import { deriveReferenceLimit } from "./providers/derive.js";
+import { deriveReferenceLimit, getProviderSurfaceSupport } from "./providers/derive.js";
 import { errorEnvelopeFields } from "./errors/envelope.js";
 export async function runNodeGeneration(req: Request, res: Response, ctx: RuntimeContext) {
     const body = (req.body ?? {}) as NodeGenerateBody;
@@ -72,7 +72,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       // falls through to generateViaResponses and bills OAuth. The envelope is
       // this file's nested shape, not the flat one generate uses.
       // Removed in wp7.
-      if (provider === "comfy") {
+      if (getProviderSurfaceSupport(provider, "node")?.supported === false) {
         finishStatus = "error";
         finishHttpStatus = 400;
         finishErrorCode = "COMFY_SURFACE_UNSUPPORTED";
@@ -189,7 +189,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       }
       // Node mode chains images, so a parent node is exactly the reference the
       // adapter cannot use. Refuse instead of generating something unrelated.
-      if (activeProvider === "nai" && inputImageCount > 0) {
+      if (getProviderSurfaceSupport(activeProvider ?? "", "node")?.references === false && inputImageCount > 0) {
         finishStatus = "error";
         finishHttpStatus = 400;
         return res.status(400).json({

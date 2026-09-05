@@ -31,6 +31,7 @@ import { invalidateHistoryIndex } from "../lib/historyIndex.js";
 import { errInfo } from "../lib/errInfo.js";
 import { requireRuntimeContext, type RouteRuntimeContext, type RuntimeContext } from "../lib/runtimeContext.js";
 import { errorEnvelopeFields } from "../lib/errors/envelope.js";
+import { getProviderSurfaceSupport } from "../lib/providers/derive.js";
 function validateModeration(ctx: RuntimeContext, moderation: unknown) {
   if (typeof moderation !== "string" || !ctx.config.oauth.validModeration.has(moderation)) {
     return { error: "moderation must be one of: auto, low" };
@@ -188,7 +189,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       // NovelAI joins this list because its infill is a distinct action with its
       // own model ids, not a mask flag on generate; accepting a mask here would
       // silently drop it.
-      if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" || activeProvider === "nai" || activeProvider === "comfy") && rawMask) {
+      if (getProviderSurfaceSupport(activeProvider ?? "", "edit")?.mask === false && rawMask) {
         finishStatus = "error";
         finishHttpStatus = 400;
         const code = activeProvider === "agy" ? "AGY_MASK_UNSUPPORTED" : activeProvider === "gemini-api" ? "GEMINI_API_MASK_UNSUPPORTED" : activeProvider === "atlascloud" ? "ATLASCLOUD_MASK_UNSUPPORTED" : activeProvider === "minimax" ? "MINIMAX_MASK_UNSUPPORTED" : activeProvider === "nai" ? "NAI_MASK_UNSUPPORTED" : activeProvider === "comfy" ? "COMFY_MASK_UNSUPPORTED" : "GROK_MASK_UNSUPPORTED";
@@ -199,7 +200,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       // is text-to-image only. Dispatching here would ignore that image and
       // return an unrelated generation, so the lane refuses instead. NovelAI's
       // img2img and infill are separate actions and a follow-on unit.
-      if (activeProvider === "nai") {
+      if (getProviderSurfaceSupport(activeProvider ?? "", "edit")?.supported === false) {
         finishStatus = "error";
         finishHttpStatus = 400;
         finishErrorCode = "NAI_EDIT_UNSUPPORTED";

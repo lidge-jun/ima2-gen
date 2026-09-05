@@ -84,7 +84,7 @@ describe("core provider registry parity", () => {
     assert.match(editSource, /editViaResponses\(/);
     assert.match(adapterSource, /\bmask\?: string(?: \| undefined)?;/);
 
-    assert.match(editSource, /getProviderSurfaceSupport\(activeProvider,\s*"edit"\)\?\.mask\s*===\s*false/);
+    assert.match(editSource, /getProviderSurfaceSupport\(activeProvider(?:\s*\?\?\s*"")?,\s*"edit"\)\?\.mask\s*===\s*false/);
     const maskRejectedLanes = REGISTRY
       .map((entry) => entry.id)
       .filter((id) => deriveProviderSurfaceSupportFrom(REGISTRY, id, "edit")?.mask === false);

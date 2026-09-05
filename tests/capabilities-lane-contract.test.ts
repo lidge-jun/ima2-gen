@@ -1,7 +1,34 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { tsImport } from "tsx/esm/api";
 
-import { buildIma2Capabilities } from "../lib/capabilities.ts";
+const { buildIma2Capabilities } = await tsImport(
+  "../lib/capabilities.ts", import.meta.url,
+) as typeof import("../lib/capabilities.ts");
+
+const EXPECTED_SURFACES = {
+  nai: {
+    generate: { supported: true, references: false, mask: false, streaming: false, catalogAccess: "static" },
+    edit: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+    multimode: { supported: true, references: false, mask: false, streaming: false, catalogAccess: "static" },
+    node: { supported: true, references: false, mask: false, streaming: false, catalogAccess: "static" },
+    video: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+  },
+  oauth: {
+    generate: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+    edit: { supported: true, references: true, mask: true, streaming: false, catalogAccess: "static" },
+    multimode: { supported: true, references: true, mask: false, streaming: true, catalogAccess: "static" },
+    node: { supported: true, references: true, mask: false, streaming: true, catalogAccess: "static" },
+    video: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+  },
+  comfy: {
+    generate: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "runtime" },
+    edit: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "runtime" },
+    multimode: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "runtime" },
+    node: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "runtime" },
+    video: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "runtime" },
+  },
+};
 
 describe("capability lane contract", () => {
   it("omits lanes entirely when no server answered", () => {
@@ -11,6 +38,29 @@ describe("capability lane contract", () => {
     // than silence.
     assert.equal(built.source, "local");
     assert.equal("lanes" in built, false);
+    assert.deepEqual(Object.keys(built.providerSurfaces), [
+      "oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "nai", "comfy",
+    ]);
+    for (const [id, expected] of Object.entries(EXPECTED_SURFACES)) {
+      assert.deepEqual(built.providerSurfaces[id], expected);
+    }
+    assert.deepEqual(built.providerSurfaces.api, EXPECTED_SURFACES.oauth);
+  });
+
+  it("serializes the same capability facts when server lanes are disconnected", () => {
+    const lanes = {
+      oauth: { status: "disconnected", models: { image: 2, video: 0 } },
+      nai: { status: "key-missing", models: { image: 4, video: 0 } },
+      comfy: { status: "disconnected", models: { image: 0, video: 0 } },
+      runway: { status: "disconnected", models: { image: 0, video: 0 } },
+    } as const;
+    const built = buildIma2Capabilities({ packageVersion: "0.0.0-test", source: "server", lanes });
+    assert.deepEqual(built.lanes, lanes);
+    const serialized = JSON.parse(JSON.stringify(built));
+    for (const [id, expected] of Object.entries(EXPECTED_SURFACES)) {
+      assert.deepEqual(serialized.providerSurfaces[id], expected);
+    }
+    for (const id of ["auto", "runway", "higgsfield"]) assert.equal(id in serialized.providerSurfaces, false);
   });
 
   it("carries lane state when a server supplied it", () => {

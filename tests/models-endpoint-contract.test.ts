@@ -23,6 +23,35 @@ type ProviderState = "connected" | "disconnected";
 type ModelLaneId = import("../routes/models.ts").ModelLaneId;
 type ModelLaneDto = import("../routes/models.ts").ModelLaneDto;
 type ModelsBody = { ok: true; lanes: Record<ModelLaneId, ModelLaneDto> };
+// Literal contract oracles: do not derive expected responses from the registry.
+const STATIC_IMAGE_SURFACES = {
+  generate: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+  edit: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+  multimode: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+  node: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+  video: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+};
+const OAUTH_SURFACES = {
+  generate: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+  edit: { supported: true, references: true, mask: true, streaming: false, catalogAccess: "static" },
+  multimode: { supported: true, references: true, mask: false, streaming: true, catalogAccess: "static" },
+  node: { supported: true, references: true, mask: false, streaming: true, catalogAccess: "static" },
+  video: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+};
+const NAI_SURFACES = {
+  generate: { supported: true, references: false, mask: false, streaming: false, catalogAccess: "static" },
+  edit: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+  multimode: { supported: true, references: false, mask: false, streaming: false, catalogAccess: "static" },
+  node: { supported: true, references: false, mask: false, streaming: false, catalogAccess: "static" },
+  video: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "static" },
+};
+const COMFY_SURFACES = {
+  generate: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "runtime" },
+  edit: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "runtime" },
+  multimode: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "runtime" },
+  node: { supported: false, references: false, mask: false, streaming: false, catalogAccess: "runtime" },
+  video: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "runtime" },
+};
 type ProviderBody = {
   providers: Array<{
     id: string;
@@ -68,6 +97,10 @@ async function withApp(
     agyInstalled?: boolean;
     minimaxApiKey?: string;
     atlasCloudApiKey?: string;
+    naiApiKey?: string;
+    oauthReadyState?: "ready" | "pending";
+    hasApiKey?: boolean;
+    comfyOnline?: boolean;
     grokProxyState?: string;
     comfyWorkflows?: Array<import("../lib/comfyWorkflowStore.ts").ComfyWorkflowRecord>;
   } = {},
@@ -76,13 +109,14 @@ async function withApp(
   const app = express();
   const manager = options.manager ?? new FakeMcpManager();
   const ctx = {
-    oauthReadyState: "ready",
-    hasApiKey: false,
+    oauthReadyState: options.oauthReadyState ?? "ready",
+    hasApiKey: options.hasApiKey ?? false,
     grokUrl: "http://127.0.0.1:18645/v1",
     xaiApiKey: undefined,
     geminiApiKey: "gemini-test-key",
     minimaxApiKey: options.minimaxApiKey,
     atlasCloudApiKey: options.atlasCloudApiKey,
+    naiApiKey: options.naiApiKey,
     mcpConnectionManager: manager,
     ...(options.grokProxyState ? { grokProxy: { state: options.grokProxyState } } : {}),
     config: {
@@ -102,7 +136,9 @@ async function withApp(
   registerModelsRoutes(app, ctx as never, {
     detectAgyInstalled: async () => options.agyInstalled ?? false,
     listComfyWorkflows: async () => options.comfyWorkflows ?? [],
-    probeComfyOrigins: async (origins) => new Map(origins.map((origin) => [origin, { ok: false, reason: "fixture offline" }])),
+    probeComfyOrigins: async (origins) => new Map(origins.map((origin) => [origin,
+      options.comfyOnline ? { ok: true } : { ok: false, reason: "fixture offline" },
+    ])),
   });
   registerMcpConnectionRoutes(app, ctx as never);
   const server = await new Promise<Server>((resolve) => {
@@ -163,11 +199,14 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
     );
     assert.ok(body.lanes.runway.models.video.some((model) => model.id === "veo-3.1"));
     assert.deepEqual(body.lanes.higgsfield.models, { image: [], video: [] });
+    assert.deepEqual(body.lanes.comfy.surfaces, COMFY_SURFACES);
+    assert.deepEqual(body.lanes.comfy.models, { image: [], video: [] });
+    for (const id of ["runway", "higgsfield"] as const) assert.equal("surfaces" in body.lanes[id], false);
     assert.equal(manager.calls.length, 0, "disconnected lanes must not browse a dynamic catalog");
   });
 });
 
-test("the Comfy lane separates image and locked video workflows without inventing an image default", async () => {
+test("the Comfy lane lists runtime video workflows without inventing an image default", async () => {
   const bind = { prompt: { node: "1", input: "text" }, output: { node: "2" } };
   const workflow = {
       id: "h3", label: "MiniMax H3 FL2VA pruned NVFP4", mediaKind: "video",
@@ -187,6 +226,7 @@ test("the Comfy lane separates image and locked video workflows without inventin
       // the description, which is availability rather than a capability lock.
       assert.notEqual(h3?.executable, false);
       assert.equal(h3?.lockReason, undefined);
+      assert.deepEqual(body.lanes.comfy.surfaces, COMFY_SURFACES);
     });
 });
 
@@ -221,6 +261,7 @@ test("connected MCP lanes add only read-only dynamic models", async () => {
     const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
     assert.equal(body.lanes.runway.status, "ready");
     assert.equal(body.lanes.higgsfield.status, "ready");
+    for (const id of ["runway", "higgsfield"] as const) assert.equal("surfaces" in body.lanes[id], false);
     assert.deepEqual(body.lanes.higgsfield.models.image.map((model) => model.id), ["soul_2"]);
     assert.deepEqual(body.lanes.higgsfield.models.video.map((model) => model.id), ["kling_3"]);
     assert.deepEqual(body.lanes.higgsfield.models.image[0].capabilities.inputRoles, ["image"]);
@@ -244,6 +285,7 @@ test("the MiniMax lane keeps its exact DTO when no key is configured", async () 
   await withApp({}, async (base) => {
     const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
     const minimax = body.lanes.minimax;
+    assert.deepEqual(minimax.surfaces, STATIC_IMAGE_SURFACES);
     assert.equal(minimax.status, "key-missing");
     assert.equal(minimax.reason, "MiniMax API key missing");
     assert.equal(minimax.defaults.image, "image-01");
@@ -260,6 +302,7 @@ test("the MiniMax lane reports ready once the runtime context holds a key", asyn
   await withApp({ minimaxApiKey: "mm-test-key" }, async (base) => {
     const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
     const minimax = body.lanes.minimax;
+    assert.deepEqual(minimax.surfaces, STATIC_IMAGE_SURFACES);
     assert.equal(minimax.status, "ready");
     assert.equal(minimax.reason, undefined, "a ready lane carries no reason");
     assert.equal(minimax.defaults.image, "image-01");
@@ -278,6 +321,7 @@ test("the Atlas Cloud lane keeps its exact DTO when no key is configured", async
   await withApp({}, async (base) => {
     const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
     const atlascloud = body.lanes.atlascloud;
+    assert.deepEqual(atlascloud.surfaces, STATIC_IMAGE_SURFACES);
     assert.equal(atlascloud.status, "key-missing");
     assert.equal(atlascloud.reason, "Atlas Cloud API key missing");
     assert.equal(atlascloud.defaults.image, "openai/gpt-image-2/text-to-image");
@@ -297,6 +341,7 @@ test("the Atlas Cloud lane reports ready once the runtime context holds a key", 
   await withApp({ atlasCloudApiKey: "apikey-test" }, async (base) => {
     const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
     const atlascloud = body.lanes.atlascloud;
+    assert.deepEqual(atlascloud.surfaces, STATIC_IMAGE_SURFACES);
     assert.equal(atlascloud.status, "ready");
     assert.equal(atlascloud.reason, undefined, "a ready lane carries no reason");
     assert.equal(atlascloud.defaults.image, "openai/gpt-image-2/text-to-image");
@@ -340,4 +385,76 @@ test("transient supervisor states do not flicker the grok lane", async () => {
     assert.equal(body.lanes.grok.status, "disconnected", "backoff is honest");
     assert.match(String(body.lanes.grok.reason), /restart/i);
   });
+});
+
+test("OAuth/API and all NovelAI rows expose fixed surface facts regardless of credentials", async () => {
+  for (const ready of [false, true]) {
+    await withApp({ oauthReadyState: ready ? "ready" : "pending", hasApiKey: ready,
+      ...(ready ? { naiApiKey: "nai-fixture-token" } : {}),
+    }, async (base) => {
+      const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+      assert.equal(body.lanes.oauth.status, ready ? "ready" : "disconnected");
+      assert.equal(body.lanes.api.status, ready ? "ready" : "key-missing");
+      assert.equal(body.lanes.nai.status, ready ? "ready" : "key-missing");
+      for (const id of ["oauth", "api"] as const) {
+        assert.deepEqual(body.lanes[id].surfaces, OAUTH_SURFACES);
+        assert.deepEqual(body.lanes[id].models.image.map((model) => model.capabilities.inputRoles), [
+          ["text", "image_references"], ["text", "image_references"],
+        ]);
+      }
+      assert.deepEqual(body.lanes.nai.surfaces, NAI_SURFACES);
+      assert.deepEqual(body.lanes.nai.models.image.map((model) => ({
+        id: model.id, inputRoles: model.capabilities.inputRoles,
+      })), [
+        { id: "nai-diffusion-5-full", inputRoles: ["text"] },
+        { id: "nai-diffusion-5-curated", inputRoles: ["text"] },
+        { id: "nai-diffusion-4-5-full", inputRoles: ["text"] },
+        { id: "nai-diffusion-4-5-curated", inputRoles: ["text"] },
+      ]);
+      assert.deepEqual(body.lanes.nai.models.video, []);
+      for (const id of ["agy", "gemini-api", "atlascloud", "minimax"] as const) {
+        assert.deepEqual(body.lanes[id].surfaces, STATIC_IMAGE_SURFACES);
+        for (const model of body.lanes[id].models.image) {
+          assert.deepEqual(model.capabilities.inputRoles, ["text", "image_references"]);
+        }
+      }
+      for (const id of ["grok", "grok-api"] as const) {
+        assert.deepEqual(body.lanes[id].surfaces, { ...STATIC_IMAGE_SURFACES,
+          video: { supported: true, references: true, mask: false, streaming: false, catalogAccess: "static" },
+        });
+      }
+    });
+  }
+});
+
+test("Comfy keeps per-workflow reference roles and runtime video while liveness changes", async () => {
+  const base = {
+    origin: "http://127.0.0.1:9", params: [], createdAt: 1, updatedAt: 1,
+    graph: { "1": { class_type: "TextEncode", inputs: { text: "fixture" } },
+      "2": { class_type: "SaveImage", inputs: {} }, "3": { class_type: "LoadImage", inputs: {} } },
+    bind: { prompt: { node: "1", input: "text" }, output: { node: "2" } },
+  };
+  const workflows: Array<import("../lib/comfyWorkflowStore.ts").ComfyWorkflowRecord> = [
+    { ...base, id: "text-image", label: "Text image", mediaKind: "image" },
+    { ...base, id: "ref-image", label: "Reference image", mediaKind: "image",
+      bind: { ...base.bind, refImage: { node: "3", input: "image" } } },
+    { ...base, id: "runtime-video", label: "Runtime video", mediaKind: "video" },
+  ];
+  for (const comfyOnline of [false, true]) {
+    await withApp({ comfyWorkflows: workflows, comfyOnline }, async (url) => {
+      const body = await (await fetch(`${url}/api/models`)).json() as ModelsBody;
+      const comfy = body.lanes.comfy;
+      assert.equal(comfy.status, comfyOnline ? "ready" : "disconnected");
+      assert.deepEqual(comfy.surfaces, COMFY_SURFACES);
+      assert.deepEqual(comfy.defaults, { image: "text-image" });
+      assert.deepEqual(comfy.models.image.map((model) => [model.id, model.capabilities.inputRoles]), [
+        ["text-image", ["text"]], ["ref-image", ["text", "image_references"]],
+      ]);
+      assert.deepEqual(comfy.models.video.map((model) => [model.id, model.capabilities.inputRoles]), [
+        ["runtime-video", ["text"]],
+      ]);
+      assert.equal(comfy.models.video[0].executable, undefined);
+      assert.equal(comfy.models.video[0].lockReason, undefined);
+    });
+  }
 });

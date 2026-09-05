@@ -34,6 +34,7 @@ import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt 
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
 import { errorEnvelopeFields } from "./errors/envelope.js";
+import { getProviderSurfaceSupport } from "./providers/derive.js";
 
 async function resolveMultimodeElements(
   elementIds: string[], references: string[], activeProvider: string, requestId: string | undefined,
@@ -160,7 +161,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       // request would reach generateViaResponses and bill OAuth for an image
       // the user asked ComfyUI to make — silently, with no error to trace.
       // Removed in wp7 when this surface gains a real comfy branch.
-      if (provider === "comfy") {
+      if (getProviderSurfaceSupport(provider, "multimode")?.supported === false) {
         finishStatus = "error";
         finishHttpStatus = 400;
         finishErrorCode = "COMFY_SURFACE_UNSUPPORTED";

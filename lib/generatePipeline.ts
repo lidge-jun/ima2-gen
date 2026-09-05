@@ -40,7 +40,7 @@ import { publishJobEvent } from "./ssePublish.js";
 import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt } from "./generationInputValidation.js";
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
-import { deriveReferenceLimit } from "./providers/derive.js";
+import { deriveReferenceLimit, getProviderSurfaceSupport } from "./providers/derive.js";
 import {
   claimIdempotencyKey,
   completeIdempotencyKey,
@@ -326,7 +326,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       // Refuse loudly rather than dropping the input: lib/naiImageAdapter.ts is
       // text-to-image only, so a reference passed here would be ignored and the
       // user would get an unrelated image back believing they had edited one.
-      if (activeProvider === "nai" && providerRefCount > 0) {
+      if (getProviderSurfaceSupport(activeProvider ?? "", "generate")?.references === false && providerRefCount > 0) {
         return fail(400, {
           error: "NovelAI image generation does not accept reference images yet",
           code: "NAI_REF_UNSUPPORTED",
