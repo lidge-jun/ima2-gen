@@ -212,6 +212,22 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify E2E source SHA
+        env:
+          WP07_EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: |
+          node --input-type=module -e '
+            import { execFileSync } from "node:child_process";
+            const wanted = process.env.WP07_EXPECTED_SHA;
+            const actual = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+            if (!/^[0-9a-f]{40}$/i.test(wanted ?? "") || wanted !== actual) {
+              throw new Error("E2E checkout does not match the requested full SHA");
+            }
+          '
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22.23.0'
@@ -265,3 +281,13 @@ jobs:
           path: ui/test-results/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload job tracking evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp07-job-tracking-evidence
+          path: |
+            ui/test-results/**/wp07-*.png
+            ui/test-results/**/wp07-*.json
+          if-no-files-found: error
+          retention-days: 14
