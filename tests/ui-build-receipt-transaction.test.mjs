@@ -4,6 +4,8 @@ import fs from "node:fs";
 import { readFile, writeFile, unlink, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
+import { execFileSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { beginUiBuild, finishUiBuild, abortUiBuild, verifyUiBuildReceipt } from "../scripts/lib/uiBuildReceipt.mjs";
 import { receiptFixture } from "./_uiBuildReceiptFixture.mjs";
 
@@ -99,4 +101,47 @@ test("abandoned lock refuses reuse and never invalidates another owner's receipt
     await assert.rejects(beginUiBuild(f.root), { code: "UI_RECEIPT_BUSY" });
     assert.equal(await readFile(join(f.dist, ".ima2-ui-build-receipt.json"), "utf8"), "prior owned marker");
   } finally { await f.close(); }
+});
+
+for (const signal of ["null-filename", "watch-error"]) test("watcher " + signal + " invalidates the real transaction", async (t) => {
+  const f = await receiptFixture(), watchers = []; let tx;
+  t.mock.method(fs, "watch", (_path, _options, callback) => {
+    const watcher = new EventEmitter(); watcher.close = () => {}; watchers.push({ watcher, callback }); return watcher;
+  });
+  syncBuiltinESMExports();
+  try {
+    tx = await beginUiBuild(f.root); assert.ok(watchers.length > 0);
+    if (signal === "null-filename") watchers[0].callback("rename", null);
+    else watchers[0].watcher.emit("error", new Error("synthetic watch failure"));
+    await assert.rejects(finishUiBuild(f.root, tx), { code: "UI_RECEIPT_BUILD_CHANGED" });
+    await abortUiBuild(f.root, tx); await assert.rejects(verify(f), { code: "UI_RECEIPT_MISSING" });
+  } finally { if (tx) await abortUiBuild(f.root, tx); t.mock.restoreAll(); syncBuiltinESMExports(); await f.close(); }
+});
+
+for (const path of ["ui/src/entry.ts", "ui/index.html", "ui/public/fonts/fixture.woff2", "ui/vite.config.ts", "package-lock.json"]) {
+  test("receipt rejects changed selected source: " + path, async () => {
+    const f = await receiptFixture(); let tx;
+    try {
+      tx = await beginUiBuild(f.root); await finishUiBuild(f.root, tx); await abortUiBuild(f.root, tx);
+      await f.put(path, "independent altered input");
+      await assert.rejects(verify(f), { code: "UI_RECEIPT_SOURCE" });
+    } finally { if (tx) await abortUiBuild(f.root, tx); await f.close(); }
+  });
+}
+
+test("actual synthetic Git HEAD change invalidates unchanged receipt inputs", async () => {
+  const f = await receiptFixture(); let tx;
+  const git = (...args) => execFileSync("git", ["-c", "core.hooksPath=" + join(f.root, "no-hooks"),
+    "-c", "commit.gpgsign=false", "-c", "user.name=Receipt fixture", "-c", "user.email=fixture@example.invalid", ...args],
+  { cwd: f.root, encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] });
+  try {
+    git("init"); git("commit", "--allow-empty", "-m", "fixture A");
+    const firstHead = git("rev-parse", "HEAD").trim();
+    tx = await beginUiBuild(f.root); const receipt = await finishUiBuild(f.root, tx); await abortUiBuild(f.root, tx);
+    assert.equal(receipt.headSha, firstHead);
+    assert.equal((await verifyUiBuildReceipt({ repoRoot: f.root, distDir: f.dist, requireGitHead: true })).binding, "git-and-source");
+    git("commit", "--allow-empty", "-m", "fixture B");
+    assert.notEqual(git("rev-parse", "HEAD").trim(), firstHead);
+    await assert.rejects(verify(f), { code: "UI_RECEIPT_HEAD" });
+  } finally { if (tx) await abortUiBuild(f.root, tx); await f.close(); }
 });

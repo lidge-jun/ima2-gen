@@ -2,6 +2,10 @@ import { expect, test } from "./fixtures/appServer";
 import { openCreate, selectOption, withJ6, PROVIDER_TRIGGER, MODEL_TRIGGER, j6EvidenceIdentity, type J6Seed } from "./fixtures/j6Selection";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+import en from "../src/i18n/en.json";
+import ko from "../src/i18n/ko.json";
+import zhHans from "../src/i18n/zh-Hans.json";
+import zhHant from "../src/i18n/zh-Hant.json";
 
 const seed: J6Seed = { provider: "nai", imageModel: "nai-diffusion-5-full", nonGenerating: true,
   viewport: { width: 1280, height: 900 }, catalog: { mode: "ready", mcp: true }, evidencePrefix: "wp09-j8",
@@ -120,6 +124,117 @@ test("MCP popup observes the selected image model without showing core GPT facts
     await page.locator(".generate-row__readiness:visible").click();
     await expect(popup.locator("[data-mcp-readiness]")).toHaveCount(0); await expect(popup).toContainText("GPT OAuth");
     await popup.getByRole("button", { name: "Close", exact: true }).click();
+    expect(observation.requests).toEqual([]);
+  });
+});
+
+for (const width of [320, 390]) for (const locale of ["en", "ko", "zh-Hans", "zh-Hant"] as const) {
+  test(`mobile navigation ${width} ${locale}: all destinations and keyboard focus remain reachable`, async ({ browser }, info) => {
+    await withJ6(browser, info, { ...seed, locale, viewport: { width, height: 844 } }, async (page, observation, origin) => {
+      await page.goto(origin);
+      const labels = { en, ko, "zh-Hans": zhHans, "zh-Hant": zhHant }[locale].nav;
+      const nav = page.locator(".nav-rail--mobile"), buttons = nav.getByRole("button");
+      await expect(buttons).toHaveCount(7);
+      const dimensions = await buttons.evaluateAll((elements) => elements.map((button) => {
+        const r = button.getBoundingClientRect(), label = button.querySelector(".nav-rail__label")!;
+        const range = document.createRange(); range.selectNodeContents(label);
+        return { text: button.getAttribute("aria-label"), width: r.width, height: r.height,
+          fits: Array.from(range.getClientRects()).every((t) => t.left >= r.left - 1 && t.right <= r.right + 1 && t.top >= r.top - 1 && t.bottom <= r.bottom + 1) };
+      }));
+      for (const row of dimensions) { expect(row.width).toBeGreaterThanOrEqual(44); expect(row.height).toBeGreaterThanOrEqual(44); expect(row.fits).toBe(true); }
+      await buttons.first().focus();
+      for (let index = 0; index < 7; index++) {
+        if (index) await page.keyboard.press("Tab");
+        await expect(buttons.nth(index)).toBeFocused(); await expect(buttons.nth(index)).toBeInViewport({ ratio: 0.99 });
+      }
+      for (let index = 5; index >= 0; index--) {
+        await page.keyboard.press("Shift+Tab"); await expect(buttons.nth(index)).toBeFocused();
+        await expect(buttons.nth(index)).toBeInViewport({ ratio: 0.99 });
+      }
+      await nav.getByRole("button", { name: labels.settings, exact: true }).click();
+      await expect(page.locator(".app")).toHaveClass(/app--settings-open/);
+      await expect(page).toHaveURL(/#settings$/);
+      await expect(nav.getByRole("button", { name: labels.settings, exact: true })).toBeInViewport({ ratio: 0.99 });
+      for (const [label, mode, hash] of [[labels.home, "home", "home"], [labels.create, "classic", "create"],
+        [labels.node, "node", "node"], [labels.assets, "assets", "assets"], [labels.home, "home", "home"]]) {
+        const button = nav.getByRole("button", { name: label!, exact: true }); await button.click();
+        await expect(page.locator(".app")).not.toHaveClass(/app--settings-open/);
+        await expect(page.locator(".app")).toHaveAttribute("data-ui-mode", mode!);
+        await expect(page).toHaveURL(new RegExp(`#${hash}$`));
+        await expect(button).toHaveAttribute("aria-current", "page"); await expect(button).toBeInViewport({ ratio: 0.99 });
+      }
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+      await capture(page, info, `nav-${width}-${locale}`, { dimensions, overflow }); expect(observation.requests).toEqual([]);
+    });
+  });
+}
+
+for (const surface of ["classic", "home"] as const) for (const field of ["positive", "negative"] as const) {
+  for (const modifier of ["Control", "Meta"] as const) {
+    test(`T5 ${surface} ${field} ${modifier}: mounted input blocks composition and submits once after commit`, async ({ browser }, info) => {
+      await withJ6(browser, info, { ...seed, uiMode: surface === "home" ? "home" : "classic" }, async (page, observation, origin) => {
+        const requests: unknown[] = [];
+        await page.route("**/api/generate", async (route) => {
+          if (route.request().method() === "POST") requests.push(route.request().postDataJSON());
+          await route.fulfill({ status: 400, json: { error: "WP09 synthetic admission refusal", code: "INVALID_REQUEST" } });
+        });
+        await page.goto(origin);
+        const root = page.locator(surface === "home" ? ".home-prompt" : desktop);
+        await fillDrafts(root, surface === "home");
+        const input = root.locator(field === "negative" ? ".negative-prompt__textarea"
+          : surface === "home" ? "#home-prompt-input" : ".composer__textarea");
+        await input.focus(); await input.press("End"); await input.press("Enter");
+        await expect(input).toHaveValue((field === "negative" ? NEGATIVE : POSITIVE) + "\n");
+        await input.evaluate((node, modifier) => {
+          node.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "한" }));
+          node.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter", code: "Enter",
+            ctrlKey: modifier === "Control", metaKey: modifier === "Meta", isComposing: true }));
+        }, modifier);
+        await page.evaluate(async () => { await Promise.resolve(); });
+        expect(requests).toEqual([]); expect(observation.requests).toEqual([]);
+        await input.evaluate((node) => { node.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "한" })); });
+        await page.evaluate(async () => { await Promise.resolve(); });
+        await input.press(`${modifier}+Enter`);
+        await expect.poll(() => requests.length).toBe(1);
+        expect(requests[0]).toMatchObject({ provider: "nai", model: "nai-diffusion-5-full" });
+        await expect(page.locator(".element-mention-menu")).toHaveCount(0);
+        await capture(page, info, `t5-${surface}-${field}-${modifier}`, { requests: requests.length, upstreamRequests: observation.requests.length });
+      });
+    });
+  }
+}
+
+test("T6 retired attachment highlight follows the mounted textarea after scroll and resize", async ({ browser }, info) => {
+  await withJ6(browser, info, { ...seed, provider: "minimax", imageModel: "image-01" }, async (page, observation, origin) => {
+    await openCreate(page, origin); const root = page.locator(desktop), input = root.locator(".composer__textarea");
+    await root.locator("input[type=file]").setInputFiles({ name: "wp09-synthetic.png", mimeType: "image/png",
+      buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
+    await expect(root.locator(".composer__tray [role=listitem]")).toHaveCount(1);
+    await expect(input).toHaveValue(/@Image_1/);
+    await root.locator(".composer__tray-remove").click();
+    await expect(root.locator(".composer__tray [role=listitem]")).toHaveCount(0);
+    await expect(input).toHaveValue(/@Image_1/);
+    await input.fill(Array.from({ length: 60 }, (_, index) => `line ${index} @Image_1`).join("\n"));
+    for (const width of [1280, 1024]) {
+      await page.setViewportSize({ width, height: 800 });
+      await input.evaluate((element: HTMLTextAreaElement) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll")); });
+      const metrics = () => root.evaluate((element) => {
+        const input = element.querySelector<HTMLTextAreaElement>(".composer__textarea")!;
+        const mirror = element.querySelector<HTMLElement>(".composer__prompt-mirror")!;
+        const actual = getComputedStyle(mirror), expected = getComputedStyle(input);
+        const keys = ["width", "height", "paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "lineHeight", "fontSize"] as const;
+        const marks = Array.from(mirror.querySelectorAll<HTMLElement>(".dead-tag"));
+        const box = input.getBoundingClientRect();
+        const visible = marks.map((mark) => mark.getBoundingClientRect()).find((r) => r.top >= box.top && r.bottom <= box.bottom);
+        return { aligned: keys.every((key) => actual[key] === expected[key]), scrollTop: input.scrollTop,
+          mirrorScrollTop: mirror.scrollTop, markCount: marks.length, pointerTransparent: actual.pointerEvents === "none",
+          hitTextarea: !!visible && document.elementFromPoint(visible.left + visible.width / 2, visible.top + visible.height / 2) === input };
+      });
+      await expect.poll(async () => { const m = await metrics(); return m.aligned && m.scrollTop === m.mirrorScrollTop && m.hitTextarea; }).toBe(true);
+      const result = await metrics(); expect(result.markCount).toBe(60); expect(result.scrollTop).toBeGreaterThan(0);
+      expect(result.pointerTransparent).toBe(true); await capture(page, info, `t6-mirror-${width}`, result);
+    }
     expect(observation.requests).toEqual([]);
   });
 });

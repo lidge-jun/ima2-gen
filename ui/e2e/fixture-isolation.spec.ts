@@ -74,6 +74,19 @@ test("I3 direct, named, custom-promisified and Worker process calls never reach 
   await proof(info, "process", { result: result.result, denied: result.guard.deniedProcesses, nativeCalls: result.nativeCalls, exited: result.exited });
 });
 
+test("I2 numeric loopback listener setup requires no native name resolution", async ({}, info) => {
+  const result = await runIsolationProbe(`
+    const {createServer}=await import("node:http");const server=createServer();let code="",nativeFrames=[];
+    try {await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve);});}
+    catch(error){code=error.code;nativeFrames=String(error.stack).split("\\n").filter(line=>line.includes("node:net:")).map(line=>line.trim());}
+    const bound=server.listening;
+    if(bound)await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+    return {bound,code,nativeFrames};
+  `);
+  await proof(info, "numeric-bind", { result: result.result, denied: result.guard.deniedConnections });
+  expect(result.result).toMatchObject({ bound: true, code: "" }); result.guard.assertClean();
+});
+
 test("I2 redirects cannot reach an independently owned foreign listener", async ({}, info) => {
   let requests = 0;
   const foreign = createServer((_request, response) => { requests++; response.end("UNREACHABLE"); });

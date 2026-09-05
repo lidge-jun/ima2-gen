@@ -94,3 +94,20 @@ J2 now checks edit recovery; J3 captures two distinct prompts across billing
 recovery; J5 enters Create and unloads the page before same-home restart.
 Remaining UIR/compiler/cache fault coverage, T5/T6, complete mobile-navigation/MCP
 matrix and actual native/render evidence stay open. B has not advanced to C.
+
+First hosted integration: f55906630dfcf5cde10e4092e0a583e82623786d,
+run33999593938/job101395962930. Strict receipt UI build passed. Isolation17 pass,
+4 fail (three primary-config startup cases plus normal server startup), all
+E2E_CHILD_EARLY_EXIT:E2E_EGRESS_DENIED;184 journey cases correctly did not run.
+WP09 artifact9979112289 downloaded under the session evidence wp09/f5590663-native.
+Do not waive missing downstream PNGs: they reflect dependency-gate refusal.
+
+RCA hypotheses before repair: H1 numeric-loopback listener setup calls guarded
+dns.lookup (falsifier: denial transport/stack is not numeric lookup); H2 bootstrap
+provider traffic uses an unowned target (falsifier: exact bind-only probe reproduces
+the denial); H3 incorrect inherited listener address (falsifier: generated env is
+127.0.0.1/port0 and same bind-only call fails). Local read-only inspection of Node
+v24.17.0 built-in net source confirms lookupAndListen invokes dns.lookup even for
+an explicit address. That is a causal candidate, not yet exact Node22 runtime proof.
+Next diagnostic captures sanitized denial transport and native-only stack frames;
+no address allowlist is broadened on this hypothesis alone.

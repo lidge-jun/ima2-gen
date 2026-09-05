@@ -229,7 +229,7 @@ function observeChild(child: ChildProcess) {
     },
   };
 }
-function listenAddress(child: ChildProcess): Promise<string> {
+function listenAddress(child: ChildProcess, guard: GuardReport): Promise<string> {
   return new Promise((resolveAddress, reject) => {
     let text = "";
     const cleanup = () => {
@@ -239,7 +239,11 @@ function listenAddress(child: ChildProcess): Promise<string> {
     const failed = () => { cleanup(); reject(new Error("E2E_CHILD_START_FAILED")); };
     const exited = () => {
       const codes = text.match(/\b(?:E2E|ERR|UI_RECEIPT)_[A-Z_]+\b/g) ?? [];
-      cleanup(); reject(new Error("E2E_CHILD_EARLY_EXIT:" + (codes.at(-1) ?? "unknown")));
+      const nativeFrames = text.split("\n").filter((line) => /^\s+at [A-Za-z0-9_.<> ]+ \(node:[a-z_]+:\d+:\d+\)$/.test(line)).slice(-8);
+      cleanup(); reject(new Error("E2E_CHILD_EARLY_EXIT:" + (codes.at(-1) ?? "unknown"), {
+        cause: { connections: guard.deniedConnections, processes: guard.deniedProcesses,
+          filesystem: guard.deniedFilesystem, nativeFrames },
+      }));
     };
     const data = (chunk: Buffer) => {
       text = (text + chunk.toString("utf8")).slice(-65536);
@@ -276,7 +280,7 @@ async function launch(stub: StubHandle, home: string, projection: Projection, is
     });
     childState = observeChild(child);
     child.on("message", guard.accept);
-    const [address] = await Promise.race([Promise.all([listenAddress(child), guard.readyPromise]), guard.failure]);
+    const [address] = await Promise.race([Promise.all([listenAddress(child, guard), guard.readyPromise]), guard.failure]);
     const url = new URL(address);
     if (url.origin !== address || url.protocol !== "http:" || url.hostname !== "127.0.0.1" || !url.port || url.port === "3333") throw new Error("E2E_CHILD_ORIGIN");
     appOrigin = address; guard.assertClean();
