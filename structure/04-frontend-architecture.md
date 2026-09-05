@@ -15,6 +15,23 @@ per-workflow Comfy binding validation remain in their existing owners. The
 `provider-surface-affordance.spec.ts` journey covers NAI-to-OAuth switching and
 a synthetic attachment without generating an image.
 
+Core selection is reconciled by `ui/src/lib/coreSelection.ts`: an explicit valid
+provider wins over conflicting model metadata, so `grok-api`, `api`, and
+`gemini-api` keep their authentication lane. `storeCoreSelectionImpl.ts` owns the
+interactive transitions; `coreSelectionPersistence.ts` owns legacy active-key
+reads/writes and bounded `ima2.coreSelectionMemory.v1` per-lane memory. Hydration
+and cross-tab storage events use one reconciled selection patch, without copying
+another tab's draft or clearing MCP/history. Legacy keys remain authoritative;
+reads do not repair storage and unknown future memory versions are not overwritten.
+
+Comfy image/video workflow IDs live in `comfyWorkflow`/`comfyVideoWorkflow`, not in
+the static `ImageModel` union. Leaving Comfy clears active carriers while remembering
+its choices; explicit null actions remove only the named remembered slot. Missing
+catalog IDs remain visible and new Comfy selections never auto-pick a workflow.
+`coreImageRequestModel` projects the image workflow into the existing wire `model`
+field, omitting it when absent. `generateImpl` sends active Comfy video to video
+generation and keeps unsupported Comfy/NAI multimode preferences inactive.
+
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 
 This matters because README and older devlog entries still contain traces of the vanilla HTML UI. Actual UI work should target React components, the Zustand store, `ui/src/lib/api.ts` / `ui/src/lib/nodeApi.ts`, and `ui/src/index.css`. Fixing the legacy HTML file will not change the active app.
@@ -75,7 +92,7 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | History | `HistoryStrip.tsx`, `GalleryModal.tsx`, `ResultActions.tsx`, `ResultMetadataModal.tsx` | Saved image browsing, favorite, restore, drag-out, metadata-restore, and per-result metadata inspector (#108) |
 | Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx`, `AccountSettings.tsx`, `settings/QuotaCard.tsx` | Pending jobs, notifications, billing/provider status, Grok quota bar + Switch Account |
 | Error UX | `ErrorCard.tsx`, `ui/src/lib/errorCodes.ts`, `errorHandler.ts` | Code-based localized error cards and toast routing. The 15 `NAI_*` codes carry NovelAI-specific copy; `NAI_API_KEY_MISSING`, `NAI_AUTH_FAILED` and `NAI_SUBSCRIPTION_REQUIRED` opt out of the generic auth/billing class card through `SELF_DESCRIBING_AUTH_CODES`, because that card says "sign in again" and this lane authenticates with a pasted token. |
-| Provider selection | `GenProviderModelSelect.tsx`, `settings/ProviderStatusSelect.tsx`, `ProviderReadinessPopup.tsx`, `ApiKeyInput.tsx`, `ui/src/lib/imageModels.ts`, `referenceLimits.ts` | Lane picker and per-lane model coercion. `PROVIDER_READINESS_LABELS` is an exhaustive map rather than a ternary chain so a new lane cannot silently render as "GPT API"; `LANES_WITHOUT_REFERENCE_SUPPORT` caps the NovelAI reference tray at zero. |
+| Provider selection | `GenProviderModelSelect.tsx`, `settings/ProviderStatusSelect.tsx`, `ProviderReadinessPopup.tsx`, `ApiKeyInput.tsx`, `ui/src/lib/imageModels.ts`, `coreSelection.ts`, `referenceLimits.ts` | Shared lane/model/workflow reconciliation preserves explicit credential lanes. `PROVIDER_READINESS_LABELS` is exhaustive; generated surface support gates reference attachment independently of readiness and numeric caps. |
 | NovelAI controls | `settings/NaiControlsPanel.tsx`, `NegativePromptField.tsx`, `PromptComposer.tsx`, `home/HomePromptComposer.tsx`, `MobileComposeSheet.tsx`, `ui/src/lib/naiOptions.ts`, `naiPayload.ts` | Provider-gated Positive prompt and Undesired content panes across desktop, home, and mobile plus sparse native overrides. The panes sit side by side and stack below a 719px container. Non-NAI providers keep one prompt; saved negative state is retained but omitted from their payloads. |
 | Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts`, `customSizeSlots.ts` | Keyboard-safe custom size drafts, slot persistence, and generation-time adjustment confirmation |
 | Prompt library | `PromptLibraryPanel.tsx`, `PromptLibraryRow.tsx`, `PromptDetailModal.tsx`, `SavePromptPopover.tsx`, `PromptImportDialog.tsx`, `PromptImportFolderSection.tsx`, `PromptImportDiscoverySection.tsx` | Right-panel/overlay prompt library for browsing, searching, favoriting, inserting, saving, preview-first imports, PR2 curated source search, PR3 GitHub folder file selection, and PR4 reviewed-source discovery |

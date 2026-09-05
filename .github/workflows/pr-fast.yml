@@ -83,6 +83,16 @@ jobs:
           path: ui/test-results/**/wp01-*.png
           if-no-files-found: ignore
           retention-days: 14
+      - name: Upload selection evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp02-selection-evidence
+          path: |
+            ui/test-results/**/wp02-*.png
+            ui/test-results/**/wp02-*.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload e2e failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
