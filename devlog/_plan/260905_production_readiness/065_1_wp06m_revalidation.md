@@ -40,7 +40,9 @@ Two P reviewers independently source-verified the following adjustments:
 
 ## Exact production refinements
 
-All production edits stay in lib/grokVideoDownload.ts. Keep cap100*1024*1024 and
+Production body-policy edits stay in lib/grokVideoDownload.ts. The narrow
+whole-last-frame-operation extraction in065_2 is the only extra production change;
+its body/order/route behavior remain unchanged. Keep cap100*1024*1024 and
 three-argument public downloadVideo. Add private assertDeclaredVideoLength(res,cap)
 used by header preflight (default cap) and reader (trusted internal cap). Header
 preflight preserves status/length/MIME precedence. No input/config can supply the
@@ -72,6 +74,10 @@ In addition to065 source/docs owners:
 | NEW | tests/_videoFfmpegFixture.ts | narrow test-only FFmpeg capability, real trusted tiny codec cases and child cleanup |
 | NEW | tests/execution-process-isolation.test.ts | harmless async-customizer sentinels and descriptor restoration |
 | MODIFY | tests/_executionRouteIsolation.ts | fresh deny replacements so promisify cannot retain an original custom executor |
+| MODIFY | tests/provider-execution-harness.test.ts | retarget setup-failure injection, retain restoration checks |
+| NEW | lib/videoExtendI2vOperation.ts | mechanically extracted detached operation returning its full Promise |
+| MODIFY | routes/videoExtended.ts | invoke operation with original captures; retain void/background semantics |
+| MODIFY | scripts/paired-generated-paths.txt | register new required operation JS twin |
 | MODIFY | tests/videoRoute.test.ts | artifact reader spy, generate failures/no persistence, safe fixture and explicit FFmpeg skip |
 | MODIFY | tests/videoExtendI2v.test.ts | real default generator/downloader failure path, parent preserved, safe fixture |
 | MODIFY | tests/agent-mode-runtime-contract.test.ts | artifact spies and actual Agent video failure/no handle or success-turn persistence |
@@ -187,10 +193,10 @@ No real provider calls or image/video generation charges are involved.
   pending-read abort protection/final wrapper barrier as separate observable cases.
   A later guard must not mask the selected mutation; synthesize any failing oracle.
 
-Six disjoint B lanes are anticipated: downloader; stream/unit tests; shared video/
-FFmpeg fixture; generator tests; route/extension tests; Agent/envelope tests. Main
-owns shared process-denial fix/negative tests and docs/inventory/integration. Final
-write ownership and helper signatures are frozen after A, before parallel B.
+Disjoint lanes and exact interfaces are in065_2. Last-frame also owns the approved
+operation extraction; main owns shared process-denial/setup-failure tests and
+docs/inventory/pairing. Agent retains its existing pinned-image fixture rather
+than opening a second isolation.
 
 ## Separate auxiliary probe limitation
 

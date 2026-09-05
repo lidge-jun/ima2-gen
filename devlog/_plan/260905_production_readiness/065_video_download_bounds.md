@@ -129,6 +129,8 @@ validation. Skip empty chunks so they cannot grow the retained chunk list.
 | Action | Path | Delta |
 | --- | --- | --- |
 | MODIFY | lib/grokVideoDownload.ts | Incremental reader, deterministic abort/error mapping and finally cleanup; existing exports preserved |
+| NEW | lib/videoExtendI2vOperation.ts | unchanged full last-frame operation Promise per065_2 |
+| MODIFY | routes/videoExtended.ts | mechanical IIFE extraction call, no route/event/persistence change |
 | NEW | tests/grokVideoDownload.test.ts | Synthetic stream boundary, cleanup, validation and public-wrapper mapping tests |
 | MODIFY | tests/grokVideoAdapter.test.ts | Replace arrayBuffer-only fixtures with real Response streams; strengthen public re-export/retry/caller negatives |
 | MODIFY | tests/videoExtendedRoute.test.ts | Download-invalid/oversized-header negatives for edit and native extension; prove no artifact persisted |
@@ -139,9 +141,10 @@ validation. Skip empty chunks so they cannot grow the retained chunk list.
 | MODIFY | structure/07-devlog-map.md | Link this outcome/evidence and next WP07 |
 | MODIFY | this document | Record current anchors, actual red/green/C proof and remaining residuals |
 
-Generated: lib/grokVideoDownload.js via existing build:server only; already paired
-in scripts/paired-generated-paths.txt:11, so no pairing-manifest edit. No new
-production module, no deletes. Tests/docs widen the one-file fix only to prove
+Generated: downloader and new operation JS twins via existing build:server only;
+main adds lib/videoExtendI2vOperation.js to scripts/paired-generated-paths.txt.
+No deletes. The sole new production module is the mechanical operation extraction
+in065_2. Tests/docs widen the body-policy fix only to prove
 its direct consumers; they remain one cohesive WP/PR. Parent owns 000/050/006 and
 goal/release-gate alignment; do not edit them opportunistically in implementation.
 
