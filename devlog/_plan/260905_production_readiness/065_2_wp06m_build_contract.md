@@ -143,6 +143,7 @@ real-codec cases unskipped; hosted skips are reported separately.
 ```ts
 openVideoFixture(options?:{codec?:boolean}):Promise<{
   root:string; config:RuntimeContext["config"];
+  beginCase():void;
   calls:UpstreamCall[]; violations:unknown[];
   ffmpeg:Awaited<ReturnType<typeof installVideoFfmpeg>> | null;
   trackApp(app:Express):void;
@@ -180,6 +181,13 @@ The fixture listen helper enrolls server/error/close ownership first, invokes
 existing listenOwnedLoopback(() => server.listen(0,"127.0.0.1")) synchronously,
 then awaits listening/error. Failed startup is closed and awaited. Both app and
 proxy workers use this recipe, not ordinary listen followed by registration.
+Lifecycle clarification approved during B: open starts idle; beginCase explicitly
+opens a scenario. A file-scoped fixture uses beforeEach(beginCase) and
+afterEach(await finishCase). finishCase moves active→finishing→idle only after all
+work/resources settle. beginCase rejects finishing/active/closed state and any
+retained violation; only drained per-case observations are reset, never violations.
+No respond/listen call silently reopens admission. A per-test fixture also calls
+beginCase once. close handles idle or active state and permanently closes it.
 
 `respond` installs a persistent normalization/validation ledger around the handler.
 Constructor/text/wire/callback AssertionErrors and unregistered rejections fail

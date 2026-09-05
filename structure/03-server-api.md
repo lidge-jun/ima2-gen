@@ -225,6 +225,19 @@ Prompt assembly for the OAuth path injects a short safety intent policy (`SAFETY
 
 ## Video Runtime
 
+`lib/grokVideoDownload.ts` owns incremental100MiB body enforcement, existing MIME/
+MP4-prefix validation and reader cleanup. It returns the same Buffer/contentType;
+callers persist only after success. Caller abort is499, downloader timeout504 and
+body/header failure502. The single timeout is not reset by GET retries or chunks;
+body failure does not restart generation. This is a byte bound, not an RSS ceiling
+or new URL/DNS/redirect security policy. See docs/API.md for exact limitations.
+
+The last-frame background operation now lives in `videoExtendI2vOperation.ts` with
+the original body, captures, phase/terminal ordering and dependencies. The route
+still responds202 and invokes it without awaiting completion. Its actual complete
+Promise can be observed by test wrappers; inflight removal or an early cancel event
+is not by itself proof that background work has stopped.
+
 | Method | Path | Body / query | Response |
 |---|---|---|---|
 | `POST` | `/api/video/generate` | SSE body with `prompt`, optional refs, `duration`, `resolution`, `aspectRatio`, `continueFromVideo`, `continuityLineage` | SSE `planning`, `submitted`, `progress`, `done`, `error` |

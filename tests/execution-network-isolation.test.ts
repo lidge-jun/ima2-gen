@@ -8,12 +8,39 @@ import tls from "node:tls";
 import http2 from "node:http2";
 import dgram from "node:dgram";
 import { syncBuiltinESMExports } from "node:module";
+import { AsyncResource } from "node:async_hooks";
 import { isolateAdditionalNetwork } from "./_executionNetworkIsolation.ts";
 import { openGeminiFixture } from "./_geminiTransportFixture.ts";
 import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
 import { executionTestProcess } from "./_executionTestProcess.ts";
 
 if (executionTestProcess(import.meta.url)) {
+  test("owned transport may finish after headers, but its lease ends with its server", async () => {
+    let forwarded = 0, resume!: () => unknown;
+    const sentinel = mock.method(net, "connect", () => { forwarded++; return new net.Socket(); });
+    const server = createServer();
+    let scope: ReturnType<typeof isolateAdditionalNetwork> | undefined;
+    const violations: unknown[] = [];
+    try {
+      await new Promise<void>(resolve => listenOwnedLoopback(() => server.listen(0, "127.0.0.1", resolve)));
+      const address = server.address(); assert.ok(address && typeof address !== "string");
+      const options = { host: "127.0.0.1", port: address.port };
+      scope = isolateAdditionalNetwork(violations, async () => {
+        resume = AsyncResource.bind(() => net.connect(options));
+        return new Response("headers returned");
+      });
+      await scope.fetchOwned(server, `http://127.0.0.1:${address.port}/`);
+      resume(); assert.equal(forwarded, 1, "owned response transport survives header settlement");
+      assert.throws(() => net.connect(options), /Forbidden fixture network/, "DUT scope is still denied");
+      await new Promise<void>(resolve => server.close(() => resolve()));
+      assert.throws(resume, /Forbidden fixture network/, "closed-server lease cannot reconnect");
+      assert.equal(forwarded, 1); assert.equal(violations.length, 2);
+    } finally {
+      scope?.restore(); sentinel.mock.restore(); syncBuiltinESMExports();
+      if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
   test("a forged server shape cannot mint a native caller capability", async () => {
     const violations: unknown[] = [];
     let reached = 0;

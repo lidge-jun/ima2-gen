@@ -9,7 +9,7 @@ import http2 from "node:http2";
 import { Server } from "node:http";
 import { syncBuiltinESMExports } from "node:module";
 
-interface CallerLease { owner: AdditionalNetworkIsolation; server: Server; port: number; active: boolean }
+interface CallerLease { owner: AdditionalNetworkIsolation; server: Server; port: number; active: boolean; retire(): void }
 const caller = new AsyncLocalStorage<CallerLease>();
 let activeIsolation: AdditionalNetworkIsolation | undefined;
 
@@ -24,7 +24,7 @@ function matchesCaller(args: unknown[], lease: CallerLease | undefined): boolean
 
 /** Complements the pinned HTTP/lookup fixture; only its private caller can open TCP. */
 class AdditionalNetworkIsolation {
-  private readonly leases = new Set<CallerLease>();
+  private readonly leases = new Map<Server, CallerLease>();
   private readonly restores: Array<() => void> = [];
   private readonly seen = new WeakMap<object, Set<string>>();
   private restored = false;
@@ -82,14 +82,25 @@ class AdditionalNetworkIsolation {
       assert.equal(url.username + url.password, ""); port = address.port;
     } catch (error) { this.violations.push(error); throw error; }
     assert.equal(activeIsolation, this, "Caller capability belongs to an inactive fixture");
-    const lease = { owner: this, server, port, active: true }; this.leases.add(lease);
-    try { return await caller.run(lease, () => this.nativeFetch(input, init)); }
-    finally { lease.active = false; this.leases.delete(lease); }
+    // fetch resolves at headers, but its owned HTTP transport may still settle a
+    // canceled body. Keep only this exact live-server lease until server close.
+    const lease = this.serverLease(server, port);
+    return await caller.run(lease, () => this.nativeFetch(input, init));
+  }
+
+  private serverLease(server: Server, port: number): CallerLease {
+    const existing = this.leases.get(server);
+    if (existing) { assert.equal(existing.port, port); return existing; }
+    const lease: CallerLease = { owner: this, server, port, active: true, retire: () => {
+      lease.active = false; this.leases.delete(server); server.off("close", lease.retire);
+    } };
+    server.once("close", lease.retire); this.leases.set(server, lease);
+    return lease;
   }
 
   restore(): void {
     if (this.restored) return;
-    for (const lease of this.leases) lease.active = false;
+    for (const lease of [...this.leases.values()]) lease.retire();
     caller.disable();
     for (const restore of [...this.restores].reverse()) restore();
     syncBuiltinESMExports();

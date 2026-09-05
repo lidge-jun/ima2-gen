@@ -1,39 +1,32 @@
-import { afterEach, describe, it } from "node:test";
+import { after, afterEach, beforeEach, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  buildVideoGenerationPayload,
-  buildGrokVideoPlannerPayload,
-  downloadVideo,
-  parseGrokVideoPlanPrompt,
-  normalizeVideoPoll,
-  generateVideoViaGrok,
-  startVideoRequest,
-  type GrokVideoEvent,
-  type GrokVideoPlan,
-} from "../lib/grokVideoAdapter.js";
-import {
-  buildGrokVideoPlannerSystemPrompt,
-  formatDurationPacingGuidance,
-} from "../lib/grokVideoPlannerPrompt.js";
-import { normalizeGrokVideoModel, VALID_GROK_VIDEO_MODELS } from "../lib/imageModels.js";
-import { parsePngInfo } from "../lib/pngInfo.js";
-import { config } from "../config.js";
-import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
+import { fakeMp4Bytes, makeVideoStreamFixture } from "./_videoStreamFixture.ts";
+import { executionTestProcess } from "./_executionTestProcess.ts";
+import type { GrokVideoEvent, GrokVideoPlan } from "../lib/grokVideoAdapter.js";
+import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import type { UpstreamCall } from "./_executionRouteHarness.ts";
 
-const originalFetch = globalThis.fetch;
+if (executionTestProcess(import.meta.url)) {
+const { openVideoFixture } = await import("./_videoExecutionFixture.ts");
+const fixture = await openVideoFixture();
+after(async () => { await fixture.close(); });
+beforeEach(() => { fixture.beginCase(); });
+const { buildVideoGenerationPayload, buildGrokVideoPlannerPayload, downloadVideo,
+  parseGrokVideoPlanPrompt, normalizeVideoPoll, generateVideoViaGrok, startVideoRequest } = await import("../lib/grokVideoAdapter.js");
+const { buildGrokVideoPlannerSystemPrompt, formatDurationPacingGuidance } = await import("../lib/grokVideoPlannerPrompt.js");
+const { normalizeGrokVideoModel, VALID_GROK_VIDEO_MODELS } = await import("../lib/imageModels.js");
+const { parsePngInfo } = await import("../lib/pngInfo.js");
+const { DEFAULT_GROK_PLANNER_MODEL } = await import("../config.js");
+const config = fixture.config;
+const PROXY = "http://video-fixture.invalid";
+const ARTIFACT = "https://vidgen.example/v.mp4";
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
-
-function ctx(overrides: Record<string, unknown> = {}) {
+function ctx(overrides: Partial<RouteRuntimeContext> = {}): RouteRuntimeContext {
   return {
     config: {
       ...config,
       grokProvider: {
         ...config.grokProvider,
-        proxyHost: "127.0.0.1",
-        proxyPort: 18645,
         plannerModel: "grok-4.3",
         plannerTimeoutMs: 10_000,
         videoStartTimeoutMs: 10_000,
@@ -43,35 +36,35 @@ function ctx(overrides: Record<string, unknown> = {}) {
       },
     },
     packageVersion: "test",
+    grokUrl: PROXY,
     ...overrides,
-  } as any;
-}
-
-function fakeMp4Bytes() {
-  return Buffer.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
+  };
 }
 
 function jsonRes(body: unknown, status = 200, contentType = "application/json") {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-    headers: { get: (k: string) => (k.toLowerCase() === "content-type" ? contentType : null) },
-  } as any;
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": contentType } });
 }
 
 function videoBytesRes() {
-  const buf = fakeMp4Bytes();
-  return {
-    ok: true,
-    status: 200,
-    arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
-    headers: { get: (k: string) => (k.toLowerCase() === "content-type" ? "video/mp4" : null) },
-  } as any;
+  return artifactStream([fakeMp4Bytes()]).response;
 }
 
-const SEARCH_RES = jsonRes({ output: [{ type: "message", content: [{ type: "text", text: "current cinematic references" }] }] });
+function artifactStream(chunks: readonly Uint8Array[], options: Parameters<typeof makeVideoStreamFixture>[1] = {}) {
+  const stream = makeVideoStreamFixture(chunks, { headers: { "content-type": "video/mp4" }, ...options });
+  artifactStreams.push(stream);
+  fixture.addStream(stream);
+  return stream;
+}
+
+const artifactStreams: ReturnType<typeof makeVideoStreamFixture>[] = [];
+afterEach(async () => {
+  await fixture.finishCase();
+  for (const stream of artifactStreams.splice(0)) {
+    assert.equal(stream.stats.arrayBufferCalls, 0);
+    stream.assertDrained();
+  }
+});
+const searchRes = () => jsonRes({ output: [{ type: "message", content: [{ type: "text", text: "current cinematic references" }] }] });
 
 function plannerRes(prompt = "An English cinematic 1-second push-in shot.") {
   return jsonRes({
@@ -87,30 +80,56 @@ function plannerRes(prompt = "An English cinematic 1-second push-in shot.") {
   });
 }
 
-// Install a URL-routing fetch mock. pollSequence is consumed in order for poll GETs.
-function installFetch(opts: { pollSequence: unknown[]; start?: unknown; captureStart?: (body: any) => void }) {
-  let pollIdx = 0;
-  globalThis.fetch = (async (input: any, init?: any) => {
-    const url = String(input);
-    if (url.includes("/v1/responses")) return SEARCH_RES;
-    if (url.includes("/v1/chat/completions")) return plannerRes();
-    if (url.includes("/v1/videos/generations")) {
-      opts.captureStart?.(JSON.parse(init?.body || "{}"));
-      return jsonRes(opts.start ?? { request_id: "vid-1" });
+type RequestKind = "search" | "planner" | "start" | "poll" | "artifact";
+function respond(handler: (kind: RequestKind, call: UpstreamCall) => Response | Promise<Response>, artifactUrl = ARTIFACT, key?: string) {
+  fixture.respond((call) => {
+    assert.ok(call.signal instanceof AbortSignal);
+    const headers: Record<string, string> = {};
+    call.headers.forEach((value, name) => { headers[name] = value; });
+    if (call.url === artifactUrl) {
+      assert.equal(call.method, "GET"); assert.equal(call.body, "");
+      assert.deepEqual(headers, {});
+      return handler("artifact", call);
     }
-    if (url.includes("/v1/videos/vid-1")) {
+    const origin = key ? "https://api.x.ai" : PROXY;
+    const paths: Record<string, RequestKind> = { [`${origin}/v1/responses`]: "search",
+      [`${origin}/v1/chat/completions`]: "planner", [`${origin}/v1/videos/generations`]: "start",
+      [`${origin}/v1/videos/vid-1`]: "poll" };
+    assert.ok(Object.hasOwn(paths, call.url), `Unexpected video URL: ${call.url}`);
+    const kind = paths[call.url];
+    assert.equal(call.method, kind === "poll" ? "GET" : "POST");
+    assert.deepEqual(headers, { authorization: `Bearer ${key || "dummy"}`, "content-type": "application/json" });
+    if (kind === "poll") assert.equal(call.body, "");
+    else { const body = JSON.parse(call.body); assert.ok(body && typeof body === "object" && !Array.isArray(body)); }
+    return handler(kind, call);
+  });
+}
+
+function installFetch(opts: { pollSequence: unknown[]; start?: unknown; captureStart?: (body: Record<string, unknown>) => void;
+  startResponse?: (body: Record<string, unknown>) => Response; artifact?: () => Response; directKey?: string }) {
+  let pollIdx = 0;
+  const counts = { start: 0, poll: 0, artifact: 0 };
+  respond((kind, call) => {
+    if (kind === "search") return searchRes();
+    if (kind === "planner") return plannerRes();
+    counts[kind]++;
+    if (kind === "start") {
+      const body = JSON.parse(call.body); opts.captureStart?.(body);
+      return opts.startResponse?.(body) ?? jsonRes(opts.start ?? { request_id: "vid-1" });
+    }
+    if (kind === "poll") {
       const next = opts.pollSequence[Math.min(pollIdx, opts.pollSequence.length - 1)];
       pollIdx += 1;
       return jsonRes(next);
     }
-    if (url.includes("vidgen.example")) return videoBytesRes();
-    throw new Error(`unexpected fetch: ${url}`);
-  }) as any;
+    return opts.artifact?.() ?? videoBytesRes();
+  }, ARTIFACT, opts.directKey);
+  return counts;
 }
 
 const DONE_POLL = { status: "done", progress: 100, video: { url: "https://vidgen.example/v.mp4", duration: 1, respect_moderation: true }, usage: { cost_in_usd_ticks: 500000000 } };
 
-describe("Grok video adapter", () => {
+// Top-level node:test cases run serially; keep every executable callback bounded.
   it("builds a T2V payload and omits aspect_ratio when auto", () => {
     const plan: GrokVideoPlan = { prompt: "p", mode: "text-to-video", duration: 5, resolution: "480p", aspectRatio: "auto", webSearchCalls: 1 };
     const payload = buildVideoGenerationPayload(plan, { model: "grok-imagine-video" });
@@ -284,74 +303,128 @@ describe("Grok video adapter", () => {
   });
 
   it("maps start HTTP errors and caller cancellation", async () => {
-    globalThis.fetch = (async (input: any, init?: any) => {
-      if (init?.signal?.aborted) {
-        const err = new Error("aborted");
-        err.name = "AbortError";
-        throw err;
-      }
-      if (String(input).includes("/v1/videos/generations")) return jsonRes({ error: "bad request" }, 400);
-      throw new Error(`unexpected fetch: ${input}`);
-    }) as any;
-    await assert.rejects(startVideoRequest(ctx(), { prompt: "x" }, {}), (e: any) => e.code === "GROK_VIDEO_REQUEST_FAILED" && e.status === 400);
-
-    const controller = new AbortController();
+    respond((kind, call) => {
+      assert.equal(kind, "start");
+      call.signal.throwIfAborted();
+      return jsonRes({ error: "bad request" }, 400);
+    });
+    await assert.rejects(startVideoRequest(ctx(), { prompt: "x" }, {}), {
+      code: "GROK_VIDEO_REQUEST_FAILED", status: 400, message: 'Grok video request failed: {"error":"bad request"}',
+    });
+    const controller = fixture.controller();
     controller.abort();
     await assert.rejects(startVideoRequest(ctx(), { prompt: "x" }, { signal: controller.signal }), (e: any) => e.code === "GENERATION_CANCELED" && e.status === 499);
   });
 
   it("rejects unsafe video download responses", async () => {
-    await assert.rejects(downloadVideo(ctx(), "http://example.com/v.mp4"), (e: any) => e.code === "GROK_VIDEO_DOWNLOAD_FAILED");
-
-    globalThis.fetch = (async () => jsonRes("not video", 200, "text/html")) as any;
-    await assert.rejects(downloadVideo(ctx(), "https://vidgen.example/not-video"), (e: any) => e.code === "GROK_VIDEO_DOWNLOAD_FAILED");
-
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => new ArrayBuffer(0),
-      headers: { get: (k: string) => (k.toLowerCase() === "content-type" ? "video/mp4" : null) },
-    })) as any;
-    await assert.rejects(downloadVideo(ctx(), "https://vidgen.example/empty.mp4"), (e: any) => e.code === "GROK_VIDEO_DOWNLOAD_FAILED");
-
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => {
-        const buf = Buffer.from("<html>not an mp4</html>");
-        return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-      },
-      headers: { get: (k: string) => (k.toLowerCase() === "content-type" ? "video/mp4" : null) },
-    })) as any;
-    await assert.rejects(downloadVideo(ctx(), "https://vidgen.example/bad.mp4"), (e: any) => e.code === "GROK_VIDEO_DOWNLOAD_FAILED");
-
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => Buffer.from("too-large").buffer,
-      headers: { get: (k: string) => (k.toLowerCase() === "content-length" ? String(101 * 1024 * 1024) : k.toLowerCase() === "content-type" ? "video/mp4" : null) },
-    })) as any;
-    await assert.rejects(downloadVideo(ctx(), "https://vidgen.example/too-large.mp4"), (e: any) => e.code === "GROK_VIDEO_DOWNLOAD_FAILED");
+    respond(() => { assert.fail("Unsafe URL must not reach fetch"); });
+    await assert.rejects(downloadVideo(ctx(), "http://example.com/v.mp4"), {
+      code: "GROK_VIDEO_DOWNLOAD_FAILED", status: 502, message: "Grok video download URL must be HTTPS",
+    });
+    assert.equal(fixture.calls.length, 0);
+    const cases = [
+      { path: "not-video", chunks: [], options: { holdOpen: true, headers: { "content-type": "text/html" } }, message: "returned a non-video response", preflight: true },
+      { path: "empty.mp4", chunks: [], options: {}, message: "was empty", preflight: false },
+      { path: "bad.mp4", chunks: [Buffer.from("<html>not an mp4</html>")], options: {}, message: "returned an invalid MP4 container", preflight: false },
+      { path: "too-large.mp4", chunks: [], options: { holdOpen: true, headers: { "content-length": "104857601", "content-type": "video/mp4" } }, message: "exceeds the 100MB limit", preflight: true },
+      { path: "large-html", chunks: [], options: { holdOpen: true, headers: { "content-length": "104857601", "content-type": "text/html" } }, message: "exceeds the 100MB limit", preflight: true },
+    ];
+    for (const entry of cases) {
+      const stream = artifactStream(entry.chunks, entry.options);
+      respond((kind) => { assert.equal(kind, "artifact"); return stream.response; }, `https://vidgen.example/${entry.path}`);
+      await assert.rejects(downloadVideo(ctx(), `https://vidgen.example/${entry.path}`), {
+        code: "GROK_VIDEO_DOWNLOAD_FAILED", status: 502, message: `Grok video download ${entry.message}`,
+      });
+      assert.equal(stream.stats.arrayBufferCalls, 0);
+      assert.equal(stream.body.locked, false);
+      if (entry.preflight) {
+        assert.equal(stream.stats.pulls, 0);
+        assert.equal(stream.stats.sourceCancelCalls, 1);
+      } else assert.equal(stream.stats.releaseLockCalls, 1);
+    }
   });
 
   it("maps video download timeout to GROK_VIDEO_TIMEOUT", async () => {
-    globalThis.fetch = (async (_input: any, init?: any) => {
-      await new Promise((_resolve, reject) => {
-        init?.signal?.addEventListener(
-          "abort",
-          () => {
-            const err = new Error("aborted");
-            err.name = "AbortError";
-            reject(err);
-          },
-          { once: true },
-        );
+    respond((kind, call) => {
+      assert.equal(kind, "artifact");
+      return new Promise<Response>((_resolve, reject) => {
+        if (call.signal.aborted) reject(call.signal.reason);
+        else call.signal.addEventListener("abort", () => reject(call.signal.reason), { once: true });
       });
-    }) as any;
-    await assert.rejects(
-      downloadVideo(ctx({ config: { ...config, grokProvider: { ...config.grokProvider, videoDownloadTimeoutMs: 1 } } } as any), "https://vidgen.example/slow.mp4"),
-      (e: any) => e.code === "GROK_VIDEO_TIMEOUT",
-    );
+    }, "https://vidgen.example/slow.mp4");
+    await fixture.track(assert.rejects(downloadVideo(ctx({ config: { ...config,
+      grokProvider: { ...config.grokProvider, videoDownloadTimeoutMs: 1 } } }),
+    "https://vidgen.example/slow.mp4", fixture.controller().signal), {
+      code: "GROK_VIDEO_TIMEOUT", status: 504, message: "Grok video download timed out",
+    }));
+    assert.equal(fixture.calls.length, 1);
+  });
+
+  it("preserves the downloader facade and scoped URL behavior", async () => {
+    assert.equal(downloadVideo, (await import("../lib/grokVideoDownload.js")).downloadVideo);
+    for (const url of [ARTIFACT, "http://localhost/fixture.mp4", "http://127.0.0.1/fixture.mp4"]) {
+      respond((kind) => { assert.equal(kind, "artifact"); return videoBytesRes(); }, url);
+      assert.deepEqual(await downloadVideo(ctx(), url), { buffer: fakeMp4Bytes(), contentType: "video/mp4" });
+    }
+    assert.equal(fixture.calls.length, 3);
+    await assert.rejects(downloadVideo(ctx(), "not a URL"), { code: "GROK_VIDEO_DOWNLOAD_FAILED", status: 502 });
+    assert.equal(fixture.calls.length, 3);
+  });
+
+  for (const directKey of [undefined, "video-fixture-direct-key"]) {
+    for (const failure of ["invalid", "read-reset"] as const) it(`never regenerates on ${failure}, lane=${directKey ? "direct" : "proxy"}`, async () => {
+      const reset = Object.assign(new Error("fixture body reset"), { code: "ECONNRESET" });
+      const stream = artifactStream([failure === "invalid" ? Buffer.from("<html>not an mp4</html>") : fakeMp4Bytes()],
+        failure === "read-reset" ? { failAfterChunks: reset } : {});
+      const counts = installFetch({ pollSequence: [DONE_POLL], artifact: () => stream.response, directKey,
+        captureStart: (body) => assert.deepEqual(body, { model: "grok-imagine-video", prompt: "bounded video", duration: 1, resolution: "480p" }),
+      });
+      await fixture.track(assert.rejects(generateVideoViaGrok("clip", ctx(), {
+        model: "grok-imagine-video", plannedPrompt: "bounded video", duration: 1,
+        directApiKey: directKey, signal: fixture.controller().signal,
+      }), { code: "GROK_VIDEO_DOWNLOAD_FAILED", status: 502, message: failure === "invalid"
+        ? "Grok video download returned an invalid MP4 container" : "Grok video download request failed: fixture body reset" }));
+      assert.deepEqual(counts, { start: 1, poll: 1, artifact: 1 });
+      assert.equal(fixture.calls.length, 3);
+      assert.equal(stream.stats.arrayBufferCalls, 0);
+      assert.equal(stream.stats.readerCancelCalls, 1); assert.equal(stream.stats.releaseLockCalls, 1);
+      assert.equal(stream.body.locked, false);
+    });
+  }
+
+  for (const failure of ["reset", "503"] as const) it(`retries ${failure} artifact GET without another billed start`, async () => {
+    const reset = Object.assign(new Error("fixture header reset"), { code: "ECONNRESET" });
+    fixture.allowFailure(reset);
+    const transient = artifactStream([], { status: 503, holdOpen: true, headers: { "retry-after": "0" } });
+    let attempts = 0;
+    const counts = installFetch({ pollSequence: [DONE_POLL], artifact() {
+      if (++attempts > 1) return videoBytesRes();
+      if (failure === "reset") throw reset;
+      return transient.response;
+    } });
+    const result = await fixture.track(generateVideoViaGrok("clip", ctx(), {
+      model: "grok-imagine-video", plannedPrompt: "bounded video", duration: 1, signal: fixture.controller().signal,
+    }));
+    assert.deepEqual(result.videoBuffer, fakeMp4Bytes());
+    assert.deepEqual(counts, { start: 1, poll: 1, artifact: 2 });
+    assert.equal(fixture.calls.length, 4);
+    assert.equal(transient.stats.sourceCancelCalls, failure === "503" ? 1 : 0);
+    assert.equal(transient.stats.pulls, 0);
+  });
+
+  for (const failure of ["reset", "503"] as const) it(`does not replay generation POST on ${failure}`, async () => {
+    const reset = Object.assign(new Error("fixture start reset"), { code: "ECONNRESET" });
+    fixture.allowFailure(reset);
+    const counts = installFetch({ pollSequence: [DONE_POLL], startResponse() {
+      if (failure === "reset") throw reset;
+      return jsonRes({ error: "unavailable" }, 503);
+    } });
+    await fixture.track(assert.rejects(generateVideoViaGrok("clip", ctx(), {
+      model: "grok-imagine-video", plannedPrompt: "bounded video", signal: fixture.controller().signal,
+    }), { code: "GROK_VIDEO_REQUEST_FAILED", status: 502, message: failure === "reset"
+      ? "Grok video start request failed: fixture start reset" : 'Grok video request failed: {"error":"unavailable"}' }));
+    assert.deepEqual(counts, { start: 1, poll: 0, artifact: 0 });
+    assert.equal(fixture.calls.length, 1);
   });
 
   it("accepts canonical 1.5 and normalizes preview alias", () => {
@@ -364,20 +437,11 @@ describe("Grok video adapter", () => {
 
   it("reports requested and effective model when 1.5 falls back for Ref2V", async () => {
     const starts: any[] = [];
-    globalThis.fetch = (async (input: any, init?: any) => {
-      const url = String(input);
-      if (url.includes("/v1/responses")) return SEARCH_RES;
-      if (url.includes("/v1/chat/completions")) return plannerRes("reference motion");
-      if (url.includes("/v1/videos/generations")) {
-        const body = JSON.parse(init?.body || "{}");
+    const counts = installFetch({ pollSequence: [DONE_POLL], startResponse(body) {
         starts.push(body);
         if (starts.length === 1) return jsonRes({ error: "`reference_images` is not supported for this model." }, 400);
         return jsonRes({ request_id: "vid-1" });
-      }
-      if (url.includes("/v1/videos/vid-1")) return jsonRes(DONE_POLL);
-      if (url.includes("vidgen.example")) return videoBytesRes();
-      throw new Error(`unexpected fetch: ${url}`);
-    }) as any;
+    } });
     const result = await generateVideoViaGrok("clip", ctx(), {
       model: "grok-imagine-video-1.5-preview",
       plannedPrompt: "reference motion",
@@ -390,6 +454,7 @@ describe("Grok video adapter", () => {
     assert.equal(result.requestedModel, "grok-imagine-video-1.5");
     assert.equal(result.effectiveModel, "grok-imagine-video");
     assert.deepEqual(result.modelFallback, { from: "grok-imagine-video-1.5", to: "grok-imagine-video" });
+    assert.deepEqual(counts, { start: 2, poll: 1, artifact: 1 });
   });
 
   it("builds 1.5 I2V payload with 1080p", () => {
@@ -427,4 +492,4 @@ describe("Grok video adapter", () => {
     assert.deepEqual(parsePngInfo(canvas), { width: 1920, height: 1080, bitDepth: 8, colorType: 2 });
     assert.match(startBody.prompt, /blank white canvas.*technical placeholder/);
   });
-});
+}

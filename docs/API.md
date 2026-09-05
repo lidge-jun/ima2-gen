@@ -533,7 +533,7 @@ Grok prompt surfaces used by video APIs:
 
 | Code | Meaning |
 |---|---|
-| `VIDEO_PROVIDER_UNSUPPORTED` | Provider is not `"grok"` |
+| `VIDEO_PROVIDER_UNSUPPORTED` | Provider is not `"grok"` or `"grok-api"` |
 | `PROMPT_REQUIRED` | Empty or missing prompt |
 | `INVALID_GROK_VIDEO_MODEL` | Model not in valid set |
 | `INVALID_VIDEO_RESOLUTION` | Resolution is not 480p/720p/1080p, or 1080p was requested outside `grok-imagine-video-1.5` prompt-only T2V / I2V |
@@ -542,6 +542,24 @@ Grok prompt surfaces used by video APIs:
 | `GROK_VIDEO_REF_TOO_MANY` | More than 7 reference images |
 | `GROK_VIDEO_FAILED` | Upstream xAI video generation failed |
 | `GROK_VIDEO_FRAME_FAILED` | Server could not extract the parent video's last frame |
+| `GROK_VIDEO_DOWNLOAD_FAILED` | Download-stage HTTP, size, MIME, empty-body, MP4-prefix or read failure (502) |
+| `GROK_VIDEO_TIMEOUT` | The download's own non-resetting timeout expired (504) |
+| `GENERATION_CANCELED` | Caller cancellation observed while downloading, including custom reasons (499) |
+
+Completed Grok video artifacts are consumed incrementally with an inclusive
+**100 MiB** byte cap. Declared size and actual streamed bytes are checked before
+retaining an overflowing chunk; invalid/empty/aborted bodies do not reach caller
+persistence. Accepted MIME is MP4 or octet-stream (missing MIME defaults to MP4),
+and the existing minimum-length/`ftyp` prefix check is retained. This is not full
+MP4 decoding or a100MiB process-memory ceiling: fetch buffers, chunk overhead and
+downstream copies are separate. Safe GET retry ends at response headers; body
+failure never starts a new billed generation.
+
+The video destination policy is unchanged: initial HTTPS or the existing literal
+HTTP-loopback allowlist, with fetch's default redirect behavior. It does not gain
+the image downloader's DNS/private-address/per-hop pinning policy. Do not treat
+HTTPS alone or these body bounds as an SSRF/security guarantee. Download error
+status appears in the existing JSON or SSE/terminal envelope for each caller.
 
 ### `POST /api/video/edit`
 

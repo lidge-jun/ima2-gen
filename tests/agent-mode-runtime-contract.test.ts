@@ -5,9 +5,13 @@ import sharp from "sharp";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
-import { drain, installTrackedWrites } from "./_executionTrackedWrites.ts";
+import { bounded, drain, installTrackedWrites } from "./_executionTrackedWrites.ts";
 import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
+import { executionTestProcess } from "./_executionTestProcess.ts";
+import { forbidArtifactArrayBuffer } from "./_videoStreamFixture.ts";
+import type { RuntimeContext } from "../lib/runtimeContext.ts";
 
+if (executionTestProcess(import.meta.url)) {
 const isolation = await isolateExecution();
 const { imageTransport } = isolation;
 const TEST_DIR = isolation.rootDir;
@@ -17,6 +21,8 @@ let appOrigin: string | undefined;
 let appServer: import("node:http").Server | undefined;
 let closeDb: (() => void) | undefined;
 let restoreWrites: (() => void) | undefined;
+const artifactSpies: ReturnType<typeof forbidArtifactArrayBuffer>[] = [];
+const videoViolations: unknown[] = [];
 after(async () => {
   try { await drain(); }
   finally {
@@ -29,6 +35,8 @@ afterEach(async () => {
   try {
     await imageTransport.deactivate();
     assert.deepEqual(imageTransport.violations, []);
+    for (const spy of artifactSpies) spy.assertUnused();
+    assert.deepEqual(videoViolations, []);
   } finally { globalThis.fetch = deniedFetch; }
 });
 
@@ -41,7 +49,7 @@ restoreWrites = await installTrackedWrites();
 const { registerAgentRoutes } = await import("../routes/agent.ts");
 const { isRuntimeRestartableError } = await import("../lib/agentRuntime.ts");
 const { runAgentVideoGeneration } = await import("../lib/agentImageVideoGen.ts");
-const { createAgentSession } = await import("../lib/agentStore.ts");
+const { createAgentSession, getAgentImages, getAgentTurns } = await import("../lib/agentStore.ts");
 async function fetchOwnedApp(url: Parameters<typeof fetch>[0], init?: RequestInit) {
   const target = new URL(url instanceof Request ? url.url : String(url));
   assert.ok(appOrigin && target.origin === appOrigin, "Native fetch is limited to the owned app server");
@@ -75,6 +83,141 @@ async function pngB64() {
 
 function fakeMp4Bytes() {
   return Buffer.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
+}
+
+function videoArtifact(response: Response) {
+  const spy = forbidArtifactArrayBuffer(response, videoViolations);
+  artifactSpies.push(spy);
+  return spy.response;
+}
+
+function agentVideoContext(generatedDir: string): RuntimeContext {
+  return {
+    rootDir: TEST_DIR, packageVersion: "test",
+    config: {
+      ...config, storage: { ...config.storage, generatedDir },
+      grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 18645,
+        videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000,
+        videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
+    },
+  } as RuntimeContext;
+}
+
+function assertAgentVideoSaved(sessionId: string, generatedDir: string) {
+  const videos = getAgentImages(sessionId).filter((image) => image.filename?.endsWith(".mp4"));
+  assert.equal(videos.length, 1);
+  const video = videos[0]!;
+  assert.deepEqual(readFileSync(join(generatedDir, video.filename!)), fakeMp4Bytes());
+  const turns = getAgentTurns(sessionId);
+  const tool = turns.filter((turn) => turn.role === "tool" && turn.imageIds?.includes(video.id));
+  const assistant = turns.filter((turn) => turn.role === "assistant" && turn.imageIds?.includes(video.id));
+  assert.equal(tool.length, 1);
+  assert.equal(tool[0]!.status, "complete");
+  assert.equal(tool[0]!.text, "ima2.generate_video");
+  assert.equal(assistant.length, 1);
+  assert.equal(assistant[0]!.status, "complete");
+}
+
+function installAgentVideoResponder(artifact: Response) {
+  const counts = { planner: 0, start: 0, poll: 0, artifact: 0 };
+  globalThis.fetch = async (input, init) => {
+    try {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      assert.equal(request.headers.get("cookie"), null);
+      if (url.href === "https://vidgen.example/agent-failure.mp4") {
+        assert.equal(request.method, "GET"); assert.equal(await request.text(), "");
+        assert.equal(request.headers.get("authorization"), null);
+        counts.artifact++; return artifact;
+      }
+      assert.equal(url.origin, "http://127.0.0.1:18645"); assert.equal(url.search, "");
+      assert.equal(request.headers.get("authorization"), "Bearer dummy");
+      if (url.pathname === "/v1/videos/agent-failure") {
+        assert.equal(request.method, "GET"); assert.equal(await request.text(), ""); counts.poll++;
+        return Response.json({ status: "done", video: { url: "https://vidgen.example/agent-failure.mp4", duration: 5, respect_moderation: true } });
+      }
+      assert.equal(request.method, "POST");
+      assert.equal(request.headers.get("content-type"), "application/json");
+      const body = await request.json() as Record<string, unknown>;
+      assert.ok(body && typeof body === "object" && !Array.isArray(body));
+      if (url.pathname === "/v1/responses") {
+        counts.planner++;
+        return Response.json({ output: [{ type: "message", content: [{ type: "text", text: "video context" }] }] });
+      }
+      if (url.pathname === "/v1/chat/completions") {
+        counts.planner++;
+        return Response.json({ choices: [{ message: { tool_calls: [{ type: "function", function: {
+          name: "generate_video", arguments: JSON.stringify({ prompt: "Agent bounded video prompt." }),
+        } }] } }] });
+      }
+      assert.equal(url.pathname, "/v1/videos/generations");
+      assert.equal(body.model, "grok-imagine-video"); assert.equal(typeof body.prompt, "string");
+      counts.start++; return Response.json({ request_id: "agent-failure" });
+    } catch (error) { videoViolations.push(error); throw error; }
+  };
+  return counts;
+}
+
+function rejectingAgentArtifact(kind: "invalid" | "header" | "cancel-reject" | "cancel-pending") {
+  let pulls = 0; let cancels = 0; let ended = false;
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let releaseCancel = () => {};
+  let notifyPull = () => {};
+  const waiting = new Promise<void>((resolve) => { notifyPull = resolve; });
+  const body = new ReadableStream<Uint8Array>({
+    start(value) { controller = value; },
+    pull(value) {
+      pulls++; notifyPull();
+      if (kind === "invalid") { value.enqueue(Buffer.from("not an mp4 body")); value.close(); ended = true; }
+    },
+    cancel() {
+      cancels++; ended = true;
+      if (kind === "cancel-reject") return Promise.reject(new Error("synthetic cancel failure"));
+      if (kind === "cancel-pending") return new Promise<void>((resolve) => { releaseCancel = resolve; });
+    },
+  }, { highWaterMark: 0 });
+  const response = videoArtifact(new Response(body, { headers: { "content-type": "video/mp4",
+    ...(kind === "header" ? { "content-length": "104857601" } : {}) } }));
+  return { response, waiting, get pulls() { return pulls; }, get cancels() { return cancels; },
+    close() { releaseCancel(); if (!ended) { ended = true; controller.close(); } },
+  };
+}
+
+async function assertAgentVideoRejected(kind: Parameters<typeof rejectingAgentArtifact>[0]) {
+  const generatedDir = join(TEST_DIR, `video-${kind}`);
+  mkdirSync(generatedDir, { recursive: true });
+  const session = createAgentSession({ title: `video ${kind}` });
+  const before = { images: getAgentImages(session.id), turns: getAgentTurns(session.id), files: readdirSync(generatedDir) };
+  const artifact = rejectingAgentArtifact(kind);
+  const counts = installAgentVideoResponder(artifact.response);
+  const controller = new AbortController();
+  const canceled = kind.startsWith("cancel-");
+  const work = runAgentVideoGeneration(agentVideoContext(generatedDir), session.id, "animate a lake", {
+    skipUserTurn: true, signal: controller.signal,
+    videoParams: { duration: 5, resolution: "480p", aspectRatio: "16:9" },
+  });
+  const rejection = assert.rejects(bounded(work, 1000), {
+    status: canceled ? 499 : 502, code: canceled ? "GENERATION_CANCELED" : "GROK_VIDEO_DOWNLOAD_FAILED",
+    message: canceled ? "Generation canceled" : kind === "header"
+      ? "Grok video download exceeds the 100MB limit" : "Grok video download returned an invalid MP4 container",
+  });
+  // Observe immediately even while waiting for the held-reader barrier.
+  void rejection.catch(() => {});
+  try {
+    if (canceled) { await bounded(artifact.waiting, 1000); controller.abort(new Error("caller cancel")); }
+    await rejection;
+    assert.equal(counts.start, 1); assert.equal(counts.poll, 1); assert.equal(counts.artifact, 1);
+    assert.deepEqual(getAgentImages(session.id), before.images, "no new video handle");
+    assert.deepEqual(getAgentTurns(session.id), before.turns, "no success tool or assistant turn");
+    assert.deepEqual(readdirSync(generatedDir), before.files, "no MP4 or sidecar");
+    assert.equal(artifact.response.body!.locked, false);
+    if (kind === "header") assert.equal(artifact.pulls, 0);
+    if (kind !== "invalid") assert.equal(artifact.cancels, 1);
+  } finally {
+    controller.abort(); artifact.close();
+    await bounded(Promise.allSettled([work, rejection]));
+    await drain();
+  }
 }
 
 async function withApp(fn: (baseUrl: string, generatedDir: string) => Promise<void>) {
@@ -125,6 +268,11 @@ async function createSession(baseUrl: string) {
 }
 
 describe("Agent Mode runtime contract", () => {
+  for (const kind of ["invalid", "header", "cancel-reject", "cancel-pending"] as const) {
+    it(`rejects actual Agent video ${kind} without handle, sidecar, or success turn`, async () => {
+      await assertAgentVideoRejected(kind);
+    });
+  }
   it("exposes only ima2 image-agent tools", async () => {
     await withApp(async (baseUrl) => {
       const res = await fetch(`${baseUrl}/api/agent/tools`);
@@ -313,6 +461,7 @@ describe("Agent Mode runtime contract", () => {
       },
     });
     const starts: any[] = [];
+    const downloads = { poll: 0, artifact: 0 };
     globalThis.fetch = async (url, init) => {
       const href = String(url);
       if (href.includes("/v1/responses")) {
@@ -335,6 +484,7 @@ describe("Agent Mode runtime contract", () => {
         return Response.json({ request_id: "vid-agent-1080" });
       }
       if (href.includes("/v1/videos/vid-agent-1080")) {
+        downloads.poll++;
         return Response.json({
           status: "done",
           progress: 100,
@@ -343,7 +493,8 @@ describe("Agent Mode runtime contract", () => {
         });
       }
       if (href.includes("vidgen.example")) {
-        return new Response(fakeMp4Bytes(), { headers: { "Content-Type": "video/mp4" } });
+        downloads.artifact++;
+        return videoArtifact(new Response(fakeMp4Bytes(), { headers: { "Content-Type": "video/mp4" } }));
       }
       throw new Error(`unexpected fetch: ${href}`);
     };
@@ -377,6 +528,7 @@ describe("Agent Mode runtime contract", () => {
     );
 
     assert.equal(starts.length, 1);
+    assert.deepEqual(downloads, { poll: 1, artifact: 1 });
     assert.equal(starts[0].model, "grok-imagine-video-1.5");
     assert.equal(starts[0].resolution, "1080p");
     assert.ok(starts[0].image?.url?.startsWith("data:image/"));
@@ -390,6 +542,7 @@ describe("Agent Mode runtime contract", () => {
     assert.equal(sidecar.video.resolution, "1080p");
     assert.equal(sidecar.video.requestedModel, "grok-imagine-video-1.5");
     assert.equal(sidecar.video.effectiveModel, "grok-imagine-video-1.5");
+    assertAgentVideoSaved(session.id, generatedDir);
   });
 
   it("routes Agent prompt-only 1080p video through Grok Video 1.5 canvas shim", async () => {
@@ -397,6 +550,7 @@ describe("Agent Mode runtime contract", () => {
     mkdirSync(generatedDir, { recursive: true });
     const session = createAgentSession({ title: "agent 1080p t2v" });
     const starts: any[] = [];
+    const downloads = { poll: 0, artifact: 0 };
     globalThis.fetch = async (url, init) => {
       const href = String(url);
       if (href.includes("/v1/responses")) {
@@ -419,6 +573,7 @@ describe("Agent Mode runtime contract", () => {
         return Response.json({ request_id: "vid-agent-1080-t2v" });
       }
       if (href.includes("/v1/videos/vid-agent-1080-t2v")) {
+        downloads.poll++;
         return Response.json({
           status: "done",
           progress: 100,
@@ -427,7 +582,8 @@ describe("Agent Mode runtime contract", () => {
         });
       }
       if (href.includes("vidgen.example")) {
-        return new Response(fakeMp4Bytes(), { headers: { "Content-Type": "video/mp4" } });
+        downloads.artifact++;
+        return videoArtifact(new Response(fakeMp4Bytes(), { headers: { "Content-Type": "video/mp4" } }));
       }
       throw new Error(`unexpected fetch: ${href}`);
     };
@@ -461,6 +617,7 @@ describe("Agent Mode runtime contract", () => {
     );
 
     assert.equal(starts.length, 1);
+    assert.deepEqual(downloads, { poll: 1, artifact: 1 });
     assert.equal(starts[0].model, "grok-imagine-video-1.5");
     assert.equal(starts[0].resolution, "1080p");
     assert.ok(starts[0].image?.url?.startsWith("data:image/png;base64,"));
@@ -471,6 +628,7 @@ describe("Agent Mode runtime contract", () => {
     assert.equal(sidecar.video.mode, "text-to-video");
     assert.equal(sidecar.video.resolution, "1080p");
     assert.equal(sidecar.video.requestedModel, "grok-imagine-video-1.5");
+    assertAgentVideoSaved(session.id, generatedDir);
   });
 
   it("persists selected Agent image focus and rejects cross-session image ids", async () => {
@@ -639,3 +797,4 @@ describe("Agent Mode runtime contract", () => {
     assert.equal(isRuntimeRestartableError(validation), false);
   });
 });
+}
