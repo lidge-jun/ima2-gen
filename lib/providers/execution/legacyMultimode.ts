@@ -1,6 +1,4 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
-import { generateMultimodeViaGrok } from "../../grokMultimodeAdapter.js";
-import { resolveGrokQualityModel } from "../../imageModels.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
 import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
@@ -28,19 +26,8 @@ function executeSingleLane(ctx: RuntimeContext, request: MultimodeRequest) {
 }
 
 async function executeSequence(
-  ctx: RuntimeContext, request: MultimodeRequest, progress: ExecutionProgress,
+  ctx: RuntimeContext, request: MultimodeRequest, _progress: ExecutionProgress,
 ): Promise<SequenceImageExecutionResult> {
-  const { provider, prompt, references, signal, requestId, options, maxImages } = request;
-  if (provider === "grok" || provider === "grok-api") {
-    const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
-    const grokRefs = request.providerUrl
-      ? [{ b64: "", url: request.providerUrl }, ...references] : references;
-    return generateMultimodeViaGrok(prompt, ctx, {
-      model: resolveGrokQualityModel(options.model, options.quality), maxImages,
-      size: options.size, signal, requestId, references: grokRefs, directApiKey,
-      onFinalImage: progress.onFinalImage,
-    });
-  }
   const result = await executeSingleLane(ctx, request);
   // Preserve the old per-lane projection: downstream detects bytes, not MIME here.
   return {

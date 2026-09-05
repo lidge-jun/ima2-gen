@@ -1,5 +1,3 @@
-import { generateViaGrok, planGrokImage } from "../../grokImageAdapter.js";
-import { resolveGrokQualityModel } from "../../imageModels.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
 import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
@@ -20,25 +18,7 @@ export async function prepareLegacyClassic(
 ): Promise<PreparedImageExecution<"classic">> {
   try {
     const { provider: activeProvider, prompt: generationPrompt, requestId, background: backgroundParams } = request;
-    const { model: imageModel, quality, size: effectiveSize, webSearchEnabled } = request.options;
-    const grokRefs = request.providerUrl
-      ? [{ b64: "", url: request.providerUrl, declaredMime: "image/png", detectedMime: "image/png" }, ...request.references]
-      : request.references;
-    // Keep classic's once-per-batch key and shared plan capture before any image attempt.
-    const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-    const sharedGrokPlan = activeProvider === "grok" || activeProvider === "grok-api"
-      ? await planGrokImage(generationPrompt, ctx, {
-        model: resolveGrokQualityModel(imageModel, quality),
-        size: effectiveSize,
-        signal: request.signal,
-        requestId,
-        referenceCount: grokRefs.length,
-        references: grokRefs,
-        directApiKey: grokDirectApiKey,
-        backgroundConstraint: request.backgroundConstraint,
-        webSearchEnabled,
-      })
-      : null;
+    const { model: imageModel, quality, size: effectiveSize } = request.options;
     const generateOne = async (): Promise<SingleImageExecutionResult> => {
       if (activeProvider === "gemini-api") {
         const r = await generateViaGeminiApi(generationPrompt, requireRuntimeContext(ctx), {
@@ -106,20 +86,6 @@ export async function prepareLegacyClassic(
           references: request.references,
           ...request.comfy,
           onQueue: progress.onQueue,
-        });
-        return r;
-      }
-      if (activeProvider === "grok" || activeProvider === "grok-api") {
-        const grokModel = resolveGrokQualityModel(imageModel, quality);
-        const r = await generateViaGrok(generationPrompt, ctx, {
-          model: grokModel,
-          size: effectiveSize,
-          signal: request.signal,
-          requestId,
-          plannedPrompt: sharedGrokPlan?.prompt,
-          webSearchCalls: sharedGrokPlan?.webSearchCalls,
-          references: grokRefs,
-          directApiKey: grokDirectApiKey,
         });
         return r;
       }

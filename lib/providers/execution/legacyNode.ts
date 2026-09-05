@@ -1,10 +1,8 @@
-import { generateViaGrok } from "../../grokImageAdapter.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
 import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaNai } from "../../naiImageAdapter.js";
-import { toGrokReferences } from "../../nodeHelpers.js";
 import { requireRuntimeContext, type RuntimeContext } from "../../runtimeContext.js";
 import type { ExecutionProgress, PreparedImageExecution, SingleImageExecutionResult } from "./types.js";
 import type { LegacyExecutionRequest } from "./legacy.js";
@@ -14,12 +12,9 @@ type NodeRequest = Extract<LegacyExecutionRequest, { surface: "node" }>;
 export async function prepareLegacyNode(
   ctx: RuntimeContext, request: NodeRequest, _progress?: ExecutionProgress,
 ): Promise<PreparedImageExecution<"node">> {
-  // Preserve the original pre-attempt capture. The facade checks current presence
-  // on every execute, but replacing a nonblank key must not rebind either retry.
-  const grokDirectApiKey = request.provider === "grok-api" ? ctx.xaiApiKey : undefined;
   return { execute: async () => {
     try {
-      return { kind: "single", value: await executeNodeAttempt(ctx, request, grokDirectApiKey) };
+      return { kind: "single", value: await executeNodeAttempt(ctx, request) };
     } catch (error) { throw error; } // The caller owns retries and normalization.
   } };
 }
@@ -27,12 +22,10 @@ export async function prepareLegacyNode(
 // Keep the legacy one-attempt branches together; retry/lifecycle stays at the caller.
 async function executeNodeAttempt(
   ctx: RuntimeContext, request: NodeRequest,
-  grokDirectApiKey: string | undefined,
 ): Promise<SingleImageExecutionResult> {
   const { provider, sourceImage: parentB64, prompt: generationPrompt, rawPrompt: prompt,
     references, requestId, signal, options } = request;
   const { model, size, quality } = options;
-  const refsForRequest = request.contextMode === "parent-only" ? [] : references;
   return provider === "gemini-api"
     ? await generateViaGeminiApi(parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt, requireRuntimeContext(ctx), {
         model, size, signal, ...(requestId !== undefined ? { requestId } : {}),
@@ -64,12 +57,6 @@ async function executeNodeAttempt(
     : provider === "nai"
     ? await generateViaNai(prompt, requireRuntimeContext(ctx), {
         model, size, signal, requestId, ...request.nai,
-      })
-    : provider === "grok" || provider === "grok-api"
-    ? await generateViaGrok(generationPrompt, ctx, {
-        model, size, requestId, signal,
-        references: toGrokReferences(parentB64, refsForRequest),
-        directApiKey: grokDirectApiKey,
       })
     : unsupportedNodeProvider(provider);
 }

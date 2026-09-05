@@ -1,7 +1,5 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
 import { detectImageMimeFromB64 } from "../../refs.js";
-import { editViaGrok } from "../../grokImageAdapter.js";
-import { resolveGrokQualityModel } from "../../imageModels.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
 import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
@@ -29,14 +27,6 @@ function executeImageToImage(ctx: RuntimeContext, request: EditRequest) {
 }
 
 async function executeEdit(ctx: RuntimeContext, request: EditRequest): Promise<SingleImageExecutionResult> {
-  const { provider, rawPrompt, sourceImage, signal, requestId, options } = request;
-  if (provider === "grok" || provider === "grok-api") {
-    const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
-    return editViaGrok(rawPrompt, sourceImage, ctx, {
-      model: resolveGrokQualityModel(options.model, options.quality),
-      size: options.size, signal, requestId, directApiKey,
-    });
-  }
   return executeImageToImage(ctx, request);
 }
 

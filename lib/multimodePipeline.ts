@@ -393,7 +393,8 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       latestUsage = generated.usage || null;
       latestWebSearchCalls = generated.webSearchCalls || 0;
       latestExtraIgnored = generated.extraIgnored || 0;
-      for (const [index, image] of generated.images.entries() as IterableIterator<[number, MultimodeImage]>) {
+      for (const [position, image] of generated.images.entries()) {
+        const index = generated.originalIndexes?.[position] ?? position;
         await persistAndSendImage(
           image,
           index,
