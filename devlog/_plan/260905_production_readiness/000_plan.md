@@ -202,3 +202,12 @@ beforemerge/release. WP08 P revalidates080; WP09 must retain observedbaseline
 nodeHUD/defaultfit overlap during journey review. WP12 security/history gates and
 alllaterphases remainmandatory. One reviewer exceeded localtestscope; its broad
 execution is excluded, and a replacement source-only review passed without tests.
+
+WP08 closure: codefreezec220aa48, PR209above208;084_4records fullproof.
+CI33986991622 Node22/24each3127PASS4skip0FAIL and144E2EPASS; CodeQL33986992995
+same93inheritedIDs. Paneownership/independentgeometry/contrast, IMEandnativeEscape
+contract verified.205PNG/145unique, eachfinaloracle91newdirectviews+92oldpositive
+byte-reuse/22newduplicates; dualPASS andQA receipt. Actualcorner/navbleedfindings
+repaired. SoTDESIGN/structure04updated. Currentc9/tasks close through genuineD.
+NextWP08c revalidates085; WP09 carries nodeHUD, compositioninterruption andHome
+roster journey follow-through. No merge/release; wholeproductiongoalcontinues.
