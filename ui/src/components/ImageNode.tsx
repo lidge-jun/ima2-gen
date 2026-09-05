@@ -222,7 +222,8 @@ function ImageNodeImpl({ id, data, selected }: NodeProps<GraphNode>) {
     }
   };
   const statusLabel = computeStatusLabel();
-  const errorAction = d.status === "error" ? d.errorInfo?.action ?? "retry" : null;
+  const errorAction = d.status === "error" && d.errorInfo?.code !== "JOB_TRACKING_TIMEOUT"
+    ? d.errorInfo?.action ?? "retry" : null;
 
   return (
     <div

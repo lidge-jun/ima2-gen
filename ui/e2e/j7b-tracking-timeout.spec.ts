@@ -157,6 +157,27 @@ async function assertNativeError(page: Page) {
   expect(observed.filter((event) => event.kind === "close")).toEqual([]);
   expect(observed.filter((event) => event.kind === "open")).toHaveLength(1);
 }
+async function dismissGlobalToasts(page: Page) {
+  while (await page.locator(".toast__dismiss").count()) await page.locator(".toast__dismiss").first().click();
+  await expect(page.locator(".toast")).toHaveCount(0);
+}
+function measureInlineWarning(element: Element) {
+  const box = (rect: DOMRect) => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height });
+  const range = document.createRange(); range.selectNodeContents(element);
+  const container = element.closest<HTMLElement>(".assetgen-error")!;
+  const dismiss = container.querySelector<HTMLButtonElement>(".assetgen-error__dismiss")!;
+  const dismissBox = dismiss.getBoundingClientRect(), alertBox = container.getBoundingClientRect();
+  const hit = (target: Element, rect: DOMRect) => target.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+  const nav = document.querySelector(".mobile-app-bar")?.getBoundingClientRect();
+  return { text: element.textContent, box: box(element.getBoundingClientRect()),
+    dismissHit: hit(dismiss, dismissBox), textHits: Array.from(range.getClientRects()).every(rect => hit(element, rect)),
+    navOverlap: !!nav && nav.height > 0 && alertBox.bottom > nav.top && alertBox.top < nav.bottom,
+    clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+    clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+    alert: { box: box(container.getBoundingClientRect()), clientWidth: container.clientWidth, scrollWidth: container.scrollWidth },
+    textRects: Array.from(range.getClientRects(), box),
+    page: { clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth } };
+}
 async function assetWarningViewports(page: Page, info: TestInfo, locale: string, warning: string) {
   const original = page.viewportSize();
   const alert = page.locator(".assetgen-error[role=alert]");
@@ -167,23 +188,15 @@ async function assetWarningViewports(page: Page, info: TestInfo, locale: string,
       if (viewport.width <= 800) await expect(page.locator(".app")).toHaveAttribute("data-mobile", "1");
       else await expect(page.locator(".app")).not.toHaveAttribute("data-mobile", "1");
       await expect(alert).toBeVisible(); await expect(text).toHaveText(warning);
-      await alert.scrollIntoViewIfNeeded(); await expect(text).toBeInViewport({ ratio: 1 });
+      await alert.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+      await expect(text).toBeInViewport({ ratio: 1 });
       await page.evaluate(async () => { await document.fonts.ready; });
-      const metrics = await text.evaluate((element) => {
-        const box = (rect: DOMRect) => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height });
-        const range = document.createRange(); range.selectNodeContents(element);
-        const container = element.closest<HTMLElement>(".assetgen-error")!;
-        return { text: element.textContent, box: box(element.getBoundingClientRect()),
-          clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
-          clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
-          alert: { box: box(container.getBoundingClientRect()), clientWidth: container.clientWidth, scrollWidth: container.scrollWidth },
-          textRects: Array.from(range.getClientRects(), box),
-          page: { clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth } };
-      });
+      const metrics = await text.evaluate(measureInlineWarning);
       const name = `asset-${locale}-${viewport.width}`;
       await writeFile(info.outputPath(`wp07-${name}-metrics.json`), JSON.stringify({ viewport, expected: warning, metrics }, null, 2));
       await screenshot(page, info, name);
       expect(metrics.text).toBe(warning);
+      expect(metrics.dismissHit).toBe(true); expect(metrics.textHits).toBe(true); expect(metrics.navOverlap).toBe(false);
       expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
       expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
       expect(metrics.alert.scrollWidth).toBeLessThanOrEqual(metrics.alert.clientWidth + 1);
@@ -253,6 +266,7 @@ for (const [locale, warning] of Object.entries(warnings)) {
         await expect(page.locator("body")).not.toContainText(poison);
         await expect(page.locator(".assetgen-tile")).toHaveCount(0);
         await assertNativeError(page); await screenshot(page, info, `asset-${locale}`);
+        await dismissGlobalToasts(page);
         await assetWarningViewports(page, info, locale, warning);
         expect(capture.requests).toHaveLength(1);
       } finally { await finish(page, scenario, info, `asset-${locale}`, capture); }
@@ -351,7 +365,8 @@ async function exerciseVideoNode(page: Page, info: TestInfo, scenario: Scenario,
   await nodeStep("node terminal warning and no Retry", async () => {
     await expect(page.locator(".image-node__status")).toContainText(warnings.en);
     await expect(page.locator(".image-node__retry")).toHaveCount(0);
-    await expect(page.locator(".image-node__status")).toHaveAttribute("title", /JOB_TRACKING_TIMEOUT/);
+    await expect(page.locator(".image-node__error-cta")).toHaveCount(0);
+    await expect(page.locator(".image-node__status")).toHaveAttribute("title", `Error: ${warnings.en} [JOB_TRACKING_TIMEOUT]`);
     await assertNativeError(page); await screenshot(page, info, "video-node");
   }, info, progress);
 }
@@ -403,11 +418,18 @@ test("extension tracking disables same-source Retry and preserves pending source
       await expect(page.locator(".result-actions").getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
       await expect(page.locator(".toast")).not.toContainText("Video ready");
       await assertNativeError(page); await screenshot(page, info, "extension-tracking");
+      await dismissGlobalToasts(page); await screenshot(page, info, "extension-tracking-clear");
       await page.locator(".history-thumb--video").nth(1).click(); await expect(button).toBeEnabled();
       expect(capture.requests).toHaveLength(1); scenario.outcome = "ordinary";
       await button.click();
       const retry = page.locator(".result-actions").getByRole("button", { name: "Retry", exact: true });
-      await expect(retry).toBeEnabled(); await screenshot(page, info, "extension-ordinary");
+      await expect(retry).toBeEnabled(); await screenshot(page, info, "extension-ordinary-notice");
+      await dismissGlobalToasts(page);
+      expect(await retry.evaluate(button => {
+        const box = button.getBoundingClientRect();
+        return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+      })).toBe(true);
+      await screenshot(page, info, "extension-ordinary");
       scenario.outcome = "held"; await retry.click();
       await expect.poll(() => capture.requests.length).toBe(3);
       await page.locator(".history-thumb--video").nth(0).click();
