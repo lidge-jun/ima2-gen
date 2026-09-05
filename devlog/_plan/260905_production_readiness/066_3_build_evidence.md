@@ -53,3 +53,39 @@ After rejectPathOrIo and build:server exit0, identical invocations report
 EIO/sameError=true at both points and exit0 (metadata-eio-green.txt); the ordinary
 68-byte emitted smoke and cleanup checks still pass. Durable tests are being added
 by the artifact-test worker; final independent C evidence remains outstanding.
+
+## B fixture integration review — swallowed boundary traps
+
+Main found a verifier issue in _agyArtifactFixture: path-boundary and forbidden
+filesystem-method guards throw but do not persist a violation. A product policy
+catch can convert such an error to an expected rejection; cleanup can swallow it.
+This is a source-verified false-green risk, not an observed outside-file access.
+Accepted correction: keep a persistent ledger for guard denials only (intentional
+EIO/fault injections are not violations), fail fixture close after safe drain and
+restoration, and prove a deliberately caught trap still fails the child verifier.
+The test uses a pre-I/O guard, never accesses outside bytes or real user files.
+Existing owned sentinel cases remain inside the fixture's outer root.
+
+Main integration: the new driver contract plus operation cleanup/process files
+passed 57 tests with zero failures/skips (wp06s/b-integration.txt). Full project
+typecheck:tests then failed TS2339 at new driver-contract line242: npm stdout is
+inferred as NonSharedBuffer by the project's JS helper declaration. The worker's
+focused typecheck did not establish this project-wide check. Normalize that test
+stdout to a string without a suppression and rerun the actual project command.
+
+Worker fixed String(stdout).trim without a suppression; main reran both project
+typechecks, build:server, inventory and line-count checks, all exit0. Core/operation
+reader review blocker closed by the same reviewer. Main ran the actual dedicated
+driver --light over all five real files, exit0; per-file TAP/JSON and summary live
+in wp06s/b-light-84f871f2. This is a dirty integration-tree receipt, not final-head C.
+No heavy body was selected. The driver validates exact required names, emitted
+behavior, local platform cancellation cases and absence of heavy PASS rows.
+
+Artifact worker reports 57 tiny checks PASS after three caught-guard oracle cases
+were RED before persistent-ledger repair and GREEN after. Main inspected all four
+changed files and reran the real integrated light driver independently. Four
+hosted cases remain unexecuted locally. Operation test changes replace readFile/rm
+observations with actual handle read/close and unlink/rmdir; reference rm remains.
+Windows replacements execute rather than skip; its hosted truth is still pending.
+The new node cancellation expectation INVALID_REQUEST/499 reflects existing
+normalization; inherited direct GENERATION_CANCELED/499 assertions remain intact.
