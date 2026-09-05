@@ -19,3 +19,12 @@ F1 protects fixture writes only, not production artifact policy. C2's mechanical
 business-operation extraction is main-approved for this WP, with no request fields
 or test-only product API. Same reviewers recheck before B. No066 work or blocked
 auxiliary probe is added.
+
+## Round2 closure
+
+At65cca6ef plus the sole IIFE anchor correction, all three same auditors PASS.
+Stream contract unchanged; fixture F1–F3 and caller C1–C3 closed. Caller reviewer
+hit a transient Astra capacity error, then completed the same-model retry; no
+different model or fabricated verdict was used. This is plan approval only.
+IIFE324–382/body325–381 excludes the following native-extension route. Main now
+owns the B decision and later source-equivalence/fixture/runtime evidence.

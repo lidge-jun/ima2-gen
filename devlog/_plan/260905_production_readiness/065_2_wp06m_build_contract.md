@@ -39,7 +39,7 @@ extractFrame:(dir:string,file:string,position:string,options:{signal:AbortSignal
 generateVideo:(prompt:string,ctx:RouteRuntimeContext,options:GrokVideoOptions)=>Promise<GrokVideoGenerateResult>;
 persistArtifact:typeof persistVideoArtifact; createFilename:(ctx:RuntimeContext)=>string.
 
-Move videoExtended.ts324–392's IIFE body unchanged after one capture destructure.
+Move videoExtended.ts324–382's IIFE (body325–381) unchanged after one capture destructure.
 Keep stage/event/finish-before-done/catch behavior and every actual dependency call.
 Route passes original values/functions and does `void runLastFrameI2v({...})`;
 no request fields, await-before202, runtime test flag, retries or lifecycle change.
