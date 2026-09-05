@@ -3,6 +3,8 @@ Class C4. Archetype: spec satisfaction. Consumes WP00 locked map and WP01-WP12
 plus WP06m and WP12s verified layer tips; semantic dependency is all layers integrated.
 The explicit security-gate/media-gate tasks and c-15/c-16 block entry to merge/release
 until WP12s/WP06m close; the coarse WP12 dependency is not a sufficient release gate.
+The appendedwp08c/c-17 and provider-display-gate also block merge/release: observed
+Comfy RHS naming/status/hosted-control fallback must be fixed in its own085 cycle.
 Stop: >=10 implementation PRs actually merged, exact release artifact and smoke
 proof agree, all preceding WPs closed, all high/critical findings resolved.
 Memory: this unit's 000 continuity log, layer-specific check docs, goalplan/ledger.
@@ -44,7 +46,8 @@ are never delegated. Permission/credential blockers require a user-facing report
 Preserve ecde2bc7 as prerequisite branch codex/prod-prereq-nai (base dev).
 WP00 branch codex/prod-wp00-roadmap bases on prerequisite. Implementation branch
 names are codex/prod-wp01-capabilities through codex/prod-wp12-acceptance
-(including codex/prod-wp06m-video-bounds between WP06 and WP07),
+(including codex/prod-wp06m-video-bounds between WP06 and WP07 and
+codex/prod-wp08c-provider-display between WP08 and WP09),
 followed by codex/prod-wp12s-lan-security, each
 created at verified prior layer head. Exact suffixes are recorded in 000 before
 publishing. Every PR explicitly names base; never rely on gh defaults.

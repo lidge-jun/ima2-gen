@@ -71,12 +71,13 @@ verified branch. Semantic prerequisites below differ from cumulative stack order
 | wp06m / 6b | 065_video_download_bounds | incremental video size cap and cancellation cleanup | wp06 integrated transports | wp06m-video-bounds |
 | wp07 / 7 | 070_job_lifecycle | durable expiry/cancel/replay recovery, bounded subscribers | stable caller-owned lifecycle | wp07-jobs |
 | wp08 / 8 | 080_composer_contract | shared pane geometry/scroll/interaction ownership | wp01-02, ecde2bc7 | wp08-composer |
+| wp08c / 8b | 085_provider_display_consistency | truthful Comfy core status and relevant local workflow controls | wp02, wp08 | wp08c-provider-display |
 | wp09 / 9 | 090_user_journeys | isolated behavior-based UI regressions, real state/error/layout paths | wp02, wp07-08 | wp09-journeys |
 | wp10 / 10 | 100_runtime_diagnostics | safe actionable structured diagnostics/runtime gate | wp07 | wp10-diagnostics |
 | wp11 / 11 | 110_installation_docs_contract | safe installers and metadata-derived requirements | wp10, wp01 | wp11-install |
 | wp12 / 12 | 120_integrated_acceptance | exact-head cross-platform stack CI and integration acceptance | wp01-11 | wp12-acceptance |
 | wp12s / 13 | 125_local_lan_security | LAN credential transport/private media and local origin boundary | wp09-10, wp12 | wp12s-lan-security |
-| wp13 / 14 | 130_merge_and_release | all layers merged and canonical released artifact proved | ALL including wp12s | promotion via dev/main |
+| wp13 / 14 | 130_merge_and_release | all layers merged and canonical released artifact proved | ALL including wp12s and wp08c | promotion via dev/main |
 
 Each listed document has .md suffix. Prior ecde2bc7 is explicitly published as
 codex/prod-prereq-nai (base dev), then docs layer, then implementation stack;
