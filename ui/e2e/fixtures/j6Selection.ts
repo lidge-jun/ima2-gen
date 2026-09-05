@@ -1,6 +1,6 @@
 import { expect, type Browser, type BrowserContext, type Page, type Route, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
-import { assertJ6Isolation, startApp } from "./appServer";
+import { assertJ6Isolation, j6RunnerPathDiagnostics, startApp } from "./appServer";
 import type { ComfyLaneModels, LaneCatalog } from "../../src/lib/api-comfy";
 
 export const MODEL_TRIGGER = "#sidebar-generation-model:visible";
@@ -169,7 +169,8 @@ export async function preflightJ6(info: TestInfo): Promise<void> {
     await writeFile(info.outputPath("wp02-preflight.json"), JSON.stringify({ passed: true, isolation }));
   } catch (error) {
     await writeFile(info.outputPath("wp02-preflight.json"), JSON.stringify({ passed: false,
-      reason: error instanceof Error ? error.message : "Isolation preflight failed" }));
+      reason: error instanceof Error ? error.message : "Isolation preflight failed",
+      runnerPathDiagnostics: j6RunnerPathDiagnostics() }));
     throw error;
   }
 }

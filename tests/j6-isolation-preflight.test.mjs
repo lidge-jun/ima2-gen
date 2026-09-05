@@ -94,3 +94,15 @@ test("J6 remains blocked on local/self-hosted contexts before any resource alloc
     assert.throws(() => load(state).assertJ6Isolation(), /disposable GitHub-hosted/);
   }
 });
+
+test("J6 diagnostics expose fixed-path metadata without changing refusal or inspecting arbitrary values", () => {
+  const state = host({ mode: 0o777 });
+  const api = load(state);
+  assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.mode, "777");
+  assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.expectedPath, true);
+  assert.throws(() => api.assertJ6Isolation(), /unsafe environment names/);
+  state.env.AZURE_EXTENSION_DIR = "/untrusted/location";
+  assert.deepEqual(load(state).j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR, { expectedPath: false, inspected: false });
+  state.env.GITHUB_ACTIONS = "false";
+  assert.deepEqual(load(state).j6RunnerPathDiagnostics(), { inspected: false });
+});

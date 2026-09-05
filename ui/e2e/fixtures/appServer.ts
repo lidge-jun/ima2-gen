@@ -33,6 +33,26 @@ function verifiedRunnerPath(key: string, value: string | undefined, osHome: stri
   return key === "XDG_CONFIG_HOME" || (metadata.uid === 0 && (metadata.mode & 0o022) === 0);
 }
 
+/** Diagnostic only: inspect two fixed public tool paths, never arbitrary env values or file contents. */
+export function j6RunnerPathDiagnostics(): Record<string, unknown> {
+  if (process.env.GITHUB_ACTIONS !== "true" || process.env.RUNNER_ENVIRONMENT !== "github-hosted"
+    || process.platform !== "linux") return { inspected: false };
+  return Object.fromEntries([
+    ["XDG_CONFIG_HOME", "/home/runner/.config"], ["AZURE_EXTENSION_DIR", "/opt/az/azcliextensions"],
+  ].map(([key, expected]) => {
+    if (process.env[key] !== expected) return [key, { expectedPath: false, inspected: false }];
+    try {
+      const metadata = lstatSync(expected);
+      let canonical = false;
+      try { canonical = realpathSync(expected) === expected; } catch { /* Report false, do not repair. */ }
+      return [key, { expectedPath: true, directory: metadata.isDirectory(), symlink: metadata.isSymbolicLink(),
+        uid: metadata.uid, mode: (metadata.mode & 0o777).toString(8), canonical }];
+    } catch (error) {
+      return [key, { expectedPath: true, code: (error as NodeJS.ErrnoException).code ?? "UNKNOWN" }];
+    }
+  }));
+}
+
 // WP02 is deliberately hosted-only; this is a preflight, NOT WP09's OS sandbox.
 // Never read credential contents or repair an unsafe environment to make it pass.
 export function assertJ6Isolation(): J6Isolation {
