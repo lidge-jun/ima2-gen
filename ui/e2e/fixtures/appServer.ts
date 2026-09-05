@@ -17,7 +17,21 @@ export type J6Isolation = {
   checkout: string; osHome: string; runner: string; runId: string;
   dotenvAbsent: true; providerEnvironmentAbsent: true; authStoresAbsent: true;
   credentialMountsAbsent: true; autoStartDisabled: true;
+  runnerPaths: { xdgConfigHome: string | null; azureExtensions: string | null };
 };
+
+function verifiedRunnerPath(key: string, value: string | undefined, osHome: string): boolean {
+  const expected = key === "XDG_CONFIG_HOME" ? join(osHome, ".config")
+    : key === "AZURE_EXTENSION_DIR" ? "/opt/az/azcliextensions" : null;
+  if (!expected || value !== expected) return false;
+  let metadata: ReturnType<typeof lstatSync>;
+  try { metadata = lstatSync(expected); } catch (error) {
+    return key === "XDG_CONFIG_HOME" && (error as NodeJS.ErrnoException).code === "ENOENT";
+  }
+  if (metadata.isSymbolicLink() || !metadata.isDirectory()) return false;
+  try { if (realpathSync(expected) !== expected) return false; } catch { return false; }
+  return key === "XDG_CONFIG_HOME" || (metadata.uid === 0 && (metadata.mode & 0o022) === 0);
+}
 
 // WP02 is deliberately hosted-only; this is a preflight, NOT WP09's OS sandbox.
 // Never read credential contents or repair an unsafe environment to make it pass.
@@ -34,9 +48,9 @@ export function assertJ6Isolation(): J6Isolation {
     || !checkout.startsWith(`${osHome}/work/`)) {
     throw new Error("J6 BLOCKED: checkout or actual OS home is not the disposable runner identity");
   }
-  const unsafeEnv = Object.keys(process.env).filter((key) =>
+  const unsafeEnv = Object.keys(process.env).filter((key) => !verifiedRunnerPath(key, process.env[key], osHome) && (
     /^(IMA2_|DOTENV_|OPENAI_|XAI_|GROK_|PROGROK_|CHATGPT_|GEMINI_|GOOGLE_|VERTEX_|ATLASCLOUD_|MINIMAX_|NOVELAI_|RUNWAY_|HIGGSFIELD_|AGY_|ANTHROPIC_|AWS_|AZURE_|PW_TEST_|PLAYWRIGHT_TEST_BASE_URL$|CODEX_HOME$|XDG_CONFIG_HOME$|NODE_OPTIONS$|NODE_PATH$|OAUTH_PORT$|HTTPS?_PROXY$|ALL_PROXY$)/i.test(key)
-    || /(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|CLIENT_SECRET|CREDENTIALS|AUTH_TOKEN|COOKIE)/i.test(key));
+    || /(?:API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|CLIENT_SECRET|CREDENTIALS|AUTH_TOKEN|COOKIE)/i.test(key)));
   if (unsafeEnv.length) throw new Error(`J6 BLOCKED: unsafe environment names: ${unsafeEnv.sort().join(", ")}`);
   const stores = [".ima2", ".codex", ".chatgpt-local", ".grok", ".progrok", ".gemini",
     ".antigravity", ".config/codex", ".config/gcloud", ".config/progrok", ".config/grok", ".aws", ".azure"];
@@ -51,7 +65,9 @@ export function assertJ6Isolation(): J6Isolation {
   }
   return { checkout, osHome, runner: "github-hosted/linux", runId: process.env.GITHUB_RUN_ID,
     dotenvAbsent: true, providerEnvironmentAbsent: true, authStoresAbsent: true,
-    credentialMountsAbsent: true, autoStartDisabled: true };
+    credentialMountsAbsent: true, autoStartDisabled: true,
+    runnerPaths: { xdgConfigHome: process.env.XDG_CONFIG_HOME ?? null,
+      azureExtensions: process.env.AZURE_EXTENSION_DIR ?? null } };
 }
 
 function assertNoJ6Overrides(checkout: string): void {
