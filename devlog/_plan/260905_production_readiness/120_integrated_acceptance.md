@@ -15,6 +15,26 @@ escalate missing fixture seam or permissions, not bypass. No leaf delegation.
 
 ## Dependencies and independently meaningful outcome
 
+### WP05-discovered inherited CodeQL debt (registered at WP06 P)
+
+The `wp12/codeql-triage` goalplan task is mandatory. WP05 exact-head analysis
+1728958810 at54543ee0 and the then-current dev reference each reported the same
+93 open alert IDs, including inherited High/Critical path, command and URL flows.
+Zero introduced Grok alerts is not proof these inherited alerts are false positives.
+
+At this P, refresh full alert instances and trace each High/Critical report through
+its exact source/sink, validation, trust boundary and real caller. Record alert ID,
+source SHA/path/line, reachability, classification and executable negative evidence.
+Fix genuine in-scope defects; append dependency-ordered implementation WPs and
+their own PABCD/PRs if the fix is an independent outcome. A false-positive decision
+requires concrete source-grounded proof, not baseline age, count parity, scanner
+silence or a green workflow. Do not auto-dismiss alerts or weaken scanner rules.
+Unresolved reachable High/Critical findings prevent WP12 acceptance and release.
+Repeat the analysis against the integrated post-WP12s candidate during WP13.
+
+Evidence anchor: `058_wp05_check_synthesis.md`, PR204, CodeQL33959122484;
+session `wp05/54543ee0/ci-codeql-evidence.json` retains the comparison and raw runs.
+
 Semantic: WP01–06 capability/selection/execution contracts; WP07 tracker/replay;
 WP08 real composer affordances; WP09 isolated fixtures and journey assertions;
 WP10 doctor report; WP11 install/generated-output checks, standalone Windows

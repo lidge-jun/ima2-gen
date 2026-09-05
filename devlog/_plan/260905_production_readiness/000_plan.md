@@ -9,10 +9,12 @@ Goalplan: .codexclaw/goalplans/bring-ima2-gen-to-explicitly-verified-production/
 ## Loop specification and objective
 
 Class C4 overall (API/credential/installation/release boundaries); per-WP C3/C4
-classification in decade docs. Archetype: spec satisfaction. Deliver 14 substantive
+classification in decade docs. Archetype: spec satisfaction. Deliver 16 substantive
 implementation WPs as at least ten stacked PRs, merged bottom-up, then canonical
 release with fresh provenance/install/visual proof. Production readiness means the
 named scenarios, not unlimited scale or universal internet-service security.
+Current count reflects post-lock additions through WP06 P; historical WP00 receipt
+counts are retained as history, not relabeled as if these units existed at lock.
 
 WP00 is docs-only: source-grounded 000-009 research plus full path/diff-level plans
 for EVERY implementation WP, independent A audit, C receipt, D roadmap lock.
@@ -67,8 +69,9 @@ verified branch. Semantic prerequisites below differ from cumulative stack order
 | wp03 / 3 | 030_execution_boundary | typed real execution seam, no wrong-key fallback or silent refs loss | wp01-02 | wp03-execution |
 | wp04 / 4 | 040_openai_adapter_parity | OpenAI executable family migration with callback/retry parity | wp03 | wp04-openai |
 | wp05 / 5 | 050_grok_adapter_parity | Grok migration, truthful search toggles, bounded artifacts | wp03, integrated interface | wp05-grok |
-| wp06 / 6 | 060_google_adapter_parity | Agy/Gemini migration preserving API/Vertex/process behavior | wp03, integrated router | wp06-google |
+| wp06 / 6 | 060_google_adapter_parity, 061 | Agy/Gemini migration, lossless selected refs and bounded child/ref cleanup | wp03, integrated router | wp06-google |
 | wp06m / 6b | 065_video_download_bounds | incremental video size cap and cancellation cleanup | wp06 integrated transports | wp06m-video-bounds |
+| wp06s / 6c | 066_agy_artifact_confinement | canonical artifact containment, bounded descriptor reads and guarded cleanup | wp06 operation/process owners | wp06s-agy-artifacts |
 | wp07 / 7 | 070_job_lifecycle | durable expiry/cancel/replay recovery, bounded subscribers | stable caller-owned lifecycle | wp07-jobs |
 | wp08 / 8 | 080_composer_contract | shared pane geometry/scroll/interaction ownership | wp01-02, ecde2bc7 | wp08-composer |
 | wp08c / 8b | 085_provider_display_consistency | truthful Comfy core status and relevant local workflow controls | wp02, wp08 | wp08c-provider-display |
@@ -78,6 +81,12 @@ verified branch. Semantic prerequisites below differ from cumulative stack order
 | wp12 / 12 | 120_integrated_acceptance | exact-head cross-platform stack CI and integration acceptance | wp01-11 | wp12-acceptance |
 | wp12s / 13 | 125_local_lan_security | LAN credential transport/private media and local origin boundary | wp09-10, wp12 | wp12s-lan-security |
 | wp13 / 14 | 130_merge_and_release | all layers merged and canonical released artifact proved | ALL including wp12s and wp08c | promotion via dev/main |
+
+WP06 P amendment: an actual scanner probe selected a file symlink outside its
+explicit root. Added wp06s/c-18 in pending order afterwp06m, beforewp07;066 defines
+the independent corrective outcome. WP13agy-artifact-gate is mandatory. WP12 also
+owns the registered CodeQL triage of93 inherited alerts; neither finding is waived
+by a same-baseline green run. This adds scope, not a change to completed criteria.
 
 Each listed document has .md suffix. Prior ecde2bc7 is explicitly published as
 codex/prod-prereq-nai (base dev), then docs layer, then implementation stack;

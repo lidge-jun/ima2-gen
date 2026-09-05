@@ -5,6 +5,12 @@ The explicit security-gate/media-gate tasks and c-15/c-16 block entry to merge/r
 until WP12s/WP06m close; the coarse WP12 dependency is not a sufficient release gate.
 The appendedwp08c/c-17 and provider-display-gate also block merge/release: observed
 Comfy RHS naming/status/hosted-control fallback must be fixed in its own085 cycle.
+The WP06-P-registered `codeql-triage-gate` additionally requires WP12's inherited
+CodeQL High/Critical source-by-source disposition and any corrective WPs to close.
+Refresh the final candidate analysis: matching the old baseline's 93 alerts does
+not waive this gate, and no unresolved reachable High/Critical issue may release.
+The registered `agy-artifact-gate` and c-18 require066/wp06s canonical artifact
+confinement, bounded read and guarded cleanup to complete before merge/release.
 Stop: >=10 implementation PRs actually merged, exact release artifact and smoke
 proof agree, all preceding WPs closed, all high/critical findings resolved.
 Memory: this unit's 000 continuity log, layer-specific check docs, goalplan/ledger.

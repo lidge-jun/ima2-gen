@@ -1,6 +1,6 @@
 # WP06 — Google execution ownership and lossless node references
 
-Status: P / future implementation, independently rederived at ecde2bc79.
+Status: WP06 P, revalidating the locked roadmap at54543ee0 (WP05 verified tip).
 One PR outcome: agy and gemini-api use actual family-owned operations, and node input-image policy is faithfully executed instead of silently dropping/overriding selected references.
 Semantic dependency: WP03 typed request/progress/result contract + WP01 supported-reference contract. WP02 is UI selection/persistence only.
 Stack base: WP05 tip. Test prerequisite: WP05's canonical scripts/run-tests.mjs module-mock activation and Node22/24 child-invocation proof (R1-01). No source-level dependency on OpenAI or Grok implementation details.
@@ -14,12 +14,22 @@ Verifier=real new execution owner with fixture transports and local fake process
 Stop=both Google lanes/all four surfaces covered, original exports preserved, no unexplained input loss; parent independently reviews.
 Artifact=this doc + 002 + parent C receipt. Outcomes=verified migration / blocked contract or test isolation.
 Main owns scope escalation and two-failed-packet reclaim; no leaf subagents/state/git.
+Resource bound: existing repository/GitHub credentials and fixture-only local
+process/HTTP scope; no real Agy executable, Vertex token, provider request or paid
+generation. Local focused tests/typechecks/builds only, canonical suites on exact
+head hosted CI. Reassess this WP at4hours and the whole goal at72hours; no numeric
+token budget was requested. Parallel workers use the current Astra/high convention;
+the tool has no service-tier override, so priority is not independently asserted.
 
 Authorized corrections, not accidental parity drift:
 1. Node Agy root now receives context-filtered supplementary refs; child receives parent first plus those refs.
 2. Node Gemini honors parent-only by excluding supplementary refs, while parent-plus-refs sends parent first plus selected refs.
 3. Required image-count preflight must match actual sent list; no clipping a valid parent+refs request after a different count was admitted.
-All non-node prompt/reference behavior and provider wire defaults remain unchanged. Baseline before evidence is nodeGeneration.ts:153,300-318, not an inference from old docs.
+All non-node prompt/reference behavior and provider wire defaults remain unchanged.
+The additional Agy cancellation/staging exception-safety corrections are explicitly
+defined in061; they supersede relocation-only lifetime wording below. Artifact
+symlink/canonical containment is a separately registered066/wp06s outcome, not
+claimed fixed by this WP. Current before evidence is061 and its actual-route probe.
 
 ## Exact change manifest
 
@@ -38,6 +48,7 @@ All non-node prompt/reference behavior and provider wire defaults remain unchang
 | MODIFY | lib/providers/execution/legacyNode.ts | DELETE Google branches; replaced reference fix lives in googleExecution |
 | MODIFY | lib/providers/execution/legacyEdit.ts | DELETE Google branches |
 | MODIFY | lib/providers/execution/legacyMultimode.ts | DELETE Google branches |
+| MODIFY | config.ts | Central AGY_PROCESS_POLICY constants defined in061 |
 | NEW | tests/google-execution-parity.test.ts | Request/reference/result/error cases through actual boundary |
 | NEW | tests/agy-execution-process.test.ts | Fake local executable lifecycle, refs, cancel and cleanup |
 | NEW | tests/fixtures/agy-fixture.mjs | Deterministic fixture process, no provider/network/credential access |
@@ -63,9 +74,16 @@ export function prepareGoogleExecution<R extends GoogleRequest>(
 ```
 
 Prepare never starts a CLI/token lookup/network request. Execute dispatches to **moved operation bodies**, not old facade imports.
+Preserve capture timing: classic snapshots effective prompt/model/size/requestId
+at prepare, while signal/references and credentials are read at execution as in
+legacyClassic. Node/edit/multimode derive prompt/options/refs at each execution.
+Tests mutate distinguishable request fields between prepare/execute to observe
+this distinction; do not eagerly copy credentials or tokens into a prepared object.
 Progress is accepted for the common contract but these single-result operations emit no partial/final callback themselves. Multimode still returns one image and caller final sweep persists it; don't invent stage=request/decode events.
 Helpers are private, bounded functions: `googleInput(request):{prompt:string;references:ExecutionReference[]}`, `runGoogleImage(ctx,request,input):Promise<SingleImageExecutionResult>`, and single-to-sequence projection.
-Use refs' existing MIME detector when materializing a source-image descriptor; do not add duplicate schema validation.
+Edit source descriptors use the existing MIME detector. Node parent descriptors
+retain declaredMime=null/detectedMime=null; the operation detects MIME as before.
+Do not add duplicate schema validation or change metadata merely during relocation.
 
 | Surface | Prompt | References |
 | --- | --- | --- |
@@ -104,9 +122,12 @@ size=auto omits image config; aliases and image part extraction/usage names rema
 
 ### agyProcess.ts
 
-Move spawnAgy from :165-239 with AGY_TIMEOUT_MS and AGY_MAX_OUTPUT_BYTES.
+Move spawnAgy from :165-239; centralize inherited deadline/output policy and new
+termination grace as specified in061.
 Export `spawnAgy(prompt:string,signal?:AbortSignal):Promise<{stdout:string;stderr:string}>`.
-Preserve resolveAgyBin/buildAgyPathEnv, spawn argv [-p,-], restricted environment shape, stdin delivery, output clipping, close/error behavior, SIGTERM, settled guard, timer clear and abort listener removal.
+Preserve resolveAgyBin/buildAgyPathEnv, spawn argv [-p,-], restricted environment
+shape, stdin delivery and output collection. Replace early cancel rejection with
+061's pre-abort/TERM→KILL/close-observed settlement and shared timer/listener cleanup.
 Move the existing agyError constructor to this module and export it for artifact/operations (same status/code contract, no new normalization).
 This module imports neither agyOperations nor googleExecution, so no cycle.
 
@@ -129,7 +150,9 @@ export async function generateViaAgy(
     requestId?:string|undefined} = {}
 ): Promise<AgyGenerateResult>;
 ```
-Preserve artifact fallback only on AGY_PARSE_FAILED, path allowlist/stat/read checks, detected MIME, usage.agy_artifact_bytes, artifact deletion after read and ref cleanup finally.
+Preserve artifact fallback only on AGY_PARSE_FAILED, lexical path checks and result
+vocabulary. Add061's exception-safe staging and cancellation barriers;066 later owns
+canonical artifact confinement. AGY_MALFORMED_RESULT is not a fallback trigger.
 Splitting process/artifact owners keeps new files below 400 lines rather than moving a >400-line monolith.
 
 ### fixtures/agy-fixture.mjs
@@ -177,8 +200,8 @@ Index selects two exact lane ids. Remove Google arms from legacy and narrow the 
 | Q06-5 | Initialized fake Vertex state and explicit vertex mode, distinct public key sentinel | Vertex URL/project/auth and camelCase config; no key in URL/result; auth reads stub state only, not real service-account files |
 | Q06-6 | Gemini inline images with distinct mime/text/usage, safety finishReason, no image, HTTP429/403 | Exact returned bytes/mime/usage and GEMINI_API_SAFETY_BLOCKED/NO_IMAGE/RATE_LIMITED/BAD_REQUEST; unchanged caller error envelope |
 | Q06-7 | Gemini fetch rejects AbortError after external abort; controlled TimeoutError fixture | Cancel becomes 499; timeout classification is observed explicitly. If timeout contract is corrected, amend exact expected code before implementation, never claim existing AbortError check handles TimeoutError |
-| Q06-8 | Agy success/malformed output/missing artifact/path rejected/abort | No real process; expected AGY_PARSE_FAILED/ARTIFACT_NOT_FOUND/PATH_REJECTED or GENERATION_CANCELED; all staged refs removed, no output persisted on abort |
-| Q06-9 | Agy parsed-output fails but recent fixture artifact exists in explicit temp root | Fallback chosen only on parse failure; not on arbitrary exception; matching file consumed; symlink scan negative retained |
+| Q06-8 | Agy success/malformed output/missing artifact/path rejected/abort | Only owned fake executable, never real Agy; exact AGY_MALFORMED_RESULT/AGY_PARSE_FAILED/AGY_ARTIFACT_NOT_FOUND/AGY_PATH_REJECTED or GENERATION_CANCELED;061 adds native child-close, stubborn termination, partial-staging and late-read barriers |
+| Q06-9 | Agy parsed-output fails but recent fixture artifact exists in explicit temp root | Fallback only on AGY_PARSE_FAILED, not malformed RESULT or other failures; matching file consumed; existing directory-symlink negative retained, file-symlink residual belongs066 |
 | Q06-10 | Multimode maxImages=3 for each lane | Exactly one native execution, one output, existing partial sequence status; no fabricated partial-image callbacks or extra billed calls |
 | Q06-11 | Existing mask and NAI/Comfy refusals through real routes | Zero Google execution on rejected requests, exact established code/envelope; no capability reinterpretation by executor |
 | Q06-12 | Imports through old facade versus new owner | Same function identity in built graph; real body not duplicated; no family source imports facade |
