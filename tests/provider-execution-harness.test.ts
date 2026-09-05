@@ -95,6 +95,27 @@ if (executionTestProcess(import.meta.url)) {
     });
   });
 
+  test("actual handler cancellation cannot hide an unmatched upstream exception", async () => {
+    const sentinel = new Error("UNMATCHED_ENDPOINT_SENTINEL");
+    let cancel!: () => void;
+    await assert.rejects(harness.run("classic", { upstream: (call) => {
+      cancel();
+      assert.equal(call.signal?.aborted, true);
+      assert.notEqual(sentinel, call.signal?.reason);
+      throw sentinel;
+    } }, async (fixture) => {
+      cancel = fixture.cancel;
+      assert.equal((await fixture.post(payload)).status, 202);
+      assert.equal((await fixture.waitTerminal()).data.code, "GENERATION_CANCELED");
+      await fixture.waitSettled();
+      assert.ok(fixture.calls.length > 0, "the real handler invoked the concrete transport");
+    }), (error: assert.AssertionError) => {
+      assert.match(error.message, /Unmatched upstream calls/);
+      assert.ok(Array.isArray(error.actual) && error.actual.includes(sentinel));
+      return true;
+    });
+  });
+
   for (const kind of ["request-log", "thumbnail"] as const) {
     test(`cleanup drains the held real ${kind} writer before scratch removal`, async () => {
       const entered = deferred<readonly unknown[]>();

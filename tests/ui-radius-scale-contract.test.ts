@@ -137,7 +137,8 @@ function keyOf(row: { file: string; atRule: string | null; selector: string }): 
 
 test("the frozen manifest covers every border-radius declaration exactly once", () => {
   const decls = radiusDecls().filter((d) => d.prop === "border-radius");
-  assert.equal(MANIFEST.length, 476, "the manifest is frozen at 476 rows");
+  // WP03 adds one card-only CTA using the existing small-radius token.
+  assert.equal(MANIFEST.length, 477, "the manifest is frozen at 477 rows");
   assert.equal(decls.length, MANIFEST.length, "declaration count drifted from the manifest");
 
   const manifestKeys = new Set(MANIFEST.map(keyOf));

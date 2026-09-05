@@ -142,8 +142,8 @@ export async function openRouteHarness(): Promise<RouteHarness> {
       calls.push(call);
       try { return await options.upstream(call); }
       catch (error) {
-        // Aborted held providers are expected; every other unmatched fixture call remains fatal.
-        if (!call.signal?.aborted) violations.push(error);
+        // Only the exact known abort reason is expected; cancellation cannot hide fixture failures.
+        if (!(call.signal?.aborted && error === call.signal.reason)) violations.push(error);
         throw error;
       }
     };

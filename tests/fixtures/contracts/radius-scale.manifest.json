@@ -3285,6 +3285,13 @@
   {
     "file": "ui/src/styles/toast-modal.css",
     "atRule": null,
+    "selector": ".toast--card .toast__cta",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
     "selector": ".toast__dismiss",
     "expected": "var(--r-xs)",
     "important": false

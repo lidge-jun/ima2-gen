@@ -81,14 +81,45 @@ function elementGeometry(locator: Locator) {
     const rect = element.getBoundingClientRect();
     const range = document.createRange();
     range.selectNodeContents(element);
-    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    const hit = document.elementFromPoint(point.x, point.y);
     const style = getComputedStyle(element);
+    const describe = (node: Element) => {
+      const css = getComputedStyle(node);
+      const bounds = node.getBoundingClientRect();
+      return { tag: node.tagName, id: node.id, className: node.getAttribute("class"), box: box(bounds),
+        clientBox: { left: bounds.left + node.clientLeft, top: bounds.top + node.clientTop,
+          right: bounds.left + node.clientLeft + node.clientWidth, bottom: bounds.top + node.clientTop + node.clientHeight },
+        scrollTop: node.scrollTop, scrollLeft: node.scrollLeft, clientWidth: node.clientWidth,
+        clientHeight: node.clientHeight, scrollWidth: node.scrollWidth, scrollHeight: node.scrollHeight,
+        overflowX: css.overflowX, overflowY: css.overflowY, scrollBehavior: css.scrollBehavior,
+        pointerEvents: css.pointerEvents, visibility: css.visibility, opacity: css.opacity,
+        position: css.position, zIndex: css.zIndex, transform: css.transform,
+        animations: node.getAnimations().map((a) => ({ playState: a.playState, currentTime: String(a.currentTime) })) };
+    };
+    const ancestors = [];
+    for (let node = element.parentElement; node; node = node.parentElement) ancestors.push(describe(node));
+    const probe = (r: DOMRect, inset: number) => {
+      const dx = Math.min(inset, r.width / 2), dy = Math.min(inset, r.height / 2);
+      return [r.left + dx, r.left + r.width / 2, r.right - dx].flatMap((x) =>
+        [r.top + dy, r.top + r.height / 2, r.bottom - dy].map((y) => {
+          const target = document.elementFromPoint(x, y);
+          return { x, y, hitTestable: target !== null && element.contains(target),
+            target: target ? { tag: target.tagName, id: target.id, className: target.getAttribute("class") } : null };
+        }));
+    };
+    const controlPoints = element.matches("button") ? probe(rect, 4) : [];
+    const textPoints = element.matches(".toast__message, .toast__cta")
+      ? Array.from(range.getClientRects()).flatMap((r) => probe(r, 1)) : [];
     return { box: box(rect), text: element.textContent, textRects: Array.from(range.getClientRects(), box),
       clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
       clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
       hitTestable: hit !== null && element.contains(hit), color: style.color, background: style.backgroundColor,
       whiteSpace: style.whiteSpace, outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth,
-      focusVisible: element.matches(":focus-visible") };
+      focusVisible: element.matches(":focus-visible"), point, hitTarget: hit ? describe(hit) : null,
+      hitPath: document.elementsFromPoint(point.x, point.y).map(describe), ancestors,
+      element: describe(element), virtualTime: Date.now(), controlPoints, textPoints,
+      fullyHitTestable: [...controlPoints, ...textPoints].every((p) => p.hitTestable) };
   });
 }
 
@@ -129,6 +160,7 @@ function readable(metrics: Awaited<ReturnType<typeof elementGeometry>>, bounds: 
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
   expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
   expect(metrics.textRects.length).toBeGreaterThan(0);
+  expect(metrics.textPoints.every((p) => p.hitTestable), "every text-range point must be unobscured").toBe(true);
   for (const rect of metrics.textRects) {
     expect(rect.height).toBeGreaterThan(0);
     expect(rect.width).toBeGreaterThan(0);
@@ -160,6 +192,7 @@ function assertCard(metrics: Awaited<ReturnType<typeof inspectCard>>, viewport: 
     expect(control.box.width).toBeGreaterThanOrEqual(44);
     expect(control.box.height).toBeGreaterThanOrEqual(44);
     expect(control.hitTestable).toBe(true);
+    expect(control.fullyHitTestable, "control edges and label must not be obscured by navigation").toBe(true);
   }
   if (metrics.cta) {
     readable(metrics.cta, metrics.bounds);
@@ -174,7 +207,14 @@ function assertCard(metrics: Awaited<ReturnType<typeof inspectCard>>, viewport: 
 async function pageBounds(page: Page) {
   return page.evaluate(() => ({ left: 0, top: 0, right: innerWidth, bottom: innerHeight,
     width: innerWidth, height: innerHeight, clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth }));
+    scrollWidth: document.documentElement.scrollWidth,
+    navigation: Array.from(document.querySelectorAll(".mobile-app-bar, .nav-rail--mobile, .compose-sheet, .compose-sheet-backdrop"))
+      .filter((el) => el.getClientRects().length > 0).map((el) => {
+        const { left, right, top, bottom, width, height } = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return { className: el.className, left, right, top, bottom, width, height,
+          zIndex: style.zIndex, visibility: style.visibility, pointerEvents: style.pointerEvents };
+      }) }));
 }
 
 async function focusEvidence(page: Page, card: Locator, info: TestInfo, name: string, hasCta: boolean) {
@@ -233,10 +273,40 @@ for (const variant of Object.keys(VARIANTS) as Variant[]) {
   }
 }
 
+async function mixedCheckpoint(page: Page, info: TestInfo, name: string, details: unknown) {
+  const stack = page.locator(".toast-stack");
+  const snapshot = { clockControlled: true, viewport: await pageBounds(page),
+    stack: await elementGeometry(stack), dom: await stack.evaluate((el) => el.outerHTML), details };
+  // Write before any geometry/actionability assertion, including on a failed readiness wait.
+  await writeFile(info.outputPath(`wp03-${name}.json`), JSON.stringify(snapshot, null, 2));
+  await page.screenshot({ path: info.outputPath(`wp03-${name}.png`) });
+}
+
+async function waitMixedControlsReady(page: Page, card: Locator, info: TestInfo, name: string) {
+  const controls = card.locator(".toast__dismiss, .toast__cta");
+  let previous = "";
+  const samples: Array<{ ready: boolean; measured: Awaited<ReturnType<typeof elementGeometry>>[] }> = [];
+  try {
+    await expect.poll(async () => {
+      const measured = await Promise.all((await controls.all()).map(elementGeometry));
+      const signature = JSON.stringify(measured.map((m) => ({ box: m.box,
+        ancestors: m.ancestors.map((a) => ({ box: a.box, scrollTop: a.scrollTop, scrollLeft: a.scrollLeft })) })));
+      const ready = measured.length > 0 && measured.every((m) => m.hitTestable && m.fullyHitTestable) && signature === previous;
+      samples.push({ ready, measured });
+      previous = signature;
+      return ready;
+    }, { message: "WP03 mixed controls must be hit-testable with stable control/scroll bounds" }).toBe(true);
+  } finally {
+    // Do not advance the paused clock or force styles: preserve frozen transitions as evidence.
+    await mixedCheckpoint(page, info, `${name}-readiness`, samples);
+  }
+}
+
 async function mixedStackEvidence(page: Page, info: TestInfo, width: number) {
   const stack = page.locator(".toast-stack");
   const viewport = await pageBounds(page);
   const stackBox = await elementGeometry(stack);
+  await mixedCheckpoint(page, info, `mixed-${width}-initial`, { stackBox });
   within(stackBox.box, viewport);
   expect(stackBox.scrollHeight).toBeGreaterThan(stackBox.clientHeight);
   expect(stackBox.scrollWidth).toBeLessThanOrEqual(stackBox.clientWidth + 1);
@@ -246,13 +316,21 @@ async function mixedStackEvidence(page: Page, info: TestInfo, width: number) {
   for (const [index, variant] of (["invalid-request", "oauth-unavailable", "grok-api-key-missing", "grok-api-key-missing"] as const).entries()) {
     const card = cards.nth(index);
     await card.scrollIntoViewIfNeeded();
+    const name = `mixed-${width}-${index}`;
+    await mixedCheckpoint(page, info, `${name}-after-scroll`, {
+      measured: await inspectCard(card, VARIANTS[variant].copy, VARIANTS[variant].error) });
+    await waitMixedControlsReady(page, card, info, name);
     const measured = await inspectCard(card, VARIANTS[variant].copy, VARIANTS[variant].error);
     metrics.push(measured);
+    await mixedCheckpoint(page, info, `${name}-preassert`, { measured });
     assertCard(measured, viewport);
     await focusEvidence(page, card, info, `mixed-${width}-${index}`, !!VARIANTS[variant].copy.cta);
   }
   const ordinary = stack.locator(".toast:not(.toast--card)");
   await ordinary.scrollIntoViewIfNeeded();
+  await mixedCheckpoint(page, info, `mixed-${width}-ordinary-after-scroll`, {
+    dismiss: await elementGeometry(ordinary.locator(".toast__dismiss")) });
+  await waitMixedControlsReady(page, ordinary, info, `mixed-${width}-ordinary`);
   expect((await elementGeometry(ordinary.locator(".toast__dismiss"))).hitTestable).toBe(true);
   await expect(ordinary.locator(".toast__message")).toHaveCSS("white-space", "nowrap");
   const extremes = [];

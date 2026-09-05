@@ -75,6 +75,7 @@
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
+  word-break: keep-all;
   overflow-wrap: anywhere;
   line-height: 1.5;
 }
@@ -116,6 +117,12 @@
 }
 .toast-stack:has(.toast--card) > .toast {
   flex-shrink: 0;
+}
+@media (max-width: 800px) {
+  /* Above mobile chrome (150/160), below the compose backdrop/sheet (170/180). */
+  .toast-stack:has(.toast--card) {
+    z-index: 165;
+  }
 }
 .trash-undo-toast {
   position: fixed;
