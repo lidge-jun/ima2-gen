@@ -199,17 +199,22 @@ if (executionTestProcess(import.meta.url)) {
       const savedFetch = globalThis.fetch; const savedConfig = process.env.IMA2_CONFIG_DIR;
       const savedRequest = Object.getOwnPropertyDescriptor(https, "request");
       const savedSpawn = Object.getOwnPropertyDescriptor(childProcess, "spawn");
-      const methodDescriptor = Object.getOwnPropertyDescriptor(mock, "method");
-      const method = mock.method.bind(mock); let root = "";
-      const injected = mock.method(mock, "method", ((target: object, name: string, ...rest: unknown[]) => {
-        if (target === childProcess && name === "spawnSync") { root = process.env.IMA2_CONFIG_DIR!; throw new Error("controlled isolation setup failure"); }
-        return Reflect.apply(method, mock, [target, name, ...rest]);
-      }) as typeof mock.method);
-      try { await assert.rejects(isolateExecution(), /controlled isolation setup failure/); }
+      const methodDescriptor = Object.getOwnPropertyDescriptor(Object, "getOwnPropertyDescriptor")!;
+      const original = Object.getOwnPropertyDescriptor; let root = "", hits = 0;
+      let unexpected: Awaited<ReturnType<typeof isolateExecution>> | undefined;
+      Object.defineProperty(Object, "getOwnPropertyDescriptor", { ...methodDescriptor,
+        value: (target: object, name: PropertyKey) => {
+          if (target === childProcess && name === "spawnSync" && hits++ === 0) {
+            root = process.env.IMA2_CONFIG_DIR!; throw new Error("controlled isolation setup failure");
+          }
+          return original(target, name);
+        } });
+      try { await assert.rejects(async () => { unexpected = await isolateExecution(); }, /controlled isolation setup failure/); }
       finally {
-        injected.mock.restore();
-        if (methodDescriptor) Object.defineProperty(mock, "method", methodDescriptor); else Reflect.deleteProperty(mock, "method");
+        Object.defineProperty(Object, "getOwnPropertyDescriptor", methodDescriptor);
+        await unexpected?.close();
       }
+      assert.equal(hits, 1);
       assert.equal(globalThis.fetch, savedFetch); assert.equal(process.env.IMA2_CONFIG_DIR, savedConfig);
       assert.deepEqual(Object.getOwnPropertyDescriptor(https, "request"), savedRequest);
       assert.deepEqual(Object.getOwnPropertyDescriptor(childProcess, "spawn"), savedSpawn);

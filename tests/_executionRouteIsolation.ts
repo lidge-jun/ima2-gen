@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
-import { mock } from "node:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, isAbsolute } from "node:path";
@@ -50,12 +49,16 @@ export async function isolateExecution() {
     throw error;
   };
   for (const name of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"] as const) {
-    const trapped = mock.method(childProcess, name, () => {
+    const descriptor = Object.getOwnPropertyDescriptor(childProcess, name);
+    assert.ok(descriptor && typeof descriptor.value === "function", `Missing native process method: ${name}`);
+    // Fresh functions must not retain native util.promisify.custom executors.
+    const denied = () => {
       const error = new Error(`Provider process launch forbidden: ${name}`);
       violations.push(error);
       throw error;
-    });
-    restoreMocks.push(() => trapped.mock.restore());
+    };
+    Object.defineProperty(childProcess, name, { ...descriptor, value: denied });
+    restoreMocks.push(() => Object.defineProperty(childProcess, name, descriptor));
   }
   syncBuiltinESMExports();
   return { rootDir, nativeFetch, fetchOwned: network.fetchOwned, violations, imageTransport, async close() {
