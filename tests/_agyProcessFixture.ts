@@ -271,8 +271,10 @@ async function loadHandle(state: State, artifactPolicy?: ArtifactPolicy): Promis
     const { config } = configModule;
     isolateConfig(state, config);
     if (artifactPolicy) {
+      const { default: defaultExport, ...namedExports } = configModule;
       const configured = mock.module(new URL("../config.ts", import.meta.url).href, {
-        namedExports: { ...configModule, AGY_ARTIFACT_POLICY: Object.freeze({ ...artifactPolicy }) },
+        defaultExport,
+        namedExports: { ...namedExports, AGY_ARTIFACT_POLICY: Object.freeze({ ...artifactPolicy }) },
       });
       state.restorations.push(() => configured.restore());
     }

@@ -14,6 +14,26 @@ async function replacementSurvives(path: string) {
   await preserved(path, Buffer.from("replacement")); await preserved(`${path}.original`);
 }
 
+function mutateMappingBeforeReturn(f: ArtifactFixture, mutate: () => Promise<void>) {
+  // The Windows runner rejected these parent/root moves with a file still open.
+  // Exercise real rename+junction after native close, before reader return.
+  // POSIX retains the stronger during-read mutation with the descriptor still open.
+  if (process.platform === "win32") {
+    f.hooks.afterClose = async () => {
+      assert.equal(f.handles.length, 1); assert.ok(f.events.includes("closed")); f.closed();
+      assert.ok(f.reads.some((call) => call.bytesRead === 0), "reader reached EOF before close");
+      await mutate();
+    };
+  } else {
+    f.hooks.afterRead = async (call) => {
+      if (call.bytesRead !== 0) return;
+      assert.equal(f.handles.length, 1); assert.notEqual(f.handles[0].fd, -1);
+      assert.equal(f.events.includes("closed"), false);
+      await mutate();
+    };
+  }
+}
+
 if (executionTestProcess(url)) {
 artifactTest(url, "Agy artifact accepts owned regular bytes and guarded cleanup", async (f) => {
   for (const root of f.roots) {
@@ -192,10 +212,11 @@ async function redirected(f: ArtifactFixture, stage: "read" | "cleanup") {
   const parent = join(f.roots[0], "parent"), moved = join(f.outside, "moved");
   const path = await f.file(parent); let activated = false;
   const redirect = async () => {
-    activated = true; await native.rename(parent, moved); await native.symlink(moved, parent, directoryLink);
+    await native.rename(parent, moved); await native.symlink(moved, parent, directoryLink);
+    assert.equal(await native.realpath(parent), moved); activated = true;
   };
   if (stage === "read") {
-    f.hooks.afterRead = async (call) => { if (call.bytesRead === 0) await redirect(); };
+    mutateMappingBeforeReturn(f, redirect);
     await rejected(f, path);
   } else {
     const receipt = await f.read(path); await redirect(); await f.cleanup(receipt);
@@ -209,12 +230,14 @@ artifactTest(url, "Agy artifact cleanup rejects redirected parents with unchange
 
 artifactTest(url, "Agy artifact rejects root relocation during reading", async (f) => {
   const path = await f.file(), moved = join(f.outside, "moved-root"); let activated = false;
-  f.hooks.afterRead = async (call) => {
-    if (call.bytesRead === 0) {
-      activated = true; await native.rename(f.roots[0], moved); await native.symlink(moved, f.roots[0], directoryLink);
-    }
-  };
+  // The reader operation is still pending on both platforms; Windows mutates
+  // after descriptor close, not during a kernel read or after successful return.
+  mutateMappingBeforeReturn(f, async () => {
+    await native.rename(f.roots[0], moved); await native.symlink(moved, f.roots[0], directoryLink);
+    assert.equal(await native.realpath(f.roots[0]), moved); activated = true;
+  });
   await rejected(f, path); assert.equal(activated, true); await preserved(join(moved, "ima2_generated_owned.png"));
+  assert.equal(f.events.includes("unlink"), false);
 });
 
 artifactTest(url, "Agy artifact cleanup preserves replacement and concurrent siblings", async (f) => {

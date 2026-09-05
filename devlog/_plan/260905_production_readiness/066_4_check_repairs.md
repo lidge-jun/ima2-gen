@@ -80,3 +80,34 @@ no-added-retry behavior and explicitly preserve caller retry policy, rather than
 changing pre-existing runtime semantics in this unit. Also clarify that direct
 GENERATION_CANCELED/499 can normalize to node INVALID_REQUEST/499. This is a
 source-grounded documentation correction, not a live provider retry claim.
+
+## Four-row run33971422794 at94f42fde
+
+Previous allocation and npm-binding blockers cleared: Linux22 reached and passed
+the bounds file including heavy cases, Windows reached the actual test driver.
+Mac24/Linux24 passed. Two deeper fixture issues then surfaced:
+
+- Linux22 process cases fail before execution with generated config mock syntax
+  "Expected identifier but found default". _agyProcessFixture spreads the module
+  namespace (including default) into namedExports. Separate defaultExport from
+  namedExports, prove the same tiny cases on local22.22.3 and24.17, then recheck
+  actual hosted22.23. This is not a production config syntax error.
+- Windows parent/root relocation cases attempt directory rename while the file
+  handle is open and receive native EPERM. This failure is in fault setup, not a
+  successful containment check. Preserve POSIX during-read mutation; on Windows
+  use the real after-native-close/before-return barrier and require actual
+  rename/junction plus policy rejection/preservation. No skipped assurance or
+  fake rename completion. The other26 Windows confinement cases passed.
+
+Artifacts: wp06s/platform-second-node22 and platform-second-windows. Reused
+original operation/artifact-test workers on disjoint files; no runtime changes
+or model fallback. Manual HTTP final run waits for a platform-green frozen tip;
+historical preflights/partial attempts cannot be relabeled as that final run.
+
+Both fixture repairs are source-scoped. Operation worker reproduced three process
+top-level failures on local22.22.3 before separating defaultExport; afterward the
+same cleanup/process suites pass44/44 on22.22.3 and24.17. Windows test worker
+retains open-descriptor POSIX mutation, but asserts closed descriptors/EOF before
+real Windows rename and junction creation; mutation completion and rejection/
+preservation remain required. Five related macOS cases pass; this is not Windows
+runtime evidence. Both workers changed only their assigned test files.
