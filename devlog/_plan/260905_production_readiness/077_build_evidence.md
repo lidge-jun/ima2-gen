@@ -51,8 +51,9 @@ Mutating only terminalResult's tracking branch fails all3 restored cases.
 
 Kierkegaard UIstate task01a0725e-feb2-7940-bf07-ddc8f97a736a retained original
 16PASS baseline and actual runtime RED before state changes, then67PASS. Main
-still owes individual snapshot/revision/scope/removal mutation proof after all
-peer mutation windows close. Do not claim it already ran.
+ran five individual snapshot/revision/object-replacement/removal/scope mutations
+after all peer windows closed: each went RED then restored GREEN, retained in
+wp07/ui-state-mutations.json. No mutation remains active.
 
 ## Test changes and scope refinements
 

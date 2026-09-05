@@ -148,7 +148,10 @@ async function screenshot(page: Page, info: TestInfo, name: string) {
 async function assertNativeError(page: Page) {
   const observed = await page.evaluate(() => window.__wp07Native);
   expect(observed.some((event) => event.kind === "error" && event.data)).toBe(true);
-  expect(observed.filter((event) => event.kind === "close" && event.closeFrom === "application")).toEqual([]);
+  // The fixture remains open until after this assertion. No handler may close it,
+  // including addEventListener subscribers outside the onerror attribution wrapper.
+  expect(observed.filter((event) => event.kind === "close")).toEqual([]);
+  expect(observed.filter((event) => event.kind === "open")).toHaveLength(1);
 }
 async function finish(page: Page, scenario: Scenario, info: TestInfo, name: string, capture: J6Capture) {
   const observed = page.isClosed() ? [] : await page.evaluate(() => window.__wp07Native ?? []);
