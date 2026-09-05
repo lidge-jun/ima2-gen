@@ -16,6 +16,7 @@ import { dirname, isAbsolute, join, relative } from "node:path";
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
 const root = process.env.HOME;
 const artifactPath = join(root, ".gemini", "antigravity-cli", "brain", "artifact", "ima2_generated.png");
+let phase = "module-start";
 // Separate receipts keep native stdout/stderr and parser fallback activation truthful.
 const receipt = (event, values = {}) => {
   const value = { event, pid: process.pid, ...values };
@@ -25,6 +26,11 @@ const receipt = (event, values = {}) => {
     if (error) process.exitCode = 90;
   });
 };
+
+function checkpoint(next) {
+  phase = next;
+  receipt("phase", { phase });
+}
 
 function installDenials() {
   const deny = (name) => () => {
@@ -56,6 +62,7 @@ function assertOwned(path) {
 
 async function input() {
   try {
+    checkpoint("stdin");
     let prompt = "";
     for await (const chunk of process.stdin) prompt += chunk.toString();
     const pathsLine = prompt.split("\n").find((line) => line.startsWith("  ImagePaths: "));
@@ -65,6 +72,7 @@ async function input() {
     assert.ok(Array.isArray(paths));
     const hashes = [];
     for (const path of paths) {
+      checkpoint("reference-read");
       assertOwned(path); assertOwned(await realpath(path));
       hashes.push(createHash("sha256").update(await readFile(path)).digest("hex"));
     }
@@ -99,11 +107,19 @@ async function emitResult(scenario) {
 
 async function main() {
   try {
+    checkpoint("install-denials");
     installDenials();
+    checkpoint("argv");
     assert.deepEqual(process.argv.slice(2), ["-p", "-"]);
-    for (const key of ["HOME", "USERPROFILE", "TMPDIR", "TEMP"]) assert.equal(process.env[key], root);
+    for (const key of ["HOME", "USERPROFILE", "TMPDIR", "TEMP"]) {
+      checkpoint(`environment-${key}`);
+      assert.equal(process.env[key], root);
+    }
+    checkpoint("cwd");
     assert.equal(process.cwd(), root);
+    checkpoint("credential-key-denial");
     assert.equal(Object.keys(process.env).some((key) => /KEY|TOKEN|CREDENTIAL|NODE_OPTIONS/i.test(key)), false);
+    checkpoint("control-read");
     const controlPath = join(root, "agy-control.json");
     assertOwned(controlPath); assertOwned(await realpath(controlPath));
     const { scenario } = JSON.parse(await readFile(controlPath, "utf8"));
@@ -118,8 +134,13 @@ async function main() {
       return;
     }
     receipt("ready", { scenario });
+    checkpoint("emit-result");
     await emitResult(scenario);
-  } catch (error) { receipt("fixture-error", { message: String(error) }); process.exitCode = 90; }
+  } catch (error) {
+    receipt("fixture-error", { phase, message: String(error).slice(0, 2048),
+      code: typeof error?.code === "string" ? error.code : undefined });
+    process.exitCode = 90;
+  }
 }
 
 await main();

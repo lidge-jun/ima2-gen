@@ -170,11 +170,15 @@ export class AgyFaults {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const deadline = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`Owned ${point} barrier was not reached`)), BARRIER_DEADLINE_MS);
+        timer = setTimeout(() => reject(new Error(`Owned ${point} barrier was not reached; ${this.fixture.diagnostics()}`)), BARRIER_DEADLINE_MS);
       });
       await Promise.race([this.barrier.entered, deadline, work.then(
-        () => { throw new Error(`Agy fulfilled before owned ${point} barrier`); },
-        (error) => { throw new Error(`Agy rejected before owned ${point} barrier`, { cause: error }); },
+        (value) => {
+          const result = value as { status?: number; body?: { error?: Record<string, unknown> } } | undefined;
+          const primary = result?.body?.error ? { ...result.body.error, status: result.status } : undefined;
+          throw new Error(`Agy fulfilled before owned ${point} barrier; ${this.fixture.diagnostics(primary)}`);
+        },
+        (error) => { throw new Error(`Agy rejected before owned ${point} barrier; ${this.fixture.diagnostics(error)}`, { cause: error }); },
       )]);
     } catch (error) { throw error; }
     finally { if (timer) clearTimeout(timer); }

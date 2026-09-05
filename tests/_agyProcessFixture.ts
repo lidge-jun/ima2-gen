@@ -21,6 +21,7 @@ export interface AgyProcessFixture {
   waitFor(event: string): Promise<Record<string, unknown>>;
   spawnCount(): number;
   observations(): readonly Record<string, unknown>[];
+  diagnostics(error?: unknown): string;
   track<T>(work: Promise<T>): Promise<T>;
   close(): Promise<void>;
   node(signal?: AbortSignal): Promise<{ status: number; body: Record<string, unknown> }>;
@@ -28,6 +29,7 @@ export interface AgyProcessFixture {
 
 const WATCHDOG_MS = 10_000;
 const DRAIN_MS = 3_000;
+const DIAGNOSTIC_TEXT_LIMIT = 2_048;
 const SCENARIOS = new Set(["success", "malformed-result", "no-artifact", "unparseable",
   "unparseable-with-recent-artifact", "error", "quota", "outside-path", "cooperative-wait",
   "term-ignored-wait", "stderr-result", "saved-path", "nonzero", "raw-quota", "tiny-overflow"]);
@@ -42,6 +44,8 @@ interface NativeChild {
   closed: boolean;
   close: Promise<void>;
   paths: string[];
+  stderr: string;
+  stderrTruncated: boolean;
 }
 interface State {
   root: string;
@@ -54,6 +58,7 @@ interface State {
   children: NativeChild[];
   controllers: Set<AbortController>;
   pending: Set<Promise<unknown>>;
+  lastFailure: unknown;
   observations: Observation[];
   listeners: Set<() => void>;
   restorations: Array<() => void>;
@@ -67,9 +72,26 @@ function observe(state: State, value: Observation): void {
   for (const listener of state.listeners) listener();
 }
 
+function diagnostics(state: State, error: unknown = state.lastFailure): string {
+  const text = (value: unknown) => typeof value === "string" ? value.slice(0, DIAGNOSTIC_TEXT_LIMIT) : value;
+  const primary = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const events = state.observations.slice(state.cursor).filter((entry) =>
+    ["phase", "input", "ready", "fixture-error", "violation", "process-error", "watchdog", "close"].includes(String(entry.event)));
+  // Fixed owned child only. Never serialize prompts, reference bytes, argv or environment.
+  return JSON.stringify({ primary: { name: text(primary.name), message: text(primary.message),
+    code: text(primary.code), status: primary.status }, events: events.slice(-24).map((entry) => ({
+    event: entry.event, phase: entry.phase, pid: entry.pid, code: entry.code, signal: entry.signal,
+    message: text(entry.message), stderr: text(entry.stderr), stderrTruncated: entry.stderrTruncated,
+    refsExist: entry.refsExist, sequence: entry.sequence,
+  })) });
+}
+
 function track<T>(state: State, work: Promise<T>): Promise<T> {
   state.pending.add(work);
-  void work.then(() => state.pending.delete(work), () => state.pending.delete(work));
+  void work.then(() => state.pending.delete(work), (error) => {
+    state.lastFailure = error;
+    state.pending.delete(work);
+  });
   return work;
 }
 
@@ -149,9 +171,15 @@ function consumeReceipts(state: State, entry: NativeChild): { drain(): void; clo
 
 function retainChild(state: State, child: ChildProcessWithoutNullStreams): NativeChild {
   let resolveClose!: () => void;
-  const entry: NativeChild = { child, kill: child.kill.bind(child), closed: false, paths: [],
+  const entry: NativeChild = { child, kill: child.kill.bind(child), closed: false, paths: [], stderr: "", stderrTruncated: false,
     close: new Promise<void>((resolve) => { resolveClose = resolve; }) };
   state.children.push(entry);
+  const onStderr = (chunk: Buffer) => {
+    const remaining = DIAGNOSTIC_TEXT_LIMIT - entry.stderr.length;
+    entry.stderr += chunk.subarray(0, remaining).toString();
+    if (chunk.length > remaining) entry.stderrTruncated = true;
+  };
+  child.stderr.on("data", onStderr);
   let receipts: ReturnType<typeof consumeReceipts> | undefined;
   const watchdog = state.setTimer(() => {
     if (entry.closed) return;
@@ -162,13 +190,16 @@ function retainChild(state: State, child: ChildProcessWithoutNullStreams): Nativ
   child.once("close", (code, signal) => {
     try { receipts?.drain(); } catch (error) { state.isolation.violations.push(error); }
     receipts?.close();
+    child.stderr.removeListener("data", onStderr);
     entry.closed = true;
     state.clearTimer(watchdog);
     observe(state, { event: "close", pid: child.pid, code, signal,
+      stderr: entry.stderr, stderrTruncated: entry.stderrTruncated,
       paths: [...entry.paths], refsExist: entry.paths.map((path) => existsSync(path)) });
     resolveClose();
   });
-  child.once("error", (error) => observe(state, { event: "process-error", message: error.message }));
+  child.once("error", (error) => observe(state, { event: "process-error", message: error.message,
+    code: Reflect.get(error, "code") }));
   const kill = child.kill.bind(child);
   child.kill = (signal) => {
     observe(state, { event: "kill", signal: signal ?? "SIGTERM", pid: child.pid });
@@ -216,6 +247,7 @@ async function configure(state: State, scenario: string, options: Record<string,
     assert.equal(state.pending.size, 0, "Previous operation still pending");
     assert.deepEqual(Object.keys(options), [], "No unrecognized child control options");
     state.cursor = state.observations.length;
+    state.lastFailure = undefined;
     await rm(join(state.root, ".gemini", "antigravity-cli", "brain", "artifact"), { recursive: true, force: true });
     await writeFile(join(state.root, "agy-observations.jsonl"), "");
     await writeFile(join(state.root, "agy-control.json"), JSON.stringify({ scenario }));
@@ -238,13 +270,16 @@ async function close(state: State): Promise<void> {
   await bounded(state, Promise.allSettled([...state.pending]), "Agy operation did not drain");
   await state.isolation.imageTransport.drain();
   try {
-    assert.deepEqual(state.isolation.violations, [], "Agy fixture violations before restoring protections");
+    assert.deepEqual(state.isolation.violations, [], `Agy fixture violations before restoring protections; ${diagnostics(state)}`);
     assert.deepEqual(state.isolation.imageTransport.violations, []);
   } finally {
     // Restoring spawn exposes the shared DEFAULT-DENY guard, never native spawn.
     for (const restore of state.restorations.reverse()) restore();
     syncBuiltinESMExports();
     try { await state.isolation.close(); }
+    catch (error) {
+      throw new Error(`Agy fixture isolation teardown failed; ${diagnostics(state)}`, { cause: error });
+    }
     finally { state.restored = true; }
   }
 }
@@ -304,6 +339,7 @@ async function loadHandle(state: State, artifactPolicy?: ArtifactPolicy): Promis
       configure: (scenario, options) => configure(state, scenario, options),
       waitFor: (event) => waitFor(state, event), spawnCount: () => state.children.length,
       observations: () => state.observations.slice(state.cursor),
+      diagnostics: (error) => diagnostics(state, error),
       track: (work) => track(state, work), close: () => close(state),
       node: (signal) => track(state, runNode(state, ctx, signal)),
     };
@@ -320,7 +356,7 @@ export async function openAgyProcessFixture(artifactPolicy?: ArtifactPolicy): Pr
   const isolation = await isolateExecution();
   const root = await realpath(isolation.rootDir);
   const state: State = { root, executable: join(root, "bin", "agy-fixture.mjs"), executableSource: "", isolation,
-    nativeSpawn, setTimer, clearTimer, children: [], controllers: new Set(), pending: new Set(),
+    nativeSpawn, setTimer, clearTimer, children: [], controllers: new Set(), pending: new Set(), lastFailure: undefined,
     observations: [], listeners: new Set(), restorations: [], cursor: 0, closing: false, restored: false };
   try {
     state.restorations.push(isolateEnvironment(root));

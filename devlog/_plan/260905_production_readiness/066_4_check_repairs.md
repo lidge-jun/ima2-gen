@@ -111,3 +111,28 @@ retains open-descriptor POSIX mutation, but asserts closed descriptors/EOF befor
 real Windows rename and junction creation; mutation completion and rejection/
 preservation remain required. Five related macOS cases pass; this is not Windows
 runtime evidence. Both workers changed only their assigned test files.
+
+## d271bab9 Windows native-fixture investigation
+
+Run33971818112 passes both Linux heavy rows and macOS light. Windows now passes
+confinement/bounds/fallback, then cleanup reports8 failures/2 passes before any
+artifact read. Barrier wrappers hide the original rejection in Error.cause;
+the TAP output does not expose it. A close record has no reference input receipt.
+This is insufficient evidence to change the production reader or a test policy.
+
+Orthogonal hypotheses: H1 native child startup/env/IPC failure (falsify with a
+successful child input receipt); H2 a child pre-input invariant fails (falsify
+with successful invariant/input receipts and zero child failure); H3 parent
+post-child path/reader rejection (falsify with nonzero child exit before input).
+Original fixture owner will expose the actual owned-child/primary-error boundary
+without changing behavior, then select a correction from observed evidence.
+No timeout increase, skip or synthetic success is authorized.
+
+Diagnostic-only patch exposes bounded native stderr/exit, child phase markers
+and primary error directly in failed barrier/teardown messages; prompts, reference
+bytes and environment are excluded. Worker discriminating probes validate H1
+(native exit7/stderr), H2 (pre-input reference-read ENOENT/exit90), and H3 (child
+exit0/input followed by missing artifact), without claiming Windows causality.
+The same44 cleanup/process tests pass on local22.22.3 and24.17 with diagnostics;
+no behavior fix or assertion weakening is present. Push this checkpoint to obtain
+the missing Windows value before selecting a permanent correction.
