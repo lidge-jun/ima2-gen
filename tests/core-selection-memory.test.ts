@@ -3,10 +3,23 @@ import test from "node:test";
 import { build } from "esbuild";
 import type * as Persistence from "../ui/src/store/coreSelectionPersistence.ts";
 import { reconcileCoreSelection } from "../ui/src/lib/coreSelection.ts";
+import { CORE_SELECTION_MEMORY_STORAGE_KEY, PERSISTED_KEYS } from "../ui/src/store/persistenceRegistry.ts";
 
 const key = "ima2.coreSelectionMemory.v1";
 const generationKey = "ima2.generationDefaults";
 const videoKey = "ima2.videoDefaults";
+
+test("selection memory appends without repointing any historical persisted key", () => {
+  assert.deepEqual(PERSISTED_KEYS.slice(0, 20), [
+    "ima2.rightPanelOpen", "ima2.uiMode", "ima2.historyStripLayout", "ima2.canvas.exportBackground.v1",
+    "ima2.imageModel", "ima2.reasoningEffort", "ima2.webSearchEnabled", "ima2.generationDefaults",
+    "ima2.inFlight", "ima2.selectedFilename", "ima2.activeSessionId", "ima2.graphTabId",
+    "ima2.galleryScope", "ima2.galleryDefaultScope", "ima2.locale", "ima2.workspaceProfile",
+    "ima2.workspaceOverrides", "ima2.videoDefaults", "ima2.agentPanePreference", "ima2.naiOptions",
+  ]);
+  assert.equal(PERSISTED_KEYS[20], "ima2.coreSelectionMemory.v1");
+  assert.equal(CORE_SELECTION_MEMORY_STORAGE_KEY, "ima2.coreSelectionMemory.v1");
+});
 class MemoryStorage {
   rows = new Map<string, string>();
   writes: string[] = [];
