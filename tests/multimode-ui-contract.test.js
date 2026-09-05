@@ -76,8 +76,8 @@ describe("multimode frontend UX contract", () => {
     assert.match(store, /kind: NonNullable<PersistedInFlight\["kind"\]>/);
     assert.match(store, /job\.kind === "multimode"/);
     assert.match(store, /scopes\.push\(\{ kind: "multimode" \}\)/);
-    assert.match(store, /fetchInflightScopes\(scopes\)/);
-    assert.match(store, /matchesInflightScope\(f, scopes\)/);
+    // Real phase/scope outcomes for both public reconciliation actions are covered
+    // by inflight-reload-reconcile-contract.test.ts, including storage-only multimode.
     assert.doesNotMatch(store, /hasMultimode && state\.uiMode !== "node"/);
     assert.match(store, /status: "canceled"/);
     assert.doesNotMatch(store, /status: current\.images\.length > 0 \? "partial" : "empty"/);

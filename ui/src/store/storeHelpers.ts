@@ -8,6 +8,7 @@ import {
   getHistory,
 } from "../lib/api";
 import { compressToBase64 } from "../lib/compress";
+import { JOB_TRACKING_TIMEOUT_MESSAGE } from "../lib/errorCodes";
 import { IN_FLIGHT_STORAGE_KEY } from "./persistenceRegistry";
 import { normalizeCustomSizePairDetailed } from "../lib/size";
 import { resolveNaiOptions, type NaiOptions } from "../lib/naiOptions";
@@ -103,7 +104,9 @@ export function terminalJobError(job: ServerTerminalJob): Error & { code?: strin
   const code = typeof job.errorCode === "string" && job.errorCode
     ? job.errorCode
     : "UNKNOWN";
-  const e = new Error(code === "EMPTY_RESPONSE"
+  const e = new Error(code === "JOB_TRACKING_TIMEOUT"
+    ? JOB_TRACKING_TIMEOUT_MESSAGE
+    : code === "EMPTY_RESPONSE"
     ? "No image data returned from the image backend."
     : "Generation failed on the server.") as Error & { code?: string; status?: number };
   e.code = code;
@@ -130,7 +133,7 @@ export function mergeMultimodeImages(current: GenerateItem[], incoming: Generate
   );
 }
 
-export function loadInFlight(): PersistedInFlight[] {
+export function loadInFlight({ includeExpired = false }: { includeExpired?: boolean } = {}): PersistedInFlight[] {
   try {
     const raw = localStorage.getItem(IN_FLIGHT_STORAGE_KEY);
     if (!raw) return [];
@@ -141,7 +144,7 @@ export function loadInFlight(): PersistedInFlight[] {
       .filter(
         (x: any) =>
           x && typeof x.id === "string" && typeof x.prompt === "string" &&
-          typeof x.startedAt === "number" && now - x.startedAt < INFLIGHT_TTL_MS,
+          typeof x.startedAt === "number" && (includeExpired || now - x.startedAt < INFLIGHT_TTL_MS),
       )
       .map((x: any) => ({
         id: x.id,
