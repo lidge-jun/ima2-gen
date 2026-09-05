@@ -77,6 +77,9 @@ implementation PR minimum.
    verify ancestry and rerun exact-head checks for changed layers.
 
 ## Bottom-up merge procedure
+- Mandatory predecessor:013's CI-history prerequisite must already be merged by
+  WP12, and its merge-up cascade/current-head checks must be complete. A red
+  PR199 Fast Gate is still a merge blocker even if manual full-head CI is green.
 - Prefer merge commits to preserve stack ancestry; repository currently allows them.
 - Merge prerequisite, then documentation, then implementation layers in order.
 - For each now-bottom layer explicitly retarget base to dev once predecessor is

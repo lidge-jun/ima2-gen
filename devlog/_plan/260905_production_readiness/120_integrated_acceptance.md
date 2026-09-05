@@ -191,7 +191,7 @@ on:
 
 After: `pull_request: {}` with no branches/branches-ignore/paths/paths-ignore filters.
 Retain read-only permissions and fork-safe pull_request, never pull_request_target.
-Checkout explicitly `ref: ${{ github.sha }}`, fetch-depth:2. Keep blob budget base
+Checkout explicitly `ref: ${{ github.sha }}`, fetch-depth:0. Keep blob budget base
 HEAD^1 because this job tests GitHub's synthetic merge commit. Guard EXPECTED_SHA is
 github.sha, NOT pull_request.head.sha. Job summary must name merge SHA and PR head
 SHA separately; exact layer-tip proof comes from ci.yml dispatch with full tip input.
@@ -234,7 +234,7 @@ Policy is deliberately specific, not a generic GitHub expression interpreter:
 2. Require test/e2e always applicable; windows/macos condition exactly the supported
    schedule-or-dispatch expression. Require both declared Windows matrix pairs.
 3. Require pr pull_request event unfiltered, no pull_request_target; PR checkout and
-   guard use github.sha; fetch-depth >=2 and blob comparison HEAD^1 retained.
+   guard use github.sha; fetch-depth exactly 0 and blob comparison HEAD^1 retained.
 4. Required build/check/test steps may not have `if:false`, success-masking shell
    suffixes, or continue-on-error. Exact known run entries are compared as values;
    only guard ordering is structural, not regex over the entire document.
@@ -388,3 +388,21 @@ workflows stay unchanged and main's WP13 verifies exact tarball provenance, obse
 installation and visual proof. Current structure docs describe these gates honestly;
 archived logs are not rewritten. Final readiness is scenario-bounded, not a universal
 production/security certification.
+
+## Discovered PR ancestry prerequisite (013)
+
+PR199's actual Fast Gate fails because fetch-depth2 omits a required historical
+commit, while the same full-head CI passes. Preserve the provenance guard; change
+PR Fast checkout to fetch-depth0 and test real shallow/full Git fixtures. The
+checker rejects depth2 even though HEAD^1 exists: that is sufficient for blob
+budget, not historical provenance. Include tests/pr-fast-history.test.mjs and
+its inventory in this WP's file map; pure temporary Git fixture, no production data.
+
+Before feature-stack merging, publish a narrow CI-history prerequisite branch off
+current dev containing only this depth fix/test/inventory; verify and merge it,
+then merge-up cascade dev -> task prerequisite -> docs -> each implementation
+branch. Fresh parent ancestry/diff/CI receipts are mandatory. Do not force shared
+refs or merge a top feature first.013 defines the main's execution order and
+proves the root cause; the prerequisite's own checks are not waived or inherited
+from this cumulative branch. This task remains open until PR199's Fast Gate and
+all updated-layer checks succeed.
