@@ -4,7 +4,8 @@ Mandatory current-tree amendment to070, base f2b60b64. No implementation yet.
 Read-only P sidecars revalidated the actual frontend and MCP/CLI owners; main
 read the referenced code and reproduced polling's loss of a concurrent addition.
 This document retains every070 acceptance row and fills missing consumers/harness
-details. It does not promise universal Agent-queue/CLI presentation behavior.
+details.074/075 supersede conflicting first-draft mechanisms and extend this manifest.
+It does not promise universal Agent-queue/CLI presentation behavior.
 
 ## Additional exact file manifest
 
@@ -129,11 +130,13 @@ exact JOB_TRACKING_TIMEOUT (including its existing rawCode fallback) before prio
 class selection and never echoes a poisoned message/class on that branch.
 The literal registered UNKNOWN wrapper needs an explicit companion check:
 `registered === "JOB_TRACKING_TIMEOUT" || (registered === "UNKNOWN" &&
-incomingRawCode === "JOB_TRACKING_TIMEOUT")`. Other genuinely registered codes
+incomingRawCode === "JOB_TRACKING_TIMEOUT")`, returning the LITERAL tracking code/spec
+per074 (never registered UNKNOWN). Other genuinely registered codes
 still outrank a conflicting rawCode. Test both an unregistered wrapper and the
 literal UNKNOWN wrapper with a poisoned priority class; do not silently assume
 the existing registered-code selection already handles the latter.
-parseSseErrorPayload fixes the message after envelope-first code selection. Unknown
+parseSseErrorPayload canonicalizes tracking wrappers through the pure resolver
+after envelope-first selection per074, before constructing Error. Unknown
 codes, AGY_TIMEOUT/MCP_JOB_TIMEOUT and ordinary auth/error precedence stay unchanged.
 
 runVideoGenerateImpl's non-cancel catch obtains the exact code, invokes handleError
@@ -141,8 +144,9 @@ once for tracking timeout, and uses its localized message. For a current-session
 video node set errorInfo to `{ ...buildNodeErrorInfo(error), message }` as well as
 error/status/pending cleanup. The existing nodeRetryAction maps this no-CTA code
 to fix-input/retryable=false. Never leave errorInfo absent (ImageNode defaults to
-Retry), and never leave a stale retryable previous errorInfo. Other errors retain
-their existing path. Track timeout is not inferred from arbitrary timeout text.
+Retry), and never leave stale previous errorInfo.074 requires errorInfo:null on
+admission/success/cancel/ordinary failure plus save/reload lifetime tests.
+Tracking timeout is not inferred from arbitrary timeout text.
 
 animateImageImpl returns false from its catch AFTER the existing error handling
 (tracking timeout uses the new localized warning; ordinary errors keep their
@@ -156,14 +160,15 @@ Test ordinary failure and cancellation as well as tracking timeout; none can add
 animateDone, while successful generation still does. No provider retry change.
 
 ResultActions extension catch retains AbortError cancellation handling. For exact
-tracking timeout, call handleError(error,useAppStore.getState()) once; otherwise
+tracking timeout, call handleError(error,useAppStore.getState()) once and enter074's
+source-bound tracking-expired disabled state; otherwise
 keep existing error-message fallback. Success toast/history addition remains only
 on successful stream completion. Hosted UI verifies localized warning, no success
 toast and no Retry action for tracking timeout.
 
 MCP watcher calls parseSseErrorPayload(data, typeof data.message === "string"
 ? data.message : "MCP generation failed"). This preserves ordinary MCP-only message
-payloads which the parser itself does not read. Settings' exact candidate.code check
+payloads which the parser itself does not read. Settings' pure-resolver tracking check
 precedes its prefix mappings. Exercise BOTH watch callback and submit rejection
 through startMcpGeneration and the generate action installed by setMcpProviderImpl.
 Do not export those private message helpers for tests.
@@ -193,9 +198,8 @@ dispatch. Tests drive actual MessageEvent and plain Event separately, then stale
 callbacks after disconnect/reconnect. In J7b, instrument the native EventSource
 onerror/close boundary before app load and attribute explicit close calls to
 MessageEvent-with-data versus plain transport Event. A tracking error frame must
-not trigger close in its MessageEvent handler. A finite intercepted SSE body's
-later end may legitimately reconnect; do not assert zero reconnects or mistake
-end-of-body transport failure for the application error itself.
+not trigger close in its MessageEvent handler.075 keeps the owned stream open
+through that assertion; EOF is tested separately, never conflated with app error.
 
 Data listeners ignore events without string data (transport errors have their own
 handler). At the wire ingress, dispatch validates parsed JSON is a non-null,
@@ -252,6 +256,7 @@ export function withJobTrackingUi<T>(
 
 JobTrackingUiRuntime is the actual export-type intersection for useAppStore,
 storeInflightImpl, storeHelpers, storeVideoImpl, storeSettingsImpl, mcpProviders,
+storeAssetGenImpl, storeSpriteRecipeImpl,
 errorCodes/errorHandler/sseStreamError/nodeErrorInfo and eventChannel. The test
 entry exports needed existing functions explicitly; it does not add production
 exports. Components remain browser-driven in J7b, not privately exported handlers.
@@ -338,13 +343,14 @@ ui/playwright.config.ts testDir is ./e2e, workers1/retries0.
 
 - Main/server: inflight, terminalStore, ssePublish, spriteJobEvents and their scoped
   DB/terminal/cancel tests, canonical CI evidence wiring/contract plus source-of-truth/devlog/inventory synchronization.
-- Event transport worker: eventBus, routes/events, eventChannel, backpressure and
+- Event transport worker: eventsPolicy, eventBus, routes/events, eventChannel, backpressure and
   replay-gap tests. No UI state/error-file writes.
 - UI state worker: storeHelpers, storeInflightImpl, inflightReconciliation,
   _jobTrackingUiFixture and state/legacy-replacement tests.
 - UI presentation worker: errorCodes/errorHandler/sseStreamError, dictionaries,
-  storeVideoImpl, ResultActions, mcpProviders/storeSettingsImpl, timeout UI tests
-  and hosted J7b. It consumes the state worker's fixture; no duplicate harness.
+  storeVideoImpl, ResultActions, mcpProviders/storeSettingsImpl, AssetGen/Sprite,
+  video-extend-ui-contract, timeout UI tests and075's hosted J7b/live SSE/media fixtures.
+  It consumes the state worker's fixture; no duplicate harness.
 - CLI worker: bin/lib/mcpJob and its two existing CLI/producer recovery tests.
 
 Dependencies are explicit: fixed errorCode/message export before UI state tests;

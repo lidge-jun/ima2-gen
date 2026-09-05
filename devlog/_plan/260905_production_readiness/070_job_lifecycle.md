@@ -1,6 +1,7 @@
 # WP07 — Recoverable tracker termination and bounded event delivery
 
-Status: WP07 P at f2b60b64; not implemented. 071/072 are mandatory amendments.
+Status: WP07 A; not implemented.071–075 are mandatory current amendments.
+074 owns corrected residual cleanup/transport/presentation;075 owns native E2E.
 Historical baseline:
 [004_lifecycle_operations_research.md](004_lifecycle_operations_research.md).
 
@@ -45,7 +46,7 @@ generic persistence abstraction. App-level blast radius; no dependency added.
 | MODIFY | `lib/inflight.ts` | Reuse terminal store, expired terminal transition, late-controller guard |
 | MODIFY | `lib/ssePublish.ts` | Suppress done for tracking-expired jobs as for canceled jobs |
 | MODIFY | `lib/eventBus.ts` | Detect future process cursor, including empty new ring |
-| MODIFY | `routes/events.ts` | Idempotent cleanup before replay; disconnect write(false) |
+| MODIFY | `routes/events.ts` | Idempotent cleanup; bounded drain-driven catch-up per074 |
 | MODIFY | `ui/src/lib/eventChannel.ts` | Handle replay-gap as control event, clear cursor, resync |
 | MODIFY | `ui/src/lib/errorCodes.ts` | Register JOB_TRACKING_TIMEOUT, fixed safe fallback, explicit resolver precedence with no retry CTA |
 | MODIFY | `ui/src/lib/sseStreamError.ts` | Normalize recognized tracking-timeout text before raw-message consumers |
@@ -75,7 +76,7 @@ generic persistence abstraction. App-level blast radius; no dependency added.
 DELETE: none. Generated .js is emitted by existing build commands, never hand-edited
 or newly tracked. No .db migration or config deadline change.
 Read-only consumers: api-generation.ts/nodeApi.ts/videoExtendStream.ts parse SSE;
-storeGenImpl.ts/storeNodeGenImpl.ts/storeAssetGenImpl.ts dispatch handleError;
+storeGenImpl.ts/storeNodeGenImpl.ts dispatch handleError;074 adds AssetGen/Sprite writes.
 nodeErrorInfo.ts/agentQueueError.ts/Toast.tsx consume its resolver/spec. storeTypes.ts/api-inflight.ts
 accept string errorCode/numeric httpStatus. No new terminal field/status or retry framework.
 
@@ -120,8 +121,9 @@ export function purgeStaleJobs(now = Date.now()) {
 ```
 
 After: retain public signature; select only rows matching the SAME strict `<`
-cutoff inside one synchronous SQLite transaction. For each row, build a
-TerminalJob preserving requestId/kind/phase/phaseAt/meta/startedAt, omitting prompt:
+cutoff inside one synchronous SQLite transaction. First apply074's retained-terminal
+precedence/repair. Only rows without retained outcomes build a new TerminalJob
+from existing column-first rowToJob(row), omitting top-level prompt:
 
 ```ts
 const terminal = {
@@ -129,7 +131,7 @@ const terminal = {
   status: "error", startedAt: Number(row.started_at), finishedAt: now,
   durationMs: now - Number(row.started_at), phase: row.phase || "queued",
   phaseAt: Number(row.phase_at || row.started_at),
-  httpStatus: 504, errorCode: "JOB_TRACKING_TIMEOUT", meta: parseMeta(row.meta),
+  httpStatus: 504, errorCode: "JOB_TRACKING_TIMEOUT", meta: rowToJob(row).meta,
 };
 writeTerminalJob(terminal); // transaction must roll back on failure
 db.prepare("DELETE FROM inflight WHERE request_id = ?").run(row.request_id);
@@ -200,8 +202,9 @@ existing unknown-wrapper/rawCode path). Preserve priority behavior for every oth
 code. Return no rawCode/errorClass or caller-supplied message on this branch:
 
 ```ts
-if (registered === "JOB_TRACKING_TIMEOUT") {
-  return { code: registered, spec: errorCodes[registered],
+if (registered === "JOB_TRACKING_TIMEOUT" ||
+    (registered === "UNKNOWN" && incomingRawCode === "JOB_TRACKING_TIMEOUT")) {
+  return { code: "JOB_TRACKING_TIMEOUT", spec: errorCodes.JOB_TRACKING_TIMEOUT,
     message: JOB_TRACKING_TIMEOUT_MESSAGE };
 }
 ```
@@ -209,9 +212,9 @@ if (registered === "JOB_TRACKING_TIMEOUT") {
 Do not classify arbitrary "timeout" text as tracking expiry: AGY_TIMEOUT/MCP_JOB_TIMEOUT stay distinct.
 No retry CTA, auto-resubmit, success inference or billing/refund promise is introduced.
 
-`sseStreamError.ts` imports the constant, keeps envelope-first code selection and
-sets `message = JOB_TRACKING_TIMEOUT_MESSAGE` immediately before constructing Error
-when final code is JOB_TRACKING_TIMEOUT. All existing raw-message consumers then
+`sseStreamError.ts` keeps envelope-first selection and uses the pure resolver to
+canonicalize tracking wrappers per074 (code/message/status/phase, no poisoned
+rawCode/class) before constructing Error. All existing raw-message consumers then
 receive safe fixed text even if wire error/message contains synthetic secrets.
 `storeHelpers.ts` imports the same constant; retain terminalJobError's signature,
 code and status assignment, replacing ONLY its message selection:
@@ -235,7 +238,7 @@ direct showToast bypass without changing unrelated error semantics.
 `callbacks.onError?.(parseSseErrorPayload(data,
 typeof data.message === "string" ? data.message : "MCP generation failed"))`, importing
 the existing parser. Keep finish/unsubscribe/timer behavior. `storeSettingsImpl.ts`
-adds `if (candidate.code === "JOB_TRACKING_TIMEOUT") return t("toast.jobTrackingTimeout");`
+uses the pure resolver's tracking code to return t("toast.jobTrackingTimeout")
 before its MCP-specific branches. Both existing callback and catch callers reuse it.
 
 Dictionary values for `toast.jobTrackingTimeout` are fixed, with no interpolation:
@@ -365,16 +368,13 @@ Keep numeric SSE IDs and existing gap payload, including nullable oldestAvailabl
 Numeric cursors cannot detect equal/lower collisions after restart. Existing
 reconnect resync covers that case; an epoch is outside this WP's compatibility budget.
 
-Before safeWrite: ignores `res.write` boolean. After: `return res.write(chunk);`
-false means disconnect subscriber, not retry chunk (Node already accepted it).
-In registerEventsRoute initialize `cleaned`, no-op `unsub`, and optional heartbeat
-BEFORE replay; register req/res close/error listeners before first write. Cleanup
-unsubscribes once, clears timer if allocated, decrements activeConnections once,
-removes installed listeners, and closes/destroys only this response. On false write
-destroy the response to discard its buffered pending writes; no custom queue.
-Every replay write failure calls cleanup and RETURNS from handler, so no subscription
-or heartbeat is created afterward. Live and heartbeat failure use same cleanup.
-Capacity rejection remains 503 SSE_CAPACITY; successful capacity is reusable.
+Before safeWrite: ignores `res.write` boolean. After:074's bounded drain pump.
+False pauses writes; the accepted chunk is never retried. Drain resumes from the
+queued cursor/global ring; only permanent stall reaches the fixed15s deadline.
+Listeners/subscription precede replay and are cleaned exactly once. No per-client
+queue; preserve live full payload and catch-up omission/gap semantics. Immediate
+destroy was rejected by S2's native counterexample. Capacity rejection remains503
+SSE_CAPACITY; successful capacity is reusable.
 
 Browser addition after regular event listeners:
 
@@ -411,7 +411,7 @@ wire field or idempotency-key completion is implied by a tracking timeout.
 | intentional ordinary reuse of canceled ID, fresh module restore | new admission allowed; obsolete disk cancel absent; new controller not spuriously aborted |
 | completed job / unknown job | registration behavior preserved; no inferred cancellation of unknown pre-admission work |
 | future cursor on empty and one-event ring | gap true; oldestAvailableId null/1; retained cursor false, evicted cursor true |
-| response.write(false) during replay, live, heartbeat | stream destroyed; no further writes/subscriptions; capacity slot released once across close+error |
+| response.write(false) during replay, live, heartbeat | pause; drain resumes once; deadline closes stall; cleanup/capacity reuse and native reconnect progress per074 |
 | replay-gap without jobId | existing resync called, cursor cleared; next reconnect URL lacks previous cursor; unrelated job subscriptions retained |
 | live SSE tracking expiry, envelope and legacy flat variants | real parser → resolver → handleError calls showToast with exact locale warning; code stays JOB_TRACKING_TIMEOUT; no generic unknown/card/CTA; video and MCP paths same warning |
 | restored status=error/errorCode=JOB_TRACKING_TIMEOUT/httpStatus=504 with poisoned meta.message | terminalJobError and real reconciliation emit exact safe warning; persisted ID removed; activeGenerations=0; subsequent reconcile no second warning |
@@ -427,44 +427,24 @@ wire field or idempotency-key completion is implied by a tracking timeout.
 | all four locales, live then restored browser state | observed alert text equals independently hardcoded localized literal, no raw-key fallback; dismiss/reload triggers zero generation POSTs beyond initial live submission |
 | runMcpJob receives live expiry or replay-gap with restored expiry | public promise rejects code JOB_TRACKING_TIMEOUT/status504/fixed warning; POST count exactly one, no retry timer/new submission, no raw meta/body echo |
 
-Tests must run real modules, not the local replica of publishJobEvent currently in
-tests/inflight.test.ts. Use direct import after temporary config env setup. EventSource
-test transpiles the import-free `ui/src/lib/eventChannel.ts` with installed TypeScript
-transpileModule (ESNext target/module), imports its output as a unique data URL, and
-sets a fake global EventSource before connect. Valid gap/phase events avoid the
-import.meta.env.DEV invalid-payload logging branches; do not rewrite production code
-to expose testing internals. Restore global EventSource and call disconnect in finally.
-This directly exercises channel behavior without browser or source-regex assertions.
+Tests run real modules, not the replica publisher in baseline inflight.test.ts.
+Owned config/DB precedes imports.072's actual esbuild UI graph and controlled
+fetch/storage/EventSource/timers replace the old partial-barrel mock recipe;
+define Vite env and cover invalid JSON rather than avoiding that branch. Real
+store/i18n/toastLog deliver warnings; expected locale literals are independent.
+Held promises/ticks replace sleeps; every unassigned request remains a violation
+even when product code catches it. Restore globals and prove owned teardown.
+074 adds lifetime/wrapper/Sprite cases;075 separately proves native rendering.
+Exhaustive node-error/i18n tests retain coverage. CLI uses its real public helper
+and owned HTTP/SSE; DB restart proves actual persisted producer results.
 
-`job-tracking-timeout-ui.test.ts` dynamically imports real errorCodes/parser/
-terminalJobError/handleError/reconcileInflightImpl after node:test mock.module
-replaces only the existing API barrel (getInflight/getHistory deterministic replies)
-and useAppStore export (getState returns selected locale) at their resolved module
-paths. The real i18n t/translate and dictionaries stay loaded. Supply memory
-localStorage and a window.setInterval callback capture; restore all globals/mocks
-in finally. WP05's earlier runner flag enables these mocks; the focused command
-below carries that flag too. Drive actual showToast sink, not an imitation resolver.
-Iterate real dictionaries with separately hardcoded
-expected literals above (not expected=t(actualKey)). Capture fetch/POST counts;
-use controlled tick callback for polling, not elapsed wall-clock waits. Exhaustive
-node error test adds the new key; existing i18n-dictionary test checks key coverage.
-CLI tests use their existing synthetic loopback HTTP/SSE harness through runMcpJob;
-DB-restart tests separately prove durable snapshot creation, not copied JSON alone.
-
-`j7b-tracking-timeout.spec.ts` uses existing startApp/seedBrowser ONLY on a disposable,
-credential/media-free hosted runner until WP09 proves fixture isolation. No local
-server/browser run in WP00/WP07 on a credentialed workstation, no new fixture API
-or dependency on future WP09 changes. Before navigation install route intercepts
-for generation (202 with captured requestId), SSE (terminal timeout frame), and
-inflight (scoped terminal snapshot). Coordinate SSE fulfillment with the observed
-submission promise; no upstream generation request is forwarded. Use real composer
-submission and real EventSource/parser/store/Toast. For reload, seed an aged local
-inflight record only ONCE, serve terminal JSON, reload without reseeding and assert
-the alert plus removal, then reload again and assert no alert/no POST. Parameterize
-all four locales. Server restart durability stays in SQLite/fresh-module tests;
-browser tests prove consumer/rendering, not real upstream timeout. Finally close
-fixture/context, attach screenshots and read them at C; WP09 later reruns J7b with
-its hardened existing fixture. No bypass routes in production or paid canary.
+`j7b-tracking-timeout.spec.ts` uses strict existing J6 cleanroom isolation hosted
+only.075 replaces the finite SSE stub: owned native OPEN before POST, full202,
+correlated terminal after acceptance. Reload seeds an aged ID once; second reload
+has no warning or POST. Four locales/video-node/extension/AssetGen/animation render
+real state with tiny owned playable media.075 specifies route and teardown guards.
+SQLite/fresh-module tests prove restart separately. C directly views screenshots;
+no credentialed-host E2E, production bypass or paid canary is authorized.
 
 ## Verification, compatibility and rollback
 

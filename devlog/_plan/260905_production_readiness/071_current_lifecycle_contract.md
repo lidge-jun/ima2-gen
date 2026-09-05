@@ -7,9 +7,10 @@ and retained WP06m/WP06s duplicate-cancellation captures. Goal: durable expirati
 single cancellation/expiry terminal outcome, recoverable bounded event delivery.
 Non-goals: new schema/queue/provider retry/epoch protocol, cross-process abort,
 universal ordering of unrelated completed/error producers. 070 remains binding
-except the specific amendments here and in072. No production implementation in P.
+except amendments here and072–075.074 replaces residual expiry/transport;
+075 replaces finite SSE fixtures. No production implementation yet.
 Stop: c-8 plus both explicit duplicate tasks pass; otherwise record exact failures.
-Memory: 070–072, goalplan and ledger, session wp07 evidence.
+Memory:070–075, goalplan and ledger, session wp07 evidence.
 Expected outcome: DONE for this layer; all later WPs and release remain required.
 
 ## Authority, resource bounds and prior D
@@ -153,7 +154,9 @@ cross-process controller guarantee is introduced.
 
 ## Expiry and storage refinements
 
-Keep070's strict cutoff transaction and post-commit ordering. readTerminalJobs,
+Keep070's strict cutoff transaction and post-commit ordering, with074's retained
+terminal precedence, rowToJob metadata and single-row repair/rollback. Only new
+expiry publishes; residual cleanup never rewrites timestamps. readTerminalJobs,
 writeTerminalJob, deleteExpiredTerminalJobs and deleteTerminalJob share getDb but
 never import inflight/eventBus. Move existing row mapping/serialization without
 silently changing malformed-meta/default/status handling. Expiry preserves IDs,
