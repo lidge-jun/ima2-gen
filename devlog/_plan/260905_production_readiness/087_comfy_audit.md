@@ -113,3 +113,29 @@ SelectwithoutariaDescribedBy continuesnoaria-describedbyattribute. InhostedD14
 assertnewComfyworkflowtriggerdescription resolves toinstance-specificstatusDOM,
 andexistingprovidertrigger(no prop) hasnoattribute. Hidden/visiblepanelsdistinct.
 Allotherwidgetkeyboard/mouse/focus behavior coveredbyexistingSelect/J6 regressions.
+
+## Main ingress/fixture precision before B
+
+Clarify R3: an unencoded reserved comfy-video:value underMCP is REJECTED withALL
+setters0, not treatedasan arbitraryrawMCPmodel. ValidencodeMcpModelValue input
+stillhits theexistingMCPsetteronce. Read currentuseAppStore.getState in bothComfy
+picker callbacks; drop a callbackwhose capturedprovider/MCPcontext no longer
+matchescurrentstate. ReadgetLaneCatalogSnapshot atactivation, notonlythe render's
+closed-over snapshot, so a ready→loading transition beforeReactcommits cannot
+reactivate anoldrow. Tests renderready thenchangefakecurrentcontext/snapshot
+without rerender andinvoke theprevious publiconChange: expect0setters.
+
+Selector admission fixture is concreteNode-only wiring: esbuildtheactual
+GenProviderModelSelect toCJS withReact/react-jsx-runtime external, resolvedfrom
+ui/package.json withcreateRequire; renderToStaticMarkup uses thatSAMEReactinstance.
+Testmodule stubs supply useAppStoreselector/getState/actions, useLaneCatalog/
+getLaneCatalogSnapshot, useMcpProviders andi18n; realComfyDisplay/projection/value
+parsers remain. StubSelect capturespublicprops byexistingid, returnsnull. No
+effects/fetch/server/DOMbrowser run, no productionhandlers exported. This tests
+valueadmission only, NOTsubscription lifecycle orvisuals. Resource tests andD11
+actualtwohooks remainunmocked in their distinct fixtures. Executein a freshVM
+context/mockedmodulemap percase; missingdependencies fail, neverfallthroughI/O.
+
+Newcatalogstatus retry controls use a scopedmin-height44px/fontinherit rule under
+gen-provider-model__catalog-state. OldMCPretry styling isunchanged. Native320/390
+statuscases verifyhit/focus/label fit; do notshrinkrecoverytargets tofittext.
