@@ -55,3 +55,24 @@ i18n files passed all12 tests; the expanded 13-file C receipt now records100 PAS
 frontend job101376830078 succeeded and uploaded WP08c and existing-suite evidence.
 Main is downloading screenshots; neither artifact existence nor native pass is yet
 a visual verdict. A new exact-head run is required after the repair.
+
+## Pixel-grounded correction
+
+First native run passed179 cases. Main viewed en1280, ko390 and320error PNGs.
+The desktop ProviderStatusSelect trigger had no visible ComfyUI identity; mobile
+clipped Local HTTP. Its long selected-item `sub` reserves flex width and displaces
+the main label, despite the status also being shown immediately below. Existing
+tests inspected status/chip/workflow controls, not this provider-label geometry.
+Repair the Comfy caller only using Select's existing `triggerSub=""` override;
+keep full status in menu rows and the live status line, and all other provider
+triggers unchanged. Add exact full provider-label and rendered-range checks in
+every D14 locale/viewport case. No primitive redesign or status deletion.
+Two candidate visual reviewers inspect all40 first-run captures for other issues.
+
+Main also viewed selected-video-popup/manage-workflows/Home captures. The selected
+video popup wrongly included the lane-only availability hint "Choose a workflow".
+Hide that generic hint only in core-Comfy; the selected-specific status and facts
+already supply guidance. Assert no generic hint in that native case. The management
+capture showed the top of Settings, not the below-fold manager: scroll the actual
+manager title into the viewport before taking its screenshot. These are separate
+display/capture defects, not a reason to change generation or navigation contracts.

@@ -185,6 +185,7 @@ export function ProviderStatusSelect({ mcpProviders }: { mcpProviders: McpProvid
         groups={groups}
         value={selectedValue}
         onChange={onChange}
+        triggerSub={isLocalComfy ? "" : undefined}
         portal
         ariaLabel={t("provider.authTitle")}
         className="provider-status-select__select"

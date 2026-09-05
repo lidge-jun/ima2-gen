@@ -152,6 +152,9 @@ for (const locale of ["en", "ko", "zh-Hans", "zh-Hant"] as const) for (const vie
       const panel = await openComfyPanel(page, origin), controls = control(panel);
       await expect(status(panel)).toHaveText(TEXT[locale].available);
       await expect(panel.locator(".provider-auth-chip")).toHaveText(TEXT[locale].local);
+      const providerChoice = panel.locator(".provider-status-select [role='combobox']");
+      await expect(providerChoice.locator(".ctl-select__value")).toHaveText(`ComfyUI ${TEXT[locale].local}`);
+      await expect(providerChoice.locator(".ctl-select__value-sub")).toHaveCount(0);
       const all = await page.locator("[data-testid='comfy-generation-controls'] [role='combobox']").evaluateAll((elements) =>
         elements.map((element) => ({ id: element.id, description: element.getAttribute("aria-describedby") })));
       expect(all.length).toBeGreaterThan(0);
@@ -163,7 +166,7 @@ for (const locale of ["en", "ko", "zh-Hans", "zh-Hant"] as const) for (const vie
       }
       expect(await panel.locator(".provider-status-select [role='combobox']").getAttribute("aria-describedby")).toBe(null);
       const metrics = [];
-      for (const target of [status(panel), controls.getByRole("combobox"), controls.getByRole("button", { name: TEXT[locale].refresh, exact: true }),
+      for (const target of [providerChoice, status(panel), controls.getByRole("combobox"), controls.getByRole("button", { name: TEXT[locale].refresh, exact: true }),
         controls.getByRole("button", { name: TEXT[locale].manage, exact: true })]) metrics.push(await readable(target, true));
       await displayEvidence(page, info, `a11y-${locale}-${viewport.width}`, capture, panel, { all, metrics });
     });
@@ -191,10 +194,13 @@ test("Comfy readiness popup names the selected video and opens workflow manageme
     await expect(dialog.locator(".provider-readiness__facts")).toContainText("Selected video");
     await expect(dialog.locator(".provider-readiness__facts")).toContainText("wf-video-selected");
     await expect(dialog).not.toContainText("GPT");
+    await expect(dialog.locator(".modal__hint")).toHaveCount(0);
     await displayEvidence(page, info, "selected-video-popup", capture, dialog);
     await dialog.getByRole("button", { name: "Manage workflows", exact: true }).click();
     await expect(page.locator(".settings-workspace")).toBeVisible();
     await expect(page.locator("#comfy-workflow-manager-title")).toBeVisible();
+    await page.locator("#comfy-workflow-manager-title").scrollIntoViewIfNeeded();
+    await expect(page.locator("#comfy-workflow-manager-title")).toBeInViewport();
     await displayEvidence(page, info, "manage-workflows", capture, page.locator(".settings-workspace"));
   });
 });

@@ -72,7 +72,7 @@ export function ProviderReadinessPopup() {
             <strong>{isComfy ? t(comfyDisplayMessageKey(comfyDisplay, laneCatalog)) : ready ? t("readiness.ready") : t("readiness.blocked")}</strong>
             <small>{isComfy ? t("comfy.display.controlsHelp") : ready ? t("readiness.readyBody") : current.reason}</small>
           </div>
-          {current.hint ? <p className="modal__hint">{current.hint}</p> : null}
+          {!isComfy && current.hint ? <p className="modal__hint">{current.hint}</p> : null}
           {isComfy ? (
             <dl className="provider-readiness__facts">
               <div><dt>{t("readiness.provider")}</dt><dd>{PROVIDER_READINESS_LABELS.comfy}</dd></div>
