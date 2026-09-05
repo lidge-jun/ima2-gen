@@ -1,5 +1,8 @@
 # WP08c — honest Comfy provider status and workflow controls
 
+Current execution: WP08c P at22dfa811; [086_comfy_revalidation.md](086_comfy_revalidation.md)
+amends the historical944 plan below. No WP08c production implementation yet.
+
 Status: docs-only roadmap amendment during WP02 P replan; main reports wp08c
 registered with c-17 and wp13 provider-display-gate. NOT implemented, independently
 audited, or runtime-verified by this leaf; this leaf did not mutate goal/FSM state.
