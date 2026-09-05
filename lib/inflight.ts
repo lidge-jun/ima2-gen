@@ -2,6 +2,8 @@ import { config } from "../config.js";
 import { getDb } from "./db.js";
 import { publish } from "./eventBus.js";
 import { buildEnvelope } from "./jobs/envelope.js";
+import { deleteExpiredTerminalJobs, readTerminalJobs,
+  writeTerminalJob, type TerminalJob } from "./jobs/terminalStore.js";
 import { logError, logEvent } from "./logger.js";
 
 // SQLite-backed inflight job registry.
@@ -35,21 +37,6 @@ interface InflightJob {
   phaseAt: number;
 }
 
-interface TerminalJob {
-  requestId: string;
-  kind: string;
-  status: string;
-  startedAt: number;
-  finishedAt: number;
-  durationMs: number;
-  phase: string;
-  phaseAt: number;
-  httpStatus?: number | undefined;
-  errorCode?: string | undefined;
-  prompt?: string | null;
-  meta: Record<string, unknown>;
-}
-
 const terminalJobs = new Map<string, TerminalJob>(); // requestId -> terminal snapshot, active-only API stays default
 /**
  * The map above is the source of truth; SQLite is its backup (#151).
@@ -65,24 +52,8 @@ function ensureTerminalJobsRestored(): void {
   terminalJobsRestored = true;
   try {
     const cutoff = Date.now() - config.inflight.terminalTtlMs;
-    const rows = getDb()
-      .prepare("SELECT * FROM terminal_jobs WHERE finished_at > ?")
-      .all(cutoff) as TerminalJobRow[];
-    for (const row of rows) {
-      if (terminalJobs.has(row.request_id)) continue;
-      terminalJobs.set(row.request_id, {
-        requestId: row.request_id,
-        kind: row.kind,
-        status: row.status,
-        startedAt: Number(row.started_at),
-        finishedAt: Number(row.finished_at),
-        durationMs: Number(row.finished_at) - Number(row.started_at),
-        phase: row.phase || "unknown",
-        phaseAt: Number(row.phase_at || row.finished_at),
-        httpStatus: row.http_status ?? undefined,
-        errorCode: row.error_code ?? undefined,
-        meta: parseMeta(row.meta),
-      });
+    for (const job of readTerminalJobs(cutoff)) {
+      if (!terminalJobs.has(job.requestId)) terminalJobs.set(job.requestId, job);
     }
   } catch (err: unknown) {
     // A restore failure must not take down job tracking; the process simply
@@ -91,39 +62,9 @@ function ensureTerminalJobsRestored(): void {
   }
 }
 
-interface TerminalJobRow {
-  request_id: string;
-  kind: string;
-  status: string;
-  started_at: number;
-  finished_at: number;
-  phase?: string | null;
-  phase_at?: number | null;
-  http_status?: number | null;
-  error_code?: string | null;
-  meta?: string | null;
-}
-
 function persistTerminalJob(job: TerminalJob): void {
   try {
-    getDb()
-      .prepare(`
-        INSERT OR REPLACE INTO terminal_jobs (
-          request_id, kind, status, started_at, finished_at, phase, phase_at, http_status, error_code, meta
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .run(
-        job.requestId,
-        job.kind,
-        job.status,
-        job.startedAt,
-        job.finishedAt,
-        job.phase,
-        job.phaseAt,
-        job.httpStatus ?? null,
-        job.errorCode ?? null,
-        JSON.stringify(job.meta ?? {}),
-      );
+    writeTerminalJob(job);
   } catch (err: unknown) {
     logError("inflight", "terminal_persist:error", err);
   }
@@ -379,9 +320,7 @@ export function reapTerminalJobs(now = Date.now()) {
     if (now - j.finishedAt > config.inflight.terminalTtlMs) terminalJobs.delete(id);
   }
   try {
-    getDb()
-      .prepare("DELETE FROM terminal_jobs WHERE finished_at <= ?")
-      .run(now - config.inflight.terminalTtlMs);
+    deleteExpiredTerminalJobs(now - config.inflight.terminalTtlMs);
   } catch (err: unknown) {
     logError("inflight", "terminal_reap:error", err);
   }
