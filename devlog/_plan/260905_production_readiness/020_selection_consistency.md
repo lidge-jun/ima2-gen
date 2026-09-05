@@ -191,6 +191,9 @@ Accept nonempty Comfy strings without catalog filtering. Unknown versions return
 {} without overwriting raw data. Saving uses the same allowlist projection and
 merges existing known lane entries; no catch block clears storage. A failed save
 does not undo in-session state. Never log raw stored content.
+Merge at the provider-record level: each supplied valid lane REPLACES that lane's
+record wholesale; an absent provider keeps its old record. Never slot-merge inside
+saveMemory: action-owned deliberate slot deletion must not be resurrected there.
 If an existing blob has a future version, saveMemory skips that key rather than
 overwriting it with v1; active legacy-key writes and in-session actions still work.
 
@@ -223,7 +226,7 @@ export function setCoreComfyWorkflowSelection(id: string | null, set: StoreSet, 
 export function setCoreComfyVideoSelection(id: string | null, set: StoreSet, get: StoreGet): void;
 ```
 
-Private `commitSelection(current,next,set)` loads memory; merges current under its
+Private `commitSelection(current,next,set,clearSlot?:"image"|"video")` loads memory; merges current under its
 provider (before active fields are cleared), merges next under its provider;
 persistCoreSelection(next); set(next) once. Only known selection fields are copied
 from get(); do not pass/serialize the full AppState. Same-provider action may no-op
@@ -238,6 +241,10 @@ When merging memory, present image/video ids replace their respective slot,
 absent ids preserve the previous inactive slot, and kind always follows the new
 active selection. Explicit id=null clears the corresponding remembered slot in
 that workflow action, rather than treating a deliberate clear as absence.
+Concrete intent path: null image action passes clearSlot="image", null video action
+passes "video"; non-null actions omit it. After merging outgoing/incoming slots,
+delete that slot from next.provider's remembered entry BEFORE saving. The public
+action signatures and v1 memory schema remain unchanged.
 
 Before storeSettingsImpl `:358`: long setProviderImpl branch tree; `:488` model
 setter unconditionally chooses grok; `:546` video action lacks get argument.
@@ -345,6 +352,7 @@ before showing the modal; do not introduce a second model-selection resolver the
 | Comfy image pick while Comfy video selected | comfyWorkflow=new-id, comfyVideoWorkflow=null; generate invokes runGenerate not runVideoGenerate | actions + dispatch spy |
 | Comfy video pick, generate with multimode=true | request provider=comfy, model=wf-video via existing video builder; no Grok or multimode call | action + J6 payload |
 | Comfy A→OAuth→Comfy | outgoing active fields null on OAuth, remembered A survives, return restores A; same-lane reselect unchanged | actual setters + storage + J6 |
+| Identical Comfy imageA/videoV input: select imageA versus clear video with null | both active states imageA/video-null; image selection retains rememberedV, explicit video clear deletesV; leave/return obeyskind; symmetric image-null clears only rememberedimage | paired real actions + raw storage + leave/return |
 | No remembered Comfy selection, catalog has multiple workflows | no workflow auto-picked, no hidden default request | pure + J6 |
 | NAI selected with saved multimode=true and count=4 | existing direct generation dispatch remains; preference/count stored unchanged; NAI payload n=1 remains | dispatch spy + payload |
 | Storage sync changes provider from oauth to gemini-api with nano-banana-pro | provider/model update together in one set; MCP fields, history metadata, selectedFilename and dirty prompt unchanged; actual second-tab storage event changes first-tab label | sync action + J6 |
