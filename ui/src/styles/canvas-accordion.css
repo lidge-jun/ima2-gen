@@ -279,6 +279,10 @@
 }
 .gen-provider-model .ctl-select__value {
   font-size: 10.5px;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
 }
 .gen-provider-model .ctl-select__value-sub {
   font-size: 9px;

@@ -7,9 +7,9 @@
     position: sticky;
     top: 0;
     z-index: 150;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
     min-height: 64px;
     padding:
@@ -52,6 +52,28 @@
     justify-content: flex-end;
     gap: 7px;
     min-width: 0;
+  }
+  .mobile-app-bar__selection {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .mobile-app-bar__selection .gen-provider-model.is-compact {
+    width: 100%;
+    max-width: none;
+    flex-wrap: nowrap;
+  }
+  .mobile-app-bar__selection .gen-provider-model.is-compact .gen-provider-model__select--provider {
+    flex: 0 0 112px;
+    width: 112px;
+    max-width: 40%;
+  }
+  .mobile-app-bar__selection .gen-provider-model.is-compact .gen-provider-model__select--model {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+  .mobile-app-bar__selection .gen-provider-model.is-compact .ctl-select__trigger {
+    min-height: 44px;
   }
   .mobile-app-bar .image-model-select__trigger,
   .mobile-app-bar__icon-button,
