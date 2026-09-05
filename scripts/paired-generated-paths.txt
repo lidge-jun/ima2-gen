@@ -3,6 +3,7 @@ bin/commands/grok.js
 bin/commands/prompt-sub/build.js
 bin/ima2.js
 config.js
+lib/agyArtifactRead.js
 lib/capabilities.js
 lib/generationRequestLog.js
 lib/grokProxyLauncher.js

@@ -27,6 +27,7 @@ import {
 // is judged by the result rather than a benchmark. 4.6 stays selectable below.
 export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.3";
 export const AGY_PROCESS_POLICY = Object.freeze({ timeoutMs: 360_000, terminateGraceMs: 1000, maxOutputBytes: 1_048_576 });
+export const AGY_ARTIFACT_POLICY = Object.freeze({ maxBytes: 52_428_800, chunkBytes: 65_536 });
 export const GROK_PLANNER_MODELS = [
   DEFAULT_GROK_PLANNER_MODEL,
   "grok-4.6",
