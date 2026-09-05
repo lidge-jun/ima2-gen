@@ -1,6 +1,6 @@
 # Production readiness — master roadmap and continuity spine
 
-Status: WP00 / B, independent design audits PASS; final C/D lock pending.
+Status: WP00 / C verified, independent audits PASS; D ledger records the roadmap lock.
 Baseline: ecde2bc79cddc50ff0da38091c1ce0590383090c.
 Branch: codex/prod-wp00-roadmap.
 FSM session: 01a06e88-aa93-77b2-a99a-fc10f8458eb2.
@@ -165,6 +165,6 @@ two High normal-build/fixture-boundary regressions. Main's structural RCA in008_
 separates ordinary build from strict build:fixture without weakening certification.
 Security/delivery same-reviewer R4 PASS closes the last two High issues.
 008_3 records accepted scoped verdicts and the fourteen-implementation map.
-WP00 B finalizes only these docs; C/D remain pending, no production source change.
-Next: source-bound docs-only C/D lock, publish prerequisite/docs layers, then
-WP01 P revalidation. Do not implement before the lock.
+WP00 C structural receipt/typechecks/inventory pass;008_4 records scoped evidence,
+with no production source change. D ledger records closure after final receipt.
+Next: immediate WP01 P after D, publish prerequisite/docs layers and revalidate010.
