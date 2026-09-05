@@ -8,7 +8,7 @@
 // - lib/minimaxImageAdapter.ts: MiniMax takes a single subject_reference
 // - gpt oauth/api: server capabilities.limits.maxRefCount (referenceLimit)
 import type { Provider } from "../types";
-import { PROVIDER_REFERENCE_LIMITS, PROVIDER_SURFACE_SUPPORT } from "../generated/providers";
+import { isCoreProviderId, PROVIDER_REFERENCE_LIMITS, PROVIDER_SURFACE_SUPPORT } from "../generated/providers";
 
 export const GROK_FAMILY_IMAGE_REF_LIMIT = PROVIDER_REFERENCE_LIMITS.grok.image;
 export const MINIMAX_IMAGE_REF_LIMIT = PROVIDER_REFERENCE_LIMITS.minimax.image;
@@ -34,7 +34,7 @@ export function effectiveReferenceLimit(input: {
   if (input.mcpProvider) return MCP_REFERENCE_LIMIT;
   if (input.videoModelSelected) return Math.min(input.serverLimit, GROK_VIDEO_REF_LIMIT);
   // An absent numeric cap is not the same as an unsupported reference input.
-  if (PROVIDER_SURFACE_SUPPORT[input.provider]?.generate.references === false) return 0;
+  if (isCoreProviderId(input.provider) && !PROVIDER_SURFACE_SUPPORT[input.provider].generate.references) return 0;
   const lane = laneLimit(input.provider, "image");
   return lane === undefined ? input.serverLimit : Math.min(input.serverLimit, lane);
 }

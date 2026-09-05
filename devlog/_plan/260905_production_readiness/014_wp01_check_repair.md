@@ -10,7 +10,10 @@ after taking a node lock but before its try/finally. New direct generated-map
 lookup assumes a core key and throws; correcting provider afterward still sees
 the leaked lock. Reviewer toggled baseline/current helper with same actual
 consumer: baseline fallback5 and retry, current exception and stucklock.
-Accepted fix: optional generated-map lookup, only explicit references:false disables.
+Accepted fix: canonical isCoreProviderId membership before generated-map lookup;
+only an explicit core references:false disables attachment. Optional lookup alone
+still reached inherited constructor/__proto__/toString entries, so those persisted
+values were reproduced and added to the real recovery tests before finalization.
 Keep unknown provider fallback to numeric server limit exactly as before. Do not
 add new provider routing, auth, or broad node pipeline changes. Add durable real
 save/restore->consumer retry regression plus direct fallback assertion.

@@ -191,7 +191,7 @@ test("BUG-R1: saved non-core providers do not poison node generation recovery", 
     assert.equal(db.getDbPath(), process.env.IMA2_DB_PATH);
     const sessionStore = await import("../lib/sessionStore.ts");
     consumer = await loadConsumer();
-    for (const provider of ["auto", "legacy-unknown-provider"]) {
+    for (const provider of ["auto", "legacy-unknown-provider", "constructor", "__proto__", "toString"]) {
       await checkRecovery(t, { sessionStore, consumer, attempts }, provider);
     }
   } finally {
