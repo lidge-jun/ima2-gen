@@ -46,3 +46,13 @@ including originalcancelterminal1. They stay bound to9f, never relabeled newHEAD
 Main owns root-test corrections; original presentation worker may repair only its
 J7b test/harness after explicit packet. All resource checks finished/held before
 tracked writes. Subsequent freshheadcompilers/receipt/CI/manualproof required.
+
+## Additional9f CI failure — test clock, accepted exact correction
+
+9f run33978496516 repeats the above failures and Node24 adds the post-purge-cancel
+test at inflight.test.ts. It samples Date.now BEFORE startJob, then advances only
+TTL+1 from that earlier timestamp. If admission takes more than1ms, that does not
+cross the admitted row's strict cutoff; old behavior hid this because later cancel
+still made a tombstone. Use the actual admitted job.startedAt from listJobs as the
+boundary anchor. No added sleep/deadline or production TTL change. Strict exactly-
+cutoff and cutoff+1 are separately tested in job-cancellation-terminal.

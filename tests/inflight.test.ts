@@ -99,8 +99,8 @@ test("abortJob aborts the registered controller and records canceled terminal st
 });
 
 test("cancel after stale purge preserves tracking expiry and suppresses a late done event", () => {
-  const startedAt = Date.now();
   startJob({ requestId: "req_purged_cancel", kind: "classic", meta: {} });
+  const [{ startedAt }] = listJobs({ kind: "classic" });
 
   purgeStaleJobs(startedAt + config.inflight.ttlMs + 1);
   abortJob("req_purged_cancel");
