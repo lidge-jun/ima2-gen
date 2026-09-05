@@ -1,13 +1,13 @@
 # WP06m — Bounded Grok video body consumption
 
-Status: final docs-only P design; no further scope refinement needed. Ready for
-independent parent A; not implemented or independently A-approved.
-Source baseline: ecde2bc79cddc50ff0da38091c1ce0590383090c.
-Execution order: WP06 → **WP06m** → WP07, after all family source changes.
+Status: WP06m P revalidation at9c87c943. This locked-roadmap design is amended by
+065_1 for current error priority, fixtures, FFmpeg scope and executed baseline.
+Not implemented or independently A-approved for the current cycle.
+Source baseline: 9c87c943bb6b0f89e45a19c9fae66cdfbbadf49f.
+Execution order: WP06 → **WP06m** → WP06s → WP07, after family source changes.
 One meaningful WP/PR: codex/prod-wp06m-video-bounds, based on verified WP06.
 Parent owns orchestration, goalplan, c-16, stack, independent audit and release.
-This delegated delivery writes ONLY this file; every source/test/doc edit below
-is a future implementation manifest, not present authorization to execute it.
+Main owns the current cycle; all source/test changes remain future until A passes.
 
 ## Loop specification and prerequisites
 
@@ -63,9 +63,9 @@ config, environment, GrokVideoOptions nor public facade can set it.
 Searched `getReader|maxBytes|readBoundedImageBody|openPinnedImageGet|
 resolveImageDownloadTarget|readVideoDownloadBody|makeVideoStreamFixture`.
 
-- Existing grokImageCore.ts:146 reader has a fixed 50 MiB image limit and returns
-  buffer/base64/MIME; it is not a parameterized video reader. Its awaited cancel
-  and image error mapping are not copied blindly.
+- The current private image reader is in grokImageDownload.ts:171 with a fixed
+  outer50MiB image policy, not grokImageCore.ts:146. The image transport and mapping
+  are not copied blindly into a Web Response reader.
 - lib/minimaxImageAdapter.ts:130 has another fixed 50 MiB image reader with image
   validation/errors. lib/comfyImageAdapter.ts:315 still uses arrayBuffer and
   returns base64/MIME. Neither fits this contract.
@@ -79,7 +79,8 @@ resolveImageDownloadTarget|readVideoDownloadBody|makeVideoStreamFixture`.
   `body:AsyncIterable<Uint8Array>|null`, and `cancel(reason?:Error):void`.
 - Final 050's **private** `readBoundedImageBody(response:PinnedImageResponse,
   options:{maxBytes:number;signal:AbortSignal}):Promise<Buffer>` with
-  GROK_MEDIA_TOO_LARGE / GROK_MEDIA_EMPTY / GENERATION_CANCELED discriminants.
+  private ImageBodyFailure reasons too-large/empty, mapped at the public wrapper
+  to existing GROK_IMAGE_DOWNLOAD_FAILED502. No public GROK_MEDIA_* codes exist.
   Its limit is suitable, but fetch Response.body is a Web ReadableStream, not
   that response contract. Reuse would require an iterator/cancel/lock adapter
   and error translation. The video-specific reader below directly owns those
@@ -198,8 +199,9 @@ Exact new helpers, all in lib/grokVideoDownload.ts, each <50 lines:
 1. `assertVideoDownloadUrl(url:string):void`: move existing new URL/hostname/
    protocol guard verbatim. Do not interpret userinfo, DNS or redirect policy anew.
 2. `videoDownloadContentType(res:Response):string`: existing !res.ok error and
-   Content-Type fallback/regex guard verbatim, returning header value unchanged
-   (including parameters). Move Content-Length into reader below.
+   Content-Length precheck, then Content-Type fallback/regex guard in the original
+   order, returning the header unchanged (including parameters). The reader also
+   checks length against its internal trusted cap; use a shared private length check.
 3. `videoDownloadFailure(message:string)`: return
    `grokError(message,502,"GROK_VIDEO_DOWNLOAD_FAILED")`; shared local constructor
    for the reader's current messages, not a new error taxonomy.
@@ -214,8 +216,9 @@ Exact new helpers, all in lib/grokVideoDownload.ts, each <50 lines:
    MAX_VIDEO_DOWNLOAD_BYTES):Promise<Buffer>`: exported **internal test seam**,
    not re-exported by grokVideoAdapter and not configurable at public boundaries.
 7. `mapVideoDownloadError(error:unknown,caller:AbortSignal|undefined,combined:
-   AbortSignal):Error`: precise priority table after the reader. Use a narrow
-   code/status/name inspection; no new broad any escape or provider error wrapper.
+   AbortSignal):unknown`: priority amended below/065_1. Preserve existing thrown
+   structured objects as well as Error instances; use narrow code/status/name
+   inspection, not a broad any cast or a new provider wrapper.
 
 Read operation must settle on abort even when a synthetic or broken body ignores
 fetch's signal. Promise.race attaches rejection handlers to the losing read;
@@ -296,8 +299,9 @@ Error mapping priority (checked at catch time, including non-Error abort reasons
 | --- | --- |
 | caller signal aborted, regardless of reason/name; both signals aborted | 499 / GENERATION_CANCELED / Generation canceled |
 | combined signal aborted with caller not aborted | 504 / GROK_VIDEO_TIMEOUT / Grok video download timed out |
-| Existing structured Error carrying truthy code/status | Preserve exact Error (especially 502 validation failures) |
-| AbortError without observable caller abort (legacy behavior) or TimeoutError | 504 / GROK_VIDEO_TIMEOUT |
+| AbortError without observable caller abort, including structured AbortError | 504 / GROK_VIDEO_TIMEOUT (legacy precedence) |
+| Existing object/function carrying truthy code/status | Preserve exact thrown value, including non-Error structured objects |
+| Unstructured TimeoutError with neither signal observed aborted | 504 / GROK_VIDEO_TIMEOUT (intentional new classification; structured identity above wins) |
 | Other fetch/read/parse failure | 502 / GROK_VIDEO_DOWNLOAD_FAILED, existing request-failed prefix; no new raw URL/body logging |
 
 Do NOT abort the timeout controller to implement overflow cleanup: that would
@@ -361,7 +365,7 @@ Do not use RSS snapshots or GC timing as the oracle for released local reference
 | V06m-07 times out before headers and after headers | Existing fetch-abort fixture; separately held body ignoring fetch signal, existing videoDownloadTimeoutMs set to 10ms; 504, one GET, cancel/unlock, no concat |
 | V06m-08 cleanup rejection or never-settling cancel cannot hide failure | Overflow and abort with cancelBehavior reject/pending; original 502/499 settles under a 1s test watchdog, no unhandled rejection, no stuck lock |
 | V06m-09 stream error is not download retry | Actual controller.error(reset error) after valid prefix; 502, one GET, reader cancellation attempted, no concat |
-| V06m-10 keeps one absolute timer and clears resources | Retry then held body uses same deadline; success/HTTP400/header/MIME/read failure remove read listeners and clear timer; observe via narrowly scoped timer/listener mocks, restore every mock |
+| V06m-10 keeps one non-resetting timeout and clears resources | Retry then held body uses the same timer budget; success/HTTP400/header/MIME/read failure remove read listeners and clear timer; no strict wall-clock scheduling guarantee |
 | V06m-11 no late success or misclassified overflow | Abort on final read completion; 499 and concat zero. Overflow without aborted signal stays 502; abort both signals before catch yields 499 |
 | V06m-12 preserves public export and URL behavior | public downloadVideo === direct export; existing HTTPS/HTTP127.0.0.1/localhost tiny fixtures accepted, external HTTP/malformed URL rejected with fetch count zero; fetch init gains no policy/auth headers |
 | V06m-13 ignores zero chunks and rejects internal invalid cap | Empty chunk interleaving does not add retained entries; 0/negative/NaN/>default seam cap rejects; public signature unchanged |
@@ -390,8 +394,8 @@ checking real streamed tiny bytes and sidecar. No production dependency seam nee
 Mandatory stream/caller regression: tests/grokVideoAdapter.test.ts,
 tests/videoRoute.test.ts, tests/videoExtendedRoute.test.ts,
 tests/videoExtendI2v.test.ts (real last-frame case at :388, not just injected result),
-tests/agent-mode-runtime-contract.test.ts (1080p I2V/T2V at :263/:354 use real
-Response bodies, so no fixture migration needed), tests/grok-upstream-retry.test.ts,
+tests/agent-mode-runtime-contract.test.ts (I2V/T2V use real Response bodies; stream
+shape stays, but artifact arrayBuffer prohibition/caller negatives are added), tests/grok-upstream-retry.test.ts,
 tests/error-envelope-contract.test.ts, tests/server-code-preservation.test.ts.
 
 Public adapter imports/source-contract matches, unchanged but parent CI coverage:
@@ -417,8 +421,8 @@ docs-only deviation from PLAN-VERIFIER-REAL-01; new test does not exist yet.
 Implementation C, under parent's isolated env/config/DB test fixture policy:
 
 ```sh
-node --import tsx --test --test-concurrency=1 tests/grokVideoDownload.test.ts tests/grokVideoAdapter.test.ts tests/grok-upstream-retry.test.ts
-node --import tsx --test --test-concurrency=1 tests/videoRoute.test.ts tests/videoExtendedRoute.test.ts tests/videoExtendI2v.test.ts tests/agent-mode-runtime-contract.test.ts tests/error-envelope-contract.test.ts tests/server-code-preservation.test.ts
+node --experimental-test-module-mocks --import tsx --test --test-concurrency=1 tests/grokVideoDownload.test.ts tests/grokVideoAdapter.test.ts tests/grok-upstream-retry.test.ts
+node --experimental-test-module-mocks --import tsx --test --test-concurrency=1 tests/videoRoute.test.ts tests/videoExtendedRoute.test.ts tests/videoExtendI2v.test.ts tests/agent-mode-runtime-contract.test.ts tests/error-envelope-contract.test.ts tests/server-code-preservation.test.ts
 npm run typecheck
 npm run typecheck:tests
 npm run test:inventory

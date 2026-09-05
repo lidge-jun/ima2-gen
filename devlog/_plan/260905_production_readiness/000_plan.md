@@ -178,3 +178,14 @@ Security/delivery same-reviewer R4 PASS closes the last two High issues.
 WP00 C structural receipt/typechecks/inventory pass;008_4 records scoped evidence,
 with no production source change. D ledger records closure after final receipt.
 Next: immediate WP01 P after D, publish prerequisite/docs layers and revalidate010.
+
+WP05 D:54543ee0, PR204 ready over203, CI33959120882/CodeQL33959122484 success;
+Grok search/sparse/pinned-image contract verified. WP06 D:9c87c943, PR205 ready
+over204, CI33963424536/CodeQL33963425755 success, current HTTP40/visual94 proofs.
+Alert95 relocates14 at the unchanged Gemini fetch body; bounded initial-origin
+proof is not a clean-security claim. Registered WP12 inherited-alert triage and
+WP13 codeql-triage-gate remain mandatory. WP06s/c18 is separately gated.
+WP06m P now consumes065 plus current065_1/065_2; tiny16-byte baseline demonstrates
+whole-body API use and late success on a signal-ignoring held body. No full local
+suite/large allocation/provider call. Auxiliary artifact content/provenance probe
+was tool-blocked and has no execution evidence; no bypass/reproduction claim.
