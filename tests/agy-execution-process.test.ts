@@ -460,3 +460,37 @@ test("Agy tiny overflow preserves direct code and actual normalized node error w
     assert.equal(faults.count("rm", "completed"), 2, "both staging directories removed");
   } finally { await faults.drain(); faults.restore(); await fixture.close(); }
 });
+
+if (process.platform === "win32") test("Windows Agy parent SystemRoot toggle isolates native startup", { timeout: 20_000 }, async () => {
+  const systemRoot = process.env.SystemRoot;
+  assert.ok(systemRoot, "Windows runner must supply its actual OS SystemRoot");
+  const fixture = await openAgyProcessFixture(TINY_POLICY);
+  try {
+    assert.equal(process.env.SystemRoot, systemRoot);
+    assert.equal(process.env.HOME, fixture.root);
+    assert.equal(process.env.USERPROFILE, fixture.root);
+    assert.deepEqual(Object.keys(process.env).filter((key) => /KEY|TOKEN|CREDENTIAL|NODE_OPTIONS/i.test(key)), []);
+    const isolated = { ...process.env };
+    for (const present of [true, false, true]) {
+      await fixture.configure("success");
+      if (present) process.env.SystemRoot = systemRoot; else delete process.env.SystemRoot;
+      const expected = { ...isolated };
+      if (!present) delete expected.SystemRoot;
+      assert.deepEqual({ ...process.env }, expected, "only parent SystemRoot changes; DUT exact-env guard stays active");
+      const work = fixture.generate("SystemRoot control", { references: refs(A) });
+      if (present) {
+        assert.deepEqual(await work, nativeResult("SystemRoot control"));
+        await assertInput(fixture, [A], "SystemRoot control");
+      } else {
+        await assert.rejects(work, code("AGY_PROCESS_ERROR", 502));
+        const closed = await fixture.waitFor("close");
+        assert.equal(closed.code, 134);
+        assert.match(String(closed.stderr), /ncrypto::CSPRNG\(nullptr,\s*0\)/);
+        assert.deepEqual(fixture.observations().map((entry) => entry.event), ["close"]);
+        assert.deepEqual(closed.refsExist, []);
+      }
+      assert.deepEqual((await readdir(fixture.root)).filter((name) => name.startsWith("ima2-agy-refs-")), []);
+    }
+  } finally { process.env.SystemRoot = systemRoot; await fixture.close(); }
+  assert.equal(process.env.SystemRoot, systemRoot, "full fixture restoration preserves runner environment");
+});

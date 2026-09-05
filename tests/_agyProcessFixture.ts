@@ -229,11 +229,15 @@ function installSpawn(state: State): void {
 
 function isolateEnvironment(root: string): () => void {
   const saved = { ...process.env };
+  const systemRoot = process.env.SystemRoot;
   for (const key of Object.keys(process.env)) {
     if (!key.startsWith("IMA2_") && key !== "DOTENV_CONFIG_PATH") delete process.env[key];
   }
   Object.assign(process.env, { HOME: root, USERPROFILE: root, TMPDIR: root, TEMP: root, TMP: root,
     XDG_CONFIG_HOME: root, PATH: dirname(process.execPath), LANG: "C" });
+  // Windows libuv supplies a missing child SystemRoot from the parent. Keep
+  // only this OS prerequisite; the DUT's exact restricted env remains unchanged.
+  if (process.platform === "win32" && systemRoot !== undefined) process.env.SystemRoot = systemRoot;
   return () => {
     for (const key of Object.keys(process.env)) delete process.env[key];
     Object.assign(process.env, saved);

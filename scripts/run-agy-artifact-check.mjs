@@ -35,6 +35,7 @@ const ANCHORS = [
     'Windows Agy cancellation closes before one rejection',
     'Windows Agy timeout keeps first reason through abrupt close',
     'Windows Agy watchdog reaps suppressed DUT termination',
+    'Windows Agy parent SystemRoot toggle isolates native startup',
   ] : [
     'native cooperative cancellation observes close before rejection',
     'native TERM-ignoring cancellation observes close before rejection',

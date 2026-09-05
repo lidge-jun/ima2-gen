@@ -136,3 +136,29 @@ exit0/input followed by missing artifact), without claiming Windows causality.
 The same44 cleanup/process tests pass on local22.22.3 and24.17 with diagnostics;
 no behavior fix or assertion weakening is present. Push this checkpoint to obtain
 the missing Windows value before selecting a permanent correction.
+
+Windows diagnostic33972409363 at00555a56 supplies the discriminating value:
+native Node24.17 exits134 at InitializeOncePerProcessInternal with assertion
+ncrypto::CSPRNG(nullptr,0). There are no child phase/input events, only close.
+H1 native startup is supported; H2 pre-input JS assertion and H3 post-child
+reader rejection are ruled out for this run. Raw stderr is bounded and untruncated
+in platform-diagnostic-windows/agy-execution-cleanup.test.ts.tap.
+
+Next narrower hypothesis: the fixture deletes the parent's SystemRoot, which
+libuv normally supplies to a restricted child environment. Main opened the exact
+Node24.17 vendored deps/uv/src/win/process.c: required_vars includes SYSTEMROOT;
+make_program_env uses GetEnvironmentVariableW to supplement omitted values only
+when they exist in the parent. Source URL:
+https://raw.githubusercontent.com/nodejs/node/v24.17.0/deps/uv/src/win/process.c
+The pinned source fetch was complete, not a search snippet. This proves the
+propagation mechanism, not yet that SystemRoot alone resolves this CSPRNG failure.
+Test-only one-variable preservation/toggle evidence on Windows is required;
+production spawn arguments and exact environment guard remain unchanged.
+
+Candidate preserves only original parent SystemRoot on Windows, with full original
+environment restoration. A required Windows present/absent/restored control keeps
+every other isolated value identical and demands success / native134+CSPRNG with
+no JS events / success, plus staging cleanup. The dedicated driver requires its
+exact PASS name. No production environment or exact DUT guard is changed. Local
+44-test Linux-style suites on22.22.3/24.17 pass, but the Windows control is still
+unexecuted before publication; only the next actual Windows result can settle it.
