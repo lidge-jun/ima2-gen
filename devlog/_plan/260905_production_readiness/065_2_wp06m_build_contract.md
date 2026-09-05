@@ -108,6 +108,7 @@ openVideoFixture(options?:{codec?:boolean}):Promise<{
   root:string; config:RuntimeContext["config"];
   calls:UpstreamCall[]; violations:unknown[];
   ffmpeg:Awaited<ReturnType<typeof installVideoFfmpeg>> | null;
+  trackApp(app:Express):void;
   registerApp(server:Server):void;
   fetchApp(input:Parameters<typeof fetch>[0],init?:RequestInit):Promise<Response>;
   respond(handler:(call:UpstreamCall)=>Response|Promise<Response>):void;
@@ -118,6 +119,7 @@ openVideoFixture(options?:{codec?:boolean}):Promise<{
   track<T>(work:Promise<T>):Promise<T>;
   addStream(stream:ReturnType<typeof makeVideoStreamFixture>):void;
   drain():Promise<void>;
+  finishCase():Promise<void>;
   close():Promise<void>;
 }>;
 ```
@@ -132,6 +134,10 @@ must not overlap in one process or reuse a deleted config root silently.
 test-caller channel via isolation.fetchOwned. Tests call this function directly;
 global fetch is reserved for validated DUT upstream traffic. App and proxy servers
 are tracked by actual object, never a naked-port or all-loopback exemption.
+Call trackApp BEFORE route registration; it observes the actual returned handler
+promises for used HTTP methods, preserving their return/error behavior. This uses
+the existing PromiseTracker pattern, not a fake handler/result. Retain server close
+promises when registered: listening=false alone does not prove sockets have closed.
 
 `respond` installs a persistent normalization/validation ledger around the handler.
 Constructor/text/wire/callback AssertionErrors and unregistered rejections fail
@@ -153,6 +159,13 @@ mock clocks; bounded drain/watchdogs must still fire. Teardown aborts controller
 releases held streams/cancel promises, awaits operations, writes and codec children,
 then closes retained servers/DB and restores mocks/isolation. If drain fails, keep
 protections/handles/root for explicit cleanup instead of restoring underneath work.
+After isolated module setup, assert the inflight store is empty; all jobs created
+in that non-overlapping fixture belong to it. finishCase aborts its outstanding
+inflight jobs/controllers, releases fixture barriers, then drains handlers/native
+children/writes. It does not restore global guards. Every per-case finally awaits
+finishCase BEFORE closing servers or removing the case directory; otherwise a
+detached thumbnail could still read/write deleted files. drain itself observes
+settlement without changing outcomes; close calls finishCase before final teardown.
 
 Route workers keep original assertions and convert test-caller fetches to fetchApp.
 Their actual app route registrations, generator/downloader and persistence remain
