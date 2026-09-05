@@ -1,6 +1,6 @@
 # WP03 — one typed, actually used image-execution boundary
 
-Status: P / future implementation design, independently rederived at ecde2bc79.
+Status: P / revalidated at a34205f7d551e179bcd95aeee084c7e2971c181c. Read 031 and 032 with this contract before B; they specify the discovered typing, error-card and test-ownership deltas.
 One PR outcome: classic, node, multimode and edit use one typed execution boundary that rejects missing direct Grok credentials and unsupported NAI multimode references before dispatch. Other observable behavior stays compatible until explicitly named later fixes.
 Semantic prerequisite: WP01 getProviderSurfaceSupport and CoreProviderId. WP02 is UI selection/persistence, not server auth or admission ownership.
 Stack base: WP02 tip, not “WP02 must already be merged”. WP04–06 can build above this standalone-green extraction.
@@ -25,6 +25,9 @@ Necessity decision: no-op/config cannot remove four dispatch chains. Reusing V1 
 | NEW | lib/providers/execution/types.ts | The complete contract below; no runtime imports or side effects |
 | NEW | lib/providers/execution/admission.ts | Missing direct-key fail-closed check, NAI multimode reference refusal, exact surface mapping |
 | MODIFY | lib/generationErrors.ts | Add GROK_API_KEY_MISSING to PASSTHROUGH_CODES and 401 classification; existing 4xx retry guard applies |
+| MODIFY | lib/providerOptions.ts | Preserve the final resolved api/oauth literal union; do not cast raw request providers |
+| MODIFY | lib/errors/providerMap.ts | Map the new missing-key code to AUTH_INVALID without weakening error coverage |
+| MODIFY | ui/src/lib/errorCodes.ts and four locale JSON files | Self-describing image-key error card with provider-settings CTA; exact keys in 032 |
 | NEW | lib/providers/execution/index.ts | Public prepareImageExecution function; delegates to currently selected implementation; preserves thrown error identity |
 | NEW | lib/providers/execution/legacy.ts | Internal surface dispatcher; no HTTP/file/event state |
 | NEW | lib/providers/execution/legacyClassic.ts | Move classic shared Grok preparation + current per-image execution/retry expressions |
@@ -38,6 +41,7 @@ Necessity decision: no-op/config cannot remove four dispatch chains. Reusing V1 
 | NEW | tests/provider-execution-boundary.test.ts | Real boundary with fixture transports, activation assertions |
 | NEW | tests/provider-execution-routes.test.ts | Four real route registrations, temporary stores, deterministic upstream fixture |
 | NEW | tests/provider-execution-imports.test.ts | TypeScript AST direct-import conformance, allowed/forbidden edge fixtures |
+| NEW/MODIFY | Additional test helpers, surface tests, error E2E and workflows listed in 032 | Disjoint execution proofs, precise old-oracle migrations and uploaded visual evidence |
 | MODIFY | docs/migration/runtime-test-inventory.md | Regenerate for the three new test files |
 | MODIFY | structure/03-server-api.md | Current ownership and stream/persistence contracts |
 | MODIFY | structure/05-node-mode.md | Node retry/reference policy remains caller-owned |
@@ -106,7 +110,8 @@ export interface ExecutionImage {
   mime?: string | undefined;
   providerUrl?: string | undefined;
 }
-export interface SingleImageExecutionResult extends ExecutionImage {
+export interface SingleImageExecutionResult extends Omit<ExecutionImage, "providerUrl"> {
+  providerUrl?: string | null | undefined;
   usage: Record<string, number> | null;
   webSearchCalls: number;
   text?: string | null | undefined;
@@ -209,13 +214,13 @@ Credential race: prepare and each execute recheck only the direct-key invariant 
 
 Required proof: RED baseline fixture observes a proxy request for missing grok-api key and NAI transport invoked with ignored refs; GREEN same inputs assert new code/status, no owned job, zero transport. Test absent, whitespace-only and removed-after-prepare keys; positive grok proxy without key and grok-api with invented key prove no overbroad rejection. Reference fixture must be valid bytes so generic ref validation does not mask the target guard. This is WP03's named admission fix; WP02 remains UI-only.
 
-prepare preserves ctx object identity. It must not call validateAuth from V1 or resolveProviderOptions again. No global cache of context/credentials. It performs only the existing classic Grok plan before returning the executable closure; all other work waits for execute. Classic Grok directApiKey is captured at the same preparation point as today. Node/edit/multimode resolve it at their existing execution point.
+prepare preserves ctx object identity. It must not call validateAuth from V1 or resolveProviderOptions again. No global cache of context/credentials. It performs only the existing classic Grok plan before returning the executable closure; all other work waits for execute. Classic Grok directApiKey is captured at the same preparation point as today. Node preparation captures it once at the existing pre-attempt capture point, without provider work. Each execute checks current presence but uses the captured value: replacing one nonblank key with another must not rebind either node retry. Edit/multimode retain execute-time capture.
 
-classic execute = one output, including existing OpenAI-only outer retry (MAX_RETRIES=1). Move that bounded loop verbatim to a classic helper, preserving isNonRetryableGenerationError, normalizeGenerationFailure and retry logs. Non-OpenAI calls receive no new outer retry. The inner OAuth fallback remains in its original transport helper until WP04 relocation.
+classic execute = one output, including existing OpenAI-only outer retry (MAX_RETRIES=1). Move that bounded loop verbatim to a classic helper, preserving isNonRetryableGenerationError, normalizeGenerationFailure and retry logs. Preserve the in-loop throwIfJobCanceled immediately after Responses completion, before the empty-output retry decision; the caller's post-execute check is not a substitute. Non-OpenAI calls receive no new outer retry. The inner OAuth fallback remains in its original transport helper until WP04 relocation.
 
 node prepare = no provider work; execute = one existing provider attempt. Existing maxAttempts=inputImageCount>0?1:2 and catch/log/normalize stay in nodeGeneration. edit execute = one call, no planner for Grok. multimode execute = one existing sequence operation, **not** maxImages parallel single calls.
 
-No new generic error type, retry scheduler or error-normalization adapter. Errors thrown by the wire functions pass through the execution boundary as the same object; outer route code owns status/envelope decisions. Unexpected branch errors are programmer errors, never an OAuth fallback.
+No new generic error type, retry scheduler or error-normalization adapter. The facade adds no error wrapping; direct wire errors retain identity except where the already-existing classic retry normalization applies. Outer route code owns status/envelope decisions. Unexpected branch errors are programmer errors, never an OAuth fallback.
 
 Exact generationErrors delta for the new admission code:
 ```diff
@@ -248,7 +253,7 @@ const execution = await prepareImageExecution(ctx, {
   background: backgroundParams,
   backgroundConstraint: backgroundPreset
     ? backgroundPlannerConstraint(backgroundPreset) : undefined,
-  nai: readNaiOptions(req.body),
+  nai: activeProvider === "nai" ? readNaiOptions(req.body) : {},
   comfy: { /* existing conditional seed/params extraction, no new defaults */ },
 }, { onQueue: existingQueueCallback });
 const generateOne = async () => {
@@ -267,7 +272,7 @@ Move its body unchanged from :509-515. readNaiOptions must remain lazy for the N
 Before: one ternary chain inside the attempt loop.
 After: build a node request after parent/ref validation; prepare once without doing network work; inside the same try/attempt log use `const {value:r}=await execution.execute();`, then unchanged throwIfJobCanceled, b64 assignment, MIME logic and break.
 
-Populate references with **all** refCheck.refDetails, sourceImage with parentB64, contextMode with validated non-ancestry value, searchMode with normalized searchMode and partialImages with emitProgress?2:0. legacyNode computes filtered refs for OpenAI/Grok; it deliberately retains baseline Agy/Gemini exceptions documented in 002. Do not pass only refsForRequest and lose information needed to preserve Gemini's baseline behavior.
+Populate references with **all** refCheck.refDetails, sourceImage with parentB64, contextMode with validated non-ancestry value, searchMode with normalized searchMode and partialImages with emitProgress?2:0. legacyNode computes filtered refs for OpenAI/Grok; it deliberately retains baseline Agy/Gemini exceptions documented in 002. Atlas and MiniMax also currently consume all validated refs under parent-only; preserve that behavior. Do not pass only refsForRequest and lose information needed to preserve those baseline behaviors. options.model is effectiveImageModel, not the unresolved input. Replace array-includes normalization with equivalent literal ternaries described in 031 so no broad string casts cross the seam.
 
 Keep partial closure at the caller:
 ```ts
@@ -302,6 +307,7 @@ The original branch already coalesces Responses usage/search; retain these defau
 - Edit source: routes/edit :251-367. Prefix effective prompt only in image-to-image single-call lanes; Grok/OpenAI keep raw prompt and specialized edit entrypoints.
 - Multimode source: multimodePipeline :367-487. Google/Atlas/MiniMax/NAI projection still omits mime/providerUrl as today; byte detection remains downstream. Forward native Grok/Responses sequence results without discarding error/diagnostics.
 - The seam does not infer “edit” from nonempty references: node Grok generation+refs requires a planner; edit route Grok does not. Surface discriminant prevents this conflation.
+- Forward native single results, including nullable providerUrl, Comfy promptId/origin and MiniMax/NAI effectiveModel. Sequence/progress image providerUrl remains string-or-undefined. Forward the original callback image (including Grok's runtime providerUrl) and await/return final callback promises; do not rebuild a narrower object.
 - Keep existing transport setJobPhase effects. “Boundary owns no lifecycle” means no **new** start/finish/publish ownership, not pretending low-level parser phase updates do not exist.
 
 ## Acceptance activation matrix — independent assertions
@@ -324,15 +330,15 @@ New runtime files use node:test, fetch stubs restored in finally/afterEach, temp
 
 Do not copy expectations from execution result or refresh snapshots from DUT. Use hand-authored request/frame/sidecar values. Existing source-text tests that assert old dispatch strings must be reclassified and replaced with behavior checks in their **own named file** after P reinspection; do not delete them wholesale. Exact impacted tests are discovered by the import/string search below and folded into the manifest before B if necessary.
 
-Observed lexical-test migration manifest (MODIFY, not blanket deletion): tests/edit-mask-api-contract.test.js:50 and tests/oauth-proxy-edit-mask-contract.test.js:42 assert route-local editViaResponses; tests/multimode-backend-contract.test.js:40 asserts route-local generateMultimodeViaResponses. In WP03 replace only those direct-dispatch assertions with AST import-edge assertions proving the route calls prepareImageExecution, while tests/provider-execution-routes.test.ts proves actual mask forwarding and sequence behavior. Preserve mask validation/legacy OAuth rejection and sequence metadata assertions. This keeps them source-only JS contracts; runtime assertions live in the new TS files. WP04 subsequently redirects remaining adapter-body assertions to the moved body/transport owners, as specified in 040.
+Observed lexical-test migration manifest is expanded by the exact named files in 032. Replace only dispatch-location assumptions, never mask/ref/sequence semantics or source coverage gates. Runtime assertions live in the new surface TS files. WP04 subsequently redirects remaining adapter-body assertions to the moved body/transport owners, as specified in 040.
 
 ## Commands / baseline / visibility
 
 Baseline: npm run typecheck=0; npm run typecheck:tests=0; npm run test:inventory=0; seven-file command in 002=0 (51/51).
 These validate current source/test inventory only; none exercises a new execution seam yet.
-WP00 A round1 recompiled this canonical fenced contract (including originalIndexes)
+Historical WP00 A round1 recompiled the then-canonical fenced contract (including originalIndexes)
 with actual repository imports using a virtual CompilerHost/noEmit: `node
---input-type=module` exited0, diagnostics=[]. No source file or runtime was emitted.
+--input-type=module` exited0, diagnostics=[]. That did not assign every native result; WP03 P found and corrected nullable single providerUrl. See 031 for fresh native-assignment proof. No source file or runtime was emitted by these probes.
 
 Future C commands (new test files do not exist at WP00, so no fabricated baseline exit):
 ```sh
