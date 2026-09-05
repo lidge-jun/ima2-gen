@@ -1,0 +1,98 @@
+name: Agy artifact filesystem check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full 40-character commit SHA to test
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  filesystem:
+    name: filesystem (${{ matrix.os }}, node ${{ matrix.node }}, ${{ matrix.mode }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            node: '22.23.0'
+            npm: '11.18.0'
+            mode: hosted-heavy
+          - os: ubuntu-latest
+            platform: linux
+            node: '24.17.0'
+            npm: '12.0.0'
+            mode: hosted-heavy
+          - os: macos-latest
+            platform: darwin
+            node: '24.17.0'
+            npm: '12.0.0'
+            mode: light
+          - os: windows-latest
+            platform: win32
+            node: '24.17.0'
+            npm: '12.0.0'
+            mode: light
+    env:
+      WANT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+      WANT_NODE: ${{ matrix.node }}
+      WANT_NPM: ${{ matrix.npm }}
+      WANT_PLATFORM: ${{ matrix.platform }}
+      AGY_CHECK_OUTPUT: ${{ runner.temp }}/agy-artifacts-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Assert exact checkout and platform before installation
+        shell: node {0}
+        run: |
+          const assert = require('node:assert/strict');
+          const { execFileSync } = require('node:child_process');
+          assert.match(process.env.WANT_SHA, /^[a-f0-9]{40}$/);
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.WANT_SHA);
+          assert.equal(process.versions.node, process.env.WANT_NODE);
+          assert.equal(process.platform, process.env.WANT_PLATFORM);
+      - name: Pin npm
+        run: npm install -g npm@${{ matrix.npm }}
+      - name: Assert npm before dependency installation
+        shell: node {0}
+        run: |
+          const assert = require('node:assert/strict');
+          const { pathToFileURL } = require('node:url');
+          const { resolve } = require('node:path');
+          (async () => {
+            const { spawnNpmSync } = await import(pathToFileURL(resolve('scripts/npm-subprocess.mjs')).href);
+            const result = spawnNpmSync(['--version'], { encoding: 'utf8', timeout: 15000 });
+            assert.equal(result.status, 0);
+            assert.equal(result.stdout.trim(), process.env.WANT_NPM);
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
+      - name: Install root dependencies
+        run: npm ci
+      - name: Build emitted server owners
+        run: npm run build:server
+      - name: Run exact filesystem files
+        run: node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ env.AGY_CHECK_OUTPUT }}"
+      - name: Upload filesystem receipts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agy-artifacts-${{ matrix.os }}-${{ matrix.node }}-${{ env.WANT_SHA }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.AGY_CHECK_OUTPUT }}/*.json
+            ${{ env.AGY_CHECK_OUTPUT }}/*.tap
+          if-no-files-found: error
+          retention-days: 14
