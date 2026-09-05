@@ -36,7 +36,9 @@ describe("multimode frontend UX contract", () => {
     assert.match(store, /activeFlightIds:\s*Set<string>/);
     assert.match(store, /multimodeSequences:\s*Record<string,\s*MultimodeSequenceState>/);
     assert.match(store, /multimodePreviewFlightId:\s*string\s*\|\s*null/);
-    assert.match(store, /const useMultimode = s\.uiMode === "classic" && s\.multimode/);
+    // Behavior is independently exercised by core-generation-mode and actual transport tests.
+    assert.match(store, /const mode = effectiveCoreGenerationMode\(s\)/);
+    assert.match(store, /const useMultimode = mode === "multimode"/);
     assert.match(store, /if \(useMultimode\) \{[\s\S]*?await get\(\)\.generateMultimode\(\);[\s\S]*?return;[\s\S]*?\}/);
     assert.match(store, /if \(enabled && get\(\)\.uiMode !== "classic"\) return/);
     assert.match(store, /if \(s\.uiMode !== "classic"\) return/);
@@ -98,7 +100,7 @@ describe("multimode frontend UX contract", () => {
 
     assert.match(cost, /multimodeMaxImages/);
     assert.match(cost, /cost \* multimodeMaxImages/);
-    assert.match(composer, /const multimode = useAppStore\(\(s\) => s\.multimode\)/);
+    assert.match(composer, /const multimode = useAppStore\(composerUsesMultimode\)/);
     assert.match(composer, /composer--multimode/);
     assert.match(composer, /role="group"/);
     assert.match(composer, /multimode\.composerAriaLabel/);

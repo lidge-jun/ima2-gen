@@ -172,8 +172,7 @@ export async function selectionScreenshot(page: Page, info: TestInfo, name: stri
 }
 
 function labelGeometry(control: Locator, labelSelector: string) {
-  return control.evaluate(async (element, selector) => {
-    await document.fonts.ready;
+  return control.evaluate((element, selector) => {
     const label = element.querySelector<HTMLElement>(selector);
     if (!label) throw new Error("WP02 missing visible selection label");
     const box = (rect: DOMRect) => ({ left: rect.left, right: rect.right, top: rect.top,
@@ -228,6 +227,7 @@ export async function readableSelection(page: Page, info: TestInfo, name: string
   for (const [index, label] of [expected.provider, expected.model].entries()) {
     await expect(controls[index].locator(".ctl-select__value")).toHaveText(label);
   }
+  await page.evaluate(async () => { await document.fonts.ready; });
   const labels = await Promise.all(controls.map((control) => labelGeometry(control, ".ctl-select__value")));
   const pageBounds = await page.evaluate(() => ({ width: innerWidth, height: innerHeight,
     clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth,
@@ -265,6 +265,7 @@ async function selectedMenu(page: Page, info: TestInfo, name: string, expected: 
     const selected = page.getByRole("option", { selected: true });
     await expect(selected.locator(".ctl-select__item-label")).toHaveText(expected);
     await expect(selected).toBeInViewport();
+    await page.evaluate(async () => { await document.fonts.ready; });
     const metrics = await labelGeometry(selected, ".ctl-select__item-label");
     await writeFile(info.outputPath(`wp02-${name}-menu-metrics.json`), JSON.stringify({ expected, metrics }, null, 2));
     await selectionScreenshot(page, info, `${name}-menu`);
@@ -285,6 +286,7 @@ export async function composerMode(page: Page, info: TestInfo, name: string, seq
     await expect(opener).toHaveAccessibleName("Open prompt sheet to generate an image");
     await opener.click();
     await expect(sheet).toHaveAttribute("aria-hidden", "false");
+    await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
     await expect(sheet.getByRole("tab", { name: "Prompt", exact: true })).toHaveAttribute("aria-selected", "true");
   }
   try {
@@ -308,9 +310,24 @@ export async function composerMode(page: Page, info: TestInfo, name: string, seq
     if (mobile) {
       await sheet.locator(".compose-sheet__handle").click();
       await expect(sheet).toHaveAttribute("aria-hidden", "true");
+      await expect(sheet).toBeHidden();
       await expect(opener).toBeFocused();
     }
   }
+}
+
+async function settleSelectionViewport(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  const app = page.locator(".app");
+  if (viewport.width <= 800) {
+    await expect(app).toHaveAttribute("data-mobile", "1");
+    await expect(page.locator(".mobile-app-bar")).toBeVisible();
+  } else {
+    await expect(app).not.toHaveAttribute("data-mobile", "1");
+    await expect(page.locator(".mobile-app-bar")).toHaveCount(0);
+  }
+  await expect(page.locator(PROVIDER_TRIGGER)).toBeVisible();
+  await expect(page.locator(MODEL_TRIGGER)).toBeVisible();
 }
 
 export async function selectionViewports(page: Page, info: TestInfo, name: string,
@@ -318,13 +335,13 @@ export async function selectionViewports(page: Page, info: TestInfo, name: strin
   const original = page.viewportSize();
   try {
     for (const viewport of WP02_VIEWPORTS) {
-      await page.setViewportSize(viewport);
+      await settleSelectionViewport(page, viewport);
       const frame = `${name}-${viewport.width}`;
       await readableSelection(page, info, frame, expected);
       await selectedMenu(page, info, frame, expected.model);
       if (expected.sequence !== undefined) await composerMode(page, info, frame, expected.sequence);
     }
-  } finally { if (original) await page.setViewportSize(original); }
+  } finally { if (original) await settleSelectionViewport(page, original); }
 }
 
 export async function preflightJ6(info: TestInfo): Promise<void> {

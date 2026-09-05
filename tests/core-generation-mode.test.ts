@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { effectiveCoreGenerationMode } from "../ui/src/lib/coreGenerationMode.ts";
+import { composerUsesMultimode, effectiveCoreGenerationMode } from "../ui/src/lib/coreGenerationMode.ts";
 
 const base = { provider: "oauth", uiMode: "classic", multimode: true };
 
@@ -30,6 +30,15 @@ test("unknown and prototype-named providers never index generated surface metada
   for (const provider of ["auto", "missing", "constructor", "__proto__", "toString", ""]) {
     assert.equal(effectiveCoreGenerationMode({ ...base, provider }), "image", provider);
   }
+});
+
+test("composer selector uses effective core mode and preserves independent MCP preference", () => {
+  assert.equal(composerUsesMultimode(base), true);
+  assert.equal(composerUsesMultimode({ ...base, provider: "comfy" }), false);
+  assert.equal(composerUsesMultimode({ ...base, provider: "nai" }), false);
+  assert.equal(composerUsesMultimode({ ...base, provider: "grok-api", videoModelSelected: "grok-imagine-video" }), false);
+  assert.equal(composerUsesMultimode({ ...base, provider: "comfy", mcpProvider: "fixture-mcp" }), true);
+  assert.equal(composerUsesMultimode({ ...base, mcpProvider: "fixture-mcp", multimode: false }), false);
 });
 
 test("absent, undefined, null and false video choices remain image choices on Comfy", () => {

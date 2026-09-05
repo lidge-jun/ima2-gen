@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
-import { effectiveCoreGenerationMode } from "../lib/coreGenerationMode";
+import { composerUsesMultimode } from "../lib/coreGenerationMode";
 import { useI18n } from "../i18n";
 import { isVideoItem, extractLastFrame } from "../lib/videoMedia";
 import type { VideoReferenceDragPayload } from "../lib/videoContinuity";
@@ -93,8 +93,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const compositionCommitRef = useRef<string | null>(null);
   const dismissedMentionKeyRef = useRef<string | null>(null);
   const promptMode = useAppStore((s) => s.promptMode);
-  const multimode = useAppStore((s) => s.mcpProvider
-    ? s.multimode : effectiveCoreGenerationMode(s) === "multimode");
+  const multimode = useAppStore(composerUsesMultimode);
   const multimodeMaxImages = useAppStore((s) => s.multimodeMaxImages);
   const isDirectMode = promptMode === "direct";
   const isNai = provider === "nai";

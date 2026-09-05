@@ -20,3 +20,10 @@ export function effectiveCoreGenerationMode(input: {
   }
   return "image";
 }
+
+/** MCP dispatch is owned separately; retain its existing composer preference. */
+export function composerUsesMultimode(
+  input: Parameters<typeof effectiveCoreGenerationMode>[0] & { mcpProvider?: string | null },
+): boolean {
+  return input.mcpProvider ? input.multimode : effectiveCoreGenerationMode(input) === "multimode";
+}
