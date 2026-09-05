@@ -29,6 +29,26 @@ Generation section below for the full endpoint specification.
 
 ## Health And Status
 
+### Core provider surface metadata
+
+`GET /api/capabilities` includes `providerSurfaces[coreProviderId][surface]`.
+`GET /api/models` includes the same `surfaces` on each core lane; MCP lanes
+retain their existing model capabilities. Surfaces are `generate`, `edit`,
+`multimode`, `node`, and `video`.
+
+Each record contains `supported`, `references`, `mask`, `streaming`, and
+`catalogAccess` (`static` or `runtime`). These are application capability facts,
+not credential/liveness or entitlement checks. `references` means the surface
+can accept image input; a Comfy workflow still needs the appropriate binding.
+`streaming` describes partial-image delivery on Node/Multimode, not lifecycle SSE.
+
+NovelAI's generate/node/multimode entries are supported without references;
+edit/video are unsupported. Its models explicitly declare generation support,
+not fictitious edit support. Comfy is runtime-catalog backed: empty static
+model IDs do not disable its generate/edit/video surfaces, while node/multimode
+remain unsupported. Local capabilities expose the structural map without
+inventing a runtime `lanes` availability result.
+
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/health` | Server health, version, paths, provider policy |

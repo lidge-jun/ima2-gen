@@ -6,6 +6,15 @@ aliases: [ima2 frontend, ima2 React UI, image_gen frontend]
 
 # Frontend Architecture
 
+Core composer reference eligibility comes from generated
+`PROVIDER_SURFACE_SUPPORT[provider].generate.references`, sourced from
+`lib/providers/surfaceSupport.ts`. This is separate from numeric reference caps:
+OAuth's absent lane-specific cap permits the server default, while NovelAI's
+generation-only policy disables attachment controls. MCP/video priority and
+per-workflow Comfy binding validation remain in their existing owners. The
+`provider-surface-affordance.spec.ts` journey covers NAI-to-OAuth switching and
+a synthetic attachment without generating an image.
+
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 
 This matters because README and older devlog entries still contain traces of the vanilla HTML UI. Actual UI work should target React components, the Zustand store, `ui/src/lib/api.ts` / `ui/src/lib/nodeApi.ts`, and `ui/src/index.css`. Fixing the legacy HTML file will not change the active app.

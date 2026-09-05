@@ -75,6 +75,14 @@ jobs:
         run: npx --prefix ui playwright install --with-deps chromium
       - name: Run frontend e2e
         run: npm --prefix ui run test:e2e
+      - name: Upload provider surface visual evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp01-provider-surface-visual
+          path: ui/test-results/**/wp01-*.png
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload e2e failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

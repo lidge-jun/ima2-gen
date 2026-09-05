@@ -51,7 +51,8 @@ graph TD
 | Method | Path | Response | Description |
 |---|---|---|---|
 | `GET` | `/api/providers` | `{ apiKey, oauth, oauthPort, apiKeyDisabled, apiKeySource, runtime }` | Reports available providers and runtime ports to the UI. `apiKeyDisabled` is a legacy compatibility field and is `false` in current API-provider builds. |
-| `GET` | `/api/capabilities` | `{ ok, source, version, defaults, valid, limits, guidance }` | Agent-facing runtime defaults and capability metadata; uses allowlist projection only |
+| `GET` | `/api/capabilities` | `{ ok, source, version, defaults, valid, limits, guidance, providerSurfaces }` | Agent-facing defaults and structural core surface facts, independent of optional runtime lane availability |
+| `GET` | `/api/models` | `{ ok, lanes }` | Core lanes add the same `surfaces` projection; MCP model metadata and Comfy per-workflow binding roles remain distinct |
 | `GET` | `/api/health` | `{ ok, version, provider, uptimeSec, activeJobs, pid, startedAt, runtime }` | Used by CLI discovery and health checks |
 | `GET` | `/api/oauth/status` | `{ status, models?, runtime }` | Checks whether the OAuth proxy is ready and reports actual proxy URL/port |
 | `GET` | `/api/billing` | `{ oauth, apiKeyValid, apiKeySource, credits?, costs? }` | Probes billing/model state when an API key exists |
