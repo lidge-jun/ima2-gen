@@ -41,8 +41,10 @@ function modelCatalog(state: J6CatalogState): { ok: true; lanes: LaneCatalog } {
 }
 
 function readFixtures(catalog: J6CatalogState): Record<string, unknown> {
+  // An already-saved empty session: version0 invokes the existing beforeunload
+  // initialization PUT. Selection reloads do not exercise graph creation.
   const session = { id: "wp02-session", title: "Selection fixture", createdAt: 1, updatedAt: 1,
-    graphVersion: 0, nodeCount: 0, nodes: [], edges: [] };
+    graphVersion: 1, nodeCount: 0, nodes: [], edges: [] };
   return {
     "/api/models": modelCatalog(catalog),
     "/api/capabilities": { limits: { maxRefCount: 5 }, defaults: {} },
@@ -96,7 +98,7 @@ async function serveJ6(route: Route, origin: string, capture: J6Capture): Promis
   } else if (method === "POST" && !url.search && ["/api/generate", "/api/video/generate"].includes(url.pathname)) {
     await captureSubmission(route, capture, url.pathname);
   } else if (method !== "GET") {
-    capture.unexpected.push(`${method} unexpected-mutation`);
+    capture.unexpected.push(`${method} ${url.pathname} unexpected-mutation`);
     await route.abort("blockedbyclient");
   } else if (url.pathname === "/api/events") {
     // 204 prevents EventSource reconnect loops; these tests assert capture, not completion.

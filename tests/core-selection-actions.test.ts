@@ -354,3 +354,35 @@ test("quota failure retains legal in-memory action; future memory version is nev
     assert.equal(f.get().videoModelSelected, false);
   });
 });
+
+test("reload fixture distinguishes unsaved version0 from an already-saved empty graph", async () => {
+  const storage = new MapStorage();
+  const oldStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const oldFetch = globalThis.fetch;
+  const requests: Array<{ url: string; options?: RequestInit }> = [];
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    const runtime = await loadRuntime();
+    const f = fixture(runtime, { activeSessionId: "wp02-session", activeSessionGraphVersion: 0,
+      sessionLoading: false, graphNodes: [], graphEdges: [] });
+    runtime.flushGraphSaveBeacon(f.get);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "/api/sessions/wp02-session/graph");
+    assert.equal(requests[0].options?.method, "PUT");
+    assert.equal(requests[0].options?.keepalive, true);
+    assert.equal(new Headers(requests[0].options?.headers).get("If-Match"), "0");
+    assert.equal(new Headers(requests[0].options?.headers).get("X-Ima2-Graph-Save-Reason"), "beforeunload");
+    assert.deepEqual(JSON.parse(String(requests[0].options?.body)), { nodes: [], edges: [] });
+    f.set({ activeSessionGraphVersion: 1 });
+    runtime.flushGraphSaveBeacon(f.get);
+    assert.equal(requests.length, 1, "saved empty fixture must not send a second PUT");
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldStorage) Object.defineProperty(globalThis, "localStorage", oldStorage);
+    else Reflect.deleteProperty(globalThis, "localStorage");
+  }
+});
