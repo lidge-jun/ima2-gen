@@ -22,6 +22,7 @@ export interface RouteCase {
   waitFor(predicate: (event: RecordedEvent) => boolean, timeoutMs?: number): Promise<RecordedEvent>;
   waitTerminal(timeoutMs?: number): Promise<RecordedEvent>;
   waitSettled(timeoutMs?: number): Promise<void>;
+  trackWork<T>(work: Promise<T>): Promise<T>;
   cancel(): void;
 }
 interface RunOptions {
@@ -197,6 +198,10 @@ export async function openRouteHarness(): Promise<RouteHarness> {
           headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ ...payload, requestId }) }),
         waitFor: entries.waitFor, waitTerminal: (timeoutMs) => entries.waitFor((event) => event.event === "done" || event.event === "error", timeoutMs),
         waitSettled, cancel,
+        trackWork: <T>(work: Promise<T>): Promise<T> => {
+          handlers.track(work.then(() => undefined, () => undefined));
+          return work;
+        },
       });
     } finally {
       if (setupComplete) await cleanup?.();

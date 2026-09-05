@@ -1,9 +1,17 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
 import { assertDirectGrokKey } from "./admission.js";
-import { prepareLegacyImageExecution } from "./legacy.js";
+import { isLegacyExecutionRequest, prepareLegacyImageExecution } from "./legacy.js";
+import { isOpenaiRequest, prepareOpenaiExecution } from "../adapters/openaiExecution.js";
 import type { ExecutionProgress, ExecutionSurface, ImageExecutionRequest, PreparedImageExecution } from "./types.js";
 
 export type * from "./types.js";
+
+function prepareSelected(ctx: RuntimeContext, request: ImageExecutionRequest,
+  progress?: ExecutionProgress): Promise<PreparedImageExecution<ExecutionSurface>> {
+  if (isOpenaiRequest(request)) return prepareOpenaiExecution(ctx, request, progress);
+  if (isLegacyExecutionRequest(request)) return prepareLegacyImageExecution(ctx, request, progress);
+  throw new Error("Unreachable image execution provider");
+}
 
 export function prepareImageExecution<R extends ImageExecutionRequest>(
   ctx: RuntimeContext, request: R, progress?: ExecutionProgress,
@@ -13,7 +21,7 @@ export async function prepareImageExecution(
 ): Promise<PreparedImageExecution<ExecutionSurface>> {
   try {
     assertDirectGrokKey(ctx, request.provider);
-    const prepared = await prepareLegacyImageExecution(ctx, request, progress);
+    const prepared = await prepareSelected(ctx, request, progress);
     return { execute: async () => {
       try {
         assertDirectGrokKey(ctx, request.provider);

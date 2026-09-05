@@ -1,6 +1,5 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
 import { detectImageMimeFromB64 } from "../../refs.js";
-import { editViaResponses } from "../../responsesImageAdapter.js";
 import { editViaGrok } from "../../grokImageAdapter.js";
 import { resolveGrokQualityModel } from "../../imageModels.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
@@ -8,9 +7,10 @@ import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaComfy } from "../../comfyImageAdapter.js";
-import type { ExecutionProgress, ImageExecutionRequest, PreparedImageExecution, SingleImageExecutionResult } from "./types.js";
+import type { ExecutionProgress, PreparedImageExecution, SingleImageExecutionResult } from "./types.js";
+import type { LegacyExecutionRequest } from "./legacy.js";
 
-type EditRequest = Extract<ImageExecutionRequest, { surface: "edit" }>;
+type EditRequest = Extract<LegacyExecutionRequest, { surface: "edit" }>;
 
 function executeImageToImage(ctx: RuntimeContext, request: EditRequest) {
   const { provider, prompt, sourceImage, signal, requestId, options } = request;
@@ -36,17 +36,6 @@ async function executeEdit(ctx: RuntimeContext, request: EditRequest): Promise<S
       model: resolveGrokQualityModel(options.model, options.quality),
       size: options.size, signal, requestId, directApiKey,
     });
-  }
-  if (provider === "api" || provider === "oauth") {
-    const result = await editViaResponses(
-      provider, rawPrompt, sourceImage, options.quality, options.size,
-      options.moderation, options.mode, ctx, requestId,
-      { model: options.model, reasoningEffort: options.reasoningEffort,
-        webSearchEnabled: options.webSearchEnabled,
-        ...(request.mask !== null ? { mask: request.mask } : {}), signal },
-    );
-    // Preserve native retry metadata; only Responses had these caller defaults.
-    return { ...result, usage: result.usage ?? null, webSearchCalls: result.webSearchCalls ?? 0 };
   }
   return executeImageToImage(ctx, request);
 }

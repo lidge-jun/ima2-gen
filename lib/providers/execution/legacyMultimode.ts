@@ -1,5 +1,4 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
-import { generateMultimodeViaResponses } from "../../responsesImageAdapter.js";
 import { generateMultimodeViaGrok } from "../../grokMultimodeAdapter.js";
 import { resolveGrokQualityModel } from "../../imageModels.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
@@ -7,9 +6,10 @@ import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaNai } from "../../naiImageAdapter.js";
-import type { ExecutionProgress, ImageExecutionRequest, PreparedImageExecution, SequenceImageExecutionResult } from "./types.js";
+import type { ExecutionProgress, PreparedImageExecution, SequenceImageExecutionResult } from "./types.js";
+import type { LegacyExecutionRequest } from "./legacy.js";
 
-type MultimodeRequest = Extract<ImageExecutionRequest, { surface: "multimode" }>;
+type MultimodeRequest = Extract<LegacyExecutionRequest, { surface: "multimode" }>;
 
 function executeSingleLane(ctx: RuntimeContext, request: MultimodeRequest) {
   const { provider, prompt, rawPrompt, references, signal, requestId, options } = request;
@@ -40,16 +40,6 @@ async function executeSequence(
       size: options.size, signal, requestId, references: grokRefs, directApiKey,
       onFinalImage: progress.onFinalImage,
     });
-  }
-  if (provider === "api" || provider === "oauth") {
-    return generateMultimodeViaResponses(
-      provider, prompt, options.quality, options.size, options.moderation,
-      references, requestId, options.mode, ctx,
-      { model: options.model, maxImages, reasoningEffort: options.reasoningEffort,
-        webSearchEnabled: options.webSearchEnabled,
-        ...(progress.onPartialImage !== undefined ? { onPartialImage: progress.onPartialImage } : {}),
-        ...(progress.onFinalImage !== undefined ? { onFinalImage: progress.onFinalImage } : {}), signal },
-    );
   }
   const result = await executeSingleLane(ctx, request);
   // Preserve the old per-lane projection: downstream detects bytes, not MIME here.

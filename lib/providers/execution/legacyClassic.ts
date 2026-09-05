@@ -1,4 +1,3 @@
-import { generateViaResponses } from "../../responsesImageAdapter.js";
 import { generateViaGrok, planGrokImage } from "../../grokImageAdapter.js";
 import { resolveGrokQualityModel } from "../../imageModels.js";
 import { generateViaAgy } from "../../agyImageAdapter.js";
@@ -7,24 +6,21 @@ import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaNai } from "../../naiImageAdapter.js";
 import { generateViaComfy } from "../../comfyImageAdapter.js";
-import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "../../generationErrors.js";
-import { throwIfJobCanceled } from "../../generationCancel.js";
-import { logEvent } from "../../logger.js";
 import { requireRuntimeContext, type RuntimeContext } from "../../runtimeContext.js";
 import type { ImageBackgroundParams } from "../../imageBackgroundParam.js";
 import type {
-  ExecutionProgress, ImageExecutionRequest, PreparedImageExecution, SingleImageExecutionResult,
+  ExecutionProgress, PreparedImageExecution, SingleImageExecutionResult,
 } from "./types.js";
+import type { LegacyExecutionRequest } from "./legacy.js";
 
 export async function prepareLegacyClassic(
   ctx: RuntimeContext,
-  request: Extract<ImageExecutionRequest, { surface: "classic" }>,
+  request: Extract<LegacyExecutionRequest, { surface: "classic" }>,
   progress: ExecutionProgress = {},
 ): Promise<PreparedImageExecution<"classic">> {
   try {
     const { provider: activeProvider, prompt: generationPrompt, requestId, background: backgroundParams } = request;
-    const { model: imageModel, quality, size: effectiveSize, moderation,
-      mode: normalizedPromptMode, reasoningEffort, webSearchEnabled } = request.options;
+    const { model: imageModel, quality, size: effectiveSize, webSearchEnabled } = request.options;
     const grokRefs = request.providerUrl
       ? [{ b64: "", url: request.providerUrl, declaredMime: "image/png", detectedMime: "image/png" }, ...request.references]
       : request.references;
@@ -127,50 +123,7 @@ export async function prepareLegacyClassic(
         });
         return r;
       }
-      if (activeProvider !== "api" && activeProvider !== "oauth") {
-        throw new Error(`Unsupported classic execution provider: ${activeProvider}`);
-      }
-      const MAX_RETRIES = 1;
-      let lastErr: unknown;
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const r = await generateViaResponses(
-            activeProvider,
-            generationPrompt,
-            quality,
-            effectiveSize,
-            moderation,
-            request.references,
-            requestId,
-            normalizedPromptMode,
-            ctx,
-            {
-              model: imageModel,
-              reasoningEffort,
-              webSearchEnabled,
-              signal: request.signal,
-              allowPromptOnlyOAuthFallback: activeProvider !== "api",
-              ...(backgroundParams ? { background: backgroundParams.background } : {}),
-              ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
-            },
-          );
-          throwIfJobCanceled(requestId);
-          if (r.b64) return r;
-          lastErr = new Error("Empty response (safety refusal)");
-        } catch (e) {
-          lastErr = e;
-          if (isNonRetryableGenerationError(e as UpstreamErr | null | undefined)) break;
-        }
-        if (attempt < MAX_RETRIES) {
-          const errCode = (lastErr && typeof lastErr === "object" && "code" in lastErr)
-            ? (lastErr as { code?: unknown }).code
-            : undefined;
-          logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: errCode });
-        }
-      }
-      throw normalizeGenerationFailure(lastErr as UpstreamErr | null | undefined, {
-        safetyMessage: "Content generation refused after retries",
-      });
+      throw new Error(`Unsupported classic execution provider: ${activeProvider}`);
     };
 
     return { execute: async () => {

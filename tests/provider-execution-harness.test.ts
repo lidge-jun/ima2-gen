@@ -95,6 +95,42 @@ if (executionTestProcess(import.meta.url)) {
     });
   });
 
+  test("direct work retains original promise identity and expected rejection", async () => {
+    await harness.run("classic", { upstream }, async (fixture) => {
+      const sentinel = new Error("expected direct-operation refusal");
+      const work = Promise.reject(sentinel);
+      assert.equal(fixture.trackWork(work), work);
+      await assert.rejects(work, (error) => error === sentinel);
+      await fixture.waitSettled();
+      assert.equal(fixture.calls.length, 0);
+    });
+  });
+
+  test("pending direct work delays fixture settlement until released", async () => {
+    const held = deferred();
+    await harness.run("classic", { upstream }, async (fixture) => {
+      const work = fixture.trackWork(held.promise);
+      try {
+        await assert.rejects(fixture.waitSettled(20), SettlementTimeout);
+        await access(fixture.generatedDir);
+      } finally { held.resolve(); await Promise.allSettled([work]); }
+      await fixture.waitSettled();
+    });
+  });
+
+  test("test-body failure releases held direct work before fixture cleanup", async () => {
+    const held = deferred();
+    const sentinel = new Error("test-body failure fixture");
+    let generatedDir = "";
+    await assert.rejects(harness.run("classic", { upstream }, async (fixture) => {
+      generatedDir = fixture.generatedDir;
+      const work = fixture.trackWork(held.promise);
+      try { throw sentinel; }
+      finally { held.resolve(); await Promise.allSettled([work]); }
+    }), (error) => error === sentinel);
+    await assert.rejects(access(generatedDir), { code: "ENOENT" });
+  });
+
   test("actual handler cancellation cannot hide an unmatched upstream exception", async () => {
     const sentinel = new Error("UNMATCHED_ENDPOINT_SENTINEL");
     let cancel!: () => void;

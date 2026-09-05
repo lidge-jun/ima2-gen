@@ -5,11 +5,19 @@ import { prepareLegacyNode } from "./legacyNode.js";
 import { prepareLegacyEdit } from "./legacyEdit.js";
 import { prepareLegacyMultimode } from "./legacyMultimode.js";
 
-export function prepareLegacyImageExecution<R extends ImageExecutionRequest>(
+export type LegacyExecutionRequest = ImageExecutionRequest & {
+  provider: Exclude<ImageExecutionRequest["provider"], "oauth" | "api">;
+};
+
+export function isLegacyExecutionRequest(request: ImageExecutionRequest): request is LegacyExecutionRequest {
+  return request.provider !== "oauth" && request.provider !== "api";
+}
+
+export function prepareLegacyImageExecution<R extends LegacyExecutionRequest>(
   ctx: RuntimeContext, request: R, progress?: ExecutionProgress,
 ): Promise<PreparedImageExecution<R["surface"]>>;
 export function prepareLegacyImageExecution(
-  ctx: RuntimeContext, request: ImageExecutionRequest, progress?: ExecutionProgress,
+  ctx: RuntimeContext, request: LegacyExecutionRequest, progress?: ExecutionProgress,
 ): Promise<PreparedImageExecution<ExecutionSurface>> {
   switch (request.surface) {
     case "classic": return prepareLegacyClassic(ctx, request, progress);
