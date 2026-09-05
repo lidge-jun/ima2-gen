@@ -2,10 +2,10 @@ import { expect, test } from "./fixtures/appServer";
 import { openCreate, selectOption, withJ6, PROVIDER_TRIGGER, MODEL_TRIGGER, j6EvidenceIdentity, type J6Seed } from "./fixtures/j6Selection";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
-import en from "../src/i18n/en.json";
-import ko from "../src/i18n/ko.json";
-import zhHans from "../src/i18n/zh-Hans.json";
-import zhHant from "../src/i18n/zh-Hant.json";
+import en from "../src/i18n/en.json" with { type: "json" };
+import ko from "../src/i18n/ko.json" with { type: "json" };
+import zhHans from "../src/i18n/zh-Hans.json" with { type: "json" };
+import zhHant from "../src/i18n/zh-Hant.json" with { type: "json" };
 
 const seed: J6Seed = { provider: "nai", imageModel: "nai-diffusion-5-full", nonGenerating: true,
   viewport: { width: 1280, height: 900 }, catalog: { mode: "ready", mcp: true }, evidencePrefix: "wp09-j8",
@@ -238,3 +238,47 @@ test("T6 retired attachment highlight follows the mounted textarea after scroll 
     expect(observation.requests).toEqual([]);
   });
 });
+
+for (const scenario of ["default", "image", "video", "missing", "model-locked", "locked", "disconnected", "malformed", "retry"] as const) {
+  test(`MCP observed facts ${scenario}: current selection, execution locks and recovery`, async ({ browser }, info) => {
+    await withJ6(browser, info, { ...seed, provider: "oauth", imageModel: "gpt-5.6-luna" }, async (page, observation, origin) => {
+      let phase: string = "ready", providerReads = 0;
+      await page.route(`${origin}/api/mcp/providers`, async (route) => {
+        providerReads++;
+        if (phase === "retry") { await route.fulfill({ status: 503, json: { error: "synthetic read failure" } }); return; }
+        await route.fulfill({ json: { ok: true, providers: [{ id: "runway", endpoint: "http://synthetic.invalid",
+          enabled: phase === "malformed" ? "wrong-type" : true, executable: phase !== "locked",
+          status: { provider: "runway", state: phase === "disconnected" ? "disconnected" : "connected", toolCount: 1 } }] } });
+      });
+      await page.route(`${origin}/api/mcp/providers/runway/models`, async (route) => {
+        const row = (label: string) => ({ id: "same-id", label, executable: phase !== "model-locked",
+          capabilities: { source: "verified-contract", aspectRatios: [], parameters: [], inputRoles: ["text"] } });
+        await route.fulfill({ json: { ok: true, models: {
+          image: phase === "missing" ? [] : [row("Same ID image")], video: [row("Same ID video")],
+        } } });
+      });
+      await openCreate(page, origin); await selectOption(page, PROVIDER_TRIGGER, "Runway");
+      if (scenario !== "default") await selectOption(page, MODEL_TRIGGER, scenario === "video" ? "Same ID video" : "Same ID image");
+      phase = scenario;
+      await page.locator(".generate-row__readiness:visible").click();
+      const popup = page.locator(".provider-readiness"), detail = popup.locator("[data-mcp-readiness]");
+      const expected = ({ default: "default", image: "ready", video: "ready", missing: "model-missing",
+        "model-locked": "model-locked", locked: "locked", disconnected: "disconnected", malformed: "error", retry: "error" })[scenario];
+      await expect(detail).toHaveAttribute("data-mcp-readiness", expected);
+      await expect(detail).toContainText("runway · MCP");
+      await expect(popup).not.toContainText("GPT OAuth"); await expect(popup).not.toContainText("Reasoning");
+      if (scenario === "image" || scenario === "video") await expect(detail).toContainText(scenario === "video" ? "Same ID video" : "Same ID image");
+      if (scenario === "default") await expect(detail).toContainText("Provider default model");
+      await capture(page, info, `mcp-${scenario}`, { providerReads, expected });
+      if (scenario === "retry") {
+        const before = providerReads; phase = "ready";
+        await popup.getByRole("button", { name: "Refresh", exact: true }).click();
+        await expect(detail).toHaveAttribute("data-mcp-readiness", "ready");
+        expect(providerReads).toBeGreaterThan(before); await expect(detail).toContainText("Same ID image");
+        await capture(page, info, "mcp-recovered");
+      }
+      await popup.getByRole("button", { name: "Close", exact: true }).click();
+      expect(observation.requests).toEqual([]);
+    });
+  });
+}

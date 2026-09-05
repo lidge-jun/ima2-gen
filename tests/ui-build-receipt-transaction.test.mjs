@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
-import { readFile, writeFile, unlink, mkdir } from "node:fs/promises";
+import { readFile, writeFile, unlink, mkdir, lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
+import { promisify } from "node:util";
 import { beginUiBuild, finishUiBuild, abortUiBuild, verifyUiBuildReceipt } from "../scripts/lib/uiBuildReceipt.mjs";
 import { receiptFixture } from "./_uiBuildReceiptFixture.mjs";
 
 const verify = (f) => verifyUiBuildReceipt({ repoRoot: f.root, distDir: f.dist, requireGitHead: false });
+const execute = promisify(execFile);
+const fixtureGit = (root, ...args) => execFileSync("git", ["-c", "core.hooksPath=" + join(root, "no-hooks"),
+  "-c", "commit.gpgsign=false", "-c", "user.name=Receipt fixture", "-c", "user.email=fixture@example.invalid", ...args],
+{ cwd: root, encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"],
+  env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^GIT_(?:DIR|WORK_TREE|INDEX_FILE|COMMON_DIR|CONFIG)/.test(key))) });
 
 test("same-process transaction publishes complete outputs and consumers wait for lock release", async () => {
   const f = await receiptFixture(); let tx;
@@ -131,9 +137,7 @@ for (const path of ["ui/src/entry.ts", "ui/index.html", "ui/public/fonts/fixture
 
 test("actual synthetic Git HEAD change invalidates unchanged receipt inputs", async () => {
   const f = await receiptFixture(); let tx;
-  const git = (...args) => execFileSync("git", ["-c", "core.hooksPath=" + join(f.root, "no-hooks"),
-    "-c", "commit.gpgsign=false", "-c", "user.name=Receipt fixture", "-c", "user.email=fixture@example.invalid", ...args],
-  { cwd: f.root, encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] });
+  const git = (...args) => fixtureGit(f.root, ...args);
   try {
     git("init"); git("commit", "--allow-empty", "-m", "fixture A");
     const firstHead = git("rev-parse", "HEAD").trim();
@@ -144,4 +148,67 @@ test("actual synthetic Git HEAD change invalidates unchanged receipt inputs", as
     assert.notEqual(git("rev-parse", "HEAD").trim(), firstHead);
     await assert.rejects(verify(f), { code: "UI_RECEIPT_HEAD" });
   } finally { if (tx) await abortUiBuild(f.root, tx); await f.close(); }
+});
+
+async function wrapperFixture() {
+  const f = await receiptFixture();
+  try {
+    const modules = ["uiBuildReceipt.mjs", "uiBuildReceiptSchema.mjs", "uiBuildReceiptFiles.mjs", "uiBuildReceiptTransaction.mjs"];
+    for (const name of modules) await f.put("scripts/lib/" + name, await readFile(new URL("../scripts/lib/" + name, import.meta.url)));
+    await f.put("scripts/write-ui-build-receipt.mjs", await readFile(new URL("../scripts/write-ui-build-receipt.mjs", import.meta.url)));
+    await f.put("package.json", '{"type":"module"}'); await f.put("ui/package.json", '{"type":"module"}');
+    await f.put(".gitignore", "/ui/node_modules/\n/ui/dist/\n");
+    await f.put("ui/src/compiler-fixture-mode.json", '"success"');
+    await f.put("ui/node_modules/typescript/package.json", '{"name":"typescript","type":"module"}');
+    await f.put("ui/node_modules/vite/package.json", '{"name":"vite","type":"module"}');
+    const common = `import fs from "node:fs/promises";
+      const mode=JSON.parse(await fs.readFile("src/compiler-fixture-mode.json","utf8"));
+      const stage=process.argv.includes("-b")?"tsc-app":process.argv.includes("-p")?"tsc-e2e":"vite";
+      await fs.mkdir("node_modules/.cache",{recursive:true});
+      await fs.appendFile("node_modules/.cache/stages.jsonl",JSON.stringify({stage,
+        secretPresent:Object.hasOwn(process.env,"OPENAI_API_KEY"),target:process.env.VITE_IMA2_API_TARGET})+"\\n");
+      if(mode===stage)process.exit(7);
+    `;
+    await f.put("ui/node_modules/typescript/bin/tsc", common);
+    await f.put("ui/node_modules/vite/bin/vite.js", common + `
+      await fs.rm("dist",{recursive:true,force:true});await fs.mkdir("dist/assets",{recursive:true});
+      await fs.writeFile("dist/index.html","<main>synthetic compiled app</main>");
+      await fs.writeFile("dist/assets/app.js","export {};");
+    `);
+    fixtureGit(f.root, "init"); fixtureGit(f.root, "add", "."); fixtureGit(f.root, "commit", "-m", "owned wrapper fixture");
+    return f;
+  } catch (error) { await f.close(); throw error; }
+}
+
+test("real wrapper releases each failed synthetic compiler stage and keeps the Git worktree clean", async () => {
+  const f = await wrapperFixture();
+  const run = () => execute(process.execPath, [join(f.root, "scripts/write-ui-build-receipt.mjs")], {
+    cwd: join(f.root, "ui"), timeout: 15000, maxBuffer: 1024 * 1024,
+    env: { PATH: process.env.PATH, ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+      OPENAI_API_KEY: "WP09-SYNTHETIC-SECRET-DO-NOT-LOG" },
+  });
+  try {
+    for (const stage of ["tsc-app", "tsc-e2e", "vite"]) {
+      await f.put("ui/src/compiler-fixture-mode.json", JSON.stringify(stage));
+      fixtureGit(f.root, "add", "ui/src/compiler-fixture-mode.json"); fixtureGit(f.root, "commit", "-m", "synthetic fault " + stage);
+      const before = fixtureGit(f.root, "status", "--porcelain");
+      await assert.rejects(run(), (error) => {
+        assert.equal(error.code, 1); assert.match(error.stderr, /UI_RECEIPT_IO/);
+        assert.doesNotMatch(error.stdout + error.stderr, /WP09-SYNTHETIC-SECRET/); return true;
+      });
+      await assert.rejects(lstat(join(f.root, "ui/node_modules/.cache/ima2-ui-build/active")), { code: "ENOENT" });
+      await assert.rejects(verify(f), { code: "UI_RECEIPT_MISSING" });
+      assert.equal(fixtureGit(f.root, "status", "--porcelain"), before);
+      await f.put("ui/src/compiler-fixture-mode.json", '"success"');
+      fixtureGit(f.root, "add", "ui/src/compiler-fixture-mode.json"); fixtureGit(f.root, "commit", "-m", "restore synthetic compiler");
+      const output = await run(); assert.equal(JSON.parse(output.stdout).binding, "git-and-source");
+      assert.equal((await verify(f)).receipt.outputs.length, 2);
+      assert.equal(fixtureGit(f.root, "status", "--porcelain"), "");
+      assert.match(fixtureGit(f.root, "check-ignore", "ui/dist/index.html", "ui/node_modules/.cache/stages.jsonl"), /stages\.jsonl/);
+    }
+    const observations = (await readFile(join(f.root, "ui/node_modules/.cache/stages.jsonl"), "utf8")).trim().split("\n").map(JSON.parse);
+    assert.deepEqual(observations.map(({ stage }) => stage), ["tsc-app", "tsc-app", "tsc-e2e", "vite",
+      "tsc-app", "tsc-e2e", "tsc-app", "tsc-e2e", "vite", "tsc-app", "tsc-e2e", "vite", "tsc-app", "tsc-e2e", "vite"]);
+    assert.ok(observations.every(({ secretPresent, target }) => !secretPresent && target === "http://127.0.0.1:1"));
+  } finally { await f.close(); }
 });

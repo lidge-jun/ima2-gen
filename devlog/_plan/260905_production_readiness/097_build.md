@@ -111,3 +111,9 @@ v24.17.0 built-in net source confirms lookupAndListen invokes dns.lookup even fo
 an explicit address. That is a causal candidate, not yet exact Node22 runtime proof.
 Next diagnostic captures sanitized denial transport and native-only stack frames;
 no address allowlist is broadened on this hypothesis alone.
+
+Diagnostic candidate edfc11fb42f155877eb27792700b065b59657f34, run33999838832,
+did not reach the bind probe: Node22 ESM collection rejected four new dictionary
+imports lacking `with { type: "json" }`. Typecheck alone did not detect this.
+Main added explicit import attributes and reruns actual Playwright listing before
+the next push. No failed runtime evidence is claimed for this collection failure.
