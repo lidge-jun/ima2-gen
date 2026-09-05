@@ -1,31 +1,51 @@
-import { after, afterEach, describe, it } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import sharp from "sharp";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
+import { drain, installTrackedWrites } from "./_executionTrackedWrites.ts";
+import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
 
-const TEST_DIR = mkdtempSync(join(tmpdir(), "ima2-agent-runtime-"));
-process.env.IMA2_CONFIG_DIR = TEST_DIR;
-process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
+const isolation = await isolateExecution();
+const { imageTransport } = isolation;
+const TEST_DIR = isolation.rootDir;
+const deniedFetch = globalThis.fetch;
+const originalFetch = isolation.nativeFetch;
+let appOrigin: string | undefined;
+let closeDb: (() => void) | undefined;
+let restoreWrites: (() => void) | undefined;
+after(async () => {
+  try { await drain(); }
+  finally {
+    try { closeDb?.(); restoreWrites?.(); }
+    finally { await isolation.close(); }
+  }
+});
+beforeEach(() => { globalThis.fetch = fetchOwnedApp; });
+afterEach(async () => {
+  try {
+    await imageTransport.deactivate();
+    assert.deepEqual(imageTransport.violations, []);
+  } finally { globalThis.fetch = deniedFetch; }
+});
 
+const { config } = await import("../config.js");
+for (const key of ["configDir", "dbPath", "generatedDir", "trashDir", "generationRequestLogFile"] as const) {
+  assertOwned(TEST_DIR, config.storage[key]);
+}
+({ closeDb } = await import("../lib/db.js"));
+restoreWrites = await installTrackedWrites();
 const { registerAgentRoutes } = await import("../routes/agent.ts");
 const { isRuntimeRestartableError } = await import("../lib/agentRuntime.ts");
 const { runAgentVideoGeneration } = await import("../lib/agentImageVideoGen.ts");
 const { createAgentSession } = await import("../lib/agentStore.ts");
-const { config } = await import("../config.ts");
-const db = await import("../lib/db.ts");
-const originalFetch = globalThis.fetch;
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
-
-after(() => {
-  db.closeDb();
-  rmSync(TEST_DIR, { recursive: true, force: true });
-});
+async function fetchOwnedApp(url: Parameters<typeof fetch>[0], init?: RequestInit) {
+  const target = new URL(url instanceof Request ? url.url : String(url));
+  assert.ok(appOrigin && target.origin === appOrigin, "Native fetch is limited to the owned app server");
+  return originalFetch(url, { ...init, redirect: "error" });
+}
 
 function sseResponse(events: unknown[]) {
   const encoder = new TextEncoder();
@@ -68,13 +88,18 @@ async function withApp(fn: (baseUrl: string, generatedDir: string) => Promise<vo
     packageVersion: "test",
   });
   const server = await new Promise<import("node:http").Server>((resolve) => {
-    const s = app.listen(0, "127.0.0.1", () => resolve(s));
+    const s = listenOwnedLoopback(() => app.listen(0, "127.0.0.1", () => resolve(s)));
   });
   const addr = server.address() as import("node:net").AddressInfo;
+  appOrigin = `http://127.0.0.1:${addr.port}`;
   try {
-    await fn(`http://127.0.0.1:${addr.port}`, generatedDir);
+    await fn(appOrigin, generatedDir);
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    try {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await imageTransport.drain();
+      await drain();
+    } finally { appOrigin = undefined; }
   }
 }
 
@@ -147,7 +172,7 @@ describe("Agent Mode runtime contract", () => {
     const finalImage = await pngB64();
     const calls: Array<{ body: any }> = [];
     globalThis.fetch = async (url, init) => {
-      if (String(url).startsWith("http://127.0.0.1:")) return originalFetch(url, init);
+      if (String(url).startsWith("http://127.0.0.1:")) return fetchOwnedApp(url, init);
       calls.push({ body: JSON.parse(String(init?.body)) });
       return sseResponse([
         { type: "response.output_text.delta", delta: "Use a crisp frontal composition." },
@@ -191,7 +216,7 @@ describe("Agent Mode runtime contract", () => {
     const finalImage = await pngB64();
     const calls: Array<{ url: string; body: any }> = [];
     globalThis.fetch = async (url, init) => {
-      if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) return originalFetch(url, init);
+      if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) return fetchOwnedApp(url, init);
       const body = JSON.parse(String(init?.body || "{}"));
       calls.push({ url: String(url), body });
       if (String(url).endsWith("/v1/responses")) {
@@ -223,6 +248,17 @@ describe("Agent Mode runtime contract", () => {
       });
     };
 
+    const respond = globalThis.fetch;
+    assert.notEqual(respond, originalFetch);
+    assert.notEqual(respond, deniedFetch);
+    imageTransport.activate({
+      hosts: { "cdn.x.ai": [{ address: "8.8.8.8", family: 4 }] },
+      respond: (call) => {
+        assert.equal(call.method, "GET");
+        assert.equal(call.body, "");
+        return respond(call.url, { method: "GET", headers: call.headers, signal: call.signal });
+      },
+    });
     for (const plannerModel of ["grok-4.6", "grok-4.5", "grok-4.3"]) {
       calls.length = 0;
       await withApp(async (baseUrl) => {
@@ -256,6 +292,8 @@ describe("Agent Mode runtime contract", () => {
       assert.match(calls.find((call) => call.url.endsWith("/v1/chat/completions"))?.body.messages[1].content[0].text, /English only/);
       });
     }
+    assert.equal(imageTransport.calls.length, 3);
+    assert.equal(imageTransport.resolutions.length, 3);
   });
 
   it("routes Agent 1080p I2V video through Grok Video 1.5 and records sidecar metadata", async () => {
@@ -435,7 +473,7 @@ describe("Agent Mode runtime contract", () => {
   it("persists selected Agent image focus and rejects cross-session image ids", async () => {
     const finalImage = await pngB64();
     globalThis.fetch = async (url, init) => {
-      if (String(url).startsWith("http://127.0.0.1:")) return originalFetch(url, init);
+      if (String(url).startsWith("http://127.0.0.1:")) return fetchOwnedApp(url, init);
       return sseResponse([
         {
           type: "response.output_item.done",
@@ -526,7 +564,7 @@ describe("Agent Mode runtime contract", () => {
   it("does not treat text-only model output as success", async () => {
     let upstreamHits = 0;
     globalThis.fetch = async (url, init) => {
-      if (String(url).startsWith("http://127.0.0.1:")) return originalFetch(url, init);
+      if (String(url).startsWith("http://127.0.0.1:")) return fetchOwnedApp(url, init);
       upstreamHits++;
       return sseResponse([
         { type: "response.output_text.delta", delta: "This is a text-only answer." },
@@ -553,7 +591,7 @@ describe("Agent Mode runtime contract", () => {
   it("retries a failed image tool call instead of surfacing it as a dead end", async () => {
     let upstreamHits = 0;
     globalThis.fetch = async (url, init) => {
-      if (String(url).startsWith("http://127.0.0.1:")) return originalFetch(url, init);
+      if (String(url).startsWith("http://127.0.0.1:")) return fetchOwnedApp(url, init);
       upstreamHits++;
       // An upstream image_generation_call that reports status "failed" is a transient
       // per-call outcome, not a rejection: the same prompt succeeds on a retry.

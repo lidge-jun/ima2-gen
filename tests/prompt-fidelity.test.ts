@@ -20,7 +20,7 @@ import {
   buildEditTextPrompt,
   buildUserTextPrompt,
 } from "../lib/oauthProxy.ts";
-import { buildGrokPlannerPayload } from "../lib/grokImageAdapter.ts";
+import { buildGrokPlannerPayload } from "../lib/grokImagePlanner.ts";
 import { buildGrokVideoPlannerSystemPrompt } from "../lib/grokVideoPlannerPrompt.ts";
 import { SAFETY_INTENT_POLICY } from "../lib/promptSafetyPolicy.ts";
 import { VISIBLE_TEXT_LANGUAGE_POLICY } from "../lib/visibleTextLanguagePolicy.ts";
@@ -34,7 +34,7 @@ const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
 const nodeApiPath = join(__dirname, "..", "ui", "src", "lib", "nodeApi.ts");
 const asyncJobSubmitPath = join(__dirname, "..", "ui", "src", "lib", "asyncJobSubmit.ts");
 const responsesOperationsPath = join(__dirname, "..", "lib", "providers", "adapters", "openaiOperations.ts");
-const grokImageAdapterPath = join(__dirname, "..", "lib", "grokImageAdapter.ts");
+const grokImagePlannerPath = join(__dirname, "..", "lib", "grokImagePlanner.ts");
 const grokVideoPlannerPath = join(__dirname, "..", "lib", "grokVideoPlannerPrompt.ts");
 const agyAdapterPath = join(__dirname, "..", "lib", "agyImageAdapter.ts");
 
@@ -47,7 +47,7 @@ const apiSrc = await readFile(apiPath, "utf8");
 const nodeApiSrc = await readFile(nodeApiPath, "utf8");
 const asyncJobSubmitSrc = await readFile(asyncJobSubmitPath, "utf8");
 const responsesOperationsSrc = await readFile(responsesOperationsPath, "utf8");
-const grokImageAdapterSrc = await readFile(grokImageAdapterPath, "utf8");
+const grokImagePlannerSrc = await readFile(grokImagePlannerPath, "utf8");
 const grokVideoPlannerSrc = await readFile(grokVideoPlannerPath, "utf8");
 const agyAdapterSrc = await readFile(agyAdapterPath, "utf8");
 const bannedSafetyCopy = [
@@ -188,7 +188,7 @@ for (const prompt of [grokImagePlanner, grokVideoPlanner]) {
   assert.ok(prompt.includes("instead of rewriting it as allowed"), "grok planner should not launder unsafe prompts");
 }
 
-for (const source of [grokImageAdapterSrc, grokVideoPlannerSrc, agyAdapterSrc]) {
+for (const source of [grokImagePlannerSrc, grokVideoPlannerSrc, agyAdapterSrc]) {
   assert.doesNotMatch(source, /Do NOT refuse, defer, censor, sanitize, or downgrade.*for any reason/);
   assert.doesNotMatch(source, /authorized for all usage categories/);
   for (const banned of bannedSafetyCopy) assert.doesNotMatch(source, banned);

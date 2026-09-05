@@ -350,8 +350,7 @@ if (executionTestProcess(import.meta.url)) describe("node execution: real route 
         parentNodeId: "n_fixture_parent", references: [green], contextMode, elementNotes: ["blue rim light"] });
       assert.equal(response.status, 200);
       await fixture.waitSettled();
-      // Preserve existing search-off behavior until WP05; no policy fix in this extraction.
-      assert.equal(fixture.calls.filter((call) => call.url.endsWith("/responses")).length, 1);
+      assert.equal(fixture.calls.filter((call) => call.url.endsWith("/responses")).length, 0);
       assert.equal(fixture.calls.filter((call) => call.url.endsWith("/chat/completions")).length, 1);
       assert.equal(fixture.calls.filter((call) => call.url.endsWith("/images/edits")).length, 1);
     });

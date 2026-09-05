@@ -155,7 +155,8 @@ describe("Agent Mode right sidebar contract", () => {
     const model = readSource("ui/src/components/agent/AgentModelSelector.tsx");
     const globalModel = readSource("ui/src/components/ImageModelSelect.tsx");
     const agentGen = readSource("lib/agentImageVideoGen.ts");
-    const grokAdapter = readSource("lib/grokImageAdapter.ts");
+    const grokPlanner = readSource("lib/grokImagePlanner.ts");
+    const grokOperations = readSource("lib/providers/adapters/grokOperations.ts");
     const grokVideo = readSource("lib/grokVideoAdapter.ts");
     const types = readSource("ui/src/components/agent/agentTypes.ts");
     const css = readSource("ui/src/styles/provider-controls.css");
@@ -183,8 +184,9 @@ describe("Agent Mode right sidebar contract", () => {
     assert.match(agentGen, /AGENT_GROK_PLANNER_MODELS = new Set\(\[DEFAULT_GROK_PLANNER_MODEL, "grok-4\.6", "grok-4\.5", "grok-4\.3"\]\)/);
     assert.match(agentGen, /rawModel: grokPlannerModel \? undefined : options\.model/);
     assert.match(agentGen, /plannerModel: grokPlannerModel/);
-    assert.match(grokAdapter, /plannerModel\?: string/);
-    assert.match(grokAdapter, /const plannerModel = options\.plannerModel \|\| planner\.model/);
+    assert.match(grokOperations, /plannerModel\?: string/);
+    assert.match(grokPlanner, /plannerModel\?: string/);
+    assert.match(grokPlanner, /const plannerModel = options\.plannerModel \|\| planner\.model/);
     assert.match(grokVideo, /const plannerModel = options\.plannerModel \|\| cfg\.plannerModel/);
   });
 });

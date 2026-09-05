@@ -102,7 +102,9 @@ test("Grok image download enforces byte limit for chunked responses", async () =
   });
   const base = await listen(upstream);
   try {
-    await assert.rejects(() => downloadGrokImageUrl(`${base}/oversize`, undefined, 10_000), (error: any) => {
+    await assert.rejects(() => downloadGrokImageUrl(`${base}/oversize`, undefined, 10_000, {
+      trustedProxyOrigin: base,
+    }), (error: any) => {
       assert.equal(error.code, "GROK_IMAGE_DOWNLOAD_FAILED");
       assert.match(error.message, /50MB limit/);
       return true;

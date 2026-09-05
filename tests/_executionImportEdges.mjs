@@ -16,6 +16,17 @@ const openaiOwners = new Set([
   "lib/providers/adapters/openaiExecution", "lib/providers/adapters/openaiOperations",
   "lib/responsesTransport",
 ]);
+const grokFacades = new Set(["lib/grokImageAdapter", "lib/grokMultimodeAdapter"]);
+const grokEdges = new Map([
+  ["lib/providers/adapters/grokExecution", ["lib/providers/adapters/grokOperations", "lib/providers/adapters/grokMultimodeOperations", "lib/grokImagePlanner", "lib/grokImageCore"]],
+  ["lib/providers/adapters/grokOperations", ["lib/grokImagePlanner", "lib/grokImageCore", "lib/grokImageDownload"]],
+  ["lib/providers/adapters/grokMultimodeOperations", ["lib/grokImagePlanner", "lib/grokImageCore", "lib/grokImageDownload"]],
+  ["lib/grokImagePlanner", ["lib/grokImageCore", "lib/grokUpstreamRetry"]],
+  ["lib/grokImageCore", ["lib/grokImageDownload"]],
+  ["lib/grokImageDownload", ["lib/grokImageDownloadPolicy", "lib/grokUpstreamRetry"]],
+  ["lib/grokImageDownloadPolicy", []],
+]);
+const grokOwners = new Set(grokEdges.keys());
 const isLegacyOwner = (target) => /^lib\/providers\/execution\/legacy[^/]*$/.test(target);
 
 export function normalizeModulePath(file, specifier) {
@@ -105,13 +116,20 @@ export function forbiddenExecutionEdges(source, file) {
   const owner = normalizeModulePath(file, file);
   return collectRuntimeEdges(source, file).filter(({ target }) => {
     if (EXECUTION_CALLERS.includes(file)) {
-      return concreteOwners.has(target) || openaiOwners.has(target) || isLegacyOwner(target);
+      return concreteOwners.has(target) || openaiOwners.has(target) || grokOwners.has(target) || isLegacyOwner(target);
     }
-    if (isLegacyOwner(owner)) return target === facadeOwner || openaiOwners.has(target);
+    if (isLegacyOwner(owner)) return target === facadeOwner || openaiOwners.has(target)
+      || grokFacades.has(target) || grokOwners.has(target);
+    if (grokOwners.has(owner)) {
+      return target === facadeOwner || grokFacades.has(target) || target === publicOwner
+        || isLegacyOwner(target) || openaiOwners.has(target) || target.startsWith("routes/")
+        || (grokOwners.has(target) && !grokEdges.get(owner).includes(target));
+    }
     if (owner === "lib/responsesTransport") {
-      return target === publicOwner || openaiOwners.has(target) || target.startsWith("routes/") || target === facadeOwner;
+      return target === publicOwner || openaiOwners.has(target) || target.startsWith("routes/")
+        || target === facadeOwner || grokFacades.has(target);
     }
-    return openaiOwners.has(owner) && target === facadeOwner;
+    return openaiOwners.has(owner) && (target === facadeOwner || grokFacades.has(target));
   });
 }
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { posix } from "node:path";
 import test from "node:test";
 import {
   EXECUTION_CALLERS, collectCallArguments, collectRuntimeEdges, forbiddenExecutionEdges, inspectExecutionCaller,
@@ -48,6 +49,8 @@ test("every concrete owner and private legacy module is forbidden for every call
     "providers/execution/legacy", "providers/execution/legacyClassic",
     "providers/execution/legacyNode", "providers/execution/legacyEdit", "providers/execution/legacyMultimode",
     "providers/adapters/openaiExecution", "providers/adapters/openaiOperations", "responsesTransport",
+    "providers/adapters/grokExecution", "providers/adapters/grokOperations", "providers/adapters/grokMultimodeOperations",
+    "grokImagePlanner", "grokImageDownload", "grokImageDownloadPolicy",
   ];
   for (const file of EXECUTION_CALLERS) for (const name of owners) for (const ext of ["js", "ts"]) {
     const prefix = file.startsWith("routes/") ? "../lib/" : "./";
@@ -68,9 +71,9 @@ test("genuine type-only edges, policy helpers and internal execution imports are
   for (const name of ["providers/derive", "naiOptions", "refs", "generationErrors", "inflight", "providers/execution/index", "providers/execution/admission"]) {
     assert.deepEqual(forbiddenExecutionEdges(`import * as helper from "./${name}.js";`, caller), []);
   }
-  const internal = 'import { generateViaGrok } from "../../grokImageAdapter.js";';
-  assert.equal(collectRuntimeEdges(internal, "lib/providers/execution/legacyClassic.ts").length, 1);
-  assert.deepEqual(forbiddenExecutionEdges(internal, "lib/providers/execution/legacyClassic.ts"), []);
+  const internal = 'import { generateViaGrok } from "./grokOperations.js";';
+  assert.equal(collectRuntimeEdges(internal, "lib/providers/adapters/grokExecution.ts").length, 1);
+  assert.deepEqual(forbiddenExecutionEdges(internal, "lib/providers/adapters/grokExecution.ts"), []);
 });
 
 const legacyOwners = ["legacy", "legacyClassic", "legacyNode", "legacyEdit", "legacyMultimode"]
@@ -79,11 +82,39 @@ const openaiOwners = [
   "lib/providers/adapters/openaiExecution.ts", "lib/providers/adapters/openaiOperations.ts",
   "lib/responsesTransport.ts",
 ];
+const grokOwners = [
+  "lib/providers/adapters/grokExecution.ts", "lib/providers/adapters/grokOperations.ts",
+  "lib/providers/adapters/grokMultimodeOperations.ts", "lib/grokImagePlanner.ts",
+  "lib/grokImageCore.ts", "lib/grokImageDownload.ts", "lib/grokImageDownloadPolicy.ts",
+];
 
-test("actual internal OpenAI and legacy owners contain no forbidden runtime edges", () => {
-  for (const file of [...legacyOwners, ...openaiOwners]) {
+test("actual internal OpenAI, Grok and legacy owners contain no forbidden runtime edges", () => {
+  for (const file of [...legacyOwners, ...openaiOwners, ...grokOwners]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.deepEqual(forbiddenExecutionEdges(source, file), [], file);
+  }
+});
+
+test("Grok owner policy rejects facade cycles, legacy access and upward edges in every runtime form", () => {
+  for (const file of [...legacyOwners, ...grokOwners, ...openaiOwners]) {
+    const targets = ["lib/grokImageAdapter", "lib/grokMultimodeAdapter"];
+    if (legacyOwners.includes(file)) targets.push(...grokOwners.map((path) => path.replace(/\.ts$/, "")));
+    if (grokOwners.includes(file)) targets.push("lib/providers/execution/index", "routes/edit");
+    if (file === "lib/grokImageDownload.ts") targets.push("lib/grokImageCore", "lib/grokImagePlanner");
+    if (file === "lib/grokImagePlanner.ts") targets.push("lib/providers/adapters/grokOperations");
+    for (const target of targets) for (const ext of ["js", "ts", "mjs", "mts"]) {
+      const specifier = `./${posix.relative(posix.dirname(file), `${target}.${ext}`)}`;
+      for (const statement of [
+        `import { run as alias } from "${specifier}";`, `export * from "${specifier}";`,
+        `const run = await import("${specifier}");`, `const run = await import(\`${specifier}\`);`,
+        `import { type Options, run } from "${specifier}";`,
+      ]) {
+        const edges = forbiddenExecutionEdges(statement, file);
+        assert.equal(edges.length, 1, `${file}: ${statement}`);
+        assert.equal(edges[0].target, target);
+      }
+      assert.deepEqual(forbiddenExecutionEdges(`import type { Options } from "${specifier}";`, file), []);
+    }
   }
 });
 
@@ -119,6 +150,22 @@ test("the actual public-family-operation-transport and compatibility edges remai
     ["lib/providers/adapters/openaiExecution.ts", "lib/providers/adapters/openaiOperations"],
     ["lib/providers/adapters/openaiOperations.ts", "lib/responsesTransport"],
     ["lib/responsesImageAdapter.ts", "lib/providers/adapters/openaiOperations"],
+    ["lib/providers/execution/index.ts", "lib/providers/adapters/grokExecution"],
+    ["lib/providers/adapters/grokExecution.ts", "lib/providers/adapters/grokOperations"],
+    ["lib/providers/adapters/grokExecution.ts", "lib/providers/adapters/grokMultimodeOperations"],
+    ["lib/providers/adapters/grokExecution.ts", "lib/grokImagePlanner"],
+    ["lib/providers/adapters/grokOperations.ts", "lib/grokImagePlanner"],
+    ["lib/providers/adapters/grokOperations.ts", "lib/grokImageCore"],
+    ["lib/providers/adapters/grokMultimodeOperations.ts", "lib/grokImagePlanner"],
+    ["lib/providers/adapters/grokMultimodeOperations.ts", "lib/grokImageCore"],
+    ["lib/grokImagePlanner.ts", "lib/grokImageCore"],
+    ["lib/grokImagePlanner.ts", "lib/grokUpstreamRetry"],
+    ["lib/grokImageCore.ts", "lib/grokImageDownload"],
+    ["lib/grokImageDownload.ts", "lib/grokImageDownloadPolicy"],
+    ["lib/grokImageDownload.ts", "lib/grokUpstreamRetry"],
+    ["lib/grokImageAdapter.ts", "lib/grokImagePlanner"],
+    ["lib/grokImageAdapter.ts", "lib/providers/adapters/grokOperations"],
+    ["lib/grokMultimodeAdapter.ts", "lib/providers/adapters/grokMultimodeOperations"],
   ]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     const edges = collectRuntimeEdges(source, file).filter((edge) => edge.target === target);

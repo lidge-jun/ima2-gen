@@ -8,6 +8,7 @@ import type { AddressInfo } from "node:net";
 import type { RuntimeContext } from "../lib/runtimeContext.ts";
 import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
 import { bounded, drain, installTrackedWrites, PromiseTracker, SettlementTimeout } from "./_executionTrackedWrites.ts";
+import { listenOwnedLoopback, type ImageTransportFixture } from "./_grokImageTransportFixture.ts";
 
 export type Surface = "classic" | "node" | "multimode" | "edit";
 export interface UpstreamCall {
@@ -18,6 +19,8 @@ export interface RecordedEvent { event: string; data: Record<string, unknown> }
 export interface RouteCase {
   requestId: string; generatedDir: string; ctx: RuntimeContext;
   calls: readonly UpstreamCall[]; events: readonly RecordedEvent[];
+  readonly imageTransportCalls: ImageTransportFixture["calls"];
+  readonly imageResolutions: ImageTransportFixture["resolutions"];
   post(body: Record<string, unknown>, headers?: Record<string, string>): Promise<Response>;
   waitFor(predicate: (event: RecordedEvent) => boolean, timeoutMs?: number): Promise<RecordedEvent>;
   waitTerminal(timeoutMs?: number): Promise<RecordedEvent>;
@@ -37,6 +40,8 @@ export interface RouteHarness {
 const endpoints: Record<Surface, string> = {
   classic: "/api/generate", node: "/api/node/generate", multimode: "/api/generate/multimode", edit: "/api/edit",
 };
+const imageHosts = Object.fromEntries(["cdn.x.ai", "fixture.invalid", "artifact.fixture.invalid"].map(
+  (hostname) => [hostname, [{ address: "8.8.8.8", family: 4 as const }]]));
 
 export function responsesSse(events: readonly unknown[]): Response {
   return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""), {
@@ -138,8 +143,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
     modules.inflight._resetForTests();
     const calls: UpstreamCall[] = [];
     const violations: unknown[] = [];
-    globalThis.fetch = async (input, init) => {
-      const call = await normalizeCall(input, init);
+    const upstream = async (call: UpstreamCall) => {
       calls.push(call);
       try { return await options.upstream(call); }
       catch (error) {
@@ -148,6 +152,8 @@ export async function openRouteHarness(): Promise<RouteHarness> {
         throw error;
       }
     };
+    globalThis.fetch = async (input, init) => upstream(await normalizeCall(input, init));
+    isolation.imageTransport.activate({ hosts: imageHosts, respond: upstream });
     const ctx = modules.runtime.createTestRuntimeContext({
       apiKey: "sk-execution-fixture", oauthReadyState: "ready", oauthUrl: "http://oauth-fixture.invalid",
       grokUrl: "http://grok-fixture.invalid/v1", ...options.context,
@@ -161,7 +167,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
     app.use(express.json({ limit: "16mb" }));
     trackPostHandlers(app, handlers);
     modules.registrations[surface](app, ctx);
-    server = app.listen(0, "127.0.0.1");
+    server = listenOwnedLoopback(() => app.listen(0, "127.0.0.1"));
     await new Promise<void>((resolve, reject) => { server.once("listening", resolve); server.once("error", reject); });
     const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}${endpoints[surface]}`;
     const waitSettled = async (timeoutMs = 5000) => {
@@ -172,6 +178,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
         handlerError = error;
       }
       await drain(Math.max(1, timeoutMs - (Date.now() - start)));
+      await isolation.imageTransport.drain(Math.max(1, timeoutMs - (Date.now() - start)));
       if (handlerError) throw handlerError;
     };
     const cancel = () => { modules.inflight.abortJob(requestId); };
@@ -182,6 +189,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
         if (error instanceof SettlementTimeout) throw error; // Keep traps, root, subscription and server.
         failure = error;
       }
+      await isolation.imageTransport.deactivate();
       entries.close(); unsubscribe?.();
       await closeServer(server);
       modules.inflight._resetForTests();
@@ -189,11 +197,13 @@ export async function openRouteHarness(): Promise<RouteHarness> {
       cleanup = undefined;
       globalThis.fetch = inactiveFetch;
       assert.deepEqual(violations, [], "Unmatched upstream calls (even if caught by the route)");
+      assert.deepEqual(isolation.imageTransport.violations, [], "Unmatched pinned image transport calls");
       assert.deepEqual(isolation.violations, [], "Provider process launches forbidden");
       if (failure) throw failure;
     };
     setupComplete = true;
       await body({ requestId, generatedDir, ctx, calls, events: entries.events,
+        imageTransportCalls: isolation.imageTransport.calls, imageResolutions: isolation.imageTransport.resolutions,
         post: (payload, headers = {}) => isolation.nativeFetch(url, { method: "POST",
           headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ ...payload, requestId }) }),
         waitFor: entries.waitFor, waitTerminal: (timeoutMs) => entries.waitFor((event) => event.event === "done" || event.event === "error", timeoutMs),
@@ -206,6 +216,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
     } finally {
       if (setupComplete) await cleanup?.();
       else {
+        await isolation.imageTransport.deactivate();
         unsubscribe?.();
         try { if (server?.listening) await closeServer(server); }
         finally {

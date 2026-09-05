@@ -5,13 +5,17 @@ import { mock } from "node:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, isAbsolute } from "node:path";
+import { installGrokImageTransportFixture, type ImageTransportFixture } from "./_grokImageTransportFixture.ts";
 
 export async function isolateExecution() {
   const rootDir = await mkdtemp(join(tmpdir(), "ima2-execution-"));
   const saved = new Map<string, string | undefined>();
   const nativeFetch = globalThis.fetch;
   const restoreMocks: Array<() => void> = [];
+  let imageTransport: ImageTransportFixture | undefined;
   const restore = async () => {
+    // A timed-out pump retains every trap and its owned storage for a later drain.
+    await imageTransport?.restore();
     globalThis.fetch = nativeFetch;
     for (const restoreMock of restoreMocks) restoreMock();
     syncBuiltinESMExports();
@@ -21,6 +25,7 @@ export async function isolateExecution() {
     await rm(rootDir, { recursive: true, force: true });
   };
   try {
+  imageTransport = installGrokImageTransportFixture();
   const env = {
     IMA2_CONFIG_DIR: rootDir, IMA2_DB_PATH: join(rootDir, "test.db"),
     IMA2_GENERATED_DIR: join(rootDir, "generated"), IMA2_TRASH_DIR: join(rootDir, "trash"),
@@ -49,9 +54,11 @@ export async function isolateExecution() {
     restoreMocks.push(() => trapped.mock.restore());
   }
   syncBuiltinESMExports();
-  return { rootDir, nativeFetch, violations, async close() {
+  return { rootDir, nativeFetch, violations, imageTransport, async close() {
     try {
+      await imageTransport!.drain();
       assert.equal(violations.length, 0, `Isolation violations: ${violations.map(String).join("; ")}`);
+      assert.deepEqual(imageTransport!.violations, [], "Image transport isolation violations");
     } finally {
       await restore();
     }

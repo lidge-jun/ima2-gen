@@ -33,7 +33,7 @@ describe("current model defaults: runtime contract", () => {
 
     for (const path of [
       "lib/grokImageCore.ts",
-      "lib/grokImageAdapter.ts",
+      "lib/grokImagePlanner.ts",
       "lib/grokVideoAdapter.ts",
       "routes/videoExtended.ts",
     ]) {

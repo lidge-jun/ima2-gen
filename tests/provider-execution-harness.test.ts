@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { before, after, test, mock } from "node:test";
+import { before, after, describe, test, mock } from "node:test";
+import dns from "node:dns";
+import dnsPromises from "node:dns/promises";
+import http from "node:http";
+import https from "node:https";
+import type { LookupFunction } from "node:net";
 import express from "express";
 import childProcess from "node:child_process";
 import { access } from "node:fs/promises";
@@ -10,6 +15,7 @@ import { executionChildEnv, executionTestProcess } from "./_executionTestProcess
 import { openRouteHarness, responsesSse, type RouteHarness } from "./_executionRouteHarness.ts";
 import { observeBeforeWrite, PromiseTracker, SettlementTimeout } from "./_executionTrackedWrites.ts";
 import { isolateExecution } from "./_executionRouteIsolation.ts";
+import { installGrokImageTransportFixture, listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
 
 function deferred<T = void>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -18,6 +24,199 @@ function deferred<T = void>() {
 }
 
 if (executionTestProcess(import.meta.url)) {
+    const hosts = { "fixture.invalid": [{ address: "8.8.8.8", family: 4 as const }] };
+    const url = "https://fixture.invalid/image";
+    const pinnedLookup: LookupFunction = (_hostname, options, callback) => {
+      const addresses = hosts["fixture.invalid"].filter((entry) => !options.family || entry.family === options.family);
+      if (!addresses.length) { callback(new Error("no matching family"), "", 0); return; }
+      // Node invokes this same callback with an array when all=true.
+      if (options.all) callback(null, addresses);
+      else callback(null, addresses[0]!.address, addresses[0]!.family);
+    };
+  describe("image transport fixture safety (no production imports)", () => {
+    const requestBody = (options: http.RequestOptions = {}) => new Promise<Buffer>((resolve, reject) => {
+      const request = https.request(url, { lookup: pinnedLookup, ...options }, (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.once("end", () => resolve(Buffer.concat(chunks)));
+        response.once("error", reject);
+      });
+      request.once("error", reject); request.end();
+    });
+
+    test("inactive DNS and both request protocols deny before DUT import and restore exact descriptors", async () => {
+      const entries = [[dnsPromises, "lookup"], [dns, "lookup"], [http, "request"], [https, "request"], [http, "get"], [https, "get"]] as const;
+      const saved = entries.map(([target, key]) => Object.getOwnPropertyDescriptor(target, key));
+      const fixture = installGrokImageTransportFixture();
+      try {
+        for (const family of [0, 4, 6]) for (const all of [false, true]) {
+          const result = await new Promise<{ error: Error | null; address: unknown; family: unknown }>((resolve) => {
+            listenOwnedLoopback(() => dns.lookup("127.0.0.1", { family, all }, (error, address, resolvedFamily) => resolve({ error, address, family: resolvedFamily })));
+          });
+          if (family === 6) assert.ok(result.error);
+          else {
+            assert.equal(result.error, null);
+            assert.deepEqual(result.address, all ? [{ address: "127.0.0.1", family: 4 }] : "127.0.0.1");
+            if (!all) assert.equal(result.family, 4);
+          }
+        }
+        assert.equal(fixture.resolutions.length, 0, "numeric bind is not artifact DNS");
+        const imported = await import("node:https");
+        assert.equal(imported.request, https.request, "named ESM binding must be trapped before DUT import");
+        await assert.rejects(dnsPromises.lookup("fixture.invalid"), /outside active fixture/);
+        assert.throws(() => dns.lookup("fixture.invalid", () => {}), /Default DNS lookup forbidden/);
+        assert.throws(() => http.request("http://fixture.invalid/a"), /outside active fixture/);
+        assert.throws(() => imported.request(url), /outside active fixture/);
+        assert.equal(fixture.calls.length, 0); assert.equal(fixture.violations.length, 4);
+        assert.throws(() => fixture.activate({ hosts, respond: () => new Response("never") }), /Pre-activation network violations/);
+      } finally { await fixture.restore(); }
+      assert.deepEqual(entries.map(([target, key]) => Object.getOwnPropertyDescriptor(target, key)), saved);
+    });
+
+    test("unknown hosts and inherited map keys fail closed with zero GET", async () => {
+      const fixture = installGrokImageTransportFixture();
+      fixture.activate({ hosts, respond: () => assert.fail("unmatched host reached upstream") });
+      try {
+        for (const hostname of ["unknown.invalid", "toString"]) {
+          await assert.rejects(dnsPromises.lookup(hostname), /Unmatched image fixture host/);
+          assert.throws(() => https.request(`https://${hostname}/image`), /Unmatched image fixture host/);
+        }
+        assert.equal(fixture.calls.length, 0);
+      } finally { await fixture.restore(); }
+    });
+
+    test("actual custom lookup covers family/all and GET preserves the response stream", async () => {
+      const fixture = installGrokImageTransportFixture();
+      const optionsSeen: unknown[] = [];
+      fixture.activate({ hosts, respond: (call) => {
+        assert.equal(call.method, "GET"); assert.equal(call.body, "");
+        const response = new Response("image bytes");
+        response.arrayBuffer = async () => assert.fail("must not prebuffer Response");
+        return response;
+      } });
+      try {
+        assert.deepEqual(await dnsPromises.lookup("fixture.invalid", { all: true }), hosts["fixture.invalid"]);
+        const lookup: LookupFunction = (host, options, callback) => { optionsSeen.push(options); pinnedLookup(host, options, callback); };
+        assert.equal((await requestBody({ lookup })).toString(), "image bytes");
+        await fixture.drain();
+        assert.deepEqual(optionsSeen, [0, 4, 6].flatMap((family) => [{ family, all: false }, { family, all: true }]));
+        assert.equal(fixture.calls.length, 1); assert.equal(fixture.resolutions.length, 1);
+        assert.deepEqual(fixture.violations, []);
+      } finally { await fixture.restore(); }
+    });
+
+    test("missing or wrong custom lookup rejects before upstream without fallback", async () => {
+      for (const lookup of [undefined, ((_host, _options, callback) => callback(null, "127.0.0.1", 4)) as LookupFunction]) {
+        const fixture = installGrokImageTransportFixture();
+        fixture.activate({ hosts, respond: () => assert.fail("bad lookup reached upstream") });
+        try {
+          await assert.rejects(requestBody({ lookup }), /custom lookup|Expected values/);
+          await fixture.drain(); assert.equal(fixture.calls.length, 0); assert.ok(fixture.violations.length);
+        } finally { await fixture.restore(); }
+      }
+    });
+
+    test("headers and first chunk arrive before held body release; deactivate waits for pump", async () => {
+      const fixture = installGrokImageTransportFixture();
+      const entered = deferred(); const release = deferred();
+      let count = 0; let first = "";
+      fixture.activate({ hosts, respond: () => new Response(new ReadableStream<Uint8Array>({ async pull(controller) {
+        try {
+          if (++count === 1) controller.enqueue(Buffer.from("first"));
+          else { entered.resolve(); await release.promise; controller.enqueue(Buffer.from("last")); controller.close(); }
+        } catch (error) { controller.error(error); }
+      } })) });
+      const received = new Promise<void>((resolve, reject) => {
+        const req = https.request(url, { lookup: pinnedLookup }, (response) => {
+          response.once("data", (chunk) => { first = String(chunk); });
+          response.once("end", resolve); response.once("error", reject); response.resume();
+        }); req.once("error", reject); req.end();
+      });
+      try {
+        await entered.promise;
+        await assert.rejects(fixture.drain(20), SettlementTimeout);
+        assert.equal(first, "first");
+        let deactivated = false;
+        const closing = fixture.deactivate().then(() => { deactivated = true; });
+        assert.equal(deactivated, false); release.resolve(); await received; await closing;
+        assert.deepEqual(fixture.violations, []);
+      } finally { release.resolve(); await received; await fixture.restore(); }
+    });
+
+    test("abort drains a late response and rejects unrelated post-abort callback exceptions", async () => {
+      for (const unexpected of [false, true]) {
+        const fixture = installGrokImageTransportFixture();
+        const entered = deferred(); const release = deferred(); const abort = new AbortController();
+        const failure = new Error("unexpected post-abort upstream failure"); let canceled = false;
+        fixture.activate({ hosts, respond: async () => {
+          entered.resolve(); await release.promise;
+          if (unexpected) throw failure;
+          return new Response(new ReadableStream({ cancel() { canceled = true; } }));
+        } });
+        const received = requestBody({ signal: abort.signal });
+        const rejected = assert.rejects(received, (error) => error === abort.signal.reason);
+        try {
+          await entered.promise; abort.abort(new Error("expected fixture abort")); await rejected;
+          await assert.rejects(fixture.drain(20), SettlementTimeout);
+          release.resolve(); await fixture.deactivate();
+          assert.equal(canceled, !unexpected);
+          assert.deepEqual(fixture.violations, unexpected ? [failure] : []);
+        } finally { release.resolve(); await rejected; await fixture.restore(); }
+      }
+    });
+
+    test("post-abort Node error events remain visible after request close", async () => {
+      const fixture = installGrokImageTransportFixture();
+      const abort = new AbortController(); const headers = deferred(); const canceled = deferred();
+      const late = new Error("late Node event after abort");
+      fixture.activate({ hosts, respond: () => new Response(new ReadableStream({ cancel() { canceled.resolve(); } })) });
+      const request = https.request(url, { lookup: pinnedLookup, signal: abort.signal }, () => headers.resolve());
+      request.end();
+      try {
+        await headers.promise; abort.abort(new Error("expected abort")); await canceled.promise;
+        await fixture.drain(); assert.equal(request.destroyed, true);
+        request.emit("error", late); await fixture.drain();
+        assert.deepEqual(fixture.violations, [late]);
+      } finally { request.destroy(); await fixture.restore(); }
+    });
+
+    test("failed body pump settles, preserves its violation, and permits deactivation", async () => {
+      const fixture = installGrokImageTransportFixture();
+      const failure = new Error("controlled body pump failure");
+      fixture.activate({ hosts, respond: () => new Response(new ReadableStream({
+        start(controller) { controller.error(failure); },
+      })) });
+      try {
+        await assert.rejects(requestBody(), (error) => error === failure);
+        await fixture.deactivate();
+        assert.deepEqual(fixture.violations, [failure]);
+        fixture.activate({ hosts, respond: () => new Response("next case") });
+        assert.equal((await requestBody()).toString(), "next case");
+      } finally { await fixture.restore(); }
+    });
+
+    test("failed isolation setup rolls back descriptors and environment without a DUT import", async () => {
+      const savedFetch = globalThis.fetch; const savedConfig = process.env.IMA2_CONFIG_DIR;
+      const savedRequest = Object.getOwnPropertyDescriptor(https, "request");
+      const savedSpawn = Object.getOwnPropertyDescriptor(childProcess, "spawn");
+      const methodDescriptor = Object.getOwnPropertyDescriptor(mock, "method");
+      const method = mock.method.bind(mock); let root = "";
+      const injected = mock.method(mock, "method", ((target: object, name: string, ...rest: unknown[]) => {
+        if (target === childProcess && name === "spawnSync") { root = process.env.IMA2_CONFIG_DIR!; throw new Error("controlled isolation setup failure"); }
+        return Reflect.apply(method, mock, [target, name, ...rest]);
+      }) as typeof mock.method);
+      try { await assert.rejects(isolateExecution(), /controlled isolation setup failure/); }
+      finally {
+        injected.mock.restore();
+        if (methodDescriptor) Object.defineProperty(mock, "method", methodDescriptor); else Reflect.deleteProperty(mock, "method");
+      }
+      assert.equal(globalThis.fetch, savedFetch); assert.equal(process.env.IMA2_CONFIG_DIR, savedConfig);
+      assert.deepEqual(Object.getOwnPropertyDescriptor(https, "request"), savedRequest);
+      assert.deepEqual(Object.getOwnPropertyDescriptor(childProcess, "spawn"), savedSpawn);
+      await assert.rejects(access(root), { code: "ENOENT" });
+    });
+  });
+  describe("route harness integration", () => {
   let harness: RouteHarness;
   let image: string;
   const payload = { provider: "api", prompt: "execution harness", async: true, n: 1, webSearchEnabled: false };
@@ -30,7 +229,10 @@ if (executionTestProcess(import.meta.url)) {
     assert.equal(childProcess.spawn, spawnBefore);
     assert.equal(globalThis.fetch, beforeIsolation);
     await assert.rejects(access(owned.rootDir), { code: "ENOENT" });
+    const moduleDescriptor = Object.getOwnPropertyDescriptor(mock, "module");
     const original = mock.module.bind(mock);
+    const builtinDescriptors = [dnsPromises, dns, http, https].map((target, index) =>
+      Object.getOwnPropertyDescriptor(target, index < 2 ? "lookup" : "request"));
     const savedFetch = globalThis.fetch;
     const savedConfig = process.env.IMA2_CONFIG_DIR;
     let failedRoot = "";
@@ -41,7 +243,14 @@ if (executionTestProcess(import.meta.url)) {
       return original(...args);
     });
     try { await assert.rejects(openRouteHarness(), /fixture mock installation failed/); }
-    finally { moduleMock.mock.restore(); }
+    finally {
+      moduleMock.mock.restore();
+      if (moduleDescriptor) Object.defineProperty(mock, "module", moduleDescriptor);
+      else Reflect.deleteProperty(mock, "module");
+    }
+    assert.deepEqual(Object.getOwnPropertyDescriptor(mock, "module"), moduleDescriptor);
+    assert.deepEqual([dnsPromises, dns, http, https].map((target, index) =>
+      Object.getOwnPropertyDescriptor(target, index < 2 ? "lookup" : "request")), builtinDescriptors);
     assert.equal(globalThis.fetch, savedFetch);
     assert.equal(process.env.IMA2_CONFIG_DIR, savedConfig);
     await assert.rejects(access(failedRoot), { code: "ENOENT" });
@@ -106,6 +315,25 @@ if (executionTestProcess(import.meta.url)) {
     });
   });
 
+  test("pinned GET shares upstream totals but has separate transport and DNS records", async () => {
+    await harness.run("classic", { upstream: (call) => {
+      assert.equal(call.url, "https://fixture.invalid/image");
+      assert.equal(call.method, "GET"); assert.equal(call.body, "");
+      return new Response("fixture");
+    } }, async (fixture) => {
+      await fetch("https://fixture.invalid/image");
+      await dnsPromises.lookup("fixture.invalid", { all: true });
+      const bytes = new Promise<void>((resolve, reject) => {
+        const req = https.request("https://fixture.invalid/image", { lookup: pinnedLookup }, (response) => {
+          response.once("end", resolve); response.once("error", reject); response.resume();
+        }); req.once("error", reject); req.end();
+      });
+      await fixture.trackWork(bytes); await fixture.waitSettled();
+      assert.equal(fixture.calls.length, 2); assert.equal(fixture.imageTransportCalls.length, 1);
+      assert.equal(fixture.imageResolutions.length, 1);
+    });
+  });
+
   test("pending direct work delays fixture settlement until released", async () => {
     const held = deferred();
     await harness.run("classic", { upstream }, async (fixture) => {
@@ -116,6 +344,26 @@ if (executionTestProcess(import.meta.url)) {
       } finally { held.resolve(); await Promise.allSettled([work]); }
       await fixture.waitSettled();
     });
+  });
+
+  test("failed image pump reports its violation after removing settled case storage", async () => {
+    const failure = new Error("route fixture body pump failure"); let generatedDir = "";
+    await assert.rejects(harness.run("classic", { upstream: () => new Response(new ReadableStream({
+      start(controller) { controller.error(failure); },
+    })) }, async (fixture) => {
+      generatedDir = fixture.generatedDir;
+      const work = new Promise<void>((resolve, reject) => {
+        const req = https.request("https://fixture.invalid/image", { lookup: pinnedLookup }, (response) => {
+          response.once("error", reject); response.once("end", resolve); response.resume();
+        }); req.once("error", reject); req.end();
+      });
+      await assert.rejects(fixture.trackWork(work), (error) => error === failure);
+    }), (error: assert.AssertionError) => {
+      assert.match(error.message, /Unmatched pinned image transport calls/);
+      assert.deepEqual(error.actual, [failure]); return true;
+    });
+    await assert.rejects(access(generatedDir), { code: "ENOENT" });
+    await harness.run("classic", { upstream }, async () => {}); // Prove clean reuse after the asserted failure.
   });
 
   test("test-body failure releases held direct work before fixture cleanup", async () => {
@@ -245,5 +493,6 @@ if (executionTestProcess(import.meta.url)) {
       await harness.close();
       await assert.rejects(access(rootDir), { code: "ENOENT" });
     } finally { release.resolve(); observeBeforeWrite(); }
+  });
   });
 }

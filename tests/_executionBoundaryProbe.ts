@@ -9,8 +9,9 @@ import { isolateExecution } from "./_executionRouteIsolation.ts";
 interface Call { name: string; args: unknown[] }
 const transports = {
   "providers/adapters/openaiOperations": ["generateViaResponses", "editViaResponses", "generateMultimodeViaResponses"],
-  grokImageAdapter: ["planGrokImage", "generateViaGrok", "editViaGrok"],
-  grokMultimodeAdapter: ["generateMultimodeViaGrok"],
+  grokImagePlanner: ["planGrokImage"],
+  "providers/adapters/grokOperations": ["generateViaGrok", "editViaGrok"],
+  "providers/adapters/grokMultimodeOperations": ["generateMultimodeViaGrok"],
   agyImageAdapter: ["generateViaAgy"], geminiApiImageAdapter: ["generateViaGeminiApi"],
   atlasCloudImageAdapter: ["generateViaAtlasCloud"], minimaxImageAdapter: ["generateViaMinimax"],
   naiImageAdapter: ["generateViaNai"], comfyImageAdapter: ["generateViaComfy"],
@@ -21,6 +22,7 @@ export async function openBoundaryProbe() {
   const calls: Call[] = [];
   const mocks: Array<{ restore(): void }> = [];
   let failure: unknown;
+  let plannedSearchCalls = 7;
   let callbackWork: Promise<void> | undefined;
   const single: SingleImageExecutionResult = {
     b64: "native-image", revisedPrompt: "native-revised", providerUrl: null, mime: "image/webp",
@@ -47,7 +49,7 @@ export async function openBoundaryProbe() {
   const dispatch = async (name: string, args: unknown[]) => {
     calls.push({ name, args });
     if (failure) throw failure;
-    if (name === "planGrokImage") return { prompt: "planned-effective", model: "grok-imagine-image-quality", webSearchCalls: 7 };
+    if (name === "planGrokImage") return { prompt: "planned-effective", model: "grok-imagine-image-quality", webSearchCalls: plannedSearchCalls };
     const options = args.at(-1) as ExecutionProgress;
     options.onPartialImage?.(partial);
     options.onQueue?.(queue);
@@ -72,8 +74,9 @@ export async function openBoundaryProbe() {
     const source = (await sharp({ create: { width: 8, height: 8, channels: 3, background: "#654321" } }).png().toBuffer()).toString("base64");
     return { calls, single, sequence, callbackImage, partial, queue, ctx, source, prepareImageExecution, prepareLegacyImageExecution,
       failWith(error?: unknown) { failure = error; },
+      planSearchCalls(value: number) { plannedSearchCalls = value; },
       callbackPromise() { return callbackWork; },
-      reset() { calls.length = 0; failure = undefined; callbackWork = undefined; ctx.xaiApiKey = "initial-invented-key"; },
+      reset() { calls.length = 0; failure = undefined; callbackWork = undefined; plannedSearchCalls = 7; ctx.xaiApiKey = "initial-invented-key"; },
       async close() {
         (await import("../lib/db.ts")).closeDb();
         for (const entry of mocks.reverse()) entry.restore();
@@ -150,6 +153,9 @@ export function assertCall(call: Call, ctx: RuntimeContext, request: ImageExecut
     assert.equal(options.background, "transparent"); assert.equal(options.outputFormat, "png");
   }
   if (surface === "multimode" && (responses || provider.startsWith("grok"))) assert.equal(options.maxImages, 3);
+  if (provider.startsWith("grok") && (surface === "node" || surface === "multimode")) {
+    assert.equal(options.webSearchEnabled, request.options.webSearchEnabled);
+  }
 }
 
 export function assertReferenceOrder(call: Call, request: ImageExecutionRequest, source: string): void {

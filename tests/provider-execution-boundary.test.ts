@@ -30,7 +30,7 @@ if (executionTestProcess(import.meta.url)) {
 
   for (const surface of Object.keys(lanes) as ExecutionSurface[]) {
     for (const provider of lanes[surface]) {
-      test(`${surface}/${provider}: actual facade/legacy dispatch, fields, identity and native result`, async () => {
+      test(`${surface}/${provider}: actual family/legacy dispatch, fields, identity and native result`, async () => {
         probe.reset();
         const request = requestFor(surface, provider, probe.source);
         const result = await (await probe.prepareImageExecution(probe.ctx, request)).execute();
@@ -67,6 +67,21 @@ if (executionTestProcess(import.meta.url)) {
         }
       });
     }
+  }
+
+  for (const provider of ["grok", "grok-api"] as const) {
+    test(`classic/${provider}: prepared zero search count survives repeated executions`, async () => {
+      probe.reset();
+      probe.planSearchCalls(0);
+      const prepared = await probe.prepareImageExecution(probe.ctx, requestFor("classic", provider, probe.source));
+      await prepared.execute(); await prepared.execute();
+      assert.deepEqual(probe.calls.map((call) => call.name), ["planGrokImage", "generateViaGrok", "generateViaGrok"]);
+      for (const call of probe.calls.slice(1)) {
+        const options = call.args.at(-1) as Record<string, unknown>;
+        assert.equal(options.plannedPrompt, "planned-effective");
+        assert.equal(options.webSearchCalls, 0);
+      }
+    });
   }
 
   for (const provider of lanes.node) {

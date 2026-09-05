@@ -283,6 +283,8 @@ describe("EN — element node lifecycle", () => {
     const execution = read(owner);
     const openaiOwner = "lib/providers/adapters/openaiExecution.ts";
     const openaiExecution = read(openaiOwner);
+    const grokOwner = "lib/providers/adapters/grokExecution.ts";
+    const grokExecution = read(grokOwner);
     for (const [name, position, expected] of [
       ["generateViaResponses", 1, "generationPrompt"],
       ["editViaResponses", 1, "generationPrompt"],
@@ -295,6 +297,8 @@ describe("EN — element node lifecycle", () => {
     ]) {
       const calls = name === "generateViaResponses" || name === "editViaResponses"
         ? collectCallArguments(openaiExecution, openaiOwner, name, "executeOpenaiNode")
+        : name === "generateViaGrok"
+        ? collectCallArguments(grokExecution, grokOwner, name, "executeGrokNode")
         : collectCallArguments(execution, owner, name);
       assert.equal(calls.length, 1, `${name}: expected a live call expression`);
       assert.equal(calls[0][position], expected, `${name}: wrong prompt lane`);

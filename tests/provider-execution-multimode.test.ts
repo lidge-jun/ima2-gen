@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import type { ExecutionImage, ImageExecutionRequest } from "../lib/providers/execution/types.ts";
 import { executionTestProcess } from "./_executionTestProcess.ts";
 import { openRouteHarness, responsesSse } from "./_executionRouteHarness.ts";
+import { bounded } from "./_executionTrackedWrites.ts";
+
+function assertCanceledExecution(execution: PromiseSettledResult<unknown> | undefined): void {
+  assert.ok(execution && execution.status === "rejected");
+  assert.equal(execution.reason.code, "GENERATION_CANCELED");
+}
 
 if (executionTestProcess(import.meta.url)) describe("execution multimode routes and native sequence", () => {
   let harness: Awaited<ReturnType<typeof openRouteHarness>>;
@@ -119,45 +125,54 @@ if (executionTestProcess(import.meta.url)) describe("execution multimode routes 
       const originals: ExecutionImage[] = [];
       const indexes: number[] = [];
       const partials: unknown[] = [];
+      const controller = new AbortController();
+      const pending: Promise<unknown>[] = [];
       const request: Extract<ImageExecutionRequest, { surface: "multimode" }> = {
         surface: "multimode", provider: "api", requestId: fixture.requestId,
-        signal: new AbortController().signal, prompt: "Native sequence", rawPrompt: "Raw sequence",
+        signal: controller.signal, prompt: "Native sequence", rawPrompt: "Raw sequence",
         references: [], providerUrl: null, maxImages: 2, nai: {},
         options: { model: "gpt-5.4", quality: "medium", size: "1024x1024", moderation: "low", mode: "direct", reasoningEffort: "high", webSearchEnabled: false },
       };
-      const prepared = await prepareImageExecution(fixture.ctx, request, {
-        onPartialImage: (partial) => { partials.push(partial); },
-        onFinalImage: async (image, index) => {
-          originals.push(image); indexes.push(index);
-          if (index === 0) { entered(); await held; }
-        },
-      });
-      assert.equal(fixture.calls.length, 0, "preparing a sequence performs no provider work");
-      let settled = false;
-      const work = prepared.execute().then((result) => { settled = true; return result; });
       try {
-        await callbackEntered;
+        const preparation = fixture.trackWork(prepareImageExecution(fixture.ctx, request, {
+          onPartialImage: (partial) => { partials.push(partial); },
+          onFinalImage: async (image, index) => {
+            originals.push(image); indexes.push(index);
+            if (index === 0) { entered(); await held; }
+          },
+        }));
+        pending.push(preparation);
+        const prepared = await preparation;
+        assert.equal(fixture.calls.length, 0, "preparing a sequence performs no provider work");
+        let settled = false;
+        const work = fixture.trackWork(prepared.execute().then((result) => { settled = true; return result; }));
+        pending.push(work);
+        await bounded(callbackEntered);
         assert.equal(settled, false);
         assert.deepEqual(indexes, [0]);
-      } finally { release(); }
-      const { kind, value } = await work;
-      assert.equal(kind, "sequence");
-      assert.deepEqual(indexes, [0, 1]);
-      assert.deepEqual(partials, [{ b64: first, index: 4 }]);
-      assert.equal(value.images[0], originals[0]);
-      assert.equal(value.images[1], originals[1]);
-      assert.deepEqual(value.images, [{ b64: first, revisedPrompt: "Blue stage A" }, { b64: second, revisedPrompt: "Amber stage B" }]);
-      assert.deepEqual(value.usage, { input_tokens: 23, output_tokens: 31, total_tokens: 54 });
-      assert.equal(value.webSearchCalls, 3);
-      assert.equal(value.text, "Sequence fixture text");
-      assert.equal(value.extraIgnored, 0);
-      assert.equal(value.eventCount, 6);
-      assert.deepEqual(value.eventTypes, { "response.image_generation_call.partial_image": 1, "response.output_item.done": 3, "response.output_text.done": 1, "response.completed": 1 });
-      assert.equal(value.diagnostics?.streamStats.sawResponseCompleted, true);
-      assert.equal(value.diagnostics?.imageResultCount, 3);
-      assert.equal(value.diagnostics?.outputItemSummary.length, 3);
-      assert.equal(value.diagnostics?.messageOutputSeen, true);
-      assert.equal(value.originalIndexes, undefined);
+        release();
+        const { kind, value } = await work;
+        assert.equal(kind, "sequence");
+        assert.deepEqual(indexes, [0, 1]);
+        assert.deepEqual(partials, [{ b64: first, index: 4 }]);
+        assert.equal(value.images[0], originals[0]);
+        assert.equal(value.images[1], originals[1]);
+        assert.deepEqual(value.images, [{ b64: first, revisedPrompt: "Blue stage A" }, { b64: second, revisedPrompt: "Amber stage B" }]);
+        assert.deepEqual(value.usage, { input_tokens: 23, output_tokens: 31, total_tokens: 54 });
+        assert.equal(value.webSearchCalls, 3);
+        assert.equal(value.text, "Sequence fixture text");
+        assert.equal(value.extraIgnored, 0);
+        assert.equal(value.eventCount, 6);
+        assert.deepEqual(value.eventTypes, { "response.image_generation_call.partial_image": 1, "response.output_item.done": 3, "response.output_text.done": 1, "response.completed": 1 });
+        assert.equal(value.diagnostics?.streamStats.sawResponseCompleted, true);
+        assert.equal(value.diagnostics?.imageResultCount, 3);
+        assert.equal(value.diagnostics?.outputItemSummary.length, 3);
+        assert.equal(value.diagnostics?.messageOutputSeen, true);
+        assert.equal(value.originalIndexes, undefined);
+      } finally {
+        release(); controller.abort();
+        await bounded(Promise.allSettled(pending));
+      }
     });
   });
 
@@ -180,48 +195,58 @@ if (executionTestProcess(import.meta.url)) describe("execution multimode routes 
       const held = new Promise<void>((resolve) => { release = resolve; });
       let entered!: () => void;
       const callbackEntered = new Promise<void>((resolve) => { entered = resolve; });
-      const prepared = await prepareImageExecution(fixture.ctx, {
-        surface: "multimode", provider: "grok-api", requestId: fixture.requestId,
-        signal: new AbortController().signal, prompt: "Grok effective sequence", rawPrompt: "Grok raw sequence",
-        references: [], providerUrl: null, maxImages: 1, nai: {},
-        options: { model: "grok-imagine-image", quality: "medium", size: "1024x1024", moderation: "low", mode: "direct", reasoningEffort: "none", webSearchEnabled: false },
-      }, {
-        onFinalImage: async (image, index) => {
-          original = image;
-          assert.equal(index, 0);
-          entered(); await held;
-        },
-      });
-      assert.equal(fixture.calls.length, 0);
-      let settled = false;
-      const work = prepared.execute().then((result) => { settled = true; return result; });
+      const controller = new AbortController();
+      const pending: Promise<unknown>[] = [];
       try {
-        await callbackEntered;
+        const preparation = fixture.trackWork(prepareImageExecution(fixture.ctx, {
+          surface: "multimode", provider: "grok-api", requestId: fixture.requestId,
+          signal: controller.signal, prompt: "Grok effective sequence", rawPrompt: "Grok raw sequence",
+          references: [], providerUrl: null, maxImages: 1, nai: {},
+          options: { model: "grok-imagine-image", quality: "medium", size: "1024x1024", moderation: "low", mode: "direct", reasoningEffort: "none", webSearchEnabled: false },
+        }, {
+          onFinalImage: async (image, index) => {
+            original = image;
+            assert.equal(index, 0);
+            entered(); await held;
+          },
+        }));
+        pending.push(preparation);
+        const prepared = await preparation;
+        assert.equal(fixture.calls.length, 0);
+        let settled = false;
+        const work = fixture.trackWork(prepared.execute().then((result) => { settled = true; return result; }));
+        pending.push(work);
+        await bounded(callbackEntered);
         assert.equal(settled, false);
         assert.equal(original?.providerUrl, providerUrl);
-      } finally { release(); }
-      const { value } = await work;
-      assert.equal(value.images[0], original);
-      assert.deepEqual(value.images[0], { b64: first, mime: "image/png", revisedPrompt: "Native planned stage", providerUrl });
-      assert.deepEqual(value.usage, { grok_cost_usd_ticks: 211 });
-      assert.equal(value.webSearchCalls, 1, "WP03 preserves existing sequence search behavior");
-      assert.equal(value.extraIgnored, 0);
-      assert.equal(value.originalIndexes, undefined, "WP05 owns sparse-index correction");
-      assert.equal(fixture.calls.length, 4);
+        release();
+        const { value } = await work;
+        assert.equal(value.images[0], original);
+        assert.deepEqual(value.images[0], { b64: first, mime: "image/png", revisedPrompt: "Native planned stage", providerUrl });
+        assert.deepEqual(value.usage, { grok_cost_usd_ticks: 211 });
+        assert.equal(value.webSearchCalls, 0, "explicit false suppresses search, not planning");
+        assert.equal(value.extraIgnored, 0);
+        assert.deepEqual(value.originalIndexes, [0]);
+        assert.equal(fixture.calls.length, 3);
 
-      const response = await fixture.post({ provider: "grok-api", prompt: "Grok route sequence", model: "grok-imagine-image", maxImages: 1, async: true });
-      assert.equal(response.status, 202);
-      const terminal = await fixture.waitTerminal();
-      await fixture.waitSettled();
-      assert.equal(terminal.event, "done");
-      const event = fixture.events.find((entry) => entry.event === "image")!;
-      assert.equal(event.data.providerUrl, providerUrl);
-      const meta = JSON.parse(await readFile(join(fixture.generatedDir, `${event.data.filename}.json`), "utf8"));
-      assert.equal(meta.providerUrl, providerUrl);
-      assert.equal(meta.revisedPrompt, "Native planned stage");
-      assert.equal(meta.usage, null, "callback sidecars precede native sequence usage assignment");
-      assert.deepEqual(terminal.data.usage, { grok_cost_usd_ticks: 211 });
-      assert.equal((await readdir(fixture.generatedDir)).filter((name) => name.endsWith(".json")).length, 1);
+        const response = await fixture.post({ provider: "grok-api", prompt: "Grok route sequence", model: "grok-imagine-image", maxImages: 1, async: true });
+        assert.equal(response.status, 202);
+        const terminal = await fixture.waitTerminal();
+        await fixture.waitSettled();
+        assert.equal(terminal.event, "done");
+        const event = fixture.events.find((entry) => entry.event === "image")!;
+        assert.equal(event.data.providerUrl, providerUrl);
+        const meta = JSON.parse(await readFile(join(fixture.generatedDir, `${event.data.filename}.json`), "utf8"));
+        assert.equal(meta.providerUrl, providerUrl);
+        assert.equal(meta.revisedPrompt, "Native planned stage");
+        assert.equal(meta.usage, null, "callback sidecars precede native sequence usage assignment");
+        assert.deepEqual(terminal.data.usage, { grok_cost_usd_ticks: 211 });
+        assert.equal(terminal.data.webSearchCalls, 1, "omitted route option retains search-on default");
+        assert.equal((await readdir(fixture.generatedDir)).filter((name) => name.endsWith(".json")).length, 1);
+      } finally {
+        release(); controller.abort();
+        await bounded(Promise.allSettled(pending));
+      }
     });
   });
 
@@ -246,6 +271,7 @@ if (executionTestProcess(import.meta.url)) describe("execution multimode routes 
       }, { onFinalImage: () => assert.fail("failed images must not call final callback") });
       const { value } = await prepared.execute();
       assert.deepEqual(value.images, []);
+      assert.deepEqual(value.originalIndexes, []);
       assert.equal(value.usage, null);
       assert.equal(value.webSearchCalls, 2);
       assert.ok(value.error instanceof Error);
@@ -267,5 +293,66 @@ if (executionTestProcess(import.meta.url)) describe("execution multimode routes 
       assert.deepEqual(await readdir(fixture.generatedDir), []);
       assert.equal(fixture.events.some((entry) => entry.event === "done" || entry.event === "image"), false);
     });
+  });
+
+  it("failed assertion releases actual held Grok callback and settles execution before pinned deactivation", async () => {
+    const order: string[] = [];
+    const providerUrl = "https://fixture.invalid/cleanup.png";
+    let generatedDir = "";
+    await assert.rejects(harness.run("multimode", {
+      context: { xaiApiKey: "fixture-xai-cleanup" }, upstream: (call) => {
+        if (call.method === "GET") {
+          assert.equal(call.url, providerUrl);
+          return new Response(Buffer.from(first, "base64"), { headers: { "content-type": "image/png" } });
+        }
+        if (call.url.endsWith("/chat/completions")) return Response.json({ choices: [{ message: { tool_calls: [{ type: "function", function: {
+          name: "generate_image", arguments: JSON.stringify({ prompt: "held callback cleanup" }),
+        } }] } }] });
+        assert.equal(call.url, "https://api.x.ai/v1/images/generations");
+        return Response.json({ data: [{ url: providerUrl }] });
+      },
+    }, async (fixture) => {
+      generatedDir = fixture.generatedDir;
+      const controller = new AbortController();
+      let release!: () => void, entered!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const callbackEntered = new Promise<void>((resolve) => { entered = resolve; });
+      const pending: Promise<unknown>[] = [];
+      try {
+        const { prepareImageExecution } = await import("../lib/providers/execution/index.ts");
+        const preparation = fixture.trackWork(prepareImageExecution(fixture.ctx, {
+          surface: "multimode", provider: "grok-api", requestId: fixture.requestId, signal: controller.signal,
+          prompt: "callback cleanup", rawPrompt: "callback cleanup", references: [], providerUrl: null, maxImages: 2, nai: {},
+          options: { model: "grok-imagine-image", quality: "medium", size: "1024x1024", moderation: "low", mode: "direct", reasoningEffort: "none", webSearchEnabled: false },
+        }, { onFinalImage: async (_image, index) => {
+          assert.equal(index, 0); entered(); await gate; order.push("callback-released");
+        } }));
+        pending.push(preparation);
+        const prepared = await preparation;
+        const work = fixture.trackWork(prepared.execute().finally(() => { order.push("execution-settled"); }));
+        pending.push(work);
+        await bounded(callbackEntered);
+        assert.deepEqual(order, []);
+        assert.fail("intentional held-callback assertion failure");
+      } finally {
+        release(); controller.abort();
+        const settled = await bounded(Promise.allSettled(pending));
+        const execution = settled[1];
+        assertCanceledExecution(execution);
+        // A real public-wrapper GET after execution settlement can succeed only while
+        // this case's pinned fixture remains active. No policy/download replacement.
+        const { downloadGrokImageUrl } = await import("../lib/grokImageCore.ts");
+        const probeController = new AbortController();
+        const probe = fixture.trackWork(downloadGrokImageUrl(providerUrl, probeController.signal));
+        try { assert.equal((await bounded(probe)).b64, first); }
+        finally { probeController.abort(); await bounded(Promise.allSettled([probe])); }
+        order.push("pinned-probe-complete");
+        assert.equal(fixture.imageTransportCalls.length, 2);
+        assert.equal(fixture.calls.filter((call) => call.url.endsWith("/images/generations")).length, 1);
+      }
+    }), (error) => error instanceof assert.AssertionError && error.message.includes("intentional held-callback assertion failure"));
+    order.push("harness-cleaned");
+    assert.deepEqual(order, ["callback-released", "execution-settled", "pinned-probe-complete", "harness-cleaned"]);
+    await assert.rejects(access(generatedDir), { code: "ENOENT" });
   });
 });

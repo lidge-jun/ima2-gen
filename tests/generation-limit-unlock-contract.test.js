@@ -54,6 +54,7 @@ test("server generation paths no longer keep hard-coded 8 image-count caps", () 
     "lib/oauthProxy/streams.ts",
     "lib/responsesImageAdapter.ts",
     "lib/grokMultimodeAdapter.ts",
+    "lib/providers/adapters/grokMultimodeOperations.ts",
     "lib/agentCommandParser.ts",
     "lib/agentRuntime.ts",
     "lib/agentGenerationPlanner.ts",
@@ -67,8 +68,8 @@ test("server generation paths no longer keep hard-coded 8 image-count caps", () 
   }
 });
 
-test("each new OpenAI owner rejects an in-memory eight-cap mutation", () => {
-  for (const owner of openaiOwners) {
+test("each migrated owner rejects an in-memory eight-cap mutation", () => {
+  for (const owner of [...openaiOwners, "lib/providers/adapters/grokMultimodeOperations.ts"]) {
     const source = readSource(owner);
     assertNoEightCap(source, owner);
     for (const mutation of ['const capped = Math.min(8, requested);', 'const help = "<1-8>";']) {

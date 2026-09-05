@@ -1,25 +1,54 @@
-import { afterEach, describe, it } from "node:test";
+import { after, afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import sharp from "sharp";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { registerGenerateRoutes } from "../routes/generate.ts";
-import { registerEditRoutes } from "../routes/edit.ts";
-import { registerMultimodeRoutes } from "../routes/multimode.ts";
-import { registerNodeRoutes } from "../routes/nodes.ts";
-import { config } from "../config.js";
+import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
+import { drain, installTrackedWrites } from "./_executionTrackedWrites.ts";
+import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
 
-const FINAL_B64 = Buffer.from("final image").toString("base64");
-const SECOND_B64 = Buffer.from("second image").toString("base64");
+const isolation = await isolateExecution();
+const { imageTransport } = isolation;
+const deniedFetch = globalThis.fetch;
+const originalFetch = isolation.nativeFetch;
+let appOrigin: string | undefined;
+let closeDb: (() => void) | undefined;
+let restoreWrites: (() => void) | undefined;
+after(async () => {
+  try { await drain(); }
+  finally {
+    try { closeDb?.(); restoreWrites?.(); }
+    finally { await isolation.close(); }
+  }
+});
+afterEach(async () => {
+  try {
+    await imageTransport.deactivate();
+    assert.deepEqual(imageTransport.violations, []);
+  } finally { globalThis.fetch = deniedFetch; }
+});
+
+const { config } = await import("../config.js");
+for (const key of ["configDir", "dbPath", "generatedDir", "trashDir", "generationRequestLogFile"] as const) {
+  assertOwned(isolation.rootDir, config.storage[key]);
+}
+({ closeDb } = await import("../lib/db.js"));
+restoreWrites = await installTrackedWrites();
+const { registerGenerateRoutes } = await import("../routes/generate.ts");
+const { registerEditRoutes } = await import("../routes/edit.ts");
+const { registerMultimodeRoutes } = await import("../routes/multimode.ts");
+const { registerNodeRoutes } = await import("../routes/nodes.ts");
+
+const FINAL_B64 = await pngB64();
+const SECOND_B64 = await pngB64({ alpha: true });
 const PARTIAL_B64 = Buffer.from("partial image").toString("base64");
 
-let originalFetch = globalThis.fetch;
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
+async function fetchOwnedApp(url: Parameters<typeof fetch>[0], init?: RequestInit) {
+  const target = new URL(url instanceof Request ? url.url : String(url));
+  assert.ok(appOrigin && target.origin === appOrigin, "Native fetch is limited to the owned app server");
+  return originalFetch(url, { ...init, redirect: "error" });
+}
 
 function sseResponse(events) {
   const encoder = new TextEncoder();
@@ -52,7 +81,7 @@ function imageEvents(images = [FINAL_B64]) {
 }
 
 async function withApp(fn, { apiKey = "sk-test" } = {}) {
-  const rootDir = await mkdtemp(join(tmpdir(), "ima2-api-provider-"));
+  const rootDir = await mkdtemp(join(isolation.rootDir, "api-provider-"));
   const generatedDir = join(rootDir, "generated");
   const ctx = {
     rootDir,
@@ -71,14 +100,30 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
   registerMultimodeRoutes(app, ctx);
   registerNodeRoutes(app, ctx);
   const server = await new Promise<import("node:http").Server>((resolve) => {
-    const s = app.listen(0, "127.0.0.1", () => resolve(s));
+    const s = listenOwnedLoopback(() => app.listen(0, "127.0.0.1", () => resolve(s)));
   });
   const addr = server.address() as import("node:net").AddressInfo;
   const baseUrl = `http://127.0.0.1:${addr.port}`;
+  appOrigin = baseUrl;
+  const respond = globalThis.fetch;
   try {
+    assert.notEqual(respond, originalFetch);
+    assert.notEqual(respond, deniedFetch);
+    imageTransport.activate({
+      hosts: { "cdn.x.ai": [{ address: "8.8.8.8", family: 4 }] },
+      respond: (call) => {
+        assert.equal(call.method, "GET");
+        assert.equal(call.body, "");
+        return respond(call.url, { method: "GET", headers: call.headers, signal: call.signal });
+      },
+    });
     await fn({ baseUrl, generatedDir });
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    try {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await imageTransport.deactivate();
+      await drain();
+    } finally { appOrigin = undefined; }
     await rm(rootDir, { recursive: true, force: true });
   }
 }
@@ -100,7 +145,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       calls.push({ url, init, body: JSON.parse(init.body) });
       return sseResponse(imageEvents());
@@ -136,7 +181,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       const body = JSON.parse(String(init?.body || "{}"));
       calls.push({ url: String(url), body });
@@ -196,13 +241,15 @@ describe("API provider parity", () => {
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/responses")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/chat/completions")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/generations")).length, 2);
+      assert.equal(imageTransport.calls.length, 2);
+      assert.equal(imageTransport.resolutions.length, 2);
     });
   });
 
   it("generate provider=grok returns provider URL metadata for immediate continue-as-url actions", async () => {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       if (String(url).endsWith("/v1/responses")) {
         return Response.json({
@@ -251,6 +298,8 @@ describe("API provider parity", () => {
       assert.equal(body.provider, "grok");
       assert.equal(body.providerUrl, "https://cdn.x.ai/test-single-gen.png");
       assert.equal(typeof body.createdAt, "number");
+      assert.equal(imageTransport.calls.length, 1);
+      assert.equal(imageTransport.resolutions.length, 1);
     });
   });
 
@@ -258,7 +307,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       calls.push({ url: String(url), body });
@@ -313,6 +362,8 @@ describe("API provider parity", () => {
       assert.ok(editCall);
       assert.equal(editCall.body.image.url, "https://cdn.x.ai/source-image.png");
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/generations")).length, 0);
+      assert.equal(imageTransport.calls.length, 1);
+      assert.equal(imageTransport.resolutions.length, 1);
     });
   });
 
@@ -320,7 +371,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       calls.push({ url: String(url), body });
@@ -358,6 +409,8 @@ describe("API provider parity", () => {
       assert.equal(sidecar.providerUrl, "https://cdn.x.ai/edit-output.jpeg");
       assert.equal(sidecar.kind, "edit");
       assert.equal(sidecar.provider, "grok");
+      assert.equal(imageTransport.calls.length, 1);
+      assert.equal(imageTransport.resolutions.length, 1);
     });
   });
 
@@ -365,7 +418,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       calls.push({ url: String(url), body: init?.body });
       return Response.json({ error: "unexpected upstream" }, { status: 500 });
@@ -395,7 +448,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       calls.push({ url: String(url), body: init?.body });
       return Response.json({ error: "unexpected upstream" }, { status: 500 });
@@ -424,7 +477,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       calls.push({ body: JSON.parse(init.body) });
       return sseResponse(imageEvents());
@@ -449,7 +502,7 @@ describe("API provider parity", () => {
     let upstreamHits = 0;
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       upstreamHits++;
       return sseResponse(imageEvents());
@@ -470,7 +523,7 @@ describe("API provider parity", () => {
   it("provider=api sanitizes upstream 4xx messages before route responses", async () => {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       return jsonResponse({
         error: {
@@ -509,7 +562,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       calls.push(JSON.parse(init.body));
       return sseResponse(imageEvents());
@@ -535,7 +588,7 @@ describe("API provider parity", () => {
   it("multimode provider=api preserves SSE image and done envelope", async () => {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       return sseResponse(imageEvents([FINAL_B64, SECOND_B64]));
     };
@@ -561,7 +614,7 @@ describe("API provider parity", () => {
   it("multimode provider=api converts zero returned images into an SSE error", async () => {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       return sseResponse(imageEvents([]));
     };
@@ -583,7 +636,7 @@ describe("API provider parity", () => {
   it("node provider=api preserves SSE partial and done envelope", async () => {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       return sseResponse(imageEvents());
     };
@@ -606,7 +659,7 @@ describe("API provider parity", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       const body = JSON.parse(String(init?.body || "{}"));
       calls.push({ url: String(url), body });
@@ -661,6 +714,8 @@ describe("API provider parity", () => {
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/chat/completions")).length, 1);
       assert.equal(calls.filter((call) => call.url.endsWith("/v1/images/generations")).length, 1);
       assert.equal(calls.find((call) => call.url.endsWith("/v1/images/generations"))?.body.model, "grok-imagine-image-2.0");
+      assert.equal(imageTransport.calls.length, 1);
+      assert.equal(imageTransport.resolutions.length, 1);
     });
   });
 
@@ -668,7 +723,7 @@ describe("API provider parity", () => {
     const reference = await pngB64();
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       throw new Error(`unexpected upstream call: ${String(url)}`);
     };
@@ -694,7 +749,7 @@ describe("grok web-search toggle (070 QA regression)", () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
-        return originalFetch(url, init);
+        return fetchOwnedApp(url, init);
       }
       const body = JSON.parse(String(init?.body || "{}"));
       calls.push({ url: String(url), body });
@@ -728,6 +783,9 @@ describe("grok web-search toggle (070 QA regression)", () => {
       assert.equal(body.webSearchCalls, 0);
       assert.equal(calls.filter((c) => c.url.endsWith("/v1/responses")).length, 0, "no forced web search when disabled");
       assert.equal(calls.filter((c) => c.url.endsWith("/v1/chat/completions")).length, 1, "planner still runs without search");
+      assert.equal(calls.filter((c) => c.url.endsWith("/v1/images/generations")).length, 1);
+      assert.equal(imageTransport.calls.length, 1);
+      assert.equal(imageTransport.resolutions.length, 1);
     });
   });
 });
