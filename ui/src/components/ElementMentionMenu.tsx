@@ -28,7 +28,7 @@ type ElementMentionMenuProps = {
   emptyLabel: string;
   kindLabel(kind: ElementMentionKind): string;
   onSelect(element: ElementMentionOption): void;
-  onClose(): void;
+  onClose(reason?: "escape"): void;
   onActiveChange?(index: number): void;
 };
 
@@ -104,7 +104,7 @@ export function ElementMentionMenu({ open, textareaRef, composingRef, caret, que
       if (document.activeElement !== textarea) return;
       if (composingRef?.current || event.isComposing || event.keyCode === 229) return;
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) return;
-      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
+      if (event.key === "Escape") { event.preventDefault(); onClose("escape"); return; }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setActive((activeIndex + (event.key === "ArrowDown" ? 1 : -1) + visibleElements.length) % Math.max(1, visibleElements.length)); }
       else if (event.key === "Home") { event.preventDefault(); setActive(0); }
       else if (event.key === "End") { event.preventDefault(); setActive(Math.max(0, visibleElements.length - 1)); }

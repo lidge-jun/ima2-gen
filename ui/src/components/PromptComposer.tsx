@@ -463,18 +463,18 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
           insertTagAtMention(trayElement.tag, mentionQuery);
           setMentionQuery(null);
         }}
-        onClose={() => setMentionQuery(null)}
+        onClose={(reason) => {
+          if (reason === "escape" && mentionQuery) dismissedMentionKeyRef.current = mentionKey(mentionQuery);
+          setMentionQuery(null);
+        }}
       />
-
       {afterPrompts.length > 0 && (
         <div className="composer__prompt-chips composer__prompt-chips--after">
           <span className="composer__prompt-chips-label">{t("prompt.afterBlocks")}</span>
           {afterPrompts.map(renderPromptChip)}
         </div>
       )}
-
       <PromptComposerToolbar canAddMore={canAddMore} onAttach={openFilePicker} />
-
       {dragOver && (
         <div className="composer__dropzone" aria-hidden="true">
           {t("prompt.dropHere", { max: maxRefs })}
