@@ -147,7 +147,7 @@ export class DownloadNetwork {
 
   install() {
     const lookup = mock.method(promiseDns, "lookup", async (hostname: string) => {
-      if (!this.active || !(hostname in this.hosts)) return this.deny(`DNS ${hostname}`);
+      if (!this.active || !Object.hasOwn(this.hosts, hostname)) return this.deny(`DNS ${hostname}`);
       this.resolutions.push(hostname);
       const addresses = this.resolve ? await this.resolve(hostname) : this.hosts[hostname];
       this.resolved.set(hostname, addresses.map((address) => ({ ...address })));
@@ -169,8 +169,9 @@ export class DownloadNetwork {
   }
 
   activate() {
+    assert.deepEqual(this.violations, [], "Prior network violations prevent fixture activation");
     assert.equal(this.pending.size, 0);
-    this.exchanges = []; this.resolutions = []; this.order = []; this.violations = [];
+    this.exchanges = []; this.resolutions = []; this.order = [];
     this.active = true; this.resolve = undefined; this.respond = () => ({});
     this.resolved.clear();
     this.hosts = {
