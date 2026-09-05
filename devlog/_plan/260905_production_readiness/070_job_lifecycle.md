@@ -1,6 +1,7 @@
 # WP07 — Recoverable tracker termination and bounded event delivery
 
-Status: WP00 design, not implemented. Baseline and executed command results:
+Status: WP07 P at f2b60b64; not implemented. 071/072 are mandatory amendments.
+Historical baseline:
 [004_lifecycle_operations_research.md](004_lifecycle_operations_research.md).
 
 ## Execution contract
@@ -10,7 +11,9 @@ Status: WP00 design, not implemented. Baseline and executed command results:
 - Goal: a canceled/expired tracked job cannot silently resume, and a disconnected
   client can reconcile an explicit terminal outcome without an unbounded SSE sink.
 - Non-goals: new envelope, idempotency, job queue, provider retry, cross-process
-  controller ownership, total-order terminal arbitration, or shutdown redesign.
+  controller ownership, arbitrary success/error total ordering, or shutdown redesign.
+  Bounded canceled/expired terminal dominance and the original node/video failures
+  are in scope per071; polling and presentation repairs are in072.
 - Verifier: targeted SQLite/transport/browser-channel tests and exact-tip CI.
 - Stop: every activation row below passes, including mutation negatives and review.
 - Memory artifact: this decade plus the research ledger; main owns FSM/goal/git.
@@ -24,9 +27,7 @@ entry signatures. WP03 owns selected-provider authentication/reference refusal a
 proposed `lib/providers/execution/types.ts`; WP02 is pure UI state, not pre-dispatch
 authentication. Callers keep startJob/finishJob/persistence. WP07 does not move those
 responsibilities into adapters. WP04–06 are regression consumers, not imports of this WP.
-Stack: base WP06m (065 bounded video downloads after WP06); next WP08 integrates
-cumulative behavior. WP06m adds no semantic job API dependency; it is the verified
-transport baseline immediately below this layer.
+Stack: base verified WP06s/PR207 at f2b60b64; next WP08 integrates cumulative behavior.
 
 Current: routes/pipelines → inflight → db/eventBus; ssePublish → inflight/eventBus;
 events route → eventBus only; browser eventChannel → server and resync callback.
@@ -175,7 +176,8 @@ reading terminalJobs in `startJob` when respectCanceledTombstone is true.
 Before ssePublish: `if (event === "done" && isJobCanceled(requestId)) return false;`
 After: same condition with `(isJobCanceled(requestId) || isJobTrackingExpired(requestId))`.
 Preserve return boolean, data/envelope shape, sequence allocation and sync adapters.
-This suppresses late success, not every possible duplicate provider failure event.
+071 supersedes this guard: suppress late done AND error after canceled/expired
+state, with cancellation state established before synchronous abort listeners.
 
 ### Tracking-timeout consumer repair (R1-08)
 
@@ -230,7 +232,8 @@ and toast path. Existing graph/pending cleanup remains unchanged. This fixes vid
 direct showToast bypass without changing unrelated error semantics.
 
 `mcpProviders.ts` replaces watchMcpJob's hand-built Error/code with
-`callbacks.onError?.(parseSseErrorPayload(data, "MCP generation failed"))`, importing
+`callbacks.onError?.(parseSseErrorPayload(data,
+typeof data.message === "string" ? data.message : "MCP generation failed"))`, importing
 the existing parser. Keep finish/unsubscribe/timer behavior. `storeSettingsImpl.ts`
 adds `if (candidate.code === "JOB_TRACKING_TIMEOUT") return t("toast.jobTrackingTimeout");`
 before its MCP-specific branches. Both existing callback and catch callers reuse it.
@@ -359,9 +362,8 @@ return oldest !== null && lastEventId < oldest - 1;
 ```
 
 Keep numeric SSE IDs and existing gap payload, including nullable oldestAvailableId.
-Do not claim equal/lower cursor collision after restart is detected: numeric cursors
-have no epoch. Existing reconnect resync covers that case; adding an epoch is outside
-this WP's compatibility budget.
+Numeric cursors cannot detect equal/lower collisions after restart. Existing
+reconnect resync covers that case; an epoch is outside this WP's compatibility budget.
 
 Before safeWrite: ignores `res.write` boolean. After: `return res.write(chunk);`
 false means disconnect subscriber, not retry chunk (Node already accepted it).
@@ -466,9 +468,8 @@ its hardened existing fixture. No bypass routes in production or paid canary.
 
 ## Verification, compatibility and rollback
 
-Baseline commands/exits are in research: 28 targeted tests and both typechecks pass
-while fault probes demonstrate defects. Future tests do not exist at WP00.
-Implementation C runs the same 28 plus new exact test paths, real ssePublish tests,
+Current P baselines/probes are in071/072; historical WP00 results are in004.
+Implementation C runs affected baseline and new exact paths, real ssePublish tests,
 `npm run typecheck`, `npm run typecheck:tests`, focused UI channel test; full suites
 only exact-tip CI. Build server/CLI and UI in CI; refresh counts/inventory in same PR.
 Mutation proof: remove late-register guard, restore DELETE-only purge, ignore
@@ -484,8 +485,7 @@ node --experimental-test-module-mocks --import tsx --test tests/job-tracking-tim
 npm --prefix ui run test:e2e -- e2e/j7b-tracking-timeout.spec.ts
 ```
 
-Browser command is hosted-only; root typecheck excludes UI, so retain CI's full UI build.
-
+Browser command is hosted-only; retain CI's UI build (root typecheck excludes UI).
 No schema migration. Legacy consumers see existing error status/code fields and
 additive envelope; original status spellings retained. Existing TTL and terminal TTL
 unchanged. Slow SSE peers may reconnect sooner by design; replay/snapshot recovery
@@ -496,4 +496,4 @@ user files. New error snapshots are readable by old clients as ordinary failures
 Old clients may lose the explicit unknown-completion warning; that is a rollback
 limitation, not evidence of safe retry. Revert parser/resolver/dictionaries and CLI
 mapping together; do not strand a new registry key without localized text.
-No automatic retry during rollback. Current-architecture docs synchronize in the same implementation PR.
+No automatic retry during rollback; current-architecture docs sync in this PR.

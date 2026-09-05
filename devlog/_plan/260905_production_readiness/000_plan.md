@@ -33,9 +33,11 @@ wholesale rewrite, shared-branch forced update or branch-protection bypass.
 User authorizes task push, >=10 stacked implementation PRs, bottom-up merge and
 canonical release. Existing unrelated dependency PRs are out of scope.
 
-Dispatch amendment: explicitly gpt-6-astra / high for every work/review agent;
-priority is user-confirmed. This supersedes the original omit-field clause in the
-host objective. Five Luna execution drafts required independent Astra rederivation.
+Dispatch history: earlier cycles explicitly selected gpt-6-astra/high; priority
+was user-confirmed, not independently measured. WP07 onward follows the active
+goal's inheritance instruction: omit model and reasoning_effort on new spawns.
+Actual selection follows the parent/app settings, not a worker's self-description.
+Five historical Luna execution drafts required independent Astra rederivation.
 Workers are leaves; main owns FSM/goal/remote decisions. Failed A rounds synthesize
 then reuse the auditor; C uses fresh independent scrutiny.
 
