@@ -3,6 +3,7 @@ import test from "node:test";
 import * as path from "node:path";
 import { build } from "esbuild";
 import { EventEmitter } from "node:events";
+import * as urls from "node:url";
 
 // Execute the actual preflight in a synthetic host, never start the fixture.
 // No HOME mutation, real filesystem probe, browser, socket, or child process.
@@ -10,7 +11,20 @@ const runnerHome = "/home/runner";
 const checkout = runnerHome + "/work/ima2-gen/ima2-gen";
 const azure = "/opt/az/azcliextensions";
 const result = await build({ entryPoints: ["ui/e2e/fixtures/appServer.ts"], bundle: true,
-  write: false, platform: "node", format: "cjs", external: ["node:*"], logLevel: "silent" });
+  write: false, platform: "node", format: "cjs", external: ["node:*", "@playwright/test"], logLevel: "silent",
+  define: { "import.meta.url": JSON.stringify(`file://${checkout}/ui/e2e/fixtures/appServer.ts`) },
+  plugins: [{ name: "preflight-owner-boundaries", setup(builder) {
+    const replacements = {
+      "./appProjection": "export const createAppProjection=(x)=>__wp09.projection(x);export const verifyAppProjection=async()=>{};",
+      "./appOwnership": "export const issueAppHome=async()=>'/tmp/wp09-synthetic';export const requireAppHome=async()=>{};export const registerOwnedApp=async(x)=>__wp09.register(x);export const isOwnedBrowserOrigin=()=>false;export const disposeOwnedApps=async()=>{};export const hasUnexitedOwnedApps=()=>false;",
+      "./appRuntimeBuild": "export const disposeRuntimeBuildCache=async()=>{};",
+      "./stubUpstream": "export const startStubUpstream=(mode)=>__wp09.stub(mode);",
+    };
+    builder.onResolve({ filter: /.*/ }, (args) => args.importer.endsWith("appServer.ts") && Object.hasOwn(replacements, args.path)
+      ? { path: args.path, namespace: "preflight" } : undefined);
+    builder.onLoad({ filter: /.*/, namespace: "preflight" }, (args) => ({ contents: replacements[args.path], loader: "js" }));
+  } }],
+});
 
 function host(overrides = {}) {
   return {
@@ -38,6 +52,8 @@ function load(state, overrides = {}) {
     writeFileSync: () => { throw Error("preflight must not write files"); },
   };
   const modules = { "node:fs": { ...fs, ...overrides.fs }, "node:path": path,
+    "node:url": urls, "@playwright/test": { expect: {}, test: { extend: () => ({}) } },
+    "node:fs/promises": overrides.promises ?? {},
     "node:os": { homedir: () => runnerHome, userInfo: () => ({ homedir: runnerHome }), tmpdir: () => "/tmp" },
     "node:child_process": overrides.childProcess ?? { spawn: () => { throw Error("preflight must not spawn"); } },
     "node:http": overrides.http ?? { createServer: () => { throw Error("preflight must not open sockets"); } },
@@ -48,9 +64,13 @@ function load(state, overrides = {}) {
     if (!Object.hasOwn(modules, name)) throw Error("Unexpected preflight dependency: " + name);
     return modules[name];
   };
-  new Function("require", "module", "exports", "process", result.outputFiles[0].text
+  new Function("require", "module", "exports", "process", "__wp09", result.outputFiles[0].text
     + "\n//# sourceURL=wp02-preflight-bundle.js")(require, module, module.exports,
-    { env: state.env, platform: "linux", cwd: () => checkout + "/ui", execPath: "/fixture/node" });
+    { env: state.env, platform: "linux", cwd: () => checkout + "/ui", execPath: "/fixture/node" }, {
+      projection: overrides.projection ?? (() => { throw Error("preflight must not project"); }),
+      stub: overrides.stub ?? (() => { throw Error("preflight must not start upstream"); }),
+      register: overrides.register ?? (() => {}),
+    });
   return module.exports;
 }
 
@@ -158,38 +178,55 @@ test("J6 recognizes observed canonical root-owned777 Azure path as unused metada
   assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.mode, "777");
 });
 
-test("actual J6 startApp excludes both metadata variables from captured child options", async () => {
+test("actual J6 startApp binds an emitted projection, IPC and allowlisted child environment", async () => {
   const state = host({ mode: 0o777 }); state.env.PATH = "/fixture/bin";
-  const captured = []; const writes = []; let stubClosed = false;
+  const captured = [], writes = []; let stubClosed = false, projectionClosed = false, registered;
   const child = Object.assign(new EventEmitter(), {
-    stdout: new EventEmitter(), stderr: new EventEmitter(), exitCode: null, signalCode: null,
-    kill(signal) { this.signalCode = signal; queueMicrotask(() => this.emit("exit", null, signal)); return true; },
+    pid: 123, stdout: new EventEmitter(), stderr: new EventEmitter(), exitCode: null, signalCode: null,
+    kill(signal) { this.signalCode = signal; queueMicrotask(() => { this.emit("exit", null, signal); this.emit("close", null, signal); }); return true; },
   });
+  const projection = { root: "/tmp/wp09-runtime", guardPath: "/tmp/wp09-runtime/appNetworkGuard.mjs",
+    entryPath: "/tmp/wp09-runtime/server.js", policyPath: "/tmp/wp09-runtime/fixture-policy.json",
+    dispose: async () => { projectionClosed = true; } };
   const api = load(state, {
     net: fakeFallbackNet().net,
-    fs: { mkdtempSync: () => "/tmp/wp02-synthetic", writeFileSync: (p, value) => writes.push([p, JSON.parse(value)]) },
+    promises: {
+      mkdir: async () => {}, realpath: async (path) => path,
+      lstat: async () => ({ isDirectory: () => true, isSymbolicLink: () => false }),
+      writeFile: async (path, value) => { writes.push([path, value]); },
+    },
+    projection: async (options) => { assert.equal(options.repoRoot, checkout); return projection; },
+    register: (record) => { registered = record; },
+    stub: async () => ({ url: "http://127.0.0.1:40123/v1", calls: [], externalAttempts: [], generationRequests: [],
+      close: async () => { stubClosed = true; } }),
     childProcess: { spawn: (...args) => {
       captured.push(args);
-      queueMicrotask(() => child.stdout.emit("data", Buffer.from("Image Gen running at http://127.0.0.1:40124")));
+      queueMicrotask(() => {
+        child.emit("message", { type: "ima2-e2e-guard-ready", version: 1 });
+        child.stdout.emit("data", Buffer.from("Image Gen running at http://127.0.0.1:40124"));
+      });
       return child;
     } },
-    http: { createServer: () => ({
-      listen: (_port, _host, ready) => ready(), address: () => ({ port: 40123 }),
-      close: (done) => { stubClosed = true; done(); },
-    }) },
   });
   const app = await api.startApp("minimax", { j6: true, provider: "oauth" });
   try {
     assert.equal(captured.length, 1);
     const [command, args, options] = captured[0];
-    assert.equal(command, "/fixture/node"); assert.deepEqual(args, ["--import", "tsx", "server.ts"]);
-    assert.equal(Object.hasOwn(options.env, "AZURE_EXTENSION_DIR"), false);
-    assert.equal(Object.hasOwn(options.env, "XDG_CONFIG_HOME"), false);
-    assert.equal(options.env.HOME, runnerHome);
+    assert.equal(command, "/fixture/node");
+    assert.deepEqual(args, ["--import", projection.guardPath, projection.entryPath]);
+    assert.equal(options.cwd, projection.root);
+    assert.equal(options.stdio.at(-1), "ipc");
+    for (const name of ["AZURE_EXTENSION_DIR", "XDG_CONFIG_HOME", "HOME", "NODE_OPTIONS"]) assert.equal(Object.hasOwn(options.env, name), false);
     assert.equal(options.env.IMA2_NO_OAUTH_PROXY, "1"); assert.equal(options.env.IMA2_NO_GROK_PROXY, "1");
+    assert.equal(options.env.IMA2_MCP_PROVIDERS, ",");
+    assert.equal(options.env.IMA2_E2E_POLICY, projection.policyPath);
     assert.equal(Object.hasOwn(options, "shell"), false);
-    assert.equal(writes.length, 1); assert.deepEqual(writes[0][1].mcp.enabledProviders, []);
+    const configWrites = writes.filter(([path]) => path.endsWith("/config.json"));
+    assert.equal(configWrites.length, 1); assert.deepEqual(JSON.parse(configWrites[0][1]).mcp.enabledProviders, []);
+    assert.equal(writes.filter(([path, value]) => path.endsWith("/fixture.env") && value === "").length, 1);
+    assert.equal(app.guard.ready, true); assert.equal(registered.appOrigin, app.baseUrl);
     assert.equal(app.isolation.azureExtensionHandling, "unused-public-tool-metadata");
   } finally { await app.close(); }
-  assert.equal(child.signalCode, "SIGTERM"); assert.equal(stubClosed, true);
+  assert.equal(child.signalCode, "SIGTERM"); assert.equal(stubClosed, true); assert.equal(projectionClosed, true);
+  assert.equal(registered.exited(), true);
 });

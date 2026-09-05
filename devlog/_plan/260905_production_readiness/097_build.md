@@ -48,3 +48,27 @@ body consumption despite claiming an after-headers case. Corrected fixtures awai
 the actual body-read signal and retain the stale-selection guard. Nine focused
 MCP tests now pass without asynchronous activity after test completion. Native
 render/lifetime coverage and remaining parser adversarial cases are still open.
+
+Parent integration refinement: register an owned starting app with appOrigin:null
+until the actual listener address is observed; null never grants browser access.
+This retains startup-failure child ownership without inventing a URL. Home identity
+checks are async and expose hasUnexitedOwnedApps so worker cleanup never removes
+the shared emitted cache while a child exit is unproven. The resource/verification
+split and no-forged-ready IPC contract are unchanged.
+
+Main replaced the unsafe two-case guard test with a pure bundled-module VM fixture.
+Every node:fs/process/network/os/module dependency is replaced by in-memory objects
+and native-call sentinels; unknown requires reject. It does not install hooks into
+the host process or start an app/socket/provider. Local execution of this pure
+fixture is within the existing mocked-helper allowance. Actual Node preload,
+filesystem/syscall and server/browser proof remains hosted-only I1–I9; do not
+promote VM results into OS/runtime isolation claims.
+
+Main parent/guard rewrites now typecheck. The old J6 regression was migrated to
+mock the new ownership/projection boundaries while still executing the actual
+preflight/startApp source. All12 J6 cases pass, including rejection before resource
+allocation and an emitted --import/IPC/allowlisted-env launch through fake child
+and projection objects. Four new pure guard VM cases and13 receipt cases pass.
+This replaces obsolete tsx/HOME assumptions without deleting hosted identity,
+fallback refusal or zero-real-startup assertions. Actual hosted startup is still
+unverified and remains the next integration gate.
