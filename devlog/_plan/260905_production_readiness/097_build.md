@@ -37,3 +37,14 @@ test initially failed because the host filesystem collapsed the two names, then
 its mock matched lexical /var rather than canonical /private/var. Canonical
 boundary matching plus an injected-call counter proves the collision branch fires.
 No production check was weakened; remaining UIR/guard/journey gates stay open.
+
+Main UI integration found a second set of real gaps: parser narrowing/type errors,
+unchecked connection/executable values, missing provider/model/kind facts and an
+uncancelled manual refresh path. Main rewrote the pure consumed-field projection
+and effect-owned popup read lifecycle. HTTP-error body cleanup is now awaited.
+Worker tests were also wrong: they expected a new selection to be ready against
+an old selection snapshot, supplied a non-Promise cancel stub and aborted before
+body consumption despite claiming an after-headers case. Corrected fixtures await
+the actual body-read signal and retain the stale-selection guard. Nine focused
+MCP tests now pass without asynchronous activity after test completion. Native
+render/lifetime coverage and remaining parser adversarial cases are still open.

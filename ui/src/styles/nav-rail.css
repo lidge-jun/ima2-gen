@@ -101,6 +101,11 @@
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   z-index: 160;
+  overflow-x: auto;
+  justify-content: flex-start;
+  gap: 8px;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
 }
 
 /* Touch has no hover, so the tab bar shows its labels permanently. min-width/min-height
@@ -113,6 +118,7 @@
   height: auto;
   min-height: 44px;
   padding: 4px 6px;
+  flex: 0 0 auto;
 }
 
 .nav-rail--mobile .nav-rail__label {

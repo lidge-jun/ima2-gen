@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { jsonFetch } from "./api-core";
+import { jsonFetch, jsonGetObservation } from "./api-core";
 import { armStreamTimeout, subscribe } from "./eventChannel";
 import { parseSseErrorPayload } from "./sseStreamError";
 
@@ -80,6 +80,14 @@ export async function listMcpProviders(signal?: AbortSignal): Promise<McpProvide
   const response = await jsonFetch<McpProvidersResponse>("/api/mcp/providers", { signal });
   providerCache = Array.isArray(response.providers) ? response.providers : [];
   return providerCache;
+}
+
+export function readMcpProviderObservation(signal?: AbortSignal): Promise<unknown> {
+  return jsonGetObservation("/api/mcp/providers", signal);
+}
+
+export function readMcpModelObservation(provider: string, signal?: AbortSignal): Promise<unknown> {
+  return jsonGetObservation(`/api/mcp/providers/${encodeURIComponent(provider)}/models`, signal);
 }
 
 export function getCachedMcpProviders(): readonly McpProviderRecord[] {

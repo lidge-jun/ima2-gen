@@ -5,6 +5,7 @@ import { useProviderAvailability } from "../hooks/useProviderAvailability";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { useLaneCatalog } from "../hooks/useLaneCatalog";
 import { deriveComfyDisplay, comfyDisplayMessageKey } from "../lib/comfyDisplay";
+import { McpReadinessDetails } from "./McpReadinessDetails";
 
 /**
  * Short readiness-facts label per lane. Kept exhaustive rather than a ternary
@@ -67,6 +68,8 @@ export function ProviderReadinessPopup() {
           {t("readiness.title")}
         </div>
         <div className="modal__body provider-readiness__body">
+          {mcpProvider ? <McpReadinessDetails /> : null}
+          {!mcpProvider && <>
           <div className={`provider-readiness__status${ready ? " is-ok" : " is-blocked"}`}>
             <span aria-hidden="true" />
             <strong>{isComfy ? t(comfyDisplayMessageKey(comfyDisplay, laneCatalog)) : ready ? t("readiness.ready") : t("readiness.blocked")}</strong>
@@ -110,6 +113,7 @@ export function ProviderReadinessPopup() {
               </>
             )}
           </dl>}
+          </>}
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__btn modal__btn--secondary" onClick={close} data-modal-initial-focus>

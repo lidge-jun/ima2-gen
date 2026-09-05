@@ -339,7 +339,8 @@
     "webSearch": "Web search",
     "grokApi": "Grok API",
     "grokApiBody": "Runs through bundled progrok: mandatory search, Grok 4.5 image-and-text tool planning in English, then xAI Images API. Attached references use xAI image editing so i2i context is preserved.",
-    "openAccount": "Open account settings"
+    "openAccount": "Open account settings",
+    "mcp": {"loading":"Checking MCP readiness…","error":"MCP readiness could not be read","missing":"Provider is unavailable","disabled":"Provider is disabled","disconnected":"Provider is not connected","locked":"Provider execution is locked","default":"Provider default model","model-missing":"Selected model is unavailable","model-locked":"Selected model execution is locked","ready":"Available at the last connection check.","refresh":"Refresh","observed":"Observed {time}"}
   },
   "generate": {
     "button": "Generate",

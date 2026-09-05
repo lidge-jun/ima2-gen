@@ -339,7 +339,8 @@
     "webSearch": "웹 검색",
     "grokApi": "Grok API",
     "grokApiBody": "번들 progrok에서 필수 검색 → Grok 4.5 이미지·텍스트 도구 기획(영어 프롬프트) → xAI Images API 순서로 실행합니다. 첨부 레퍼런스는 xAI 이미지 편집으로 보내 i2i 맥락을 유지합니다.",
-    "openAccount": "계정 설정 열기"
+    "openAccount": "계정 설정 열기",
+    "mcp": {"loading":"MCP 준비 상태 확인 중…","error":"MCP 준비 상태를 읽지 못했습니다","missing":"공급자를 사용할 수 없습니다","disabled":"공급자가 비활성화되었습니다","disconnected":"공급자가 연결되지 않았습니다","locked":"공급자 실행이 잠겨 있습니다","default":"공급자 기본 모델","model-missing":"선택한 모델을 사용할 수 없습니다","model-locked":"선택한 모델 실행이 잠겨 있습니다","ready":"최근 연결 확인 때 사용 가능했습니다.","refresh":"새로고침","observed":"확인 시각 {time}"}
   },
   "generate": {
     "button": "생성",

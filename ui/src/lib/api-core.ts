@@ -40,6 +40,21 @@ export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> 
   }
   return data;
 }
+
+export async function jsonGetObservation(url: string, signal?: AbortSignal): Promise<unknown> {
+  signal?.throwIfAborted();
+  const res = await fetch(url, { method: "GET", signal });
+  if (!res.ok) {
+    try { await res.body?.cancel(); } catch { /* Preserve the HTTP status if cleanup fails. */ }
+    const error = new Error(`Request failed: ${res.status}`) as Error & { status?: number };
+    error.status = res.status;
+    throw error;
+  }
+  signal?.throwIfAborted();
+  const data = await res.json();
+  signal?.throwIfAborted();
+  return data;
+}
 export function parseSseBlock(block: string): { event: string | null; data: unknown } | null {
   let event: string | null = null;
   const dataLines: string[] = [];

@@ -47,3 +47,13 @@ test("the touch tab bar keeps a 44px touch target in both axes", () => {
   assert.match(rule, /min-width:\s*44px/);
   assert.match(rule, /min-height:\s*44px/);
 });
+
+test("mobile navigation scrolls its own horizontal rail", () => {
+  const src = readFileSync(NAV_RAIL_TSX, "utf8");
+  const css = readFileSync(NAV_RAIL_CSS, "utf8");
+  assert.match(src, /mobileNavRef/);
+  assert.match(src, /nav\.scrollLeft/);
+  assert.doesNotMatch(src, /scrollIntoView/);
+  assert.match(css, /overflow-x:\s*auto/);
+  assert.match(css, /flex:\s*0 0 auto/);
+});

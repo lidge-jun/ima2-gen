@@ -339,7 +339,8 @@
     "webSearch": "網頁搜尋",
     "grokApi": "Grok API",
     "grokApiBody": "透過捆綁的 progrok 運作：強制搜尋、Grok 4.5 英語圖像和文字工具規劃，然後是 xAI Images API。附加參考使用 xAI 影像編輯，因此保留了 i2i 上下文。",
-    "openAccount": "開設帳戶設置"
+    "openAccount": "開設帳戶設置",
+    "mcp": {"loading":"正在檢查 MCP 就緒狀態…","error":"無法讀取 MCP 就緒狀態","missing":"提供者不可用","disabled":"提供者已停用","disconnected":"提供者未連線","locked":"提供者執行已鎖定","default":"提供者預設模型","model-missing":"所選模型不可用","model-locked":"所選模型執行已鎖定","ready":"上次連線檢查時可用。","refresh":"重新整理","observed":"檢查於 {time}"}
   },
   "generate": {
     "button": "產生",

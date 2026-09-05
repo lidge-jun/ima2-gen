@@ -106,6 +106,11 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "settings.imageModel.naiDiffusion5Full", "settings.imageModel.naiDiffusion5Curated",
     "settings.imageModel.naiDiffusion45Full", "settings.imageModel.naiDiffusion45Curated",
   ]],
+  ["ui/src/components/McpReadinessDetails.tsx :: messageKey", [
+    "readiness.mcp.loading", "readiness.mcp.error", "readiness.mcp.missing", "readiness.mcp.disabled",
+    "readiness.mcp.disconnected", "readiness.mcp.locked", "readiness.mcp.default",
+    "readiness.mcp.model-missing", "readiness.mcp.model-locked", "readiness.mcp.ready",
+  ]],
   // REASONING_EFFORT_OPTIONS fullLabelKey literals in ui/src/lib/reasoning.ts.
   ["ui/src/components/ReasoningEffortSelect.tsx :: option.fullLabelKey", reasoningKeys()],
   // The local code-to-key conditional chain in ResultActions.tsx.
