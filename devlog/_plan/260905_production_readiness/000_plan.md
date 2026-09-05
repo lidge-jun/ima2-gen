@@ -156,7 +156,7 @@ Screenshot creation alone is not observation: read the actual rendered result.
 
 Existing repo/GitHub/npm workflow credentials and browser tools; synthetic isolated
 temporary homes. No purchases, extra subscriptions, credential dump or paid images.
-Explicit Astra/high uses account allowances; no numeric token budget requested.
+Delegation follows the inheritance rule above and account allowances; no numeric token budget requested.
 Reassess at four hours per WP and 72 hours overall. Main reclaims a slice after two
 failed agent packets. Failed reviews change the plan; do not forge/fake evidence.
 Single trusted local operator, uncredentialed LAN peers untrusted; no cloud accounts
@@ -191,3 +191,14 @@ WP06m P now consumes065 plus current065_1/065_2; tiny16-byte baseline demonstrat
 whole-body API use and late success on a signal-ignoring held body. No full local
 suite/large allocation/provider call. Auxiliary artifact content/provenance probe
 was tool-blocked and has no execution evidence; no bypass/reproduction claim.
+
+WP07 closure: codefreeze424da8cb, PR208 above207;079_3 records evidence/scope.
+CI33981123923/CodeQL33981125192 success; Node22/24 each3121PASS4skip0FAIL,
+frontend53PASS. RealHTTP14+CLI40+video27PASS, originalduplicatecancelterminalsclosed.
+Visual134PNG,66newdirectlyviewedbyeachoracle/68positiveexactreuse, dualPASS andreceipt.
+AdditionalmacOSartifactjobremainsqueued and is not counted as c-8 proof; nativeMac
+manualproof and the canonical CI gates pass. Fullplatform/PR gates still refresh
+beforemerge/release. WP08 P revalidates080; WP09 must retain observedbaseline
+nodeHUD/defaultfit overlap during journey review. WP12 security/history gates and
+alllaterphases remainmandatory. One reviewer exceeded localtestscope; its broad
+execution is excluded, and a replacement source-only review passed without tests.
