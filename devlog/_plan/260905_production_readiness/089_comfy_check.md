@@ -90,3 +90,26 @@ baseline. Add flex-wrap/center/gap4px8px to this scoped status row and44px min w
 to its existing button; no global layout change. Native320 error case independently
 asserts that text/button rectangles are separated. Current screenshots remain
 candidate evidence until this last render delta has a fresh run.
+
+## Final candidate a1505d61 automated evidence
+
+Freeze `a1505d61b5fc28856e73d02b14b2d48852eed16d`, PR210 parent209.
+CI33993540499 succeeded: Node22+24 each3149 tests,3145 pass,0fail,4skip;
+both install/update/package smokes passed. Frontend179 cases passed in4.4min.
+CodeQL33993541780 succeeded; current93 alert identities match the prior baseline,
+no additions/removals. Existing security debt still blocks overall release until
+its assigned later work phases close. The expanded focused C receipt has100PASS.
+
+Artifact9977428721 contains40PNG/39unique plus35 clean scenario teardowns.
+Main viewed current error desktop/320, Korean390, English1280, selected-video
+popup and scrolled management captures. Provider identity, selected guidance,
+actual management target and recovery spacing are visibly correct. The two
+independent final visual passes are still being collected; do not close D from
+this paragraph alone. Inventory/blob/line-count gates pass; user recording files
+remain the only untracked content. No live provider, paid generation or local
+browser execution was used. Final details live under session evidence/wp08c.
+
+Final visual closure is recorded in089_0. Kant and replacement Mencius each have
+40 actual imageView traces and an explicit all-manifest PASS. Hooke's unsupported
+claim was rejected, not reused. Raw compact verdicts were expanded mechanically
+over the bound manifest; actual trace/hash checks passed before QA receipt exit0.

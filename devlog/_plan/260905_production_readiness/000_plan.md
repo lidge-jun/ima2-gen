@@ -211,3 +211,13 @@ byte-reuse/22newduplicates; dualPASS andQA receipt. Actualcorner/navbleedfinding
 repaired. SoTDESIGN/structure04updated. Currentc9/tasks close through genuineD.
 NextWP08c revalidates085; WP09 carries nodeHUD, compositioninterruption andHome
 roster journey follow-through. No merge/release; wholeproductiongoalcontinues.
+
+WP08c closure: code freeze a1505d61, PR210 above209;089_0 records full proof.
+One shared validated catalog and current workflow admission support truthful
+Local HTTP controls/status. Exact CI33993540499: Node22/24 each3145PASS4skip0FAIL,
+native179PASS; CodeQL33993541780 has the same93 inherited identities/severities.
+Forty current captures directly viewed by both verified final oracles,35 clean
+teardowns and QA receipt. An unsupported oracle claim was rejected and replaced.
+Next WP09 revalidates090 against this source, including320px navigation crowding
+and actual-MCP popup facts alongside prior node/focus/roster residuals. Remaining
+security, integrated acceptance, bottom-up merge and release gates stay active.
