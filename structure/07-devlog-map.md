@@ -122,7 +122,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260905_production_readiness/` | WP00 and WP01–06 verified; WP06m bounded video-body work is at P revalidation (065/065_1/065_2). 066/wp06s artifact confinement and inherited CodeQL triage remain mandatory release gates. Stack merge/release still pending. | — |
+| `260905_production_readiness/` | WP00 and WP01–06m verified. WP06s artifact confinement is in B after two audit blockers were closed (066/066_1/066_2); c-18/platform evidence remains open. WP07 owns the reproduced duplicate cancellation event. Inherited CodeQL triage, stack merge and release remain pending. | — |
 | `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 

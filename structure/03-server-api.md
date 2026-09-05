@@ -114,8 +114,13 @@ Agy's native child lifecycle is owned by `agyProcess.ts`, with centralized
 after child close. Staged refs are cleaned on partial-write failure and operation
 exit. The final success check occurs after awaited ref cleanup, so cancellation
 during cleanup cannot return success. This does not claim descendant-tree control.
-`agyArtifact.ts` retains the existing parser/fallback; canonical symlink-safe file
-ingestion is a separately gated WP06s change, not already provided by relocation.
+`agyArtifact.ts` retains parser/fallback ordering but excludes symlink/nonregular
+scanner entries. `agyArtifactRead.ts` owns canonical root and descriptor identity
+checks, 50MiB bounded reads, and private receipt-authorized unlink/nonrecursive
+parent cleanup. Operations no longer consume or delete an unchecked raw path.
+Path mappings are checked again after close and before cleanup; detected changes
+fail closed. Windows uses explicit checks without POSIX open flags. Same-user
+atomic filesystem confinement and hardlink provenance are not claimed.
 Gemini's public/Vertex payloads and legacy TimeoutError502 classification remain
 unchanged; fixture proof is not live provider/auth availability assurance.
 

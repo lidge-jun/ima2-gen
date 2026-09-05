@@ -247,7 +247,8 @@ routes/
 | `lib/cardNewsPath.ts` | 29 | Generated card-news set path construction and validation helpers |
 | `lib/agyCli.ts` | 44 | Antigravity CLI discovery and process execution helpers |
 | `lib/agyImageAdapter.ts` | 3 | Compatibility reexports for Agy operation/result and recent artifact lookup |
-| `lib/agyArtifact.ts` | 101 | Agy output parser and legacy recent-artifact scanner; containment hardening remains separately gated |
+| `lib/agyArtifact.ts` | 101 | Agy output parser and recent-artifact scanner excluding links/nonregular entries |
+| `lib/agyArtifactRead.ts` | 232 | Canonical artifact roots, bounded descriptor reads and private identity-bound cleanup receipts |
 | `lib/agyProcess.ts` | 127 | Direct-child cancellation/timeout, TERM-to-KILL grace and close-observed settlement |
 | `lib/providers/adapters/agyOperations.ts` | 253 | Actual Agy prompt/staging/operation with exception-safe refs and late-cancel barriers |
 | `lib/providers/adapters/googleExecution.ts` | 104 | Agy/Gemini four-surface mapping, lossless context-filtered node references and one-image sequence projection |

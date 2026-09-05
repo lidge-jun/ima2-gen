@@ -49,6 +49,30 @@ abort; existing surface error normalization still applies. Errors do not expose
 raw returned URL/query credentials. This restricted policy is not an exhaustive
 public-address/routability guarantee and does not change video or MCP URL policy.
 
+### Agy artifact reads and cleanup
+
+Reported and fallback artifact paths must be absolute regular files within the
+canonical `.gemini`, `.cache`, or system temporary roots. Intentionally relocated
+root directories remain supported; missing roots never broaden the boundary.
+Leaf symlinks, paths escaping those roots, unusable file identities and detected
+path/file replacement are rejected. The same checks apply to parsed result paths
+and fallback discovery; filename matching alone is not acceptance.
+
+The reader enforces an inclusive 50MiB limit before and during descriptor reads,
+using bounded blocks even when individual reads are short. A successful receipt
+authorizes cleanup only for that same checked file; replacements and unrelated
+siblings are left alone. Cancellation returns `GENERATION_CANCELED`/499 after
+pending file I/O and descriptor close settle. Policy-rejected artifacts are not
+deleted. There is no automatic retry of billed generation on artifact failure.
+
+`AGY_PATH_REJECTED`/502 covers the path/identity policy; `AGY_ARTIFACT_TOO_LARGE`/502
+covers overflow, and `AGY_ARTIFACT_NOT_FOUND`/502 covers missing reported files.
+Existing generation normalization may expose `code: UNKNOWN` while retaining
+the original `rawCode` and `errorClass: INTERNAL_STATE_ERROR`.
+Windows uses explicit path/identity checks without POSIX no-follow open flags.
+This is not an atomic filesystem sandbox against another same-user process, a
+hardlink-provenance guarantee, or a process-wide memory ceiling.
+
 ## Health And Status
 
 ### Core provider surface metadata
@@ -813,7 +837,8 @@ Registered only when `config.features.cardNews` is true (`routes/cardNews.ts`). 
 | `AGY_QUOTA_EXHAUSTED` | Gemini API quota exhausted (rate limit) |
 | `AGY_PARSE_FAILED` | Could not parse artifact path from agy output |
 | `AGY_ARTIFACT_NOT_FOUND` | Agy reported an artifact path that does not exist |
-| `AGY_PATH_REJECTED` | Agy artifact path was outside allowed directories |
+| `AGY_PATH_REJECTED` | Agy artifact path, file type, or identity failed the allowed-root policy |
+| `AGY_ARTIFACT_TOO_LARGE` | Agy artifact exceeded the inclusive 50MiB read limit |
 | `AGY_VIDEO_UNSUPPORTED` | Video generation is not supported by the Gemini (agy) provider |
 | `AGY_MASK_UNSUPPORTED` | Mask-based editing is not supported by the Gemini (agy) provider |
 | `AGY_REF_TOO_MANY` | Too many reference images for agy (max 3) |

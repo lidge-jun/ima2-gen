@@ -82,6 +82,10 @@ async function validateRoot(root: RootSnapshot): Promise<void> {
 async function inspectCandidate(candidate: string): Promise<ArtifactSnapshot> {
   if (!isAbsolute(candidate) || candidate.includes("\0")
     || (process.platform === "win32" && candidate.slice(2).includes(":"))) throw pathRejected();
+  const roots = await approvedRoots();
+  if (!roots.some((root) => contained(root.source, candidate) || contained(root.canonical, candidate))) {
+    throw pathRejected();
+  }
   let info: BigIntStats;
   try { info = await lstat(candidate, { bigint: true }); }
   catch (error) {
@@ -93,7 +97,6 @@ async function inspectCandidate(candidate: string): Promise<ArtifactSnapshot> {
   try {
     if (info.isSymbolicLink() || !info.isFile()) throw pathRejected();
     const canonicalPath = await realpath(candidate);
-    const roots = await approvedRoots();
     const root = roots.find((entry) => contained(entry.canonical, canonicalPath));
     if (!root) throw pathRejected();
     const parent = await lstat(dirname(canonicalPath), { bigint: true });
