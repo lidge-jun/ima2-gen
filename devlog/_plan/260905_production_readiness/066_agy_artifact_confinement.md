@@ -1,7 +1,7 @@
 # WP06s — confined, bounded Agy artifact ingestion
 
-Status: new docs-first corrective unit, registered during WP06 P. No implementation
-in WP06 B. One full PABCD and one implementation PR, after065/wp06m and before070.
+Status: WP06s P revalidation at ef0e80a2. Original registration was during WP06 P;
+no implementation in WP06 B. One full PABCD and one implementation PR, after065/wp06m and before070.
 Semantic input: WP06's extracted agyArtifact/agyOperations and lifetime barriers.
 Branch codex/prod-wp06s-agy-artifacts; base the verified wp06m tip. c-18 and WP13's
 agy-artifact-gate prevent merge/release until this outcome is verified.
@@ -44,7 +44,7 @@ fault hooks; actual50MiB boundaries run only in exact-head hosted CI. Reassess a
 | MODIFY | tests/agy-artifact-fallback.test.ts | retain directory tests, add matching-file-symlink exclusion |
 | MODIFY | tests/agy-execution-process.test.ts | real operation consumes only accepted artifact and preserves499 cleanup |
 | MODIFY | tests/_agyFaultFixtures.ts, tests/agy-execution-cleanup.test.ts | retarget actual descriptor-read barrier; preserve inherited cancellation/cleanup cases |
-| NEW | .github/workflows/agy-artifact-check.yml | dispatch-only exact-SHA Linux/macOS/Windows filesystem gate |
+| NEW | .github/workflows/agy-artifact-check.yml | PR/dispatch exact-SHA Linux/macOS/Windows filesystem gate |
 | NEW | scripts/run-agy-artifact-check.mjs | exact file/child-marker light and hosted-heavy driver |
 | NEW | tests/agy-artifact-check-contract.test.ts | parsed workflow/SHA/platform and real tiny driver selector/exit-code negatives |
 | MODIFY | tests/error-class-coverage.test.ts | only required named-policy/error contract updates |
@@ -58,7 +58,7 @@ facades remain unchanged. Emitted JS is rebuilt, not hand-edited/committed.
 ## Trusted read contract
 
 New `readAgyArtifact(path:string,signal?:AbortSignal):Promise<AgyArtifactRead>`:
-return `{buffer:Buffer, canonicalPath:string, identity:{dev:number,ino:number},
+return `{buffer:Buffer, canonicalPath:string, identity:{dev:bigint,ino:bigint},
 approvedRoots:readonly string[]}`. Internal data only; never serialize receipt or
 roots into API/SSE/history. Export a cleanup helper from the same owner or consume
 the receipt in agyOperations; do not split validation and use across raw paths.
@@ -156,30 +156,37 @@ it; do not implement a knowingly weaker fallback under the same criterion.
 
 ## Exact-tip platform and local/heavy execution path
 
-NEW agy-artifact-check.yml has only workflow_dispatch, required string inputsha,
-contents:read permissions, no secrets/environment/publish step and fail-fast:false.
-Matrixos=[ubuntu-latest,macos-latest,windows-latest], Node24.17.0/npm12.0.0,20minute
-job bound. Reuse checkout3d3c42e5… and setup-node82076278… full pins from current CI.
-Checkoutref is inputs.sha, fetch-depth0. Before install/build, a shell-neutral Node
-assertion checks WANT_SHA against /^[a-f0-9]{40}$/ and git rev-parseHEAD exactly.
-Run npm install-g npm@12.0.0, npm ci, npm run build:server, then the driver below.
+NEW agy-artifact-check.yml has pull_request (opened/synchronize/reopened/ready_for_review)
+and workflow_dispatch with required string input sha. No pull_request_target. PR
+execution checks out github.event.pull_request.head.sha, dispatch checks inputs.sha;
+neither uses the synthetic merge commit as product identity. This permits the first
+pre-merge run without assuming an unregistered dispatch workflow can be launched.
+Use contents:read permissions, no secrets/environment/publish step and fail-fast:false.
+Four explicit rows: ubuntu-latest Node22.23.0/npm11.18.0 heavy; ubuntu-latest
+Node24.17.0/npm12.0.0 heavy; macos-latest and windows-latest Node24.17.0/npm12.0.0 light.
+Twenty-minute job bound. Reuse checkout3d3c42e5… and setup-node82076278… full pins
+from current CI. Checkout fetch-depth0; persist-credentials:false. Before install/build,
+a shell-neutral Node assertion checks WANT_SHA against /^[a-f0-9]{40}$/ and
+git rev-parseHEAD exactly. Verify actual Node/npm/platform against the matrix row.
+Run npm install-g npm@<matrix.npm>, npm ci, npm run build:server, then the driver below.
 No UI deps/browser/full suite required for this dedicated filesystem job.
-Ubuntu runs --hosted-heavy; macOS/Windows run --light. Always upload nonempty
-JSON/TAP artifacts named agy-artifact-${{matrix.os}}-${{inputs.sha}}, with current
+Both Ubuntu rows run --hosted-heavy; macOS/Windows run --light. Always upload nonempty
+JSON/TAP artifacts named with matrix OS, Node version and expected SHA, with current
 upload-artifact043fb46d… full pin. ExpectedSHA/platform/runtime and exit status are
 in each receipt. Separate canonical ci.yml at the same tip owns Node22/24 full
-suite and Linux-heavy cross-runtime proof. Do not rely on schedule-only Windows.
+suite. Dedicated rows explicitly own both heavy runtimes; no implicit selector
+inheritance through the full-suite wrapper is claimed. Do not rely on schedule-only Windows.
 
 Driver `node scripts/run-agy-artifact-check.mjs --light` runs the exact five files:
 agy-artifact-confinement, agy-artifact-read-bounds, agy-artifact-fallback,
 agy-execution-cleanup, agy-execution-process (all tests/*.test.ts). One child/file,
-argv=[--experimental-test-module-mocks,--import,tsx,--test,--test-concurrency=1,
+argv=[--experimental-test-module-mocks,--import,tsx,--test,--test-reporter=tap,--test-concurrency=1,
 --test-skip-pattern=hosted CI,<absoluteFile>]. Set EXECUTION_TEST_FILE to that
 file's pathToFileURL href in an otherwise minimal PATH/platform/temp/locale env.
 Thus executionTestProcess executes inline and cannot discard the selector.
 Preflight requires the regex to match all four exact `[hosted CI]` bound-case
 labels, and not a small-case label; reject any heavy PASS row during --light.
-Node24 may omit filtered rows: require the expected small-case count instead of
+Node24 may omit filtered rows: require expected named small-case passes instead of
 pretending absent rows are four explicit SKIPs. No blanket skip or count-only PASS.
 
 --hosted-heavy requires parent GITHUB_ACTIONS=true and omits only the skip flag;
@@ -204,8 +211,10 @@ or light selector and must fail the real tiny-file invocation contract; these
 are JS driver mutations, not imaginary YAML fields. New SHA assertion belongs
 this small dedicated workflow;
 do not import not-yet-created WP11 assert-ci-sha or change WP11/12 ownership.
-At066 C dispatch both workflow names with the same verified full SHA; inspect each
-checkout and platform artifact, and require all three dedicated jobs plus both
+At066 C obtain the dedicated PR-triggered run and dispatch registered canonical CI
+with an explicit workflow ref and the same verified full SHA. Record workflow revision
+separately from actual checkout, including the canonical frontend job. Inspect each
+checkout and platform artifact, and require all four dedicated jobs plus both
 canonical Linux runtimes green. Explicit failure is a blocker, not a silent skip.
 
 ## Rollback and delivery
