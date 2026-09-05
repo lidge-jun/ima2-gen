@@ -41,47 +41,63 @@ function buildEventsUrl(): string {
 
 function connect() {
   if (source && source.readyState !== EventSource.CLOSED) return;
-  source = new EventSource(buildEventsUrl());
+  const ownedSource = new EventSource(buildEventsUrl());
+  source = ownedSource;
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
 
-  source.onopen = () => {
+  ownedSource.onopen = () => {
+    if (source !== ownedSource) return;
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     reconnectAttempt = 0;
-    if (wasEverConnected) resyncCallback?.();
+    const reconnecting = wasEverConnected;
     wasEverConnected = true;
-    connectionStateCallback?.("connected");
+    if (reconnecting) resyncCallback?.();
+    if (source === ownedSource) connectionStateCallback?.("connected");
   };
 
   for (const type of EVENT_TYPES) {
-    source.addEventListener(type, (ev: Event) => dispatch(type, ev as MessageEvent));
+    ownedSource.addEventListener(type, (ev: Event) => {
+      if (source !== ownedSource || typeof (ev as MessageEvent).data !== "string") return;
+      dispatch(type, ev as MessageEvent);
+    });
   }
 
-  source.onerror = () => {
-    source?.close();
+  ownedSource.addEventListener("replay-gap", () => {
+    if (source !== ownedSource) return;
+    lastEventId = "";
+    resyncCallback?.();
+  });
+
+  ownedSource.onerror = (ev: Event) => {
+    if (source !== ownedSource || typeof (ev as MessageEvent).data === "string") return;
     source = null;
+    ownedSource.close();
     const baseDelay = Math.min(
       RECONNECT_BASE_MS * Math.pow(1.5, reconnectAttempt),
       RECONNECT_MAX_MS,
     );
     const delay = Math.min(baseDelay * (0.8 + Math.random() * 0.4), RECONNECT_MAX_MS);
     reconnectAttempt += 1;
-    connectionStateCallback?.(reconnectAttempt >= FAILED_THRESHOLD ? "failed" : "reconnecting");
     reconnectTimer = setTimeout(connect, delay);
+    connectionStateCallback?.(reconnectAttempt >= FAILED_THRESHOLD ? "failed" : "reconnecting");
   };
 }
 
 function dispatch(eventType: string, ev: MessageEvent) {
   if (ev.lastEventId) lastEventId = ev.lastEventId;
-  let data: Record<string, unknown>;
+  let parsed: unknown;
   try {
-    data = JSON.parse(ev.data);
+    parsed = JSON.parse(ev.data);
   } catch {
     if (import.meta.env.DEV) {
       console.warn(`[eventChannel] invalid JSON for "${eventType}"`, ev.data);
     }
     return;
   }
-  const jobId = (data.jobId ?? data.requestId ?? "") as string;
-  if (!jobId) {
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return;
+  const data = parsed as Record<string, unknown>;
+  const jobId = data.jobId ?? data.requestId;
+  if (typeof jobId !== "string" || !jobId) {
     if (import.meta.env.DEV) {
       console.warn(`[eventChannel] missing jobId on "${eventType}"`, data);
     }
@@ -119,8 +135,9 @@ export function onConnectionStateChange(cb: (state: ConnectionState) => void) {
 }
 
 export function disconnect() {
-  source?.close();
+  const ownedSource = source;
   source = null;
+  ownedSource?.close();
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   subs.clear();
   lastEventId = "";

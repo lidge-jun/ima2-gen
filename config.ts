@@ -8,13 +8,13 @@
 // `config.json` is loaded once at module import. Mutating the file at runtime
 // requires a server restart (same as env vars).
 //
-// Keep this module dependency-free aside from node:* built-ins to avoid
-// circular imports with lib/*.
+// Import only pure policy helpers from lib/*; never runtime owners that import config.
 
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
+export { SSE_STREAM_POLICY } from "./lib/eventsPolicy.js";
 import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
 import {
   DEFAULT_PROMPT_BUILDER_MODELS,
