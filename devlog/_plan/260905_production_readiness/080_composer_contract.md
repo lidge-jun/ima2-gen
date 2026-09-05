@@ -1,6 +1,8 @@
 # WP08 — one pane geometry owner, preserved editing behavior
 
-Status: WP00 design only; no implementation has occurred.
+Status: WP08 P; original WP00 design below, current-tree amendments in
+[081_composer_revalidation.md](081_composer_revalidation.md) take precedence.
+No WP08 implementation has occurred yet.
 Baseline: `ecde2bc79cddc50ff0da38091c1ce0590383090c`.
 Research: [003_visual_research.md](003_visual_research.md).
 
