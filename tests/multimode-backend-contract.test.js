@@ -38,8 +38,8 @@ describe("multimode backend contract", () => {
     assert.match(index, /registerMultimodeRoutes/);
     assert.match(route, /app\.post\("\/api\/generate\/multimode"/);
     assert.match(route, /normalizeMaxImages/);
-    const owner = "lib/providers/execution/legacyMultimode.ts";
-    const calls = collectCallArguments(readFileSync(join(root, owner), "utf8"), owner, "generateMultimodeViaResponses");
+    const owner = "lib/providers/adapters/openaiExecution.ts";
+    const calls = collectCallArguments(readFileSync(join(root, owner), "utf8"), owner, "generateMultimodeViaResponses", "executeOpenaiMultimode");
     assert.equal(calls.length, 1);
     assert.match(calls[0][9], /maxImages/);
     assert.match(calls[0][9], /onPartialImage: progress\.onPartialImage/);
@@ -49,9 +49,12 @@ describe("multimode backend contract", () => {
 
   it("uses a strict prompt wrapper and collects multiple image_generation_call outputs", () => {
     const oauth = readSource("lib/oauthProxy.ts");
-    const adapter = readSource("lib/responsesImageAdapter.ts");
-    const responsesTools = readSource("lib/responsesTools.ts");
-    const parser = readSource("lib/responsesParse.ts");
+    const operationsOwner = "lib/providers/adapters/openaiOperations.ts";
+    const operations = readFileSync(join(root, operationsOwner), "utf8");
+    const transportOwner = "lib/responsesTransport.ts";
+    const transport = readFileSync(join(root, transportOwner), "utf8");
+    const responsesTools = readFileSync(join(root, "lib/responsesTools.ts"), "utf8");
+    const parser = readFileSync(join(root, "lib/responsesParse.ts"), "utf8");
 
     assert.match(oauth, /export function buildMultimodeSequencePrompt/);
     assert.match(oauth, /You MUST create up to N separate image_generation_call outputs/);
@@ -60,20 +63,23 @@ describe("multimode backend contract", () => {
     assert.match(oauth, /Do not create a contact sheet/);
     assert.match(oauth, /Do not create a storyboard sheet/);
     assert.match(oauth, /Do not put multiple panels inside one image/);
-    assert.match(adapter, /parseStream/);
+    const streamCalls = collectCallArguments(transport, transportOwner, "parseStream", "postResponses");
+    assert.equal(streamCalls.length, 1);
+    assert.match(streamCalls[0][1], /onPartialImage, onFinalImage/);
     assert.match(parser, /export async function parseStream/);
     assert.match(parser, /images: \[\]/);
     assert.match(parser, /state\.images\.push\(/);
+    assert.match(parser, /state\.images\.some\(\(image\) => image\.b64 === item\.result\)\) return/);
     assert.match(parser, /onFinalImage/);
     assert.match(parser, /await onFinalImage\?\.\(image, index\)/);
-    assert.match(
-      adapter,
-      /export async function generateMultimodeViaResponses[\s\S]*?onPartialImage: options\.onPartialImage[\s\S]*?onFinalImage: options\.onFinalImage/,
-    );
+    const posts = collectCallArguments(operations, operationsOwner, "postResponses", "generateMultimodeViaResponses");
+    assert.equal(posts.length, 1);
+    assert.match(posts[0][0], /onPartialImage: options\.onPartialImage/);
+    assert.match(posts[0][0], /onFinalImage: options\.onFinalImage/);
     assert.match(parser, /extraIgnored/);
     assert.match(responsesTools, /function tools\(webSearchEnabled/);
     assert.match(responsesTools, /\.\.\(webSearchEnabled \? \[\{ type: "web_search" \}\] : \[\]\)/);
-    assert.match(adapter, /tool_choice: "required"/);
+    assert.match(posts[0][0], /tool_choice: "required"/);
   });
 
   it("persists sequence metadata and surfaces it through history", () => {

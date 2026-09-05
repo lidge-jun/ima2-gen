@@ -31,8 +31,8 @@ describe("child node references contract", () => {
 
   it("does not reject parentNodeId plus references in the node route", () => {
     assert.doesNotMatch(nodes, /NODE_REFS_UNSUPPORTED_FOR_EDIT/);
-    const owner = "lib/providers/execution/legacyNode.ts";
-    const calls = collectCallArguments(readFileSync(owner, "utf8"), owner, "editViaResponses");
+    const owner = "lib/providers/adapters/openaiExecution.ts";
+    const calls = collectCallArguments(readFileSync(owner, "utf8"), owner, "editViaResponses", "executeOpenaiNode");
     assert.equal(calls.length, 1);
     assert.equal(calls[0][2], "parentB64");
     assert.match(calls[0][9], /references: refsForRequest/);

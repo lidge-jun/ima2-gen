@@ -11,6 +11,12 @@ const concreteOwners = new Set([
   "minimaxImageAdapter", "naiImageAdapter", "comfyImageAdapter",
 ].map((name) => `lib/${name}`));
 const publicOwner = "lib/providers/execution/index";
+const facadeOwner = "lib/responsesImageAdapter";
+const openaiOwners = new Set([
+  "lib/providers/adapters/openaiExecution", "lib/providers/adapters/openaiOperations",
+  "lib/responsesTransport",
+]);
+const isLegacyOwner = (target) => /^lib\/providers\/execution\/legacy[^/]*$/.test(target);
 
 export function normalizeModulePath(file, specifier) {
   const target = specifier.startsWith(".")
@@ -70,11 +76,23 @@ export function collectRuntimeEdges(source, file) {
 }
 
 // Location-migration oracles inspect real calls, never comments or import names.
-export function collectCallArguments(source, file, name) {
+/** @param {string} [scopeName] */
+export function collectCallArguments(source, file, name, scopeName) {
   const tree = parse(source, file);
+  let scope = tree;
+  if (scopeName !== undefined) {
+    const declarations = [];
+    walkRuntime(tree, (node) => {
+      if (ts.isFunctionDeclaration(node) && node.name?.text === scopeName) declarations.push(node);
+    });
+    if (declarations.length !== 1 || !declarations[0].body) {
+      throw new Error(`${file}: expected exactly one function body for ${scopeName}; found ${declarations.length} declarations`);
+    }
+    scope = declarations[0].body;
+  }
   const printer = ts.createPrinter({ removeComments: true });
   const calls = [];
-  walkRuntime(tree, (node) => {
+  walkRuntime(scope, (node) => {
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name) {
       calls.push(node.arguments.map((arg) => printer.printNode(ts.EmitHint.Expression, arg, tree)));
     }
@@ -83,9 +101,18 @@ export function collectCallArguments(source, file, name) {
 }
 
 export function forbiddenExecutionEdges(source, file) {
-  if (!EXECUTION_CALLERS.includes(file)) return [];
-  return collectRuntimeEdges(source, file).filter(({ target }) =>
-    concreteOwners.has(target) || /^lib\/providers\/execution\/legacy[^/]*$/.test(target));
+  // E7 source gate: computed imports and arbitrary external barrels remain outside this policy.
+  const owner = normalizeModulePath(file, file);
+  return collectRuntimeEdges(source, file).filter(({ target }) => {
+    if (EXECUTION_CALLERS.includes(file)) {
+      return concreteOwners.has(target) || openaiOwners.has(target) || isLegacyOwner(target);
+    }
+    if (isLegacyOwner(owner)) return target === facadeOwner || openaiOwners.has(target);
+    if (owner === "lib/responsesTransport") {
+      return target === publicOwner || openaiOwners.has(target) || target.startsWith("routes/") || target === facadeOwner;
+    }
+    return openaiOwners.has(owner) && target === facadeOwner;
+  });
 }
 
 // Bind only this source, without resolving dependencies or loading production code.

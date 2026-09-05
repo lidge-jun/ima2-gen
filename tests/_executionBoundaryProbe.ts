@@ -8,7 +8,7 @@ import { isolateExecution } from "./_executionRouteIsolation.ts";
 
 interface Call { name: string; args: unknown[] }
 const transports = {
-  responsesImageAdapter: ["generateViaResponses", "editViaResponses", "generateMultimodeViaResponses"],
+  "providers/adapters/openaiOperations": ["generateViaResponses", "editViaResponses", "generateMultimodeViaResponses"],
   grokImageAdapter: ["planGrokImage", "generateViaGrok", "editViaGrok"],
   grokMultimodeAdapter: ["generateMultimodeViaGrok"],
   agyImageAdapter: ["generateViaAgy"], geminiApiImageAdapter: ["generateViaGeminiApi"],
@@ -89,6 +89,7 @@ export async function openBoundaryProbe() {
 
 export type BoundaryProbe = Awaited<ReturnType<typeof openBoundaryProbe>>;
 
+export function requestFor<P extends CoreProviderId>(surface: ExecutionSurface, provider: P, source: string): ImageExecutionRequest & { provider: P };
 export function requestFor(surface: ExecutionSurface, provider: CoreProviderId, source: string): ImageExecutionRequest {
   const base = {
     provider, requestId: "boundary-fixture", signal: new AbortController().signal,

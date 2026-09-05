@@ -281,6 +281,8 @@ describe("EN — element node lifecycle", () => {
     assert.match(prepared[0][1], /rawPrompt: prompt/);
     const owner = "lib/providers/execution/legacyNode.ts";
     const execution = read(owner);
+    const openaiOwner = "lib/providers/adapters/openaiExecution.ts";
+    const openaiExecution = read(openaiOwner);
     for (const [name, position, expected] of [
       ["generateViaResponses", 1, "generationPrompt"],
       ["editViaResponses", 1, "generationPrompt"],
@@ -291,7 +293,9 @@ describe("EN — element node lifecycle", () => {
       ["generateViaMinimax", 0, 'parentB64 ? `Edit this image: ${prompt}` : prompt'],
       ["generateViaNai", 0, "prompt"],
     ]) {
-      const calls = collectCallArguments(execution, owner, name);
+      const calls = name === "generateViaResponses" || name === "editViaResponses"
+        ? collectCallArguments(openaiExecution, openaiOwner, name, "executeOpenaiNode")
+        : collectCallArguments(execution, owner, name);
       assert.equal(calls.length, 1, `${name}: expected a live call expression`);
       assert.equal(calls[0][position], expected, `${name}: wrong prompt lane`);
     }

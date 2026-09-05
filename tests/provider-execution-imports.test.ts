@@ -47,6 +47,7 @@ test("every concrete owner and private legacy module is forbidden for every call
     "minimaxImageAdapter", "naiImageAdapter", "comfyImageAdapter",
     "providers/execution/legacy", "providers/execution/legacyClassic",
     "providers/execution/legacyNode", "providers/execution/legacyEdit", "providers/execution/legacyMultimode",
+    "providers/adapters/openaiExecution", "providers/adapters/openaiOperations", "responsesTransport",
   ];
   for (const file of EXECUTION_CALLERS) for (const name of owners) for (const ext of ["js", "ts"]) {
     const prefix = file.startsWith("routes/") ? "../lib/" : "./";
@@ -67,9 +68,92 @@ test("genuine type-only edges, policy helpers and internal execution imports are
   for (const name of ["providers/derive", "naiOptions", "refs", "generationErrors", "inflight", "providers/execution/index", "providers/execution/admission"]) {
     assert.deepEqual(forbiddenExecutionEdges(`import * as helper from "./${name}.js";`, caller), []);
   }
-  const internal = 'import { generateViaResponses } from "../../responsesImageAdapter.js";';
+  const internal = 'import { generateViaGrok } from "../../grokImageAdapter.js";';
   assert.equal(collectRuntimeEdges(internal, "lib/providers/execution/legacyClassic.ts").length, 1);
   assert.deepEqual(forbiddenExecutionEdges(internal, "lib/providers/execution/legacyClassic.ts"), []);
+});
+
+const legacyOwners = ["legacy", "legacyClassic", "legacyNode", "legacyEdit", "legacyMultimode"]
+  .map((name) => `lib/providers/execution/${name}.ts`);
+const openaiOwners = [
+  "lib/providers/adapters/openaiExecution.ts", "lib/providers/adapters/openaiOperations.ts",
+  "lib/responsesTransport.ts",
+];
+
+test("actual internal OpenAI and legacy owners contain no forbidden runtime edges", () => {
+  for (const file of [...legacyOwners, ...openaiOwners]) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    assert.deepEqual(forbiddenExecutionEdges(source, file), [], file);
+  }
+});
+
+test("internal forbidden edges reject aliases, reexports and literal dynamic imports", () => {
+  for (const file of [...legacyOwners, ...openaiOwners]) {
+    const targets = ["lib/responsesImageAdapter", ...(legacyOwners.includes(file)
+      ? openaiOwners.map((owner) => owner.replace(/\.ts$/, "")) : [])];
+    if (file === "lib/responsesTransport.ts") targets.push(
+      "lib/providers/execution/index", "lib/providers/adapters/openaiExecution",
+      "lib/providers/adapters/openaiOperations", "routes/edit", "routes/generate",
+    );
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    for (const target of targets) for (const ext of ["js", "ts", "mjs", "mts"]) {
+      const specifier = `${file === "lib/responsesTransport.ts" ? "../" : "../../../"}unused/../${target}.${ext}`;
+      for (const statement of [
+        `import { run as alias } from "${specifier}";`,
+        `export * from "${specifier}";`, `const run = await import("${specifier}");`,
+        `const run = await import(\`${specifier}\`);`,
+        `import { type Options, run } from "${specifier}";`,
+      ]) {
+        const edges = forbiddenExecutionEdges(`${source}\n${statement}`, file);
+        assert.equal(edges.length, 1, `${file}: ${statement}`);
+        assert.equal(edges[0].target, target);
+      }
+      assert.deepEqual(forbiddenExecutionEdges(`import type { Options } from "${specifier}";`, file), []);
+    }
+  }
+});
+
+test("the actual public-family-operation-transport and compatibility edges remain allowed", () => {
+  for (const [file, target] of [
+    ["lib/providers/execution/index.ts", "lib/providers/adapters/openaiExecution"],
+    ["lib/providers/adapters/openaiExecution.ts", "lib/providers/adapters/openaiOperations"],
+    ["lib/providers/adapters/openaiOperations.ts", "lib/responsesTransport"],
+    ["lib/responsesImageAdapter.ts", "lib/providers/adapters/openaiOperations"],
+  ]) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    const edges = collectRuntimeEdges(source, file).filter((edge) => edge.target === target);
+    assert.equal(edges.length, 1, `${file}: missing actual edge to ${target}`);
+    assert.deepEqual(forbiddenExecutionEdges(source, file), [], file);
+  }
+});
+
+test("function-scoped calls select the unique helper and include nested callbacks only within it", () => {
+  const source = `
+    function classic() { return () => run("classic", { signal }); }
+    async function node() {
+      // run("comment"); function classic() {}
+      const example = 'run("string"); function classic() {}';
+      return run("node", { onFinalImage: async () => run("callback") });
+    }
+    run("outside");`;
+  assert.deepEqual(collectCallArguments(source, caller, "run", "classic"), [['"classic"', "{ signal }"]]);
+  const nodeCalls = collectCallArguments(source, caller, "run", "node");
+  assert.equal(nodeCalls.length, 2);
+  assert.equal(nodeCalls[0][0], '"node"');
+  assert.deepEqual(nodeCalls[1], ['"callback"']);
+  assert.equal(collectCallArguments(source, caller, "run").length, 4);
+  assert.deepEqual(collectCallArguments(source, caller, "absent", "classic"), []);
+});
+
+test("missing, duplicate or bodyless function scopes cannot silently pass", () => {
+  for (const source of [
+    'function other() { run("outside"); }',
+    'const wanted = () => run("arrow");',
+    'function wanted() {} function outer() { function wanted() { run("nested"); } }',
+    'declare function wanted(): void;',
+    'function wanted(): void; function wanted() { run("implementation"); }',
+    '// function wanted() {}\nconst text = "function wanted() {}";',
+  ]) assert.throws(() => collectCallArguments(source, caller, "run", "wanted"), /expected exactly one function body for wanted/);
 });
 
 test("comments and strings cannot fake edges or execution activation", () => {

@@ -81,9 +81,9 @@ describe("core provider registry parity", () => {
     // routes/edit.ts names the lanes it rejects masks for, and everything else
     // reaches the execution owner's editViaResponses, whose options accept a mask.
     const editSource = readFileSync(join(repoRoot, "routes/edit.ts"), "utf8");
-    const adapterSource = readFileSync(join(repoRoot, "lib/responsesImageAdapter.ts"), "utf8");
-    const owner = "lib/providers/execution/legacyEdit.ts";
-    const calls = collectCallArguments(readFileSync(join(repoRoot, owner), "utf8"), owner, "editViaResponses");
+    const adapterSource = readFileSync(join(repoRoot, "lib/providers/adapters/openaiTypes.ts"), "utf8");
+    const owner = "lib/providers/adapters/openaiExecution.ts";
+    const calls = collectCallArguments(readFileSync(join(repoRoot, owner), "utf8"), owner, "editViaResponses", "executeOpenaiEdit");
     assert.equal(calls.length, 1);
     assert.match(calls[0][9], /mask: request\.mask/);
     assert.match(adapterSource, /\bmask\?: string(?: \| undefined)?;/);

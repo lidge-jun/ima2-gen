@@ -39,9 +39,9 @@ describe("oauth proxy edit mask contract", () => {
 
   it("uses the Responses adapter for route-level mask-guided edits", () => {
     const route = readSource("routes/edit.ts");
-    const adapter = readSource("lib/responsesImageAdapter.ts");
-    const owner = "lib/providers/execution/legacyEdit.ts";
-    const calls = collectCallArguments(readSource(owner), owner, "editViaResponses");
+    const adapter = readSource("lib/providers/adapters/openaiOperations.ts");
+    const owner = "lib/providers/adapters/openaiExecution.ts";
+    const calls = collectCallArguments(readSource(owner), owner, "editViaResponses", "executeOpenaiEdit");
     assert.equal(calls.length, 1);
     assert.match(calls[0][9], /mask: request\.mask/);
     assert.match(route, /mask: maskCheck\.mask/);
