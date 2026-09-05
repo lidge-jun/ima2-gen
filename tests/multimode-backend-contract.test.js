@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readSourceTree } from "./_readTree.mjs";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const root = process.cwd();
 
@@ -37,7 +38,12 @@ describe("multimode backend contract", () => {
     assert.match(index, /registerMultimodeRoutes/);
     assert.match(route, /app\.post\("\/api\/generate\/multimode"/);
     assert.match(route, /normalizeMaxImages/);
-    assert.match(route, /generateMultimodeViaResponses/);
+    const owner = "lib/providers/execution/legacyMultimode.ts";
+    const calls = collectCallArguments(readFileSync(join(root, owner), "utf8"), owner, "generateMultimodeViaResponses");
+    assert.equal(calls.length, 1);
+    assert.match(calls[0][9], /maxImages/);
+    assert.match(calls[0][9], /onPartialImage: progress\.onPartialImage/);
+    assert.match(calls[0][9], /onFinalImage: progress\.onFinalImage/);
     assert.match(classic, /Promise\.allSettled\(Array\.from\(\{ length: count \}, generateOne\)\)/);
   });
 

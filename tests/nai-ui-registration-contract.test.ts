@@ -118,6 +118,9 @@ test("every NAI_* code the server can throw has UI text", () => {
     "lib/naiImageAdapter.ts",
     "lib/naiZip.ts",
     "lib/generatePipeline.ts",
+    "lib/nodeGeneration.ts",
+    "lib/multimodePipeline.ts",
+    "lib/providers/execution/admission.ts",
     "routes/edit.ts",
   ];
   const thrown = new Set<string>();

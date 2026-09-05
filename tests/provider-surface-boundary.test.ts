@@ -88,7 +88,7 @@ interface Fixture {
 }
 type FakeUpstream = (call: UpstreamCall) => Response;
 
-async function withApp(fn: (fixture: Fixture) => Promise<void>, upstream?: FakeUpstream) {
+async function withApp(fn: (fixture: Fixture) => Promise<void>, upstream?: FakeUpstream, xaiApiKey?: string) {
   const requestId = `surface-boundary-${++sequence}`;
   const generatedDir = join(rootDir, requestId);
   await mkdir(generatedDir);
@@ -102,7 +102,7 @@ async function withApp(fn: (fixture: Fixture) => Promise<void>, upstream?: FakeU
     return upstream(call);
   };
   const ctx = runtime.createTestRuntimeContext({
-    rootDir, apiKey: "sk-fixture-only", oauthReadyState: "ready",
+    rootDir, apiKey: "sk-fixture-only", oauthReadyState: "ready", xaiApiKey,
     oauthUrl: "http://oauth-fixture.invalid",
     config: { ...config, storage: { ...config.storage, generatedDir } },
   });
@@ -169,7 +169,7 @@ describe("provider surface HTTP boundaries", { concurrency: false }, () => {
           ...(provider === "comfy" ? {} : { rawCode: code, errorClass: "CAPABILITY_UNSUPPORTED" }),
         });
         assert.deepEqual(inflight.listJobs(), [], "edit admission is finalized after rejection");
-      });
+      }, undefined, provider === "grok-api" ? "xai-mask-fixture-only" : undefined);
     });
   }
 

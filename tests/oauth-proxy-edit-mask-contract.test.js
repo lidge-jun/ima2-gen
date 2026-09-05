@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const root = process.cwd();
 
@@ -39,9 +40,11 @@ describe("oauth proxy edit mask contract", () => {
   it("uses the Responses adapter for route-level mask-guided edits", () => {
     const route = readSource("routes/edit.ts");
     const adapter = readSource("lib/responsesImageAdapter.ts");
-    assert.match(route, /editViaResponses/);
+    const owner = "lib/providers/execution/legacyEdit.ts";
+    const calls = collectCallArguments(readSource(owner), owner, "editViaResponses");
+    assert.equal(calls.length, 1);
+    assert.match(calls[0][9], /mask: request\.mask/);
     assert.match(route, /mask: maskCheck\.mask/);
     assert.match(adapter, /mask guide/);
   });
 });
-

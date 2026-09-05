@@ -28,6 +28,13 @@ test("server generation paths no longer keep hard-coded 8 image-count caps", () 
   for (const relPath of [
     "lib/generatePipeline.ts",
     "lib/multimodePipeline.ts",
+    "lib/providers/execution/index.ts",
+    "lib/providers/execution/admission.ts",
+    "lib/providers/execution/legacy.ts",
+    "lib/providers/execution/legacyClassic.ts",
+    "lib/providers/execution/legacyNode.ts",
+    "lib/providers/execution/legacyEdit.ts",
+    "lib/providers/execution/legacyMultimode.ts",
     "lib/multimodeHelpers.ts",
     "lib/oauthProxy/prompts.ts",
     "lib/oauthProxy/generators.ts",

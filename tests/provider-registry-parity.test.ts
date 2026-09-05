@@ -7,6 +7,7 @@ import { config } from "../config.js";
 import { ELEMENT_CAPACITY_DEFAULTS } from "../lib/elementCompiler.js";
 import { REGISTRY } from "../lib/providers/registry.ts";
 import { deriveProviderSurfaceSupportFrom } from "../lib/providers/surfaceSupport.ts";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -78,10 +79,13 @@ describe("core provider registry parity", () => {
   it("declares mask support exactly where the edit route allows it", () => {
     // The oracle is the ACTIVE route, not the manifest talking to itself:
     // routes/edit.ts names the lanes it rejects masks for, and everything else
-    // reaches editViaResponses, whose options accept a mask.
+    // reaches the execution owner's editViaResponses, whose options accept a mask.
     const editSource = readFileSync(join(repoRoot, "routes/edit.ts"), "utf8");
     const adapterSource = readFileSync(join(repoRoot, "lib/responsesImageAdapter.ts"), "utf8");
-    assert.match(editSource, /editViaResponses\(/);
+    const owner = "lib/providers/execution/legacyEdit.ts";
+    const calls = collectCallArguments(readFileSync(join(repoRoot, owner), "utf8"), owner, "editViaResponses");
+    assert.equal(calls.length, 1);
+    assert.match(calls[0][9], /mask: request\.mask/);
     assert.match(adapterSource, /\bmask\?: string(?: \| undefined)?;/);
 
     assert.match(editSource, /getProviderSurfaceSupport\(activeProvider(?:\s*\?\?\s*"")?,\s*"edit"\)\?\.mask\s*===\s*false/);

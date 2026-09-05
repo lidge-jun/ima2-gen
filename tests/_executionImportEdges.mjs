@@ -1,0 +1,169 @@
+import ts from "typescript";
+import { posix } from "node:path";
+
+export const EXECUTION_CALLERS = Object.freeze([
+  "lib/generatePipeline.ts", "lib/nodeGeneration.ts",
+  "lib/multimodePipeline.ts", "routes/edit.ts",
+]);
+const concreteOwners = new Set([
+  "responsesImageAdapter", "grokImageAdapter", "grokMultimodeAdapter", "grokImageCore",
+  "agyImageAdapter", "geminiApiImageAdapter", "atlasCloudImageAdapter",
+  "minimaxImageAdapter", "naiImageAdapter", "comfyImageAdapter",
+].map((name) => `lib/${name}`));
+const publicOwner = "lib/providers/execution/index";
+
+export function normalizeModulePath(file, specifier) {
+  const target = specifier.startsWith(".")
+    ? posix.join(posix.dirname(file.replaceAll("\\", "/")), specifier)
+    : specifier;
+  return posix.normalize(target).replace(/\.(?:[cm]?[jt]sx?)$/, "");
+}
+
+function parse(source, file) {
+  const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  if (tree.parseDiagnostics.length) throw new Error(`Invalid TypeScript fixture: ${file}`);
+  return tree;
+}
+
+function walkRuntime(node, visit) {
+  if (ts.isTypeNode(node)) return;
+  visit(node);
+  ts.forEachChild(node, (child) => walkRuntime(child, visit));
+}
+
+function hasRuntimeImport(node) {
+  const clause = node.importClause;
+  if (!clause) return true;
+  if (clause.isTypeOnly) return false;
+  if (clause.name || !clause.namedBindings || ts.isNamespaceImport(clause.namedBindings)) return true;
+  return clause.namedBindings.elements.length === 0
+    || clause.namedBindings.elements.some((item) => !item.isTypeOnly);
+}
+
+function hasRuntimeExport(node) {
+  if (node.isTypeOnly) return false;
+  if (!node.exportClause || !ts.isNamedExports(node.exportClause)) return true;
+  return node.exportClause.elements.length === 0
+    || node.exportClause.elements.some((item) => !item.isTypeOnly);
+}
+
+function runtimeEdges(tree, file) {
+  const edges = [];
+  const add = (literal, kind) => {
+    if (!literal || !ts.isStringLiteralLike(literal)) return;
+    edges.push({ kind, specifier: literal.text, target: normalizeModulePath(file, literal.text) });
+  };
+  walkRuntime(tree, (node) => {
+    if (ts.isImportDeclaration(node) && hasRuntimeImport(node)) add(node.moduleSpecifier, "import");
+    if (ts.isExportDeclaration(node) && hasRuntimeExport(node)) add(node.moduleSpecifier, "export");
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      add(node.arguments[0], "dynamic-import");
+    }
+    if (ts.isImportEqualsDeclaration(node) && !node.isTypeOnly
+      && ts.isExternalModuleReference(node.moduleReference)) add(node.moduleReference.expression, "import-equals");
+  });
+  return edges;
+}
+
+export function collectRuntimeEdges(source, file) {
+  return runtimeEdges(parse(source, file), file);
+}
+
+// Location-migration oracles inspect real calls, never comments or import names.
+export function collectCallArguments(source, file, name) {
+  const tree = parse(source, file);
+  const printer = ts.createPrinter({ removeComments: true });
+  const calls = [];
+  walkRuntime(tree, (node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name) {
+      calls.push(node.arguments.map((arg) => printer.printNode(ts.EmitHint.Expression, arg, tree)));
+    }
+  });
+  return calls;
+}
+
+export function forbiddenExecutionEdges(source, file) {
+  if (!EXECUTION_CALLERS.includes(file)) return [];
+  return collectRuntimeEdges(source, file).filter(({ target }) =>
+    concreteOwners.has(target) || /^lib\/providers\/execution\/legacy[^/]*$/.test(target));
+}
+
+// Bind only this source, without resolving dependencies or loading production code.
+// Symbols distinguish a genuine import/result from same-name shadowed locals.
+function localChecker(tree, file) {
+  const host = {
+    getSourceFile: (name) => name === file ? tree : undefined,
+    getDefaultLibFileName: () => "", writeFile: () => {}, getCurrentDirectory: () => "",
+    getDirectories: () => [], fileExists: (name) => name === file,
+    readFile: (name) => name === file ? tree.text : undefined,
+    getCanonicalFileName: (name) => name, useCaseSensitiveFileNames: () => true,
+    getNewLine: () => "\n",
+  };
+  return ts.createProgram([file], { noResolve: true, noLib: true }, host).getTypeChecker();
+}
+
+function unwrap(node) {
+  while (node && (ts.isParenthesizedExpression(node) || ts.isAwaitExpression(node)
+    || ts.isAsExpression(node) || ts.isNonNullExpression(node) || ts.isSatisfiesExpression(node))) {
+    node = node.expression;
+  }
+  return node;
+}
+
+function member(node, name) {
+  if (ts.isPropertyAccessExpression(node) && node.name.text === name) return node.expression;
+  if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)
+    && node.argumentExpression.text === name) return node.expression;
+  return undefined;
+}
+
+function prepareBindings(tree, file, checker) {
+  const named = new Set();
+  const namespaces = new Set();
+  for (const node of tree.statements) {
+    if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)
+      || normalizeModulePath(file, node.moduleSpecifier.text) !== publicOwner
+      || !hasRuntimeImport(node)) continue;
+    const bindings = node.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) namespaces.add(checker.getSymbolAtLocation(bindings.name));
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const item of bindings.elements) {
+        if (!item.isTypeOnly && (item.propertyName ?? item.name).text === "prepareImageExecution") {
+          named.add(checker.getSymbolAtLocation(item.name));
+        }
+      }
+    }
+  }
+  return { named, namespaces };
+}
+
+export function inspectExecutionCaller(source, file) {
+  const tree = parse(source, file);
+  const checker = localChecker(tree, file);
+  const { named, namespaces } = prepareBindings(tree, file, checker);
+  const isPrepare = (node) => {
+    node = unwrap(node);
+    if (!node || !ts.isCallExpression(node) || node.arguments.length < 2) return false;
+    const callee = unwrap(node.expression);
+    if (ts.isIdentifier(callee)) return named.has(checker.getSymbolAtLocation(callee));
+    const receiver = member(callee, "prepareImageExecution");
+    return !!receiver && namespaces.has(checker.getSymbolAtLocation(receiver));
+  };
+  const prepared = new Set();
+  let prepareCalls = 0;
+  walkRuntime(tree, (node) => {
+    if (ts.isCallExpression(node) && isPrepare(node)) prepareCalls++;
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && isPrepare(node.initializer)) {
+      prepared.add(checker.getSymbolAtLocation(node.name));
+    }
+  });
+  let executeCalls = 0;
+  walkRuntime(tree, (node) => {
+    if (!ts.isCallExpression(node)) return;
+    const receiver = member(unwrap(node.expression), "execute");
+    if (!receiver) return;
+    const value = unwrap(receiver);
+    if (isPrepare(value) || (ts.isIdentifier(value) && prepared.has(checker.getSymbolAtLocation(value)))) executeCalls++;
+  });
+  return { forbiddenEdges: forbiddenExecutionEdges(source, file), prepareCalls, executeCalls };
+}

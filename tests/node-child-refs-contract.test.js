@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { readStoreBundle } from "./_storeBundle.mjs";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const store = readStoreBundle();
 const imageNode = readFileSync("ui/src/components/ImageNode.tsx", "utf-8");
@@ -30,7 +31,11 @@ describe("child node references contract", () => {
 
   it("does not reject parentNodeId plus references in the node route", () => {
     assert.doesNotMatch(nodes, /NODE_REFS_UNSUPPORTED_FOR_EDIT/);
-    assert.match(nodes, /references: refsForRequest/);
+    const owner = "lib/providers/execution/legacyNode.ts";
+    const calls = collectCallArguments(readFileSync(owner, "utf8"), owner, "editViaResponses");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][2], "parentB64");
+    assert.match(calls[0][9], /references: refsForRequest/);
   });
 
   it("forwards edit references after the parent image and before text", () => {
@@ -49,4 +54,3 @@ describe("child node references contract", () => {
     assert.doesNotMatch(oauth, /logEvent\("oauth-edit", "request", \{[^}]*references:/);
   });
 });
-

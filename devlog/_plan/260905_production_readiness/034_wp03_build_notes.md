@@ -52,3 +52,32 @@ regenerated and remain ignored. This checkpoint establishes compilation, not the
 pending route/boundary/visual/hosted full-suite assertions. Error-card geometry
 scope was re-planned and independently approved in035, then the same six workers
 resumed with preserved partial changes.
+
+Test compiler found an additional exhaustive consumer oracle:
+tests/node-error-info-contract.test.ts's Record<ImaErrorCode,NodeRetryAction>.
+Main added the new code's `auth` expectation and actual buildNodeErrorInfo test;
+the existing production node action already derives auth from the reauth CTA.
+No production retry policy changed, no exhaustive requirement weakened. This
+bounded existing-test synchronization was missing in032's initial impact list.
+
+## Completed worker slices (B, not final C)
+
+- Classic: nine new actual-route tests passed; BodyInit fixture typing corrected
+  using Uint8Array, not an any cast. E03-1/2/3/5/7/9 covered.
+- Node: 21 tests passed. Baseline distinction is explicit: Responses empty422
+  is not retried; retryable Grok empty502 gets root2/child1. Child's public UNKNOWN
+  plus rawCode GROK_EMPTY_RESPONSE remains unchanged.
+- Edit/sequence: eight tests passed for real masked API edit, paired sidecars,
+  legacy/async A,A,B dedupe, original awaited callback objects and native errors.
+- Migration/AST: source-focused52 + isolated registry/NAI12 + one direct-Grok
+  mask fixture passed. Final seven AST tests also passed (overlap, not seven extra
+  unique tests). Exactly-one NAI call per expected owner and symbol-linked actual
+  prepare/execute checks replace vacuous source-location checks.
+- Fixture harness: worker reported nine tests passed, including failed setup
+  rollback, held real detached writes, and cancellation/settlement ownership.
+- Main node-error-info contract: nine tests passed including new key remediation.
+
+All four completed source/migration workers closed; their context can be resumed
+for scoped repairs. Source delta from production checkpoint3523a64e is empty.
+Remaining B: comprehensive boundary/admission suite and rendered error scenarios.
+Exact-head CI, independent C review and screenshots are not yet complete.

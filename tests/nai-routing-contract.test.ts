@@ -18,6 +18,7 @@ import { createTestRuntimeContext } from "../lib/runtimeContext.ts";
 import { getProviderSurfaceSupport } from "../lib/providers/derive.ts";
 import { buildLaneMap } from "../routes/models.ts";
 import { config } from "../config.ts";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (rel: string) => readFileSync(join(repoRoot, rel), "utf8");
@@ -91,20 +92,20 @@ test("no nai dispatch forwards references to the adapter", () => {
   // generateViaNai has no references parameter. A copied MiniMax branch would
   // either fail typecheck or, behind a cast, drop the user's image silently.
   for (const file of [
-    "lib/generatePipeline.ts",
-    "lib/multimodePipeline.ts",
-    "lib/nodeGeneration.ts",
+    "lib/providers/execution/legacyClassic.ts",
+    "lib/providers/execution/legacyMultimode.ts",
+    "lib/providers/execution/legacyNode.ts",
     "lib/agentImageVideoGen.ts",
   ]) {
-    const source = read(file);
-    let index = source.indexOf("generateViaNai(");
-    while (index !== -1) {
-      const call = source.slice(index, source.indexOf("})", index) + 2);
+    const calls = collectCallArguments(read(file), file, "generateViaNai");
+    assert.equal(calls.length, 1, `${file}: expected one actual NAI dispatch`);
+    for (const args of calls) {
+      assert.equal(args.length, 3, `${file}: NAI options must be the third argument`);
+      const options = args[2];
       assert.ok(
-        !/\breferences\s*:/.test(call),
+        !/\breferences\b/.test(options),
         `${file}: a generateViaNai call passes references, which the adapter cannot use`,
       );
-      index = source.indexOf("generateViaNai(", index + 1);
     }
   }
 });
