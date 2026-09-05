@@ -40,6 +40,17 @@ the private fixed `IMA2_UI_RECEIPT_BUILD=1` flag. Ordinary build configuration,
 source CSS and automatic scanning stay unchanged. Both new files are bound by
 ui/dev inventory; all three receipt implementation modules are explicit inputs.
 
+The helper exports `fixtureTailwindSources(): import("vite").Plugin`; its
+configResolved hook derives repoRoot from the verified Vite ui root, and it keeps
+one build-local certified inventory. Vite config inserts it before Tailwind only
+for the fixed private flag. Wrapper sets that flag; it is not caller-controlled
+receipt metadata. Public receipt facade/declaration adds
+`inventoryUiSourceInputs(repoRoot: string): Promise<FileDigest[]>` and source
+snapshot reuses that exact implementation. The plugin must observe transformation
+of the canonical entry and reject a build that never visits it, rather than issue
+a silently unbounded certificate. No filesystem receipt is written by the plugin;
+only the original nonce-bound parent transaction publishes after Vite succeeds.
+
 The plugin obtains the same validated source-file inventory used by the receipt
 through an additive public `inventoryUiSourceInputs(repoRoot): Promise<FileDigest[]>`
 export. It transforms only the canonical ui/src/index.css Tailwind entry in memory:
