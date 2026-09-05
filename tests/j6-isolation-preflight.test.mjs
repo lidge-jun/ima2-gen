@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as path from "node:path";
 import { build } from "esbuild";
+import { EventEmitter } from "node:events";
 
 // Execute the actual preflight in a synthetic host, never start the fixture.
 // No HOME mutation, real filesystem probe, browser, socket, or child process.
@@ -21,7 +22,7 @@ function host(overrides = {}) {
   };
 }
 
-function load(state) {
+function load(state, overrides = {}) {
   const fs = {
     existsSync: (p) => state.present.has(p), realpathSync: (p) => p,
     lstatSync: (p) => {
@@ -36,10 +37,10 @@ function load(state) {
     mkdtempSync: () => { throw Error("preflight must not create fixture directories"); },
     writeFileSync: () => { throw Error("preflight must not write files"); },
   };
-  const modules = { "node:fs": fs, "node:path": path,
+  const modules = { "node:fs": { ...fs, ...overrides.fs }, "node:path": path,
     "node:os": { homedir: () => runnerHome, userInfo: () => ({ homedir: runnerHome }), tmpdir: () => "/tmp" },
-    "node:child_process": { spawn: () => { throw Error("preflight must not spawn"); } },
-    "node:http": { createServer: () => { throw Error("preflight must not open sockets"); } },
+    "node:child_process": overrides.childProcess ?? { spawn: () => { throw Error("preflight must not spawn"); } },
+    "node:http": overrides.http ?? { createServer: () => { throw Error("preflight must not open sockets"); } },
   };
   const module = { exports: {} };
   const require = (name) => {
@@ -48,7 +49,7 @@ function load(state) {
   };
   new Function("require", "module", "exports", "process", result.outputFiles[0].text
     + "\n//# sourceURL=wp02-preflight-bundle.js")(require, module, module.exports,
-    { env: state.env, platform: "linux", cwd: () => checkout + "/ui" });
+    { env: state.env, platform: "linux", cwd: () => checkout + "/ui", execPath: "/fixture/node" });
   return module.exports;
 }
 
@@ -67,9 +68,9 @@ test("J6 does not treat path exceptions as credential or arbitrary-root exceptio
   }
 });
 
-test("J6 rejects linked paths and untrusted Azure extension directory ownership/mode", () => {
+test("J6 rejects linked paths, nonroot ownership and unobserved writable modes", () => {
   for (const state of [host({ symlinks: new Set([azure]) }), host({ symlinks: new Set([runnerHome + "/.config"]) }),
-    host({ uid: 1001 }), host({ mode: 0o777 })]) {
+    host({ uid: 1001 }), host({ mode: 0o775 })]) {
     assert.throws(() => load(state).assertJ6Isolation(), /unsafe environment names/);
   }
 });
@@ -96,13 +97,54 @@ test("J6 remains blocked on local/self-hosted contexts before any resource alloc
 });
 
 test("J6 diagnostics expose fixed-path metadata without changing refusal or inspecting arbitrary values", () => {
-  const state = host({ mode: 0o777 });
+  const state = host({ mode: 0o775 });
   const api = load(state);
-  assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.mode, "777");
+  assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.mode, "775");
   assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.expectedPath, true);
   assert.throws(() => api.assertJ6Isolation(), /unsafe environment names/);
   state.env.AZURE_EXTENSION_DIR = "/untrusted/location";
   assert.deepEqual(load(state).j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR, { expectedPath: false, inspected: false });
   state.env.GITHUB_ACTIONS = "false";
   assert.deepEqual(load(state).j6RunnerPathDiagnostics(), { inspected: false });
+});
+
+test("J6 recognizes observed canonical root-owned777 Azure path as unused metadata only", () => {
+  const api = load(host({ mode: 0o777 }));
+  assert.equal(api.assertJ6Isolation().azureExtensionHandling, "unused-public-tool-metadata");
+  assert.equal(api.j6RunnerPathDiagnostics().AZURE_EXTENSION_DIR.mode, "777");
+});
+
+test("actual J6 startApp excludes both metadata variables from captured child options", async () => {
+  const state = host({ mode: 0o777 }); state.env.PATH = "/fixture/bin";
+  const captured = []; const writes = []; let stubClosed = false;
+  const child = Object.assign(new EventEmitter(), {
+    stdout: new EventEmitter(), stderr: new EventEmitter(), exitCode: null, signalCode: null,
+    kill(signal) { this.signalCode = signal; queueMicrotask(() => this.emit("exit", null, signal)); return true; },
+  });
+  const api = load(state, {
+    fs: { mkdtempSync: () => "/tmp/wp02-synthetic", writeFileSync: (p, value) => writes.push([p, JSON.parse(value)]) },
+    childProcess: { spawn: (...args) => {
+      captured.push(args);
+      queueMicrotask(() => child.stdout.emit("data", Buffer.from("Image Gen running at http://127.0.0.1:40124")));
+      return child;
+    } },
+    http: { createServer: () => ({
+      listen: (_port, _host, ready) => ready(), address: () => ({ port: 40123 }),
+      close: (done) => { stubClosed = true; done(); },
+    }) },
+  });
+  const app = await api.startApp("minimax", { j6: true, provider: "oauth" });
+  try {
+    assert.equal(captured.length, 1);
+    const [command, args, options] = captured[0];
+    assert.equal(command, "/fixture/node"); assert.deepEqual(args, ["--import", "tsx", "server.ts"]);
+    assert.equal(Object.hasOwn(options.env, "AZURE_EXTENSION_DIR"), false);
+    assert.equal(Object.hasOwn(options.env, "XDG_CONFIG_HOME"), false);
+    assert.equal(options.env.HOME, runnerHome);
+    assert.equal(options.env.IMA2_NO_OAUTH_PROXY, "1"); assert.equal(options.env.IMA2_NO_GROK_PROXY, "1");
+    assert.equal(Object.hasOwn(options, "shell"), false);
+    assert.equal(writes.length, 1); assert.deepEqual(writes[0][1].mcp.enabledProviders, []);
+    assert.equal(app.isolation.azureExtensionHandling, "unused-public-tool-metadata");
+  } finally { await app.close(); }
+  assert.equal(child.signalCode, "SIGTERM"); assert.equal(stubClosed, true);
 });

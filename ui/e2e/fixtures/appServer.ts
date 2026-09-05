@@ -18,6 +18,8 @@ export type J6Isolation = {
   dotenvAbsent: true; providerEnvironmentAbsent: true; authStoresAbsent: true;
   credentialMountsAbsent: true; autoStartDisabled: true;
   runnerPaths: { xdgConfigHome: string | null; azureExtensions: string | null };
+  runnerPathMetadata: Record<string, unknown>;
+  azureExtensionHandling: "absent" | "unused-public-tool-metadata";
 };
 
 function verifiedRunnerPath(key: string, value: string | undefined, osHome: string): boolean {
@@ -30,7 +32,10 @@ function verifiedRunnerPath(key: string, value: string | undefined, osHome: stri
   }
   if (metadata.isSymbolicLink() || !metadata.isDirectory()) return false;
   try { if (realpathSync(expected) !== expected) return false; } catch { return false; }
-  return key === "XDG_CONFIG_HOME" || (metadata.uid === 0 && (metadata.mode & 0o022) === 0);
+  // The observed hosted image makes /opt world-writable. This exact path is
+  // unused metadata, NOT trusted extension code; it is never inherited by J6's child.
+  return key === "XDG_CONFIG_HOME" || (metadata.uid === 0
+    && ((metadata.mode & 0o022) === 0 || (metadata.mode & 0o7777) === 0o777));
 }
 
 /** Diagnostic only: inspect two fixed public tool paths, never arbitrary env values or file contents. */
@@ -87,7 +92,9 @@ export function assertJ6Isolation(): J6Isolation {
     dotenvAbsent: true, providerEnvironmentAbsent: true, authStoresAbsent: true,
     credentialMountsAbsent: true, autoStartDisabled: true,
     runnerPaths: { xdgConfigHome: process.env.XDG_CONFIG_HOME ?? null,
-      azureExtensions: process.env.AZURE_EXTENSION_DIR ?? null } };
+      azureExtensions: process.env.AZURE_EXTENSION_DIR ?? null },
+    runnerPathMetadata: j6RunnerPathDiagnostics(),
+    azureExtensionHandling: process.env.AZURE_EXTENSION_DIR ? "unused-public-tool-metadata" : "absent" };
 }
 
 function assertNoJ6Overrides(checkout: string): void {

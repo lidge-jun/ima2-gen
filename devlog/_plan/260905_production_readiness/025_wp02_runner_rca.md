@@ -32,3 +32,30 @@ It reports lstat directory/link/uid/mode and canonical-equality, no file content
 preflight failure JSON captures this data. Existing allow/refuse policy unchanged.
 Synthetic actual-source test proves diagnostics do not convert refused777 or
 arbitrary-path cases into success. Next CI is a diagnostic run, not another fix.
+
+Exact failing-image primary source fetched in full via GitHub Contents API:
+https://github.com/actions/runner-images/blob/ubuntu24/20260831.293/images/ubuntu/scripts/build/configure-system.sh
+explicitly runs chmod-R777 on/opt. The same image's configure-environment.sh sets
+XDG_CONFIG_HOME=$HOME/.config; post-gen/environment-variables.sh substitutes the
+actual user's home. H2 now has a source-backed prediction (mode777), not a guess.
+Still wait for diagnostic-run33945997963's actual metadata to confirm this host.
+
+Observed33945997963 artifact now confirms H2, twice (both spec beforeAll captures):
+AZURE_EXTENSION_DIR expectedPath=true,directory=true,symlink=false,uid=0,mode777,
+canonical=true. XDG expectedPath=true,directory=true,symlink=false,uid1001,mode755,
+canonical=true. H1 wrongpath and H3 absent/link are falsified by these captures.
+Artifacts:devlog/_artifacts/260905_production_readiness/wp02/4cd4d1d0/**/wp02-preflight.json.
+The matching image source chmod-R777 predicts the exact captured discriminator;
+the synthetic actual-helper mode755/mode777 toggle reproduces acceptance/refusal.
+
+Causal fix: add only the observed canonical root-owned0777 Azure-path case as an
+UNUSED PUBLIC TOOL METADATA exception. It is not a secure-permission assertion or
+permission to import/execute extensions. Keep wrongpath/nonroot/symlink/canonical
+errors and all otherAZURE credential vars blocked; keep child env exclusion.
+Readonly Poincare candidate reviewPASS required runtime metadata (now captured),
+exact bounds, unused-path proof, regressions and honest receipts. Source search
+found no scoped Azure CLI/credential consumers; child starts process.execPath,
+not a shell, with OAuth/Grok auto-start and MCP restoration disabled. Add actual
+startApp spawn-option capture through synthetic fs/http/child boundaries to prove
+metadata is absent from child env; no real resources. Record real metadata plus
+exception label in successful hosted receipt; do not claim directory integrity.
