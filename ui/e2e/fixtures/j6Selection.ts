@@ -2,7 +2,8 @@ import { expect, type Browser, type BrowserContext, type Locator, type Page, typ
 import { writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { assertJ6Isolation, j6RunnerPathDiagnostics, startApp } from "./appServer";
-import type { ComfyLaneModels, LaneCatalog } from "../../src/lib/api-comfy";
+import { readFixtures, type J6CatalogState } from "./j6Catalog";
+export { J6_WORKFLOWS, type J6CatalogState } from "./j6Catalog";
 
 export const MODEL_TRIGGER = "#sidebar-generation-model:visible";
 export const PROVIDER_TRIGGER = "#sidebar-generation-provider:visible";
@@ -10,13 +11,6 @@ export const WP02_VIEWPORTS = [
   { width: 1440, height: 1000 }, { width: 1024, height: 800 }, { width: 768, height: 1024 },
   { width: 390, height: 844 }, { width: 320, height: 740 },
 ];
-export const J6_WORKFLOWS: ComfyLaneModels = {
-  image: [{ id: "wf-first", label: "First image", executable: true },
-    { id: "wf-selected", label: "Selected image", executable: true }],
-  video: [{ id: "wf-video-first", label: "First video", executable: true },
-    { id: "wf-video-selected", label: "Selected video", executable: true }],
-};
-export type J6CatalogState = { mode: "ready" | "empty" | "offline" | "error" };
 export type J6Capture = {
   requests: Array<{ path: string; body: unknown }>;
   deniedGeneration: Array<{ method: string; path: string }>;
@@ -24,6 +18,11 @@ export type J6Capture = {
   continued: string[];
   unexpected: string[];
   catalog: J6CatalogState;
+  catalogReads: number;
+  catalogCancelled: number;
+  catalogPending: number;
+  releaseCatalog(): void;
+  drainCatalog(): Promise<void>;
   submissionFailure?: "grok-api-key-missing" | "oauth-unavailable" | "invalid-request";
   dispose(): Promise<void>;
 };
@@ -35,55 +34,12 @@ export type J6Seed = {
   profile?: "default" | "prompt-studio";
   uiMode?: "classic" | "home";
   theme?: "dark" | "light";
-  locale?: "en" | "ko";
+  locale?: "en" | "ko" | "zh-Hans" | "zh-Hant";
   evidencePrefix?: string;
   nonGenerating?: boolean;
+  catalog?: J6CatalogState;
 };
 
-function modelCatalog(state: J6CatalogState, composer = false): { ok: true; lanes: LaneCatalog } {
-  const lane = (image: string[], video: string[] = []) => ({ status: "ready" as const,
-    models: { image: image.map((id) => ({ id, label: id })), video: video.map((id) => ({ id, label: id })) } });
-  const models = state.mode === "empty" ? { image: [], video: [] } : {
-    image: J6_WORKFLOWS.image.map((row) => ({ ...row, executable: state.mode !== "offline" })),
-    video: J6_WORKFLOWS.video.map((row) => ({ ...row, executable: state.mode !== "offline" })),
-  };
-  return { ok: true, lanes: {
-    oauth: lane(["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]),
-    api: lane(["gpt-5.6-luna", "gpt-5.6-sol"]),
-    grok: lane(["grok-imagine-image-2.0", "grok-imagine-image-quality"], ["grok-imagine-video-1.5"]),
-    "grok-api": lane(["grok-imagine-image-2.0", "grok-imagine-image-quality"], ["grok-imagine-video-1.5"]),
-    "gemini-api": lane(["nano-banana-pro", "nano-banana-2"]),
-    ...(composer ? { nai: lane(["nai-diffusion-5-full"]), minimax: lane(["image-01"]) } : {}),
-    comfy: { status: state.mode === "offline" ? "disconnected" : "ready", models },
-  } };
-}
-
-function readFixtures(catalog: J6CatalogState, composer = false): Record<string, unknown> {
-  // An already-saved empty session: version0 invokes the existing beforeunload
-  // initialization PUT. Selection reloads do not exercise graph creation.
-  const session = { id: "wp02-session", title: "Selection fixture", createdAt: 1, updatedAt: 1,
-    graphVersion: 1, nodeCount: 0, nodes: [], edges: [] };
-  return {
-    "/api/models": modelCatalog(catalog, composer),
-    "/api/capabilities": { limits: { maxRefCount: 5 }, defaults: {} },
-    "/api/oauth/status": { status: "ready", models: ["gpt-5.6-luna"] },
-    "/api/grok/status": { status: "ready", models: ["grok-imagine-image-2.0"] },
-    "/api/agy/status": { installed: false },
-    "/api/keys/status": Object.fromEntries(["openai", "xai", "gemini", "vertex", "atlascloud", "minimax", "nai"]
-      .map((id) => [id, { configured: true, valid: true, source: "fixture", maskedKey: null }])),
-    "/api/providers": { apiKey: true, oauth: true, apiKeyDisabled: false, apiKeySource: "fixture" },
-    "/api/billing": { oauth: true, apiKeyValid: true, apiKeySource: "fixture" },
-    "/api/mcp/providers": { providers: [] },
-    "/api/inflight": { jobs: [], terminalJobs: [] },
-    "/api/assets": { assets: [], nextCursor: null, total: 0 },
-    "/api/sessions": { sessions: [session] },
-    "/api/sessions/wp02-session": { session },
-    "/api/config/grok-planner": { model: "grok-4.3", options: ["grok-4.3"] },
-    "/api/prompt-builder/config": { backend: "auto", model: "gpt-5.6-luna",
-      options: { backends: ["auto"], models: { auto: ["gpt-5.6-luna"] }, autoOrder: [] },
-      locked: { backend: true, model: true } },
-  };
-}
 
 export function requestObject(body: unknown): Record<string, unknown> {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Expected JSON request object");
@@ -126,7 +82,27 @@ async function captureSubmission(route: Route, capture: J6Capture, path: string)
   }
 }
 
-async function serveJ6(route: Route, origin: string, capture: J6Capture): Promise<void> {
+type CatalogGate = { closing: boolean; waiters: Array<() => void>; pending: Set<Promise<void>> };
+
+async function serveCatalog(route: Route, capture: J6Capture, gate: CatalogGate) {
+  capture.catalogReads++;
+  if (capture.catalog.mode === "loading" && !gate.closing) await new Promise<void>((resolve) => gate.waiters.push(resolve));
+  try {
+    if (gate.closing || route.request().failure()) {
+      capture.catalogCancelled++; await route.abort("aborted").catch(() => {}); return;
+    }
+    if (capture.catalog.mode === "error") await route.fulfill({ status: 503, json: { error: "Fixture catalog unavailable" } });
+    else if (capture.catalog.mode === "app-auth401" || capture.catalog.mode === "app-auth403") {
+      await route.fulfill({ status: capture.catalog.mode === "app-auth401" ? 401 : 403, json: { error: "Application access required" } });
+    } else if (capture.catalog.mode === "invalid") await route.fulfill({ contentType: "application/json", body: "{invalid-json" });
+    else await route.fulfill({ json: readFixtures(capture.catalog, capture.nonGenerating)["/api/models"] });
+  } catch (error) {
+    if (gate.closing || route.request().failure()) { capture.catalogCancelled++; return; }
+    throw error;
+  }
+}
+
+async function serveJ6(route: Route, origin: string, capture: J6Capture, gate: CatalogGate): Promise<void> {
   const request = route.request();
   const url = new URL(request.url());
   const method = request.method();
@@ -148,8 +124,8 @@ async function serveJ6(route: Route, origin: string, capture: J6Capture): Promis
     await route.fulfill({ json: url.searchParams.has("groupBy")
       ? { sessions: [], loose: [], total: 0, nextCursor: null }
       : { items: [], total: 0, nextCursor: null } });
-  } else if (url.pathname === "/api/models" && capture.catalog.mode === "error") {
-    await route.fulfill({ status: 503, json: { error: "Fixture catalog unavailable" } });
+  } else if (url.pathname === "/api/models") {
+    await serveCatalog(route, capture, gate);
   } else if (Object.hasOwn(readFixtures(capture.catalog, capture.nonGenerating), url.pathname)) {
     await route.fulfill({ json: readFixtures(capture.catalog, capture.nonGenerating)[url.pathname] });
   } else if (url.pathname.startsWith("/api/")) {
@@ -162,18 +138,33 @@ async function serveJ6(route: Route, origin: string, capture: J6Capture): Promis
 }
 
 export async function installJ6SelectionCapture(context: BrowserContext, fixtureOrigin: string,
-  options: Pick<J6Seed, "nonGenerating"> = {}): Promise<J6Capture> {
+  options: Pick<J6Seed, "nonGenerating" | "catalog"> = {}): Promise<J6Capture> {
   const url = new URL(fixtureOrigin);
   if (url.origin !== fixtureOrigin || url.hostname !== "127.0.0.1" || url.protocol !== "http:"
     || !url.port || url.port === "3333" || context.pages().length || context.serviceWorkers().length) {
     throw new Error("J6 BLOCKED: capture requires an unused context and ephemeral loopback origin");
   }
-  const capture: J6Capture = { requests: [], deniedGeneration: [], continued: [],
-    nonGenerating: options.nonGenerating ?? false, unexpected: [], catalog: { mode: "ready" },
-    dispose: () => context.unroute("**/*", handler) };
+  const gate: CatalogGate = { closing: false, waiters: [], pending: new Set() };
+  const capture: J6Capture = { requests: [], deniedGeneration: [], continued: [], catalogReads: 0, catalogCancelled: 0, catalogPending: 0,
+    nonGenerating: options.nonGenerating ?? false, unexpected: [], catalog: options.catalog ?? { mode: "ready" },
+    releaseCatalog: () => { while (gate.waiters.length) gate.waiters.shift()?.(); },
+    async drainCatalog() {
+      gate.closing = true; capture.releaseCatalog();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([Promise.allSettled([...gate.pending]), new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Catalog route teardown timed out")), 2000);
+        })]);
+      } finally { clearTimeout(timer); }
+    },
+    dispose: async () => { await capture.drainCatalog(); await context.unroute("**/*", handler); } };
   const handler = async (route: Route) => {
-    try { await serveJ6(route, fixtureOrigin, capture); }
+    const catalog = new URL(route.request().url()).pathname === "/api/models";
+    const work = serveJ6(route, fixtureOrigin, capture, gate);
+    if (catalog) { gate.pending.add(work); capture.catalogPending++; }
+    try { await work; }
     catch { capture.unexpected.push("route-handler-failed"); await route.abort("failed").catch(() => {}); }
+    finally { if (catalog) { gate.pending.delete(work); capture.catalogPending--; } }
   };
   try {
     await context.route("**/*", handler);
@@ -424,7 +415,7 @@ export async function withJ6(browser: Browser, info: TestInfo, seed: J6Seed,
     try {
       if (context) {
         // Keep guards active while unloading every page; unexpected beacons still fail.
-        try { for (const page of context.pages()) await page.close(); }
+        try { await capture?.drainCatalog(); for (const page of context.pages()) await page.close(); }
         finally {
           await context.close(); teardown.contextClosed = true;
         }
@@ -442,12 +433,14 @@ export async function withJ6(browser: Browser, info: TestInfo, seed: J6Seed,
           configPath: app.home, origin: app.baseUrl, routeScope: "context/all-pages; exact-origin; deny mutations/external; SW blocked",
           requests, expectedSubmissions: seed.expectedSubmissions, nonGenerating: seed.nonGenerating ?? false,
           deniedGeneration: capture?.deniedGeneration ?? [], continued: capture?.continued ?? [],
-          unexpected: capture?.unexpected ?? [], stubCalls: app.stub.calls.length,
+          unexpected: capture?.unexpected ?? [], catalogReads: capture?.catalogReads ?? 0,
+          catalogCancelled: capture?.catalogCancelled ?? 0, catalogPending: capture?.catalogPending ?? 0, stubCalls: app.stub.calls.length,
           teardown, completionClaimed: false }, null, 2));
       }
     }
     expect(capture?.unexpected ?? []).toEqual([]);
     expect(capture?.deniedGeneration ?? []).toEqual([]);
+    expect(capture?.catalogPending ?? 0).toBe(0);
     expect(app.stub.calls).toEqual([]);
     expect(teardown).toEqual({ contextClosed: true, childExitedAndStubClosed: true });
     if (seed.expectedSubmissions !== undefined) expect(capture?.requests ?? []).toHaveLength(seed.expectedSubmissions);

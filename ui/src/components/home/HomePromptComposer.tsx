@@ -62,8 +62,10 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
     return {
       value: providerValue,
       label,
-      sub: availability.ok ? t("readiness.ready") : availability.reason,
-      disabled: !availability.ok,
+      sub: providerValue === "comfy" ? availability.reason : availability.ok ? t("readiness.ready") : availability.reason,
+      // ComfyUI is selectable even before a workflow is observed so the user
+      // can reach its existing Settings manager and configure the local lane.
+      disabled: !availability.ok && providerValue !== "comfy",
     } satisfies SelectItem<Provider>;
   });
 

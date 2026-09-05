@@ -29,6 +29,7 @@ export async function withLaneCatalog(run: (fixture: {
   const originals = new Map(["fetch", "window", "localStorage"].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const requests: Request[] = [], focus = new Set<EventListenerOrEventListenerObject>(), disposers: Array<() => void> = [];
   const violations: string[] = [];
+  let windowReads = 0, storageReads = 0;
   const windowValue = { addEventListener: (name: string, listener: EventListenerOrEventListenerObject) => {
     assert.equal(name, "focus"); focus.add(listener);
   }, removeEventListener: (name: string, listener: EventListenerOrEventListenerObject) => {
@@ -40,17 +41,19 @@ export async function withLaneCatalog(run: (fixture: {
     }
     return new Promise<Response>((resolve, reject) => requests.push({ url, signal: init.signal ?? undefined, resolve, reject }));
   };
-  const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+  const flush = async () => { await new Promise<void>((resolve) => setImmediate(resolve)); };
   Object.defineProperty(globalThis, "fetch", { configurable: true, value: fakeFetch });
-  Object.defineProperty(globalThis, "window", { configurable: true, get() { throw new Error("Import accessed window"); } });
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("Catalog accessed storage"); } });
+  Object.defineProperty(globalThis, "window", { configurable: true, get() { windowReads++; throw new Error("Import accessed window"); } });
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { storageReads++; throw new Error("Catalog accessed storage"); } });
   try {
     const api = await load(); assert.equal(requests.length, 0);
+    assert.equal(windowReads, 0); assert.equal(storageReads, 0);
     Object.defineProperty(globalThis, "window", { configurable: true, value: windowValue });
     await run({ api, requests, focus, flush,
       subscribe(listener = () => {}) { const close = api.subscribeLaneCatalog(listener); disposers.push(close); return close; },
       respond(index, body = catalogBody(), status = 200) { requests[index].resolve(new Response(JSON.stringify(body), { status })); } });
     assert.deepEqual(violations, []);
+    assert.equal(storageReads, 0, "even caught storage reads violate the resource boundary");
   } finally {
     disposers.reverse().forEach((close) => close());
     requests.forEach((request) => request.reject(new Error("Synthetic teardown")));

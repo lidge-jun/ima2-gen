@@ -2,6 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { catalogBody, withLaneCatalog } from "./_laneCatalogFixture";
 
+test("workflow API encodes opaque delete IDs without altering the request method or body", async () => {
+  await withLaneCatalog(async ({ api }) => {
+    const original = globalThis.fetch, calls: unknown[] = [];
+    globalThis.fetch = async (url, init) => {
+      calls.push([url, init?.method, init?.body]);
+      return new Response(JSON.stringify({ ok: true, id: "cedar/a" }), { status: 200 });
+    };
+    try {
+      await api.deleteComfyWorkflow("cedar/a");
+      assert.deepEqual(calls, [["/api/comfy/workflows/cedar%2Fa", "DELETE", undefined]]);
+    } finally { globalThis.fetch = original; }
+  });
+});
+
 test("catalog parser rejects malformed consumed fields with fixed identity, not empty readiness", async () => {
   await withLaneCatalog(async ({ api }) => {
     const row = { id: "cedar", label: "Cedar" };

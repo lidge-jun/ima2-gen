@@ -7,6 +7,8 @@ import { useGrokStatus } from "./useGrokStatus";
 import { useKeyStatus } from "./useKeyStatus";
 import type { Provider } from "../types";
 import { useI18n } from "../i18n";
+import { useLaneCatalog } from "./useLaneCatalog";
+import { deriveComfyDisplay, comfyDisplayMessageKey } from "../lib/comfyDisplay";
 
 export type ProviderAvailability = {
   ok: boolean;
@@ -51,6 +53,8 @@ export function useProviderAvailability(): Record<Provider, ProviderAvailability
   const atlasCloudKeyOk = keyStatus?.atlascloud?.valid === true;
   const minimaxKeyOk = keyStatus?.minimax?.valid === true;
   const naiKeyOk = keyStatus?.nai?.valid === true;
+  const laneCatalog = useLaneCatalog();
+  const comfyDisplay = deriveComfyDisplay(laneCatalog, null);
 
   return {
     oauth: { ok: oauthReady, reason: oauthReason, hint: oauthHint },
@@ -88,14 +92,9 @@ export function useProviderAvailability(): Record<Provider, ProviderAvailability
       reason: naiKeyOk ? "" : t("provider.naiApiKeyRequired"),
     },
     comfy: {
-      // The comfy lane has no credential: what makes it usable is a registered
-      // workflow reachable on its own origin. The models endpoint already folds
-      // that into a lane status, so this reports the lane's own verdict rather
-      // than inventing a second source of truth. Filled in properly by wp5;
-      // until then the lane is reported unavailable rather than silently ok,
-      // because an "ok" lane with no workflow would 400 on every generation.
-      ok: false,
-      reason: t("provider.comfyNoWorkflow"),
+      ok: comfyDisplay.laneAvailable,
+      reason: t(comfyDisplay.laneAvailable ? "comfy.display.available" : comfyDisplayMessageKey(comfyDisplay, laneCatalog)),
+      hint: t("comfy.display.chooseWorkflow"),
     },
   };
 }

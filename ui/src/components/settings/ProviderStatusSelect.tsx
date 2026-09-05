@@ -3,6 +3,9 @@
 // (devlog/_fin/260716_mcp-model-surface-ui/060). Status is information
 // (dot + text), selection is the action; color is never the only signal.
 import { useState } from "react";
+import { CORE_PROVIDER_IDS, isCoreProviderId } from "../../generated/providers";
+import { useLaneCatalog } from "../../hooks/useLaneCatalog";
+import { deriveComfyDisplay, comfyDisplayMessageKey } from "../../lib/comfyDisplay";
 import { useAppStore } from "../../store/useAppStore";
 import { setMcpProviderImpl } from "../../store/storeSettingsImpl";
 import { useProviderAvailability } from "../../hooks/useProviderAvailability";
@@ -17,17 +20,19 @@ const MCP_PREFIX = "mcp:";
 
 type CoreEntry = { value: Provider; provider: string; method: string };
 
-const CORE_ENTRIES: ReadonlyArray<CoreEntry> = [
-  { value: "oauth", provider: "GPT", method: "OAuth" },
-  { value: "api", provider: "GPT", method: "API" },
-  { value: "grok", provider: "Grok", method: "OAuth" },
-  { value: "grok-api", provider: "Grok", method: "API" },
-  { value: "agy", provider: "Gemini", method: "agy" },
-  { value: "gemini-api", provider: "Gemini", method: "API" },
-  { value: "atlascloud", provider: "Atlas Cloud", method: "API" },
-  { value: "minimax", provider: "MiniMax", method: "API" },
-  { value: "nai", provider: "NovelAI", method: "API" },
-];
+const CORE_ENTRY_BY_ID: Record<Provider, CoreEntry> = {
+  oauth: { value: "oauth", provider: "GPT", method: "OAuth" },
+  api: { value: "api", provider: "GPT", method: "API" },
+  grok: { value: "grok", provider: "Grok", method: "OAuth" },
+  "grok-api": { value: "grok-api", provider: "Grok", method: "API" },
+  agy: { value: "agy", provider: "Gemini", method: "agy" },
+  "gemini-api": { value: "gemini-api", provider: "Gemini", method: "API" },
+  atlascloud: { value: "atlascloud", provider: "Atlas Cloud", method: "API" },
+  minimax: { value: "minimax", provider: "MiniMax", method: "API" },
+  nai: { value: "nai", provider: "NovelAI", method: "API" },
+  comfy: { value: "comfy", provider: "ComfyUI", method: "local" },
+};
+const CORE_ENTRIES: ReadonlyArray<CoreEntry> = CORE_PROVIDER_IDS.map((value) => CORE_ENTRY_BY_ID[value]);
 
 function displayProviderId(id: string): string {
   return id.replace(/(^|-)([a-z])/g, (_match, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
@@ -58,10 +63,18 @@ export function ProviderStatusSelect({ mcpProviders }: { mcpProviders: McpProvid
   const mcpProvider = useAppStore((s) => s.mcpProvider ?? null);
   const setProvider = useAppStore((s) => s.setProvider);
   const availability = useProviderAvailability();
+  const snapshot = useLaneCatalog();
+  const comfyWorkflow = useAppStore((s) => s.comfyWorkflow);
+  const comfyVideoWorkflow = useAppStore((s) => s.comfyVideoWorkflow);
+  const comfyDisplay = deriveComfyDisplay(snapshot, { comfyWorkflow, comfyVideoWorkflow });
+  const activeComfy = provider === "comfy" && !mcpProvider;
+  const comfyTone: DotTone = comfyDisplay.selectedAvailable ? "ok"
+    : ["error", "disconnected", "selected-offline"].includes(comfyDisplay.code) ? "bad" : "warn";
   const [blocked, setBlocked] = useState<{ label: string; reason: string; hint?: string } | null>(null);
 
   const coreStatusText = (entry: CoreEntry): string => {
     const state = availability[entry.value];
+    if (entry.value === "comfy") return activeComfy ? t(comfyDisplayMessageKey(comfyDisplay, snapshot)) : state.reason;
     return state.ok ? t("provider.statusReady") : state.reason;
   };
 
@@ -82,11 +95,11 @@ export function ProviderStatusSelect({ mcpProviders }: { mcpProviders: McpProvid
         const state = availability[entry.value];
         return {
           value: `${CORE_PREFIX}${entry.value}`,
-          searchText: `${entry.provider} ${entry.method}`,
+          searchText: `${entry.provider} ${entry.value === "comfy" ? t("comfy.display.localMethod") : entry.method}`,
           label: (
             <span className="provider-option">
-              <Dot tone={state.ok ? "ok" : "bad"} />
-              <span>{entry.provider} {entry.method}</span>
+              <Dot tone={entry.value === "comfy" && activeComfy ? comfyTone : state.ok ? "ok" : "bad"} />
+              <span>{entry.provider} {entry.value === "comfy" ? t("comfy.display.localMethod") : entry.method}</span>
             </span>
           ),
           sub: coreStatusText(entry),
@@ -113,25 +126,37 @@ export function ProviderStatusSelect({ mcpProviders }: { mcpProviders: McpProvid
     ? mcpProviders.find((record) => record.id === mcpProvider) ?? null
     : null;
 
-  const statusText = selectedCore
+  const isLocalComfy = selectedCore?.value === "comfy";
+  const statusText = isLocalComfy
+    ? t(comfyDisplayMessageKey(comfyDisplay, snapshot))
+    : selectedCore
     ? coreStatusText(selectedCore)
     : selectedRecord
       ? mcpStatusText(selectedRecord)
       : t("provider.statusDisconnected");
-  const statusTone: DotTone = selectedCore
+  const statusTone: DotTone = isLocalComfy
+    ? comfyTone
+    : selectedCore
     ? (availability[selectedCore.value].ok ? "ok" : "bad")
     : selectedRecord
       ? mcpTone(selectedRecord)
       : "bad";
   const authText = selectedCore
-    ? selectedCore.method
+    ? selectedCore.value === "comfy" ? t("comfy.display.localMethod") : selectedCore.method
     : "MCP";
 
   const onChange = (value: string) => {
     if (value.startsWith(CORE_PREFIX)) {
-      const next = value.slice(CORE_PREFIX.length) as Provider;
+      const next = value.slice(CORE_PREFIX.length);
+      if (!isCoreProviderId(next)) return;
       const entry = CORE_ENTRIES.find((candidate) => candidate.value === next);
       const state = availability[next];
+      // ComfyUI has no credential gate: selecting it must remain possible so
+      // the user can reach the existing workflow manager and configure it.
+      if (next === "comfy") {
+        setProvider(next);
+        return;
+      }
       if (!state.ok) {
         setBlocked({ label: entry ? `${entry.provider} ${entry.method}` : next, reason: state.reason, hint: state.hint });
         return;
@@ -164,14 +189,17 @@ export function ProviderStatusSelect({ mcpProviders }: { mcpProviders: McpProvid
         ariaLabel={t("provider.authTitle")}
         className="provider-status-select__select"
       />
-      <div className="provider-status-line" data-tone={statusTone}>
+      <div className="provider-status-line" data-tone={statusTone} role="status" aria-live="polite">
         <Dot tone={statusTone} />
         <span className="provider-status-line__key">{t("provider.statusLineTitle")}:</span>
         <span className="provider-status-line__value">{statusText}</span>
       </div>
-      <div className="provider-auth-chip" title={t("provider.authMethodTitle")}>
+      {isLocalComfy && snapshot.observedAt !== null ? <p className="provider-helper">{t("comfy.display.lastChecked", { time: new Date(snapshot.observedAt).toLocaleTimeString() })}</p> : null}
+      {isLocalComfy && comfyDisplay.code === "selected-missing" && snapshot.catalog?.comfy?.status === "disconnected"
+        ? <p className="provider-helper">{t("comfy.statusOffline")}</p> : null}
+      <div className="provider-auth-chip" title={t(isLocalComfy ? "comfy.display.localMethod" : "provider.authMethodTitle")}>
         <span>{authText}</span>
-        {statusTone !== "bad"
+        {statusTone !== "bad" && !isLocalComfy
           ? <span className="provider-auth-chip__state">{t("provider.authActive")}</span>
           : null}
       </div>

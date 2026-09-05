@@ -2350,6 +2350,7 @@
     "refUndo": "Undo"
   },
   "comfy": {
+    "display": {"localMethod":"Local HTTP","loading":"Checking workflows…","refreshing":"Refreshing the last observation…","loadFailed":"Could not read the workflow catalog.","appAccessRequired":"App access is required to read the catalog.","unavailable":"Workflow availability is unknown.","available":"Available at the last catalog check.","chooseWorkflow":"Choose a workflow","empty":"No workflows registered.","selectedMissing":"The selected workflow is no longer listed.","selectedOffline":"The selected workflow was offline at the last check.","selectedLocked":"The selected workflow is locked.","observedConnected":"An instance responded at the last check.","lastChecked":"Last checked {time}","refresh":"Refresh","manage":"Manage workflows","controlsHelp":"This panel selects an image or video workflow. Its bindings determine which saved request settings apply; selecting a workflow does not verify execution."},
     "workflowsTitle": "ComfyUI workflows",
     "addTitle": "Register a workflow",
     "loading": "Loading workflows…",

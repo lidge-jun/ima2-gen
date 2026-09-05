@@ -1,4 +1,5 @@
-import { expect, type Browser, type BrowserContext, type Page, type Route, type TestInfo } from "@playwright/test";
+import { expect, type Browser, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
+import { installIsolatedComponentTransport } from "./isolatedComponentTransport";
 import { build } from "esbuild";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -80,71 +81,6 @@ async function syntheticAssets(assets: Map<string, Asset>, bundle: string) {
   } catch (error) { throw new Error("WP08 synthetic assets unavailable", { cause: error }); }
 }
 
-function installBrowserTransportGuard({ catalog }: { catalog: string }) {
-  window.wp08Transport = [];
-  const record = (kind: string, method: string, url: string, allowed = false) => {
-    const attempt = { kind, method, url, allowed };
-    window.wp08Transport.push(attempt);
-    void window.wp08RecordTransport(attempt).catch((error: unknown) => console.error("WP08 transport evidence failed", error));
-  };
-  const denied = () => new DOMException("WP08 transport denied", "SecurityError");
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input, init) => {
-    const url = new URL(input instanceof Request ? input.url : String(input), location.href).href;
-    const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-    const allowed = method === "GET" && url === catalog;
-    record("fetch", method, url, allowed);
-    return allowed ? nativeFetch(input, init) : Promise.reject(denied());
-  };
-  XMLHttpRequest.prototype.open = function (method: string, url: string | URL) {
-    record("xhr", method, String(url)); throw denied();
-  };
-  const constructors = ["EventSource", "WebSocket", "Worker", "SharedWorker"] as const;
-  for (const name of constructors) {
-    const original = window[name];
-    if (!original) continue;
-    Object.defineProperty(window, name, { configurable: true, value: new Proxy(original, {
-      construct(_target, args) { record(name, "CONNECT", String(args[0])); throw denied(); },
-    }) });
-  }
-  navigator.sendBeacon = (url) => { record("beacon", "POST", String(url)); return false; };
-  if (navigator.serviceWorker) navigator.serviceWorker.register = (url) => {
-    record("serviceWorker", "REGISTER", String(url)); return Promise.reject(denied());
-  };
-  localStorage.setItem("ima2.locale", "en");
-}
-
-declare global {
-  interface Window { wp08RecordTransport(attempt: TransportAttempt): Promise<void> }
-}
-
-async function guardContext(context: BrowserContext, assets: Map<string, Asset>, traffic: Traffic) {
-  const handler = async (route: Route) => {
-    const request = route.request();
-    const record = { method: request.method(), url: request.url(), outcome: "pending" };
-    traffic.routes.push(record);
-    try {
-      const asset = request.method() === "GET" ? assets.get(request.url()) : undefined;
-      if (!asset) {
-        traffic.unexpected.push(`${record.method} ${record.url}`);
-        await route.abort("blockedbyclient"); record.outcome = "aborted"; return;
-      }
-      await route.fulfill({ status: 200, ...asset }); record.outcome = "fulfilled-synthetic";
-    } catch (error) {
-      record.outcome = "route-error"; traffic.unexpected.push(String(error));
-      await route.abort("failed").catch(() => {});
-    }
-  };
-  try {
-    await context.exposeBinding("wp08RecordTransport", (_source, attempt: TransportAttempt) => { traffic.attempts.push(attempt); });
-    await context.addInitScript(installBrowserTransportGuard, { catalog: CATALOG });
-    await context.route("**/*", handler);
-    await context.routeWebSocket("**/*", (socket) => {
-      traffic.unexpected.push(`websocket ${socket.url()}`); socket.close();
-    });
-    context.on("serviceworker", () => traffic.unexpected.push("serviceworker created"));
-  } catch (error) { throw new Error("WP08 transport guard setup failed", { cause: error }); }
-}
 
 export async function checkpoint(fixture: ComposerCase, name: string) {
   try {
@@ -218,7 +154,7 @@ export async function withComposer(browser: Browser, info: TestInfo, seed: Compo
     sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: UI, encoding: "utf8" }).trim();
     bundle = await bundleComponent(); styles = await syntheticAssets(assets, bundle.body);
     context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1280, height: 900 } });
-    await guardContext(context, assets, traffic);
+    await installIsolatedComponentTransport(context, assets, [CATALOG], traffic);
     const page = await context.newPage();
     page.on("pageerror", (error) => traffic.pageErrors.push(error.message));
     page.on("console", (message) => { if (message.type() === "error") traffic.pageErrors.push(message.text()); });

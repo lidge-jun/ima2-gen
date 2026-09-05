@@ -10,7 +10,7 @@ import type { ProviderAvailability } from "../../src/hooks/useProviderAvailabili
 export type ComposerSurface = "sidebar" | "bottom" | "home";
 export type ComposerSeed = { surface: ComposerSurface; prompt?: string; busy?: boolean };
 export type ComposerObservation = ReturnType<typeof snapshot>;
-export type TransportAttempt = { kind: string; method: string; url: string; allowed: boolean };
+export type { TransportAttempt } from "./isolatedComponentTransport";
 
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=";
 const calls: Array<{ prompt: string; negativePrompt: string; activeGenerations: number }> = [];
@@ -126,7 +126,6 @@ export type ComposerController = {
 declare global {
   interface Window {
     wp08?: ComposerController;
-    wp08Transport: TransportAttempt[];
   }
 }
 window.wp08 = { mount, snapshot, retireAttachment, makeMissingElement, enableReferenceLane, unmount };

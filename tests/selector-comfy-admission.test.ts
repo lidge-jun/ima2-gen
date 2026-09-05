@@ -85,6 +85,10 @@ test("captured callbacks reject fresh-loading, disconnected, locked and stale-co
     const f = await render(); const previous = f.controls["sidebar-generation-model"].onChange;
     change(f); previous("comfy-video:motion"); assert.deepEqual(f.calls, []);
   }
+  for (const patch of [{ provider: "oauth" }, { mcpProvider: "runway" }]) {
+    const f = await render(); const previous = f.controls["sidebar-generation-model"].onChange;
+    Object.assign(f.state, patch); previous("cedar"); assert.deepEqual(f.calls, []);
+  }
 });
 
 test("MCP and other core contexts never interpret reserved Comfy values as setters", async () => {

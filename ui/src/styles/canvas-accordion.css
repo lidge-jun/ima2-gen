@@ -292,6 +292,7 @@
   height: 8px;
 }
 
+.comfy-generation-controls .option-btn { min-height: 44px; }
 .gen-provider-model__catalog-state {
   flex: 0 0 100%;
   min-width: 0;

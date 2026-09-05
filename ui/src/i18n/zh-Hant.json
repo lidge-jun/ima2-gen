@@ -2350,6 +2350,7 @@
     "refUndo": "撤銷"
   },
   "comfy": {
+    "display": {"localMethod":"本機 HTTP","loading":"正在檢查工作流…","refreshing":"正在更新上次觀測狀態…","loadFailed":"無法讀取工作流目錄。","appAccessRequired":"讀取目錄需要應用程式存取權限。","unavailable":"尚未確認工作流是否可用。","available":"上次檢查目錄時可用。","chooseWorkflow":"選擇工作流","empty":"尚未註冊工作流。","selectedMissing":"所選工作流已不在目錄中。","selectedOffline":"上次檢查時所選工作流離線。","selectedLocked":"所選工作流已鎖定。","observedConnected":"上次檢查時有執行個體回應。","lastChecked":"上次檢查：{time}","refresh":"重新整理","manage":"管理工作流","controlsHelp":"此面板選擇影像或影片工作流。繫結決定哪些已儲存的請求設定生效；選擇工作流並不證明執行成功。"},
     "workflowsTitle": "ComfyUI 工作流",
     "addTitle": "註冊工作流",
     "loading": "正在載入工作流…",

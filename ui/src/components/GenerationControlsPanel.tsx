@@ -11,6 +11,7 @@ import { GrokModelPicker } from "./GrokModelPicker";
 import { VideoControlsPanel } from "./VideoControlsPanel";
 import { NaiControlsPanel } from "./settings/NaiControlsPanel";
 import { McpGenerationControls } from "./settings/McpGenerationControls";
+import { ComfyGenerationControls } from "./settings/ComfyGenerationControls";
 import { useMcpProviders } from "../lib/mcpProviders";
 import type { Format, GeminiImageModel, Moderation, Quality } from "../types";
 
@@ -110,6 +111,7 @@ export function GenerationControlsPanel() {
   const isGeminiApi = provider === "gemini-api";
   const isAnyGemini = isAgyOnly || isGeminiApi;
   const isNai = provider === "nai";
+  const isComfy = provider === "comfy";
   // NovelAI always returns PNG and reads none of the GPT-shaped controls, so
   // format and moderation would be inert switches.
   const hideFormatControls = isGrok || isAnyGemini || isNai;
@@ -185,6 +187,15 @@ export function GenerationControlsPanel() {
         <McpGenerationControls
           record={mcpProviders.find((entry) => entry.id === mcpProvider) ?? null}
         />
+      </div>
+    );
+  }
+
+  if (isComfy) {
+    return (
+      <div className="right-panel-settings" role="tabpanel">
+        <ProviderStatusSelect mcpProviders={mcpProviders} />
+        <ComfyGenerationControls />
       </div>
     );
   }
