@@ -330,10 +330,22 @@ async function exerciseVideoNode(page: Page, info: TestInfo, scenario: Scenario,
   await nodeStep("Chromium observes native OPEN", async () => {
     await expect.poll(() => page.evaluate(() => window.__wp07Native.filter((e) => e.kind === "open").length)).toBeGreaterThan(0);
   }, info, progress);
-  await nodeStep("node pre-action geometry", () => nodeCheckpoint(page, info, "preaction", pending), info, progress);
   const generate = page.locator(".image-node__generate");
   await nodeStep("node Gen is visible", () => expect(generate).toBeVisible(), info, progress);
   await nodeStep("node Gen is enabled", () => expect(generate).toBeEnabled(), info, progress);
+  await nodeStep("node initial geometry", () => nodeCheckpoint(page, info, "initial", pending), info, progress);
+  await nodeStep("zoom out through normal controls until Gen is reachable", async () => {
+    const receivesClick = () => generate.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return hit !== null && button.contains(hit);
+    });
+    for (let clicks = 0; clicks < 3 && !await receivesClick(); clicks++) {
+      await page.getByRole("button", { name: "Zoom Out", exact: true }).click();
+    }
+    await expect.poll(receivesClick).toBe(true);
+  }, info, progress);
+  await nodeStep("node pre-action geometry", () => nodeCheckpoint(page, info, "preaction", pending), info, progress);
   await nodeStep("node Gen click", () => generate.click({ timeout: 5_000 }), info, progress);
   await nodeStep("node generation POST captured", () => expect.poll(() => capture.requests.length).toBe(1), info, progress);
   await nodeStep("node terminal warning and no Retry", async () => {
@@ -418,6 +430,7 @@ for (const outcome of ["tracking", "ordinary", "cancel", "success"] as const) {
         await animate.click(); await expect.poll(() => capture.requests.length).toBe(1);
         if (outcome === "success") {
           await expect(page.locator(".toast")).toContainText("Video ready. Check your history."); await playable(page);
+          await expect(page.locator(".toast__message")).toHaveCSS("white-space", "nowrap");
         } else {
           await expect(animate).toBeEnabled();
           await expect(page.locator(".toast").filter({ hasText: "Video ready" })).toHaveCount(0);

@@ -302,6 +302,11 @@ async function waitMixedControlsReady(page: Page, card: Locator, info: TestInfo,
   }
 }
 
+const ORDINARY_ERROR = "HEIC/HEIF is not supported. Convert to JPEG or PNG and try again.";
+function providerErrorCards(page: Page) {
+  return page.locator(".toast--card[role=alert]").filter({ hasNotText: ORDINARY_ERROR });
+}
+
 async function mixedStackEvidence(page: Page, info: TestInfo, width: number) {
   const stack = page.locator(".toast-stack");
   const viewport = await pageBounds(page);
@@ -311,7 +316,7 @@ async function mixedStackEvidence(page: Page, info: TestInfo, width: number) {
   expect(stackBox.scrollHeight).toBeGreaterThan(stackBox.clientHeight);
   expect(stackBox.scrollWidth).toBeLessThanOrEqual(stackBox.clientWidth + 1);
   expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth + 1);
-  const cards = page.locator(".toast--card[role=alert]");
+  const cards = providerErrorCards(page);
   const metrics = [];
   for (const [index, variant] of (["invalid-request", "oauth-unavailable", "grok-api-key-missing", "grok-api-key-missing"] as const).entries()) {
     const card = cards.nth(index);
@@ -326,13 +331,16 @@ async function mixedStackEvidence(page: Page, info: TestInfo, width: number) {
     assertCard(measured, viewport);
     await focusEvidence(page, card, info, `mixed-${width}-${index}`, !!VARIANTS[variant].copy.cta);
   }
-  const ordinary = stack.locator(".toast:not(.toast--card)");
+  const ordinary = stack.locator(".toast").filter({ hasText: ORDINARY_ERROR });
   await ordinary.scrollIntoViewIfNeeded();
   await mixedCheckpoint(page, info, `mixed-${width}-ordinary-after-scroll`, {
     dismiss: await elementGeometry(ordinary.locator(".toast__dismiss")) });
   await waitMixedControlsReady(page, ordinary, info, `mixed-${width}-ordinary`);
   expect((await elementGeometry(ordinary.locator(".toast__dismiss"))).hitTestable).toBe(true);
-  await expect(ordinary.locator(".toast__message")).toHaveCSS("white-space", "nowrap");
+  await expect(ordinary.locator(".toast__message")).toHaveCSS("white-space", "normal");
+  await expect(ordinary.locator(".toast__message")).toHaveText(ORDINARY_ERROR);
+  await expect(ordinary.locator(".toast__cta")).toHaveCount(0);
+  await expect(ordinary.locator(".toast__dismiss")).toHaveCSS("width", "44px");
   const extremes = [];
   for (const edge of ["oldest", "newest"] as const) {
     await stack.evaluate((el, position) => { el.scrollTop = position === "oldest" ? 0 : el.scrollHeight; }, edge);
@@ -357,15 +365,15 @@ for (const width of [320, 390]) {
         { name: "first.heic", mimeType: "image/heic", buffer: Buffer.from("synthetic unsupported fixture") },
         { name: "second.heic", mimeType: "image/heic", buffer: Buffer.from("synthetic unsupported fixture") },
       ]);
-      await expect(page.locator(".toast:not(.toast--card) .toast__message")).toHaveText("HEIC/HEIF is not supported. Convert to JPEG or PNG and try again.");
+      await expect(page.locator(".toast__message").filter({ hasText: ORDINARY_ERROR })).toHaveText(ORDINARY_ERROR);
       await submitRefusal(page, capture, origin, "invalid-request");
-      await expect(page.locator(".toast--card")).toHaveCount(1);
+      await expect(providerErrorCards(page)).toHaveCount(1);
       await selectOption(page, PROVIDER_TRIGGER, "GPT");
       await submitRefusal(page, capture, origin, "oauth-unavailable");
-      await expect(page.locator(".toast--card")).toHaveCount(2);
+      await expect(providerErrorCards(page)).toHaveCount(2);
       await selectOption(page, PROVIDER_TRIGGER, "xAI API");
       await submitRefusal(page, capture, origin, "grok-api-key-missing");
-      await expect(page.locator(".toast--card")).toHaveCount(3);
+      await expect(providerErrorCards(page)).toHaveCount(3);
       await submitRefusal(page, capture, origin, "grok-api-key-missing");
       await expect(page.locator(".toast-stack > .toast")).toHaveCount(5);
       await page.setViewportSize({ width, height: width === 320 ? 740 : 844 });
