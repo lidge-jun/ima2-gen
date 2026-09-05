@@ -1,5 +1,5 @@
 import type { ClientNodeId } from "../lib/graph";
-import { isCoreProviderId, PROVIDER_SURFACE_SUPPORT } from "../generated/providers";
+import { effectiveCoreGenerationMode } from "../lib/coreGenerationMode";
 import { t } from "../i18n";
 import { composePrompt, formatSize } from "./storePersistence";
 import { getCustomSizeConfirmation } from "./storeHelpers";
@@ -11,15 +11,12 @@ export async function generateImpl(set: StoreSet, get: StoreGet): Promise<void> 
   const prompt = composePrompt(s.prompt, s.insertedPrompts);
   if (!prompt) return;
   if (missingElementsBlock(get)) return;
-  if ((s.provider === "comfy" && s.comfyVideoWorkflow)
-    || ((s.provider === "grok" || s.provider === "grok-api") && s.videoModelSelected)) {
-    return get().runVideoGenerate();
-  }
+  const mode = effectiveCoreGenerationMode(s);
+  if (mode === "video") return get().runVideoGenerate();
   // NovelAI never takes the multimode path: the persisted preference is left
   // untouched so other lanes keep it, but a hidden toggle must not steer this
   // one (devlog 004 B4).
-  const useMultimode = s.uiMode === "classic" && s.multimode && s.provider !== "nai"
-    && isCoreProviderId(s.provider) && PROVIDER_SURFACE_SUPPORT[s.provider].multimode.supported;
+  const useMultimode = mode === "multimode";
   const pending = getCustomSizeConfirmation(s, { kind: useMultimode ? "multimode" : "classic" });
   if (pending) {
     set({ customSizeConfirm: pending });

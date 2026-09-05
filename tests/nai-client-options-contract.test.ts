@@ -22,6 +22,7 @@ import {
 } from "../lib/naiImageAdapter.ts";
 import { readNaiOptions } from "../lib/naiOptions.ts";
 import { NAI_OPTIONS_STORAGE_KEY, PERSISTED_KEYS, PERSISTED_REGISTRY } from "../ui/src/store/persistenceRegistry.ts";
+import { effectiveCoreGenerationMode } from "../ui/src/lib/coreGenerationMode.ts";
 import { naiPayloadFields } from "../ui/src/lib/naiPayload.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -218,7 +219,7 @@ test("nai forces one image and skips the multimode path", () => {
   // separate upstream calls, and a persisted multimode:true still steers
   // submission. Both must be behavioral.
   assert.match(read("ui/src/store/storeGenImpl.ts"), /s\.provider === "nai" \? 1 : s\.count/);
-  assert.match(read("ui/src/store/storeGenerateEntryImpl.ts"), /s\.provider !== "nai"/);
+  assert.equal(effectiveCoreGenerationMode({ provider: "nai", uiMode: "classic", multimode: true }), "image");
 });
 
 test("the nai override key retains its appended index and exported constant", () => {
