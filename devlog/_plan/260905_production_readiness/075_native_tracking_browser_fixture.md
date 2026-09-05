@@ -54,6 +54,11 @@ override verifies exact original origin/method and records its calls before work
 all unassigned requests continue to the base denial guard via route.fallback.
 Captured actual POSTs append to J6Capture.requests so expectedSubmissions still
 enforces the total. No catch may hide an unexpected request from the final ledger.
+The real node UI also schedules graph saving: allow only intercepted PUT to the
+owned /api/sessions/wp02-session/graph, require nodes/edges arrays, retain actual
+path/body in a separate graphSaves ledger, and answer with the fixture graphVersion.
+Never forward it or count it as a generation POST. This B-level fixture refinement
+preserves actual UI autosave without opening an unlogged mutation bypass.
 
 ## Native sequencing and acceptance responses
 
@@ -79,6 +84,10 @@ the submitted sourceVideoId and respond exactly:
 This matches ui/src/lib/videoExtendStream.ts:24-26; a requestId-only acceptance is
 invalid and must fail the test. Include invalid-response negative coverage in
 the existing focused stream contract, not in a supposed successful browser case.
+No existing runtime stream suite was found (only a source-shape contract): expose
+the existing public postVideoExtendStream export through072's shared test bundle,
+and add full202/requestId-only/mismatched-source/workflow cases to the already
+owned job-tracking-timeout-ui.test.ts. No production test export or duplicate fixture.
 Emit only after the route fulfillment resolves; assertion observes the real
 rendered terminal, never treats an accepted response as completion.
 

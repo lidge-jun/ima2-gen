@@ -101,11 +101,13 @@ routes/
 | `lib/generationRequestLog.ts` | 44 | In-memory generation request log store |
 | `routes/agent.ts` | 331 | Agent Mode API — sessions, turns, durable queue, compact, manifest, tools (`/api/agent/*`); backed by `lib/agent*.ts`; no CLI wrapper |
 | `routes/promptBuilder.ts` | 107 | `POST /api/prompt-builder/chat` plus `GET/PUT /api/prompt-builder/config`; chat uses `lib/promptBuilder/*`, config persists the backend/model pair, and `ima2 prompt build` wraps chat |
-| `routes/events.ts` | 95 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat; serializes `jobSeq` and the job envelope |
-| `lib/eventBus.ts` | 147 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, per-job `jobSeq` (LRU-bounded), `replaySince`, `hasReplayGap` |
-| `lib/ssePublish.ts` | 32 | `publishJobEvent` — terminal `done` suppression after cancel (cancel↔done race guard) plus the publish-time envelope snapshot |
-| `ui/src/lib/eventChannel.ts` | 164 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
-| `ui/src/lib/sseStreamError.ts` | 66 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
+| `routes/events.ts` | 151 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat; serializes `jobSeq` and the job envelope |
+| `lib/eventBus.ts` | 152 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, per-job `jobSeq` (LRU-bounded), `replaySince`, `hasReplayGap` |
+| `lib/ssePublish.ts` | 33 | `publishJobEvent` — suppress late done/error after retained cancel or tracking expiry, plus publish-time envelope snapshot |
+| `lib/eventsPolicy.ts` | 3 | Pure SSE drain deadline; route imports no runtime configuration |
+| `lib/jobs/terminalStore.ts` | 79 | Terminal snapshot disk read/write/reap and per-ID admission cleanup; no inflight import |
+| `ui/src/lib/eventChannel.ts` | 181 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
+| `ui/src/lib/sseStreamError.ts` | 77 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
 | `bin/ima2.ts` | 544 | CLI setup, serve, status, doctor, open, reset, command dispatch (`serve --dev` enables verbose diagnostics) |
 | `bin/commands/gen.ts` | 400 | CLI image-generation client with references, provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, background preset (`--bg`), `--character` (MCP lanes), and output-dir options |
 | `bin/commands/edit.ts` | 168 | CLI image-edit client with provider override, model, mode, moderation, web-search, reasoning-effort, session, timeout recovery, and output options |
@@ -154,7 +156,12 @@ routes/
 | `lib/systemTrash.ts` | 21 | Cross-platform OS-trash helper wrapping the `trash` dependency |
 | `lib/db.ts` | 392 | SQLite bootstrap and migrations (schema 7): sessions, nodes, edges, inflight, terminal jobs, idempotency keys, prompts, prompt folders, canvas versions |
 | `lib/nodeStore.ts` | 92 | Node image and metadata load/save |
-| `lib/inflight.ts` | 500 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and terminal job snapshots that survive a restart |
+| `lib/inflight.ts` | 457 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and terminal job snapshots that survive a restart |
+
+Tracker expiry writes its terminal and deletes the active row transactionally.
+Retained outcomes dominate residual cleanup; controllers and the in-memory cache
+remain owned by inflight. `ui/src/store/inflightReconciliation.ts` owns request-local
+scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/logger.ts` | 162 | Safe structured logging, redaction, level filtering, and test sink helpers |
 | `lib/requestLogger.ts` | 50 | API-only request lifecycle logging and sanitized request ID middleware |
 | `lib/codexDetect.ts` | 154 | Codex OAuth session detection helper |
@@ -358,7 +365,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Node batch | `ui/src/lib/nodeBatch.ts` | 159 | Sequential batch generation queue, cycle-selection guard (`findCycleNodeIds`), and stale-downstream rewiring |
 | Node connection validation | `ui/src/lib/nodeConnectionValidation.ts` | 32 | Pure drag-time `isValidConnection` validator for React Flow (port resolution + compatibility incl. cycle guard) |
 | Node error info | `ui/src/lib/nodeErrorInfo.ts` | 46 | Structured inline node-card error state: ImaErrorCode → retry/auth/fix-input action mapping |
-| Node history | `ui/src/lib/nodeHistory.ts` | 102 | Graph undo/redo snapshot ring (structuredClone isolation, pending-protection merge, 30-entry bound) |
+| Node history | `ui/src/lib/nodeHistory.ts` | 104 | Graph undo/redo snapshot ring (structuredClone isolation, pending-protection merge, 30-entry bound) |
 | Node layout | `ui/src/lib/nodeLayout.ts` | 30 | Position-based child node placement |
 | Node ref storage | `ui/src/lib/nodeRefStorage.ts` | 55 | Browser-local node reference persistence outside SQLite graph payloads |
 | Custom size slots | `ui/src/lib/customSizeSlots.ts` | 63 | User-defined custom size slot persistence |
@@ -366,8 +373,8 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Image helpers | `ui/src/lib/image.ts` | 42 | Browser image utilities |
 | Compression | `ui/src/lib/compress.ts` | 159 | Browser-side image compression for references and uploads |
 | Cost | `ui/src/lib/cost.ts` | 91 | Quality/size cost estimation |
-| Error codes | `ui/src/lib/errorCodes.ts` | 289 | Stable error code → translation key mapping |
-| Error handler | `ui/src/lib/errorHandler.ts` | 24 | Routes errors to toast or persistent `ErrorCard` |
+| Error codes | `ui/src/lib/errorCodes.ts` | 299 | Stable error code → translation key mapping |
+| Error handler | `ui/src/lib/errorHandler.ts` | 25 | Routes errors to toast or persistent `ErrorCard` |
 | Image models | `ui/src/lib/imageModels.ts` | 216 | UI-side image model labels and `resolveCoreModelValue` lane gating |
 | Core selection policy | `ui/src/lib/coreSelection.ts` | 142 | Pure provider/model/workflow reconciliation, lane memory projection and image wire model |
 | Core selection persistence | `ui/src/store/coreSelectionPersistence.ts` | 59 | Legacy active snapshot and bounded versioned lane-memory storage boundary |

@@ -179,7 +179,25 @@ Key modules:
 - `ui/src/lib/api-generation.ts` — `postMultimodeGenerateStream()` and `postNodeGenerateStream()` use subscribe-before-fetch pattern
 - `ui/src/store/storeNodeGenImpl.ts` — node generation state using async POST + eventChannel
 - `ui/src/store/storeVideoImpl.ts` — video generation state with cancel-aware cleanup
-- `ui/src/store/storeInflightImpl.ts` — shared inflight tracking with `activeFlightIds` Set
+- `ui/src/store/storeInflightImpl.ts` — shared inflight actions and polling
+- `ui/src/store/inflightReconciliation.ts` — request-local scope/revision/identity merge
+
+Reconcile and polling preserve concurrent additions, replacements, removals and
+scope changes across both inflight and history awaits. Reconcile alone reads aged
+stored IDs for terminal matching; failed inflight fetch cannot authorize TTL pruning.
+Backend and local timestamps are not compared for identity. Application SSE `error`
+MessageEvents do not close the connection; only transport errors reconnect. Stale
+source callbacks are inert, and `replay-gap` is a resync control, never a job error.
+
+`JOB_TRACKING_TIMEOUT` is a fixed four-locale completion-unknown warning with no
+Retry CTA. Parser/resolver canonicalize recognized wrappers before raw-message
+consumers; video, AssetGen, MCP and live Sprite paths use the localized result.
+Video admission/success/cancel/ordinary failure clear stale errorInfo, and busy
+graph Undo preserves live error fields. Animation returns success only on success.
+Extension's tracking-expired advisory disables the same-source submit button;
+changing source resets the advisory without submitting automatically. Sprite recipe
+reload and the nonwatching UI-upscale path have separate presentation state; this
+tracking change does not add a persisted warning system for them or Agent queue.
 
 The monolithic `useAppStore` was split into focused `store*Impl.ts` modules to keep each under 500 lines. The main `useAppStore.ts` re-exports composed slices.
 

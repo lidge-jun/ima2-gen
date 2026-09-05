@@ -430,6 +430,16 @@ flag vocabulary: that one carries `auto` and omits the MCP lanes.
 
 The inflight registry tracks classic, node, and multimode jobs. The default response is active-only so the UI never renders completed jobs as still running. `includeTerminal=1` is an opt-in debug surface that keeps recent completed/error/canceled jobs briefly for request tracing. Cancellation records a terminal `canceled` snapshot and aborts the upstream request when the active job still has a registered `AbortController`.
 
+Tracker TTL expiry persists `status: error`, `errorCode: JOB_TRACKING_TIMEOUT`,
+`httpStatus: 504` before removing the active row in one SQLite transaction. It means
+upstream completion is unknown, not proven generation failure. Clients should
+inspect history before submitting again. Column-first session/node correlation
+survives restart; top-level prompt is not copied into terminal snapshots.
+`lib/jobs/terminalStore.ts` owns disk serialization; inflight owns the lazy cache
+and local controllers. Failed expiry writes roll back without abort/publication.
+A retained outcome left beside an active row after failed cleanup is preserved,
+including its timestamp; recovery cleanup does not emit another terminal event.
+
 ## Events Multiplexing (SSE)
 
 The browser UI uses a single persistent SSE channel (`GET /api/events`) for all async generation progress. This replaces per-request SSE streams that previously consumed one HTTP connection each and caused gallery hangs at the browser's 6-connection limit.
@@ -444,13 +454,20 @@ The browser UI uses a single persistent SSE channel (`GET /api/events`) for all 
 2. Server responds with `text/event-stream`, sets `X-Accel-Buffering: no`, starts 15s heartbeat pings.
 3. If `activeConnections >= MAX_SSE_LISTENERS` (512): responds `503 SSE_CAPACITY`.
 4. Events are fan-out: every connected client receives all job events.
-5. On disconnect: listener removed, heartbeat cleared, `res.end()` called.
+5. On disconnect: listeners and timers removed, capacity released once, owned response destroyed.
+6. A false write pauses output until drain. Accepted chunks are not repeated;
+   catch-up uses the bounded global ring, with no per-client event queue. A stall
+   exceeding `SSE_STREAM_POLICY.drainTimeoutMs` (15s) closes that response.
 
 ### Replay
 
 - Client sends `Last-Event-ID` header or `?lastEventId=` query on reconnect.
 - Server replays from ring buffer (size 2000). Large image payloads (>1000 chars) are stripped in replay with `_imageOmitted: true`.
-- If the requested ID is older than the ring's oldest entry, a `replay-gap` event is emitted and the client triggers `reconcileInflight()` for state recovery.
+- Evicted or future cursors emit `replay-gap`; zero also detects eviction of the
+  first event. Absent/invalid cursors remain live-only. Paused connections check
+  eviction again on drain. Browser clients clear their cursor and invoke resync;
+  CLI MCP clients recover the terminal snapshot without another generation POST.
+- IDs remain process-local numbers: equal/lower restart collisions are not an epoch protocol.
 
 ### Event envelope
 
@@ -474,9 +491,17 @@ All events carry: `id` (global monotonic seq), `event` (type name), `data` (JSON
 
 POST routes (`/api/node/generate`, `/api/generate/multimode`, `/api/video/generate`) accept `{ async: true, requestId }`. They respond immediately with `202 { requestId }` and emit progress via `eventBus.publish()` → `GET /api/events`. CLI/legacy clients omit `async` and receive per-request SSE on the same response (dual-emit: both legacy SSE write and eventBus publish).
 
-### Cancel-done race guard
+### Cancellation and expiry terminal guard
 
-`lib/ssePublish.ts` suppresses `done` events after `abortJob` has already emitted `error`, preventing clients from resolving success on a canceled job.
+`abortJob` records cancellation before invoking synchronous abort listeners.
+`lib/ssePublish.ts` rejects later `done` AND `error` after retained cancellation or
+tracking expiry, without allocating a sequence. Node/video/Sprite canonical terminal
+publication uses this guard. Raw nonterminal/custom untracked events are outside
+this promise; it is not universal success/error ordering. A deliberately reused ID
+clears its old disk snapshot in the same successful admission transaction. Concurrent
+reuse while an old producer still runs is outside the request-ID ownership contract.
+Only locally registered controllers can be aborted; no cross-process cancellation
+or upstream completion guarantee is introduced.
 
 ## Node Mode API
 
