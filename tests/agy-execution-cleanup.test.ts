@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { readdir } from "node:fs/promises";
 import test from "node:test";
 import { withAgyFaults } from "./_agyFaultFixtures.ts";
+import type { BusEvent } from "../lib/eventBus.ts";
 
 // Independent tiny valid PNGs, not bytes derived from the operation under test.
 const WHITE_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
@@ -164,9 +165,13 @@ for (const hold of ["eof", "close"] as const) {
   });
 }
 
-for (const hold of ["read", "ref-rm"] as const) {
+for (const hold of ["read", "eof", "close", "ref-rm"] as const) {
   test(`Agy actual node cancellation during ${hold} returns 499 without persistence`, async () => {
     await withAgyFaults({ hold }, async (faults, fixture) => {
+      const { subscribe } = await import("../lib/eventBus.ts");
+      const events: BusEvent[] = [];
+      const unsubscribe = subscribe(entry => { if (entry.jobId === "owned-agy-node") events.push(entry); });
+      try {
       const work = faults.runNode();
       await faults.waitAt(hold, work);
       const closed = await fixture.waitFor("close");
@@ -177,6 +182,11 @@ for (const hold of ["read", "ref-rm"] as const) {
       // Existing node normalization projects unlisted 4xx codes to INVALID_REQUEST.
       // Direct operation cases above still require GENERATION_CANCELED/499.
       assert.deepEqual(result.body.error, { code: "INVALID_REQUEST", message: "Generation canceled" });
+      const terminal = events.filter(entry => entry.envelope?.terminal);
+      assert.equal(terminal.length, 1, "cancel must not become a second failed terminal");
+      assert.equal(terminal[0]?.envelope?.phase, "cancelled");
+      assert.equal(terminal[0]?.envelope?.error?.code, "GENERATION_CANCELED");
+      assert.equal(events.some(entry => entry.event === "image" || entry.event === "done"), false);
       assert.equal(fixture.spawnCount(), 1);
       assert.equal(faults.count("close", "completed"), 1);
       assert.equal(faults.count("unlink", "completed"), 1);
@@ -186,6 +196,7 @@ for (const hold of ["read", "ref-rm"] as const) {
       await faults.assertAbsent(faults.directory());
       assert.deepEqual(await readdir(fixture.ctx.config.storage.generatedDir), []);
       assert.ok(!JSON.stringify(result.body).includes(fixture.root));
+      } finally { unsubscribe(); }
     });
   });
 }

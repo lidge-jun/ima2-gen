@@ -8,6 +8,7 @@ import { executionTestProcess } from "./_executionTestProcess.ts";
 import { openVideoFixture, type UpstreamCall } from "./_videoExecutionFixture.ts";
 import { fakeMp4Bytes, makeVideoStreamFixture } from "./_videoStreamFixture.ts";
 import { bounded } from "./_executionTrackedWrites.ts";
+import type { BusEvent } from "../lib/eventBus.ts";
 
 type Mode = "generate" | "edit" | "native" | "last-frame";
 const PROXY = "http://video-fixture.invalid";
@@ -98,7 +99,7 @@ if (executionTestProcess(import.meta.url)) {
       const prior = await Promise.all((await readdir(dir)).sort().map(async name => ({ name, bytes: await readFile(join(dir, name)) })));
       const stream = makeVideoStreamFixture([fakeMp4Bytes()], { holdOpen: true }); fixture.addStream(stream);
       const observed = upstream(mode, stream);
-      const requestId = `cancel-read-${mode}`, events: Array<{ event: string; data: Record<string, unknown> }> = [];
+      const requestId = `cancel-read-${mode}`, events: BusEvent[] = [];
       const stop = subscribe(entry => { if (entry.jobId === requestId) events.push(entry); });
       const app = await appFor(mode, dir);
       const endpoint = mode === "native" ? "extend/native" : mode === "last-frame" ? "extend" : mode;
@@ -123,6 +124,10 @@ if (executionTestProcess(import.meta.url)) {
           assert.equal(app.response()?.statusCode, 499);
         } else {
           assert.ok(events.some(entry => entry.event === "error" && entry.data.status === 499));
+          const terminal = events.filter(entry => entry.envelope?.terminal);
+          assert.equal(terminal.length, 1, "registry cancellation publishes exactly one terminal");
+          assert.equal(terminal[0]?.envelope?.phase, "cancelled");
+          assert.equal(terminal[0]?.envelope?.error?.code, "GENERATION_CANCELED");
           if (mode === "generate") assert.ok(!wire.includes("event: done"));
         }
         assert.deepEqual((await readdir(dir)).sort(), prior.map(x => x.name));
