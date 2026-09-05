@@ -122,6 +122,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
+| `260905_production_readiness/` | WP00 roadmap and WP01/02 complete; WP03 execution boundary at C verification. 030–035 contain contract, revalidation, audit and card-layout amendment; family migrations WP04–06 follow. Merge/release still pending. | — |
 | `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 

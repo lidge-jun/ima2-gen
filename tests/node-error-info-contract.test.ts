@@ -19,6 +19,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   NAI_EDIT_UNSUPPORTED: "fix-input",
   // cta "reauth" routes the node card to Settings, where the token is pasted.
   NAI_API_KEY_MISSING: "auth",
+  GROK_API_KEY_MISSING: "auth",
   NAI_AUTH_FAILED: "auth",
   NAI_SUBSCRIPTION_REQUIRED: "fix-input",
   NAI_RATE_LIMITED: "retry",
@@ -85,6 +86,15 @@ describe("node error info contracts", () => {
   it("EI-03 expired ChatGPT auth points to auth remediation", () => {
     const info = buildNodeErrorInfo(new Error("Your token is expired, sign in again"));
     assert.equal(info.code, "AUTH_CHATGPT_EXPIRED");
+    assert.equal(info.action, "auth");
+    assert.equal(info.retryable, false);
+  });
+
+  it("Grok image key refusal points to provider settings instead of retry", () => {
+    const info = buildNodeErrorInfo(Object.assign(new Error("Grok API key is required"), {
+      code: "GROK_API_KEY_MISSING", status: 401,
+    }));
+    assert.equal(info.code, "GROK_API_KEY_MISSING");
     assert.equal(info.action, "auth");
     assert.equal(info.retryable, false);
   });

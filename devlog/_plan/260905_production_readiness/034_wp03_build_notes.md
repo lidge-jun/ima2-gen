@@ -81,3 +81,10 @@ All four completed source/migration workers closed; their context can be resumed
 for scoped repairs. Source delta from production checkpoint3523a64e is empty.
 Remaining B: comprehensive boundary/admission suite and rendered error scenarios.
 Exact-head CI, independent C review and screenshots are not yet complete.
+
+Final B handoffs: fixture100/100 (harness9, boundary69, routes22); Error UI38/38
+focused tests,18 authored E2E scenarios, E2E noEmit0. Main server/test compilers,
+server build, UI build (including E2E typecheck), inventory and diff check pass.
+FSM advanced B→C for fresh aggregate verification, independent audits, SoT sync,
+exact-head hosted CI and visual inspection. Native module-mock warnings are
+expected test-only warnings; Node22 proof is not assumed from Node24 local passes.

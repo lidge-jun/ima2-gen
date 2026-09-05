@@ -12,6 +12,7 @@ export type ImaErrorCode =
   | "NAI_REF_UNSUPPORTED"
   | "NAI_EDIT_UNSUPPORTED"
   | "NAI_API_KEY_MISSING"
+  | "GROK_API_KEY_MISSING"
   | "NAI_AUTH_FAILED"
   | "NAI_SUBSCRIPTION_REQUIRED"
   | "NAI_RATE_LIMITED"
@@ -84,6 +85,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   // exactly where the token is pasted. The copy stays NovelAI-specific, so the
   // user is not told to re-run a sign-in flow this lane does not have.
   NAI_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.naiApiKeyMissing", cta: "reauth" },
+  GROK_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.grokApiKeyMissing", cta: "reauth" },
   NAI_AUTH_FAILED: { surface: "card", cardKey: "errorCard.naiAuthFailed", cta: "reauth" },
   NAI_SUBSCRIPTION_REQUIRED: { surface: "card", cardKey: "errorCard.naiSubscriptionRequired", cta: "dismiss" },
   NAI_RATE_LIMITED: { surface: "toast", toastKey: "toast.naiRateLimited", cta: "retry" },
@@ -204,6 +206,7 @@ export type ModerationStage = "input" | "output" | "unknown";
  * generic AUTH_INVALID / BILLING_REQUIRED class card must not override them.
  */
 const SELF_DESCRIBING_AUTH_CODES: readonly ImaErrorCode[] = [
+  "GROK_API_KEY_MISSING",
   "NAI_API_KEY_MISSING",
   "NAI_AUTH_FAILED",
   "NAI_SUBSCRIPTION_REQUIRED",

@@ -1587,6 +1587,11 @@
       "title": "需要充值",
       "body": "该服务商账户余额不足。请前往服务商控制台确认后重试。"
     },
+    "grokApiKeyMissing": {
+      "title": "需要 Grok API 密钥",
+      "body": "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok 代理。",
+      "cta": "打开提供商设置"
+    },
     "naiApiKeyMissing": {
       "title": "未设置 NovelAI 令牌",
       "body": "请在设置中粘贴 NovelAI 永久 API 令牌（以 pst- 开头）。此通道不使用登录会话。",

@@ -1,0 +1,65 @@
+import assert from "node:assert/strict";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+import { mock } from "node:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, relative, isAbsolute } from "node:path";
+
+export async function isolateExecution() {
+  const rootDir = await mkdtemp(join(tmpdir(), "ima2-execution-"));
+  const saved = new Map<string, string | undefined>();
+  const nativeFetch = globalThis.fetch;
+  const restoreMocks: Array<() => void> = [];
+  const restore = async () => {
+    globalThis.fetch = nativeFetch;
+    for (const restoreMock of restoreMocks) restoreMock();
+    syncBuiltinESMExports();
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+    await rm(rootDir, { recursive: true, force: true });
+  };
+  try {
+  const env = {
+    IMA2_CONFIG_DIR: rootDir, IMA2_DB_PATH: join(rootDir, "test.db"),
+    IMA2_GENERATED_DIR: join(rootDir, "generated"), IMA2_TRASH_DIR: join(rootDir, "trash"),
+    IMA2_GENERATION_REQUEST_LOG_FILE: join(rootDir, "requests.json"),
+    IMA2_LOG_LEVEL: "silent", DOTENV_CONFIG_PATH: join(rootDir, "empty.env"),
+  };
+  for (const key of new Set([...Object.keys(process.env).filter((k) => k.startsWith("IMA2_") || k === "DOTENV_CONFIG_PATH"), ...Object.keys(env)])) {
+    saved.set(key, process.env[key]);
+    delete process.env[key];
+  }
+  Object.assign(process.env, env);
+  await writeFile(join(rootDir, "config.json"), "{}");
+  await writeFile(join(rootDir, "empty.env"), "");
+  const violations: unknown[] = [];
+  globalThis.fetch = async () => {
+    const error = new Error("Network request outside active execution fixture");
+    violations.push(error);
+    throw error;
+  };
+  for (const name of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"] as const) {
+    const trapped = mock.method(childProcess, name, () => {
+      const error = new Error(`Provider process launch forbidden: ${name}`);
+      violations.push(error);
+      throw error;
+    });
+    restoreMocks.push(() => trapped.mock.restore());
+  }
+  syncBuiltinESMExports();
+  return { rootDir, nativeFetch, violations, async close() {
+    try {
+      assert.equal(violations.length, 0, `Isolation violations: ${violations.map(String).join("; ")}`);
+    } finally {
+      await restore();
+    }
+  } };
+  } catch (error) { await restore(); throw error; }
+}
+
+export function assertOwned(root: string, path: string): void {
+  const rel = relative(root, path);
+  assert.ok(rel === "" || (!rel.startsWith("..") && !isAbsolute(rel)), `Store escapes owned root: ${path}`);
+}

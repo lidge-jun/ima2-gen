@@ -1587,6 +1587,11 @@
       "title": "需要儲值",
       "body": "此服務商帳戶餘額不足。請前往服務商主控台確認後重試。"
     },
+    "grokApiKeyMissing": {
+      "title": "需要 Grok API 金鑰",
+      "body": "請在設定 > 供應商中新增 xAI API 金鑰，然後重試。此圖像請求不會改用 Grok 代理。",
+      "cta": "開啟供應商設定"
+    },
     "naiApiKeyMissing": {
       "title": "未設定 NovelAI 權杖",
       "body": "請在設定中貼上 NovelAI 永久 API 權杖（以 pst- 開頭）。此通道不使用登入工作階段。",

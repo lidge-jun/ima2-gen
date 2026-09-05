@@ -6,7 +6,7 @@ aliases: [ima2 API, image_gen server API, ima2 endpoints]
 
 # Server API
 
-`server.ts` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*.ts`. The TypeScript migration is closed (#24); paired `server.js`/`routes/*.js` are committed runtime artifacts produced by the build, not hand-edited. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
+`server.ts` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*.ts`. TypeScript is the source of truth; `server.js`/`routes/*.js`/`lib/*.js` are generated runtime outputs, ignored in the current checkout, and must be built before package/runtime verification rather than hand-edited. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
 
 This document matters because the UI and CLI share the same server contract. For example, `/api/generate` returns a different shape for single-image and multi-image responses. `/api/history` supports both a flat list and session grouping. Node mode uses separate `/api/node/generate` and `/api/sessions/*` contracts. If those differences are not documented, clients can break quietly.
 
@@ -77,6 +77,40 @@ The live generation/edit provider can be OAuth, API-key, Grok, Gemini, Atlas Clo
 Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` never accepts a browser-supplied path; it opens `ctx.config.storage.generatedDir` only.
 
 Runtime responses expose configured and actual ports separately. The backend can bind `3334+` when `3333` is occupied, and the OAuth proxy can report an actual fallback port when `10531` is occupied. Clients should follow the URL in `~/.ima2/server.json` or the `runtime.*.url` fields rather than rebuilding URLs from configured defaults.
+
+## Image Execution Ownership
+
+`lib/providers/execution/index.ts` exposes `prepareImageExecution(ctx, request,
+progress?)`, returning an executable closure. Classic generation, node generation,
+multimode and edit call this shared typed boundary. The request has an explicit
+surface plus already-resolved provider/options, validated references and an
+AbortSignal; the result is a native single image or sequence, not a job handle.
+It is in-process only and adds no serialized/stored fields.
+
+The four `legacy*` execution helpers currently own concrete transport dispatch.
+Classic prepares its Grok plan once per batch and retains its existing Responses
+retry loop. Node keeps retry ownership at the caller; edit executes one operation;
+multimode invokes its native sequence operation. Routes/pipelines still own input
+validation, start/finish/cancellation, persistence, sidecars and SSE/eventbus
+publication. Existing low-level transport phase updates remain in place.
+
+For these four image surfaces, missing or blank `grok-api` credentials now return
+`GROK_API_KEY_MISSING` (401) before job admission instead of selecting the proxy.
+The boundary rechecks presence before preparation and each execution; classic
+and node retain their original captured key if it changes to another nonblank key.
+Removing a key after admission refuses execution and finishes that owned job.
+The distinct `grok` proxy lane remains valid without an xAI API key. This is not
+a statement about video/agent/sprite authentication behavior.
+
+NAI multimode references now return `NAI_REF_UNSUPPORTED` before job admission,
+matching the existing text-to-image-only contract. Legacy multimode keeps its
+HTTP200 error SSE envelope, while async JSON carries the refusal status. Existing
+edit validation still runs after its original admission point; mask/surface
+refusals keep their previous codes and bookkeeping.
+
+`tests/provider-execution-*.test.ts` cover real route/fixture behavior and the
+typed dispatch boundary. The import guard checks the four selected callers,
+not arbitrary future barrels or the intentionally unchanged agent/sprite routes.
 
 ## MCP Connection Lifecycle
 

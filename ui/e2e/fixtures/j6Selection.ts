@@ -20,6 +20,7 @@ export type J6Capture = {
   requests: Array<{ path: string; body: unknown }>;
   unexpected: string[];
   catalog: J6CatalogState;
+  submissionFailure?: "grok-api-key-missing" | "oauth-unavailable" | "invalid-request";
   dispose(): Promise<void>;
 };
 export type J6Seed = {
@@ -85,6 +86,21 @@ async function captureSubmission(route: Route, capture: J6Capture, path: string)
       throw new Error("Missing async correlation");
     }
     capture.requests.push({ path, body });
+    const refusal = path === "/api/generate" && capture.submissionFailure ? {
+      "grok-api-key-missing": { provider: "grok-api", status: 401, code: "GROK_API_KEY_MISSING",
+        error: "Grok API key is required for grok-api image generation" },
+      "oauth-unavailable": { provider: "oauth", status: 503, code: "OAUTH_UNAVAILABLE",
+        error: "OAuth proxy unavailable" },
+      "invalid-request": { provider: "api", status: 400, code: "INVALID_REQUEST",
+        error: "Invalid size for image generation" },
+    }[capture.submissionFailure] : undefined;
+    if (refusal && record.provider === refusal.provider) {
+      // Actual pre-admission flat shape: no synthetic rawCode/errorClass fields.
+      await route.fulfill({ status: refusal.status, json: {
+        error: refusal.error, code: refusal.code, requestId: record.requestId,
+      } });
+      return;
+    }
     // Submission proof only. No provider, fake completion, response fetch or fallback.
     await route.fulfill({ status: 202, json: { requestId: record.requestId } });
   } catch {

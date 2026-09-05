@@ -10,7 +10,7 @@ Node mode extends `ima2-gen` from a single-image generator into a graph-based im
 
 This mode matters because it is the likely center of future workflows. Classic UI revolves around one prompt and a list of image results. Node mode can represent lineage, retries, comparisons, and research-style branching as a graph. That connects API contracts, store state, session DB, and asset lifecycle.
 
-To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.ts` owns `/api/node/generate`, while `routes/sessions.ts` and `lib/sessionStore.ts` persist graph state. After the TypeScript migration close (#24), treat `.ts` files as source of truth; the paired `.js` files in `lib/`, `routes/`, and `bin/` are committed runtime artifacts.
+To understand node mode, start with three files. `NodeCanvas.tsx` owns graph interaction. `ImageNode.tsx` renders the prompt, image, pending, stale, error, and node-local reference input state of each node. `routes/nodes.ts` owns `/api/node/generate`, while `routes/sessions.ts` and `lib/sessionStore.ts` persist graph state. Treat `.ts` files as source of truth; paired `.js` files are generated runtime outputs, ignored in the current checkout and rebuilt for package/runtime verification.
 
 ---
 
@@ -83,6 +83,25 @@ sequenceDiagram
 Visual edges are the canonical parent graph. `parentServerNodeId` is a derived generation cache, not a separate source of truth. On load, edge changes, node changes, connect, disconnect, and save, the UI derives a node's parent server id from its single incoming edge. `ImageNode` renders top/right/bottom/left source and target handles with unique React Flow handle ids. `NodeCanvas` forwards `sourceHandle` and `targetHandle` into `connectNodes()`, and session graph saves preserve those ids in edge `data` so reloads keep the same visual anchors. The server repeats parent normalization in `saveGraph()` and rejects multiple incoming parent edges with `GRAPH_PARENT_CONFLICT`.
 
 ## Streaming And Recovery
+
+The node pipeline calls `prepareImageExecution` once and executes one provider
+attempt per iteration. `legacyNode.ts` owns transport dispatch only. Root requests
+without input images may attempt twice on an existing retryable error; parent/ref
+requests attempt once. Responses empty422 remains non-retryable, while Grok
+empty502 can reach the second root attempt. Cancellation checks, retry logs,
+partial publication and node persistence remain in `nodeGeneration.ts`.
+
+The request retains all validated refs plus its explicit context mode. OpenAI/Grok
+filter extra refs in parent-only mode. The current Gemini/Atlas/MiniMax branches
+still use all refs in that mode, and Agy's existing parent-only/omission behavior
+is preserved; extraction does not claim those later policy fixes are complete.
+Effective prompt and raw prompt stay distinct for the existing provider branches.
+
+Direct Grok keys are captured once before attempts. Each execute checks current
+presence, refusing a removed key with GROK_API_KEY_MISSING rather than switching
+to the proxy. Replacing a nonblank key does not rebind the active execution.
+Before admission, missing/blank keys return the node's nested error plus code,
+parentNodeId and requestId; an already admitted failure finishes its owned job.
 
 Root node generation requests use `postNodeGenerateStream()` and ask the server for `Accept: text/event-stream`. The server relays upstream partial images as `partial` events before the canonical `done` event. Child/edit nodes currently use the same route but remain final-only, because combining parent-edit semantics with extra progressive previews needs separate provider validation. SSE `error` events carry `status` and upstream diagnostics so client-side handling can distinguish invalid request parameters from moderation and network failures.
 

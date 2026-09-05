@@ -1587,6 +1587,11 @@
       "title": "Billing required",
       "body": "This provider account has no remaining credit. Check the provider console, then try again."
     },
+    "grokApiKeyMissing": {
+      "title": "Grok API key required",
+      "body": "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok proxy.",
+      "cta": "Open provider settings"
+    },
     "naiApiKeyMissing": {
       "title": "NovelAI token not set",
       "body": "Open Settings and paste your NovelAI persistent API token (starts with pst-). This lane does not use a sign-in session.",

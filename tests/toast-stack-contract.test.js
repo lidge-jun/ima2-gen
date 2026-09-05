@@ -8,6 +8,31 @@ const toastSource = readFileSync("ui/src/components/Toast.tsx", "utf8");
 const errorCardSource = readFileSync("ui/src/components/ErrorCard.tsx", "utf8");
 const cssSource = readSourceTree("ui/src/index.css");
 
+test("WP03 source constraints isolate wrapping and action geometry to cards", () => {
+  const rule = (selector) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = cssSource.match(new RegExp(`${escaped}\\s*\\{([^}]+)\\}`));
+    assert.ok(match, `missing CSS rule ${selector}`);
+    return match[1];
+  };
+  assert.match(rule(".toast--card"), /grid-template-columns:\s*minmax\(0,\s*1fr\) 44px/);
+  assert.match(rule(".toast--card"), /width:\s*min\(560px,\s*100%\)/);
+  const message = rule(".toast--card .toast__message");
+  for (const declaration of [/white-space:\s*normal/, /overflow:\s*visible/, /text-overflow:\s*clip/,
+    /overflow-wrap:\s*anywhere/, /grid-row:\s*1/]) assert.match(message, declaration);
+  const cta = rule(".toast--card .toast__cta");
+  for (const declaration of [/grid-column:\s*1 \/ -1/, /grid-row:\s*2/, /min-height:\s*44px/,
+    /max-width:\s*100%/]) assert.match(cta, declaration);
+  const dismiss = rule(".toast--card .toast__dismiss");
+  for (const declaration of [/width:\s*44px/, /height:\s*44px/, /grid-column:\s*2/]) assert.match(dismiss, declaration);
+  assert.ok(cssSource.indexOf(".toast--card .toast__message") > cssSource.indexOf(".toast__dismiss:hover"));
+  const stack = rule(".toast-stack:has(.toast--card)");
+  for (const declaration of [/max-height:\s*calc\(100dvh - 48px\)/, /overflow-y:\s*auto/,
+    /overflow-x:\s*hidden/, /padding:\s*4px/, /pointer-events:\s*auto/]) assert.match(stack, declaration);
+  assert.match(rule(".toast-stack:has(.toast--card) > .toast"), /flex-shrink:\s*0/);
+  assert.match(rule(".toast--card .toast__dismiss:focus-visible"), /outline:\s*2px solid var\(--accent\)/);
+});
+
 test("toast store keeps an append-only visible log with dismiss support", () => {
   assert.match(
     storeSource,
