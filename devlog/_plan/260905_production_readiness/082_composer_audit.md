@@ -40,3 +40,45 @@ Both existing workflow upload steps gain a separate wp08 artifact with
 `ui/test-results/**/wp08-*.json`. Names bind run/attempt and SHA where existing
 convention provides it. Missing screenshots after a preflight/build failure
 remain missing proof; the extra upload failure must not hide the original error.
+
+## Main current-tree follow-through
+
+`tests/composer-tray-ui-contract.test.js:44,57` also directly reads moved textarea
+z-index/sidebar-stack fromprogress. Main owns updating only those reads to the
+new pane stylesheet, preserving mirror/tray/shell assertions inprogress. Include
+it and the source-consumer contracts for prompt-studio, issue77 longprompt,
+provider-ui-polish, inflight-badge, ui-touch-target andui-gradient in direct checks.
+
+Current `ui/tsconfig.e2e.json` has no JSX option. The new actual component TSX entry
+would otherwise fail typecheck. Component-verification lane owns adding
+`jsx:react-jsx`, `resolveJsonModule:true`, `DOM.Iterable`, and`vite/client` types to
+this existing config, preserving existing strict/noEmit/include. This checks
+actual imported production TSX/Vite env, not merely a string evaluated by esbuild.
+No new tooling, runtime flag or production config. Main runs both app/E2E checks
+after integration; baseline both exited0 at e835 before this new entry existed.
+
+## Round-two synthesis and final routing amendment
+
+Sartre re-confirmedPASS. Cicero returnedGO-WITH-FIXES(blockers1): the synthetic
+policy page lacked an explicit document/asset activation path. Accept: merely
+calling a serverless origin would fall through currentJ6 static route.continue.
+
+Exact self-test sequence: create fresh empty context(SW blocked); install J6
+capture at synthetic `http://127.0.0.1:49152` withnonGenerating; install a LAST
+outer route for all URLs. Outer route fulfills ONLY exact GET origin `/` with
+fixed emptyHTML, no script/src/image/stylesheet assets. For exact same-origin
+POST `/api/generate` or `/api/video/generate` with no query it calls
+`route.fallback()` to the already installed J6 handler. EVERY other URL/method
+is recorded as unexpected and aborted. Thus no document/static request reaches
+continue or a real socket, and there is no server or bind claim for49152.
+Only then create/navigate page and execute the three declared POST fetches
+(imageJSON/videoJSON/malformedJSON) within that same origin. Capture abort occurs
+before payload parsing and before202. All fetches reject; exactlythree denied
+generation attempts and0acceptedrequests,0unexpected-other,0upstream/continued.
+Persist intendeddenials separately from unexpected traffic; normal withJ6 fails
+when any deniedGeneration exists. Keep both route layers until pageclose; close
+context in finally and verify every request outcome. WebSockets are always closed.
+
+This directly folds the residual, without weakening zero-generation UI cases or
+claiming runtime proof. Main judges A near-pass only after this concrete amendment;
+the final C reviewer is fresh. Original round-one FAIL is not the exit verdict.
