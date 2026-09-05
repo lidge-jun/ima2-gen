@@ -47,17 +47,25 @@ async function sources(root: string): Promise<{ head: string; files: SourceFile[
   const head = (await git(root, ["rev-parse", "HEAD"])).trim();
   if (!/^[a-f0-9]{40}$/.test(head) || await realpath((await git(root, ["rev-parse", "--show-toplevel"])).trim()) !== root) return fail("E2E_SOURCE_HEAD");
   const tracked = (await git(root, ["ls-files", "-z", "--cached"])).split("\0").filter(Boolean);
-  const exact = new Set(["server.ts", "config.ts", "package.json", "package-lock.json", "tsconfig.json", "tsconfig.build.json", "tsconfig.bin.json",
-    ...RUNTIME_GUARDS.map((name) => "ui/e2e/fixtures/" + name)]);
-  const paths = tracked.filter((path) => exact.has(path) || /^(?:lib|routes|bin|types)\/.*\.ts$/.test(path));
-  for (const path of exact) if (!paths.includes(path)) return fail("E2E_SOURCE_MISSING");
+  const paths = selectRuntimeSourcePaths(tracked);
   const files: SourceFile[] = [];
-  for (const path of paths.sort()) {
-    if (/(?:^|\/)(?:\.env[^/]*|\.ima2|\.codex|\.grok|\.progrok|generated|auth\.json|config\.json|[^/]*\.(?:db|sqlite)[^/]*)(?:\/|$)/i.test(path)) return fail("E2E_SOURCE_FORBIDDEN");
+  for (const path of paths) {
     const bytes = await fileBytes(root, path); files.push({ path, bytes, sha256: hash(bytes) });
   }
   if ((await git(root, ["rev-parse", "HEAD"])).trim() !== head) return fail("E2E_SOURCE_CHANGED");
   return { head, files, digest: hash(JSON.stringify(files.map(({ path, sha256 }) => [path, sha256]))) };
+}
+/** Positive source manifest, shared by projection construction and its inventory audit. */
+export function selectRuntimeSourcePaths(tracked: readonly string[]): string[] {
+  const exact = new Set(["server.ts", "config.ts", "package.json", "package-lock.json", "tsconfig.json", "tsconfig.build.json", "tsconfig.bin.json",
+    ...RUNTIME_GUARDS.map((name) => "ui/e2e/fixtures/" + name)]);
+  const paths = tracked.filter((path) => exact.has(path) || /^(?:lib|routes|bin|types)\/.*\.ts$/.test(path));
+  for (const path of exact) if (!paths.includes(path)) return fail("E2E_SOURCE_MISSING");
+  for (const path of paths) {
+    if (!safeRelative(path)) return fail("E2E_SOURCE_PATH");
+    if (/(?:^|\/)(?:\.env[^/]*|\.ima2|\.codex|\.grok|\.progrok|generated|auth\.json|config\.json|[^/]*\.(?:db|sqlite)[^/]*)(?:\/|$)/i.test(path)) return fail("E2E_SOURCE_FORBIDDEN");
+  }
+  return paths.sort();
 }
 async function compiler(root: string): Promise<{ path: string; version: string; identity: string }> {
   const require = createRequire(join(root, "package.json"));

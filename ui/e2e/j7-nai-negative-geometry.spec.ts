@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { type Locator, type Page, type TestInfo } from "@playwright/test";
+import { test, expect } from "./fixtures/appServer";
 import { preflightJ6, PROVIDER_TRIGGER, selectOption, withJ6, type J6Seed } from "./fixtures/j6Selection";
 import { assertComposerGeometry, assertGeometryMutations, composerEvidence, composerGeometry, inspectPanes,
   observeContainerBoundary, paneSelectors, reveal, scrollGrid, trialControls, type ComposerSurface } from "./fixtures/composerGeometry";

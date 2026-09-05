@@ -1,4 +1,5 @@
-import { test, expect, type Page, type TestInfo, type Request } from "@playwright/test";
+import { type Page, type TestInfo, type Request } from "@playwright/test";
+import { test, expect } from "./fixtures/appServer";
 import { writeFile } from "node:fs/promises";
 import { preflightJ6, withJ6, requestObject, WP02_VIEWPORTS, type J6Capture } from "./fixtures/j6Selection";
 import { startTrackingStream, type TrackingStream } from "./fixtures/jobTrackingStream";

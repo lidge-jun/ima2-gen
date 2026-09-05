@@ -1,6 +1,5 @@
-import { test, expect } from "@playwright/test";
 import sharp from "sharp";
-import { seedBrowser, startApp } from "./fixtures/appServer";
+import { expect, seedBrowser, startApp, test } from "./fixtures/appServer";
 
 // Before WP09's full fixture isolation, execute this only on clean CI runners.
 // This journey attaches synthetic local bytes but never submits a generation.
@@ -50,6 +49,7 @@ test("WP01 reference controls follow the selected provider surface", async ({ pa
     expect(generationPosts).toBe(0);
     expect(app.stub.calls.filter((call) => /images\/generations|responses/.test(call))).toEqual([]);
   } finally {
+    await page.close();
     await app.close();
   }
 });

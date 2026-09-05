@@ -1,12 +1,9 @@
-import { test, expect } from "@playwright/test";
-import { assertStubOnlyCalls, seedBrowser, startApp } from "./fixtures/appServer";
+import { assertStubOnlyCalls, expect, seedBrowser, startApp, test } from "./fixtures/appServer";
 
 test("J1 first run can save a MiniMax key and generate into the gallery", async ({ page }) => {
   const app = await startApp("minimax", { withoutMinimaxKey: true });
   try {
-    // The popup only renders when GPT, Grok, AND Gemini are all unauthenticated,
-    // so whether it appears depends on the developer's ambient Gemini key. Skip
-    // it deterministically and let J1 assert the key-entry path it owns.
+    // This isolated journey owns key entry, not onboarding-popup behavior.
     await seedBrowser(page, { dismissOnboarding: true, provider: "minimax" });
     await page.goto(app.baseUrl);
     await page.getByRole("button", { name: "Settings" }).click();
@@ -31,6 +28,7 @@ test("J1 first run can save a MiniMax key and generate into the gallery", async 
     expect(app.stub.calls.some((call) => call.includes("/image_generation"))).toBeTruthy();
     assertStubOnlyCalls(app.stub);
   } finally {
+    await page.close();
     await app.close();
   }
 });

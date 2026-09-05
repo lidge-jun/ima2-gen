@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { test, expect } from "./fixtures/appServer";
 import { MODEL_TRIGGER, PROVIDER_TRIGGER, J6_WORKFLOWS, openCreate, preflightJ6, requestObject,
   composerMode, selectionScreenshot, selectionViewports, selectOption, withJ6, type J6Capture } from "./fixtures/j6Selection";
 

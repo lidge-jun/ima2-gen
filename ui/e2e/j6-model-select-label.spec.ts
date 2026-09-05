@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/appServer";
 import { MODEL_TRIGGER, PROVIDER_TRIGGER, openCreate, preflightJ6, selectionScreenshot,
   selectionViewports, selectOption, withJ6 } from "./fixtures/j6Selection";
 

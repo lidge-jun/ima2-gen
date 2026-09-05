@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures/appServer";
 import { preflightJ6, withJ6, selectOption, PROVIDER_TRIGGER, type J6CatalogState, type J6Seed } from "./fixtures/j6Selection";
 import { openComfyPanel, readable, displayEvidence } from "./fixtures/comfyDisplayEvidence";
 import type { LaneCatalog } from "../src/lib/api-comfy";

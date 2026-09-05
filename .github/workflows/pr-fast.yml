@@ -57,7 +57,6 @@ jobs:
       - name: Build cli
         run: npm run build:cli
       - name: Build ui
-        id: wp08_ui_build
         run: npm --prefix ui run build
       # Runs after the builds: npm pack --ignore-scripts skips prepack, so
       # ui/dist has to already exist or the measurement reads far too small.
@@ -74,11 +73,28 @@ jobs:
         run: npm run lint:pkg
       - name: Install Playwright Chromium
         run: npx --prefix ui playwright install --with-deps chromium
+      - name: Typecheck E2E
+        run: npm --prefix ui run typecheck:e2e
+      - name: Build isolated fixture UI
+        id: wp08_ui_build
+        run: npm --prefix ui run build:fixture
       - name: Run frontend e2e
         env:
-          WP08_BUILD_COMMAND: npm --prefix ui run build
+          WP08_BUILD_COMMAND: npm --prefix ui run build:fixture
           WP08_BUILD_OUTCOME: ${{ steps.wp08_ui_build.outcome }}
         run: npm --prefix ui run test:e2e
+      - name: Upload WP09 isolation and journey evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp09-journeys-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          path: |
+            ui/test-results/**/wp09-*.png
+            ui/test-results/**/wp09-*.json
+            ui/dist/.ima2-ui-build-receipt.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload composer evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

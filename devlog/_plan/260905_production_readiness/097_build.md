@@ -72,3 +72,25 @@ and projection objects. Four new pure guard VM cases and13 receipt cases pass.
 This replaces obsolete tsx/HOME assumptions without deleting hosted identity,
 fallback refusal or zero-real-startup assertions. Actual hosted startup is still
 unverified and remains the next integration gate.
+
+Main resumed at b16abc9397fd72499d3be88ff3bf874322b9b7d6 with FSM B confirmed.
+The bounded environment-only worker added five pure tests; main corrected its
+regenerated-config oracle and portable path expectations before accepting the
+file. Fresh focused execution:34 passed,0 failed (environment5, VM guards4,
+mocked J6 startup12, receipts13). No native guard/app/browser ran locally.
+
+Hosted isolation coverage now includes foreign redirect with a separate listener
+and independent native-call sentinel, held-response counters, early/double release,
+abort/close, runtime config content denial, path/Buffer/URL/symlink overloads,
+write-capable read flags, native realpath, callback/promises and closed descriptors.
+These are authored assertions, not yet runtime proof. Playwright now encodes
+isolation -> journeys and blocks service workers; app-using specs adopt the
+worker cleanup fixture. Both workflows prebuild emitted server/CLI, use the
+strict fixture UI build and record its actual command plus WP09 artifacts.
+
+Main replaced the worker's nonexistent Sequence-tab scenario with actual T1–T4
+draft/provider/reload/breakpoint/tab interactions and an initial MCP popup case.
+J2 now checks edit recovery; J3 captures two distinct prompts across billing
+recovery; J5 enters Create and unloads the page before same-home restart.
+Remaining UIR/compiler/cache fault coverage, T5/T6, complete mobile-navigation/MCP
+matrix and actual native/render evidence stay open. B has not advanced to C.

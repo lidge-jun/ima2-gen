@@ -1,5 +1,4 @@
-import { test, expect } from "@playwright/test";
-import { seedBrowser, startApp } from "./fixtures/appServer";
+import { expect, seedBrowser, startApp, test } from "./fixtures/appServer";
 
 test("J2 auth failure exposes a reachable reauth action", async ({ page }) => {
   const app = await startApp("oauth-expired");
@@ -24,7 +23,12 @@ test("J2 auth failure exposes a reachable reauth action", async ({ page }) => {
     // Closing settings must return to the canvas with the composer usable.
     await page.getByRole("button", { name: "Close settings" }).click();
     await expect(page.getByRole("button", { name: "Generate" })).toBeVisible();
+    const prompt = page.locator(".composer:visible .composer__textarea");
+    await expect(prompt).toHaveValue("expired session");
+    await prompt.focus(); await expect(prompt).toBeFocused();
+    await prompt.fill("retry draft"); await expect(prompt).toHaveValue("retry draft");
   } finally {
+    await page.close();
     await app.close();
   }
 });

@@ -237,7 +237,10 @@ function listenAddress(child: ChildProcess): Promise<string> {
       child.off("error", failed); child.off("exit", exited);
     };
     const failed = () => { cleanup(); reject(new Error("E2E_CHILD_START_FAILED")); };
-    const exited = () => { cleanup(); reject(new Error("E2E_CHILD_EARLY_EXIT")); };
+    const exited = () => {
+      const codes = text.match(/\b(?:E2E|ERR|UI_RECEIPT)_[A-Z_]+\b/g) ?? [];
+      cleanup(); reject(new Error("E2E_CHILD_EARLY_EXIT:" + (codes.at(-1) ?? "unknown")));
+    };
     const data = (chunk: Buffer) => {
       text = (text + chunk.toString("utf8")).slice(-65536);
       const match = /Image Gen running at (http:\/\/[^\s]+)/.exec(text);
