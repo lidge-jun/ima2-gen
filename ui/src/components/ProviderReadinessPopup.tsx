@@ -75,7 +75,7 @@ export function ProviderReadinessPopup() {
           {current.hint ? <p className="modal__hint">{current.hint}</p> : null}
           {isComfy ? (
             <dl className="provider-readiness__facts">
-              <div><dt>{t("readiness.provider")}</dt><dd>ComfyUI</dd></div>
+              <div><dt>{t("readiness.provider")}</dt><dd>{PROVIDER_READINESS_LABELS.comfy}</dd></div>
               <div><dt>{t("comfy.workflowsTitle")}</dt><dd>{comfyDisplay.selected?.label ?? t("comfy.display.chooseWorkflow")}</dd></div>
               {comfyDisplay.selected ? <>
                 <div><dt>{t("comfy.colId")}</dt><dd>{comfyDisplay.selected.id}</dd></div>
