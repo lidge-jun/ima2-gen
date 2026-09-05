@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { errorCodes, resolveErrorSpec, type ImaErrorCode } from "../ui/src/lib/errorCodes.ts";
+import { effectiveReferenceLimit } from "../ui/src/lib/referenceLimits.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (rel: string) => readFileSync(join(repoRoot, rel), "utf8");
@@ -112,16 +113,13 @@ test("switching to nai coerces the model, and away from nai clears it", () => {
 });
 
 test("the UI offers no reference attachment for nai", () => {
-  // The routes answer NAI_REF_UNSUPPORTED, so the tray must cap at zero.
-  const limits = read("ui/src/lib/referenceLimits.ts");
-  assert.match(limits, /LANES_WITHOUT_REFERENCE_SUPPORT/);
-  assert.ok(limits.includes('new Set(["nai"])'), "nai is not in the no-reference lane set");
-  // oauth and api also have empty manifest limits but legitimately defer to the
-  // server cap; deriving the set from emptiness would silently break them.
-  assert.ok(
-    !limits.includes("limits.image === undefined && limits.edit === undefined"),
-    "the set is derived from empty manifest limits, which would also catch oauth and api",
-  );
+  const base = { serverLimit: 12, videoModelSelected: false, mcpProvider: null };
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "nai" }), 0);
+  // Empty numeric caps on OAuth/API still defer to the server; only an actual
+  // no-reference capability disables attachments. Assert behavior, not a set name.
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "oauth" }), 12);
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "api" }), 12);
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "nai", mcpProvider: "runway" }), 3);
 });
 
 test("every NAI_* code the server can throw has UI text", () => {

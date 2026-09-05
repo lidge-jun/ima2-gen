@@ -294,3 +294,28 @@ NAI dual inputs preserve content-aware scrolling; non-NAI wrappers remain conten
 IME composition does not submit via Ctrl/Cmd+Enter."
 No runtime claim enters SoT until its C evidence exists. Parent updates the roadmap
 and archives the entire unit only after its registered work is actually complete.
+
+## WP01 visual discovery amendment — enabled input contrast
+
+Two independent WP01 core-affordance screenshot reviews found no new geometry or
+attachment regression. PassB measured pre-existing negative placeholder contrast
+~3.27:1 and pane border~1.22:1 in the dark screenshot at60e36bb3. No whole-app AA
+claim is earned by those two English screenshots. Fix the scoped enabled-input
+contrast in this WP, not by changing WP01 policy or claiming it is already solved.
+
+In the new composer-panes.css, enabled positive/negative placeholders use existing
+var(--text-muted) at opacity1 instead of the old0.7. Use var(--text-muted) for the
+identifying border of dual classic panes and Home textareas rather than decorative
+var(--border). Keep disabled controls exempt/distinct, focus tokens unchanged,
+colors elsewhere untouched; this is a measured accessibility correction, not a
+new theme. Actual source pairs: dark #90909d on #1c1c23 and light #5d5d68 on#ececf1
+both exceed4.5:1 at fullopacity under standard sRGB luminance calculation.
+
+Add E2E computed-color/alpha composite assertions for enabled placeholders>=4.5:1
+and the identifying input boundary>=3:1 in dark/light themes, plus observed
+screenshots at existing viewport matrix. Measure actual rendered backgrounds,
+not token names alone. Synthetic control mutation restoring opacity0.7/oldborder
+must fail its specific check; no claims about untested controls/locales.
+Re-read current tokens at WP08 P; if theme values drift, amend with measured
+pair selection before B rather than weakening thresholds. Document the scoped
+contrast fix in structure/04 and visual QA records.
