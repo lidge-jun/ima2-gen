@@ -1,6 +1,9 @@
 import { openSse, sseUrlWithCursor, type OpenSseResult, type SseEvent } from "./sse.js";
 import { normalizeTerminalStatus } from "../../lib/jobStatus.js";
 
+const JOB_TRACKING_TIMEOUT_MESSAGE =
+  "Job tracking expired; upstream completion is unknown. Inspect history before retrying.";
+
 export interface McpJobOptions {
   serverBase: string;
   kind: "image" | "video";
@@ -142,25 +145,24 @@ function matchingOutcome(event: SseEvent, opts: McpJobOptions): StreamOutcome | 
       if (event.event === "done") return doneResult(data);
     } else {
       const envErr = asRecord(envelope.error);
+      const code = typeof envErr?.code === "string" ? envErr.code
+        : typeof data.code === "string" ? data.code : fallbackCode(phase);
       return {
         kind: "error",
-        error: new McpJobError(
-          typeof envErr?.code === "string" ? envErr.code
-            : typeof data.code === "string" ? data.code
-            : fallbackCode(phase),
-          errorMessage(data),
-        ),
+        error: code === "JOB_TRACKING_TIMEOUT"
+          ? new McpJobError(code, JOB_TRACKING_TIMEOUT_MESSAGE, { status: 504 })
+          : new McpJobError(code, errorMessage(data)),
       };
     }
   }
   if (event.event === "done") return doneResult(data);
   if (event.event === "error") {
+    const code = typeof data.code === "string" ? data.code : "MCP_JOB_FAILED";
     return {
       kind: "error",
-      error: new McpJobError(
-        typeof data.code === "string" ? data.code : "MCP_JOB_FAILED",
-        typeof data.message === "string" ? data.message : "MCP job failed",
-      ),
+      error: code === "JOB_TRACKING_TIMEOUT"
+        ? new McpJobError(code, JOB_TRACKING_TIMEOUT_MESSAGE, { status: 504 })
+        : new McpJobError(code, typeof data.message === "string" ? data.message : "MCP job failed"),
     };
   }
   return null;
@@ -185,6 +187,9 @@ function terminalResult(job: Record<string, unknown>): McpJobResult | McpJobErro
   const meta = asRecord(job.meta) ?? {};
   const normalized = normalizeTerminalStatus(status);
   if (normalized === "error") {
+    if (job.errorCode === "JOB_TRACKING_TIMEOUT") {
+      return new McpJobError("JOB_TRACKING_TIMEOUT", JOB_TRACKING_TIMEOUT_MESSAGE, { status: 504 });
+    }
     return new McpJobError(
       typeof job.errorCode === "string" ? job.errorCode : "MCP_JOB_FAILED",
       typeof meta.message === "string" ? meta.message : "MCP job failed",
