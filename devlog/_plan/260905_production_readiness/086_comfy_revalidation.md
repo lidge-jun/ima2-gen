@@ -206,3 +206,15 @@ Bypassrecord085 remains: UIobservations areadvisory/E4browserguard+preflight,
 knownbypass directAPI/outsidecontext/server-sideI/O, residualserverenforcement,
 no finalOSlayer here. These are notpermission to usebypass. WP09 ownsprojection.
 SoT04/inventory/linecountsync atC; rollbackwholeunit withoutclearing userselections.
+
+### Accessible Select description seam
+
+CurrentSelectProps hasariaLabel/id butno descriptionprop. Addoptional
+`ariaDescribedBy?:string` inexistingcontrols/Select.tsx, destructureandforwardONLY
+toactualtrigger's `aria-describedby`; oldcallers omitit, behavior/styleunchanged.
+ComfyGenerationControls createsstatusId withuseId andpassesit; nativeD14 checks
+attribute→existingdescriptionelement anduniqueIDs acrossbothpanelinstances.
+This is an explicitminimalaccessibilityprop extension, NOT aSelect redesign.
+Fieldchain: ReactuseId→panelstatusDOMid +Selectprop→triggerDOMattribute;
+serialization/persistence:N/A. Presentationworker ownsSelect.tsx onlythisprop;
+existingSelect contracts remainincluded. No other primitive behaviorchanges.
