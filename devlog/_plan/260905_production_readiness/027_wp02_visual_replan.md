@@ -140,6 +140,8 @@ portal/focus return, and that the generate opener still opens the prompt sheet.
   switching away/back preserves savedtoggle and updates chrome without storageclear.
   Use source/bundled render proof or strict hosted fixture, no paid submission.
 - At1440/1024/768/390/320, provider/model fulltext matches actual selectedvalue.
+  Compare independent displaylabels (5.6l/Selected image), not raw wireids; only
+  unknownworkflow labels must match their literal storedID.
   Capture DOM text/client/scroll bounds and textRange rectangles: no text rectangles
   outside control and scrollWidth<=clientWidth (small rounding tolerance). Merely
   checkingtoHaveText or CSS textOverflow is insufficient. Current42/46 geometry is
@@ -147,6 +149,8 @@ portal/focus return, and that the generate opener still opens the prompt sheet.
   different workflowids. Read every new frame or assign it to the visual oracle.
 - Narrow open model menu shows exact selected label/id; Escape returns focus to
   trigger. Generate opener still opens owned prompt sheet. No controls overlap,
+  Check mobilebadge/placeholder only AFTER opening that real prompt sheet, never
+  inferabsence from a hidden composer. Also verify close returns focus to opener.
   horizontalpage overflow or clipped label; mobiletrigger targets>=44px high.
 - Preserve existinghosted guards, expectedPOSTcapture, unexpected0,stub0, true
   teardown; no new exception allowing graphPUT or real server generation.

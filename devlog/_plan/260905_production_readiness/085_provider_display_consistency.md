@@ -230,8 +230,8 @@ label fallback is the exact ID, never GPT or another workflow. Null selection as
 for lane-only availability; it is not permission to auto-select the first row.
 
 Decision order: idle/loading → loading; error → error; missing lane or unexpected
-Comfy key-missing/locked lane status → unavailable; both catalogs empty → empty;
-selected ID absent from its kind → selected-missing; lane disconnected → disconnected;
+Comfy key-missing/locked lane status → unavailable; selected ID absent from its kind
+→ selected-missing (including both lists empty); empty catalogs with NO retained selection → empty; lane disconnected → disconnected;
 selected executable false → selected-locked; selected suffix offline → selected-offline;
 no eligible rows → unavailable; no selected ID → choose; else ready. Availability
 booleans are false unless their full conditions hold, regardless of displayed code.
@@ -299,8 +299,8 @@ if (provider === "comfy") {
 
 All hooks stay unconditional before returns. ComfyGenerationControls has no props;
 reads current comfyWorkflow/comfyVideoWorkflow, WP02 setters, openSettings and shared
-catalog. Render existing option-group/Select primitives, own unique id
-`comfy-generation-workflow`, `data-testid="comfy-generation-controls"`. Image values
+catalog. Render existing option-group/Select primitives with ReactuseId-derived
+control/description IDs per instance; keep `data-testid="comfy-generation-controls"` and scope tests to the visible panel. Image values
 are raw IDs; video values use COMFY_VIDEO_VALUE_PREFIX, passed to existing setters.
 Groups use existing kindImage/kindVideo translations and generated surface support.
 Missing selected ID gets a labelled unavailable row; onChange accepts ONLY an actual
@@ -358,18 +358,18 @@ translation keys visible and no color-only status; no concept-image generation.
 | --- | --- | --- |
 | D1 | Hold first catalog response; then release ready | ComfyUI + local chip never blank/MCP; loading then selected observed-connected; no early green. |
 | D2 | Ready → refresh held → 503/invalid JSON/schema | Prior label stays, refreshing/error shown, no stale ready; retry to ready restores without selection/draft mutation. |
-| D3 | Valid comfy empty image/video arrays (both ready and disconnected statuses) | Empty workflow guidance + Manage action; no automatic first model/GPT fallback. |
+| D3 | Valid comfy empty image/video arrays with NO retained selection (both ready and disconnected statuses) | Empty workflow guidance + Manage action; no automatic first model/GPT fallback. |
 | D4 | Valid lanes without comfy; Comfy status key-missing/locked | Unavailable, local method retained; no request to obtain Comfy credentials. |
 | D5 | Lane disconnected, registered IDs retained | Rows visible disabled, disconnected text; provider still selectable for setup. |
 | D6 | Lane ready, image A online, selected image B description ends `(offline)` | Lane available but selected offline; B cannot be reselected; A selectable. Also cover video list separately. |
 | D7 | Lane ready, selected executable=false but no offline suffix | Selected locked distinct from offline, fixed recovery text, no green. |
-| D8 | Selected ID deleted or exists only in opposite kind | Exact ID remains visible, selected-missing, no storage repair/auto-switch; choosing valid row uses existing setter. |
+| D8 | Selected ID deleted (including lastworkflow leaving botharrays empty) or exists only in opposite kind | Exact ID remains visible, selected-missing evenatcounts0, no storage repair/auto-switch; choosing valid row uses existing setter. |
 | D9 | First Comfy visit without selection; only video workflow ready | Choose workflow, lane available; image empty is not whole-lane empty; no credential-ready claim; video selection shows video workflow controls, not Grok controls. |
 | D10 | Comfy ↔ GPT ↔ Comfy, and real MCP selected with provider field still comfy | WP02 persistence/readability unchanged; GPT controls only on GPT; MCP controls only on actual MCP selection; no Comfy branch wins over MCP. |
 | D11 | Successful manager create/delete invalidation; failed write | Success refreshes all mounted catalog consumers; failed write never forges ready. Mock API unit wiring or intercepted synthetic response only, no real workflow writes. |
 | D12 | Two subscribers, refresh A delayed, refresh B wins, A later settles, last unsubscribe/re-subscribe | One initial fetch, both see same snapshot; A cannot overwrite B or clear B controller; abort/cleanup observed; remount revalidates; module import does no I/O. |
 | D13 | Catalog401/403; static supported=true plus unavailable observation | App-access error distinct from provider credentials; no static-support inference, auth bootstrap stub or forbidden login request. |
-| D14 | Right panel desktop 1280×800, mobile Controls tab390×844; en/ko/zh-Hans/zh-Hant | Unique control IDs, nonempty names, status text readable, manage/retry keyboard reachable/hit-testable; GPT quality/size/format/moderation/cost/sequence controls absent. |
+| D14 | Right panel desktop 1280×800, mobile Controls tab390×844; en/ko/zh-Hans/zh-Hant | New control/description IDs unique across hiddenRightPanel and visibleSheet instances; scopedqueries, nonempty readable names/status, keyboard/hit tests; irrelevant hostedcontrols absent. |
 
 Root tests use synthetic literal catalogs/deferred fetch and assert literal result
 objects/call counts; never calculate expected status using the production helper.
