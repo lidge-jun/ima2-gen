@@ -63,6 +63,22 @@ to ellipsis. The mobile workspace header places the same selector in a full-widt
 row beneath brand/actions; its existing bottom navigation and sheet focus owner
 remain separate and unchanged.
 
+Comfy catalog observations now have one non-persisted owner, `lib/laneCatalog.ts`,
+consumed through `useLaneCatalog`. `api-comfy.parseLaneCatalog` validates consumed
+fields at the JSON boundary. Subscribers share the initial read and manual/focus
+refresh; last unsubscribe aborts work and removes the focus listener. Obsolete
+responses cannot replace a newer observation. Loading and failed refresh retain
+selection identity as stale, never as available. This is not a live-health promise.
+
+`lib/comfyDisplay.ts` distinguishes lane availability from the selected image/video
+workflow's availability. Provider controls identify Comfy as Local HTTP and show the
+last catalog observation; `ComfyGenerationControls` exposes registered workflows,
+not GPT scalar settings. Selection callbacks recheck current provider and catalog
+before applying a workflow. Missing/offline/locked choices remain named but disabled.
+Manager create/delete success refreshes both its list and this shared observation;
+catalog failure does not turn a successful write into a failed mutation. The new
+readiness popup branch is core-Comfy only; legacy MCP popup facts remain WP09 work.
+
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 
 This matters because README and older devlog entries still contain traces of the vanilla HTML UI. Actual UI work should target React components, the Zustand store, `ui/src/lib/api.ts` / `ui/src/lib/nodeApi.ts`, and `ui/src/index.css`. Fixing the legacy HTML file will not change the active app.
