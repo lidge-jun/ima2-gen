@@ -61,9 +61,12 @@ and fallback discovery; filename matching alone is not acceptance.
 The reader enforces an inclusive 50MiB limit before and during descriptor reads,
 using bounded blocks even when individual reads are short. A successful receipt
 authorizes cleanup only for that same checked file; replacements and unrelated
-siblings are left alone. Cancellation returns `GENERATION_CANCELED`/499 after
-pending file I/O and descriptor close settle. Policy-rejected artifacts are not
-deleted. There is no automatic retry of billed generation on artifact failure.
+siblings are left alone. Direct reader/operation cancellation returns
+`GENERATION_CANCELED`/499 after pending file I/O and descriptor close settle;
+existing node normalization can expose `INVALID_REQUEST`/499 instead.
+Policy-rejected artifacts are not deleted. The reader and Agy operation add no
+retries, but caller policies remain unchanged: reference-free node requests can
+retry once after retryable artifact errors, starting another generation attempt.
 
 `AGY_PATH_REJECTED`/502 covers the path/identity policy; `AGY_ARTIFACT_TOO_LARGE`/502
 covers overflow, and `AGY_ARTIFACT_NOT_FOUND`/502 covers missing reported files.

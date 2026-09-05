@@ -8,14 +8,48 @@ const CANCELED = { code: "GENERATION_CANCELED", status: 499 };
 const TOO_LARGE = { code: "AGY_ARTIFACT_TOO_LARGE", status: 502 };
 const HOSTED_MAX = 52_428_800;
 
-async function allocations(body: (proof: { sizes: number[]; concats: number[] }) => Promise<void>) {
-  const proof = { sizes: [] as number[], concats: [] as number[] };
+interface AllocationProof {
+  sizes: number[]; blocks: Buffer[]; concats: number[];
+  concatSizes: Array<number | undefined>; concatAllocations: Buffer[]; concatResults: Buffer[];
+}
+
+async function allocations(body: (proof: AllocationProof) => Promise<void>) {
+  const proof: AllocationProof = { sizes: [], blocks: [], concats: [], concatSizes: [], concatAllocations: [], concatResults: [] };
   const alloc = Buffer.allocUnsafe, concat = Buffer.concat;
-  const allocMock = mock.method(Buffer, "allocUnsafe", (size: number) => { proof.sizes.push(size); return alloc(size); });
+  let insideConcat = false;
+  const allocMock = mock.method(Buffer, "allocUnsafe", (size: number) => {
+    const buffer = alloc(size);
+    // Node22 concat invokes exported allocUnsafe; Node24 allocates internally.
+    // Keep that allowed final allocation separate from descriptor-read blocks.
+    if (insideConcat) proof.concatAllocations.push(buffer);
+    else { proof.sizes.push(size); proof.blocks.push(buffer); }
+    return buffer;
+  });
   const concatMock = mock.method(Buffer, "concat", (chunks: readonly Uint8Array[], size?: number) => {
-    proof.concats.push(chunks.length); return concat(chunks, size);
+    proof.concats.push(chunks.length); proof.concatSizes.push(size);
+    insideConcat = true;
+    try { const result = concat(chunks, size); proof.concatResults.push(result); return result; }
+    finally { insideConcat = false; }
   });
   try { await body(proof); } finally { allocMock.mock.restore(); concatMock.mock.restore(); }
+}
+
+function blockAllocations(f: ArtifactFixture, proof: AllocationProof, sizes: number[]) {
+  const used = [...new Set(f.reads.map((call) => call.buffer))];
+  assert.deepEqual(proof.sizes, sizes); assert.deepEqual(used.map((block) => block.length), sizes);
+  assert.equal(proof.blocks.length, used.length, "every retained allocation must be an actual read block");
+  for (const [index, block] of used.entries()) assert.equal(proof.blocks[index], block, "native read-block identity");
+}
+
+function finalAllocation(proof: AllocationProof, result: Buffer, expectedBytes: number, maxBytes: number) {
+  assert.deepEqual(proof.concatSizes, [expectedBytes], "concat receives the exact bounded byte count");
+  assert.equal(proof.concatResults.length, 1); assert.equal(proof.concatResults[0], result);
+  assert.equal(result.length, expectedBytes); assert.ok(result.length <= maxBytes);
+  assert.ok(proof.concatAllocations.length <= 1, "at most one observed final-result allocation");
+  for (const allocation of proof.concatAllocations) {
+    assert.equal(allocation, result, "concat-internal allocation must be the returned buffer");
+    assert.equal(allocation.length, expectedBytes);
+  }
 }
 
 function readProof(f: ArtifactFixture, bytes: number, chunk: number) {
@@ -36,6 +70,8 @@ artifactTest(url, "Agy artifact reader uses bounded chunks and no readFile", asy
     readProof(f, PNG.length, 16);
     assert.ok(proof.sizes.every((size) => size <= 16)); assert.equal(proof.concats.length, 1);
     assert.ok(proof.concats[0] <= Math.ceil(PNG.length / 16));
+    blockAllocations(f, proof, Array(Math.ceil(PNG.length / 16)).fill(16));
+    finalAllocation(proof, receipt.buffer, PNG.length, 256);
     await f.cleanup(receipt); await missing(path);
   });
 });
@@ -68,6 +104,7 @@ artifactTest(url, "Agy artifact reader coalesces one-byte short reads within fix
     assert.equal(f.reads.filter((call) => call.bytesRead === 1).length, 25);
     assert.equal(new Set(f.reads.map((call) => call.buffer)).size, 4, "short reads must fill four blocks, not retain 25");
     assert.deepEqual(proof.sizes, [8, 8, 8, 8]); assert.deepEqual(proof.concats, [4]);
+    blockAllocations(f, proof, [8, 8, 8, 8]); finalAllocation(proof, receipt.buffer, 25, 32);
     await f.cleanup(receipt); await missing(path);
   });
 }, { maxBytes: 32, chunkBytes: 8 });

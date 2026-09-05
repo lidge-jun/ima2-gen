@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, lstatSync, realpathSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnNpmSync } from './npm-subprocess.mjs';
 
@@ -85,15 +85,28 @@ function identity() {
   const env = childEnv('');
   delete env.EXECUTION_TEST_FILE;
   const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', env, timeout: 15_000 }).trim();
-  const npm = spawnNpmSync(['--version'], { encoding: 'utf8', env, timeout: 15_000 });
+  const npmCli = pinnedNpmCli();
+  const npm = npmCli
+    ? spawnSync(process.execPath, [npmCli, '--version'], { encoding: 'utf8', env, timeout: 15_000 })
+    : spawnNpmSync(['--version'], { encoding: 'utf8', env, timeout: 15_000 });
   assert.equal(npm.status, 0, 'npm version probe failed');
   return {
     expectedSha: process.env.WANT_SHA ?? null, actualSha: sha,
     expectedNode: process.env.WANT_NODE ?? null, node: process.versions.node,
-    expectedNpm: process.env.WANT_NPM ?? null, npm: npm.stdout.trim(),
+    expectedNpm: process.env.WANT_NPM ?? null, npm: String(npm.stdout).trim(), npmCli,
     expectedPlatform: process.env.WANT_PLATFORM ?? null, platform: process.platform,
     workflowSha: process.env.GITHUB_WORKFLOW_SHA ?? null,
   };
+}
+
+function pinnedNpmCli() {
+  const path = process.env.AGY_NPM_CLI;
+  if (process.env.GITHUB_ACTIONS === 'true') assert.ok(path, 'hosted identity requires AGY_NPM_CLI');
+  if (path === undefined) return null;
+  assert.ok(isAbsolute(path) && !/[\r\n]/.test(path), 'AGY_NPM_CLI must be an absolute single-line path');
+  const canonical = realpathSync(path);
+  assert.ok(lstatSync(canonical).isFile(), 'AGY_NPM_CLI must be a regular file');
+  return canonical;
 }
 
 function verifyIdentity(receipt) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
@@ -63,7 +63,7 @@ assert.equal((await import('node:os')).tmpdir(), 'native-tiny-fixture');
 if (executionTestProcess(import.meta.url)) {
   const registerOrdinary = async (context) => {
   for (const name of ${JSON.stringify(names)}) await context.test(name, () => {
-    for (const key of ['HOME', 'USERPROFILE', 'NODE_OPTIONS', 'AGY_API_KEY', 'GITHUB_ACTIONS'])
+    for (const key of ['HOME', 'USERPROFILE', 'NODE_OPTIONS', 'AGY_API_KEY', 'GITHUB_ACTIONS', 'AGY_NPM_CLI', 'npm_execpath'])
       assert.equal(process.env[key], undefined, key + ' leaked');
     writeFileSync(new URL('./' + ${JSON.stringify(file)} + '.executed', import.meta.url), 'ordinary body ran');
   });
@@ -122,6 +122,14 @@ async function invoke(root: string, options: { driver?: string; mode?: string; e
 }
 
 function summary(root: string) { return JSON.parse(readFileSync(join(root, 'receipts/summary.json'), 'utf8')); }
+
+function npmFixture(root: string, version = '12.0.0') {
+  const prefix = join(root, 'pinned npm');
+  const cli = join(prefix, ...(process.platform === 'win32' ? [] : ['lib']), 'node_modules/npm/bin/npm-cli.js');
+  mkdirSync(dirname(cli), { recursive: true });
+  writeFileSync(cli, `if (process.argv.length !== 3 || process.argv[2] !== '--version') throw new Error('unexpected npm fixture args');\nconsole.log(${JSON.stringify(version)});\n`);
+  return { prefix, cli };
+}
 
 test('Agy driver executes exactly five tiny files inline; light never executes heavy bodies', async () => {
   await withFixtures(async (root) => {
@@ -239,7 +247,7 @@ test('Agy heavy guard rejects local parent; hosted selector contract uses only t
     const result = await invoke(root, { mode: '--hosted-heavy', env: {
       GITHUB_ACTIONS: 'true', WANT_SHA: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: REPO, encoding: 'utf8' }).trim(),
       WANT_NODE: process.versions.node,
-      WANT_NPM: String((await import('../scripts/npm-subprocess.mjs')).spawnNpmSync(['--version'], { encoding: 'utf8' }).stdout).trim(),
+      WANT_NPM: '12.0.0', AGY_NPM_CLI: npmFixture(root).cli,
       WANT_PLATFORM: process.platform,
     } });
     assert.equal(result.code, 0, result.output);
@@ -247,6 +255,42 @@ test('Agy heavy guard rejects local parent; hosted selector contract uses only t
     assert.deepEqual(bounds.rows.filter((row: { name: string }) => row.name.startsWith('[hosted CI]'))
       .map((row: { name: string; pass: boolean }) => [row.name, row.pass]), BOUND_CASES.map((name) => [name, true]));
   }, true);
+});
+
+test('Agy driver uses explicit pinned npm instead of a stale ambient CLI and isolates children', async () => {
+  for (const mutate of [false, true]) await withFixtures(async (root) => {
+    const pinned = npmFixture(root), stale = join(root, 'stale-npm.mjs');
+    writeFileSync(stale, 'console.log("11.13.0");');
+    const driver = mutate ? copiedDriver(root, 'const path = process.env.AGY_NPM_CLI;', 'const path = process.env.npm_execpath;') : DRIVER;
+    const result = await invoke(root, { driver, env: { AGY_NPM_CLI: pinned.cli, npm_execpath: stale, WANT_NPM: '12.0.0' } });
+    assert.equal(result.code, mutate ? 1 : 0, result.output);
+    assert.equal(summary(root).npm, mutate ? '11.13.0' : '12.0.0');
+    assert.equal(summary(root).npmCli, realpathSync(mutate ? stale : pinned.cli));
+    if (mutate) assert.match(result.output, /expectedNpm/);
+  });
+  for (const binding of ['relative/npm-cli.js', 'missing', 'wrong-version', 'unset-hosted']) await withFixtures(async (root) => {
+    const cli = binding === 'wrong-version' ? npmFixture(root, '11.13.0').cli
+      : binding === 'missing' ? join(root, 'missing-cli.js') : binding;
+    const env = binding === 'unset-hosted' ? { GITHUB_ACTIONS: 'true' } : { AGY_NPM_CLI: cli, WANT_NPM: '12.0.0' };
+    const result = await invoke(root, { env });
+    assert.equal(result.code, 1);
+    assert.deepEqual(summary(root).files, []);
+    if (binding === 'unset-hosted') assert.match(result.output, /hosted identity requires AGY_NPM_CLI/);
+  });
+});
+
+test('Agy workflow verifies the prefix-installed npm before exporting its CLI binding', async () => {
+  await withFixtures(async (root) => {
+    const pinned = npmFixture(root), envFile = join(root, 'github-env');
+    const script = parsed(readFileSync(WORKFLOW, 'utf8')).jobs.filesystem.steps[4].run;
+    const env = { ...executionChildEnv(), AGY_NPM_PREFIX: pinned.prefix, WANT_NPM: '12.0.0', GITHUB_ENV: envFile };
+    execFileSync(process.execPath, ['-e', script], { cwd: REPO, env, timeout: 10_000, stdio: 'pipe' });
+    const expected = `AGY_NPM_CLI=${realpathSync(pinned.cli)}\n`;
+    assert.equal(readFileSync(envFile, 'utf8'), expected);
+    npmFixture(root, '11.13.0');
+    assert.throws(() => execFileSync(process.execPath, ['-e', script], { cwd: REPO, env, timeout: 10_000, stdio: 'pipe' }));
+    assert.equal(readFileSync(envFile, 'utf8'), expected, 'failed version cannot export another binding');
+  });
 });
 
 const HEAD_EXPRESSION = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}";
@@ -297,11 +341,14 @@ function validateWorkflow(source: string) {
   assert.match(steps[2].run, /\.trim\(\), process\.env\.WANT_SHA\)/);
   assert.match(steps[2].run, /assert\.equal\(process\.versions\.node, process\.env\.WANT_NODE\)/);
   assert.match(steps[2].run, /assert\.equal\(process\.platform, process\.env\.WANT_PLATFORM\)/);
-  assert.equal(steps[3].run, 'npm install -g npm@${{ matrix.npm }}');
+  assert.equal(steps[3].run, 'npm install -g --prefix "${{ runner.temp }}/agy-pinned-npm" npm@${{ matrix.npm }}');
   assert.equal(steps[4].shell, 'node {0}');
+  assert.deepEqual(steps[4].env, { AGY_NPM_PREFIX: '${{ runner.temp }}/agy-pinned-npm' });
+  assert.match(steps[4].run, /spawnSync\(process\.execPath, \[npmCli, '--version'\]/);
+  assert.match(steps[4].run, /appendFileSync\(process\.env\.GITHUB_ENV, `AGY_NPM_CLI=/);
   assert.match(steps[4].run, /assert\.equal\(result\.stdout\.trim\(\), process\.env\.WANT_NPM\)/);
-  assert.equal(steps[5].run, 'npm ci');
-  assert.equal(steps[6].run, 'npm run build:server');
+  assert.equal(steps[5].run, 'node "${{ env.AGY_NPM_CLI }}" ci');
+  assert.equal(steps[6].run, 'node "${{ env.AGY_NPM_CLI }}" run build:server');
   assert.equal(steps[7].run, 'node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}"');
   validateArtifact(steps[8]);
   for (const step of steps.slice(0, -1)) assert.equal(step.if, undefined);
@@ -342,6 +389,9 @@ test('Agy parsed YAML mutations reject checkout, guard, platform, mode, artifact
     (w) => { w.jobs.filesystem.env.INVALID_JOB_CONTEXT = '${{ runner.temp }}'; },
     (w) => { w.jobs.filesystem.steps[7].run = w.jobs.filesystem.steps[7].run.replace('${{ runner.temp }}/', ''); },
     (w) => { w.jobs.filesystem.steps[8].with.path = '${{ env.AGY_CHECK_OUTPUT_BASENAME }}/*.json'; },
+    (w) => { delete w.jobs.filesystem.steps[4].env; },
+    (w) => { w.jobs.filesystem.steps[5].run = 'npm ci'; },
+    (w) => { w.jobs.filesystem.steps[6].run = 'npm run build:server'; },
   ];
   for (const [index, mutate] of mutations.entries()) {
     const workflow = parsed(readFileSync(WORKFLOW, 'utf8'));

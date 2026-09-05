@@ -67,23 +67,28 @@ jobs:
           assert.equal(process.versions.node, process.env.WANT_NODE);
           assert.equal(process.platform, process.env.WANT_PLATFORM);
       - name: Pin npm
-        run: npm install -g npm@${{ matrix.npm }}
+        run: npm install -g --prefix "${{ runner.temp }}/agy-pinned-npm" npm@${{ matrix.npm }}
       - name: Assert npm before dependency installation
         shell: node {0}
+        env:
+          AGY_NPM_PREFIX: ${{ runner.temp }}/agy-pinned-npm
         run: |
           const assert = require('node:assert/strict');
-          const { pathToFileURL } = require('node:url');
-          const { resolve } = require('node:path');
-          (async () => {
-            const { spawnNpmSync } = await import(pathToFileURL(resolve('scripts/npm-subprocess.mjs')).href);
-            const result = spawnNpmSync(['--version'], { encoding: 'utf8', timeout: 15000 });
-            assert.equal(result.status, 0);
-            assert.equal(result.stdout.trim(), process.env.WANT_NPM);
-          })().catch((error) => { console.error(error); process.exitCode = 1; });
+          const { appendFileSync, realpathSync, statSync } = require('node:fs');
+          const { isAbsolute, join } = require('node:path');
+          const { spawnSync } = require('node:child_process');
+          assert.ok(isAbsolute(process.env.AGY_NPM_PREFIX));
+          const npmCli = realpathSync(join(process.env.AGY_NPM_PREFIX, ...(process.platform === 'win32' ? [] : ['lib']), 'node_modules/npm/bin/npm-cli.js'));
+          assert.ok(statSync(npmCli).isFile());
+          assert.doesNotMatch(npmCli, /[\r\n]/);
+          const result = spawnSync(process.execPath, [npmCli, '--version'], { encoding: 'utf8', timeout: 15000 });
+          assert.equal(result.status, 0);
+          assert.equal(result.stdout.trim(), process.env.WANT_NPM);
+          appendFileSync(process.env.GITHUB_ENV, `AGY_NPM_CLI=${npmCli}\n`);
       - name: Install root dependencies
-        run: npm ci
+        run: node "${{ env.AGY_NPM_CLI }}" ci
       - name: Build emitted server owners
-        run: npm run build:server
+        run: node "${{ env.AGY_NPM_CLI }}" run build:server
       - name: Run exact filesystem files
         run: node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}"
       - name: Upload filesystem receipts
