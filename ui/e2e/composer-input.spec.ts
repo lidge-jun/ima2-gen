@@ -201,6 +201,8 @@ test("composition ref closes suggestions and ordinary Escape/arrows/Tab retain m
     await textarea.press("Escape");
     await expect(fixture.page.getByRole("listbox")).toHaveCount(0);
     await expect(textarea).toBeFocused(); await expect(textarea).toHaveValue("@");
+    await textarea.click(); // React Escape must retain sticky suppression after the native listener.
+    await expect(fixture.page.getByRole("listbox")).toHaveCount(0);
     await textarea.fill(""); await openMentions(fixture);
     await textarea.press("ArrowDown");
     await expect(fixture.page.getByRole("option", { selected: true })).toContainText("Willow");

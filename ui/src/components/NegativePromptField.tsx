@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 
@@ -24,6 +25,7 @@ export function NegativePromptField({ variant, onSubmit }: NegativePromptFieldPr
   const provider = useAppStore((s) => s.provider);
   const value = useAppStore((s) => s.negativePrompt);
   const setValue = useAppStore((s) => s.setNegativePrompt);
+  const composingRef = useRef(false);
   const { t } = useI18n();
 
   if (provider !== "nai") return null;
@@ -43,9 +45,12 @@ export function NegativePromptField({ variant, onSubmit }: NegativePromptFieldPr
         value={value}
         placeholder={t("nai.negativePrompt.placeholder")}
         aria-describedby={hintId}
+        onCompositionStart={() => { composingRef.current = true; }}
+        onCompositionEnd={() => { composingRef.current = false; }}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+          if (event.defaultPrevented || composingRef.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
           event.preventDefault();
           onSubmit();
         }}

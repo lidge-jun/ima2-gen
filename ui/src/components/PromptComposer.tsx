@@ -26,7 +26,6 @@ type ElementSelectionState = {
 };
 type InternalRefDragItem = VideoReferenceDragPayload;
 const TRAY_MENTION_PREFIX = "tray:";
-
 function mentionKey(mention: MentionQuery): string { return `${mention.start}:${mention.end}:${mention.query}`; }
 function addElementFromMention(asset: AssetItem): TrayItem | null {
   const state = useAppStore.getState() as ReturnType<typeof useAppStore.getState> & ElementSelectionState;
@@ -73,7 +72,6 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     return () => { cancelled = true; };
   }, []);
   const { t } = useI18n();
-
   const trayItems = useAppStore((s) => s.trayItems);
   const retiredTags = useAppStore((s) => s.retiredTags);
   const removeTrayItem = useAppStore((s) => s.removeTrayItem);
@@ -100,7 +98,6 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const beforePrompts = insertedPrompts.filter((item) => item.placement !== "after");
   const afterPrompts = insertedPrompts.filter((item) => item.placement === "after");
   const visualPromptIds = [...beforePrompts.map((item) => item.id), "__main_prompt__", ...afterPrompts.map((item) => item.id)];
-
   const canAddMore = trayItems.length < maxRefs;
   const placeholder = multimode
     ? trayItems.length > 0
@@ -394,6 +391,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
               }}
               onClick={(e) => updateMentionAtCaret(e.currentTarget.value, e.currentTarget.selectionStart)}
               onKeyDown={(e) => {
+                if (composingRef.current || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
                 if (e.key === "Escape" && mentionQuery) {
                   e.preventDefault();
                   dismissedMentionKeyRef.current = mentionKey(mentionQuery);
@@ -401,6 +399,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
                   return;
                 }
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  if (e.defaultPrevented) return;
                   e.preventDefault();
                   submitPrompt();
                 }
@@ -414,6 +413,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
       <ElementMentionMenu
         open={mentionQuery !== null}
         textareaRef={textareaRef}
+        composingRef={composingRef}
         caret={mentionQuery?.end ?? 0}
         query={mentionQuery?.query ?? ""}
         elements={[

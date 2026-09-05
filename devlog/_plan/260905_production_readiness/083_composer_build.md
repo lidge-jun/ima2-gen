@@ -56,3 +56,30 @@ Main UIbuild0 (627modules; existingchunk/dynamicimportwarnings), direct compiler
 probe built1in-memorycomponentbundle1584539bytes/136inputs with write:false and
 NEVER executed it. Structurelinecount drift main48→49 regenerated; inventory0,
 actionlintbothworkflows0. Subsequent exactcheck/hostedbaseline still pending.
+
+## Exact-source baseline scheduling amendment
+
+PR209 draft andCI33984453487 are pinned to52fe86fb, inputguards still absent there.
+Hosted queue delays alljobs. To continue useful B work, main implements the four
+small handlers in a later commit while the immutable52baseline runs. This adjusts
+wall-clock ordering, NOT the causal oracle: tests were written/committed before
+guards; baseline52 must still demonstrate actualnative failures, and finalguarded
+head must separately pass. No baselineRED or nativePASS is claimed yet. CI groups
+include requestedSHA, so the later run must not cancel/replace52. No localbrowser.
+
+Main owns the tightly coupled four-handler delta directly rather than another
+worker. Source check caught an ordering hazard: nativeMenu already prevents
+Escape; an unconditional defaultPrevented return at the start of React keydown
+would bypass Classic's sticky dismissedMentionKeyRef. Preserve Escape branch;
+IME guard precedes it, and defaultPrevented is checked only before Enter submit.
+NativeMenu skips composing/ref/229 then modifiedEnter, leaving normalEscape and
+plainEnter selection unchanged. This is082's preserveEscape requirement, not a
+new global dispatcher. Fresh C must verify both paths.
+
+Main applied the four minimal handlers, preserving Homebusy/blank, Classicmissing,
+compositionCommit microtask and all store/payload semantics. Negative/Home refs
+precede gates; allthree detect ref/native/229; Menu receives existingClassicref,
+ignoresmodifiedEnter and leaves normalselection/Escape. PromptComposer499lines.
+Added actualEscape→click sticky-suppression assertion to the existing native menu
+test. Sixdirectfiles53PASS, app/E2Etypechecks0. Native52RED and finalnativeGREEN
+are still unverified while queued; these local results do not replace them.
