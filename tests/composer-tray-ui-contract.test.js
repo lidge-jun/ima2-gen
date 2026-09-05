@@ -8,6 +8,7 @@ const composer = read("ui/src/components/PromptComposer.tsx");
 const tray = read("ui/src/components/composer/ReferenceTray.tsx");
 const mirror = read("ui/src/components/composer/DeadTagMirror.tsx");
 const composerCss = read("ui/src/styles/progress-composer.css");
+const paneCss = read("ui/src/styles/composer-panes.css");
 const sidebarCss = read("ui/src/styles/sidebar.css");
 const en = JSON.parse(read("ui/src/i18n/en.json"));
 const ko = JSON.parse(read("ui/src/i18n/ko.json"));
@@ -35,7 +36,7 @@ test("dead tags join retiredTags behind the native textarea", () => {
   assert.match(mirror, /ResizeObserver/);
   assert.match(mirror, /textarea\.addEventListener\("scroll"/);
   assert.match(composerCss, /\.composer__prompt-mirror\s*\{[\s\S]*?z-index:\s*0/);
-  assert.match(composerCss, /\.composer__textarea\s*\{[\s\S]*?z-index:\s*1/);
+  assert.match(paneCss, /\.composer__textarea\s*\{[\s\S]*?z-index:\s*1/);
   assert.match(composerCss, /\.dead-tag\s*\{[\s\S]*?background:[\s\S]*?text-decoration-line:\s*line-through/);
   assert.match(mirror, /document\.createRange\(\)/);
   assert.match(mirror, /range\.getClientRects\(\)/);
@@ -48,7 +49,7 @@ test("desktop layout uses 7:3 flex ratios without changing the bottom variant", 
   assert.match(sidebarCss, /::after\s*\{[\s\S]*?flex:\s*3 1 0/);
   assert.doesNotMatch(sidebarCss, /\.in-flight-list/);
   assert.match(composerCss, /@media \(min-width:\s*801px\)[\s\S]*?\.composer--sidebar/);
-  assert.match(composerCss, /\.composer--sidebar \.composer__prompt-stack\s*\{[\s\S]*?display:\s*flex/);
+  assert.match(paneCss, /\.composer--sidebar \.composer__prompt-stack\s*\{[\s\S]*?display:\s*flex/);
   assert.doesNotMatch(composerCss, /\.composer--bottom[\s\S]*?clamp\(200px, 42vh, 520px\)/);
 });
 

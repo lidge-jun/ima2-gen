@@ -23,6 +23,7 @@ import "./styles/agent-stage.css";
 import "./styles/assets-workspace.css";
 import "./styles/assetgen-workspace.css";
 import "./styles/home-workspace.css";
+import "./styles/composer-panes.css";
 import "./styles/quota-card.css";
 import "./styles/favorite-star.css";
 import App from "./App";

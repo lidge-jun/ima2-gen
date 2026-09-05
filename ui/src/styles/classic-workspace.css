@@ -115,15 +115,6 @@
   overflow: hidden;
 }
 
-.composer--bottom .composer__textarea {
-  flex: 0 1 auto;
-  min-height: var(--composer-textarea-min-height);
-  max-height: var(--composer-textarea-max-height);
-  padding: 6px 4px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 .composer--bottom .composer__header,
 .composer--bottom .composer__chips,
 .composer--bottom .composer__toolbar {
@@ -142,18 +133,6 @@
    composer's overflow:hidden box. Rows keep their content minimum. */
 .classic-workspace__dock:has(.composer__prompt-panes--dual) {
   max-height: min(52dvh, 420px);
-}
-
-.composer--bottom .composer__prompt-panes--dual {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  grid-auto-rows: minmax(min-content, auto);
-}
-
-.composer--bottom .composer__prompt-panes--dual > .composer__prompt-pane,
-.composer--bottom .composer__prompt-panes--dual > .negative-prompt {
-  min-height: 0;
 }
 
 .classic-workspace__dock .generate-row {

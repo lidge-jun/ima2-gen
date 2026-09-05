@@ -8,7 +8,7 @@ const composer = read("ui/src/components/PromptComposer.tsx");
 const paste = read("ui/src/components/composer/usePromptPaste.ts");
 const toolbar = read("ui/src/components/composer/PromptComposerToolbar.tsx");
 const mirror = read("ui/src/components/composer/DeadTagMirror.tsx");
-const composerCss = read("ui/src/styles/progress-composer.css");
+const composerCss = read("ui/src/styles/composer-panes.css");
 const en = JSON.parse(read("ui/src/i18n/en.json"));
 const ko = JSON.parse(read("ui/src/i18n/ko.json"));
 

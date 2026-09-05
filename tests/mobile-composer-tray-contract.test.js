@@ -14,6 +14,7 @@ const homeHero = read("ui/src/components/home/HomeHero.tsx");
 const homeWorkspace = read("ui/src/components/home/HomeWorkspace.tsx");
 const homeRecent = read("ui/src/components/home/HomeRecentRow.tsx");
 const responsiveCss = read("ui/src/styles/responsive-layout.css");
+const paneCss = read("ui/src/styles/composer-panes.css");
 const homeCss = read("ui/src/styles/home-workspace.css");
 const navRailCss = read("ui/src/styles/nav-rail.css");
 const composerCss = readSourceTree("ui/src/styles/progress-composer.css");
@@ -51,7 +52,7 @@ test("mobile layout grows the textarea and keeps tray, actions, and targets touc
   assert.match(responsiveCss, /\.compose-sheet-backdrop\s*\{[\s\S]*?z-index:\s*170/);
   assert.match(responsiveCss, /\.compose-sheet\s*\{[\s\S]*?z-index:\s*180/);
   assert.match(responsiveCss, /\.compose-sheet__panel--prompt\s*\{[\s\S]*?display:\s*flex[\s\S]*?flex-direction:\s*column/);
-  assert.match(responsiveCss, /\.compose-sheet__panel--prompt \.composer__prompt-stack\s*\{[\s\S]*?flex:\s*1 1 160px[\s\S]*?min-height:\s*160px/);
+  assert.match(paneCss, /\.compose-sheet__panel--prompt \.composer__prompt-stack\s*\{[\s\S]*?flex:\s*1 1 160px[\s\S]*?min-height:\s*160px/);
   assert.match(responsiveCss, /\.compose-sheet__actions\s*\{[\s\S]*?position:\s*sticky[\s\S]*?bottom:\s*0/);
   assert.match(responsiveCss, /\.compose-sheet__panel--prompt \.composer__tray-thumbnail\s*\{[\s\S]*?width:\s*64px[\s\S]*?height:\s*64px/);
   assert.match(responsiveCss, /\.compose-sheet__panel--prompt \.composer__tray-remove\s*\{[\s\S]*?width:\s*44px[\s\S]*?height:\s*44px/);

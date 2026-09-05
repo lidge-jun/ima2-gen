@@ -1757,7 +1757,7 @@
     "important": false
   },
   {
-    "file": "ui/src/styles/home-workspace.css",
+    "file": "ui/src/styles/composer-panes.css",
     "atRule": null,
     "selector": ".home-prompt__textarea",
     "expected": "var(--r-xl)",
@@ -2653,7 +2653,7 @@
     "important": false
   },
   {
-    "file": "ui/src/styles/provider-controls.css",
+    "file": "ui/src/styles/composer-panes.css",
     "atRule": null,
     "selector": ".negative-prompt__textarea",
     "expected": "var(--r-sm)",

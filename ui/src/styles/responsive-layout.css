@@ -228,19 +228,6 @@
     --composer-textarea-max-height: none;
     flex: 1 0 auto;
   }
-  .compose-sheet__panel--prompt .composer__prompt-stack {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 160px;
-    min-height: 160px;
-  }
-  .compose-sheet__panel--prompt .composer__textarea,
-  .compose-sheet__panel--prompt .negative-prompt__textarea {
-    height: 100% !important;
-    min-height: 160px;
-    max-height: none;
-    flex: 1 1 auto;
-  }
   .compose-sheet__panel--prompt .composer__tray-slot {
     width: 72px;
     min-width: 72px;
