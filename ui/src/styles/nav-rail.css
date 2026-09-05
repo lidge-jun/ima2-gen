@@ -97,7 +97,7 @@
     max(8px, env(safe-area-inset-left));
   border-right: none;
   border-top: 1px solid var(--hairline-soft);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: var(--bg);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   z-index: 160;

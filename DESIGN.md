@@ -154,6 +154,24 @@ animation. Skeleton shimmer is the only repeating animation.
 
 ## Verification
 
+### Composer contract (WP08)
+
+Preserve the expert-tool V3/M2/D5 profile. `styles/composer-panes.css` owns the
+paired editing surface; host allocation stays with sidebar/dock/sheet styles.
+The enabled placeholder and identifying border use `--text-muted`, not decorative
+hairlines or reduced placeholder opacity. Classic panes use `--r-md` for both
+border radius and clipping, preventing disconnected corners. Home keeps its
+effective `--r-xl` input radius. Focus tokens and disabled controls are unchanged.
+The fixed mobile navigation uses opaque `--bg`, preventing underlying scrolling
+text from bleeding into its labels; dimensions, safe areas and navigation stay.
+
+Runtime CSS in `ui/src/index.css` is authoritative; the older global token tables
+above are historical snapshots, not rendered-color evidence. The scoped current
+pairs are dark muted#90909d on surface2#1c1c23 and light#5d5d68 on#ececf1. Actual
+hosted tests composite ancestor/pseudo opacity and compare PNG background samples;
+they do not certify all controls or the whole application as WCAG-conformant.
+Current implementation evidence belongs to `260905_production_readiness/084*`.
+
 Render proof (wp7): 16/16 live Playwright checks passed at commit
 `635723d7`. Verified: radius tokens, type ladders at 1280px and 320px,
 paper/state color tokens in computed style, settings-workspace

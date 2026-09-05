@@ -32,6 +32,16 @@ async function openComposer(page: Page, origin: string, scenario: Scenario) {
   await expect(root).toBeVisible();
   await expect(root.locator(".negative-prompt__textarea")).toBeVisible();
   await page.evaluate(async () => { await document.fonts.ready; });
+  if (scenario.viewport.width <= 800) {
+    const alpha = await page.locator(".nav-rail--mobile").evaluate((element) => {
+      const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = getComputedStyle(element).backgroundColor;
+      context.fillRect(0, 0, 1, 1);
+      return context.getImageData(0, 0, 1, 1).data[3] / 255;
+    });
+    expect(alpha, "Fixed navigation must not bleed underlying roster text").toBe(1);
+  }
   return root;
 }
 

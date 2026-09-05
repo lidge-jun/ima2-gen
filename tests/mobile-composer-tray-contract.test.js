@@ -49,6 +49,7 @@ test("home never mounts classic-only mobile chrome", () => {
 test("mobile layout grows the textarea and keeps tray, actions, and targets touch-safe", () => {
   assert.match(responsiveCss, /\.app\[data-mobile="1"\] > \.sidebar\s*\{[\s\S]*?display:\s*none/);
   assert.match(navRailCss, /\.nav-rail--mobile\s*\{[\s\S]*?z-index:\s*160/);
+  assert.match(navRailCss, /\.nav-rail--mobile\s*\{[^}]*background:\s*var\(--bg\);/);
   assert.match(responsiveCss, /\.compose-sheet-backdrop\s*\{[\s\S]*?z-index:\s*170/);
   assert.match(responsiveCss, /\.compose-sheet\s*\{[\s\S]*?z-index:\s*180/);
   assert.match(responsiveCss, /\.compose-sheet__panel--prompt\s*\{[\s\S]*?display:\s*flex[\s\S]*?flex-direction:\s*column/);

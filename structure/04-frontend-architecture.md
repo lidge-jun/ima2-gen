@@ -6,6 +6,30 @@ aliases: [ima2 frontend, ima2 React UI, image_gen frontend]
 
 # Frontend Architecture
 
+Composer pane geometry lives in `ui/src/styles/composer-panes.css`; sidebar,
+classic dock and mobile sheet styles allocate host space. NAI paired inputs keep
+content-aware scrolling: sidebar dual floors72px, bottom86–148px, mobile160px,
+Home168px/144px at<=480px. Both grids collapse at719px query-container width;
+non-NAI wrappers remain `display: contents`. Enabled placeholders and identifying
+pane/Home-input borders use the existing `--text-muted` role. Classic pane borders
+share the same `--r-md` radius as their clipping shape.
+The mobile navigation background is opaque `--bg` so scrolling content cannot
+bleed through its labels; fixed positioning and safe-area allocation are unchanged.
+
+Classic and Home retain separate submit policies. Their positive and negative
+fields suppress Ctrl/Cmd+Enter during composition using local refs, native
+`isComposing` and the229 compatibility signal; compositionend never submits.
+The native mention menu selects on ordinary Enter and lets modified Enter reach
+Classic once. Native Escape carries dismissal intent to the parent before query
+clearing, keeping the same query closed until text changes. Negative `@text`
+remains literal; no store schema or generation payload changed.
+
+WP08 checks these contracts with hosted actual React component callbacks and
+non-generating full-app geometry, plus exact-source CSS contracts. The synthetic
+J6 preflight/routing is a bounded test facility, not an OS sandbox or proof of live
+provider behavior. Exact-run evidence, visual review and production release
+remain separately gated in the production-readiness devlog.
+
 Core composer reference eligibility comes from generated
 `PROVIDER_SURFACE_SUPPORT[provider].generate.references`, sourced from
 `lib/providers/surfaceSupport.ts`. This is separate from numeric reference caps:
