@@ -47,7 +47,7 @@ jobs:
       WANT_NODE: ${{ matrix.node }}
       WANT_NPM: ${{ matrix.npm }}
       WANT_PLATFORM: ${{ matrix.platform }}
-      AGY_CHECK_OUTPUT: ${{ runner.temp }}/agy-artifacts-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.node }}
+      AGY_CHECK_OUTPUT_BASENAME: agy-artifacts-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.node }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
@@ -85,14 +85,14 @@ jobs:
       - name: Build emitted server owners
         run: npm run build:server
       - name: Run exact filesystem files
-        run: node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ env.AGY_CHECK_OUTPUT }}"
+        run: node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}"
       - name: Upload filesystem receipts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: agy-artifacts-${{ matrix.os }}-${{ matrix.node }}-${{ env.WANT_SHA }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ env.AGY_CHECK_OUTPUT }}/*.json
-            ${{ env.AGY_CHECK_OUTPUT }}/*.tap
+            ${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}/*.json
+            ${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}/*.tap
           if-no-files-found: error
           retention-days: 14

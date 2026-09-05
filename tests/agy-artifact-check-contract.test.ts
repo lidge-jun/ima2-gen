@@ -280,7 +280,11 @@ function validateWorkflow(source: string) {
   for (const [key, value] of [['WANT_NODE', 'node'], ['WANT_NPM', 'npm'], ['WANT_PLATFORM', 'platform']]) {
     assert.equal(job.env[key], '${{ matrix.' + value + ' }}');
   }
-  assert.match(job.env.AGY_CHECK_OUTPUT, /^\$\{\{ runner.temp \}\}\/agy-artifacts-/);
+  // Parsed policy checks do not validate Actions expression contexts; actionlint owns that gate.
+  for (const value of Object.values(job.env)) {
+    assert.doesNotMatch(String(value), /\$\{\{[^}]*\brunner\s*(?:\.|\[)/, 'runner context is invalid in job-level env');
+  }
+  assert.equal(job.env.AGY_CHECK_OUTPUT_BASENAME, 'agy-artifacts-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.node }}');
   const actions = assertAllActionsPinned(source).map((entry: { action: string }) => entry.action);
   assert.deepEqual(actions, ['actions/checkout', 'actions/setup-node', 'actions/upload-artifact']);
   const steps = job.steps;
@@ -298,7 +302,7 @@ function validateWorkflow(source: string) {
   assert.match(steps[4].run, /assert\.equal\(result\.stdout\.trim\(\), process\.env\.WANT_NPM\)/);
   assert.equal(steps[5].run, 'npm ci');
   assert.equal(steps[6].run, 'npm run build:server');
-  assert.equal(steps[7].run, 'node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ env.AGY_CHECK_OUTPUT }}"');
+  assert.equal(steps[7].run, 'node scripts/run-agy-artifact-check.mjs --${{ matrix.mode }} --output-dir "${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}"');
   validateArtifact(steps[8]);
   for (const step of steps.slice(0, -1)) assert.equal(step.if, undefined);
   for (const step of steps) assert.equal(step['continue-on-error'], undefined);
@@ -309,7 +313,7 @@ function validateArtifact(step: ReturnType<typeof parsed>) {
   assert.equal(step.if, 'always()');
   assert.equal(step.with['if-no-files-found'], 'error');
   assert.equal(step.with.name, 'agy-artifacts-${{ matrix.os }}-${{ matrix.node }}-${{ env.WANT_SHA }}-${{ github.run_id }}-${{ github.run_attempt }}');
-  assert.deepEqual(step.with.path.trim().split('\n'), ['${{ env.AGY_CHECK_OUTPUT }}/*.json', '${{ env.AGY_CHECK_OUTPUT }}/*.tap']);
+  assert.deepEqual(step.with.path.trim().split('\n'), ['${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}/*.json', '${{ runner.temp }}/${{ env.AGY_CHECK_OUTPUT_BASENAME }}/*.tap']);
 }
 
 test('Agy parsed workflow locks exact-head four-row filesystem gate', () => {
@@ -334,6 +338,10 @@ test('Agy parsed YAML mutations reject checkout, guard, platform, mode, artifact
     (w) => { w.jobs.filesystem.steps[0].uses = 'actions/checkout@main'; },
     (w) => { w.jobs.filesystem.env.WANT_PLATFORM = 'linux'; },
     (w) => { w.jobs.filesystem.steps[4].run = 'console.log("npm unchecked")'; },
+    (w) => { w.jobs.filesystem.env.AGY_CHECK_OUTPUT_BASENAME = '${{ runner.temp }}/agy-artifacts'; },
+    (w) => { w.jobs.filesystem.env.INVALID_JOB_CONTEXT = '${{ runner.temp }}'; },
+    (w) => { w.jobs.filesystem.steps[7].run = w.jobs.filesystem.steps[7].run.replace('${{ runner.temp }}/', ''); },
+    (w) => { w.jobs.filesystem.steps[8].with.path = '${{ env.AGY_CHECK_OUTPUT_BASENAME }}/*.json'; },
   ];
   for (const [index, mutate] of mutations.entries()) {
     const workflow = parsed(readFileSync(WORKFLOW, 'utf8'));
