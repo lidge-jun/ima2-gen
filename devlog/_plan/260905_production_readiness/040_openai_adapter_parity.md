@@ -1,6 +1,6 @@
 # WP04 — OpenAI execution ownership, OAuth/API parity
 
-Status: P / future implementation, independently rederived at ecde2bc79.
+Status: P / revalidating at d039b5875f511bdfe103ee8444f63b90308f4369 (verified WP03). Read041 current-tree findings before implementation; no WP04 source changes yet.
 One PR outcome: OAuth/API use an actual typed OpenAI execution owner, with operation bodies extracted from responsesImageAdapter and all OpenAI branches removed from WP03's legacy execution helpers.
 Semantic dependency: WP03 prepareImageExecution/types, server admission and four caller integration. Existing resolveProviderOptions supplies resolved fields; WP02 is UI selection/persistence only.
 Stack base: WP03 tip. No requirement to merge WP03 before creating this stacked PR.
@@ -36,6 +36,8 @@ This is a relocation of production operation bodies, not a new adapter that mere
 | MODIFY | lib/providers/execution/legacyEdit.ts | DELETE editViaResponses branch |
 | MODIFY | lib/providers/execution/legacyMultimode.ts | DELETE generateMultimodeViaResponses branch |
 | NEW | tests/openai-execution-parity.test.ts | Activate all four surface mappings and both lane endpoints via real new execution owner |
+| NEW | tests/openai-transport-parity.test.ts | Actual transport auth/errors/parser/abort and layered classic normalization |
+| MODIFY | Eight existing test/helper targets in042 | Native mock retargeting, provider-preserving factory, scoped AST and precise source-owner assertions |
 | MODIFY | tests/provider-execution-imports.test.ts | Family implementation may not import compatibility facade; legacy may not dispatch oauth/api |
 | MODIFY | docs/migration/runtime-test-inventory.md | New runtime test inventory |
 | MODIFY | structure/03-server-api.md | Actual OpenAI execution/transport/facade split |
@@ -57,9 +59,9 @@ Import FinalImageHandler from ../../responsesParse.js. No runtime code or new sc
 
 ### responsesTransport.ts
 
-Move MakeErrorOptions, ResponsesError, RESPONSES_ERROR_MARKER, makeError, parseOpenAIErrorBody, normalizedCode, safeUpstreamClientMessage, safeBaseUrl, apiAuthorizationHeader, isKnownResponsesError, getEndpoint, PostResponsesArgs, combineAbortSignals and postResponses, preserving bodies/defaults.
+Move MakeErrorOptions, ResponsesError, UpstreamError, RESPONSES_ERROR_MARKER, makeError, parseOpenAIErrorBody, normalizedCode, safeUpstreamClientMessage, safeBaseUrl, apiAuthorizationHeader, isKnownResponsesError, getEndpoint, PostResponsesArgs, combineAbortSignals and postResponses, preserving bodies/defaults.
 Public runtime export is `postResponses(args: PostResponsesArgs): Promise<ParsedResponsesResult>`; export PostResponsesArgs for typed callers. Other helpers remain private.
-Dependencies: logger, errorClassify, errInfo, inflight.setJobPhase, runtimeContext type, oauthProxy.waitForOAuthReady, responsesParse parseJson/parseStream/safeDiagnosticLabel.
+Dependencies: logger, errorClassify, errInfo, inflight.setJobPhase, runtimeContext type, oauthProxy.waitForOAuthReady, responsesParse parseJson/parseStream/safeDiagnosticLabel plus ParsedResponsesResult type for the explicit return annotation.
 It must not import openaiExecution, execution/index, routes or any compatibility facade.
 No change to provider==="api" direct URL/header selection, OAuth waitReady, safeBaseUrl, 400/401/429 diagnostics or 499-versus-504 mapping.
 
@@ -88,12 +90,17 @@ Prepare does no fetch/readiness probe; execute selects one of four surface-speci
 | Request surface | Exact operation/options |
 | --- | --- |
 | classic | generateViaResponses with request.prompt/references/options; signal; allowPromptOnlyOAuthFallback=provider!=="api"; background/outputFormat only when present. Preserve original two-attempt outer loop and error normalization. |
-| node, sourceImage=null | generateViaResponses with context-filtered references; model/reasoning/webSearch/signal; partialImages=request.partialImages; progress.onPartialImage only if enabled. Do NOT enable allowPromptOnlyOAuthFallback. |
+| node, sourceImage=null | generateViaResponses with context-filtered references; model/reasoning/webSearch/signal; partialImages=request.partialImages; onPartialImage=progress?.onPartialImage ?? null independently of partialImages. Caller decides whether to attach progress; add no new callback gate. Do NOT enable allowPromptOnlyOAuthFallback. |
 | node, sourceImage present | editViaResponses with sourceImage, context-filtered refs and searchMode; no mask, partial callback or fallback flag. |
-| edit | editViaResponses with sourceImage and mask when non-null; model/reasoning/webSearch/signal; no references not previously supplied. |
+| edit | editViaResponses with request.rawPrompt, sourceImage and mask when non-null; model/reasoning/webSearch/signal; no references not previously supplied. Native result forwarding keeps usage ?? null and webSearchCalls ?? 0. |
 | multimode | generateMultimodeViaResponses with maxImages, refs, model/reasoning/webSearch/signal and both callbacks; do not add partial_images merely because a callback exists. |
 
 Node outer attempts remain nodeGeneration's responsibility. Classic retry logs stay scope=generate, with unchanged attempt/code fields. Caller cancellation check remains; retaining the classic per-attempt throwIfJobCanceled prevents a canceled result from entering a retry. Do not add a new global abort check that changes transport failure ordering.
+
+Capture parity: classic's provider/prompt/options scalar destructuring stays at
+prepare; references/signal/live ctx are read at execute as in legacyClassic.
+Node/edit/multimode request and callback reads stay execute-time. Do not flatten
+all fields into an eager shared options snapshot or add node final callbacks.
 
 ## Before / after patches
 
@@ -110,14 +117,20 @@ Move, do not copy, the private helpers and bodies according to the module map ab
 Existing agentImageVideoGen and spriteRowPipeline imports keep working through this facade.
 
 Execution selector after WP03:
-```diff
-- return prepareLegacyExecution(ctx, request, progress);
-+ if (request.provider === "oauth" || request.provider === "api") {
-+   return prepareOpenaiExecution(ctx, narrowedOpenaiRequest, progress);
-+ }
-+ return prepareLegacyExecution(ctx, narrowedLegacyRequest, progress);
+Replace ONLY selection of `const prepared = await ...` using a typed helper:
+
+```ts
+function prepareSelected(ctx: RuntimeContext, request: ImageExecutionRequest,
+  progress?: ExecutionProgress): Promise<PreparedImageExecution<ExecutionSurface>> {
+  if (isOpenaiRequest(request)) return prepareOpenaiExecution(ctx, request, progress);
+  if (isLegacyExecutionRequest(request)) return prepareLegacyImageExecution(ctx, request, progress);
+  throw new Error("Unreachable image execution provider");
+}
 ```
-narrowedOpenaiRequest/narrowedLegacyRequest describe type-guard results, not new data copies. Implement an explicit provider type guard or overload so the same request and ctx object cross the boundary; no `as any`.
+
+Keep the existing outer prepare/execute credential wrapper unchanged. Both guards
+narrow the same object without copies; definitions and no-emit proof are in041.
+Public generic overload retains surface-specific inference without unsafe casts.
 Remove the matching branches/imports from each legacy helper and narrow its input provider set in the same patch. Preserve remaining provider behavior, including refusal paths preserved by WP01 and added by WP03.
 
 ## Acceptance: reachable fixtures and independent expectations
@@ -125,18 +138,18 @@ Remove the matching branches/imports from each legacy helper and narrow its inpu
 | ID | Activation | Assertion |
 | --- | --- | --- |
 | O04-1 | Two contexts with distinctive fake API key vs OAuth loopback URL/readiness, same request | API uses https://api.openai.com/v1/responses + fake Bearer; OAuth uses loopback /v1/responses without API auth; no fallback to other lane; mutate live ctx readiness before execute and observe current state |
-| O04-2 | Classic oauth first stream empty, next two fallback streams empty, third fallback returns image | 4 transport calls for one outer attempt; first two fallback requests retain refs/developer, last drops them; retryKind and all drop/event metadata literal values survive to classic response |
-| O04-3 | Classic api empty stream, then retryable empty; node oauth empty and edit oauth empty | API never calls oauth-fallback; classic outer request count matches two; node no inner fallback; edit exactly one; non-retryable safety exits early |
+| O04-2 | Classic oauth with at least one valid reference and webSearchEnabled=true; first stream empty, next two fallback streams empty, third fallback returns image | 4 transport calls for one outer attempt; first two fallback requests retain refs/developer, last drops them; retryKind and all drop/event metadata literal values survive to classic response |
+| O04-3 | Classic API empty-completed SSE; separately HTTP503 response then image; node OAuth empty and edit OAuth empty | Empty422 is one call, not a retryable empty. HTTP503 reaches exactly two classic attempts without throwing an unmatched fixture exception. API never calls oauth-fallback; node gets no inner fallback, edit exactly one. Preserve existing safety-code retry classification rather than inventing non-retryable safety behavior. |
 | O04-4 | Generate with webSearch=false and distinct size/model/reasoning/background/outputFormat | Request tools/choice, developer/user content, reasoning and image options equal explicit fixture fields; fallback retains background/outputFormat |
 | O04-5 | Node child parent+ref and PNG mask on edit route, using valid small image bytes | Node compresses parent+filtered refs as before; edit mask appended as guidance image/text; no claim of pixel-exact native masked editing |
-| O04-6 | Node partial followed by final; multimode two final items and duplicate bytes | Partial wire payload unchanged; final callback awaited before next item; duplicate bytes ignored by parser, caller persisted index remains once |
+| O04-6 | Node partial followed by final; multimode SSE A,A,B and manually held first final callback promise | Partial wire payload unchanged; callback indices [0,1], second callback cannot occur before first is released; original objects retained, caller persisted index once. JSON has neither callbacks nor SSE byte dedupe. OAuth fallback forwards no callbacks but still uses SSE parsing/dedupe. Node final callback is not added. |
 | O04-7 | SSE error with rate_limit_exceeded, malformed key, 400 param absent, no-image edit | Exact RESPONSES_STREAM_ERROR/upstreamCode/eventCount; malformed key redacted; paramless error wording preserved; empty edit 422 diagnostics retained |
-| O04-8 | Held fetch rejected with AbortError after caller abort vs internal timeout | 499 GENERATION_CANCELED versus 504 RESPONSES_IMAGE_TIMEOUT; no successful persistence/done; same error diagnostics traverse seam |
+| O04-8 | Held fetch rejected with AbortError after caller abort vs internal timeout | Transport/operations and node/edit/multimode execution preserve499 GENERATION_CANCELED vs504 RESPONSES_IMAGE_TIMEOUT. Classic execution preserves existing normalization:499 INVALID_REQUEST with native cause; repeated internal timeout yields504 UNKNOWN aftertwoattempts with cause. Real inflight-canceled classic route still emits GENERATION_CANCELED and no successful persistence/done. Do not confuse these layers or change normalization policy. |
 | O04-9 | Multimode final image then stream timeout | Already saved images retained by existing caller partial-timeout path, one terminal outcome; seam must not convert to an empty successful sequence |
 | O04-10 | Import both old facade and new operation in the same built graph | Exported function identity equal; real operation called once; legacy branches gone, no new module imports the facade |
 
 Safety fixture keys are invented strings. Do not read credentials or boot the user's proxy. Mock URL requests prove lane selection locally, not account validity.
-Complete strings/builders are not re-derived from DUT in assertions: expected request fields and event order come from hand-authored fixtures. Include red/green mutation evidence that re-enabling fallback on API or dropping one callback breaks a test.
+Complete strings/builders are not re-derived from DUT in assertions: expected request fields and event order come from hand-authored fixtures. Include red/green mutation evidence that actually permitting additional API fallback transport calls or dropping a final callback breaks a test. Flipping only the family opt-in flag is not sufficient mutation proof because responsesFallback independently rejects provider=api.
 
 ## Verification and baseline exits
 
