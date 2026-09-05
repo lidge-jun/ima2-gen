@@ -6,6 +6,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, isAbsolute } from "node:path";
 import { installGrokImageTransportFixture, type ImageTransportFixture } from "./_grokImageTransportFixture.ts";
+import { isolateAdditionalNetwork } from "./_executionNetworkIsolation.ts";
 
 export async function isolateExecution() {
   const rootDir = await mkdtemp(join(tmpdir(), "ima2-execution-"));
@@ -13,9 +14,11 @@ export async function isolateExecution() {
   const nativeFetch = globalThis.fetch;
   const restoreMocks: Array<() => void> = [];
   let imageTransport: ImageTransportFixture | undefined;
+  let network: ReturnType<typeof isolateAdditionalNetwork> | undefined;
   const restore = async () => {
     // A timed-out pump retains every trap and its owned storage for a later drain.
     await imageTransport?.restore();
+    network?.restore();
     globalThis.fetch = nativeFetch;
     for (const restoreMock of restoreMocks) restoreMock();
     syncBuiltinESMExports();
@@ -40,6 +43,7 @@ export async function isolateExecution() {
   await writeFile(join(rootDir, "config.json"), "{}");
   await writeFile(join(rootDir, "empty.env"), "");
   const violations: unknown[] = [];
+  network = isolateAdditionalNetwork(violations, nativeFetch);
   globalThis.fetch = async () => {
     const error = new Error("Network request outside active execution fixture");
     violations.push(error);
@@ -54,7 +58,7 @@ export async function isolateExecution() {
     restoreMocks.push(() => trapped.mock.restore());
   }
   syncBuiltinESMExports();
-  return { rootDir, nativeFetch, violations, imageTransport, async close() {
+  return { rootDir, nativeFetch, fetchOwned: network.fetchOwned, violations, imageTransport, async close() {
     try {
       await imageTransport!.drain();
       assert.equal(violations.length, 0, `Isolation violations: ${violations.map(String).join("; ")}`);

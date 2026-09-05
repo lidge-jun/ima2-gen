@@ -14,6 +14,7 @@ const TEST_DIR = isolation.rootDir;
 const deniedFetch = globalThis.fetch;
 const originalFetch = isolation.nativeFetch;
 let appOrigin: string | undefined;
+let appServer: import("node:http").Server | undefined;
 let closeDb: (() => void) | undefined;
 let restoreWrites: (() => void) | undefined;
 after(async () => {
@@ -44,7 +45,8 @@ const { createAgentSession } = await import("../lib/agentStore.ts");
 async function fetchOwnedApp(url: Parameters<typeof fetch>[0], init?: RequestInit) {
   const target = new URL(url instanceof Request ? url.url : String(url));
   assert.ok(appOrigin && target.origin === appOrigin, "Native fetch is limited to the owned app server");
-  return originalFetch(url, { ...init, redirect: "error" });
+  assert.ok(appServer);
+  return isolation.fetchOwned(appServer, url, { ...init, redirect: "error" });
 }
 
 function sseResponse(events: unknown[]) {
@@ -92,6 +94,7 @@ async function withApp(fn: (baseUrl: string, generatedDir: string) => Promise<vo
   });
   const addr = server.address() as import("node:net").AddressInfo;
   appOrigin = `http://127.0.0.1:${addr.port}`;
+  appServer = server;
   try {
     await fn(appOrigin, generatedDir);
   } finally {
@@ -99,7 +102,7 @@ async function withApp(fn: (baseUrl: string, generatedDir: string) => Promise<vo
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await imageTransport.drain();
       await drain();
-    } finally { appOrigin = undefined; }
+    } finally { appOrigin = undefined; appServer = undefined; }
   }
 }
 

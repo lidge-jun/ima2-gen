@@ -1,10 +1,5 @@
 import assert from "node:assert/strict";
 import childProcess, { type ChildProcessWithoutNullStreams, type SpawnOptions } from "node:child_process";
-import dns from "node:dns";
-import dnsPromises from "node:dns/promises";
-import net from "node:net";
-import tls from "node:tls";
-import dgram from "node:dgram";
 import os from "node:os";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { chmod, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
@@ -58,7 +53,6 @@ interface State {
   observations: Observation[];
   listeners: Set<() => void>;
   restorations: Array<() => void>;
-  guardRestorations: Array<() => void>;
   cursor: number;
   closing: boolean;
   restored: boolean;
@@ -67,12 +61,6 @@ interface State {
 function observe(state: State, value: Observation): void {
   state.observations.push({ ...value, sequence: state.observations.length });
   for (const listener of state.listeners) listener();
-}
-
-function violation(state: State, message: string): never {
-  const error = new Error(message);
-  state.isolation.violations.push(error);
-  throw error;
 }
 
 function track<T>(state: State, work: Promise<T>): Promise<T> {
@@ -104,26 +92,6 @@ function waitFor(state: State, event: string): Promise<Observation> {
   return bounded(state, work, `Missing Agy fixture event ${event}`).finally(() => {
     if (listener) state.listeners.delete(listener);
   });
-}
-
-function installAdditionalDenials(state: State): void {
-  const patch = (target: object, key: string) => {
-    const descriptor = Object.getOwnPropertyDescriptor(target, key);
-    if (!descriptor || typeof descriptor.value !== "function") return;
-    Object.defineProperty(target, key, { ...descriptor, value: () => violation(state, `Agy fixture forbids ${key}`) });
-    state.guardRestorations.push(() => Object.defineProperty(target, key, descriptor));
-  };
-  for (const target of [dns, dnsPromises]) {
-    for (const key of Object.keys(target)) if (/^(resolve|reverse)/.test(key)) patch(target, key);
-    for (const key of Object.getOwnPropertyNames(target.Resolver.prototype)) {
-      if (/^(resolve|reverse)/.test(key)) patch(target.Resolver.prototype, key);
-    }
-  }
-  for (const [target, keys] of [[net, ["connect", "createConnection"]],
-    [net.Socket.prototype, ["connect"]], [tls, ["connect"]], [dgram, ["createSocket"]]] as const) {
-    for (const key of keys) patch(target, key);
-  }
-  syncBuiltinESMExports();
 }
 
 function validateSpawn(state: State, executable: string, args: readonly string[], options: SpawnOptions): void {
@@ -273,10 +241,7 @@ async function close(state: State): Promise<void> {
     for (const restore of state.restorations.reverse()) restore();
     syncBuiltinESMExports();
     try { await state.isolation.close(); }
-    finally {
-      for (const restore of state.guardRestorations.reverse()) restore();
-      syncBuiltinESMExports(); state.restored = true;
-    }
+    finally { state.restored = true; }
   }
 }
 
@@ -339,7 +304,7 @@ export async function openAgyProcessFixture(): Promise<AgyProcessFixture> {
   const root = await realpath(isolation.rootDir);
   const state: State = { root, executable: join(root, "bin", "agy-fixture.mjs"), executableSource: "", isolation,
     nativeSpawn, setTimer, clearTimer, children: [], controllers: new Set(), pending: new Set(),
-    observations: [], listeners: new Set(), restorations: [], guardRestorations: [], cursor: 0, closing: false, restored: false };
+    observations: [], listeners: new Set(), restorations: [], cursor: 0, closing: false, restored: false };
   try {
     state.restorations.push(isolateEnvironment(root));
     assert.equal(os.homedir(), root); assert.equal(os.tmpdir(), root);
@@ -350,7 +315,6 @@ export async function openAgyProcessFixture(): Promise<AgyProcessFixture> {
     await writeFile(state.executable, state.executableSource);
     await chmod(state.executable, 0o700);
     process.env.IMA2_AGY_BIN = state.executable;
-    installAdditionalDenials(state);
     installSpawn(state);
     await configure(state, "success");
     return await loadHandle(state);

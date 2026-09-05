@@ -127,15 +127,20 @@ export function collectReturnedFields(source, file, scopeName, field) {
   const scope = functionScope(tree, file, scopeName);
   const printer = ts.createPrinter({ removeComments: true });
   const values = [];
-  walkRuntime(scope, (node) => {
-    if (!ts.isReturnStatement(node) || !node.expression || !ts.isObjectLiteralExpression(node.expression)) return;
-    for (const property of node.expression.properties) {
-      if (!ts.isPropertyAssignment(property)) continue;
-      if ((ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) && property.name.text === field) {
-        values.push(printer.printNode(ts.EmitHint.Expression, property.initializer, tree));
+  function visit(node) {
+    if (ts.isTypeNode(node) || ts.isFunctionLike(node)) return;
+    if (ts.isReturnStatement(node) && node.expression && ts.isObjectLiteralExpression(node.expression)) {
+      for (const property of node.expression.properties) {
+        if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) continue;
+        if ((ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) && property.name.text === field) {
+          const expression = ts.isShorthandPropertyAssignment(property) ? property.name : property.initializer;
+          values.push(printer.printNode(ts.EmitHint.Expression, expression, tree));
+        }
       }
     }
-  });
+    ts.forEachChild(node, visit);
+  }
+  visit(scope);
   return values;
 }
 

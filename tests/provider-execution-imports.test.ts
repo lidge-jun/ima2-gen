@@ -247,6 +247,19 @@ test("returned-field oracle reads executable return properties, not comments or 
   assert.deepEqual(collectReturnedFields(source.replace('return { prompt: r.prompt }', 'return { prompt: r.rawPrompt }'), caller, "input", "prompt"), ["r.rawPrompt"]);
 });
 
+test("returned-field oracle excludes nested function scopes and exposes shorthand expressions", () => {
+  for (const nested of [
+    'function unrelated() { return { prompt: r.prompt }; }',
+    'const unrelated = () => { return { prompt: r.prompt }; };',
+    'const unrelated = { method() { return { prompt: r.prompt }; } };',
+    'class Unrelated { method() { return { prompt: r.prompt }; } }',
+  ]) {
+    const source = `function input(r) { ${nested} const prompt = r.rawPrompt; return { prompt }; }`;
+    assert.deepEqual(collectReturnedFields(source, caller, "input", "prompt"), ["prompt"]);
+    assert.notDeepEqual(collectReturnedFields(source, caller, "input", "prompt"), ["r.prompt"]);
+  }
+});
+
 test("comments and strings cannot fake edges or execution activation", () => {
   const source = `${seam}
     // prepare(ctx, request); execution.execute(); import "${owner}";

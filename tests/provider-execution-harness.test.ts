@@ -258,6 +258,14 @@ if (executionTestProcess(import.meta.url)) {
     image = (await sharp({ create: { width: 8, height: 8, channels: 3, background: "#345678" } }).png().toBuffer()).toString("base64");
   });
   after(async () => { observeBeforeWrite(); await harness?.close(); });
+  test("caught request-normalization errors fail the active route fixture ledger", async () => {
+    await assert.rejects(harness.run("classic", {
+      upstream: () => assert.fail("Malformed request must not reach synthetic upstream"),
+    }, async (fixture) => {
+      await assert.rejects(fetch("https://fixture.invalid", { method: "CONNECT" }));
+      assert.equal(fixture.calls.length, 0);
+    }), /Unmatched upstream calls/);
+  });
   const upstream = (call: { url: string }) => {
     assert.equal(call.url, "https://api.openai.com/v1/responses");
     return responsesSse([

@@ -13,6 +13,7 @@ const { imageTransport } = isolation;
 const deniedFetch = globalThis.fetch;
 const originalFetch = isolation.nativeFetch;
 let appOrigin: string | undefined;
+let appServer: import("node:http").Server | undefined;
 let closeDb: (() => void) | undefined;
 let restoreWrites: (() => void) | undefined;
 after(async () => {
@@ -47,7 +48,8 @@ const PARTIAL_B64 = Buffer.from("partial image").toString("base64");
 async function fetchOwnedApp(url: Parameters<typeof fetch>[0], init?: RequestInit) {
   const target = new URL(url instanceof Request ? url.url : String(url));
   assert.ok(appOrigin && target.origin === appOrigin, "Native fetch is limited to the owned app server");
-  return originalFetch(url, { ...init, redirect: "error" });
+  assert.ok(appServer);
+  return isolation.fetchOwned(appServer, url, { ...init, redirect: "error" });
 }
 
 function sseResponse(events) {
@@ -105,6 +107,7 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
   const addr = server.address() as import("node:net").AddressInfo;
   const baseUrl = `http://127.0.0.1:${addr.port}`;
   appOrigin = baseUrl;
+  appServer = server;
   const respond = globalThis.fetch;
   try {
     assert.notEqual(respond, originalFetch);
@@ -123,7 +126,7 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await imageTransport.deactivate();
       await drain();
-    } finally { appOrigin = undefined; }
+    } finally { appOrigin = undefined; appServer = undefined; }
     await rm(rootDir, { recursive: true, force: true });
   }
 }

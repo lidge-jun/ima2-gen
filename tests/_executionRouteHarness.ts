@@ -152,7 +152,12 @@ export async function openRouteHarness(): Promise<RouteHarness> {
         throw error;
       }
     };
-    globalThis.fetch = async (input, init) => upstream(await normalizeCall(input, init));
+    globalThis.fetch = async (input, init) => {
+      let call: UpstreamCall;
+      try { call = await normalizeCall(input, init); }
+      catch (error) { violations.push(error); throw error; }
+      return upstream(call);
+    };
     isolation.imageTransport.activate({ hosts: imageHosts, respond: upstream });
     const ctx = modules.runtime.createTestRuntimeContext({
       apiKey: "sk-execution-fixture", oauthReadyState: "ready", oauthUrl: "http://oauth-fixture.invalid",
@@ -198,13 +203,13 @@ export async function openRouteHarness(): Promise<RouteHarness> {
       globalThis.fetch = inactiveFetch;
       assert.deepEqual(violations, [], "Unmatched upstream calls (even if caught by the route)");
       assert.deepEqual(isolation.imageTransport.violations, [], "Unmatched pinned image transport calls");
-      assert.deepEqual(isolation.violations, [], "Provider process launches forbidden");
+      assert.deepEqual(isolation.violations, [], "Unmatched isolation boundary calls");
       if (failure) throw failure;
     };
     setupComplete = true;
       await body({ requestId, generatedDir, ctx, calls, events: entries.events,
         imageTransportCalls: isolation.imageTransport.calls, imageResolutions: isolation.imageTransport.resolutions,
-        post: (payload, headers = {}) => isolation.nativeFetch(url, { method: "POST",
+        post: (payload, headers = {}) => isolation.fetchOwned(server!, url, { method: "POST",
           headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ ...payload, requestId }) }),
         waitFor: entries.waitFor, waitTerminal: (timeoutMs) => entries.waitFor((event) => event.event === "done" || event.event === "error", timeoutMs),
         waitSettled, cancel,

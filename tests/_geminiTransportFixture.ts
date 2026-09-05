@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { mock } from "node:test";
+import { join } from "node:path";
 import type { RuntimeContext } from "../lib/runtimeContext.ts";
 import type { generateViaGeminiApi } from "../lib/geminiApiImageAdapter.ts";
 import { isolateExecution } from "./_executionRouteIsolation.ts";
@@ -85,8 +86,11 @@ export async function openGeminiFixture(graph: "source" | "emitted" = "source", 
     const { config } = await moduleAt("config");
     const logger = await moduleAt("lib/logger");
     (logger.configureLogger as typeof import("../lib/logger.ts").configureLogger)({ level: "silent" });
+    const base = config as RuntimeContext["config"];
     const ctx = createContext({ rootDir: isolation.rootDir, geminiApiKey: PUBLIC_KEY,
-      config: config as RuntimeContext["config"] });
+      config: { ...base, storage: { ...base.storage, configDir: isolation.rootDir,
+        dbPath: join(isolation.rootDir, "test.db"), generatedDir: join(isolation.rootDir, "generated"),
+        trashDir: join(isolation.rootDir, "trash"), generationRequestLogFile: join(isolation.rootDir, "requests.json") } } });
     const owner = await moduleAt("lib/providers/adapters/geminiOperations");
     const facade = await moduleAt("lib/geminiApiImageAdapter");
     const generate = owner.generateViaGeminiApi as typeof generateViaGeminiApi;
@@ -107,11 +111,14 @@ function nativeFixture(deps: { isolation: Awaited<ReturnType<typeof isolateExecu
   let expectedUrl = publicUrl(), expectedKey = PUBLIC_KEY;
   let response: (call: UpstreamCall) => Response | Promise<Response> = () => success();
   globalThis.fetch = async (input, init) => {
-    const request = new Request(input, init);
-    const call = { url: request.url, method: request.method, headers: request.headers,
-      body: await request.text(), signal: init?.signal ?? undefined };
-    calls.push(call);
-    try { assertWire(call, expectedUrl, expectedKey); }
+    let call: UpstreamCall;
+    try {
+      const request = new Request(input, init);
+      call = { url: request.url, method: request.method, headers: request.headers,
+        body: await request.text(), signal: init?.signal ?? undefined };
+      calls.push(call);
+      assertWire(call, expectedUrl, expectedKey);
+    }
     catch (error) { violations.push(error); throw error; }
     // Only the explicitly installed synthetic responder may reject as a transport fixture.
     return response(call);
