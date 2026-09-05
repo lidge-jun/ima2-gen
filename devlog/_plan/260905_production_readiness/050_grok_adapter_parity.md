@@ -1,6 +1,6 @@
 # WP05 — Grok execution ownership and search-toggle correctness
 
-Status: P / future implementation design, rederived at ecde2bc79; amended by main's explicit fix authorization.
+Status: P / revalidating against verified WP04 tip30dc2cb4331ea02ca33fdd0a3d911374f3e40521. Read051/052 for current threat model, real baseline reproductions and exact fixture/ownership amendments before B.
 One PR outcome: grok/grok-api image execution honors search policy, persists sparse outputs exactly once by original callback index and safely retrieves returned artifacts through one actual family owner. Explicit fixes are search-off forwarding, sparse final-sweep identity and bounded per-hop retrieval; image POST/retry policy stays unchanged.
 Semantic dependency: WP03 execution contract and fail-closed server admission; WP01 surface metadata. WP02 is UI selection/persistence only.
 Stack base: WP04 tip. No semantic dependency on OpenAI internals.
@@ -16,16 +16,14 @@ Stop=both lanes and all four surfaces pass extraction/toggle/download cases; com
 Artifact=this doc + 002 + parent receipt. Outcomes=verified scoped migration / blocked security-policy seam.
 Escalation=parent scope/contract decision, or two failed packets; no leaf dispatch/state/git commands.
 
-Main-approved corrections: search-off omission, sparse final-sweep identity (R1-03), signal-bounded DNS (R1-04), reachable pinned-socket fixtures (R1-05) and canonical test-runner activation (R1-01) are fixed in this WP, not deferred readiness residuals. Remaining changes are extraction or named compatibility requirements.
-
 ## Source anchors and explicit behavior delta
 
-- generatePipeline.ts:411-425 plans once per classic batch, passing webSearchEnabled and backgroundConstraint; :517-529 uses plannedPrompt/webSearchCalls.
-- nodeGeneration.ts:348-356 calls generateViaGrok without webSearchEnabled; refs include parent and context-filtered refs.
-- multimodePipeline.ts:436-453 calls generateMultimodeViaGrok without webSearchEnabled.
+- execution/legacyClassic.ts prepares one plan per batch and executes with plannedPrompt/webSearchCalls, forwarding search and background options.
+- execution/legacyNode.ts calls generateViaGrok without webSearchEnabled; refs include parent and context-filtered refs.
+- execution/legacyMultimode.ts calls generateMultimodeViaGrok without webSearchEnabled.
 - grokImageAdapter.ts:293-322 planGrokImage already supports webSearchEnabled=false; :374-425 generateViaGrok options omit it.
 - grokMultimodeAdapter.ts:36-80 options and per-item planner forwarding omit it.
-- routes/edit.ts:326 calls editViaGrok directly; preserve no planner/search there.
+- execution/legacyEdit.ts calls editViaGrok with rawPrompt; preserve no planner/search there.
 - grokImageCore.ts:202-257 image POST intentionally has no automatic network retry because billing may already have occurred. Search/planner/download retry via grokUpstreamRetry stays distinct.
 
 After: add optional webSearchEnabled to the two generation APIs, carry resolved value from node/multimode execution mapping into every planner call, default omitted=true as before. This does not disable the prompt planner; only the web-search stage is skipped. Planner calls continue using the configured model. Classic still plans once; edit remains direct and search count zero.
@@ -77,7 +75,7 @@ No import of grokImageAdapter facade or grokOperations. Preserve existing tool c
 ### lib/providers/adapters/grokOperations.ts
 
 Move generateViaGrok :374-425 and editViaGrok :428-447, rebasing imports.
-Imports: ../../grokImagePlanner.js for planGrokImage, ../../grokImageCore.js for wire/result types/helpers, ../../logger.js, ../../refs.js, ../../runtimeContext.js.
+Imports: ../../grokImagePlanner.js for planGrokImage, ../../grokImageCore.js for wire/result types/helpers, ../../logger.js, ../../refs.js, ../../runtimeContext.js, ../../grokSizeMapper.js for mapSizeToGrokImageParams, and ../../grokRuntime.js for server-owned proxy-origin derivation.
 Existing result type remains GrokGenerateResult from grokImageCore.
 
 Concrete signature delta:
@@ -96,7 +94,7 @@ Concrete signature delta:
 ```
 Existing `planGrokImage(prompt, ctx, {...options, referenceCount:references.length, directApiKey:options.directApiKey})` now transports that declared field. Add an explicit assertion for its value; don't assume spread syntax is proof.
 When plannedPrompt is supplied, do not perform a new plan/search and preserve supplied webSearchCalls, including numeric zero.
-editViaGrok's signature and body remain identical: one source image, no planner or added search option.
+editViaGrok's signature and image operation remain identical except the explicitly mapped trusted-origin download argument: one source image, no planner or added search option.
 
 ### lib/providers/adapters/grokMultimodeOperations.ts
 
@@ -157,11 +155,16 @@ Uses canonical ../execution/types.js, new operations/planner/core, imageModels.r
 | Surface | Prepare / execute contract |
 | --- | --- |
 | classic | Resolve quality model; prepend providerUrl ref if present; prepare exactly one plan with webSearchEnabled/backgroundConstraint, then execute uses plannedPrompt and webSearchCalls for each image. |
-| node | No work in prepare; execute generateViaGrok(effective prompt) with parent+filtered refs, effective model and options.webSearchEnabled. This keeps planner-required node edit semantics. |
-| edit | No work in prepare; execute editViaGrok(prompt,sourceImage), model/size/signal/requestId/direct key. No planner; webSearchCalls remains 0. |
+| node | No provider work in prepare, but capture direct key once there; execute generateViaGrok(request.prompt) with parent+filtered refs, effective model and options.webSearchEnabled. Caller retries retain captured key; this keeps planner-required node edit semantics. |
+| edit | No work in prepare; execute editViaGrok(request.rawPrompt,sourceImage), model/size/signal/requestId/direct key captured per execute. No planner; webSearchCalls remains 0. |
 | multimode | No work in prepare; execute generateMultimodeViaGrok with maxImages, Grok refs/providerUrl, model/size/signal/requestId, onFinalImage and options.webSearchEnabled. |
 
 directApiKey is supplied only for grok-api, at the same capture point as WP03. Never use `ctx.xaiApiKey` for grok proxy merely because present. Conversely, direct-key absence must be refused by the WP03 admission contract before entry, and the credential-race negative must not silently switch to proxy. See seam agreement below.
+Classic captures key before its shared plan and reuses it for the batch; node
+captures at prepare and reuses across attempts; edit/multimode capture at each
+execute, and multimode retains that value throughout its sequence. Keep current
+index presence checks. Legacy excludes oauth/api already; add grok/grok-api to
+both its provider Exclude and runtime guard without reintroducing OpenAI.
 Return native value unchanged under kind=single/sequence; no invented partial/stage events or error wrapping.
 
 ## Before/after routing and facade
@@ -196,7 +199,7 @@ Agent imports keep their signatures; optional new flag defaults preserve old cal
 | G05-5 | Node child parent + supplemental refs vs edit route same source | Node hits planner then images/edits; edit route hits only images/edits; source URL/MIME ordering exact; edit search count 0 |
 | G05-6 | Classic/multimode providerUrl plus b64 refs | URL ref first, no base64 encoding of URL; edit endpoint selected; result providerUrl and grok_cost_usd_ticks retained |
 | G05-7 | Item 0 fails, item 1 succeeds; then separate case 0 fails and 1/2 return identical bytes/prompt/URL; all-failed with distinct errors | Callbacks [1] / [1,2], originalIndexes [1] / [1,2], real route persists exactly 1 / 2 images and image events, original sequenceIndex 2 / [2,3], final returned=1 / 2 and partial status; mixed success has no representative error; all-failed images/indexes=[] and last error, zero persistence |
-| G05-8 | Planner bad tool arguments/search error/image HTTP500/no URL/download failure | Exact stage codes; image POST count=1 per attempt (never transport retry), no fallback OAuth; caller outer retry counts unchanged |
+| G05-8 | Planner bad tool arguments/search error/image HTTP500/no URL/download failure | Exact stage codes; image POST count=1 per attempt (never transport retry), no fallback OAuth; caller outer retry counts unchanged. Generate/edit no URL throws GROK_EMPTY_RESPONSE502; multimode no URL silently skips without an item error. Planner/search failures remain outside item catch; image/download/callback failures remain inside, representative last error only when no image returned. |
 | G05-9 | Abort in held planner/image/download or before next sequence item | Signal observed, GENERATION_CANCELED, no further item or saved final; callbacks awaited and cancellation guards honored |
 | G05-10 | Existing downloader oversized declared/chunked content, empty body, valid image | 50MiB cap and streamed cancellation remain active; no “full private-IP/redirect protection” claim from this test |
 | G05-11 | Old facade and new modules loaded into same built graph | Functions identical, no circular facade import, no Grok branch left in legacy helpers |
@@ -213,37 +216,10 @@ reproduce duplicate count=2 for one success; patched case must produce count=1.
 Reverting only the sweep index expression must make that regression fail. These
 are required future RED/GREEN observations, not already-executed WP00 tests.
 
-## R1-01 — canonical runner activation in WP05
+## Canonical runner and verifier gates
 
-Baseline scripts/run-tests.mjs:19 spawns a fresh Node with only --import tsx and
---test; flags on a focused parent command do not repair canonical npm test.
-Required exact script delta (preserve discovery/sort/stdio/exit propagation):
-```diff
--const child = spawn(process.execPath, ["--import", "tsx", "--test", ...files], {
-+const child = spawn(process.execPath, ["--experimental-test-module-mocks", "--import", "tsx", "--test", ...files], {
-```
-No NODE_OPTIONS mutation, optional skip or runtime fallback. package.json already
-maps test to this script, so no package or CI script edit is needed. Existing
-.github/workflows/ci.yml:33-40 test matrix selects Node22.23.0 and Node24.17.0;
-:94 invokes npm test. Both exact-WP05-tip legs must execute the new tests. A local
-Node24 capability check alone cannot close Node22 or canonical-runner acceptance.
-
-NEW tests/test-runner-invocation.test.ts uses node:test and a test-owned mkdtemp root. Create only tests/probe.test.mjs plus a local probe-dependency.mjs there; link the repository's node_modules into that root (directory symlink, Windows junction), so --import tsx resolves. Run absolute scripts/run-tests.mjs with process.execPath and cwd=scratch, NOT a mocked spawn or copied runner. Child env is a copy with NODE_OPTIONS and NODE_TEST_CONTEXT removed; no parent execArgv is forwarded. Probe imports {mock} from node:test, asserts the flag occurs exactly once in process.execArgv, registers mock.module(dependencyURL,{namedExports: {value:42}}), dynamically imports it and asserts 42 against the real module's value=7; emits a unique completion marker plus process.version. Restore mock in finally. Outer test asserts marker, current-runtime version and runner exit0. Second isolated fixture deliberately asserts false: runner must return exit1. Do not run repository discovery recursively: scratch contains only the tiny probe. Track/close both children and remove only the owned scratch tree in finally; no provider, auth or network imports. This test is automatically discovered by the existing *.test.ts pattern; inventory registers it in WP05. WP06 inherits runner/test unchanged, adding its own Vertex mock activation to canonical CI.
-
-## Command evidence and future gates
-
-WP00 observed npm run typecheck=0, typecheck:tests=0, test:inventory=0; combined seven-file command in 002=0 (51/51), including grok-planner-adapter and grok-upstream-retry.
-New files do not yet exist, so future commands are not reported as already passed:
-```sh
-node --experimental-test-module-mocks --import tsx --test tests/grok-execution-parity.test.ts tests/grok-image-download-policy.test.ts tests/test-runner-invocation.test.ts tests/grok-planner-adapter.test.ts tests/grok-upstream-retry.test.ts tests/provider-execution-routes.test.ts tests/provider-execution-imports.test.ts
-npm run typecheck
-npm run typecheck:tests
-npm run test:inventory
-git diff --check
-```
-Direct file arguments protect listed targets; compiler includes lib/**/*.ts. Rebuild matching JS via existing build:server before runtime tests with .js imports; not run in docs-only WP00. Exact-head full CI and any live visual proof belong parent.
-
-WP00 A round1 bounded proofs (all exit0, no source/test/script writes): `node --input-type=module` transpiled the actual multimode operation in memory with synthetic transports: baseline persisted indices [1,0], amended [1], identical outputs [1,2], all-failed []/last error, callback-free sweep [1,2]. Documented DNS helper settled on abort before held resolution, handled late fulfillment/rejection with zero unhandledRejection. These are algorithm proofs, not real route tests. `node --experimental-test-module-mocks --experimental-vm-modules --input-type=module` proved baseline/amended runner argv in a VM and actual builtin module mocking on Node24.17.0; NOT canonical child or Node22 proof. Standalone native named-loopback HTTP primitive also passed: custom lookup=1, default DNS=0, server calls=1, exact bytes; server/socket closed. Future downloader, deadline, route, child-invocation and both-runtime CI cases remain mandatory and have not yet run.
+Read053_wp05_runner_and_security_gates.md for mandatory R1-01 runner activation,
+actual child-invocation proof, exact commands and security scan/CodeQL gates.
 
 ## Image result-download hardening — explicit WP05 patch
 
@@ -285,12 +261,38 @@ export function resolveImageDownloadTarget(
 
 grokImageDownloadPolicy imports node:dns/promises.lookup, node:net.isIP/BlockList only. Validate URL protocol and credentials before resolution. Reject username/password, invalid schemes, empty hostname, IPv6 zone ids. Exact configured proxy origin (scheme+host+effective port) is allowed HTTP/HTTPS and may resolve locally. Compare to normalized new URL(policy.trustedProxyOrigin).origin; do not allow all localhost, matching hostname on another port, or arbitrary user-provided URLs.
 
-All other targets require HTTPS and public-address resolution. Normalize bracketed IPv6 and IPv4-mapped IPv6; reject a DNS answer set if empty or **any** address fails the policy. Private/special block set, encoded as numeric CIDRs via BlockList: IPv4 0/8,10/8,100.64/10,127/8,169.254/16,172.16/12,192.0.0/24,192.0.2/24,192.168/16,198.18/15,198.51.100/24,203.0.113/24,224/4,240/4. IPv6 require 2000::/3 and exclude 2001::/32 (Teredo),2001:db8::/32,2002::/16 (6to4); mapped addresses go through IPv4 classifier, not a string-prefix loophole. This is the named restricted download policy, not a claim that MCP's existing classifier is exhaustive or pinned.
+All other targets require HTTPS and conservatively allowed destination addresses.
+Normalize bracketed IPv6 and IPv4-mapped IPv6; reject empty DNS sets or ANY rejected
+answer. Numeric BlockList CIDRs: IPv4 0/8,10/8,100.64/10,127/8,169.254/16,
+172.16/12,192.0.0/24,192.0.2/24,192.88.99/24,192.168/16,198.18/15,
+198.51.100/24,203.0.113/24,224/4,240/4. Mapped IPv6 is classified as IPv4
+first; all other IPv6 requires2000::/3 and excludes2001::/23,2001:db8::/32,
+2002::/16 and3fff::/20. This intentionally also rejects some globally reachable
+special protocol allocations; it does not guarantee that all public addresses
+are allowed/reachable. No universal classifier or MCP pinning claim.051 records
+primary IANA sources and the dated policy decision.
 
 grokImageDownload imports node:http.request, node:https.request, node:stream.Readable and existing grok retry helpers. To avoid a grokImageCore↔download cycle, download errors are constructed locally with existing public code/status (no import of grokImageCore); private error constructor is <=10 lines.
 Private openPinnedImageGet(target,signal) uses the URL hostname for Host/TLS SNI and a custom lookup callback that returns **only the prevalidated addresses**. Disable connection pooling with agent:false so an unrelated cached connection/lookup cannot evade that decision. It must never invoke DNS again after validation; retry re-resolves and re-validates rather than changing to a default fetch fallback. Honor lookup callback family/all options and preserve address family types. No proxy env interpretation, Authorization/Cookie forwarding, or credential-bearing Referer. Convert IncomingMessage to the existing bounded reader shape (or async iterable) without buffering first.
 
 Manual redirects: process only 301/302/303/307/308 with valid Location; resolve relative URL against current URL; maximum five redirects. Close/cancel every redirect body before next hop, then call resolveImageDownloadTarget again. A public CDN cannot redirect to a private address; a configured local origin can redirect only to itself or an independently valid public HTTPS target. Missing Location, sixth hop or policy refusal fails with existing status502/code GROK_IMAGE_DOWNLOAD_FAILED and a safe message without raw URL/query. Keep public service/endpoint config untouched.
+
+Origin-exception state is monotone per public download invocation: enable only
+when the INITIAL URL matches the configured trusted origin. Pass that origin only
+while every prior/current hop stays there. Once a redirect leaves it, permanently
+remove the exception for subsequent hops/retries. A public initial URL cannot
+redirect into the configured private proxy; trusted→public→trusted cannot regain
+trust. Standalone resolveImageDownloadTarget obeys only its supplied hop policy;
+the public wrapper owns this monotone state, never mutates the caller's policy.
+
+openPinnedImageGet preserves original pre-header ECONNRESET/EPIPE errors for the
+existing retry classifier; safe public wrapping happens outside retry. It owns
+ClientRequest and IncomingMessage error listeners until their close, not merely
+until the header promise resolves. Destroy/late response/error after cancellation
+must stay handled and closed. Promise rejection handling is not a substitute for
+Node error-event handling. SNI uses DNS hostname only, omitted for IP literals;
+Host remains the original authority. Custom lookup handles family/all and fails
+closed when no prevalidated address matches; it never falls back to default DNS.
 
 One overall timeout timer starts before first resolution and is never reset for a
 hop/retry. Its combined AbortSignal covers DNS wait, every GET, redirects, retry
@@ -404,7 +406,7 @@ reads, locks or copies body bytes. Only Retry-After is projected into real Heade
 download MIME/length/Location use untouched source.headers. source is in-memory
 only, never wire/sidecar metadata. Full Response callers keep their own object.
 In downloadGrokImageUrl each hop obtains `const response = await
-fetchPinnedImageWithRetry(currentUrl, policy, combined)` in place of raw GET. Wrap
+fetchPinnedImageWithRetry(currentUrl, effectiveHopPolicy, combined)` in place of raw GET. Wrap
 that response's redirect/status/body handling in try/finally with
 `void cancelPinnedImageResponse(response)` in finally, including last-attempt 503,
 nonretryable status and successful read. No await before redirect/next operation;
@@ -417,16 +419,12 @@ Required independent tests (real helper, never a stub of grokFetchWithRetry):
 
 - tests/grok-upstream-retry.test.ts: infer Response with .json/.text available and a structural subtype retaining its literal marker; native Response identity preserved. Structural 503 with Headers Retry-After=2 ->200: fake clock observes exactly 2000ms, cancel-before-second-fetch order. Keep all existing classification/attempt tests, plus 400 no retry and attempt exhaustion.
 - tests/grok-image-download-policy.test.ts: public download wrapper + actual retry helper + intercepted DNS/HTTP gives held 503 body then valid200. Assert first request/response destroy before GET2, no discarded-body reads, exact200 bytes, Retry-After delay, two vetted resolutions, zero public connections. A cast/raw-pinned mutation must fail typecheck or show cancel0 (RED).
-- Same wrapper, cancel invokes synchronous destroy then (separately) returns rejected promise, never-settling promise, or throws: cleanup failure never changes200/attempt budget or emits unhandledRejection. Retry-After=0 reaches GET2 without settling cleanup; Retry-After=2 cannot reach GET2 before its delay. Await request/socket close receipts independently of advisory promises.
+- Private adapter source-unit test with actual retry helper: cancel invokes synchronous destroy then separately returns rejected/never-settling promise or throws. Cleanup cannot change attempt budget or leak rejection. Public wrapper separately proves real request/socket close; do not claim its private cancel was replaced through a nonexistent injection hook. See052 for the source-unit mechanism.
 - Abort during the Retry-After wait with cleanup pending: caller rejects499, timeout-only variant rejects504 at original overall deadline, GET2=0, destroy observed, retry timer and wrapper-owned timers/listeners removed. Also abort after headers but before helper classifies503 (existing early-return path); wrapper still cleans it. Release/reject held cleanup later and assert no late GET/unhandledRejection. Exercise third503 exhaustion ->502 with exactly3 GETs and final response destroyed; reset budgets remain the existing nested helper budgets, never an image POST retry.
 Use node:test mock timers plus entered/closed latches, not real sleeps or a test-side
 timeout declared as success. Both Node22/24 canonical WP05 CI must run these cases.
 These are future helper+wrapper integration gates; standalone adapter proof is not
 evidence that the not-yet-implemented public downloader passed them.
-WP00 A round2 proof: `node --input-type=module` with virtual CompilerHost/noEmit reproduced raw-pinned TS2322, then compiled the generic helper, exact adapter and all actual repository callers with diagnostics=[]. No source files emitted.
-Transpiled baseline/amended retry helper JS compared byte-identical; native Response identity and .text() runtime probe passed (exit0), confirming the helper change is type-only.
-Runtime proof used actual helper source + this exact adapter/retry wrapper in memory with intercepted transports/fake clock: RED 503->200 cancel0; GREEN GET1,destroy1,GET2,destroy2 with Retry-After=2000ms. Reject/never/throw cleanup, abort499, deadline504 and three503 exhaustion502 passed; discarded-body reads=0, pending timers=0, unhandledRejection=0. Exit0; public downloader integration and Node22/24 CI remain unrun.
-
 Caller contract:
 ```diff
 - downloadGrokImageUrl(imageUrl, options.signal)
@@ -458,8 +456,6 @@ After: untrusted returned URLs require public HTTPS with per-hop pinned resoluti
 New optional webSearchEnabled field chain: resolved existing caller boolean → WP03 request.options → grokExecution → generateViaGrok/generateMultimodeViaGrok options → planGrokImage → zero/one search call → usage/result → existing response/sidecar. It is not serialized as a new request schema field; caller's public webSearchEnabled/searchMode already exist. Other consumers agent/old API omit it and retain true default. No persisted enum/migration.
 SoT before: node/multimode can request search-off but planner still searches.
 SoT after: structure/03 and 05 say search-off suppresses search, not planner; file map points to actual operation owners; 07 records evidence.
-
-
 ### Image-internal helper contract and WP06m boundary
 
 The policy module exports its real image boundary. Transport/body helpers remain private to the image downloader; no speculative shared video framework is added.
@@ -474,9 +470,19 @@ interface PinnedImageResponse {
   cancel(reason?: Error): void; // idempotently destroy request and response
 }
 ```
-openPinnedImageGet performs one pinned GET, no automatic redirects or body buffering. readBoundedImageBody enforces declared and streamed limits, rejects null/empty body, cancels on overflow/abort, and returns bytes only after complete bounded consumption. Its policy-neutral failure discriminants are code GROK_MEDIA_TOO_LARGE, GROK_MEDIA_EMPTY, GENERATION_CANCELED; public image wrapper maps the first two to existing GROK_IMAGE_DOWNLOAD_FAILED/status502 and leaves cancellation499. Timeout is imposed by wrapper signal and mapped to its existing timeout code. Neither helper decides image/video MIME, persistence, redirects, retries or provider authentication.
+openPinnedImageGet performs one pinned GET without redirects/prebuffering.
+readBoundedImageBody enforces declared/streamed limits, rejects null/empty bodies,
+cancels onoverflow/abort and returns onlycomplete boundedbytes. Its private
+ImageBodyFailure reason is too-large or empty (052); outerwrapper maps toexisting
+GROK_IMAGE_DOWNLOAD_FAILED502. Cancellation/timercome fromwrappersignal and map
+toexisting499/504. No newpublicGROK_MEDIA errorcodes, image/videoMIME/persistence/
+redirect/retry/auth decision insidebodyreader.
 
-Image wrapper owns its max-five manual redirect loop and 50MiB cap. WP06m/doc065 independently replaces video arrayBuffer with bounded incremental streaming while preserving video URL and retry policy. It does not consume these image helpers or claim per-hop DNS pinning for video. Public-image default remains HTTPS/public-address only; exact configured proxy origin is granted by server-owned context. Image helpers stay private and are tested through the real public downloader with controlled DNS/HTTP boundaries.
+Image wrapper owns its max-five manual redirect loop and50MiB cap. WP06m/doc065
+independently handles video body bounds and does not reuse image pinning policy.
+Default image destinations require HTTPS and the explicit conservative address
+policy; the exact server-owned proxy-origin exception follows the monotone chain
+rule above. Image helpers stay private and are tested through the public downloader.
 
 Module mocking for DNS/HTTP tests is registered before dynamic import of emitted
 download modules; public-policy fixtures mock DNS/HTTP completely, while the named
@@ -486,12 +492,7 @@ the real-socket case; restore builtins/mocks and await cleanup in finally. R1-01
 canonical runner flag and Node22/24 child-invocation gate above are mandatory for
 this WP; focused --experimental-test-module-mocks alone does not activate npm test.
 
-## Cross-lane agreements
+## Cross-lane and rollback contract
 
-Existing resolveProviderOptions supplies provider/model/size/reasoningEffort/webSearchEnabled; WP03 types its existing output into the execution request. No WP02 backend type is required. WP03 adds GROK_API_KEY_MISSING (401), after verifying no current direct-Grok missing-key validator/code exists: grokImageCore.getGrokEndpoint(:62) chooses proxy on falsy directApiKey. WP03 pre-admission plus execute-time recheck prevents missing/removed keys from reaching that fallback. Add the new code to PASSTHROUGH_CODES/statusForErrorCode; existing 4xx handling is non-retryable. API_KEY_REQUIRED remains OpenAI's current 401. All route error shapes follow WP03's explicit matrix. No second provider resolver or automatic provider choice.
-
-WP03 also owns NAI multimode references: getProviderSurfaceSupport(nai,multimode).references=false plus valid references.length>0 returns NAI_REF_UNSUPPORTED 400 before admission/transport. WP05 preserves this precondition; WP02 has no server auth/refusal ownership.
-
-006_trust_boundaries.md:91/197 grounds the image-download patch above: WP05 owns per-hop/pinned returned-image URL policy and streamed image bound. It does not claim current MCP DNS pinning. WP06m/doc065 owns streamed Grok video bytes and video-specific validation after WP06; it does not reuse image transport policy; video URL restrictions remain an explicitly disclosed unchanged limitation. Existing MCP DNS precheck-versus-connect re-resolution remains disclosed and unchanged, not a pending universal-refactor requirement.
-
-Rollback: parent reverts WP05 family/toggle/download/identity changes together to WP04, including multimodePipeline sweep and canonical runner/tests, then rebuilds runtime. Revert R2-B2's pinned adapter and grokUpstreamRetry type diff together (or retain the additive generic contract); never restore Response-only signature while retaining the structural caller or bypass with a cast. Existing full-Response caller source remains unchanged. WP03's optional unused originalIndexes field can remain harmlessly absent from producers. Partial rollback that drops mapping while retaining sparse producers is forbidden: it restores duplicate persistence. Removing runner flag requires reverting dependent WP06 mock tests first; no skips. Record that rollback restores old search-off, duplicate-output and unsafe/unbounded download behavior, so readiness is unmet. Existing credentials/media/sidecars are never deleted or rewritten; historical duplicates are not migrated. Parent cascades/revalidates upper layers. Import/fixture gates are E7 + CI early warning; bypass=not running them; residual=live upstream unverified; final unbypassable enforcement=none.
+Read051's inherited cross-lane/rollback section; the whole WP05 layer must be
+reverted together, preserving WP03/04 admission and all user media/credentials.
