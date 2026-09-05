@@ -62,11 +62,11 @@ if (executionTestProcess(import.meta.url)) describe("node execution: real route 
   let harness: Harness;
   let red: string, green: string, blue: string;
   let agyMock: ReturnType<typeof mock.module>;
-  const agyCalls: Array<{ prompt: string; references?: Array<{ b64: string; declaredMime: null; detectedMime: null }> }> = [];
+  const agyCalls: Array<{ prompt: string; references?: Array<{ b64: string; declaredMime: string | null; detectedMime: string | null }> }> = [];
   before(async () => {
     // Agy is a process transport: intercept that concrete adapter only, before
     // route imports. All other cases execute their real adapters via fetch traps.
-    agyMock = mock.module(new URL("../lib/agyImageAdapter.ts", import.meta.url).href, { namedExports: {
+    agyMock = mock.module(new URL("../lib/providers/adapters/agyOperations.ts", import.meta.url).href, { namedExports: {
       generateViaAgy: async (prompt: string, options: { references?: typeof agyCalls[number]["references"] }) => {
         agyCalls.push({ prompt, references: options.references });
         return { b64: red, usage: null, webSearchCalls: 0 };
@@ -244,13 +244,12 @@ if (executionTestProcess(import.meta.url)) describe("node execution: real route 
     });
   });
 
-  for (const provider of ["gemini-api", "minimax"]) it(`${provider} keeps all refs under parent-only and its prompt lane`, async () => {
+  for (const provider of ["gemini-api", "minimax"]) it(`${provider} parent-only preserves its explicit reference policy and prompt lane`, async () => {
     await harness.run("node", { context: { geminiApiKey: "gemini-fixture", minimaxApiKey: "minimax-fixture" }, upstream: (call) => {
       const wire = JSON.parse(call.body);
       if (provider === "gemini-api") {
         assert.equal(call.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent");
         assert.deepEqual(wire.contents[0].parts, [
-          { inlineData: { mimeType: "image/png", data: green } },
           { text: "node raw fixture\n\nElement notes:\nblue rim light" },
         ]);
         return Response.json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/png", data: red } }] } }] });
@@ -269,24 +268,50 @@ if (executionTestProcess(import.meta.url)) describe("node execution: real route 
     });
   });
 
-  for (const child of [false, true]) it(`Agy ${child ? "child gets parent only" : "root drops refs"} with effective prompt`, async () => {
+  for (const child of [false, true]) for (const contextMode of ["parent-only", "parent-plus-refs"]) it(`Agy ${child ? "child" : "root"} ${contextMode} preserves selected input order`, async () => {
     agyCalls.length = 0;
     await harness.run("node", { upstream: () => { throw new Error("Agy must use only its process adapter fixture"); } }, async (fixture) => {
       if (child) await seedParent(fixture, blue);
-      const response = await fixture.post({ ...BASE, provider: "agy", references: [green], contextMode: "parent-only",
+      const response = await fixture.post({ ...BASE, provider: "agy", references: [green], contextMode,
         elementNotes: ["blue rim light"], ...(child ? { parentNodeId: "n_fixture_parent" } : {}) });
       assert.equal(response.status, 200);
       await fixture.waitSettled();
       assert.equal(agyCalls.length, 1);
       assert.equal(agyCalls[0].prompt, `${child ? "Edit this image: " : ""}node raw fixture\n\nElement notes:\nblue rim light`);
+      const refs = agyCalls[0].references;
+      assert.ok(refs);
+      assert.equal(refs.length, Number(child) + Number(contextMode !== "parent-only"));
       if (child) {
-        assert.equal(agyCalls[0].references.length, 1);
-        const ref = agyCalls[0].references[0];
+        const ref = refs[0];
         assert.equal(ref.declaredMime, null);
         assert.equal(ref.detectedMime, null);
         await assertColor(`data:image/png;base64,${ref.b64}`, 2);
-      } else assert.equal(agyCalls[0].references, undefined);
+      }
+      if (contextMode !== "parent-only") await assertColor(`data:image/png;base64,${refs.at(-1)!.b64}`, 1);
       assert.equal(fixture.calls.length, 0);
+    });
+  });
+
+  for (const overCap of [false, true]) it(`Agy real node admission ${overCap ? "rejects parent plus three refs before operation" : "sends parent plus two refs without clipping"}`, async () => {
+    agyCalls.length = 0;
+    await harness.run("node", { upstream: () => { throw new Error("Agy route must not use fetch"); } }, async (fixture) => {
+      await seedParent(fixture, blue);
+      const response = await fixture.post({ ...BASE, provider: "agy", parentNodeId: "n_fixture_parent",
+        references: overCap ? [green, red, blue] : [green, red], contextMode: "parent-plus-refs" });
+      assert.equal(response.status, overCap ? 400 : 200);
+      const body = await response.json(); await fixture.waitSettled();
+      assert.equal(fixture.calls.length, 0);
+      assert.equal(agyCalls.length, overCap ? 0 : 1);
+      if (overCap) {
+        assert.equal(body.code, "AGY_REF_TOO_MANY");
+        assert.equal(body.error.code, "AGY_REF_TOO_MANY");
+        assert.equal(fixture.events.length, 0);
+      } else {
+        assert.equal(body.refsCount, 2);
+        const refs = agyCalls[0].references!;
+        assert.equal(refs.length, 3);
+        for (const [index, channel] of [[0, 2], [1, 1], [2, 0]] as const) await assertColor(`data:image/png;base64,${refs[index].b64}`, channel);
+      }
     });
   });
 

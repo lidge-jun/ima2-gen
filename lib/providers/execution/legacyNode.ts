@@ -1,5 +1,3 @@
-import { generateViaAgy } from "../../agyImageAdapter.js";
-import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaNai } from "../../naiImageAdapter.js";
@@ -23,24 +21,10 @@ export async function prepareLegacyNode(
 async function executeNodeAttempt(
   ctx: RuntimeContext, request: NodeRequest,
 ): Promise<SingleImageExecutionResult> {
-  const { provider, sourceImage: parentB64, prompt: generationPrompt, rawPrompt: prompt,
+  const { provider, sourceImage: parentB64, rawPrompt: prompt,
     references, requestId, signal, options } = request;
   const { model, size, quality } = options;
-  return provider === "gemini-api"
-    ? await generateViaGeminiApi(parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt, requireRuntimeContext(ctx), {
-        model, size, signal, ...(requestId !== undefined ? { requestId } : {}),
-        references: parentB64
-          ? [{ b64: parentB64, declaredMime: null, detectedMime: null }, ...references]
-          : references,
-      })
-    : provider === "agy"
-    ? await generateViaAgy(parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt, {
-        ...(parentB64
-          ? { references: [{ b64: parentB64, declaredMime: null, detectedMime: null }] }
-          : {}),
-        signal, requestId,
-      })
-    : provider === "atlascloud"
+  return provider === "atlascloud"
     ? await generateViaAtlasCloud(parentB64 ? `Edit this image: ${prompt}` : prompt, requireRuntimeContext(ctx), {
         model, size, quality, signal, requestId,
         references: parentB64

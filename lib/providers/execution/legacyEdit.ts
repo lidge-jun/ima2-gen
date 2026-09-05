@@ -1,7 +1,5 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
 import { detectImageMimeFromB64 } from "../../refs.js";
-import { generateViaAgy } from "../../agyImageAdapter.js";
-import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaComfy } from "../../comfyImageAdapter.js";
@@ -16,8 +14,6 @@ function executeImageToImage(ctx: RuntimeContext, request: EditRequest) {
   const editPrompt = `Edit this image: ${prompt}`;
   const params = { model: options.model, size: options.size, signal, ...(requestId !== undefined ? { requestId } : {}), references };
   switch (provider) {
-    case "gemini-api": return generateViaGeminiApi(editPrompt, ctx, params);
-    case "agy": return generateViaAgy(editPrompt, { references, signal, requestId });
     case "atlascloud": return generateViaAtlasCloud(editPrompt, ctx, { ...params, quality: options.quality });
     case "minimax": return generateViaMinimax(editPrompt, ctx, params);
     // LoadImage binding owns i2i; missing workflow binding still refuses there.

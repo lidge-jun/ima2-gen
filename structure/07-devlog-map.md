@@ -122,7 +122,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260905_production_readiness/` | WP00 roadmap and WP01–04 complete; WP05 Grok/search/sparse-index/pinned-download work at C verification. 050–057 contain threat model, ownership and proof; WP06 Google migration follows. Merge/release still pending. | — |
+| `260905_production_readiness/` | WP00 and WP01–05 verified; WP06 Google/reference/native-lifetime implementation and verification in progress (060–063). Added066/wp06s artifact confinement and inherited CodeQL triage as mandatory release gates. Stack merge/release still pending. | — |
 | `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 

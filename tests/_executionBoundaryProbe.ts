@@ -12,7 +12,8 @@ const transports = {
   grokImagePlanner: ["planGrokImage"],
   "providers/adapters/grokOperations": ["generateViaGrok", "editViaGrok"],
   "providers/adapters/grokMultimodeOperations": ["generateMultimodeViaGrok"],
-  agyImageAdapter: ["generateViaAgy"], geminiApiImageAdapter: ["generateViaGeminiApi"],
+  "providers/adapters/agyOperations": ["generateViaAgy"],
+  "providers/adapters/geminiOperations": ["generateViaGeminiApi"],
   atlasCloudImageAdapter: ["generateViaAtlasCloud"], minimaxImageAdapter: ["generateViaMinimax"],
   naiImageAdapter: ["generateViaNai"], comfyImageAdapter: ["generateViaComfy"],
 };
@@ -167,8 +168,8 @@ export function assertReferenceOrder(call: Call, request: ImageExecutionRequest,
   if (surface === "node") {
     const parent = request.sourceImage ? [source] : [];
     const effectiveRefs = request.contextMode === "parent-only" ? [] : ["first-reference", "second-reference"];
-    if (provider === "agy") assert.deepEqual(refs?.map((ref) => ref.b64) ?? [], parent);
-    else if (["gemini-api", "atlascloud", "minimax"].includes(provider)) assert.deepEqual(refs?.map((ref) => ref.b64), [...parent, "first-reference", "second-reference"]);
+    if (provider === "agy" || provider === "gemini-api") assert.deepEqual(refs?.map((ref) => ref.b64), [...parent, ...effectiveRefs]);
+    else if (["atlascloud", "minimax"].includes(provider)) assert.deepEqual(refs?.map((ref) => ref.b64), [...parent, "first-reference", "second-reference"]);
     else assert.deepEqual(refs?.map((ref) => ref.b64), [...(responses ? [] : parent), ...effectiveRefs]);
     if (responses && request.sourceImage) assert.equal(call.args[2], source);
   } else if (provider.startsWith("grok")) {

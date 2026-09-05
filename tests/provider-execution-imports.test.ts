@@ -51,6 +51,8 @@ test("every concrete owner and private legacy module is forbidden for every call
     "providers/adapters/openaiExecution", "providers/adapters/openaiOperations", "responsesTransport",
     "providers/adapters/grokExecution", "providers/adapters/grokOperations", "providers/adapters/grokMultimodeOperations",
     "grokImagePlanner", "grokImageDownload", "grokImageDownloadPolicy",
+    "providers/adapters/googleExecution", "providers/adapters/agyOperations", "providers/adapters/geminiOperations",
+    "agyProcess", "agyArtifact",
   ];
   for (const file of EXECUTION_CALLERS) for (const name of owners) for (const ext of ["js", "ts"]) {
     const prefix = file.startsWith("routes/") ? "../lib/" : "./";
@@ -87,11 +89,36 @@ const grokOwners = [
   "lib/providers/adapters/grokMultimodeOperations.ts", "lib/grokImagePlanner.ts",
   "lib/grokImageCore.ts", "lib/grokImageDownload.ts", "lib/grokImageDownloadPolicy.ts",
 ];
+const googleOwners = [
+  "lib/providers/adapters/googleExecution.ts", "lib/providers/adapters/agyOperations.ts",
+  "lib/providers/adapters/geminiOperations.ts", "lib/agyProcess.ts", "lib/agyArtifact.ts",
+];
 
-test("actual internal OpenAI, Grok and legacy owners contain no forbidden runtime edges", () => {
-  for (const file of [...legacyOwners, ...openaiOwners, ...grokOwners]) {
+test("actual internal OpenAI, Grok, Google and legacy owners contain no forbidden runtime edges", () => {
+  for (const file of [...legacyOwners, ...openaiOwners, ...grokOwners, ...googleOwners]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.deepEqual(forbiddenExecutionEdges(source, file), [], file);
+  }
+});
+
+test("Google owner policy rejects facade cycles, cross-family access and upward runtime edges", () => {
+  for (const file of [...legacyOwners, ...openaiOwners, ...grokOwners, ...googleOwners]) {
+    const targets = ["lib/agyImageAdapter", "lib/geminiApiImageAdapter"];
+    if (!googleOwners.includes(file)) targets.push(...googleOwners.map((path) => path.replace(/\.ts$/, "")));
+    else targets.push("lib/providers/execution/index", "lib/providers/execution/legacyNode", "routes/edit",
+      "lib/providers/adapters/openaiOperations", "lib/providers/adapters/grokOperations");
+    if (file === "lib/agyProcess.ts") targets.push("lib/agyArtifact", "lib/providers/adapters/agyOperations");
+    if (file === "lib/agyArtifact.ts") targets.push("lib/providers/adapters/agyOperations");
+    if (file === "lib/providers/adapters/geminiOperations.ts") targets.push("lib/providers/adapters/googleExecution", "lib/agyProcess");
+    for (const target of targets) for (const ext of ["js", "ts", "mjs", "mts"]) {
+      const specifier = `./${posix.relative(posix.dirname(file), `${target}.${ext}`)}`;
+      for (const statement of [
+        `import { run as alias } from "${specifier}";`, `export * from "${specifier}";`,
+        `const run = await import("${specifier}");`, `const run = await import(\`${specifier}\`);`,
+        `import { type Options, run } from "${specifier}";`,
+      ]) assert.equal(forbiddenExecutionEdges(statement, file).length, 1, `${file}: ${statement}`);
+      assert.deepEqual(forbiddenExecutionEdges(`import type { Options } from "${specifier}";`, file), []);
+    }
   }
 });
 
@@ -166,6 +193,15 @@ test("the actual public-family-operation-transport and compatibility edges remai
     ["lib/grokImageAdapter.ts", "lib/grokImagePlanner"],
     ["lib/grokImageAdapter.ts", "lib/providers/adapters/grokOperations"],
     ["lib/grokMultimodeAdapter.ts", "lib/providers/adapters/grokMultimodeOperations"],
+    ["lib/providers/execution/index.ts", "lib/providers/adapters/googleExecution"],
+    ["lib/providers/adapters/googleExecution.ts", "lib/providers/adapters/agyOperations"],
+    ["lib/providers/adapters/googleExecution.ts", "lib/providers/adapters/geminiOperations"],
+    ["lib/providers/adapters/agyOperations.ts", "lib/agyProcess"],
+    ["lib/providers/adapters/agyOperations.ts", "lib/agyArtifact"],
+    ["lib/agyArtifact.ts", "lib/agyProcess"],
+    ["lib/agyImageAdapter.ts", "lib/providers/adapters/agyOperations"],
+    ["lib/agyImageAdapter.ts", "lib/agyArtifact"],
+    ["lib/geminiApiImageAdapter.ts", "lib/providers/adapters/geminiOperations"],
   ]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     const edges = collectRuntimeEdges(source, file).filter((edge) => edge.target === target);

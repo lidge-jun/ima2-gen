@@ -1,0 +1,358 @@
+import assert from "node:assert/strict";
+import childProcess, { type ChildProcessWithoutNullStreams, type SpawnOptions } from "node:child_process";
+import dns from "node:dns";
+import dnsPromises from "node:dns/promises";
+import net from "node:net";
+import tls from "node:tls";
+import dgram from "node:dgram";
+import os from "node:os";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { chmod, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { dirname, delimiter, join, isAbsolute } from "node:path";
+import { syncBuiltinESMExports } from "node:module";
+import { mock } from "node:test";
+import type { RuntimeContext } from "../lib/runtimeContext.ts";
+import type { generateViaAgy } from "../lib/providers/adapters/agyOperations.ts";
+import type { prepareImageExecution } from "../lib/providers/execution/index.ts";
+import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
+
+export interface AgyProcessFixture {
+  root: string;
+  generate: typeof generateViaAgy;
+  prepare: typeof prepareImageExecution;
+  ctx: RuntimeContext;
+  configure(scenario: string, options?: Record<string, unknown>): Promise<void>;
+  waitFor(event: string): Promise<Record<string, unknown>>;
+  spawnCount(): number;
+  observations(): readonly Record<string, unknown>[];
+  track<T>(work: Promise<T>): Promise<T>;
+  close(): Promise<void>;
+}
+
+const WATCHDOG_MS = 10_000;
+const DRAIN_MS = 3_000;
+const SCENARIOS = new Set(["success", "malformed-result", "no-artifact", "unparseable",
+  "unparseable-with-recent-artifact", "error", "quota", "outside-path", "cooperative-wait",
+  "term-ignored-wait", "stderr-result", "saved-path", "nonzero", "raw-quota"]);
+type Observation = Record<string, unknown>;
+type Isolation = Awaited<ReturnType<typeof isolateExecution>>;
+type NativeSpawn = typeof childProcess.spawn;
+interface NativeChild {
+  child: ChildProcessWithoutNullStreams;
+  kill: ChildProcessWithoutNullStreams["kill"];
+  closed: boolean;
+  close: Promise<void>;
+  paths: string[];
+}
+interface State {
+  root: string;
+  executable: string;
+  executableSource: string;
+  isolation: Isolation;
+  nativeSpawn: NativeSpawn;
+  setTimer: typeof setTimeout;
+  clearTimer: typeof clearTimeout;
+  children: NativeChild[];
+  controllers: Set<AbortController>;
+  pending: Set<Promise<unknown>>;
+  observations: Observation[];
+  listeners: Set<() => void>;
+  restorations: Array<() => void>;
+  guardRestorations: Array<() => void>;
+  cursor: number;
+  closing: boolean;
+  restored: boolean;
+}
+
+function observe(state: State, value: Observation): void {
+  state.observations.push({ ...value, sequence: state.observations.length });
+  for (const listener of state.listeners) listener();
+}
+
+function violation(state: State, message: string): never {
+  const error = new Error(message);
+  state.isolation.violations.push(error);
+  throw error;
+}
+
+function track<T>(state: State, work: Promise<T>): Promise<T> {
+  state.pending.add(work);
+  void work.then(() => state.pending.delete(work), () => state.pending.delete(work));
+  return work;
+}
+
+async function bounded<T>(state: State, work: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([work, new Promise<never>((_, reject) => {
+      timer = state.setTimer(() => reject(new Error(`${label}; root=${state.root}; pids=${
+        state.children.filter((entry) => !entry.closed).map((entry) => entry.child.pid).join(",")}`)), DRAIN_MS);
+    })]);
+  } finally { if (timer) state.clearTimer(timer); }
+}
+
+function waitFor(state: State, event: string): Promise<Observation> {
+  let listener: (() => void) | undefined;
+  const work = new Promise<Observation>((resolve) => {
+    listener = () => {
+      const found = state.observations.slice(state.cursor).find((entry) => entry.event === event);
+      if (found) resolve(found);
+    };
+    state.listeners.add(listener);
+    listener();
+  });
+  return bounded(state, work, `Missing Agy fixture event ${event}`).finally(() => {
+    if (listener) state.listeners.delete(listener);
+  });
+}
+
+function installAdditionalDenials(state: State): void {
+  const patch = (target: object, key: string) => {
+    const descriptor = Object.getOwnPropertyDescriptor(target, key);
+    if (!descriptor || typeof descriptor.value !== "function") return;
+    Object.defineProperty(target, key, { ...descriptor, value: () => violation(state, `Agy fixture forbids ${key}`) });
+    state.guardRestorations.push(() => Object.defineProperty(target, key, descriptor));
+  };
+  for (const target of [dns, dnsPromises]) {
+    for (const key of Object.keys(target)) if (/^(resolve|reverse)/.test(key)) patch(target, key);
+    for (const key of Object.getOwnPropertyNames(target.Resolver.prototype)) {
+      if (/^(resolve|reverse)/.test(key)) patch(target.Resolver.prototype, key);
+    }
+  }
+  for (const [target, keys] of [[net, ["connect", "createConnection"]],
+    [net.Socket.prototype, ["connect"]], [tls, ["connect"]], [dgram, ["createSocket"]]] as const) {
+    for (const key of keys) patch(target, key);
+  }
+  syncBuiltinESMExports();
+}
+
+function validateSpawn(state: State, executable: string, args: readonly string[], options: SpawnOptions): void {
+  try {
+    assert.equal(state.closing, false, "Fixture is closing");
+    assert.equal(executable, state.executable, "Only the fixed owned executable may run");
+    assert.ok(existsSync(executable));
+    assert.ok(lstatSync(executable).isFile(), "Fixture executable must not be a symlink");
+    assert.equal(readFileSync(executable, "utf8"), state.executableSource, "Fixture executable was replaced");
+    assert.deepEqual(args, ["-p", "-"]);
+    assert.deepEqual(Object.keys(options).sort(), ["env", "stdio"]);
+    assert.deepEqual(options.stdio, ["pipe", "pipe", "pipe"]);
+    assert.deepEqual(options.env, {
+      PATH: `${dirname(state.executable)}${delimiter}${dirname(process.execPath)}`,
+      HOME: state.root, USERPROFILE: state.root, TMPDIR: state.root, TEMP: state.root,
+      LANG: "C", GEMINI_API_KEY: undefined,
+    });
+  } catch (error) { state.isolation.violations.push(error); throw error; }
+}
+
+function consumeReceipts(state: State, entry: NativeChild): { drain(): void; close(): void } {
+  const path = join(state.root, "agy-observations.jsonl");
+  const received: Observation[] = [];
+  const message = (value: unknown) => {
+    try {
+      assert.ok(value && typeof value === "object");
+      const packet = value as { channel?: unknown; receipt?: Observation };
+      assert.equal(packet.channel, "agy-fixture");
+      const receipt = packet.receipt;
+      assert.ok(receipt && typeof receipt.event === "string");
+      assert.equal(receipt.pid, entry.child.pid);
+      if (receipt.event === "input") entry.paths = receipt.paths as string[];
+      if (receipt.event === "violation" || receipt.event === "fixture-error") {
+        state.isolation.violations.push(new Error(`Child fixture failure: ${JSON.stringify(receipt)}`));
+      }
+      received.push(receipt);
+      observe(state, receipt);
+    } catch (error) { state.isolation.violations.push(error); }
+  };
+  entry.child.on("message", message);
+  return {
+    drain() {
+      const persisted = readFileSync(path, "utf8").trim().split("\n").filter(Boolean).map(line => JSON.parse(line));
+      assert.deepEqual(received, persisted, "Native IPC and independent file receipts must agree");
+    },
+    close() {
+      entry.child.removeListener("message", message);
+    }
+  };
+}
+
+function retainChild(state: State, child: ChildProcessWithoutNullStreams): NativeChild {
+  let resolveClose!: () => void;
+  const entry: NativeChild = { child, kill: child.kill.bind(child), closed: false, paths: [],
+    close: new Promise<void>((resolve) => { resolveClose = resolve; }) };
+  state.children.push(entry);
+  let receipts: ReturnType<typeof consumeReceipts> | undefined;
+  const watchdog = state.setTimer(() => {
+    if (entry.closed) return;
+    state.isolation.violations.push(new Error(`Native Agy watchdog reaped pid=${child.pid}; root=${state.root}`));
+    observe(state, { event: "watchdog", pid: child.pid });
+    entry.kill("SIGKILL");
+  }, WATCHDOG_MS);
+  child.once("close", (code, signal) => {
+    try { receipts?.drain(); } catch (error) { state.isolation.violations.push(error); }
+    receipts?.close();
+    entry.closed = true;
+    state.clearTimer(watchdog);
+    observe(state, { event: "close", pid: child.pid, code, signal,
+      paths: [...entry.paths], refsExist: entry.paths.map((path) => existsSync(path)) });
+    resolveClose();
+  });
+  child.once("error", (error) => observe(state, { event: "process-error", message: error.message }));
+  const kill = child.kill.bind(child);
+  child.kill = (signal) => {
+    observe(state, { event: "kill", signal: signal ?? "SIGTERM", pid: child.pid });
+    return kill(signal);
+  };
+  try { receipts = consumeReceipts(state, entry); }
+  catch (error) { state.isolation.violations.push(error); entry.kill("SIGKILL"); throw error; }
+  return entry;
+}
+
+function installSpawn(state: State): void {
+  const guarded = mock.method(childProcess, "spawn", (executable: string, args: string[], options: SpawnOptions) => {
+    validateSpawn(state, executable, args, options);
+    // Windows uses a fixed Node bridge, NOT a claim about native agy.cmd launch.
+    const command = process.platform === "win32" ? process.execPath : state.executable;
+    const argv = process.platform === "win32" ? [state.executable, ...args] : args;
+    // The test bridge adds a private receipt channel AFTER validating the DUT's
+    // exact three stdio pipes. Native stdout/stderr stay untouched; no fs.watch race.
+    const child = state.nativeSpawn(command, argv, { ...options, cwd: state.root,
+      stdio: ["pipe", "pipe", "pipe", "ipc"], shell: false }) as ChildProcessWithoutNullStreams;
+    retainChild(state, child);
+    return child;
+  });
+  state.restorations.push(() => guarded.mock.restore());
+  syncBuiltinESMExports();
+}
+
+function isolateEnvironment(root: string): () => void {
+  const saved = { ...process.env };
+  for (const key of Object.keys(process.env)) {
+    if (!key.startsWith("IMA2_") && key !== "DOTENV_CONFIG_PATH") delete process.env[key];
+  }
+  Object.assign(process.env, { HOME: root, USERPROFILE: root, TMPDIR: root, TEMP: root, TMP: root,
+    XDG_CONFIG_HOME: root, PATH: dirname(process.execPath), LANG: "C" });
+  return () => {
+    for (const key of Object.keys(process.env)) delete process.env[key];
+    Object.assign(process.env, saved);
+  };
+}
+
+async function configure(state: State, scenario: string, options: Record<string, unknown> = {}): Promise<void> {
+  try {
+    assert.ok(SCENARIOS.has(scenario), `Unknown fixture scenario: ${scenario}`);
+    assert.equal(state.children.some((entry) => !entry.closed), false, "Previous child still alive");
+    assert.equal(state.pending.size, 0, "Previous operation still pending");
+    assert.deepEqual(Object.keys(options), [], "No unrecognized child control options");
+    state.cursor = state.observations.length;
+    await rm(join(state.root, ".gemini", "antigravity-cli", "brain", "artifact"), { recursive: true, force: true });
+    await writeFile(join(state.root, "agy-observations.jsonl"), "");
+    await writeFile(join(state.root, "agy-control.json"), JSON.stringify({ scenario }));
+  } catch (error) { throw error; }
+}
+
+function ownedSignal(state: State, signal?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  state.controllers.add(controller);
+  return signal ? AbortSignal.any([controller.signal, signal]) : controller.signal;
+}
+
+async function close(state: State): Promise<void> {
+  if (state.restored) return;
+  state.closing = true;
+  for (const controller of state.controllers) controller.abort();
+  for (const entry of state.children) if (!entry.closed) entry.kill("SIGKILL");
+  // If either drain fails, retain traps/storage/handles; never restore under live work.
+  await bounded(state, Promise.all(state.children.map((entry) => entry.close)), "Native child did not close");
+  await bounded(state, Promise.allSettled([...state.pending]), "Agy operation did not drain");
+  await state.isolation.imageTransport.drain();
+  try {
+    assert.deepEqual(state.isolation.violations, [], "Agy fixture violations before restoring protections");
+    assert.deepEqual(state.isolation.imageTransport.violations, []);
+  } finally {
+    // Restoring spawn exposes the shared DEFAULT-DENY guard, never native spawn.
+    for (const restore of state.restorations.reverse()) restore();
+    syncBuiltinESMExports();
+    try { await state.isolation.close(); }
+    finally {
+      for (const restore of state.guardRestorations.reverse()) restore();
+      syncBuiltinESMExports(); state.restored = true;
+    }
+  }
+}
+
+function isolateConfig(state: State, config: RuntimeContext["config"]): void {
+  const saved = { storage: config.storage, mcp: config.mcp, log: config.log };
+  config.storage = { ...config.storage, packageRoot: state.root, configDir: state.root,
+    generatedDir: join(state.root, "generated"), trashDir: join(state.root, "trash"),
+    dbPath: join(state.root, "test.db"), configFile: join(state.root, "config.json"),
+    advertiseFile: join(state.root, "server.json"), generationRequestLogFile: join(state.root, "requests.json"),
+    promptImportIndexCacheFile: join(state.root, "prompt-import-index.json"),
+    promptImportDiscoveryRegistryFile: join(state.root, "prompt-import-discovery.json") };
+  config.mcp = { ...config.mcp, tokenDir: join(state.root, "mcp"), snapshotDir: join(state.root, "mcp", "snapshots") };
+  config.log = { ...config.log, level: "silent" };
+  state.restorations.push(() => Object.assign(config, saved));
+  for (const value of [...Object.values(config.storage), config.mcp.tokenDir, config.mcp.snapshotDir]) {
+    if (typeof value === "string" && isAbsolute(value)) assertOwned(state.root, value);
+  }
+}
+
+async function loadHandle(state: State): Promise<AgyProcessFixture> {
+  try {
+    const { config } = await import("../config.ts");
+    isolateConfig(state, config);
+    const { configureLogger } = await import("../lib/logger.ts");
+    configureLogger({ level: "silent" });
+    state.restorations.push(() => configureLogger({ level: "silent" }));
+    const { createTestRuntimeContext } = await import("../lib/runtimeContext.ts");
+    const { generateViaAgy: generate } = await import("../lib/providers/adapters/agyOperations.ts");
+    const { prepareImageExecution: prepare } = await import("../lib/providers/execution/index.ts");
+    const ctx = createTestRuntimeContext({ rootDir: state.root, config });
+    assertOwned(state.root, ctx.rootDir);
+    for (const value of Object.values(ctx.config.storage)) {
+      if (typeof value === "string" && isAbsolute(value)) assertOwned(state.root, value);
+    }
+    return { root: state.root, ctx,
+      generate: (prompt, options = {}) => track(state, generate(prompt,
+        { ...options, signal: ownedSignal(state, options.signal) })),
+      prepare: async (context, request, progress) => {
+        try {
+          // Forward late field reads; copying request here would falsify classic capture tests.
+          const forwarded = new Proxy(request, { get: (target, key, receiver) => key === "signal"
+            ? ownedSignal(state, target.signal) : Reflect.get(target, key, receiver) });
+          const prepared = await prepare(context, forwarded, progress);
+          return { execute: () => track(state, prepared.execute()) };
+        } catch (error) { throw error; }
+      },
+      configure: (scenario, options) => configure(state, scenario, options),
+      waitFor: (event) => waitFor(state, event), spawnCount: () => state.children.length,
+      observations: () => state.observations.slice(state.cursor),
+      track: (work) => track(state, work), close: () => close(state),
+    };
+  } catch (error) { throw error; }
+}
+
+export async function openAgyProcessFixture(): Promise<AgyProcessFixture> {
+  const nativeSpawn = childProcess.spawn;
+  const setTimer = globalThis.setTimeout;
+  const clearTimer = globalThis.clearTimeout;
+  const isolation = await isolateExecution();
+  const root = await realpath(isolation.rootDir);
+  const state: State = { root, executable: join(root, "bin", "agy-fixture.mjs"), executableSource: "", isolation,
+    nativeSpawn, setTimer, clearTimer, children: [], controllers: new Set(), pending: new Set(),
+    observations: [], listeners: new Set(), restorations: [], guardRestorations: [], cursor: 0, closing: false, restored: false };
+  try {
+    state.restorations.push(isolateEnvironment(root));
+    assert.equal(os.homedir(), root); assert.equal(os.tmpdir(), root);
+    await mkdir(dirname(state.executable));
+    const source = await readFile(new URL("./fixtures/agy-fixture.mjs", import.meta.url), "utf8");
+    assert.ok(!process.execPath.includes("\n"), "Invalid Node executable path");
+    state.executableSource = `#!${process.execPath}\n${source}`;
+    await writeFile(state.executable, state.executableSource);
+    await chmod(state.executable, 0o700);
+    process.env.IMA2_AGY_BIN = state.executable;
+    installAdditionalDenials(state);
+    installSpawn(state);
+    await configure(state, "success");
+    return await loadHandle(state);
+  } catch (error) { await close(state); throw error; }
+}

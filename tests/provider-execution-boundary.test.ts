@@ -86,7 +86,7 @@ if (executionTestProcess(import.meta.url)) {
 
   for (const provider of lanes.node) {
     for (const sourceImage of [true, false]) {
-      test(`node/${provider}: parent-only ${sourceImage ? "with parent" : "root"} preserves legacy reference exceptions`, async () => {
+      test(`node/${provider}: parent-only ${sourceImage ? "with parent" : "root"} follows migrated policy or explicit legacy exception`, async () => {
         probe.reset();
         const request = requestFor("node", provider, probe.source);
         assert.equal(request.surface, "node");
@@ -99,6 +99,55 @@ if (executionTestProcess(import.meta.url)) {
         assertReferenceOrder(probe.calls[0], request, probe.source);
       });
     }
+  }
+
+  for (const provider of ["agy", "gemini-api"] as const) for (const surface of ["classic", "node", "edit", "multimode"] as const) {
+    test(`Google ${surface}/${provider}: captured classic scalars, live inputs and no synthetic callbacks`, async () => {
+      probe.reset();
+      const request = requestFor(surface, provider, probe.source);
+      const progress = {
+        onPartialImage: () => assert.fail("Google must not invent partial callbacks"),
+        onFinalImage: () => assert.fail("Google must not invent final callbacks"),
+        onQueue: () => assert.fail("Google must not invent queue callbacks"),
+      };
+      const prepared = await probe.prepareImageExecution(probe.ctx, request, progress);
+      assert.equal(probe.calls.length, 0, "prepare cannot execute a native operation");
+      request.prompt = "updated effective"; request.rawPrompt = "updated raw";
+      request.options.model = "updated-model"; request.options.size = "auto";
+      request.requestId = "updated-id";
+      request.references = [{ b64: "updated-reference", declaredMime: "image/webp", detectedMime: "image/webp" }];
+      request.signal = new AbortController().signal;
+      if (request.surface === "node") request.sourceImage = null;
+      if (request.surface === "edit") request.sourceImage = "updated-source";
+      const result = await prepared.execute();
+      assert.equal(probe.calls.length, 1, "each surface executes one native operation");
+      const call = probe.calls[0];
+      const options = call.args.at(-1) as Record<string, unknown>;
+      assert.equal(call.args[0], surface === "classic" ? "effective prompt with context"
+        : `${surface === "edit" ? "Edit this image: " : ""}updated effective`);
+      assert.equal(options.requestId, surface === "classic" ? "boundary-fixture" : "updated-id");
+      assert.equal(options.signal, request.signal);
+      const references = options.references as Array<{ b64: string }>;
+      assert.deepEqual(references.map(ref => ref.b64), [surface === "edit" ? "updated-source" : "updated-reference"]);
+      if (provider === "gemini-api") {
+        assert.equal(call.args[1], probe.ctx);
+        assert.equal(options.model, surface === "classic" ? "grok-imagine-image-quality" : "updated-model");
+        assert.equal(options.size, surface === "classic" ? "1536x1024" : "auto");
+      }
+      if (surface !== "multimode") assert.equal(result.value, probe.single);
+      await prepared.execute();
+      assert.equal(probe.calls.length, 2, "multimode maxImages does not introduce native loops");
+    });
+
+    test(`Google ${surface}/${provider}: optional requestId own-property contract`, async () => {
+      probe.reset();
+      const request = requestFor(surface, provider, probe.source);
+      request.requestId = undefined;
+      await (await probe.prepareImageExecution(probe.ctx, request)).execute();
+      const options = probe.calls[0].args.at(-1) as Record<string, unknown>;
+      assert.equal(options.requestId, undefined);
+      assert.equal(Object.hasOwn(options, "requestId"), provider === "agy");
+    });
   }
 
   for (const provider of ["api", "grok"] as const) {

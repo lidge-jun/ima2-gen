@@ -73,7 +73,7 @@ routes/
 | File | Lines | Responsibility |
 |---|---:|---|
 | `server.ts` | 632 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
-| `config.ts` | 498 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
+| `config.ts` | 499 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 93 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 47 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
@@ -224,12 +224,12 @@ routes/
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
 | `lib/providers/execution/admission.ts` | 38 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
-| `lib/providers/execution/index.ts` | 35 | Public prepare/execute facade with current direct-key presence checks |
-| `lib/providers/execution/legacy.ts` | 30 | Four-surface dispatcher with OAuth/API excluded from legacy request types |
-| `lib/providers/execution/legacyClassic.ts` | 102 | Remaining-provider classic dispatch; OpenAI/Grok live in family owners |
-| `lib/providers/execution/legacyNode.ts` | 67 | One node transport attempt; caller owns retry, partials and persistence |
-| `lib/providers/execution/legacyEdit.ts` | 41 | Remaining-provider single edit dispatch and native result metadata |
-| `lib/providers/execution/legacyMultimode.ts` | 47 | Native sequence dispatch and existing one-image projections |
+| `lib/providers/execution/index.ts` | 37 | Public prepare/execute facade with current direct-key presence checks |
+| `lib/providers/execution/legacy.ts` | 31 | Four-surface Atlas/MiniMax/NAI/Comfy dispatcher; OpenAI/Grok/Google excluded |
+| `lib/providers/execution/legacyClassic.ts` | 73 | Remaining-provider classic dispatch with preserved prepare-time capture |
+| `lib/providers/execution/legacyNode.ts` | 51 | One node transport attempt; caller owns retry, partials and persistence |
+| `lib/providers/execution/legacyEdit.ts` | 37 | Remaining-provider single edit dispatch and native result metadata |
+| `lib/providers/execution/legacyMultimode.ts` | 43 | Native sequence dispatch and existing one-image projections |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 252 | Comfy lane model registry: per-record origin and image/video kind, legacy image normalization, id/kind validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 273 | API-format graph parsing, grouped SDXL/H3 binding inference, SaveImage/SaveVideo kind inference, non-mutating value injection, parameter derivation |
@@ -246,7 +246,11 @@ routes/
 | `lib/cardNewsGenerator.ts` | 307 | Card-by-card image assembly orchestrator |
 | `lib/cardNewsPath.ts` | 29 | Generated card-news set path construction and validation helpers |
 | `lib/agyCli.ts` | 44 | Antigravity CLI discovery and process execution helpers |
-| `lib/agyImageAdapter.ts` | 401 | Antigravity CLI image-generation provider adapter |
+| `lib/agyImageAdapter.ts` | 3 | Compatibility reexports for Agy operation/result and recent artifact lookup |
+| `lib/agyArtifact.ts` | 101 | Agy output parser and legacy recent-artifact scanner; containment hardening remains separately gated |
+| `lib/agyProcess.ts` | 127 | Direct-child cancellation/timeout, TERM-to-KILL grace and close-observed settlement |
+| `lib/providers/adapters/agyOperations.ts` | 253 | Actual Agy prompt/staging/operation with exception-safe refs and late-cancel barriers |
+| `lib/providers/adapters/googleExecution.ts` | 104 | Agy/Gemini four-surface mapping, lossless context-filtered node references and one-image sequence projection |
 | `lib/apiCachePolicy.ts` | 12 | API response cache-control policy helpers |
 | `lib/assetsStore.ts` | 533 | Generated asset indexing, lookup, and persistence helpers |
 | `lib/assetRef.ts` | 57 | Asset-id-first reference resolution with legacy filename fallback and `via` provenance for generate requests |
@@ -256,7 +260,8 @@ routes/
 | `lib/composerSnapshot.ts` | 34 | Composer state snapshot normalization |
 | `lib/configKeys.ts` | 77 | Runtime configuration key definitions and validation |
 | `lib/elementCompiler.ts` | 200 | Structured element prompt compilation and validation |
-| `lib/geminiApiImageAdapter.ts` | 265 | Gemini API image-generation provider adapter |
+| `lib/geminiApiImageAdapter.ts` | 2 | Compatibility reexport of Gemini native operation/result |
+| `lib/providers/adapters/geminiOperations.ts` | 265 | Actual public/Vertex image payload, auth selection and unchanged native response/error handling |
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
 | `lib/grokImageCore.ts` | 194 | Shared Grok image request and response handling |

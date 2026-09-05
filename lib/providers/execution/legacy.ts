@@ -6,12 +6,13 @@ import { prepareLegacyEdit } from "./legacyEdit.js";
 import { prepareLegacyMultimode } from "./legacyMultimode.js";
 
 export type LegacyExecutionRequest = ImageExecutionRequest & {
-  provider: Exclude<ImageExecutionRequest["provider"], "oauth" | "api" | "grok" | "grok-api">;
+  provider: Exclude<ImageExecutionRequest["provider"], "oauth" | "api" | "grok" | "grok-api" | "agy" | "gemini-api">;
 };
 
 export function isLegacyExecutionRequest(request: ImageExecutionRequest): request is LegacyExecutionRequest {
   return request.provider !== "oauth" && request.provider !== "api"
-    && request.provider !== "grok" && request.provider !== "grok-api";
+    && request.provider !== "grok" && request.provider !== "grok-api"
+    && request.provider !== "agy" && request.provider !== "gemini-api";
 }
 
 export function prepareLegacyImageExecution<R extends LegacyExecutionRequest>(

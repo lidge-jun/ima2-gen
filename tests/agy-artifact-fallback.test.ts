@@ -1,9 +1,19 @@
-import test from "node:test";
+import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile, symlink, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { findRecentAgyArtifact } from "../lib/agyImageAdapter.ts";
+import { executionTestProcess } from "./_executionTestProcess.ts";
+import { isolateExecution } from "./_executionRouteIsolation.ts";
+
+if (executionTestProcess(import.meta.url)) {
+let isolation: Awaited<ReturnType<typeof isolateExecution>>;
+let findRecentAgyArtifact: typeof import("../lib/agyImageAdapter.ts").findRecentAgyArtifact;
+before(async () => {
+  isolation = await isolateExecution();
+  ({ findRecentAgyArtifact } = await import("../lib/agyImageAdapter.ts"));
+});
+after(async () => { await isolation?.close(); });
 
 test("findRecentAgyArtifact returns matching file within time window", async () => {
   const root = await mkdtemp(join(tmpdir(), "ima2-artifact-test-"));
@@ -125,3 +135,4 @@ test("findRecentAgyArtifact returns null for empty/missing directories", async (
   const result = await findRecentAgyArtifact(Date.now(), ["/tmp/does-not-exist-ima2-test"]);
   assert.equal(result, null);
 });
+}

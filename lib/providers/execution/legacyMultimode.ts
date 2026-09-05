@@ -1,6 +1,4 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
-import { generateViaAgy } from "../../agyImageAdapter.js";
-import { generateViaGeminiApi } from "../../geminiApiImageAdapter.js";
 import { generateViaAtlasCloud } from "../../atlasCloudImageAdapter.js";
 import { generateViaMinimax } from "../../minimaxImageAdapter.js";
 import { generateViaNai } from "../../naiImageAdapter.js";
@@ -10,11 +8,9 @@ import type { LegacyExecutionRequest } from "./legacy.js";
 type MultimodeRequest = Extract<LegacyExecutionRequest, { surface: "multimode" }>;
 
 function executeSingleLane(ctx: RuntimeContext, request: MultimodeRequest) {
-  const { provider, prompt, rawPrompt, references, signal, requestId, options } = request;
+  const { provider, rawPrompt, references, signal, requestId, options } = request;
   const params = { model: options.model, size: options.size, signal, ...(requestId !== undefined ? { requestId } : {}), references };
   switch (provider) {
-    case "gemini-api": return generateViaGeminiApi(prompt, ctx, params);
-    case "agy": return generateViaAgy(prompt, { references, signal, requestId });
     case "atlascloud": return generateViaAtlasCloud(rawPrompt, ctx, { ...params, quality: options.quality });
     case "minimax": return generateViaMinimax(rawPrompt, ctx, params);
     // Text-to-image only: no references; admission rejects them before startJob.

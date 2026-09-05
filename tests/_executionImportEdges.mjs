@@ -27,6 +27,15 @@ const grokEdges = new Map([
   ["lib/grokImageDownloadPolicy", []],
 ]);
 const grokOwners = new Set(grokEdges.keys());
+const googleFacades = new Set(["lib/agyImageAdapter", "lib/geminiApiImageAdapter"]);
+const googleEdges = new Map([
+  ["lib/providers/adapters/googleExecution", ["lib/providers/adapters/agyOperations", "lib/providers/adapters/geminiOperations"]],
+  ["lib/providers/adapters/agyOperations", ["lib/agyProcess", "lib/agyArtifact"]],
+  ["lib/providers/adapters/geminiOperations", []],
+  ["lib/agyArtifact", ["lib/agyProcess"]],
+  ["lib/agyProcess", []],
+]);
+const googleOwners = new Set(googleEdges.keys());
 const isLegacyOwner = (target) => /^lib\/providers\/execution\/legacy[^/]*$/.test(target);
 
 export function normalizeModulePath(file, specifier) {
@@ -116,20 +125,28 @@ export function forbiddenExecutionEdges(source, file) {
   const owner = normalizeModulePath(file, file);
   return collectRuntimeEdges(source, file).filter(({ target }) => {
     if (EXECUTION_CALLERS.includes(file)) {
-      return concreteOwners.has(target) || openaiOwners.has(target) || grokOwners.has(target) || isLegacyOwner(target);
+      return concreteOwners.has(target) || openaiOwners.has(target) || grokOwners.has(target)
+        || googleOwners.has(target) || isLegacyOwner(target);
     }
     if (isLegacyOwner(owner)) return target === facadeOwner || openaiOwners.has(target)
-      || grokFacades.has(target) || grokOwners.has(target);
+      || grokFacades.has(target) || grokOwners.has(target) || googleFacades.has(target) || googleOwners.has(target);
+    if (googleOwners.has(owner)) {
+      return concreteOwners.has(target) || openaiOwners.has(target) || grokOwners.has(target)
+        || target === publicOwner || isLegacyOwner(target) || target.startsWith("routes/")
+        || (googleOwners.has(target) && !googleEdges.get(owner).includes(target));
+    }
     if (grokOwners.has(owner)) {
       return target === facadeOwner || grokFacades.has(target) || target === publicOwner
-        || isLegacyOwner(target) || openaiOwners.has(target) || target.startsWith("routes/")
+        || isLegacyOwner(target) || openaiOwners.has(target) || googleFacades.has(target)
+        || googleOwners.has(target) || target.startsWith("routes/")
         || (grokOwners.has(target) && !grokEdges.get(owner).includes(target));
     }
     if (owner === "lib/responsesTransport") {
       return target === publicOwner || openaiOwners.has(target) || target.startsWith("routes/")
-        || target === facadeOwner || grokFacades.has(target);
+        || target === facadeOwner || grokFacades.has(target) || googleFacades.has(target) || googleOwners.has(target);
     }
-    return openaiOwners.has(owner) && (target === facadeOwner || grokFacades.has(target));
+    return openaiOwners.has(owner) && (target === facadeOwner || grokFacades.has(target)
+      || googleFacades.has(target) || googleOwners.has(target));
   });
 }
 

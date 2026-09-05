@@ -36,7 +36,7 @@ const asyncJobSubmitPath = join(__dirname, "..", "ui", "src", "lib", "asyncJobSu
 const responsesOperationsPath = join(__dirname, "..", "lib", "providers", "adapters", "openaiOperations.ts");
 const grokImagePlannerPath = join(__dirname, "..", "lib", "grokImagePlanner.ts");
 const grokVideoPlannerPath = join(__dirname, "..", "lib", "grokVideoPlannerPrompt.ts");
-const agyAdapterPath = join(__dirname, "..", "lib", "agyImageAdapter.ts");
+const agyAdapterPath = join(__dirname, "..", "lib", "providers", "adapters", "agyOperations.ts");
 
 const src = await readFile(serverPath, "utf8");
 const historySrc = await readFile(historyListPath, "utf8");

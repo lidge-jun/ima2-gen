@@ -3,6 +3,7 @@ import { assertDirectGrokKey } from "./admission.js";
 import { isLegacyExecutionRequest, prepareLegacyImageExecution } from "./legacy.js";
 import { isOpenaiRequest, prepareOpenaiExecution } from "../adapters/openaiExecution.js";
 import { isGrokRequest, prepareGrokExecution } from "../adapters/grokExecution.js";
+import { isGoogleRequest, prepareGoogleExecution } from "../adapters/googleExecution.js";
 import type { ExecutionProgress, ExecutionSurface, ImageExecutionRequest, PreparedImageExecution } from "./types.js";
 
 export type * from "./types.js";
@@ -11,6 +12,7 @@ function prepareSelected(ctx: RuntimeContext, request: ImageExecutionRequest,
   progress?: ExecutionProgress): Promise<PreparedImageExecution<ExecutionSurface>> {
   if (isOpenaiRequest(request)) return prepareOpenaiExecution(ctx, request, progress);
   if (isGrokRequest(request)) return prepareGrokExecution(ctx, request, progress);
+  if (isGoogleRequest(request)) return prepareGoogleExecution(ctx, request, progress);
   if (isLegacyExecutionRequest(request)) return prepareLegacyImageExecution(ctx, request, progress);
   throw new Error("Unreachable image execution provider");
 }

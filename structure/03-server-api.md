@@ -96,8 +96,28 @@ and other consumers; it contains no duplicate operation implementation.
 Grok/proxy and directGrok execution now belongs to `grokExecution.ts`, with actual
 operations in `grokOperations.ts`/`grokMultimodeOperations.ts` and planning in
 `grokImagePlanner.ts`. Compatibility facades retain old function/type exports.
-Other providers remain in the four `legacy*` helpers, whose types exclude both
-OpenAI and Grok lanes.
+Agy/Gemini execution belongs to `googleExecution.ts`, with actual operations in
+`agyOperations.ts` and `geminiOperations.ts`; old adapters remain direct reexports.
+The four `legacy*` helpers now contain only Atlas/MiniMax/NAI/Comfy and exclude
+OpenAI, Grok and Google lanes from their types.
+
+Google node inputs match the admitted context policy: parent-only sends only an
+existing parent, while parent-plus-refs sends parent first followed by selected
+references. Agy no longer drops supplementary refs; Gemini no longer sends ignored
+ones. Classic keeps its prepare-time scalar capture and live references/signal;
+other surfaces derive inputs on execution. Native multimode still returns one
+dense image, not maxImages billed calls or fabricated image callbacks.
+
+Agy's native child lifecycle is owned by `agyProcess.ts`, with centralized
+`AGY_PROCESS_POLICY`. Pre-aborted calls never spawn; cancellation/timeout pins its
+499/504 reason, requests TERM then KILL after a1000ms grace if needed, and settles
+after child close. Staged refs are cleaned on partial-write failure and operation
+exit. The final success check occurs after awaited ref cleanup, so cancellation
+during cleanup cannot return success. This does not claim descendant-tree control.
+`agyArtifact.ts` retains the existing parser/fallback; canonical symlink-safe file
+ingestion is a separately gated WP06s change, not already provided by relocation.
+Gemini's public/Vertex payloads and legacy TimeoutError502 classification remain
+unchanged; fixture proof is not live provider/auth availability assurance.
 
 Classic prepares its Grok plan once per batch and retains its existing Responses
 retry loop in the OpenAI execution owner. API empty422 is not retried; retryable

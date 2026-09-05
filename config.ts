@@ -26,6 +26,7 @@ import {
 // 4.6 rewrites prompts in ways that read worse than 4.3 for this planner's job, which
 // is judged by the result rather than a benchmark. 4.6 stays selectable below.
 export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.3";
+export const AGY_PROCESS_POLICY = Object.freeze({ timeoutMs: 360_000, terminateGraceMs: 1000, maxOutputBytes: 1_048_576 });
 export const GROK_PLANNER_MODELS = [
   DEFAULT_GROK_PLANNER_MODEL,
   "grok-4.6",
