@@ -110,6 +110,8 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
   const setProvider = useAppStore((state) => state.setProvider);
   const setImageModel = useAppStore((state) => state.setImageModel);
   const selectVideoModel = useAppStore((state) => state.selectVideoModel);
+  const setComfyWorkflow = useAppStore((state) => state.setComfyWorkflow);
+  const comfyWorkflow = useAppStore((state) => state.comfyWorkflow);
   const setComfyVideoWorkflow = useAppStore((state) => state.setComfyVideoWorkflow);
   const comfyVideoWorkflow = useAppStore((state) => state.comfyVideoWorkflow);
   const setReasoningEffort = useAppStore((state) => state.setReasoningEffort);
@@ -218,6 +220,7 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
     provider,
     imageModel,
     videoModel,
+    comfyWorkflow,
     comfyVideoWorkflow,
   });
   const modelValue = mcpProvider
@@ -281,6 +284,10 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
     }
     if (value.startsWith(VIDEO_PREFIX)) {
       selectVideoModel(value.slice(VIDEO_PREFIX.length));
+      return;
+    }
+    if (provider === "comfy") {
+      setComfyWorkflow(value || null);
       return;
     }
     setImageModel(value as Parameters<typeof setImageModel>[0]);
@@ -482,7 +489,7 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
         disabled={Boolean(unavailableReason)}
         placeholder={mcpProvider
           ? (modelsLoading ? t("mcp.loadingModels") : t("mcp.chooseModel"))
-          : undefined}
+          : provider === "comfy" ? t("mcp.chooseModel") : undefined}
         triggerSub={isGptFamily && currentEffort ? currentEffort.shortLabel : undefined}
         portal
       />

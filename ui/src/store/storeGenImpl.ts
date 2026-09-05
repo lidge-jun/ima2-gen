@@ -29,6 +29,7 @@ import { naiPayloadFields } from "../lib/naiPayload";
 import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 import { compilePresets, type PresetProvider } from "../../../lib/presetCompiler.js";
 import { getAllPresets } from "../lib/presets";
+import { coreImageRequestModel } from "../lib/coreSelection";
 
 type StoreSet = (p: Partial<AppState> | ((s: AppState) => Partial<AppState>)) => void;
 type StoreGet = () => AppState;
@@ -110,7 +111,7 @@ export async function generateMultimodeImpl(
       moderation: s.moderation,
       provider: s.provider,
       maxImages: requested,
-      model: s.imageModel,
+      model: coreImageRequestModel(s),
       reasoningEffort: s.reasoningEffort,
       webSearchEnabled: s.webSearchEnabled,
       requestId: flightId,
@@ -317,7 +318,7 @@ export async function runGenerateImpl(
       // fans this out into n separate upstream calls. Forcing 1 is the behavior
       // that makes hiding CountPicker honest instead of cosmetic.
       n: s.provider === "nai" ? 1 : s.count,
-      model: s.imageModel,
+      model: coreImageRequestModel(s),
       reasoningEffort: s.reasoningEffort,
       storyboard: s.storyboardActive || undefined,
       webSearchEnabled: s.webSearchEnabled,
