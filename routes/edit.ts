@@ -8,14 +8,9 @@ import { generateImageThumbnailFromBuffer } from "../lib/imageThumb.js";
 import { classifyUpstreamError } from "../lib/errorClassify.js";
 import { normalizeOAuthParams } from "../lib/oauthNormalize.js";
 import { resolveProviderOptions } from "../lib/providerOptions.js";
-import { editViaResponses } from "../lib/responsesImageAdapter.js";
-import { editViaGrok } from "../lib/grokImageAdapter.js";
+import { prepareImageExecution } from "../lib/providers/execution/index.js";
+import { checkImageExecutionAdmission } from "../lib/providers/execution/admission.js";
 import { resolveGrokQualityModel } from "../lib/imageModels.js";
-import { generateViaAgy } from "../lib/agyImageAdapter.js";
-import { generateViaGeminiApi } from "../lib/geminiApiImageAdapter.js";
-import { generateViaAtlasCloud } from "../lib/atlasCloudImageAdapter.js";
-import { generateViaMinimax } from "../lib/minimaxImageAdapter.js";
-import { generateViaComfy } from "../lib/comfyImageAdapter.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, INFLIGHT_RETRY_AFTER_SECONDS } from "../lib/inflight.js";
 import {
   isGenerationCanceledError,
@@ -136,7 +131,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         rawSize: size,
         rawWebSearchEnabled,
       });
-      if (providerOptions.error) {
+      if (providerOptions.error !== undefined) {
         finishStatus = "error";
         finishHttpStatus = providerOptions.status;
         finishErrorCode = providerOptions.code;
@@ -149,6 +144,19 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       const activeProvider = providerOptions.provider;
       const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : null;
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
+
+      const admission = checkImageExecutionAdmission(ctx, {
+        provider: activeProvider, surface: "edit", referenceCount: imageB64 ? 1 : 0,
+      });
+      if (admission) {
+        finishStatus = "error";
+        finishHttpStatus = admission.status;
+        finishErrorCode = admission.code;
+        return res.status(admission.status).json({
+          error: admission.message, code: admission.code, requestId,
+          ...errorEnvelopeFields({ code: admission.code, status: admission.status }),
+        });
+      }
 
       const started = startJob({
         requestId,
@@ -210,7 +218,7 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
           ...errorEnvelopeFields({ code: "NAI_EDIT_UNSUPPORTED", status: 400 }),
         });
       }
-      const maskCheck: any = validateEditMask(imageB64, rawMask);
+      const maskCheck = validateEditMask(imageB64, rawMask);
       if (maskCheck.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -242,125 +250,19 @@ export function registerEditRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         maskBytes: maskCheck.maskBytes ?? 0,
       });
       const startTime = Date.now();
-      let resultB64: string;
-      let usage: Record<string, number> | null;
-      let revisedPrompt: string | undefined;
-      let webSearchCalls = 0;
-      let resultMimeFromProvider: string | undefined;
-      let providerUrl: string | null = null;
-
-      if (activeProvider === "gemini-api") {
-        const r = await generateViaGeminiApi(`Edit this image: ${prompt}`, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          references: [{ b64: imageB64, declaredMime: null, detectedMime: detectImageMimeFromB64(imageB64) || null }],
-        });
-        resultB64 = r.b64;
-        usage = r.usage;
-        revisedPrompt = r.revisedPrompt;
-        webSearchCalls = r.webSearchCalls;
-        resultMimeFromProvider = r.mime;
-      } else if (activeProvider === "agy") {
-        const r = await generateViaAgy(`Edit this image: ${prompt}`, {
-          references: [{ b64: imageB64, declaredMime: null, detectedMime: detectImageMimeFromB64(imageB64) || null }],
-          signal: cancelController.signal,
-          requestId,
-        });
-        resultB64 = r.b64;
-        usage = r.usage;
-        revisedPrompt = r.revisedPrompt;
-        webSearchCalls = r.webSearchCalls;
-        resultMimeFromProvider = r.mime;
-      } else if (activeProvider === "atlascloud") {
-        const r = await generateViaAtlasCloud(`Edit this image: ${prompt}`, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          quality,
-          signal: cancelController.signal,
-          requestId,
-          references: [{ b64: imageB64, declaredMime: null, detectedMime: detectImageMimeFromB64(imageB64) || null }],
-        });
-        resultB64 = r.b64;
-        providerUrl = r.providerUrl ?? null;
-        usage = r.usage;
-        revisedPrompt = r.revisedPrompt ?? undefined;
-        webSearchCalls = r.webSearchCalls;
-        resultMimeFromProvider = r.mime;
-      } else if (activeProvider === "minimax") {
-        const r = await generateViaMinimax(`Edit this image: ${prompt}`, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          references: [{ b64: imageB64, declaredMime: null, detectedMime: detectImageMimeFromB64(imageB64) || null }],
-        });
-        resultB64 = r.b64;
-        providerUrl = r.providerUrl ?? null;
-        usage = r.usage;
-        revisedPrompt = r.revisedPrompt ?? undefined;
-        webSearchCalls = r.webSearchCalls;
-        resultMimeFromProvider = r.mime;
-      } else if (activeProvider === "comfy") {
-        // i2i goes through the same adapter as generate: the reference is
-        // uploaded to the instance and its filename injected into the
-        // workflow's LoadImage binding. A graph without that binding refuses
-        // with COMFY_WORKFLOW_BIND_INVALID rather than silently ignoring the
-        // input image.
-        const r = await generateViaComfy(`Edit this image: ${prompt}`, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          references: [{ b64: imageB64, declaredMime: null, detectedMime: detectImageMimeFromB64(imageB64) || null }],
-        });
-        resultB64 = r.b64;
-        providerUrl = r.providerUrl ?? null;
-        usage = r.usage;
-        revisedPrompt = r.revisedPrompt ?? undefined;
-        webSearchCalls = r.webSearchCalls;
-        resultMimeFromProvider = r.mime;
-      } else if (activeProvider === "grok" || activeProvider === "grok-api") {
-        const directApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-        const grokModel = resolveGrokQualityModel(imageModel, quality);
-        const r = await editViaGrok(prompt, imageB64, ctx, {
-          model: grokModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          directApiKey,
-        });
-        resultB64 = r.b64;
-        providerUrl = r.providerUrl ?? null;
-        usage = r.usage;
-        revisedPrompt = r.revisedPrompt;
-        webSearchCalls = r.webSearchCalls;
-        resultMimeFromProvider = r.mime;
-      } else {
-        const r = await editViaResponses(
-          activeProvider,
-          prompt,
-          imageB64,
-          quality,
-          effectiveSize,
-          moderation,
-          normalizedPromptMode,
-          ctx,
-          requestId,
-          {
-            model: imageModel,
-            reasoningEffort,
-            webSearchEnabled,
-            mask: maskCheck.mask,
-            signal: cancelController.signal,
-          },
-        );
-        resultB64 = r.b64;
-        usage = r.usage ?? null;
-        revisedPrompt = r.revisedPrompt ?? undefined;
-        webSearchCalls = r.webSearchCalls ?? 0;
-      }
+      const { value: r } = await (await prepareImageExecution(ctx, {
+        surface: "edit", provider: activeProvider, requestId,
+        signal: cancelController.signal, prompt, rawPrompt: prompt,
+        sourceImage: imageB64, mask: maskCheck.mask ?? null, references: [],
+        options: { model: imageModel, quality, size: effectiveSize, moderation,
+          mode: normalizedPromptMode, reasoningEffort, webSearchEnabled },
+      })).execute();
+      const resultB64 = r.b64;
+      const usage = r.usage;
+      const revisedPrompt = r.revisedPrompt ?? undefined;
+      const webSearchCalls = r.webSearchCalls;
+      const resultMimeFromProvider = r.mime;
+      const providerUrl = r.providerUrl ?? null;
       throwIfJobCanceled(requestId);
 
       const elapsed = +((Date.now() - startTime) / 1000).toFixed(1);

@@ -77,7 +77,7 @@ export interface ExecutionOptions {
   size: string;
   moderation: string;
   mode: "auto" | "direct";
-  reasoningEffort: string;
+  reasoningEffort: string | undefined;
   webSearchEnabled: boolean;
 }
 interface ExecutionBase {

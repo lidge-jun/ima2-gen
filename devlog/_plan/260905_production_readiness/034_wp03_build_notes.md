@@ -35,3 +35,20 @@ launch or network. 35 literal assertions passed: four surfaces × missing/empty/
 blank key refusal, proxy/direct positive cases, NAI sequence refs vs no refs and
 mutable-key removal. Scope is the helper alone, not actual route/legacy execution.
 `git diff --check` exit0 at this checkpoint. No full local suite run.
+
+## Intermediate integration diagnostics
+
+Initial server typecheck after leaf relocation exposed an over-narrow seam:
+providerOptions' normalized reasoningEffort is inferred string-or-undefined.
+ExecutionOptions now preserves that native optional value rather than introducing
+a new default or casting caller input. Responses already accepts undefined effort.
+Other diagnostics were incomplete edit/sequence imports and exact-optional Gemini
+requestId / Responses mask and callback options; assigned original owners to omit
+absent optional fields without changing wire behavior. This was not a green build.
+
+After those type corrections and all four caller import/admission replacements,
+`npm run typecheck` and `npm run build:server` each exited0. Runtime twins were
+regenerated and remain ignored. This checkpoint establishes compilation, not the
+pending route/boundary/visual/hosted full-suite assertions. Error-card geometry
+scope was re-planned and independently approved in035, then the same six workers
+resumed with preserved partial changes.
