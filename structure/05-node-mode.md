@@ -85,7 +85,8 @@ Visual edges are the canonical parent graph. `parentServerNodeId` is a derived g
 ## Streaming And Recovery
 
 The node pipeline calls `prepareImageExecution` once and executes one provider
-attempt per iteration. `legacyNode.ts` owns transport dispatch only. Root requests
+attempt per iteration. `openaiExecution.ts` owns OAuth/API dispatch and
+`legacyNode.ts` owns the remaining provider dispatch, neither owning node retries. Root requests
 without input images may attempt twice on an existing retryable error; parent/ref
 requests attempt once. Responses empty422 remains non-retryable, while Grok
 empty502 can reach the second root attempt. Cancellation checks, retry logs,

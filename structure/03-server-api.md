@@ -87,12 +87,29 @@ surface plus already-resolved provider/options, validated references and an
 AbortSignal; the result is a native single image or sequence, not a job handle.
 It is in-process only and adds no serialized/stored fields.
 
-The four `legacy*` execution helpers currently own concrete transport dispatch.
+OAuth/API execution now belongs to `providers/adapters/openaiExecution.ts`.
+`openaiOperations.ts` owns the existing generate/edit/multimode payload operations,
+`openaiTypes.ts` their unchanged option/reference types, and `responsesTransport.ts`
+the endpoint/auth/readiness, redaction, abort and response-parser boundary.
+`responsesImageAdapter.ts` is a compatibility re-export for existing agent/sprite
+and other consumers; it contains no duplicate operation implementation.
+Other providers remain in the four `legacy*` helpers, whose types exclude OAuth/API.
+
 Classic prepares its Grok plan once per batch and retains its existing Responses
-retry loop. Node keeps retry ownership at the caller; edit executes one operation;
-multimode invokes its native sequence operation. Routes/pipelines still own input
+retry loop in the OpenAI execution owner. API empty422 is not retried; retryable
+HTTP503 can reach a second attempt. Classic OAuth alone opts into its existing
+reference-preserving/degraded fallback chain. Node keeps retry ownership at the
+caller; edit executes one operation; multimode invokes its native sequence
+operation. Routes/pipelines still own input
 validation, start/finish/cancellation, persistence, sidecars and SSE/eventbus
 publication. Existing low-level transport phase updates remain in place.
+
+SSE final callbacks retain original image objects, await completion and dedupe
+repeated bytes. JSON parsing has no callbacks/SSE dedupe, while OAuth fallback
+still uses SSE parsing but forwards no callbacks. Masked edits remain prompt
+guidance through image/text content, not a newly claimed native mask parameter.
+Transport499 cancellation/504 timeout codes stay distinct from classic's existing
+normalization and the caller's final cancellation/partial-timeout envelopes.
 
 For these four image surfaces, missing or blank `grok-api` credentials now return
 `GROK_API_KEY_MISSING` (401) before job admission instead of selecting the proxy.

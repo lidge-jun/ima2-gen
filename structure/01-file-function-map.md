@@ -197,7 +197,11 @@ routes/
 | `lib/oauthProxy/errors.ts` | 129 | OAuth-specific error codes and normalization |
 | `lib/oauthProxy/types.ts` | 10 | Shared OAuth proxy types (re-exported from `index`) |
 | `lib/promptSafetyPolicy.ts` | 3 | `SAFETY_INTENT_POLICY` constant: 3-line intent policy injected by oauthProxy/prompts and the API-key Responses adapter |
-| `lib/responsesImageAdapter.ts` | 497 | API-key provider Responses adapter — parity with OAuth path for generate/edit/multimode/node, including multimode final-image callbacks |
+| `lib/responsesImageAdapter.ts` | 6 | Compatibility re-exports of the three OpenAI operations; existing agent/sprite imports remain valid |
+| `lib/responsesTransport.ts` | 240 | Responses endpoint/auth/readiness, redacted errors, abort/timeout and JSON/SSE parser boundary |
+| `lib/providers/adapters/openaiTypes.ts` | 29 | Original positional-operation reference/options types, unchanged optional fields |
+| `lib/providers/adapters/openaiOperations.ts` | 235 | Actual OpenAI generate/edit/multimode operation bodies and reference normalization |
+| `lib/providers/adapters/openaiExecution.ts` | 148 | Typed four-surface OpenAI owner, classic retry and native callback/result mapping |
 | `lib/providerOptions.ts` | 161 | Per-provider option assembly; rejects catalog-only Comfy video workflows on the classic image path |
 | `lib/runtimeContext.ts` | 234 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
@@ -220,12 +224,12 @@ routes/
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
 | `lib/providers/execution/admission.ts` | 38 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
-| `lib/providers/execution/index.ts` | 25 | Public prepare/execute facade with current direct-key presence checks |
-| `lib/providers/execution/legacy.ts` | 21 | Explicit four-surface dispatcher, no job or persistence ownership |
-| `lib/providers/execution/legacyClassic.ts` | 183 | Shared Grok plan/captured key and per-output dispatch, preserving Responses retry |
-| `lib/providers/execution/legacyNode.ts` | 91 | One node transport attempt; caller owns retry, partials and persistence |
-| `lib/providers/execution/legacyEdit.ts` | 62 | Single edit dispatch, masks and native result metadata |
-| `lib/providers/execution/legacyMultimode.ts` | 70 | Native sequence dispatch and existing one-image projections |
+| `lib/providers/execution/index.ts` | 33 | Public prepare/execute facade with current direct-key presence checks |
+| `lib/providers/execution/legacy.ts` | 29 | Four-surface dispatcher with OAuth/API excluded from legacy request types |
+| `lib/providers/execution/legacyClassic.ts` | 136 | Remaining-provider classic dispatch and shared Grok plan/captured key; OpenAI lives in its family owner |
+| `lib/providers/execution/legacyNode.ts` | 80 | One node transport attempt; caller owns retry, partials and persistence |
+| `lib/providers/execution/legacyEdit.ts` | 51 | Remaining-provider single edit dispatch and native result metadata |
+| `lib/providers/execution/legacyMultimode.ts` | 60 | Native sequence dispatch and existing one-image projections |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 252 | Comfy lane model registry: per-record origin and image/video kind, legacy image normalization, id/kind validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 273 | API-format graph parsing, grouped SDXL/H3 binding inference, SaveImage/SaveVideo kind inference, non-mutating value injection, parameter derivation |
