@@ -95,21 +95,23 @@ export function collectRuntimeEdges(source, file) {
   return runtimeEdges(parse(source, file), file);
 }
 
+function functionScope(tree, file, scopeName) {
+  if (scopeName === undefined) return tree;
+  const declarations = [];
+  walkRuntime(tree, (node) => {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === scopeName) declarations.push(node);
+  });
+  if (declarations.length !== 1 || !declarations[0].body) {
+    throw new Error(`${file}: expected exactly one function body for ${scopeName}; found ${declarations.length} declarations`);
+  }
+  return declarations[0].body;
+}
+
 // Location-migration oracles inspect real calls, never comments or import names.
 /** @param {string} [scopeName] */
 export function collectCallArguments(source, file, name, scopeName) {
   const tree = parse(source, file);
-  let scope = tree;
-  if (scopeName !== undefined) {
-    const declarations = [];
-    walkRuntime(tree, (node) => {
-      if (ts.isFunctionDeclaration(node) && node.name?.text === scopeName) declarations.push(node);
-    });
-    if (declarations.length !== 1 || !declarations[0].body) {
-      throw new Error(`${file}: expected exactly one function body for ${scopeName}; found ${declarations.length} declarations`);
-    }
-    scope = declarations[0].body;
-  }
+  const scope = functionScope(tree, file, scopeName);
   const printer = ts.createPrinter({ removeComments: true });
   const calls = [];
   walkRuntime(scope, (node) => {
@@ -118,6 +120,23 @@ export function collectCallArguments(source, file, name, scopeName) {
     }
   });
   return calls;
+}
+
+export function collectReturnedFields(source, file, scopeName, field) {
+  const tree = parse(source, file);
+  const scope = functionScope(tree, file, scopeName);
+  const printer = ts.createPrinter({ removeComments: true });
+  const values = [];
+  walkRuntime(scope, (node) => {
+    if (!ts.isReturnStatement(node) || !node.expression || !ts.isObjectLiteralExpression(node.expression)) return;
+    for (const property of node.expression.properties) {
+      if (!ts.isPropertyAssignment(property)) continue;
+      if ((ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) && property.name.text === field) {
+        values.push(printer.printNode(ts.EmitHint.Expression, property.initializer, tree));
+      }
+    }
+  });
+  return values;
 }
 
 export function forbiddenExecutionEdges(source, file) {

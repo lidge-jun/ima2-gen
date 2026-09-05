@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { posix } from "node:path";
 import test from "node:test";
 import {
-  EXECUTION_CALLERS, collectCallArguments, collectRuntimeEdges, forbiddenExecutionEdges, inspectExecutionCaller,
+  EXECUTION_CALLERS, collectCallArguments, collectReturnedFields, collectRuntimeEdges, forbiddenExecutionEdges, inspectExecutionCaller,
 } from "./_executionImportEdges.mjs";
 
 const caller = "lib/generatePipeline.ts";
@@ -237,6 +237,14 @@ test("missing, duplicate or bodyless function scopes cannot silently pass", () =
     'function wanted(): void; function wanted() { run("implementation"); }',
     '// function wanted() {}\nconst text = "function wanted() {}";',
   ]) assert.throws(() => collectCallArguments(source, caller, "run", "wanted"), /expected exactly one function body for wanted/);
+});
+
+test("returned-field oracle reads executable return properties, not comments or unrelated values", () => {
+  const source = 'function input(r) { const fake = { prompt: "unused" }; /* return { prompt: "comment" } */ return { prompt: r.prompt }; }';
+  assert.deepEqual(collectReturnedFields(source, caller, "input", "prompt"), ["r.prompt"]);
+  assert.deepEqual(collectReturnedFields(source, caller, "input", "absent"), []);
+  assert.throws(() => collectReturnedFields(source, caller, "missing", "prompt"), /exactly one function body/);
+  assert.deepEqual(collectReturnedFields(source.replace('return { prompt: r.prompt }', 'return { prompt: r.rawPrompt }'), caller, "input", "prompt"), ["r.rawPrompt"]);
 });
 
 test("comments and strings cannot fake edges or execution activation", () => {

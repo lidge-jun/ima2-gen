@@ -66,3 +66,31 @@ watchdog/violation test. Current tests semantic typecheck and line-count drift
 check passed. Raw logs live under session wp06/0fc7b821/focused; that head still
 had uncommitted integration changes, so these are B-worktree proof, not final SHA
 acceptance. C must rerun its receipt after the source checkpoint and any repairs.
+
+## Source mutations and first hosted candidate
+
+At source1dafb740, main performed five actual source mutations, rebuilding matching
+server JS before each probe and each restoration. Every mutant failed the intended
+scenario and the exact restoration passed:
+
+- Omit partial-staging cleanup: second-ref EIO test fails the removal count.
+- Omit final post-ref-cleanup check: held successful ref-rm abort returns success,
+  so assert.rejects fails.
+- Compound late-read ablation removes three post-read masking guards: held artifact
+  read abort returns success. This is deliberately not a single-redundant-line proof.
+- Ignore contextMode in googleInput: real Gemini parent-only wire test fails.
+- Omit actual grace-timer KILL: native stubborn/timeout cases require watchdog reaps
+  and fail the isolation ledger. Restored native group passes32/32.
+
+All three production files compared identical to committed source after restoration;
+no mutation is retained. Raw RED/restored logs: session wp06/mutations/.
+
+PR205 draft above204; first CI33961435592 at1dafb740 failed on both Node versions
+only at the old node-studio element-prompt source oracle: it still looked for Google
+calls in legacyNode. Frontend39 passed; CodeQL33961436587 succeeded. No clean-CI
+claim is made for that candidate. Main retargeted the actual Google runGoogleImage
+call and AST-returned prompt fields (including request.prompt vs rawPrompt), while
+preserving other families' exact checks. New returned-field extractor ignores
+comments/unreturned objects and has direct tests. The affected UI/import suites
+pass34/34; semantic tests typecheck passes. The final local driver now includes
+this twentieth file. Fresh exact-tip CI/CodeQL and C review remain required.

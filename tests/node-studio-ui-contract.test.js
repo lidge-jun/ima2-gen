@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { collectCallArguments } from "./_executionImportEdges.mjs";
+import { collectCallArguments, collectReturnedFields } from "./_executionImportEdges.mjs";
 import {
   canConnectPorts,
   canConnectPortTypes,
@@ -285,12 +285,14 @@ describe("EN — element node lifecycle", () => {
     const openaiExecution = read(openaiOwner);
     const grokOwner = "lib/providers/adapters/grokExecution.ts";
     const grokExecution = read(grokOwner);
+    const googleOwner = "lib/providers/adapters/googleExecution.ts";
+    const googleExecution = read(googleOwner);
     for (const [name, position, expected] of [
       ["generateViaResponses", 1, "generationPrompt"],
       ["editViaResponses", 1, "generationPrompt"],
       ["generateViaGrok", 0, "generationPrompt"],
-      ["generateViaGeminiApi", 0, 'parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt'],
-      ["generateViaAgy", 0, 'parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt'],
+      ["generateViaGeminiApi", 0, "input.prompt"],
+      ["generateViaAgy", 0, "input.prompt"],
       ["generateViaAtlasCloud", 0, 'parentB64 ? `Edit this image: ${prompt}` : prompt'],
       ["generateViaMinimax", 0, 'parentB64 ? `Edit this image: ${prompt}` : prompt'],
       ["generateViaNai", 0, "prompt"],
@@ -299,10 +301,19 @@ describe("EN — element node lifecycle", () => {
         ? collectCallArguments(openaiExecution, openaiOwner, name, "executeOpenaiNode")
         : name === "generateViaGrok"
         ? collectCallArguments(grokExecution, grokOwner, name, "executeGrokNode")
+        : name === "generateViaGeminiApi" || name === "generateViaAgy"
+        ? collectCallArguments(googleExecution, googleOwner, name, "runGoogleImage")
         : collectCallArguments(execution, owner, name);
       assert.equal(calls.length, 1, `${name}: expected a live call expression`);
       assert.equal(calls[0][position], expected, `${name}: wrong prompt lane`);
     }
+    assert.deepEqual(collectCallArguments(googleExecution, googleOwner, "runGoogleImage")
+      .map(args => args[2]), ["googleInput(request)", "googleInput(request)"]);
+    assert.deepEqual(collectReturnedFields(googleExecution, googleOwner, "googleInput", "prompt"), [
+      '`Edit this image: ${request.prompt}`',
+      'request.sourceImage ? `Edit this image: ${request.prompt}` : request.prompt',
+      "request.prompt",
+    ]);
     // Merge dedupes across classic+element refs and caps at the active limit.
     assert.match(nodeRun, /mergeRunReferences\(node\.data\.referenceImages \?\? \[\], elementResolution\.referenceDataUrls, variantRefLimit\)/);
     assert.match(nodeRun, /effectiveReferenceLimit\(\{\s*provider: nodeProvider/);
