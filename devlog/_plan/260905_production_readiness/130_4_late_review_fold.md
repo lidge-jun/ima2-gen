@@ -108,6 +108,24 @@ persistence, external provider or native-route coverage claimed by this probe.
   the absence grace, rather than filtered away by the realistic response fixture.
 - Independent late-source micro-audit and exact new-head hosted CI pending.
 
+Independent Astra/high Kuhn review subsequently passed the seven-file7d3f8d01
+repair delta with no blocking findings, rerunning23+5mock tests. All three scoped
+agents retired. Native route39/39, including all16 sparse Grok wire/persistence
+scenarios and dense fallback, passed on Linux Node24 job101533754566. Its overall
+suite still failed1/3473: the existing MCP source-contract regex expected the old
+inline `scope.kind === job.kind` deduplication instead of the shared scope matcher.
+The same focused test reproduced locally. Replace that one stale pattern with
+checks for the existing negated matcher call and normalized kind equality; retain
+the MCP-kind normalization assertions and behavioral reconciliation coverage.
+Focused MCP contract then13/13 PASS. This is an implementation-shape test update,
+not a product rollback, lowered threshold, skip or replacement fixture framework.
+
+Installed candidateUI34050882612 at7d3f8d01 passed. The earlier34050735201 was an
+operator invocation failure: main supplied release SHA/version with candidate
+mode, which intentionally requires empty release inputs. Correcting the inputs
+without changing workflow/identity validation produced the successful run; keep
+the failed invocation distinct. Screenshots still require direct inspection.
+
 The previous bfb candidate completed fullCI34048928508 (all6),
 PRFast34048798967 (all3), AgY34048798985 (all4), CodeQL34048930050 and installed
 candidate UI34048797010 successfully. These are baseline/control evidence only;
