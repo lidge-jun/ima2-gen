@@ -89,6 +89,25 @@ test("I2 numeric loopback listener setup requires no native name resolution", as
   expect(result.result).toMatchObject({ bound: true, code: "" }); expect(result.nativeCalls).toEqual([]); result.guard.assertClean();
 });
 
+test("I9 platform discovery refuses native content and does not hide write attempts", async ({}, info) => {
+  const result = await runIsolationProbe(`
+    const fs=await import("node:fs"),fp=await import("node:fs/promises");const codes=[];
+    for(const path of ["/proc/self/exe","/usr/bin/ldd"]) {
+      for(const call of [()=>fs.openSync(path,"r"),()=>fs.readFileSync(path)]) {
+        try{call();codes.push("NOT_BLOCKED");}catch(error){codes.push(error.code);}
+      }
+      try{await fp.readFile(path);codes.push("NOT_BLOCKED");}catch(error){codes.push(error.code);}
+      try{fs.openSync(path,"r+");codes.push("NOT_BLOCKED");}catch(error){codes.push(error.code);}
+    }
+    return {codes};
+  `, { beforeGuard: filesystemSentinel(["/proc/self/exe", "/usr/bin/ldd"]) });
+  expect(result.result).toEqual({ codes: Array(8).fill("E2E_FILESYSTEM_DENIED") });
+  expect(result.nativeCalls).toEqual([]); expect(result.guard.expectedPlatformProbes).toHaveLength(6);
+  expect(result.guard.deniedFilesystem).toHaveLength(2); expect(() => result.guard.assertClean()).toThrow();
+  await proof(info, "platform-discovery", { result: result.result, nativeCalls: result.nativeCalls,
+    expected: result.guard.expectedPlatformProbes, unexpectedWrites: result.guard.deniedFilesystem });
+});
+
 test("I2 redirects cannot reach an independently owned foreign listener", async ({}, info) => {
   let requests = 0;
   const foreign = createServer((_request, response) => { requests++; response.end("UNREACHABLE"); });
@@ -202,6 +221,7 @@ for (const config of ["valid", "missing", "malformed"] as const) test("I6 guarde
     expect(providers.providers.every((row: { enabled: boolean }) => row.enabled === false)).toBe(true);
     app.guard.assertClean(); expect(app.guard.expectedLegacyProbes).toBeGreaterThan(0);
     await proof(info, "config-" + config, { guardReady: app.guard.ready, expectedMetadata: app.guard.expectedLegacyProbes,
+      expectedPlatformProbes: app.guard.expectedPlatformProbes,
       unexpectedFiles: app.guard.deniedFilesystem, unexpectedProcesses: app.guard.deniedProcesses });
   } finally { await app.close(); }
 });
@@ -282,7 +302,7 @@ test("I9 normal emitted server and model discovery have no unexpected execution"
     app.guard.assertClean();
     expect(app.guard.expectedDiscoveries.some((row) => row.discovery === "agy-version")).toBe(true);
     await proof(info, "normal-start", { guardReady: app.guard.ready, expected: app.guard.expectedDiscoveries,
-      expectedLegacyProbes: app.guard.expectedLegacyProbes, denials: app.guard.deniedConnections });
+      expectedLegacyProbes: app.guard.expectedLegacyProbes, expectedPlatformProbes: app.guard.expectedPlatformProbes, denials: app.guard.deniedConnections });
   } finally {
     await app.close(); expect(runtimeRoot).not.toBe(""); await assertNoOwnedFile(runtimeRoot);
     await proof(info, "normal-close", { projectionRemoved: true, sameHomePreserved: (await lstat(app.home)).isDirectory() });

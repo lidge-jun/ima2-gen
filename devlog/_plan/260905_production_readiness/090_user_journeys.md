@@ -1,5 +1,8 @@
 # WP09 — isolated, persistence-honest composer journeys
 
+Owner steering: read [098_scope_lock.md](098_scope_lock.md) first. Its delivery
+scope and exclusions supersede expansion requirements below; existing changes remain preserved.
+
 Status: WP09 P revalidation. Original WP00 baseline was
 `ecde2bc79cddc50ff0da38091c1ce0590383090c`; current implementation base is
 `7e2f084d82b8f7852be96636ced65d485c17076c` (WP08c/PR210).

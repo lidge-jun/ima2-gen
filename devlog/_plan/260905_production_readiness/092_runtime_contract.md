@@ -330,3 +330,30 @@ report fixed synthetic observations and exit. Driver code is fixture-owned, not
 retrieved text or user input. Actual normal startApp plus models/keys/quota requests
 still separately prove server startup. Do not replace either with a hand-called
 mock that cannot activate the consumer.
+
+## B causal amendment — blocked libc platform discovery
+
+Native run34000963925 at5c66d810 identifies the three remaining startup refusals:
+openSync of/proc/self/exe, openSync of/usr/bin/ldd, and readFileSync of/usr/bin/ldd.
+No content reached the original filesystem. Installed detect-libc2.1.2 uses these
+optional probes and falls back to Node's existing process.report data after denial.
+The kernel/is-wsl hypothesis was rejected by the sanitized exact-path labels.
+
+Keep both paths outside the read/write allowlist. Add expectedPlatformProbe only
+for those exact lexical paths, normalized open/readFile APIs and write=false.
+It throws E2E_FILESYSTEM_DENIED before originalFS; w/r+/O_TRUNC, streams/copies,
+other paths and user config/auth remain unexpected refusals. No/proc prefix rule.
+The IPC category expected-platform-probe is distinct from legacy metadata; the
+collector admits only open/readFile (+Sync/promises) and platformLdd/platformExecutable
+operation labels, stores readonly expectedPlatformProbes, and continues rejecting
+malformed/extra fields. J6 and native startup evidence serialize this observation.
+
+Field chain: path checker/write-intent -> private reported refusal -> IPC category
+and sanitized operation -> strict GuardReport validation -> expectedPlatformProbes
+-> J6/native evidence. There is no production API, config or provider change.
+Validation: independent original-FS sentinels on both lexical and canonical paths;
+native read/open/promise attempts remain denied, original-call count0; r+ attempts
+remain in unexpected deniedFilesystem and assertClean fails for that negative case.
+Normal guarded boot must separately pass and retain platform-refusal evidence.
+Independent proposal reviewer Maxwell01a0741a-64c5-75a2-ab93-11b4c8be8e9e PASS;
+this is not C/native acceptance. Pure regression went5pass/1fail before the change.

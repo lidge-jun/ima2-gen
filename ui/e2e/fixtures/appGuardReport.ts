@@ -8,6 +8,7 @@ export type GuardReport = {
   readonly deniedFilesystem: ReadonlyArray<{ operation: string; category: "outside-fixture" }>;
   readonly expectedDiscoveries: ReadonlyArray<{ api: string; discovery: string }>;
   readonly expectedLegacyProbes: number;
+  readonly expectedPlatformProbes: ReadonlyArray<{ operation: string }>;
   assertClean(): void;
 };
 const PROCESS_APIS = new Set(["spawn", "exec", "execFile", "fork", "spawnSync", "execSync", "execFileSync", "ChildProcess.spawn", "Worker"]);
@@ -26,6 +27,7 @@ export function createGuardReport(): GuardReport {
   const processes: Array<{ api: string }> = [];
   const filesystem: Array<{ operation: string; category: "outside-fixture" }> = [];
   const discoveries: Array<{ api: string; discovery: string }> = [];
+  const platformProbes: Array<{ operation: string }> = [];
   const invalid = () => {
     protocolError = true;
     const error = new Error("E2E_GUARD_IPC_INVALID");
@@ -52,8 +54,11 @@ export function createGuardReport(): GuardReport {
     }
     if (value.type === "ima2-e2e-file-denied" && exact(value, ["type", "operation", "category"])
       && typeof value.operation === "string" && /^[a-zA-Z.]{1,64}$/.test(value.operation)
-      && typeof value.category === "string" && ["outside-fixture", "expected-discovery-metadata"].includes(value.category)) {
-      if (value.category === "expected-discovery-metadata") expectedLegacyProbes++;
+      && typeof value.category === "string" && ["outside-fixture", "expected-discovery-metadata", "expected-platform-probe"].includes(value.category)) {
+      if (value.category === "expected-platform-probe") {
+        if (!/^(?:open(?:Sync)?|readFile(?:Sync)?|promises\.(?:open|readFile))\.platform(?:Ldd|Executable)$/.test(value.operation)) { invalid(); return; }
+        platformProbes.push({ operation: value.operation });
+      } else if (value.category === "expected-discovery-metadata") expectedLegacyProbes++;
       else filesystem.push({ operation: value.operation, category: "outside-fixture" });
       return;
     }
@@ -63,6 +68,7 @@ export function createGuardReport(): GuardReport {
     get deniedConnections() { return [...connections]; }, get deniedProcesses() { return [...processes]; },
     get deniedFilesystem() { return [...filesystem]; }, get expectedDiscoveries() { return [...discoveries]; },
     get expectedLegacyProbes() { return expectedLegacyProbes; },
+    get expectedPlatformProbes() { return [...platformProbes]; },
     assertClean() {
       if (protocolError || !ready || connections.length || processes.length || filesystem.length) {
         throw new Error("E2E_GUARD_UNEXPECTED_DENIAL:" + JSON.stringify({ ready, protocolError,

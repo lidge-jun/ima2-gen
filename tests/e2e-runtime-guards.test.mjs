@@ -146,6 +146,29 @@ test("numeric loopback lookup serves the bind literal without invoking a native 
   } finally { restore(); }
   m["node:dns"].lookup("127.0.0.1", () => {}); assert.deepEqual(f.native, ["dns.lookup"]);
 });
+
+test("fixed readonly platform probes stay denied but are distinguished from unexpected content and writes", async () => {
+  const f = await loadGuard("appFilesystemGuard.mjs"), fs = f.modules["node:fs"];
+  const restore = f.api.installFilesystemGuard(policy, f.report);
+  try {
+    for (const path of ["/proc/self/exe", "/usr/bin/ldd"]) {
+      assert.throws(() => fs.openSync(path, "r"), { code: "E2E_FILESYSTEM_DENIED" });
+      assert.equal(f.reports.at(-1).category, "expected-platform-probe");
+      assert.throws(() => fs.readFileSync(path), { code: "E2E_FILESYSTEM_DENIED" });
+      assert.equal(f.reports.at(-1).category, "expected-platform-probe");
+      for (const flags of ["w", "r+", 512]) {
+        assert.throws(() => fs.openSync(path, flags), { code: "E2E_FILESYSTEM_DENIED" });
+        assert.equal(f.reports.at(-1).category, "outside-fixture");
+      }
+      assert.throws(() => fs.readFileSync(path, { flag: "r+" }), { code: "E2E_FILESYSTEM_DENIED" });
+      assert.equal(f.reports.at(-1).category, "outside-fixture");
+    }
+    assert.throws(() => fs.readFileSync("/proc/version"), { code: "E2E_FILESYSTEM_DENIED" });
+    assert.equal(f.reports.at(-1).category, "outside-fixture");
+    assert.throws(() => fs.readFileSync(ROOT + "/.ima2/config.json"), { code: "E2E_FILESYSTEM_DENIED" });
+    assert.equal(f.reports.at(-1).category, "outside-fixture"); assert.deepEqual(f.native, []);
+  } finally { restore(); }
+});
 test("filesystem guard preserves synthetic-home data and blocks outside paths, write flags and foreign descriptors", async () => {
   const f = await loadGuard("appFilesystemGuard.mjs"), fs = f.modules["node:fs"], promises = f.modules["node:fs/promises"];
   const restore = f.api.installFilesystemGuard(policy, f.report);

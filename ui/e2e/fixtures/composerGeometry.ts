@@ -117,14 +117,14 @@ export async function reveal(target: Locator, text = false) {
   return metrics;
 }
 
-export async function inspectPanes(root: Locator, surface: ComposerSurface, long = false) {
+export async function inspectPanes(root: Locator, surface: ComposerSurface, long = false, unbrokenToken = false) {
   const observations = [];
   for (const selectors of paneSelectors(surface)) {
     const input = root.locator(selectors.input), pane = root.locator(selectors.pane);
     const label = pane.locator(selectors.label), hint = pane.locator(selectors.hint);
     await expect(label).toHaveAttribute("for", (await input.getAttribute("id"))!);
     await expect(input).toHaveAttribute("aria-describedby", (await hint.getAttribute("id"))!);
-    if (long) await input.fill(LONG_PROMPT);
+    if (long) await input.fill(LONG_PROMPT + (unbrokenToken ? "\n" + "x".repeat(512) : ""));
     const labelView = await reveal(label, true);
     const inputView = await reveal(input);
     const scrolling = await input.evaluate((element: HTMLTextAreaElement) => {

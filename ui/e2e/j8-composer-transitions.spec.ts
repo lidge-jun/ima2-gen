@@ -84,6 +84,17 @@ test("T3 prompt-studio draft survives mobile sheet remount and breakpoint round 
       await capture(page, info, `t3-width-${width}`);
     }
     expect(await page.evaluate(() => localStorage.getItem("ima2.workspaceProfile"))).toBe("prompt-studio");
+    await selectOption(page, PROVIDER_TRIGGER, "MiniMax");
+    for (const width of [800, 801, 1024]) {
+      await page.setViewportSize({ width, height: 900 });
+      if (width <= 800) await openSheet(page);
+      else await expect(page.locator(sheet)).toHaveCount(0);
+      const root = page.locator(width <= 800 ? `${sheet} .composer` : ".composer--bottom");
+      await expect(root.locator(".composer__textarea")).toHaveValue(POSITIVE);
+      await expect(root.locator(".negative-prompt__textarea, .composer__prompt-panes--dual")).toHaveCount(0);
+      await capture(page, info, `t3-minimax-width-${width}`);
+    }
+    await selectOption(page, PROVIDER_TRIGGER, "NovelAI"); await drafts(page.locator(".composer--bottom"));
     expect(observation.requests).toEqual([]);
   });
 });

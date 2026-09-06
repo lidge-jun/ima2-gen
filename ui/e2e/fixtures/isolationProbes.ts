@@ -138,7 +138,8 @@ export function filesystemSentinel(roots: string[]): string {
 import {resolve,sep} from "node:path";import {fileURLToPath} from "node:url";import {syncBuiltinESMExports} from "node:module";
 const roots=${JSON.stringify(roots)}.map(r=>resolve(r)),real=fs.realpathSync;
 const denied=(value)=>{try{let p=value instanceof URL?fileURLToPath(value):Buffer.isBuffer(value)?value.toString():value;
- if(typeof p!=="string")return true;p=resolve(p);try{p=real(p);}catch{}
+ if(typeof p!=="string")return true;p=resolve(p);if(roots.some(r=>p===r||p.startsWith(r+sep)))return true;
+ try{p=real(p);}catch{}
  return roots.some(r=>p===r||p.startsWith(r+sep));}catch{return true;}};
 for(const [target,keys] of [[fs,["readFile","readFileSync","open","openSync","copyFile","copyFileSync","cp","cpSync","existsSync","stat","statSync"]],
  [fp,["readFile","open","copyFile","cp","stat"]]])for(const key of keys){const original=target[key];

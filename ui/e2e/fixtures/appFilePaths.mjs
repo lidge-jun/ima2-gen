@@ -46,6 +46,14 @@ export function expectedMetadata(value, operation, policy) {
   }
   return op === "readdir" && wildcardBases.some((part) => path === join(policy.home, part));
 }
+export function expectedPlatformProbe(value, operation, write) {
+  if (write || !["open", "readFile"].includes(normalOp(operation))) return false;
+  // Content remains denied. This only identifies the two observed libc
+  // detector probes so its report-based fallback can run without false alarm.
+  let path;
+  try { path = lexicalPath(value); } catch { return false; }
+  return path === "/proc/self/exe" || path === "/usr/bin/ldd";
+}
 function admitted(path, operation, write, policy) {
   if (isDescendant(path, policy.home)) return !inMigration(path, policy.home);
   if (write) return false;

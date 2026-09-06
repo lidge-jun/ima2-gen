@@ -56,7 +56,7 @@ async function openComposer(page: Page, origin: string, scenario: Scenario) {
 
 async function observeGeometry(page: Page, info: TestInfo, root: Locator, scenario: Scenario, long: boolean) {
   const suffix = `${scenario.name}-${long ? "long" : "short"}`;
-  const panes = await inspectPanes(root, scenario.surface, long);
+  const panes = await inspectPanes(root, scenario.surface, long, scenario.name.startsWith("wp09-"));
   const gridScroll = await scrollGrid(root, scenario.surface);
   const geometry = await composerGeometry(root, scenario.surface);
   // Capture independent metrics before asserting so a failed floor remains reviewable.

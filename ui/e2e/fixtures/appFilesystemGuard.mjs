@@ -4,7 +4,7 @@ import os from "node:os";
 import { join, relative } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
 import { safeDenial, REPORTED } from "./appPolicy.mjs";
-import { createPathChecker, expectedMetadata, lexicalPath } from "./appFilePaths.mjs";
+import { createPathChecker, expectedMetadata, expectedPlatformProbe, lexicalPath } from "./appFilePaths.mjs";
 import { accessMode, createDescriptorRegistry } from "./appFileDescriptors.mjs";
 
 export function installFilesystemGuard(policy, report = () => {}) {
@@ -15,16 +15,18 @@ export function installFilesystemGuard(policy, report = () => {}) {
   const descriptors = createDescriptorRegistry(report);
   const platformLabels = new Map([["/usr/bin/ldd", "platformLdd"], ["/proc/self/exe", "platformExecutable"],
     ["/proc/version", "platformKernel"], ["/proc/self/cgroup", "platformContainer"]]);
-  const mark = (error, operation, value) => {
+  const mark = (error, operation, value, platformProbe = false) => {
     if (error?.[REPORTED]) return error;
     const denied = safeDenial(); denied[REPORTED] = true;
     let label;
     try { label = platformLabels.get(lexicalPath(value)); } catch { /* Never print unvalidated paths. */ }
     report({ type: "ima2-e2e-file-denied", operation: label ? `${operation}.${label}` : operation,
-      category: expectedMetadata(value, operation, policy) ? "expected-discovery-metadata" : "outside-fixture" });
+      category: platformProbe ? "expected-platform-probe"
+        : expectedMetadata(value, operation, policy) ? "expected-discovery-metadata" : "outside-fixture" });
     return denied;
   };
   const path = (value, operation, write = false) => {
+    if (expectedPlatformProbe(value, operation, write)) throw mark(null, operation, value, true);
     if (expectedMetadata(value, operation, policy)) throw mark(null, operation, value);
     return checkPath(value, operation, write);
   };
