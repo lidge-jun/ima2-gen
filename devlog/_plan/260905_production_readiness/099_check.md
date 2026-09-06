@@ -108,3 +108,13 @@ without unmounting its hook state, so composingRef survives the missing DOM fiel
 Clear only that ref after the non-NAI commit, before return navigation; preserve
 the draft and all composing/native229 guards, with no automatic submission.
 Both repairs use existing owners and existing failing tests, not new abstractions.
+
+08c3d768/run34005387069:25pass/1fail. Provider interruption now submits correctly;
+mobile Node reaches its graph after the invisible backdrop is removed. Main
+directly opened wp09-node-default-fit-390.png: toolbar's second row, selection
+bar, Elements panel and duplicate+button overlap. This is not another backdrop
+or missing-node failure; hit testing fails on the visible HUD. Mobile-only CSS
+places the four existing toolbar buttons in two44px rows, the selection bar below,
+then Elements. Hide the duplicate+action on mobile only (Add image remains).
+Desktop and graph data/generation behavior are unchanged. Re-run the same Node
+case; no new fixture or additional verification matrix.
