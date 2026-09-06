@@ -5,7 +5,7 @@ import type {
   MultimodeGenerateResponse,
   GenerateItem,
 } from "../types";
-import { jsonFetch } from "./api-core";
+import { fetchApi, jsonFetch } from "./api-core";
 import { subscribe, ensureConnected, armStreamTimeout } from "./eventChannel";
 import { cancelInflight } from "./api-inflight";
 import { parseSseErrorPayload } from "./sseStreamError";
@@ -180,7 +180,7 @@ export function postEdit(payload: GenerateRequest & { mask?: string }): Promise<
 }
 export async function importLocalImage(file: File): Promise<GenerateItem> {
   const buffer = await file.arrayBuffer();
-  const res = await fetch("/api/history/import-local", {
+  const res = await fetchApi("/api/history/import-local", {
     method: "POST",
     headers: {
       "Content-Type": file.type || "image/png",

@@ -107,6 +107,8 @@ export function table<R extends Record<string, unknown>>(rows: R[], columns: Tab
 export function exitCodeForError(e: unknown): number {
   const err = e as ErrorLike;
   if (err?.code === "SERVER_UNREACHABLE") return 3;
+  if (err?.status === 401 || err?.status === 403 || ["LAN_TOKEN_REQUIRED", "LOCAL_HOST_REJECTED",
+    "LOCAL_ORIGIN_REJECTED", "SERVER_ACCESS_DENIED"].includes(err?.code ?? "")) return 4;
   if (err?.code === "APIKEY_DISABLED") return 4;
   if (err?.code === "AUTH_CHATGPT_EXPIRED" || err?.code === "OAUTH_UNAVAILABLE") return 4;
   if (err?.code === "NETWORK_FAILED") return 6;

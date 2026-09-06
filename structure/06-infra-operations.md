@@ -18,6 +18,27 @@ The runtime table is package-derived. Clean-checkout builds and installed-packag
 
 # Infrastructure And Operations
 
+## Local/LAN access operation
+
+Non-loopback configuration requires a private `IMA2_LAN_TOKEN`; browser sessions
+are memory-only, origin-bound, absolute eight-hour capabilities. API/media access
+uses the same instance; session revocation closes admitted responses before HTTP
+shutdown. Token rotation requires restart. CLI transport attaches the environment
+token only after explicit server selection, with redirects disabled.
+
+`IMA2_PUBLIC_ORIGINS` is a strict JSON array for exact serving origins (proxy/DNS/
+published-port differences). No forwarded-header trust or broad CORS exception.
+HTTP LAN is not encrypted; use TLS/VPN for untrusted networks. New private media
+headers cannot revoke previously cached/downloaded copies; purge controlled caches.
+Rollback must disable external ingress or bind loopback before reverting protection.
+Windows configuration confidentiality relies on operator-directory ACLs; POSIX
+private writes use exclusive0600 temporary files and atomic rename.
+
+Native verification uses existing hosted CI, LAN/session/media/CLI tests and J9
+with synthetic providers/credentials. The fixture keeps actual binds loopback and
+unchanged child egress/filesystem/process restrictions. See docs/API.md and CLI.md
+for user contracts; no private state or credential is part of runtime receipts.
+
 `ima2-gen` operates as an npm package, local Node server, OAuth proxy, SQLite-backed graph store, image file store, and React build artifact. Users see one CLI, but internally the server, UI bundle, local config, runtime port discovery, and runtime data move together.
 
 This document matters because development mode and packaged mode take different paths. Developers run `npm run dev`, which builds the UI and launches the watched server. Users run `ima2 serve`, which checks for `ui/dist` and starts the server. Node mode is enabled in both paths by default. CLI clients read `~/.ima2/server.json` to find the running server. Config and generated data are split between the repo and the user's home directory.

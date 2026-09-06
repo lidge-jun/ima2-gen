@@ -1,3 +1,6 @@
+import { fetchApi } from "./api-core";
+import { createLanAuthError, getLanAuthEpoch, isLanSessionLocked } from "./lanSession";
+
 const DEFAULT_CAPACITY_RETRY_MS = 5000;
 const MAX_CAPACITY_RETRY_MS = 30000;
 
@@ -54,6 +57,7 @@ export async function submitAsyncJobWithCapacityRetry<TErrorBody>({
   signal?: AbortSignal;
   parseError: (res: Response, data: TErrorBody) => AsyncJobError;
 }): Promise<void> {
+  const epoch = getLanAuthEpoch();
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   const wait = (ms: number): Promise<void> => new Promise((resolve, reject) => {
@@ -78,7 +82,9 @@ export async function submitAsyncJobWithCapacityRetry<TErrorBody>({
 
   while (true) {
     if (signal?.aborted) throw abortError();
-    const res = await fetch(url, {
+    if (epoch !== getLanAuthEpoch()) throw createLanAuthError(epoch);
+    if (isLanSessionLocked()) throw createLanAuthError(epoch - 1);
+    const res = await fetchApi(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, async: true, requestId }),

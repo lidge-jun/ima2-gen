@@ -1,4 +1,23 @@
 {
+  "lan": {
+    "title": "連線至工作室",
+    "body": "請輸入工作室設定的 LAN 權杖。權杖不會儲存在瀏覽器儲存空間中。",
+    "token": "LAN 權杖",
+    "connect": "連線",
+    "connecting": "正在連線…",
+    "retry": "重新檢查連線",
+    "sessionExpired": "請登入工作室。已輸入的內容會保留。",
+    "unavailable": "無法連線至工作室。請檢查地址後重試。",
+    "rateLimited": "嘗試次數過多，請稍後再試。",
+    "capacity": "工作室工作階段已滿，請稍後再試。",
+    "originRejected": "請使用管理員設定的地址開啟工作室。",
+    "cookieRequired": "請允許此工作室使用 Cookie，然後重新連線。",
+    "duplicateToken": "地址包含多個權杖，請在下方輸入正確的權杖。",
+    "sessionTitle": "工作室工作階段",
+    "signOut": "登出工作室",
+    "signingOut": "正在登出…",
+    "signOutBody": "登出不會取消正在進行的生成工作。"
+  },
   "common": {
     "ok": "確定",
     "cancel": "取消",

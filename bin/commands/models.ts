@@ -1,7 +1,7 @@
 import { parseArgs } from "../lib/args.js";
 import { request, resolveServer } from "../lib/client.js";
 import type { ModelCatalog as Catalog } from "../lib/modelResolver.js";
-import { fail, json, out, table } from "../lib/output.js";
+import { exitCodeForError, fail, json, out, table } from "../lib/output.js";
 
 type Kind = "image" | "video";
 
@@ -66,7 +66,7 @@ async function fetchCatalog(serverFlag: unknown, isJson: boolean): Promise<{ bas
     return { base: server.base, catalog };
   } catch (error) {
     const message = (error as Error)?.message || "server unreachable";
-    fail({ json: isJson, code: "SERVER_UNREACHABLE", message, exitCode: 3 });
+    fail({ json: isJson, code: (error as { code?: string })?.code ?? "SERVER_REQUEST_FAILED", message, exitCode: exitCodeForError(error) });
   }
 }
 

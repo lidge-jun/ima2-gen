@@ -122,6 +122,7 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.1",
+    "node-gyp": "13.0.1",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "yaml": "2.9.0"

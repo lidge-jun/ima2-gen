@@ -2,6 +2,7 @@ import { createInterface } from "readline/promises";
 import { parseArgs } from "../lib/args.js";
 import { confirmDestructiveAction } from "../lib/destructive-confirm.js";
 import { out, die, color, json, exitFlushed } from "../lib/output.js";
+import { parsePublicOrigins } from "../../lib/localAccessPolicy.js";
 import {
   CONFIG_FILE,
   KEY_TO_ENV,
@@ -55,11 +56,11 @@ async function pathSub(_argv: string[]) {
 async function lsSub(argv: string[]) {
   const args = parseArgs(argv, { flags: FLAGS });
   if (args.effective) {
-    const eff = buildEffectiveConfig();
+    const eff = redactValue("", buildEffectiveConfig());
     if (args.json) { json(eff); return; }
     out(JSON.stringify(eff, null, 2));
   } else {
-    const fileCfg = loadFileCfg();
+    const fileCfg = redactValue("", loadFileCfg());
     if (args.json) { json(fileCfg); return; }
     out(JSON.stringify(fileCfg, null, 2));
   }
@@ -107,12 +108,18 @@ async function setSub(argv: string[]) {
     die(2, `unknown config key: "${key}". Run 'ima2 config ls --effective' to see the config structure.`);
   }
 
-  const value = parseConfigValue(rawValue);
+  let value = parseConfigValue(rawValue);
+  if (key === "server.publicOrigins") {
+    try { value = parsePublicOrigins(value); }
+    catch { die(2, "INVALID_PUBLIC_ORIGINS: expected an array of exact HTTP(S) origins without credentials, paths, query or fragments."); }
+  }
 
   // Warn if env var is overriding this key
   const override = envOverrideForKey(key);
   if (override) {
-    out(color.yellow(`warning: env ${override.envVar}=${override.value} is currently overriding this value.`));
+    out(color.yellow(key === "server.publicOrigins"
+      ? `warning: env ${override.envVar} is currently overriding this value.`
+      : `warning: env ${override.envVar}=${override.value} is currently overriding this value.`));
     out(`The file change will only apply after unsetting the env var and restarting the server.`);
   }
 

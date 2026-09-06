@@ -177,7 +177,7 @@ jobs:
       - name: Pin npm
         run: npm install -g npm@${{ matrix.npm }}
       - name: Install root deps
-        run: npm ci
+        run: npm ci --foreground-scripts
       - name: Native dependency smoke
         run: npm run test:native-deps
       - name: Install ui deps

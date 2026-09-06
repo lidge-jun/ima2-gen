@@ -71,6 +71,19 @@ again.
 
 ## Authentication and providers
 
+### Why does LAN access now show a studio sign-in page or return 401 for media?
+
+LAN APIs and generated images/videos now share an authenticated session. Open the
+studio and enter its configured LAN token; CLI users set `IMA2_LAN_TOKEN` and an
+explicit `--server` / `IMA2_SERVER`. This is separate from provider login. Sessions
+expire after eight hours or server restart. Reconnect does not replay generation,
+and sign-out does not cancel accepted work. No generated files are deleted.
+
+If a Docker port or proxy address differs, configure its exact
+`IMA2_PUBLIC_ORIGINS` value. HTTP requires a trusted network; use TLS/VPN otherwise.
+Old downloaded/cached copies cannot be revoked. See the [access contract](API.md#local-and-lan-access)
+and [CLI setup](CLI.md#lan-server-authentication).
+
 ### Do I need an OpenAI API key?
 
 No for the default generation path. The normal path uses your local Codex/ChatGPT OAuth session.

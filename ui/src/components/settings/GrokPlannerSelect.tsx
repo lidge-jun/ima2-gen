@@ -1,3 +1,4 @@
+import { fetchApi } from "../../lib/api-core";
 import { useEffect, useState } from "react";
 import { useI18n } from "../../i18n";
 import { Select } from "../controls";
@@ -12,7 +13,7 @@ export function GrokPlannerSelect() {
   const [config, setConfig] = useState<PlannerConfig | null>(null);
 
   useEffect(() => {
-    fetch("/api/config/grok-planner")
+    fetchApi("/api/config/grok-planner")
       .then((r) => r.json() as Promise<PlannerConfig>)
       .then(setConfig)
       .catch(() => {});
@@ -20,7 +21,7 @@ export function GrokPlannerSelect() {
 
   const onChange = async (model: string) => {
     try {
-      await fetch("/api/config/grok-planner", {
+      await fetchApi("/api/config/grok-planner", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model }),

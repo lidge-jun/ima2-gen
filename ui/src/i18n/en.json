@@ -1,4 +1,23 @@
 {
+  "lan": {
+    "title": "Connect to your studio",
+    "body": "Enter the LAN token configured on this studio. It is not saved in browser storage.",
+    "token": "LAN token",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "retry": "Check connection again",
+    "sessionExpired": "Studio sign-in is required. Your drafts are kept.",
+    "unavailable": "The studio could not be reached. Check its address and try again.",
+    "rateLimited": "Too many attempts. Wait before trying again.",
+    "capacity": "The studio session limit is reached. Try again later.",
+    "originRejected": "Open the studio using an address configured by its operator.",
+    "cookieRequired": "Allow cookies for this studio, then connect again.",
+    "duplicateToken": "The address contained multiple tokens. Enter the correct token below.",
+    "sessionTitle": "Studio session",
+    "signOut": "Sign out of studio",
+    "signingOut": "Signing out…",
+    "signOutBody": "Signing out does not cancel running generations."
+  },
   "common": {
     "ok": "OK",
     "cancel": "Cancel",

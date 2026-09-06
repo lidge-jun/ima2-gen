@@ -5,6 +5,7 @@ export type IsolationOptions = {
   stubUrl: string;
   mode: "minimax" | "oauth-expired" | "minimax-billing";
   withoutMinimaxKey: boolean;
+  lan?: { token: string; publicOrigins?: readonly string[] };
 };
 
 function stubOrigin(value: string): { origin: string; port: string } {
@@ -41,5 +42,11 @@ export function makeAppEnv(inherited: NodeJS.ProcessEnv, options: IsolationOptio
     IMA2_E2E_ALLOWED_ORIGIN: origin, TMPDIR: tmp, TMP: tmp, TEMP: tmp,
   });
   if (!options.withoutMinimaxKey) env.MINIMAX_API_KEY = "e2e-minimax-key";
+  if (options.lan) {
+    env.IMA2_HOST = "0.0.0.0";
+    env.IMA2_LAN_TOKEN = options.lan.token;
+    env.IMA2_PUBLIC_ORIGINS = JSON.stringify(options.lan.publicOrigins ?? []);
+    env.IMA2_E2E_LAN_BIND = "1";
+  }
   return env;
 }

@@ -1,3 +1,4 @@
+import { fetchApi } from "./api-core";
 /**
  * Phase 040 — Shared chaining actions for gallery tiles, history strip,
  * result viewer, and any future surface. Each action takes a GenerateItem
@@ -96,12 +97,13 @@ export async function executeChaining(
       const src = item.url || item.image;
       if (!src) return;
       try {
-        const response = await fetch(src);
+        const response = await fetchApi(src);
         const blob = await response.blob();
         const file = new File([blob], item.filename || "reference.png", { type: blob.type });
         await store.addReferences([file]);
         store.showToast(t("chain.refAdded"));
-      } catch {
+      } catch (error) {
+        if ((error as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
         store.showToast(t("chain.refFailed"), true);
       }
       break;

@@ -19,7 +19,7 @@ import { loadAllBundledSnapshots, readLocalSnapshot } from "../../lib/mcp/snapsh
 import type { ToolContract } from "../../lib/contracts/types.js";
 import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
-import { json, out } from "../lib/output.js";
+import { json, out, exitCodeForError } from "../lib/output.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -72,7 +72,7 @@ async function fromServer(args: ParsedArgs, path: string): Promise<Record<string
     const server = await resolveServer({ serverFlag: args.server });
     return await request(server.base, path, { timeoutMs: 8000 }) as Record<string, unknown>;
   } catch (error) {
-    if ((error as { code?: string }).code === "SERVER_UNREACHABLE" && !args.server) return null; // offline fallback
+    if ((error as { code?: string }).code === "SERVER_UNREACHABLE" && !args.server && !process.env.IMA2_SERVER) return null; // offline fallback
     throw error;
   }
 }
@@ -82,7 +82,7 @@ function emit(payload: unknown, asJson: boolean): void {
   json(payload); // machine surface: JSON is the primary output either way
 }
 
-export default async function toolsCommand(argv: string[]): Promise<void> {
+async function runToolsCommand(argv: string[]): Promise<void> {
   const args = parseArgs(argv, { flags: FLAGS });
   if (args.help) { out(HELP); return; }
   const [sub, id] = args.positional;
@@ -120,6 +120,19 @@ export default async function toolsCommand(argv: string[]): Promise<void> {
 
   out(HELP);
   process.exitCode = sub ? 1 : 0;
+}
+
+export default async function toolsCommand(argv: string[]): Promise<void> {
+  try { await runToolsCommand(argv); }
+  catch (error) {
+    if (!(error instanceof Error)) throw error;
+    const code = (error as Error & { code?: string }).code;
+    const exit = exitCodeForError(error);
+    if (exit !== 4 && code !== "SERVER_UNREACHABLE") throw error;
+    const envelope = errorEnvelope("server_error", error.message, { catalogVersion: "unavailable", cliVersion: cliVersion() });
+    json({ ...envelope, error: { ...envelope.error, code: code ?? "SERVER_ACCESS_DENIED" } });
+    process.exitCode = exit;
+  }
 }
 
 async function callTool(args: ParsedArgs, id: string, asJson: boolean): Promise<void> {

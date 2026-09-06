@@ -14,6 +14,7 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
+import { parsePublicOrigins } from "./lib/localAccessPolicy.js";
 export { SSE_STREAM_POLICY } from "./lib/eventsPolicy.js";
 import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
 import {
@@ -31,6 +32,11 @@ export const AGY_ARTIFACT_POLICY = Object.freeze({ maxBytes: 52_428_800, chunkBy
 /** Per-process API admission; streaming frames do not consume request slots. */
 export const API_REQUEST_POLICY = Object.freeze({
   windowMs: 60_000, requests: 600, mutations: 120, maxPeers: 4096,
+});
+export const LAN_SECURITY_POLICY = Object.freeze({
+  lanSessionTtlMs: 28_800_000, lanMaxSessions: 256,
+  lanAuthWindowMs: 60_000, lanAuthMaxFailures: 10,
+  lanAuthMaxBuckets: 4096, lanTokenMaxBytes: 4096,
 });
 export const GROK_PLANNER_MODELS = [
   DEFAULT_GROK_PLANNER_MODEL,
@@ -61,14 +67,18 @@ function loadConfigJson() {
     try {
       const raw = readFileSync(p, "utf-8");
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return { values: parsed, source: p };
     } catch {
       // ignore malformed config.json; env+defaults still apply
     }
   }
-  return {};
+  return { values: {}, source: null };
 }
-const fileCfg = loadConfigJson();
+const loadedFileConfig = loadConfigJson();
+const fileCfg = loadedFileConfig.values;
+export const CONFIG_SOURCE_FILE = loadedFileConfig.source;
+const publicOriginsEnv = env.IMA2_PUBLIC_ORIGINS;
+const publicOriginsFile = fileCfg.server?.publicOrigins;
 
 type Pickable = string | number | boolean | undefined;
 
@@ -116,6 +126,7 @@ export function defaultLogLevelForEnv(runtimeEnv = env) {
 }
 
 export const config = {
+  security: LAN_SECURITY_POLICY,
   diagnostics: {
     keyTimeoutMs: Math.min(30000, pickPositiveInt(env.IMA2_DIAGNOSTIC_KEY_TIMEOUT_MS, fileCfg.diagnostics?.keyTimeoutMs, 5000)),
     runtimeTimeoutMs: Math.min(30000, pickPositiveInt(env.IMA2_DIAGNOSTIC_RUNTIME_TIMEOUT_MS, fileCfg.diagnostics?.runtimeTimeoutMs, 1500)),
@@ -125,6 +136,18 @@ export const config = {
     port: pickInt(firstDefined(env.IMA2_PORT, env.PORT), fileCfg.server?.port, 3333),
     host: pickStr(env.IMA2_HOST, fileCfg.server?.host, "127.0.0.1"),
     lanToken: env.IMA2_LAN_TOKEN || "",
+    // Lazy validation permits config rm to repair a bad file-layer value.
+    // Access policy snapshots this before listening; inputs stay import-time fixed.
+    get publicOrigins(): readonly string[] {
+      try {
+        return parsePublicOrigins(publicOriginsEnv === undefined
+          ? (publicOriginsFile === undefined ? [] : publicOriginsFile) : JSON.parse(publicOriginsEnv));
+      } catch {
+        throw Object.assign(new Error("IMA2_PUBLIC_ORIGINS must be an array of exact HTTP(S) origins."), {
+          code: "INVALID_PUBLIC_ORIGINS", status: 400,
+        });
+      }
+    },
     bodyLimit: pickStr(env.IMA2_BODY_LIMIT, fileCfg.server?.bodyLimit, "50mb"),
   },
   limits: {

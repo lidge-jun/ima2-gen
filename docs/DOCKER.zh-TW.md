@@ -9,7 +9,7 @@ ima2-gen運送多級`Dockerfile`（問題＃114）。該圖像建構了
 docker build -t ima2-gen .
 docker run -d --name ima2 \
   -p 3333:3333 \
-  -e IMA2_LAN_TOKEN=change-me \
+  -e IMA2_LAN_TOKEN \
   -v ima2-data:/data \
   ima2-gen
 ```
@@ -17,11 +17,18 @@ docker run -d --name ima2 \
 或使用 compose：
 
 ```bash
-IMA2_LAN_TOKEN=change-me docker compose up -d
+docker compose up -d
 ```
 
-然後打開`http://localhost:3333/?token=change-me`（或將令牌作為
-`x-ima2-token`標頭打開API來電）。
+請先在環境中設定自行產生的強隨機 `IMA2_LAN_TOKEN`，不要使用範例權杖。
+然後開啟 `http://localhost:3333/`，在工作室登入表單輸入權杖。
+瀏覽器使用 HttpOnly 工作階段存取 API、圖片、影片與 SSE；權杖不會存入瀏覽器儲存空間。
+
+變更發布連接埠或使用代理時，設定 `IMA2_PUBLIC_ORIGINS` JSON 陣列，
+例如 `["http://localhost:8080"]`。TLS 代理須保留 Host/Origin 並轉送 Set-Cookie。
+HTTP 不會加密憑證，僅適用可信網路；不可信網路請使用 TLS/VPN。
+生成檔案現在需要授權且不快取，但無法撤回舊快取或已下載的副本。
+重新啟動會使工作階段失效，不會刪除檔案。詳見 [存取協定](API.md#local-and-lan-access) 與 [CLI 認證](CLI.md#lan-server-authentication)。
 
 ## 為什麼`IMA2_LAN_TOKEN`是必須的
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { getEventListeners } from "node:events";
 import { withJobTrackingUi, type JobTrackingUiFixture } from "./_jobTrackingUiFixture.ts";
 import type { PersistedInFlight, ServerInFlightJob, ServerTerminalJob } from "../ui/src/store/storeTypes.ts";
 
@@ -270,3 +271,75 @@ test("polling reuses unchanged memory identity while retaining local prompt/comp
     assert.deepEqual([job.prompt, job.composerPrompt, job.startedAt], ["local prompt", "local composer", 1]);
   });
 });
+
+for (const mode of ["poll", "reconcile"] as const) {
+  test(`${mode}: LAN401 retains records and draft, stops polling, and skips history`, () => withJobTrackingUi(async (f) => {
+    seed(f, [local("accepted")]);
+    const store = f.runtime.useAppStore;
+    store.setState({ prompt: "retained draft" });
+    store.getState().startInFlightPolling();
+    f.route("GET", "/api/inflight", () => Response.json({ error: { code: "LAN_TOKEN_REQUIRED", message: "denied" } }, { status: 401 }));
+    await begin(f, mode);
+    assertJobs(f, ["accepted"]); assert.equal(store.getState().prompt, "retained draft");
+    assert.equal(store.getState().toastLog.length + store.getState().errorCardLog.length, 0);
+    assert.equal([...f.timers.values()].some(timer => timer.kind === "interval"), false);
+    const requests = f.requests.length;
+    store.getState().startInFlightPolling(); await store.getState().reconcileInflight();
+    assert.equal(f.requests.length, requests);
+    assert.ok(f.requests.every(request => new URL(request.url).pathname === "/api/inflight"));
+  }));
+
+  test(`${mode}: explicit stop invalidates held result even after polling restarts`, () => withJobTrackingUi(async (f) => {
+    seed(f, [local("accepted")]);
+    const held = heldInflight(f), work = begin(f, mode);
+    f.runtime.stopInFlightPollingImpl();
+    f.runtime.useAppStore.getState().startInFlightPolling();
+    const writes = f.storage.writes.length;
+    held.resolve({ jobs: [], terminalJobs: [terminal("accepted")] }); await work;
+    assertJobs(f, ["accepted"]); assert.equal(f.storage.writes.length, writes);
+    assert.equal(f.runtime.useAppStore.getState().toastLog.length, 0);
+    assert.ok(f.requests.every(request => new URL(request.url).pathname === "/api/inflight"));
+    f.runtime.stopInFlightPollingImpl();
+  }));
+}
+
+test("poll history response cannot write after auth loss", () => withJobTrackingUi(async (f) => {
+  seed(f, [local("accepted", { startedAt: 999_000 })]);
+  const { entered, held } = heldHistory(f), work = begin(f, "poll"); await entered.promise;
+  const store = f.runtime.useAppStore, writes = f.storage.writes.length;
+  f.runtime.handleError({ code: "LAN_TOKEN_REQUIRED" }, store.getState());
+  held.resolve({ items: [{ filename: "stale.png", url: "/generated/stale.png" }] }); await work;
+  assertJobs(f, ["accepted"]); assert.deepEqual(store.getState().history, []);
+  assert.equal(f.storage.writes.length, writes);
+  assert.equal([...f.timers.values()].some(timer => timer.kind === "interval"), false);
+}));
+
+test("poll listener is removed on idle/stop and reauth resumes through existing reconcile", () => withJobTrackingUi(async (f) => {
+  const r = f.runtime, store = r.useAppStore;
+  const listeners = () => getEventListeners(window, r.LAN_AUTH_REQUIRED_EVENT).length;
+  const initialListeners = listeners();
+  f.route("GET", "/api/history", () => Response.json({ items: [] }));
+  store.getState().startInFlightPolling(); store.getState().startInFlightPolling();
+  assert.equal(listeners(), initialListeners + 1);
+  const timer = [...f.timers].find(([, value]) => value.kind === "interval"); assert.ok(timer);
+  await f.runTimer(timer[0]); await f.runTimer(timer[0]);
+  assert.equal(listeners(), initialListeners); assert.equal(f.timers.has(timer[0]), false);
+
+  seed(f, [local("retained")]);
+  const held = heldInflight(f), work = begin(f, "poll");
+  r.requireLanAuthentication();
+  assert.equal(listeners(), initialListeners);
+  f.route("POST", "/api/auth/lan/session", () => new Response(null, { status: 204 }));
+  f.route("GET", "/api/auth/lan/session", () => Response.json({ mode: "lan", authenticated: true, expiresAt: 9_000_000 }));
+  await r.createLanSession("synthetic-fixture-token");
+  store.getState().startInFlightPolling();
+  held.resolve({ jobs: [], terminalJobs: [terminal("retained")] }); await work;
+  assert.deepEqual(store.getState().inFlight.map(job => job.id), ["retained"]);
+  assert.equal(store.getState().toastLog.length, 0);
+  f.route("GET", "/api/inflight", () => Response.json({ jobs: [active("retained")], terminalJobs: [] }));
+  await store.getState().reconcileInflight();
+  assert.equal(store.getState().inFlight[0].phase, "streaming");
+  assert.ok(f.requests.every(request => request.method === "GET" || new URL(request.url).pathname === "/api/auth/lan/session"));
+  r.stopInFlightPollingImpl(); r.stopInFlightPollingImpl();
+  assert.equal(listeners(), initialListeners);
+}));

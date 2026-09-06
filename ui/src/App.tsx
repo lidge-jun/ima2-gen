@@ -17,6 +17,8 @@ import { MobileAppBar } from "./components/MobileAppBar";
 import { NavRail } from "./components/NavRail";
 import { MobileComposeSheet } from "./components/MobileComposeSheet";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
+import { stopInFlightPollingImpl } from "./store/storeInflightImpl";
+import { isLanSessionLocked } from "./lib/lanSession";
 import {
   GENERATION_DEFAULTS_STORAGE_KEY, IMAGE_MODEL_STORAGE_KEY, VIDEO_DEFAULTS_STORAGE_KEY,
 } from "./store/persistenceRegistry";
@@ -101,6 +103,7 @@ export default function App() {
   }, [locale]);
 
   useEffect(() => {
+    if (isLanSessionLocked()) return;
     void syncCapabilities();
     hydrateHistory();
     if (ENABLE_AGENT_MODE || ENABLE_NODE_MODE) loadSessions();
@@ -111,6 +114,11 @@ export default function App() {
     onConnectionStateChange((state) => {
       if (state === "failed") console.warn("[SSE] connection failed after multiple retries");
     });
+    return () => {
+      stopInFlightPollingImpl();
+      onResync(() => {});
+      onConnectionStateChange(() => {});
+    };
   }, [hydrateHistory, loadSessions, reconcileInflight, startInFlightPolling, syncCapabilities]);
 
   useEffect(() => {

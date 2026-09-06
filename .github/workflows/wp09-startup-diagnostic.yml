@@ -1,4 +1,4 @@
-name: WP09 focused UI diagnostic
+name: Focused UI diagnostic
 
 on:
   push:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   startup:
-    name: WP09 focused UI diagnostic (not release CI)
+    name: Focused UI diagnostic (not release CI)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -45,12 +45,15 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ui/package-lock.json
-      - run: npm ci
+      - run: npm ci --foreground-scripts
       - run: npm --prefix ui ci --no-audit --no-fund
       - name: Install browser for the observed UI failures
         run: npx --prefix ui playwright install --with-deps chromium
       - run: npm run build:server
       - run: npm run build:cli
+      - name: Verify corrected native session authority contract
+        run: >-
+          node --import tsx --test --test-name-pattern='^hosted HTTP:' tests/lan-session.test.ts
       - name: Build fixture UI
         id: fixture_build
         run: npm --prefix ui run build:fixture
@@ -59,7 +62,7 @@ jobs:
         env:
           WP08_BUILD_COMMAND: npm --prefix ui run build:fixture
           WP08_BUILD_OUTCOME: ${{ steps.fixture_build.outcome }}
-        run: npm --prefix ui run test:e2e -- --project=journeys --grep 'Node default and explicit fit 1280' --reporter=line
+        run: npm --prefix ui run test:e2e -- --project=journeys --grep 'WP02 Grok API survives|J9' --reporter=line
       - name: Upload diagnostic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

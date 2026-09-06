@@ -3351,5 +3351,26 @@
     "selector": ".viewer-controls",
     "expected": "var(--r-pill)",
     "important": false
+  },
+  {
+    "file": "ui/src/styles/lan-sign-in.css",
+    "atRule": null,
+    "selector": ".lan-sign-in__panel",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/lan-sign-in.css",
+    "atRule": null,
+    "selector": ".lan-sign-in__panel input",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/lan-sign-in.css",
+    "atRule": null,
+    "selector": ".lan-sign-in__panel button",
+    "expected": "var(--r-md)",
+    "important": false
   }
 ]

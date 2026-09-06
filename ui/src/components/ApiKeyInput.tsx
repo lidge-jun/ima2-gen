@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import { useState, useCallback } from "react";
 import { useI18n } from "../i18n";
 
@@ -28,7 +29,7 @@ export function ApiKeyInput({ provider, label, placeholder, maskedKey, source, c
     setError(null);
     setSuccess(false);
     try {
-      const res = await fetch(`/api/keys/${provider}`, {
+      const res = await fetchApi(`/api/keys/${provider}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: key.trim() }),
@@ -43,7 +44,8 @@ export function ApiKeyInput({ provider, label, placeholder, maskedKey, source, c
         onSaved();
         setTimeout(() => setSuccess(false), 3000);
       }
-    } catch {
+    } catch (error) {
+      if ((error as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
       setError(t("settings.apiKeys.networkError"));
     } finally {
       setSaving(false);
@@ -52,7 +54,7 @@ export function ApiKeyInput({ provider, label, placeholder, maskedKey, source, c
 
   const handleDelete = useCallback(async () => {
     try {
-      const res = await fetch(`/api/keys/${provider}`, { method: "DELETE" });
+      const res = await fetchApi(`/api/keys/${provider}`, { method: "DELETE" });
       if (!res.ok) {
         setError(t("settings.apiKeys.removeFailed"));
         return;
@@ -60,7 +62,8 @@ export function ApiKeyInput({ provider, label, placeholder, maskedKey, source, c
       setKey("");
       setEditing(false);
       onSaved();
-    } catch {
+    } catch (error) {
+      if ((error as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
       setError(t("settings.apiKeys.networkError"));
     }
   }, [provider, onSaved, t]);

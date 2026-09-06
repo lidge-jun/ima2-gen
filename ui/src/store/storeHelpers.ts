@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import type {
   Format,
   GenerateItem,
@@ -294,7 +295,7 @@ export function stripDataUrlPrefix(dataUrl: string): string {
 }
 
 export async function compressReferenceSource(src: string, filename = "reference.png"): Promise<string> {
-  const resp = await fetch(src);
+  const resp = await fetchApi(src);
   if (!resp.ok) throw new Error(`reference fetch failed: ${resp.status}`);
   const blob = await resp.blob();
   const file = new File([blob], filename, { type: blob.type || "image/png" });

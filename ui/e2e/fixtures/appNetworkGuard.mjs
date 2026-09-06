@@ -26,7 +26,9 @@ function destination(args) {
   return null;
 }
 function literalLoopbackLookup(args, promise) {
-  if (args[0] !== "127.0.0.1" || args.length > (promise ? 2 : 3)) return null;
+  const lanBind = args[0] === "0.0.0.0" && process.env.IMA2_E2E_LAN_BIND === "1"
+    && process.env.IMA2_HOST === "0.0.0.0";
+  if ((args[0] !== "127.0.0.1" && !lanBind) || args.length > (promise ? 2 : 3)) return null;
   const callback = promise ? null : args.at(-1);
   if (!promise && typeof callback !== "function") return null;
   const options = typeof args[1] === "function" ? undefined : args[1];
@@ -55,6 +57,7 @@ export function installNetworkGuard(_policy, report, origin = process.env.IMA2_E
       if (literal) {
         // Node's listen(host) calls lookup even for a numeric address. Return
         // only the fixed IPv4 literal: never call the captured native resolver.
+        // Explicit LAN fixtures retain LAN config but cannot bind a public socket.
         const value = { address: "127.0.0.1", family: 4 };
         if (target === dnsPromises) return Promise.resolve(literal.all ? [value] : value);
         process.nextTick(literal.callback, null, ...(literal.all ? [[value]] : [value.address, value.family]));

@@ -29,7 +29,8 @@ export async function requireAppHome(path: string): Promise<void> {
 function ownedOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);
-    return url.origin === origin && url.protocol === "http:" && url.hostname === "127.0.0.1"
+    return url.origin === origin && ["http:", "https:"].includes(url.protocol)
+      && ["127.0.0.1", "localhost"].includes(url.hostname)
       && Boolean(url.port) && url.port !== "3333" && !url.username && !url.password;
   } catch { return false; }
 }

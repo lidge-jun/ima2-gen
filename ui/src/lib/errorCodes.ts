@@ -1,9 +1,11 @@
 // 0.09.8 — ImaErrorCode registry + classifier.
 import { classSpec, isPriorityErrorClass } from "./errorClassSpecs";
+import { createLanAuthError } from "./lanSession";
 // Mirrors lib/errorClassify.js on the server. Frontend uses this to map
 // server error codes (or raw strings) to i18n keys + surface (toast vs card).
 
 export type ImaErrorCode =
+  | "LAN_TOKEN_REQUIRED"
   | "REF_TOO_LARGE"
   | "REF_NOT_BASE64"
   | "REF_EMPTY"
@@ -73,6 +75,8 @@ export type ErrorSpec = {
 };
 
 export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
+  // handleError routes this to the LAN gate before either presentation surface.
+  LAN_TOKEN_REQUIRED: { surface: "toast" },
   REF_TOO_LARGE: { surface: "toast", toastKey: "toast.refTooLarge" },
   REF_NOT_BASE64: { surface: "toast", toastKey: "toast.refNotBase64" },
   REF_EMPTY: { surface: "toast", toastKey: "toast.refEmpty" },
@@ -245,6 +249,10 @@ export function resolveErrorSpec(err: unknown): ResolvedErrorSpec {
   const rec = e && typeof e === "object" ? e as Record<string, unknown> : {};
   const rawMessage = typeof rec.message === "string" ? rec.message : String(err ?? "");
   const incomingCode = typeof rec.code === "string" ? rec.code : "";
+  if (incomingCode === "LAN_TOKEN_REQUIRED") {
+    return { code: "LAN_TOKEN_REQUIRED", spec: errorCodes.LAN_TOKEN_REQUIRED,
+      message: createLanAuthError().message };
+  }
   const incomingRawCode = typeof rec.rawCode === "string" ? rec.rawCode : undefined;
   const incomingClass = typeof rec.errorClass === "string" ? rec.errorClass : undefined;
   // A wrapper code (e.g. the agent's AGENT_TEXT_ONLY_RESULT) is not in the registry,

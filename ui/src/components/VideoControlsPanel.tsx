@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import { useEffect, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
@@ -73,7 +74,7 @@ export function VideoControlsPanel() {
 
   const [plannerConfig, setPlannerConfig] = useState<PlannerConfig | null>(null);
   useEffect(() => {
-    fetch("/api/config/grok-planner")
+    fetchApi("/api/config/grok-planner")
       .then((r) => r.json() as Promise<PlannerConfig>)
       .then(setPlannerConfig)
       .catch(() => {});
@@ -82,14 +83,15 @@ export function VideoControlsPanel() {
     const previousModel = plannerConfig?.model;
     setPlannerConfig((prev) => prev ? { ...prev, model } : null);
     try {
-      const response = await fetch("/api/config/grok-planner", {
+      const response = await fetchApi("/api/config/grok-planner", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    } catch {
+    } catch (error) {
       setPlannerConfig((prev) => prev && previousModel ? { ...prev, model: previousModel } : prev);
+      if ((error as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
       showToast(t("video.plannerUpdateFailed"), true);
     }
   };

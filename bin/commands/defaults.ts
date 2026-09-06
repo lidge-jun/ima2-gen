@@ -15,7 +15,7 @@ import {
   setNestedKey,
   CONFIG_FILE,
 } from "../lib/config-store.js";
-import { color, die, dieWithError, fail, json, out } from "../lib/output.js";
+import { color, die, exitCodeForError, fail, json, out } from "../lib/output.js";
 
 const MODEL_KEYS = ["imageModels.default", "apiProvider.defaultImageModel"] as const;
 const REASONING_KEYS = ["imageModels.reasoningEffort", "apiProvider.defaultReasoningEffort"] as const;
@@ -84,7 +84,8 @@ async function readDefaults(args: ReturnType<typeof parseArgs>) {
       defaults: { ...(capabilities.defaults ?? {}), cli: loadCliDefaults() },
     };
   } catch (error) {
-    if (args.server) throw error;
+    if (args.server !== undefined || process.env.IMA2_SERVER !== undefined
+      || (error as { code?: string })?.code !== "SERVER_UNREACHABLE") throw error;
     return localDefaults();
   }
 }
@@ -162,8 +163,8 @@ async function fetchModelCatalog(args: ReturnType<typeof parseArgs>): Promise<Re
     return catalog.lanes ?? {};
   } catch (error) {
     fail({
-      json: Boolean(args.json), code: "SERVER_UNREACHABLE",
-      message: (error as Error)?.message || "server unreachable", exitCode: 3,
+      json: Boolean(args.json), code: (error as { code?: string })?.code ?? "SERVER_REQUEST_FAILED",
+      message: (error as Error)?.message || "server request failed", exitCode: exitCodeForError(error),
     });
   }
 }
@@ -210,7 +211,8 @@ async function listSub(argv: string[]): Promise<void> {
     if (args.json) json(payload);
     else printDefaults(payload);
   } catch (error) {
-    dieWithError(error);
+    fail({ json: Boolean(args.json), code: (error as { code?: string })?.code ?? "SERVER_REQUEST_FAILED",
+      message: (error as Error)?.message || "server request failed", exitCode: exitCodeForError(error) });
   }
 }
 

@@ -1,3 +1,4 @@
+import { fetchApi } from "./api-core";
 import type { GenerateItem } from "../types";
 import type {
   AgentGenerationSettings,
@@ -15,7 +16,7 @@ type AgentSessionPatch = {
 };
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetchApi(url, init);
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as {
       error?: string | { message?: string; code?: string };

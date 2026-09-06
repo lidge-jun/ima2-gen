@@ -1,6 +1,7 @@
 // SSE consumer for CLI streaming endpoints. Plain fetch + line-based parser, no external libs.
 
 import { parseEventCursor } from "../../lib/eventsPolicy.js";
+import { fetchServerUrl } from "./client.js";
 
 let CLI_VERSION = "0.0.0";
 export function setCliVersion(v: string) { CLI_VERSION = v; }
@@ -102,7 +103,7 @@ async function openWithMethod(url: string, init: SseInit, defaultMethod: string)
   init.signal?.addEventListener("abort", forwardAbort, { once: true });
   if (init.signal?.aborted) close();
   try {
-    const res = await fetch(url, {
+    const res = await fetchServerUrl(url, {
       method: init.method || defaultMethod,
       headers: requestHeaders(init),
       ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
