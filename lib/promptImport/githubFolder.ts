@@ -252,7 +252,7 @@ async function fetchJson(url: string, limits: PromptImportLimits): Promise<Fetch
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);
   let response: PinnedHttpResponse | undefined;
   try {
-    response = await publicPinnedHttpGet(url, controller.signal, assertGithubApiUrl, { Accept: "application/vnd.github+json" });
+    response = await publicPinnedHttpGet(url, controller.signal, assertGithubApiUrl, { Accept: "application/vnd.github+json", "User-Agent": "ima2-gen" });
     if (response.status === 404) { await response.cancel(); return { notFound: true }; }
     if (response.status < 200 || response.status >= 300) {
       await response.cancel();

@@ -105,6 +105,9 @@ describe("prompt import GitHub folder contract", () => {
     network.respond = () => ({ chunks: [Buffer.from(JSON.stringify(folderItems()))] });
     const source = normalizeGitHubFolderSource("o/r:prompts/");
     const result = await fetchGitHubFolderFiles(source, limits);
+    const headers = new Headers(network.exchanges[0]!.options.headers as Record<string, string>);
+    assert.equal(headers.get("user-agent"), "ima2-gen", "GitHub REST requires an application User-Agent");
+    assert.equal(headers.get("accept"), "application/vnd.github+json");
     assert.equal(result.files.length, 1);
     assert.equal(result.files[0].path, "prompts/poster.md");
     assert.ok(result.warnings.some((warning) => warning.includes("unsupported-extension")));
