@@ -81,7 +81,8 @@ function findExecutable(originalPath: string): string | null {
 
 function assertInside(root: string, path: string): void {
   const rel = relative(root, path);
-  assert.ok(rel && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel), "FFmpeg path escapes fixture");
+  assert.ok(rel && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel),
+    `FFmpeg path escapes fixture (relativeEmpty=${rel === ""}, absolute=${isAbsolute(rel)})`);
 }
 
 function ownedPath(state: State, path: string, extension: string, input = false): string {

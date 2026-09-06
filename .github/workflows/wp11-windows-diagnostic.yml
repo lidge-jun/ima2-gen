@@ -1,0 +1,66 @@
+name: WP11 Windows diagnostic
+on:
+  push:
+    branches: [codex/prod-wp11-installation]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact diagnostic source SHA
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.17.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Exact diagnostic checkout
+        env:
+          EXPECTED_SHA: ${{ inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
+      - run: npm install -g npm@12.0.0
+      - run: npm ci
+      - run: npm --prefix ui ci --no-audit --no-fund
+      - run: npm run build:server
+      - run: npm run build:cli
+      - name: Observe native environment synthesis and owned watcher events
+        shell: bash
+        run: |
+          node --import tsx --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          import { syncBuiltinESMExports } from 'node:module';
+          import { relative } from 'node:path';
+          import { receiptFixture } from './tests/_uiBuildReceiptFixture.mjs';
+          import { beginUiBuild, abortUiBuild } from './scripts/lib/uiBuildReceipt.mjs';
+          const env = Object.fromEntries(['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
+          for (const loader of [[], ['--import', 'tsx']]) {
+            const child = spawnSync(process.execPath, [...loader, '-e', 'console.log(JSON.stringify({profilePresent:process.env.USERPROFILE!==undefined,homePresent:process.env.HOME!==undefined}))'], { env, encoding: 'utf8', timeout: 10000 });
+            console.log(JSON.stringify({ kind: 'environment-observation', loader: loader.length > 0, status: child.status, output: child.stdout.trim() }));
+          }
+          const f = await receiptFixture(), events = [], original = fs.watch;
+          let transaction;
+          fs.watch = (target, options, callback) => original(target, options, (event, filename) => {
+            events.push({ target: relative(f.root, String(target)), event, filename: filename == null ? null : String(filename) });
+            callback(event, filename);
+          });
+          syncBuiltinESMExports();
+          try { transaction = await beginUiBuild(f.root); console.log(JSON.stringify({ kind: 'watch-observation', outcome: 'began', events })); }
+          catch (error) { console.log(JSON.stringify({ kind: 'watch-observation', outcome: error.code, events })); }
+          finally { fs.watch = original; syncBuiltinESMExports(); if (transaction) await abortUiBuild(f.root, transaction); await f.close(); }
+          JS
+      - name: Existing failing Windows slices only
+        run: node --import tsx --test tests/action-pin-contract.test.ts tests/agy-artifact-check-contract.test.ts tests/j6-isolation-preflight.test.mjs tests/stop-command-contract.test.ts tests/ui-build-receipt-transaction.test.mjs tests/ui-gradient-manifest-contract.test.ts tests/vectorize-cli-contract.test.ts tests/videoExtendedRoute.test.ts

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 
 const UI_SRC = join(import.meta.dirname, "..", "ui", "src");
 const STYLES_DIR = join(UI_SRC, "styles");
@@ -70,7 +70,7 @@ describe("ui-gradient-manifest-contract", () => {
       }
     }
     for (const file of cssFiles) {
-      const rel = relative(UI_SRC, file);
+      const rel = relative(UI_SRC, file).split(sep).join("/");
       if (seen.has(rel)) continue;
       const count = countGradients(file);
       if (count > 0) {
@@ -110,7 +110,7 @@ describe("ui-gradient-manifest-contract", () => {
       if (file === INDEX_CSS) continue;
       const content = readFileSync(file, "utf8");
       const count = (content.match(/var\(--skeleton-shimmer\)/g) || []).length;
-      if (count > 0) actualConsumers.push(relative(UI_SRC, file));
+      if (count > 0) actualConsumers.push(relative(UI_SRC, file).split(sep).join("/"));
       refs += count;
     }
     assert.equal(refs, 6, "--skeleton-shimmer should be referenced by 6 consumers");
@@ -126,7 +126,7 @@ describe("ui-gradient-manifest-contract", () => {
     for (const file of cssFiles) {
       const content = readFileSync(file, "utf8");
       if (/\.canvas__blank-sheet\s*\{[^}]*(?:background|background-image)\s*:/.test(content)) {
-        filesWithBg.push(relative(UI_SRC, file));
+        filesWithBg.push(relative(UI_SRC, file).split(sep).join("/"));
       }
     }
     assert.deepStrictEqual(filesWithBg, ["styles/viewer-workflow.css"]);

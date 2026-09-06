@@ -51,8 +51,10 @@ function load(state, overrides = {}) {
     mkdtempSync: () => { throw Error("preflight must not create fixture directories"); },
     writeFileSync: () => { throw Error("preflight must not write files"); },
   };
-  const modules = { "node:fs": { ...fs, ...overrides.fs }, "node:path": path,
-    "node:url": urls, "@playwright/test": { expect: {}, test: { extend: () => ({}) } },
+  // This is a synthetic Linux host even when the unit test runs on Windows.
+  const modules = { "node:fs": { ...fs, ...overrides.fs }, "node:path": path.posix,
+    "node:url": { ...urls, fileURLToPath: (value) => urls.fileURLToPath(value, { windows: false }) },
+    "@playwright/test": { expect: {}, test: { extend: () => ({}) } },
     "node:fs/promises": overrides.promises ?? {},
     "node:os": { homedir: () => runnerHome, userInfo: () => ({ homedir: runnerHome }), tmpdir: () => "/tmp" },
     "node:child_process": overrides.childProcess ?? { spawn: () => { throw Error("preflight must not spawn"); } },
