@@ -14,7 +14,7 @@ export const RUNTIME_GUARDS = ["appPolicy.mjs", "appFilePaths.mjs", "appFileDesc
   "appFilesystemGuard.mjs", "appProcessGuard.mjs", "appNetworkGuard.mjs"] as const;
 type SourceFile = { path: string; bytes: Buffer; sha256: string };
 type Cache = { repoRoot: string; container: string; dev: number; ino: number; head: string; compilerIdentity: string;
-  sourceDigest: string; snapshot: EmittedSnapshot };
+  sourceDigest: string; runtimeIdentity: { dev: number; ino: number } | null; snapshot: EmittedSnapshot };
 let pending: Promise<Cache> | undefined;
 let cache: Cache | undefined;
 const run = promisify(execFile);
@@ -113,11 +113,13 @@ async function build(root: string): Promise<Cache> {
   const container = await realpath(await mkdtemp(join(tmpdir(), "ima2-emitted-cache-")));
   const metadata = await lstat(container);
   const state: Cache = { repoRoot: root, container, dev: metadata.dev, ino: metadata.ino, head: input.head,
-    compilerIdentity: tool.identity, sourceDigest: input.digest,
+    compilerIdentity: tool.identity, sourceDigest: input.digest, runtimeIdentity: null,
     snapshot: { root: join(container, "runtime"), sourceDigest: input.digest, compilerVersion: tool.version, files: [] } };
   try {
     const stage = join(container, "source"), output = state.snapshot.root;
     await mkdir(stage); await mkdir(output);
+    const runtimeMetadata = await lstat(output);
+    state.runtimeIdentity = { dev: runtimeMetadata.dev, ino: runtimeMetadata.ino };
     for (const file of input.files) await put(stage, file.path, file.bytes);
     const dependencies = await realpath(join(root, "node_modules"));
     await symlink(dependencies, join(stage, "node_modules"), "dir");
@@ -145,6 +147,12 @@ async function build(root: string): Promise<Cache> {
   } catch (error) { await dispose(state); throw error; }
 }
 async function verify(entry: Cache): Promise<void> {
+  for (const [path, identity] of [[entry.container, entry], [entry.snapshot.root, entry.runtimeIdentity]] as const) {
+    if (!identity) return fail("E2E_CACHE_OWNERSHIP");
+    const metadata = await lstat(path);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.dev !== identity.dev
+      || metadata.ino !== identity.ino || await realpath(path) !== path) return fail("E2E_CACHE_OWNERSHIP");
+  }
   const input = await sources(entry.repoRoot), tool = await compiler(entry.repoRoot);
   if (input.head !== entry.head || input.digest !== entry.sourceDigest || tool.identity !== entry.compilerIdentity) return fail("E2E_CACHE_STALE");
   for (const file of entry.snapshot.files) {

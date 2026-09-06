@@ -112,3 +112,16 @@ for (const mutation of ["source", "head", "compiler", "emitted", "cache", "missi
     assert.equal(f.state.compiles.length, 2);
   } finally { await f.close(); }
 });
+
+test("identical cached bytes do not authorize replacing the runtime root with a symlink", async () => {
+  const f = await fixture(); let runtime, backup;
+  try {
+    runtime = (await f.api.getVerifiedRuntimeBuild(f.root)).root; backup = runtime + "-owned-backup";
+    await fs.rename(runtime, backup); await fs.symlink(backup, runtime, "dir");
+    await assert.rejects(f.api.getVerifiedRuntimeBuild(f.root), /E2E_CACHE_OWNERSHIP/);
+    assert.equal(f.state.compiles.length, 2);
+  } finally {
+    if (runtime && backup) { await fs.unlink(runtime); await fs.rename(backup, runtime); }
+    await f.close();
+  }
+});

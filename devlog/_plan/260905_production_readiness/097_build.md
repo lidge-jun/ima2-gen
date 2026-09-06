@@ -129,3 +129,13 @@ calling any original DNS API. All other names/resolvers, foreign ports and
 transport APIs retain their denial behavior. Hosted bind probe now installs an
 independent pre-guard DNS sentinel, so a native resolver call cannot pass unnoticed.
 The fix is not yet native-green; next exact-head CI must prove it.
+
+Cache identity review found a distinct pre-copy gap: file hashes were rechecked
+but the cache runtime root itself was not. Hypotheses: missing root metadata
+validation; skipped cache verification; accidental content/source mutation in the
+test. Existing byte-tamper rejection falsifies skipped verification, and an owned
+rename-plus-symlink preserves all bytes/source while reproducing acceptance.
+The new pure compiler fixture failed9-pass/1-fail with Missing expected rejection.
+Main stores the original runtime dev/ino and validates both container and runtime
+directory identity/canonicality before cache reads. No app/provider startup or
+OS guard installation occurs in this synthetic compiler test.
