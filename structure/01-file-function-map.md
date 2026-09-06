@@ -457,10 +457,14 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 
 ## Test Map
 
-The `tests/` directory now contains roughly 125 `*.test.js` / `*.test.mjs` / `*.test.ts` files (plus a handful of `*-contract.test.js` and harness `.mjs` files). The table below highlights representative contracts only — for the authoritative list, run `ls tests/`. New since the previous snapshot include `api-provider-parity.test.ts` (#49 — API-key Responses parity for generate/edit/multimode/node), `oauth-masked-edit-contract.test.js` (#31 masked-edit feature flag groundwork), `gallery-session-scope-contract.test.js` and `gallery-shortcuts-visible-domain-contract.test.js` (#42), `settings-persistence-contract.test.js` (#43 + persistence harden), `toast-stack-contract.test.js` (stacked error toasts), `node-generation-lock-contract.test.js` (concurrent-generate dedupe), `mobile-generate-entry-contract.test.js` (mobile compose), `prompt-import-search-ux-contract.test.js`, `inflight-reload-reconcile-contract.test.js` and `inflight-reload-race.test.js` (#47), plus the canvas-mode contract suite carried forward from the previous snapshot.
+The table below includes representative historical contracts, not a current test count. The generated `docs/migration/runtime-test-inventory.md` and `npm run test:inventory` are the authoritative inventory; `scripts/run-tests.mjs` owns discovery and execution.
 
 | Test | Lines | Contract covered |
 |---|---:|---|
+| `tests/install-runtime-contract.test.ts` | n/a | Hosted POSIX/PS5.1 installer order, Node floor, npm/doctor failure, no collateral operations |
+| `tests/runtime-install-projection.test.ts` | n/a | Package metadata projection, no-write checks, invalid-input and source/public drift |
+| `tests/ci-windows-candidate.test.ts` | n/a | Exact-SHA checkout and mandatory Windows installer verification |
+| `tests/pages-publication-contract.test.ts` | n/a | Published registry/source/report compatibility and Pages upload ordering |
 | `tests/structure-line-counts-contract.test.js` | n/a | `structure/01` lib/bin/route line counts match live sources (`docs:refresh-line-counts --check`) |
 | `tests/api-docs-contract.test.js` | n/a | Every `routes/*.ts` `/api/*` path is documented in `docs/API.md` |
 | `tests/cli-feature-parity-contract.test.js` | n/a | CLI provider/web-search parity and `docs/CLI.md` public contract |
@@ -543,6 +547,14 @@ The `tests/` directory now contains roughly 125 `*.test.js` / `*.test.mjs` / `*.
 | `tests/package-install-smoke.mjs` | 202 | Optional tarball install smoke |
 
 ## Refactor Signals
+
+Installation and publication script owners:
+
+| Script | Owned contract |
+|---|---|
+| `scripts/generate-runtime-install-contract.mjs` | Package/.node-version projection into current docs and source/public installers |
+| `scripts/assert-ci-sha.mjs` | Current checkout matches the full expected candidate SHA before dependency commands |
+| `scripts/pages-publication-gate.mjs` | Site source, stable tag, exact/latest metadata and offline installed report agree |
 
 | Signal | Current state | Recommended docs to update |
 |---|---|---|

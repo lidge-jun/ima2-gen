@@ -1,5 +1,7 @@
 # npx Quickstart
 
+The package engine requirement applies to npx too; source `.ts` files require the normal build before emitted `.js` files are run.
+
 > The recommended install method is `npm install -g ima2-gen`. This page covers
 > the alternative `npx` workflow for one-shot usage without a global install.
 
@@ -10,6 +12,10 @@ npx ima2-gen serve
 ```
 
 Then open `http://localhost:3333`.
+
+To check the installed package without starting a server or reading provider
+credentials, run `npx ima2-gen doctor --installation --json`. A failed local
+prerequisite exits1; missing provider credentials are not installation failures.
 
 If ChatGPT OAuth is not logged in yet:
 

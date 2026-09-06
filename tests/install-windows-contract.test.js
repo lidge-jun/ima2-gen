@@ -12,16 +12,8 @@ test("Windows installers use PowerShell 5.1-safe npm handling", () => {
   for (const installerPath of installerPaths) {
     const script = readFileSync(installerPath, "utf8");
 
-    assert.match(
-      script,
-      /Join-Path \(Join-Path \$npmGlobal 'node_modules'\) '\.package-lock\.json'/,
-      `${installerPath} should compose the npm lockfile path with nested Join-Path calls`,
-    );
-    assert.doesNotMatch(
-      script,
-      /Join-Path \$npmGlobal 'node_modules' '\.package-lock\.json'/,
-      `${installerPath} should not pass three positional arguments to Join-Path`,
-    );
+    assert.doesNotMatch(script, /\.package-lock\.json|Remove-Item/, `${installerPath} must not delete npm lockfiles`);
+    assert.doesNotMatch(script, /Stop-Process|npm cache clean|sudo/, `${installerPath} must not perform collateral cleanup or privilege retries`);
     assert.match(script, /function Invoke-Npm/, `${installerPath} should isolate native npm invocation`);
     assert.match(
       script,
@@ -29,6 +21,10 @@ test("Windows installers use PowerShell 5.1-safe npm handling", () => {
       `${installerPath} should allow npm warnings to be captured without aborting the installer`,
     );
     assert.match(script, /\$installResult\.ExitCode -ne 0/, `${installerPath} should check npm's exit code`);
+    assert.match(script, /doctor --installation --json/, `${installerPath} should run the offline doctor before launch`);
+    assert.match(script, /runtime-contract:generated:start/);
+    const engine = JSON.parse(readFileSync("package.json", "utf8")).engines.node;
+    assert.match(script, new RegExp(`\\$MIN_NODE = ${engine.match(/\d+/)[0]}`));
   }
 });
 

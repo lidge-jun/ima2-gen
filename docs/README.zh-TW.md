@@ -1,5 +1,18 @@
 # ima2-gen
 
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+安裝程式從套件中繼資料讀取 Node.js 最低版本，並在啟動伺服器前執行離線安裝檢查。
+
 <p align="center">
   <img src="../assets/logo.png" alt="ima2-gen logo" width="240">
 </p>
@@ -75,7 +88,7 @@ irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 ```
 
-每個腳本都會檢查 nvm、fnm、Homebrew 或 winget，選擇最適合的方法安裝 Node LTS，並自動清理殘留的舊程序。
+每個腳本都會檢查支援的 Node 版本，必要時使用 nvm、fnm、Homebrew 或 winget 安裝 Node LTS。npm 安裝只嘗試一次，通過 `ima2 doctor --installation --json` 後才啟動伺服器。腳本不會終止其他程序或刪除全域鎖定檔案。
 
 ### 設定
 
@@ -96,7 +109,7 @@ curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 npm install -g ima2-gen@latest
 ```
 
-現在按下 Ctrl+C 會正常關閉程式：關閉資料庫、停止子程序並釋放檔案鎖定。如果使用舊版（< 1.1.22），或在 Windows 上看到 `EBUSY`，請改用會自動清理殘留程序的安裝腳本。
+按下 Ctrl+C 會關閉資料庫、停止子程序並釋放檔案鎖定。如果 Windows 顯示 `EBUSY`，請先手動停止對應的 ima2 服務，再重新安裝。安裝器不會自動終止程序或提高權限。
 
 ## 功能總覽
 

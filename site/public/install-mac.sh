@@ -8,14 +8,16 @@
 #
 # Steps:
 #   1. Detect Node.js (nvm → fnm → brew → direct nvm install)
-#   2. Verify Node >= 20
-#   3. Kill stale ima2/node processes that hold file locks
-#   4. Install ima2-gen globally
+#   2. Verify the package-derived Node minimum
+#   3. Install ima2-gen globally
+#   4. Verify runtime dependencies offline
 #   5. Launch ima2 serve
 
 set -euo pipefail
 
-MIN_NODE=20
+# runtime-contract:generated:start
+MIN_NODE=22
+# runtime-contract:generated:end
 
 print() { printf '\033[1;36m▸\033[0m %s\n' "$1"; }
 ok()    { printf '\033[1;32m✔\033[0m %s\n' "$1"; }
@@ -77,14 +79,6 @@ NPM_VERSION="$(npm --version)"
 NPM_MAJOR="${NPM_VERSION%%.*}"
 ok "Node $(node --version), npm $NPM_VERSION"
 
-# ── 3. Kill stale processes ─────────────────────────────────────────
-
-if pgrep -f "ima2.*(serve|server)" >/dev/null 2>&1; then
-  warn "Stopping stale ima2 processes…"
-  pkill -f "ima2.*(serve|server)" 2>/dev/null || true
-  sleep 1
-fi
-
 # ── 4. Install ima2-gen ─────────────────────────────────────────────
 
 print "Installing ima2-gen globally…"
@@ -95,11 +89,10 @@ fi
 if npm "${INSTALL_ARGS[@]}"; then
   ok "ima2-gen $(ima2 --version 2>/dev/null || echo 'installed')"
 else
-  warn "Permission denied. Retrying with sudo…"
-  sudo npm "${INSTALL_ARGS[@]}" || fail "Install failed. Check npm permissions or set a user prefix: npm config set prefix ~/.npm-global"
+  fail "Install failed. Check the npm error above and your npm permissions."
 fi
 print "Verifying runtime dependencies…"
-ima2 doctor >/dev/null || fail "Runtime verification failed. Re-run the installer and inspect 'ima2 doctor'."
+ima2 doctor --installation --json || fail "Runtime verification failed. Fix the reported prerequisite and re-run the installer."
 ok "Runtime dependencies verified"
 
 # ── 5. Launch ────────────────────────────────────────────────────────

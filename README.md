@@ -1,5 +1,18 @@
 # ima2-gen
 
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+The installer derives its Node.js floor from package metadata and runs an offline installation check before launching the server.
+
 <p align="center">
   <img src="assets/logo.png" alt="ima2-gen logo" width="240">
 </p>
@@ -75,7 +88,7 @@ irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 ```
 
-Each script checks for nvm/fnm/brew/winget, installs Node LTS through the best available method, and handles stale process cleanup automatically.
+Each script checks the package-derived Node.js floor, installs Node LTS through the best available method, installs once, and runs the offline installation check before launching `ima2 serve`. It does not stop unrelated processes or clear global locks.
 
 ### Setup
 
@@ -97,7 +110,7 @@ Stop the running server with Ctrl+C, then:
 npm install -g ima2-gen@latest
 ```
 
-Ctrl+C now performs a clean shutdown — closing the database, stopping child processes, and releasing file locks. On older versions (< 1.1.22) or if you see `EBUSY` on Windows, use the install script which handles stale process cleanup automatically.
+Ctrl+C now performs a clean shutdown — closing the database, stopping child processes, and releasing file locks. If an installation fails, inspect the reported npm permissions or stop the specific `ima2` process yourself; the installer does not perform broad process cleanup.
 
 ## What It Does
 
