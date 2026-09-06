@@ -1,16 +1,18 @@
 import { test, expect, assertJ6Isolation, seedBrowser, startApp } from "./fixtures/appServer";
-import { runIsolationProbe, PROCESS_SENTINEL, NETWORK_SENTINEL, filesystemSentinel } from "./fixtures/isolationProbes";
+import { runIsolationProbe, PROCESS_SENTINEL, NETWORK_SENTINEL, filesystemSentinel, assertNoOwnedFile } from "./fixtures/isolationProbes";
 import { makeAppEnv } from "./fixtures/appIsolation";
 import { issueAppHome } from "./fixtures/appOwnership";
 import { startStubUpstream } from "./fixtures/stubUpstream";
 import { lstat, mkdir, mkdtemp, readFile, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
 import { runInNewContext } from "node:vm";
 import { createServer } from "node:http";
 import type { Page, TestInfo } from "@playwright/test";
 import { getVerifiedRuntimeBuild, selectRuntimeSourcePaths } from "./fixtures/appRuntimeBuild";
+import { verifyUiBuildReceipt } from "../../scripts/lib/uiBuildReceipt.mjs";
 
 test.beforeAll(async ({}, info) => {
   const isolation = assertJ6Isolation();
@@ -82,9 +84,9 @@ test("I2 numeric loopback listener setup requires no native name resolution", as
     const bound=server.listening;
     if(bound)await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
     return {bound,code,nativeFrames};
-  `);
+  `, { beforeGuard: NETWORK_SENTINEL });
   await proof(info, "numeric-bind", { result: result.result, denied: result.guard.deniedConnections });
-  expect(result.result).toMatchObject({ bound: true, code: "" }); result.guard.assertClean();
+  expect(result.result).toMatchObject({ bound: true, code: "" }); expect(result.nativeCalls).toEqual([]); result.guard.assertClean();
 });
 
 test("I2 redirects cannot reach an independently owned foreign listener", async ({}, info) => {
@@ -271,7 +273,9 @@ test("I8 actual filesystem guards deny outside content and nested copy links bef
 });
 
 test("I9 normal emitted server and model discovery have no unexpected execution", async ({}, info) => {
-  const app = await startApp("minimax", { withoutMinimaxKey: true });
+  let runtimeRoot = "";
+  const app = await startApp("minimax", { withoutMinimaxKey: true,
+    prepareRuntime: async (paths) => { runtimeRoot = paths.runtimeRoot; } });
   try {
     const response = await fetch(app.baseUrl + "/api/models"); expect(response.status).toBe(200);
     expect((await response.json()).ok).toBe(true);
@@ -279,7 +283,10 @@ test("I9 normal emitted server and model discovery have no unexpected execution"
     expect(app.guard.expectedDiscoveries.some((row) => row.discovery === "agy-version")).toBe(true);
     await proof(info, "normal-start", { guardReady: app.guard.ready, expected: app.guard.expectedDiscoveries,
       expectedLegacyProbes: app.guard.expectedLegacyProbes, denials: app.guard.deniedConnections });
-  } finally { await app.close(); }
+  } finally {
+    await app.close(); expect(runtimeRoot).not.toBe(""); await assertNoOwnedFile(runtimeRoot);
+    await proof(info, "normal-close", { projectionRemoved: true, sameHomePreserved: (await lstat(app.home)).isDirectory() });
+  }
 });
 
 test("I8 flags, callbacks, native realpath and descriptor reuse retain the same boundary", async ({}, info) => {
@@ -319,9 +326,11 @@ test("I8 flags, callbacks, native realpath and descriptor reuse retain the same 
 });
 
 test("I9 missing emitted entry fails before child launch and preserves owned cleanup", async () => {
-  await expect(startApp("minimax", { prepareRuntime: async ({ runtimeRoot }) => {
-    await rm(join(runtimeRoot, "server.js"));
+  let runtimeRoot = "";
+  await expect(startApp("minimax", { prepareRuntime: async (paths) => {
+    runtimeRoot = paths.runtimeRoot; await rm(join(runtimeRoot, "server.js"));
   } })).rejects.toThrow();
+  expect(runtimeRoot).not.toBe(""); await assertNoOwnedFile(runtimeRoot);
 });
 
 test("I6-source positive inventory excludes poison without reading it", async ({}, info) => {
@@ -380,4 +389,55 @@ test("I9 worker cache reuse is verified and byte tamper prevents a new launch", 
   } finally { await writeFile(entry, original); }
   expect((await getVerifiedRuntimeBuild(root)).sourceDigest).toBe(first.sourceDigest);
   await proof(info, "cache", { sameWorkerCache: true, tamperRejectedBeforePrepare: true, restored: true });
+});
+
+test("UIR strict Tailwind build ignores unlisted candidates and Git ignore changes but includes selected sources", async ({}, info) => {
+  // Three real compiler transactions; no app/browser fixture is requested here.
+  // Each wrapper has three intrinsic 120s compiler limits; the outer budget
+  // leaves the wrapper time to reap its compiler and release its transaction.
+  test.setTimeout(1140000);
+  const root = join(process.cwd(), ".."), ignore = join(root, ".gitignore");
+  const originalIgnore = await readFile(ignore), ignoreIdentity = await lstat(ignore);
+  const outside = join(root, "wp09-unlisted-tailwind.html"), selected = join(root, "ui/src/wp09-owned-tailwind.ts");
+  const owned = new Map<string, { ino: number; dev: number }>();
+  const create = async (path: string, text: string) => {
+    await writeFile(path, text, { flag: "wx" }); const stat = await lstat(path); owned.set(path, { ino: stat.ino, dev: stat.dev });
+  };
+  const remove = async (path: string) => {
+    const identity = owned.get(path); if (!identity) return;
+    const stat = await lstat(path); expect(stat.ino).toBe(identity.ino); expect(stat.dev).toBe(identity.dev);
+    await unlink(path); owned.delete(path);
+  };
+  const readReceipt = () => verifyUiBuildReceipt({ repoRoot: root, distDir: join(root, "ui/dist"), requireGitHead: true });
+  const build = () => promisify(execFile)(process.execPath, [join(root, "scripts/write-ui-build-receipt.mjs")],
+    { cwd: join(root, "ui"), timeout: 365000, maxBuffer: 8 * 1024 * 1024 });
+  const initial = (await readReceipt()).receipt;
+  let changedIgnore = false;
+  try {
+    // Do not spell the complete canary class in this selected E2E source: the
+    // strict scanner intentionally scans it too, which would taint the oracle.
+    await create(outside, '<div class="' + ["z-", "[", "991233", "]"].join("") + '"></div>');
+    await writeFile(ignore, Buffer.concat([originalIgnore, Buffer.from("\n/ui/src/**\n/wp09-unlisted-tailwind.html\n")])); changedIgnore = true;
+    await build();
+    const unchanged = (await readReceipt()).receipt;
+    expect(unchanged.sourceInputDigest).toBe(initial.sourceInputDigest); expect(unchanged.outputs).toEqual(initial.outputs);
+    await create(selected, 'export const canary = "' + ["z-", "[", "991234", "]"].join("") + '";\n');
+    await build();
+    const changed = (await readReceipt()).receipt;
+    expect(changed.sourceInputDigest).not.toBe(initial.sourceInputDigest);
+    const cssFiles = changed.outputs.filter((file) => file.path.endsWith(".css")); expect(cssFiles.length).toBeGreaterThan(0);
+    const css = (await Promise.all(cssFiles.map((file) => readFile(join(root, "ui/dist", file.path), "utf8")))).join("\n");
+    expect(css).toMatch(/z-index:\s*991234/); expect(css).not.toMatch(/z-index:\s*991233/);
+    await proof(info, "tailwind-candidates", { initial: initial.sourceInputDigest, changed: changed.sourceInputDigest,
+      ignoredCandidatesExcluded: true, selectedCandidateIncluded: true, outputCount: changed.outputs.length });
+  } finally {
+    await remove(selected); await remove(outside);
+    if (changedIgnore) {
+      const current = await lstat(ignore); expect(current.ino).toBe(ignoreIdentity.ino); expect(current.dev).toBe(ignoreIdentity.dev);
+      await writeFile(ignore, originalIgnore);
+    }
+    await build();
+    const restored = (await readReceipt()).receipt;
+    expect(restored.sourceInputDigest).toBe(initial.sourceInputDigest); expect(restored.outputs).toEqual(initial.outputs);
+  }
 });

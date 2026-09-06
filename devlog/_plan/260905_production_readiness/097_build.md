@@ -117,3 +117,15 @@ did not reach the bind probe: Node22 ESM collection rejected four new dictionary
 imports lacking `with { type: "json" }`. Typecheck alone did not detect this.
 Main added explicit import attributes and reruns actual Playwright listing before
 the next push. No failed runtime evidence is claimed for this collection failure.
+
+Root cause confirmed by a99b21347d472e13b026e723451a7c4987f62b1f/run34000008091:
+the bind-only probe returned bound:false/E2E_EGRESS_DENIED, transport:dns,
+`at lookupAndListen (node:net:2197:7)` on Node22. No app/provider modules were
+imported in that probe, ruling out H2; the explicit127.0.0.1 argument rules out H3.
+Native artifact is wp09/a99b2134-native/.../wp09-isolation-numeric-bind.json.
+The independent VM regression also failed4-pass/1-fail before repair. Main adds
+literal-only callback/promise lookup for127.0.0.1, synthesizing IPv4 data without
+calling any original DNS API. All other names/resolvers, foreign ports and
+transport APIs retain their denial behavior. Hosted bind probe now installs an
+independent pre-guard DNS sentinel, so a native resolver call cannot pass unnoticed.
+The fix is not yet native-green; next exact-head CI must prove it.

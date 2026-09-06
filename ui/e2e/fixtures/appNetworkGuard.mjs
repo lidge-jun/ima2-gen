@@ -25,12 +25,25 @@ function destination(args) {
   }
   return null;
 }
+function literalLoopbackLookup(args, promise) {
+  if (args[0] !== "127.0.0.1" || args.length > (promise ? 2 : 3)) return null;
+  const callback = promise ? null : args.at(-1);
+  if (!promise && typeof callback !== "function") return null;
+  const options = typeof args[1] === "function" ? undefined : args[1];
+  if (options !== undefined && options !== 0 && options !== 4) {
+    if (!options || typeof options !== "object" || Array.isArray(options)
+      || Object.keys(options).some((key) => !["all", "family"].includes(key))
+      || (options.family !== undefined && options.family !== 0 && options.family !== 4)
+      || (options.all !== undefined && typeof options.all !== "boolean")) return null;
+  }
+  return { callback, all: options?.all === true };
+}
 export function installNetworkGuard(_policy, report, origin = process.env.IMA2_E2E_ALLOWED_ORIGIN) {
   const url = new URL(origin ?? "");
   if (url.origin !== origin || url.protocol !== "http:" || url.hostname !== "127.0.0.1"
     || !url.port || url.port === "3333" || url.username || url.password) throw safeDenial("E2E_POLICY_INVALID");
   const restores = [], patched = new WeakMap();
-  const patch = (target, key, transport, tcp = false) => {
+  const patch = (target, key, transport, tcp = false, lookup = false) => {
     if (patched.get(target)?.has(key)) return;
     const descriptor = Object.getOwnPropertyDescriptor(target, key);
     const original = Reflect.get(target, key);
@@ -38,6 +51,15 @@ export function installNetworkGuard(_policy, report, origin = process.env.IMA2_E
     const keys = patched.get(target) ?? new Set(); keys.add(key); patched.set(target, keys);
     Object.defineProperty(target, key, { configurable: descriptor?.configurable ?? true,
       enumerable: descriptor?.enumerable ?? false, writable: true, value: function (...args) {
+      const literal = lookup ? literalLoopbackLookup(args, target === dnsPromises) : null;
+      if (literal) {
+        // Node's listen(host) calls lookup even for a numeric address. Return
+        // only the fixed IPv4 literal: never call the captured native resolver.
+        const value = { address: "127.0.0.1", family: 4 };
+        if (target === dnsPromises) return Promise.resolve(literal.all ? [value] : value);
+        process.nextTick(literal.callback, null, ...(literal.all ? [[value]] : [value.address, value.family]));
+        return;
+      }
       const next = tcp ? destination(args) : null;
       if (next && next.host === "127.0.0.1" && next.port === Number(url.port)) return Reflect.apply(original, this, args);
       report({ type: "ima2-e2e-denied", transport, host: "unowned", port: 0 });
@@ -51,7 +73,7 @@ export function installNetworkGuard(_policy, report, origin = process.env.IMA2_E
     patch(http2, "connect", "http2"); patch(dgram, "createSocket", "udp");
     patch(dgram.Socket.prototype, "send", "udp"); patch(dgram.Socket.prototype, "connect", "udp");
     for (const target of [dns, dnsPromises]) {
-      for (const key of Object.keys(target)) if (/^(?:lookup|resolve|reverse)/.test(key)) patch(target, key, "dns");
+      for (const key of Object.keys(target)) if (/^(?:lookup|resolve|reverse)/.test(key)) patch(target, key, "dns", false, key === "lookup");
       for (let prototype = target.Resolver.prototype; prototype && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype)) {
         for (const key of Object.getOwnPropertyNames(prototype)) if (/^(?:resolve|reverse|lookup)/.test(key)) patch(target.Resolver.prototype, key, "dns");
       }

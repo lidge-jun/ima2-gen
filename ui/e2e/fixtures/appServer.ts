@@ -16,14 +16,21 @@ import type { Provider } from "../../src/types";
 
 export { expect };
 export const test = base.extend<{}, { ownedAppCleanup: void }>({
-  ownedAppCleanup: [async ({}, use) => {
+  ownedAppCleanup: [async ({}, use, workerInfo) => {
     const errors: unknown[] = [];
+    let resourcesClosed = false, cacheDisposed = false;
     try { await use(); }
     finally {
-      try { await disposeOwnedApps(); } catch (error) { errors.push(error); }
+      try { await disposeOwnedApps(); resourcesClosed = true; } catch (error) { errors.push(error); }
       if (!hasUnexitedOwnedApps()) {
-        try { await disposeRuntimeBuildCache(); } catch (error) { errors.push(error); }
+        try { await disposeRuntimeBuildCache(); cacheDisposed = true; } catch (error) { errors.push(error); }
       }
+      try {
+        await writeFile(join(workerInfo.project.outputDir, `wp09-worker-${workerInfo.workerIndex}-cleanup.json`), JSON.stringify({
+          runId: process.env.GITHUB_RUN_ID, project: workerInfo.project.name, workerIndex: workerInfo.workerIndex,
+          resourcesClosed, cacheDisposed, childExitUnproven: hasUnexitedOwnedApps(), errorCount: errors.length,
+        }));
+      } catch (error) { errors.push(error); }
       if (errors.length) throw new AggregateError(errors, "E2E_WORKER_CLEANUP");
     }
   }, { scope: "worker", auto: true }],

@@ -212,3 +212,23 @@ test("real wrapper releases each failed synthetic compiler stage and keeps the G
     assert.ok(observations.every(({ secretPresent, target }) => !secretPresent && target === "http://127.0.0.1:1"));
   } finally { await f.close(); }
 });
+
+test("build option changes invalidate an in-flight transaction without leaking a receipt", async () => {
+  const f = await receiptFixture(); let tx;
+  try {
+    tx = await beginUiBuild(f.root); process.env.VITE_SOURCEMAP = "1";
+    await assert.rejects(finishUiBuild(f.root, tx), { code: "UI_RECEIPT_BUILD_CHANGED" });
+    await abortUiBuild(f.root, tx); await assert.rejects(verify(f), { code: "UI_RECEIPT_MISSING" });
+  } finally { delete process.env.VITE_SOURCEMAP; if (tx) await abortUiBuild(f.root, tx); await f.close(); }
+});
+
+test("an archive cannot impersonate Git and broken Git metadata is not archive fallback", async () => {
+  const f = await receiptFixture(); let tx;
+  try {
+    tx = await beginUiBuild(f.root); await finishUiBuild(f.root, tx); await abortUiBuild(f.root, tx);
+    assert.equal((await verify(f)).binding, "source-digest");
+    await assert.rejects(verifyUiBuildReceipt({ repoRoot: f.root, distDir: f.dist, requireGitHead: true }), { code: "UI_RECEIPT_HEAD" });
+    await f.put(".git", "gitdir: ./missing-owned-git-dir\n");
+    await assert.rejects(verify(f), { code: "UI_RECEIPT_HEAD" });
+  } finally { if (tx) await abortUiBuild(f.root, tx); await f.close(); }
+});

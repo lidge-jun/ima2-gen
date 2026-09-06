@@ -72,7 +72,7 @@ async function loadGuard(name) {
     "node:net": { Socket, connect() { native.push("net.connect"); }, createConnection() { native.push("net.createConnection"); } },
     "node:tls": { TLSSocket: TlsSocket, connect() { native.push("tls.connect"); } },
     "node:dns": { Resolver, lookup() { native.push("dns.lookup"); }, resolveTxt() { native.push("dns.resolveTxt"); } },
-    "node:dns/promises": { Resolver, resolveTxt() { native.push("dnsPromises.resolveTxt"); } },
+    "node:dns/promises": { Resolver, lookup() { native.push("dnsPromises.lookup"); }, resolveTxt() { native.push("dnsPromises.resolveTxt"); } },
     "node:http2": { connect() { native.push("http2"); } },
     "node:dgram": { createSocket() { native.push("udp"); }, Socket: class { send() { native.push("udp.send"); } connect() { native.push("udp.connect"); } } },
   };
@@ -125,6 +125,26 @@ test("network guard denies foreign and resolver/protocol paths while admitting o
     m["node:net"].connect({ host: "127.0.0.1", port: 41234 });
     assert.deepEqual(f.native, ["net.connect"]);
   } finally { restore(); }
+});
+
+test("numeric loopback lookup serves the bind literal without invoking a native resolver", async () => {
+  const f = await loadGuard("appNetworkGuard.mjs"), m = f.modules;
+  const restore = f.api.installNetworkGuard(policy, f.report, "http://127.0.0.1:41234");
+  try {
+    const all = await new Promise((resolve, reject) => m["node:dns"].lookup("127.0.0.1", { all: true },
+      (error, addresses) => error ? reject(error) : resolve(addresses)));
+    assert.equal(JSON.stringify(all), '[{"address":"127.0.0.1","family":4}]');
+    const one = await new Promise((resolve, reject) => m["node:dns"].lookup("127.0.0.1",
+      (error, address, family) => error ? reject(error) : resolve({ address, family })));
+    assert.deepEqual(one, { address: "127.0.0.1", family: 4 });
+    assert.equal(JSON.stringify(await m["node:dns/promises"].lookup("127.0.0.1")), '{"address":"127.0.0.1","family":4}');
+    assert.deepEqual(f.native, []); assert.deepEqual(f.reports, []);
+    assert.throws(() => m["node:dns"].lookup("localhost", () => {}), { code: "E2E_EGRESS_DENIED" });
+    assert.throws(() => m["node:dns"].lookup("127.0.0.1", { family: 6 }, () => {}), { code: "E2E_EGRESS_DENIED" });
+    assert.throws(() => m["node:net"].connect({ host: "127.0.0.1", port: 3333 }), { code: "E2E_EGRESS_DENIED" });
+    assert.deepEqual(f.native, []);
+  } finally { restore(); }
+  m["node:dns"].lookup("127.0.0.1", () => {}); assert.deepEqual(f.native, ["dns.lookup"]);
 });
 test("filesystem guard preserves synthetic-home data and blocks outside paths, write flags and foreign descriptors", async () => {
   const f = await loadGuard("appFilesystemGuard.mjs"), fs = f.modules["node:fs"], promises = f.modules["node:fs/promises"];
