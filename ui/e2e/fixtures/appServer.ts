@@ -41,6 +41,7 @@ export type AppHandle = {
 };
 export type AppStartOptions = {
   provider?: "minimax" | "oauth"; home?: string; withoutMinimaxKey?: boolean; j6?: boolean;
+  lan?: { token: string; publicOrigins?: readonly string[] };
   prepareRuntime?: (paths: { runtimeRoot: string; home: string }) => Promise<void>;
 };
 export type J6Isolation = {
@@ -289,7 +290,8 @@ async function launch(stub: StubHandle, home: string, projection: Projection, is
     child.on("message", guard.accept);
     const [address] = await Promise.race([Promise.all([listenAddress(child, guard), guard.readyPromise]), guard.failure]);
     const url = new URL(address);
-    if (url.origin !== address || url.protocol !== "http:" || url.hostname !== "127.0.0.1" || !url.port || url.port === "3333") throw new Error("E2E_CHILD_ORIGIN");
+    const expectedHost = env.IMA2_E2E_LAN_BIND === "1" ? "localhost" : "127.0.0.1";
+    if (url.origin !== address || url.protocol !== "http:" || url.hostname !== expectedHost || !url.port || url.port === "3333") throw new Error("E2E_CHILD_ORIGIN");
     appOrigin = address; guard.assertClean();
     return { baseUrl: address, stub, home, isolation, guard, async close() { await closeResources(); verify(); } };
   } catch (error) {
@@ -330,7 +332,8 @@ export async function startApp(mode: StubMode = "minimax", options: AppStartOpti
     projection = await createAppProjection({ repoRoot, home, buildDir: join(repoRoot, "ui/dist") });
     await options.prepareRuntime?.({ runtimeRoot: projection.root, home });
     await requireAppHome(home); await verifyAppProjection(projection);
-    const env = makeAppEnv(process.env, { home, stubUrl: stub.url, mode, withoutMinimaxKey });
+    const env = makeAppEnv(process.env, { home, stubUrl: stub.url, mode, withoutMinimaxKey,
+      ...(options.lan ? { lan: options.lan } : {}) });
     launched = true;
     return await launch(stub, home, projection, isolation, env);
   } catch (error) {

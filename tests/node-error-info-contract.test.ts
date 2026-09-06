@@ -10,6 +10,7 @@ import { errorCodes, type ImaErrorCode } from "../ui/src/lib/errorCodes.ts";
 
 /** Expected inline-node action for every registry code (wp2 audit blocker #1). */
 const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
+  LAN_TOKEN_REQUIRED: "fix-input",
   REF_TOO_LARGE: "fix-input",
   REF_NOT_BASE64: "fix-input",
   REF_EMPTY: "fix-input",

@@ -4,6 +4,94 @@ import { homedir } from "node:os";
 
 export const DEFAULT_PORT = 3333;
 
+type TransportError = Error & { code: string; status?: number };
+let binding: { origin: string; token: string } | undefined;
+
+/** Service discovery must not inherit a previous command's credential selection. */
+export function clearServerBinding(): void { binding = undefined; }
+
+function transportError(code: string, message: string, status?: number): TransportError {
+  return Object.assign(new Error(message), { code, ...(status === undefined ? {} : { status }) });
+}
+
+function serverOrigin(value: unknown): string {
+  try {
+    if (typeof value !== "string" || !/^https?:\/\//i.test(value) || /[\s\\?#@]/.test(value)) throw new Error();
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.pathname !== "/") throw new Error();
+    return url.origin;
+  } catch {
+    throw transportError("SERVER_URL_INVALID", "Server must be an HTTP(S) origin without credentials, query, fragment or path.");
+  }
+}
+
+function transportUrl(value: string, base?: string): URL {
+  try {
+    const url = new URL(value, base);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash
+      || [...url.searchParams.keys()].some((key) => /^token(?:\[|$)/i.test(key))) throw new Error();
+    return url;
+  } catch {
+    throw transportError("SERVER_URL_INVALID", "Invalid server request URL; URL credentials and LAN query tokens are not supported.");
+  }
+}
+
+function transportHeaders(init: RequestInit, origin: string): Headers {
+  try {
+    const headers = new Headers(init.headers);
+    if (headers.has("cookie") || headers.has("x-ima2-token")) throw new Error();
+    if (binding?.origin === origin && binding.token) headers.set("x-ima2-token", binding.token);
+    return headers;
+  } catch {
+    throw transportError("SERVER_CREDENTIAL_CONFLICT", "Use IMA2_LAN_TOKEN with an explicit server; caller cookie/token headers are not supported.");
+  }
+}
+
+async function checkAccess(response: Response): Promise<void> {
+  if (response.status >= 300 && response.status < 400) {
+    try { await response.body?.cancel(); } catch { /* Preserve the safe redirect error. */ }
+    throw transportError("SERVER_REDIRECT_REJECTED", "Server redirects are not allowed.");
+  }
+  if (response.status !== 401 && response.status !== 403) return;
+  let code = response.status === 401 ? "LAN_TOKEN_REQUIRED" : "SERVER_ACCESS_DENIED";
+  try {
+    const body = await response.json() as { error?: { code?: unknown } };
+    if (response.status === 403 && (body?.error?.code === "LOCAL_HOST_REJECTED" || body?.error?.code === "LOCAL_ORIGIN_REJECTED")) {
+      code = body.error.code;
+    }
+  } catch { /* Never expose an untrusted auth body. */ }
+  throw transportError(code, response.status === 401
+    ? "LAN authentication required. Specify a known --server or IMA2_SERVER and set IMA2_LAN_TOKEN."
+    : "Server access denied. Check the configured server Host/Origin policy.", response.status);
+}
+
+/** Only explicit selection below can bind a secret; request URLs never do. */
+export async function fetchServerUrl(url: string, init: RequestInit = {}): Promise<Response> {
+  const target = transportUrl(url);
+  const headers = transportHeaders(init, target.origin);
+  let response: Response;
+  try {
+    response = await fetch(target.href, { ...init, headers, credentials: "omit", redirect: "error" });
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    // Node's native fetch rejects redirect:error before exposing a Response.
+    const cause = (error as { cause?: { message?: string } })?.cause;
+    if (cause?.message === "unexpected redirect") {
+      throw transportError("SERVER_REDIRECT_REJECTED", "Server redirects are not allowed.");
+    }
+    throw transportError("NETWORK_FAILED", "Server request failed.");
+  }
+  await checkAccess(response);
+  return response;
+}
+
+export async function fetchServer(base: string, pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
+  const origin = serverOrigin(base);
+  const target = transportUrl(pathOrUrl, `${origin}/`);
+  if (target.origin !== origin) throw transportError("SERVER_URL_INVALID", "Server request must stay on its selected origin.");
+  return fetchServerUrl(target.href, init);
+}
+
 function readAdvertise() {
   const p = process.env.IMA2_ADVERTISE_FILE ||
     join(process.env.IMA2_CONFIG_DIR || join(homedir(), ".ima2"), "server.json");
@@ -26,24 +114,28 @@ async function probe(base: string, timeoutMs = 600): Promise<ServerHealth | null
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const r = await fetch(`${base}/api/health`, {
+    const r = await fetchServer(base, "/api/health", {
       signal: controller.signal,
       // CLI is short-lived: close the socket so process.exit() never races a
       // keep-alive handle (libuv UV_HANDLE_CLOSING assert on Windows, 260719).
       headers: { connection: "close" },
     });
-    if (!r.ok) return null;
-    return (await r.json()) as ServerHealth;
-  } catch {
-    return null;
+    if (!r.ok) throw transportError("SERVER_HTTP_ERROR", `Server health failed: HTTP ${r.status}`, r.status);
+    try { return (await r.json()) as ServerHealth; }
+    catch { throw transportError("SERVER_INVALID_HEALTH", "Server returned an invalid health response."); }
+  } catch (error) {
+    if ((error as TransportError)?.code === "NETWORK_FAILED"
+      || (controller.signal.aborted && !(error as TransportError)?.code)) return null;
+    throw error;
   } finally {
     clearTimeout(timer);
   }
 }
 
 export async function findRunningServer({ includeEnv = true }: { includeEnv?: boolean } = {}) {
+  clearServerBinding();
+  if (includeEnv && process.env.IMA2_SERVER !== undefined) return selectServer(process.env.IMA2_SERVER);
   const candidates: string[] = [];
-  if (includeEnv && process.env.IMA2_SERVER) candidates.push(process.env.IMA2_SERVER.replace(/\/$/, ""));
   const adv = readAdvertise();
   if (adv?.backend?.url) candidates.push(String(adv.backend.url).replace(/\/$/, ""));
   if (adv?.url) candidates.push(String(adv.url).replace(/\/$/, ""));
@@ -53,7 +145,8 @@ export async function findRunningServer({ includeEnv = true }: { includeEnv?: bo
   const seen = new Set<string>();
   const uniq = candidates.filter((c) => !seen.has(c) && seen.add(c));
 
-  for (const base of uniq) {
+  for (const candidate of uniq) {
+    const base = serverOrigin(candidate);
     const health = await probe(base);
     if (health) return { base, health };
   }
@@ -61,19 +154,25 @@ export async function findRunningServer({ includeEnv = true }: { includeEnv?: bo
 }
 
 export async function resolveServer({ serverFlag }: any = {}) {
-  if (serverFlag) {
-    const base = serverFlag.replace(/\/$/, "");
-    const health = await probe(base);
-    if (health) return { base, health };
-    const err: any = new Error(`server unreachable at ${base}`);
-    err.code = "SERVER_UNREACHABLE";
-    throw err;
-  }
+  clearServerBinding();
+  if (serverFlag !== undefined) return selectServer(serverFlag);
   const found = await findRunningServer();
   if (found) return found;
-  const err: any = new Error("server unreachable — is 'ima2 serve' running?");
-  err.code = "SERVER_UNREACHABLE";
-  throw err;
+  throw transportError("SERVER_UNREACHABLE", "Server unreachable; is 'ima2 serve' running?");
+}
+
+async function selectServer(value: unknown) {
+  const base = serverOrigin(value);
+  const selected = { origin: base, token: process.env.IMA2_LAN_TOKEN || "" };
+  binding = selected;
+  try {
+    const health = await probe(base);
+    if (health) return { base, health };
+    throw transportError("SERVER_UNREACHABLE", "Selected server is unreachable.");
+  } catch (error) {
+    if (binding === selected) clearServerBinding();
+    throw error;
+  }
 }
 
 export async function request(base: string, path: string, {
@@ -94,7 +193,7 @@ export async function request(base: string, path: string, {
   let res: Response;
   let text: string;
   try {
-    res = await fetch(base + path, {
+    res = await fetchServer(base, path, {
       method,
       // connection: close — see the health-check note above.
       headers: { connection: "close", ...finalHeaders },

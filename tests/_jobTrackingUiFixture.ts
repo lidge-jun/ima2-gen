@@ -16,6 +16,7 @@ export type JobTrackingUiRuntime = typeof import("../ui/src/store/useAppStore.ts
   & typeof import("../ui/src/lib/sseStreamError.ts")
   & typeof import("../ui/src/lib/nodeErrorInfo.ts")
   & typeof import("../ui/src/lib/videoExtendStream.ts")
+  & typeof import("../ui/src/lib/lanSession.ts")
   & typeof import("../ui/src/lib/eventChannel.ts");
 
 export interface UiRequest {
@@ -73,7 +74,7 @@ async function compileRuntime(): Promise<string> {
       "store/storeVideoImpl", "store/storeSettingsImpl", "store/storeAssetGenImpl",
       "store/storeSpriteRecipeImpl", "store/storeGraphSave", "lib/mcpProviders",
       "lib/errorCodes", "lib/errorHandler", "lib/sseStreamError", "lib/nodeErrorInfo", "lib/eventChannel",
-      "lib/videoExtendStream",
+      "lib/videoExtendStream", "lib/lanSession",
     ];
     const result = await build({
       stdin: { resolveDir: fileURLToPath(new URL("../", import.meta.url)),

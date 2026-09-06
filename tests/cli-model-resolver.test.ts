@@ -195,7 +195,7 @@ writeFileSync(join(transpiledDir, "package.json"), '{"type":"module"}');
 mkdirSync(join(transpiledDir, "bin", "lib"), { recursive: true });
 mkdirSync(join(transpiledDir, "lib"), { recursive: true });
 for (const [sourceDir, targetDir, names] of [
-  [binLibDir, join(transpiledDir, "bin", "lib"), ["sse", "mcpJob"]],
+  [binLibDir, join(transpiledDir, "bin", "lib"), ["sse", "mcpJob", "client"]],
   [serverLibDir, join(transpiledDir, "lib"), ["jobStatus", "eventsPolicy"]],
 ] as const) {
   for (const name of names) {

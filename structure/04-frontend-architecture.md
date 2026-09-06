@@ -6,6 +6,14 @@ aliases: [ima2 frontend, ima2 React UI, image_gen frontend]
 
 # Frontend Architecture
 
+LAN startup is owned by `ui/src/lib/lanSession.ts` and `main.tsx`: remove URL tokens
+before async work, confirm a session cookie, then import App. `LanSignIn.tsx` uses
+pure locale helpers and dictionaries, not the store-dependent i18n barrel. Expiry
+replaces private UI with sign-in. The existing API core observes first-party LAN401;
+auth epochs prevent old unsent retries/waiters from replaying after login. SSE pauses
+its transport but keeps accepted subscriptions/cursor/deadlines; inflight polling
+stops and authenticated mount reconciles. Tokens never enter browser storage.
+
 Composer pane geometry lives in `ui/src/styles/composer-panes.css`; sidebar,
 classic dock and mobile sheet styles allocate host space. NAI paired inputs keep
 content-aware scrolling: sidebar dual floors72px, bottom86–148px, mobile160px,

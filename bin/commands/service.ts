@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { clearServerBinding, fetchServerUrl, resolveServer } from "../lib/client.js";
+import { dieWithError } from "../lib/output.js";
 import {
   LAUNCHD_LABEL,
   SYSTEMD_UNIT,
@@ -107,14 +109,23 @@ function readAdvertise(): AdvertiseEntry | null {
 }
 
 async function waitForHealth(timeoutMs: number): Promise<{ ok: boolean; entry: AdvertiseEntry | null }> {
+  clearServerBinding();
+  if (process.env.IMA2_SERVER !== undefined) {
+    const selected = await resolveServer();
+    const entry = readAdvertise();
+    // An unrelated advertisement is neither credential authority nor selected health.
+    return { ok: true, entry: entry?.url?.replace(/\/$/, "") === selected.base ? entry : null };
+  }
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const entry = readAdvertise();
     if (entry?.url) {
       try {
-        const r = await fetch(`${String(entry.url).replace(/\/$/, "")}/api/health`, { headers: { connection: "close" } });
+        const r = await fetchServerUrl(`${String(entry.url).replace(/\/$/, "")}/api/health`, { headers: { connection: "close" } });
         if (r.ok) return { ok: true, entry };
-      } catch { /* keep polling */ }
+      } catch (error) {
+        if ((error as { code?: string })?.code !== "NETWORK_FAILED") throw error;
+      }
     }
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -412,6 +423,14 @@ const HELP = `
 `;
 
 export async function service(args: string[] = []): Promise<void> {
+  try { await dispatchService(args); }
+  catch (error) {
+    if (!(error instanceof Error)) throw error;
+    dieWithError(error);
+  }
+}
+
+async function dispatchService(args: string[]): Promise<void> {
   const sub = args[0];
   switch (sub) {
     case "install": await install(); break;

@@ -108,6 +108,22 @@ test("I9 platform discovery refuses native content and does not hide write attem
     expected: result.guard.expectedPlatformProbes, unexpectedWrites: result.guard.deniedFilesystem });
 });
 
+test("LAN fixture bind remains loopback and grants no wildcard egress", async ({}, info) => {
+  const result = await runIsolationProbe(`
+    const {createServer}=await import("node:http"),net=await import("node:net");
+    const server=createServer();
+    await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"0.0.0.0",resolve);});
+    const address=server.address().address;
+    await new Promise(resolve=>server.close(resolve));
+    let code="";try{net.connect({host:"0.0.0.0",port:Number(process.env.IMA2_OAUTH_PROXY_PORT)});}catch(error){code=error.code;}
+    return {address,code};
+  `, { beforeGuard: `process.env.IMA2_E2E_LAN_BIND="1";process.env.IMA2_HOST="0.0.0.0";\n${NETWORK_SENTINEL}` });
+  expect(result.result).toEqual({ address: "127.0.0.1", code: "E2E_EGRESS_DENIED" });
+  expect(result.nativeCalls).toEqual([]);
+  expect(result.guard.deniedConnections).toHaveLength(1);
+  await proof(info, "lan-bind", { result: result.result, denied: result.guard.deniedConnections });
+});
+
 test("I2 redirects cannot reach an independently owned foreign listener", async ({}, info) => {
   let requests = 0;
   const foreign = createServer((_request, response) => { requests++; response.end("UNREACHABLE"); });

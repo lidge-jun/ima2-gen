@@ -1,4 +1,23 @@
 {
+  "lan": {
+    "title": "连接到工作室",
+    "body": "请输入工作室设置的 LAN 令牌。令牌不会保存在浏览器存储中。",
+    "token": "LAN 令牌",
+    "connect": "连接",
+    "connecting": "正在连接…",
+    "retry": "重新检查连接",
+    "sessionExpired": "请登录工作室。已输入的内容会保留。",
+    "unavailable": "无法连接到工作室。请检查地址后重试。",
+    "rateLimited": "尝试次数过多，请稍后重试。",
+    "capacity": "工作室会话已满，请稍后重试。",
+    "originRejected": "请使用管理员配置的地址打开工作室。",
+    "cookieRequired": "请允许此工作室使用 Cookie，然后重新连接。",
+    "duplicateToken": "地址包含多个令牌，请在下方输入正确的令牌。",
+    "sessionTitle": "工作室会话",
+    "signOut": "退出工作室",
+    "signingOut": "正在退出…",
+    "signOutBody": "退出不会取消正在进行的生成任务。"
+  },
   "common": {
     "ok": "确定",
     "cancel": "取消",

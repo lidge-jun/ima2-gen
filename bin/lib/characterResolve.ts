@@ -1,6 +1,7 @@
 // wp4 046: CLI-side character element resolution + binding precheck.
 // Prechecks are UX hints only — the server response is the final authority
 // (041/046 server-authority clause); server error codes pass through unchanged.
+import { fetchServer } from "./client.js";
 
 export type CharacterElementRecord = {
   id: string;
@@ -15,7 +16,7 @@ export type CharacterResolution =
 
 export async function resolveCharacterElement(serverBase: string, idOrName: string): Promise<CharacterResolution> {
   const base = serverBase.replace(/\/$/, "");
-  const response = await fetch(`${base}/api/assets?kind=element&limit=500`);
+  const response = await fetchServer(base, "/api/assets?kind=element&limit=500");
   if (!response.ok) throw new Error(`failed to list elements: HTTP ${response.status}`);
   const payload = await response.json() as { assets?: Array<Record<string, unknown>> };
   const characters = (payload.assets ?? []).filter((asset) =>

@@ -8,6 +8,54 @@ Base URL:
 http://localhost:3333
 ```
 
+## Local and LAN access
+
+The configured bind determines access mode. Loopback keeps single-user no-token
+use; a non-loopback bind requires `IMA2_LAN_TOKEN`, including requests arriving
+from a loopback proxy. LAN protects both `/api` and `/generated` before file,
+Range or conditional-response processing. UI/static assets remain public.
+
+| Endpoint | Contract |
+|---|---|
+| `GET /api/auth/lan/session` | No-store `{mode, authenticated, expiresAt}`; no token/cookie value returned |
+| `POST /api/auth/lan/session` | Same-origin `Origin`, JSON `{}`, valid `x-ima2-token`; 204 and an opaque HttpOnly/SameSite=Strict cookie in LAN mode |
+| `DELETE /api/auth/lan/session` | Same-origin `Origin` and presented cookie; revoke it and return 204 |
+
+Sessions are in memory, origin-bound and expire after an absolute eight hours.
+Restart/rotation invalidates them. Settings → General → Studio session signs out;
+sign-out/expiry closes admitted streams but does not cancel accepted generation.
+Reauthentication does not automatically submit a waiting generation again.
+The browser removes a supplied `?token=...` before loading App and never stores
+the token in local/sessionStorage; entering it in the sign-in form avoids putting
+it in initial URL/access logs. API clients can use `x-ima2-token`; legacy query
+tokens remain accepted. Header → query → cookie precedence applies. Malformed
+duplicates are rejected; an explicit invalid credential cannot fall back to a cookie.
+
+Serving Host/Origin must match the actual listener or exact configured
+`server.publicOrigins` / `IMA2_PUBLIC_ORIGINS` JSON array (maximum 16). No wildcards,
+userinfo, paths, query or fragments. This is a serving-origin list, not CORS
+permission: cross-origin and same-site sibling-origin requests remain rejected.
+Forwarded headers do not establish trust. The case-compatible exact GET MCP OAuth
+callback retains its existing state/PKCE check; admin stop still needs its nonce.
+
+For Vite development, use `http://127.0.0.1:5173` and explicitly include that origin
+on the backend (`IMA2_PUBLIC_ORIGINS='["http://127.0.0.1:5173"]'`). The dev proxy
+preserves Host. If opening `localhost` instead, list that exact origin too; local
+mode canonicalizes it to `127.0.0.1`, while LAN mode preserves the entered origin.
+
+LAN media uses `private, no-store, max-age=0`, no ETag/Last-Modified, and
+same-origin resource policy. JSON sidecars and outside-root links are not served;
+SVG retains its restrictive CSP. Previously cached/downloaded copies cannot be
+revoked: purge operator-controlled proxy caches during upgrade. HTTP LAN is for
+trusted networks only; use TLS/VPN on untrusted networks. HTTPS sessions use Secure
+cookies. A malicious process on the operator host is outside this boundary.
+
+Wrong/missing LAN credentials return `401 LAN_TOKEN_REQUIRED`; invalid Host/Origin
+returns 403. Bootstrap is limited to ten failed attempts per socket peer per minute
+and shares the app API request budget. Respect `Retry-After` on 429; a full
+256-session store returns 503 instead of evicting users. Tokens are bounded to
+4096 UTF-8 bytes. Access errors contain fixed messages, never supplied secrets.
+
 ## Provider Policy
 
 Image generation supports OAuth, API-key, Grok, and Gemini (`agy` and `gemini-api`) providers.

@@ -1,5 +1,7 @@
+import { fetchApi } from "../../lib/api-core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../i18n";
+import { getLanAuthEpoch, isLanSessionLocked, LAN_AUTH_REQUIRED_EVENT } from "../../lib/lanSession";
 
 interface QuotaWindow {
   label: string;
@@ -65,11 +67,12 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
   const switching = useRef(false);
 
   const startSwitch = useCallback(async () => {
-    if (switching.current) return;
+    if (switching.current || isLanSessionLocked()) return;
+    const epoch = getLanAuthEpoch();
     switching.current = true;
     setState({ phase: "starting" });
     try {
-      const res = await fetch("/api/auth/switch", {
+      const res = await fetchApi("/api/auth/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider }),
@@ -80,25 +83,34 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
         return;
       }
       const data = await res.json() as { sessionId: string; userCode: string; verificationUrl: string };
+      if (isLanSessionLocked() || epoch !== getLanAuthEpoch()) return;
       setState({ phase: "waiting", ...data });
       window.open(data.verificationUrl, "_blank");
     } catch (e) {
       switching.current = false;
+      if ((e as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
       setState({ phase: "error", error: (e as Error).message });
     }
   }, [provider]);
 
   useEffect(() => {
-    if (state.phase !== "waiting" || !state.sessionId) return;
+    if (state.phase !== "waiting" || !state.sessionId || isLanSessionLocked()) return;
+    const epoch = getLanAuthEpoch();
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const stop = () => {
+      cancelled = true;
+      clearTimeout(timer);
+      window.removeEventListener(LAN_AUTH_REQUIRED_EVENT, stop);
+    };
     const poll = async () => {
+      if (cancelled || isLanSessionLocked() || epoch !== getLanAuthEpoch()) return;
       try {
-        const res = await fetch(`/api/auth/switch/${state.sessionId}`);
+        const res = await fetchApi(`/api/auth/switch/${state.sessionId}`);
         const data = await res.json() as { status: string; error?: string };
-        if (cancelled) return;
+        if (cancelled || isLanSessionLocked() || epoch !== getLanAuthEpoch()) return;
         if (data.status === "complete") {
           setState({ phase: "complete" });
-          setTimeout(onComplete, 1000);
           return;
         }
         if (data.status === "error" || data.status === "expired") {
@@ -106,11 +118,23 @@ function SwitchAccountButton({ provider, onComplete }: { provider: "grok" | "cod
           return;
         }
       } catch { /* retry */ }
-      if (!cancelled) setTimeout(poll, 3000);
+      if (!cancelled && !isLanSessionLocked() && epoch === getLanAuthEpoch()) timer = setTimeout(poll, 3000);
     };
-    const timer = setTimeout(poll, 3000);
-    return () => { cancelled = true; clearTimeout(timer); };
+    window.addEventListener(LAN_AUTH_REQUIRED_EVENT, stop);
+    timer = setTimeout(poll, 3000);
+    return stop;
   }, [state.phase, state.sessionId, onComplete]);
+
+  useEffect(() => {
+    if (state.phase !== "complete" || isLanSessionLocked()) return;
+    const timer = setTimeout(() => { stop(); onComplete(); }, 1000);
+    const stop = () => {
+      clearTimeout(timer);
+      window.removeEventListener(LAN_AUTH_REQUIRED_EVENT, stop);
+    };
+    window.addEventListener(LAN_AUTH_REQUIRED_EVENT, stop);
+    return stop;
+  }, [state.phase, onComplete]);
 
   if (state.phase === "idle") {
     return (
@@ -210,7 +234,7 @@ export function useQuotaData() {
 
   const refreshQuota = useCallback(() => {
     setLoading(true);
-    fetch("/api/quota")
+    fetchApi("/api/quota")
       .then((r) => r.json() as Promise<QuotaResponse>)
       .then(setData)
       .catch(() => setData(null))
@@ -218,8 +242,14 @@ export function useQuotaData() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(refreshQuota, 1500);
-    return () => clearTimeout(timer);
+    if (isLanSessionLocked()) return;
+    const timer = setTimeout(() => { stop(); refreshQuota(); }, 1500);
+    const stop = () => {
+      clearTimeout(timer);
+      window.removeEventListener(LAN_AUTH_REQUIRED_EVENT, stop);
+    };
+    window.addEventListener(LAN_AUTH_REQUIRED_EVENT, stop);
+    return stop;
   }, [refreshQuota]);
 
   return { data, loading, refreshQuota };

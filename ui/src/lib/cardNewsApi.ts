@@ -1,3 +1,4 @@
+import { fetchApi } from "./api-core";
 export type CardNewsGenerationStrategy =
   | "parallel-template-i2i"
   | "selected-card-i2i"
@@ -168,7 +169,7 @@ export type CardNewsJobSummary = {
 };
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetchApi(url, init);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const raw = data as { error?: { message?: string; code?: string } | string };

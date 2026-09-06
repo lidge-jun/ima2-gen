@@ -69,7 +69,7 @@ async function getServer(args: ParsedArgs) {
   catch (e: any) { die(exitCodeForError(e), e.message); throw e; }
 }
 
-function handle(e: unknown) {
+function handle(e: unknown): never {
   const err = e as { message?: string; code?: string };
   die(exitCodeForError(e), `${err.message}${err.code ? ` (${err.code})` : ""}`);
 }
@@ -307,9 +307,9 @@ async function importSources(argv: string[]) {
   const args = parseArgs(argv, { flags: COMMON_FLAGS });
   const server = await getServer(args);
   const [curated, discovery] = await Promise.all([
-    request(server.base, "/api/prompts/import/curated-sources").catch(() => ({})),
-    request(server.base, "/api/prompts/import/discovery").catch(() => ({})),
-  ]);
+    request(server.base, "/api/prompts/import/curated-sources").catch((error) => { if (exitCodeForError(error) === 4) throw error; return {}; }),
+    request(server.base, "/api/prompts/import/discovery").catch((error) => { if (exitCodeForError(error) === 4) throw error; return {}; }),
+  ]).catch(handle);
   if (args.json) { json({ curated, discovery }); return; }
   out(color.bold("Curated sources:"));
   out(JSON.stringify(curated, null, 2));

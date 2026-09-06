@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import { useState, useCallback } from "react";
 import { useI18n } from "../i18n";
 
@@ -25,7 +26,7 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
     setError(null);
     setSuccess(false);
     try {
-      const res = await fetch("/api/keys/vertex", {
+      const res = await fetchApi("/api/keys/vertex", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serviceAccountJson: json.trim() }),
@@ -40,7 +41,8 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
         onSaved();
         setTimeout(() => setSuccess(false), 3000);
       }
-    } catch {
+    } catch (error) {
+      if ((error as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
       setError(t("settings.apiKeys.networkError"));
     } finally {
       setSaving(false);
@@ -49,7 +51,7 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
 
   const handleDelete = useCallback(async () => {
     try {
-      const response = await fetch("/api/keys/vertex", { method: "DELETE" });
+      const response = await fetchApi("/api/keys/vertex", { method: "DELETE" });
       if (!response.ok) {
         setError(t("settings.apiKeys.removeFailed"));
         return;
@@ -57,7 +59,8 @@ export function VertexJsonInput({ configured, maskedKey, source, onSaved }: Vert
       setJson("");
       setEditing(false);
       onSaved();
-    } catch {
+    } catch (error) {
+      if ((error as { code?: string } | null)?.code === "LAN_TOKEN_REQUIRED") return;
       setError(t("settings.apiKeys.networkError"));
     }
   }, [onSaved, t]);

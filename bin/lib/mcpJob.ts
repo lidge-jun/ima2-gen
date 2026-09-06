@@ -1,5 +1,6 @@
 import { openSse, sseUrlWithCursor, type OpenSseResult, type SseEvent } from "./sse.js";
 import { normalizeTerminalStatus } from "../../lib/jobStatus.js";
+import { fetchServer } from "./client.js";
 
 const JOB_TRACKING_TIMEOUT_MESSAGE =
   "Job tracking expired; upstream completion is unknown. Inspect history before retrying.";
@@ -85,7 +86,7 @@ async function responseError(response: Response): Promise<McpJobError> {
 
 async function submitJob(opts: McpJobOptions, signal: AbortSignal): Promise<void> {
   try {
-    const response = await fetch(`${baseUrl(opts.serverBase)}${opts.postPath ?? "/api/mcp/generate"}`, {
+    const response = await fetchServer(opts.serverBase, opts.postPath ?? "/api/mcp/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...opts.body, kind: opts.kind, requestId: opts.requestId }),
@@ -217,7 +218,7 @@ function terminalResult(job: Record<string, unknown>): McpJobResult | McpJobErro
 
 async function recoverReplayGap(opts: McpJobOptions, signal: AbortSignal): Promise<McpJobResult> {
   try {
-    const response = await fetch(`${baseUrl(opts.serverBase)}/api/inflight?includeTerminal=1`, { signal });
+    const response = await fetchServer(opts.serverBase, "/api/inflight?includeTerminal=1", { signal });
     if (!response.ok) throw await responseError(response);
     const envelope = asRecord(await response.json()) ?? {};
     const jobs = Array.isArray(envelope.terminalJobs) ? envelope.terminalJobs : [];

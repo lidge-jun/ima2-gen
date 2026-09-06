@@ -1,3 +1,5 @@
+import { fetchApi } from "./api-core";
+import { createLanAuthError, getLanAuthEpoch, isLanSessionLocked } from "./lanSession";
 import { cancelInflight } from "./api";
 import { armStreamTimeout, ensureConnected, subscribe, whenConnected } from "./eventChannel";
 import { parseSseErrorPayload } from "./sseStreamError";
@@ -13,7 +15,7 @@ export type VideoExtendRequest = {
 
 async function submitVideoExtend(payload: VideoExtendRequest, signal: AbortSignal): Promise<void> {
   try {
-    const response = await fetch("/api/video/extend", {
+    const response = await fetchApi("/api/video/extend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -31,6 +33,8 @@ async function submitVideoExtend(payload: VideoExtendRequest, signal: AbortSigna
 }
 
 export function postVideoExtendStream(payload: VideoExtendRequest, signal: AbortSignal): Promise<VideoExtendDone> {
+  const epoch = getLanAuthEpoch();
+  if (isLanSessionLocked()) return Promise.reject(createLanAuthError(epoch - 1));
   ensureConnected();
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -62,7 +66,11 @@ export function postVideoExtendStream(payload: VideoExtendRequest, signal: Abort
     // Await SSE transport open BEFORE submitting (audit blocker B3): on a fresh
     // connection a terminal event emitted before the server-side subscription
     // is installed would be lost, hanging the promise until timeout.
-    const submission = whenConnected().then(() => submitVideoExtend(payload, signal));
+    const submission = whenConnected().then(() => {
+      if (epoch !== getLanAuthEpoch()) throw createLanAuthError(epoch);
+      if (isLanSessionLocked()) throw createLanAuthError(epoch - 1);
+      return submitVideoExtend(payload, signal);
+    });
     submission.catch((error) => finish(() => reject(error)));
   });
 }

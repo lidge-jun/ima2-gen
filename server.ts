@@ -24,7 +24,9 @@ import { createRequestLogger } from "./lib/requestLogger.js";
 import { configureApiCachePolicy } from "./lib/apiCachePolicy.js";
 import { configureRoutes } from "./routes/index.js";
 import { API_REQUEST_POLICY, config } from "./config.js";
-import { createApiRequestBudget, isApiRequestPath } from "./lib/apiRequestBudget.js";
+import { createApiRequestBudget } from "./lib/apiRequestBudget.js";
+import { createLocalLanAccess, createLanApiGuard as tokenOnlyLanApiGuard } from "./lib/localLanAccess.js";
+import { createGeneratedMediaAccess } from "./lib/generatedMediaAccess.js";
 import { getServerPort, listenWithPortFallback } from "./lib/runtimePorts.js";
 import { shutdownServerAndMcp, startMcpRestoreAfterListen } from "./lib/mcp/shutdown.js";
 import type { RuntimeContext, RuntimeContextOverrides, ApiKeySource } from "./lib/runtimeContext.js";
@@ -34,7 +36,6 @@ import { stopAgentQueueWorker } from "./lib/agentQueueWorker.js";
 import { reapCardNewsJobs } from "./lib/cardNewsJobStore.js";
 import { reapTerminalJobs } from "./lib/inflight.js";
 import { errInfo } from "./lib/errInfo.js";
-import { timingSafeEqual } from "node:crypto";
 import {
   cleanupExpiredMcpTempReferences,
   MCP_TEMP_REFERENCE_JSON_BODY_LIMIT_BYTES,
@@ -221,6 +222,8 @@ function setUiStaticHeaders(res: Response, filePath: string) {
   const normalized = filePath.replace(/\\/g, "/");
   if (normalized.endsWith("/index.html")) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
     return;
   }
   if (normalized.includes("/assets/")) {
@@ -234,43 +237,29 @@ export function isLoopbackHost(host: string | undefined): boolean {
 }
 
 export function assertLanAccessConfiguration(host: string | undefined, token: string | undefined): void {
-  if (isLoopbackHost(host) || token) return;
-  const message = `[server.security] Refusing non-loopback host ${host || "<empty>"}: set IMA2_LAN_TOKEN to enable LAN access.`;
+  if (isLoopbackHost(host)) return;
+  if (token && Buffer.byteLength(token) <= config.security.lanTokenMaxBytes) return;
+  const message = "[server.security] Set a nonempty IMA2_LAN_TOKEN of at most 4096 UTF-8 bytes to enable LAN access.";
   console.error(message);
   throw new Error(message);
 }
 
-function tokenMatches(actual: unknown, expected: string): boolean {
-  if (typeof actual !== "string") return false;
-  const actualBuffer = Buffer.from(actual);
-  const expectedBuffer = Buffer.from(expected);
-  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
-}
-
 export function createLanApiGuard(host: string | undefined, token: string | undefined) {
-  const requiredToken = isLoopbackHost(host) ? "" : String(token || "");
-  return function lanApiGuard(req: Request, res: Response, next: NextFunction) {
-    if (!requiredToken || !isApiRequestPath(req.path)) return next();
-    // OAuth redirect endpoints are conventionally unauthenticated: the provider's
-    // browser redirect cannot carry x-ima2-token. Security boundary for this single
-    // path is the single-use unguessable OAuth state + PKCE (030 WP3 audit round 2);
-    // an invalid state is rejected with 400 before any token exchange.
-    if (req.method === "GET" && req.path.toLowerCase() === "/api/mcp/oauth/callback") return next();
-    const supplied = req.get("x-ima2-token") ?? req.query.token;
-    if (tokenMatches(supplied, requiredToken)) return next();
-    return res.status(401).json({
-      error: { code: "LAN_TOKEN_REQUIRED", message: "A valid IMA2 LAN token is required" },
-    });
-  };
+  return tokenOnlyLanApiGuard(host, token);
 }
 
 export function buildApp(ctx: RuntimeContext) {
   const app = express();
+  const access = createLocalLanAccess(ctx);
+  const budget = createApiRequestBudget(API_REQUEST_POLICY);
+  const locals = Object.assign(app.locals, { disposeLocalLanAccess: access.dispose });
   configureApiCachePolicy(app);
   configureLogger({ level: ctx.config.log.level });
   app.use(createRequestLogger());
-  app.use(createLanApiGuard(ctx.config.server.host, ctx.config.server.lanToken));
-  app.use(createApiRequestBudget(API_REQUEST_POLICY));
+  app.use(access.mediaHeaders);
+  access.registerSessionRoutes(app, budget);
+  app.use(access.guard);
+  app.use(budget);
   app.use("/api/mcp/temp-references", express.json({ limit: MCP_TEMP_REFERENCE_JSON_BODY_LIMIT_BYTES }));
   app.use(express.json({ limit: ctx.config.server.bodyLimit }));
   app.use(express.static(join(ctx.rootDir, "ui", "dist"), {
@@ -279,21 +268,7 @@ export function buildApp(ctx: RuntimeContext) {
   app.use("/assets", (_req, res) => {
     res.status(404).type("text/plain").send("Asset not found");
   });
-  app.use("/generated", (req, res, next) => {
-    if (req.path.endsWith(".json")) return res.status(404).type("text/plain").send("Generated metadata is not public");
-    if (req.path.toLowerCase().endsWith(".svg")) {
-      // SVG is an active document under top-level navigation, and /generated sits
-      // outside the LAN token guard (which only covers /api). Traced output is
-      // machine-generated, but the guarantee should not rest on writer discipline:
-      // this neuters script execution for any .svg served from here, now or later.
-      res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
-      res.setHeader("X-Content-Type-Options", "nosniff");
-    }
-    return next();
-  }, express.static(ctx.config.storage.generatedDir, {
-    maxAge: ctx.config.storage.staticMaxAge,
-    immutable: true,
-  }));
+  app.use("/generated", ...createGeneratedMediaAccess(ctx, access));
   configureRoutes(app, ctx);
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: { code: "NOT_FOUND", message: "Route not found" } });
@@ -312,7 +287,7 @@ export function buildApp(ctx: RuntimeContext) {
       },
     });
   });
-  return app;
+  return Object.assign(app, { locals });
 }
 
 function runtimeHostUrl(host: string | undefined): string {
@@ -486,6 +461,8 @@ export async function createRuntimeContext(overrides: StartServerOverrides = {})
 export async function startServer(overrides: StartServerOverrides = {}) {
   const ctx = await createRuntimeContext(overrides);
   assertLanAccessConfiguration(ctx.config.server.host, ctx.config.server.lanToken);
+  // Validate the lazy origin configuration before any storage migration.
+  void ctx.config.server.publicOrigins;
   await migrateGeneratedStorage(ctx);
   try {
     await cleanupExpiredMcpTempReferences(ctx.config.storage.generatedDir);
@@ -550,6 +527,7 @@ export async function startServer(overrides: StartServerOverrides = {}) {
     stopAgentQueueWorker();
     clearInterval(reapTimer);
     if (tempReferenceReapTimer) clearInterval(tempReferenceReapTimer);
+    app.locals.disposeLocalLanAccess();
     await shutdownServerAndMcp({
       closeServer: () => new Promise<void>((resolve) => {
         if (server) server.close(() => resolve()); else resolve();
@@ -568,6 +546,7 @@ export async function startServer(overrides: StartServerOverrides = {}) {
     },
   });
   ctx.serverActualPort = getServerPort(server) || ctx.config.server.port;
+  server.once("close", app.locals.disposeLocalLanAccess);
   ctx.serverUrl = `http://${runtimeHostUrl(ctx.config.server.host)}:${ctx.serverActualPort}`;
   void startMcpRestoreAfterListen(ctx).catch((error) => {
     console.warn(`[mcp.restore] code=${String((error as Error)?.message ?? error).split(":")[0]}`);

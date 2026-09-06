@@ -25,9 +25,39 @@ These work on most client commands:
 
 | Flag | Meaning |
 |---|---|
-| `--server <url>` | Override server discovery (default uses `~/.ima2/server.json`, falls back to `IMA2_SERVER` env) |
+| `--server <url>` | Explicit server origin; overrides `IMA2_SERVER`, then credential-free advertise/default discovery |
 | `--json` | Emit machine-readable JSON instead of human-formatted output |
 | `-h`, `--help` | Show subcommand help |
+
+## LAN server authentication
+
+Export your private `IMA2_LAN_TOKEN`, then select the known server explicitly:
+
+```bash
+IMA2_SERVER=http://192.168.1.20:3333 ima2 ping --json
+ima2 models --server https://studio.example --json
+```
+
+The token goes only to the selected normalized HTTP(S) origin, never to arbitrary
+advertise entries, redirects or external returned media. Do not put credentials,
+query strings or non-root paths in `--server` / `IMA2_SERVER`. No token flag or
+cookie jar is used. Auth/forbidden failures exit 4 with a safe code; an unreachable
+explicit server exits 3. Explicit targets never silently fall back to local data.
+`--local`/`--offline` options keep their documented local behavior.
+
+For a proxy or changed published port, configure exact origins and restart:
+
+```bash
+ima2 config set server.publicOrigins '["https://studio.example"]' --yes
+ima2 config rm server.publicOrigins --yes
+```
+
+Invalid origin values are rejected without echoing them. Removal can recover an
+invalid primary or legacy file-layer value while preserving other settings; the
+edited full object is written privately to the primary path and the legacy file
+is retained. An invalid environment override must be unset or corrected separately.
+Config listings/get redact nested credentials; `config path` identifies the file.
+See [LAN HTTP/session and transport limits](API.md#local-and-lan-access).
 
 ## Agent discovery
 

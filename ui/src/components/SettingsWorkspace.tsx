@@ -17,6 +17,7 @@ import type { GalleryScope } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import type { SettingsSection } from "../types";
 import { Select } from "./controls";
+import { LanSessionControls } from "./LanSignIn";
 
 const SETTINGS_SECTIONS: SettingsSection[] = [
   "providers",
@@ -296,6 +297,7 @@ export function SettingsWorkspace() {
             </SettingsSectionBlock>
 
             <SettingsSectionBlock id="general" setRef={setSectionRef}>
+              <LanSessionControls />
               <article className="settings-row">
                 <div className="settings-row__copy">
                   <h4>{t("settings.language.title")}</h4>

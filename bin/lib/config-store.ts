@@ -1,5 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { config as runtimeConfig } from "../../config.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, openSync, closeSync, renameSync, rmSync } from "fs";
+import { randomBytes } from "node:crypto";
+import { config as runtimeConfig, CONFIG_SOURCE_FILE } from "../../config.js";
+import { parsePublicOrigins } from "../../lib/localAccessPolicy.js";
 import {
   AUTH_CONFIG_KEYS,
   KEY_TO_ENV,
@@ -11,6 +13,7 @@ export { KEY_TO_ENV, WRITABLE_CONFIG_KEYS };
 
 export const CONFIG_FILE = runtimeConfig.storage.configFile;
 export const CONFIG_DIR = runtimeConfig.storage.configDir;
+let fileSource = CONFIG_SOURCE_FILE ?? CONFIG_FILE;
 
 export const AUTH_KEYS = AUTH_CONFIG_KEYS;
 
@@ -27,14 +30,22 @@ export function isSensitiveConfigKey(key: string): boolean {
 }
 
 export function redactValue(key: string, value: unknown): unknown {
-  if (isSensitiveConfigKey(key)) return value ? "<redacted>" : value;
+  if (key === "server.publicOrigins") {
+    try { return parsePublicOrigins(value); } catch { return "<invalid public origins>"; }
+  }
+  if (isSensitiveConfigKey(key) && key !== "security.lanTokenMaxBytes") return value ? "<redacted>" : value;
+  if (Array.isArray(value)) return value.map((item, index) => redactValue(`${key}.${index}`, item));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([child, item]) =>
+      [child, redactValue(key ? `${key}.${child}` : child, item)]));
+  }
   return value;
 }
 
 export function loadFileCfg(): Record<string, unknown> {
-  if (!existsSync(CONFIG_FILE)) return {};
+  if (!existsSync(fileSource)) return {};
   try {
-    return JSON.parse(readFileSync(CONFIG_FILE, "utf-8")) as Record<string, unknown>;
+    return JSON.parse(readFileSync(fileSource, "utf-8")) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -51,8 +62,22 @@ export function loadCliDefaults(): { image?: string; video?: string } {
 }
 
 export function saveFileCfg(cfg: Record<string, unknown>): void {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+  mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  const temporary = `${CONFIG_FILE}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
+  let descriptor: number | undefined;
+  let owned = false;
+  try {
+    descriptor = openSync(temporary, "wx", 0o600);
+    owned = true;
+    writeFileSync(descriptor, JSON.stringify(cfg, null, 2));
+    closeSync(descriptor);
+    descriptor = undefined;
+    renameSync(temporary, CONFIG_FILE);
+    fileSource = CONFIG_FILE;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+    if (owned) rmSync(temporary, { force: true });
+  }
 }
 
 export function getNestedKey(obj: unknown, dotKey: string): unknown {

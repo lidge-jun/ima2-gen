@@ -1,3 +1,6 @@
+import { createLanAuthError, getLanAuthEpoch, getLanSessionState,
+  isLanSessionLocked, LAN_AUTH_REQUIRED_EVENT, refreshLanSession } from "./lanSession";
+
 type EventHandler = (event: string, data: Record<string, unknown>) => void;
 
 interface Subscription {
@@ -27,6 +30,8 @@ let resyncCallback: (() => void) | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let wasEverConnected = false;
 let reconnectAttempt = 0;
+let connectionRevision = 0;
+let authListenerAttached = false;
 
 export type ConnectionState = "connected" | "reconnecting" | "failed";
 const FAILED_THRESHOLD = 3;
@@ -39,8 +44,35 @@ function buildEventsUrl(): string {
   return `/api/events?lastEventId=${encodeURIComponent(lastEventId)}`;
 }
 
+function pauseForAuthentication() {
+  connectionRevision += 1;
+  const ownedSource = source;
+  source = null;
+  ownedSource?.close();
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  // Accepted jobs keep their subscriptions, cursor and original deadlines.
+}
+
+function attachAuthListener() {
+  if (authListenerAttached || typeof window === "undefined") return;
+  window.addEventListener(LAN_AUTH_REQUIRED_EVENT, pauseForAuthentication);
+  authListenerAttached = true;
+}
+
+function scheduleReconnect(revision: number, epoch: number) {
+  if (revision !== connectionRevision || epoch !== getLanAuthEpoch() || isLanSessionLocked() || source) return;
+  const baseDelay = Math.min(RECONNECT_BASE_MS * Math.pow(1.5, reconnectAttempt), RECONNECT_MAX_MS);
+  const delay = Math.min(baseDelay * (0.8 + Math.random() * 0.4), RECONNECT_MAX_MS);
+  reconnectAttempt += 1;
+  reconnectTimer = setTimeout(connect, delay);
+  connectionStateCallback?.(reconnectAttempt >= FAILED_THRESHOLD ? "failed" : "reconnecting");
+}
+
 function connect() {
+  attachAuthListener();
+  if (isLanSessionLocked()) return;
   if (source && source.readyState !== EventSource.CLOSED) return;
+  connectionRevision += 1;
   const ownedSource = new EventSource(buildEventsUrl());
   source = ownedSource;
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
@@ -72,14 +104,14 @@ function connect() {
     if (source !== ownedSource || typeof (ev as MessageEvent).data === "string") return;
     source = null;
     ownedSource.close();
-    const baseDelay = Math.min(
-      RECONNECT_BASE_MS * Math.pow(1.5, reconnectAttempt),
-      RECONNECT_MAX_MS,
-    );
-    const delay = Math.min(baseDelay * (0.8 + Math.random() * 0.4), RECONNECT_MAX_MS);
-    reconnectAttempt += 1;
-    reconnectTimer = setTimeout(connect, delay);
-    connectionStateCallback?.(reconnectAttempt >= FAILED_THRESHOLD ? "failed" : "reconnecting");
+    const revision = ++connectionRevision;
+    const epoch = getLanAuthEpoch();
+    if (getLanSessionState()?.mode === "lan") {
+      // EventSource hides HTTP status. A failed observation is connectivity loss,
+      // not proof of expired auth; keep the existing bounded backoff in that case.
+      const resume = () => scheduleReconnect(revision, epoch);
+      void refreshLanSession().then(resume, resume);
+    } else scheduleReconnect(revision, epoch);
   };
 }
 
@@ -135,6 +167,7 @@ export function onConnectionStateChange(cb: (state: ConnectionState) => void) {
 }
 
 export function disconnect() {
+  connectionRevision += 1;
   const ownedSource = source;
   source = null;
   ownedSource?.close();
@@ -145,6 +178,10 @@ export function disconnect() {
   reconnectAttempt = 0;
   resyncCallback = null;
   connectionStateCallback = null;
+  if (authListenerAttached && typeof window !== "undefined") {
+    window.removeEventListener(LAN_AUTH_REQUIRED_EVENT, pauseForAuthentication);
+    authListenerAttached = false;
+  }
 }
 
 export function ensureConnected() {
@@ -158,6 +195,8 @@ export function ensureConnected() {
  * installed is lost on a fresh connection (no Last-Event-ID replay exists).
  */
 export function whenConnected(timeoutMs = 10_000): Promise<void> {
+  const epoch = getLanAuthEpoch();
+  if (isLanSessionLocked()) return Promise.reject(createLanAuthError(epoch - 1));
   ensureConnected();
   if (source && source.readyState === EventSource.OPEN) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -165,6 +204,10 @@ export function whenConnected(timeoutMs = 10_000): Promise<void> {
     // Poll readyState instead of onConnectionStateChange — that callback is a
     // singleton owned by the store and must not be clobbered.
     const tick = () => {
+      if (epoch !== getLanAuthEpoch() || isLanSessionLocked()) {
+        reject(createLanAuthError(epoch));
+        return;
+      }
       if (source && source.readyState === EventSource.OPEN) {
         resolve();
         return;

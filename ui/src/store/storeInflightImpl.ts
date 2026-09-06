@@ -1,6 +1,7 @@
 import type { GenerateItem } from "../types";
 import { getHistory } from "../lib/api";
 import { handleError } from "../lib/errorHandler";
+import { getLanAuthEpoch, isLanSessionLocked, LAN_AUTH_REQUIRED_EVENT } from "../lib/lanSession";
 import { INFLIGHT_TTL_MS, fetchInflightScopes, saveInFlight, HISTORY_LIMIT,
   mapHistoryItem, historyKey, retainHistoryItems } from "./storeHelpers";
 import { captureInflightSnapshot, eligibleInflightIds, isInflightSnapshotCurrent,
@@ -10,6 +11,18 @@ import type { AppState, StoreSet, StoreGet } from "./storeTypes";
 
 type PollWindow = { __ima2InflightTimer?: number; __ima2StopTicks?: number };
 type HistoryEligibility = { snapshot: InflightSnapshot; eligibleIds: Set<string>; serverActiveIds: Set<string> };
+let pollingRevision = 0;
+
+/** Pause observations only; accepted jobs and persisted drafts retain their owners. */
+export function stopInFlightPollingImpl(): void {
+  pollingRevision += 1;
+  if (typeof window === "undefined") return;
+  const w = window as unknown as PollWindow;
+  if (w.__ima2InflightTimer !== undefined) clearInterval(w.__ima2InflightTimer);
+  w.__ima2InflightTimer = undefined;
+  w.__ima2StopTicks = 0;
+  window.removeEventListener(LAN_AUTH_REQUIRED_EVENT, stopInFlightPollingImpl);
+}
 
 function commitMerge(merge: InflightMerge, set: StoreSet, get: StoreGet): void {
   const current = get();
@@ -52,11 +65,11 @@ function pruneAfterHistory(eligibility: HistoryEligibility, set: StoreSet, get: 
 }
 
 async function pollHistory(initial: InflightSnapshot, eligibility: HistoryEligibility | null,
-  set: StoreSet, get: StoreGet): Promise<void> {
+  set: StoreSet, get: StoreGet, isCurrent: () => boolean): Promise<void> {
   try {
     const lastKnown = get().history.reduce((max, item) => Math.max(max, item.createdAt ?? 0), 0);
     const { items } = await getHistory({ limit: HISTORY_LIMIT, since: lastKnown });
-    if (!isInflightSnapshotCurrent(initial, get())) return;
+    if (!isCurrent() || !isInflightSnapshotCurrent(initial, get())) return;
     updateHistory(items.map(mapHistoryItem), set);
     if (eligibility) pruneAfterHistory(eligibility, set, get);
   } catch (error) {
@@ -68,18 +81,21 @@ function idleTick(state: AppState, w: PollWindow): boolean {
   const idle = state.inFlight.length === 0 && state.activeGenerations === 0;
   w.__ima2StopTicks = idle ? (w.__ima2StopTicks ?? 0) + 1 : 0;
   if (w.__ima2StopTicks >= 2 && w.__ima2InflightTimer) {
-    clearInterval(w.__ima2InflightTimer);
-    w.__ima2InflightTimer = undefined; w.__ima2StopTicks = 0;
+    stopInFlightPollingImpl();
   }
   return idle;
 }
 
 async function pollTick(set: StoreSet, get: StoreGet, w: PollWindow): Promise<void> {
+  if (isLanSessionLocked()) { stopInFlightPollingImpl(); return; }
+  const epoch = getLanAuthEpoch(), revision = pollingRevision;
+  const isCurrent = () => !isLanSessionLocked() && epoch === getLanAuthEpoch() && revision === pollingRevision;
   const initial = captureInflightSnapshot(get());
   let eligibility: HistoryEligibility | null = null;
   if (!idleTick(get(), w)) {
     try {
       const response = await fetchInflightScopes(initial.scopes);
+      if (!isCurrent()) return;
       const merge = mergeInflightSnapshot(initial, get(), response, { mode: "poll", now: Date.now() });
       if (!merge) return;
       commitMerge(merge, set, get);
@@ -89,20 +105,24 @@ async function pollTick(set: StoreSet, get: StoreGet, w: PollWindow): Promise<vo
       if (import.meta.env.DEV) console.warn("[inflight] polling failed (fetchInflightScopes)", error);
     }
   }
-  if (isInflightSnapshotCurrent(initial, get())) await pollHistory(initial, eligibility, set, get);
+  if (isCurrent() && isInflightSnapshotCurrent(initial, get())) await pollHistory(initial, eligibility, set, get, isCurrent);
 }
 
 export function startInFlightPollingImpl(set: StoreSet, get: StoreGet): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isLanSessionLocked()) return;
   const w = window as unknown as PollWindow;
   if (w.__ima2InflightTimer) return;
+  window.addEventListener(LAN_AUTH_REQUIRED_EVENT, stopInFlightPollingImpl);
   w.__ima2InflightTimer = window.setInterval(() => pollTick(set, get, w), 1500);
 }
 
 export async function reconcileInflightImpl(set: StoreSet, get: StoreGet): Promise<void> {
+  if (isLanSessionLocked()) return;
+  const epoch = getLanAuthEpoch(), revision = pollingRevision;
   try {
     const snapshot = captureInflightSnapshot(get());
     const response = await fetchInflightScopes(snapshot.scopes);
+    if (isLanSessionLocked() || epoch !== getLanAuthEpoch() || revision !== pollingRevision) return;
     const merge = mergeInflightSnapshot(snapshot, get(), response, { mode: "reconcile", now: Date.now() });
     if (!merge) return;
     saveInFlight(merge.inFlight);

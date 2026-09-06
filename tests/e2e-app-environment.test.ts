@@ -103,6 +103,19 @@ test("omits the synthetic MiniMax key when explicitly disabled", () => {
   assert.equal(env({}, true).MINIMAX_API_KEY, undefined);
 });
 
+test("LAN fixture opts in explicitly without inheriting a real token or widening child egress", () => {
+  const inherited = { IMA2_LAN_TOKEN: "never-inherit", IMA2_E2E_LAN_BIND: "1", IMA2_PUBLIC_ORIGINS: "never-inherit" };
+  assert.equal(env(inherited).IMA2_LAN_TOKEN, undefined);
+  assert.equal(env(inherited).IMA2_E2E_LAN_BIND, undefined);
+  const result = makeAppEnv(inherited, { home, stubUrl, mode: "minimax", withoutMinimaxKey: true,
+    lan: { token: "synthetic-lan", publicOrigins: ["https://localhost:41235"] } });
+  assert.equal(result.IMA2_HOST, "0.0.0.0");
+  assert.equal(result.IMA2_E2E_LAN_BIND, "1");
+  assert.equal(result.IMA2_LAN_TOKEN, "synthetic-lan");
+  assert.equal(result.IMA2_PUBLIC_ORIGINS, '["https://localhost:41235"]');
+  assert.equal(result.IMA2_E2E_ALLOWED_ORIGIN, "http://127.0.0.1:41234");
+});
+
 test("platform refusal IPC accepts only the fixed readonly operation vocabulary", () => {
   const report = createGuardReport(); report.accept({ type: "ima2-e2e-guard-ready", version: 1 });
   report.accept({ type: "ima2-e2e-file-denied", operation: "openSync.platformExecutable", category: "expected-platform-probe" });

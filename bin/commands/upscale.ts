@@ -4,9 +4,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { parseArgs, type ParsedArgs } from "../lib/args.js";
-import { resolveServer } from "../lib/client.js";
+import { resolveServer, fetchServer } from "../lib/client.js";
 import { runMcpJob } from "../lib/mcpJob.js";
-import { color, die, fail, json, out } from "../lib/output.js";
+import { color, die, exitCodeForError, fail, json, out } from "../lib/output.js";
 import { createCliRequestId } from "../lib/recover-output.js";
 
 const MCP_UPSCALE_TIMEOUT_MS = 5 * 60_000 + 120_000 + 30_000;
@@ -55,6 +55,15 @@ function parsePercent(value: string, label: string): number {
 }
 
 export default async function upscaleCmd(argv: string[]): Promise<void> {
+  try { await upscale(argv); }
+  catch (error) {
+    if (!(error instanceof Error)) throw error;
+    fail({ json: argv.includes("--json"), code: (error as { code?: string }).code ?? "MCP_UPSCALE_FAILED",
+      message: error.message, exitCode: exitCodeForError(error) });
+  }
+}
+
+async function upscale(argv: string[]): Promise<void> {
   const args: ParsedArgs = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
   if (args._unknown.length) die(2, `unknown option: ${args._unknown[0]}`);
@@ -105,7 +114,7 @@ export default async function upscaleCmd(argv: string[]): Promise<void> {
     });
     const target = args.out ? String(args.out) : args["out-dir"] ? join(String(args["out-dir"]), result.filename) : undefined;
     if (target) {
-      const response = await fetch(`${server.base}${result.url}`);
+      const response = await fetchServer(server.base, result.url);
       if (!response.ok) die(1, `failed to download result: HTTP ${response.status}`);
       await mkdir(dirname(target), { recursive: true });
       await writeFile(target, Buffer.from(await response.arrayBuffer()));
@@ -114,6 +123,6 @@ export default async function upscaleCmd(argv: string[]): Promise<void> {
     else out(color.green("✓ ") + (target ?? `${server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string };
-    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_UPSCALE_FAILED", message: typed.message, exitCode: 1 });
+    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_UPSCALE_FAILED", message: typed.message, exitCode: exitCodeForError(error) });
   }
 }

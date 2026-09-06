@@ -76,3 +76,128 @@ test("invalid request and open-folder feedback i18n keys exist", () => {
   assert.match(en, /"imageToolFailed"/);
   assert.match(ko, /"imageToolFailed"/);
 });
+
+test("LAN transport and admission epochs share the existing fixture auth owner", async (context) => {
+  await withJobTrackingUi(async (f) => {
+    const r = f.runtime;
+    const lanBody = { error: { code: "LAN_TOKEN_REQUIRED", message: "untrusted server detail" } };
+    let authEvents = 0;
+    const observeAuth = () => { authEvents += 1; };
+    window.addEventListener(r.LAN_AUTH_REQUIRED_EVENT, observeAuth);
+    const surfaces = { showToast: () => assert.fail("LAN failure became a toast"),
+      showErrorCard: () => assert.fail("LAN failure became a provider card") };
+    f.route("POST", "/api/auth/lan/session", () => new Response(null, { status: 204 }));
+    f.route("GET", "/api/auth/lan/session", () => Response.json({ mode: "lan", authenticated: true, expiresAt: 9_000_000 }));
+    f.route("GET", "/api/history", () => Response.json({ items: [] }));
+    try {
+      await context.test("ordinary provider401 stays typed; external/data/blob media does not activate LAN gate", async () => {
+        f.route("GET", "/api/inflight", () => Response.json({
+          error: { code: "AUTH_API_KEY_INVALID", message: "ordinary provider" },
+        }, { status: 401 }));
+        await assert.rejects(r.fetchInflightScopes([{ kind: "classic" }]),
+          { code: "AUTH_API_KEY_INVALID", status: 401, message: "ordinary provider" });
+        const urls = ["https://external.invalid/api/image", "data:text/plain,fixture", "blob:http://wp07.invalid/fixture"];
+        let index = 0;
+        const mocked = context.mock.method(globalThis, "fetch", async (url: string, options?: RequestInit) => {
+          assert.equal(url, urls[index++]); assert.equal(options, undefined);
+          return Response.json(lanBody, { status: 401 });
+        });
+        try {
+          for (const url of urls) await assert.rejects(r.compressReferenceSource(url), /reference fetch failed: 401/);
+          assert.equal(index, 3); assert.equal(authEvents, 0);
+        } finally { mocked.mock.restore(); }
+      });
+
+      await context.test("nested401 locks once; delayed401 and locked-period errors cannot relock after login", async () => {
+        const held = f.defer<Response>();
+        f.route("GET", "/api/inflight", () => held.promise);
+        const older = f.track(r.fetchInflightScopes([{ kind: "classic" }])
+          .then(() => assert.fail("expected denial"), error => error));
+        f.route("GET", "/generated/expired.png", () => Response.json(lanBody, { status: 401 }));
+        const first = await r.compressReferenceSource("/generated/expired.png")
+          .then(() => assert.fail("expected denial"), error => error);
+        assert.equal(first.code, "LAN_TOKEN_REQUIRED"); assert.equal(first.status, 401);
+        assert.equal(first.authEpoch, 0); assert.doesNotMatch(first.message, /untrusted/);
+        assert.equal(authEvents, 1); assert.equal(r.isLanSessionLocked(), true);
+        const requests = f.requests.length;
+        const blocked = await r.compressReferenceSource("/generated/owned.png")
+          .then(() => assert.fail("expected locked guard"), error => error);
+        const blockedExtension = await r.postVideoExtendStream({ requestId: "locked", sourceVideoId: "owned.mp4", provider: "grok" },
+          new AbortController().signal).then(() => assert.fail("expected locked guard"), error => error);
+        assert.equal(f.requests.length, requests);
+        await r.createLanSession("synthetic-fixture-token");
+        held.resolve(Response.json(lanBody, { status: 401 }));
+        for (const error of [first, blocked, blockedExtension, await older]) r.handleError(error, surfaces);
+        assert.equal(r.isLanSessionLocked(), false); assert.equal(authEvents, 1);
+        assert.equal(r.resolveErrorSpec({ code: "LAN_TOKEN_REQUIRED", errorClass: "AUTH_EXPIRED", message: "sign in again" }).code,
+          "LAN_TOKEN_REQUIRED");
+      });
+
+      await context.test("capacity wait cannot POST again after auth loss and explicit login", async () => {
+        let posts = 0;
+        f.route("POST", "/api/generate", () => { posts += 1;
+          return Response.json({ code: "TOO_MANY_JOBS" }, { status: 429, headers: { "Retry-After": "1" } }); });
+        r.useAppStore.setState({ assetGenPrompt: "synthetic asset", assetGenProvider: "api" });
+        const work = f.track(r.useAppStore.getState().generateAssetGen());
+        for (let turn = 0; turn < 50 && ![...f.timers.values()].some(timer => timer.delay === 1000); turn++) await Promise.resolve();
+        const delay = [...f.timers].find(([, timer]) => timer.delay === 1000); assert.ok(delay);
+        r.requireLanAuthentication(); await r.createLanSession("synthetic-fixture-token");
+        await f.runTimer(delay[0]); await work;
+        assert.equal(posts, 1); assert.equal(r.isLanSessionLocked(), false);
+        assert.equal(r.useAppStore.getState().toastLog.length + r.useAppStore.getState().errorCardLog.length, 0);
+      });
+
+      await context.test("resolved OPEN waiter cannot submit across an auth-loss continuation", async () => {
+        r.ensureConnected(); f.openStream();
+        const requests = f.requests.length;
+        const work = f.track(r.postVideoExtendStream({ requestId: "old-waiter", sourceVideoId: "owned.mp4", provider: "grok" },
+          new AbortController().signal).then(() => assert.fail("expected epoch rejection"), error => error));
+        r.requireLanAuthentication();
+        const error = await work; assert.equal(error.code, "LAN_TOKEN_REQUIRED");
+        assert.equal(f.requests.length, requests);
+        await r.createLanSession("synthetic-fixture-token");
+        r.handleError(error, surfaces); assert.equal(r.isLanSessionLocked(), false);
+      });
+
+      await context.test("accepted extension retains signal, subscription and cursor across auth loss", async () => {
+        r.ensureConnected(); f.openStream();
+        const admitted = f.defer<void>();
+        const controller = new AbortController();
+        f.route("POST", "/api/video/extend", request => {
+          assert.equal(request.signal, controller.signal);
+          assert.equal(request.headers.get("Content-Type"), "application/json");
+          assert.equal(request.headers.has("X-Ima2-Token"), false);
+          admitted.resolve();
+          return Response.json({ requestId: "accepted", sourceVideoId: "owned.mp4", workflow: "last-frame-i2v" }, { status: 202 });
+        });
+        const work = f.track(r.postVideoExtendStream({ requestId: "accepted", sourceVideoId: "owned.mp4", provider: "grok" }, controller.signal));
+        await admitted.promise;
+        f.emit("phase", { requestId: "accepted", phase: "running" }, "41");
+        const deadline = [...f.timers].find(([, timer]) => timer.delay === r.JOB_STREAM_TIMEOUT_MS); assert.ok(deadline);
+        r.requireLanAuthentication();
+        assert.equal(controller.signal.aborted, false); assert.ok(f.timers.has(deadline[0]));
+        await r.createLanSession("synthetic-fixture-token");
+        r.ensureConnected(); f.openStream();
+        assert.ok(f.ledger.events.includes("stream:create:/api/events?lastEventId=41"));
+        f.emit("done", { requestId: "accepted", filename: "accepted.mp4" }, "42");
+        assert.equal((await work).filename, "accepted.mp4");
+        assert.equal(f.requests.filter(request => request.url.endsWith("/api/video/extend")).length, 1);
+        assert.equal(f.requests.some(request => request.method === "DELETE"), false);
+      });
+      await context.test("observation401 reaches the gate; abort and ordinary response contracts survive", async () => {
+        const controller = new AbortController();
+        f.route("GET", "/api/mcp/providers", request => {
+          assert.equal(request.signal, controller.signal);
+          return Response.json({ providers: [] });
+        });
+        assert.deepEqual(await r.readMcpProviderObservation(controller.signal), { providers: [] });
+        f.route("GET", "/api/mcp/providers", () => Response.json(lanBody, { status: 401 }));
+        await assert.rejects(r.readMcpProviderObservation(), { code: "LAN_TOKEN_REQUIRED", status: 401 });
+        const requests = f.requests.length;
+        controller.abort();
+        await assert.rejects(r.readMcpProviderObservation(controller.signal), { name: "AbortError" });
+        assert.equal(f.requests.length, requests);
+      });
+    } finally { window.removeEventListener(r.LAN_AUTH_REQUIRED_EVENT, observeAuth); }
+  });
+});

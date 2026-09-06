@@ -25,7 +25,7 @@ export default async function pingCmd(argv: string[]) {
     }
   } catch (e) {
     const err = errInfo(e);
-    if (args.json) { json({ ok: false, error: err.message }); exitFlushed(exitCodeForError(e)); }
+    if (args.json) { json({ ok: false, error: err.message, code: err.code }); exitFlushed(exitCodeForError(e)); }
     die(exitCodeForError(e), err.message);
   }
 }

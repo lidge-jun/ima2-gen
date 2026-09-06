@@ -1,7 +1,7 @@
 import { parseArgs } from "../lib/args.js";
-import { resolveServer } from "../lib/client.js";
+import { resolveServer, fetchServer } from "../lib/client.js";
 import { streamSse } from "../lib/sse.js";
-import { out, die, color, exitCodeForError } from "../lib/output.js";
+import { out, die, color, exitCodeForError, fail } from "../lib/output.js";
 import { writeFile, mkdir, readFile, stat } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { runVideoGenerate } from "../lib/videoMcp.js";
@@ -82,9 +82,16 @@ async function writeBuffer(path: string, buf: Buffer): Promise<void> {
 
 async function downloadReturnedVideo(serverBase: string, data: Record<string, unknown>, outPath: string, signal: AbortSignal): Promise<void> {
   const rawUrl = typeof data.url === "string" ? data.url : "";
-  const url = rawUrl.startsWith("/") ? `${serverBase}${rawUrl}` : rawUrl;
-  if (!url) die(1, "server did not return a video url");
-  const res = await fetch(url, { signal });
+  if (!rawUrl) die(1, "server did not return a video url");
+  let url: URL;
+  try {
+    url = new URL(rawUrl, `${serverBase}/`);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error();
+  } catch { die(1, "server returned an invalid video url"); }
+  // External signed media retains its query, but never inherits server credentials.
+  const res = url.origin === new URL(serverBase).origin
+    ? await fetchServer(serverBase, url.href, { signal })
+    : await fetch(url.href, { signal, credentials: "omit", redirect: "error" });
   if (!res.ok) die(1, `failed to download video: HTTP ${res.status}`);
   await writeBuffer(outPath, Buffer.from(await res.arrayBuffer()));
 }
@@ -185,6 +192,15 @@ const HELP = `
 `;
 
 export default async function videoCmd(argv: string[]) {
+  try { await dispatchVideo(argv); }
+  catch (error) {
+    if (!(error instanceof Error)) throw error;
+    fail({ json: argv.includes("--json"), code: (error as { code?: string }).code ?? "VIDEO_FAILED",
+      message: error.message, exitCode: exitCodeForError(error) });
+  }
+}
+
+async function dispatchVideo(argv: string[]) {
   const sub = argv[0];
   if (sub === "edit") return videoEditCmd(argv.slice(1));
   if (sub === "extend") return videoExtendCmd(argv.slice(1));
@@ -249,9 +265,8 @@ async function videoEditCmd(argv: string[]) {
   if (!prompt.trim()) die(2, ACTIVE_VIDEO_PROMPT_GUIDANCE);
   if (!args.video) die(2, "--video <url> is required");
   parseTimeoutSeconds(args.timeout);
-  let server;
-  try { server = await resolveServer({ serverFlag: args.server }); } catch (e: unknown) { die(exitCodeForError(e), (e as Error).message); throw e; }
-  const res = await fetch(`${server.base}/api/video/edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, videoUrl: args.video }), signal: timeoutSignal(args.timeout) });
+  const server = await resolveServer({ serverFlag: args.server });
+  const res = await fetchServer(server.base, "/api/video/edit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, videoUrl: args.video }), signal: timeoutSignal(args.timeout) });
   const data = await readJsonResponse(res, "edit");
   if (!res.ok) die(1, `edit failed: ${data.error ?? res.status}`);
   const outPath = (args.out || args.output) as string | undefined;
@@ -270,9 +285,8 @@ async function videoExtendCmd(argv: string[]) {
   const duration = parseIntegerFlag(args.duration, 6, "--duration");
   if (duration < 2 || duration > 10) die(2, "--duration must be between 2 and 10");
   parseTimeoutSeconds(args.timeout);
-  let server;
-  try { server = await resolveServer({ serverFlag: args.server }); } catch (e: unknown) { die(exitCodeForError(e), (e as Error).message); throw e; }
-  const res = await fetch(`${server.base}/api/video/extend`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, videoUrl: args.video, duration }), signal: timeoutSignal(args.timeout) });
+  const server = await resolveServer({ serverFlag: args.server });
+  const res = await fetchServer(server.base, "/api/video/extend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, videoUrl: args.video, duration }), signal: timeoutSignal(args.timeout) });
   const data = await readJsonResponse(res, "extend");
   if (!res.ok) die(1, `extend failed: ${data.error ?? res.status}`);
   const outPath = (args.out || args.output) as string | undefined;
@@ -319,8 +333,7 @@ async function videoContinueCmd(argv: string[]) {
   const model = args.model ? canonicalVideoModel(String(args.model)) : GROK_VIDEO_MODEL_BASE;
   validateCliVideoResolution(model, resolution, "image-to-video");
   parseTimeoutSeconds(args.timeout);
-  let server;
-  try { server = await resolveServer({ serverFlag: args.server }); } catch (e: unknown) { die(exitCodeForError(e), (e as Error).message); throw e; }
+  const server = await resolveServer({ serverFlag: args.server });
   const requestId = `req_cli_video_continue_${Date.now().toString(36)}`;
   const body: Record<string, unknown> = {
     prompt,
@@ -354,8 +367,7 @@ async function videoFrameCmd(argv: string[]) {
   const position = args.last ? "last" : (String(args.position || "last"));
   if (position !== "last" && !/^\d+(\.\d+)?$/.test(position)) die(2, "--position must be a non-negative number");
   parseTimeoutSeconds(args.timeout);
-  let server;
-  try { server = await resolveServer({ serverFlag: args.server }); } catch (e: unknown) { die(exitCodeForError(e), (e as Error).message); throw e; }
+  const server = await resolveServer({ serverFlag: args.server });
   // A path that exists on disk is uploaded; anything else is treated as a
   // generated filename the server can resolve itself. Before this, a clip saved
   // with -o was rejected as "not found" while sitting in the current directory,
@@ -366,13 +378,13 @@ async function videoFrameCmd(argv: string[]) {
     if (info.isFile()) localBytes = await readFile(file);
   } catch { /* not a local path; fall through to the generated-file lookup */ }
   const res = localBytes
-    ? await fetch(`${server.base}/api/video/frame`, {
+    ? await fetchServer(server.base, "/api/video/frame", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ video: localBytes.toString("base64"), position }),
       signal: timeoutSignal(args.timeout),
     })
-    : await fetch(`${server.base}/api/video/frame?file=${encodeURIComponent(file)}&position=${encodeURIComponent(position)}`, { signal: timeoutSignal(args.timeout) });
+    : await fetchServer(server.base, `/api/video/frame?file=${encodeURIComponent(file)}&position=${encodeURIComponent(position)}`, { signal: timeoutSignal(args.timeout) });
   if (!res.ok) {
     const payload = await readJsonResponse(res, "frame extraction") as { error?: string };
     const detail = payload.error ?? String(res.status);
@@ -395,9 +407,8 @@ async function videoAnalyzeCmd(argv: string[]) {
   const videoUrl = args.positional[0];
   if (!videoUrl) die(2, "generated video filename required");
   parseTimeoutSeconds(args.timeout);
-  let server;
-  try { server = await resolveServer({ serverFlag: args.server }); } catch (e: unknown) { die(exitCodeForError(e), (e as Error).message); throw e; }
-  const res = await fetch(`${server.base}/api/video/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videoUrl }), signal: timeoutSignal(args.timeout) });
+  const server = await resolveServer({ serverFlag: args.server });
+  const res = await fetchServer(server.base, "/api/video/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videoUrl }), signal: timeoutSignal(args.timeout) });
   const data = await readJsonResponse(res, "analyze");
   if (!res.ok) die(1, `analyze failed: ${(data as any).error || res.status}`);
   if (args.json) { out(JSON.stringify(data, null, 2)); } else { out((data as any).analysis); }

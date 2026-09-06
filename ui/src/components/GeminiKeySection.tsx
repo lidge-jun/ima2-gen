@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import { useEffect, useState } from "react";
 import { ApiKeyInput } from "./ApiKeyInput";
 import { VertexJsonInput } from "./VertexJsonInput";
@@ -28,7 +29,7 @@ export function GeminiKeySection({ keyStatus, onSaved }: GeminiKeySectionProps) 
   const handleModeChange = (mode: "apikey" | "vertex") => {
     setUserPicked(true);
     setAuthMode(mode);
-    void fetch("/api/keys/gemini-auth-mode", {
+    void fetchApi("/api/keys/gemini-auth-mode", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode }),

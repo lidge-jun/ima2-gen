@@ -2,6 +2,7 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { join, dirname, basename, isAbsolute } from "node:path";
 import { config } from "../../config.js";
 import { request } from "./client.js";
+import { exitCodeForError } from "./output.js";
 
 export type RecoverOutputTarget = {
   explicitOut?: string | null;
@@ -124,12 +125,12 @@ export async function recoverGeneratedOutputs(
   try {
     const result = await tryTerminalRecovery(base, requestId, target);
     if (result) return result;
-  } catch {}
+  } catch (error) { if (exitCodeForError(error) === 4) throw error; }
 
   try {
     const result = await tryHistoryRecovery(base, requestId, target);
     if (result) return result;
-  } catch {}
+  } catch (error) { if (exitCodeForError(error) === 4) throw error; }
 
   return { recovered: false, paths: [], requestId, source: "none" };
 }
