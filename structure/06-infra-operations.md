@@ -235,11 +235,13 @@ Production releases use GitHub Actions `.github/workflows/publish.yml` with npm 
 | Trigger | npm dist-tag | Notes |
 |---|---|---|
 | Push to `preview` | `preview` | Publishes `X.Y.Z-preview.YYMMDD.RUN_ID.ATTEMPT`; a stable-tagged SHA already at `latest` is skipped |
-| Push stable tag `vX.Y.Z` | `latest` | Tag/version must match, version must advance npm `latest`, and tag SHA must equal `origin/main` |
+| Push stable tag `vX.Y.Z` | `latest` | Tag/version must match, version must advance npm `latest`, and main/dev/preview/tag must identify the same source |
 
-`workflow_dispatch` and GitHub Release events are not publish triggers. All third-party Actions use full commit SHAs. The workflow has `prepare`, `package`, `windows-consumer`, `publish`, `create-github-release`, and `verify-existing` jobs; only `publish` receives `id-token: write`. The package job runs the canonical source gate, packs once, embeds the source `gitHead`, records SHA-512/integrity in `release-manifest.json`, generates `sbom.cdx.json`, and install-smokes that exact tarball. Before publish, Windows Node 22/npm 11 and Node 24/npm 12 consumers install the previous registry release into an isolated global prefix, update it with that exact tarball, and prove the package-local Codex/OAuth path from an unrelated working directory. Codex login is launched from the package-local JavaScript bin with `cli_auth_credentials_store="file"`; the proxy starts only when a concrete auth file exists and receives that path through `--oauth-file`, so a keyring-only Codex session cannot be reported as proxy-ready. The publish job then downloads and verifies those bytes, rechecks live refs, publishes the tarball, and reads npm metadata plus the SLSA attestation back. For stable `latest` publishes, the follow-on `create-github-release` job creates or refreshes the matching GitHub Release (`gh release create --verify-tag --latest`) and attaches `release-manifest.json` plus `sbom.cdx.json` from the same artifact set, so npm success no longer depends on a local finalize step. `verify-existing` also reuses `ensure-github-release` for already-published stable tags that are missing a GitHub Release entry. Repository, workflow path, push ref, commit, original run/attempt, GitHub-hosted builder, in-toto/SLSA schema, package subject, and SHA-512 must all match; `npm audit signatures` cryptographically verifies registry signatures and Sigstore provenance. A full stable-workflow rerun after an immutable version exists takes `verify-existing`. A failed-job-only rerun reaches a second registry guard inside the publish job: a correctly signed existing version skips `npm publish` and verifies its original provenance attempt, while a fresh publication must prove the current run/attempt.
+Scoped `workflow_dispatch` with `publish_ref`/`publish_sha` is also supported; GitHub Release events are not publish triggers. All third-party Actions use full commit SHAs. Jobs are `prepare`, `package`, `windows-consumer`, `publish-preview`, `publish-stable`, `create-github-release`, and `verify-existing`. OIDC is confined to the two publishers and the post-publish attestation job; packaging has no OIDC token. The package job runs the canonical source gate, packs once, embeds `gitHead`, records SHA-512/integrity in `release-manifest.json`, emits `sbom.cdx.json`, and install-smokes that tarball. The preview lane additionally installs/updates that artifact on Windows Node22/npm11 and Node24/npm12 and probes package-local Codex/OAuth. Stable publication revalidates the matching preview source-SHA proof rather than repeating that consumer matrix.
 
-`.github/workflows/release.yml` (`workflow_dispatch`, `bump` input) owns the cut. Its `cut` job asserts the baseline through `scripts/release-cut.mjs preflight` (origin/main equals the checkout and already contains dev and preview), creates the version commit, pushes `main`, promotes that exact SHA to `preview`, dispatches `publish.yml` for the preview channel, waits for that run, and then requires the npm preview proof. Only then does the `tag` job re-check the proof, create the stable tag, atomically push `main`, `dev`, and the tag, and dispatch `publish.yml` for the stable channel. `contents: write` is scoped to those two jobs and neither requests `id-token: write`.
+Codex login uses the package-local JavaScript bin with `cli_auth_credentials_store="file"`; the proxy requires a concrete auth file passed through `--oauth-file`. A keyring-only session is not proxy-ready. Publishers download the tested artifacts, recheck live refs, publish immutable bytes and verify registry/tag/integrity/Sigstore provenance. The stable follow-on creates the GitHub Release and attaches its manifest/SBOM; the TGZ is available from npm and the Actions artifact, not assumed to be a GitHub Release attachment. `verify-existing` recovers already-published versions without republishing. Repository, workflow, allowed ref, source commit, original run/attempt, GitHub-hosted builder and subject SHA-512 must agree; `npm audit signatures` performs cryptographic verification. A failed-job rerun checks immutable registry state before deciding whether publishing is necessary.
+
+`.github/workflows/release.yml` owns the cut. Its baseline must equal origin/main and contain dev/preview and the recorded required-unit commits. It creates the version commit, runs release verification, and proves exact-candidate CI through a leased candidate ref **before** moving main/preview. It then publishes/verifies preview. The `npm-stable` environment gates tagging; after preview proof and unmoved-ref checks, the tag job atomically pushes main/dev/tag and dispatches stable publication. Both cut/tag jobs have scoped contents/actions writes and no OIDC publication permission. `expected_sha` guards the caller's chosen baseline; real release, dry-run and canary modes remain distinct.
 
 `publish.yml` is reached by `workflow_dispatch` as well as by its original preview/tag pushes, because a push authenticated with `GITHUB_TOKEN` emits no workflow event; without that dispatch a CI-minted tag would leave an immutable tag with no npm package. The dispatch cannot widen what may be published: `PUBLISH_REF`/`PUBLISH_SHA` feed the same `classifyPublish`, which still accepts only `refs/heads/preview` or a `v*` tag matching `package.json`, and stable publishing still requires `main`, `dev`, `preview`, and the tag to share one SHA plus a matching npm preview `gitHead`. Every checkout in that workflow pins the published SHA so a dispatch cannot package the default branch. Recovery for an already-published version is the `verify-existing` job, which reuses `ensure-github-release`.
 
@@ -278,7 +280,34 @@ tracked peers. Responses exceeding a budget return429/API_RATE_LIMITED with
 Retry-After. Forwarded headers cannot choose a budget identity. Existing SSE
 frames are not new requests; static UI/media are outside this admission counter.
 These code-owned defaults and existing job concurrency limits protect one process,
-not a distributed deployment. Future LAN session/media changes are a separate lane.
+not a distributed deployment. LAN explicit-token comparisons additionally share
+a 10-failures/60-second socket-peer cooldown across API/media/status/bootstrap.
+Valid cookie-only access is not blocked by bearer cooldown; cookie expiry and
+normal token-free loopback use retain their own rules.
+
+### Installed release UI verification
+
+The manual-only `published-ui-smoke.yml` reuses the installed-tarball smoke's
+owned server and the existing Playwright dependency. `artifact_kind=candidate`
+exercises a packed current checkout; `artifact_kind=published` requires the exact
+stable tag, registry/provenance and manifest/TGZ digest before installation.
+Candidate evidence never substitutes for published evidence. The driver commit
+and installed product commit are recorded separately.
+
+After canonical publication:
+
+```sh
+gh workflow run published-ui-smoke.yml --ref main \
+  -f artifact_kind=published -f release_sha=<release-sha> -f release_version=<version>
+```
+
+The opt-in `IMA2_PACKAGE_UI_OUTPUT_DIR` in `tests/package-install-smoke.mjs`
+captures desktop/mobile NovelAI panes from installed assets, with synthetic
+provider metadata and no generation/account mutations. Real health/auth/static
+responses remain unmocked; served JS/CSS bytes are checked against the installed
+manifest. Read the original screenshots and JSON before accepting the result.
+The workflow neither publishes nor schedules follow-up work; existing package
+smoke runs without this option do not launch a browser.
 
 Accepted `/api/events` response headers include `x-ima2-event-cursor`, the effective
 cursor before replay. CLI `openSse` exposes a validated `initialEventId` before the

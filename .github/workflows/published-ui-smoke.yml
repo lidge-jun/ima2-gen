@@ -1,0 +1,142 @@
+name: Installed artifact UI proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_kind:
+        description: Candidate exercise or published stable proof
+        type: choice
+        options: [published, candidate]
+        default: published
+        required: true
+      release_sha:
+        description: Exact published product SHA (leave empty for candidate)
+        type: string
+        required: false
+      release_version:
+        description: Exact published stable version (leave empty for candidate)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  installed-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      npm_config_registry: https://registry.npmjs.org
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+      - name: Validate acquisition and driver identity
+        id: inputs
+        env:
+          ARTIFACT_KIND: ${{ inputs.artifact_kind }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync } from 'node:fs';
+          const { ARTIFACT_KIND: kind, RELEASE_SHA: sha, RELEASE_VERSION: version } = process.env;
+          assert(['candidate', 'published'].includes(kind));
+          const driver = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          assert.equal(driver, process.env.GITHUB_SHA);
+          if (kind === 'published') {
+            assert.match(sha, /^[0-9a-f]{40}$/);
+            assert.match(version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+          } else assert(!sha && !version, 'candidate uses the actual driver checkout, not release inputs');
+          appendFileSync(process.env.GITHUB_OUTPUT, `driver_sha=${driver}\n`);
+          NODE
+      - name: Install the existing pinned driver dependencies
+        run: |
+          NPM_VERSION=$(node -p "require('./package.json').packageManager.split('@').pop()")
+          npm install -g "npm@$NPM_VERSION"
+          node scripts/release-contract.mjs assert-toolchain
+          npm ci --no-audit --no-fund
+          npm --prefix ui ci --no-audit --no-fund
+          node ui/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Acquire and verify the exact artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_KIND: ${{ inputs.artifact_kind }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          QA_DRIVER_SHA: ${{ steps.inputs.outputs.driver_sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const { ARTIFACT_KIND: artifactKind, QA_DRIVER_SHA: driverSha, RUNNER_TEMP } = process.env;
+          const artifactDir = join(RUNNER_TEMP, 'wp13-artifact'), outputDir = join(RUNNER_TEMP, 'wp13-ui');
+          mkdirSync(artifactDir, { recursive: true }); mkdirSync(outputDir, { recursive: true });
+          const manifestPath = join(artifactDir, 'release-manifest.json');
+          const run = (command, args, extraEnv = {}) => execFileSync(command, args, {
+            encoding: 'utf8', timeout: 600_000, maxBuffer: 16 * 1024 * 1024,
+            env: { ...process.env, GITHUB_OUTPUT: '', IMA2_EXPECT_CURRENT_PROVENANCE: 'false', ...extraEnv },
+          }).trim();
+          const contract = (...args) => run(process.execPath, ['scripts/release-contract.mjs', ...args]);
+          const acquisition = { artifactKind, driverSha, startedAt: new Date().toISOString(), passed: false };
+          try {
+          let sourceSha = process.env.RELEASE_SHA, version = process.env.RELEASE_VERSION;
+          if (artifactKind === 'candidate') {
+            sourceSha = driverSha; version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+            run(process.execPath, ['scripts/release-contract.mjs', 'pack', artifactDir], { PUBLISH_SHA: driverSha });
+          } else {
+            assert.equal(run('git', ['rev-list', '-n1', `v${version}`]), sourceSha, 'release tag mismatch');
+            run('gh', ['release', 'download', `v${version}`, '--repo', process.env.GITHUB_REPOSITORY,
+              '--pattern', 'release-manifest.json', '--dir', artifactDir]);
+          }
+          const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+          assert.equal(manifest.schemaVersion, 1); assert.equal(manifest.name, 'ima2-gen');
+          assert.equal(manifest.version, version); assert.equal(manifest.gitHead, sourceSha);
+          assert.match(version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+          assert.equal(manifest.filename, `ima2-gen-${version}.tgz`);
+          assert.match(manifest.sha512, /^[0-9a-f]{128}$/);
+          assert.match(manifest.integrity, /^sha512-[A-Za-z0-9+/]{86}==$/);
+          if (artifactKind === 'published') run('npm', ['pack', `ima2-gen@${version}`, '--ignore-scripts',
+            '--json', '--registry=https://registry.npmjs.org', '--pack-destination', artifactDir]);
+          const digest = JSON.parse(contract('verify-artifact', manifestPath));
+          const publisher = artifactKind === 'published'
+            ? JSON.parse(contract('verify-registry', manifestPath, 'latest', `refs/tags/v${version}`, sourceSha)) : null;
+          const identity = { artifactKind, version, sourceSha, driverSha, integrity: digest.integrity, publisher };
+          Object.assign(acquisition, identity, { passed: true });
+          appendFileSync(process.env.GITHUB_OUTPUT, `tarball=${join(artifactDir, manifest.filename)}\noutput_dir=${outputDir}\nproduct_sha=${sourceSha}\nidentity=${JSON.stringify(identity)}\n`);
+          } catch (error) { acquisition.error = error.stack ?? error.message; throw error; }
+          finally {
+            acquisition.finishedAt = new Date().toISOString();
+            writeFileSync(join(outputDir, 'acquisition.json'), JSON.stringify(acquisition, null, 2));
+          }
+          NODE
+      - name: Observe the installed artifact using the existing smoke
+        env:
+          PRODUCT_SHA: ${{ steps.artifact.outputs.product_sha }}
+          IMA2_PACKAGE_TARBALL: ${{ steps.artifact.outputs.tarball }}
+          IMA2_PACKAGE_UI_OUTPUT_DIR: ${{ steps.artifact.outputs.output_dir }}
+          IMA2_PACKAGE_UI_DRIVER_SHA: ${{ steps.inputs.outputs.driver_sha }}
+          IMA2_PACKAGE_UI_ARTIFACT_KIND: ${{ inputs.artifact_kind }}
+          IMA2_PACKAGE_UI_IDENTITY: ${{ steps.artifact.outputs.identity }}
+        run: GITHUB_SHA="$PRODUCT_SHA" node --test tests/package-install-smoke.mjs
+      - name: Retain original UI and acquisition evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installed-ui-${{ inputs.artifact_kind }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/wp13-ui/
+            ${{ runner.temp }}/wp13-artifact/release-manifest.json
+          if-no-files-found: warn
+          retention-days: 30

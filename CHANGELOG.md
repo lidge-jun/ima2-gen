@@ -28,6 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Production readiness
+
+- Correct NovelAI positive/negative prompt pane sizing, scrolling and toolbar spacing across sidebar, bottom, home and mobile composers; retain drafts when changing providers.
+- Keep provider/model labels, capabilities and selection consistent across the UI, CLI and generation routes, including unavailable or malformed provider catalogs.
+- Preserve accepted-job tracking through disconnects, cancellation, restart and LAN reauthentication without automatically submitting the job again.
+- Bound image/video artifact reads and downloads, reject escaped artifact paths, and keep cancellation from persisting an incomplete result.
+- Add LAN sign-in with origin-bound, HttpOnly session cookies; protect generated media, SSE, Range and HEAD requests. Default loopback use remains token-free, and explicit header/query API credentials remain supported.
+- Share failed-token cooldown across API, media, status and browser bootstrap; retain existing cookie sessions during a bearer-token cooldown.
+- Bind CLI LAN credentials only to an explicitly selected server, reject redirects and credential-bearing URLs, and preserve provider authentication errors separately from LAN access failures.
+- Add offline `doctor --installation --json`, safe diagnostic reports and metadata-derived installation/runtime documentation; improve Windows lock handling without terminating unrelated processes.
+- Use a patched, development-only Node SDK downloader for source builds; keep runtime dependencies and install-script approvals unchanged.
+
+LAN HTTP is intended for trusted networks and does not encrypt tokens or cookies; use an operator-configured HTTPS proxy or VPN on untrusted networks. Verification uses isolated synthetic providers, not a claim that live provider credentials, billing or every remote deployment have been exercised.
+
 ### Added
 
 - **Current model defaults** — Grok search, image/video planning, and frame analysis now default to `grok-4.5` while retaining `grok-4.3` as an explicit compatibility override. GPT image generation, stylesheet analysis, Card News planning, and Prompt Builder default to `gpt-5.6-luna`; Grok video model discovery projects `grok-imagine-video-1.5` from runtime config.

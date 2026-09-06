@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { PROVIDER_ERROR_MAP, statusForErrorCode } from "../../lib/errors/providerMap.js";
 
 export const DEFAULT_PORT = 3333;
 
@@ -53,16 +54,32 @@ async function checkAccess(response: Response): Promise<void> {
     throw transportError("SERVER_REDIRECT_REJECTED", "Server redirects are not allowed.");
   }
   if (response.status !== 401 && response.status !== 403) return;
-  let code = response.status === 401 ? "LAN_TOKEN_REQUIRED" : "SERVER_ACCESS_DENIED";
+  const denied = transportError("SERVER_ACCESS_DENIED", "Server authentication or access was denied.", response.status);
+  let body: unknown;
   try {
-    const body = await response.json() as { error?: { code?: unknown } };
-    if (response.status === 403 && (body?.error?.code === "LOCAL_HOST_REJECTED" || body?.error?.code === "LOCAL_ORIGIN_REJECTED")) {
-      code = body.error.code;
-    }
-  } catch { /* Never expose an untrusted auth body. */ }
-  throw transportError(code, response.status === 401
-    ? "LAN authentication required. Specify a known --server or IMA2_SERVER and set IMA2_LAN_TOKEN."
-    : "Server access denied. Check the configured server Host/Origin policy.", response.status);
+    body = await response.json();
+  } catch { throw denied; }
+  const envelope = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
+  const nested = envelope.error && typeof envelope.error === "object" && !Array.isArray(envelope.error)
+    ? envelope.error as Record<string, unknown> : {};
+  const reserved = [envelope.code, nested.code].filter((code): code is string => typeof code === "string"
+    && ["LAN_TOKEN_REQUIRED", "LOCAL_HOST_REJECTED", "LOCAL_ORIGIN_REJECTED", "SERVER_ACCESS_DENIED"].includes(code));
+  if (reserved.length) {
+    const code = reserved[0]!;
+    if (code === "SERVER_ACCESS_DENIED" || reserved.some((other) => other !== code)
+      || response.status !== (code === "LAN_TOKEN_REQUIRED" ? 401 : 403)) throw denied;
+    throw transportError(code, code === "LAN_TOKEN_REQUIRED"
+      ? "LAN authentication required. Specify a known --server or IMA2_SERVER and set IMA2_LAN_TOKEN."
+      : "Server access denied. Check the configured server Host/Origin policy.", response.status);
+  }
+  if (envelope.code !== undefined && nested.code !== undefined && envelope.code !== nested.code) throw denied;
+  const code = typeof envelope.error === "string" ? envelope.code : nested.code;
+  const message = typeof envelope.error === "string" ? envelope.error : nested.message;
+  if (typeof code === "string" && typeof message === "string" && message.trim()
+    && (statusForErrorCode(code, 0) === 401 || Object.hasOwn(PROVIDER_ERROR_MAP, code))) {
+    throw Object.assign(transportError(code, message, response.status), { body });
+  }
+  throw denied;
 }
 
 /** Only explicit selection below can bind a secret; request URLs never do. */

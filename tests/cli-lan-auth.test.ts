@@ -40,7 +40,7 @@ before(async () => {
       "files", "modelResolver", "model-aliases", "recover-output", "serviceTemplates"].map((n) => `bin/lib/${n}`),
     ...["ping", "models", "defaults", "capabilities", "gen", "video", "upscale", "service", "prompt", "tools"].map((n) => `bin/commands/${n}`),
     ...["eventsPolicy", "jobStatus", "errInfo", "pngInfo", "sizeNudge", "backgroundPresets", "videoClientTimeouts"].map((n) => `lib/${n}`),
-    "lib/contracts/discovery", "lib/mcp/sanitizer",
+    "lib/contracts/discovery", "lib/mcp/sanitizer", "lib/errors/providerMap", "lib/responsesErrors",
   ];
   for (const path of sources) emit(`${path}.js`, ts.transpileModule(readFileSync(join(root, `${path}.ts`), "utf8"), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext }, fileName: `${path}.ts`,
@@ -200,7 +200,7 @@ describe("CLI destination binding", () => {
     route = ({ init }) => new Response(new ReadableStream({ start(controller) {
       init.signal!.addEventListener("abort", () => controller.error(init.signal!.reason), { once: true });
     } }), { status });
-    await assert.rejects(client.resolveServer({ serverFlag: A }), safeError(status === 401 ? "LAN_TOKEN_REQUIRED" : "SERVER_ACCESS_DENIED", status));
+    await assert.rejects(client.resolveServer({ serverFlag: A }), safeError("SERVER_ACCESS_DENIED", status));
     assert.equal(seen.length, 1);
   });
   it("never binds from helper URLs; explicit selection binds only its normalized origin", async () => {
@@ -263,7 +263,7 @@ describe("CLI destination binding", () => {
     assert.equal(seen.length, 2);
   });
   it("maps safe 401/403 and rejects redirects without exposing body/Location", async () => {
-    for (const [status, incoming, expected] of [[401, "evil", "LAN_TOKEN_REQUIRED"], [403, "LOCAL_HOST_REJECTED", "LOCAL_HOST_REJECTED"],
+    for (const [status, incoming, expected] of [[401, "evil", "SERVER_ACCESS_DENIED"], [403, "LOCAL_HOST_REJECTED", "LOCAL_HOST_REJECTED"],
       [403, "LOCAL_ORIGIN_REJECTED", "LOCAL_ORIGIN_REJECTED"], [403, TOKEN, "SERVER_ACCESS_DENIED"]] as const) {
       route = () => denied(status, incoming);
       await assert.rejects(client.request(A, "/api/models"), (e) => {
@@ -275,6 +275,96 @@ describe("CLI destination binding", () => {
     route = () => { throw new TypeError("fetch failed", { cause: new Error("unexpected redirect") }); };
     await assert.rejects(client.fetchServer(A, "/api"), safeError("SERVER_REDIRECT_REJECTED"));
     assert.ok(seen.every((call) => call.url.origin === A));
+  });
+});
+
+describe("provider authentication identity", () => {
+  for (const [code, message] of [
+    ["GROK_API_KEY_MISSING", "Grok API key is required for grok-api image generation"],
+    ["AUTH_API_KEY_INVALID", "Provider API key is invalid"],
+    ["AUTH_CHATGPT_EXPIRED", "ChatGPT session expired"],
+    ["API_KEY_REQUIRED", "An API key is required"],
+  ] as const) it(`preserves flat and nested ${code} through request and command`, async () => {
+    for (const nested of [false, true]) {
+      const payload = nested ? { error: { code, message } } : { error: message, code };
+      route = ({ url }) => url.pathname === "/api/health" ? Response.json({ ok: true }) : Response.json(payload, { status: 401 });
+      await client.resolveServer({ serverFlag: A });
+      await assert.rejects(client.request(A, "/api/generate", { method: "POST", body: {} }), (error) => {
+        safeError(code, 401)(error); assert.equal((error as Error).message, message);
+        assert.deepEqual((error as { body: unknown }).body, payload); return true;
+      });
+      const result = await invoke("models", ["--server", A, "--json"]);
+      assert.equal(result.exit, 4); assert.equal(JSON.parse(result.stdout).code, code);
+      assert.equal(JSON.parse(result.stdout).message, message); assert.doesNotMatch(result.stdout + result.stderr, /LAN authentication/);
+    }
+  });
+  it("reserved codes on either mixed side override domain bodies and reject mismatched statuses", async () => {
+    for (const code of ["LAN_TOKEN_REQUIRED", "LOCAL_HOST_REJECTED", "LOCAL_ORIGIN_REJECTED"]) {
+      const status = code === "LAN_TOKEN_REQUIRED" ? 401 : 403;
+      for (const payload of [
+        { code, error: `${TOKEN}:${BODY_SECRET}` }, { error: { code, message: `${TOKEN}:${BODY_SECRET}` } },
+        { code, error: { code: "AUTH_API_KEY_INVALID", message: `${TOKEN}:${BODY_SECRET}` } },
+        { code: "AUTH_API_KEY_INVALID", error: { code, message: `${TOKEN}:${BODY_SECRET}` } },
+      ]) for (const observed of [status, status === 401 ? 403 : 401]) {
+        route = () => Response.json(payload, { status: observed });
+        await assert.rejects(client.request(A, "/api/generate"), (error) => {
+          safeError(observed === status ? code : "SERVER_ACCESS_DENIED", observed)(error);
+          assert.equal(Object.hasOwn(error as object, "body"), false); assert.equal(Object.hasOwn(error as object, "cause"), false); return true;
+        });
+      }
+    }
+  });
+  it("unknown or malformed auth bodies are neutral and never reflected", async () => {
+    for (const status of [401, 403]) for (const payload of [
+      null, [], { error: [] }, { error: TOKEN }, { error: { code: TOKEN, message: BODY_SECRET } },
+      { code: "constructor", error: BODY_SECRET }, { code: "AUTH_INVENTED", error: TOKEN },
+      { error: { code: "AUTH_API_KEY_INVALID", message: {} } }, { code: "API_KEY_REQUIRED", error: "  " },
+      { code: "API_KEY_REQUIRED", error: { code: "AUTH_API_KEY_INVALID", message: BODY_SECRET } },
+      { code: "SERVER_ACCESS_DENIED", error: { code: "AUTH_API_KEY_INVALID", message: TOKEN } },
+    ]) {
+      route = () => Response.json(payload, { status });
+      await assert.rejects(client.request(A, "/api/models"), safeError("SERVER_ACCESS_DENIED", status));
+    }
+    for (const text of ["", `<html>${TOKEN}</html>`, `{"error":"${BODY_SECRET}`]) {
+      route = () => new Response(text, { status: 401 });
+      await assert.rejects(client.request(A, "/api/models"), safeError("SERVER_ACCESS_DENIED", 401));
+    }
+  });
+  it("registered domain403 survives raw video and SSE open with consumed-body cleanup", async () => {
+    const payload = { error: { code: "GROK_VIDEO_REQUEST_FAILED", message: "Video input was rejected" } };
+    route = ({ url }) => url.pathname === "/api/health" ? Response.json({ ok: true }) : Response.json(payload, { status: 403 });
+    const result = await invoke("video", ["analyze", "clip.mp4", "--server", A, "--json"]);
+    assert.equal(result.exit, 4); assert.equal(JSON.parse(result.stdout).code, payload.error.code);
+    assert.equal(JSON.parse(result.stdout).message, payload.error.message);
+    await assert.rejects(sse.openSse(`${A}/api/events`), (error) => {
+      safeError(payload.error.code, 403)(error); assert.deepEqual((error as { body: unknown }).body, payload); return true;
+    });
+    assert.equal(seen.at(-1)!.init.signal?.aborted, true);
+  });
+  it("MCP provider-auth submit/reconnect failures keep body and never replay the POST", async () => {
+    const payload = { code: "AUTH_CHATGPT_EXPIRED", error: "ChatGPT session expired" };
+    for (const reconnect of [false, true]) {
+      seen.length = 0; mcpRoutes(undefined, true); const normal = route;
+      route = (call) => (!reconnect && call.url.pathname === "/api/mcp/generate"
+        || reconnect && call.url.pathname === "/api/events" && seen.filter((item) => item.url.pathname === "/api/events").length > 1)
+        ? Response.json(payload, { status: 401 }) : normal(call);
+      await client.resolveServer({ serverFlag: A });
+      await assert.rejects(jobs.runMcpJob({ serverBase: A, kind: "image", body: {}, requestId: "provider-auth-job", timeoutMs: 1000, json: true }), (error) => {
+        safeError(payload.code, 401)(error); assert.deepEqual((error as { body: unknown }).body, payload); return true;
+      });
+      assert.equal(seen.filter((call) => call.init.method === "POST").length, 1);
+      assert.ok(seen.filter((call) => call.url.pathname === "/api/events").every((call) => call.init.signal?.aborted));
+      seen.forEach((call) => assertTransport(call));
+    }
+  });
+  it("success and non-auth responses remain unread for their existing consumers", async () => {
+    for (const status of [200, 400, 409]) {
+      const payload = { error: { code: "INVALID_REQUEST", message: "ordinary response" } };
+      route = () => Response.json(payload, { status });
+      const response = await client.fetchServer(A, "/api/models");
+      assert.equal(response.bodyUsed, false); assert.deepEqual(await response.json(), payload);
+      if (status !== 200) await assert.rejects(client.request(A, "/api/models"), { code: "INVALID_REQUEST", status, message: "ordinary response" });
+    }
   });
 });
 

@@ -1,23 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, mkdirSync, readFileSync, readdirSync, writeFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, isAbsolute, sep } from "node:path";
 import net from "node:net";
 import { parsePackOutput } from "../scripts/release-artifact-contract.mjs";
 import { spawnNpmSync } from "../scripts/npm-subprocess.mjs";
 
 function spawnOptions(options) {
+  const env = { ...process.env, npm_config_loglevel: "error", ...(options.env || {}) };
+  for (const key of Object.keys(env)) if (key.startsWith("IMA2_PACKAGE_UI_")) delete env[key];
   return {
     encoding: "utf8",
     ...options,
-    env: {
-      ...process.env,
-      npm_config_loglevel: "error",
-      ...(options.env || {}),
-    },
+    env,
   };
 }
 
@@ -117,6 +115,20 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
   let child = null;
   try {
     let tarball = process.env.IMA2_PACKAGE_TARBALL;
+    const uiOutput = process.env.IMA2_PACKAGE_UI_OUTPUT_DIR;
+    let uiIdentity;
+    if (uiOutput !== undefined) {
+      assert(uiOutput && tarball, "installed UI opt-in requires an output directory and a provided TGZ; no source-pack fallback");
+      uiIdentity = JSON.parse(process.env.IMA2_PACKAGE_UI_IDENTITY || "null");
+      assert(uiIdentity && ["candidate", "published"].includes(uiIdentity.artifactKind), "missing artifact identity");
+      for (const sha of [uiIdentity.sourceSha, uiIdentity.driverSha]) assert.match(sha, /^[0-9a-f]{40}$/);
+      assert.equal(uiIdentity.sourceSha, process.env.GITHUB_SHA, "UI product SHA must bind the install smoke");
+      assert.equal(uiIdentity.driverSha, process.env.IMA2_PACKAGE_UI_DRIVER_SHA, "driver SHA mismatch");
+      assert.equal(uiIdentity.artifactKind, process.env.IMA2_PACKAGE_UI_ARTIFACT_KIND, "artifact kind mismatch");
+      mkdirSync(uiOutput, { recursive: true });
+      const outputWithinRoot = relative(realpathSync(root), realpathSync(uiOutput));
+      assert(outputWithinRoot === ".." || outputWithinRoot.startsWith(`..${sep}`) || isAbsolute(outputWithinRoot), "UI evidence must survive install cleanup");
+    }
     if (tarball) {
       assert.equal(existsSync(tarball), true, `provided release tarball should exist: ${tarball}`);
     } else {
@@ -205,6 +217,7 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
       IMA2_NO_OAUTH_PROXY: "1",
       IMA2_NO_GROK_PROXY: "1",
     };
+    for (const key of Object.keys(env)) if (key.startsWith("IMA2_PACKAGE_UI_")) delete env[key];
 
     const grokHelp = run(process.execPath, [cliPath, "grok", "--help"], { cwd: projectDir, env });
     assert.match(grokHelp.stdout, /bundled progrok runtime/);
@@ -271,6 +284,13 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
     const health = await waitForJson(`http://127.0.0.1:${port}/api/health`, child, logs);
     assert.equal(health.ok, true);
     assert.equal(health.provider, "oauth");
+
+    if (uiOutput !== undefined) {
+      const { inspectPublishedUi } = await import("../scripts/package-published-ui-smoke.mjs");
+      await inspectPublishedUi({ ...uiIdentity, driverSha: process.env.IMA2_PACKAGE_UI_DRIVER_SHA,
+        artifactKind: process.env.IMA2_PACKAGE_UI_ARTIFACT_KIND, packageRoot,
+        baseUrl: `http://127.0.0.1:${port}`, outputDir: realpathSync(uiOutput) });
+    }
 
     const storage = await waitForJson(
       `http://127.0.0.1:${port}/api/storage/status`,

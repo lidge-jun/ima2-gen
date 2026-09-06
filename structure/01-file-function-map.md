@@ -145,7 +145,7 @@ routes/
 | `bin/commands/show.ts` | 77 | Single history item display/reveal client |
 | `bin/commands/video.ts` | 416 | Video CLI surface: generate, edit, extend, frame, analyze, `--character` (MCP lanes), and branch-local `continue` |
 | `bin/commands/ping.ts` | 32 | Server health probe client |
-| `bin/lib/client.ts` | 281 | Server discovery, HTTP request wrapper (connection: close, cleared timeouts), response normalization |
+| `bin/lib/client.ts` | 298 | Server discovery, HTTP request wrapper (connection: close, cleared timeouts), response normalization |
 | `bin/lib/platform.ts` | 132 | Browser-open and binary-resolution helpers |
 | `bin/lib/args.ts` | 97 | Dependency-free argv parser |
 | `bin/lib/files.ts` | 40 | Data URI file conversion and output naming |
@@ -174,7 +174,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/codexDetect.ts` | 154 | Codex OAuth session detection helper |
 | `lib/packageCli.ts` | 54 | Package-local dependency CLI resolution and Node invocation contract |
 | `lib/errorClassify.ts` | 110 | Upstream/OAuth error classifier for stable error codes, including provider validation errors |
-| `lib/generationErrors.ts` | 258 | Generation error normalization, retry classification, status mapping |
+| `lib/generationErrors.ts` | 245 | Generation error normalization, retry classification, status mapping |
 | `lib/historyList.ts` | 200 | History reconstruction from generated assets, sidecars, embedded XMP metadata fallback, session-aware rows |
 | `lib/videoContinuity.ts` | 193 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
 | `lib/videoFrameExtract.ts` | 100 | Generated-dir-safe MP4 validation and ffmpeg frame extraction for video frame/analyze/continue workflows |
