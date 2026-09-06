@@ -1,6 +1,5 @@
-import { mkdir, writeFile, access, readFile } from "fs/promises";
-import { constants } from "fs";
-import { basename, resolve, parse, sep } from "path";
+import { mkdir, writeFile, readFile, lstat, realpath } from "fs/promises";
+import { basename, dirname, resolve, parse, sep } from "path";
 import { randomBytes } from "crypto";
 import sharp from "sharp";
 import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
@@ -105,11 +104,32 @@ function ensureInsideGeneratedDir(generatedDir: string, filename: string) {
   const full = resolve(generatedDir, filename);
   const root = resolve(generatedDir);
   const prefix = root.endsWith(sep) ? root : root + sep;
-  if (full !== root && !full.startsWith(prefix)) {
+  if (full === root || !full.startsWith(prefix)) {
     const err: any = new Error("Canvas version path escapes generated directory");
     err.status = 400;
     err.code = "CANVAS_VERSION_PATH_ESCAPE";
     throw err;
+  }
+  return full;
+}
+
+/** Existing leaves must be regular files; only a new output leaf may be absent. */
+async function checkedCanvasPath(generatedDir: string, filename: string, allowMissing = false) {
+  const lexical = ensureInsideGeneratedDir(generatedDir, filename);
+  const root = await realpath(generatedDir);
+  const parent = await realpath(dirname(lexical));
+  const prefix = root.endsWith(sep) ? root : root + sep;
+  if (parent !== root && !parent.startsWith(prefix)) {
+    throw Object.assign(new Error("Canvas path escapes generated directory"), { status: 400, code: "CANVAS_VERSION_PATH_ESCAPE" });
+  }
+  const full = resolve(parent, basename(lexical));
+  try {
+    const stat = await lstat(full);
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      throw Object.assign(new Error("Canvas path must be a regular file"), { status: 400, code: "CANVAS_VERSION_PATH_ESCAPE" });
+    }
+  } catch (error) {
+    if (!allowMissing || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   return full;
 }
@@ -122,12 +142,13 @@ function makeCanvasFilename(sourceFilename: string | null | undefined) {
 
 async function writeCanvasPng(ctx: RuntimeContext, filename: string, buffer: Buffer, meta: CanvasMeta) {
   await mkdir(ctx.config.storage.generatedDir, { recursive: true });
-  const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, filename);
+  const full = await checkedCanvasPath(ctx.config.storage.generatedDir, filename, true);
+  const sidecar = await checkedCanvasPath(ctx.config.storage.generatedDir, `${filename}.json`, true);
   const embedded = await embedImageMetadataBestEffort(buffer, "png", meta, {
     version: ctx.packageVersion,
   });
   await writeFile(full, embedded.buffer);
-  await writeFile(`${full}.json`, JSON.stringify(meta)).catch(() => {});
+  await writeFile(sidecar, JSON.stringify(meta)).catch(() => {});
   invalidateHistoryIndex();
 }
 
@@ -135,7 +156,8 @@ async function readGeneratedMetadata(ctx: RuntimeContext, filename: string | nul
   if (!filename) return null;
   try {
     const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, basename(filename));
-    return JSON.parse(await readFile(`${full}.json`, "utf8")) as StoredGeneratedMeta;
+    const sidecar = await checkedCanvasPath(ctx.config.storage.generatedDir, `${full}.json`);
+    return JSON.parse(await readFile(sidecar, "utf8")) as StoredGeneratedMeta;
   } catch {
     return null;
   }
@@ -221,8 +243,8 @@ export async function createCanvasVersion(ctx: RuntimeContext, input: CanvasInpu
 export async function updateCanvasVersion(ctx: RuntimeContext, filename: string, input: CanvasInput) {
   assertSafeFilename(filename);
   assertPngBuffer(input.buffer);
-  const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, filename);
-  await access(full, constants.F_OK).catch(() => {
+  await checkedCanvasPath(ctx.config.storage.generatedDir, filename).catch((cause: NodeJS.ErrnoException) => {
+    if (cause.code !== "ENOENT") throw cause;
     const err: any = new Error("Canvas version not found");
     err.status = 404;
     err.code = "CANVAS_VERSION_NOT_FOUND";
@@ -269,7 +291,6 @@ export async function recordCanvasAnnotationBake(
 ) {
   assertSafeFilename(filename);
   assertAnnotationSnapshot(snapshot);
-  const full = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, filename);
   const previousMeta = await readGeneratedMetadata(ctx, filename);
   if (!previousMeta) {
     const err: any = new Error("Canvas version not found");
@@ -277,6 +298,7 @@ export async function recordCanvasAnnotationBake(
     err.code = "CANVAS_VERSION_NOT_FOUND";
     throw err;
   }
+  const full = await checkedCanvasPath(ctx.config.storage.generatedDir, filename);
   const buffer = await readFile(full);
   const meta = {
     ...previousMeta,
@@ -309,7 +331,7 @@ export async function revertCanvasAnnotations(ctx: RuntimeContext, filename: str
     err.code = "CANVAS_ANNOTATIONS_NOT_BAKED";
     throw err;
   }
-  const sourceFull = ensureInsideGeneratedDir(ctx.config.storage.generatedDir, basename(sourceFilename));
+  const sourceFull = await checkedCanvasPath(ctx.config.storage.generatedDir, basename(sourceFilename));
   const cleanPng = await sharp(await readFile(sourceFull)).png().toBuffer();
   const snapshot = previousMeta.annotationSnapshot ?? null;
   const annotationOnly = Boolean(previousMeta.annotationOnly);

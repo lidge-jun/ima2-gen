@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { config } from "../config.js";
+import { API_REQUEST_POLICY, config } from "../config.js";
 import { normalizeBodyRequestId } from "../lib/generationInputValidation.js";
 import { createTestRuntimeContext } from "../lib/runtimeContext.js";
 import { assertLanAccessConfiguration, buildApp, isLoopbackHost } from "../server.js";
@@ -91,6 +91,29 @@ test("non-loopback API access requires the configured LAN token", async () => {
   } finally {
     await running.close();
   }
+});
+
+test("real app rejects exhausted mutation allowance before JSON parsing", async () => {
+  const localConfig = { ...config, server: { ...config.server, host: "127.0.0.1" } };
+  const running = await listen(buildApp(createTestRuntimeContext({ config: localConfig })));
+  try {
+    for (let i = 0; i < API_REQUEST_POLICY.mutations; i++) {
+      const response = await fetch(`${running.base}/api/__budget_probe`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+      });
+      assert.equal(response.status, 404);
+      await response.arrayBuffer();
+    }
+    const denied = await fetch(`${running.base}/api/generate`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: "{invalid-json",
+    });
+    assert.equal(denied.status, 429, "parser would return400 if admission ran after it");
+    assert.equal((await denied.json()).error.code, "API_RATE_LIMITED");
+    assert.ok(Number(denied.headers.get("retry-after")) > 0);
+    const read = await fetch(`${running.base}/api/health`);
+    assert.equal(read.status, 200, "read allowance remains available");
+    await read.arrayBuffer();
+  } finally { await running.close(); }
 });
 
 test("LAN binding is rejected before listen without explicit token opt-in", () => {

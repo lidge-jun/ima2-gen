@@ -265,6 +265,15 @@ job POST, so an EOF before any frame can reconnect without submitting the job
 again. Missing headers support older servers but do not promise this recovery.
 Retention gaps still use existing snapshot/error handling and tracking deadlines.
 
+Node metadata/image readers check the canonical target against configured generated
+storage, including the metadata-absent parent fallback. Canvas update/bake/revert
+checks existing media and sidecars; writes preflight both leaves before changing
+the image. Canvas leaf links/directories are refused, while absent new output files
+are allowed. Single-asset trash cannot target a directory or storage root; restore
+validates source, optional sidecar and destination parent before moving files.
+These are path-boundary checks, not atomic protection from concurrent privileged
+filesystem replacement.
+
 | Task | Command | Expected result |
 |---|---|---|
 | Full test suite | `npm test` | `scripts/run-tests.mjs` runs `tests/*.test.{js,ts,mjs,cjs,mts,cts}` |

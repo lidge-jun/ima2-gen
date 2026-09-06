@@ -50,17 +50,15 @@ export async function loadNodeB64(rootDir: string, filename: string, generatedDi
     err.status = 404;
     throw err;
   }
-  const buf = await readFile(p);
+  const containedPath = await resolveCanonicalGeneratedPath(rootDir, p, generatedDir);
+  const buf = await readFile(containedPath);
   return buf.toString("base64");
 }
 
 export async function loadNodeMeta(rootDir: string, nodeId: string, ext = "png", generatedDir = config.storage.generatedDir) {
   try {
     const metadataPath = resolveGeneratedPath(rootDir, `${nodeId}.${ext}.json`, generatedDir);
-    const canonicalRoot = await realpath(generatedDir);
-    const canonicalPath = await realpath(metadataPath);
-    // Reuse the explicit-dir boundary after resolving directory and leaf symlinks.
-    const containedPath = resolveGeneratedPath(rootDir, canonicalPath, canonicalRoot);
+    const containedPath = await resolveCanonicalGeneratedPath(rootDir, metadataPath, generatedDir);
     return JSON.parse(await readFile(containedPath, "utf-8"));
   } catch {
     return null;
@@ -75,8 +73,16 @@ export async function loadAssetB64(rootDir: string, externalSrc: string, generat
     err.status = 404;
     throw err;
   }
-  const buf = await readFile(p);
+  const containedPath = await resolveCanonicalGeneratedPath(rootDir, p, generatedDir);
+  const buf = await readFile(containedPath);
   return buf.toString("base64");
+}
+
+async function resolveCanonicalGeneratedPath(rootDir: string, path: string, generatedDir: string) {
+  const canonicalRoot = await realpath(generatedDir);
+  const canonicalPath = await realpath(path);
+  // Reuse the explicit-dir boundary after resolving directory and leaf symlinks.
+  return resolveGeneratedPath(rootDir, canonicalPath, canonicalRoot);
 }
 
 function resolveGeneratedPath(rootDir: string, relPath: string, generatedDir = config.storage.generatedDir) {
