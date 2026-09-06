@@ -126,3 +126,18 @@ Use the exact mobile batch selector to win that existing cascade and include the
 visible batch buttons in the same existing HUD hit-test loop. This repairs a
 demonstrated missed control, not a new test facility. Prematurely dispatched full
 CI34006041499/CodeQL34006042683 were cancelled; no successful-candidate claim.
+
+11358ed9/fullCI34006306697 completed all258 native cases:257pass/1fail in19min.
+The only failure is desktop1280 Node selection-bar hit testing. Main directly
+opened its default-fit PNG; the existing top-center selection bar is hidden behind
+the top-right toolbar, the same placement conflict previously exposed on mobile.
+Desktop-only positioning separates toolbar, selection bar and Elements vertically;
+the duplicate+button is hidden only when the selection bar exists, with Add image
+still present. Same existing desktop test is the next single diagnostic. No new
+test harness, general layout system, skips or relaxed hit tests.
+
+The local macOS watcher receipt attempt timed out and was interrupted; its failed
+record is session/wp09/11358ed9-local-receipt-attempt.md. Original watcher test passed
+in both fullCI Node legs but this does not explain the macOS event loss. Keep that
+platform-specific nondeterminism for WP12's macOS proof; do not expand WP09 tooling.
+The separate product-focused receipt has43pass and does not claim the failed file.

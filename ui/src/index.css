@@ -306,6 +306,20 @@ body::after {
 .node-studio-status { position: absolute; z-index: 5; font-family: var(--font); inset-inline: 50%; bottom: 18px; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
 @media (max-width: 680px) { .node-studio-element-panel { width: calc(100% - 24px); margin-top: 86px !important; }.node-element-tray { max-height: 118px; }.node-element-tray__list { display: flex; overflow-x: auto; }.node-element-tray__item { flex: 0 0 150px; }.node-studio-toolbar { max-width: calc(100vw - 100px); }.node-studio-empty-overlay { align-items: start; padding-top: 250px; overflow-y: auto; }.node-studio-dialog-backdrop { align-items: end; padding: 10px; }.node-studio-dialog-backdrop .node-template-picker { max-height: calc(100dvh - 20px); } }
 
+@media (min-width: 681px) {
+  .node-canvas .node-batch-bar.react-flow__panel.top.center {
+    top: 64px;
+    left: 15px;
+    right: 15px;
+    margin: 0;
+    transform: none;
+    max-width: none;
+    overflow-x: auto;
+  }
+  .node-canvas:has(.node-batch-bar) .node-studio-element-panel { margin-top: 128px !important; }
+  .node-canvas:has(.node-batch-bar) .node-canvas__add-root { display: none; }
+}
+
 @media (max-width: 680px) {
   .node-studio-toolbar {
     position: absolute;
