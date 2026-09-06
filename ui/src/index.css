@@ -316,7 +316,7 @@ body::after {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .node-studio-toolbar button { min-height: 44px; }
-  .node-batch-bar {
+  .node-canvas .node-batch-bar.react-flow__panel.top.center {
     top: 112px;
     left: 12px;
     right: 12px;

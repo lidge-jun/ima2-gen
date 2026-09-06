@@ -376,7 +376,7 @@ for (const width of [390, 1280]) test(`Node default and explicit fit ${width}: H
     await capture(page, info, `node-default-fit-${width}`);
     const fit = page.locator(".react-flow__controls-fitview"); await fit.click();
     await expect(page.locator(".react-flow__node")).toBeInViewport();
-    for (const button of await page.locator(".node-studio-toolbar button, .node-studio-element-panel button, .node-canvas__controls button").all()) {
+    for (const button of await page.locator(".node-studio-toolbar button, .node-batch-bar button, .node-studio-element-panel button, .node-canvas__controls button").all()) {
       if (!await button.isVisible()) continue;
       await reveal(button);
       if (await button.isEnabled()) await button.click({ trial: true });

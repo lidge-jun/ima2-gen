@@ -118,3 +118,11 @@ places the four existing toolbar buttons in two44px rows, the selection bar belo
 then Elements. Hide the duplicate+action on mobile only (Add image remains).
 Desktop and graph data/generation behavior are unchanged. Re-run the same Node
 case; no new fixture or additional verification matrix.
+
+5096b678 diagnostic34005834222 passes25, but MAIN direct screenshot inspection
+rejects the frame: selection bar still sits behind the toolbar. React Flow's
+`.react-flow__panel.top.center` overrides the lower-specificity batch position.
+Use the exact mobile batch selector to win that existing cascade and include the
+visible batch buttons in the same existing HUD hit-test loop. This repairs a
+demonstrated missed control, not a new test facility. Prematurely dispatched full
+CI34006041499/CodeQL34006042683 were cancelled; no successful-candidate claim.
