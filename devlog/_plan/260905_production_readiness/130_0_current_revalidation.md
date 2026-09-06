@@ -97,7 +97,7 @@ already promotes the exact candidate to preview after its CI gate.
    not product config or a production test flag. No strict source-appProjection
    receipt is invented for an installed package.
 5. One small `scripts/package-published-ui-smoke.mjs` helper exports
-   `inspectPublishedUi({baseUrl,packageRoot,version,sourceSha,outputDir})`. Reuse the
+   `inspectPublishedUi({baseUrl,packageRoot,version,sourceSha,driverSha,artifactKind,outputDir})`. Reuse the
    existing pinned UI Playwright installation, a fresh browser/context and the
    installed package's actual assets. Bind health/version/package gitHead and
    loaded JS/CSS bytes to the installed `ui/dist` manifest; capture desktop1157x826
@@ -125,9 +125,11 @@ already promotes the exact candidate to preview after its CI gate.
    product identities must both be recorded. The existing package smoke's GITHUB_SHA
    input is set to product RELEASE_SHA for that one child process; retain actual
    QA_DRIVER_SHA separately, never assert the driver checkout is the product.
-   This permits preflighting the new driver against already-published3.13.1 before
-   release, and later running it against the new stable artifact. Do not claim
-   older-product screenshots prove the new release or use a source-UI fallback.
+   The new driver is first exercised against a **packed current candidate**, then
+   against the new stable artifact. Published3.13.1 lacks the current required
+   doctor installation mode, so it cannot reach this hook through the unchanged
+   current package smoke. Do not skip that doctor check or add a historical
+   compatibility path. Do not claim candidate screenshots prove publication.
 
 This small opt-in capture is directly required by130's published-package UI exit
 criterion; source ui/dist/J9 screenshots cannot prove what users install. It is
@@ -199,3 +201,110 @@ agreement or explicitly explained later ancestry, canonical stable+preview regis
 proof, installed artifact UI/readback and deployed Pages installer parity. Then
 archive completed devlog once, update pointers, validate goalplan E8 and complete
 the host goal. No further feature/test-framework work is opened to improve scores.
+
+## Late PR217 review to fold during A
+
+After217 became ready, Codex comment3944573198 identified a real producer/CLI
+consumer mismatch at bin/lib/client.ts:50–65. checkAccess labels every401/403 as
+LAN access, but lib/generationErrors.ts:139 and provider execution admission
+legitimately produce provider credential401s. A loopback bad provider key must
+not tell the operator to configure a LAN token. The earlier broad CLI mapping
+plan does not rebut this producer evidence.
+
+Add only `bin/lib/client.ts` and its existing `tests/cli-lan-auth.test.ts` to
+the release-prep correction map: distinguish actual fixed LAN/Host/Origin guard
+codes from provider-domain401/403, preserve actionable provider code/message and
+downstream body handling, and retain safe generic/malformed auth refusal and
+aborted-body semantics. No credential forwarding, origin binding, server/API/DB
+schema, or new error framework. A scoped CLI reviewer is deriving the minimum
+algorithm and negative proof before implementation. This supersedes130's blanket
+no-code statement only for this concrete late compatibility finding. It lands
+in the release-prep child, with cumulative exact-head checks before merge/cut;
+WP12s's b143 proof is not retroactively called proof of the new correction.
+
+## A fold — installed UI activation and candidate exercise
+
+Both auditors independently rejected the3.13.1 driver-preflight assumption; accept
+that finding and remove the claim, not the doctor gate. The one manual workflow
+has an explicit acquisition choice `candidate|published` (default published).
+This is not an old-version compatibility mode or a fallback after failed proof:
+both paths run the identical unchanged installation smoke and UI helper.
+
+- Candidate acquisition: exact driver checkout, existing pinned dependencies and
+  Chrome; `release-contract.mjs pack` builds/packs that checkout and embeds its
+  real gitHead. Verify the generated manifest/TGZ, label evidence `candidate` and
+  pass its real SHA/version to the smoke. No registry/signature/publication claim.
+- Published acquisition: explicit validated release version/SHA, exact tag match,
+  GitHub manifest + npm TGZ, manifest-aware `verify-registry` (not just separate
+  finalize/digest checks) and `verify-artifact`. Do not set
+  IMA2_EXPECT_CURRENT_PROVENANCE=true: QA is not the publisher. Pin npm registry
+  to registry.npmjs.org. Missing TGZ is a failure, never source-pack fallback.
+- Workflow input -> acquisition -> test env -> helper args -> JSON carries
+  artifactKind, product SHA/version, actual driver SHA and publisher identity
+  when published. Goal completion requires published-kind proof; candidate-kind
+  cannot satisfy that row. No change to standard source/publish CI matrices.
+
+Concrete renderer activation, copied from existing J7/J6 contracts rather than
+invented later: fresh context per1157x826 desktop and390x844 mobile; pre-navigation
+synthetic localStorage keys `ima2.locale=en`, `ima2.onboardingDismissed=1`,
+`ima2.uiMode=classic`, `ima2.workspaceProfile=default`,
+`ima2.activeSessionId=wp02-session`, `ima2.imageModel=nai-diffusion-5-full`,
+`ima2.generationDefaults={provider:nai,multimode:false}`. Seed only the owned origin.
+Reuse the pure `readFixtures` data export from `ui/e2e/fixtures/j6Catalog.ts` for
+catalog/provider/status responses; do not import its source-app lifecycle.
+Native `/api/health`, `/api/auth/lan/session` and installed static JS/CSS remain
+unmocked. Fulfill other known GET fixture shapes, explicitly cover history/events
+as in J6, and fail unexpected API/external requests. Block all browser mutations,
+especially generation/account actions. Never start withJ6/startApp/appProjection.
+
+Desktop root: `.sidebar__scroll > .composer--sidebar`. Mobile: click
+`button.mobile-app-bar__generate`, require `#mobile-generate-sheet[aria-hidden=false]`
+and selected `#mobile-sheet-tab-prompt`, then use that sheet's visible composer.
+Within either root fill `.composer__textarea` and `.negative-prompt__textarea`,
+require both visible with preserved values, capture their bounds/scroll geometry
+and toolbar. Scroll controls into view; trial-click only enabled
+`.composer__toolbar button` controls, record disabled controls without enabling
+them or submitting. Capture actual screenshots for main review of the original
+spacing complaint. This is one non-generating flow at two sizes, not a new
+provider/state/viewport permutation suite. Browser closes before existing
+package-smoke server/root finally cleanup; evidence output is outside its removed
+temporary install root. All capture assertions retain their real errors.
+
+## A fold — provider-auth identity without server runtime imports
+
+Accept CLI-AUTH-1 Medium. Read the actual producers, not just the bot's wording:
+core auth401 includes four statusForErrorCode cases, and direct Grok admission
+uses the **flat** `{error:string,code:string}` shape; nested `{error:{code,message}}`
+is also used. HTTP status alone does not identify the LAN boundary.
+
+Within checkAccess, parse an auth body once, outside the eventual throw. Recognize
+flat and nested object envelopes explicitly; reserved LAN/Host/Origin codes have
+priority and always use fixed safe text, even with malicious extras. Inconsistent
+reserved status/code, malformed/unknown envelopes or aborted/unreadable bodies
+use neutral fixed SERVER_ACCESS_DENIED with the observed401/403, never a fabricated
+LAN identity, reflected unknown code or raw body. Success/non-auth bodies remain
+unread. For a recognized server-domain code and nonempty string message, throw the
+existing typed transport error preserving code/message/status and ordinary error
+body contract. Recognition is not a guarantee against a compromised configured
+server; true access envelopes/generic bodies still never expose their payload.
+No clone-and-return of a consumed response or new error framework.
+
+Main inspected the proposed import closure: generationErrors imports responsesParse,
+which imports inflight/logger, so do not pull that owner into the minimal CLI
+transport. Move the existing pure statusForErrorCode function unchanged into the
+existing pure `lib/errors/providerMap.ts`, which imports only type data plus the
+pure RESPONSE_DIAGNOSTIC_CODES owner. generationErrors imports and re-exports it
+under its existing API and keeps its other diagnostic-code use unchanged. CLI
+uses `statusForErrorCode(code,0)===401 || Object.hasOwn(PROVIDER_ERROR_MAP,code)`;
+no new copied four-code registry or prefix/uppercase heuristic.
+
+Exact added relocation/fixture paths: `lib/generationErrors.ts`,
+`lib/errors/providerMap.ts`, and any already-existing standalone CLI emitter
+(`tests/cli-lan-auth.test.ts`, `tests/cli-model-resolver.test.ts`) that must emit
+the now-reachable pure map/responsesErrors modules. No extra runtime/config import
+or fixture framework. Verify all consumers of statusForErrorCode retain its export.
+Regression rows in the existing mock file: actual flat/nested provider401 and one
+registered domain403, raw/SSE/MCP body/cleanup, poisoned true LAN/Host/Origin,
+unknown/malformed envelopes, aborted401/403 body (generic access, never unreachable),
+readable200 and preserved ordinary400/409/onePOST behavior. Literal expectations
+come from real producer contracts, not the classifier under test.
