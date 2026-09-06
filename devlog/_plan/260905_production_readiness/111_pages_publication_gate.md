@@ -48,7 +48,9 @@ assertPagesPublication runs these exact checks:
    equals version (CLI validates and passes as registry-independent sourceVersion).
 2. registry metadata for BOTH exact version and latest has version===version and
    gitHead===sha. Reject missing/nonstring fields; never treat npm error/timeout
-   as unpublished success. Require dist.integrity string and nonempty tarball URL.
+   as unpublished success. Require exact-version registry.dist.integrity string
+   and nonempty tarball URL. latest supplies version/gitHead only; no second dist
+   contract. Both metadata versions and gitHeads must still match the candidate.
 3. installationReport is plain object: schemaVersion===1,mode==="installation",
    version===version,checks nonempty array,summary.exitCode===0,failed===0.
    Each check kind in pass/fail/warn/info, code/message strings; no fail row;

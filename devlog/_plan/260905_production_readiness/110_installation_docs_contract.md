@@ -1,6 +1,7 @@
 # WP11 — Install the supported runtime without collateral process changes
 
-Status: WP00 diff-level design. No installer/build/source execution in WP00.
+Status: WP00 design, revalidated in112; auxiliary emitted-file checker removed.
+No installer/build/source execution in WP00.
 Class C4 installation/supply-chain boundary. Archetype repair. Trigger: installers
 accept Node 20 while package requires >=22, run auth-sensitive doctor after install,
 and may kill unrelated Node processes. Goal: installation succeeds/fails according
@@ -57,14 +58,13 @@ WP11/PR. Main owns 111 and WP13 dispatch coordination; it is not deferred design
 | Action | Exact path | Change |
 |---|---|---|
 | NEW | `scripts/generate-runtime-install-contract.mjs` | Deterministic package-derived marker projection/check, root option for fixtures |
-| NEW | `scripts/check-built-runtime.mjs` | Compare isolated compiler output against emitted runtime files, no workspace writes |
 | MODIFY | `scripts/install-mac.sh` | Generated min-node marker, offline installation doctor, no pkill/sudo retry |
 | MODIFY | `scripts/install-linux.sh` | Same contract as macOS |
 | MODIFY | `scripts/install-windows.ps1` | Same node floor/doctor contract, remove global stop/cache-clean retries |
 | MODIFY | `site/public/install-mac.sh` | Exact generated copy of source script |
 | MODIFY | `site/public/install-linux.sh` | Exact generated copy of source script |
 | MODIFY | `site/public/install-windows.ps1` | Exact generated copy of source script |
-| MODIFY | `package.json` | Add runtime/docs verification scripts; retain current engine/toolchain |
+| MODIFY | `package.json` | Add runtime docs projection/check scripts; retain current engine/toolchain |
 | MODIFY | `.github/workflows/ci.yml` | Windows schedule-or-dispatch activation, explicit candidate ref, unconditional SHA guard and installer behavior step |
 | NEW | `scripts/assert-ci-sha.mjs` | Read-only full-SHA/HEAD comparator, first delivered here and reused by WP12 |
 | NEW | `tests/ci-windows-candidate.test.ts` | Comparator execution and parsed Windows workflow mutation tests, independently runnable before WP12 |
@@ -83,7 +83,6 @@ WP11/PR. Main owns 111 and WP13 dispatch coordination; it is not deferred design
 | MODIFY | `tests/install-windows-contract.test.js` | Keep source/public parity and PS5.1 compatibility checks |
 | NEW | `tests/install-runtime-contract.test.ts` | Real shell fixtures and engine/doctor cross-surface assertions |
 | NEW | `tests/runtime-install-projection.test.ts` | Two-source metadata comparison and mutation fixtures |
-| NEW | `tests/built-runtime-drift.test.ts` | Isolated compare success/missing/stale fixtures |
 | MODIFY | `tests/package-install-smoke.mjs` | Assert installed JSON-mode contract before existing safe health smoke |
 | MODIFY | `docs/migration/runtime-test-inventory.md` | Regenerate test inventory |
 | MODIFY | `structure/01-file-function-map.md` | New scripts/test owner references and counts |
@@ -219,13 +218,12 @@ LF output, stable ordering, second run byte-identical. Check exit 0 clean, 1 dri
 
 ### Package scripts (before → after)
 
-Existing scripts have no runtime docs or emitted-runtime equivalence check. Add:
+Existing scripts have no runtime docs projection check. Add:
 
 ```json
 {
   "docs:runtime": "node --import tsx scripts/generate-runtime-install-contract.mjs",
-  "docs:runtime:check": "node --import tsx scripts/generate-runtime-install-contract.mjs --check",
-  "verify:built-runtime": "node scripts/check-built-runtime.mjs"
+  "docs:runtime:check": "node --import tsx scripts/generate-runtime-install-contract.mjs --check"
 }
 ```
 
@@ -272,26 +270,14 @@ cleanup becomes: installer does not stop running applications; stop the intended
 ima2 service yourself if an update is locked. Update all five current READMEs with
 the same meaning. Initial Node discovery comments say minimum from generated block.
 
-## Built runtime checker: complete new-file design
+## Reuse existing fresh-build and installed-runtime proof
 
-`scripts/check-built-runtime.mjs` uses local TypeScript compiler, spawnSync via
-process.execPath (not npx), fs/path/os. Exports `compareEmittedFiles(expectedDir,
-runtimeRoot): { missing: string[], different: string[] }`; CLI main creates a unique
-temp directory, runs local tsc with `-p tsconfig.build.json --outDir <temp>` then
-`-p tsconfig.bin.json --outDir <temp>`. For expected bin/ima2.js only, prepend
-`#!/usr/bin/env node\n` iff the emitted bytes do not start with `#!`, matching
-`scripts/fix-shebangs.mjs:27-30`; do not alter other JS. Check the real entry executable
-bit on POSIX separately (the existing script chmods 0755), not as a byte comparison.
-Never run a root-writing step implicitly. Reject compare before builds
-when files are missing; exit 1 lists relative files, exit 2 compiler/setup failure.
-Read emitted expected `.js` files recursively and byte-compare against root files;
-do not compare arbitrary extra files, UI output, timestamps or `.ts`. Cleanup only
-the created temp path in finally. No build output is copied into workspace by checker.
-
-This detects stale generated output in source verification. It is not independent
-compiler correctness proof: package-install smoke separately executes packed `.js`
-from an unrelated directory with source absent. Existing `nai-built-runtime-contract`
-tests import .js under a TS loader, so imports alone are insufficient packed proof.
+Under112's owner-directed scope freeze, no standalone emitted-file checker is
+built. Existing clean-checkout CI builds plus package.json prepack regenerate
+runtime output before packing. The existing package-install smoke executes the
+installed .js from an unrelated directory, extended here with installation JSON.
+Source users must build before running emitted JS. A local stale-file comparison
+utility is not delivered or claimed; release freshness gates remain mandatory.
 
 ## Acceptance activation and negative tests
 
@@ -306,7 +292,6 @@ tests import .js under a TS loader, so imports alone are insufficient packed pro
 | independent source/public mutation | generator --check exit1 names affected copy; generated files byte-identical after generation |
 | mutate one document engine or packageManager | parser compares extracted table value to package source; check fails; prose rewording outside marker does not fail |
 | absent/duplicate marker or invalid engine | exit2, zero writes even in generation mode (validate all targets before writing any) |
-| mutate emitted JS or delete one generated module in temp fixture | built-runtime checker reports stale/missing independently; does not modify fixture runtime |
 | actual packed package from unrelated cwd, no source TS/dev deps | --version and --installation --json execute emitted CLI; report version equals tarball package.json, correct mode/schema/exit; existing local health smoke remains |
 | WP11 dispatch at same explicit ref/full tip | BOTH Windows legs run real installer fixtures and packed smoke; actualSha==expectedSha in each log; no nightly/WP12 substitution |
 | missing/wrong Windows ref, skipped/late guard, schedule-only or omitted behavioral step | parsed mutation fails independently; comparator actual HEAD mismatch exits1 before package commands |
@@ -327,7 +312,7 @@ Observed baseline: install-policy 0; current Windows contract 2 tests pass withi
 new installer safety or Node floor. No installer was run at WP00. Future focused C:
 
 ```sh
-node --import tsx --test tests/doctor-runtime.test.ts tests/install-runtime-contract.test.ts tests/runtime-install-projection.test.ts tests/built-runtime-drift.test.ts
+node --import tsx --test tests/doctor-runtime.test.ts tests/install-runtime-contract.test.ts tests/runtime-install-projection.test.ts
 node --import tsx --test tests/ci-windows-candidate.test.ts tests/pages-publication-contract.test.ts
 npm run docs:runtime:check
 node scripts/generate-contract-docs.mjs --check
@@ -335,7 +320,7 @@ npm run test:install-policy
 ```
 
 New commands are NOT baseline greens; execute after sources exist. CI runs existing
-server/CLI/UI builds before verify:built-runtime and packed smoke. This WP supplies
+server/CLI/UI builds before packing and installed-runtime smoke. This WP supplies
 hosted Windows candidate coverage; WP12 consumes it and expands cumulative gates.
 Local full suites and paid probes remain forbidden.
 Refresh test inventory/counts after files are final. Human review covers translated
