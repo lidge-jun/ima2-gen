@@ -21,3 +21,23 @@ after emit; it is not a production hook or new generic test runner. Add one narr
 WP10 diagnostic workflow reusing build/test commands, and invoke the same verifier
 in the final existing CI root jobs. No new isolation framework or account probes.
 Main keeps test writes scoped to preplanned doctor/report/runtime files.
+
+First diagnostic34010003677 at5e00a48c SUCCESS:33focused tests; actual emitted
+installation JSON exits0 with configReads/authLookups/subprocess/network all0.
+Invalid installation combination exits2/stdoutempty; standard null configuration
+and bundle produce singleJSON/exit1, no opaque fixture credential. Incomplete
+owned-package unit case now distinguishes native/dependency/UI failures (34pass).
+
+ReviewerHume01a074d8-83b3-7033-b0b0-de2347befa6d reports one medium defect: old
+loadConfig swallows malformed legacy JSON before diagnosticConfig can classify it.
+Accept the actual code path; diagnosticConfig now selects primary then legacy
+path itself and parses inside its existing safe catch. Human/image-probe loader
+compatibility remains unchanged. No new config framework or recovery behavior.
+Existing invalid-config subprocess proof exercises that catch; legacy selection
+priority is additionally source-reviewed, not claimed separately runtime-probed.
+
+Same reviewer confirmed PASS after that two-line fix, with no remaining finding.
+Main reran root and test typechecks (both exit0), all34 focused cases (0fail), and
+diff whitespace check. The final extra source line required only the existing
+structure line-count refresh. Ready for grouped exact-SHA full CI and CodeQL;
+this is not yet C acceptance, merge, or release proof.

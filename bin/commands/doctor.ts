@@ -276,7 +276,8 @@ function validDoctorArguments(args: string[]): boolean {
 
 function diagnosticConfig(lines: DoctorCheckLine[]): Record<string, unknown> {
   try {
-    const value: unknown = loadConfig();
+    const path = existsSync(CONFIG_FILE) ? CONFIG_FILE : existsSync(LEGACY_CONFIG_FILE) ? LEGACY_CONFIG_FILE : null;
+    const value: unknown = path ? JSON.parse(readFileSync(path, "utf8")) : {};
     if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("CONFIG_INVALID");
     return value as Record<string, unknown>;
   } catch { lines.push({ code: "CONFIG_INVALID", kind: "fail", text: "Configuration is not a JSON object" }); return {}; }

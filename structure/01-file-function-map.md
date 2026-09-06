@@ -126,7 +126,7 @@ routes/
 | `bin/commands/cardnews.ts` | 250 | CLI dev-gated card-news client |
 | `bin/commands/config.ts` | 187 | CLI config get/set client |
 | `bin/commands/observability.ts` | 177 | Shared CLI handler for `storage`, `billing`, `providers`, `oauth`, and `inflight` aliases (`ima2.ts` routes those commands here) |
-| `bin/commands/doctor.ts` | 309 | CLI diagnostics: storage, OAuth, providers, image probe |
+| `bin/commands/doctor.ts` | 310 | CLI diagnostics: storage, OAuth, providers, image probe |
 | `bin/commands/grok.ts` | 91 | Grok OAuth login and status helpers |
 | `bin/commands/defaults.ts` | 268 | CLI default provider/model/size/reasoning-effort get/set |
 | `bin/commands/capabilities.ts` | 141 | CLI wrapper for `GET /api/capabilities` |
