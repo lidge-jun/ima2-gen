@@ -3,6 +3,7 @@
 // scripts/lib (not lib/routes/bin), which classify-tests.mjs treats as non-runtime.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 // eslint-disable-next-line import/no-relative-packages
 import { scrub, sha, denyMutations } from "../scripts/lib/spikeSanitize.mjs";
 
@@ -30,6 +31,15 @@ test("scrub preserves nested schema structure", () => {
 test("sha is deterministic and prefixed", () => {
   assert.equal(sha({ a: 1 }), sha({ a: 1 }));
   assert.match(sha({ a: 1 }), /^sha256:[0-9a-f]{64}$/);
+});
+
+test("auxiliary OAuth callback returns untrusted error text as nosniff plain text", () => {
+  // Do not import the executable spike: that would load account state and connect.
+  const source = readFileSync(new URL("../scripts/mcp-schema-spike.mjs", import.meta.url), "utf8");
+  const callback = source.slice(source.indexOf("function waitForCallback()"), source.indexOf("async function connectOnce()"));
+  assert.match(callback, /"content-type": "text\/plain; charset=utf-8"/);
+  assert.match(callback, /"x-content-type-options": "nosniff"/);
+  assert.doesNotMatch(callback, /text\/html|<h2>/);
 });
 
 test("denyMutations blocks callTool/readResource/getPrompt with MCP_SPIKE_MUTATION_DENIED", () => {

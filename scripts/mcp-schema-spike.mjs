@@ -72,8 +72,8 @@ function waitForCallback() {
       if (u.pathname !== "/callback") { res.writeHead(404).end(); return; }
       const code = u.searchParams.get("code");
       const err = u.searchParams.get("error");
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(code ? "<h2>ima2 spike: 인증 완료. 이 창은 닫아도 됩니다.</h2>" : `<h2>실패: ${err}</h2>`);
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "x-content-type-options": "nosniff" });
+      res.end(code ? "ima2 spike: 인증 완료. 이 창은 닫아도 됩니다." : `실패: ${err}`);
       server.close();
       if (code) resolve(code); else reject(new Error(`oauth error: ${err}`));
     });
