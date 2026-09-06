@@ -1,7 +1,7 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import { spawn } from "child_process";
-import { writeFileSync, mkdirSync, rmSync, existsSync, mkdtempSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, mkdtempSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -81,7 +81,8 @@ describe("ima2 CLI", () => {
   it("should run doctor", async () => {
     const { stdout, code } = await runCLI(["doctor"]);
     assert.ok(stdout.includes("Doctor"), "doctor should show header");
-    assert.ok(stdout.includes(">= 20"), "doctor should report package Node requirement");
+    const requiredNode = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).engines.node;
+    assert.ok(stdout.includes(requiredNode), "doctor should report package Node requirement");
     assert.ok(stdout.includes("Storage"), "doctor should show storage section");
     assert.ok(stdout.includes("passed") || stdout.includes("failed"), "doctor should show results");
     // doctor exits 0 if all ok, 1 if failures
