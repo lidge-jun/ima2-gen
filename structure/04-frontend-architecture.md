@@ -23,6 +23,9 @@ editing space; retained references and other providers keep their tray.
 Classic and Home retain separate submit policies. Their positive and negative
 fields suppress Ctrl/Cmd+Enter during composition using local refs, native
 `isComposing` and the229 compatibility signal; compositionend never submits.
+Leaving NAI clears the hidden negative field's composition ref, not its stored draft.
+The CSS-hidden desktop RightPanel is not mounted on mobile, preventing an invisible
+legacy backdrop/focus trap from covering Node and mobile composer controls.
 The native mention menu selects on ordinary Enter and lets modified Enter reach
 Classic once. Native Escape carries dismissal intent to the parent before query
 clearing, keeping the same query closed until text changes. Negative `@text`

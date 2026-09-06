@@ -97,3 +97,14 @@ composition-interruption and reference-control cases. The Node390 capture was
 not yet written at cancellation, so do not infer its appearance or outcome. Run
 only that retained tail plus isolation before the final25-minute aggregate job;
 no new tests, scenario permutations or runtime guards are being added.
+
+Tail diagnostic8055c7d7/run34004872173:28pass/2fail. Mobile Node's enabled/stable
+Start blank button is intercepted by right-panel-backdrop; the legacy aside is
+already display:none on mobile, but App still mounts its backdrop/focus trap.
+Do not mount that desktop panel on mobile. Desktop panel behavior is unchanged.
+The negative-field provider round trip preserves draft values but submits0 times;
+viewport remount variants pass. NegativePromptField returns null for non-NAI
+without unmounting its hook state, so composingRef survives the missing DOM field.
+Clear only that ref after the non-NAI commit, before return navigation; preserve
+the draft and all composing/native229 guards, with no automatic submission.
+Both repairs use existing owners and existing failing tests, not new abstractions.

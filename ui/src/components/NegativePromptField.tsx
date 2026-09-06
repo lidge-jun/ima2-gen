@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 
@@ -27,6 +27,10 @@ export function NegativePromptField({ variant, onSubmit }: NegativePromptFieldPr
   const setValue = useAppStore((s) => s.setNegativePrompt);
   const composingRef = useRef(false);
   const { t } = useI18n();
+
+  useLayoutEffect(() => {
+    if (provider !== "nai") composingRef.current = false;
+  }, [provider]);
 
   if (provider !== "nai") return null;
 

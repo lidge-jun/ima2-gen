@@ -182,7 +182,7 @@ export default function App() {
             <Canvas />
           )}
         </Suspense>
-        {uiMode === "agent" ? null : uiMode === "card-news" ? null : uiMode === "assets" ? null : uiMode === "asset-gen" ? null : uiMode === "home" ? null : <RightPanel />}
+        {isMobile ? null : uiMode === "agent" ? null : uiMode === "card-news" ? null : uiMode === "assets" ? null : uiMode === "asset-gen" ? null : uiMode === "home" ? null : <RightPanel />}
       </div>
       <CustomSizeConfirmModal />
       <TrashUndoToast />
