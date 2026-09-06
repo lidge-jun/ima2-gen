@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { SOURCE_DIRS, SOURCE_FILES } from "../scripts/lib/uiBuildReceiptFiles.mjs";
@@ -22,6 +22,8 @@ export async function receiptFixture() {
     await put("ui/dist/assets/entry.js", "fixture()");
     await put("ui/dist/.vite/manifest.json", "{}");
     await put("ui/dist/fonts/fixture.woff2", "fontbytes");
+    // Complete first directory access during fixture setup, before build watchers.
+    await readdir(join(root, "ui/public/fonts"));
     return { root, dist: join(root, "ui/dist"), put, async close() {
       for (const [key, value] of saved) process.env[key] = value;
       await rm(root, { recursive: true, force: true });

@@ -23,7 +23,7 @@ test("POSIX installers encode the generated runtime and safe execution order", (
 });
 
 function scenarioValues(name: string) {
-  return { name, node: `v${name === "node20" ? 20 : name === "floor24" ? 22 : minimumNodeMajor}.0.0`,
+  return { name, node: `v${name === "node20" || name === "iex-failure" ? 20 : name === "floor24" ? 22 : minimumNodeMajor}.0.0`,
     floor: name === "floor24" ? 24 : minimumNodeMajor, npm: name === "success-npm12" ? "12.0.0" : "11.18.0",
     npmExit: name.startsWith("npm-") ? 7 : 0, doctorExit: name === "doctor-failure" ? 8 : 0 };
 }
@@ -50,6 +50,7 @@ function windowsFixture(root: string, source: string, value: ReturnType<typeof s
   const forbidden = ["Get-Process", "Stop-Process", "Remove-Item", "Start-Process", "Invoke-WebRequest", "Invoke-RestMethod"]
     .map((name) => `function ${name} { Add-Content $env:IMA2_FIXTURE_LOG 'forbidden ${name}'; throw 'Forbidden fixture operation' }`).join("\n");
   writeFileSync(fixture, `
+$ErrorActionPreference = 'Stop'
 function node { Add-Content $env:IMA2_FIXTURE_LOG ("node " + ($args -join ' ')); $global:LASTEXITCODE = 0; '${value.node}' }
 function npm {
   Add-Content $env:IMA2_FIXTURE_LOG ("npm " + ($args -join ' '))
@@ -64,8 +65,10 @@ function ima2 {
   if ($args[0] -eq '--version') { '0.0.0' }
 }
 ${forbidden}
-& '${installer.replaceAll("'", "''")}'
-exit $LASTEXITCODE
+${value.name === "iex-failure" ? `
+try { Invoke-Expression ([IO.File]::ReadAllText('${installer.replaceAll("'", "''")}')); throw 'Expected installer failure' }
+catch { if ($_.Exception.Message -notlike 'ERROR Node v20*') { throw }; Add-Content $env:IMA2_FIXTURE_LOG 'parent survived' }
+exit 0` : `& '${installer.replaceAll("'", "''")}'\nexit $LASTEXITCODE`}
 `);
   return { command: "powershell.exe", args: ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", fixture], path: process.env.PATH };
 }
@@ -81,12 +84,13 @@ async function verifyScenario(source: string, name: string, installer: string) {
     assert.equal(result.error, undefined, `${name}: bounded child execution`);
     const calls = readFileSync(log, "utf8").replace(/\r/g, "").trim().split("\n");
     assert.ok(calls.every((call) => !call.startsWith("forbidden "))); process.kill(sentinel.pid, 0);
-    const unsupported = name === "node20" || name === "floor24", installed = !unsupported && !value.npmExit;
+    const unsupported = name === "node20" || name === "floor24" || name === "iex-failure", installed = !unsupported && !value.npmExit;
     assert.equal(calls.filter((call) => call.startsWith("npm install ")).length, unsupported ? 0 : 1);
     if (unsupported) assert.ok(calls.every((call) => !call.startsWith("npm ")));
     assert.equal(calls.includes("ima2 doctor --installation --json"), installed);
     assert.equal(calls.includes("ima2 serve"), installed && !value.doctorExit);
-    assert.equal(result.status, installed && !value.doctorExit ? 0 : 1, `${name}: ${result.stdout}\n${result.stderr}`);
+    assert.equal(result.status, name === "iex-failure" || (installed && !value.doctorExit) ? 0 : 1, `${name}: ${result.stdout}\n${result.stderr}`);
+    if (name === "iex-failure") assert.ok(calls.includes("parent survived"));
     if (name === "success-npm12") assert.ok(calls.includes("npm install -g ima2-gen --allow-scripts=ima2-gen,better-sqlite3,sharp"));
     console.log(JSON.stringify({ installer, installerPlatform: process.platform, scenario: name, node: value.node, floor: value.floor, calls, sentinelAlive: true, exitCode: result.status }));
   } finally {
@@ -100,7 +104,9 @@ test("hosted installers execute bounded scenarios without collateral operations"
   timeout: 120_000,
 }, async () => {
   const sources = process.platform === "win32" ? [readFileSync("scripts/install-windows.ps1", "utf8")] : scripts;
-  for (const [index, source] of sources.entries()) for (const name of ["node20", "floor24", "npm-EBUSY", "npm-EPERM", "npm-failure", "doctor-failure", "success", "success-npm12"]) {
+  const scenarios = ["node20", "floor24", "npm-EBUSY", "npm-EPERM", "npm-failure", "doctor-failure", "success", "success-npm12"];
+  if (process.platform === "win32") scenarios.push("iex-failure");
+  for (const [index, source] of sources.entries()) for (const name of scenarios) {
     const installer = process.platform === "win32" ? "install-windows.ps1" : index === 0 ? "install-mac.sh" : "install-linux.sh";
     await verifyScenario(source, name, installer);
   }

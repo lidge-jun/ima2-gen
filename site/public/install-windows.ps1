@@ -23,7 +23,7 @@ $MIN_NODE = 22
 function Print($msg) { Write-Host "> $msg" -ForegroundColor Cyan }
 function Ok($msg)    { Write-Host "OK $msg" -ForegroundColor Green }
 function Warn($msg)  { Write-Host "! $msg" -ForegroundColor Yellow }
-function Fail($msg)  { Write-Host "ERROR $msg" -ForegroundColor Red; exit 1 }
+function Fail($msg)  { throw "ERROR $msg" }
 
 function Refresh-Path {
     $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +

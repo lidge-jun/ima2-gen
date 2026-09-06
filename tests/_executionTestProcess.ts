@@ -13,7 +13,10 @@ export function executionChildEnv(): NodeJS.ProcessEnv {
 }
 
 export function executionTestProcess(url: string): boolean {
-  if (process.env.EXECUTION_TEST_FILE === url && process.execArgv.includes("--experimental-test-module-mocks")) return true;
+  if (process.env.EXECUTION_TEST_FILE === url && process.execArgv.includes("--experimental-test-module-mocks")) {
+    if (process.platform === "win32") delete process.env.USERPROFILE;
+    return true;
+  }
   test(`isolated execution fixture: ${fileURLToPath(url)}`, { timeout: 65_000 }, async (t) => {
     const child = spawn(process.execPath, ["--experimental-test-module-mocks", "--import", "tsx", "--test", fileURLToPath(url)], {
       env: { ...executionChildEnv(), EXECUTION_TEST_FILE: url }, stdio: ["ignore", "pipe", "pipe"],

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, isAbsolute } from "node:path";
 import { installGrokImageTransportFixture, type ImageTransportFixture } from "./_grokImageTransportFixture.ts";
 import { isolateAdditionalNetwork } from "./_executionNetworkIsolation.ts";
 
 export async function isolateExecution() {
-  const rootDir = await mkdtemp(join(tmpdir(), "ima2-execution-"));
+  const rootDir = await realpath(await mkdtemp(join(tmpdir(), "ima2-execution-")));
   const saved = new Map<string, string | undefined>();
   const nativeFetch = globalThis.fetch;
   const restoreMocks: Array<() => void> = [];
