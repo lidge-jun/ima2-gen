@@ -4,7 +4,7 @@ import os from "node:os";
 import { join, relative } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
 import { safeDenial, REPORTED } from "./appPolicy.mjs";
-import { createPathChecker, expectedMetadata } from "./appFilePaths.mjs";
+import { createPathChecker, expectedMetadata, lexicalPath } from "./appFilePaths.mjs";
 import { accessMode, createDescriptorRegistry } from "./appFileDescriptors.mjs";
 
 export function installFilesystemGuard(policy, report = () => {}) {
@@ -13,10 +13,14 @@ export function installFilesystemGuard(policy, report = () => {}) {
     existsSync: fs.existsSync, exists: fs.exists };
   const checkPath = createPathChecker(policy, native);
   const descriptors = createDescriptorRegistry(report);
+  const platformLabels = new Map([["/usr/bin/ldd", "platformLdd"], ["/proc/self/exe", "platformExecutable"],
+    ["/proc/version", "platformKernel"], ["/proc/self/cgroup", "platformContainer"]]);
   const mark = (error, operation, value) => {
     if (error?.[REPORTED]) return error;
     const denied = safeDenial(); denied[REPORTED] = true;
-    report({ type: "ima2-e2e-file-denied", operation,
+    let label;
+    try { label = platformLabels.get(lexicalPath(value)); } catch { /* Never print unvalidated paths. */ }
+    report({ type: "ima2-e2e-file-denied", operation: label ? `${operation}.${label}` : operation,
       category: expectedMetadata(value, operation, policy) ? "expected-discovery-metadata" : "outside-fixture" });
     return denied;
   };

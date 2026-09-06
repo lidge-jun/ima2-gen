@@ -179,3 +179,17 @@ the fallback `readFixtures` call; the report inverted that real branch order.
 The mutation screenshot is dark-only and TestInfo.outputPath is per test, so the
 reported potential dark/light collision cannot occur. Reviewer was sent exact
 control-flow anchors for correction. These reports are not native UI proof.
+
+6ca418f7b3b624c982b402d9003059a16322fb8d/run34000583175 narrows the remaining
+startup failure to exactly filesystem3 (openSync twice, readFileSync once), with
+ready:true, protocolError:false and zero process/connection denials. This rejects
+H2/H3. Installed detect-libc has optional opens of/proc/self/exe and/usr/bin/ldd;
+is-wsl has/proc/version reads, but local dependency source alone does not prove
+the cleanroom's exact offending paths. Add fixed public-platform operation labels
+without logging arbitrary paths and WITHOUT changing any denial/admission rule.
+Next hosted evidence must identify the concrete calls before any disposition.
+
+Both read-only reviewers corrected/closed their findings. Arendt accepts #1 has
+no demonstrated hash-binding bypass and closes2–4; main's two deterministic copy
+fault tests pass. Epicurus explicitly withdrew both UI-test findings. No worker
+writes or native-visual acceptance are credited to these static reviews.
