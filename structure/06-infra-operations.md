@@ -287,7 +287,7 @@ normal token-free loopback use retain their own rules.
 
 ### Installed release UI verification
 
-The manual-only `published-ui-smoke.yml` reuses the installed-tarball smoke's
+The `published-ui-smoke.yml` workflow reuses the installed-tarball smoke's
 owned server and the existing Playwright dependency. `artifact_kind=candidate`
 exercises a packed current checkout; `artifact_kind=published` requires the exact
 stable tag, registry/provenance and manifest/TGZ digest before installation.
@@ -306,7 +306,10 @@ captures desktop/mobile NovelAI panes from installed assets, with synthetic
 provider metadata and no generation/account mutations. Real health/auth/static
 responses remain unmocked; served JS/CSS bytes are checked against the installed
 manifest. Read the original screenshots and JSON before accepting the result.
-The workflow neither publishes nor schedules follow-up work; existing package
+Published verification is manual-only. A path-filtered push trigger on the single
+release-preparation branch bootstraps candidate evidence before the workflow
+exists on main; it cannot select published mode. The workflow neither publishes
+nor schedules follow-up work; existing package
 smoke runs without this option do not launch a browser.
 
 Accepted `/api/events` response headers include `x-ima2-event-cursor`, the effective

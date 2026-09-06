@@ -1,6 +1,13 @@
 name: Installed artifact UI proof
 
 on:
+  # Bootstrap candidate evidence before this new workflow exists on main.
+  push:
+    branches: [codex/prod-wp13-release]
+    paths:
+      - .github/workflows/published-ui-smoke.yml
+      - scripts/package-published-ui-smoke.mjs
+      - tests/package-install-smoke.mjs
   workflow_dispatch:
     inputs:
       artifact_kind:
@@ -27,6 +34,7 @@ jobs:
     timeout-minutes: 40
     env:
       npm_config_registry: https://registry.npmjs.org
+      ARTIFACT_KIND: ${{ github.event_name == 'push' && 'candidate' || inputs.artifact_kind }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
@@ -40,7 +48,6 @@ jobs:
       - name: Validate acquisition and driver identity
         id: inputs
         env:
-          ARTIFACT_KIND: ${{ inputs.artifact_kind }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
@@ -70,7 +77,6 @@ jobs:
         id: artifact
         env:
           GH_TOKEN: ${{ github.token }}
-          ARTIFACT_KIND: ${{ inputs.artifact_kind }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_VERSION: ${{ inputs.release_version }}
           QA_DRIVER_SHA: ${{ steps.inputs.outputs.driver_sha }}
@@ -127,14 +133,14 @@ jobs:
           IMA2_PACKAGE_TARBALL: ${{ steps.artifact.outputs.tarball }}
           IMA2_PACKAGE_UI_OUTPUT_DIR: ${{ steps.artifact.outputs.output_dir }}
           IMA2_PACKAGE_UI_DRIVER_SHA: ${{ steps.inputs.outputs.driver_sha }}
-          IMA2_PACKAGE_UI_ARTIFACT_KIND: ${{ inputs.artifact_kind }}
+          IMA2_PACKAGE_UI_ARTIFACT_KIND: ${{ env.ARTIFACT_KIND }}
           IMA2_PACKAGE_UI_IDENTITY: ${{ steps.artifact.outputs.identity }}
         run: GITHUB_SHA="$PRODUCT_SHA" node --test tests/package-install-smoke.mjs
       - name: Retain original UI and acquisition evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: installed-ui-${{ inputs.artifact_kind }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: installed-ui-${{ env.ARTIFACT_KIND }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/wp13-ui/
             ${{ runner.temp }}/wp13-artifact/release-manifest.json
