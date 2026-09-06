@@ -76,3 +76,17 @@ the unsupported empty tray. Navigation's final Home state remains horizontally
 scrollable; focused-item completeness is proven by the unchanged0.99 viewport
 assertions throughout keyboard traversal, not by pretending all seven items fit
 simultaneously in320px. Final full-suite success remains pending.
+
+Full candidate0b898e0a/run34003607293: Node22/24 andCodeQL pass; named UI output
+confirms only J3's expected upstream prompt mismatch before cancellation at case253.
+The actual request retains the typed prompt and appends the existing1024x1024
+size constraint. lib/sizeNudge.ts is unchanged from the parent; direct mode does
+not remove this policy. Correct the two independent literal expectations including
+that exact suffix, keep full equality and distinct first/retry prompts. No product
+generation behavior, token/key policy or assertion strength is relaxed.
+
+The serial retained suite reached253/258 at20 minutes; normal late cases were
+progressing at roughly5–8s each. Increase only the aggregate E2E job budget to25
+minutes so remaining cases and uploads finish. Individual test/expect limits,
+all cases, isolation dependencies and assertions remain unchanged. This does not
+fix or excuse J3. Diagnose J3 alone (+required isolation) before another full run.

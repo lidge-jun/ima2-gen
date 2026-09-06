@@ -209,7 +209,9 @@ jobs:
   e2e:
     name: frontend e2e (ubuntu)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The retained serial suite reached case253/258 at the former20-minute
+    # job bound. Reserve time to finish and upload; individual test limits stay unchanged.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
