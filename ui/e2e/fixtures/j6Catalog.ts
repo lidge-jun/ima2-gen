@@ -45,6 +45,7 @@ export function readFixtures(catalog: J6CatalogState, composer = false): Record<
   const session = { id: "wp02-session", title: "Selection fixture", createdAt: 1, updatedAt: 1,
     graphVersion: 1, nodeCount: 0, nodes: [], edges: [] };
   return {
+    "/api/auth/lan/session": { mode: "local", authenticated: true, expiresAt: null },
     "/api/models": catalog.mode === "malformed" || catalog.mode === "invalid" ? { ok: true, lanes: { comfy: { status: "ready", models: { image: [{ id: 7, label: "bad" }], video: [] } } } } : catalog.mode === "missing" ? { ok: true, lanes: {} } : catalog.mode === "schema" ? { ok: true, lanes: { comfy: { status: "wrong-status", models: { image: [], video: [] } } } } : modelCatalog(catalog, composer),
     "/api/capabilities": { limits: { maxRefCount: 5 }, defaults: {} },
     "/api/oauth/status": { status: "ready", models: ["gpt-5.6-luna"] },

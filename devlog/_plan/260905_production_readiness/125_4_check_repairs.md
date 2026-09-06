@@ -98,3 +98,22 @@ tests. Cause/disposition remains open; no blind rerun or package-policy waiver.
   creation is now inside proxy cleanup. Added accepted-extension UI remount
   scenario explicitly uses synthetic202/terminal with native LAN auth/SSE and
   actual React consumer, not a paid provider request. Hosted run still pending.
+
+## Full UI failure, then focused CI
+
+PR Fast34041113105 frontend hit its existing25-minute job limit. Downloaded
+wp09/wp02 artifacts under ignored `wp12s/10ede-pr-ui` and `10ede-selection`.
+Core selection records show `GET unexpected-api`, zero catalog reads and zero
+submissions; filesystem/process/connection denials are empty. Competing causes:
+H1 missing preauth fixture response; H2 App/module crash; H3 isolation denial.
+The exact-origin J6 route table lacks the new GET session endpoint and aborts
+unknown APIs before App import; captured request/zero catalog and clean guards
+support H1, not H2/H3. Add only the local-mode session status literal to the
+existing table. Mutation and foreign-origin denials are unchanged; this mock
+is not claimed as native auth proof (J9 owns that).
+
+Repurpose the existing focused diagnostic workflow's fixed selector to the
+original WP02 Grok API reload flow plus J9, with line reporter. Include the
+already-failing native HTTPS session case after the existing builds. No new
+workflow/runner, retry, timeout increase or validation weakening. Full CI will
+run after the coherent fixes and focused checks converge.
