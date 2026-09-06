@@ -1,6 +1,6 @@
 import { mkdir, writeFile, access, readFile } from "fs/promises";
 import { constants } from "fs";
-import { basename, join, normalize, parse } from "path";
+import { basename, resolve, parse, sep } from "path";
 import { randomBytes } from "crypto";
 import sharp from "sharp";
 import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
@@ -93,13 +93,19 @@ function assertSafeFilename(filename: string) {
 
 function safeSourceBase(sourceFilename: string | null | undefined) {
   const parsed = parse(basename(String(sourceFilename || "image")));
-  return parsed.name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "image";
+  const safe = parsed.name.replace(/[^a-zA-Z0-9_-]+/g, "-");
+  let start = 0;
+  let end = safe.length;
+  while (start < end && safe[start] === "-") start++;
+  while (end > start && safe[end - 1] === "-") end--;
+  return safe.slice(start, Math.min(end, start + 80)) || "image";
 }
 
 function ensureInsideGeneratedDir(generatedDir: string, filename: string) {
-  const full = normalize(join(generatedDir, filename));
-  const root = normalize(generatedDir);
-  if (!full.startsWith(root)) {
+  const full = resolve(generatedDir, filename);
+  const root = resolve(generatedDir);
+  const prefix = root.endsWith(sep) ? root : root + sep;
+  if (full !== root && !full.startsWith(prefix)) {
     const err: any = new Error("Canvas version path escapes generated directory");
     err.status = 400;
     err.code = "CANVAS_VERSION_PATH_ESCAPE";

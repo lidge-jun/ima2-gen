@@ -1,4 +1,4 @@
-import { writeFile, readFile, access, mkdir } from "fs/promises";
+import { writeFile, readFile, access, mkdir, realpath } from "fs/promises";
 import { join, resolve, sep } from "path";
 import { randomBytes } from "crypto";
 import { config } from "../config.js";
@@ -51,9 +51,13 @@ export async function loadNodeB64(rootDir: string, filename: string, generatedDi
 }
 
 export async function loadNodeMeta(rootDir: string, nodeId: string, ext = "png", generatedDir = config.storage.generatedDir) {
-  void rootDir;
   try {
-    return JSON.parse(await readFile(join(generatedDir, `${nodeId}.${ext}.json`), "utf-8"));
+    const metadataPath = resolveGeneratedPath(rootDir, `${nodeId}.${ext}.json`, generatedDir);
+    const canonicalRoot = await realpath(generatedDir);
+    const canonicalPath = await realpath(metadataPath);
+    // Reuse the explicit-dir boundary after resolving directory and leaf symlinks.
+    const containedPath = resolveGeneratedPath(rootDir, canonicalPath, canonicalRoot);
+    return JSON.parse(await readFile(containedPath, "utf-8"));
   } catch {
     return null;
   }
@@ -81,7 +85,8 @@ function resolveGeneratedPath(rootDir: string, relPath: string, generatedDir = c
   }
   const baseDir = resolve(generatedDir);
   const target = resolve(baseDir, relPath);
-  if (target !== baseDir && !target.startsWith(baseDir + sep)) {
+  const prefix = baseDir.endsWith(sep) ? baseDir : baseDir + sep;
+  if (target !== baseDir && !target.startsWith(prefix)) {
     const err = new Error(`Asset path escapes generated/: ${relPath}`) as Error & { code?: string; status?: number };
     err.code = "NODE_SOURCE_INVALID";
     err.status = 400;
