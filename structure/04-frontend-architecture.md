@@ -102,6 +102,15 @@ unowned file/process/network access; fixed libc probes remain denied but are
 separately observed. This is a regression fixture, not an OS security sandbox.
 WP09 startup-only diagnostic results do not replace full CI or visual acceptance.
 
+`ui/e2e/j5-restart-recovery.spec.ts` owns integrated local generation, held-job
+cancellation and same-home restart. It correlates the request ID, persisted
+filename and loaded image, waits for pipeline cancellation cleanup, and checks
+that restarting does not resubmit upstream work. It reuses `app.guard.assertClean`
+and the existing build/source identity; there is no second fixture harness.
+Desktop/mobile `wp12-*` PNG and JSON evidence ships in the journey CI artifact.
+Test definitions or emitted attachments alone are not visual acceptance: the
+candidate's actual test result and opened screenshots must be reviewed.
+
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 
 This matters because README and older devlog entries still contain traces of the vanilla HTML UI. Actual UI work should target React components, the Zustand store, `ui/src/lib/api.ts` / `ui/src/lib/nodeApi.ts`, and `ui/src/index.css`. Fixing the legacy HTML file will not change the active app.

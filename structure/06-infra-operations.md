@@ -237,6 +237,30 @@ and source/public installers. `npm run docs:runtime:check` checks drift without
 writes. Windows scheduled and candidate CI both require exact-SHA checkout,
 hosted installer behavior and packed installation before claiming acceptance.
 
+Candidate CI binds every Linux, Windows, macOS-install and UI checkout to the
+requested SHA (or event SHA when no override was supplied). macOS runs focused
+native installer/offline-doctor/packed smoke, not another full suite. PR Fast runs
+for every PR base, checks the synthetic merge SHA, and prints the separate PR head
+SHA. Full Git history is required by existing release provenance checks; HEAD^1
+alone is enough only for the blob budget. A pending/cancelled/missing job is not
+acceptance. After a branch changes, prior runtime checks do not verify the new tip.
+
+The API guard matches `/api` case-insensitively with a segment boundary. Its only
+OAuth callback exemption is GET on the exact callback path; state/PKCE validation
+still owns that redirect. Per-app request budgets then run before JSON parsing:
+600 total and120 mutating requests per socket peer per60 seconds, at most4096
+tracked peers. Responses exceeding a budget return429/API_RATE_LIMITED with
+Retry-After. Forwarded headers cannot choose a budget identity. Existing SSE
+frames are not new requests; static UI/media are outside this admission counter.
+These code-owned defaults and existing job concurrency limits protect one process,
+not a distributed deployment. Future LAN session/media changes are a separate lane.
+
+Accepted `/api/events` response headers include `x-ima2-event-cursor`, the effective
+cursor before replay. CLI `openSse` exposes a validated `initialEventId` before the
+job POST, so an EOF before any frame can reconnect without submitting the job
+again. Missing headers support older servers but do not promise this recovery.
+Retention gaps still use existing snapshot/error handling and tracking deadlines.
+
 | Task | Command | Expected result |
 |---|---|---|
 | Full test suite | `npm test` | `scripts/run-tests.mjs` runs `tests/*.test.{js,ts,mjs,cjs,mts,cts}` |

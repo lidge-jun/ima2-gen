@@ -72,8 +72,8 @@ routes/
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `server.ts` | 632 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
-| `config.ts` | 505 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
+| `server.ts` | 634 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
+| `config.ts` | 509 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 93 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 47 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
@@ -101,10 +101,10 @@ routes/
 | `lib/generationRequestLog.ts` | 44 | In-memory generation request log store |
 | `routes/agent.ts` | 331 | Agent Mode API — sessions, turns, durable queue, compact, manifest, tools (`/api/agent/*`); backed by `lib/agent*.ts`; no CLI wrapper |
 | `routes/promptBuilder.ts` | 107 | `POST /api/prompt-builder/chat` plus `GET/PUT /api/prompt-builder/config`; chat uses `lib/promptBuilder/*`, config persists the backend/model pair, and `ima2 prompt build` wraps chat |
-| `routes/events.ts` | 151 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat; serializes `jobSeq` and the job envelope |
+| `routes/events.ts` | 152 | `GET /api/events` — SSE multiplexing endpoint; single persistent stream for all async job progress; ring replay + `replay-gap` + heartbeat; serializes `jobSeq` and the job envelope |
 | `lib/eventBus.ts` | 152 | Global pub/sub event bus with ring buffer (2000), monotonic `seq`, per-job `jobSeq` (LRU-bounded), `replaySince`, `hasReplayGap` |
 | `lib/ssePublish.ts` | 33 | `publishJobEvent` — suppress late done/error after retained cancel or tracking expiry, plus publish-time envelope snapshot |
-| `lib/eventsPolicy.ts` | 3 | Pure SSE drain deadline; route imports no runtime configuration |
+| `lib/eventsPolicy.ts` | 10 | Pure SSE drain deadline and accepted cursor parsing; no runtime configuration |
 | `lib/jobs/terminalStore.ts` | 79 | Terminal snapshot disk read/write/reap and per-ID admission cleanup; no inflight import |
 | `ui/src/lib/eventChannel.ts` | 181 | Browser singleton `EventSource` for `/api/events`; exponential backoff reconnect; `subscribe(jobId)` routing; connection state callbacks; `armStreamTimeout`; `ensureConnected` |
 | `ui/src/lib/sseStreamError.ts` | 77 | Shared `parseSseErrorPayload` — normalizes flat/nested SSE error shapes |
@@ -139,7 +139,7 @@ routes/
 | `bin/commands/video.ts` | 405 | Video CLI surface: generate, edit, extend, frame, analyze, `--character` (MCP lanes), and branch-local `continue` |
 | `bin/commands/ping.ts` | 32 | Server health probe client |
 | `bin/lib/client.ts` | 179 | Server discovery, HTTP request wrapper (connection: close, cleared timeouts), response normalization |
-| `bin/lib/platform.ts` | 129 | Browser-open and binary-resolution helpers |
+| `bin/lib/platform.ts` | 132 | Browser-open and binary-resolution helpers |
 | `bin/lib/args.ts` | 97 | Dependency-free argv parser |
 | `bin/lib/files.ts` | 40 | Data URI file conversion and output naming |
 | `bin/lib/output.ts` | 121 | Terminal output, JSON, exit-code mapping, natural-exit (no process.exit — Windows safe) |
@@ -148,14 +148,14 @@ routes/
 | `bin/lib/interactive-confirm.ts` | 129 | Inline yes/no selector (arrow keys, `y`/`n`, Enter) with a typed fallback |
 | `bin/lib/agent-driven.ts` | 35 | Agent/CI harness detection so consent prompts defer to the user |
 | `bin/lib/storage-doctor.ts` | 40 | CLI storage doctor formatting |
-| `bin/lib/sse.ts` | 175 | CLI SSE response stream helper |
+| `bin/lib/sse.ts` | 185 | CLI SSE response stream helper |
 | `bin/lib/browser-id.ts` | 17 | CLI browser-id header helper |
 | `lib/sessionStore.ts` | 309 | SQLite session and graph persistence, graph parent normalization, style-sheet helpers, session-title lookup |
 | `lib/styleSheet.ts` | 140 | Session style-sheet extraction and prefix composition |
 | `lib/assetLifecycle.ts` | 175 | Soft delete (OS trash via `trash` dep), restore, node asset-missing marking |
 | `lib/systemTrash.ts` | 21 | Cross-platform OS-trash helper wrapping the `trash` dependency |
 | `lib/db.ts` | 392 | SQLite bootstrap and migrations (schema 7): sessions, nodes, edges, inflight, terminal jobs, idempotency keys, prompts, prompt folders, canvas versions |
-| `lib/nodeStore.ts` | 92 | Node image and metadata load/save |
+| `lib/nodeStore.ts` | 97 | Node image and metadata load/save |
 | `lib/inflight.ts` | 457 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and terminal job snapshots that survive a restart |
 
 Tracker expiry writes its terminal and deletes the active row transactionally.
@@ -219,7 +219,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/imageModels.ts` | 320 | Image model allowlist and `normalizeImageModel(ctx, raw)` helper |
 | `lib/imageMetadata.ts` | 124 | `ima2.generation.v1` payload schema, XMP build/parse, embed limits |
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
-| `lib/canvasVersionStore.ts` | 331 | Canvas version snapshot storage, list, restore, and pruning |
+| `lib/canvasVersionStore.ts` | 337 | Canvas version snapshot storage, list, restore, and pruning |
 | `lib/comfyBridge.ts` | 266 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
 | `lib/naiImageAdapter.ts` | 265 | NovelAI image-generation provider adapter: request build, V5 parameter gating, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
 | `lib/naiOptions.ts` | 145 | NovelAI request-option normalizer shared by every request-driven dispatch, plus negative-prompt history provenance |
@@ -260,6 +260,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/providers/adapters/agyOperations.ts` | 208 | Actual Agy prompt/staging/operation with exception-safe refs and late-cancel barriers |
 | `lib/providers/adapters/googleExecution.ts` | 104 | Agy/Gemini four-surface mapping, lossless context-filtered node references and one-image sequence projection |
 | `lib/apiCachePolicy.ts` | 12 | API response cache-control policy helpers |
+| `lib/apiRequestBudget.ts` | 57 | Case-insensitive API matching and bounded per-app socket-peer request admission |
 | `lib/assetsStore.ts` | 533 | Generated asset indexing, lookup, and persistence helpers |
 | `lib/assetRef.ts` | 57 | Asset-id-first reference resolution with legacy filename fallback and `via` provenance for generate requests |
 | `lib/atomicWrite.ts` | 16 | Atomic file-write helper |
@@ -277,8 +278,9 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/providers/adapters/grokExecution.ts` | 140 | Four-surface Grok/proxy and direct execution, captured keys and search forwarding |
 | `lib/providers/adapters/grokOperations.ts` | 99 | Actual generate/edit operations with scoped artifact-origin policy |
 | `lib/providers/adapters/grokMultimodeOperations.ts` | 124 | Ordered per-image planning and sparse original-index result identity |
-| `lib/grokImageDownloadPolicy.ts` | 114 | Conservative address policy, exact-origin exception and abort-aware pinned DNS resolution |
-| `lib/grokImageDownload.ts` | 267 | Pinned HTTP GET, monotone redirect trust, overall deadline, bounded streamed body and cleanup |
+| `lib/grokImageDownloadPolicy.ts` | 128 | Conservative address policy, exact-origin exception and abort-aware pinned DNS resolution |
+| `lib/grokImageDownload.ts` | 153 | Grok redirect trust, overall deadline, bounded streamed image body and cleanup |
+| `lib/pinnedHttpGet.ts` | 176 | Shared validated-address GET lifecycle, public redirect handling and bounded text bodies |
 | `lib/grokMultimodeAdapter.ts` | 6 | Compatibility re-exports of actual Grok multimode operation/type |
 | `lib/grokProxyLauncher.ts` | 326 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
@@ -313,11 +315,11 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/promptImport/errors.ts` | 19 | Prompt import error type and detection helpers |
 | `lib/promptImport/curatedSources.ts` | 142 | Static curated prompt source registry for PR2 indexed search |
 | `lib/promptImport/discoveryRegistry.ts` | 330 | File-based PR4 discovery review queue, approved/rejected state, reviewed source conversion, and allowed-path validation |
-| `lib/promptImport/githubFolder.ts` | 404 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
+| `lib/promptImport/githubFolder.ts` | 414 | GitHub Contents API folder normalization, safe listing, selected-file validation, and selected-file fetch |
 | `lib/promptImport/githubDiscovery.ts` | 310 | GitHub repository discovery search, rate-limit normalization, candidate scoring, and registry upsert |
-| `lib/promptImport/githubSource.ts` | 259 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
+| `lib/promptImport/githubSource.ts` | 263 | GitHub prompt source normalization, host/path validation, redirect validation, and text/metadata fetch |
 | `lib/promptImport/gptImageHints.ts` | 74 | `gpt-image-2` model/task/size/quality hint and warning extraction |
-| `lib/promptImport/parsePromptCandidates.ts` | 181 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
+| `lib/promptImport/parsePromptCandidates.ts` | 204 | Conservative Markdown/TXT prompt candidate extraction with PR2 metadata fields |
 | `lib/promptImport/promptIndex.ts` | 327 | File-based curated/reviewed source index/cache, refresh, and search orchestration |
 | `lib/promptImport/rankPromptCandidates.ts` | 66 | Query scoring for curated prompt candidates |
 

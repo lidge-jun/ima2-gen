@@ -14,7 +14,9 @@ reachable High/Critical findings or the original unclassified MCP failure block 
 Bound: existing four-hour reassessment and72-hour goal; zero paid calls. CI trails
 implementation asynchronously; a green older SHA never verifies a newer patch.
 Ownership: main owns integration/FSM/Git/CI/stack; independent workers have disjoint
-file sets, model and effort omitted. No leaf dispatch, global settings or release.
+file sets. Latest explicit user correction requires model=gpt-6-astra and
+reasoning_effort=high, superseding earlier omission/inheritance instructions.
+No leaf dispatch, global settings or release.
 Escalation: new authority or an independently large defect returns to P; do not
 grow a checker to compensate for a missing product boundary.
 
