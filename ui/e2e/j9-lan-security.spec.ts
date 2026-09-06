@@ -325,7 +325,9 @@ async function tlsProxy() {
   const proxy = createHttpsServer({ key: await readFile(key), cert: await readFile(cert) }, (request, response) => {
     if (!target) { response.writeHead(503).end(); return; }
     const upstream = httpRequest(target + request.url, { method: request.method, headers: request.headers }, result => {
-      response.writeHead(result.statusCode ?? 502, result.headers); result.pipe(response);
+      response.writeHead(result.statusCode ?? 502, result.headers);
+      response.flushHeaders(); // Preserve upstream SSE OPEN before its first 15s heartbeat.
+      result.pipe(response);
     });
     upstream.on("error", () => { if (!response.headersSent) response.writeHead(502); response.end(); });
     response.on("close", () => upstream.destroy()); request.pipe(upstream);

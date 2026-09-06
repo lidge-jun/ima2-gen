@@ -51,7 +51,7 @@ test("#93 contract: inflight polling uses grace-tick before clearing interval", 
     "polling must track consecutive stop ticks for grace-tick mechanism",
   );
   assert.ok(
-    src.includes("__ima2StopTicks >= 2"),
+    src.includes("(w.__ima2StopTicks ?? 0) >= 2"),
     "polling must require at least 2 consecutive stop ticks before clearing interval",
   );
 });

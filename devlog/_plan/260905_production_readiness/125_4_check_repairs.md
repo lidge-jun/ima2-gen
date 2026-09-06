@@ -164,3 +164,23 @@ this is not Windows/npm12-only. To observe the corrected executable in actual
 lifecycle output, enable foreground-script logging on the existing Windows CI
 install step and focused Linux diagnostic install step only. This changes log
 visibility, not scripts, checks, timeout, matrix or approval policy.
+
+## Focused native/browser result at3d8c2227
+
+Diagnostic34042635661:32pass/1fail in3.5minutes. Native HTTPS session test,
+WP02 reload flow and six J9 scenarios pass. Sole failure: TLS EventSource never
+observes OPEN within the unchanged5-second predicate. H1 cookie/host admission,
+H2 proxy buffers response headers, H3 connection saturation. TLS App/bootstrap
+and Secure cookie checks passed; direct HTTP SSE passed; only two owned SSEs
+are used. Source `routes/events.ts:44` flushes headers immediately and sends its
+first heartbeat at15seconds, while J9's proxy only calls writeHead/pipe, delaying
+the browser's headers until body data. Preserve upstream behavior with an
+immediate proxy flushHeaders; no timeout increase, fake OPEN or auth allowance.
+Native recheck remains required; H2 is source-supported, not yet closed.
+
+PR backend101512082825: all previous ten failures resolved; sole new failure
+is the old #93 source substring `__ima2StopTicks >= 2`, now expressed with
+`?? 0` after moving shutdown below the final history read. Update only that
+substring to the actual two-tick predicate; the existing runtime test still
+asserts two real history reads, timer present after first and absent after
+second. Do not change the two-tick behavior to satisfy an obsolete string.
