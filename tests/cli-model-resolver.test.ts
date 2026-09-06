@@ -211,6 +211,7 @@ const mcpModule = await import(`${pathToFileURL(join(transpiledDir, "bin", "lib"
 };
 
 const clients = new Set<ServerResponse>();
+const eventTrace: unknown[] = [];
 const terminalJobs = new Map<string, Record<string, unknown>>();
 const postSawOpen = new Map<string, boolean>();
 const reconnectCursors: string[] = [];
@@ -226,6 +227,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 function emit(event: string, data: Record<string, unknown>, id: number) {
+  eventTrace.push({ at: Date.now(), event, jobId: data.jobId, clients: clients.size });
   const frame = `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const client of clients) client.write(frame);
 }
@@ -233,6 +235,7 @@ function emit(event: string, data: Record<string, unknown>, id: number) {
 async function fakeHandler(req: IncomingMessage, res: ServerResponse) {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
+    eventTrace.push({ at: Date.now(), method: req.method, path: url.pathname });
     if (req.method === "GET" && url.pathname === "/api/events") {
       res.writeHead(200, { "Content-Type": "text/event-stream" });
       res.flushHeaders();
@@ -313,9 +316,13 @@ function mcpOpts(requestId: string, timeoutMs = 20_000): McpJobOptions {
 }
 
 describe("runMcpJob", () => {
-  it("opens SSE before POST, reports progress, and resolves done", async () => {
+  it("opens SSE before POST, reports progress, and resolves done", async (t) => {
     const phases: string[] = [];
-    const result = await mcpModule.runMcpJob({ ...mcpOpts("done-job"), onProgress: (phase) => phases.push(phase) });
+    const result = await mcpModule.runMcpJob({ ...mcpOpts("done-job"), onProgress: (phase) => phases.push(phase) })
+      .catch((error) => {
+        t.diagnostic(JSON.stringify({ eventTrace, phases, postOpen: postSawOpen.get("done-job"), clients: clients.size }));
+        throw error;
+      });
     assert.strictEqual(postSawOpen.get("done-job"), true);
     assert.deepStrictEqual(phases, ["rendering"]);
     assert.strictEqual(result.filename, "done.png");
