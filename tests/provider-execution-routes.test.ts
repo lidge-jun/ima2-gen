@@ -91,6 +91,8 @@ if (executionTestProcess(import.meta.url)) {
             assert.deepEqual(terminal.data.usage, { grok_cost_usd_ticks: 19 * indexes.length });
             const images = fixture.events.filter((entry) => entry.event === "image");
             assert.deepEqual(images.map((entry) => entry.data.sequenceIndex), indexes);
+            assert.deepEqual(images.map((entry) => entry.data.sequenceTotalReturned), indexes.map((_, position) => position + 1));
+            assert.ok(images.every((entry) => entry.data.sequenceStatus === "partial"));
             assert.equal(images.length, indexes.length);
             assert.deepEqual(terminal.data.images, images.map((entry) => entry.data));
             assert.equal(new Set(images.map((entry) => entry.data.filename)).size, indexes.length);
@@ -105,6 +107,8 @@ if (executionTestProcess(import.meta.url)) {
               assert.equal(event.data.image, `data:image/png;base64,${image}`, "equal bytes at different indices remain separate");
               const sidecar = await readFile(join(fixture.generatedDir, `${event.data.filename}.json`), "utf8");
               assert.equal(JSON.parse(sidecar).sequenceIndex, indexes[position]);
+              assert.equal(JSON.parse(sidecar).sequenceTotalReturned, position + 1);
+              assert.equal(JSON.parse(sidecar).sequenceStatus, "partial");
               assert.equal(JSON.parse(sidecar).providerUrl, providerUrl);
               assert.equal(JSON.parse(sidecar).revisedPrompt, "identical planned content");
               assert.ok(!sidecar.includes('"originalIndexes"'));

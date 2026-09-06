@@ -86,6 +86,10 @@ export function mergeInflightSnapshot(snapshot: InflightSnapshot, current: AppSt
     const restored = toPersistedInFlightJob(job);
     if (!matchesInflightScope(restored, snapshot.scopes)) continue;
     serverActiveIds.add(id);
+    // Supplemental scopes reconcile known jobs without expanding server-only discovery.
+    if ((restored.kind ?? "classic") === "classic" && snapshot.uiMode === "node") continue;
+    if (restored.kind === "node" && (snapshot.uiMode !== "node"
+      || (restored.sessionId ?? null) !== snapshot.activeSessionId)) continue;
     if (!snapshot.local.has(id) && !fresh.local.has(id)) inFlight.push(restored);
   }
   return { inFlight, terminalErrors, eligibleIds, serverActiveIds };

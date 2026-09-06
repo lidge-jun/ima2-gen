@@ -21,8 +21,9 @@ function responses(f: JobTrackingUiFixture, jobs: ServerInFlightJob[], terminalJ
   f.route("GET", "/api/inflight", (request) => {
     const query = new URL(request.url).searchParams;
     assert.equal(query.get("includeTerminal"), "1");
-    return Response.json({ jobs: jobs.filter((job) => job.kind === query.get("kind")),
-      terminalJobs: terminalJobs.filter((job) => job.kind === query.get("kind")) });
+    const matches = (job: ServerInFlightJob) => job.kind === query.get("kind")
+      && (!query.get("sessionId") || job.meta?.sessionId === query.get("sessionId"));
+    return Response.json({ jobs: jobs.filter(matches), terminalJobs: terminalJobs.filter(matches) });
   });
   f.route("GET", "/api/history", () => Response.json({ items: [] }));
 }
@@ -59,7 +60,7 @@ for (const mode of ["reconcile", "poll"] as const) {
     });
   }
 
-  test(`${mode}: server-only node restoration preserves correlation and rejects other-session data`, async () => {
+  test(`${mode}: server-only node restoration preserves correlation, clears absent locals, and rejects other-session discovery`, async () => {
     await withJobTrackingUi(async (f) => {
       const other = local("other-session", { kind: "node", sessionId: "B", startedAt: 1 });
       const mcp = local("mcp", { kind: "mcp-action-upscale" });
@@ -69,21 +70,27 @@ for (const mode of ["reconcile", "poll"] as const) {
         server("wrong-session", { kind: "node", meta: { sessionId: "B" } }), server("mcp", { kind: "mcp-action-upscale" })]);
       await run(f, mode);
       const state = f.runtime.useAppStore.getState();
-      assert.deepEqual(state.inFlight.map((job) => job.id).sort(), ["mcp", "node-new", "other-session"]);
+      assert.deepEqual(state.inFlight.map((job) => job.id).sort(), ["mcp", "node-new"]);
       const node = state.inFlight.find((job) => job.id === "node-new");
       assert.deepEqual([node?.kind, node?.sessionId, node?.parentNodeId, node?.clientNodeId], ["node", "A", "parent", "client"]);
       assert.ok(f.requests.some((request) => new URL(request.url).searchParams.get("kind") === "mcp-action-upscale"));
-      assert.equal(state.inFlight.find((job) => job.id === "other-session"), other);
+      assert.equal(state.activeGenerations, 2);
+      assert.deepEqual(f.runtime.loadInFlight({ includeExpired: true }).map((job) => job.id).sort(), ["mcp", "node-new"]);
     });
   });
 
   test(`${mode}: terminal scope is checked and canceled jobs settle silently`, async () => {
     await withJobTrackingUi(async (f) => {
-      const jobs = [local("mismatch", { kind: "node", sessionId: "A" }), local("canceled", { kind: "node", sessionId: "A" })];
+      const jobs = [local("mismatch", { kind: "node", sessionId: "A", startedAt: 900_000 }), local("canceled", { kind: "node", sessionId: "A" })];
       f.runtime.useAppStore.setState({ uiMode: "node", activeSessionId: "A", inFlight: jobs, activeGenerations: 2 });
       f.runtime.saveInFlight(jobs);
-      responses(f, [], [expired("mismatch", { kind: "node", meta: { sessionId: "B" } }),
-        expired("canceled", { kind: "node", status: "canceled", meta: { sessionId: "A" } })]);
+      responses(f, []);
+      // Deliberately malformed response: the A query contains a B terminal.
+      // Keep it past absence grace so filtering it out would fail this test.
+      f.route("GET", "/api/inflight", (request) => Response.json({ jobs: [], terminalJobs:
+        new URL(request.url).searchParams.get("kind") === "node"
+          ? [expired("mismatch", { kind: "node", meta: { sessionId: "B" } }),
+            expired("canceled", { kind: "node", status: "canceled", meta: { sessionId: "A" } })] : [] }));
       await run(f, mode);
       assert.deepEqual(f.runtime.useAppStore.getState().inFlight.map((job) => job.id), ["mismatch"]);
       assert.equal(f.runtime.useAppStore.getState().toastLog.length, 0);
@@ -119,6 +126,51 @@ for (const mode of ["reconcile", "poll"] as const) {
       assert.equal(f.runtime.useAppStore.getState().toastLog.length, 1);
     });
   });
+}
+
+for (const scenario of ["nodeA-classic", "nodeA-nodeB", "classic-nodeB"] as const) {
+  for (const settlement of ["absent", "terminal"] as const) {
+    test(`storage-only ${scenario}: retains active, clears absent/terminal, then ${settlement} stops polling`, async () => {
+      await withJobTrackingUi(async (f) => {
+        const kind = scenario === "classic-nodeB" ? "classic" : "node";
+        const sessionId = kind === "node" ? "A" : null;
+        const uiMode = scenario === "nodeA-classic" ? "classic" : "node";
+        const meta = { sessionId };
+        const stored = ["active", "absent", "terminal"].map((id) => local(id, {
+          kind: kind === "classic" && id !== "absent" ? undefined : kind, sessionId, startedAt: 1,
+        }));
+        f.runtime.saveInFlight(stored);
+        const store = f.runtime.useAppStore;
+        store.setState({ uiMode, activeSessionId: uiMode === "node" ? "B" : null,
+          inFlight: [], activeGenerations: 0, locale: "en" });
+        assert.deepEqual(f.runtime.loadInFlight(), []);
+        const activeJobs = [server("active", { kind, meta }), server("unrelated", { kind, meta })];
+        responses(f, activeJobs, [expired("terminal", { kind, meta })]);
+        await run(f, "reconcile");
+        assert.deepEqual(store.getState().inFlight.map((job) => job.id), ["active"]);
+        assert.equal(store.getState().activeGenerations, 1);
+        assert.deepEqual(f.runtime.loadInFlight({ includeExpired: true }).map((job) => job.id), ["active"]);
+        assert.deepEqual(store.getState().toastLog.map((toast) => toast.message), [warnings.en]);
+        const scopes = f.requests.map((request) => new URL(request.url).searchParams);
+        assert.equal(scopes.filter((query) => query.get("kind") === kind && query.get("sessionId") === sessionId).length, 1);
+        const timer = [...f.timers].find(([, value]) => value.kind === "interval"); assert.ok(timer);
+        await f.runTimer(timer[0]);
+        assert.deepEqual(store.getState().inFlight.map((job) => job.id), ["active"]);
+        assert.equal(store.getState().activeGenerations, 1);
+        responses(f, [], settlement === "terminal" ? [expired("active", { kind, meta })] : []);
+        await f.runTimer(timer[0]);
+        assert.deepEqual(store.getState().inFlight, []);
+        assert.deepEqual(f.runtime.loadInFlight({ includeExpired: true }), []);
+        assert.equal(store.getState().activeGenerations, 0);
+        assert.equal(store.getState().toastLog.length, settlement === "terminal" ? 2 : 1);
+        const inflightReads = f.requests.filter((request) => new URL(request.url).pathname === "/api/inflight").length;
+        await f.runTimer(timer[0]); assert.ok(f.timers.has(timer[0]));
+        await f.runTimer(timer[0]); assert.equal(f.timers.has(timer[0]), false);
+        assert.equal(f.requests.filter((request) => new URL(request.url).pathname === "/api/inflight").length, inflightReads);
+        assert.ok(f.requests.every((request) => request.method === "GET"));
+      });
+    });
+  }
 }
 
 test("polling writes removal of stored-only terminal even when memory is already empty", async () => {
