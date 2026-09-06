@@ -124,6 +124,8 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
         cwd: process.cwd(),
       });
       const packManifest = [parsePackOutput(pack.stdout)];
+      console.log(JSON.stringify({ kind: "packed-runtime-inventory", name: packManifest[0].name,
+        version: packManifest[0].version, files: packManifest[0].files }));
       for (const bundled of ["progrok", "openai-oauth", "zod"]) {
         assert.ok(packManifest[0].bundled.includes(bundled), `packed artifact should bundle ${bundled}`);
       }
