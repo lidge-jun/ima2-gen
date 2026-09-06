@@ -167,6 +167,32 @@ for (const outcome of ["tracking", "ordinary", "cancel", "success"] as const) {
   }));
 }
 
+for (const outcome of ["local", "server", "ordinary", "tracking"] as const) {
+  test(`classic settlement distinguishes ${outcome} cancellation from failure`, () => withJobTrackingUi(async (f) => {
+    prepare(f);
+    const accepted = admission(f, "/api/generate");
+    const store = f.runtime.useAppStore;
+    store.setState({ prompt: "synthetic classic", provider: "api", locale: "en" });
+    const work = f.track(store.getState().runGenerate());
+    const id = requestId(await accepted);
+    if (outcome === "local") {
+      f.route("DELETE", `/api/inflight/${id}`, () => json({ requestId: id }));
+      await store.getState().cancelInFlightJob(id);
+    } else {
+      f.emit("error", { requestId: id, ...(outcome === "tracking" ? wrapped
+        : { code: outcome === "server" ? "GENERATION_CANCELED" : "INVALID_REQUEST", error: "ordinary failure" }) });
+    }
+    await work;
+    const state = store.getState();
+    assert.equal(state.toastLog.length + state.errorCardLog.length, outcome === "local" || outcome === "server" ? 0 : 1);
+    assert.equal(store.getState().history.length, 0);
+    assert.equal(store.getState().activeGenerations, 0);
+    assert.deepEqual(store.getState().inFlight, []);
+    assert.equal(posts(f).length, 1);
+    noWatcher(f);
+  }));
+}
+
 function mcpRoutes(f: JobTrackingUiFixture) {
   f.route("GET", "/api/mcp/providers", () => json({ providers: [{ id: "fixture", status: { state: "connected" } }] }));
 }

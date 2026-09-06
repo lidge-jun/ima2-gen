@@ -404,7 +404,7 @@ export async function runGenerateImpl(
       get().showToast(t("toast.generatedSingle", { elapsed: res.elapsed }));
     }
   } catch (err) {
-    if (!isCanceledGenerationError(err)) handleError(err, get());
+    if (!(err instanceof Error && err.name === "AbortError") && !isCanceledGenerationError(err)) handleError(err, get());
   } finally {
     const remaining = get().inFlight.filter((f) => f.id !== flightId);
     saveInFlight(remaining);

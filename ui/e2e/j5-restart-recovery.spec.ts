@@ -118,6 +118,10 @@ async function cancelHeld(page: Page, app: AppHandle, submissions: Submission[],
       .items.find((entry) => entry.requestId === requestId)).toMatchObject({ succeeded: 0, error: "GENERATION_CANCELED" });
     await expect(cancel).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Generate", exact: true })).toBeEnabled();
+    // Read immediately after settlement; waiting for absence could hide a toast
+    // that merely expired rather than correctly representing cancellation.
+    const cancellationErrors = await page.locator(".toast.error").allTextContents();
+    expect(cancellationErrors).toEqual([]);
     const state = await readAppJson<Inflight>(page, "/api/inflight?includeTerminal=1");
     expect(state.jobs).toEqual([]);
     expect(state.terminalJobs?.find((job) => job.requestId === requestId)).toMatchObject({ status: "canceled", errorCode: "GENERATION_CANCELED" });
@@ -125,7 +129,7 @@ async function cancelHeld(page: Page, app: AppHandle, submissions: Submission[],
     expect(history.items.map((item) => item.filename)).toEqual([artifact.filename]);
     await renderedArtifact(page, artifact);
     app.guard.assertClean();
-    return { requestId, terminal: { status: "canceled", errorCode: "GENERATION_CANCELED" }, heldScreenshot,
+    return { requestId, terminal: { status: "canceled", errorCode: "GENERATION_CANCELED" }, heldScreenshot, cancellationErrors,
       screenshot: await capture(page, info, "canceled-desktop"), repliesAfterRelease: app.stub.generationReplies };
   } finally { held.release(); }
 }
