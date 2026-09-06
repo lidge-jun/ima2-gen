@@ -244,6 +244,10 @@ for every PR base, checks the synthetic merge SHA, and prints the separate PR he
 SHA. Full Git history is required by existing release provenance checks; HEAD^1
 alone is enough only for the blob budget. A pending/cancelled/missing job is not
 acceptance. After a branch changes, prior runtime checks do not verify the new tip.
+PR backend and frontend checks use independent hosted runners: server tests must
+not leave configuration stores on the UI fixture's otherwise untouched machine.
+The terminal check retains the name `PR fast gate` and succeeds only when both
+jobs succeed. Existing UI isolation guards are unchanged; no stores are deleted.
 
 The API guard matches `/api` case-insensitively with a segment boundary. Its only
 OAuth callback exemption is GET on the exact callback path; state/PKCE validation

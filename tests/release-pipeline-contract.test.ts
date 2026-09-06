@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -600,6 +600,45 @@ describe("package install policy contract", () => {
     const identity = steps.find((s: any) => s.env?.PR_HEAD_SHA);
     assert.equal(identity.env.PR_HEAD_SHA, "${{ github.event.pull_request.head.sha }}");
     assert.equal(identity.env.MERGE_SHA, "${{ github.sha }}");
+  });
+
+  it("PR frontend has a fresh runner and the preserved gate requires both jobs", () => {
+    const workflow = parse(readFileSync(join(repoRoot(), ".github/workflows/pr-fast.yml"), "utf8"));
+    const { fast, frontend, gate } = workflow.jobs;
+    assert.equal(frontend.needs, undefined, "backend and UI must run independently");
+    assert.equal(frontend["runs-on"], "ubuntu-latest");
+    assert.equal(frontend.steps[0].with.ref, "${{ github.sha }}");
+    assert.equal(frontend.steps[0].with["persist-credentials"], false);
+    const commands = frontend.steps.map((s: any) => s.run).filter(Boolean);
+    for (const command of ["node scripts/assert-ci-sha.mjs", "npm ci", "npm --prefix ui ci --no-audit --no-fund",
+      "npm run build:server", "npm run build:cli", "npm --prefix ui run build:fixture", "npm --prefix ui run test:e2e"]) {
+      assert.ok(commands.includes(command), command);
+    }
+    assert.equal(frontend.steps.find((s: any) => s.run === commands[0]).env.EXPECTED_SHA, "${{ github.sha }}");
+    assert.equal(commands.includes("npm test"), false);
+    assert.ok(fast.steps.some((s: any) => s.run === "npm test"));
+    const uploads = frontend.steps.filter((s: any) => s.uses?.startsWith("actions/upload-artifact@"));
+    assert.ok(uploads.some((s: any) => s.with.path.includes("wp12-*.png")));
+    assert.ok(uploads.some((s: any) => s.with.path.includes("wp08c-*.png")));
+    assert.equal(gate.name, "PR fast gate");
+    assert.deepEqual(gate.needs, ["fast", "frontend"]);
+    assert.equal(gate.if, "always()");
+    assert.equal(gate.steps.length, 1);
+    const step = gate.steps[0];
+    assert.equal(step.if, undefined);
+    assert.ok(!step["continue-on-error"]);
+    assert.deepEqual(step.env, { BACKEND_RESULT: "${{ needs.fast.result }}", FRONTEND_RESULT: "${{ needs.frontend.result }}" });
+    const predicate = /^node -e '([^']+)'$/.exec(step.run)?.[1];
+    assert.ok(predicate, "execute the actual aggregate predicate without a platform shell");
+    for (const backend of ["success", "failure", "cancelled", "skipped"]) {
+      for (const ui of ["success", "failure", "cancelled", "skipped"]) {
+        const result = spawnSync(process.execPath, ["-e", predicate], {
+          env: { BACKEND_RESULT: backend, FRONTEND_RESULT: ui }, timeout: 5000,
+        });
+        assert.equal(result.error, undefined);
+        assert.equal(result.status === 0, backend === "success" && ui === "success", `${backend}/${ui}`);
+      }
+    }
   });
 
   it("ci gate correlates runs by full candidate SHA only", async () => {

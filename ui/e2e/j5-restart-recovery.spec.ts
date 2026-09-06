@@ -102,6 +102,7 @@ async function cancelHeld(page: Page, app: AppHandle, submissions: Submission[],
     await page.locator(".inflight-badge--popup:visible").click();
     const cancel = page.getByRole("button", { name: `Cancel generation: ${CANCEL_PROMPT}`, exact: true });
     await expect(cancel).toBeVisible();
+    await expect(page.locator(".inflight-popup[data-positioned=true]")).toHaveCSS("opacity", "1");
     const heldScreenshot = await capture(page, info, "held-desktop");
     const [response] = await Promise.all([
       page.waitForResponse((res) => res.request().method() === "DELETE"

@@ -5,6 +5,11 @@ ledger, NOT security acceptance or scanner dismissal. Full candidate CI340261728
 and new CodeQL analysis are pending. Original snapshot has93 alerts: IDs1..95
 except14 and18, all from aca964 runtime (109171 only added closeout docs).
 
+C correction: independent path audit found four genuine High caller/sink paths
+among the provisional37guarded candidates. Main confirmed the source and accepted
+the repairs in124_3_path_repair_plan.md. The earlier table is a snapshot of working
+dispositions, not clearance; do not use its candidate counts as a passing gate.
+
 ## Report reconciliation
 
 | IDs | Current source decision | Evidence still required before acceptance |
