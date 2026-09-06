@@ -32,7 +32,7 @@ function verifyContract(candidate: Step[]): void {
   const install = candidate.findIndex(step => step.name === "Install root deps");
   assert.ok(candidate.indexOf(guard) > candidate.indexOf(checkout!));
   assert.ok(candidate.indexOf(guard) < install);
-  assert.ok(candidate.some(step => step.run === "npm --prefix ui run test:e2e"));
+  assert.ok(candidate.some(step => step.run === "npm --prefix ui run test:e2e -- --reporter=line"));
   const upload = candidate.find(step => step.with?.name === "wp07-job-tracking-evidence");
   assert.equal(upload?.if, "always()");
   assertActionPinned(`jobs:\n  tracking:\n    steps:\n      - uses: ${upload?.uses}`, "actions/upload-artifact", "tracking upload");

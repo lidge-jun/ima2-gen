@@ -254,7 +254,7 @@ jobs:
         env:
           WP08_BUILD_COMMAND: npm --prefix ui run build:fixture
           WP08_BUILD_OUTCOME: ${{ steps.wp08_ui_build.outcome }}
-        run: npm --prefix ui run test:e2e
+        run: npm --prefix ui run test:e2e -- --reporter=line
       - name: Upload WP09 isolation and journey evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

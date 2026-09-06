@@ -62,3 +62,17 @@ flake. The named focused result is authoritative. Next single job checks only
 the two remaining named failures, keeping the original isolation dependency.
 After these grouped fixes pass, full CI checks the retained suite including core
 cases lacking terminal outcomes. No unrelated diagnostic matrix or new test.
+
+Product-fix checkpointc7e027f01eeb41328d5955f14fc23f5868184fd5:
+focused run34003201468 SUCCESS. Both named UI failures now pass alongside the
+unchanged isolation dependency. Main will directly read the new frames and then
+run final fullCI/CodeQL. Full CI uses the built-in line reporter so a cancelled
+run cannot erase test names behind buffered dots; no case, threshold, timeout or
+isolation rule is changed by that logging choice.
+
+Main directly opened c7e027f0 short-dock and320px navigation PNGs after the26-pass
+run. The short dock now exposes prompt text and enabled toolbar actions without
+the unsupported empty tray. Navigation's final Home state remains horizontally
+scrollable; focused-item completeness is proven by the unchanged0.99 viewport
+assertions throughout keyboard traversal, not by pretending all seven items fit
+simultaneously in320px. Final full-suite success remains pending.
