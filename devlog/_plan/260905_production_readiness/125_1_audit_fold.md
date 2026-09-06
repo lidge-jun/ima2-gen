@@ -20,6 +20,21 @@ configuration with an empty replacement or delete its file. Capture raw inputs
 for the getter at module initialization; do not read a later mutated env value.
 Main owns these edits, not the CLI transport worker.
 
+Second-round B2 is accepted: copying credentials through the old unspecified-mode
+writer could create a0644 primary on POSIX. Keep saveFileCfg synchronous, but reuse
+the repository's private temporary-write/rename pattern (configFileStore/tokenStore):
+create a nonce-named sibling exclusively with0600 BEFORE writing any bytes, then
+rename that private file over the primary. Creation of missing config directories
+uses0700. A pre-existing0644 destination is replaced by the private file, not written
+then chmodded. Track ownership so cleanup removes only a temporary actually created
+by this invocation; a failed exclusive open must not remove someone else's file.
+Preserve original target on write/rename failure and keep the legacy source intact.
+No new persistence helper or public async signature, no unrelated writer edits.
+The existing synthetic migration case asserts POSIX group/other bits absent for
+both new and pre-existing permissive destinations. Windows retains inherited
+operator-directory ACL behavior; POSIX mode bits are not claimed as Windows DACL
+enforcement, and no global ACL/security-policy command is introduced.
+
 lan-config.test.ts covers primary-invalid and legacy-only-invalid origins: config
 rm removes only publicOrigins, retains another synthetic setting/credential, a fresh
 load gets default[], and the original legacy file remains recoverable. Invalid env
