@@ -1,4 +1,23 @@
 {
+  "lan": {
+    "title": "連線至工作室",
+    "body": "請輸入工作室設定的 LAN 權杖。權杖不會儲存在瀏覽器儲存空間中。",
+    "token": "LAN 權杖",
+    "connect": "連線",
+    "connecting": "正在連線…",
+    "retry": "重新檢查連線",
+    "sessionExpired": "請登入工作室。已輸入的內容會保留。",
+    "unavailable": "無法連線至工作室。請檢查地址後重試。",
+    "rateLimited": "嘗試次數過多，請稍後再試。",
+    "capacity": "工作室工作階段已滿，請稍後再試。",
+    "originRejected": "請使用管理員設定的地址開啟工作室。",
+    "cookieRequired": "請允許此工作室使用 Cookie，然後重新連線。",
+    "duplicateToken": "地址包含多個權杖，請在下方輸入正確的權杖。",
+    "sessionTitle": "工作室工作階段",
+    "signOut": "登出工作室",
+    "signingOut": "正在登出…",
+    "signOutBody": "登出不會取消正在進行的生成工作。"
+  },
   "common": {
     "ok": "確定",
     "cancel": "取消",
@@ -72,6 +91,7 @@
     "generatedBatch": "在 {elapsed}s 中產生 {count} 影像。",
     "generatedSingle": "在 {elapsed}s 中產生。",
     "generateFailed": "一代失敗。",
+    "jobTrackingTimeout": "工作追蹤已逾時，無法確認服務提供方是否已完成。重試前請先檢查歷史紀錄。",
     "sessionReloadedElsewhere": "圖表版本發生變化，因此重新載入最新圖表。",
     "promptCopied": "提示已複製",
     "metadataCopied": "已複製",
@@ -338,7 +358,8 @@
     "webSearch": "網頁搜尋",
     "grokApi": "Grok API",
     "grokApiBody": "透過捆綁的 progrok 運作：強制搜尋、Grok 4.5 英語圖像和文字工具規劃，然後是 xAI Images API。附加參考使用 xAI 影像編輯，因此保留了 i2i 上下文。",
-    "openAccount": "開設帳戶設置"
+    "openAccount": "開設帳戶設置",
+    "mcp": {"loading":"正在檢查 MCP 就緒狀態…","error":"無法讀取 MCP 就緒狀態","missing":"提供者不可用","disabled":"提供者已停用","disconnected":"提供者未連線","locked":"提供者執行已鎖定","default":"提供者預設模型","model-missing":"所選模型不可用","model-locked":"所選模型執行已鎖定","ready":"上次連線檢查時可用。","refresh":"重新整理","observed":"檢查於 {time}"}
   },
   "generate": {
     "button": "產生",
@@ -852,6 +873,8 @@
     "label": "預估成本"
   },
   "result": {
+    "extend": "延長影片",
+    "extendTitle": "從此影片的最後一幀繼續產生",
     "download": "下載",
     "copyImage": "複製影像",
     "copyLastFrame": "最後\n框架",
@@ -1587,6 +1610,11 @@
       "title": "需要儲值",
       "body": "此服務商帳戶餘額不足。請前往服務商主控台確認後重試。"
     },
+    "grokApiKeyMissing": {
+      "title": "需要 Grok API 金鑰",
+      "body": "請在設定 > 供應商中新增 xAI API 金鑰，然後重試。此圖像請求不會改用 Grok 代理。",
+      "cta": "開啟供應商設定"
+    },
     "naiApiKeyMissing": {
       "title": "未設定 NovelAI 權杖",
       "body": "請在設定中貼上 NovelAI 永久 API 權杖（以 pst- 開頭）。此通道不使用登入工作階段。",
@@ -1849,7 +1877,7 @@
     "imageFallback": "生成的圖像",
     "videoFallback": "生成的視頻",
     "emptyCta": "寫下你的第一個提示",
-    "errorTitle": "生成失敗",
+    "errorTitle": "生成提示",
     "errorHint": "請檢查模型與 API 金鑰設定後再試一次。",
     "errorDismiss": "關閉",
     "savedHint": "結果會自動儲存到您的專案中。",
@@ -2342,6 +2370,7 @@
     "refUndo": "撤銷"
   },
   "comfy": {
+    "display": {"localMethod":"本機 HTTP","loading":"正在檢查工作流…","refreshing":"正在更新上次觀測狀態…","loadFailed":"無法讀取工作流目錄。","appAccessRequired":"讀取目錄需要應用程式存取權限。","unavailable":"尚未確認工作流是否可用。","available":"上次檢查目錄時可用。","chooseWorkflow":"選擇工作流","empty":"尚未註冊工作流。","selectedMissing":"所選工作流已不在目錄中。","selectedOffline":"上次檢查時所選工作流離線。","selectedLocked":"所選工作流已鎖定。","observedConnected":"上次檢查時有執行個體回應。","lastChecked":"上次檢查：{time}","refresh":"重新整理","manage":"管理工作流","controlsHelp":"此面板選擇影像或影片工作流。繫結決定哪些已儲存的請求設定生效；選擇工作流並不證明執行成功。"},
     "workflowsTitle": "ComfyUI 工作流",
     "addTitle": "註冊工作流",
     "loading": "正在載入工作流…",

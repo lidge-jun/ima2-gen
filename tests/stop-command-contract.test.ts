@@ -101,7 +101,7 @@ describe("escalateKill ladder on a real child", () => {
     assert.equal(isAlive(pid), false);
   });
 
-  test("SIGKILL finishes a child that ignores SIGTERM (kill outcome)", async () => {
+  test("an owned stubborn child follows native platform termination semantics", async () => {
     const child = spawn(
       process.execPath,
       ["-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"],
@@ -111,7 +111,7 @@ describe("escalateKill ladder on a real child", () => {
     // give the child a beat to install its SIGTERM handler
     await new Promise((r) => setTimeout(r, 300));
     const outcome = await escalateKill(pid, { termMs: 800, killMs: 3000 });
-    assert.equal(outcome, "kill");
+    assert.equal(outcome, process.platform === "win32" ? "term" : "kill");
     assert.equal(isAlive(pid), false);
   });
 });
@@ -119,18 +119,22 @@ describe("escalateKill ladder on a real child", () => {
 describe("corroborateByStartTime", () => {
   const now = Date.now();
 
-  test("agreement within tolerance corroborates", () => {
+  test("POSIX agreement corroborates while Windows refuses birth-time inference", () => {
+    let called = false;
     assert.equal(
-      corroborateByStartTime(1234, now, () => new Date(now + 30_000).toString()),
-      "corroborated",
+      corroborateByStartTime(1234, now, () => { called = true; return new Date(now + 30_000).toString(); }),
+      process.platform === "win32" ? "unknown" : "corroborated",
     );
+    assert.equal(called, process.platform !== "win32");
   });
 
-  test("a process provably younger than the advertised boot is recycled", () => {
+  test("POSIX younger process is recycled while Windows refuses birth-time inference", () => {
+    let called = false;
     assert.equal(
-      corroborateByStartTime(1234, now - 3_600_000, () => new Date(now).toString()),
-      "recycled",
+      corroborateByStartTime(1234, now - 3_600_000, () => { called = true; return new Date(now).toString(); }),
+      process.platform === "win32" ? "unknown" : "recycled",
     );
+    assert.equal(called, process.platform !== "win32");
   });
 
   test("unreadable ps output refuses with unknown, never a guess", () => {

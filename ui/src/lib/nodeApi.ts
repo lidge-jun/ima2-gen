@@ -1,3 +1,4 @@
+import { fetchApi } from "./api-core";
 import type { ImageModel, Provider } from "../types";
 import { subscribe, ensureConnected, armStreamTimeout } from "./eventChannel";
 import { cancelInflight } from "./api-inflight";
@@ -73,7 +74,7 @@ export type NodeErrorResponse = {
 };
 
 export async function postNodeGenerate(payload: NodeGenerateRequest): Promise<NodeGenerateResponse> {
-  const res = await fetch("/api/node/generate", {
+  const res = await fetchApi("/api/node/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

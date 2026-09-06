@@ -20,6 +20,7 @@ process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
 
 const inflight = await import("../lib/inflight.js");
 const db = await import("../lib/db.js");
+const { config } = await import("../config.ts");
 
 test.after(() => {
   db.closeDb();
@@ -100,4 +101,28 @@ test("expired snapshots are reaped from the database, not just the map", () => {
     0,
     "a reaped snapshot must not linger in the database",
   );
+});
+
+test("expiry restores column-only and conflicting correlation IDs with malformed metadata compatibility", async () => {
+  try {
+    inflight._resetForTests();
+    for (const [id, meta] of [["column-only", "{broken"], ["column-wins", '{"sessionId":"wrong","clientNodeId":"wrong"}']]) {
+      inflight.startJob({ requestId: id, kind: "node", prompt: "owned private prompt" });
+      db.getDb().prepare(`UPDATE inflight SET started_at = ?, meta = ?, session_id = ?,
+        client_node_id = ?, parent_node_id = ? WHERE request_id = ?`)
+        .run(Date.now() - config.inflight.ttlMs - 1, meta, "owned-session", "owned-client", "owned-parent", id);
+    }
+    inflight.purgeStaleJobs();
+    db.closeDb();
+    const fresh = await import(`../lib/inflight.ts?expiry-columns=${Date.now()}`);
+    const restored = fresh.listTerminalJobs({ kind: "node", sessionId: "owned-session" });
+    assert.equal(restored.length, 2);
+    for (const job of restored) {
+      assert.equal(job.errorCode, "JOB_TRACKING_TIMEOUT");
+      assert.equal(job.httpStatus, 504);
+      assert.equal(job.status, "error");
+      assert.equal(job.prompt, undefined);
+      assert.deepEqual(job.meta, { sessionId: "owned-session", clientNodeId: "owned-client", parentNodeId: "owned-parent" });
+    }
+  } catch (error) { throw error; }
 });

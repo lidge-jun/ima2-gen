@@ -6,13 +6,13 @@ import { sizeDrifted } from "../../lib/sizeNudge.js";
 import { errInfo } from "../../lib/errInfo.js";
 import { parseArgs, type ParsedArgs } from "../lib/args.js";
 import { wasFlagPassed } from "../lib/argsExplicit.js";
-import { resolveServer, request, normalizeGenerate } from "../lib/client.js";
+import { resolveServer, request, normalizeGenerate, fetchServer } from "../lib/client.js";
 import { fileToDataUri, dataUriToFile, defaultOutName, readStdin } from "../lib/files.js";
 import { loadCliDefaults } from "../lib/config-store.js";
 import { runMcpJob } from "../lib/mcpJob.js";
 import { characterElementIdForMcp } from "../lib/characterResolve.js";
 import { resolveTarget, type ModelCatalog, type ModelEntry, type ResolveResult } from "../lib/modelResolver.js";
-import { out, die, dieWithError, color, err, fail, json } from "../lib/output.js";
+import { out, die, dieWithError, color, err, exitCodeForError, fail, json } from "../lib/output.js";
 import { createCliRequestId, recoverGeneratedOutputs, formatRecoveryHint } from "../lib/recover-output.js";
 import { deriveProviderIds } from "../../lib/providers/derive.js";
 import { listProviders } from "../../lib/mcp/providerRegistry.js";
@@ -156,7 +156,9 @@ function savedLine(path: string, actual: { width: number; height: number } | nul
 }
 
 function failServer(jsonMode: boolean, error: unknown): never {
+  const code = (error as { code?: string })?.code ?? "SERVER_REQUEST_FAILED";
   const message = (error as Error)?.message || "server unreachable";
+  if (code !== "SERVER_UNREACHABLE") fail({ json: jsonMode, code, message, exitCode: exitCodeForError(error) });
   if (jsonMode) err("Hint: start the server with `ima2 serve`.");
   fail({ json: jsonMode, code: "SERVER_UNREACHABLE", message: `${message}\nHint: run ima2 serve`, exitCode: 3 });
 }
@@ -251,7 +253,7 @@ function validateMcpRefs(refs: string[], context: ImageContext, roles: string[],
 }
 
 async function downloadMcpResult(serverBase: string, url: string, target: string): Promise<void> {
-  const response = await fetch(`${serverBase}${url}`);
+  const response = await fetchServer(serverBase, url);
   if (!response.ok) die(1, `failed to download image: HTTP ${response.status}`);
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, Buffer.from(await response.arrayBuffer()));
@@ -283,7 +285,8 @@ async function runMcpImage(argv: string[], args: ParsedArgs, context: ImageConte
     else out(color.green("✓ ") + (target ? displayPath(target) : `${context.server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string | undefined };
-    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: 1 });
+    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message,
+      exitCode: exitCodeForError(error) === 4 ? 4 : 1 });
   }
 }
 
@@ -374,8 +377,18 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
 }
 
 export default async function genCmd(argv: string[]): Promise<void> {
+  try { await generate(argv); }
+  catch (error) {
+    if (!(error instanceof Error)) throw error; // Preserve the output owner's exit marker.
+    fail({ json: argv.includes("--json"), code: (error as { code?: string }).code ?? "GENERATION_FAILED",
+      message: error.message, exitCode: exitCodeForError(error) });
+  }
+}
+
+async function generate(argv: string[]): Promise<void> {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
+  if (args._unknown.length) die(2, `unknown option: ${args._unknown[0]}`);
   const naiPreflight = unwrapNaiCliResult(parseNaiCliOptions(args, "allow-unknown"), Boolean(args.json));
   let prompt = args.positional.join(" ");
   if (!prompt && !args.stdin) die(2, "prompt is required (positional or via --stdin)");

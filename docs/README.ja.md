@@ -1,5 +1,18 @@
 # ima2-gen
 
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+インストーラーはパッケージメタデータから Node.js の最低バージョンを読み、サーバー起動前にオフライン検査を行います。
+
 [![npm version](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
@@ -54,7 +67,7 @@ irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 ```
 
-各スクリプトは nvm/fnm/brew/winget を確認し、最適な方法で Node LTS を入れ、古いプロセスのクリーンアップも自動で行います。
+各スクリプトは対応する Node バージョンを確認し、必要に応じて nvm/fnm/brew/winget で Node LTS を入れます。npm のインストールは一度だけ試し、`ima2 doctor --installation --json` が成功してからサーバーを起動します。プロセスの強制終了やグローバルロックの削除は行いません。
 
 ### セットアップ
 
@@ -75,7 +88,7 @@ curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 npm install -g ima2-gen@latest
 ```
 
-Ctrl+C は DB クローズ、子プロセス停止、ファイルロック解放まで行うクリーンシャットダウンです。古いバージョン（< 1.1.22）や Windows で `EBUSY` が出る場合は、インストールスクリプトが stale プロセスを自動クリーンアップします。
+Ctrl+C は DB クローズ、子プロセス停止、ファイルロック解放まで行うクリーンシャットダウンです。インストールに失敗した場合は表示された npm 権限を確認するか、対象の `ima2` プロセスを手動で停止してください。インストーラーは無関係なプロセスやグローバルロックを操作しません。
 
 ## できること
 

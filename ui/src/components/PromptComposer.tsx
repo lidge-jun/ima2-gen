@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type DragEvent } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { composerUsesMultimode } from "../lib/coreGenerationMode";
 import { useI18n } from "../i18n";
 import { isVideoItem, extractLastFrame } from "../lib/videoMedia";
 import type { VideoReferenceDragPayload } from "../lib/videoContinuity";
@@ -25,7 +26,6 @@ type ElementSelectionState = {
 };
 type InternalRefDragItem = VideoReferenceDragPayload;
 const TRAY_MENTION_PREFIX = "tray:";
-
 function mentionKey(mention: MentionQuery): string { return `${mention.start}:${mention.end}:${mention.query}`; }
 function addElementFromMention(asset: AssetItem): TrayItem | null {
   const state = useAppStore.getState() as ReturnType<typeof useAppStore.getState> & ElementSelectionState;
@@ -72,7 +72,6 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     return () => { cancelled = true; };
   }, []);
   const { t } = useI18n();
-
   const trayItems = useAppStore((s) => s.trayItems);
   const retiredTags = useAppStore((s) => s.retiredTags);
   const removeTrayItem = useAppStore((s) => s.removeTrayItem);
@@ -92,14 +91,13 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const compositionCommitRef = useRef<string | null>(null);
   const dismissedMentionKeyRef = useRef<string | null>(null);
   const promptMode = useAppStore((s) => s.promptMode);
-  const multimode = useAppStore((s) => s.multimode);
+  const multimode = useAppStore(composerUsesMultimode);
   const multimodeMaxImages = useAppStore((s) => s.multimodeMaxImages);
   const isDirectMode = promptMode === "direct";
   const isNai = provider === "nai";
   const beforePrompts = insertedPrompts.filter((item) => item.placement !== "after");
   const afterPrompts = insertedPrompts.filter((item) => item.placement === "after");
   const visualPromptIds = [...beforePrompts.map((item) => item.id), "__main_prompt__", ...afterPrompts.map((item) => item.id)];
-
   const canAddMore = trayItems.length < maxRefs;
   const placeholder = multimode
     ? trayItems.length > 0
@@ -393,6 +391,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
               }}
               onClick={(e) => updateMentionAtCaret(e.currentTarget.value, e.currentTarget.selectionStart)}
               onKeyDown={(e) => {
+                if (composingRef.current || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
                 if (e.key === "Escape" && mentionQuery) {
                   e.preventDefault();
                   dismissedMentionKeyRef.current = mentionKey(mentionQuery);
@@ -400,6 +399,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
                   return;
                 }
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  if (e.defaultPrevented) return;
                   e.preventDefault();
                   submitPrompt();
                 }
@@ -413,6 +413,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
       <ElementMentionMenu
         open={mentionQuery !== null}
         textareaRef={textareaRef}
+        composingRef={composingRef}
         caret={mentionQuery?.end ?? 0}
         query={mentionQuery?.query ?? ""}
         elements={[
@@ -462,18 +463,18 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
           insertTagAtMention(trayElement.tag, mentionQuery);
           setMentionQuery(null);
         }}
-        onClose={() => setMentionQuery(null)}
+        onClose={(reason) => {
+          if (reason === "escape" && mentionQuery) dismissedMentionKeyRef.current = mentionKey(mentionQuery);
+          setMentionQuery(null);
+        }}
       />
-
       {afterPrompts.length > 0 && (
         <div className="composer__prompt-chips composer__prompt-chips--after">
           <span className="composer__prompt-chips-label">{t("prompt.afterBlocks")}</span>
           {afterPrompts.map(renderPromptChip)}
         </div>
       )}
-
       <PromptComposerToolbar canAddMore={canAddMore} onAttach={openFilePicker} />
-
       {dragOver && (
         <div className="composer__dropzone" aria-hidden="true">
           {t("prompt.dropHere", { max: maxRefs })}

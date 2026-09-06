@@ -1,5 +1,19 @@
 [
   {
+    "file": "ui/src/styles/composer-panes.css",
+    "atRule": null,
+    "selector": ".composer__prompt-panes--dual .composer__prompt-pane",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/composer-panes.css",
+    "atRule": null,
+    "selector": ".negative-prompt--classic",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
     "file": "ui/src/index.css",
     "atRule": null,
     "selector": ":focus-visible",
@@ -1757,7 +1771,7 @@
     "important": false
   },
   {
-    "file": "ui/src/styles/home-workspace.css",
+    "file": "ui/src/styles/composer-panes.css",
     "atRule": null,
     "selector": ".home-prompt__textarea",
     "expected": "var(--r-xl)",
@@ -2653,7 +2667,7 @@
     "important": false
   },
   {
-    "file": "ui/src/styles/provider-controls.css",
+    "file": "ui/src/styles/composer-panes.css",
     "atRule": null,
     "selector": ".negative-prompt__textarea",
     "expected": "var(--r-sm)",
@@ -3285,6 +3299,13 @@
   {
     "file": "ui/src/styles/toast-modal.css",
     "atRule": null,
+    "selector": ".toast--card .toast__cta",
+    "expected": "var(--r-sm)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/toast-modal.css",
+    "atRule": null,
     "selector": ".toast__dismiss",
     "expected": "var(--r-xs)",
     "important": false
@@ -3329,6 +3350,27 @@
     "atRule": null,
     "selector": ".viewer-controls",
     "expected": "var(--r-pill)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/lan-sign-in.css",
+    "atRule": null,
+    "selector": ".lan-sign-in__panel",
+    "expected": "var(--r-xl)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/lan-sign-in.css",
+    "atRule": null,
+    "selector": ".lan-sign-in__panel input",
+    "expected": "var(--r-md)",
+    "important": false
+  },
+  {
+    "file": "ui/src/styles/lan-sign-in.css",
+    "atRule": null,
+    "selector": ".lan-sign-in__panel button",
+    "expected": "var(--r-md)",
     "important": false
   }
 ]

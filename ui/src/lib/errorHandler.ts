@@ -5,6 +5,7 @@
 
 import { resolveErrorSpec, type ImaErrorCode } from "./errorCodes";
 import { t } from "../i18n";
+import { requireLanAuthentication } from "./lanSession";
 
 export type ErrorStore = {
   showToast: (message: string, error?: boolean) => void;
@@ -13,11 +14,17 @@ export type ErrorStore = {
 
 export function handleError(err: unknown, store: ErrorStore): { code: ImaErrorCode; message: string } {
   const { code, spec, message } = resolveErrorSpec(err);
+  if (code === "LAN_TOKEN_REQUIRED") {
+    const epoch = (err as { authEpoch?: unknown } | null)?.authEpoch;
+    requireLanAuthentication(typeof epoch === "number" ? epoch : undefined);
+    return { code, message };
+  }
   if (spec.surface === "card") {
     store.showErrorCard(code, { fallbackMessage: message, cardKey: spec.cardKey, cta: spec.cta });
   } else {
     const toastMsg = spec.toastKey ? t(spec.toastKey) : message || t("toast.generateFailed");
     store.showToast(toastMsg, true);
+    if (code === "JOB_TRACKING_TIMEOUT") return { code, message: toastMsg };
   }
   return { code, message };
 }

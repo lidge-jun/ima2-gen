@@ -10,6 +10,7 @@ import { errorCodes, type ImaErrorCode } from "../ui/src/lib/errorCodes.ts";
 
 /** Expected inline-node action for every registry code (wp2 audit blocker #1). */
 const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
+  LAN_TOKEN_REQUIRED: "fix-input",
   REF_TOO_LARGE: "fix-input",
   REF_NOT_BASE64: "fix-input",
   REF_EMPTY: "fix-input",
@@ -19,6 +20,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   NAI_EDIT_UNSUPPORTED: "fix-input",
   // cta "reauth" routes the node card to Settings, where the token is pasted.
   NAI_API_KEY_MISSING: "auth",
+  GROK_API_KEY_MISSING: "auth",
   NAI_AUTH_FAILED: "auth",
   NAI_SUBSCRIPTION_REQUIRED: "fix-input",
   NAI_RATE_LIMITED: "retry",
@@ -52,6 +54,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   APIKEY_DISABLED: "auth",
   AGY_GENERATION_FAILED: "retry",
   AGY_TIMEOUT: "retry",
+  JOB_TRACKING_TIMEOUT: "fix-input",
   AGY_PROCESS_ERROR: "retry",
   AGY_QUOTA_EXHAUSTED: "auth",
   AGY_PARSE_FAILED: "retry",
@@ -61,6 +64,16 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
 };
 
 describe("node error info contracts", () => {
+  it("tracking expiry wrappers remain safe and nonretryable", () => {
+    for (const code of ["JOB_TRACKING_TIMEOUT", "UNKNOWN", "UNREGISTERED_WRAPPER"]) {
+      const info = buildNodeErrorInfo({ code, rawCode: "JOB_TRACKING_TIMEOUT",
+        message: "secret request token", errorClass: "AUTH_EXPIRED" });
+      assert.equal(info.code, "JOB_TRACKING_TIMEOUT");
+      assert.equal(info.message, "Job tracking expired; upstream completion is unknown. Inspect history before retrying.");
+      assert.equal(info.action, "fix-input");
+      assert.equal(info.retryable, false);
+    }
+  });
   it("EI-00 exhaustively maps every registry code to the audited action", () => {
     for (const code of Object.keys(errorCodes) as ImaErrorCode[]) {
       assert.equal(nodeRetryAction(code), EXPECTED[code], `action mismatch for ${code}`);
@@ -85,6 +98,15 @@ describe("node error info contracts", () => {
   it("EI-03 expired ChatGPT auth points to auth remediation", () => {
     const info = buildNodeErrorInfo(new Error("Your token is expired, sign in again"));
     assert.equal(info.code, "AUTH_CHATGPT_EXPIRED");
+    assert.equal(info.action, "auth");
+    assert.equal(info.retryable, false);
+  });
+
+  it("Grok image key refusal points to provider settings instead of retry", () => {
+    const info = buildNodeErrorInfo(Object.assign(new Error("Grok API key is required"), {
+      code: "GROK_API_KEY_MISSING", status: 401,
+    }));
+    assert.equal(info.code, "GROK_API_KEY_MISSING");
     assert.equal(info.action, "auth");
     assert.equal(info.retryable, false);
   });

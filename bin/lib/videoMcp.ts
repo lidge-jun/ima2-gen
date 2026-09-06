@@ -8,7 +8,7 @@ import {
 import { VIDEO_CLIENT_TIMEOUT_MS } from "../../lib/videoClientTimeouts.js";
 import { type ParsedArgs } from "./args.js";
 import { wasFlagPassed } from "./argsExplicit.js";
-import { resolveHistoryReference, resolveServer, request } from "./client.js";
+import { resolveHistoryReference, resolveServer, request, fetchServer } from "./client.js";
 import { loadCliDefaults } from "./config-store.js";
 import { runMcpJob } from "./mcpJob.js";
 import { characterElementIdForMcp } from "./characterResolve.js";
@@ -59,7 +59,9 @@ async function writeBuffer(path: string, buffer: Buffer): Promise<void> {
 }
 
 function failServer(jsonMode: boolean, error: unknown): never {
+  const code = (error as { code?: string })?.code ?? "SERVER_REQUEST_FAILED";
   const message = (error as Error)?.message || "server unreachable";
+  if (code !== "SERVER_UNREACHABLE") fail({ json: jsonMode, code, message, exitCode: exitCodeForError(error) });
   if (jsonMode) err("Hint: start the server with `ima2 serve`.");
   fail({ json: jsonMode, code: "SERVER_UNREACHABLE", message: `${message}\nHint: run ima2 serve`, exitCode: 3 });
 }
@@ -123,7 +125,7 @@ function validateCoreOptions(args: ParsedArgs, refs: string[], model: string, la
   return { duration, resolution, aspectRatio };
 }
 
-async function coreReferences(serverBase: string, refs: string[]): Promise<string[]> {
+async function coreReferences(serverBase: string, refs: string[], jsonMode: boolean): Promise<string[]> {
   let latestPromise: Promise<string> | undefined;
   return Promise.all(refs.map(async (path) => {
     if (path === "@last") latestPromise ||= resolveHistoryReference(serverBase, path);
@@ -132,7 +134,8 @@ async function coreReferences(serverBase: string, refs: string[]): Promise<strin
     return (await readFile(resolved)).toString("base64");
   })).catch((error: unknown) => {
     const typed = error as { code?: string | undefined; message?: string | undefined };
-    return die(typed.code === "HISTORY_EMPTY" ? 5 : 1, typed.message || String(error));
+    return fail({ json: jsonMode, code: typed.code ?? "REFERENCE_FAILED", message: typed.message || String(error),
+      exitCode: typed.code === "HISTORY_EMPTY" ? 5 : exitCodeForError(error) });
   });
 }
 
@@ -189,7 +192,9 @@ async function consumeCoreSse(url: string, body: Record<string, unknown>, args: 
   } catch (error) {
     if ((error as Error).name === "AbortError" && !timedOut) return null;
     if (!args.json && lastProgress >= 0) process.stdout.write("\n");
-    die(exitCodeForError(error), (error as Error).message);
+    if (!(error instanceof Error)) throw error;
+    fail({ json: Boolean(args.json), code: (error as { code?: string }).code ?? "VIDEO_FAILED",
+      message: error.message, exitCode: exitCodeForError(error) });
   } finally {
     clearTimeout(timer); process.off("SIGINT", onSignal); process.off("SIGTERM", onSignal);
   }
@@ -199,13 +204,13 @@ async function consumeCoreSse(url: string, body: Record<string, unknown>, args: 
 async function runCoreVideo(args: ParsedArgs, context: VideoContext): Promise<void> {
   const refs = (Array.isArray(args.ref) ? args.ref : []) as string[];
   const options = validateCoreOptions(args, refs, context.target.model, context.target.lane);
-  const references = await coreReferences(context.server.base, refs);
+  const references = await coreReferences(context.server.base, refs, Boolean(args.json));
   const requestId = createCliRequestId("req_cli_video");
   const done = await consumeCoreSse(`${context.server.base}/api/video/generate`, coreBody(args, context, options, references, requestId), args, requestId);
   if (!done?.filename) die(1, "server did not return a video filename");
   const filename = String(done.filename);
   const target = args.out ? String(args.out) : args["out-dir"] ? join(String(args["out-dir"]), filename) : join(config.storage.generatedDir, filename);
-  const response = await fetch(`${context.server.base}${done.url || `/generated/${encodeURIComponent(filename)}`}`,
+  const response = await fetchServer(context.server.base, String(done.url || `/generated/${encodeURIComponent(filename)}`),
     { signal: AbortSignal.timeout(parseInteger(args.timeout, MCP_VIDEO_TIMEOUT_MS / 1000, "--timeout") * 1000) });
   if (!response.ok) die(1, `failed to download video: HTTP ${response.status}`);
   await writeBuffer(target, Buffer.from(await response.arrayBuffer()));
@@ -329,7 +334,7 @@ function mcpMediaInputs(args: ParsedArgs, context: VideoContext, roles: string[]
 }
 
 async function downloadMcpVideo(serverBase: string, url: string, target: string): Promise<void> {
-  const response = await fetch(`${serverBase}${url}`);
+  const response = await fetchServer(serverBase, url);
   if (!response.ok) die(1, `failed to download video: HTTP ${response.status}`);
   await writeBuffer(target, Buffer.from(await response.arrayBuffer()));
 }
@@ -359,7 +364,8 @@ async function runMcpVideo(argv: string[], args: ParsedArgs, context: VideoConte
     else out(color.green("✓ ") + (target ?? `${context.server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string | undefined };
-    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: 1 });
+    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message,
+      exitCode: exitCodeForError(error) === 4 ? 4 : 1 });
   }
 }
 

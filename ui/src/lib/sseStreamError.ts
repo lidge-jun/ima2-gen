@@ -1,3 +1,5 @@
+import { resolveErrorSpec } from "./errorCodes";
+
 /**
  * Canonical job envelope fields the UI reads (#151 stage 2). The envelope is
  * the primary source for terminal classification; the flat/nested payload
@@ -53,7 +55,16 @@ export function parseSseErrorPayload(
   if (typeof data.code === "string") code = code ?? data.code;
   if (typeof data.rawCode === "string") rawCode = rawCode ?? data.rawCode;
   if (typeof data.errorClass === "string") errorClass = errorClass ?? data.errorClass;
-  const status = typeof data.status === "number" ? data.status : undefined;
+  let status = typeof data.status === "number" ? data.status : undefined;
+  const resolved = resolveErrorSpec({ code, rawCode, message, errorClass });
+  if (resolved.code === "JOB_TRACKING_TIMEOUT") {
+    code = resolved.code;
+    message = resolved.message;
+    status = 504;
+    phase = "timed_out";
+    rawCode = undefined;
+    errorClass = undefined;
+  }
 
   const e = new Error(message) as Error & { code?: string; status?: number; rawCode?: string; errorClass?: string; phase?: string };
   e.code = code;

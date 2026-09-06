@@ -70,6 +70,27 @@ describe("node graph history contracts", () => {
     assert.equal(merged.nodes[0].data.pendingRequestId, "req1");
   });
 
+  for (const status of ["pending", "reconciling"] as const) {
+    for (const shift of [popUndo, popRedo]) {
+      it(`GH-04 ${status} ${shift.name} preserves live cleared errors`, () => {
+        const historic = makeSnapshot([node("a", { status: "error", error: "historic warning",
+          errorInfo: { code: "JOB_TRACKING_TIMEOUT", message: "historic warning", action: "fix-input", retryable: false, occurredAt: 1 } })], [], "historic");
+        const live = [node("a", { status, pendingRequestId: "new-request", error: undefined, errorInfo: null })];
+        const current = makeSnapshot(live, [], "current");
+        const shifted = shift([historic], current, [historic]);
+        assert.ok(shifted);
+        const data = mergeAfterRestore(shifted.restored, live).nodes[0].data;
+        assert.equal(data.status, status);
+        assert.equal(data.pendingRequestId, "new-request");
+        assert.equal(data.error, undefined);
+        assert.equal(data.errorInfo, null);
+        const settled = mergeAfterRestore(shifted.restored, [node("a", { status: "ready" })]).nodes[0].data;
+        assert.equal(settled.error, "historic warning");
+        assert.equal(settled.errorInfo?.code, "JOB_TRACKING_TIMEOUT");
+      });
+    }
+  }
+
   it("GH-05 session transitions clear both history stacks", () => {
     const sessions = readFileSync("ui/src/store/storeSessionImpl.ts", "utf-8");
     const clears = sessions.match(/graphHistoryPast: \[\],\s*graphHistoryFuture: \[\]/g) ?? [];

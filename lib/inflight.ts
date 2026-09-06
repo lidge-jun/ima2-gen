@@ -2,6 +2,8 @@ import { config } from "../config.js";
 import { getDb } from "./db.js";
 import { publish } from "./eventBus.js";
 import { buildEnvelope } from "./jobs/envelope.js";
+import { deleteExpiredTerminalJobs, deleteTerminalJob, readTerminalJob, readTerminalJobs,
+  writeTerminalJob, type TerminalJob } from "./jobs/terminalStore.js";
 import { logError, logEvent } from "./logger.js";
 
 // SQLite-backed inflight job registry.
@@ -35,21 +37,6 @@ interface InflightJob {
   phaseAt: number;
 }
 
-interface TerminalJob {
-  requestId: string;
-  kind: string;
-  status: string;
-  startedAt: number;
-  finishedAt: number;
-  durationMs: number;
-  phase: string;
-  phaseAt: number;
-  httpStatus?: number | undefined;
-  errorCode?: string | undefined;
-  prompt?: string | null;
-  meta: Record<string, unknown>;
-}
-
 const terminalJobs = new Map<string, TerminalJob>(); // requestId -> terminal snapshot, active-only API stays default
 /**
  * The map above is the source of truth; SQLite is its backup (#151).
@@ -65,24 +52,8 @@ function ensureTerminalJobsRestored(): void {
   terminalJobsRestored = true;
   try {
     const cutoff = Date.now() - config.inflight.terminalTtlMs;
-    const rows = getDb()
-      .prepare("SELECT * FROM terminal_jobs WHERE finished_at > ?")
-      .all(cutoff) as TerminalJobRow[];
-    for (const row of rows) {
-      if (terminalJobs.has(row.request_id)) continue;
-      terminalJobs.set(row.request_id, {
-        requestId: row.request_id,
-        kind: row.kind,
-        status: row.status,
-        startedAt: Number(row.started_at),
-        finishedAt: Number(row.finished_at),
-        durationMs: Number(row.finished_at) - Number(row.started_at),
-        phase: row.phase || "unknown",
-        phaseAt: Number(row.phase_at || row.finished_at),
-        httpStatus: row.http_status ?? undefined,
-        errorCode: row.error_code ?? undefined,
-        meta: parseMeta(row.meta),
-      });
+    for (const job of readTerminalJobs(cutoff)) {
+      if (!terminalJobs.has(job.requestId)) terminalJobs.set(job.requestId, job);
     }
   } catch (err: unknown) {
     // A restore failure must not take down job tracking; the process simply
@@ -91,39 +62,9 @@ function ensureTerminalJobsRestored(): void {
   }
 }
 
-interface TerminalJobRow {
-  request_id: string;
-  kind: string;
-  status: string;
-  started_at: number;
-  finished_at: number;
-  phase?: string | null;
-  phase_at?: number | null;
-  http_status?: number | null;
-  error_code?: string | null;
-  meta?: string | null;
-}
-
 function persistTerminalJob(job: TerminalJob): void {
   try {
-    getDb()
-      .prepare(`
-        INSERT OR REPLACE INTO terminal_jobs (
-          request_id, kind, status, started_at, finished_at, phase, phase_at, http_status, error_code, meta
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .run(
-        job.requestId,
-        job.kind,
-        job.status,
-        job.startedAt,
-        job.finishedAt,
-        job.phase,
-        job.phaseAt,
-        job.httpStatus ?? null,
-        job.errorCode ?? null,
-        JSON.stringify(job.meta ?? {}),
-      );
+    writeTerminalJob(job);
   } catch (err: unknown) {
     logError("inflight", "terminal_persist:error", err);
   }
@@ -154,13 +95,11 @@ export function startJob({ requestId, kind, prompt, meta = {}, respectCanceledTo
 }): StartJobResult | undefined {
   if (!requestId) return;
   purgeStaleJobs();
+  ensureTerminalJobsRestored();
   if (getJob(requestId)) {
     return { ok: false, code: "REQUEST_ID_IN_USE" };
   }
-  // Opt-in tombstone respect (extend audit B2 round 3): a DELETE that raced
-  // ahead of admission must still win. Without this, startJob deleted the
-  // tombstone and ran a job the user already canceled. Off by default — the
-  // agent queue's retry path reuses requestIds after cancel legitimately.
+  // Extend respects a cancel that preceded admission; queue retry may reuse IDs.
   if (respectCanceledTombstone && terminalJobs.get(requestId)?.status === "canceled") {
     return { ok: false, code: "GENERATION_CANCELED" };
   }
@@ -171,34 +110,8 @@ export function startJob({ requestId, kind, prompt, meta = {}, respectCanceledTo
   const normalizedPrompt = typeof prompt === "string" ? prompt.slice(0, 500) : "";
   const normalizedMeta = normalizeMeta(meta);
   try {
-    getDb()
-      .prepare(`
-        INSERT INTO inflight (
-          request_id,
-          kind,
-          prompt,
-          meta,
-          session_id,
-          parent_node_id,
-          client_node_id,
-          started_at,
-          phase,
-          phase_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .run(
-        requestId,
-        kind,
-        normalizedPrompt,
-        JSON.stringify(normalizedMeta),
-        stringOrNull(normalizedMeta.sessionId),
-        stringOrNull(normalizedMeta.parentNodeId),
-        stringOrNull(normalizedMeta.clientNodeId),
-        startedAt,
-        "queued",
-        startedAt,
-      );
+    insertJob({ requestId, kind, prompt: normalizedPrompt, meta: normalizedMeta,
+      startedAt, phase: "queued", phaseAt: startedAt });
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
     if (code === "SQLITE_CONSTRAINT_PRIMARYKEY" || code === "SQLITE_CONSTRAINT") {
@@ -225,54 +138,54 @@ export function registerJobAbortController(
   controller: AbortController,
 ) {
   if (!requestId) return;
+  if (isJobCanceled(requestId) || isJobTrackingExpired(requestId)) {
+    controller.abort();
+    return;
+  }
   abortControllers.set(requestId, controller);
   controllerRegisteredAt.set(requestId, Date.now());
 }
 
 export function abortJob(requestId: string | null | undefined) {
   if (!requestId) return { requestId: "", active: false, aborted: false };
+  const alreadyTerminal = isJobCanceled(requestId) || isJobTrackingExpired(requestId);
   const controller = abortControllers.get(requestId);
   const active = Boolean(getJob(requestId));
-  let aborted = false;
-  if (controller && !controller.signal.aborted) {
-    controller.abort();
-    aborted = true;
+  const aborted = Boolean(controller && !controller.signal.aborted);
+  const inflightPhase = getJobPhase(requestId);
+  let failed: { error: unknown } | undefined;
+  try {
+    finishJob(requestId, { canceled: true, httpStatus: 499, errorCode: "GENERATION_CANCELED" });
+  } catch (error) { failed = { error }; }
+  // Establish terminal dominance before synchronous AbortSignal listeners run.
+  if (aborted) controller!.abort();
+  if (!alreadyTerminal && (active || aborted)) {
+    publishTerminalError(requestId, inflightPhase, "GENERATION_CANCELED", 499, "Generation canceled");
   }
-  if (active || aborted) {
-    // #151 stage 2: the cancel path is a terminal event, so it carries the
-    // canonical envelope. Assembled inline rather than via ssePublish because
-    // ssePublish imports this module (cycle), and abortJob already knows the
-    // inflight phase locally.
-    const data = {
-      error: "Generation canceled",
-      code: "GENERATION_CANCELED",
-      status: 499,
-      requestId,
-    };
-    const inflightPhase = getJobPhase(requestId);
-    publish(requestId, "error", data, {
-      buildEnvelope: (sequence) => buildEnvelope({
-        jobId: requestId,
-        requestId,
-        sequence,
-        event: "error",
-        data,
-        inflightPhase,
-      }),
-    });
-  }
-  finishJob(requestId, {
-    canceled: true,
-    httpStatus: 499,
-    errorCode: "GENERATION_CANCELED",
-  });
+  if (failed) throw failed.error;
   return { requestId, active, aborted };
+}
+
+function publishTerminalError(requestId: string, inflightPhase: string | null,
+  code: string, status: number, error: string): void {
+  const data = { requestId, code, status, error };
+  // The registry cannot use ssePublish, which imports it. Keep this cycle-free.
+  publish(requestId, "error", data, {
+    buildEnvelope: (sequence) => buildEnvelope({ jobId: requestId, requestId,
+      sequence, event: "error", data, inflightPhase }),
+  });
 }
 
 export function isJobCanceled(requestId: string | null | undefined): boolean {
   if (!requestId) return false;
   ensureTerminalJobsRestored();
   return terminalJobs.get(requestId)?.status === "canceled";
+}
+
+export function isJobTrackingExpired(requestId: string | null | undefined): boolean {
+  if (!requestId) return false;
+  ensureTerminalJobsRestored();
+  return terminalJobs.get(requestId)?.errorCode === "JOB_TRACKING_TIMEOUT";
 }
 
 /**
@@ -319,38 +232,36 @@ export function updateJobAdmission(requestId: string | null | undefined, { promp
   }
 }
 
-export function finishJob(requestId: string | null | undefined, options: any = {}) {
+interface FinishJobOptions {
+  canceled?: boolean | undefined;
+  status?: string | undefined;
+  httpStatus?: number | undefined;
+  errorCode?: string | undefined;
+  meta?: Record<string, unknown> | undefined;
+}
+
+function recordFinishedJob(job: InflightJob, options: FinishJobOptions, finishedAt: number): void {
+  const status = options.canceled ? "canceled" : options.status || "completed";
+  const snapshot: TerminalJob = {
+    requestId: job.requestId, kind: job.kind, status, startedAt: job.startedAt,
+    finishedAt, durationMs: finishedAt - job.startedAt, phase: job.phase, phaseAt: job.phaseAt,
+    httpStatus: options.httpStatus, errorCode: options.errorCode,
+    meta: { ...job.meta, ...(options.meta || {}) },
+  };
+  terminalJobs.set(job.requestId, snapshot);
+  persistTerminalJob(snapshot);
+  logEvent("inflight", "finish", { requestId: job.requestId, kind: job.kind, status,
+    durationMs: snapshot.durationMs, httpStatus: options.httpStatus, errorCode: options.errorCode });
+}
+
+export function finishJob(requestId: string | null | undefined, options: FinishJobOptions = {}) {
   if (!requestId) return;
+  ensureTerminalJobsRestored();
   const j = getJob(requestId);
   const finishedAt = Date.now();
-  if (j) {
-    const status = options.canceled ? "canceled" : options.status || "completed";
-    const snapshot: TerminalJob = {
-      requestId,
-      kind: j.kind,
-      status,
-      startedAt: j.startedAt,
-      finishedAt,
-      durationMs: finishedAt - j.startedAt,
-      phase: j.phase,
-      phaseAt: j.phaseAt,
-      httpStatus: options.httpStatus,
-      errorCode: options.errorCode,
-      meta: {
-        ...j.meta,
-        ...(options.meta || {}),
-      },
-    };
-    terminalJobs.set(requestId, snapshot);
-    persistTerminalJob(snapshot);
-    logEvent("inflight", "finish", {
-      requestId,
-      kind: j.kind,
-      status,
-      durationMs: finishedAt - j.startedAt,
-      httpStatus: options.httpStatus,
-      errorCode: options.errorCode,
-    });
+  const forcedTerminal = isJobCanceled(requestId) || isJobTrackingExpired(requestId);
+  if (j && !forcedTerminal) {
+    recordFinishedJob(j, options, finishedAt);
   } else if (options.canceled && !terminalJobs.has(requestId)) {
     const tombstone: TerminalJob = {
       requestId,
@@ -379,9 +290,7 @@ export function reapTerminalJobs(now = Date.now()) {
     if (now - j.finishedAt > config.inflight.terminalTtlMs) terminalJobs.delete(id);
   }
   try {
-    getDb()
-      .prepare("DELETE FROM terminal_jobs WHERE finished_at <= ?")
-      .run(now - config.inflight.terminalTtlMs);
+    deleteExpiredTerminalJobs(now - config.inflight.terminalTtlMs);
   } catch (err: unknown) {
     logError("inflight", "terminal_reap:error", err);
   }
@@ -436,9 +345,57 @@ export function _resetForTests() {
 }
 
 export function purgeStaleJobs(now = Date.now()) {
-  getDb()
-    .prepare("DELETE FROM inflight WHERE started_at < ?")
-    .run(now - config.inflight.ttlMs);
+  ensureTerminalJobsRestored();
+  let outcomes: Array<{ terminal: TerminalJob; expired: boolean }>;
+  try {
+    outcomes = getDb().transaction(() => expireStaleRows(now))();
+  } catch (error) {
+    logError("inflight", "expire:error", error);
+    return;
+  }
+  // Commit every memory outcome before any reentrant abort listener can publish.
+  for (const { terminal } of outcomes) terminalJobs.set(terminal.requestId, terminal);
+  for (const { terminal, expired } of outcomes) {
+    const controller = abortControllers.get(terminal.requestId);
+    abortControllers.delete(terminal.requestId);
+    controllerRegisteredAt.delete(terminal.requestId);
+    if (terminal.status === "canceled" || terminal.errorCode === "JOB_TRACKING_TIMEOUT") controller?.abort();
+    if (expired) publishTerminalError(terminal.requestId, terminal.phase, "JOB_TRACKING_TIMEOUT", 504,
+      "Job tracking expired; upstream completion is unknown. Inspect history before retrying.");
+  }
+}
+
+function expireStaleRows(now: number): Array<{ terminal: TerminalJob; expired: boolean }> {
+  const rows = getDb().prepare(`SELECT request_id, kind, prompt, meta, session_id,
+    parent_node_id, client_node_id, started_at, phase, phase_at FROM inflight WHERE started_at < ?`)
+    .all(now - config.inflight.ttlMs) as InflightRow[];
+  const cutoff = now - config.inflight.terminalTtlMs;
+  return rows.map(row => {
+    const memory = terminalJobs.get(row.request_id);
+    const disk = readTerminalJob(row.request_id, cutoff);
+    const retained = memory && memory.finishedAt > cutoff ? memory : disk;
+    const terminal = retained ?? expiredSnapshot(rowToJob(row), now);
+    // Also repairs a prior best-effort persistence failure without changing time/status.
+    if (!retained || JSON.stringify(terminal) !== JSON.stringify(disk)) writeTerminalJob(terminal);
+    getDb().prepare("DELETE FROM inflight WHERE request_id = ?").run(row.request_id);
+    return { terminal, expired: !retained };
+  });
+}
+
+function expiredSnapshot(job: InflightJob, now: number): TerminalJob {
+  return { requestId: job.requestId, kind: job.kind, status: "error", startedAt: job.startedAt,
+    finishedAt: now, durationMs: now - job.startedAt, phase: job.phase, phaseAt: job.phaseAt,
+    httpStatus: 504, errorCode: "JOB_TRACKING_TIMEOUT", meta: job.meta };
+}
+
+function insertJob(job: InflightJob): void {
+  getDb().transaction(() => {
+    getDb().prepare(`INSERT INTO inflight (request_id, kind, prompt, meta, session_id,
+      parent_node_id, client_node_id, started_at, phase, phase_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(job.requestId, job.kind, job.prompt, JSON.stringify(job.meta), stringOrNull(job.meta.sessionId),
+        stringOrNull(job.meta.parentNodeId), stringOrNull(job.meta.clientNodeId), job.startedAt, job.phase, job.phaseAt);
+    deleteTerminalJob(job.requestId);
+  })();
 }
 
 function countActiveJobs(): number {

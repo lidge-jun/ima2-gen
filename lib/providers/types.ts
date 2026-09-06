@@ -3,6 +3,15 @@ export type KeyProviderId = "openai" | "xai" | "gemini" | "atlascloud" | "minima
 export type ProviderVendor = "openai" | "xai" | "google" | "atlascloud" | "minimax" | "novelai" | "comfy";
 export type ProviderModelKind = "image" | "video";
 export type ProviderReferenceMode = "image" | "edit" | "video";
+export type ProviderSurface = "generate" | "edit" | "multimode" | "node" | "video";
+/** Application support, independent of current credentials and availability. */
+export interface ProviderSurfaceSupport {
+  supported: boolean;
+  references: boolean;
+  mask: boolean;
+  streaming: boolean;
+  catalogAccess: "static" | "runtime";
+}
 export type ElementTaxonomy = "gpt" | "gemini" | "grok";
 
 export type ProviderCredential =
@@ -43,11 +52,12 @@ export interface CoreProviderModel {
    * serves the lane — not to dormant helpers. `mask` is true only when
    * routes/edit.ts lets the lane through to an adapter that accepts a mask.
    */
-  supports: { edit: boolean; mask: boolean; streaming: boolean };
+  supports: { generate: boolean; edit: boolean; mask: boolean; streaming: boolean };
 }
 
 export interface CoreProviderManifestBase {
   id: string;
+  surfaces: readonly ProviderSurface[];
   vendor: ProviderVendor;
   credentials: readonly ProviderCredential[];
   models: readonly CoreProviderModel[];

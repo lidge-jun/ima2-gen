@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { jsonFetch } from "./api-core";
+import { jsonFetch, jsonGetObservation } from "./api-core";
 import { armStreamTimeout, subscribe } from "./eventChannel";
+import { parseSseErrorPayload } from "./sseStreamError";
 
 export type McpConnectionState =
   | "disconnected"
@@ -79,6 +80,14 @@ export async function listMcpProviders(signal?: AbortSignal): Promise<McpProvide
   const response = await jsonFetch<McpProvidersResponse>("/api/mcp/providers", { signal });
   providerCache = Array.isArray(response.providers) ? response.providers : [];
   return providerCache;
+}
+
+export function readMcpProviderObservation(signal?: AbortSignal): Promise<unknown> {
+  return jsonGetObservation("/api/mcp/providers", signal);
+}
+
+export function readMcpModelObservation(provider: string, signal?: AbortSignal): Promise<unknown> {
+  return jsonGetObservation(`/api/mcp/providers/${encodeURIComponent(provider)}/models`, signal);
 }
 
 export function getCachedMcpProviders(): readonly McpProviderRecord[] {
@@ -240,11 +249,8 @@ function watchMcpJob(requestId: string, callbacks: McpJobCallbacks): () => void 
       return;
     }
     if (event === "error" && finish()) {
-      const error = new Error(
-        typeof data.message === "string" ? data.message : "MCP generation failed",
-      ) as Error & { code?: string };
-      if (typeof data.code === "string") error.code = data.code;
-      callbacks.onError?.(error);
+      callbacks.onError?.(parseSseErrorPayload(data,
+        typeof data.message === "string" ? data.message : "MCP generation failed"));
     }
   });
   const cancelTimeout = armStreamTimeout(() => {

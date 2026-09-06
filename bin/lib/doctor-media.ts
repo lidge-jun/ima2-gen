@@ -7,10 +7,10 @@ const execFileAsync = promisify(execFile);
 export async function buildMediaDoctorLines(): Promise<DoctorCheckLine[]> {
   try {
     await execFileAsync("ffmpeg", ["-version"], { timeout: 4000 });
-    return [{ kind: "pass", text: "ffmpeg available on PATH" }];
+    return [{ code: "FFMPEG_READY", kind: "pass", text: "ffmpeg available on PATH" }];
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") return [{ kind: "warn", text: "ffmpeg not on PATH (video features unavailable)" }];
-    return [{ kind: "warn", text: "ffmpeg probe failed" }];
+    if (code === "ENOENT") return [{ code: "FFMPEG_MISSING", kind: "warn", text: "ffmpeg not on PATH (video features unavailable)" }];
+    return [{ code: "FFMPEG_PROBE_FAILED", kind: "warn", text: "ffmpeg probe failed" }];
   }
 }

@@ -5,7 +5,7 @@ import { config } from "../../config.js";
 import { buildIma2Capabilities } from "../../lib/capabilities.js";
 import { parseArgs } from "../lib/args.js";
 import { resolveServer, request } from "../lib/client.js";
-import { color, dieWithError, json, out } from "../lib/output.js";
+import { color, exitCodeForError, fail, json, out } from "../lib/output.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PACKAGE_PATH = join(ROOT, "package.json");
@@ -51,7 +51,8 @@ async function readCapabilities(args: ReturnType<typeof parseArgs>) {
     const server = await resolveServer({ serverFlag: args.server });
     return await request(server.base, "/api/capabilities", { timeoutMs: 5000 });
   } catch (error) {
-    if (args.server || args["require-server"]) throw error;
+    if (args.server !== undefined || process.env.IMA2_SERVER !== undefined || args["require-server"]
+      || (error as { code?: string })?.code !== "SERVER_UNREACHABLE") throw error;
     return localCapabilities();
   }
 }
@@ -135,6 +136,7 @@ export default async function capabilitiesCmd(argv: string[]) {
     if (args.json) json(capabilities);
     else printText(capabilities);
   } catch (error) {
-    dieWithError(error);
+    fail({ json: Boolean(args.json), code: (error as { code?: string })?.code ?? "SERVER_REQUEST_FAILED",
+      message: (error as Error)?.message || "server request failed", exitCode: exitCodeForError(error) });
   }
 }

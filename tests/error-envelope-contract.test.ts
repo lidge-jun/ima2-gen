@@ -1,36 +1,36 @@
-import { after, describe, it } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { join } from "node:path";
+import { executionTestProcess } from "./_executionTestProcess.ts";
+import type { UpstreamCall } from "./_videoExecutionFixture.ts";
 
-const TEST_DIR = mkdtempSync(join(tmpdir(), "ima2-error-envelope-"));
-process.env.IMA2_CONFIG_DIR = TEST_DIR;
-process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
+if (executionTestProcess(import.meta.url)) {
+const { openVideoFixture } = await import("./_videoExecutionFixture.ts");
+const fixture = await openVideoFixture();
+const TEST_DIR = fixture.root;
+const { config } = fixture;
+after(async () => { await fixture.close(); });
+beforeEach(() => { fixture.beginCase(); });
+afterEach(async () => { await fixture.finishCase(); });
 
-const { errorEnvelopeFields } = await import("../lib/errors/envelope.ts");
-const { upstreamErrorFields } = await import("../lib/routeHelpers.ts");
-const { writeNodeError, nodeErrorDetails } = await import("../lib/nodeHelpers.ts");
-const { normalizeGenerationFailure } = await import("../lib/generationErrors.ts");
-const { generateMultimodeViaGrok } = await import("../lib/grokMultimodeAdapter.ts");
-const { registerVideoExtendedRoutes } = await import("../routes/videoExtended.ts");
-const { registerVideoRoutes } = await import("../routes/video.ts");
-const { registerEditRoutes } = await import("../routes/edit.ts");
-const { registerMcpMediaRoutes } = await import("../routes/mcpMedia.ts");
-const { registerMcpRecoverRoutes } = await import("../routes/mcpRecover.ts");
-const { registerMcpMultishotRoutes } = await import("../routes/mcpMultishot.ts");
-const { createAgentSession } = await import("../lib/agentStore.ts");
-const { tickAgentQueueWorker } = await import("../lib/agentQueueWorker.ts");
-const queue = await import("../lib/agentQueueStore.ts");
-const db = await import("../lib/db.ts");
-const { subscribe } = await import("../lib/eventBus.ts");
-const { config } = await import("../config.ts");
-
-after(() => {
-  db.closeDb();
-  rmSync(TEST_DIR, { recursive: true, force: true });
-});
+const { errorEnvelopeFields } = await import("../lib/errors/envelope.js");
+const { upstreamErrorFields } = await import("../lib/routeHelpers.js");
+const { writeNodeError, nodeErrorDetails } = await import("../lib/nodeHelpers.js");
+const { normalizeGenerationFailure } = await import("../lib/generationErrors.js");
+const { generateMultimodeViaGrok } = await import("../lib/grokMultimodeAdapter.js");
+const { registerVideoExtendedRoutes } = await import("../routes/videoExtended.js");
+const { registerVideoRoutes } = await import("../routes/video.js");
+const { registerEditRoutes } = await import("../routes/edit.js");
+const { registerMcpMediaRoutes } = await import("../routes/mcpMedia.js");
+const { registerMcpRecoverRoutes } = await import("../routes/mcpRecover.js");
+const { registerMcpMultishotRoutes } = await import("../routes/mcpMultishot.js");
+const { createAgentSession } = await import("../lib/agentStore.js");
+const { tickAgentQueueWorker } = await import("../lib/agentQueueWorker.js");
+const queue = await import("../lib/agentQueueStore.js");
+const { subscribe } = await import("../lib/eventBus.js");
 
 function source(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -46,15 +46,41 @@ function providerError(code: string, status: number) {
 }
 
 async function withServer(app: express.Express, run: (baseUrl: string) => Promise<void>) {
-  const server = await new Promise<import("node:http").Server>((resolve) => {
-    const value = app.listen(0, "127.0.0.1", () => resolve(value));
-  });
-  const address = server.address() as import("node:net").AddressInfo;
   try {
-    await run(`http://127.0.0.1:${address.port}`);
+    const baseUrl = await fixture.listen(createServer(app), "app");
+    await run(baseUrl);
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await fixture.drain();
   }
+}
+
+function trackedApp() {
+  const app = express();
+  fixture.trackApp(app);
+  return app;
+}
+
+function assertJsonPost(call: UpstreamCall, origin: string, paths: readonly string[], authorization: string | null) {
+  const url = new URL(call.url);
+  assert.equal(url.origin, origin);
+  assert.ok(paths.includes(url.pathname), `Unexpected provider path: ${url.pathname}`);
+  assert.equal(url.search, "");
+  assert.equal(call.method, "POST");
+  assert.equal(call.headers.get("authorization"), authorization);
+  assert.equal(call.headers.get("cookie"), null);
+  assert.equal(call.headers.get("content-type"), "application/json");
+  const body: unknown = JSON.parse(call.body);
+  assert.ok(body && typeof body === "object" && !Array.isArray(body));
+  return body as Record<string, unknown>;
+}
+
+function failVideoRequests(paths: readonly string[]) {
+  const failure = providerError("GROK_VIDEO_REQUEST_FAILED", 502);
+  fixture.allowFailure(failure);
+  fixture.respond((call) => {
+    assertJsonPost(call, "http://127.0.0.1:1", paths, "Bearer dummy");
+    throw failure;
+  });
 }
 
 function parseSse(text: string) {
@@ -133,8 +159,8 @@ describe("062 error transport envelopes", () => {
   });
 
   it("Video SSE dual-emit carries Grok 502 fields without changing code", async () => {
-    const originalFetch = globalThis.fetch;
-    const app = express();
+    failVideoRequests(["/v1/responses", "/v1/chat/completions", "/v1/videos/generations"]);
+    const app = trackedApp();
     app.use(express.json());
     registerVideoRoutes(app, {
       rootDir: process.cwd(),
@@ -148,11 +174,7 @@ describe("062 error transport envelopes", () => {
     });
     try {
       await withServer(app, async (baseUrl) => {
-        globalThis.fetch = async (url, init) => {
-          if (String(url).startsWith(baseUrl)) return originalFetch(url, init);
-          throw providerError("GROK_VIDEO_REQUEST_FAILED", 502);
-        };
-        const response = await originalFetch(`${baseUrl}/api/video/generate`, {
+        const response = await fixture.fetchApp(`${baseUrl}/api/video/generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: "animate", provider: "grok", duration: 1, resolution: "480p", requestId: "env-video-sse" }),
@@ -165,19 +187,18 @@ describe("062 error transport envelopes", () => {
         assert.equal(error.errorClass, "NETWORK_FAILURE");
       });
     } finally {
-      globalThis.fetch = originalFetch;
+      await fixture.drain();
     }
   });
 
   it("Video JSON restores structured code and fields", async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => { throw providerError("GROK_VIDEO_REQUEST_FAILED", 502); };
-    const app = express();
+    failVideoRequests(["/v1/videos/edits"]);
+    const app = trackedApp();
     app.use(express.json());
     registerVideoExtendedRoutes(app, { config: { storage: { generatedDir: TEST_DIR }, grokProvider: { proxyHost: "127.0.0.1", proxyPort: 1 } } });
     try {
       await withServer(app, async (baseUrl) => {
-        const response = await originalFetch(`${baseUrl}/api/video/edit`, {
+        const response = await fixture.fetchApp(`${baseUrl}/api/video/edit`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: "edit", videoUrl: "https://example.test/input.mp4" }),
         });
@@ -187,7 +208,7 @@ describe("062 error transport envelopes", () => {
         assert.equal(body.errorClass, "NETWORK_FAILURE");
       });
     } finally {
-      globalThis.fetch = originalFetch;
+      await fixture.drain();
     }
   });
 
@@ -197,7 +218,7 @@ describe("062 error transport envelopes", () => {
       kind: "video", provider: "grok", model: "grok-imagine-video",
       userPrompt: "parent", video: { duration: 5, resolution: "480p", aspectRatio: "auto" },
     }));
-    const app = express();
+    const app = trackedApp();
     app.use(express.json());
     registerVideoExtendedRoutes(app, {
       rootDir: process.cwd(),
@@ -214,7 +235,7 @@ describe("062 error transport envelopes", () => {
     });
     await withServer(app, async (baseUrl) => {
       const pending = waitForError("env-video-extend");
-      const response = await fetch(`${baseUrl}/api/video/extend`, {
+      const response = await fixture.fetchApp(`${baseUrl}/api/video/extend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceVideoId: "root.mp4", requestId: "env-video-extend", prompt: "continue" }),
@@ -228,7 +249,7 @@ describe("062 error transport envelopes", () => {
   });
 
   it("Video extend preflight fail() carries a thrown provider error", async () => {
-    const app = express();
+    const app = trackedApp();
     app.use(express.json());
     registerVideoExtendedRoutes(app, {
       rootDir: process.cwd(),
@@ -246,7 +267,7 @@ describe("062 error transport envelopes", () => {
     });
     await withServer(app, async (baseUrl) => {
       const pending = waitForError("env-video-preflight");
-      const response = await fetch(`${baseUrl}/api/video/extend`, {
+      const response = await fixture.fetchApp(`${baseUrl}/api/video/extend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceVideoId: "root.mp4", requestId: "env-video-preflight", prompt: "continue" }),
@@ -264,9 +285,11 @@ describe("062 error transport envelopes", () => {
   });
 
   it("Multimode returns the last item failure from the adapter", async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (url) => {
-      const target = String(url);
+    const failure = providerError("GROK_UPSTREAM_ERROR", 502);
+    fixture.allowFailure(failure);
+    fixture.respond((call) => {
+      assertJsonPost(call, "http://127.0.0.1:9", ["/v1/responses", "/v1/chat/completions", "/v1/images/generations"], "Bearer dummy");
+      const target = call.url;
       if (target.endsWith("/v1/responses")) {
         return Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: "brief" }] }] });
       }
@@ -282,8 +305,8 @@ describe("062 error transport envelopes", () => {
           }],
         });
       }
-      throw providerError("GROK_UPSTREAM_ERROR", 502);
-    };
+      throw failure;
+    });
     try {
       const result = await generateMultimodeViaGrok("sequence", {
         config: {
@@ -300,7 +323,7 @@ describe("062 error transport envelopes", () => {
         errorClass: "NETWORK_FAILURE",
       });
     } finally {
-      globalThis.fetch = originalFetch;
+      await fixture.drain();
     }
   });
 
@@ -312,7 +335,7 @@ describe("062 error transport envelopes", () => {
       tools: [{ name: "upscale_image" }],
     }));
     writeFileSync(join(TEST_DIR, "generated", "src-image.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
-    const app = express();
+    const app = trackedApp();
     app.use(express.json());
     registerMcpMediaRoutes(app, {
       config: {
@@ -335,7 +358,7 @@ describe("062 error transport envelopes", () => {
     } as never);
     await withServer(app, async (baseUrl) => {
       const pending = waitForError("env-mcp");
-      const response = await fetch(`${baseUrl}/api/mcp/media-action`, {
+      const response = await fixture.fetchApp(`${baseUrl}/api/mcp/media-action`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "upscale-image", files: ["src-image.png"], requestId: "env-mcp" }),
@@ -349,7 +372,7 @@ describe("062 error transport envelopes", () => {
   });
 
   it("MCP generate event payload prefers structured code", async () => {
-    const app = express();
+    const app = trackedApp();
     app.use(express.json());
     registerMcpMediaRoutes(app, {
       config: {
@@ -371,7 +394,7 @@ describe("062 error transport envelopes", () => {
     } as never);
     await withServer(app, async (baseUrl) => {
       const pending = waitForError("env-mcp-generate");
-      const response = await fetch(`${baseUrl}/api/mcp/generate`, {
+      const response = await fixture.fetchApp(`${baseUrl}/api/mcp/generate`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ provider: "runway", kind: "image", prompt: "generate", requestId: "env-mcp-generate" }),
@@ -385,7 +408,7 @@ describe("062 error transport envelopes", () => {
   });
 
   it("MCP recover event payload prefers structured code", async () => {
-    const app = express();
+    const app = trackedApp();
     app.use(express.json());
     registerMcpRecoverRoutes(app, {
       config: {
@@ -414,7 +437,7 @@ describe("062 error transport envelopes", () => {
           }
         });
       });
-      const response = await fetch(`${baseUrl}/api/mcp/tasks/20fba936-054a-4563-b91b-8fa9b019bb20/recover`, {
+      const response = await fixture.fetchApp(`${baseUrl}/api/mcp/tasks/20fba936-054a-4563-b91b-8fa9b019bb20/recover`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ provider: "runway", kind: "video" }),
@@ -428,7 +451,7 @@ describe("062 error transport envelopes", () => {
   });
 
   it("MCP multishot event payload prefers structured code", async () => {
-    const app = express();
+    const app = trackedApp();
     app.use(express.json());
     registerMcpMultishotRoutes(app, {
       config: {
@@ -447,7 +470,7 @@ describe("062 error transport envelopes", () => {
     } as never);
     await withServer(app, async (baseUrl) => {
       const pending = waitForError("env-mcp-multishot");
-      const response = await fetch(`${baseUrl}/api/mcp/multishot`, {
+      const response = await fixture.fetchApp(`${baseUrl}/api/mcp/multishot`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt: "story", requestId: "env-mcp-multishot" }),
@@ -461,8 +484,12 @@ describe("062 error transport envelopes", () => {
   });
 
   it("Edit JSON carries Gemini fields from the real route", async () => {
-    const originalFetch = globalThis.fetch;
-    const app = express();
+    fixture.respond((call) => {
+      assertJsonPost(call, "https://generativelanguage.googleapis.com", ["/v1beta/models/gemini-3.1-flash-image:generateContent"], null);
+      assert.equal(call.headers.get("x-goog-api-key"), "test-key");
+      return new Response("rate limited", { status: 429 });
+    });
+    const app = trackedApp();
     app.use(express.json({ limit: "2mb" }));
     registerEditRoutes(app, {
       geminiApiKey: "test-key",
@@ -475,14 +502,10 @@ describe("062 error transport envelopes", () => {
     });
     try {
       await withServer(app, async (baseUrl) => {
-        globalThis.fetch = async (url, init) => {
-          if (String(url).startsWith(baseUrl)) return originalFetch(url, init);
-          return new Response("rate limited", { status: 429 });
-        };
-        const response = await originalFetch(`${baseUrl}/api/edit`, {
+        const response = await fixture.fetchApp(`${baseUrl}/api/edit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: "edit", image: TINY_PNG, provider: "gemini-api" }),
+          body: JSON.stringify({ prompt: "edit", image: TINY_PNG, provider: "gemini-api", model: "nano-banana-2" }),
         });
         const body = await response.json() as Record<string, unknown>;
         assert.equal(body.code, "GEMINI_API_RATE_LIMITED");
@@ -490,7 +513,7 @@ describe("062 error transport envelopes", () => {
         assert.equal(body.errorClass, "RATE_LIMITED");
       });
     } finally {
-      globalThis.fetch = originalFetch;
+      await fixture.drain();
     }
   });
 
@@ -505,7 +528,6 @@ describe("062 error transport envelopes", () => {
   }
 
   it("Agent queue worker stores Atlas 400 and 502 classes", async () => {
-    const originalFetch = globalThis.fetch;
     const session = createAgentSession({ title: "error envelope" });
     const cases = [[400, "CAPABILITY_UNSUPPORTED"], [502, "NETWORK_FAILURE"]] as const;
     try {
@@ -515,12 +537,10 @@ describe("062 error transport envelopes", () => {
           prompt: `atlas ${status}`,
           options: { provider: "atlascloud", generationStrategy: "manual" },
         });
-        globalThis.fetch = async (url) => {
-          if (String(url).includes("/model/generateImage")) {
-            return new Response("failed", { status });
-          }
-          throw new Error(`unexpected fetch ${String(url)}`);
-        };
+        fixture.respond((call) => {
+          assertJsonPost(call, "https://api.atlascloud.ai", ["/api/v1/model/generateImage"], "Bearer test-key");
+          return new Response("failed", { status });
+        });
         await tickAgentQueueWorker({
           atlasCloudApiKey: "test-key",
           config: {
@@ -535,7 +555,7 @@ describe("062 error transport envelopes", () => {
         assert.equal(stored.errorClass, expectedClass);
       }
     } finally {
-      globalThis.fetch = originalFetch;
+      await fixture.drain();
     }
 
     const appItem = queue.createAgentQueueItem({ sessionId: session.id, prompt: "canceled" });
@@ -556,3 +576,4 @@ describe("062 error transport envelopes", () => {
     assert.equal("errorClass" in fields, false);
   });
 });
+}

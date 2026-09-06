@@ -1,0 +1,164 @@
+# WP06s C — observed failures and repairs
+
+Candidate92fae36b / PR207 above206. New platform workflow run33970717208 failed
+before creating jobs. No platform test ran; do not call this a Windows/test failure.
+Main `actionlint .github/workflows/agy-artifact-check.yml` exited1 and identified
+line50: runner context is unavailable in job-level env; available contexts are
+github/inputs/matrix/needs/secrets/strategy/vars. The parsed-YAML contract had
+required this invalid form, so 13 green contract tests did not establish GHA
+expression validity. Actual first-run failure is retained, not hidden by retries.
+
+Accept the workflow-context blocker. Keep a unique output basename in job env,
+resolve runner.temp only in allowed run/upload step expressions (or equivalent
+step-local env). Update independent parsed expectations and add a negative for
+runner context at job env. Main runs installed actionlint on this exact workflow
+in addition to real tiny driver contracts and both project typechecks. No new
+dependency, bootstrap merge, privileged trigger or protection bypass is needed.
+Re-push a corrected tip and require fresh four-row/platform and canonical CI.
+Initial canonical CI33970737635 / CodeQL33970738595 belong to92fae36b, not a
+later repaired head. They cannot certify a changed tip.
+
+Worker corrected only workflow/context contract; actual actionlint exit0,
+13 tiny driver-contract tests PASS and project typecheck:tests exit0. Main
+independently re-ran exact-file actionlint and checked the scoped diff.
+
+## Actual source mutations
+
+Main mutated actual production source, ran the exact named verifier, restored
+the original source with apply_patch and reran the same verifier:
+
+- Scanner leaf-link exclusion: removed both Dirent link/regular-file filters.
+  The owned matching-symlink test failed expected equality, then passed restored.
+- Root containment: removed parent/absolute rejection in the shared relative-path
+  predicate. The owned directory-link/sibling/traversal verifier failed missing
+  expected rejection, then passed restored.
+- Stream cap: removed the overflow-byte rejection. The tiny17-byte/16-byte-cap
+  verifier failed missing expected rejection, then passed restored.
+
+All three RED runs exited1, all restored runs exit0. Raw files live in session
+wp06s/mutations/{scanner-link,containment,streamed-cap}-{red,restored}.txt.
+No large local allocation, user file or provider call. git diff -- lib routes is
+empty after restoration; no mutation was built into emitted JS or committed.
+
+## Four-row run33970927606 at8a4987ac
+
+macOS24 light and Linux24 heavy passed. Windows failed before dependency install:
+the npm probe reported11.13.0 after pinning12.0.0. The shared npmInvocation helper
+uses npm_execpath when present, otherwise Windows's Node-adjacent CLI; this plain
+Node workflow/driver had selected the older adjacent copy. Fix the new gate's
+explicit npm binding, not the required version or shared runtime helper.
+
+Linux22 failed two small allocation-oracle cases in the bounds file. Hosted TAP
+is saved under wp06s/platform-first-node22. The short-read case observed the four
+8-byte blocks plus a25-byte allocation, while expecting only the blocks. Suspected
+cause: Buffer.concat's Node22 implementation invokes the observed allocUnsafe for
+its allowed final result. Require source/runtime confirmation and distinguish
+chunk retention from final bounded concatenation, preserving both checks. No
+production defect or large-boundary failure is asserted from these two test errors.
+Reused original workers on disjoint CI/test repairs; no unchanged blind rerun.
+
+Node22 allocation RCA confirmed on local22.22.3 (not hosted22.23): native concat
+calls the exported allocUnsafe, while24.17 allocates internally. The revised
+oracle separately records actual read-block identity/count/size and the single
+bounded concat result. Both original failing cases plus two overflow controls
+pass4/4 on local22.22.3 and24.17; hosted default50MiB still requires the new tip.
+
+Windows npm repair installs the pinned version in a runner-temp prefix, verifies
+that exact CLI and exports its path for dependency install/build and driver
+identity. Test children do not inherit the binding. Shared npm helper is unchanged.
+Worker actionlint,15tiny contracts and both project typechecks pass; actual
+Windows still requires hosted execution. No expected version was relaxed.
+
+## Independent reader C documentation finding
+
+Locke2 (01a071e9-1dae-7893-8168-190d0d35ff8b) found no production reader/caller
+blocker and passed four tiny checks plus six exact source/emitted comparisons.
+Its Medium finding is accepted: docs/API's new blanket no-generation-retry
+statement contradicts unchanged nodeGeneration.ts:300-340. Reference-free node
+requests can retry once after retryable artifact502 errors. Qualify the reader's
+no-added-retry behavior and explicitly preserve caller retry policy, rather than
+changing pre-existing runtime semantics in this unit. Also clarify that direct
+GENERATION_CANCELED/499 can normalize to node INVALID_REQUEST/499. This is a
+source-grounded documentation correction, not a live provider retry claim.
+
+## Four-row run33971422794 at94f42fde
+
+Previous allocation and npm-binding blockers cleared: Linux22 reached and passed
+the bounds file including heavy cases, Windows reached the actual test driver.
+Mac24/Linux24 passed. Two deeper fixture issues then surfaced:
+
+- Linux22 process cases fail before execution with generated config mock syntax
+  "Expected identifier but found default". _agyProcessFixture spreads the module
+  namespace (including default) into namedExports. Separate defaultExport from
+  namedExports, prove the same tiny cases on local22.22.3 and24.17, then recheck
+  actual hosted22.23. This is not a production config syntax error.
+- Windows parent/root relocation cases attempt directory rename while the file
+  handle is open and receive native EPERM. This failure is in fault setup, not a
+  successful containment check. Preserve POSIX during-read mutation; on Windows
+  use the real after-native-close/before-return barrier and require actual
+  rename/junction plus policy rejection/preservation. No skipped assurance or
+  fake rename completion. The other26 Windows confinement cases passed.
+
+Artifacts: wp06s/platform-second-node22 and platform-second-windows. Reused
+original operation/artifact-test workers on disjoint files; no runtime changes
+or model fallback. Manual HTTP final run waits for a platform-green frozen tip;
+historical preflights/partial attempts cannot be relabeled as that final run.
+
+Both fixture repairs are source-scoped. Operation worker reproduced three process
+top-level failures on local22.22.3 before separating defaultExport; afterward the
+same cleanup/process suites pass44/44 on22.22.3 and24.17. Windows test worker
+retains open-descriptor POSIX mutation, but asserts closed descriptors/EOF before
+real Windows rename and junction creation; mutation completion and rejection/
+preservation remain required. Five related macOS cases pass; this is not Windows
+runtime evidence. Both workers changed only their assigned test files.
+
+## d271bab9 Windows native-fixture investigation
+
+Run33971818112 passes both Linux heavy rows and macOS light. Windows now passes
+confinement/bounds/fallback, then cleanup reports8 failures/2 passes before any
+artifact read. Barrier wrappers hide the original rejection in Error.cause;
+the TAP output does not expose it. A close record has no reference input receipt.
+This is insufficient evidence to change the production reader or a test policy.
+
+Orthogonal hypotheses: H1 native child startup/env/IPC failure (falsify with a
+successful child input receipt); H2 a child pre-input invariant fails (falsify
+with successful invariant/input receipts and zero child failure); H3 parent
+post-child path/reader rejection (falsify with nonzero child exit before input).
+Original fixture owner will expose the actual owned-child/primary-error boundary
+without changing behavior, then select a correction from observed evidence.
+No timeout increase, skip or synthetic success is authorized.
+
+Diagnostic-only patch exposes bounded native stderr/exit, child phase markers
+and primary error directly in failed barrier/teardown messages; prompts, reference
+bytes and environment are excluded. Worker discriminating probes validate H1
+(native exit7/stderr), H2 (pre-input reference-read ENOENT/exit90), and H3 (child
+exit0/input followed by missing artifact), without claiming Windows causality.
+The same44 cleanup/process tests pass on local22.22.3 and24.17 with diagnostics;
+no behavior fix or assertion weakening is present. Push this checkpoint to obtain
+the missing Windows value before selecting a permanent correction.
+
+Windows diagnostic33972409363 at00555a56 supplies the discriminating value:
+native Node24.17 exits134 at InitializeOncePerProcessInternal with assertion
+ncrypto::CSPRNG(nullptr,0). There are no child phase/input events, only close.
+H1 native startup is supported; H2 pre-input JS assertion and H3 post-child
+reader rejection are ruled out for this run. Raw stderr is bounded and untruncated
+in platform-diagnostic-windows/agy-execution-cleanup.test.ts.tap.
+
+Next narrower hypothesis: the fixture deletes the parent's SystemRoot, which
+libuv normally supplies to a restricted child environment. Main opened the exact
+Node24.17 vendored deps/uv/src/win/process.c: required_vars includes SYSTEMROOT;
+make_program_env uses GetEnvironmentVariableW to supplement omitted values only
+when they exist in the parent. Source URL:
+https://raw.githubusercontent.com/nodejs/node/v24.17.0/deps/uv/src/win/process.c
+The pinned source fetch was complete, not a search snippet. This proves the
+propagation mechanism, not yet that SystemRoot alone resolves this CSPRNG failure.
+Test-only one-variable preservation/toggle evidence on Windows is required;
+production spawn arguments and exact environment guard remain unchanged.
+
+Candidate preserves only original parent SystemRoot on Windows, with full original
+environment restoration. A required Windows present/absent/restored control keeps
+every other isolated value identical and demands success / native134+CSPRNG with
+no JS events / success, plus staging cleanup. The dedicated driver requires its
+exact PASS name. No production environment or exact DUT guard is changed. Local
+44-test Linux-style suites on22.22.3/24.17 pass, but the Windows control is still
+unexecuted before publication; only the next actual Windows result can settle it.

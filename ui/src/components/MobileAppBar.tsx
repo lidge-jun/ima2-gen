@@ -45,7 +45,6 @@ export function MobileAppBar() {
         </div>
       </div>
       <div className="mobile-app-bar__actions">
-        <GenProviderModelSelect compact />
         <button
           ref={libraryOpenerRef}
           type="button"
@@ -85,6 +84,9 @@ export function MobileAppBar() {
             <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
           </svg>
         </button>
+      </div>
+      <div className="mobile-app-bar__selection">
+        <GenProviderModelSelect compact />
       </div>
     </header>
   );

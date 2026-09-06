@@ -1,9 +1,45 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { publish, subscribe, replaySince, RING_SIZE, _resetForTest } from "../lib/eventBus.js";
+import { publish, subscribe, replaySince, hasReplayGap, latestEventId, replayOldestId, RING_SIZE, _resetForTest } from "../lib/eventBus.js";
 
 describe("eventBus", () => {
   beforeEach(() => _resetForTest());
+
+  it("reads latest cursor without allocation and resets it with the ring", () => {
+    assert.equal(latestEventId(), 0);
+    assert.equal(latestEventId(), 0);
+    assert.equal(replayOldestId(), null);
+    publish("a", "phase", {});
+    assert.equal(latestEventId(), 1);
+    publish("b", "done", {});
+    assert.equal(latestEventId(), 2);
+    _resetForTest();
+    assert.equal(latestEventId(), 0);
+  });
+
+  it("detects future cursors even on an empty ring but ignores invalid numbers", () => {
+    assert.equal(hasReplayGap(1), true);
+    assert.equal(hasReplayGap(0), false);
+    for (const cursor of [-1, NaN, Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      assert.equal(hasReplayGap(cursor), false);
+    }
+    publish("a", "phase", {});
+    assert.equal(hasReplayGap(2), true);
+    assert.equal(hasReplayGap(1), false);
+    assert.equal(hasReplayGap(0), false);
+  });
+
+  it("zero is a gap only after the first event has been evicted", () => {
+    for (let i = 0; i < RING_SIZE; i++) publish("a", "phase", {});
+    assert.equal(hasReplayGap(0), false);
+    publish("a", "done", {});
+    assert.equal(replayOldestId(), 2);
+    assert.equal(hasReplayGap(0), true);
+    assert.equal(hasReplayGap(1), false);
+    publish("b", "done", {});
+    assert.equal(hasReplayGap(1), true);
+    assert.equal(hasReplayGap(2), false);
+  });
 
   it("delivers events to subscribers", () => {
     const received: any[] = [];

@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { exportImageToComfy } from "../lib/api";
 import { toVideoHistoryItem } from "../lib/videoHistoryItem";
-import { postVideoExtendStream } from "../lib/videoExtendStream";
+import { videoExtensionOwner } from "../lib/videoExtendStream";
 import { isVideoItem, extractFirstFrame, extractMidFrame, extractLastFrame } from "../lib/videoMedia";
 import { continueFromItem, continueFromItemAsUrl } from "../lib/continueFromItem";
 import { ResultMetadataModal } from "./ResultMetadataModal";
@@ -12,10 +12,10 @@ import { buildUpscaleBody, type UpscaleParams } from "../lib/upscaleAction";
 import { jsonFetch } from "../lib/api";
 import { listMcpProviders } from "../lib/mcpProviders";
 import type { GenerateItem } from "../types";
+import { handleError } from "../lib/errorHandler";
+import { resolveErrorSpec } from "../lib/errorCodes";
 
 interface ResultActionsProps { imageOverride?: GenerateItem | null; onAfterDeleteFocus?: () => void }
-
-type ExtendState = "idle" | "pending" | "error";
 
 const CANVAS_MODE_PROMPT_ID = "canvas-mode-context";
 const CANVAS_MODE_PROMPT_NAME = "Canvas Mode";
@@ -28,10 +28,7 @@ const CANVAS_MODE_PROMPT_TEXT = [
   "Infer the intended edit from the canvas marks and memo text. Preserve unrelated image content.",
 ].join("\n");
 
-export function ResultActions({
-  imageOverride = null,
-  onAfterDeleteFocus,
-}: ResultActionsProps) {
+export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: ResultActionsProps) {
   const { t } = useI18n();
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
@@ -39,19 +36,16 @@ export function ResultActions({
   const createRootNodeFromHistoryItem = useAppStore((s) => s.createRootNodeFromHistoryItem);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const saveToAssetsAction = useAppStore((s) => s.saveToAssets);
-  const permanentlyDeleteHistoryItemByClick = useAppStore(
-    (s) => s.permanentlyDeleteHistoryItemByClick,
-  );
+  const permanentlyDeleteHistoryItemByClick = useAppStore((s) => s.permanentlyDeleteHistoryItemByClick);
   const canvasOpen = useAppStore((s) => s.canvasOpen);
   const openCanvas = useAppStore((s) => s.openCanvas);
   const [comfyExporting, setComfyExporting] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const [extendState, setExtendState] = useState<ExtendState>("idle");
+  const extendUi = useSyncExternalStore(videoExtensionOwner.subscribe, videoExtensionOwner.getSnapshot);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [upscaleOpen, setUpscaleOpen] = useState(false);
   const [upscalePending, setUpscalePending] = useState(false);
   const [runwayConnected, setRunwayConnected] = useState(false);
-  const extendAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -82,8 +76,14 @@ export function ResultActions({
     }
   };
 
-  useEffect(() => () => extendAbortRef.current?.abort(), []);
+  useEffect(() => videoExtensionOwner.releaseView, []);
   const actionImage = imageOverride ?? currentImage;
+  const sourceFilename = actionImage?.filename ?? null;
+  useEffect(() => {
+    videoExtensionOwner.select(sourceFilename);
+  }, [sourceFilename]);
+  const extendState = extendUi.status === "pending" || extendUi.source === sourceFilename
+    ? extendUi.status : "idle";
   if (!actionImage) return null;
   const isVideo = isVideoItem(actionImage);
   const videoSrc = isVideo ? (actionImage.url || actionImage.image) : "";
@@ -92,10 +92,7 @@ export function ResultActions({
   const canExtend = isVideo && Boolean(actionImage.filename);
   const isGrokProvider = actionImage.provider === "grok" || actionImage.provider === "grok-api";
   const providerUrlAlive = Boolean(
-    isGrokProvider &&
-    !isVideo &&
-    actionImage.providerUrl &&
-    actionImage.createdAt &&
+    isGrokProvider && !isVideo && actionImage.providerUrl && actionImage.createdAt &&
     Date.now() - actionImage.createdAt < PROVIDER_URL_TTL_MS,
   );
 
@@ -114,34 +111,31 @@ export function ResultActions({
   };
 
   const extend = async () => {
-    if (!actionImage.filename || extendState === "pending") return;
+    if (!actionImage.filename || extendState === "pending" || extendState === "tracking-expired") return;
     const requestId = `vext_${crypto.randomUUID()}`;
-    const controller = new AbortController();
-    extendAbortRef.current = controller;
-    setExtendState("pending");
     try {
-      const done = await postVideoExtendStream({
+      const work = videoExtensionOwner.start({
         requestId,
         sourceVideoId: actionImage.filename,
         prompt: actionImage.prompt?.trim() || undefined,
         provider: actionImage.provider === "grok-api" ? "grok-api" : "grok",
         model: actionImage.model ?? undefined,
-      }, controller.signal);
+      });
+      if (!work) return;
+      const done = await work;
       useAppStore.getState().addHistoryItem(toVideoHistoryItem(done, actionImage));
-      setExtendState("idle");
       showToast(t("toast.animateDone"));
     } catch (error) {
       const canceled = error instanceof DOMException && error.name === "AbortError";
-      setExtendState(canceled ? "idle" : "error");
-      if (!canceled) {
+      const code = resolveErrorSpec(error).code;
+      if (code === "JOB_TRACKING_TIMEOUT" || code === "LAN_TOKEN_REQUIRED") handleError(error, useAppStore.getState());
+      else if (!canceled) {
         showToast(error instanceof Error ? error.message : t("toast.animateFailed"), true);
       }
-    } finally {
-      if (extendAbortRef.current === controller) extendAbortRef.current = null;
     }
   };
 
-  const cancelExtend = () => extendAbortRef.current?.abort();
+  const cancelExtend = () => videoExtensionOwner.cancel();
 
   const download = () => {
     const a = document.createElement("a");
@@ -338,8 +332,7 @@ export function ResultActions({
         {t("result.copyPrompt")}
       </button>
       <button
-        type="button"
-        className="action-btn"
+        type="button" className="action-btn"
         onClick={() => {
           void (async () => {
             const ok = await saveToAssetsAction(actionImage);
@@ -351,8 +344,7 @@ export function ResultActions({
         {t("chain.saveToAssets")}
       </button>
       <button
-        type="button"
-        className="action-btn action-btn--primary"
+        type="button" className="action-btn action-btn--primary"
         onClick={newFromHere}
         title={t("result.continueHereTitle")}
       >
@@ -360,8 +352,7 @@ export function ResultActions({
       </button>
       {providerUrlAlive && (
         <button
-          type="button"
-          className="action-btn"
+          type="button" className="action-btn"
           onClick={() => void newFromHereAsUrl()}
           title={t("result.continueAsUrlTitle")}
         >
@@ -370,8 +361,7 @@ export function ResultActions({
       )}
       {canAnimate && (
         <button
-          type="button"
-          className="action-btn"
+          type="button" className="action-btn"
           onClick={() => void animate()}
           disabled={animating}
           title={t("result.animateTitle")}
@@ -382,8 +372,7 @@ export function ResultActions({
       {runwayConnected && actionImage.filename && (
         isVideo ? (
           <button
-            type="button"
-            className="action-btn"
+            type="button" className="action-btn"
             disabled={upscalePending}
             onClick={() => void startUpscale({})}
             title={t("result.upscaleTitle")}
@@ -393,8 +382,7 @@ export function ResultActions({
         ) : (
           <>
             <button
-              type="button"
-              className="action-btn"
+              type="button" className="action-btn"
               disabled={upscalePending}
               onClick={() => setUpscaleOpen((open) => !open)}
               title={t("result.upscaleTitle")}
@@ -414,12 +402,11 @@ export function ResultActions({
       {canExtend && (
         <>
           <button
-            type="button"
-            className="action-btn"
+            type="button" className="action-btn"
             onClick={extend}
-            disabled={extendState === "pending"}
+            disabled={extendState === "pending" || extendState === "tracking-expired"}
             aria-busy={extendState === "pending"}
-            title={t("result.extendTitle") ?? "이어가기"}
+            title={t(extendState === "tracking-expired" ? "toast.jobTrackingTimeout" : "result.extendTitle")}
           >
             {extendState === "pending"
               ? t("inflight.streaming")
@@ -431,16 +418,14 @@ export function ResultActions({
         </>
       )}
       <button
-        type="button"
-        className="action-btn"
+        type="button" className="action-btn"
         onClick={generateAsFirstNode}
         title={t("result.firstNodeTitle")}
       >
         {t("result.firstNode")}
       </button>
       <button
-        type="button"
-        className="action-btn"
+        type="button" className="action-btn"
         onClick={() => setMetadataOpen(true)}
         title={t("result.infoTitle")}
       >
@@ -448,8 +433,7 @@ export function ResultActions({
       </button>
       {!canvasOpen && (
         <button
-          type="button"
-          className="action-btn"
+          type="button" className="action-btn"
           onClick={openCanvas}
           title={t("canvas.open")}
           aria-label={t("canvas.openAria")}
@@ -462,8 +446,7 @@ export function ResultActions({
       {actionImage.filename && (
         <>
           <button
-            type="button"
-            className="action-btn action-btn--danger"
+            type="button" className="action-btn action-btn--danger"
             onClick={() => void deleteToTrash()}
             title={t("result.deleteTitle")}
           >
@@ -474,8 +457,7 @@ export function ResultActions({
             <div className="result-actions__menu">
               {canExportToComfy && (
                 <button
-                  type="button"
-                  className="result-actions__menu-item"
+                  type="button" className="result-actions__menu-item"
                   onClick={() => void sendToComfyUI()}
                   title={t("result.sendToComfyUITitle")}
                   disabled={comfyExporting}
@@ -484,8 +466,7 @@ export function ResultActions({
                 </button>
               )}
               <button
-                type="button"
-                className="result-actions__menu-item result-actions__danger-item"
+                type="button" className="result-actions__menu-item result-actions__danger-item"
                 onClick={() => void deletePermanently()}
               >
                 {t("result.permanentDelete")}

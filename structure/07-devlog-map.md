@@ -122,6 +122,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
+| `260905_production_readiness/` | WP00–WP12s verified; WP13 release preparation is in B. Candidate installed UI captured; late product-review repairs and final-head verification are in progress. Implementation PR merges, main/preview promotion and deployment remain pending. See130_0/130_4/131. | — |
 | `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 

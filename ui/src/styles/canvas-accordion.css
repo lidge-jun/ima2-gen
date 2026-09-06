@@ -279,6 +279,10 @@
 }
 .gen-provider-model .ctl-select__value {
   font-size: 10.5px;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
 }
 .gen-provider-model .ctl-select__value-sub {
   font-size: 9px;
@@ -286,6 +290,27 @@
 .gen-provider-model .ctl-select__caret {
   width: 8px;
   height: 8px;
+}
+
+.comfy-generation-controls .option-btn { min-height: 44px; }
+.gen-provider-model__catalog-state {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.gen-provider-model__catalog-state button {
+  min-height: 44px;
+  min-width: 44px;
+  font: inherit;
 }
 
 .image-model-select--settings select {

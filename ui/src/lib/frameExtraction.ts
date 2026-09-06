@@ -1,3 +1,4 @@
+import { fetchApi } from "./api-core";
 import { extractFirstFrame, extractLastFrame, extractMidFrame } from "./videoMedia";
 
 export type FramePosition = "first" | "mid" | "last";
@@ -56,7 +57,7 @@ export async function fetchGeneratedFrameApi(
   options: { signal?: AbortSignal } = {},
 ): Promise<string> {
   const url = `/api/video/frame?file=${encodeURIComponent(filename)}&position=${position}`;
-  const response = await fetch(url, { signal: options.signal });
+  const response = await fetchApi(url, { signal: options.signal });
   if (!response.ok) {
     throw Object.assign(new Error(`frame extraction failed (${response.status})`), {
       status: response.status,

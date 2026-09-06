@@ -66,6 +66,7 @@ describe("History: delete tombstone + pagination", () => {
         IMA2_TEST_SYSTEM_TRASH_DIR: SYSTEM_TRASH_DIR,
         NODE_ENV: "test",
         IMA2_NO_OAUTH_PROXY: "1",
+        IMA2_NO_GROK_PROXY: "1",
       },
       cwd: process.cwd(),
       stdio: ["ignore", "pipe", "pipe"],

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { getAllPresets } from "../../lib/presets";
 import type { TrayItem } from "../../lib/referenceTray";
 import { useI18n } from "../../i18n";
@@ -44,6 +45,7 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
   const generate = useAppStore((state) => state.generate);
   const activeGenerations = useAppStore((state) => state.activeGenerations);
   const trayItems = useAppStore((state) => state.trayItems);
+  const composingRef = useRef(false);
   const { t } = useI18n();
   const selectedIdSet = new Set(selectedPresetIds);
   const selectedPresets = getAllPresets().filter((preset) => selectedIdSet.has(preset.id));
@@ -60,8 +62,10 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
     return {
       value: providerValue,
       label,
-      sub: availability.ok ? t("readiness.ready") : availability.reason,
-      disabled: !availability.ok,
+      sub: providerValue === "comfy" ? availability.reason : availability.ok ? t("readiness.ready") : availability.reason,
+      // ComfyUI is selectable even before a workflow is observed so the user
+      // can reach its existing Settings manager and configure the local lane.
+      disabled: !availability.ok && providerValue !== "comfy",
     } satisfies SelectItem<Provider>;
   });
 
@@ -117,9 +121,12 @@ export function HomePromptComposer({ providerAvailability }: HomePromptComposerP
             value={prompt}
             placeholder={isNai ? t("nai.positivePrompt.placeholder") : t("prompt.placeholder")}
             aria-describedby={isNai ? "home-prompt-hint" : undefined}
+            onCompositionStart={() => { composingRef.current = true; }}
+            onCompositionEnd={() => { composingRef.current = false; }}
             onChange={(event) => setPrompt(event.target.value)}
             onKeyDown={(event) => {
               if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+              if (event.defaultPrevented || composingRef.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
               event.preventDefault();
               submitPrompt();
             }}

@@ -15,6 +15,10 @@ import { fileURLToPath } from "node:url";
 import { resolveProviderOptions } from "../lib/providerOptions.ts";
 import { normalizeNaiImageModel } from "../lib/imageModels.ts";
 import { createTestRuntimeContext } from "../lib/runtimeContext.ts";
+import { getProviderSurfaceSupport } from "../lib/providers/derive.ts";
+import { buildLaneMap } from "../routes/models.ts";
+import { config } from "../config.ts";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (rel: string) => readFileSync(join(repoRoot, rel), "utf8");
@@ -72,33 +76,36 @@ test("nai provider options accept every shipped model and reject unknown ones", 
   assert.equal(normalizeNaiImageModel("").model, "nai-diffusion-5-full", "empty falls back, no error");
 });
 
-test("nai refuses reference input rather than discarding it", () => {
-  // The adapter is text-to-image only. Every entry point that could carry an
-  // image must say so out loud; a silent drop would look like a bad edit.
-  assert.match(read("lib/generatePipeline.ts"), /activeProvider === "nai" && providerRefCount > 0/);
-  assert.match(read("lib/generatePipeline.ts"), /NAI_REF_UNSUPPORTED/);
-  assert.match(read("lib/nodeGeneration.ts"), /activeProvider === "nai" && inputImageCount > 0/);
-  assert.match(read("routes/edit.ts"), /NAI_EDIT_UNSUPPORTED/);
+test("nai surface policy declares reference input unsupported", () => {
+  // Actual JSON/SSE refusals and zero upstream calls are exercised by
+  // provider-surface-boundary.test.ts, not inferred from predicate spelling.
+  for (const surface of ["generate", "node", "multimode"] as const) {
+    assert.deepEqual(getProviderSurfaceSupport("nai", surface), {
+      supported: true, references: false, mask: false, streaming: false,
+      catalogAccess: "static",
+    }, surface);
+  }
+  assert.equal(getProviderSurfaceSupport("nai", "edit")?.supported, false);
 });
 
 test("no nai dispatch forwards references to the adapter", () => {
   // generateViaNai has no references parameter. A copied MiniMax branch would
   // either fail typecheck or, behind a cast, drop the user's image silently.
   for (const file of [
-    "lib/generatePipeline.ts",
-    "lib/multimodePipeline.ts",
-    "lib/nodeGeneration.ts",
+    "lib/providers/execution/legacyClassic.ts",
+    "lib/providers/execution/legacyMultimode.ts",
+    "lib/providers/execution/legacyNode.ts",
     "lib/agentImageVideoGen.ts",
   ]) {
-    const source = read(file);
-    let index = source.indexOf("generateViaNai(");
-    while (index !== -1) {
-      const call = source.slice(index, source.indexOf("})", index) + 2);
+    const calls = collectCallArguments(read(file), file, "generateViaNai");
+    assert.equal(calls.length, 1, `${file}: expected one actual NAI dispatch`);
+    for (const args of calls) {
+      assert.equal(args.length, 3, `${file}: NAI options must be the third argument`);
+      const options = args[2];
       assert.ok(
-        !/\breferences\s*:/.test(call),
+        !/\breferences\b/.test(options),
         `${file}: a generateViaNai call passes references, which the adapter cannot use`,
       );
-      index = source.indexOf("generateViaNai(", index + 1);
     }
   }
 });
@@ -117,15 +124,27 @@ test("every NAI_ code the lane can emit is classified", () => {
   }
 });
 
-test("the nai lane advertises no capability the routes refuse", () => {
-  // A catalog that promises image_references while the route answers
-  // NAI_REF_UNSUPPORTED is worse than one that omits the feature.
-  const models = read("routes/models.ts");
-  const laneStart = models.indexOf("function naiLane(");
-  assert.notEqual(laneStart, -1);
-  const lane = models.slice(laneStart, models.indexOf("\n}", laneStart));
-  assert.match(lane, /textOnlyCapabilities\(\)/);
-  assert.ok(!/image_references/.test(lane));
+test("the actual nai lane projection advertises text-only image input", async () => {
+  // Unlike the provider-options-only fixture, the complete catalog reads each
+  // lane's config. Supply the real config shape with all external catalogs off.
+  const ctx = createTestRuntimeContext({
+    naiApiKey: "nai-test-token",
+    config: { ...config, mcp: { ...config.mcp, enabledProviders: [] } },
+  });
+  const lanes = await buildLaneMap(ctx, {
+    detectAgyInstalled: async () => false,
+    listComfyWorkflows: async () => [],
+    probeComfyOrigins: async () => new Map(),
+  });
+  const nai = lanes.nai;
+  assert.ok(nai);
+  assert.equal(nai.models.image.length, 4);
+  assert.deepEqual(nai.models.video, []);
+  for (const model of nai.models.image) {
+    assert.deepEqual(model.capabilities.inputRoles, ["text"]);
+  }
+  assert.equal(nai.surfaces?.generate.references, false);
+  assert.equal(nai.surfaces?.edit.supported, false);
 });
 
 test("nai never joins a JPEG-forcing conditional", () => {
@@ -133,7 +152,7 @@ test("nai never joins a JPEG-forcing conditional", () => {
   const sites: Array<[string, string]> = [
     ["lib/generatePipeline.ts", "const providerForcesJpeg ="],
     ["lib/multimodePipeline.ts", "const mmFormat ="],
-    ["lib/nodeGeneration.ts", 'let resultFormat: "png" | "jpeg" | "webp" ='],
+    ["lib/nodeGeneration.ts", "let resultFormat ="],
   ];
   for (const [file, anchor] of sites) {
     const expression = expressionAt(read(file), anchor);

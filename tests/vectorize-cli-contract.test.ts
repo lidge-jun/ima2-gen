@@ -8,11 +8,11 @@ import { promisify } from "node:util";
 import sharp from "sharp";
 
 const run = promisify(execFile);
-const CLI = ["tsx", "bin/ima2.ts", "vectorize"];
+const CLI = ["--import", "tsx", "bin/ima2.ts", "vectorize"];
 
 async function cli(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   try {
-    const { stdout, stderr } = await run("npx", [...CLI, ...args], { cwd: process.cwd() });
+    const { stdout, stderr } = await run(process.execPath, [...CLI, ...args], { cwd: process.cwd() });
     return { code: 0, stdout, stderr };
   } catch (error) {
     const typed = error as { code?: number; stdout?: string; stderr?: string };

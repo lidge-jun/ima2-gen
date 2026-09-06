@@ -1,4 +1,23 @@
 {
+  "lan": {
+    "title": "Connect to your studio",
+    "body": "Enter the LAN token configured on this studio. It is not saved in browser storage.",
+    "token": "LAN token",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "retry": "Check connection again",
+    "sessionExpired": "Studio sign-in is required. Your drafts are kept.",
+    "unavailable": "The studio could not be reached. Check its address and try again.",
+    "rateLimited": "Too many attempts. Wait before trying again.",
+    "capacity": "The studio session limit is reached. Try again later.",
+    "originRejected": "Open the studio using an address configured by its operator.",
+    "cookieRequired": "Allow cookies for this studio, then connect again.",
+    "duplicateToken": "The address contained multiple tokens. Enter the correct token below.",
+    "sessionTitle": "Studio session",
+    "signOut": "Sign out of studio",
+    "signingOut": "Signing out…",
+    "signOutBody": "Signing out does not cancel running generations."
+  },
   "common": {
     "ok": "OK",
     "cancel": "Cancel",
@@ -72,6 +91,7 @@
     "generatedBatch": "Generated {count} images in {elapsed}s.",
     "generatedSingle": "Generated in {elapsed}s.",
     "generateFailed": "Generation failed.",
+    "jobTrackingTimeout": "Job tracking expired; upstream completion is unknown. Inspect history before retrying.",
     "sessionReloadedElsewhere": "Graph version changed, so the latest graph was reloaded.",
     "promptCopied": "Prompt copied",
     "metadataCopied": "Copied",
@@ -338,7 +358,8 @@
     "webSearch": "Web search",
     "grokApi": "Grok API",
     "grokApiBody": "Runs through bundled progrok: mandatory search, Grok 4.5 image-and-text tool planning in English, then xAI Images API. Attached references use xAI image editing so i2i context is preserved.",
-    "openAccount": "Open account settings"
+    "openAccount": "Open account settings",
+    "mcp": {"loading":"Checking MCP readiness…","error":"MCP readiness could not be read","missing":"Provider is unavailable","disabled":"Provider is disabled","disconnected":"Provider is not connected","locked":"Provider execution is locked","default":"Provider default model","model-missing":"Selected model is unavailable","model-locked":"Selected model execution is locked","ready":"Available at the last connection check.","refresh":"Refresh","observed":"Observed {time}"}
   },
   "generate": {
     "button": "Generate",
@@ -852,6 +873,8 @@
     "label": "Est. cost"
   },
   "result": {
+    "extend": "Extend video",
+    "extendTitle": "Continue this video from its last frame",
     "download": "Download",
     "copyImage": "Copy image",
     "copyLastFrame": "Last\nFrame",
@@ -1587,6 +1610,11 @@
       "title": "Billing required",
       "body": "This provider account has no remaining credit. Check the provider console, then try again."
     },
+    "grokApiKeyMissing": {
+      "title": "Grok API key required",
+      "body": "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok proxy.",
+      "cta": "Open provider settings"
+    },
     "naiApiKeyMissing": {
       "title": "NovelAI token not set",
       "body": "Open Settings and paste your NovelAI persistent API token (starts with pst-). This lane does not use a sign-in session.",
@@ -1849,7 +1877,7 @@
     "imageFallback": "Generated image",
     "videoFallback": "Generated video",
     "emptyCta": "Write your first prompt",
-    "errorTitle": "Generation failed",
+    "errorTitle": "Generation notice",
     "errorHint": "Check the model and API key settings, then try again.",
     "errorDismiss": "Dismiss",
     "savedHint": "Results are saved to your project automatically.",
@@ -2342,6 +2370,7 @@
     "refUndo": "Undo"
   },
   "comfy": {
+    "display": {"localMethod":"Local HTTP","loading":"Checking workflows…","refreshing":"Refreshing the last observation…","loadFailed":"Could not read the workflow catalog.","appAccessRequired":"App access is required to read the catalog.","unavailable":"Workflow availability is unknown.","available":"Available at the last catalog check.","chooseWorkflow":"Choose a workflow","empty":"No workflows registered.","selectedMissing":"The selected workflow is no longer listed.","selectedOffline":"The selected workflow was offline at the last check.","selectedLocked":"The selected workflow is locked.","observedConnected":"An instance responded at the last check.","lastChecked":"Last checked {time}","refresh":"Refresh","manage":"Manage workflows","controlsHelp":"This panel selects an image or video workflow. Its bindings determine which saved request settings apply; selecting a workflow does not verify execution."},
     "workflowsTitle": "ComfyUI workflows",
     "addTitle": "Register a workflow",
     "loading": "Loading workflows…",

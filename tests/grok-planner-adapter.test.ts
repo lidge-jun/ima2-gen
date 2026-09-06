@@ -1,20 +1,44 @@
-import { afterEach, describe, it } from "node:test";
+import { after, afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
+import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
+
+const isolation = await isolateExecution();
+const { imageTransport } = isolation;
+const deniedFetch = globalThis.fetch;
+after(async () => { await isolation.close(); });
+afterEach(async () => {
+  try {
+    await imageTransport.deactivate();
+    assert.deepEqual(imageTransport.violations, []);
+  } finally { globalThis.fetch = deniedFetch; }
+});
+
+const {
   buildGrokPlannerPayload,
   buildGrokSearchPayload,
   generateViaGrok,
   parseGrokImagePlan,
-} from "../lib/grokImageAdapter.js";
-import { generateMultimodeViaGrok } from "../lib/grokMultimodeAdapter.js";
-import { config } from "../config.js";
-import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
+} = await import("../lib/grokImageAdapter.js");
+const { generateMultimodeViaGrok } = await import("../lib/grokMultimodeAdapter.js");
+const { config, DEFAULT_GROK_PLANNER_MODEL } = await import("../config.js");
+for (const key of ["configDir", "dbPath", "generatedDir", "trashDir", "generationRequestLogFile"] as const) {
+  assertOwned(isolation.rootDir, config.storage[key]);
+}
 
-const originalFetch = globalThis.fetch;
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
+function activateImageTransport() {
+  const respond = globalThis.fetch;
+  assert.notEqual(respond, isolation.nativeFetch);
+  assert.notEqual(respond, deniedFetch);
+  imageTransport.activate({
+    hosts: { "cdn.x.ai": [{ address: "8.8.8.8", family: 4 }] },
+    respond: (call) => {
+      assert.equal(call.method, "GET");
+      assert.equal(call.body, "");
+      // Reuse the legacy CDN branch without inventing a JSON POST body.
+      return respond(call.url, { method: "GET", headers: call.headers, signal: call.signal });
+    },
+  });
+}
 
 function ctx(overrides: Record<string, unknown> = {}) {
   return {
@@ -110,7 +134,8 @@ describe("Grok planner adapter", () => {
     assert.deepEqual(plan, { prompt: "cinematic cat", model: "grok-imagine-image-quality", webSearchCalls: 1 });
   });
 
-  it("runs mandatory search, planner, then images API without sending unsupported size", async () => {
+  for (const webSearchEnabled of [undefined, true, false]) {
+  it(`runs legacy generate search=${webSearchEnabled ?? "omitted"}, planner, then images API without unsupported size`, async () => {
     const calls: Array<{ url: string; body: any }> = [];
     globalThis.fetch = (async (url, init) => {
       const body = JSON.parse(String(init?.body || "{}"));
@@ -147,6 +172,7 @@ describe("Grok planner adapter", () => {
       });
     }) as typeof fetch;
 
+    activateImageTransport();
     const result = await generateViaGrok("raw prompt", ctx({
       grokActualPort: 18647,
       grokUrl: "http://127.0.0.1:18647/v1",
@@ -154,22 +180,32 @@ describe("Grok planner adapter", () => {
       model: "grok-imagine-image-quality",
       size: "2048x1152",
       requestId: "req_test",
+      ...(webSearchEnabled === undefined ? {} : { webSearchEnabled }),
     });
 
-    assert.equal(calls.length, 4);
-    assert.equal(calls.slice(0, 3).every((call) => call.url.startsWith("http://127.0.0.1:18647/")), true);
-    assert.equal(calls[0].url.endsWith("/v1/responses"), true);
-    assert.equal(calls[0].body.tool_choice, "required");
-    assert.equal(calls[1].body.model, "grok-4.3");
-    assert.match(plannerUserText(calls[1].body), /Visual search brief/);
-    assert.equal(calls[2].body.prompt, "planned image prompt");
-    assert.equal(calls[2].body.aspect_ratio, "16:9");
-    assert.equal(calls[2].body.resolution, "2k");
-    assert.equal("size" in calls[2].body, false);
+    const searchCalls = webSearchEnabled === false ? 0 : 1;
+    assert.equal(calls.length, searchCalls + 3);
+    assert.equal(calls.slice(0, searchCalls + 2).every((call) => call.url.startsWith("http://127.0.0.1:18647/")), true);
+    assert.equal(calls.filter((call) => call.url.endsWith("/v1/responses")).length, searchCalls);
+    if (searchCalls) {
+      assert.equal(calls[0].url.endsWith("/v1/responses"), true);
+      assert.equal(calls[0].body.tool_choice, "required");
+      assert.match(plannerUserText(calls[1].body), /Visual search brief/);
+    }
+    assert.equal(calls[searchCalls].url.endsWith("/v1/chat/completions"), true);
+    assert.equal(calls[searchCalls].body.model, "grok-4.3");
+    assert.equal(calls[searchCalls + 1].url.endsWith("/v1/images/generations"), true);
+    assert.equal(calls[searchCalls + 1].body.prompt, "planned image prompt");
+    assert.equal(calls[searchCalls + 1].body.aspect_ratio, "16:9");
+    assert.equal(calls[searchCalls + 1].body.resolution, "2k");
+    assert.equal("size" in calls[searchCalls + 1].body, false);
     assert.equal(result.revisedPrompt, "planned image prompt");
-    assert.equal(result.webSearchCalls, 1);
+    assert.equal(result.webSearchCalls, searchCalls);
     assert.equal(result.mime, "image/jpeg");
+    assert.equal(imageTransport.calls.length, 1);
+    assert.equal(imageTransport.resolutions.length, 1);
   });
+  }
 
   it("uses image edits endpoint when classic Grok generation has reference images", async () => {
     const calls: Array<{ url: string; body: any }> = [];
@@ -207,6 +243,7 @@ describe("Grok planner adapter", () => {
       });
     }) as typeof fetch;
 
+    activateImageTransport();
     const result = await generateViaGrok("raw prompt", ctx(), {
       model: "grok-imagine-image-quality",
       size: "2048x1152",
@@ -232,9 +269,12 @@ describe("Grok planner adapter", () => {
     assert.equal(calls[1].body.messages[1].content.filter((part: any) => part.type === "image_url").length, 2);
     assert.equal(result.revisedPrompt, "planned edit prompt");
     assert.equal(result.webSearchCalls, 1);
+    assert.equal(imageTransport.calls.length, 1);
+    assert.equal(imageTransport.resolutions.length, 1);
   });
 
-  it("uses search, multimodal planner, and edits endpoint for Grok multimode references", async () => {
+  for (const webSearchEnabled of [undefined, true, false]) {
+  it(`uses legacy multimode search=${webSearchEnabled ?? "omitted"}, multimodal planner, and edits endpoint`, async () => {
     const calls: Array<{ url: string; body: any }> = [];
     globalThis.fetch = (async (url, init) => {
       const body = JSON.parse(String(init?.body || "{}"));
@@ -270,28 +310,35 @@ describe("Grok planner adapter", () => {
       });
     }) as typeof fetch;
 
+    activateImageTransport();
     const result = await generateMultimodeViaGrok("raw sequence prompt", ctx(), {
       model: "grok-imagine-image-quality",
       size: "2048x1152",
       maxImages: 1,
       requestId: "req_multi_ref",
+      ...(webSearchEnabled === undefined ? {} : { webSearchEnabled }),
       references: [
         { b64: Buffer.from("ref-one").toString("base64"), detectedMime: "image/png" },
       ],
     });
 
-    assert.equal(calls.length, 4);
-    assert.equal(calls[0].url.endsWith("/v1/responses"), true);
-    assert.equal(calls[1].url.endsWith("/v1/chat/completions"), true);
-    assert.equal(calls[2].url.endsWith("/v1/images/edits"), true);
-    assert.equal(calls[2].body.prompt, "planned multimode edit prompt");
-    assert.match(calls[2].body.image.url, /^data:image\/png;base64,/);
-    assert.equal(calls[2].body.aspect_ratio, "16:9");
-    assert.equal(calls[2].body.resolution, "2k");
-    assert.match(plannerUserText(calls[1].body), /Reference images attached: 1/);
-    assert.equal(calls[1].body.messages[1].content.filter((part: any) => part.type === "image_url").length, 1);
+    const searchCalls = webSearchEnabled === false ? 0 : 1;
+    assert.equal(calls.length, searchCalls + 3);
+    assert.equal(calls.filter((call) => call.url.endsWith("/v1/responses")).length, searchCalls);
+    if (searchCalls) assert.equal(calls[0].url.endsWith("/v1/responses"), true);
+    assert.equal(calls[searchCalls].url.endsWith("/v1/chat/completions"), true);
+    assert.equal(calls[searchCalls + 1].url.endsWith("/v1/images/edits"), true);
+    assert.equal(calls[searchCalls + 1].body.prompt, "planned multimode edit prompt");
+    assert.match(calls[searchCalls + 1].body.image.url, /^data:image\/png;base64,/);
+    assert.equal(calls[searchCalls + 1].body.aspect_ratio, "16:9");
+    assert.equal(calls[searchCalls + 1].body.resolution, "2k");
+    assert.match(plannerUserText(calls[searchCalls].body), /Reference images attached: 1/);
+    assert.equal(calls[searchCalls].body.messages[1].content.filter((part: any) => part.type === "image_url").length, 1);
     assert.equal(result.images.length, 1);
     assert.equal(result.images[0].revisedPrompt, "planned multimode edit prompt");
-    assert.equal(result.webSearchCalls, 1);
+    assert.equal(result.webSearchCalls, searchCalls);
+    assert.equal(imageTransport.calls.length, 1);
+    assert.equal(imageTransport.resolutions.length, 1);
   });
+  }
 });

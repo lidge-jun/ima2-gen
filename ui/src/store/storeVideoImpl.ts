@@ -18,6 +18,9 @@ import type { ClientNodeId } from "../lib/graph";
 import { missingElementsBlock } from "./storeGenerateEntryImpl";
 import { clearFlightAbort, registerFlightAbort } from "./flightAbortRegistry";
 import { t } from "../i18n";
+import { handleError } from "../lib/errorHandler";
+import { resolveErrorSpec } from "../lib/errorCodes";
+import { buildNodeErrorInfo } from "../lib/nodeErrorInfo";
 import { compilePresets, type PresetProvider } from "../../../lib/presetCompiler.js";
 import { getAllPresets } from "../lib/presets";
 
@@ -129,7 +132,7 @@ export async function runVideoGenerateImpl(
     set({
       graphNodes: get().graphNodes.map((n) =>
         n.id === nodeId
-          ? { ...n, data: { ...n.data, status: "pending" as const, pendingRequestId: flightId, pendingPhase: "queued", pendingStartedAt: startedAt, partialImageUrl: null, error: undefined } }
+          ? { ...n, data: { ...n.data, status: "pending" as const, pendingRequestId: flightId, pendingPhase: "queued", pendingStartedAt: startedAt, partialImageUrl: null, error: undefined, errorInfo: null } }
           : n,
       ),
     });
@@ -185,6 +188,8 @@ export async function runVideoGenerateImpl(
                   serverNodeId: result.filename.replace(/\.[^.]+$/, ""),
                   imageUrl: result.url,
                   status: "ready" as const,
+                  error: undefined,
+                  errorInfo: null,
                   pendingRequestId: null,
                   pendingPhase: null,
                   pendingStartedAt: null,
@@ -238,6 +243,7 @@ export async function runVideoGenerateImpl(
                     pendingPhase: null,
                     pendingStartedAt: null,
                     error: undefined,
+                    errorInfo: null,
                   },
                 }
               : n,
@@ -245,17 +251,20 @@ export async function runVideoGenerateImpl(
         });
       }
     } else {
-      const message = error instanceof Error ? error.message : "Video generation failed";
+      const trackingExpired = resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT";
+      const message = trackingExpired ? handleError(error, get()).message
+        : error instanceof Error ? error.message : "Video generation failed";
+      const errorInfo = trackingExpired ? { ...buildNodeErrorInfo(error), message } : null;
       if (node && get().activeSessionId === requestSessionId) {
         set({
           graphNodes: get().graphNodes.map((n) =>
             n.id === nodeId
-              ? { ...n, data: { ...n.data, status: "error" as const, pendingRequestId: null, pendingPhase: null, pendingStartedAt: null, error: message } }
+              ? { ...n, data: { ...n.data, status: "error" as const, pendingRequestId: null, pendingPhase: null, pendingStartedAt: null, error: message, errorInfo } }
               : n,
           ),
         });
       }
-      get().showToast(message, true);
+      if (!trackingExpired) get().showToast(message, true);
     }
   } finally {
     const remaining = get().inFlight.filter((f) => f.id !== flightId);
@@ -343,9 +352,10 @@ export async function animateImageImpl(
     await addHistory(videoItem, set, get, { autoSelectStartedAt });
   } catch (error) {
     if (!isCanceledGenerationError(error)) {
-      const message = error instanceof Error ? error.message : "Video generation failed";
-      get().showToast(message, true);
+      if (resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT") handleError(error, get());
+      else get().showToast(error instanceof Error ? error.message : "Video generation failed", true);
     }
+    return false;
   } finally {
     const remaining = get().inFlight.filter((f) => f.id !== flightId);
     saveInFlight(remaining);

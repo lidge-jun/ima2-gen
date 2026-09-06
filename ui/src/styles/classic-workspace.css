@@ -115,15 +115,6 @@
   overflow: hidden;
 }
 
-.composer--bottom .composer__textarea {
-  flex: 0 1 auto;
-  min-height: var(--composer-textarea-min-height);
-  max-height: var(--composer-textarea-max-height);
-  padding: 6px 4px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 .composer--bottom .composer__header,
 .composer--bottom .composer__chips,
 .composer--bottom .composer__toolbar {
@@ -134,6 +125,23 @@
   flex: 0 1 auto;
   max-height: min(10dvh, 82px);
   overflow-y: auto;
+}
+
+/* NAI dual panes in the bottom dock: the dock is capped for a single field, so
+   it grows a little when the second pane is present, and the pane grid takes
+   the remaining room and scrolls instead of pushing the toolbar out of the
+   composer's overflow:hidden box. Rows keep their content minimum. */
+.classic-workspace__dock:has(.composer__prompt-panes--dual) {
+  max-height: min(52dvh, 420px);
+}
+
+@media (max-height: 700px) {
+  /* NAI cannot attach references. In a short dock, its empty disabled tray
+     consumes the space needed to see the editor; retained references stay visible. */
+  .composer--bottom:has(.composer__prompt-panes--dual)
+    .composer__tray-wrap:not(:has([role="listitem"])) {
+    display: none;
+  }
 }
 
 .classic-workspace__dock .generate-row {

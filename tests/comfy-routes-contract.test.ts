@@ -26,6 +26,7 @@ const VIDEO_GRAPH = {
 const VIDEO_BIND = { prompt: { node: "131", input: "prompt" }, output: { node: "92" } };
 
 const originalConfigDir = config.storage.configDir;
+const originalFetch = globalThis.fetch;
 const scratch: string[] = [];
 
 async function withServer<T>(fn: (base: string) => Promise<T>): Promise<T> {
@@ -39,10 +40,18 @@ async function withServer<T>(fn: (base: string) => Promise<T>): Promise<T> {
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", () => resolve()));
   const port = (server.address() as import("node:net").AddressInfo).port;
+  const base = `http://127.0.0.1:${port}`;
+  // Probe results are fixture-owned, never dependent on a live local ComfyUI.
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.startsWith(`${base}/api/`)) return originalFetch(input, init);
+    throw new Error("Fixture ComfyUI origin is unreachable");
+  };
   try {
-    return await fn(`http://127.0.0.1:${port}`);
+    return await fn(base);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    globalThis.fetch = originalFetch;
     (config.storage as { configDir: string }).configDir = originalConfigDir;
   }
 }
@@ -215,8 +224,8 @@ describe("comfy surface guards", () => {
   // for an image the user asked ComfyUI to make — with no error to trace.
   // These guards are removed in wp7 when those surfaces gain real support.
   const sources = [
-    ["lib/multimodePipeline.ts", /respondMultimodeValidationError\(/],
-    ["lib/nodeGeneration.ts", /parentNodeId/],
+    // Actual node/multimode HTTP status, envelopes, precedence and zero-dispatch
+    // assertions live in provider-surface-boundary.test.ts.
     ["lib/agentImageVideoGen.ts", /throw err/],
   ] as const;
 

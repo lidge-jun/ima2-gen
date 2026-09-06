@@ -1,0 +1,85 @@
+# WP08 B — execution ledger and exact transfer correction
+
+A exited near-pass after082 folded the synthetic-document residual. Source has
+not changed since e835; docs checkpoints616433db/a8ebb1c9. Main final line-number
+inspection corrected stale textual ranges inherited in080/081: progress wrapper
+region is491–529 (mirror starts530, not532); provider negative region starts198
+(its introductory comment196); responsive stack/input region is231–243, NOT209
+(209 now belongs to mobile tabs). Move only complete identified rules with parsed
+selector/ancestor checks, not blindly slicing the stale ranges. Mirror remains.
+
+Main owns CSS+AST/radius/SoT. Popper01a072cd-4e74-7700-a3fc-b0c054883ec0 owns
+component fixture/inputspec/TSconfig. Aquinas01a072cd-4e07-79d2-bff8-b3bedecacb0c
+owns J6/appServer/geometryspec/helpers/policyspec/workflowuploads. Neither worker
+may execute tests/builds/browser/project code or mutate git/FSM. Main serializes.
+Production input guard lane is intentionally not dispatched yet: obtain hosted
+baseline RED with actual component tests before applying guards, then rerunGREEN.
+
+P additional direct7source-consumer contracts passed61/0FAIL; initial9passed88,
+total149. App andE2E typechecks both exited0 at e835. No rendered WP08 proof yet.
+Auxiliary WP07 macOSjob101346295722 nowSUCCESS; PR208 body refreshed accordingly.
+
+CSS transferred with a read-only emitter producing apply_patch payloads. First
+combined payload exceeded tool output cap (JSON truncation); no source mutation
+occurred. Separate per-file payloads applied, all retained declaration/ancestor/
+importance ASTs equal before/after reflow. New composer-panes312lines; progress468,
+provider195, Home399, classic160, responsive422. Proof inwp08/css-transfer-proof.json.
+
+Path-coupled legacy assertions failed as expected after moving: focus, mirror
+z-index/sidebar stack and NAI CSS checks. Migrated focus/tray reads and replaced
+NAI CSS regexes with parsed selector/ancestor/declaration/important assertions;
+retained all ten original meanings, added Homefloor/radius, oneowner/import and
+contrast-role assertions. First26focused passed. Two radiusmanifest file paths
+moved, all477 values/selectors preserved. Broader16-file run found one additional
+mobile-composer-tray directread of movedstack; main amended that one read only.
+Test typecheck found PostCSS parent can be Document as well as Container; declared
+the existing Rule.parent|Root.parent union, no any/disabled check.
+
+First actual72floor mutation correctly failed, but its single-line reverse patch
+matched a different min-height0 rule. Restored-check caught this immediately.
+Main inspected numberedselectors, repaired both exact scoped rules and reran13
+PASS. Retained the failed restoration in css-ast-mutations.json; subsequent
+mutation patches include full selector contexts and byte-compare the complete
+file after every restoration. No browser was running from these source inputs.
+
+Worker return: Popper component4files132/245/299lineentry/harness/spec +e2etsconfig,
+77static cases. Aquinas geometry8files,16cases +policyselftest. Additional helper
+composerContrast.ts is the pre-authorized split. Locale en/ko optionalJ6seed maps
+toexistingima2.locale andi18n; existing defaulten unchanged. Bothworkersfrozen.
+Inputguardfiles intentionally still baseline for hostedRED. Main read allworker
+diffs/entries/specs; firstE2Etypecheck found stylehandle inferredNode removal in
+twohelpers; Aquinas changed to explicit HTMLStyleElement-producing evaluateHandle.
+SecondE2Etypecheck0. Main requested policybeforeAllpreflight beforebrowserfixture;
+added while keepingbodyguard. No localsafetyguard was bypassed.
+
+Main UIbuild0 (627modules; existingchunk/dynamicimportwarnings), direct compiler
+probe built1in-memorycomponentbundle1584539bytes/136inputs with write:false and
+NEVER executed it. Structurelinecount drift main48→49 regenerated; inventory0,
+actionlintbothworkflows0. Subsequent exactcheck/hostedbaseline still pending.
+
+## Exact-source baseline scheduling amendment
+
+PR209 draft andCI33984453487 are pinned to52fe86fb, inputguards still absent there.
+Hosted queue delays alljobs. To continue useful B work, main implements the four
+small handlers in a later commit while the immutable52baseline runs. This adjusts
+wall-clock ordering, NOT the causal oracle: tests were written/committed before
+guards; baseline52 must still demonstrate actualnative failures, and finalguarded
+head must separately pass. No baselineRED or nativePASS is claimed yet. CI groups
+include requestedSHA, so the later run must not cancel/replace52. No localbrowser.
+
+Main owns the tightly coupled four-handler delta directly rather than another
+worker. Source check caught an ordering hazard: nativeMenu already prevents
+Escape; an unconditional defaultPrevented return at the start of React keydown
+would bypass Classic's sticky dismissedMentionKeyRef. Preserve Escape branch;
+IME guard precedes it, and defaultPrevented is checked only before Enter submit.
+NativeMenu skips composing/ref/229 then modifiedEnter, leaving normalEscape and
+plainEnter selection unchanged. This is082's preserveEscape requirement, not a
+new global dispatcher. Fresh C must verify both paths.
+
+Main applied the four minimal handlers, preserving Homebusy/blank, Classicmissing,
+compositionCommit microtask and all store/payload semantics. Negative/Home refs
+precede gates; allthree detect ref/native/229; Menu receives existingClassicref,
+ignoresmodifiedEnter and leaves normalselection/Escape. PromptComposer499lines.
+Added actualEscape→click sticky-suppression assertion to the existing native menu
+test. Sixdirectfiles53PASS, app/E2Etypechecks0. Native52RED and finalnativeGREEN
+are still unverified while queued; these local results do not replace them.

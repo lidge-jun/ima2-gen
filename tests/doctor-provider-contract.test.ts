@@ -3,14 +3,30 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import * as path from "node:path";
+import { build } from "esbuild";
+import { runInNewContext } from "node:vm";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const {
-  buildProviderDoctorLines,
-  listedValidateUrls,
-  resolveValidateUrl,
-  verifyConfiguredKeys,
-} = await import("../bin/lib/doctor-providers.ts");
+// Execute the actual provider checker with synthetic config/auth/filesystem.
+// No operator environment, credential store, native auth process or network.
+const compiled = await build({ entryPoints: [resolve(root, "bin/lib/doctor-providers.ts")], bundle: true,
+  write: false, platform: "node", format: "cjs", external: ["node:*"], logLevel: "silent",
+  plugins: [{ name: "doctor-owned-observations", setup(builder) {
+    builder.onResolve({ filter: /(?:config|codexDetect)\.js$/ }, (args) => ({ path: args.path, namespace: "doctor-fixture" }));
+    builder.onLoad({ filter: /.*/, namespace: "doctor-fixture" }, (args) => ({ loader: "js", contents: args.path.endsWith("codexDetect.js")
+      ? 'export const detectCodexAuth=()=>({proxyReady:false,authed:false});'
+      : 'export const config={comfy:{defaultUrl:"http://127.0.0.1:8188"},minimaxProvider:{region:"global_en",globalBaseUrl:"https://api.minimax.io/v1",cnBaseUrl:"https://api.minimax.chat/v1"},diagnostics:{keyTimeoutMs:5000}};' }));
+  } }],
+});
+const modules: Record<string, unknown> = { "node:fs": { existsSync: () => false, constants: {} },
+  "node:fs/promises": {}, "node:path": path, "node:os": { homedir: () => "/synthetic/doctor-home" } };
+const module = { exports: {} };
+runInNewContext(compiled.outputFiles[0]!.text, { module, Buffer, URL, AbortController, setTimeout, clearTimeout,
+  process: { env: {}, platform: "linux" }, fetch: () => { throw Error("Uninjected fetch prohibited"); },
+  require: (name: string) => { assert.ok(Object.hasOwn(modules, name), name); return modules[name]; },
+}, { timeout: 2000 });
+const { buildProviderDoctorLines, listedValidateUrls, resolveValidateUrl, verifyConfiguredKeys } = module.exports as typeof import("../bin/lib/doctor-providers.ts");
 const { listProviders } = await import("../lib/providers/registry.ts");
 const { bundleContainsSecrets, buildDoctorBundle, expectedLaneIds } = await import("../bin/lib/doctor-bundle.ts");
 
@@ -77,10 +93,11 @@ describe("070 doctor provider contract", () => {
   it("redacts secrets from the diagnostic bundle", () => {
     const bundle = buildDoctorBundle({
       version: "test",
-      providerLines: [{ lane: "api", kind: "fail", text: "leaked sk-secret and Bearer abc.def" }],
+      providerLines: [{ code: "AUTH_INVALID", lane: "api", kind: "fail", text: "opaque_password sk-secret and Bearer abc.def" }],
     });
     assert.equal(bundleContainsSecrets(bundle), false);
-    assert.match(JSON.stringify(bundle), /\[redacted\]/);
+    assert.equal(bundle.lanes[0]!.text, "The authentication endpoint rejected the credential.");
+    assert.equal(JSON.stringify(bundle).includes("opaque_password"), false);
   });
 
   it("treats Vertex JSON as a parsed service account, not a file path", () => {
@@ -89,4 +106,30 @@ describe("070 doctor provider contract", () => {
     });
     assert.ok(lines.some((line) => line.lane === "gemini-api" && line.text.includes("service-account JSON present")));
   });
+});
+
+it("remote auth distinguishes status failures and cancels every response body", async () => {
+  for (const [status, code] of [[200, "AUTH_VERIFIED"], [401, "AUTH_INVALID"], [403, "AUTH_INVALID"],
+    [429, "AUTH_RATE_LIMITED"], [503, "AUTH_UPSTREAM_FAILED"]] as const) {
+    let cancelled = 0;
+    const result = await verifyConfiguredKeys({ naiApiKey: "synthetic-owned-key" }, (async (_url, init) => {
+      assert.equal(init?.redirect, "error"); assert.ok(init?.signal);
+      return new Response(new ReadableStream({ cancel() { cancelled++; } }), { status });
+    }) as typeof fetch, { timeoutMs: 100 });
+    assert.equal(result.length, 1); assert.equal(result[0]!.code, code); assert.equal(cancelled, 1);
+    assert.equal(result[0]!.evidence, "remote-auth");
+  }
+});
+
+it("remote auth network and body-cleanup timeout cannot become credential-invalid", async () => {
+  const network = await verifyConfiguredKeys({ naiApiKey: "synthetic-owned-key" }, (async () => {
+    throw Error("https://opaque-secret@invalid.test/upstream-body");
+  }) as typeof fetch, { timeoutMs: 20 });
+  assert.equal(network[0]!.code, "AUTH_NETWORK_FAILED"); assert.equal(JSON.stringify(network).includes("opaque"), false);
+  let signal: AbortSignal | undefined, cancelStarted = false;
+  const timeout = await verifyConfiguredKeys({ naiApiKey: "synthetic-owned-key" }, (async (_url, init) => {
+    signal = init?.signal ?? undefined;
+    return new Response(new ReadableStream({ cancel() { cancelStarted = true; return new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true })); } }));
+  }) as typeof fetch, { timeoutMs: 10 });
+  assert.equal(timeout[0]!.code, "AUTH_TIMEOUT"); assert.equal(cancelStarted, true); assert.equal(signal?.aborted, true);
 });

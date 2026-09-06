@@ -1,9 +1,11 @@
 // 0.09.8 — ImaErrorCode registry + classifier.
 import { classSpec, isPriorityErrorClass } from "./errorClassSpecs";
+import { createLanAuthError } from "./lanSession";
 // Mirrors lib/errorClassify.js on the server. Frontend uses this to map
 // server error codes (or raw strings) to i18n keys + surface (toast vs card).
 
 export type ImaErrorCode =
+  | "LAN_TOKEN_REQUIRED"
   | "REF_TOO_LARGE"
   | "REF_NOT_BASE64"
   | "REF_EMPTY"
@@ -12,6 +14,7 @@ export type ImaErrorCode =
   | "NAI_REF_UNSUPPORTED"
   | "NAI_EDIT_UNSUPPORTED"
   | "NAI_API_KEY_MISSING"
+  | "GROK_API_KEY_MISSING"
   | "NAI_AUTH_FAILED"
   | "NAI_SUBSCRIPTION_REQUIRED"
   | "NAI_RATE_LIMITED"
@@ -45,6 +48,7 @@ export type ImaErrorCode =
   | "APIKEY_DISABLED"
   | "AGY_GENERATION_FAILED"
   | "AGY_TIMEOUT"
+  | "JOB_TRACKING_TIMEOUT"
   | "AGY_PROCESS_ERROR"
   | "AGY_QUOTA_EXHAUSTED"
   | "AGY_PARSE_FAILED"
@@ -53,6 +57,9 @@ export type ImaErrorCode =
   | "UNKNOWN";
 
 export type ErrorSurface = "toast" | "card";
+
+export const JOB_TRACKING_TIMEOUT_MESSAGE =
+  "Job tracking expired; upstream completion is unknown. Inspect history before retrying.";
 
 export type ErrorSpec = {
   surface: ErrorSurface;
@@ -68,6 +75,8 @@ export type ErrorSpec = {
 };
 
 export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
+  // handleError routes this to the LAN gate before either presentation surface.
+  LAN_TOKEN_REQUIRED: { surface: "toast" },
   REF_TOO_LARGE: { surface: "toast", toastKey: "toast.refTooLarge" },
   REF_NOT_BASE64: { surface: "toast", toastKey: "toast.refNotBase64" },
   REF_EMPTY: { surface: "toast", toastKey: "toast.refEmpty" },
@@ -84,6 +93,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   // exactly where the token is pasted. The copy stays NovelAI-specific, so the
   // user is not told to re-run a sign-in flow this lane does not have.
   NAI_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.naiApiKeyMissing", cta: "reauth" },
+  GROK_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.grokApiKeyMissing", cta: "reauth" },
   NAI_AUTH_FAILED: { surface: "card", cardKey: "errorCard.naiAuthFailed", cta: "reauth" },
   NAI_SUBSCRIPTION_REQUIRED: { surface: "card", cardKey: "errorCard.naiSubscriptionRequired", cta: "dismiss" },
   NAI_RATE_LIMITED: { surface: "toast", toastKey: "toast.naiRateLimited", cta: "retry" },
@@ -117,6 +127,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   APIKEY_DISABLED: { surface: "card", cardKey: "errorCard.apikeyDisabled", cta: "dismiss" },
   AGY_GENERATION_FAILED: { surface: "card", cardKey: "errorCard.agyGenerationFailed", cta: "retry" },
   AGY_TIMEOUT: { surface: "card", cardKey: "errorCard.agyTimeout", cta: "retry" },
+  JOB_TRACKING_TIMEOUT: { surface: "toast", toastKey: "toast.jobTrackingTimeout" },
   AGY_PROCESS_ERROR: { surface: "card", cardKey: "errorCard.agyProcessError", cta: "retry" },
   AGY_QUOTA_EXHAUSTED: { surface: "card", cardKey: "errorCard.agyQuotaExhausted", cta: "dismiss" },
   AGY_PARSE_FAILED: { surface: "card", cardKey: "errorCard.agyProcessError", cta: "retry" },
@@ -204,6 +215,7 @@ export type ModerationStage = "input" | "output" | "unknown";
  * generic AUTH_INVALID / BILLING_REQUIRED class card must not override them.
  */
 const SELF_DESCRIBING_AUTH_CODES: readonly ImaErrorCode[] = [
+  "GROK_API_KEY_MISSING",
   "NAI_API_KEY_MISSING",
   "NAI_AUTH_FAILED",
   "NAI_SUBSCRIPTION_REQUIRED",
@@ -237,6 +249,10 @@ export function resolveErrorSpec(err: unknown): ResolvedErrorSpec {
   const rec = e && typeof e === "object" ? e as Record<string, unknown> : {};
   const rawMessage = typeof rec.message === "string" ? rec.message : String(err ?? "");
   const incomingCode = typeof rec.code === "string" ? rec.code : "";
+  if (incomingCode === "LAN_TOKEN_REQUIRED") {
+    return { code: "LAN_TOKEN_REQUIRED", spec: errorCodes.LAN_TOKEN_REQUIRED,
+      message: createLanAuthError().message };
+  }
   const incomingRawCode = typeof rec.rawCode === "string" ? rec.rawCode : undefined;
   const incomingClass = typeof rec.errorClass === "string" ? rec.errorClass : undefined;
   // A wrapper code (e.g. the agent's AGENT_TEXT_ONLY_RESULT) is not in the registry,
@@ -247,6 +263,11 @@ export function resolveErrorSpec(err: unknown): ResolvedErrorSpec {
     : incomingRawCode && incomingRawCode in errorCodes
       ? incomingRawCode as ImaErrorCode
       : undefined;
+  if (registered === "JOB_TRACKING_TIMEOUT" ||
+    (registered === "UNKNOWN" && incomingRawCode === "JOB_TRACKING_TIMEOUT")) {
+    return { code: "JOB_TRACKING_TIMEOUT", spec: errorCodes.JOB_TRACKING_TIMEOUT,
+      message: JOB_TRACKING_TIMEOUT_MESSAGE };
+  }
   const priority = isPriorityErrorClass(incomingClass) ? classSpec(incomingClass) : undefined;
   // WP4 audit blocker: the priority class card says "sign in again from Settings",
   // which is wrong for a lane authenticated by a pasted persistent token. A code

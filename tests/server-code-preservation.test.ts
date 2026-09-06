@@ -11,6 +11,19 @@ function upstreamError(code: string, status: number, extras: UpstreamErr = {}): 
   return { message: `${code} test failure`, code, status, ...extras };
 }
 
+test("missing Grok image key keeps its specific code with AUTH_INVALID decoration", async () => {
+  const { providerErrorClass } = await import("../lib/errors/providerMap.ts");
+  const original = upstreamError("GROK_API_KEY_MISSING", 401);
+  assert.equal(providerErrorClass(original.code, original.status), "AUTH_INVALID");
+  const normalized = normalizeGenerationFailure(original);
+  assertDecoration(normalized, {
+    code: "GROK_API_KEY_MISSING", rawCode: "GROK_API_KEY_MISSING", errorClass: "AUTH_INVALID",
+  });
+  assert.equal(normalized.status, 401);
+  assert.equal(normalized.message, original.message);
+  assert.equal(isNonRetryableGenerationError(original), true);
+});
+
 function assertDecoration(
   normalized: Error & { code?: string; rawCode?: string; errorClass?: string },
   expected: { code: string; rawCode: string; errorClass: string },

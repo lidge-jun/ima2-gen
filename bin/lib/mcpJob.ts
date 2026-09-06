@@ -1,5 +1,9 @@
 import { openSse, sseUrlWithCursor, type OpenSseResult, type SseEvent } from "./sse.js";
 import { normalizeTerminalStatus } from "../../lib/jobStatus.js";
+import { fetchServer } from "./client.js";
+
+const JOB_TRACKING_TIMEOUT_MESSAGE =
+  "Job tracking expired; upstream completion is unknown. Inspect history before retrying.";
 
 export interface McpJobOptions {
   serverBase: string;
@@ -82,7 +86,7 @@ async function responseError(response: Response): Promise<McpJobError> {
 
 async function submitJob(opts: McpJobOptions, signal: AbortSignal): Promise<void> {
   try {
-    const response = await fetch(`${baseUrl(opts.serverBase)}${opts.postPath ?? "/api/mcp/generate"}`, {
+    const response = await fetchServer(opts.serverBase, opts.postPath ?? "/api/mcp/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...opts.body, kind: opts.kind, requestId: opts.requestId }),
@@ -142,32 +146,33 @@ function matchingOutcome(event: SseEvent, opts: McpJobOptions): StreamOutcome | 
       if (event.event === "done") return doneResult(data);
     } else {
       const envErr = asRecord(envelope.error);
+      const code = typeof envErr?.code === "string" ? envErr.code
+        : typeof data.code === "string" ? data.code : fallbackCode(phase);
       return {
         kind: "error",
-        error: new McpJobError(
-          typeof envErr?.code === "string" ? envErr.code
-            : typeof data.code === "string" ? data.code
-            : fallbackCode(phase),
-          errorMessage(data),
-        ),
+        error: code === "JOB_TRACKING_TIMEOUT"
+          ? new McpJobError(code, JOB_TRACKING_TIMEOUT_MESSAGE, { status: 504 })
+          : new McpJobError(code, errorMessage(data)),
       };
     }
   }
   if (event.event === "done") return doneResult(data);
   if (event.event === "error") {
+    const code = typeof data.code === "string" ? data.code : "MCP_JOB_FAILED";
     return {
       kind: "error",
-      error: new McpJobError(
-        typeof data.code === "string" ? data.code : "MCP_JOB_FAILED",
-        typeof data.message === "string" ? data.message : "MCP job failed",
-      ),
+      error: code === "JOB_TRACKING_TIMEOUT"
+        ? new McpJobError(code, JOB_TRACKING_TIMEOUT_MESSAGE, { status: 504 })
+        : new McpJobError(code, typeof data.message === "string" ? data.message : "MCP job failed"),
     };
   }
   return null;
 }
 
 async function consumeStream(stream: OpenSseResult, opts: McpJobOptions): Promise<StreamOutcome> {
-  let lastEventId: string | undefined;
+  // Keep the server's pre-job bookmark until an event is actually observed.
+  // This makes an EOF before the first frame recoverable without reposting.
+  let lastEventId: string | undefined = stream.initialEventId;
   try {
     for await (const event of stream.events) {
       if (event.id !== undefined) lastEventId = event.id;
@@ -185,6 +190,9 @@ function terminalResult(job: Record<string, unknown>): McpJobResult | McpJobErro
   const meta = asRecord(job.meta) ?? {};
   const normalized = normalizeTerminalStatus(status);
   if (normalized === "error") {
+    if (job.errorCode === "JOB_TRACKING_TIMEOUT") {
+      return new McpJobError("JOB_TRACKING_TIMEOUT", JOB_TRACKING_TIMEOUT_MESSAGE, { status: 504 });
+    }
     return new McpJobError(
       typeof job.errorCode === "string" ? job.errorCode : "MCP_JOB_FAILED",
       typeof meta.message === "string" ? meta.message : "MCP job failed",
@@ -210,7 +218,7 @@ function terminalResult(job: Record<string, unknown>): McpJobResult | McpJobErro
 
 async function recoverReplayGap(opts: McpJobOptions, signal: AbortSignal): Promise<McpJobResult> {
   try {
-    const response = await fetch(`${baseUrl(opts.serverBase)}/api/inflight?includeTerminal=1`, { signal });
+    const response = await fetchServer(opts.serverBase, "/api/inflight?includeTerminal=1", { signal });
     if (!response.ok) throw await responseError(response);
     const envelope = asRecord(await response.json()) ?? {};
     const jobs = Array.isArray(envelope.terminalJobs) ? envelope.terminalJobs : [];

@@ -224,7 +224,8 @@ describe("MCP provider UI contract", () => {
     const helpers = readSource("ui/src/store/storeHelpers.ts");
 
     assert.match(types, /"mcp-image" \| "mcp-video" \| `mcp-action-\$\{string\}`/);
-    assert.match(helpers, /scope\.kind === job\.kind/);
+    assert.match(helpers, /if \(!matchesInflightScope\(job, scopes\)\)/);
+    assert.match(helpers, /const kind = job\.kind \?\? "classic";[\s\S]*?kind === scope\.kind/);
     assert.match(helpers, /value === "mcp-image" \|\| value === "mcp-video"/);
     assert.match(helpers, /value\.startsWith\("mcp-action-"\)/);
   });

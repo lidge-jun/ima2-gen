@@ -3,8 +3,41 @@ created: 2026-04-23
 tags: [ima2-gen, operations, build, testing]
 aliases: [ima2 operations, ima2 infra, image_gen operations]
 ---
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+The runtime table is package-derived. Clean-checkout builds and installed-package smoke tests prove emitted JavaScript freshness.
 
 # Infrastructure And Operations
+
+## Local/LAN access operation
+
+Non-loopback configuration requires a private `IMA2_LAN_TOKEN`; browser sessions
+are memory-only, origin-bound, absolute eight-hour capabilities. API/media access
+uses the same instance; session revocation closes admitted responses before HTTP
+shutdown. Token rotation requires restart. CLI transport attaches the environment
+token only after explicit server selection, with redirects disabled.
+
+`IMA2_PUBLIC_ORIGINS` is a strict JSON array for exact serving origins (proxy/DNS/
+published-port differences). No forwarded-header trust or broad CORS exception.
+HTTP LAN is not encrypted; use TLS/VPN for untrusted networks. New private media
+headers cannot revoke previously cached/downloaded copies; purge controlled caches.
+Rollback must disable external ingress or bind loopback before reverting protection.
+Windows configuration confidentiality relies on operator-directory ACLs; POSIX
+private writes use exclusive0600 temporary files and atomic rename.
+
+Native verification uses existing hosted CI, LAN/session/media/CLI tests and J9
+with synthetic providers/credentials. The fixture keeps actual binds loopback and
+unchanged child egress/filesystem/process restrictions. See docs/API.md and CLI.md
+for user contracts; no private state or credential is part of runtime receipts.
 
 `ima2-gen` operates as an npm package, local Node server, OAuth proxy, SQLite-backed graph store, image file store, and React build artifact. Users see one CLI, but internally the server, UI bundle, local config, runtime port discovery, and runtime data move together.
 
@@ -38,11 +71,11 @@ graph TD
 | version | `package.json` is authoritative; release commits update it before promotion |
 | type | `module` |
 | bin | `ima2` -> `./bin/ima2.js` |
-| package engine | `node >=20` |
+| package engine | generated runtime-install table above; `package.json` is authoritative |
 | release toolchain | Node `24.17.0` from `.node-version`; npm `11.18.0` from `packageManager` |
 | publish files | `bin/**/*.js`, `lib/**/*.js`, `routes/**/*.js`, `skills/`, `ui/dist/`, `docs/`, `vendor/`, `assets/card-news/templates/`, `integrations/comfyui/ima2_gen_bridge/*`, `server.js`, `config.js`, `.env.example`, `README.md`, `CHANGELOG.md`, `LICENSE` |
-| bundled dependencies | `progrok`, patched `openai-oauth` |
-| major dependencies | exact `@openai/codex@0.144.1`, `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `trash`, `ulid`, exact `zod@3.25.76` |
+| bundled dependencies | `progrok`, patched `openai-oauth`, `zod` |
+| major dependencies | `@openai/codex`, `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `trash`, `ulid`, `zod`; exact versions come from the package manifest and lockfile |
 
 README may still mention a different Node baseline. The operational baseline is the current `engines.node` field in `package.json`.
 
@@ -57,8 +90,8 @@ README may still mention a different Node baseline. The operational baseline is 
 | `npm run ui:dev` | `cd ui && npm run dev` | Vite dev server |
 | `npm run ui:build` | `cd ui && npm run build` | TypeScript build and Vite build |
 | `npm run build` | `npm run ui:build` | Build UI bundle before publish |
-| `npm run build:server` | `tsc -p tsconfig.build.json` | Emit committed `*.js` runtime artifacts for `server`, `routes/`, `lib/`, `config` |
-| `npm run build:cli` | `tsc -p tsconfig.bin.json && node scripts/fix-shebangs.mjs` | Emit committed CLI runtime artifacts for `bin/` and reinstate shebangs |
+| `npm run build:server` | `tsc -p tsconfig.build.json` | Emit ignored `*.js` runtime artifacts for `server`, `routes/`, `lib/`, `config` |
+| `npm run build:cli` | `tsc -p tsconfig.bin.json && node scripts/fix-shebangs.mjs` | Emit ignored CLI runtime artifacts for `bin/` and reinstate shebangs |
 | `npm run typecheck` | `tsc -p tsconfig.json --noEmit` | Source-level type check for the migrated TypeScript surface |
 | `npm run typecheck:tests` | `tsc -p tsconfig.tests.json --noEmit` | Type check for the `tests/` overlay (runs against the test-only tsconfig) |
 | `npm run test:inventory` | `node scripts/classify-tests.mjs --check --fail-js-runtime` | Inventory gate: classifies `tests/*` and fails if a `.js` runtime test slips back in instead of `.ts` |
@@ -72,7 +105,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `npm run verify:release:source` | canonical source gate | Native imports, typechecks, inventory, builds, full tests, package lint, install policy, root production audit, and UI build-dependency audit |
 | `npm run verify:release` | canonical release gate | Source gate plus a real packed-package install and server smoke |
 | `npm run docs:refresh-line-counts` | `node scripts/refresh-structure-line-counts.mjs` | Refresh `structure/01-file-function-map.md` lib/bin/route line counts; pass `--check` in CI |
-| `prepack` | `ui:build && build:server && build:cli` | Refresh all committed runtime artifacts (UI, server, CLI) before tarball |
+| `prepack` | `ui:build && build:server && build:cli` | Rebuild runtime artifacts (UI, server, CLI) before tarball |
 | `prepublishOnly` | OIDC context assertion + `verify:release` | Blocks accidental directory publishing outside the registered OIDC workflow; the workflow publishes only its already-tested tarball with lifecycle scripts disabled. |
 
 `release:*` scripts dispatch `.github/workflows/release.yml`, which runs the verified preview -> stable-tag OIDC flow in CI and creates the GitHub Release only after npm proof. Agents must not run them unless the user explicitly asks.
@@ -92,6 +125,17 @@ README may still mention a different Node baseline. The operational baseline is 
 | `ui/dist/` | Active UI bundle served by server | Build output, not source |
 
 `ima2 doctor` includes a Storage section with the current gallery path, legacy-source counts, and recovery-guide pointer. The browser gallery also calls `/api/storage/status` and can open the current generated folder through `/api/storage/open-generated-dir`; that endpoint accepts no arbitrary path.
+
+Machine `doctor --json` uses fixed code-derived messages with a fail-preserving
+summary; it does not serialize free-form provider errors or storage paths.
+`--installation --json` runs before config/account initialization and checks only
+the package engine, dependencies/bins, in-memory native binding, skills and UI.
+`--verify-keys` is explicit non-generating remote authentication, with a5000ms
+deadline; `--runtime <loopback-origin>` is explicit local health/version with a1500ms
+deadline and no credentials/redirects. Neither establishes provider generation
+success. Timeout overrides are capped at30000ms. Generic logger error strings
+redact URL-shaped/Bearer/query credentials before truncation and omit nested
+cause/body/stack data; this does not claim arbitrary opaque free text is safe.
 
 ## Environment Variables
 
@@ -191,15 +235,97 @@ Production releases use GitHub Actions `.github/workflows/publish.yml` with npm 
 | Trigger | npm dist-tag | Notes |
 |---|---|---|
 | Push to `preview` | `preview` | Publishes `X.Y.Z-preview.YYMMDD.RUN_ID.ATTEMPT`; a stable-tagged SHA already at `latest` is skipped |
-| Push stable tag `vX.Y.Z` | `latest` | Tag/version must match, version must advance npm `latest`, and tag SHA must equal `origin/main` |
+| Push stable tag `vX.Y.Z` | `latest` | Tag/version must match, version must advance npm `latest`, and main/dev/preview/tag must identify the same source |
 
-`workflow_dispatch` and GitHub Release events are not publish triggers. All third-party Actions use full commit SHAs. The workflow has `prepare`, `package`, `windows-consumer`, `publish`, `create-github-release`, and `verify-existing` jobs; only `publish` receives `id-token: write`. The package job runs the canonical source gate, packs once, embeds the source `gitHead`, records SHA-512/integrity in `release-manifest.json`, generates `sbom.cdx.json`, and install-smokes that exact tarball. Before publish, Windows Node 22/npm 11 and Node 24/npm 12 consumers install the previous registry release into an isolated global prefix, update it with that exact tarball, and prove the package-local Codex/OAuth path from an unrelated working directory. Codex login is launched from the package-local JavaScript bin with `cli_auth_credentials_store="file"`; the proxy starts only when a concrete auth file exists and receives that path through `--oauth-file`, so a keyring-only Codex session cannot be reported as proxy-ready. The publish job then downloads and verifies those bytes, rechecks live refs, publishes the tarball, and reads npm metadata plus the SLSA attestation back. For stable `latest` publishes, the follow-on `create-github-release` job creates or refreshes the matching GitHub Release (`gh release create --verify-tag --latest`) and attaches `release-manifest.json` plus `sbom.cdx.json` from the same artifact set, so npm success no longer depends on a local finalize step. `verify-existing` also reuses `ensure-github-release` for already-published stable tags that are missing a GitHub Release entry. Repository, workflow path, push ref, commit, original run/attempt, GitHub-hosted builder, in-toto/SLSA schema, package subject, and SHA-512 must all match; `npm audit signatures` cryptographically verifies registry signatures and Sigstore provenance. A full stable-workflow rerun after an immutable version exists takes `verify-existing`. A failed-job-only rerun reaches a second registry guard inside the publish job: a correctly signed existing version skips `npm publish` and verifies its original provenance attempt, while a fresh publication must prove the current run/attempt.
+Scoped `workflow_dispatch` with `publish_ref`/`publish_sha` is also supported; GitHub Release events are not publish triggers. All third-party Actions use full commit SHAs. Jobs are `prepare`, `package`, `windows-consumer`, `publish-preview`, `publish-stable`, `create-github-release`, and `verify-existing`. OIDC is confined to the two publishers and the post-publish attestation job; packaging has no OIDC token. The package job runs the canonical source gate, packs once, embeds `gitHead`, records SHA-512/integrity in `release-manifest.json`, emits `sbom.cdx.json`, and install-smokes that tarball. The preview lane additionally installs/updates that artifact on Windows Node22/npm11 and Node24/npm12 and probes package-local Codex/OAuth. Stable publication revalidates the matching preview source-SHA proof rather than repeating that consumer matrix.
 
-`.github/workflows/release.yml` (`workflow_dispatch`, `bump` input) owns the cut. Its `cut` job asserts the baseline through `scripts/release-cut.mjs preflight` (origin/main equals the checkout and already contains dev and preview), creates the version commit, pushes `main`, promotes that exact SHA to `preview`, dispatches `publish.yml` for the preview channel, waits for that run, and then requires the npm preview proof. Only then does the `tag` job re-check the proof, create the stable tag, atomically push `main`, `dev`, and the tag, and dispatch `publish.yml` for the stable channel. `contents: write` is scoped to those two jobs and neither requests `id-token: write`.
+Codex login uses the package-local JavaScript bin with `cli_auth_credentials_store="file"`; the proxy requires a concrete auth file passed through `--oauth-file`. A keyring-only session is not proxy-ready. Publishers download the tested artifacts, recheck live refs, publish immutable bytes and verify registry/tag/integrity/Sigstore provenance. The stable follow-on creates the GitHub Release and attaches its manifest/SBOM; the TGZ is available from npm and the Actions artifact, not assumed to be a GitHub Release attachment. `verify-existing` recovers already-published versions without republishing. Repository, workflow, allowed ref, source commit, original run/attempt, GitHub-hosted builder and subject SHA-512 must agree; `npm audit signatures` performs cryptographic verification. A failed-job rerun checks immutable registry state before deciding whether publishing is necessary.
+
+`.github/workflows/release.yml` owns the cut. Its baseline must equal origin/main and contain dev/preview and the recorded required-unit commits. It creates the version commit, runs release verification, and proves exact-candidate CI through a leased candidate ref **before** moving main/preview. It then publishes/verifies preview. The `npm-stable` environment gates tagging; after preview proof and unmoved-ref checks, the tag job atomically pushes main/dev/tag and dispatches stable publication. Both cut/tag jobs have scoped contents/actions writes and no OIDC publication permission. `expected_sha` guards the caller's chosen baseline; real release, dry-run and canary modes remain distinct.
 
 `publish.yml` is reached by `workflow_dispatch` as well as by its original preview/tag pushes, because a push authenticated with `GITHUB_TOKEN` emits no workflow event; without that dispatch a CI-minted tag would leave an immutable tag with no npm package. The dispatch cannot widen what may be published: `PUBLISH_REF`/`PUBLISH_SHA` feed the same `classifyPublish`, which still accepts only `refs/heads/preview` or a `v*` tag matching `package.json`, and stable publishing still requires `main`, `dev`, `preview`, and the tag to share one SHA plus a matching npm preview `gitHead`. Every checkout in that workflow pins the published SHA so a dispatch cannot package the default branch. Recovery for an already-published version is the `verify-existing` job, which reuses `ensure-github-release`.
 
 ## Development And Verification
+
+Pages publication is an explicit post-stable step, not a main-push side effect.
+Dispatch pages.yml with release_version and the full release_sha only after the
+canonical package publication is verified. Its build checks provenance, installs
+that exact registry version in an owned directory, runs offline installation
+doctor, and binds the report to source/tag/exact/latest metadata before uploading
+the site. Failure leaves the previous site live. Once latest advances, recovery
+uses a corrected forward release; an arbitrary older site cannot bypass this gate.
+
+`npm run docs:runtime` projects package/.node-version metadata into current docs
+and source/public installers. `npm run docs:runtime:check` checks drift without
+writes. Windows scheduled and candidate CI both require exact-SHA checkout,
+hosted installer behavior and packed installation before claiming acceptance.
+
+Candidate CI binds every Linux, Windows, macOS-install and UI checkout to the
+requested SHA (or event SHA when no override was supplied). macOS runs focused
+native installer/offline-doctor/packed smoke, not another full suite. PR Fast runs
+for every PR base, checks the synthetic merge SHA, and prints the separate PR head
+SHA. Full Git history is required by existing release provenance checks; HEAD^1
+alone is enough only for the blob budget. A pending/cancelled/missing job is not
+acceptance. After a branch changes, prior runtime checks do not verify the new tip.
+PR backend and frontend checks use independent hosted runners: server tests must
+not leave configuration stores on the UI fixture's otherwise untouched machine.
+The terminal check retains the name `PR fast gate` and succeeds only when both
+jobs succeed. Existing UI isolation guards are unchanged; no stores are deleted.
+
+The API guard matches `/api` case-insensitively with a segment boundary. Its only
+OAuth callback exemption is GET on the exact callback path; state/PKCE validation
+still owns that redirect. Per-app request budgets then run before JSON parsing:
+600 total and120 mutating requests per socket peer per60 seconds, at most4096
+tracked peers. Responses exceeding a budget return429/API_RATE_LIMITED with
+Retry-After. Forwarded headers cannot choose a budget identity. Existing SSE
+frames are not new requests; static UI/media are outside this admission counter.
+These code-owned defaults and existing job concurrency limits protect one process,
+not a distributed deployment. LAN explicit-token comparisons additionally share
+a 10-failures/60-second socket-peer cooldown across API/media/status/bootstrap.
+Valid cookie-only access is not blocked by bearer cooldown; cookie expiry and
+normal token-free loopback use retain their own rules.
+
+### Installed release UI verification
+
+The `published-ui-smoke.yml` workflow reuses the installed-tarball smoke's
+owned server and the existing Playwright dependency. `artifact_kind=candidate`
+exercises a packed current checkout; `artifact_kind=published` requires the exact
+stable tag, registry/provenance and manifest/TGZ digest before installation.
+Candidate evidence never substitutes for published evidence. The driver commit
+and installed product commit are recorded separately.
+
+After canonical publication:
+
+```sh
+gh workflow run published-ui-smoke.yml --ref main \
+  -f artifact_kind=published -f release_sha=<release-sha> -f release_version=<version>
+```
+
+The opt-in `IMA2_PACKAGE_UI_OUTPUT_DIR` in `tests/package-install-smoke.mjs`
+captures desktop/mobile NovelAI panes from installed assets, with synthetic
+provider metadata and no generation/account mutations. Real health/auth/static
+responses remain unmocked; served JS/CSS bytes are checked against the installed
+manifest. Read the original screenshots and JSON before accepting the result.
+Published verification is manual-only. A path-filtered push trigger on the single
+release-preparation branch bootstraps candidate evidence before the workflow
+exists on main; it cannot select published mode. The workflow neither publishes
+nor schedules follow-up work; existing package
+smoke runs without this option do not launch a browser.
+
+Accepted `/api/events` response headers include `x-ima2-event-cursor`, the effective
+cursor before replay. CLI `openSse` exposes a validated `initialEventId` before the
+job POST, so an EOF before any frame can reconnect without submitting the job
+again. Missing headers support older servers but do not promise this recovery.
+Retention gaps still use existing snapshot/error handling and tracking deadlines.
+
+Node metadata/image readers check the canonical target against configured generated
+storage, including the metadata-absent parent fallback. Canvas update/bake/revert
+checks existing media and sidecars; writes preflight both leaves before changing
+the image. Canvas leaf links/directories are refused, while absent new output files
+are allowed. Single-asset trash cannot target a directory or storage root; restore
+validates source, optional sidecar and destination parent before moving files.
+These are path-boundary checks, not atomic protection from concurrent privileged
+filesystem replacement.
 
 | Task | Command | Expected result |
 |---|---|---|

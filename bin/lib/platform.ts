@@ -1,7 +1,7 @@
 // Cross-platform helpers (Windows / macOS / Linux / WSL).
 // Keep this file tiny & dependency-free. Node 18+ only.
 
-import { spawn, execSync } from "node:child_process";
+import { spawn, execFileSync, execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { errInfo } from "../../lib/errInfo.js";
@@ -56,18 +56,22 @@ export function spawnBin(name: string, args: string[], opts: Parameters<typeof s
  */
 export function openUrl(url: string): { ok: boolean; error?: string } {
   try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { ok: false, error: "only http(s) URLs can be opened" };
+    }
     if (isMac) {
-      execSync(`open ${JSON.stringify(url)}`, { stdio: "ignore" });
-    } else if (isWin) {
-      execSync(`cmd /c start "" ${JSON.stringify(url)}`, { stdio: "ignore" });
-    } else if (isWsl()) {
-      // WSL: hand off to Windows via powershell
-      execSync(`powershell.exe -NoProfile -Command Start-Process ${JSON.stringify(url)}`, { stdio: "ignore" });
+      execFileSync("open", [url], { stdio: "ignore" });
+    } else if (isWin || isWsl()) {
+      // Only base64 data varies; URL punctuation never enters PowerShell syntax.
+      const encoded = Buffer.from(url, "utf8").toString("base64");
+      const command = `$u=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); Start-Process -FilePath $u -ErrorAction Stop`;
+      execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", Buffer.from(command, "utf16le").toString("base64")], { stdio: "ignore", windowsHide: true });
     } else {
       if (!hasDesktopSession()) {
         return { ok: false, error: "no desktop session (DISPLAY/WAYLAND_DISPLAY unset)" };
       }
-      execSync(`xdg-open ${JSON.stringify(url)}`, { stdio: "ignore" });
+      execFileSync("xdg-open", [url], { stdio: "ignore" });
     }
     return { ok: true };
   } catch (e) {
@@ -125,4 +129,3 @@ export function killProcessTree(pid: number | undefined) {
     // Process already exited
   }
 }
-

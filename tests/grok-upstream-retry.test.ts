@@ -2,6 +2,8 @@
 // asserts how many times the replayable fetch actually ran.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
+import type { RetryResponse } from "../lib/grokUpstreamRetry.js";
 import {
   grokFetchWithRetry,
   isConnectionResetError,
@@ -58,6 +60,113 @@ describe("grok upstream retry classification", () => {
 });
 
 describe("grokFetchWithRetry", () => {
+  it("infers native Response methods and preserves the exact native object", async () => {
+    const native = new Response('{"native":true}', { headers: { "content-type": "application/json" } });
+    const result = await grokFetchWithRetry(async () => native);
+    const text: Promise<string> = result.clone().text();
+    const json: Promise<unknown> = result.json();
+    assert.equal(result, native);
+    assert.equal(await text, '{"native":true}');
+    assert.deepEqual(await json, { native: true });
+  });
+
+  for (const cleanup of ["resolve", "reject", "never", "throw"] as const) {
+    it(`structural subtype: ${cleanup} cleanup precedes retry without delaying Retry-After`, async (t) => {
+      t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+      const order: string[] = [];
+      let calls = 0;
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      const controller = new AbortController();
+      const success = { ok: true, status: 200, headers: new Headers(), body: null, marker: "structural-native" as const } satisfies RetryResponse & { marker: string };
+      const transient = { ...success, ok: false, status: 503, headers: new Headers({ "retry-after": "2" }),
+        body: { cancel(): Promise<void> {
+          order.push("cancel");
+          if (cleanup === "throw") throw new Error("advisory cleanup");
+          if (cleanup === "reject") return Promise.reject(new Error("advisory cleanup"));
+          return cleanup === "never" ? held : Promise.resolve();
+        } },
+      };
+      const work = grokFetchWithRetry(async () => {
+        order.push(`fetch${++calls}`);
+        return calls === 1 ? transient : success;
+      }, { signal: controller.signal });
+      try {
+        await setImmediate();
+        assert.deepEqual(order, ["fetch1", "cancel"]);
+        t.mock.timers.tick(1_999);
+        await setImmediate();
+        assert.equal(calls, 1);
+        t.mock.timers.tick(1);
+        const result = await work;
+        const marker: "structural-native" = result.marker;
+        assert.equal(result, success);
+        assert.equal(marker, "structural-native");
+        assert.equal(Date.now(), 2_000);
+        assert.deepEqual(order, ["fetch1", "cancel", "fetch2"]);
+      } finally {
+        controller.abort(); release();
+        await Promise.allSettled([work]);
+        t.mock.timers.reset();
+      }
+    });
+  }
+
+  it("abort during structural retry delay prevents another fetch even with pending cleanup", async (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+    const controller = new AbortController();
+    const reason = new Error("owned retry abort");
+    let calls = 0;
+    let cancels = 0;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const work = grokFetchWithRetry(async () => {
+      calls++;
+      return { ok: false, status: 503, headers: new Headers({ "retry-after": "2" }),
+        body: { cancel() { cancels++; return held; } } };
+    }, { signal: controller.signal });
+    const rejected = assert.rejects(work, (error) => error === reason);
+    try {
+      await setImmediate();
+      assert.equal(cancels, 1);
+      controller.abort(reason);
+      await rejected;
+      t.mock.timers.tick(10_000);
+      await setImmediate();
+      assert.equal(calls, 1);
+      assert.equal(cancels, 1);
+    } finally {
+      controller.abort(reason); release();
+      await Promise.allSettled([work, rejected]);
+      t.mock.timers.reset();
+    }
+  });
+
+  it("structural transient exhaustion returns the third object and cancels only discarded attempts", async (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+    const order: string[] = [];
+    const controller = new AbortController();
+    let calls = 0;
+    const responses = [1, 2, 3].map((id) => ({
+      ok: false, status: 503, headers: new Headers({ "retry-after": "2" }), marker: id,
+      body: { cancel() { order.push(`cancel${id}`); return Promise.resolve(); } },
+    }));
+    const work = grokFetchWithRetry(async () => {
+      order.push(`fetch${++calls}`);
+      return responses[calls - 1]!;
+    }, { attempts: 3, signal: controller.signal });
+    try {
+      await setImmediate(); t.mock.timers.tick(2_000);
+      await setImmediate(); t.mock.timers.tick(2_000);
+      const result = await work;
+      assert.equal(result, responses[2]);
+      assert.equal(result.marker, 3);
+      assert.deepEqual(order, ["fetch1", "cancel1", "fetch2", "cancel2", "fetch3"]);
+    } finally {
+      controller.abort(); await Promise.allSettled([work]); t.mock.timers.reset();
+    }
+  });
+
   it("replays a reset and returns the eventual success", async () => {
     let calls = 0;
     const res = await grokFetchWithRetry(async () => {

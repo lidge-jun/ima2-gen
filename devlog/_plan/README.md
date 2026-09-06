@@ -1,6 +1,6 @@
 ---
 created: 2026-04-23
-updated: 2026-08-31
+updated: 2026-09-07
 tags: [ima2-gen, devlog, roadmap]
 aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 ---
@@ -24,6 +24,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
+| `260905_production_readiness/` | WP00–WP12s 검증 완료, WP13 릴리스 준비 중. 늦은 제품 리뷰 수정과 최종 후보 검증 진행. 구현 PR 머지·main/preview 통합·배포 미완료. 근거: `130_0_current_revalidation.md`, `130_4_late_review_fold.md`, `131_release_readiness.md`. |
 | `260819c_grok_proxy_supervision/` | 조사 + 로드맵 완료 (000-030), 구현 미착수. Grok 프록시 수명주기 재설계 — ensure 진입점, 로그인 재기동, 프로브 기반 상태. |
 
 ## 열린 이슈

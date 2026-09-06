@@ -33,6 +33,7 @@ type Props<V extends string> = {
   value: V;
   onChange: (v: V) => void;
   ariaLabel?: string;
+  ariaDescribedBy?: string;
   className?: string;
   id?: string;
   disabled?: boolean;
@@ -92,6 +93,7 @@ export function Select<V extends string>({
   value,
   onChange,
   ariaLabel,
+  ariaDescribedBy,
   className,
   id,
   disabled,
@@ -340,6 +342,7 @@ export function Select<V extends string>({
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && flat[activeIndex] ? optionId(activeIndex) : undefined}
         aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled || isEmpty}
         title={title}
         onClick={() => (open ? setOpen(false) : openList())}

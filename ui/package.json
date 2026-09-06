@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && tsc -p tsconfig.e2e.json --noEmit && vite build",
+    "build:fixture": "node ../scripts/write-ui-build-receipt.mjs",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit"

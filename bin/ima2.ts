@@ -7,17 +7,42 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn, execFileSync } from "child_process";
 import { confirmDestructiveAction } from "./lib/destructive-confirm.js";
-import { doctor } from "./commands/doctor.js";
 import { openUrl, killProcessTree } from "./lib/platform.js";
-import { maybePromptGithubStar } from "./lib/star-prompt.js";
 import { ensureFreshUiDist } from "./lib/ui-build.js";
 import { codexFileLoginArgs, detectCodexAuth } from "../lib/codexDetect.js";
 import { packageCliCommand } from "../lib/packageCli.js";
-import { config as runtimeConfig } from "../config.js";
 
 import { errInfo } from "../lib/errInfo.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
+let pkg = { version: "?", name: "ima2-gen" };
+try {
+  const metadata = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
+  if (metadata && typeof metadata.version === "string" && typeof metadata.name === "string") pkg = metadata;
+} catch {}
+
+// Installation diagnosis must run before any account/config initialization.
+if (process.argv[2] === "doctor" && process.argv.slice(3).includes("--installation")) {
+  const options = process.argv.slice(3);
+  const allowed = new Set(["--installation", "--json", "--help", "-h"]);
+  if (options.some((option) => !allowed.has(option)) || new Set(options).size !== options.length) {
+    console.error("Installation doctor accepts only --installation, --json and --help.");
+    exitFlushed(2);
+  }
+  if (options.includes("--help") || options.includes("-h")) {
+    console.log("Usage: ima2 doctor --installation [--json]\nOffline package, Node, native binding, skill and UI checks. No config, account or network checks.");
+    exitFlushed(0);
+  }
+  const { buildInstallationDoctorLines } = await import("./lib/doctor-runtime.js");
+  const { buildDoctorReport, renderDoctorReport } = await import("./lib/doctor-report.js");
+  const report = buildDoctorReport({ version: pkg.version, mode: "installation", lines: buildInstallationDoctorLines(ROOT) });
+  console.log(options.includes("--json") ? JSON.stringify(report) : renderDoctorReport(report));
+  exitFlushed(report.summary.exitCode);
+}
+
+const { config: runtimeConfig } = await import("../config.js");
+const { doctor } = await import("./commands/doctor.js");
+const { maybePromptGithubStar } = await import("./lib/star-prompt.js");
 // Config lives under runtimeConfig.storage.configDir (honors IMA2_CONFIG_DIR).
 // Legacy installs that stored config at <packageRoot>/.ima2/config.json will be
 // migrated on first write.
@@ -36,12 +61,6 @@ function runCodexLogin() {
     throw new Error("Codex login completed without a file-backed session for the GPT OAuth proxy");
   }
 }
-
-// Load package.json for version
-let pkg = { version: "?", name: "ima2-gen" };
-try {
-  pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
-} catch {}
 
 function loadConfig() {
   if (existsSync(CONFIG_FILE)) {

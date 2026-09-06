@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -18,6 +18,7 @@ import { gypfileNames, validateBundleParity, validateInstallPolicy } from "../sc
 import { npmInvocation } from "../scripts/npm-subprocess.mjs";
 import { assertActionPinned, assertAllActionsPinned } from "./_actionPins.mjs";
 import { assertUnitProvenance, REQUIRED_UNITS } from "../scripts/release-cut.mjs";
+import { parse } from "yaml";
 
 const SHA = "a".repeat(40);
 
@@ -558,11 +559,86 @@ describe("package install policy contract", () => {
     assert.ok(gateIndex > -1 && mainPushIndex > -1 && gateIndex < mainPushIndex);
   });
 
-  it("ci.yml checks out the dispatched SHA and asserts it", () => {
-    const ci = readFileSync(join(repoRoot(), ".github/workflows/ci.yml"), "utf8");
-    assert.match(ci, /workflow_dispatch:[\s\S]*?sha:/);
-    assert.match(ci, /ref: \$\{\{ github\.event\.inputs\.sha \|\| github\.sha \}\}/);
-    assert.match(ci, /git rev-parse HEAD/);
+  it("every candidate job checks out and guards the dispatched SHA before package execution", () => {
+    const ci = parse(readFileSync(join(repoRoot(), ".github/workflows/ci.yml"), "utf8"));
+    const ref = "${{ github.event.inputs.sha || github.sha }}";
+    assert.equal(ci.on.workflow_dispatch.inputs.sha.type, "string");
+    for (const name of ["test", "windows", "macos-install", "e2e"]) {
+      const steps = ci.jobs[name].steps;
+      const checkout = steps.filter((s: any) => s.uses?.startsWith("actions/checkout@"));
+      assert.equal(checkout.length, 1, name);
+      assert.equal(checkout[0].with.ref, ref, name);
+      assert.equal(checkout[0].with["fetch-depth"], 0, name);
+      const index = steps.findIndex((s: any) => name === "e2e"
+        ? s.env?.WP07_EXPECTED_SHA === ref : s.run === "node scripts/assert-ci-sha.mjs");
+      assert.ok(index >= 0, `${name}: missing guard`);
+      assert.equal(steps[index].if, undefined);
+      assert.ok(!steps[index]["continue-on-error"]);
+      assert.ok(index < steps.findIndex((s: any) => /\bnpm\b/.test(s.run ?? "")), name);
+      if (name === "e2e") {
+        assert.match(steps[index].run, /execFileSync\("git", \["rev-parse", "HEAD"\]/);
+        assert.match(steps[index].run, /wanted !== actual/);
+      } else assert.equal(steps[index].env.EXPECTED_SHA, ref);
+    }
+    const mac = ci.jobs["macos-install"];
+    assert.equal(mac["runs-on"], "macos-latest");
+    assert.equal(mac.if, "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'");
+    assert.ok(mac.steps.some((s: any) => s.run === "npm run test:package-install"));
+    assert.ok(mac.steps.some((s: any) => s.run?.includes("tests/install-runtime-contract.test.ts")));
+  });
+
+  it("all PR bases use a guarded synthetic merge SHA distinct from the layer head", () => {
+    const workflow = parse(readFileSync(join(repoRoot(), ".github/workflows/pr-fast.yml"), "utf8"));
+    assert.deepEqual(workflow.on.pull_request, {});
+    const steps = workflow.jobs.fast.steps;
+    assert.equal(steps[0].with.ref, "${{ github.sha }}");
+    const guard = steps.find((s: any) => s.run === "node scripts/assert-ci-sha.mjs");
+    assert.equal(guard.env.EXPECTED_SHA, "${{ github.sha }}");
+    assert.equal(guard.if, undefined);
+    assert.ok(!guard["continue-on-error"]);
+    assert.ok(steps.indexOf(guard) < steps.findIndex((s: any) => /\bnpm\b/.test(s.run ?? "")));
+    const identity = steps.find((s: any) => s.env?.PR_HEAD_SHA);
+    assert.equal(identity.env.PR_HEAD_SHA, "${{ github.event.pull_request.head.sha }}");
+    assert.equal(identity.env.MERGE_SHA, "${{ github.sha }}");
+  });
+
+  it("PR frontend has a fresh runner and the preserved gate requires both jobs", () => {
+    const workflow = parse(readFileSync(join(repoRoot(), ".github/workflows/pr-fast.yml"), "utf8"));
+    const { fast, frontend, gate } = workflow.jobs;
+    assert.equal(frontend.needs, undefined, "backend and UI must run independently");
+    assert.equal(frontend["runs-on"], "ubuntu-latest");
+    assert.equal(frontend.steps[0].with.ref, "${{ github.sha }}");
+    assert.equal(frontend.steps[0].with["persist-credentials"], false);
+    const commands = frontend.steps.map((s: any) => s.run).filter(Boolean);
+    for (const command of ["node scripts/assert-ci-sha.mjs", "npm ci", "npm --prefix ui ci --no-audit --no-fund",
+      "npm run build:server", "npm run build:cli", "npm --prefix ui run build:fixture", "npm --prefix ui run test:e2e"]) {
+      assert.ok(commands.includes(command), command);
+    }
+    assert.equal(frontend.steps.find((s: any) => s.run === commands[0]).env.EXPECTED_SHA, "${{ github.sha }}");
+    assert.equal(commands.includes("npm test"), false);
+    assert.ok(fast.steps.some((s: any) => s.run === "npm test"));
+    const uploads = frontend.steps.filter((s: any) => s.uses?.startsWith("actions/upload-artifact@"));
+    assert.ok(uploads.some((s: any) => s.with.path.includes("wp12-*.png")));
+    assert.ok(uploads.some((s: any) => s.with.path.includes("wp08c-*.png")));
+    assert.equal(gate.name, "PR fast gate");
+    assert.deepEqual(gate.needs, ["fast", "frontend"]);
+    assert.equal(gate.if, "always()");
+    assert.equal(gate.steps.length, 1);
+    const step = gate.steps[0];
+    assert.equal(step.if, undefined);
+    assert.ok(!step["continue-on-error"]);
+    assert.deepEqual(step.env, { BACKEND_RESULT: "${{ needs.fast.result }}", FRONTEND_RESULT: "${{ needs.frontend.result }}" });
+    const predicate = /^node -e '([^']+)'$/.exec(step.run)?.[1];
+    assert.ok(predicate, "execute the actual aggregate predicate without a platform shell");
+    for (const backend of ["success", "failure", "cancelled", "skipped"]) {
+      for (const ui of ["success", "failure", "cancelled", "skipped"]) {
+        const result = spawnSync(process.execPath, ["-e", predicate], {
+          env: { BACKEND_RESULT: backend, FRONTEND_RESULT: ui }, timeout: 5000,
+        });
+        assert.equal(result.error, undefined);
+        assert.equal(result.status === 0, backend === "success" && ui === "success", `${backend}/${ui}`);
+      }
+    }
   });
 
   it("ci gate correlates runs by full candidate SHA only", async () => {

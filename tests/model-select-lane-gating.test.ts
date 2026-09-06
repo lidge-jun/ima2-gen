@@ -7,6 +7,7 @@ import {
   COMFY_VIDEO_VALUE_PREFIX,
   VIDEO_VALUE_PREFIX,
 } from "../ui/src/lib/imageModels.ts";
+import { reconcileCoreSelection, selectCoreProvider } from "../ui/src/lib/coreSelection.ts";
 
 function readSource(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -42,7 +43,7 @@ describe("model select value: lane gating", () => {
     for (const provider of ["oauth", "api", "gemini-api", "comfy"] as const) {
       assert.equal(
         resolveCoreModelValue({ ...base, provider, videoModel: "grok-imagine-video-1.5" }),
-        DEFAULT_IMAGE_MODEL,
+        provider === "comfy" ? "" : DEFAULT_IMAGE_MODEL,
         `${provider} must not display a grok video model`,
       );
     }
@@ -63,10 +64,25 @@ describe("model select value: lane gating", () => {
     );
   });
 
-  it("falls back to the image model when a lane has no lane-specific selection", () => {
-    assert.equal(resolveCoreModelValue({ ...base, provider: "comfy" }), DEFAULT_IMAGE_MODEL);
+  it("leaves unselected Comfy empty and keeps static lane image fallbacks", () => {
+    assert.equal(resolveCoreModelValue({ ...base, provider: "comfy" }), "");
     assert.equal(resolveCoreModelValue({ ...base, provider: "grok" }), DEFAULT_IMAGE_MODEL);
     assert.equal(resolveCoreModelValue({ ...base, provider: "oauth" }), DEFAULT_IMAGE_MODEL);
+  });
+
+  it("shows a Comfy image workflow without treating the static model as a workflow", () => {
+    assert.equal(resolveCoreModelValue({
+      ...base, provider: "comfy", comfyWorkflow: "wf-image-missing",
+    }), "wf-image-missing");
+    assert.equal(resolveCoreModelValue({
+      ...base, provider: "comfy", comfyWorkflow: "wf-image", comfyVideoWorkflow: "wf-video",
+    }), "comfy-video:wf-video");
+    for (const comfyWorkflow of [null, undefined]) {
+      assert.equal(resolveCoreModelValue({ ...base, provider: "comfy", comfyWorkflow }), "");
+    }
+    assert.equal(resolveCoreModelValue({
+      ...base, provider: "oauth", comfyWorkflow: "wf-image-missing",
+    }), DEFAULT_IMAGE_MODEL);
   });
 
   it("accepts the undefined slices the persisted-defaults type allows", () => {
@@ -106,30 +122,36 @@ describe("model select value: lane gating", () => {
 });
 
 describe("comfy lane exit: stranded selection cleanup", () => {
-  const settings = readSource("ui/src/store/storeSettingsImpl.ts");
-
   it("clears comfy-only selections when leaving the comfy lane", () => {
-    // The pre-existing branch only cleared on the way IN, so both carriers rode
-    // out of the lane and produced the empty label under GPT.
-    assert.match(settings, /if \(get\(\)\.provider === "comfy" && provider !== "comfy"\) \{/);
-    assert.match(settings, /comfyWorkflow: null,\s*\n\s*comfyVideoWorkflow: null,/);
-    assert.match(settings, /saveGenerationDefaultsPatch\(\{ comfyWorkflow: null, comfyVideoWorkflow: null \}\)/);
+    const current = reconcileCoreSelection({
+      provider: "comfy", imageModel: "gpt-5.6-sol",
+      comfyWorkflow: "wf-image", comfyVideoWorkflow: "wf-video",
+    });
+    assert.deepEqual(selectCoreProvider(current, "oauth"), {
+      provider: "oauth", imageModel: "gpt-5.6-sol", videoModelSelected: false,
+      comfyWorkflow: null, comfyVideoWorkflow: null,
+    });
+    assert.equal(current.comfyWorkflow, "wf-image");
+    assert.equal(current.comfyVideoWorkflow, "wf-video");
   });
 
   it("converges a workflow id left in imageModel by union membership", () => {
-    // A workflow id matches none of the per-provider predicates below it, so
-    // enumerating providers could never catch it; membership in the ImageModel
-    // union can. Also persisted, or a reload would restore the default anyway
-    // and hide the in-session bug rather than fix it.
-    assert.match(settings, /const strandedModel = !isImageModel\(currentModel\);/);
-    assert.match(settings, /if \(strandedModel\) saveImageModel\(DEFAULT_IMAGE_MODEL\);/);
-    assert.match(settings, /\.\.\.\(strandedModel \? \{ imageModel: DEFAULT_IMAGE_MODEL \} : \{\}\)/);
+    const current = reconcileCoreSelection({ provider: "comfy", imageModel: "wf-legacy" });
+    assert.equal(current.comfyWorkflow, "wf-legacy");
+    assert.deepEqual(selectCoreProvider(current, "oauth"), {
+      provider: "oauth", imageModel: "gpt-5.6-luna", videoModelSelected: false,
+      comfyWorkflow: null, comfyVideoWorkflow: null,
+    });
   });
 
   it("keeps the 260823 contract: re-selecting comfy preserves the workflow", () => {
-    // Clearing belongs to the outbound transition only. Re-entering the lane
-    // already selected (or hydrating one) must not discard the user's choice.
-    assert.match(settings, /if \(get\(\)\.provider === "comfy"\) set\(\{ provider \}\);/);
-    assert.match(settings, /else set\(\{ provider, comfyWorkflow: null, comfyVideoWorkflow: null \}\);/);
+    const current = reconcileCoreSelection({
+      provider: "comfy", comfyWorkflow: "wf-image", comfyVideoWorkflow: "wf-video",
+    });
+    assert.strictEqual(selectCoreProvider(current, "comfy"), current);
+    const outside = selectCoreProvider(current, "oauth");
+    assert.deepEqual(selectCoreProvider(outside, "comfy", {
+      kind: "video", image: "wf-image", video: "wf-video",
+    }), current);
   });
 });

@@ -3,6 +3,7 @@ bin/commands/grok.js
 bin/commands/prompt-sub/build.js
 bin/ima2.js
 config.js
+lib/agyArtifactRead.js
 lib/capabilities.js
 lib/generationRequestLog.js
 lib/grokProxyLauncher.js
@@ -12,6 +13,7 @@ lib/grokVideoDownload.js
 lib/grokVideoPlannerPrompt.js
 lib/imageModels.js
 lib/oauthLauncher.js
+lib/videoExtendI2vOperation.js
 routes/generate.js
 routes/generationRequestLog.js
 routes/index.js

@@ -41,17 +41,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.sha || github.sha }}
           fetch-depth: 0
-      - name: Assert the checked-out SHA is the dispatched one
-        if: ${{ github.event.inputs.sha != '' && github.event.inputs.sha != null }}
-        shell: bash
-        env:
-          WANT: ${{ github.event.inputs.sha }}
-        run: |
-          ACTUAL=$(git rev-parse HEAD)
-          if [ "$WANT" != "$ACTUAL" ]; then
-            echo "dispatch asked for $WANT but checked out $ACTUAL"
-            exit 1
-          fi
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
@@ -61,6 +50,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ui/package-lock.json
+      - name: Assert candidate checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
       - name: Structure line-count drift (fast fail)
         run: node scripts/refresh-structure-line-counts.mjs --check
       - name: Pin npm
@@ -84,12 +77,16 @@ jobs:
         run: npm run typecheck:tests
       - name: Test inventory
         run: npm run test:inventory
+      - name: Runtime installation documentation
+        run: npm run docs:runtime:check
       - name: Build server (tsc emit)
         run: npm run build:server
       - name: Build cli (tsc emit)
         run: npm run build:cli
       - name: Build ui
         run: npm --prefix ui run build
+      - name: Emitted doctor CLI offline and JSON contracts
+        run: node --import tsx --input-type=module -e 'import { verifyEmittedDoctorCli } from "./tests/doctor-report.test.ts"; await verifyEmittedDoctorCli();'
       - name: Run tests
         run: npm test
         timeout-minutes: 20
@@ -146,20 +143,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.npm == '11.18.0'
         run: npm run publish:dry-run
 
-  # Windows is a supported install target, so its coverage is kept — but it is
-  # off the release path. The two Windows legs were the slowest thing on the
-  # board and they gated every release cut, while the only failure they ever
-  # produced was EPERM in a test's own `rmSync` teardown on a temp dir the OS
-  # had not released yet. That is a Windows filesystem behaviour, not a defect
-  # in the shipped package, and it blocked releases that were otherwise green
-  # on every other leg.
-  #
-  # `schedule` only: never on push, and never on the workflow_dispatch that
-  # release.yml uses for its candidate gate. A regression here is caught within
-  # a day and fixed on its own merit instead of stopping a release.
+  # Supported Windows installers are verified on the exact dispatched candidate.
+  # Nightly coverage remains; candidate failures must be repaired before release.
   windows:
     name: windows (node ${{ matrix.node }}, npm ${{ matrix.npm }})
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 45
     strategy:
@@ -172,6 +160,9 @@ jobs:
             npm: '12.0.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
@@ -179,14 +170,20 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ui/package-lock.json
+      - name: Assert candidate checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
       - name: Pin npm
         run: npm install -g npm@${{ matrix.npm }}
       - name: Install root deps
-        run: npm ci
+        run: npm ci --foreground-scripts
       - name: Native dependency smoke
         run: npm run test:native-deps
       - name: Install ui deps
         run: npm --prefix ui ci --no-audit --no-fund
+      - name: Runtime installation documentation
+        run: npm run docs:runtime:check
       - name: Typecheck
         run: npm run typecheck
       - name: Build server (tsc emit)
@@ -195,6 +192,8 @@ jobs:
         run: npm run build:cli
       - name: Build ui
         run: npm --prefix ui run build
+      - name: Hosted installer behavior
+        run: node --import tsx --test tests/install-runtime-contract.test.ts
       - name: Run tests
         run: npm test
         timeout-minutes: 20
@@ -206,12 +205,73 @@ jobs:
       - name: CLI smoke (capabilities)
         run: node bin/ima2.js capabilities --json
 
+  macos-install:
+    name: macOS native installation
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.17.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Assert candidate checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
+      - name: Pin npm
+        run: npm install -g npm@11.18.0
+      - name: Install root deps
+        run: npm ci
+      - name: Install ui deps
+        run: npm --prefix ui ci --no-audit --no-fund
+      - name: Native dependency smoke
+        run: npm run test:native-deps
+      - name: Runtime installation documentation
+        run: npm run docs:runtime:check
+      - name: Build server
+        run: npm run build:server
+      - name: Build cli
+        run: npm run build:cli
+      - name: Build ui
+        run: npm --prefix ui run build
+      - name: Hosted installer and offline doctor behavior
+        run: node --import tsx --test tests/install-runtime-contract.test.ts tests/doctor-runtime.test.ts tests/doctor-report.test.ts
+      - name: Package install smoke
+        run: npm run test:package-install
+        timeout-minutes: 15
+
   e2e:
     name: frontend e2e (ubuntu)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The retained serial suite reached case253/258 at the former20-minute
+    # job bound. Reserve time to finish and upload; individual test limits stay unchanged.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify E2E source SHA
+        env:
+          WP07_EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: |
+          node --input-type=module -e '
+            import { execFileSync } from "node:child_process";
+            const wanted = process.env.WP07_EXPECTED_SHA;
+            const actual = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+            if (!/^[0-9a-f]{40}$/i.test(wanted ?? "") || wanted !== actual) {
+              throw new Error("E2E checkout does not match the requested full SHA");
+            }
+          '
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22.23.0'
@@ -225,10 +285,82 @@ jobs:
         run: npm --prefix ui ci --no-audit --no-fund
       - name: Install Playwright Chromium
         run: npx --prefix ui playwright install --with-deps chromium
-      - name: Build ui
-        run: npm --prefix ui run build
+      - name: Build server
+        run: npm run build:server
+      - name: Build cli
+        run: npm run build:cli
+      - name: Typecheck E2E
+        run: npm --prefix ui run typecheck:e2e
+      - name: Build isolated fixture UI
+        id: wp08_ui_build
+        run: npm --prefix ui run build:fixture
       - name: Run frontend e2e
-        run: npm --prefix ui run test:e2e
+        env:
+          WP08_BUILD_COMMAND: npm --prefix ui run build:fixture
+          WP08_BUILD_OUTCOME: ${{ steps.wp08_ui_build.outcome }}
+        run: npm --prefix ui run test:e2e -- --reporter=line
+      - name: Upload WP09 isolation and journey evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp09-journeys-${{ github.event.inputs.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          path: |
+            ui/test-results/**/wp09-*.png
+            ui/test-results/**/wp09-*.json
+            ui/test-results/**/wp12-*.png
+            ui/test-results/**/wp12-*.json
+            ui/dist/.ima2-ui-build-receipt.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload composer evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp08-composer-${{ github.event.inputs.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ui/test-results/**/wp08-*.png
+            ui/test-results/**/wp08-*.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload WP08c evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp08c-provider-display-${{ github.event.inputs.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ui/test-results/**/wp08c-*.png
+            ui/test-results/**/wp08c-*.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload provider surface visual evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp01-provider-surface-visual
+          path: ui/test-results/**/wp01-*.png
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload selection evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp02-selection-evidence
+          path: |
+            ui/test-results/**/wp02-*.png
+            ui/test-results/**/wp02-*.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload execution error evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp03-error-evidence
+          path: |
+            ui/test-results/**/wp03-*.png
+            ui/test-results/**/wp03-*.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload e2e failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -237,3 +369,13 @@ jobs:
           path: ui/test-results/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload job tracking evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wp07-job-tracking-evidence
+          path: |
+            ui/test-results/**/wp07-*.png
+            ui/test-results/**/wp07-*.json
+          if-no-files-found: error
+          retention-days: 14

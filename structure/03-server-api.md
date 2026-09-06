@@ -6,7 +6,7 @@ aliases: [ima2 API, image_gen server API, ima2 endpoints]
 
 # Server API
 
-`server.ts` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*.ts`. The TypeScript migration is closed (#24); paired `server.js`/`routes/*.js` are committed runtime artifacts produced by the build, not hand-edited. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
+`server.ts` is the runtime bootstrap for `ima2-gen`. The browser UI and CLI both call `/api/*` endpoints registered from `routes/*.ts`. TypeScript is the source of truth; `server.js`/`routes/*.js`/`lib/*.js` are generated runtime outputs, ignored in the current checkout, and must be built before package/runtime verification rather than hand-edited. The server starts the OAuth proxy, serves the built UI, wires route modules, stores generated image files under the configured generated directory, reconstructs history, and exposes graph sessions.
 
 This document matters because the UI and CLI share the same server contract. For example, `/api/generate` returns a different shape for single-image and multi-image responses. `/api/history` supports both a flat list and session grouping. Node mode uses separate `/api/node/generate` and `/api/sessions/*` contracts. If those differences are not documented, clients can break quietly.
 
@@ -51,7 +51,8 @@ graph TD
 | Method | Path | Response | Description |
 |---|---|---|---|
 | `GET` | `/api/providers` | `{ apiKey, oauth, oauthPort, apiKeyDisabled, apiKeySource, runtime }` | Reports available providers and runtime ports to the UI. `apiKeyDisabled` is a legacy compatibility field and is `false` in current API-provider builds. |
-| `GET` | `/api/capabilities` | `{ ok, source, version, defaults, valid, limits, guidance }` | Agent-facing runtime defaults and capability metadata; uses allowlist projection only |
+| `GET` | `/api/capabilities` | `{ ok, source, version, defaults, valid, limits, guidance, providerSurfaces }` | Agent-facing defaults and structural core surface facts, independent of optional runtime lane availability |
+| `GET` | `/api/models` | `{ ok, lanes }` | Core lanes add the same `surfaces` projection; MCP model metadata and Comfy per-workflow binding roles remain distinct |
 | `GET` | `/api/health` | `{ ok, version, provider, uptimeSec, activeJobs, pid, startedAt, runtime }` | Used by CLI discovery and health checks |
 | `GET` | `/api/oauth/status` | `{ status, models?, runtime }` | Checks whether the OAuth proxy is ready and reports actual proxy URL/port |
 | `GET` | `/api/billing` | `{ oauth, apiKeyValid, apiKeySource, credits?, costs? }` | Probes billing/model state when an API key exists |
@@ -71,11 +72,104 @@ graph TD
 
 `/api/billing` reports `apiKeySource` as `"none"`, `"env"`, or `"config"`. API-key generation requires a configured key and returns `API_KEY_REQUIRED` before upstream when `provider: "api"` is requested without one.
 
-The live generation/edit provider can be OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, or ComfyUI based. The NovelAI (`nai`) lane is text-to-image only: `/api/generate` refuses attached references with `NAI_REF_UNSUPPORTED` and `/api/edit` refuses outright with `NAI_EDIT_UNSUPPORTED`, so the capability is never silently downgraded. OAuth and API-key paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs. The Grok path uses the bundled progrok xAI proxy: classic, Node, and Agent generation first run mandatory xAI Web Search through `/v1/responses`, then call `grok-4.5` with a forced local `generate_image` function, then the server executes xAI `/v1/images/generations`; `grok-4.3` remains an explicit compatibility override. When Grok references, a Node parent image, or an Agent current image are explicitly attached, the planner also receives those images as multimodal inputs and the final step switches to xAI `/v1/images/edits` with the same reference images so i2i context survives the planner phase. Agent image plans now carry `sourceImagePolicy: "none" | "current" | "auto"`; plain image requests default to fresh generation (`none`), while current-image edit/reference use requires explicit planner or prompt intent (`current`). Grok video uses separate routes: `/api/video/generate` for T2V/I2V/Ref2V plus branch-local continuation, `/api/video/edit`, `/api/video/extend`, `/api/video/frame`, and `/api/video/analyze`.
+The live generation/edit provider can be OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, or ComfyUI based. The NovelAI (`nai`) lane is text-to-image only: `/api/generate` refuses attached references with `NAI_REF_UNSUPPORTED` and `/api/edit` refuses outright with `NAI_EDIT_UNSUPPORTED`, so the capability is never silently downgraded. OAuth and API-key paths use the Responses API `image_generation` tool through a shared image adapter; only the endpoint/auth boundary differs. Grok image generation uses the configured planner (default grok-4.3); search is enabled by default but classic, node and multimode honor the resolved off flag without skipping planning. Classic shares one plan per batch, while multimode plans each item; the edit route remains direct. Agent's omitted-option search default is unchanged. When Grok references, a Node parent image, or an Agent current image are explicitly attached, the planner also receives those images as multimodal inputs and the final step switches to xAI `/v1/images/edits` with the same reference images so i2i context survives the planner phase. Agent image plans now carry `sourceImagePolicy: "none" | "current" | "auto"`; plain image requests default to fresh generation (`none`), while current-image edit/reference use requires explicit planner or prompt intent (`current`). Grok video uses separate routes: `/api/video/generate` for T2V/I2V/Ref2V plus branch-local continuation, `/api/video/edit`, `/api/video/extend`, `/api/video/frame`, and `/api/video/analyze`.
 
 Storage endpoints are local-support helpers. `/api/storage/open-generated-dir` never accepts a browser-supplied path; it opens `ctx.config.storage.generatedDir` only.
 
 Runtime responses expose configured and actual ports separately. The backend can bind `3334+` when `3333` is occupied, and the OAuth proxy can report an actual fallback port when `10531` is occupied. Clients should follow the URL in `~/.ima2/server.json` or the `runtime.*.url` fields rather than rebuilding URLs from configured defaults.
+
+## Image Execution Ownership
+
+`lib/providers/execution/index.ts` exposes `prepareImageExecution(ctx, request,
+progress?)`, returning an executable closure. Classic generation, node generation,
+multimode and edit call this shared typed boundary. The request has an explicit
+surface plus already-resolved provider/options, validated references and an
+AbortSignal; the result is a native single image or sequence, not a job handle.
+It is in-process only and adds no serialized/stored fields.
+
+OAuth/API execution now belongs to `providers/adapters/openaiExecution.ts`.
+`openaiOperations.ts` owns the existing generate/edit/multimode payload operations,
+`openaiTypes.ts` their unchanged option/reference types, and `responsesTransport.ts`
+the endpoint/auth/readiness, redaction, abort and response-parser boundary.
+`responsesImageAdapter.ts` is a compatibility re-export for existing agent/sprite
+and other consumers; it contains no duplicate operation implementation.
+Grok/proxy and directGrok execution now belongs to `grokExecution.ts`, with actual
+operations in `grokOperations.ts`/`grokMultimodeOperations.ts` and planning in
+`grokImagePlanner.ts`. Compatibility facades retain old function/type exports.
+Agy/Gemini execution belongs to `googleExecution.ts`, with actual operations in
+`agyOperations.ts` and `geminiOperations.ts`; old adapters remain direct reexports.
+The four `legacy*` helpers now contain only Atlas/MiniMax/NAI/Comfy and exclude
+OpenAI, Grok and Google lanes from their types.
+
+Google node inputs match the admitted context policy: parent-only sends only an
+existing parent, while parent-plus-refs sends parent first followed by selected
+references. Agy no longer drops supplementary refs; Gemini no longer sends ignored
+ones. Classic keeps its prepare-time scalar capture and live references/signal;
+other surfaces derive inputs on execution. Native multimode still returns one
+dense image, not maxImages billed calls or fabricated image callbacks.
+
+Agy's native child lifecycle is owned by `agyProcess.ts`, with centralized
+`AGY_PROCESS_POLICY`. Pre-aborted calls never spawn; cancellation/timeout pins its
+499/504 reason, requests TERM then KILL after a1000ms grace if needed, and settles
+after child close. Staged refs are cleaned on partial-write failure and operation
+exit. The final success check occurs after awaited ref cleanup, so cancellation
+during cleanup cannot return success. This does not claim descendant-tree control.
+`agyArtifact.ts` retains parser/fallback ordering but excludes symlink/nonregular
+scanner entries. `agyArtifactRead.ts` owns canonical root and descriptor identity
+checks, 50MiB bounded reads, and private receipt-authorized unlink/nonrecursive
+parent cleanup. Operations no longer consume or delete an unchecked raw path.
+Path mappings are checked again after close and before cleanup; detected changes
+fail closed. Windows uses explicit checks without POSIX open flags. Same-user
+atomic filesystem confinement and hardlink provenance are not claimed.
+Gemini's public/Vertex payloads and legacy TimeoutError502 classification remain
+unchanged; fixture proof is not live provider/auth availability assurance.
+
+Classic prepares its Grok plan once per batch and retains its existing Responses
+retry loop in the OpenAI execution owner. API empty422 is not retried; retryable
+HTTP503 can reach a second attempt. Classic OAuth alone opts into its existing
+reference-preserving/degraded fallback chain. Node keeps retry ownership at the
+caller; edit executes one operation; multimode invokes its native sequence
+operation. Routes/pipelines still own input
+validation, start/finish/cancellation, persistence, sidecars and SSE/eventbus
+publication. Existing low-level transport phase updates remain in place.
+
+SSE final callbacks retain original image objects, await completion and dedupe
+repeated bytes. JSON parsing has no callbacks/SSE dedupe, while OAuth fallback
+still uses SSE parsing but forwards no callbacks. Masked edits remain prompt
+guidance through image/text content, not a newly claimed native mask parameter.
+Transport499 cancellation/504 timeout codes stay distinct from classic's existing
+normalization and the caller's final cancellation/partial-timeout envelopes.
+
+For these four image surfaces, missing or blank `grok-api` credentials now return
+`GROK_API_KEY_MISSING` (401) before job admission instead of selecting the proxy.
+The boundary rechecks presence before preparation and each execution; classic
+and node retain their original captured key if it changes to another nonblank key.
+Removing a key after admission refuses execution and finishes that owned job.
+The distinct `grok` proxy lane remains valid without an xAI API key. This is not
+a statement about video/agent/sprite authentication behavior.
+
+NAI multimode references now return `NAI_REF_UNSUPPORTED` before job admission,
+matching the existing text-to-image-only contract. Legacy multimode keeps its
+HTTP200 error SSE envelope, while async JSON carries the refusal status. Existing
+edit validation still runs after its original admission point; mask/surface
+refusals keep their previous codes and bookkeeping.
+
+`tests/provider-execution-*.test.ts` cover real route/fixture behavior and the
+typed dispatch boundary. The import guard checks the four selected callers,
+not arbitrary future barrels or the intentionally unchanged agent/sprite routes.
+
+Grok node/multimode now forward resolved search policy: false skips search but
+keeps the planner. Classic still plans once per batch, edit stays direct.
+Multimode carries successful original attempt indices in-process into the final
+sweep, preventing sparse duplicates without content dedupe or new serialized fields.
+
+Returned Grok images use `grokImageDownload.ts` and its address policy: validated
+per-hop DNS pinned into the actual connection, agent:false, conservative IPv4/IPv6
+ranges, max5redirects, streamed50MiB and one overall deadline. Only an initially
+matching configured proxy origin gets local trust; leaving it permanently drops
+the exception. Request/response error listeners remain owned through close.
+Artifact GET carries no API key/cookie/referrer. The exact address policy and
+safe502/504/499 error contract are in docs/API.md. Video/MCP policies are separate.
 
 ## MCP Connection Lifecycle
 
@@ -117,7 +211,7 @@ References/edit/masks remain explicit `NAI_*_UNSUPPORTED` failures.
 
 Image generation model selection is explicit. If omitted, the server defaults to `gpt-5.6-luna`. Supported image models are `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, and `gpt-5.4-mini`. `gpt-5.3-codex-spark` can appear in OAuth model status, but it does not support the `image_generation` tool, so generation endpoints reject it with `IMAGE_MODEL_UNSUPPORTED` before calling OAuth.
 
-For `provider: "api"`, missing options use `config.apiProvider` defaults: `gpt-5.6-luna`, `low` reasoning effort, `1024x1024`, and web search enabled. These defaults are overridable via `apiProvider.*` config or the `IMA2_API_IMAGE_MODEL_DEFAULT`, `IMA2_API_REASONING_EFFORT`, `IMA2_API_IMAGE_SIZE`, and `IMA2_API_ALLOW_WEB_SEARCH` env vars (see `06-infra-operations`). Validated request options still pass through. The API-key path uses `lib/responsesImageAdapter.ts` to mirror the OAuth Responses payload, including reasoning-effort, web-search, and reference-image plumbing — `tests/api-provider-parity.test.ts` (#49) locks the parity contract for generate/edit/multimode/node.
+For `provider: "api"`, missing options use `config.apiProvider` defaults: `gpt-5.6-luna`, `low` reasoning effort, `1024x1024`, and web search enabled. These defaults are overridable via `apiProvider.*` config or the `IMA2_API_IMAGE_MODEL_DEFAULT`, `IMA2_API_REASONING_EFFORT`, `IMA2_API_IMAGE_SIZE`, and `IMA2_API_ALLOW_WEB_SEARCH` env vars (see `06-infra-operations`). Validated request options still pass through. Generate/edit/multimode/node use `providers/adapters/openaiExecution.ts`, `openaiOperations.ts`, and `responsesTransport.ts` for the shared OAuth/API Responses payload, including reasoning-effort, web-search, and reference-image plumbing. `lib/responsesImageAdapter.ts` remains the compatibility re-export for agent/sprite consumers. `tests/api-provider-parity.test.ts` and `tests/provider-execution-*.test.ts` cover the parity and dispatch contracts.
 
 For `provider: "grok"`, supported image models are `grok-imagine-image` and
 `grok-imagine-image-quality`. Classic `n > 1` requests run mandatory search and
@@ -135,6 +229,19 @@ Masked edits are sent as mask/selection guidance; callers should not treat them 
 Prompt assembly for the OAuth path injects a short safety intent policy (`SAFETY_INTENT_POLICY` from `lib/promptSafetyPolicy.ts`) into the `lib/oauthProxy/prompts.ts` builder for generate/edit/multimode. The same constant is reused by the API-key Responses adapter so both providers send the same intent guardrails.
 
 ## Video Runtime
+
+`lib/grokVideoDownload.ts` owns incremental100MiB body enforcement, existing MIME/
+MP4-prefix validation and reader cleanup. It returns the same Buffer/contentType;
+callers persist only after success. Caller abort is499, downloader timeout504 and
+body/header failure502. The single timeout is not reset by GET retries or chunks;
+body failure does not restart generation. This is a byte bound, not an RSS ceiling
+or new URL/DNS/redirect security policy. See docs/API.md for exact limitations.
+
+The last-frame background operation now lives in `videoExtendI2vOperation.ts` with
+the original body, captures, phase/terminal ordering and dependencies. The route
+still responds202 and invokes it without awaiting completion. Its actual complete
+Promise can be observed by test wrappers; inflight removal or an early cancel event
+is not by itself proof that background work has stopped.
 
 | Method | Path | Body / query | Response |
 |---|---|---|---|
@@ -323,6 +430,16 @@ flag vocabulary: that one carries `auto` and omits the MCP lanes.
 
 The inflight registry tracks classic, node, and multimode jobs. The default response is active-only so the UI never renders completed jobs as still running. `includeTerminal=1` is an opt-in debug surface that keeps recent completed/error/canceled jobs briefly for request tracing. Cancellation records a terminal `canceled` snapshot and aborts the upstream request when the active job still has a registered `AbortController`.
 
+Tracker TTL expiry persists `status: error`, `errorCode: JOB_TRACKING_TIMEOUT`,
+`httpStatus: 504` before removing the active row in one SQLite transaction. It means
+upstream completion is unknown, not proven generation failure. Clients should
+inspect history before submitting again. Column-first session/node correlation
+survives restart; top-level prompt is not copied into terminal snapshots.
+`lib/jobs/terminalStore.ts` owns disk serialization; inflight owns the lazy cache
+and local controllers. Failed expiry writes roll back without abort/publication.
+A retained outcome left beside an active row after failed cleanup is preserved,
+including its timestamp; recovery cleanup does not emit another terminal event.
+
 ## Events Multiplexing (SSE)
 
 The browser UI uses a single persistent SSE channel (`GET /api/events`) for all async generation progress. This replaces per-request SSE streams that previously consumed one HTTP connection each and caused gallery hangs at the browser's 6-connection limit.
@@ -337,13 +454,20 @@ The browser UI uses a single persistent SSE channel (`GET /api/events`) for all 
 2. Server responds with `text/event-stream`, sets `X-Accel-Buffering: no`, starts 15s heartbeat pings.
 3. If `activeConnections >= MAX_SSE_LISTENERS` (512): responds `503 SSE_CAPACITY`.
 4. Events are fan-out: every connected client receives all job events.
-5. On disconnect: listener removed, heartbeat cleared, `res.end()` called.
+5. On disconnect: listeners and timers removed, capacity released once, owned response destroyed.
+6. A false write pauses output until drain. Accepted chunks are not repeated;
+   catch-up uses the bounded global ring, with no per-client event queue. A stall
+   exceeding `SSE_STREAM_POLICY.drainTimeoutMs` (15s) closes that response.
 
 ### Replay
 
 - Client sends `Last-Event-ID` header or `?lastEventId=` query on reconnect.
 - Server replays from ring buffer (size 2000). Large image payloads (>1000 chars) are stripped in replay with `_imageOmitted: true`.
-- If the requested ID is older than the ring's oldest entry, a `replay-gap` event is emitted and the client triggers `reconcileInflight()` for state recovery.
+- Evicted or future cursors emit `replay-gap`; zero also detects eviction of the
+  first event. Absent/invalid cursors remain live-only. Paused connections check
+  eviction again on drain. Browser clients clear their cursor and invoke resync;
+  CLI MCP clients recover the terminal snapshot without another generation POST.
+- IDs remain process-local numbers: equal/lower restart collisions are not an epoch protocol.
 
 ### Event envelope
 
@@ -367,9 +491,17 @@ All events carry: `id` (global monotonic seq), `event` (type name), `data` (JSON
 
 POST routes (`/api/node/generate`, `/api/generate/multimode`, `/api/video/generate`) accept `{ async: true, requestId }`. They respond immediately with `202 { requestId }` and emit progress via `eventBus.publish()` → `GET /api/events`. CLI/legacy clients omit `async` and receive per-request SSE on the same response (dual-emit: both legacy SSE write and eventBus publish).
 
-### Cancel-done race guard
+### Cancellation and expiry terminal guard
 
-`lib/ssePublish.ts` suppresses `done` events after `abortJob` has already emitted `error`, preventing clients from resolving success on a canceled job.
+`abortJob` records cancellation before invoking synchronous abort listeners.
+`lib/ssePublish.ts` rejects later `done` AND `error` after retained cancellation or
+tracking expiry, without allocating a sequence. Node/video/Sprite canonical terminal
+publication uses this guard. Raw nonterminal/custom untracked events are outside
+this promise; it is not universal success/error ordering. A deliberately reused ID
+clears its old disk snapshot in the same successful admission transaction. Concurrent
+reuse while an old producer still runs is outside the request-ID ownership contract.
+Only locally registered controllers can be aborted; no cross-process cancellation
+or upstream completion guarantee is introduced.
 
 ## Node Mode API
 

@@ -31,6 +31,8 @@
     "prepublishOnly": "node scripts/release-contract.mjs assert-publish-context && npm run verify:release",
     "lint:pkg": "node -e \"const p=require('./package.json'); const req=['name','version','bin']; for(const k of req){if(!p[k])throw new Error('missing '+k)} const mustInclude=['bin/**/*.js','lib/**/*.js','routes/**/*.js','skills/','integrations/comfyui/ima2_gen_bridge/__init__.py','integrations/comfyui/ima2_gen_bridge/nodes.py','integrations/comfyui/ima2_gen_bridge/README.md','assets/card-news/templates/','assets/mcp-snapshots/','vendor/','server.js','LICENSE']; for(const f of mustInclude){if(!p.files.includes(f))throw new Error('files[] must include '+f)}\"",
     "docs:refresh-line-counts": "node scripts/refresh-structure-line-counts.mjs",
+    "docs:runtime": "node --import tsx scripts/generate-runtime-install-contract.mjs",
+    "docs:runtime:check": "node --import tsx scripts/generate-runtime-install-contract.mjs --check",
     "publish:dry-run": "node scripts/publish-dry-run.mjs",
     "release:patch": "gh workflow run release.yml -f bump=patch -f dry_run=false",
     "release:minor": "gh workflow run release.yml -f bump=minor -f dry_run=false",
@@ -120,6 +122,7 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.1",
+    "node-gyp": "13.0.1",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "yaml": "2.9.0"

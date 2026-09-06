@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { errorCodes, resolveErrorSpec, type ImaErrorCode } from "../ui/src/lib/errorCodes.ts";
+import { effectiveReferenceLimit } from "../ui/src/lib/referenceLimits.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (rel: string) => readFileSync(join(repoRoot, rel), "utf8");
@@ -96,32 +97,17 @@ test("the provider is offered everywhere a user picks one", () => {
   assert.match(read("ui/src/components/AccountSettings.tsx"), /provider="nai"/);
 });
 
-test("switching to nai coerces the model, and away from nai clears it", () => {
-  // Without both halves a user can hold a model the selected provider cannot
-  // serve, which only surfaces as an upstream rejection.
-  const store = read("ui/src/store/storeSettingsImpl.ts");
-  assert.ok(
-    store.includes('provider === "nai" && !isNaiImageModel(currentModel)'),
-    "switching to nai does not coerce the model",
-  );
-  assert.ok(
-    store.includes("isNaiImageModel(imageModel)"),
-    "selecting a nai model does not switch the provider",
-  );
-  assert.ok(store.includes('provider !== "nai"'), "the reset guard does not exclude nai");
-});
+// Provider/model transitions now run as real actions in core-selection-actions.test.ts:
+// "NovelAI provider fallback and model action preserve count/multimode preferences".
 
 test("the UI offers no reference attachment for nai", () => {
-  // The routes answer NAI_REF_UNSUPPORTED, so the tray must cap at zero.
-  const limits = read("ui/src/lib/referenceLimits.ts");
-  assert.match(limits, /LANES_WITHOUT_REFERENCE_SUPPORT/);
-  assert.ok(limits.includes('new Set(["nai"])'), "nai is not in the no-reference lane set");
-  // oauth and api also have empty manifest limits but legitimately defer to the
-  // server cap; deriving the set from emptiness would silently break them.
-  assert.ok(
-    !limits.includes("limits.image === undefined && limits.edit === undefined"),
-    "the set is derived from empty manifest limits, which would also catch oauth and api",
-  );
+  const base = { serverLimit: 12, videoModelSelected: false, mcpProvider: null };
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "nai" }), 0);
+  // Empty numeric caps on OAuth/API still defer to the server; only an actual
+  // no-reference capability disables attachments. Assert behavior, not a set name.
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "oauth" }), 12);
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "api" }), 12);
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "nai", mcpProvider: "runway" }), 3);
 });
 
 test("every NAI_* code the server can throw has UI text", () => {
@@ -132,6 +118,9 @@ test("every NAI_* code the server can throw has UI text", () => {
     "lib/naiImageAdapter.ts",
     "lib/naiZip.ts",
     "lib/generatePipeline.ts",
+    "lib/nodeGeneration.ts",
+    "lib/multimodePipeline.ts",
+    "lib/providers/execution/admission.ts",
     "routes/edit.ts",
   ];
   const thrown = new Set<string>();

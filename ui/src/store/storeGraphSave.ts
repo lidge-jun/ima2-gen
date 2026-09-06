@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import type { GenerateItem } from "../types";
 import type { SessionFull, SessionGraphEdge } from "../lib/api";
 import {
@@ -364,7 +365,7 @@ export function flushGraphSaveBeacon(get: () => AppState): void {
   const url = `/api/sessions/${encodeURIComponent(s.activeSessionId)}/graph`;
   const body = JSON.stringify({ nodes, edges });
   try {
-    void fetch(url, {
+    void fetchApi(url, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -375,7 +376,7 @@ export function flushGraphSaveBeacon(get: () => AppState): void {
       },
       body,
       keepalive: true,
-    });
+    }).catch(() => { /* Keep the draft; unload has no response UI. */ });
   } catch {}
 }
 

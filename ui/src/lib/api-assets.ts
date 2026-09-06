@@ -1,5 +1,5 @@
 import type { AssetFolder, AssetItem, AssetsFilters } from "../store/storeTypes";
-import { jsonFetch } from "./api-core";
+import { fetchApi, jsonFetch } from "./api-core";
 
 export type AssetsPage = { assets: AssetItem[]; nextCursor: string | null };
 export type AssetUpdatePatch = {
@@ -85,7 +85,7 @@ export async function uploadDerivedAsset(blob: Blob, input: {
   if (input.projectId) params.set("projectId", input.projectId);
   if (input.name) params.set("name", input.name);
   if (input.meta) params.set("meta", JSON.stringify(input.meta));
-  const res = await fetch(`/api/assets/derived?${params.toString()}`, {
+  const res = await fetchApi(`/api/assets/derived?${params.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "image/png" },
     body: blob,
@@ -131,7 +131,7 @@ export async function requestVectorize(input: {
   if (input.cornerThreshold !== undefined) params.set("cornerThreshold", String(input.cornerThreshold));
   if (input.projectId) params.set("projectId", input.projectId);
   if (input.name) params.set("name", input.name);
-  const res = await fetch(`/api/assets/derived?${params.toString()}`, {
+  const res = await fetchApi(`/api/assets/derived?${params.toString()}`, {
     method: "POST",
     signal: input.signal,
   });

@@ -21,7 +21,8 @@ import {
   NAI_UC_PRESET_IDS,
 } from "../lib/naiImageAdapter.ts";
 import { readNaiOptions } from "../lib/naiOptions.ts";
-import { PERSISTED_KEYS, PERSISTED_REGISTRY } from "../ui/src/store/persistenceRegistry.ts";
+import { NAI_OPTIONS_STORAGE_KEY, PERSISTED_KEYS, PERSISTED_REGISTRY } from "../ui/src/store/persistenceRegistry.ts";
+import { effectiveCoreGenerationMode } from "../ui/src/lib/coreGenerationMode.ts";
 import { naiPayloadFields } from "../ui/src/lib/naiPayload.ts";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -218,16 +219,17 @@ test("nai forces one image and skips the multimode path", () => {
   // separate upstream calls, and a persisted multimode:true still steers
   // submission. Both must be behavioral.
   assert.match(read("ui/src/store/storeGenImpl.ts"), /s\.provider === "nai" \? 1 : s\.count/);
-  assert.match(read("ui/src/store/storeGenerateEntryImpl.ts"), /s\.provider !== "nai"/);
+  assert.equal(effectiveCoreGenerationMode({ provider: "nai", uiMode: "classic", multimode: true }), "image");
 });
 
-test("the nai override key is appended and the indexed constants still hold", () => {
+test("the nai override key retains its appended index and exported constant", () => {
   assert.ok(PERSISTED_KEYS.includes("ima2.naiOptions"));
   assert.equal(
-    PERSISTED_KEYS[PERSISTED_KEYS.length - 1],
+    PERSISTED_KEYS[19],
     "ima2.naiOptions",
-    "constants index into this array; inserting anywhere else repoints an existing key",
+    "later keys may append, but the original NAI index must never move",
   );
+  assert.equal(NAI_OPTIONS_STORAGE_KEY, "ima2.naiOptions");
   assert.equal(PERSISTED_KEYS[5], "ima2.reasoningEffort");
   assert.equal(PERSISTED_KEYS[7], "ima2.generationDefaults");
   assert.equal(PERSISTED_KEYS[14], "ima2.locale");

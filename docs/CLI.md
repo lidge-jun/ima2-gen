@@ -12,6 +12,7 @@ For a quick start, see the [main README](../README.md). For endpoint mapping, se
 | `ima2 setup` / `ima2 login` | Reconfigure saved auth (interactive) |
 | `ima2 status` | Show config and OAuth status |
 | `ima2 doctor` | Diagnose Node, package, config, and auth |
+| `ima2 doctor --installation --json` | Offline package checks without config, account or network access |
 | `ima2 doctor image-probe [--json]` | Run live sanitized Responses image probes for `EMPTY_RESPONSE` support |
 | `ima2 open` | Open the web UI in a browser |
 | `ima2 grok login/status/models/proxy` | Manage the bundled progrok runtime used by the Grok provider |
@@ -24,9 +25,39 @@ These work on most client commands:
 
 | Flag | Meaning |
 |---|---|
-| `--server <url>` | Override server discovery (default uses `~/.ima2/server.json`, falls back to `IMA2_SERVER` env) |
+| `--server <url>` | Explicit server origin; overrides `IMA2_SERVER`, then credential-free advertise/default discovery |
 | `--json` | Emit machine-readable JSON instead of human-formatted output |
 | `-h`, `--help` | Show subcommand help |
+
+## LAN server authentication
+
+Export your private `IMA2_LAN_TOKEN`, then select the known server explicitly:
+
+```bash
+IMA2_SERVER=http://192.168.1.20:3333 ima2 ping --json
+ima2 models --server https://studio.example --json
+```
+
+The token goes only to the selected normalized HTTP(S) origin, never to arbitrary
+advertise entries, redirects or external returned media. Do not put credentials,
+query strings or non-root paths in `--server` / `IMA2_SERVER`. No token flag or
+cookie jar is used. Auth/forbidden failures exit 4 with a safe code; an unreachable
+explicit server exits 3. Explicit targets never silently fall back to local data.
+`--local`/`--offline` options keep their documented local behavior.
+
+For a proxy or changed published port, configure exact origins and restart:
+
+```bash
+ima2 config set server.publicOrigins '["https://studio.example"]' --yes
+ima2 config rm server.publicOrigins --yes
+```
+
+Invalid origin values are rejected without echoing them. Removal can recover an
+invalid primary or legacy file-layer value while preserving other settings; the
+edited full object is written privately to the primary path and the legacy file
+is retained. An invalid environment override must be unset or corrected separately.
+Config listings/get redact nested credentials; `config path` identifies the file.
+See [LAN HTTP/session and transport limits](API.md#local-and-lan-access).
 
 ## Agent discovery
 
@@ -277,6 +308,39 @@ download fields such as `ok`, `path`, and `filename`. `ima2 video continue
 `url`, `video`, `revisedPrompt`, and `videoContinuity`.
 
 ## Diagnostics
+
+`ima2 doctor --json` prints one JSON document with `schemaVersion: 1`, `mode`,
+`checks` and `summary`. Each check has a stable code, severity, evidence category
+and a fixed message/action. Exit0 means no failed checks; warnings alone do not
+fail. Exit1 means a prerequisite failed. Invalid flag combinations exit2 with
+stderr only. Standard mode retains provider-auth checks; missing OAuth can fail
+standard doctor even if a different provider is selected.
+
+Use `ima2 doctor --installation --json` to check only the package Node engine,
+runtime dependencies/CLI entries, in-memory SQLite binding, packaged skills and UI
+build. It does not load account/config files, repair anything, build the UI or make
+network requests. Missing optional provider credentials are not installation errors.
+It cannot combine with `--bundle`, `--verify-keys` or `--runtime`.
+
+`ima2 doctor --bundle --json` retains the legacy version/node/platform/hostnameHash/
+lanes fields and adds safe checks/summary. The compatibility hostname hash is not
+an anonymity guarantee. Machine reports omit arbitrary diagnostic text, raw paths,
+URLs, response bodies and credential values.
+
+`--verify-keys` explicitly checks registry-declared non-generating authentication
+endpoints. Configured/present is not verified, and successful authentication does
+not prove generation capability or balance. Authentication rejection, rate limit,
+upstream failure, network failure and timeout have different codes.
+
+`--runtime http://127.0.0.1:3333` explicitly checks only that loopback origin's
+`/api/health`; localhost and IPv6 loopback are also accepted. No credentials,
+redirects, arbitrary paths, query strings or server discovery are used. A version
+match proves a local response, not provider success. Authorization-required health
+responses direct the operator to the configured authorized client.
+
+Timeouts default to5000ms for key checks and1500ms for runtime health. Optional
+`IMA2_DIAGNOSTIC_KEY_TIMEOUT_MS` and `IMA2_DIAGNOSTIC_RUNTIME_TIMEOUT_MS` override
+them, capped at30000ms. Response cleanup remains inside the deadline.
 
 `ima2 doctor image-probe` runs live Responses probes that help classify image
 generation failures such as `EMPTY_RESPONSE`. It is intended for support

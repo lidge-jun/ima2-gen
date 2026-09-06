@@ -14,6 +14,7 @@ import {
   type ModelCatalog,
 } from "../bin/lib/modelResolver.ts";
 import type { McpJobOptions, McpJobResult } from "../bin/lib/mcpJob.ts";
+import { parseEventCursor } from "../lib/eventsPolicy.ts";
 
 const ready = (models: Partial<LaneInfo["models"]> = {}, defaults: LaneInfo["defaults"] = {}): LaneInfo => ({
   status: "ready",
@@ -193,9 +194,11 @@ writeFileSync(join(transpiledDir, "package.json"), '{"type":"module"}');
 // temp tree mirrors both directories instead of flattening them.
 mkdirSync(join(transpiledDir, "bin", "lib"), { recursive: true });
 mkdirSync(join(transpiledDir, "lib"), { recursive: true });
+mkdirSync(join(transpiledDir, "lib", "errors"), { recursive: true });
 for (const [sourceDir, targetDir, names] of [
-  [binLibDir, join(transpiledDir, "bin", "lib"), ["sse", "mcpJob"]],
-  [serverLibDir, join(transpiledDir, "lib"), ["jobStatus"]],
+  [binLibDir, join(transpiledDir, "bin", "lib"), ["sse", "mcpJob", "client"]],
+  [serverLibDir, join(transpiledDir, "lib"), ["jobStatus", "eventsPolicy", "responsesErrors"]],
+  [join(serverLibDir, "errors"), join(transpiledDir, "lib", "errors"), ["providerMap"]],
 ] as const) {
   for (const name of names) {
     const source = readFileSync(join(sourceDir, `${name}.ts`), "utf8");
@@ -209,11 +212,16 @@ for (const [sourceDir, targetDir, names] of [
 const mcpModule = await import(`${pathToFileURL(join(transpiledDir, "bin", "lib", "mcpJob.js")).href}?v=${Date.now()}`) as {
   runMcpJob(opts: McpJobOptions): Promise<McpJobResult>;
 };
+const sseModule = await import(pathToFileURL(join(transpiledDir, "bin", "lib", "sse.js")).href) as typeof import("../bin/lib/sse.ts");
 
 const clients = new Set<ServerResponse>();
+const eventTrace: unknown[] = [];
 const terminalJobs = new Map<string, Record<string, unknown>>();
 const postSawOpen = new Map<string, boolean>();
 const reconnectCursors: string[] = [];
+let postCount = 0;
+let firstDropPosted = false;
+let initialCursor: string | undefined;
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
   try {
@@ -226,6 +234,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 function emit(event: string, data: Record<string, unknown>, id: number) {
+  eventTrace.push({ at: Date.now(), event, jobId: data.jobId, clients: clients.size });
   const frame = `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const client of clients) client.write(frame);
 }
@@ -233,12 +242,24 @@ function emit(event: string, data: Record<string, unknown>, id: number) {
 async function fakeHandler(req: IncomingMessage, res: ServerResponse) {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
+    eventTrace.push({ at: Date.now(), method: req.method, path: url.pathname });
     if (req.method === "GET" && url.pathname === "/api/events") {
-      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      if (firstDropPosted && url.searchParams.get("lastEventId") !== "7") {
+        res.writeHead(409).end("first-frame reconnect lost its bookmark");
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        ...(initialCursor === undefined ? {} : {
+          "x-ima2-event-cursor": url.searchParams.get("lastEventId") ?? initialCursor,
+        }),
+      });
       res.flushHeaders();
       if (url.searchParams.has("lastEventId")) {
         reconnectCursors.push(String(url.searchParams.get("lastEventId")));
-        res.write(`event: replay-gap\ndata: {"oldestAvailableId":99}\n\n`);
+        if (firstDropPosted) {
+          res.end('id: 8\nevent: done\ndata: {"jobId":"first-drop-job","filename":"replayed.mp4","url":"/generated/replayed.mp4"}\n\n');
+        } else res.write(`event: replay-gap\ndata: {"oldestAvailableId":99}\n\n`);
       } else {
         clients.add(res);
         res.on("close", () => clients.delete(res));
@@ -246,9 +267,14 @@ async function fakeHandler(req: IncomingMessage, res: ServerResponse) {
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/mcp/generate") {
+      postCount++;
       const body = await readJson(req);
       const requestId = String(body.requestId ?? "");
       postSawOpen.set(requestId, clients.size > 0);
+      if (requestId === "first-drop-job") {
+        firstDropPosted = true;
+        for (const client of [...clients]) client.end();
+      }
       res.writeHead(202, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true, requestId }));
       setImmediate(() => completeFakeJob(requestId));
@@ -272,8 +298,8 @@ function completeFakeJob(requestId: string) {
     emit("done", { jobId: requestId, filename: "done.png", url: "/generated/done.png" }, 2);
   } else if (requestId === "error-job") {
     emit("error", { jobId: requestId, code: "MCP_PROVIDER_FAILED", message: "provider failed" }, 3);
-  } else if (requestId === "replay-job") {
-    terminalJobs.set(requestId, {
+  } else if (requestId === "replay-job" || requestId === "pending-gap-job") {
+    if (requestId === "replay-job") terminalJobs.set(requestId, {
       requestId, status: "done", meta: { filename: "replayed.mp4" },
     });
     emit("progress", { jobId: requestId, phase: "persisting" }, 10);
@@ -313,9 +339,25 @@ function mcpOpts(requestId: string, timeoutMs = 20_000): McpJobOptions {
 }
 
 describe("runMcpJob", () => {
-  it("opens SSE before POST, reports progress, and resolves done", async () => {
+  it("opens SSE before POST, reports progress, and resolves done", async (t) => {
     const phases: string[] = [];
-    const result = await mcpModule.runMcpJob({ ...mcpOpts("done-job"), onProgress: (phase) => phases.push(phase) });
+    const nativeFetch = globalThis.fetch;
+    t.mock.method(globalThis, "fetch", async (...args: Parameters<typeof fetch>) => {
+      eventTrace.push({ at: Date.now(), fetch: String(args[0]), stage: "start" });
+      try {
+        const response = await nativeFetch(...args);
+        eventTrace.push({ at: Date.now(), stage: "headers", status: response.status });
+        return response;
+      } catch (error) {
+        eventTrace.push({ at: Date.now(), stage: "error", error: String(error), cause: String((error as Error).cause) });
+        throw error;
+      }
+    });
+    const result = await mcpModule.runMcpJob({ ...mcpOpts("done-job"), onProgress: (phase) => phases.push(phase) })
+      .catch((error) => {
+        t.diagnostic(JSON.stringify({ eventTrace, phases, postOpen: postSawOpen.get("done-job"), clients: clients.size }));
+        throw error;
+      });
     assert.strictEqual(postSawOpen.get("done-job"), true);
     assert.deepStrictEqual(phases, ["rendering"]);
     assert.strictEqual(result.filename, "done.png");
@@ -331,10 +373,66 @@ describe("runMcpJob", () => {
   });
 
   it("reconnects with the last id and recovers a replay gap from inflight", async () => {
+    const before = reconnectCursors.length;
     const result = await mcpModule.runMcpJob(mcpOpts("replay-job"));
-    assert.deepStrictEqual(reconnectCursors, ["10"]);
+    assert.deepStrictEqual(reconnectCursors.slice(before), ["10"]);
     assert.strictEqual(result.filename, "replayed.mp4");
     assert.strictEqual(result.url, "/generated/replayed.mp4");
     assert.strictEqual(result.meta.status, "done");
   });
+
+  it("keeps a replay gap without terminal evidence as an error without reposting", async () => {
+    const before = postCount;
+    await assert.rejects(mcpModule.runMcpJob(mcpOpts("pending-gap-job")), { code: "SSE_REPLAY_GAP" });
+    assert.equal(postCount, before + 1);
+  });
+
+  it("replays after the initial stream drops before its first event without reposting", async () => {
+    const before = postCount;
+    const cursorStart = reconnectCursors.length;
+    initialCursor = "7";
+    try {
+      const result = await mcpModule.runMcpJob(mcpOpts("first-drop-job"));
+      assert.equal(postCount, before + 1);
+      assert.equal(postSawOpen.get("first-drop-job"), true);
+      assert.equal(result.filename, "replayed.mp4");
+      assert.equal(result.url, "/generated/replayed.mp4");
+      assert.deepStrictEqual(reconnectCursors.slice(cursorStart), ["7"]);
+    } finally { firstDropPosted = false; initialCursor = undefined; }
+  });
+});
+
+describe("SSE cursor contract", () => {
+  it("parses only decimal nonnegative safe integers", () => {
+    for (const [value, expected] of [["0", 0], ["007", 7], ["9007199254740991", 9007199254740991]] as const) {
+      assert.equal(parseEventCursor(value), expected);
+    }
+    for (const value of [null, "", " ", "7\n", "7\r", "7\t", " 7", "7 ", "-1", "+1", "1.5", "1e2", "0x10", "7junk", "7,8", "9007199254740992"]) {
+      assert.equal(parseEventCursor(value), null, JSON.stringify(value));
+    }
+  });
+
+  for (const cursor of [null, "0", "007", "9007199254740991"]) {
+    it(`accepts cursor ${cursor ?? "absent (legacy)"} before reading frames`, async (t) => {
+      t.mock.method(globalThis, "fetch", async () => new Response(null, {
+        headers: cursor === null ? {} : { "x-ima2-event-cursor": cursor },
+      }));
+      const stream = await sseModule.openSse(`${serverBase}/api/events`);
+      try { assert.equal(stream.initialEventId, cursor ?? undefined); } finally { stream.close(); }
+    });
+  }
+
+  for (const cursor of ["", "-1", "+1", "1.5", "1e2", "0x10", "7junk", "7, 8", "9007199254740992"]) {
+    it(`rejects malformed cursor ${JSON.stringify(cursor)} before POST and cancels the stream`, async (t) => {
+      const methods: string[] = [];
+      let signal: AbortSignal | null | undefined;
+      t.mock.method(globalThis, "fetch", async (_input: unknown, init?: RequestInit) => {
+        methods.push(init?.method ?? "GET"); signal = init?.signal;
+        if (methods.length > 1) throw new Error("unexpected request after invalid cursor");
+        return new Response(null, { headers: { "x-ima2-event-cursor": cursor } });
+      });
+      await assert.rejects(mcpModule.runMcpJob(mcpOpts("invalid-header")), { message: "SSE_INVALID_EVENT_CURSOR" });
+      assert.deepEqual(methods, ["GET"]); assert.equal(signal?.aborted, true);
+    });
+  }
 });

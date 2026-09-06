@@ -9,7 +9,7 @@ ima2-gen运送多级`Dockerfile`（问题＃114）。该图像构建了
 docker build -t ima2-gen .
 docker run -d --name ima2 \
   -p 3333:3333 \
-  -e IMA2_LAN_TOKEN=change-me \
+  -e IMA2_LAN_TOKEN \
   -v ima2-data:/data \
   ima2-gen
 ```
@@ -17,11 +17,18 @@ docker run -d --name ima2 \
 或者使用 compose：
 
 ```bash
-IMA2_LAN_TOKEN=change-me docker compose up -d
+docker compose up -d
 ```
 
-然后打开`http://localhost:3333/?token=change-me`（或将令牌作为
-`x-ima2-token`标头打开API来电）。
+请先在环境中设置自己生成的强随机 `IMA2_LAN_TOKEN`，不要使用示例令牌。
+然后打开 `http://localhost:3333/`，在工作室登录表单中输入令牌。
+浏览器使用 HttpOnly 会话访问 API、图片、视频和 SSE；令牌不保存在浏览器存储中。
+
+更改发布端口或使用代理时，设置 `IMA2_PUBLIC_ORIGINS` JSON 数组，
+例如 `["http://localhost:8080"]`。TLS 代理必须保留 Host/Origin 并转发 Set-Cookie。
+HTTP 不加密凭据，仅适用于可信网络；不可信网络请使用 TLS/VPN。
+生成文件现需授权且不缓存，但旧缓存和已下载的副本无法撤回。
+重启会使会话失效，不会删除文件。详见 [访问协议](API.md#local-and-lan-access) 和 [CLI 认证](CLI.md#lan-server-authentication)。
 
 ## 为什么`IMA2_LAN_TOKEN`是必须的
 

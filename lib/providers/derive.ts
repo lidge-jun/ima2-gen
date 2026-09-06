@@ -3,6 +3,8 @@
 // CoreProviderId typing consumers rely on.
 import { REGISTRY, type CoreProviderId } from "./registry.js";
 import type { CoreProviderManifestBase, ProviderModelKind, ProviderReferenceMode } from "./types.js";
+import type { ProviderSurface, ProviderSurfaceSupport } from "./types.js";
+import { deriveProviderSurfaceSupportFrom } from "./surfaceSupport.js";
 import {
   deriveCliImageModelSetFrom,
   deriveIdsFrom,
@@ -15,6 +17,13 @@ import {
 } from "./deriveCore.js";
 
 type RegistryInput = readonly CoreProviderManifestBase[];
+
+export function getProviderSurfaceSupport(
+  providerId: string,
+  surface: ProviderSurface,
+): ProviderSurfaceSupport | null {
+  return deriveProviderSurfaceSupportFrom(REGISTRY, providerId, surface);
+}
 
 export function deriveProviderIds(): CoreProviderId[];
 export function deriveProviderIds<const T extends RegistryInput>(registry: T): Array<T[number]["id"]>;

@@ -27,47 +27,47 @@ function configString(fileConfig: Record<string, unknown>, key?: string): string
 function inspectApiKey(lane: string, credential: Extract<ProviderCredential, { kind: "api-key" }>, fileConfig: Record<string, unknown>): ProviderDoctorLine {
   const value = firstEnv(credential.envVars) || configString(fileConfig, credential.configKey);
   if (!value) {
-    return { lane, kind: "warn", text: `${lane}: api-key unset` };
+    return { code: "CREDENTIAL_MISSING", lane, kind: "warn", text: `${lane}: api-key unset` };
   }
   if (credential.keyPrefix && !value.startsWith(credential.keyPrefix)) {
-    return { lane, kind: "fail", text: `${lane}: api-key prefix mismatch (expected ${credential.keyPrefix})` };
+    return { code: "CREDENTIAL_SHAPE_INVALID", lane, kind: "fail", text: `${lane}: api-key prefix mismatch (expected ${credential.keyPrefix})` };
   }
   if (!credential.keyPrefix) {
     // Several lanes (minimax region-specific, nai persistent tokens) have no
     // stable prefix, so the message must stay vocabulary-neutral.
-    return { lane, kind: "pass", text: `${lane}: api-key present (no prefix check; this lane has no fixed key prefix)` };
+    return { code: "CREDENTIAL_PRESENT", lane, kind: "pass", text: `${lane}: api-key present (no prefix check; this lane has no fixed key prefix)` };
   }
-  return { lane, kind: "pass", text: `${lane}: api-key present` };
+  return { code: "CREDENTIAL_PRESENT", lane, kind: "pass", text: `${lane}: api-key present` };
 }
 
 function inspectOauth(lane: string): ProviderDoctorLine {
   if (lane === "oauth") {
     const auth = detectCodexAuth();
-    if (auth.proxyReady) return { lane, kind: "pass", text: `${lane}: file-backed Codex session ready` };
-    return { lane, kind: "fail", text: `${lane}: no file-backed Codex session; run ima2 login` };
+    if (auth.proxyReady) return { code: "OAUTH_FILE_READY", lane, kind: "pass", text: `${lane}: file-backed Codex session ready` };
+    return { code: "OAUTH_FILE_REQUIRED", lane, kind: "fail", text: `${lane}: no file-backed Codex session; run ima2 login` };
   }
   if (lane === "grok") {
     const home = homedir();
     const files = [join(home, ".progrok", "auth.json"), join(home, ".grok", "auth.json")];
     if (files.some((path) => existsSync(path))) {
-      return { lane, kind: "pass", text: `${lane}: local Grok auth file present` };
+      return { code: "CREDENTIAL_PRESENT", lane, kind: "pass", text: `${lane}: local Grok auth file present` };
     }
-    return { lane, kind: "warn", text: `${lane}: no ~/.progrok or ~/.grok auth file` };
+    return { code: "CREDENTIAL_MISSING", lane, kind: "warn", text: `${lane}: no ~/.progrok or ~/.grok auth file` };
   }
-  return { lane, kind: "warn", text: `${lane}: oauth-proxy has no lane-specific checker` };
+  return { code: "DIAGNOSTIC_UNKNOWN", lane, kind: "warn", text: `${lane}: oauth-proxy has no lane-specific checker` };
 }
 
 function inspectServiceAccount(lane: string, credential: Extract<ProviderCredential, { kind: "service-account" }>, fileConfig: Record<string, unknown>): ProviderDoctorLine {
   const raw = firstEnv(credential.envVars) || configString(fileConfig, credential.configKey);
-  if (!raw) return { lane, kind: "warn", text: `${lane}: service-account unset` };
+  if (!raw) return { code: "CREDENTIAL_MISSING", lane, kind: "warn", text: `${lane}: service-account unset` };
   try {
     const parsed = JSON.parse(raw) as { type?: unknown; project_id?: unknown };
     if (parsed.type !== "service_account" || typeof parsed.project_id !== "string" || !parsed.project_id) {
-      return { lane, kind: "fail", text: `${lane}: service-account JSON missing type/project_id` };
+      return { code: "CREDENTIAL_SHAPE_INVALID", lane, kind: "fail", text: `${lane}: service-account JSON missing type/project_id` };
     }
-    return { lane, kind: "pass", text: `${lane}: service-account JSON present` };
+    return { code: "CREDENTIAL_PRESENT", lane, kind: "pass", text: `${lane}: service-account JSON present` };
   } catch {
-    return { lane, kind: "fail", text: `${lane}: service-account is not JSON` };
+    return { code: "CREDENTIAL_SHAPE_INVALID", lane, kind: "fail", text: `${lane}: service-account is not JSON` };
   }
 }
 
@@ -75,10 +75,10 @@ function inspectLocalCli(lane: string, credential: Extract<ProviderCredential, {
   const override = firstEnv(credential.envVars);
   if (override) {
     return existsSync(override)
-      ? { lane, kind: "pass", text: `${lane}: local CLI override found` }
-      : { lane, kind: "fail", text: `${lane}: local CLI override missing` };
+      ? { code: "LOCAL_CLI_FOUND", lane, kind: "pass", text: `${lane}: local CLI override found` }
+      : { code: "LOCAL_CLI_MISSING", lane, kind: "fail", text: `${lane}: local CLI override missing` };
   }
-  return { lane, kind: "warn", text: `${lane}: local CLI env unset` };
+  return { code: "LOCAL_CLI_MISSING", lane, kind: "warn", text: `${lane}: local CLI env unset` };
 }
 
 /**
@@ -94,9 +94,9 @@ function inspectLocalHttp(lane: string, credential: Extract<ProviderCredential, 
   const raw = firstEnv(credential.envVars) ?? runtimeConfig.comfy.defaultUrl;
   try {
     const origin = normalizeComfyOrigin(raw);
-    return { lane, kind: "pass", text: `${lane}: origin ${origin}` };
+    return { code: "LOCAL_ORIGIN_VALID", lane, kind: "pass", text: `${lane}: origin ${origin}` };
   } catch {
-    return { lane, kind: "fail", text: `${lane}: invalid origin ${raw}` };
+    return { code: "LOCAL_ORIGIN_INVALID", lane, kind: "fail", text: `${lane}: invalid configured origin` };
   }
 }
 
@@ -134,6 +134,7 @@ export function listedValidateUrls(): string[] {
 export async function verifyConfiguredKeys(
   fileConfig: Record<string, unknown>,
   fetchImpl: typeof fetch = fetch,
+  options: { timeoutMs?: number } = {},
 ): Promise<ProviderDoctorLine[]> {
   const lines: ProviderDoctorLine[] = [];
   for (const provider of listProviders()) {
@@ -143,21 +144,30 @@ export async function verifyConfiguredKeys(
       if (!url) continue;
       const value = firstEnv(credential.envVars) || configString(fileConfig, credential.configKey);
       if (!value) continue;
-      try {
-        const headers: Record<string, string> = credential.keyVocabulary === "gemini"
-          ? { "x-goog-api-key": value }
-          : { Authorization: `Bearer ${value}` };
-        const response = await fetchImpl(url, { headers });
-        if (response.ok) {
-          lines.push({ lane: provider.id, kind: "pass", text: `${provider.id}: validateUrl ok` });
-        } else {
-          lines.push({ lane: provider.id, kind: "fail", text: `${provider.id}: AUTH_INVALID (${response.status})` });
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        lines.push({ lane: provider.id, kind: "fail", text: `${provider.id}: AUTH_INVALID (${message})` });
-      }
+      const headers: Record<string, string> = credential.keyVocabulary === "gemini"
+        ? { "x-goog-api-key": value } : { Authorization: `Bearer ${value}` };
+      const code = await verifyKey(url, headers, fetchImpl, options.timeoutMs ?? runtimeConfig.diagnostics.keyTimeoutMs);
+      lines.push({ lane: provider.id, code, kind: code === "AUTH_VERIFIED" ? "pass" : "fail", evidence: "remote-auth", text: `${provider.id}: ${code}` });
     }
   }
   return lines;
+}
+
+async function verifyKey(url: string, headers: Record<string, string>, fetchImpl: typeof fetch, requestedTimeout: number): Promise<string> {
+  const timeoutMs = Number.isFinite(requestedTimeout) && requestedTimeout > 0 ? Math.min(requestedTimeout, 30000) : 5000;
+  const controller = new AbortController(); let timer!: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { controller.abort(); reject(Error("AUTH_TIMEOUT")); }, timeoutMs);
+  });
+  try {
+    const request = (async () => {
+      const response = await fetchImpl(url, { headers, signal: controller.signal, redirect: "error" });
+      const code = response.ok ? "AUTH_VERIFIED" : response.status === 401 || response.status === 403 ? "AUTH_INVALID"
+        : response.status === 429 ? "AUTH_RATE_LIMITED" : "AUTH_UPSTREAM_FAILED";
+      await response.body?.cancel();
+      return code;
+    })();
+    return await Promise.race([request, deadline]);
+  } catch { return controller.signal.aborted ? "AUTH_TIMEOUT" : "AUTH_NETWORK_FAILED"; }
+  finally { clearTimeout(timer); controller.abort(); }
 }

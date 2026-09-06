@@ -1,14 +1,16 @@
 name: Deploy GitHub Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'site/**'
-      - 'scripts/install-*.sh'
-      - 'scripts/install-*.ps1'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Published stable package source commit
+        required: true
+        type: string
+      release_version:
+        description: Published stable package version
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -22,18 +24,55 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: site
+    timeout-minutes: 30
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_VERSION: ${{ inputs.release_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 20
+          node-version-file: .node-version
           cache: npm
-          cache-dependency-path: site/package-lock.json
-      - run: npm install --no-audit --no-fund
-      - run: npm run build
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
+      - name: Validate release inputs before publication work
+        run: node scripts/pages-publication-gate.mjs validate-inputs
+      - name: Pin the package npm toolchain
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { spawnSync } from "node:child_process";
+            const npm = JSON.parse(readFileSync("package.json", "utf8")).packageManager;
+            if (typeof npm !== "string" || !/^npm@[0-9]+\.[0-9]+\.[0-9]+$/.test(npm)) throw Error("Invalid npm toolchain");
+            const result = spawnSync("npm", ["install", "--global", npm], { stdio: "inherit", shell: false });
+            process.exit(result.status ?? 1);
+          '
+      - name: Install release verification dependencies
+        run: npm ci
+      - name: Verify published artifact and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin --tags
+          node scripts/release-contract.mjs finalize-check "$RELEASE_VERSION" "$RELEASE_SHA"
+      - name: Install the exact published package in an owned directory
+        run: |
+          PAGES_INSTALL_ROOT="$(mktemp -d "$RUNNER_TEMP/ima2-pages-install.XXXXXX")"
+          npm install --prefix "$PAGES_INSTALL_ROOT" "ima2-gen@$RELEASE_VERSION"
+          echo "PAGES_INSTALL_ROOT=$PAGES_INSTALL_ROOT" >> "$GITHUB_ENV"
+      - name: Check the installed offline runtime
+        run: |
+          cd "$PAGES_INSTALL_ROOT"
+          node "$PAGES_INSTALL_ROOT/node_modules/ima2-gen/bin/ima2.js" doctor --installation --json > "$PAGES_INSTALL_ROOT/doctor.json"
+      - name: Bind site source to registry and installed runtime
+        run: node scripts/pages-publication-gate.mjs verify --report "$PAGES_INSTALL_ROOT/doctor.json"
+      - run: npm --prefix site ci --no-audit --no-fund
+      - run: npm --prefix site run build
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site/dist

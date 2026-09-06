@@ -89,8 +89,15 @@ export async function sleepWithAbort(ms: number, signal?: AbortSignal): Promise<
   });
 }
 
+export interface RetryResponse {
+  ok: boolean;
+  status: number;
+  headers: Headers;
+  body: { cancel(reason?: unknown): Promise<void> } | null;
+}
+
 /** Cleanup only: a retry must never wait for, or fail because of, cancellation. */
-function cancelResponseBodyBestEffort(res: Response): void {
+function cancelResponseBodyBestEffort(res: RetryResponse): void {
   try {
     const cancellation = res.body?.cancel();
     if (cancellation) void cancellation.catch(() => {});
@@ -105,10 +112,10 @@ export interface GrokRetryOptions {
   attempts?: number;
 }
 
-async function fetchWithResetRetry(
-  doFetch: () => Promise<Response>,
+async function fetchWithResetRetry<R extends RetryResponse>(
+  doFetch: () => Promise<R>,
   opts: GrokRetryOptions,
-): Promise<Response> {
+): Promise<R> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < RESET_RETRY_MAX_ATTEMPTS; attempt++) {
     if (opts.signal?.aborted) throw abortError(opts.signal);
@@ -131,10 +138,10 @@ async function fetchWithResetRetry(
  * Runs `doFetch` with reset + transient-5xx retries.
  * `doFetch` MUST be replayable: it may be called more than once.
  */
-export async function grokFetchWithRetry(
-  doFetch: () => Promise<Response>,
+export async function grokFetchWithRetry<R extends RetryResponse>(
+  doFetch: () => Promise<R>,
   opts: GrokRetryOptions = {},
-): Promise<Response> {
+): Promise<R> {
   const attempts = Math.max(1, opts.attempts ?? TRANSIENT_RETRY_MAX_ATTEMPTS);
   let attemptStart = Date.now();
   let res = await fetchWithResetRetry(doFetch, opts);

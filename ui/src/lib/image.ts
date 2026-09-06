@@ -1,3 +1,4 @@
+import { fetchApi } from "./api-core";
 export function readFileAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -11,7 +12,7 @@ export function readFileAsDataURL(file: File): Promise<string> {
  * generation requests). Lives here so store files stay free of raw
  * FileReader plumbing (node-child-refs-payload contract). */
 export async function fetchAsDataUrl(url: string): Promise<string> {
-  const response = await fetch(url);
+  const response = await fetchApi(url);
   if (!response.ok) throw new Error(`reference fetch failed: ${response.status}`);
   const blob = await response.blob();
   return readFileAsDataURL(new File([blob], "reference.png", { type: blob.type || "image/png" }));

@@ -14,15 +14,15 @@ function readSource(path) {
 test("inflight cancel is wired to AbortController, not just terminal bookkeeping", () => {
   const inflight = readSource("lib/inflight.ts");
   const health = readSource("routes/health.ts");
-  const adapter = readSource("lib/responsesImageAdapter.ts");
+  const transport = readSource("lib/responsesTransport.ts");
 
   assert.match(inflight, /const abortControllers = new Map<string, AbortController>\(\)/);
   assert.match(inflight, /export function registerJobAbortController/);
   assert.match(inflight, /controller\.abort\(\)/);
   assert.match(health, /abortJob\(req\.params\.requestId\)/);
-  assert.match(adapter, /signal\?: AbortSignal \| null/);
-  assert.match(adapter, /signal:\s*fetchSignal/);
-  assert.match(adapter, /code: "GENERATION_CANCELED"/);
+  assert.match(transport, /export interface PostResponsesArgs\s*\{[^}]*signal\?: AbortSignal \| null/);
+  assert.match(transport, /signal:\s*fetchSignal/);
+  assert.match(transport, /code: "GENERATION_CANCELED"/);
 });
 
 test("classic and multimode routes register cancel controllers and block late saves", () => {
@@ -47,4 +47,3 @@ test("UI exposes cancel buttons only through the store cancel action", () => {
   assert.match(store, /await cancelInflight\(requestId\)/);
   assert.match(store, /phase: "canceling"/);
 });
-

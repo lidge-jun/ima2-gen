@@ -28,6 +28,108 @@ const billingPayload = {
   message: "ordinary provider failure",
 };
 
+const grokKeyCopy = {
+  en: { title: "Grok API key required", body: "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok proxy.", cta: "Open provider settings" },
+  ko: { title: "Grok API 키가 필요합니다", body: "설정 > 제공자에서 xAI API 키를 추가한 뒤 다시 시도하세요. 이 이미지 요청은 Grok 프록시로 전환되지 않습니다.", cta: "제공자 설정 열기" },
+  "zh-Hans": { title: "需要 Grok API 密钥", body: "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok 代理。", cta: "打开提供商设置" },
+  "zh-Hant": { title: "需要 Grok API 金鑰", body: "請在設定 > 供應商中新增 xAI API 金鑰，然後重試。此圖像請求不會改用 Grok 代理。", cta: "開啟供應商設定" },
+};
+
+describe("WP03 Grok image key guidance", () => {
+  it("flat 401 JSON reaches the dedicated card without synthetic decoration", async () => {
+    const original = globalThis.fetch;
+    const payload = { error: "Grok API key is required for grok-api image generation",
+      code: "GROK_API_KEY_MISSING", requestId: "wp03-flat-key" };
+    globalThis.fetch = async () => new Response(JSON.stringify(payload), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    });
+    try {
+      await assert.rejects(jsonFetch("/api/generate"), (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal((error as Error & { status?: number }).status, 401);
+        const resolved = resolveErrorSpec(error);
+        assert.equal(resolved.code, "GROK_API_KEY_MISSING");
+        assert.equal(resolved.message, payload.error);
+        assert.equal(resolved.rawCode, undefined);
+        assert.equal(resolved.errorClass, undefined);
+        assert.deepEqual(resolved.spec, { surface: "card", cardKey: "errorCard.grokApiKeyMissing", cta: "reauth" });
+        return true;
+      });
+    } finally { globalThis.fetch = original; }
+  });
+
+  it("dedicated code and rawCode fallback both outrank generic AUTH_INVALID", () => {
+    for (const code of ["GROK_API_KEY_MISSING", "UNREGISTERED_WRAPPER"]) {
+      const resolved = resolveErrorSpec({ code, rawCode: "GROK_API_KEY_MISSING",
+        errorClass: "AUTH_INVALID", message: "ordinary provider failure" });
+      assert.equal(resolved.code, "GROK_API_KEY_MISSING");
+      assert.equal(resolved.rawCode, "GROK_API_KEY_MISSING");
+      assert.equal(resolved.errorClass, "AUTH_INVALID");
+      assert.deepEqual(resolved.spec, { surface: "card", cardKey: "errorCard.grokApiKeyMissing", cta: "reauth" });
+    }
+  });
+
+  it("flat and nested stream consumers preserve missing-key guidance", () => {
+    for (const error of ["key missing", { code: "GROK_API_KEY_MISSING", message: "key missing" }]) {
+      const parsed = parseSseErrorPayload({ error, code: "GROK_API_KEY_MISSING", status: 401 });
+      assert.equal(parsed.code, "GROK_API_KEY_MISSING");
+      assert.equal(parsed.status, 401);
+      assert.equal(resolveErrorSpec(parsed).spec.cardKey, "errorCard.grokApiKeyMissing");
+    }
+  });
+
+  for (const [locale, expected] of Object.entries(grokKeyCopy)) {
+    it(`${locale} has exact image-only key-setting copy`, () => {
+      const dictionary = JSON.parse(source(`ui/src/i18n/${locale}.json`));
+      assert.deepEqual(dictionary.errorCard.grokApiKeyMissing, expected);
+    });
+  }
+});
+
+it("WP03 actual J6 interception keeps flat refusals scoped and default 202 unchanged", async () => {
+  const { installJ6SelectionCapture } = await import("../ui/e2e/fixtures/j6Selection.ts");
+  type Capture = Awaited<ReturnType<typeof installJ6SelectionCapture>>;
+  let handler: ((route: unknown) => Promise<void>) | undefined;
+  let disposed = false;
+  // A protocol-only context double: no Playwright browser, socket, app, or auth probe.
+  const context = { pages: () => [], serviceWorkers: () => [],
+    route: async (_pattern: string, callback: typeof handler) => { handler = callback; },
+    unroute: async (_pattern: string, callback: typeof handler) => { assert.equal(callback, handler); disposed = true; } };
+  const capture = await installJ6SelectionCapture(context as unknown as Parameters<typeof installJ6SelectionCapture>[0], "http://127.0.0.1:40123");
+  const cases: Array<{ failure?: Capture["submissionFailure"]; provider: string; path: string; status: number; code?: string; error?: string }> = [
+    { provider: "grok-api", path: "/api/generate", status: 202 },
+    { failure: "grok-api-key-missing", provider: "grok-api", path: "/api/generate", status: 401,
+      code: "GROK_API_KEY_MISSING", error: "Grok API key is required for grok-api image generation" },
+    { failure: "grok-api-key-missing", provider: "grok", path: "/api/generate", status: 202 },
+    { failure: "grok-api-key-missing", provider: "grok-api", path: "/api/video/generate", status: 202 },
+    { failure: "oauth-unavailable", provider: "oauth", path: "/api/generate", status: 503,
+      code: "OAUTH_UNAVAILABLE", error: "OAuth proxy unavailable" },
+    { failure: "oauth-unavailable", provider: "api", path: "/api/generate", status: 202 },
+    { failure: "invalid-request", provider: "api", path: "/api/generate", status: 400,
+      code: "INVALID_REQUEST", error: "Invalid size for image generation" },
+    { failure: "invalid-request", provider: "oauth", path: "/api/generate", status: 202 },
+  ];
+  try {
+    assert.ok(handler);
+    for (const [index, fixture] of cases.entries()) {
+      if (fixture.failure) capture.submissionFailure = fixture.failure;
+      else delete capture.submissionFailure;
+      const requestId = `wp03-j6-${index}`;
+      const replies: unknown[] = [];
+      await handler({ request: () => ({ url: () => `http://127.0.0.1:40123${fixture.path}`,
+        method: () => "POST", postDataJSON: () => ({ provider: fixture.provider, async: true, requestId }) }),
+        fulfill: async (reply: unknown) => { replies.push(reply); },
+        abort: async () => { assert.fail("valid fixture submission must not abort"); },
+        continue: async () => { assert.fail("submission must never reach a real handler"); } });
+      const json = fixture.code ? { error: fixture.error, code: fixture.code, requestId } : { requestId };
+      assert.deepEqual(replies, [{ status: fixture.status, json }]);
+    }
+    assert.equal(capture.requests.length, cases.length);
+    assert.deepEqual(capture.unexpected, []);
+  } finally { await capture.dispose(); }
+  assert.equal(disposed, true);
+});
+
 describe("063 error UI consumption", () => {
   it("priority class beats a registered app code and the cardKey survives the store", () => {
     const resolved = resolveErrorSpec(billingPayload);

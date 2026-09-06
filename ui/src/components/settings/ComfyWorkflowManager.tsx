@@ -13,6 +13,7 @@ import {
   type ComfyWorkflowRecord,
 } from "../../lib/api-comfy";
 import { useI18n } from "../../i18n";
+import { refreshLaneCatalog } from "../../lib/laneCatalog";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
@@ -147,7 +148,7 @@ export function ComfyWorkflowManager() {
       setLabel("");
       setMediaKind("image");
       if (fileRef.current) fileRef.current.value = "";
-      await refresh();
+      await Promise.all([refresh(), refreshLaneCatalog()]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("comfy.registerFailed"));
     } finally {
@@ -159,7 +160,7 @@ export function ComfyWorkflowManager() {
     setBusy(true);
     try {
       await deleteComfyWorkflow(id);
-      await refresh();
+      await Promise.all([refresh(), refreshLaneCatalog()]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("comfy.removeFailed"));
     } finally {

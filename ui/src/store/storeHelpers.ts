@@ -1,3 +1,4 @@
+import { fetchApi } from "../lib/api-core";
 import type {
   Format,
   GenerateItem,
@@ -8,6 +9,7 @@ import {
   getHistory,
 } from "../lib/api";
 import { compressToBase64 } from "../lib/compress";
+import { JOB_TRACKING_TIMEOUT_MESSAGE } from "../lib/errorCodes";
 import { IN_FLIGHT_STORAGE_KEY } from "./persistenceRegistry";
 import { normalizeCustomSizePairDetailed } from "../lib/size";
 import { resolveNaiOptions, type NaiOptions } from "../lib/naiOptions";
@@ -44,8 +46,8 @@ export function getInflightQueryScopes(state: {
   scopes.push({ kind: "video" });
   scopes.push({ kind: "mcp-image" }, { kind: "mcp-video" });
   for (const job of state.inFlight) {
-    if (job.kind?.startsWith("mcp-action-") && !scopes.some((scope) => scope.kind === job.kind)) {
-      scopes.push({ kind: job.kind });
+    if (!matchesInflightScope(job, scopes)) {
+      scopes.push({ kind: job.kind ?? "classic", ...(job.kind === "node" ? { sessionId: job.sessionId ?? undefined } : {}) });
     }
   }
   return scopes;
@@ -103,7 +105,9 @@ export function terminalJobError(job: ServerTerminalJob): Error & { code?: strin
   const code = typeof job.errorCode === "string" && job.errorCode
     ? job.errorCode
     : "UNKNOWN";
-  const e = new Error(code === "EMPTY_RESPONSE"
+  const e = new Error(code === "JOB_TRACKING_TIMEOUT"
+    ? JOB_TRACKING_TIMEOUT_MESSAGE
+    : code === "EMPTY_RESPONSE"
     ? "No image data returned from the image backend."
     : "Generation failed on the server.") as Error & { code?: string; status?: number };
   e.code = code;
@@ -130,7 +134,7 @@ export function mergeMultimodeImages(current: GenerateItem[], incoming: Generate
   );
 }
 
-export function loadInFlight(): PersistedInFlight[] {
+export function loadInFlight({ includeExpired = false }: { includeExpired?: boolean } = {}): PersistedInFlight[] {
   try {
     const raw = localStorage.getItem(IN_FLIGHT_STORAGE_KEY);
     if (!raw) return [];
@@ -141,7 +145,7 @@ export function loadInFlight(): PersistedInFlight[] {
       .filter(
         (x: any) =>
           x && typeof x.id === "string" && typeof x.prompt === "string" &&
-          typeof x.startedAt === "number" && now - x.startedAt < INFLIGHT_TTL_MS,
+          typeof x.startedAt === "number" && (includeExpired || now - x.startedAt < INFLIGHT_TTL_MS),
       )
       .map((x: any) => ({
         id: x.id,
@@ -291,7 +295,7 @@ export function stripDataUrlPrefix(dataUrl: string): string {
 }
 
 export async function compressReferenceSource(src: string, filename = "reference.png"): Promise<string> {
-  const resp = await fetch(src);
+  const resp = await fetchApi(src);
   if (!resp.ok) throw new Error(`reference fetch failed: ${resp.status}`);
   const blob = await resp.blob();
   const file = new File([blob], filename, { type: blob.type || "image/png" });

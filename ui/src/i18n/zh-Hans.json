@@ -1,4 +1,23 @@
 {
+  "lan": {
+    "title": "连接到工作室",
+    "body": "请输入工作室设置的 LAN 令牌。令牌不会保存在浏览器存储中。",
+    "token": "LAN 令牌",
+    "connect": "连接",
+    "connecting": "正在连接…",
+    "retry": "重新检查连接",
+    "sessionExpired": "请登录工作室。已输入的内容会保留。",
+    "unavailable": "无法连接到工作室。请检查地址后重试。",
+    "rateLimited": "尝试次数过多，请稍后重试。",
+    "capacity": "工作室会话已满，请稍后重试。",
+    "originRejected": "请使用管理员配置的地址打开工作室。",
+    "cookieRequired": "请允许此工作室使用 Cookie，然后重新连接。",
+    "duplicateToken": "地址包含多个令牌，请在下方输入正确的令牌。",
+    "sessionTitle": "工作室会话",
+    "signOut": "退出工作室",
+    "signingOut": "正在退出…",
+    "signOutBody": "退出不会取消正在进行的生成任务。"
+  },
   "common": {
     "ok": "确定",
     "cancel": "取消",
@@ -72,6 +91,7 @@
     "generatedBatch": "在 {elapsed}s 中生成 {count} 图像。",
     "generatedSingle": "在 {elapsed}s 中生成。",
     "generateFailed": "一代失败。",
+    "jobTrackingTimeout": "任务跟踪已超时，无法确认服务提供方是否已完成。重试前请先检查历史记录。",
     "sessionReloadedElsewhere": "图表版本发生变化，因此重新加载最新图表。",
     "promptCopied": "提示已复制",
     "metadataCopied": "已复制",
@@ -338,7 +358,8 @@
     "webSearch": "网页搜索",
     "grokApi": "Grok API",
     "grokApiBody": "通过捆绑的 progrok 运行：强制搜索、Grok 4.5 英语图像和文本工具规划，然后是 xAI Images API。附加参考使用 xAI 图像编辑，因此保留了 i2i 上下文。",
-    "openAccount": "开设账户设置"
+    "openAccount": "开设账户设置",
+    "mcp": {"loading":"正在检查 MCP 就绪状态…","error":"无法读取 MCP 就绪状态","missing":"提供商不可用","disabled":"提供商已停用","disconnected":"提供商未连接","locked":"提供商执行已锁定","default":"提供商默认模型","model-missing":"所选模型不可用","model-locked":"所选模型执行已锁定","ready":"上次连接检查时可用。","refresh":"刷新","observed":"检查于 {time}"}
   },
   "generate": {
     "button": "产生",
@@ -852,6 +873,8 @@
     "label": "预计成本"
   },
   "result": {
+    "extend": "延长视频",
+    "extendTitle": "从此视频的最后一帧继续生成",
     "download": "下载",
     "copyImage": "复制图像",
     "copyLastFrame": "最后\n框架",
@@ -1587,6 +1610,11 @@
       "title": "需要充值",
       "body": "该服务商账户余额不足。请前往服务商控制台确认后重试。"
     },
+    "grokApiKeyMissing": {
+      "title": "需要 Grok API 密钥",
+      "body": "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok 代理。",
+      "cta": "打开提供商设置"
+    },
     "naiApiKeyMissing": {
       "title": "未设置 NovelAI 令牌",
       "body": "请在设置中粘贴 NovelAI 永久 API 令牌（以 pst- 开头）。此通道不使用登录会话。",
@@ -1849,7 +1877,7 @@
     "imageFallback": "生成的图像",
     "videoFallback": "生成的视频",
     "emptyCta": "写下你的第一个提示",
-    "errorTitle": "生成失败",
+    "errorTitle": "生成提示",
     "errorHint": "请检查模型和 API 密钥设置后重试。",
     "errorDismiss": "关闭",
     "savedHint": "结果会自动保存到您的项目中。",
@@ -2342,6 +2370,7 @@
     "refUndo": "撤消"
   },
   "comfy": {
+    "display": {"localMethod":"本地 HTTP","loading":"正在检查工作流…","refreshing":"正在更新上次观测状态…","loadFailed":"无法读取工作流目录。","appAccessRequired":"读取目录需要应用访问权限。","unavailable":"尚未确认工作流是否可用。","available":"上次检查目录时可用。","chooseWorkflow":"选择工作流","empty":"尚未注册工作流。","selectedMissing":"所选工作流已不在目录中。","selectedOffline":"上次检查时所选工作流离线。","selectedLocked":"所选工作流已锁定。","observedConnected":"上次检查时有实例响应。","lastChecked":"上次检查：{time}","refresh":"刷新","manage":"管理工作流","controlsHelp":"此面板选择图像或视频工作流。绑定决定哪些已保存的请求设置生效；选择工作流并不证明执行成功。"},
     "workflowsTitle": "ComfyUI 工作流",
     "addTitle": "注册工作流",
     "loading": "正在加载工作流…",

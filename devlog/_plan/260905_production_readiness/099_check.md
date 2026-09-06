@@ -1,0 +1,143 @@
+# WP09 C — scoped release-facing verification
+
+Authority:098_scope_lock.md. No further test-infrastructure expansion.
+Source candidate:897026500bac07a790aa7710856fdbdc9b5cc0ed; PR211 remains draft.
+Actual B→C transition recorded for session01a06e88-aa93-77b2-a99a-fc10f8458eb2.
+
+Verified: single-job startup diagnostic34001495156,5 passed in32.5s. The two
+platform paths stay unreadable, write attempts remain unexpected, and all three
+primary-config variants plus normal emitted startup/model discovery pass.
+Evidence:session/wp09/89702650-startup. This is not whole-WP or release success.
+
+In progress on that exact source: fullCI34001638768 and CodeQL34001640426.
+Next: inspect actual UI results and directly open the original NAI sidebar/bottom/
+mobile screenshots plus core transition/readiness/recovery frames. Repair only
+observed product defects or demonstrably incorrect test assumptions. Required
+final-head checks, scoped review/receipt and D closure remain pending.
+
+Verification: pending. Stack merges: not performed. Release: not performed.
+Frontend SoT updated to describe implemented ownership without claiming a visual pass.
+
+FullCI34001638768: both Node/package legs pass; CodeQL comparison93→93 with no
+new IDs/severity changes. UI was cancelled at the20-minute job bound, so there is
+NO full native pass. Dot reporter emitted240 outcomes with10 failures before
+cancellation; mapping to the exact --list identifies J4, both bottom-short themes,
+six mobile navigation locale/width cases and T6. Remaining cases lack terminal
+outcomes. Screenshots/metrics were uploaded and retained.
+
+Main directly opened original NAI sidebar/bottom/mobile short captures. They show
+the paired-pane/toolbar layout, not an unexplained extra footer gap; bottom/mobile
+captures reflect their measured scroll state, so do not mistake them for initial
+unscrolled frames. Additional short-height and navigation failures remain open.
+T6 evidence specifically records POST/api/metadata/read unexpected-mutation while
+all mirror metrics/screenshots and teardown were produced; that fixture must model
+the synthetic attachment's metadata read without admitting arbitrary mutations.
+
+Next single diagnostic job runs only the four distinct observed failure families
+(J4, bottom-short dark, mobile320en, T6) plus the unchanged isolation dependency.
+Built-in line reporter retains immediate error details; bounded test-step time
+leaves upload time. No fullCI rerun or blanket timeout/allowlist relaxation.
+
+Observed product repair, not a new test gate: at1440x600 the bottom dock is312px,
+composer292px, but the editing scrollport is only51px. Both textarea floors are
+already86px or greater (rejects a textarea-floor hypothesis); scrolling works
+(rejects a broken-scroll hypothesis). The empty disabled reference tray consumes
+48px plus layout gap even though NAI cannot attach references. Hide ONLY that empty
+tray in the short-height NAI bottom composer. Keep retained references, other
+providers/surfaces, the52vh/420px cap and86–148px input bounds unchanged. Existing
+short-height contrast/control tests must verify the repair; no assertions relaxed.
+
+Focused run34002750849 at58ccaab5:26pass/2fail. T6 metadata fixture correction
+passes; J4 passes unchanged in this run (not a claimed fix for its earlier outcome).
+Short dock fails flat-background sampling because its51px scrollport clips the
+input. Mobile320en fails when focused Asset Gen is only0.518 visible. Labels and
+focus itself pass, rejecting missing-target/label-size hypotheses; active-item
+reveal runs only on mode/settings changes, not keyboard focus. Reuse that same
+nav-local reveal on focus capture. No document scrolling, target shrink, assertion
+relaxation or new test case. Next run is the same focused diagnostic against fixes.
+
+The truncated full-run dot stream did not identify each failure by name; its
+position-to-list mapping is diagnostic inference, not proof of a J4 failure or
+flake. The named focused result is authoritative. Next single job checks only
+the two remaining named failures, keeping the original isolation dependency.
+After these grouped fixes pass, full CI checks the retained suite including core
+cases lacking terminal outcomes. No unrelated diagnostic matrix or new test.
+
+Product-fix checkpointc7e027f01eeb41328d5955f14fc23f5868184fd5:
+focused run34003201468 SUCCESS. Both named UI failures now pass alongside the
+unchanged isolation dependency. Main will directly read the new frames and then
+run final fullCI/CodeQL. Full CI uses the built-in line reporter so a cancelled
+run cannot erase test names behind buffered dots; no case, threshold, timeout or
+isolation rule is changed by that logging choice.
+
+Main directly opened c7e027f0 short-dock and320px navigation PNGs after the26-pass
+run. The short dock now exposes prompt text and enabled toolbar actions without
+the unsupported empty tray. Navigation's final Home state remains horizontally
+scrollable; focused-item completeness is proven by the unchanged0.99 viewport
+assertions throughout keyboard traversal, not by pretending all seven items fit
+simultaneously in320px. Final full-suite success remains pending.
+
+Full candidate0b898e0a/run34003607293: Node22/24 andCodeQL pass; named UI output
+confirms only J3's expected upstream prompt mismatch before cancellation at case253.
+The actual request retains the typed prompt and appends the existing1024x1024
+size constraint. lib/sizeNudge.ts is unchanged from the parent; direct mode does
+not remove this policy. Correct the two independent literal expectations including
+that exact suffix, keep full equality and distinct first/retry prompts. No product
+generation behavior, token/key policy or assertion strength is relaxed.
+
+The serial retained suite reached253/258 at20 minutes; normal late cases were
+progressing at roughly5–8s each. Increase only the aggregate E2E job budget to25
+minutes so remaining cases and uploads finish. Individual test/expect limits,
+all cases, isolation dependencies and assertions remain unchanged. This does not
+fix or excuse J3. Diagnose J3 alone (+required isolation) before another full run.
+
+J3 correction at56308093/run34004614504 passes its single diagnostic job. The
+remaining unfinished tail from the cancelled full run is the existing Node fit,
+composition-interruption and reference-control cases. The Node390 capture was
+not yet written at cancellation, so do not infer its appearance or outcome. Run
+only that retained tail plus isolation before the final25-minute aggregate job;
+no new tests, scenario permutations or runtime guards are being added.
+
+Tail diagnostic8055c7d7/run34004872173:28pass/2fail. Mobile Node's enabled/stable
+Start blank button is intercepted by right-panel-backdrop; the legacy aside is
+already display:none on mobile, but App still mounts its backdrop/focus trap.
+Do not mount that desktop panel on mobile. Desktop panel behavior is unchanged.
+The negative-field provider round trip preserves draft values but submits0 times;
+viewport remount variants pass. NegativePromptField returns null for non-NAI
+without unmounting its hook state, so composingRef survives the missing DOM field.
+Clear only that ref after the non-NAI commit, before return navigation; preserve
+the draft and all composing/native229 guards, with no automatic submission.
+Both repairs use existing owners and existing failing tests, not new abstractions.
+
+08c3d768/run34005387069:25pass/1fail. Provider interruption now submits correctly;
+mobile Node reaches its graph after the invisible backdrop is removed. Main
+directly opened wp09-node-default-fit-390.png: toolbar's second row, selection
+bar, Elements panel and duplicate+button overlap. This is not another backdrop
+or missing-node failure; hit testing fails on the visible HUD. Mobile-only CSS
+places the four existing toolbar buttons in two44px rows, the selection bar below,
+then Elements. Hide the duplicate+action on mobile only (Add image remains).
+Desktop and graph data/generation behavior are unchanged. Re-run the same Node
+case; no new fixture or additional verification matrix.
+
+5096b678 diagnostic34005834222 passes25, but MAIN direct screenshot inspection
+rejects the frame: selection bar still sits behind the toolbar. React Flow's
+`.react-flow__panel.top.center` overrides the lower-specificity batch position.
+Use the exact mobile batch selector to win that existing cascade and include the
+visible batch buttons in the same existing HUD hit-test loop. This repairs a
+demonstrated missed control, not a new test facility. Prematurely dispatched full
+CI34006041499/CodeQL34006042683 were cancelled; no successful-candidate claim.
+
+11358ed9/fullCI34006306697 completed all258 native cases:257pass/1fail in19min.
+The only failure is desktop1280 Node selection-bar hit testing. Main directly
+opened its default-fit PNG; the existing top-center selection bar is hidden behind
+the top-right toolbar, the same placement conflict previously exposed on mobile.
+Desktop-only positioning separates toolbar, selection bar and Elements vertically;
+the duplicate+button is hidden only when the selection bar exists, with Add image
+still present. Same existing desktop test is the next single diagnostic. No new
+test harness, general layout system, skips or relaxed hit tests.
+
+The local macOS watcher receipt attempt timed out and was interrupted; its failed
+record is session/wp09/11358ed9-local-receipt-attempt.md. Original watcher test passed
+in both fullCI Node legs but this does not explain the macOS event loss. Keep that
+platform-specific nondeterminism for WP12's macOS proof; do not expand WP09 tooling.
+The separate product-focused receipt has43pass and does not claim the failed file.

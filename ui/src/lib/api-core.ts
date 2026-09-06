@@ -1,5 +1,37 @@
+import { createLanAuthError, getLanAuthEpoch, isLanSessionLocked, requireLanAuthentication } from "./lanSession";
+
+/** Observe first-party auth failures without changing caller transport options. */
+export async function fetchApi(url: string, init?: RequestInit): Promise<Response> {
+  const epoch = getLanAuthEpoch();
+  let protectedRequest = false;
+  try {
+    if (typeof window !== "undefined") {
+      const target = new URL(url, window.location.href);
+      protectedRequest = target.origin === window.location.origin
+        && /^\/(api|generated)(?:\/|$)/i.test(target.pathname);
+    }
+  } catch { /* Native fetch retains responsibility for invalid URLs. */ }
+  try {
+    if (protectedRequest) init?.signal?.throwIfAborted();
+    // A locked-period rejection belongs to the invalidated auth period, too.
+    // Login preserves the loss epoch, so stamping its current value would relock it.
+    if (protectedRequest && isLanSessionLocked()) throw createLanAuthError(epoch - 1);
+    const response = await fetch(url, init);
+    if (protectedRequest && response.status === 401) {
+      const body: unknown = await response.clone().json().catch(() => null);
+      const error = (body as { error?: { code?: unknown }; code?: unknown } | null);
+      if (error?.error?.code === "LAN_TOKEN_REQUIRED" || error?.code === "LAN_TOKEN_REQUIRED") {
+        requireLanAuthentication(epoch);
+        try { await response.body?.cancel(); } catch { /* Preserve the typed auth failure if cleanup fails. */ }
+        throw createLanAuthError(epoch);
+      }
+    }
+    return response;
+  } catch (error) { throw error; }
+}
+
 export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetchApi(url, init);
   const data = (await res.json().catch(() => ({}))) as T & {
     error?: string | { code?: string; message?: string };
     currentVersion?: number;
@@ -38,6 +70,21 @@ export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> 
     }
     throw err;
   }
+  return data;
+}
+
+export async function jsonGetObservation(url: string, signal?: AbortSignal): Promise<unknown> {
+  signal?.throwIfAborted();
+  const res = await fetchApi(url, { method: "GET", signal });
+  if (!res.ok) {
+    try { await res.body?.cancel(); } catch { /* Preserve the HTTP status if cleanup fails. */ }
+    const error = new Error(`Request failed: ${res.status}`) as Error & { status?: number };
+    error.status = res.status;
+    throw error;
+  }
+  signal?.throwIfAborted();
+  const data = await res.json();
+  signal?.throwIfAborted();
   return data;
 }
 export function parseSseBlock(block: string): { event: string | null; data: unknown } | null {

@@ -9,14 +9,9 @@ import { generateImageThumbnailFromBuffer } from "./imageThumb.js";
 import { classifyUpstreamError } from "./errorClassify.js";
 import { normalizeOAuthParams } from "./oauthNormalize.js";
 import { resolveProviderOptions } from "./providerOptions.js";
-import { generateMultimodeViaResponses } from "./responsesImageAdapter.js";
-import { generateMultimodeViaGrok } from "./grokMultimodeAdapter.js";
+import { prepareImageExecution } from "./providers/execution/index.js";
+import { checkImageExecutionAdmission } from "./providers/execution/admission.js";
 import { resolveGrokQualityModel } from "./imageModels.js";
-import { generateViaAgy } from "./agyImageAdapter.js";
-import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
-import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
-import { generateViaMinimax } from "./minimaxImageAdapter.js";
-import { generateViaNai } from "./naiImageAdapter.js";
 import { composerNegativePromptMeta, readNaiOptions } from "./naiOptions.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, INFLIGHT_RETRY_AFTER_SECONDS } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
@@ -25,7 +20,7 @@ import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
 import { invalidateHistoryIndex } from "./historyIndex.js";
 import { normalizeComposerInsertedPrompts, normalizeComposerPrompt, } from "./composerSnapshot.js";
 import { errInfo } from "./errInfo.js";
-import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
+import type { RuntimeContext } from "./runtimeContext.js";
 import { validateModeration, imageFormatFromMime, writeSse } from "./routeHelpers.js";
 import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
@@ -34,6 +29,7 @@ import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt 
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
 import { errorEnvelopeFields } from "./errors/envelope.js";
+import { getProviderSurfaceSupport } from "./providers/derive.js";
 
 async function resolveMultimodeElements(
   elementIds: string[], references: string[], activeProvider: string, requestId: string | undefined,
@@ -160,7 +156,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
       // request would reach generateViaResponses and bill OAuth for an image
       // the user asked ComfyUI to make — silently, with no error to trace.
       // Removed in wp7 when this surface gains a real comfy branch.
-      if (provider === "comfy") {
+      if (getProviderSurfaceSupport(provider, "multimode")?.supported === false) {
         finishStatus = "error";
         finishHttpStatus = 400;
         finishErrorCode = "COMFY_SURFACE_UNSUPPORTED";
@@ -178,7 +174,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         rawSize: size,
         rawWebSearchEnabled,
       });
-      if (providerOptions.error) {
+      if (providerOptions.error !== undefined) {
         finishStatus = "error";
         finishHttpStatus = providerOptions.status;
         finishErrorCode = providerOptions.code;
@@ -229,6 +225,17 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         });
       }
       const refCheck = refCheckResult as Extract<typeof refCheckResult, { refs: string[] }>;
+      const admission = checkImageExecutionAdmission(ctx, {
+        provider: activeProvider, surface: "multimode", referenceCount: refCheck.refs.length,
+      });
+      if (admission) {
+        finishStatus = "error";
+        finishHttpStatus = admission.status;
+        finishErrorCode = admission.code;
+        return respondMultimodeValidationError(res, requestId, asyncMode, admission.status, {
+          error: admission.message, code: admission.code, status: admission.status, requestId,
+        });
+      }
       const incomingProviderUrl = typeof req.body?.providerUrl === "string" && req.body.providerUrl.startsWith("http") ? req.body.providerUrl : null;
       const referencePayload = summarizeReferencePayload(mergedReferences);
       const started = startJob({
@@ -363,129 +370,31 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
         dualEmitMultimode(res, requestId, "image", item);
       };
       dualEmitMultimode(res, requestId, "phase", { phase: "streaming", requestId, sequenceId, maxImages });
-      let generated: { images: Array<{ b64: string; revisedPrompt?: string | null }>; usage: Record<string, number> | null; webSearchCalls?: number | undefined; extraIgnored?: number | undefined; error?: unknown | undefined };
-      if (activeProvider === "gemini-api") {
-        const r = await generateViaGeminiApi(generationPrompt, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          references: refCheck.refDetails,
-        });
-        generated = {
-          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
-          usage: r.usage,
-          webSearchCalls: r.webSearchCalls,
-        };
-      } else if (activeProvider === "agy") {
-        const r = await generateViaAgy(generationPrompt, {
-          references: refCheck.refDetails,
-          signal: cancelController.signal,
-          requestId,
-        });
-        generated = {
-          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
-          usage: r.usage,
-          webSearchCalls: r.webSearchCalls,
-        };
-      } else if (activeProvider === "atlascloud") {
-        const r = await generateViaAtlasCloud(prompt, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          quality: routeQuality,
-          signal: cancelController.signal,
-          requestId,
-          references: refCheck.refDetails,
-        });
-        generated = {
-          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
-          usage: r.usage,
-          webSearchCalls: r.webSearchCalls,
-        };
-      } else if (activeProvider === "minimax") {
-        const r = await generateViaMinimax(prompt, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          references: refCheck.refDetails,
-        });
-        generated = {
-          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
-          usage: r.usage,
-          webSearchCalls: r.webSearchCalls,
-        };
-      } else if (activeProvider === "nai") {
-        // No references: the adapter is text-to-image only (see the refusal in
-        // lib/generatePipeline.ts), so none are forwarded here either.
-        const r = await generateViaNai(prompt, requireRuntimeContext(ctx), {
-          model: imageModel,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          ...readNaiOptions(req.body),
-        });
-        generated = {
-          // No mime field on this shape; the persist step below detects PNG
-          // from the magic bytes, which is authoritative anyway.
-          images: [{ b64: r.b64, ...(r.revisedPrompt !== undefined ? { revisedPrompt: r.revisedPrompt } : {}) }],
-          usage: r.usage,
-          webSearchCalls: r.webSearchCalls,
-        };
-      } else if (activeProvider === "grok" || activeProvider === "grok-api") {
-        const directApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-        const grokModel = resolveGrokQualityModel(imageModel, quality);
-        const grokRefs = incomingProviderUrl
-          ? [{ b64: "", url: incomingProviderUrl }, ...refCheck.refDetails]
-          : refCheck.refDetails;
-        generated = await generateMultimodeViaGrok(generationPrompt, ctx, {
-          model: grokModel,
-          maxImages,
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          references: grokRefs,
-          directApiKey,
-          onFinalImage: async (image, index) => {
-            const totalReturned = Math.max(index + 1, images.length + 1);
-            await persistAndSendImage(image, index, totalReturned, sequenceStatus(totalReturned, maxImages));
+      const { value: generated } = await (await prepareImageExecution(ctx, {
+        surface: "multimode", provider: activeProvider, requestId,
+        signal: cancelController.signal, prompt: generationPrompt, rawPrompt: prompt,
+        references: refCheck.refDetails, providerUrl: incomingProviderUrl, maxImages,
+        options: { model: imageModel, quality, size: effectiveSize, moderation,
+          mode: normalizedPromptMode, reasoningEffort, webSearchEnabled },
+        nai: activeProvider === "nai" ? readNaiOptions(req.body) : {},
+      }, {
+        onPartialImage: (partial) => {
+            if (isJobCanceled(requestId)) return;
+            const pd = { image: `data:${mime};base64,${partial.b64}`, requestId, sequenceId, index: partial.index };
+            if (!res.writableEnded && !res.destroyed) writeSse(res, "partial", pd);
+            publish(requestId, "partial", pd);
           },
-        });
-      } else {
-        generated = await generateMultimodeViaResponses(
-          activeProvider,
-          generationPrompt,
-          quality,
-          effectiveSize,
-          moderation,
-          refCheck.refDetails || refCheck.refs,
-          requestId,
-          normalizedPromptMode,
-          ctx,
-          {
-            model: imageModel,
-            maxImages,
-            reasoningEffort,
-            webSearchEnabled,
-            onPartialImage: (partial) => {
-                if (isJobCanceled(requestId)) return;
-                const pd = { image: `data:${mime};base64,${partial.b64}`, requestId, sequenceId, index: partial.index };
-                if (!res.writableEnded && !res.destroyed) writeSse(res, "partial", pd);
-                publish(requestId, "partial", pd);
-              },
-            onFinalImage: async (image, index) => {
-              const totalReturned = Math.max(index + 1, images.length + 1);
-              await persistAndSendImage(image, index, totalReturned, sequenceStatus(totalReturned, maxImages));
-            },
-            signal: cancelController.signal,
-          },
-        );
-      }
+        onFinalImage: async (image, index) => {
+          const totalReturned = images.length + 1;
+          await persistAndSendImage(image, index, totalReturned, sequenceStatus(totalReturned, maxImages));
+        },
+      })).execute();
       throwIfJobCanceled(requestId);
       latestUsage = generated.usage || null;
       latestWebSearchCalls = generated.webSearchCalls || 0;
       latestExtraIgnored = generated.extraIgnored || 0;
-      for (const [index, image] of generated.images.entries() as IterableIterator<[number, MultimodeImage]>) {
+      for (const [position, image] of generated.images.entries()) {
+        const index = generated.originalIndexes?.[position] ?? position;
         await persistAndSendImage(
           image,
           index,

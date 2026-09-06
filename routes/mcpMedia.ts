@@ -194,8 +194,15 @@ async function runMediaAction(input: {
     if (input.mode === "fallback" && input.decision === "local-ffmpeg-concat") {
       setJobPhase(requestId, "media-processing");
       publishJobEvent(requestId, "progress", { phase: "media-processing" });
-      const tempOut = join(ctx.config.storage.generatedDir, `.tmp-concat-${requestId}.mp4`);
-      await deps.concat(input.resolvedFiles, tempOut, { signal: input.signal });
+      const tempOut = join(ctx.config.storage.generatedDir, `.tmp-concat-${randomBytes(16).toString("hex")}.mp4`);
+      try {
+        await deps.concat(input.resolvedFiles, tempOut, { signal: input.signal });
+      } catch (concatError) {
+        // Concat can leave a partial file; retain its error if cleanup also fails.
+        await rm(tempOut, { force: true }).catch(() => undefined);
+        throw concatError;
+      }
+      // Successful concat hands cleanup to commitMediaResult, before its done event.
       await commitMediaResult({
         ctx, deps, requestId, kind: "video",
         tempPath: tempOut, cleanup: () => rm(tempOut, { force: true }),
