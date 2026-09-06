@@ -84,6 +84,8 @@ jobs:
         run: npm run typecheck:tests
       - name: Test inventory
         run: npm run test:inventory
+      - name: Runtime installation documentation
+        run: npm run docs:runtime:check
       - name: Build server (tsc emit)
         run: npm run build:server
       - name: Build cli (tsc emit)
@@ -148,20 +150,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.npm == '11.18.0'
         run: npm run publish:dry-run
 
-  # Windows is a supported install target, so its coverage is kept — but it is
-  # off the release path. The two Windows legs were the slowest thing on the
-  # board and they gated every release cut, while the only failure they ever
-  # produced was EPERM in a test's own `rmSync` teardown on a temp dir the OS
-  # had not released yet. That is a Windows filesystem behaviour, not a defect
-  # in the shipped package, and it blocked releases that were otherwise green
-  # on every other leg.
-  #
-  # `schedule` only: never on push, and never on the workflow_dispatch that
-  # release.yml uses for its candidate gate. A regression here is caught within
-  # a day and fixed on its own merit instead of stopping a release.
+  # Supported Windows installers are verified on the exact dispatched candidate.
+  # Nightly coverage remains; candidate failures must be repaired before release.
   windows:
     name: windows (node ${{ matrix.node }}, npm ${{ matrix.npm }})
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 45
     strategy:
@@ -174,6 +167,9 @@ jobs:
             npm: '12.0.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
@@ -181,6 +177,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ui/package-lock.json
+      - name: Assert candidate checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
       - name: Pin npm
         run: npm install -g npm@${{ matrix.npm }}
       - name: Install root deps
@@ -189,6 +189,8 @@ jobs:
         run: npm run test:native-deps
       - name: Install ui deps
         run: npm --prefix ui ci --no-audit --no-fund
+      - name: Runtime installation documentation
+        run: npm run docs:runtime:check
       - name: Typecheck
         run: npm run typecheck
       - name: Build server (tsc emit)
@@ -197,6 +199,8 @@ jobs:
         run: npm run build:cli
       - name: Build ui
         run: npm --prefix ui run build
+      - name: Hosted installer behavior
+        run: node --import tsx --test tests/install-runtime-contract.test.ts
       - name: Run tests
         run: npm test
         timeout-minutes: 20

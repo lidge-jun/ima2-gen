@@ -207,6 +207,19 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
     const grokHelp = run(process.execPath, [cliPath, "grok", "--help"], { cwd: projectDir, env });
     assert.match(grokHelp.stdout, /bundled progrok runtime/);
 
+    const installedVersion = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version;
+    assert.equal(existsSync(join(packageRoot, "bin", "ima2.ts")), false, "installed CLI must not depend on repository TypeScript");
+    assert.equal(run(process.execPath, [cliPath, "--version"], { cwd: projectDir, env }).stdout.trim(), installedVersion);
+    const installation = run(process.execPath, [cliPath, "doctor", "--installation", "--json"], { cwd: projectDir, env });
+    const installationReport = JSON.parse(installation.stdout);
+    assert.equal(installationReport.schemaVersion, 1);
+    assert.equal(installationReport.mode, "installation");
+    assert.equal(installationReport.version, installedVersion);
+    assert.equal(installationReport.summary.exitCode, 0);
+    assert.equal(installationReport.summary.failed, 0);
+    assert.ok(installationReport.checks.some((check) => check.code === "NODE_RUNTIME_OK" && check.kind === "pass"));
+    assert.ok(installationReport.checks.every((check) => !check.lane && check.evidence === "local" && check.kind !== "fail"));
+
     const progrokHelp = run(process.execPath, [progrokBin, "--help"], { cwd: projectDir, env });
     assert.match(progrokHelp.stdout, /Usage: progrok/);
 
