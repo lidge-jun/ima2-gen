@@ -221,3 +221,12 @@ teardowns and QA receipt. An unsupported oracle claim was rejected and replaced.
 Next WP09 revalidates090 against this source, including320px navigation crowding
 and actual-MCP popup facts alongside prior node/focus/roster residuals. Remaining
 security, integrated acceptance, bottom-up merge and release gates stay active.
+
+WP09 verified source ef37a9b5, PR211 above210;099_0 records closure evidence and
+098 owner scope freeze. FullCI34007568897:258nativePASS, Node22/24 root/package
+PASS; CodeQL34007570051 same93inherited findings. MAIN andtwoactual-view oracles
+reviewed11coreframes; QAreceipt0,43product-focusedtestsPASS, clean hostedteardown.
+Short-dock/navfocus/MCPfacts/hiddenmobilepanel/composition/NodeHUD defects repaired.
+No further test-foundation expansion. Local macOS watcher timeout remains a
+recorded WP12 platform-verification observation, not a false local pass. NextWP10
+consumes100prewrittenplan. Stack merges and release remain unperformed.
