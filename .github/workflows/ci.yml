@@ -41,17 +41,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.sha || github.sha }}
           fetch-depth: 0
-      - name: Assert the checked-out SHA is the dispatched one
-        if: ${{ github.event.inputs.sha != '' && github.event.inputs.sha != null }}
-        shell: bash
-        env:
-          WANT: ${{ github.event.inputs.sha }}
-        run: |
-          ACTUAL=$(git rev-parse HEAD)
-          if [ "$WANT" != "$ACTUAL" ]; then
-            echo "dispatch asked for $WANT but checked out $ACTUAL"
-            exit 1
-          fi
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
@@ -61,6 +50,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ui/package-lock.json
+      - name: Assert candidate checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
       - name: Structure line-count drift (fast fail)
         run: node scripts/refresh-structure-line-counts.mjs --check
       - name: Pin npm
@@ -212,6 +205,49 @@ jobs:
       - name: CLI smoke (capabilities)
         run: node bin/ima2.js capabilities --json
 
+  macos-install:
+    name: macOS native installation
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.17.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - name: Assert candidate checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.inputs.sha || github.sha }}
+        run: node scripts/assert-ci-sha.mjs
+      - name: Pin npm
+        run: npm install -g npm@11.18.0
+      - name: Install root deps
+        run: npm ci
+      - name: Install ui deps
+        run: npm --prefix ui ci --no-audit --no-fund
+      - name: Native dependency smoke
+        run: npm run test:native-deps
+      - name: Runtime installation documentation
+        run: npm run docs:runtime:check
+      - name: Build server
+        run: npm run build:server
+      - name: Build cli
+        run: npm run build:cli
+      - name: Build ui
+        run: npm --prefix ui run build
+      - name: Hosted installer and offline doctor behavior
+        run: node --import tsx --test tests/install-runtime-contract.test.ts tests/doctor-runtime.test.ts tests/doctor-report.test.ts
+      - name: Package install smoke
+        run: npm run test:package-install
+        timeout-minutes: 15
+
   e2e:
     name: frontend e2e (ubuntu)
     runs-on: ubuntu-latest
@@ -272,6 +308,8 @@ jobs:
           path: |
             ui/test-results/**/wp09-*.png
             ui/test-results/**/wp09-*.json
+            ui/test-results/**/wp12-*.png
+            ui/test-results/**/wp12-*.json
             ui/dist/.ima2-ui-build-receipt.json
           if-no-files-found: error
           retention-days: 14
