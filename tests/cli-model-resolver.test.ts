@@ -194,9 +194,11 @@ writeFileSync(join(transpiledDir, "package.json"), '{"type":"module"}');
 // temp tree mirrors both directories instead of flattening them.
 mkdirSync(join(transpiledDir, "bin", "lib"), { recursive: true });
 mkdirSync(join(transpiledDir, "lib"), { recursive: true });
+mkdirSync(join(transpiledDir, "lib", "errors"), { recursive: true });
 for (const [sourceDir, targetDir, names] of [
   [binLibDir, join(transpiledDir, "bin", "lib"), ["sse", "mcpJob", "client"]],
-  [serverLibDir, join(transpiledDir, "lib"), ["jobStatus", "eventsPolicy"]],
+  [serverLibDir, join(transpiledDir, "lib"), ["jobStatus", "eventsPolicy", "responsesErrors"]],
+  [join(serverLibDir, "errors"), join(transpiledDir, "lib", "errors"), ["providerMap"]],
 ] as const) {
   for (const name of names) {
     const source = readFileSync(join(sourceDir, `${name}.ts`), "utf8");

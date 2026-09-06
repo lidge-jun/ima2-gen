@@ -182,7 +182,9 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
     ? comfyLane.image.map((entry: ComfyLaneModel) => ({
       id: entry.id,
       label: entry.description?.endsWith("(offline)") ? `${entry.label} — ${t("comfy.statusOffline")}` : entry.label,
-      disabled: !isComfyModelAvailable(entry),
+      disabled: laneSnapshot.phase !== "ready"
+        || laneCatalog.comfy?.status !== "ready"
+        || !isComfyModelAvailable(entry),
       reason: entry.lockReason,
     }))
     : [];
@@ -193,7 +195,9 @@ export function GenProviderModelSelect({ compact = false }: { compact?: boolean 
       // No invented reason: if the server does not lock the row, there is
       // nothing to explain. Offline is a separate, real condition below.
       reason: entry.lockReason,
-      disabled: !isComfyModelAvailable(entry),
+      disabled: laneSnapshot.phase !== "ready"
+        || laneCatalog.comfy?.status !== "ready"
+        || !isComfyModelAvailable(entry),
     }))
     : [];
   // Lane-gated: a value the current lane does not list would render the trigger

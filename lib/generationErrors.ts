@@ -1,5 +1,6 @@
 import { classifyUpstreamError, classifyUpstreamErrorCode, classifyModerationStage } from "./errorClassify.js";
-import { providerErrorClass } from "./errors/providerMap.js";
+import { providerErrorClass, statusForErrorCode } from "./errors/providerMap.js";
+export { statusForErrorCode } from "./errors/providerMap.js";
 import { safeDiagnosticLabel } from "./responsesParse.js";
 import { RESPONSE_DIAGNOSTIC_CODES } from "./responsesErrors.js";
 
@@ -134,20 +135,6 @@ export function isNonRetryableGenerationError(err: UpstreamErr | null | undefine
   if (SAFETY_CODES.has(code)) return false;
   const status = Number(err?.status);
   return code === "INVALID_REQUEST" || code === "OAUTH_IMAGE_TIMEOUT" || (Number.isFinite(status) && status >= 400 && status < 500);
-}
-
-export function statusForErrorCode(code: string, fallback = 500) {
-  if (code === "GROK_API_KEY_MISSING") return 401;
-  if (code === "OAUTH_UNAVAILABLE" || code === "NETWORK_FAILED") return 503;
-  if (code === "AUTH_CHATGPT_EXPIRED" || code === "AUTH_API_KEY_INVALID") return 401;
-  if (code === "API_KEY_REQUIRED") return 401;
-  if (code === "UPSTREAM_5XX") return 502;
-  if (code === "RESPONSES_STREAM_ERROR") return 502;
-  if (code === "OAUTH_IMAGE_TIMEOUT") return 504;
-  if (code === "INVALID_REQUEST") return 400;
-  if (RESPONSE_DIAGNOSTIC_CODES.has(code)) return 422;
-  if (code === "SAFETY_REFUSAL" || code === "MODERATION_REFUSED" || code === "moderation_blocked") return 422;
-  return fallback;
 }
 
 function copyEmptyResponseMetadata(target: any, source: UpstreamErr | null | undefined) {

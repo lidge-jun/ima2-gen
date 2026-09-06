@@ -385,7 +385,7 @@ export async function runMultimodePipeline(req: Request, res: Response, ctx: Run
             publish(requestId, "partial", pd);
           },
         onFinalImage: async (image, index) => {
-          const totalReturned = Math.max(index + 1, images.length + 1);
+          const totalReturned = images.length + 1;
           await persistAndSendImage(image, index, totalReturned, sequenceStatus(totalReturned, maxImages));
         },
       })).execute();

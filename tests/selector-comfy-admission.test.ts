@@ -73,6 +73,35 @@ test("actual selector Comfy image/video callbacks admit only current eligible wo
   }
 });
 
+test("Comfy image/video row props require ready snapshot, ready lane and eligible models", async () => {
+  for (const [phase, status, modelState, disabled] of [
+    ["ready", "ready", "eligible", false],
+    ["loading", "ready", "eligible", true],
+    ["error", "ready", "eligible", true],
+    ["idle", "ready", "eligible", true],
+    ["ready", "disconnected", "eligible", true],
+    ["ready", "locked", "eligible", true],
+    ["ready", "ready", "offline", true],
+    ["ready", "ready", "locked", true],
+  ] as const) {
+    const snapshot: LaneCatalogSnapshot = { ...ready(), phase, error: phase === "error" ? "request" : null };
+    const lane = snapshot.catalog!.comfy;
+    lane.status = status;
+    for (const model of [...lane.models.image, ...lane.models.video]) {
+      if (modelState === "offline") model.description = "origin (offline)";
+      if (modelState === "locked") model.executable = false;
+    }
+    const f = await render({}, snapshot);
+    const rows = f.controls["sidebar-generation-model"].groups.flatMap((group) => group.items);
+    for (const value of ["cedar", "comfy-video:motion"]) {
+      const row = rows.find((item) => item.value === value);
+      const scenario = `${phase}/${status}/${modelState}: ${value}`;
+      assert.ok(row, scenario);
+      assert.equal(Boolean(row.disabled), disabled, scenario);
+    }
+  }
+});
+
 test("captured callbacks reject fresh-loading, disconnected, locked and stale-context state", async () => {
   for (const change of [
     (f: Fixture) => { f.snapshot = { ...f.snapshot, phase: "loading" }; },

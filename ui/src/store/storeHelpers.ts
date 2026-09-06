@@ -46,8 +46,8 @@ export function getInflightQueryScopes(state: {
   scopes.push({ kind: "video" });
   scopes.push({ kind: "mcp-image" }, { kind: "mcp-video" });
   for (const job of state.inFlight) {
-    if (job.kind?.startsWith("mcp-action-") && !scopes.some((scope) => scope.kind === job.kind)) {
-      scopes.push({ kind: job.kind });
+    if (!matchesInflightScope(job, scopes)) {
+      scopes.push({ kind: job.kind ?? "classic", ...(job.kind === "node" ? { sessionId: job.sessionId ?? undefined } : {}) });
     }
   }
   return scopes;
