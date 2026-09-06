@@ -93,6 +93,17 @@ README may still mention a different Node baseline. The operational baseline is 
 
 `ima2 doctor` includes a Storage section with the current gallery path, legacy-source counts, and recovery-guide pointer. The browser gallery also calls `/api/storage/status` and can open the current generated folder through `/api/storage/open-generated-dir`; that endpoint accepts no arbitrary path.
 
+Machine `doctor --json` uses fixed code-derived messages with a fail-preserving
+summary; it does not serialize free-form provider errors or storage paths.
+`--installation --json` runs before config/account initialization and checks only
+the package engine, dependencies/bins, in-memory native binding, skills and UI.
+`--verify-keys` is explicit non-generating remote authentication, with a5000ms
+deadline; `--runtime <loopback-origin>` is explicit local health/version with a1500ms
+deadline and no credentials/redirects. Neither establishes provider generation
+success. Timeout overrides are capped at30000ms. Generic logger error strings
+redact URL-shaped/Bearer/query credentials before truncation and omit nested
+cause/body/stack data; this does not claim arbitrary opaque free text is safe.
+
 ## Environment Variables
 
 | Variable | Default or meaning |
