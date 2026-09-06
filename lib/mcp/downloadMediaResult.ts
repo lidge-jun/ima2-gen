@@ -3,39 +3,28 @@
 // (routes/mcpMedia.ts) owns the atomic commit. Signed URLs are never persisted.
 import { createWriteStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
-import { lookup } from "node:dns/promises";
-import { setDefaultResultOrder } from "node:dns";
-import https from "node:https";
-import { isIP } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-
-// 260718 RCA: CloudFront AAAA records + hosts without working IPv6 made
-// Node fetch die with ETIMEDOUT while curl/python (IPv4) worked — this was
-// the actual "fetch failed" that dropped completed Runway results. Prefer
-// IPv4 for outbound fetches in this process.
-try { setDefaultResultOrder("ipv4first"); } catch { /* older runtimes */ }
+import { pinnedHttpGet, type PinnedHttpResponse, type PinnedHttpTarget } from "../pinnedHttpGet.js";
+import { resolvePublicDownloadTarget } from "../grokImageDownloadPolicy.js";
 
 const MAX_REDIRECTS = 5;
-const PRIVATE_V4 = [/^10\./, /^127\./, /^169\.254\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./, /^0\./];
-
-function isPrivateAddress(address: string): boolean {
-  if (isIP(address) === 6) {
-    const lower = address.toLowerCase();
-    return lower === "::1" || lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("::ffff:127.");
+async function resolvePublicHttps(url: URL, signal: AbortSignal): Promise<PinnedHttpTarget> {
+  if (url.protocol !== "https:") throw new Error(`MCP_DOWNLOAD_INSECURE:${url.protocol}`);
+  try {
+    return await resolvePublicDownloadTarget(url, signal, "ipv4first");
+  } catch (error) {
+    signal.throwIfAborted();
+    if (!(error instanceof Error) || Reflect.get(error, "code") !== "GROK_IMAGE_DOWNLOAD_FAILED") throw error;
+    throw new Error(`MCP_DOWNLOAD_PRIVATE_IP:${url.hostname}`);
   }
-  return PRIVATE_V4.some((pattern) => pattern.test(address));
 }
 
 export async function assertPublicHttps(url: URL): Promise<void> {
-  if (url.protocol !== "https:") throw new Error(`MCP_DOWNLOAD_INSECURE:${url.protocol}`);
-  const host = url.hostname;
-  const addresses = isIP(host) ? [{ address: host }] : await lookup(host, { all: true });
-  for (const { address } of addresses) {
-    if (isPrivateAddress(address)) throw new Error(`MCP_DOWNLOAD_PRIVATE_IP:${host}`);
-  }
+  try { await resolvePublicHttps(url, new AbortController().signal); }
+  catch (error) { throw error; }
 }
 
 export interface DownloadedMedia {
@@ -88,39 +77,43 @@ async function downloadMediaResultOnce(
 ): Promise<DownloadedMedia> {
   const maxBytes = options.maxBytes ?? (options.kind === "video" ? 800 * 1024 * 1024 : 40 * 1024 * 1024);
   let url = new URL(rawUrl);
-  let response: { status: number; headers: { get(name: string): string | null }; body: Readable | null } | null = null;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    await assertPublicHttps(url);
-    response = await openGet(url, options.timeoutMs ?? 120_000, options.v4Fallback !== false);
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location) throw new Error("MCP_DOWNLOAD_REDIRECT_INVALID");
-      response.body?.resume?.();
-      url = new URL(location, url);
-      continue;
+  let response: PinnedHttpResponse | undefined;
+  try {
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+      response = await openGet(url, options.timeoutMs ?? 120_000, options.v4Fallback !== false);
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        response.cancel();
+        if (!location?.trim()) throw new Error("MCP_DOWNLOAD_REDIRECT_INVALID");
+        url = new URL(location, url);
+        continue;
+      }
+      break;
     }
-    break;
-  }
-  if (!response || response.status < 200 || response.status >= 300 || !response.body) {
-    throw new Error(`MCP_DOWNLOAD_FAILED:${response?.status ?? "no-response"}`);
-  }
-  const contentType = response.headers.get("content-type") ?? "";
-  const expected = options.kind === "video" ? /^(video\/|application\/octet-stream)/ : /^image\//;
-  if (!expected.test(contentType)) throw new Error(`MCP_RESULT_TYPE_MISMATCH:${contentType}`);
+    if (!response || response.status < 200 || response.status >= 300 || !response.body) {
+      throw new Error(`MCP_DOWNLOAD_FAILED:${response?.status ?? "no-response"}`);
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    const expected = options.kind === "video" ? /^(video\/|application\/octet-stream)/ : /^image\//;
+    if (!expected.test(contentType)) throw new Error(`MCP_RESULT_TYPE_MISMATCH:${contentType}`);
+    if (Number(response.headers.get("content-length")) > maxBytes) throw new Error("MCP_DOWNLOAD_TOO_LARGE");
+    return await writeMediaResult(response, url, contentType, maxBytes);
+  } finally { response?.cancel(); }
+}
 
+async function writeMediaResult(response: PinnedHttpResponse, url: URL, contentType: string, maxBytes: number): Promise<DownloadedMedia> {
   const dir = await mkdtemp(join(tmpdir(), "ima2-mcp-dl-"));
   const tempPath = join(dir, "result");
   let bytes = 0;
   try {
-    const webBody = Readable.toWeb(response.body) as unknown as ReadableStream<Uint8Array>;
-    const capped = webBody.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
+    const capped = async function* () {
+      for await (const chunk of response.body!) {
         bytes += chunk.byteLength;
-        if (bytes > maxBytes) controller.error(new Error("MCP_DOWNLOAD_TOO_LARGE"));
-        else controller.enqueue(chunk);
-      },
-    }));
-    await pipeline(Readable.fromWeb(capped as never), createWriteStream(tempPath));
+        if (bytes > maxBytes) throw new Error("MCP_DOWNLOAD_TOO_LARGE");
+        yield chunk;
+      }
+    };
+    await pipeline(Readable.from(capped()), createWriteStream(tempPath));
   } catch (error) {
     await rm(dir, { recursive: true, force: true });
     throw error;
@@ -134,35 +127,29 @@ async function downloadMediaResultOnce(
   };
 }
 
-/** fetch first; on a network-level failure (broken-IPv6 hosts stall in
- *  undici/https happy-eyeballs), fall back to https.request with family 4 —
- *  this was the actual ETIMEDOUT behind the lost Runway results (260718). */
+/** Retain IPv4 preference and one optional network fallback without fresh DNS. */
 async function openGet(url: URL, timeoutMs: number, v4Fallback: boolean) {
+  let target: PinnedHttpTarget | undefined;
   try {
-    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(timeoutMs) });
-    return {
-      status: response.status,
-      headers: { get: (name: string) => response.headers.get(name) },
-      body: response.body ? Readable.fromWeb(response.body as never) : null,
-    };
+    return await timedGet(async (signal) => {
+      target = await resolvePublicHttps(url, signal);
+      return target;
+    }, timeoutMs);
   } catch (error) {
-    if (!v4Fallback) throw error;
-    if (!isRetryableDownloadError(error)) throw error;
-    return httpsGetV4(url, timeoutMs);
+    if (!v4Fallback || !target?.addresses.some(({ family }) => family === 4) || !isRetryableDownloadError(error)) throw error;
+    return timedGet(async () => target!, timeoutMs, 4);
   }
 }
 
-function httpsGetV4(url: URL, timeoutMs: number) {
-  return new Promise<{ status: number; headers: { get(name: string): string | null }; body: Readable | null }>((resolve, reject) => {
-    const request = https.request(url, { method: "GET", family: 4, timeout: timeoutMs }, (response) => {
-      resolve({
-        status: response.statusCode ?? 0,
-        headers: { get: (name: string) => (response.headers[name.toLowerCase()] as string | undefined) ?? null },
-        body: response,
-      });
-    });
-    request.on("timeout", () => { request.destroy(new Error("MCP_DOWNLOAD_TIMEOUT")); });
-    request.on("error", reject);
-    request.end();
-  });
+async function timedGet(resolve: (signal: AbortSignal) => Promise<PinnedHttpTarget>, timeoutMs: number, family?: 4) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("MCP_DOWNLOAD_TIMEOUT")), timeoutMs);
+  try {
+    const target = await resolve(controller.signal);
+    const response = await pinnedHttpGet(target, controller.signal, family ? { family } : {});
+    return { ...response, cancel: (reason?: Error) => { clearTimeout(timer); response.cancel(reason); } };
+  } catch (error) {
+    clearTimeout(timer);
+    throw error;
+  }
 }

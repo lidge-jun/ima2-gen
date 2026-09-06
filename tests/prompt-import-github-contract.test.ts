@@ -1,12 +1,13 @@
-import { describe, it, afterEach } from "node:test";
+import { describe, it, before, beforeEach, after, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normalizeGitHubSource, fetchGitHubSource, fetchGitHubSourceText } from "../lib/promptImport/githubSource.ts";
 import { parsePromptCandidates } from "../lib/promptImport/parsePromptCandidates.ts";
+import { DownloadNetwork, eventTurn, fakeClock } from "./_grokDownloadPolicyCases.ts";
 
 const root = process.cwd();
-const originalFetch = globalThis.fetch;
+const network = new DownloadNetwork();
 
 function readSource(path) {
   return readFileSync(join(root, path), "utf8");
@@ -23,9 +24,14 @@ const limits = {
 };
 
 describe("prompt import GitHub contract", () => {
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
+  before(() => network.install());
+  beforeEach(() => {
+    network.activate();
+    network.hosts["raw.githubusercontent.com"] = [{ address: "8.8.8.8", family: 4 }];
+    network.hosts["github.com"] = [{ address: "1.1.1.1", family: 4 }];
   });
+  afterEach(async () => { await network.finish(); });
+  after(() => network.restore());
 
   it("normalizes supported GitHub file inputs and tags source metadata", () => {
     const blob = normalizeGitHubSource("https://github.com/owner/repo/blob/main/prompts/example.markdown");
@@ -64,34 +70,21 @@ describe("prompt import GitHub contract", () => {
   });
 
   it("enforces final redirect host and byte caps while fetching GitHub text", async () => {
-    globalThis.fetch = (async () => ({
-      ok: true,
-      url: "https://github.com.evil.com/file.md",
-      headers: new Headers(),
-      arrayBuffer: async () => new TextEncoder().encode("prompt").buffer,
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ status: 302, headers: { location: "https://github.com.evil.com/file.md" }, holdBody: true });
     await assert.rejects(
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /redirected to an unsupported host/,
     );
 
-    globalThis.fetch = (async () => ({
-      ok: true,
-      url: "https://raw.githubusercontent.com/o/r/main/a.md",
-      headers: new Headers({ "content-length": String(limits.maxFileBytesForPreview + 1) }),
-      arrayBuffer: async () => new ArrayBuffer(0),
-    })) as unknown as typeof fetch;
+    assert.equal(network.exchanges.length, 1);
+    assert.equal(network.exchanges[0].reads, 0);
+    network.respond = () => ({ headers: { "content-length": String(limits.maxFileBytesForPreview + 1) }, holdBody: true });
     await assert.rejects(
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /too large/,
     );
 
-    globalThis.fetch = (async () => ({
-      ok: true,
-      url: "https://github.com/o/r/tree/main/prompts",
-      headers: new Headers(),
-      arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ status: 302, headers: { location: "https://github.com/o/r/tree/main/prompts" }, holdBody: true });
     await assert.rejects(
       () => fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits),
       /non-file page/,
@@ -99,23 +92,14 @@ describe("prompt import GitHub contract", () => {
   });
 
   it("exposes metadata fetch while preserving text-only fetch behavior", async () => {
-    globalThis.fetch = (async () => ({
-      ok: true,
-      url: "https://raw.githubusercontent.com/o/r/main/a.md",
-      headers: new Headers({ etag: "\"abc\"" }),
-      arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ headers: { etag: "\"abc\"" }, chunks: [Buffer.from("valid prompt body that is long enough to parse")] });
     const result = await fetchGitHubSource({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits);
     assert.equal(result.etag, "\"abc\"");
     assert.equal(typeof result.contentHash, "string");
     assert.equal(result.sizeBytes > 0, true);
 
-    globalThis.fetch = (async () => ({
-      ok: true,
-      url: "https://raw.githubusercontent.com/o/r/main/a.md",
-      headers: new Headers(),
-      arrayBuffer: async () => new TextEncoder().encode("another valid prompt body that is long enough to parse").buffer,
-    })) as unknown as typeof fetch;
+    assert.equal(result.finalUrl, "https://raw.githubusercontent.com/o/r/main/a.md");
+    network.respond = () => ({ chunks: [Buffer.from("another valid prompt body that is long enough to parse")] });
     const text = await fetchGitHubSourceText({ rawUrl: "https://raw.githubusercontent.com/o/r/main/a.md" }, limits);
     assert.match(text, /another valid prompt body/);
   });
@@ -125,6 +109,48 @@ describe("prompt import GitHub contract", () => {
       () => normalizeGitHubSource("owner/repo@feature/foo:prompts.md"),
       /Branches with slashes/,
     );
+  });
+
+  it("revalidates and pins allowed redirects, rejects HTTPS downgrade before DNS", async () => {
+    network.respond = ({ index }) => index === 0
+      ? { status: 302, headers: { location: "https://github.com/o/r/blob/main/b.md" }, holdBody: true }
+      : { chunks: [Buffer.from("safe")] };
+    const result = await fetchGitHubSource(normalizeGitHubSource("o/r:a.md"), limits);
+    assert.equal(result.text, "safe");
+    assert.equal(result.finalUrl, "https://github.com/o/r/blob/main/b.md");
+    assert.deepEqual(network.resolutions, ["raw.githubusercontent.com", "github.com"]);
+    assert.ok(network.order.indexOf("destroy:0") < network.order.indexOf("get:1"));
+    network.respond = () => ({ status: 302, headers: { location: "http://raw.githubusercontent.com/o/r/main/a.md" }, holdBody: true });
+    await assert.rejects(fetchGitHubSource(normalizeGitHubSource("o/r:a.md"), limits), /unsupported protocol/);
+    assert.equal(network.exchanges.length, 3);
+    assert.equal(network.resolutions.length, 3);
+  });
+
+  it("rejects mixed public/private DNS without a socket", async () => {
+    network.hosts["raw.githubusercontent.com"] = [{ address: "8.8.8.8", family: 4 }, { address: "100.64.0.1", family: 4 }];
+    await assert.rejects(fetchGitHubSource(normalizeGitHubSource("o/r:a.md"), limits));
+    assert.equal(network.exchanges.length, 0);
+  });
+
+  for (const declared of [undefined, "1"]) it(`caps streamed text with content-length=${declared}`, async () => {
+    network.respond = () => ({ chunks: [Buffer.from("abc"), Buffer.from("de")],
+      headers: declared ? { "content-length": declared } : {} });
+    await assert.rejects(fetchGitHubSource(normalizeGitHubSource("o/r:a.md"), { ...limits, maxFileBytesForPreview: 4 }),
+      { code: "REMOTE_FILE_TOO_LARGE", status: 413 });
+    assert.equal(network.exchanges.length, 1);
+  });
+
+  it("keeps the deadline through held response body and accepts empty text", async (t) => {
+    const advance = fakeClock(t);
+    network.respond = () => ({ holdBody: true });
+    const pending = fetchGitHubSource(normalizeGitHubSource("o/r:a.md"), { ...limits, fetchTimeoutMs: 100 });
+    const refused = assert.rejects(pending, { code: "REMOTE_FETCH_TIMEOUT", status: 504 });
+    await eventTurn();
+    await advance(100);
+    await refused;
+    assert.equal(advance.pending.size, 0);
+    network.respond = () => ({ chunks: [] });
+    assert.equal(await fetchGitHubSourceText(normalizeGitHubSource("o/r:a.md"), limits), "");
   });
 
   it("extracts conservative markdown and txt prompt candidates", () => {

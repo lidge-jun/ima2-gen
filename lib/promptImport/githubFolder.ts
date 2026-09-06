@@ -3,6 +3,7 @@ import { promptImportError } from "./errors.js";
 import type { PromptImportLimits } from "./types.js";
 
 import { errInfo } from "../errInfo.js";
+import { publicPinnedHttpGet, readPinnedBody, PinnedBodyTooLarge, type PinnedHttpResponse } from "../pinnedHttpGet.js";
 const GITHUB_HOST = "github.com";
 const GITHUB_API_HOST = "api.github.com";
 const RAW_HOST = "raw.githubusercontent.com";
@@ -63,7 +64,11 @@ function safePath(path: unknown): string {
   if (decoded.includes("\\") || decoded.split("/").includes("..")) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub folder traversal is not allowed");
   }
-  return decoded.replace(/^\/+|\/+$/g, "");
+  let start = 0;
+  let end = decoded.length;
+  while (start < end && decoded[start] === "/") start++;
+  while (end > start && decoded[end - 1] === "/") end--;
+  return decoded.slice(start, end);
 }
 
 function assertOwnerRepo(owner: string | undefined, repo: string | undefined): void {
@@ -178,7 +183,7 @@ function assertGithubApiUrl(rawUrl: string): void {
   } catch {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub folder fetch returned an invalid URL");
   }
-  if (!["http:", "https:"].includes(url.protocol) || url.hostname !== GITHUB_API_HOST) {
+  if (url.protocol !== "https:" || url.hostname !== GITHUB_API_HOST) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub folder fetch used an unsupported host");
   }
 }
@@ -190,7 +195,7 @@ function assertRawDownloadUrl(rawUrl: string): void {
   } catch {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub folder file has an invalid download URL");
   }
-  if (!["http:", "https:"].includes(url.protocol) || url.hostname !== RAW_HOST) {
+  if (url.protocol !== "https:" || url.hostname !== RAW_HOST) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub folder file download host is unsupported");
   }
   const path = safePath(url.pathname.split("/").filter(Boolean).slice(3).join("/"));
@@ -245,24 +250,27 @@ async function fetchJson(url: string, limits: PromptImportLimits): Promise<Fetch
   assertGithubApiUrl(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);
+  let response: PinnedHttpResponse | undefined;
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: "application/vnd.github+json" },
-    });
-    assertGithubApiUrl(response.url || url);
-    if (response.status === 404) return { notFound: true };
-    if (!response.ok) {
+    response = await publicPinnedHttpGet(url, controller.signal, assertGithubApiUrl, { Accept: "application/vnd.github+json" });
+    if (response.status === 404) { await response.cancel(); return { notFound: true }; }
+    if (response.status < 200 || response.status >= 300) {
+      await response.cancel();
       throw promptImportError("GITHUB_FOLDER_NOT_FOUND", `GitHub folder fetch failed with ${response.status}`, 422);
     }
-    return { json: await response.json() };
+    const body = await readPinnedBody(response, limits.maxFileBytesForPreview);
+    return { json: JSON.parse(new TextDecoder().decode(body)) };
   } catch (error) {
+    if (error instanceof PinnedBodyTooLarge) {
+      throw promptImportError("REMOTE_FILE_TOO_LARGE", "GitHub folder index is too large", 413);
+    }
     const err = errInfo(error);
     if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub folder fetch timed out", 504);
     }
     throw error;
   } finally {
+    response?.cancel();
     clearTimeout(timer);
   }
 }
@@ -372,32 +380,34 @@ async function fetchRawFile(rawUrl: string, limits: PromptImportLimits): Promise
   assertRawDownloadUrl(rawUrl);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);
+  let response: PinnedHttpResponse | undefined;
   try {
-    const response = await fetch(rawUrl, { signal: controller.signal });
-    assertRawDownloadUrl(response.url || rawUrl);
-    if (!response.ok) {
+    response = await publicPinnedHttpGet(rawUrl, controller.signal, assertRawDownloadUrl);
+    if (response.status < 200 || response.status >= 300) {
+      await response.cancel();
       throw promptImportError("INVALID_GITHUB_SOURCE", `GitHub folder file fetch failed with ${response.status}`, 422);
     }
     const contentLength = Number(response.headers.get("content-length") || 0);
     if (contentLength > limits.maxFileBytesForPreview) {
       throw promptImportError("GITHUB_FOLDER_FILE_TOO_LARGE", "Folder file is too large", 413);
     }
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > limits.maxFileBytesForPreview) {
-      throw promptImportError("GITHUB_FOLDER_FILE_TOO_LARGE", "Folder file is too large", 413);
-    }
+    const buffer = await readPinnedBody(response, limits.maxFileBytesForPreview);
     const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
     return {
       text,
       contentHash: createHash("sha256").update(Buffer.from(buffer)).digest("hex"),
     };
   } catch (error) {
+    if (error instanceof PinnedBodyTooLarge) {
+      throw promptImportError("GITHUB_FOLDER_FILE_TOO_LARGE", "Folder file is too large", 413);
+    }
     const err = errInfo(error);
     if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub folder file fetch timed out", 504);
     }
     throw error;
   } finally {
+    response?.cancel();
     clearTimeout(timer);
   }
 }

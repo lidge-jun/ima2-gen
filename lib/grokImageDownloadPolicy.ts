@@ -1,14 +1,12 @@
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
+import type { PinnedHttpTarget } from "./pinnedHttpGet.js";
 
 export interface GrokImageDownloadPolicy {
   trustedProxyOrigin?: string | undefined;
 }
 
-export interface PinnedImageTarget {
-  url: URL;
-  addresses: readonly { address: string; family: 4 | 6 }[];
-}
+export type PinnedImageTarget = PinnedHttpTarget;
 
 // Dated conservative WP05 policy (050/051), not an exhaustive IANA mirror.
 const deniedIPv4 = new BlockList();
@@ -65,7 +63,7 @@ function validateAddresses(
 }
 
 async function lookupWithSignal(
-  hostname: string, signal: AbortSignal,
+  hostname: string, signal: AbortSignal, order?: "ipv4first",
 ): Promise<import("node:dns").LookupAddress[]> {
   signal.throwIfAborted();
   let onAbort: () => void = () => {};
@@ -76,7 +74,7 @@ async function lookupWithSignal(
       if (signal.aborted) { onAbort(); return; }
       Promise.resolve().then(() => {
         signal.throwIfAborted();
-        return lookup(hostname, { all: true });
+        return lookup(hostname, { all: true, ...(order ? { order } : {}) });
       }).then(resolve, reject); // Consume late fulfillment AND rejection after abort.
     });
   } catch (error) {
@@ -89,6 +87,23 @@ async function lookupWithSignal(
 export async function resolveImageDownloadTarget(
   url: URL, policy: GrokImageDownloadPolicy, signal: AbortSignal,
 ): Promise<PinnedImageTarget> {
+  try { return await resolveDownloadTarget(url, policy, signal); }
+  catch {
+    // The wrapper owns public 499/504 mapping; preserve any caller abort reason.
+    signal.throwIfAborted();
+    throw policyError();
+  }
+}
+
+/** Same public-address policy, with no trusted-proxy argument. DNS errors remain retryable. */
+export async function resolvePublicDownloadTarget(url: URL, signal: AbortSignal, order?: "ipv4first"): Promise<PinnedImageTarget> {
+  try { return await resolveDownloadTarget(url, {}, signal, order); }
+  catch (error) { signal.throwIfAborted(); throw error; }
+}
+
+async function resolveDownloadTarget(
+  url: URL, policy: GrokImageDownloadPolicy, signal: AbortSignal, order?: "ipv4first",
+): Promise<PinnedImageTarget> {
   try {
     signal.throwIfAborted();
     // Snapshot the destination so caller mutation cannot change it during DNS wait.
@@ -100,14 +115,13 @@ export async function resolveImageDownloadTarget(
     if (!trusted && targetUrl.protocol !== "https:") throw policyError();
     const family = isIP(hostname);
     const answers = family === 0
-      ? await lookupWithSignal(hostname, signal) : [{ address: hostname, family }];
+      ? await lookupWithSignal(hostname, signal, order) : [{ address: hostname, family }];
     signal.throwIfAborted();
     const addresses = validateAddresses(answers, trusted);
     signal.throwIfAborted();
     return { url: targetUrl, addresses };
-  } catch {
-    // The wrapper owns public 499/504 mapping; preserve any caller abort reason.
+  } catch (error) {
     signal.throwIfAborted();
-    throw policyError();
+    throw error;
   }
 }

@@ -3,6 +3,7 @@ import { promptImportError } from "./errors.js";
 import type { GitHubFileSource, PromptImportLimits } from "./types.js";
 
 import { errInfo } from "../errInfo.js";
+import { publicPinnedHttpGet, readPinnedBody, PinnedBodyTooLarge, type PinnedHttpResponse } from "../pinnedHttpGet.js";
 const ALLOWED_HOSTS = new Set(["github.com", "raw.githubusercontent.com"]);
 const SUPPORTED_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 const OWNER_REPO_RE = /^[A-Za-z0-9_.-]+$/;
@@ -59,8 +60,8 @@ function normalizeUrlInput(input: string): GitHubFileSource | null {
   } catch {
     return null;
   }
-  if (!["http:", "https:"].includes(url.protocol)) {
-    throw promptImportError("INVALID_GITHUB_SOURCE", "Only http(s) GitHub URLs are supported");
+  if (url.protocol !== "https:") {
+    throw promptImportError("INVALID_GITHUB_SOURCE", "Only HTTPS GitHub URLs are supported");
   }
   if (!ALLOWED_HOSTS.has(url.hostname)) {
     throw promptImportError("INVALID_GITHUB_SOURCE", "Only GitHub file URLs are supported");
@@ -173,7 +174,7 @@ function validateFinalFetchUrl(rawUrl: string): void {
   } catch {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub fetch returned an invalid final URL");
   }
-  if (!["http:", "https:"].includes(url.protocol)) {
+  if (url.protocol !== "https:") {
     throw promptImportError("INVALID_GITHUB_SOURCE", "GitHub fetch returned an unsupported protocol");
   }
   if (!ALLOWED_HOSTS.has(url.hostname)) {
@@ -215,20 +216,19 @@ interface GitHubFetchResult {
 export async function fetchGitHubSource(source: GitHubFileSource, limits: PromptImportLimits): Promise<GitHubFetchResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), limits.fetchTimeoutMs);
+  let response: PinnedHttpResponse | undefined;
   try {
-    const response = await fetch(source.rawUrl, { signal: controller.signal });
-    validateFinalFetchUrl(response.url);
-    if (!response.ok) {
+    response = await publicPinnedHttpGet(source.rawUrl, controller.signal, validateFinalFetchUrl);
+    if (response.status < 200 || response.status >= 300) {
+      await response.cancel();
       throw promptImportError("INVALID_GITHUB_SOURCE", `GitHub file fetch failed with ${response.status}`, 422);
     }
     const contentLength = Number(response.headers.get("content-length") || 0);
     if (contentLength > limits.maxFileBytesForPreview) {
+      await response.cancel();
       throw promptImportError("REMOTE_FILE_TOO_LARGE", "Remote file is too large", 413);
     }
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > limits.maxFileBytesForPreview) {
-      throw promptImportError("REMOTE_FILE_TOO_LARGE", "Remote file is too large", 413);
-    }
+    const buffer = await readPinnedBody(response, limits.maxFileBytesForPreview);
     const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
     return {
       text,
@@ -238,12 +238,16 @@ export async function fetchGitHubSource(source: GitHubFileSource, limits: Prompt
       contentHash: createHash("sha256").update(Buffer.from(buffer)).digest("hex"),
     };
   } catch (error) {
+    if (error instanceof PinnedBodyTooLarge) {
+      throw promptImportError("REMOTE_FILE_TOO_LARGE", "Remote file is too large", 413);
+    }
     const err = errInfo(error);
     if (err.name === "AbortError") {
       throw promptImportError("REMOTE_FETCH_TIMEOUT", "GitHub fetch timed out", 504);
     }
     throw error;
   } finally {
+    response?.cancel();
     clearTimeout(timer);
   }
 }

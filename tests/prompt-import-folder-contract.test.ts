@@ -1,4 +1,4 @@
-import { afterEach, describe, it } from "node:test";
+import { afterEach, before, beforeEach, after, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -7,9 +7,10 @@ import {
   fetchSelectedGitHubFolderFiles,
   normalizeGitHubFolderSource,
 } from "../lib/promptImport/githubFolder.ts";
+import { DownloadNetwork } from "./_grokDownloadPolicyCases.ts";
 
 const root = process.cwd();
-const originalFetch = globalThis.fetch;
+const network = new DownloadNetwork();
 
 function readSource(path) {
   return readFileSync(join(root, path), "utf8");
@@ -65,9 +66,14 @@ function folderItems() {
 }
 
 describe("prompt import GitHub folder contract", () => {
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
+  before(() => network.install());
+  beforeEach(() => {
+    network.activate();
+    network.hosts["api.github.com"] = [{ address: "8.8.8.8", family: 4 }];
+    network.hosts["raw.githubusercontent.com"] = [{ address: "1.1.1.1", family: 4 }];
   });
+  afterEach(async () => { await network.finish(); });
+  after(() => network.restore());
 
   it("normalizes supported folder inputs and rejects unsupported folder sources", () => {
     const tree = normalizeGitHubFolderSource("https://github.com/o/r/tree/main/prompts");
@@ -96,12 +102,7 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("lists supported files from GitHub Contents API without recursive crawl", async () => {
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
-      json: async () => folderItems(),
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ chunks: [Buffer.from(JSON.stringify(folderItems()))] });
     const source = normalizeGitHubFolderSource("o/r:prompts/");
     const result = await fetchGitHubFolderFiles(source, limits);
     assert.equal(result.files.length, 1);
@@ -111,23 +112,13 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("rejects non-folder responses and ambiguous tree URL failures", async () => {
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
-      json: async () => ({ type: "file" }),
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ chunks: [Buffer.from(JSON.stringify({ type: "file" }))] });
     await assert.rejects(
       () => fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits),
       /not a folder/,
     );
 
-    globalThis.fetch = (async () => ({
-      ok: false,
-      status: 404,
-      url: "https://api.github.com/repos/o/r/contents/foo/prompts?ref=feature",
-      json: async () => ({}),
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ status: 404, holdBody: true });
     await assert.rejects(
       () => fetchGitHubFolderFiles(normalizeGitHubFolderSource("https://github.com/o/r/tree/feature/foo/prompts"), limits),
       /ambiguous/,
@@ -135,25 +126,9 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("previews only selected paths returned by the server-side folder listing", async () => {
-    globalThis.fetch = (async (url) => {
-      if (String(url).includes("api.github.com")) {
-        return {
-          ok: true,
-          status: 200,
-          url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
-          json: async () => folderItems(),
-        };
-      }
-      return {
-        ok: true,
-        status: 200,
-        url: "https://raw.githubusercontent.com/o/r/main/prompts/poster.md",
-        headers: new Headers(),
-        arrayBuffer: async () => new TextEncoder().encode(
-          "Create a cinematic gpt-image-2 typography poster with readable headline, strict grid, and product-safe layout.",
-        ).buffer,
-      };
-    }) as unknown as typeof fetch;
+    network.respond = ({ url }) => ({ chunks: [Buffer.from(url.hostname === "api.github.com"
+      ? JSON.stringify(folderItems())
+      : "Create a cinematic gpt-image-2 typography poster with readable headline, strict grid, and product-safe layout.")] });
     const source = normalizeGitHubFolderSource("o/r:prompts/");
     const result = await fetchSelectedGitHubFolderFiles(source, ["prompts/poster.md"], limits);
     assert.equal(result.files.length, 1);
@@ -175,21 +150,11 @@ describe("prompt import GitHub folder contract", () => {
       html_url: "https://github.com/o/r/blob/main/prompts/one.md",
       download_url: index === 0 ? "https://raw.githubusercontent.com/o/r/main/prompts/one.md" : null,
     }));
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
-      json: async () => rawHeavy,
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ chunks: [Buffer.from(JSON.stringify(rawHeavy))] });
     const result = await fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits);
     assert.ok(result.warnings.some((warning) => warning.startsWith("folder-raw-too-large:")));
 
-    globalThis.fetch = (async () => ({
-      ok: true,
-      status: 200,
-      url: "https://api.github.com.evil.test/repos/o/r/contents/prompts?ref=main",
-      json: async () => folderItems(),
-    })) as unknown as typeof fetch;
+    network.respond = () => ({ status: 302, headers: { location: "https://api.github.com.evil.test/repos/o/r/contents/prompts?ref=main" }, holdBody: true });
     await assert.rejects(
       () => fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits),
       /unsupported host/,
@@ -197,27 +162,50 @@ describe("prompt import GitHub folder contract", () => {
   });
 
   it("rejects redirected raw file downloads outside the raw GitHub host", async () => {
-    globalThis.fetch = (async (url) => {
-      if (String(url).includes("api.github.com")) {
-        return {
-          ok: true,
-          status: 200,
-          url: "https://api.github.com/repos/o/r/contents/prompts?ref=main",
-          json: async () => folderItems(),
-        };
-      }
-      return {
-        ok: true,
-        status: 200,
-        url: "https://example.com/o/r/main/prompts/poster.md",
-        headers: new Headers(),
-        arrayBuffer: async () => new TextEncoder().encode("valid prompt body that is long enough to parse").buffer,
-      };
-    }) as unknown as typeof fetch;
+    network.respond = ({ url }) => url.hostname === "api.github.com"
+      ? { chunks: [Buffer.from(JSON.stringify(folderItems()))] }
+      : { status: 302, headers: { location: "https://example.com/o/r/main/prompts/poster.md" }, holdBody: true };
     await assert.rejects(
       () => fetchSelectedGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), ["prompts/poster.md"], limits),
       /download host is unsupported/,
     );
+    assert.equal(network.exchanges.length, 2);
+    assert.equal(network.exchanges[1].reads, 0);
+  });
+
+  it("trims slash runs linearly while preserving root and nested paths", () => {
+    for (const [raw, expected] of [["////", ""], ["///prompts/nested///", "prompts/nested"],
+      [`/${"/".repeat(100_000)}prompts${"/".repeat(100_000)}`, "prompts"], ["prompts//nested", "prompts//nested"]]) {
+      assert.equal(normalizeGitHubFolderSource(`o/r:${raw}`).path, expected);
+    }
+  });
+
+  for (const declared of [undefined, "1", "5"]) it(`bounds streamed JSON before parsing, length=${declared}`, async () => {
+    network.respond = () => ({ chunks: [Buffer.from("[0,"), Buffer.from("0]")], headers: declared ? { "content-length": declared } : {} });
+    await assert.rejects(fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"),
+      { ...limits, maxFileBytesForPreview: 4 }), { code: "REMOTE_FILE_TOO_LARGE", status: 413 });
+    assert.equal(network.exchanges.length, 1);
+    if (declared === "5") assert.equal(network.exchanges[0].reads, 0);
+  });
+
+  for (const location of ["http://api.github.com/repos/o/r/contents", "https://raw.githubusercontent.com/o/r/main/a.md"]) {
+    it(`rejects API redirect before another DNS/socket: ${location}`, async () => {
+      network.respond = () => ({ status: 302, headers: { location }, holdBody: true });
+      await assert.rejects(fetchGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"), limits), /unsupported host/);
+      assert.deepEqual(network.resolutions, ["api.github.com"]);
+      assert.equal(network.exchanges.length, 1);
+      assert.equal(network.exchanges[0].reads, 0);
+    });
+  }
+
+  it("raw text overflow uses folder error and cannot leave its stream open", async () => {
+    network.respond = ({ url }) => url.hostname === "api.github.com"
+      ? { chunks: [Buffer.from(JSON.stringify(folderItems()))] }
+      : { chunks: [Buffer.alloc(1024), Buffer.from("x")], headers: { "content-length": "1" } };
+    await assert.rejects(fetchSelectedGitHubFolderFiles(normalizeGitHubFolderSource("o/r:prompts/"),
+      ["prompts/poster.md"], { ...limits, maxFileBytesForPreview: 1024 }),
+      { code: "GITHUB_FOLDER_FILE_TOO_LARGE", status: 413 });
+    assert.equal(network.exchanges.length, 2);
   });
 
   it("registers folder routes, config caps, and route contracts", () => {
