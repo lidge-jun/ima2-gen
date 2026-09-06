@@ -152,7 +152,7 @@ test("nai never joins a JPEG-forcing conditional", () => {
   const sites: Array<[string, string]> = [
     ["lib/generatePipeline.ts", "const providerForcesJpeg ="],
     ["lib/multimodePipeline.ts", "const mmFormat ="],
-    ["lib/nodeGeneration.ts", 'let resultFormat: "png" | "jpeg" | "webp" ='],
+    ["lib/nodeGeneration.ts", "let resultFormat ="],
   ];
   for (const [file, anchor] of sites) {
     const expression = expressionAt(read(file), anchor);

@@ -1,7 +1,7 @@
 import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { mkdirSync, mkdtempSync, readFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -27,6 +27,7 @@ after(() => {
 
 async function withApp(fn: (baseUrl: string) => Promise<void>) {
   const app = express();
+  app.use(express.json());
   registerAssetDerivedRoutes(app, {});
   const server = await new Promise<import("node:http").Server>((resolve) => {
     const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
@@ -49,6 +50,19 @@ async function post(base: string, query: string, body: Buffer | string) {
 }
 
 describe("POST /api/assets/derived", () => {
+  it("rejects JSON Buffer impersonation before derived output writes", async () => {
+    await withApp(async (base) => {
+      const before = readdirSync(GENERATED_DIR).sort();
+      for (const body of [{ length: 4096, subarray: "not callable" }, { type: "Buffer", data: [137, 80, 78, 71] }, []]) {
+        const response = await fetch(`${base}/api/assets/derived?source=src.png`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+        });
+        assert.equal(response.status, 400);
+        assert.equal((await response.json()).code, "DERIVED_BODY_NOT_PNG");
+        assert.deepEqual(readdirSync(GENERATED_DIR).sort(), before);
+      }
+    });
+  });
   it("rejects a body that is not a PNG", async () => {
     await withApp(async (base) => {
       const { status, json } = await post(base, "source=src.png", "not-a-png");

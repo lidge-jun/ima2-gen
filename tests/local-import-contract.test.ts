@@ -14,6 +14,7 @@ const PNG_FIXTURE = Buffer.from(
 
 async function startApp(generatedDir) {
   const app = express();
+  app.use(express.json());
   registerImageImportRoutes(app, {
     config: { storage: { generatedDir }, server: { bodyLimit: "20mb" } },
     packageVersion: "test",
@@ -95,4 +96,17 @@ test("POST /api/history/import-local rejects empty body", async () => {
     await closeServer(server);
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("JSON objects cannot impersonate an image Buffer", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "ima2-import-type-"));
+  const { server, port } = await startApp(dir);
+  try {
+    for (const body of [{ length: 4096, subarray: "not callable" }, { type: "Buffer", data: [137, 80, 78, 71] }, []]) {
+      const response = await postRaw(port, { "Content-Type": "application/json" }, JSON.stringify(body));
+      assert.equal(response.status, 400);
+      assert.equal(response.body.code, "EMPTY_IMPORT");
+      assert.deepEqual(await readdir(dir), [], "invalid shapes never produce output files");
+    }
+  } finally { await closeServer(server); await rm(dir, { recursive: true, force: true }); }
 });
