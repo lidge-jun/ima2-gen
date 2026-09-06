@@ -56,7 +56,8 @@ function loadConfigJson() {
     if (!existsSync(p)) continue;
     try {
       const raw = readFileSync(p, "utf-8");
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
     } catch {
       // ignore malformed config.json; env+defaults still apply
     }
@@ -111,6 +112,10 @@ export function defaultLogLevelForEnv(runtimeEnv = env) {
 }
 
 export const config = {
+  diagnostics: {
+    keyTimeoutMs: Math.min(30000, pickPositiveInt(env.IMA2_DIAGNOSTIC_KEY_TIMEOUT_MS, fileCfg.diagnostics?.keyTimeoutMs, 5000)),
+    runtimeTimeoutMs: Math.min(30000, pickPositiveInt(env.IMA2_DIAGNOSTIC_RUNTIME_TIMEOUT_MS, fileCfg.diagnostics?.runtimeTimeoutMs, 1500)),
+  },
   server: {
     // Accept both IMA2_PORT and legacy PORT.
     port: pickInt(firstDefined(env.IMA2_PORT, env.PORT), fileCfg.server?.port, 3333),

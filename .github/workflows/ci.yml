@@ -90,6 +90,8 @@ jobs:
         run: npm run build:cli
       - name: Build ui
         run: npm --prefix ui run build
+      - name: Emitted doctor CLI offline and JSON contracts
+        run: node --import tsx --input-type=module -e 'import { verifyEmittedDoctorCli } from "./tests/doctor-report.test.ts"; await verifyEmittedDoctorCli();'
       - name: Run tests
         run: npm test
         timeout-minutes: 20
