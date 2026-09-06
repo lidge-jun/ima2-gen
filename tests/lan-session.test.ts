@@ -125,6 +125,39 @@ test("pure middleware: literal comma token works while duplicate raw fields fail
   }
 });
 
+test("pure middleware: failed token guesses share cooldown across API media and status", async t => {
+  const { createLocalLanAccess } = await import("../lib/localLanAccess.ts");
+  const ctx = { config: { server: { host: "0.0.0.0", lanToken: "synthetic-shared", publicOrigins: [] },
+    security: { lanSessionTtlMs: 28800000, lanMaxSessions: 256, lanAuthWindowMs: 60000,
+      lanAuthMaxFailures: 10, lanAuthMaxBuckets: 4096, lanTokenMaxBytes: 4096 } } } as unknown as RuntimeContext;
+  t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+  const access = createLocalLanAccess(ctx);
+  let sessionCheck!: import("express").RequestHandler;
+  access.registerSessionRoutes({ all(_path: unknown, check: import("express").RequestHandler) { sessionCheck = check; } } as unknown as
+    import("express").Express, (_req, _res, next) => next());
+  try {
+    for (let attempt = 0; attempt < 13; attempt++) {
+      if (attempt === 12) t.mock.timers.tick(60000);
+      const value = attempt < 10 ? "wrong" : "synthetic-shared";
+      const path = [`/api/probe?token=${value}`, "/generated/owned.png", `/api/auth/lan/session?token=${value}`][attempt % 3]!;
+      const headers: Record<string, string> = { host: "127.0.0.1:49123", origin: "http://127.0.0.1:49123" };
+      if (attempt % 3 === 1) headers["x-ima2-token"] = value;
+      const req = { method: "GET", path: path.split("?")[0], originalUrl: path, url: path,
+        headers, rawHeaders: Object.entries(headers).flat(),
+        socket: { localAddress: "127.0.0.1", localPort: 49123, remoteAddress: "192.0.2.1" } } as unknown as import("express").Request;
+      let status = 0, response = "";
+      const output: Record<string, string> = {};
+      const res = { getHeader: (name: string) => output[name], setHeader: (name: string, value: string) => { output[name] = value; },
+        status(code: number) { status = code; return this; }, type() { return this; }, end(body: string) { response = body; } } as unknown as
+        import("express").Response;
+      (attempt % 3 === 2 ? sessionCheck : access.guard)(req, res, () => { status = 200; });
+      assert.equal(status, attempt < 10 ? 401 : attempt < 12 ? 429 : 200, `attempt ${attempt + 1}`);
+      if (attempt < 12) assert.equal(JSON.parse(response).error.code, attempt < 10 ? "LAN_TOKEN_REQUIRED" : "LAN_AUTH_RATE_LIMITED");
+      if (attempt >= 10 && attempt < 12) assert.ok(Number(output["Retry-After"]) > 0);
+    }
+  } finally { access.dispose(); t.mock.timers.reset(); }
+});
+
 // Imports of real buildApp/config/native modules stay inside hosted callbacks below.
 // These are NOT part of the locally allowed --test-name-pattern='pure ' run.
 async function httpFixture(t: import("node:test").TestContext, options: { publicOrigins?: string[]; host?: string } = {}) {
@@ -228,6 +261,25 @@ test("hosted HTTP: token byte bound, duplicate raw headers, cooldown and reboots
   for (let i = 2; i < 10; i++) assert.equal((await bootstrap()).status, 401);
   const cooled = await bootstrap({ "x-ima2-token": "synthetic-session-token" });
   assert.equal(cooled.status, 429); assert.ok(Number(cooled.headers.get("retry-after")) > 0);
+});
+
+test("hosted HTTP: shared token cooldown preserves existing cookie sessions", async t => {
+  const { base, bootstrap } = await httpFixture(t);
+  const created = await bootstrap({ "x-ima2-token": "synthetic-session-token" });
+  assert.equal(created.status, 204);
+  const cookie = created.headers.get("set-cookie")!.split(";")[0]!;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const path = ["/api/probe", "/generated/owned.png", "/api/auth/lan/session"][attempt % 3]!;
+    const denied = await fetch(`${base}${path}?token=wrong`);
+    assert.equal(denied.status, 401);
+  }
+  const limited = await fetch(`${base}/api/probe`, { headers: { "x-ima2-token": "synthetic-session-token", cookie } });
+  assert.equal(limited.status, 429); assert.ok(Number(limited.headers.get("retry-after")) > 0);
+  assert.equal((await bootstrap({ "x-ima2-token": "synthetic-session-token" })).status, 429);
+  assert.equal((await fetch(`${base}/api/probe`, { headers: { cookie } })).status, 200);
+  const status = await fetch(`${base}/api/auth/lan/session`, { headers: { cookie } });
+  assert.equal((await status.json()).authenticated, true);
+  assert.equal((await (await fetch(`${base}/api/auth/lan/session`)).json()).authenticated, false);
 });
 
 test("hosted HTTP: pending parsed bootstrap cannot issue after disposal", async t => {

@@ -125,21 +125,31 @@ class LocalLanAccess {
       const credentials = lan ? readCredentials(req, cookieName(origin), bounds.lanTokenMaxBytes) : null;
       const viaCookie = !!credentials?.cookie && credentials.explicit === undefined;
       policy.checkBrowserRequest(req, origin, viaCookie);
-      if (credentials) this.authorize(credentials, origin, res);
+      if (credentials) this.authorize(credentials, origin, res, req.socket.remoteAddress || "unknown");
       if (!res.writableEnded && !res.destroyed) next();
     } catch (error) { sendAccessError(res, error); }
   };
-  private authorize(credentials: ReturnType<typeof readCredentials>, origin: string, res: Response) {
-    const { token, store, tracked } = this;
+  private checkTokenCooldown(peer: string, res: Response): void {
+    const retry = this.throttle.retryAfter(peer);
+    if (retry) { res.setHeader("Retry-After", String(retry)); throw localAccessError("LAN_AUTH_RATE_LIMITED", 429); }
+  }
+  private validateToken(value: string | undefined, peer: string): void {
+    if (tokenMatches(value, this.token)) return;
+    this.throttle.fail(peer);
+    throw localAccessError("LAN_TOKEN_REQUIRED", 401);
+  }
+  private authorize(credentials: ReturnType<typeof readCredentials>, origin: string, res: Response, peer: string) {
+    const { store, tracked } = this;
     if (credentials.explicit !== undefined) {
-      if (!tokenMatches(credentials.explicit, token)) throw localAccessError("LAN_TOKEN_REQUIRED", 401);
+      this.checkTokenCooldown(peer, res);
+      this.validateToken(credentials.explicit, peer);
       return;
     }
     if (!credentials.cookie || !store.validate(credentials.cookie, origin)) throw localAccessError("LAN_TOKEN_REQUIRED", 401);
     if (!tracked.has(res)) { tracked.add(res); trackResponse(store, credentials.cookie, res); }
   }
   private sessionCheck(req: Request, res: Response) {
-    const { policy, lan, bounds, token, throttle } = this;
+    const { policy, lan, bounds, throttle } = this;
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
@@ -147,16 +157,16 @@ class LocalLanAccess {
     policy.checkBrowserRequest(req, origin, false);
     if (req.method !== "GET" && !singleHeader(req, "origin", "LOCAL_ORIGIN_REJECTED")) throw localAccessError("LOCAL_ORIGIN_REJECTED");
     const peer = req.socket.remoteAddress || "unknown";
-    if (lan && req.method === "POST") {
-      const retry = throttle.retryAfter(peer);
-      if (retry) { res.setHeader("Retry-After", retry); throw localAccessError("LAN_AUTH_RATE_LIMITED", 429); }
-    }
+    if (lan && req.method === "POST") this.checkTokenCooldown(peer, res);
     let credentials: ReturnType<typeof readCredentials>;
     try {
       credentials = lan ? readCredentials(req, cookieName(origin), bounds.lanTokenMaxBytes) : { header: undefined, query: undefined, cookie: undefined, explicit: undefined };
-      if (lan && req.method === "POST" && !tokenMatches(credentials.header, token)) throw localAccessError("LAN_TOKEN_REQUIRED", 401);
     } catch (error) { if (lan && req.method === "POST") throttle.fail(peer); throw error; }
-    if (lan && req.method === "GET" && credentials.explicit !== undefined && !tokenMatches(credentials.explicit, token)) throw localAccessError("LAN_TOKEN_REQUIRED", 401);
+    if (lan && req.method === "POST") this.validateToken(credentials.header, peer);
+    if (lan && req.method === "GET" && credentials.explicit !== undefined) {
+      this.checkTokenCooldown(peer, res);
+      this.validateToken(credentials.explicit, peer);
+    }
     if (lan && req.method === "DELETE" && !credentials.cookie) throw localAccessError("LAN_TOKEN_REQUIRED", 401);
     return { origin, credentials };
   }

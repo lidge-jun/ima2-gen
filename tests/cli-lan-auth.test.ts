@@ -384,7 +384,8 @@ describe("raw CLI transport callsites", () => {
     route = () => { if (seen.length === 1) throw new TypeError("not listening yet"); return Response.json({ ok: true }); };
     try {
       const result = await invoke("service", ["start"]);
-      assert.equal(result.exit, 0); assert.ok(result.stdout.includes(B)); assert.doesNotMatch(result.stdout, /undefined/);
+      assert.equal(result.exit, 0);
+      assert.equal(result.stdout.trim(), "Service started — http://artifact.test:4012");
       assert.equal(seen.length, 2);
       seen.forEach((call) => { assert.equal(call.url.origin, B); assertTransport(call); });
     } finally { Object.defineProperty(process, "platform", platform); }
