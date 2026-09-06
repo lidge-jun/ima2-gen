@@ -122,10 +122,13 @@ async function probe(base: string, timeoutMs = 600): Promise<ServerHealth | null
     });
     if (!r.ok) throw transportError("SERVER_HTTP_ERROR", `Server health failed: HTTP ${r.status}`, r.status);
     try { return (await r.json()) as ServerHealth; }
-    catch { throw transportError("SERVER_INVALID_HEALTH", "Server returned an invalid health response."); }
+    catch (error) {
+      if (controller.signal.aborted) throw error;
+      throw transportError("SERVER_INVALID_HEALTH", "Server returned an invalid health response.");
+    }
   } catch (error) {
     if ((error as TransportError)?.code === "NETWORK_FAILED"
-      || (controller.signal.aborted && !(error as TransportError)?.code)) return null;
+      || (controller.signal.aborted && (error as Error)?.name === "AbortError")) return null;
     throw error;
   } finally {
     clearTimeout(timer);

@@ -73,3 +73,28 @@ tests. Cause/disposition remains open; no blind rerun or package-policy waiver.
   compiled current sources in owned `C:/Temp/ima2-wp12s-win-8iH0lZ`. No app,
   service, credentials, native dependency install or provider call. This is
   supplemental Windows semantics proof, not pinned CI/install acceptance.
+
+## Integrated worker repairs
+
+- CLI fresh-source mock repro confirmed unintended ordinary MCP exit5 rather
+  than legacy1. Keep ordinary gen/upscale/video MCP errors at1 and only auth
+  errors at4. Original native character/upscale assertions stay unchanged.
+  Native AbortError20 and aborted healthy response bodies now classify as
+  unreachable3; known401/403 retain access classification. Explicit service
+  startup retries only its chosen target and reports its URL. Main re-ran the
+  existing mock file:49/49 pass0fail0skip. See ignored `c-cli-repair.md` for
+  individual red signatures; no OS service operation was executed.
+- ResultActions now observes the extension snapshot/controller in the existing
+  transport module, so its accepted promise, cursor and original deadline
+  survive auth-gate unmount/remount. No new timer or automatic POST was added.
+  Explicit cancel and same-epoch ordinary teardown still abort; obsolete unsent
+  work rejects by auth epoch. Main read the diff and re-ran the two existing
+  pure/contract files:18/18 pass0fail0skip. Independent worker toggled cleanup
+  to unconditional abort: deadline assertion failed, restored condition passed.
+- J9 no longer uses route.fetch to model refused cookie storage, because its
+  context client populates the same cookie jar. A separate owned native client
+  observes real204/Set-Cookie without storing it in the browser, then returns
+  a cookie-free response; browser status must still refuse App. TLS context
+  creation is now inside proxy cleanup. Added accepted-extension UI remount
+  scenario explicitly uses synthetic202/terminal with native LAN auth/SSE and
+  actual React consumer, not a paid provider request. Hosted run still pending.

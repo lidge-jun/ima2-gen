@@ -110,25 +110,29 @@ function readAdvertise(): AdvertiseEntry | null {
 
 async function waitForHealth(timeoutMs: number): Promise<{ ok: boolean; entry: AdvertiseEntry | null }> {
   clearServerBinding();
-  if (process.env.IMA2_SERVER !== undefined) {
-    const selected = await resolveServer();
-    const entry = readAdvertise();
-    // An unrelated advertisement is neither credential authority nor selected health.
-    return { ok: true, entry: entry?.url?.replace(/\/$/, "") === selected.base ? entry : null };
-  }
+  const explicitTarget = process.env.IMA2_SERVER;
+  let lastSelectionError: unknown;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const entry = readAdvertise();
-    if (entry?.url) {
-      try {
+    try {
+      if (explicitTarget !== undefined) {
+        const selected = await resolveServer({ serverFlag: explicitTarget });
+        // Only a matching advertisement can describe the selected service.
+        return { ok: true, entry: entry?.url?.replace(/\/$/, "") === selected.base ? entry : { url: selected.base } };
+      }
+      if (entry?.url) {
         const r = await fetchServerUrl(`${String(entry.url).replace(/\/$/, "")}/api/health`, { headers: { connection: "close" } });
         if (r.ok) return { ok: true, entry };
-      } catch (error) {
-        if ((error as { code?: string })?.code !== "NETWORK_FAILED") throw error;
       }
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code !== "NETWORK_FAILED" && code !== "SERVER_UNREACHABLE") throw error;
+      if (explicitTarget !== undefined) lastSelectionError = error;
     }
     await new Promise((r) => setTimeout(r, 500));
   }
+  if (lastSelectionError) throw lastSelectionError;
   return { ok: false, entry: readAdvertise() };
 }
 

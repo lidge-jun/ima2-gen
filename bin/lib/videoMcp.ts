@@ -364,7 +364,8 @@ async function runMcpVideo(argv: string[], args: ParsedArgs, context: VideoConte
     else out(color.green("✓ ") + (target ?? `${context.server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string | undefined };
-    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: exitCodeForError(error) });
+    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message,
+      exitCode: exitCodeForError(error) === 4 ? 4 : 1 });
   }
 }
 

@@ -176,6 +176,33 @@ describe("late CLI authentication consumers", () => {
 });
 
 describe("CLI destination binding", () => {
+  for (const phase of ["headers", "body"]) it(`health ${phase} timeout is unreachable and discovery stays unbound`, async () => {
+    route = ({ url, init }) => {
+      if (url.origin !== A) return Response.json({ ok: true });
+      if (phase === "headers") return new Promise((_resolve, reject) => {
+        init.signal!.addEventListener("abort", () => reject(init.signal!.reason), { once: true });
+      });
+      return new Response(new ReadableStream({ start(controller) {
+        init.signal!.addEventListener("abort", () => controller.error(init.signal!.reason), { once: true });
+      } }));
+    };
+    const result = await invoke("ping", ["--server", A, "--json"]);
+    assert.equal(result.exit, 3); assert.equal(JSON.parse(result.stdout).code, "SERVER_UNREACHABLE");
+    assert.equal(seen.length, 1); assertTransport(seen[0]!);
+    const stalled = route;
+    route = () => Response.json({ ok: true });
+    await client.fetchServerUrl(`${A}/api/health`); assertTransport(seen.at(-1)!, null);
+    route = stalled; seen.length = 0;
+    assert.notEqual((await client.findRunningServer())?.base, A);
+    assert.equal(seen.length, 2); seen.forEach((call) => assertTransport(call, null));
+  });
+  for (const status of [401, 403]) it(`known ${status} survives an aborted auth body`, async () => {
+    route = ({ init }) => new Response(new ReadableStream({ start(controller) {
+      init.signal!.addEventListener("abort", () => controller.error(init.signal!.reason), { once: true });
+    } }), { status });
+    await assert.rejects(client.resolveServer({ serverFlag: A }), safeError(status === 401 ? "LAN_TOKEN_REQUIRED" : "SERVER_ACCESS_DENIED", status));
+    assert.equal(seen.length, 1);
+  });
   it("never binds from helper URLs; explicit selection binds only its normalized origin", async () => {
     await client.fetchServerUrl(`${A}/api/events`);
     await client.fetchServer(A, "/api/health");
@@ -252,6 +279,13 @@ describe("CLI destination binding", () => {
 });
 
 describe("CLI consumers preserve access failures", () => {
+  it("capabilities falls back only for implicit unreachable discovery", async () => {
+    route = () => { throw new TypeError("synthetic refused socket"); };
+    assert.equal(JSON.parse((await invoke("capabilities", ["--json"])).stdout).source, "local");
+    assert.equal((await invoke("capabilities", ["--require-server", "--json"])).exit, 3);
+    process.env.IMA2_SERVER = A;
+    assert.equal((await invoke("capabilities", ["--json"])).exit, 3);
+  });
   for (const [name, args] of [["ping", []], ["models", []], ["defaults", ["ls"]], ["defaults", ["set", "image", "runway/gen-4"]],
     ["capabilities", []], ["gen", ["fixture"]], ["video", ["fixture"]], ["upscale", ["1780000000000_test.png"]]] as const) {
     it(`${name} ${args.join(" ")} preserves explicit env auth/forbidden/unreachable JSON and exit`, async () => {
@@ -321,6 +355,40 @@ function mcpRoutes(denyPath?: string, drop = false): void {
 }
 
 describe("raw CLI transport callsites", () => {
+  for (const [name, args, status, code] of [
+    ["gen", ["fixture", "--model", "runway/gen-4", "--character", "char"], 400, "CHARACTER_REFS_EXCEED_PROVIDER_CAP"],
+    ["video", ["fixture", "--model", "runway/veo", "--character", "char"], 409, "MCP_NOT_CONNECTED"],
+    ["upscale", ["1780000000000_test.png", "--scale-factor", "2", "--sharpen", "25"], 409, "MCP_NOT_CONNECTED"],
+    ["upscale", ["1780000000000_test.png"], 409, "MCP_NOT_CONNECTED"],
+  ] as const) it(`${name} ${args.join(" ")} keeps ordinary MCP exit1`, async () => {
+    mcpRoutes(); const normal = route;
+    route = (call) => call.url.pathname.startsWith("/api/mcp/")
+      ? Response.json({ error: { code, message: "synthetic rejection" } }, { status }) : normal(call);
+    const result = await invoke(name, [...args, "--server", A, "--json"]);
+    assert.equal(result.exit, 1); assert.equal(JSON.parse(result.stdout).code, code);
+    const posts = seen.filter((call) => call.init.method === "POST"); assert.equal(posts.length, 1);
+    const body = JSON.parse(String(posts[0]!.init.body));
+    if (name === "gen") assert.equal(body.characterElementId, "char");
+    else if (name === "video") {
+      assert.equal(body.kind, "video"); assert.equal(body.model, "veo");
+      assert.equal(body.characterElementId, "char"); assert.deepEqual(body.parameters, {});
+    }
+    else if (args.length > 1) assert.deepEqual(body.parameters, { scaleFactor: 2, sharpen: 25 });
+    else assert.equal("parameters" in body, false);
+    seen.forEach((call) => assertTransport(call));
+  });
+  it("explicit service startup retries its selected target and reports its URL", async () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+    process.env.IMA2_SERVER = B;
+    route = () => { if (seen.length === 1) throw new TypeError("not listening yet"); return Response.json({ ok: true }); };
+    try {
+      const result = await invoke("service", ["start"]);
+      assert.equal(result.exit, 0); assert.ok(result.stdout.includes(B)); assert.doesNotMatch(result.stdout, /undefined/);
+      assert.equal(seen.length, 2);
+      seen.forEach((call) => { assert.equal(call.url.origin, B); assertTransport(call); });
+    } finally { Object.defineProperty(process, "platform", platform); }
+  });
   for (const [name, args] of [["gen", ["fixture", "--model", "runway/gen-4", "--character", "char"]],
     ["video", ["fixture", "--model", "runway/veo", "--character", "char"]], ["upscale", ["1780000000000_test.png"]]] as const) {
     it(`${name} authenticates character/SSE/submit/download; denial never becomes exit1`, async () => {

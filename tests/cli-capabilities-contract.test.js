@@ -51,12 +51,12 @@ describe("CLI capabilities contract", () => {
     assert.match(src, /cliCommand:\s*null/);
   });
 
-  it("capabilities command falls back to local metadata unless server is required", () => {
+  it("capabilities command wires server discovery and local metadata", () => {
     const src = readSource("bin/commands/capabilities.ts");
 
     assert.match(src, /--require-server/);
     assert.match(src, /localCapabilities\(\)/);
     assert.match(src, /request\(server\.base, "\/api\/capabilities"/);
-    assert.match(src, /if \(args\.server \|\| args\["require-server"\]\) throw error/);
+    // Fallback/auth behavior is exercised through the command in cli-lan-auth.test.ts.
   });
 });

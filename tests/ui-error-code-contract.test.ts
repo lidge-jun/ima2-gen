@@ -201,3 +201,92 @@ test("LAN transport and admission epochs share the existing fixture auth owner",
     } finally { window.removeEventListener(r.LAN_AUTH_REQUIRED_EVENT, observeAuth); }
   });
 });
+
+test("extension UI owner survives auth unmount and retains pending work, cursor and deadline", () => withJobTrackingUi(async (f) => {
+  const r = f.runtime, owner = r.videoExtensionOwner;
+  r.ensureConnected(); f.openStream();
+  const accepted = f.defer<void>();
+  f.route("POST", "/api/video/extend", () => {
+    accepted.resolve();
+    return Response.json({ requestId: "retained-view", sourceVideoId: "owned.mp4", workflow: "last-frame-i2v" }, { status: 202 });
+  });
+  const payload = { requestId: "retained-view", sourceVideoId: "owned.mp4", provider: "grok" as const };
+  let firstRenders = 0, remountedRenders = 0;
+  const detach = owner.subscribe(() => firstRenders++);
+  const work = f.track(owner.start(payload)!);
+  await accepted.promise;
+  f.emit("phase", { requestId: payload.requestId, phase: "running" }, "71");
+  const deadline = [...f.timers].find(([, timer]) => timer.delay === r.JOB_STREAM_TIMEOUT_MS)!;
+  r.requireLanAuthentication(); detach(); owner.releaseView();
+  const priorRenders = firstRenders;
+  assert.ok(f.timers.has(deadline[0]));
+  assert.deepEqual(owner.getSnapshot(), { source: "owned.mp4", status: "pending" });
+  f.route("POST", "/api/auth/lan/session", () => new Response(null, { status: 204 }));
+  f.route("GET", "/api/auth/lan/session", () => Response.json({ mode: "lan", authenticated: true, expiresAt: 9_000_000 }));
+  await r.createLanSession("synthetic-fixture-token");
+  owner.releaseView(); // Delayed React cleanup after reauth must still retain the old owner.
+  const detachRemount = owner.subscribe(() => remountedRenders++);
+  assert.equal(owner.start({ ...payload, requestId: "must-not-resubmit" }), null);
+  r.ensureConnected(); f.openStream();
+  assert.ok(f.ledger.events.includes("stream:create:/api/events?lastEventId=71"));
+  f.emit("done", { requestId: payload.requestId, filename: "retained.mp4" }, "72");
+  assert.equal((await work).filename, "retained.mp4");
+  assert.equal(owner.getSnapshot().status, "idle");
+  assert.equal(firstRenders, priorRenders); assert.equal(remountedRenders, 1);
+  assert.equal(f.timers.has(deadline[0]), false);
+  assert.equal(f.requests.filter(request => request.method === "POST" && request.url.endsWith("/api/video/extend")).length, 1);
+  assert.equal(f.requests.some(request => request.method === "DELETE"), false);
+  detachRemount(); owner.releaseView();
+}));
+
+test("extension UI owner keeps explicit cancel, ordinary errors and tracking expiry distinct", () => withJobTrackingUi(async (f) => {
+  const r = f.runtime, owner = r.videoExtensionOwner;
+  r.ensureConnected(); f.openStream();
+  f.route("POST", "/api/video/extend", request => Response.json({ ...(request.body as object), workflow: "last-frame-i2v" }, { status: 202 }));
+  for (const outcome of ["cancel", "unmount", "tracking", "ordinary"] as const) {
+    const requestId = `owner-${outcome}`;
+    f.route("DELETE", `/api/inflight/${requestId}`, () => Response.json({ aborted: true }));
+    const work = f.track(owner.start({ requestId, sourceVideoId: `${outcome}.mp4`, provider: "grok" })!
+      .then(() => assert.fail("expected terminal error"), error => error));
+    for (let turn = 0; turn < 20; turn++) await Promise.resolve();
+    if (outcome === "cancel") owner.cancel();
+    else if (outcome === "unmount") owner.releaseView();
+    else f.emit("error", { requestId, code: outcome === "tracking" ? "JOB_TRACKING_TIMEOUT" : "INVALID_REQUEST", error: "Synthetic failure" });
+    const error = await work;
+    assert.equal(owner.getSnapshot().status, outcome === "cancel" || outcome === "unmount" ? "idle"
+      : outcome === "tracking" ? "tracking-expired" : "error");
+    if (outcome === "cancel" || outcome === "unmount") assert.equal(error.name, "AbortError");
+    else assert.equal(error.code, outcome === "tracking" ? "JOB_TRACKING_TIMEOUT" : "INVALID_REQUEST");
+    if (outcome === "tracking") assert.equal(owner.start({ requestId: "no-retry", sourceVideoId: "tracking.mp4", provider: "grok" }), null);
+  }
+  assert.equal(f.requests.filter(request => request.method === "DELETE").length, 2);
+  assert.equal(f.requests.filter(request => request.method === "POST").length, 4);
+}));
+
+test("extension UI owner rejects unsent pre-lock work and keeps the original paused deadline", () => withJobTrackingUi(async (f) => {
+  const r = f.runtime, owner = r.videoExtensionOwner;
+  const unsent = f.track(owner.start({ requestId: "unsent-owner", sourceVideoId: "owned.mp4", provider: "grok" })!
+    .then(() => assert.fail("expected auth error"), error => error));
+  r.requireLanAuthentication(); owner.releaseView();
+  f.route("POST", "/api/auth/lan/session", () => new Response(null, { status: 204 }));
+  f.route("GET", "/api/auth/lan/session", () => Response.json({ mode: "lan", authenticated: true, expiresAt: 9_000_000 }));
+  await r.createLanSession("synthetic-fixture-token");
+  r.ensureConnected(); f.openStream();
+  const waiter = [...f.timers].find(([, timer]) => timer.delay === 50)!;
+  await f.runTimer(waiter[0]);
+  assert.equal((await unsent).code, "LAN_TOKEN_REQUIRED");
+  assert.equal(owner.getSnapshot().status, "idle");
+  assert.equal(f.requests.some(request => request.url.endsWith("/api/video/extend")), false);
+  f.route("POST", "/api/video/extend", request => Response.json({ ...(request.body as object), workflow: "last-frame-i2v" }, { status: 202 }));
+  const pending = f.track(owner.start({ requestId: "deadline-owner", sourceVideoId: "owned.mp4", provider: "grok" })!
+    .then(() => assert.fail("expected deadline"), error => error));
+  for (let turn = 0; turn < 20; turn++) await Promise.resolve();
+  const deadline = [...f.timers].find(([, timer]) => timer.delay === r.JOB_STREAM_TIMEOUT_MS)!;
+  r.requireLanAuthentication(); owner.releaseView();
+  await f.runTimer(deadline[0]);
+  assert.match((await pending).message, /stream timed out/);
+  // Local stream deadline preserves the existing ordinary timeout error;
+  // only a typed server JOB_TRACKING_TIMEOUT forbids same-source retry.
+  assert.equal(owner.getSnapshot().status, "error");
+  assert.equal(f.requests.some(request => request.method === "DELETE"), false);
+}));

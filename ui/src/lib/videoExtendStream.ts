@@ -3,6 +3,7 @@ import { createLanAuthError, getLanAuthEpoch, isLanSessionLocked } from "./lanSe
 import { cancelInflight } from "./api";
 import { armStreamTimeout, ensureConnected, subscribe, whenConnected } from "./eventChannel";
 import { parseSseErrorPayload } from "./sseStreamError";
+import { resolveErrorSpec } from "./errorCodes";
 import type { VideoExtendDone } from "./videoHistoryItem";
 
 export type VideoExtendRequest = {
@@ -74,3 +75,50 @@ export function postVideoExtendStream(payload: VideoExtendRequest, signal: Abort
     submission.catch((error) => finish(() => reject(error)));
   });
 }
+
+type ExtensionView = { source: string | null; status: "idle" | "pending" | "error" | "tracking-expired" };
+let extensionView: ExtensionView = { source: null, status: "idle" };
+let extensionController: AbortController | null = null;
+let extensionEpoch = 0;
+const extensionListeners = new Set<() => void>();
+function publishExtension(source: string | null, status: ExtensionView["status"]): void {
+  extensionView = { source, status };
+  for (const listener of extensionListeners) listener();
+}
+
+/** The result action survives an auth-gate remount; its transport deadline never restarts. */
+export const videoExtensionOwner = {
+  getSnapshot: () => extensionView,
+  subscribe(listener: () => void): () => void {
+    extensionListeners.add(listener);
+    return () => { extensionListeners.delete(listener); };
+  },
+  select(source: string | null): void {
+    if (extensionView.status !== "pending" && extensionView.source !== source) publishExtension(source, "idle");
+  },
+  start(payload: VideoExtendRequest): Promise<VideoExtendDone> | null {
+    if (extensionView.status === "pending" || (extensionView.source === payload.sourceVideoId
+      && extensionView.status === "tracking-expired")) return null;
+    const controller = new AbortController();
+    extensionController = controller;
+    extensionEpoch = getLanAuthEpoch();
+    publishExtension(payload.sourceVideoId, "pending");
+    return postVideoExtendStream(payload, controller.signal).then(done => {
+      extensionController = null;
+      publishExtension(payload.sourceVideoId, "idle");
+      return done;
+    }, error => {
+      extensionController = null;
+      const code = resolveErrorSpec(error).code;
+      const canceled = error instanceof DOMException && error.name === "AbortError";
+      publishExtension(payload.sourceVideoId, canceled || code === "LAN_TOKEN_REQUIRED" ? "idle"
+        : code === "JOB_TRACKING_TIMEOUT" ? "tracking-expired" : "error");
+      throw error;
+    });
+  },
+  cancel(): void { extensionController?.abort(); },
+  releaseView(): void {
+    // Cleanup can run after reauth has already unlocked the page.
+    if (!isLanSessionLocked() && extensionEpoch === getLanAuthEpoch()) extensionController?.abort();
+  },
+};

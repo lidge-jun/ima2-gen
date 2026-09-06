@@ -1,4 +1,4 @@
-import type { Page, TestInfo } from "@playwright/test";
+import type { BrowserContext, Page, TestInfo } from "@playwright/test";
 import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { execFile } from "node:child_process";
@@ -174,9 +174,13 @@ test("J9 refused cookie storage never loads private App requests", async ({ page
     });
     await page.context().route(`${app.baseUrl}/api/auth/lan/session`, async route => {
       if (route.request().method() !== "POST") { await route.fallback(); return; }
-      const response = await route.fetch({ maxRedirects: 0 });
-      const headers = { ...response.headers() }; delete headers["set-cookie"];
-      await route.fulfill({ response, headers });
+      // A separate native client cannot populate Playwright's shared browser cookie jar.
+      const response = await fetch(route.request().url(), { method: "POST", redirect: "error",
+        headers: { Origin: app.baseUrl, "Content-Type": "application/json", "X-Ima2-Token": TOKEN }, body: "{}" });
+      expect(response.status).toBe(204); expect(response.headers.get("set-cookie")).toBeTruthy();
+      await response.arrayBuffer();
+      expect((await page.context().cookies()).some(cookie => cookie.name.startsWith("ima2_lan_"))).toBe(false);
+      await route.fulfill({ status: 204 });
     });
     await page.goto(app.baseUrl);
     await page.getByLabel("LAN token", { exact: true }).fill(TOKEN);
@@ -243,6 +247,71 @@ test("J9 capacity wait from an old auth period cannot submit after sign-in", asy
   });
 });
 
+test("J9 accepted extension retains its ResultActions owner through native auth loss and reauth", async ({ page }, info) => {
+  await withLan(page, info, "extension-reauth", async (app, evidence) => {
+    type ExtensionWindow = Window & { j9ExtensionStreams: EventSource[] };
+    await page.addInitScript(() => {
+      const view = window as unknown as ExtensionWindow, NativeEventSource = window.EventSource;
+      view.j9ExtensionStreams = [];
+      // Keep native cookie/SSE transport; retain handles only to deliver a synthetic job terminal.
+      window.EventSource = class extends NativeEventSource {
+        constructor(url: string | URL, options?: EventSourceInit) {
+          super(url, options); view.j9ExtensionStreams.push(this);
+        }
+      };
+      localStorage.setItem("ima2.selectedFilename", "j9-video.mp4");
+    });
+    const item = { filename: "j9-video.mp4", url: "/generated/j9-video.mp4", image: "/generated/j9-video.mp4",
+      mediaType: "video", format: "mp4", provider: "grok", model: "grok-imagine-video-1.5", prompt: "Synthetic extension", createdAt: 100 };
+    await page.context().route(`${app.baseUrl}/api/history?*`, route => {
+      const grouped = new URL(route.request().url()).searchParams.has("groupBy");
+      return route.fulfill({ json: grouped ? { sessions: [], loose: [item], total: 1, nextCursor: null }
+        : { items: [item], total: 1, nextCursor: null } });
+    });
+    let posts = 0, cancels = 0, requestId = "";
+    page.on("request", request => {
+      if (request.method() === "DELETE" && new URL(request.url()).pathname.startsWith("/api/inflight/")) cancels++;
+    });
+    await page.context().route(`${app.baseUrl}/api/video/extend`, async route => {
+      expect(route.request().method()).toBe("POST");
+      const payload = route.request().postDataJSON(); posts++; requestId = payload.requestId;
+      expect(payload.sourceVideoId).toBe(item.filename);
+      await route.fulfill({ status: 202, json: { requestId, sourceVideoId: item.filename, workflow: "last-frame-i2v" } });
+    });
+    await connected(page, app.baseUrl);
+    await page.locator(".nav-rail").getByRole("button", { name: "Create", exact: true }).click();
+    await expect(page.locator(".result-actions")).toBeVisible();
+    const extend = page.locator('.result-actions button[title="Continue this video from its last frame"]');
+    await expect(page.locator(".history-thumb--video")).toHaveCount(1);
+    await expect(extend).toBeEnabled();
+    const acceptance = page.waitForResponse(response => new URL(response.url()).pathname === "/api/video/extend");
+    await extend.click(); expect((await acceptance).status()).toBe(202);
+    await expect(extend).toHaveAttribute("aria-busy", "true");
+    await revokeWithoutClearingBrowserCookie(page, app.baseUrl);
+    await expect(page.getByRole("heading", { name: "Connect to your studio" })).toBeVisible();
+    await expect(page.locator(".result-actions")).toHaveCount(0);
+    await signIn(page);
+    await expect(extend).toBeDisabled(); await expect(extend).toHaveAttribute("aria-busy", "true");
+    expect(posts).toBe(1); expect(cancels).toBe(0);
+    await expect.poll(() => page.evaluate(() => (window as unknown as ExtensionWindow).j9ExtensionStreams
+      .filter(source => source.readyState === EventSource.OPEN).length)).toBeGreaterThan(0);
+    await page.evaluate(id => {
+      const source = [...(window as unknown as ExtensionWindow).j9ExtensionStreams].reverse().find(stream => stream.readyState === EventSource.OPEN)!;
+      source.dispatchEvent(new MessageEvent("done", { data: JSON.stringify({ requestId: id, filename: "j9-extended.mp4",
+        url: "/generated/j9-video.mp4", mediaType: "video", provider: "grok", model: "grok-imagine-video-1.5",
+        prompt: "Synthetic extension completed", userPrompt: "Synthetic extension", createdAt: Date.now() }) }));
+    }, requestId);
+    await expect(extend).toBeEnabled();
+    await expect(page.locator(".history-thumb--video")).toHaveCount(2);
+    expect(posts).toBe(1); expect(cancels).toBe(0); expect(app.stub.generationRequests).toEqual([]);
+    expect(await page.locator(".toast.error").allTextContents()).toEqual([]);
+    evidence.posts = posts; evidence.cancels = cancels;
+    evidence.transport = "native LAN cookie, auth loss, EventSource and ResultActions remount";
+    evidence.job = "synthetic 202 and terminal event; no provider generation";
+    evidence.screenshot = await capture(page, info, "extension-reauth-completed");
+  }, { media: true });
+});
+
 async function tlsProxy() {
   assertJ6Isolation();
   const home = await issueAppHome();
@@ -275,9 +344,10 @@ async function tlsProxy() {
 
 test("J9 native TLS cookie and media, hostile-origin refusal and explicit UI sign-out", async ({ browser }, info) => {
   const proxy = await tlsProxy();
-  const context = await browser.newContext({ ignoreHTTPSErrors: true, serviceWorkers: "block" });
-  const page = await context.newPage();
+  let context: BrowserContext | undefined;
   try {
+    context = await browser.newContext({ ignoreHTTPSErrors: true, serviceWorkers: "block" });
+    const page = await context.newPage();
     await withLan(page, info, "tls", async (app, evidence) => {
       await proxy.connect(app); await connected(page, proxy.origin);
       evidence.cookie = await cookieProof(page, true); await nativeStream(page); evidence.media = await mediaProof(page);
@@ -302,5 +372,7 @@ test("J9 native TLS cookie and media, hostile-origin refusal and explicit UI sig
       await expect(page.getByRole("heading", { name: "Connect to your studio" })).toBeVisible();
       evidence.signedOut = true; evidence.signout = await capture(page, info, "tls-signed-out");
     }, { publicOrigins: [proxy.origin], media: true });
-  } finally { await page.close(); await context.close(); await proxy.close(); }
+  } finally {
+    try { await context?.close(); } finally { await proxy.close(); }
+  }
 });

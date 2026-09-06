@@ -285,7 +285,8 @@ async function runMcpImage(argv: string[], args: ParsedArgs, context: ImageConte
     else out(color.green("✓ ") + (target ? displayPath(target) : `${context.server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string | undefined };
-    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message, exitCode: exitCodeForError(error) });
+    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_GENERATION_FAILED", message: typed.message,
+      exitCode: exitCodeForError(error) === 4 ? 4 : 1 });
   }
 }
 

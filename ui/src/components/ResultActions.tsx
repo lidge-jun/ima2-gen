@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { exportImageToComfy } from "../lib/api";
 import { toVideoHistoryItem } from "../lib/videoHistoryItem";
-import { postVideoExtendStream } from "../lib/videoExtendStream";
+import { videoExtensionOwner } from "../lib/videoExtendStream";
 import { isVideoItem, extractFirstFrame, extractMidFrame, extractLastFrame } from "../lib/videoMedia";
 import { continueFromItem, continueFromItemAsUrl } from "../lib/continueFromItem";
 import { ResultMetadataModal } from "./ResultMetadataModal";
@@ -16,9 +16,6 @@ import { handleError } from "../lib/errorHandler";
 import { resolveErrorSpec } from "../lib/errorCodes";
 
 interface ResultActionsProps { imageOverride?: GenerateItem | null; onAfterDeleteFocus?: () => void }
-
-type ExtendState = "idle" | "pending" | "error" | "tracking-expired";
-type ExtendUiState = { source: string | null; status: ExtendState };
 
 const CANVAS_MODE_PROMPT_ID = "canvas-mode-context";
 const CANVAS_MODE_PROMPT_NAME = "Canvas Mode";
@@ -44,12 +41,11 @@ export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: Resu
   const openCanvas = useAppStore((s) => s.openCanvas);
   const [comfyExporting, setComfyExporting] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const [extendUi, setExtendUi] = useState<ExtendUiState>({ source: null, status: "idle" });
+  const extendUi = useSyncExternalStore(videoExtensionOwner.subscribe, videoExtensionOwner.getSnapshot);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [upscaleOpen, setUpscaleOpen] = useState(false);
   const [upscalePending, setUpscalePending] = useState(false);
   const [runwayConnected, setRunwayConnected] = useState(false);
-  const extendAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -80,12 +76,11 @@ export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: Resu
     }
   };
 
-  useEffect(() => () => extendAbortRef.current?.abort(), []);
+  useEffect(() => videoExtensionOwner.releaseView, []);
   const actionImage = imageOverride ?? currentImage;
   const sourceFilename = actionImage?.filename ?? null;
   useEffect(() => {
-    setExtendUi((state) => state.status === "pending" || state.source === sourceFilename
-      ? state : { source: sourceFilename, status: "idle" });
+    videoExtensionOwner.select(sourceFilename);
   }, [sourceFilename]);
   const extendState = extendUi.status === "pending" || extendUi.source === sourceFilename
     ? extendUi.status : "idle";
@@ -118,35 +113,29 @@ export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: Resu
   const extend = async () => {
     if (!actionImage.filename || extendState === "pending" || extendState === "tracking-expired") return;
     const requestId = `vext_${crypto.randomUUID()}`;
-    const controller = new AbortController();
-    extendAbortRef.current = controller;
-    const source = actionImage.filename;
-    setExtendUi({ source, status: "pending" });
     try {
-      const done = await postVideoExtendStream({
+      const work = videoExtensionOwner.start({
         requestId,
         sourceVideoId: actionImage.filename,
         prompt: actionImage.prompt?.trim() || undefined,
         provider: actionImage.provider === "grok-api" ? "grok-api" : "grok",
         model: actionImage.model ?? undefined,
-      }, controller.signal);
+      });
+      if (!work) return;
+      const done = await work;
       useAppStore.getState().addHistoryItem(toVideoHistoryItem(done, actionImage));
-      setExtendUi({ source, status: "idle" });
       showToast(t("toast.animateDone"));
     } catch (error) {
       const canceled = error instanceof DOMException && error.name === "AbortError";
-      const trackingExpired = !canceled && resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT";
-      setExtendUi({ source, status: canceled ? "idle" : trackingExpired ? "tracking-expired" : "error" });
-      if (trackingExpired) handleError(error, useAppStore.getState());
+      const code = resolveErrorSpec(error).code;
+      if (code === "JOB_TRACKING_TIMEOUT" || code === "LAN_TOKEN_REQUIRED") handleError(error, useAppStore.getState());
       else if (!canceled) {
         showToast(error instanceof Error ? error.message : t("toast.animateFailed"), true);
       }
-    } finally {
-      if (extendAbortRef.current === controller) extendAbortRef.current = null;
     }
   };
 
-  const cancelExtend = () => extendAbortRef.current?.abort();
+  const cancelExtend = () => videoExtensionOwner.cancel();
 
   const download = () => {
     const a = document.createElement("a");

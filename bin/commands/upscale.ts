@@ -123,6 +123,7 @@ async function upscale(argv: string[]): Promise<void> {
     else out(color.green("✓ ") + (target ?? `${server.base}${result.url}`));
   } catch (error) {
     const typed = error as Error & { code?: string };
-    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_UPSCALE_FAILED", message: typed.message, exitCode: exitCodeForError(error) });
+    fail({ json: Boolean(args.json), code: typed.code ?? "MCP_UPSCALE_FAILED", message: typed.message,
+      exitCode: exitCodeForError(error) === 4 ? 4 : 1 });
   }
 }
