@@ -39,6 +39,7 @@ export async function registerOwnedApp(record: OwnedAppRecord): Promise<void> {
   apps.add(record);
 }
 export function isOwnedBrowserOrigin(origin: string): boolean {
+  if (!ownedOrigin(origin)) return false;
   return [...apps].some((app) => !app.exited() && (app.appOrigin === origin || app.stubOrigin === origin));
 }
 export function hasUnexitedOwnedApps(): boolean { return [...apps].some((app) => !app.exited()); }

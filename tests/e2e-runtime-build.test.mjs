@@ -8,6 +8,7 @@ import * as crypto from "node:crypto";
 import * as util from "node:util";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { issueAppHome, registerOwnedApp, isOwnedBrowserOrigin, disposeOwnedApps } from "../ui/e2e/fixtures/appOwnership.ts";
 
 const guards = ["appPolicy.mjs", "appFilePaths.mjs", "appFileDescriptors.mjs", "appFilesystemGuard.mjs", "appProcessGuard.mjs", "appNetworkGuard.mjs"];
 const tracked = ["server.ts", "config.ts", "bin/ima2.ts", "package.json", "package-lock.json",
@@ -124,4 +125,74 @@ test("identical cached bytes do not authorize replacing the runtime root with a 
     if (runtime && backup) { await fs.unlink(runtime); await fs.rename(backup, runtime); }
     await f.close();
   }
+});
+
+test("failed cache disposal retains ownership and never deletes a replacement root", async () => {
+  const f = await fixture(); let container, backup;
+  try {
+    const snapshot = await f.api.getVerifiedRuntimeBuild(f.root);
+    container = path.dirname(snapshot.root); backup = container + "-owned-backup";
+    await fs.rename(container, backup); await fs.mkdir(container);
+    await fs.writeFile(path.join(container, "replacement-marker"), "KEEP");
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await assert.rejects(f.api.disposeRuntimeBuildCache(), /E2E_CACHE_OWNERSHIP/);
+      assert.equal(await fs.readFile(path.join(container, "replacement-marker"), "utf8"), "KEEP");
+      await assert.rejects(f.api.getVerifiedRuntimeBuild(f.root), /E2E_CACHE_OWNERSHIP/);
+    }
+    await fs.unlink(path.join(container, "replacement-marker")); await fs.rmdir(container);
+    await fs.rename(backup, container); backup = undefined;
+    await f.api.disposeRuntimeBuildCache(); await f.api.disposeRuntimeBuildCache();
+    assert.deepEqual(await fs.readdir(f.temporary), []);
+  } finally {
+    if (backup) {
+      await fs.unlink(path.join(container, "replacement-marker")); await fs.rmdir(container); await fs.rename(backup, container);
+    }
+    await f.close();
+  }
+});
+
+test("a starting app record cannot later admit a malformed or foreign browser origin", async () => {
+  // Only an issued temporary home is created: no app, guard or socket starts.
+  const home = await issueAppHome(); let origin = null, closed = false;
+  await registerOwnedApp({ home, get appOrigin() { return origin; }, stubOrigin: "http://127.0.0.1:41234",
+    closeResources: async () => { closed = true; }, exited: () => closed, verificationReported: () => true, verify() {} });
+  try {
+    for (const value of ["https://example.invalid", "http://127.0.0.1:3333", "http://127.0.0.1:41235/path"]) {
+      origin = value; assert.equal(isOwnedBrowserOrigin(value), false);
+    }
+    origin = "http://127.0.0.1:41235"; assert.equal(isOwnedBrowserOrigin(origin), true);
+  } finally { await disposeOwnedApps(); }
+  assert.equal(isOwnedBrowserOrigin("http://127.0.0.1:41235"), false);
+  await assert.rejects(fs.lstat(home), { code: "ENOENT" });
+});
+
+test("projection construction keeps its original failure when cleanup also fails", async () => {
+  const f = await fixture();
+  try {
+    await fs.mkdir(path.join(f.root, "ui/dist"), { recursive: true });
+    const output = await build({ entryPoints: [fileURLToPath(new URL("../ui/e2e/fixtures/appProjection.ts", import.meta.url))],
+      bundle: true, write: false, platform: "node", format: "cjs", logLevel: "silent",
+      external: ["node:*", "./appOwnership", "./appRuntimeBuild", "../../../scripts/lib/uiBuildReceipt.mjs"] });
+    let attemptedCleanup = "";
+    const modules = { "node:path": path, "node:crypto": crypto, "node:util": util,
+      "node:os": { tmpdir: () => f.temporary }, "node:child_process": { execFile() { throw Error("unexpected subprocess"); } },
+      "node:fs/promises": { ...fs, rm: async (target) => {
+        assert.ok(target.startsWith(f.temporary + path.sep)); attemptedCleanup = target; throw Error("SYNTHETIC_CLEANUP_FAILURE");
+      } },
+      "./appOwnership": { requireAppHome: async () => {} },
+      "./appRuntimeBuild": { getVerifiedRuntimeBuild: async () => ({ root: f.root, files: [{
+        emittedPath: "server.js", emittedSha256: "0".repeat(64),
+      }] }), readRuntimeFile: async () => Buffer.from("different bytes") },
+      "../../../scripts/lib/uiBuildReceipt.mjs": { verifyUiBuildReceipt: async () => ({ receipt: { outputs: [] } }) },
+    };
+    const context = { Buffer, module: { exports: {} }, require: (name) => {
+      assert.ok(Object.hasOwn(modules, name), "unexpected real dependency: " + name); return modules[name];
+    } };
+    vm.runInNewContext(output.outputFiles[0].text, context, { timeout: 2000 });
+    await assert.rejects(context.module.exports.createAppProjection({ repoRoot: f.root, home: f.temporary, buildDir: path.join(f.root, "ui/dist") }), (error) => {
+      assert.equal(error.name, "AggregateError");
+      assert.deepEqual(Array.from(error.errors, (cause) => cause.message), ["E2E_PROJECTION_INVALID", "SYNTHETIC_CLEANUP_FAILURE"]); return true;
+    });
+    assert.ok(attemptedCleanup.startsWith(f.temporary + path.sep));
+  } finally { await f.close(); }
 });

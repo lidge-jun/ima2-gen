@@ -5,7 +5,7 @@ import { assertComposerGeometry, assertGeometryMutations, composerEvidence, comp
   observeContainerBoundary, paneSelectors, reveal, scrollGrid, trialControls, type ComposerSurface } from "./fixtures/composerGeometry";
 import { assertContrasts, contrastMutations, inspectContrast } from "./fixtures/composerContrast";
 
-type Scenario = { name: string; surface: ComposerSurface; viewport: { width: number; height: number }; locale?: "ko" };
+type Scenario = { name: string; surface: ComposerSurface; viewport: { width: number; height: number }; locale?: "ko" | "zh-Hans" | "zh-Hant" };
 const CASES: Scenario[] = [
   { name: "j7-s1-sidebar", surface: "sidebar", viewport: { width: 1157, height: 826 } },
   { name: "j7-s2-bottom", surface: "bottom", viewport: { width: 1440, height: 1000 } },
@@ -15,6 +15,14 @@ const CASES: Scenario[] = [
   { name: "sheet-320-ko", surface: "mobile", viewport: { width: 320, height: 740 }, locale: "ko" },
   { name: "home-1440", surface: "home", viewport: { width: 1440, height: 1000 } },
   { name: "home-390-ko", surface: "home", viewport: { width: 390, height: 844 }, locale: "ko" },
+  { name: "wp09-sidebar-short", surface: "sidebar", viewport: { width: 1024, height: 600 } },
+  { name: "wp09-bottom-short", surface: "bottom", viewport: { width: 1440, height: 600 } },
+  { name: "wp09-mobile-short", surface: "mobile", viewport: { width: 320, height: 568 } },
+  { name: "wp09-home-tablet", surface: "home", viewport: { width: 768, height: 900 } },
+  { name: "wp09-sidebar-zh-Hans", surface: "sidebar", viewport: { width: 1024, height: 800 }, locale: "zh-Hans" },
+  { name: "wp09-mobile-zh-Hant", surface: "mobile", viewport: { width: 390, height: 844 }, locale: "zh-Hant" },
+  { name: "wp09-home-zh-Hans", surface: "home", viewport: { width: 390, height: 844 }, locale: "zh-Hans" },
+  { name: "wp09-home-zh-Hant", surface: "home", viewport: { width: 768, height: 900 }, locale: "zh-Hant" },
 ];
 
 async function openComposer(page: Page, origin: string, scenario: Scenario) {
@@ -25,7 +33,7 @@ async function openComposer(page: Page, origin: string, scenario: Scenario) {
     const sheet = page.locator("#mobile-generate-sheet");
     await expect(sheet).toHaveAttribute("aria-hidden", "false");
     await expect(sheet).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-    await expect(sheet.getByRole("tab", { name: scenario.locale === "ko" ? "프롬프트" : "Prompt", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(sheet.locator("#mobile-sheet-tab-prompt")).toHaveAttribute("aria-selected", "true");
   }
   const selector = { sidebar: ".sidebar__scroll > .composer--sidebar", bottom: ".composer--bottom",
     mobile: "#mobile-generate-sheet .composer:visible", home: ".home-prompt" }[scenario.surface];

@@ -97,5 +97,9 @@ export async function createAppProjection(options: { repoRoot: string; home: str
     })), state.manifest);
     await verifyAppProjection(projection);
     return Object.freeze(projection);
-  } catch (error) { await projection.dispose(); throw error; }
+  } catch (error) {
+    try { await projection.dispose(); }
+    catch (cleanup) { throw new AggregateError([error, cleanup], "E2E_PROJECTION_AND_CLEANUP"); }
+    throw error;
+  }
 }

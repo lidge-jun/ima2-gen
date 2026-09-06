@@ -282,3 +282,38 @@ for (const scenario of ["default", "image", "video", "missing", "model-locked", 
     });
   });
 }
+
+test("MCP popup close aborts its pending observation and reopening reads fresh state", async ({ browser }, info) => {
+  await withJ6(browser, info, { ...seed, provider: "oauth", imageModel: "gpt-5.6-luna" }, async (page, observation, origin) => {
+    let hold = false, release!: () => void, arrived!: () => void, aborted!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const submitted = new Promise<void>((resolve) => { arrived = resolve; });
+    const cancelled = new Promise<void>((resolve) => { aborted = resolve; });
+    let heldRequest: import("@playwright/test").Request | undefined;
+    const pending = new Set<Promise<void>>();
+    page.on("requestfailed", (request) => { if (request === heldRequest) aborted(); });
+    await page.route(`${origin}/api/mcp/providers`, async (route) => {
+      const send = async () => {
+        if (hold) { heldRequest = route.request(); arrived(); await gate; }
+        try { await route.fulfill({ json: { ok: true, providers: [{ id: "runway", endpoint: "http://synthetic.invalid",
+          enabled: true, executable: true, status: { provider: "runway", state: "connected", toolCount: 1 } }] } }); }
+        catch (error) { if (route.request() !== heldRequest) throw error; }
+      };
+      const work = send(); pending.add(work); try { await work; } finally { pending.delete(work); }
+    });
+    try {
+      await openCreate(page, origin); await selectOption(page, PROVIDER_TRIGGER, "Runway");
+      await selectOption(page, MODEL_TRIGGER, "MCP image"); hold = true;
+      await page.locator(".generate-row__readiness:visible").click(); await submitted;
+      const popup = page.locator(".provider-readiness");
+      await expect(popup.locator("[data-mcp-readiness]")).toHaveAttribute("data-mcp-readiness", "loading");
+      await popup.getByRole("button", { name: "Close", exact: true }).click();
+      await cancelled; hold = false; release(); await Promise.all([...pending]);
+      await expect(popup).toHaveCount(0);
+      await page.locator(".generate-row__readiness:visible").click();
+      await expect(popup.locator("[data-mcp-readiness]")).toHaveAttribute("data-mcp-readiness", "ready");
+      await capture(page, info, "mcp-cancel-reopen", { aborted: true, pending: pending.size });
+      await popup.getByRole("button", { name: "Close", exact: true }).click(); expect(observation.requests).toEqual([]);
+    } finally { hold = false; release(); await Promise.allSettled([...pending]); }
+  });
+});

@@ -64,7 +64,12 @@ export function createGuardReport(): GuardReport {
     get deniedFilesystem() { return [...filesystem]; }, get expectedDiscoveries() { return [...discoveries]; },
     get expectedLegacyProbes() { return expectedLegacyProbes; },
     assertClean() {
-      if (protocolError || !ready || connections.length || processes.length || filesystem.length) throw new Error("E2E_GUARD_UNEXPECTED_DENIAL");
+      if (protocolError || !ready || connections.length || processes.length || filesystem.length) {
+        throw new Error("E2E_GUARD_UNEXPECTED_DENIAL:" + JSON.stringify({ ready, protocolError,
+          connections: connections.slice(0, 8), processes: processes.slice(0, 8), filesystem: filesystem.slice(0, 8),
+          counts: { connections: connections.length, processes: processes.length, filesystem: filesystem.length },
+        }));
+      }
     },
   };
 }

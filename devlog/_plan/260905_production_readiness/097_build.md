@@ -139,3 +139,36 @@ The new pure compiler fixture failed9-pass/1-fail with Missing expected rejectio
 Main stores the original runtime dev/ino and validates both container and runtime
 directory identity/canonicality before cache reads. No app/provider startup or
 OS guard installation occurs in this synthetic compiler test.
+
+Parent review Arendt returned four code-only findings. Main synthesis:
+1. Receipt/copy atomic-lease claim is rebutted as a demonstrated bypass: every
+copied file is checked against the one returned manifest, the projected output
+inventory is checked, and verification reruns before launch. A build that changes
+bytes cannot pass those hashes; identical bytes are the admitted artifact. Accept
+the missing deterministic copy-race regression as a test gap, not permission to
+replace this audited hash-binding design with a new inter-process lease system.
+2. Accept revalidating origin syntax at browser admission. Current launch assigns
+the private getter only after validation, but the registry should fail closed for
+a subsequently invalid record too; add an owned-home-only regression.
+3. Retaining cache/pending after failed disposal is intentional fail-closed state,
+not an inconsistent registry. Clearing it would lose ownership of retained roots.
+Add a two-attempt identity-failure/restore test; do not forget failed ownership.
+4. Accept aggregating original construction and cleanup errors so diagnostics
+retain both causes. No product-runtime or provider-scope expansion is authorized.
+
+39f147ec71c7bf5c1cea623f924ce49b4ab7edbf/run34000257616 confirms the numeric
+bind repair: bound:true/code:"", zero native resolver calls and zero denial.
+The three-build real Tailwind canary also passed: unlisted class/Git ignore changes
+leave the exact outputs unchanged, selected new source adds its independent rule,
+and cleanup rebuild restores the original binding/output manifest. Five worker
+cleanup records report resourcesClosed/cacheDisposed true, childExitUnproven false,
+errorCount0. Native total19 pass/4fail;210 UI cases still blocked. Both Node22/24
+full root/package CI legs pass. None of this is final WP09 or native UI acceptance.
+
+The four remaining startup cases now reach listen but assertClean sees an
+unexpected denial. This is a changed failure, not an unchanged DNS repair retry.
+H1 unexpected file metadata classification (falsifier: filesystem count0), H2
+boot process discovery classifier gap (falsifier: process count0), H3 boot egress
+(falsifier: connection count0). Main now includes bounded sanitized IPC summaries
+in assertClean's error text; no raw paths, request bodies or credential values.
+Do not waive or broaden any guard until the actual channel/operation is known.
