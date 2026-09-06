@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures/appServer";
+import { expect, test, seedBrowser, startApp } from "./fixtures/appServer";
+import { reveal } from "./fixtures/composerGeometry";
 import { openCreate, selectOption, withJ6, PROVIDER_TRIGGER, MODEL_TRIGGER, j6EvidenceIdentity, type J6Seed } from "./fixtures/j6Selection";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -119,7 +120,10 @@ test("MCP popup observes the selected image model without showing core GPT facts
     await capture(page, info, "mcp-image-ready");
     await popup.getByRole("button", { name: "Refresh", exact: true }).click();
     await expect(details).toHaveAttribute("data-mcp-readiness", "ready");
-    await popup.getByRole("button", { name: "Close", exact: true }).click();
+    await popup.getByRole("button", { name: en.readiness.openAccount, exact: true }).click();
+    await expect(page.getByRole("main", { name: "Settings", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Providers", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Close settings", exact: true }).click();
     await selectOption(page, PROVIDER_TRIGGER, "GPT");
     await page.locator(".generate-row__readiness:visible").click();
     await expect(popup.locator("[data-mcp-readiness]")).toHaveCount(0); await expect(popup).toContainText("GPT OAuth");
@@ -266,6 +270,7 @@ for (const scenario of ["default", "image", "video", "missing", "model-locked", 
         "model-locked": "model-locked", locked: "locked", disconnected: "disconnected", malformed: "error", retry: "error" })[scenario];
       await expect(detail).toHaveAttribute("data-mcp-readiness", expected);
       await expect(detail).toContainText("runway · MCP");
+      await expect(detail.locator("dl > div").nth(2).locator("dd")).toHaveText(scenario === "video" ? "Video" : "Image");
       await expect(popup).not.toContainText("GPT OAuth"); await expect(popup).not.toContainText("Reasoning");
       if (scenario === "image" || scenario === "video") await expect(detail).toContainText(scenario === "video" ? "Same ID video" : "Same ID image");
       if (scenario === "default") await expect(detail).toContainText("Provider default model");
@@ -317,3 +322,78 @@ test("MCP popup close aborts its pending observation and reopening reads fresh s
     } finally { hold = false; release(); await Promise.allSettled([...pending]); }
   });
 });
+
+for (const width of [390, 1280]) test(`Home mode roster ${width}: real destinations preserve the composer draft`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 900 });
+  const app = await startApp("minimax", { withoutMinimaxKey: true });
+  try {
+    await seedBrowser(page, { provider: "nai", imageModel: "nai-diffusion-5-full", dismissOnboarding: true,
+      generationDefaults: { promptMode: "direct", multimode: false } });
+    await page.goto(app.baseUrl);
+    await page.locator(".nav-rail").getByRole("button", { name: "Home", exact: true }).click();
+    await fillDrafts(page.locator(".home-prompt"), true);
+    for (const [label, mode, hash, workspace] of [["Create", "classic", "create", ".canvas"],
+      ["Node graph", "node", "node", ".node-canvas"], ["Agent", "agent", "agent", ".agent-workspace"],
+      ["Assets", "assets", "assets", ".assets-workspace"]]) {
+      const destination = page.locator(".home-modes__item").filter({ has: page.locator(".home-modes__label", { hasText: new RegExp(`^${label}$`) }) });
+      const metrics = await reveal(destination, true); await capture(page, info, `home-roster-${width}-${hash}`, metrics);
+      await destination.click(); await expect(page.locator(".app")).toHaveAttribute("data-ui-mode", mode!);
+      await expect(page).toHaveURL(new RegExp(`#${hash}$`)); await expect(page.locator(workspace!)).toBeVisible();
+      await page.locator(".nav-rail").getByRole("button", { name: "Home", exact: true }).click();
+      await drafts(page.locator(".home-prompt"), true);
+    }
+    expect(app.stub.generationRequests).toEqual([]);
+  } finally { await page.close(); await app.close(); }
+});
+
+for (const width of [390, 1280]) test(`Node default and explicit fit ${width}: HUD controls remain reachable`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 }); const app = await startApp("minimax");
+  try {
+    await seedBrowser(page, { dismissOnboarding: true }); await page.goto(app.baseUrl);
+    await page.locator(".nav-rail").getByRole("button", { name: "Node graph", exact: true }).click();
+    await expect(page.locator(".node-canvas__loading")).toHaveCount(0);
+    await page.getByRole("button", { name: /Start with a blank canvas|Start blank/i }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(1);
+    await capture(page, info, `node-default-fit-${width}`);
+    const fit = page.locator(".react-flow__controls-fitview"); await fit.click();
+    await expect(page.locator(".react-flow__node")).toBeInViewport();
+    for (const button of await page.locator(".node-studio-toolbar button, .node-studio-element-panel button, .node-canvas__controls button").all()) {
+      if (!await button.isVisible()) continue;
+      await reveal(button);
+      if (await button.isEnabled()) await button.click({ trial: true });
+    }
+    const geometry = await page.locator(".node-canvas").evaluate((element) => {
+      const selectors = [".node-studio-toolbar", ".node-studio-element-panel", ".node-canvas__controls", ".react-flow__node"];
+      return selectors.map((selector) => {
+        const node = element.querySelector(selector); if (!node) throw Error("Missing node HUD anchor");
+        const r = node.getBoundingClientRect(); return { selector, left: r.left, top: r.top, width: r.width, height: r.height };
+      });
+    });
+    await capture(page, info, `node-explicit-fit-${width}`, geometry); expect(app.stub.generationRequests).toEqual([]);
+  } finally { await page.close(); await app.close(); }
+});
+
+for (const [field, interruption] of [["positive", "viewport"], ["negative", "viewport"], ["negative", "provider"]] as const) {
+  test(`composition interrupted by ${interruption}: remounted ${field} input can submit`, async ({ browser }, info) => {
+    await withJ6(browser, info, seed, async (page, observation, origin) => {
+      let submissions = 0;
+      await page.route("**/api/generate", async (route) => {
+        if (route.request().method() === "POST") submissions++;
+        await route.fulfill({ status: 400, json: { error: "synthetic admission refusal", code: "INVALID_REQUEST" } });
+      });
+      await openCreate(page, origin); await fillDrafts(page.locator(desktop));
+      const selector = field === "positive" ? ".composer__textarea" : ".negative-prompt__textarea";
+      const original = page.locator(`${desktop} ${selector}`); await original.focus();
+      await original.evaluate((node) => { node.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "한" })); });
+      if (interruption === "viewport") { await page.setViewportSize({ width: 390, height: 844 }); await openSheet(page); }
+      else {
+        await selectOption(page, PROVIDER_TRIGGER, "MiniMax"); await expect(original).toHaveCount(0);
+        await selectOption(page, PROVIDER_TRIGGER, "NovelAI");
+      }
+      expect(submissions).toBe(0);
+      const root = page.locator(interruption === "viewport" ? `${sheet} .composer` : desktop); await drafts(root);
+      await root.locator(selector).press("Control+Enter"); await expect.poll(() => submissions).toBe(1);
+      await capture(page, info, `composition-interrupt-${field}-${interruption}`, { submissions, upstreamSubmissions: observation.requests.length });
+    });
+  });
+}
