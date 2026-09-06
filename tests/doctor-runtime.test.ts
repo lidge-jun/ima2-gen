@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkNodeEngine, parseMinimumNodeMajor, probeDoctorRuntime } from "../bin/lib/doctor-runtime.ts";
+import { buildInstallationDoctorLines, checkNodeEngine, parseMinimumNodeMajor, probeDoctorRuntime } from "../bin/lib/doctor-runtime.ts";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 test("doctor Node floor follows the package requirement, not a hardcoded major", () => {
   assert.equal(parseMinimumNodeMajor(">=22"), 22);
@@ -13,6 +16,22 @@ test("doctor Node floor follows the package requirement, not a hardcoded major",
     assert.throws(() => parseMinimumNodeMajor(engine), /ENGINE_REQUIREMENT_INVALID/);
     assert.equal(checkNodeEngine("v24.17.0", engine).code, "ENGINE_REQUIREMENT_INVALID");
   }
+});
+
+test("an owned incomplete installation reports native, package and UI failures without auth", async () => {
+  const root = await mkdtemp(join(tmpdir(), "wp10-incomplete-package-"));
+  try {
+    let rows = buildInstallationDoctorLines(root);
+    for (const code of ["INSTALL_PACKAGE_MISSING", "INSTALL_DEPENDENCY_MISSING", "INSTALL_NATIVE_FAILED", "INSTALL_SKILL_MISSING", "INSTALL_UI_MISSING"]) {
+      assert.ok(rows.some((row) => row.code === code && row.kind === "fail"), code);
+    }
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "fixture", version: "1.2.3", engines: { node: ">=22" } }));
+    await mkdir(join(root, "ui/dist"), { recursive: true }); await writeFile(join(root, "ui/dist/index.html"), "<main>owned fixture</main>");
+    rows = buildInstallationDoctorLines(root);
+    assert.ok(rows.some((row) => row.code === "INSTALL_PACKAGE_OK"));
+    assert.ok(rows.some((row) => row.code === "INSTALL_UI_OK"));
+    assert.equal(rows.some((row) => row.code.startsWith("AUTH_") || row.code.startsWith("CREDENTIAL_") || row.code.startsWith("OAUTH_")), false);
+  } finally { await rm(root, { recursive: true, force: false }); }
 });
 
 test("runtime diagnostics reject unowned origins before fetch without echoing them", async () => {
