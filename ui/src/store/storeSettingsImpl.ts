@@ -1,17 +1,18 @@
 import type { Provider, Quality, SizePreset, Format, Moderation, ImageModel, Count } from "../types";
 import type { ReasoningEffort } from "../lib/reasoning";
-import { DEFAULT_IMAGE_MODEL, GROK_VIDEO_MODEL_15, isImageModel, isGrokImageModel, isGeminiImageModel, isAtlasCloudImageModel, isMinimaxImageModel, isNaiImageModel, normalizeVideoModelValue } from "../lib/imageModels";
+import {
+  setCoreProviderSelection, setCoreImageSelection, setCoreVideoSelection,
+  setCoreComfyWorkflowSelection, setCoreComfyVideoSelection,
+} from "./storeCoreSelectionImpl";
 import { parseRequestedCustomSide } from "../lib/size";
 import type { NaiOptions, NaiOptionOverrides } from "../lib/naiOptions";
 import { getEffectiveVideoSourceCount } from "../lib/videoSourceCount";
 import {
   composePrompt,
   loadMcpSelection,
-  saveImageModel,
   saveMcpSelection,
   saveReasoningEffort,
   saveWebSearchEnabled,
-  saveVideoDefaults,
   saveGenerationDefaultsPatch,
   saveNaiOverrides,
   normalizeCount,
@@ -35,6 +36,7 @@ import {
   type McpMediaKind,
 } from "../lib/mcpSelection";
 import { t } from "../i18n";
+import { resolveErrorSpec } from "../lib/errorCodes";
 
 let coreGenerateAction: ReturnType<StoreGet>["generate"] | null = null;
 type McpTempReferenceBatch = {
@@ -43,6 +45,7 @@ type McpTempReferenceBatch = {
   files: Array<{ filename: string; tag?: string }>;
 };
 function mcpGenerationErrorMessage(error: unknown): string {
+  if (resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT") return t("toast.jobTrackingTimeout");
   const candidate = error as { code?: string; message?: string };
   const code = candidate.code ?? candidate.message ?? "";
   if (code.startsWith("MCP_INPUT_ROLE_UNSUPPORTED") || candidate.message?.startsWith("MCP_INPUT_ROLE_UNSUPPORTED")) {
@@ -298,12 +301,7 @@ export function setMcpRatioImpl(ratio: string | null, set: StoreSet): void {
   set({ mcpRatio: ratio });
 }
 
-export function setMcpParameterImpl(
-  name: string,
-  value: McpPresetValue | null,
-  set: StoreSet,
-  get: StoreGet,
-): void {
+export function setMcpParameterImpl(name: string, value: McpPresetValue | null, set: StoreSet, get: StoreGet): void {
   if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(name)) return;
   const parameters = { ...(get().mcpParameters ?? {}) };
   if (value === null) delete parameters[name];
@@ -312,11 +310,7 @@ export function setMcpParameterImpl(
   set({ mcpParameters: parameters });
 }
 
-export function setMcpReferenceSelectionImpl(
-  selection: McpReferenceSelection,
-  set: StoreSet,
-  get: StoreGet,
-): void {
+export function setMcpReferenceSelectionImpl(selection: McpReferenceSelection, set: StoreSet, get: StoreGet): void {
   const next = reconcileMcpReferenceSelection(
     get().mcpInputRoles ?? [],
     normalizeMcpReferenceSelection(selection),
@@ -327,11 +321,7 @@ export function setMcpReferenceSelectionImpl(
 
 /** Called once by the sidebar catalog completion event. It is deliberately not
  * a state-watching effect, and writes only when persisted values are stale. */
-export function reconcileMcpPresetStateImpl(
-  capabilities: McpModelCapabilities,
-  set: StoreSet,
-  get: StoreGet,
-): void {
+export function reconcileMcpPresetStateImpl(capabilities: McpModelCapabilities, set: StoreSet, get: StoreGet): void {
   const current = { ratio: get().mcpRatio ?? null, parameters: get().mcpParameters ?? {} };
   const next = reconcileMcpPresetSelection(capabilities, current.ratio, current.parameters);
   const currentReferences = get().mcpReferenceSelection ?? emptyMcpReferenceSelection();
@@ -359,93 +349,7 @@ export function hydrateMcpSelectionImpl(set: StoreSet, get: StoreGet): void {
 
 export function setProviderImpl(provider: Provider, set: StoreSet, get: StoreGet): void {
   clearMcpLane(set);
-  saveGenerationDefaultsPatch({ provider });
-  const currentModel = get().imageModel;
-  const supportsVideo = provider === "grok" || provider === "grok-api";
-  if (!supportsVideo && get().videoModelSelected) {
-    set({ videoModelSelected: false });
-    saveVideoDefaults({ model: false });
-  }
-  /**
-   * LEAVING comfy: drop the selections only that lane can express.
-   *
-   * A comfy "model" is a registered workflow id, which is legal in the comfy
-   * lane (the server reads it as the workflow to run) and meaningless in every
-   * other one. Both carriers used to survive the trip out: comfyVideoWorkflow
-   * because the branch below only clears on the way IN, and a workflow id
-   * sitting in imageModel because the fallback further down enumerates the
-   * OTHER providers' model predicates — and a workflow id matches none of them,
-   * so it slipped through every branch.
-   *
-   * Both then showed up as an empty model label under GPT, and the imageModel
-   * one also rode along as the `model` of the next GPT request. Membership in
-   * the ImageModel union is the honest test here, not another predicate to add
-   * to a list that already failed to be exhaustive once.
-   *
-   * Only the OUTBOUND transition clears. Re-selecting comfy while already on it
-   * keeps the user's workflow (260823), and hydration never reaches this
-   * function at all — useAppStore projects stored values straight into initial
-   * state — so a restored comfy selection is untouched.
-   */
-  if (get().provider === "comfy" && provider !== "comfy") {
-    const strandedModel = !isImageModel(currentModel);
-    saveGenerationDefaultsPatch({ comfyWorkflow: null, comfyVideoWorkflow: null });
-    if (strandedModel) saveImageModel(DEFAULT_IMAGE_MODEL);
-    set({
-      comfyWorkflow: null,
-      comfyVideoWorkflow: null,
-      ...(strandedModel ? { imageModel: DEFAULT_IMAGE_MODEL } : {}),
-    });
-  }
-  if ((provider === "grok" || provider === "grok-api") && !isGrokImageModel(currentModel)) {
-    const grokModel = "grok-imagine-image-2.0";
-    saveImageModel(grokModel);
-    set({ provider, imageModel: grokModel });
-  } else if ((provider === "agy" || provider === "gemini-api") && !isGeminiImageModel(currentModel)) {
-    const geminiModel = provider === "gemini-api" ? "nano-banana-pro" : "nano-banana-2";
-    saveImageModel(geminiModel);
-    set({ provider, imageModel: geminiModel });
-  } else if (provider === "atlascloud" && !isAtlasCloudImageModel(currentModel)) {
-    const atlasModel = "openai/gpt-image-2/text-to-image";
-    saveImageModel(atlasModel);
-    set({ provider, imageModel: atlasModel });
-  } else if (provider === "minimax" && !isMinimaxImageModel(currentModel)) {
-    const minimaxModel = "image-01";
-    saveImageModel(minimaxModel);
-    set({ provider, imageModel: minimaxModel });
-  } else if (provider === "nai" && !isNaiImageModel(currentModel)) {
-    // Coerce to V5 Full, otherwise the selector would keep e.g. a grok model
-    // under a NovelAI selection and the request would be rejected upstream.
-    const naiModel = "nai-diffusion-5-full";
-    saveImageModel(naiModel as ImageModel);
-    set({ provider, imageModel: naiModel as ImageModel });
-  } else if (provider === "comfy") {
-    /**
-     * Switch the lane and leave imageModel alone.
-     *
-     * ImageModel is a literal union generated from the static registry, so a
-     * comfy workflow id can never be a legal value for it and there is nothing
-     * honest to write here. The selector reads the comfy catalog from
-     * /api/models and holds its own selection, showing "unselected" until the
-     * user picks a workflow; that is why setComfyWorkflowImpl exists rather
-     * than widening this field.
-     *
-     * No auto-pick either: the order workflows were registered in carries no
-     * meaning, so choosing "the first" would run a graph nobody asked for on
-     * the user's GPU.
-     */
-    // Clear only when arriving from ANOTHER lane. Re-selecting comfy while
-    // already on it (or hydrating a restored selection) must not throw the
-    // user's workflow away, which is what made the choice look unselectable
-    // again after a reload.
-    if (get().provider === "comfy") set({ provider });
-    else set({ provider, comfyWorkflow: null, comfyVideoWorkflow: null });
-  } else if (provider !== "grok" && provider !== "grok-api" && provider !== "agy" && provider !== "gemini-api" && provider !== "atlascloud" && provider !== "minimax" && provider !== "nai" && (isGrokImageModel(currentModel) || isGeminiImageModel(currentModel) || isAtlasCloudImageModel(currentModel) || isMinimaxImageModel(currentModel) || isNaiImageModel(currentModel))) {
-    set({ provider, imageModel: DEFAULT_IMAGE_MODEL });
-    saveImageModel(DEFAULT_IMAGE_MODEL);
-  } else {
-    set({ provider });
-  }
+  setCoreProviderSelection(provider, set, get);
 }
 
 export function setQualityImpl(quality: Quality, set: StoreSet): void {
@@ -487,70 +391,22 @@ export function setModerationImpl(moderation: Moderation, set: StoreSet): void {
 
 export function setImageModelImpl(imageModel: ImageModel, set: StoreSet, get: StoreGet): void {
   clearMcpLane(set);
-  saveImageModel(imageModel);
-  set({ videoModelSelected: false });
-  saveVideoDefaults({ model: false });
-  if (isGrokImageModel(imageModel)) {
-    saveGenerationDefaultsPatch({ provider: "grok" });
-    set({ provider: "grok", imageModel });
-    return;
-  }
-  if (isGeminiImageModel(imageModel)) {
-    const current = get().provider;
-    if (current !== "agy" && current !== "gemini-api") {
-      saveGenerationDefaultsPatch({ provider: "agy" });
-      set({ provider: "agy", imageModel });
-    } else {
-      set({ imageModel });
-    }
-    return;
-  }
-  if (isAtlasCloudImageModel(imageModel)) {
-    saveGenerationDefaultsPatch({ provider: "atlascloud" });
-    set({ provider: "atlascloud", imageModel });
-    return;
-  }
-  if (isMinimaxImageModel(imageModel)) {
-    saveGenerationDefaultsPatch({ provider: "minimax" });
-    set({ provider: "minimax", imageModel });
-    return;
-  }
-  if (isNaiImageModel(imageModel)) {
-    saveGenerationDefaultsPatch({ provider: "nai" });
-    set({ provider: "nai", imageModel });
-    return;
-  }
-  if (get().provider === "grok" || get().provider === "agy" || get().provider === "gemini-api" || get().provider === "atlascloud" || get().provider === "minimax" || get().provider === "nai") {
-    saveGenerationDefaultsPatch({ provider: "oauth" });
-    set({ provider: "oauth", imageModel });
-    return;
-  }
-  set({ imageModel });
+  setCoreImageSelection(imageModel, set, get);
 }
 
 export function selectVideoModelImpl(model: string | undefined, set: StoreSet, get: StoreGet): void {
   clearMcpLane(set);
-  const m = normalizeVideoModelValue(model) || GROK_VIDEO_MODEL_15;
-  set({ videoModelSelected: m });
-  saveVideoDefaults({ model: m });
-  const provider = get().provider;
-  if (provider !== "grok" && provider !== "grok-api") get().setProvider("grok");
+  setCoreVideoSelection(model, set, get);
 }
 
-/**
- * Selects a Comfy video workflow.
- *
- * Deliberately not routed through selectVideoModelImpl: that path normalizes
- * through normalizeVideoModelValue, which rewrites any non-Grok id to
- * grok-imagine-video-1.5 and then drags the provider back to grok. A comfy
- * workflow sent there would silently become a Grok generation.
- */
-export function setComfyVideoWorkflowImpl(workflowId: string | null, set: StoreSet): void {
-  // A comfy video selection and a grok video model are mutually exclusive; the
-  // request carries exactly one of them.
-  set({ comfyVideoWorkflow: workflowId, videoModelSelected: false });
-  saveVideoDefaults({ model: false });
-  saveGenerationDefaultsPatch({ comfyVideoWorkflow: workflowId });
+export function setComfyWorkflowImpl(workflowId: string | null, set: StoreSet, get: StoreGet): void {
+  clearMcpLane(set);
+  setCoreComfyWorkflowSelection(workflowId, set, get);
+}
+
+export function setComfyVideoWorkflowImpl(workflowId: string | null, set: StoreSet, get: StoreGet): void {
+  clearMcpLane(set);
+  setCoreComfyVideoSelection(workflowId, set, get);
 }
 
 export function activeVideoRefCountImpl(get: StoreGet): number {

@@ -1,6 +1,7 @@
 import { hostname, platform, release } from "node:os";
 import { listProviders } from "../../lib/providers/registry.js";
 import type { ProviderDoctorLine } from "./doctor-providers.js";
+import { buildDoctorReport, type DoctorReport } from "./doctor-report.js";
 
 const SECRET_PATTERN = /(sk-|xai-|apikey-|Bearer\s+[A-Za-z0-9._-]+|-----BEGIN)/i;
 
@@ -10,7 +11,7 @@ export type DoctorBundle = {
   platform: string;
   hostnameHash: string;
   lanes: Array<{ lane: string; kind: string; text: string }>;
-};
+} & Pick<DoctorReport, "schemaVersion" | "checks" | "summary">;
 
 function hashHostname(value: string): string {
   let hash = 0;
@@ -21,16 +22,20 @@ function hashHostname(value: string): string {
 export function buildDoctorBundle(input: {
   version: string;
   providerLines: readonly ProviderDoctorLine[];
+  report?: DoctorReport;
 }): DoctorBundle {
+  const report = input.report ?? buildDoctorReport({ version: input.version, mode: "standard", lines: input.providerLines });
+  const providers = buildDoctorReport({ version: input.version, mode: "standard", lines: input.providerLines });
   return {
+    schemaVersion: report.schemaVersion, checks: report.checks, summary: report.summary,
     version: input.version,
     node: process.version,
     platform: `${platform()} ${release()}`,
     hostnameHash: hashHostname(hostname()),
-    lanes: input.providerLines.map((line) => ({
-      lane: line.lane,
+    lanes: providers.checks.filter((line) => line.lane).map((line) => ({
+      lane: line.lane!,
       kind: line.kind,
-      text: SECRET_PATTERN.test(line.text) ? "[redacted]" : line.text,
+      text: line.message,
     })),
   };
 }

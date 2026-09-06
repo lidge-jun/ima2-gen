@@ -21,13 +21,13 @@ export function deriveModelsFrom(
 export function deriveSupportedImageModelsFrom(registry: RegistryInput, providerId: string): Set<string> {
   const provider = registry.find((entry) => entry.id === providerId);
   return new Set(provider?.models.filter(
-    (model) => model.kind === "image" && supportsAnything(model.supports),
+    (model) => model.kind === "image" && model.supports.generate,
   ).map((model) => model.id) ?? []);
 }
 
 export function deriveUnsupportedImageModelsFrom(registry: RegistryInput): Set<string> {
   return new Set(registry.flatMap((provider) => provider.models.filter(
-    (model) => model.kind === "image" && !supportsAnything(model.supports),
+    (model) => model.kind === "image" && !model.supports.generate,
   ).map((model) => model.id)));
 }
 
@@ -58,11 +58,3 @@ export function deriveReferenceLimitFrom(
 ): number | undefined {
   return registry.find((entry) => entry.id === providerId)?.referenceLimits[mode];
 }
-
-// A model with no capability at all is an explicitly unsupported entry
-// (gpt-5.3-codex-spark), which lib/imageModels.ts rejects by name.
-function supportsAnything(supports: CoreProviderModel["supports"]): boolean {
-  return Boolean(supports.edit || supports.mask || supports.streaming);
-}
-
-type CoreProviderModel = CoreProviderManifestBase["models"][number];

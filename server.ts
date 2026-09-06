@@ -23,7 +23,8 @@ import { configureLogger, logError } from "./lib/logger.js";
 import { createRequestLogger } from "./lib/requestLogger.js";
 import { configureApiCachePolicy } from "./lib/apiCachePolicy.js";
 import { configureRoutes } from "./routes/index.js";
-import { config } from "./config.js";
+import { API_REQUEST_POLICY, config } from "./config.js";
+import { createApiRequestBudget, isApiRequestPath } from "./lib/apiRequestBudget.js";
 import { getServerPort, listenWithPortFallback } from "./lib/runtimePorts.js";
 import { shutdownServerAndMcp, startMcpRestoreAfterListen } from "./lib/mcp/shutdown.js";
 import type { RuntimeContext, RuntimeContextOverrides, ApiKeySource } from "./lib/runtimeContext.js";
@@ -249,12 +250,12 @@ function tokenMatches(actual: unknown, expected: string): boolean {
 export function createLanApiGuard(host: string | undefined, token: string | undefined) {
   const requiredToken = isLoopbackHost(host) ? "" : String(token || "");
   return function lanApiGuard(req: Request, res: Response, next: NextFunction) {
-    if (!requiredToken || !req.path.startsWith("/api")) return next();
+    if (!requiredToken || !isApiRequestPath(req.path)) return next();
     // OAuth redirect endpoints are conventionally unauthenticated: the provider's
     // browser redirect cannot carry x-ima2-token. Security boundary for this single
     // path is the single-use unguessable OAuth state + PKCE (030 WP3 audit round 2);
     // an invalid state is rejected with 400 before any token exchange.
-    if (req.path === "/api/mcp/oauth/callback") return next();
+    if (req.method === "GET" && req.path.toLowerCase() === "/api/mcp/oauth/callback") return next();
     const supplied = req.get("x-ima2-token") ?? req.query.token;
     if (tokenMatches(supplied, requiredToken)) return next();
     return res.status(401).json({
@@ -269,6 +270,7 @@ export function buildApp(ctx: RuntimeContext) {
   configureLogger({ level: ctx.config.log.level });
   app.use(createRequestLogger());
   app.use(createLanApiGuard(ctx.config.server.host, ctx.config.server.lanToken));
+  app.use(createApiRequestBudget(API_REQUEST_POLICY));
   app.use("/api/mcp/temp-references", express.json({ limit: MCP_TEMP_REFERENCE_JSON_BODY_LIMIT_BYTES }));
   app.use(express.json({ limit: ctx.config.server.bodyLimit }));
   app.use(express.static(join(ctx.rootDir, "ui", "dist"), {

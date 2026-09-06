@@ -1,4 +1,4 @@
-import { useEffect, useCallback, type ReactNode } from "react";
+import { useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ENABLE_AGENT_MODE, ENABLE_NODE_MODE } from "../lib/devMode";
 import { useI18n } from "../i18n";
@@ -137,6 +137,20 @@ export function NavRail() {
   const openSettings = useAppStore((s) => s.openSettings);
   const closeSettings = useAppStore((s) => s.closeSettings);
   const isMobile = useIsMobile();
+  const mobileNavRef = useRef<HTMLElement>(null);
+
+  const revealMobileItem = useCallback((button: HTMLElement | null) => {
+    const nav = mobileNavRef.current;
+    if (!nav || !button) return;
+    const navRect = nav.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    if (buttonRect.left < navRect.left) nav.scrollLeft -= navRect.left - buttonRect.left;
+    else if (buttonRect.right > navRect.right) nav.scrollLeft += buttonRect.right - navRect.right;
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) revealMobileItem(mobileNavRef.current?.querySelector<HTMLElement>(".nav-rail__btn.is-active") ?? null);
+  }, [isMobile, uiMode, settingsOpen, revealMobileItem]);
 
   const navigate = useCallback((item: RailItem) => {
     if (item.settingsAction) {
@@ -202,7 +216,10 @@ export function NavRail() {
 
   if (isMobile) {
     return (
-      <nav className="nav-rail nav-rail--mobile" aria-label={t("nav.ariaLabel")}>
+      <nav ref={mobileNavRef} className="nav-rail nav-rail--mobile" aria-label={t("nav.ariaLabel")}
+        onFocusCapture={(event) => {
+          if (event.target instanceof HTMLElement) revealMobileItem(event.target.closest<HTMLElement>(".nav-rail__btn"));
+        }}>
         {enabledItems.map(renderItem)}
       </nav>
     );

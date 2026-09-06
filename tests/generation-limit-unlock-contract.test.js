@@ -10,6 +10,17 @@ function readSource(relPath) {
   return readFileSync(join(root, relPath), "utf8");
 }
 
+const openaiOwners = [
+  "lib/providers/adapters/openaiExecution.ts",
+  "lib/providers/adapters/openaiOperations.ts",
+  "lib/responsesTransport.ts",
+];
+
+function assertNoEightCap(source, owner) {
+  assert.doesNotMatch(source, /Math\.min\(8/, owner);
+  assert.doesNotMatch(source, /<1-8>/, owner);
+}
+
 test("generation image-count limit is configured once and exposed to clients", () => {
   const config = readSource("config.ts");
   const capabilities = readSource("lib/capabilities.ts");
@@ -28,6 +39,14 @@ test("server generation paths no longer keep hard-coded 8 image-count caps", () 
   for (const relPath of [
     "lib/generatePipeline.ts",
     "lib/multimodePipeline.ts",
+    "lib/providers/execution/index.ts",
+    "lib/providers/execution/admission.ts",
+    "lib/providers/execution/legacy.ts",
+    "lib/providers/execution/legacyClassic.ts",
+    "lib/providers/execution/legacyNode.ts",
+    "lib/providers/execution/legacyEdit.ts",
+    "lib/providers/execution/legacyMultimode.ts",
+    ...openaiOwners,
     "lib/multimodeHelpers.ts",
     "lib/oauthProxy/prompts.ts",
     "lib/oauthProxy/generators.ts",
@@ -35,6 +54,7 @@ test("server generation paths no longer keep hard-coded 8 image-count caps", () 
     "lib/oauthProxy/streams.ts",
     "lib/responsesImageAdapter.ts",
     "lib/grokMultimodeAdapter.ts",
+    "lib/providers/adapters/grokMultimodeOperations.ts",
     "lib/agentCommandParser.ts",
     "lib/agentRuntime.ts",
     "lib/agentGenerationPlanner.ts",
@@ -44,8 +64,18 @@ test("server generation paths no longer keep hard-coded 8 image-count caps", () 
     "bin/commands/node.ts",
   ]) {
     const src = readSource(relPath);
-    assert.doesNotMatch(src, /Math\.min\(8/);
-    assert.doesNotMatch(src, /<1-8>/);
+    assertNoEightCap(src, relPath);
+  }
+});
+
+test("each migrated owner rejects an in-memory eight-cap mutation", () => {
+  for (const owner of [...openaiOwners, "lib/providers/adapters/grokMultimodeOperations.ts"]) {
+    const source = readSource(owner);
+    assertNoEightCap(source, owner);
+    for (const mutation of ['const capped = Math.min(8, requested);', 'const help = "<1-8>";']) {
+      assert.throws(() => assertNoEightCap(`${source}\n${mutation}`, owner),
+        { name: "AssertionError" }, `${owner}: cap mutation must fail the source oracle`);
+    }
   }
 });
 

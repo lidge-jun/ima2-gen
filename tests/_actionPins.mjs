@@ -247,7 +247,8 @@ export function pinnedManifestPaths(root = process.cwd()) {
       }
       for (const entry of entries) {
         if (!entry.local) continue;
-        for (const candidate of localManifestCandidates(entry.raw)) {
+        for (const nativeCandidate of localManifestCandidates(entry.raw)) {
+          const candidate = nativeCandidate.split(sep).join("/");
           if (paths.has(candidate)) continue;
           if (!containedInRoot(root, candidate)) continue;
           paths.add(candidate);

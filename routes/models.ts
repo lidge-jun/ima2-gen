@@ -23,7 +23,9 @@ import {
   type McpProviderDescriptor,
 } from "../lib/mcp/providerRegistry.js";
 import type { McpConnectionStatus } from "../lib/mcp/types.js";
-import { deriveModels } from "../lib/providers/derive.js";
+import { deriveModels, deriveProviderIds, getProviderSurfaceSupport } from "../lib/providers/derive.js";
+import { PROVIDER_SURFACES } from "../lib/providers/surfaceSupport.js";
+import type { ProviderSurface, ProviderSurfaceSupport } from "../lib/providers/types.js";
 import { listWorkflows } from "../lib/comfyWorkflowStore.js";
 import { probeComfyOrigins } from "../lib/comfyImageAdapter.js";
 import type { CoreProviderId } from "../lib/providers/registry.js";
@@ -41,6 +43,7 @@ export interface ModelLaneDto {
   reason?: string;
   defaults: { image?: string; video?: string };
   models: McpProviderModels;
+  surfaces?: Record<ProviderSurface, ProviderSurfaceSupport>;
 }
 
 interface ModelsRouteDeps {
@@ -70,21 +73,15 @@ function capabilities(
   return { source: "verified-contract", aspectRatios, parameters, inputRoles };
 }
 
-/**
- * Text-only lanes. The default in `entries` advertises image_references, which
- * would be a lie for a lane whose routes answer NAI_REF_UNSUPPORTED.
- */
-function textOnlyCapabilities(): McpModelCapabilities {
-  return capabilities(["text"]);
-}
-
-function entries(ids: Iterable<string>, caps?: McpModelCapabilities): McpModelEntry[] {
+function entries(provider: CoreProviderId, ids: Iterable<string>, caps?: McpModelCapabilities): McpModelEntry[] {
   return [...ids].map((id) => ({
     id,
     label: id,
     capabilities: caps
       ? { ...caps, aspectRatios: [...caps.aspectRatios], parameters: [...caps.parameters], inputRoles: [...caps.inputRoles] }
-      : capabilities(["text", "image_references"]),
+      // CoreProviderId comes from the same registry as the getter: never null.
+      : capabilities(getProviderSurfaceSupport(provider, "generate")!.references
+        ? ["text", "image_references"] : ["text"]),
   }));
 }
 
@@ -163,14 +160,15 @@ function grokLaneState(ctx: RuntimeContext): LaneState {
   }
 }
 
-function grokLane(ctx: RuntimeContext): ModelLaneDto {
+function grokLane(ctx: RuntimeContext, provider: "grok" | "grok-api" = "grok"): ModelLaneDto {
   const state = grokLaneState(ctx);
   return lane(state, {
     image: ctx.config.grokProvider.defaultImageModel,
     video: ctx.config.grokProvider.defaultVideoModel,
   }, {
-    image: entries(deriveModels("grok", "image")),
+    image: entries(provider, deriveModels(provider, "image")),
     video: entries(
+      provider,
       [...deriveModels("grok", "video")].filter((model) => model !== "grok-imagine-video-1.5-preview"),
       videoCapabilities(),
     ),
@@ -181,7 +179,7 @@ function grokApiLane(ctx: RuntimeContext): ModelLaneDto {
   const state: LaneState = ctx.xaiApiKey
     ? { status: "ready" }
     : { status: "key-missing", reason: "xAI API key missing" };
-  const grok = grokLane(ctx);
+  const grok = grokLane(ctx, "grok-api");
   return lane(state, { ...grok.defaults }, grok.models);
 }
 
@@ -190,7 +188,7 @@ function agyLane(installed: boolean): ModelLaneDto {
     ? { status: "ready", reason: "binary installed; login cannot be probed" }
     : { status: "disconnected", reason: "binary not installed" };
   return lane(state, { image: "nano-banana-2" }, {
-    image: entries(deriveModels("agy", "image")), video: [],
+    image: entries("agy", deriveModels("agy", "image")), video: [],
   });
 }
 
@@ -200,7 +198,7 @@ function geminiLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: "Gemini API or Vertex credentials missing" };
   return lane(state, { image: "nano-banana-2" }, {
-    image: entries(deriveModels("gemini-api", "image")), video: [],
+    image: entries("gemini-api", deriveModels("gemini-api", "image")), video: [],
   });
 }
 
@@ -214,7 +212,7 @@ function atlasCloudLane(ctx: RuntimeContext): ModelLaneDto {
       ? { status: "ready" }
       : { status: "key-missing", reason: "Atlas Cloud API key missing" };
     return lane(fallback, { image: ATLASCLOUD_TEXT_TO_IMAGE_MODEL }, {
-      image: entries(deriveModels("atlascloud", "image")), video: [],
+      image: entries("atlascloud", deriveModels("atlascloud", "image")), video: [],
     });
   }
   const auth = adapter.validateAuth();
@@ -222,7 +220,7 @@ function atlasCloudLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: auth.reason ?? "Atlas Cloud API key missing" };
   return lane(state, { image: ATLASCLOUD_TEXT_TO_IMAGE_MODEL }, {
-    image: entries(adapter.listModels().map((model) => model.id)), video: [],
+    image: entries("atlascloud", adapter.listModels().map((model) => model.id)), video: [],
   });
 }
 
@@ -236,7 +234,7 @@ function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
       ? { status: "ready" }
       : { status: "key-missing", reason: "MiniMax API key missing" };
     return lane(fallback, { image: MINIMAX_TEXT_TO_IMAGE_MODEL }, {
-      image: entries(deriveModels("minimax", "image")), video: [],
+      image: entries("minimax", deriveModels("minimax", "image")), video: [],
     });
   }
   const auth = adapter.validateAuth();
@@ -244,7 +242,7 @@ function minimaxLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: auth.reason ?? "MiniMax API key missing" };
   return lane(state, { image: MINIMAX_TEXT_TO_IMAGE_MODEL }, {
-    image: entries(adapter.listModels().map((model) => model.id)), video: [],
+    image: entries("minimax", adapter.listModels().map((model) => model.id)), video: [],
   });
 }
 
@@ -255,7 +253,7 @@ function naiLane(ctx: RuntimeContext): ModelLaneDto {
       ? { status: "ready" }
       : { status: "key-missing", reason: "NovelAI API token missing" };
     return lane(fallback, { image: NAI_DEFAULT_IMAGE_MODEL }, {
-      image: entries(deriveModels("nai", "image"), textOnlyCapabilities()), video: [],
+      image: entries("nai", deriveModels("nai", "image")), video: [],
     });
   }
   const auth = adapter.validateAuth();
@@ -263,7 +261,7 @@ function naiLane(ctx: RuntimeContext): ModelLaneDto {
     ? { status: "ready" }
     : { status: "key-missing", reason: auth.reason ?? "NovelAI API token missing" };
   return lane(state, { image: NAI_DEFAULT_IMAGE_MODEL }, {
-    image: entries(adapter.listModels().map((model) => model.id), textOnlyCapabilities()), video: [],
+    image: entries("nai", adapter.listModels().map((model) => model.id)), video: [],
   });
 }
 
@@ -322,10 +320,10 @@ async function comfyLane(ctx: RuntimeContext, deps: ModelsRouteDeps = {}): Promi
 }
 
 async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean, deps: ModelsRouteDeps = {}) {
-  const gptModels = entries(ctx.config.imageModels.valid);
-  return {
+  const gptModels = entries("oauth", ctx.config.imageModels.valid);
+  const lanes: Record<CoreProviderId, ModelLaneDto> = {
     oauth: oauthLane(ctx, gptModels),
-    api: apiLane(ctx, entries(ctx.config.imageModels.valid)),
+    api: apiLane(ctx, entries("api", ctx.config.imageModels.valid)),
     grok: grokLane(ctx),
     "grok-api": grokApiLane(ctx),
     agy: agyLane(agyInstalled),
@@ -335,6 +333,13 @@ async function buildCoreLanes(ctx: RuntimeContext, agyInstalled: boolean, deps: 
     nai: naiLane(ctx),
     comfy: await comfyLane(ctx, deps),
   };
+  for (const id of deriveProviderIds()) {
+    // Both ids and surfaces exhaust the canonical registry; MCP is never decorated.
+    lanes[id].surfaces = Object.fromEntries(PROVIDER_SURFACES.map((surface) => [
+      surface, getProviderSurfaceSupport(id, surface)!,
+    ])) as Record<ProviderSurface, ProviderSurfaceSupport>;
+  }
+  return lanes;
 }
 
 function detectAgyInstalled(): Promise<boolean> {

@@ -7,26 +7,21 @@ import { detectImageMimeFromB64, summarizeReferencePayload } from "./refs.js";
 import { classifyUpstreamError } from "./errorClassify.js";
 import { normalizeOAuthParams } from "./oauthNormalize.js";
 import { resolveProviderOptions } from "./providerOptions.js";
-import { generateViaResponses, editViaResponses } from "./responsesImageAdapter.js";
-import { generateViaGrok } from "./grokImageAdapter.js";
 import { resolveGrokQualityModel } from "./imageModels.js";
-import { generateViaAgy } from "./agyImageAdapter.js";
-import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
-import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
-import { generateViaMinimax } from "./minimaxImageAdapter.js";
-import { generateViaNai } from "./naiImageAdapter.js";
+import { prepareImageExecution } from "./providers/execution/index.js";
+import { checkImageExecutionAdmission } from "./providers/execution/admission.js";
 import { readNaiOptions } from "./naiOptions.js";
 import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { logEvent, logError } from "./logger.js";
 import { errInfo } from "./errInfo.js";
-import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
+import type { RuntimeContext } from "./runtimeContext.js";
 import { imageFormatFromMime, writeSse, dataUrlFromB64 } from "./routeHelpers.js";
 import { validateNodeInputs } from "./nodeValidation.js";
 import { publish } from "./eventBus.js";
 import { publishJobEvent } from "./ssePublish.js";
-import { type NodeGenerateBody, asUpstream, wantsSse, writeNodeError, loadParentNodeB64, toGrokReferences, nodeErrorDetails, } from "./nodeHelpers.js";
+import { type NodeGenerateBody, asUpstream, wantsSse, writeNodeError, loadParentNodeB64, nodeErrorDetails, } from "./nodeHelpers.js";
 import { normalizeBodyRequestId, validateGenerationPrompt } from "./generationInputValidation.js";
-import { deriveReferenceLimit } from "./providers/derive.js";
+import { deriveReferenceLimit, getProviderSurfaceSupport } from "./providers/derive.js";
 import { errorEnvelopeFields } from "./errors/envelope.js";
 export async function runNodeGeneration(req: Request, res: Response, ctx: RuntimeContext) {
     const body = (req.body ?? {}) as NodeGenerateBody;
@@ -64,15 +59,15 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       const { provider = "oauth" } = body;
       const { quality, warnings: qualityWarnings } = normalizeOAuthParams({ provider, quality: rawQuality });
       const normalizedPromptMode = promptMode === "direct" ? "direct" : "auto";
-      const contextMode = ["parent-plus-refs", "parent-only", "ancestry"].includes(rawContextMode)
-        ? rawContextMode
-        : "parent-plus-refs";
-      const searchMode = ["off", "auto", "on"].includes(rawSearchMode) ? rawSearchMode : "on";
+      const contextMode = rawContextMode === "parent-only" ? "parent-only"
+        : rawContextMode === "ancestry" ? "ancestry" : "parent-plus-refs";
+      const searchMode = rawSearchMode === "off" || rawSearchMode === "auto"
+        ? rawSearchMode : "on";
       // Node mode has no comfy dispatch in this unit; without this the request
       // falls through to generateViaResponses and bills OAuth. The envelope is
       // this file's nested shape, not the flat one generate uses.
       // Removed in wp7.
-      if (provider === "comfy") {
+      if (getProviderSurfaceSupport(provider, "node")?.supported === false) {
         finishStatus = "error";
         finishHttpStatus = 400;
         finishErrorCode = "COMFY_SURFACE_UNSUPPORTED";
@@ -89,7 +84,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
         rawWebSearchEnabled: body.webSearchEnabled,
         searchMode,
       });
-      if (providerOptions.error) {
+      if (providerOptions.error !== undefined) {
         finishStatus = "error";
         finishHttpStatus = providerOptions.status;
         finishErrorCode = providerOptions.code;
@@ -115,7 +110,9 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
           parentNodeId,
         });
       }
-      const validation = validateNodeInputs(ctx, rawPrompt, references, moderation);
+      // Only API/OAuth persist the requested format; other providers select their output format.
+      const validation = validateNodeInputs(ctx, rawPrompt, references, moderation,
+        activeProvider === "api" || activeProvider === "oauth" ? format : undefined);
       if (validation.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -189,7 +186,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
       }
       // Node mode chains images, so a parent node is exactly the reference the
       // adapter cannot use. Refuse instead of generating something unrelated.
-      if (activeProvider === "nai" && inputImageCount > 0) {
+      if (getProviderSurfaceSupport(activeProvider ?? "", "node")?.references === false && inputImageCount > 0) {
         finishStatus = "error";
         finishHttpStatus = 400;
         return res.status(400).json({
@@ -199,6 +196,18 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
           },
           code: "NAI_REF_UNSUPPORTED",
           parentNodeId,
+        });
+      }
+      const admission = checkImageExecutionAdmission(ctx, {
+        provider: activeProvider, surface: "node", referenceCount: inputImageCount,
+      });
+      if (admission) {
+        finishStatus = "error";
+        finishHttpStatus = admission.status;
+        finishErrorCode = admission.code;
+        return res.status(admission.status).json({
+          error: { code: admission.code, message: admission.message },
+          code: admission.code, parentNodeId, requestId,
         });
       }
       const started = startJob({
@@ -273,8 +282,23 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
         publish(requestId, "phase", { requestId, phase: "streaming" });
       }
       let b64: string | undefined, usage: unknown, webSearchCalls = 0, revisedPrompt: string | null = null;
-      const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-      let resultFormat: "png" | "jpeg" | "webp" = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : format as "png" | "jpeg" | "webp";
+      const execution = await prepareImageExecution(ctx, {
+        surface: "node", provider: activeProvider, requestId,
+        signal: cancelController.signal, prompt: generationPrompt, rawPrompt: prompt,
+        references: refCheck.refDetails, sourceImage: parentB64, contextMode, searchMode,
+        partialImages: emitProgress ? 2 : 0,
+        options: { model: effectiveImageModel, quality, size: effectiveSize, moderation,
+          mode: normalizedPromptMode, reasoningEffort, webSearchEnabled },
+        nai: activeProvider === "nai" ? readNaiOptions(req.body) : {},
+      }, emitProgress ? {
+        onPartialImage: (partial) => {
+          if (isJobCanceled(requestId)) return;
+          const pd = { requestId, image: dataUrlFromB64(format, partial.b64 ?? ""), index: partial.index };
+          if (streamResponse) writeSse(res, "partial", pd);
+          publish(requestId, "partial", pd);
+        },
+      } : undefined);
+      let resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : format;
       const maxAttempts = inputImageCount > 0 ? 1 : 2;
       let lastErr: UpstreamErr | null = null;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -297,97 +321,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
             searchMode,
             webSearchEnabled,
           });
-          const r = activeProvider === "gemini-api"
-            ? await generateViaGeminiApi(parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt, requireRuntimeContext(ctx), {
-                model: effectiveImageModel,
-                size: effectiveSize,
-                signal: cancelController.signal,
-                requestId,
-                references: parentB64
-                  ? [{ b64: parentB64, declaredMime: null, detectedMime: null }, ...((refCheck.refDetails || []) as any[])]
-                  : refCheck.refDetails,
-              })
-            : activeProvider === "agy"
-            ? await generateViaAgy(parentB64 ? `Edit this image: ${generationPrompt}` : generationPrompt, {
-                ...(parentB64
-                  ? { references: [{ b64: parentB64, declaredMime: null, detectedMime: null }] }
-                  : {}),
-                signal: cancelController.signal,
-                requestId,
-              })
-            : activeProvider === "atlascloud"
-            ? await generateViaAtlasCloud(parentB64 ? `Edit this image: ${prompt}` : prompt, requireRuntimeContext(ctx), {
-                model: effectiveImageModel,
-                size: effectiveSize,
-                quality,
-                signal: cancelController.signal,
-                requestId,
-                references: parentB64
-                  ? [{ b64: parentB64, declaredMime: null, detectedMime: null }, ...((refCheck.refDetails || []) as any[])]
-                  : refCheck.refDetails,
-              })
-            : activeProvider === "minimax"
-            ? await generateViaMinimax(parentB64 ? `Edit this image: ${prompt}` : prompt, requireRuntimeContext(ctx), {
-                model: effectiveImageModel,
-                size: effectiveSize,
-                signal: cancelController.signal,
-                requestId,
-                references: parentB64
-                  ? [{ b64: parentB64, declaredMime: null, detectedMime: null }, ...((refCheck.refDetails || []) as any[])]
-                  : refCheck.refDetails,
-              })
-            : activeProvider === "nai"
-            ? await generateViaNai(prompt, requireRuntimeContext(ctx), {
-                model: effectiveImageModel,
-                size: effectiveSize,
-                signal: cancelController.signal,
-                requestId,
-                ...readNaiOptions(req.body),
-              })
-            : activeProvider === "grok" || activeProvider === "grok-api"
-            ? await generateViaGrok(generationPrompt, ctx, {
-                model: effectiveImageModel,
-                size: effectiveSize,
-                requestId,
-                signal: cancelController.signal,
-                references: toGrokReferences(parentB64, refsForRequest),
-                directApiKey: grokDirectApiKey,
-              })
-            : parentB64
-              ? await editViaResponses(activeProvider, generationPrompt, parentB64, quality, effectiveSize, moderation, normalizedPromptMode, ctx, requestId, {
-                  model: effectiveImageModel,
-                  references: refsForRequest,
-                  searchMode,
-                  reasoningEffort,
-                  webSearchEnabled,
-                  signal: cancelController.signal,
-                })
-              : await generateViaResponses(
-                  activeProvider,
-                  generationPrompt,
-                  quality,
-                  effectiveSize,
-                  moderation,
-                  refsForRequest,
-                  requestId,
-                  normalizedPromptMode,
-                  ctx,
-                  {
-                    model: effectiveImageModel,
-                    reasoningEffort,
-                    webSearchEnabled,
-                    signal: cancelController.signal,
-                    partialImages: emitProgress ? 2 : 0,
-                    onPartialImage: emitProgress
-                      ? (partial) => {
-                          if (isJobCanceled(requestId)) return;
-                          const pd = { requestId, image: dataUrlFromB64(format, partial.b64 ?? ""), index: partial.index };
-                          if (streamResponse) writeSse(res, "partial", pd);
-                          publish(requestId, "partial", pd);
-                        }
-                      : null,
-                  },
-                );
+          const { value: r } = await execution.execute();
           throwIfJobCanceled(requestId);
           if (r.b64) {
             b64 = r.b64;

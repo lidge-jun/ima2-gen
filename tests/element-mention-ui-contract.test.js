@@ -124,7 +124,8 @@ test("EM-06 keyboard selection writes a full snapshot and only replaces the acti
   assert.match(menu, /End"\)[\s\S]*visibleElements\.length - 1/);
   assert.match(menu, /Enter"\)[\s\S]*selectActive\(\)/);
   assert.match(menu, /Tab" && visibleElements\.length\) \{ selectActive\(\)/);
-  assert.match(menu, /Escape"\)[\s\S]*onClose\(\)/);
+  assert.match(menu, /Escape"\)[^\n]*onClose\("escape"\)/);
+  assert.match(composer, /onClose=\{\(reason\) => \{\s*if \(reason === "escape" && mentionQuery\) dismissedMentionKeyRef\.current = mentionKey\(mentionQuery\)/);
   assert.match(composer, /const asset = elements\.find\(\(candidate\) => candidate\.id === id\)/);
   assert.match(composer, /addElementFromMention\(asset\)/);
   assert.match(composer, /currentPrompt\.slice\(0, mention\.start\)[\s\S]*currentPrompt\.slice\(mention\.end\)/);

@@ -40,6 +40,12 @@ const REQUIRED_KEYS = [
 // No files are excluded: local non-i18n variables named `t` in InFlightList.tsx and canvas/lib
 // math helpers are never CallExpression callees; every current t(...) call is translation-bound.
 const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
+  // Finite return paths in lib/comfyDisplay.ts; exact call sites stay audited.
+  ["ui/src/components/GenProviderModelSelect.tsx :: comfyDisplayMessageKey(comfyDisplay, laneSnapshot)", comfyDisplayKeys()],
+  ["ui/src/components/ProviderReadinessPopup.tsx :: comfyDisplayMessageKey(comfyDisplay, laneCatalog)", comfyDisplayKeys()],
+  ["ui/src/components/settings/ComfyGenerationControls.tsx :: comfyDisplayMessageKey(display, snapshot)", comfyDisplayKeys()],
+  ["ui/src/components/settings/ProviderStatusSelect.tsx :: comfyDisplayMessageKey(comfyDisplay, snapshot)", comfyDisplayKeys()],
+  ["ui/src/hooks/useProviderAvailability.ts :: comfyDisplayMessageKey(comfyDisplay, laneCatalog)", comfyDisplayKeys()],
   // reasonKey() returns these literals in CustomSizeConfirmModal.tsx.
   ["ui/src/components/CustomSizeConfirmModal.tsx :: reasonKey(pending.reasons)", [
     "sizeConfirm.reasonRatio", "sizeConfirm.reasonPixels", "sizeConfirm.reasonMinPixels",
@@ -99,6 +105,11 @@ const DYNAMIC_T_IDENTIFIERS = new Map<string, readonly string[]>([
     "settings.imageModel.minimaxImage01", "settings.imageModel.minimaxImage01Live",
     "settings.imageModel.naiDiffusion5Full", "settings.imageModel.naiDiffusion5Curated",
     "settings.imageModel.naiDiffusion45Full", "settings.imageModel.naiDiffusion45Curated",
+  ]],
+  ["ui/src/components/McpReadinessDetails.tsx :: messageKey", [
+    "readiness.mcp.loading", "readiness.mcp.error", "readiness.mcp.missing", "readiness.mcp.disabled",
+    "readiness.mcp.disconnected", "readiness.mcp.locked", "readiness.mcp.default",
+    "readiness.mcp.model-missing", "readiness.mcp.model-locked", "readiness.mcp.ready",
   ]],
   // REASONING_EFFORT_OPTIONS fullLabelKey literals in ui/src/lib/reasoning.ts.
   ["ui/src/components/ReasoningEffortSelect.tsx :: option.fullLabelKey", reasoningKeys()],
@@ -250,9 +261,6 @@ const KNOWN_MISSING = new Set<string>([
   "node.animateTitle",
   // ReferenceTray.tsx references this provider-limit copy directly.
   "prompt.refOverProviderLimit",
-  // ResultActions.tsx uses ineffective nullish fallbacks after these missing t() calls.
-  "result.extend",
-  "result.extendTitle",
   // resultChaining.ts uses this missing fork-failure toast literal.
   "toast.forkFailed",
 ]);
@@ -261,6 +269,15 @@ function reasoningKeys(): readonly string[] {
   return [
     "settings.reasoning.none", "settings.reasoning.low", "settings.reasoning.medium",
     "settings.reasoning.high", "settings.reasoning.xhigh", "settings.reasoning.max",
+  ];
+}
+
+function comfyDisplayKeys(): readonly string[] {
+  return [
+    "comfy.display.loading", "comfy.display.refreshing", "comfy.display.loadFailed",
+    "comfy.display.appAccessRequired", "comfy.display.unavailable", "comfy.display.empty",
+    "comfy.statusOffline", "comfy.display.chooseWorkflow", "comfy.display.selectedMissing",
+    "comfy.display.selectedOffline", "comfy.display.selectedLocked", "comfy.display.available",
   ];
 }
 

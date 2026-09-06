@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { collectCallArguments } from "./_executionImportEdges.mjs";
 
 const root = process.cwd();
 
@@ -45,9 +46,12 @@ describe("edit mask API contract", () => {
 
   it("routes validated masks through the Responses adapter as guided edits", () => {
     const route = readSource("routes/edit.ts");
-    const adapter = readSource("lib/responsesImageAdapter.ts");
+    const adapter = readSource("lib/providers/adapters/openaiOperations.ts");
     const oauth = readSource("lib/oauthProxy.ts");
-    assert.match(route, /editViaResponses/);
+    const owner = "lib/providers/adapters/openaiExecution.ts";
+    const calls = collectCallArguments(readSource(owner), owner, "editViaResponses", "executeOpenaiEdit");
+    assert.equal(calls.length, 1);
+    assert.match(calls[0][9], /mask: request\.mask/);
     assert.match(route, /mask: maskCheck\.mask/);
     assert.match(adapter, /mask guide/);
     assert.match(adapter, /input_image/);
@@ -65,4 +69,3 @@ describe("edit mask API contract", () => {
     assert.match(png, /hasPngAlphaChannel/);
   });
 });
-

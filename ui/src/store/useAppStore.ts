@@ -5,9 +5,7 @@
 import { create } from "zustand";
 import type { VideoResolutionUI } from "../types";
 import { getBrowserId } from "../lib/api";
-import {
-  isGrokImageModel,
-} from "../lib/imageModels";
+import { loadCoreSelectionSnapshot } from "./coreSelectionPersistence";
 import {
   GALLERY_DEFAULT_SCOPE_STORAGE_KEY,
   GALLERY_SCOPE_STORAGE_KEY,
@@ -20,7 +18,6 @@ import {
   loadHistoryStripLayout,
   loadGalleryScope,
   loadCanvasExportBackground,
-  loadImageModel,
   loadReasoningEffort,
   loadWebSearchEnabled,
   loadVideoDefaults,
@@ -120,7 +117,7 @@ import {
 import {
   setProviderImpl, setQualityImpl, setSizePresetImpl, setCustomSizeImpl,
   setGrokAspectRatioImpl, setGrokResolutionImpl, setFormatImpl, setModerationImpl,
-  setImageModelImpl, selectVideoModelImpl, setComfyVideoWorkflowImpl, activeVideoRefCountImpl,
+  setImageModelImpl, selectVideoModelImpl, setComfyWorkflowImpl, setComfyVideoWorkflowImpl, activeVideoRefCountImpl,
   setReasoningEffortImpl, setWebSearchEnabledImpl, setCountImpl,
   setMultimodeImpl, setMultimodeMaxImagesImpl, setPromptModeImpl, setPromptImpl,
   setNegativePromptImpl, setNaiOptionImpl, resetNaiOptionsImpl,
@@ -165,11 +162,8 @@ import { effectiveReferenceLimit } from "../lib/referenceLimits";
 import { physicalVideoSourceCount as countPhysicalVideoSources } from "../lib/referenceTray";
 import { emptyMcpReferenceSelection } from "../lib/mcpSelection";
 const storedGenerationDefaults = loadGenerationDefaults();
-const storedImageModel = loadImageModel();
 const storedVideoDefaults = loadVideoDefaults();
-const initialProvider =
-  storedVideoDefaults.model ? "grok" :
-  isGrokImageModel(storedImageModel) ? "grok" : (storedGenerationDefaults.provider ?? "oauth") === "grok" ? "oauth" : (storedGenerationDefaults.provider ?? "oauth");
+const initialSelection = loadCoreSelectionSnapshot();
 
 export const useAppStore = create<AppState>((set, get, store) => ({
   ...createPresetSlice(set, get, store),
@@ -196,7 +190,7 @@ export const useAppStore = create<AppState>((set, get, store) => ({
   assetsFilters: { kind: null, folderId: null, tag: null, q: "" },
   assetGenPrompt: "",
   assetGenBackground: "chroma-green",
-  assetGenProvider: initialProvider === "grok" || initialProvider === "grok-api" ? initialProvider : "oauth",
+  assetGenProvider: initialSelection.provider === "grok" || initialSelection.provider === "grok-api" ? initialSelection.provider : "oauth",
   assetGenKind: "image",
   assetGenVideoDuration: 5,
   assetGenVideoResolution: "720p",
@@ -250,7 +244,7 @@ export const useAppStore = create<AppState>((set, get, store) => ({
   renameAssetFolder: (id, name) => renameAssetFolderImpl(id, name, set),
   moveAssetFolder: (id, parentId) => moveAssetFolderImpl(id, parentId, set),
   deleteAssetFolder: (id) => deleteAssetFolderImpl(id, set),
-  provider: initialProvider,
+  ...initialSelection,
   quality: storedGenerationDefaults.quality ?? "medium",
   sizePreset: storedGenerationDefaults.sizePreset ?? "1024x1024",
   customW: storedGenerationDefaults.customW ?? 1920,
@@ -389,7 +383,6 @@ trashPending: null,
   setGalleryScope: (scope) => setGalleryScopeImpl(scope, set),
   setGalleryDefaultScope: (scope) => setGalleryDefaultScopeImpl(scope, set),
 
-  imageModel: storedImageModel,
   reasoningEffort: loadReasoningEffort(),
   webSearchEnabled: loadWebSearchEnabled(),
 
@@ -545,9 +538,6 @@ addChildNodeAt: (parentClientId, position, sourceHandle) => addChildNodeAtImpl(p
   setFormat: (format) => setFormatImpl(format, set),
   setModeration: (moderation) => setModerationImpl(moderation, set),
   setImageModel: (imageModel) => setImageModelImpl(imageModel, set, get),
-  videoModelSelected: storedVideoDefaults.model,
-  comfyVideoWorkflow: storedGenerationDefaults.comfyVideoWorkflow ?? null,
-  comfyWorkflow: storedGenerationDefaults.comfyWorkflow ?? null,
   videoDuration: storedVideoDefaults.duration,
   videoResolution: storedVideoDefaults.resolution as VideoResolutionUI,
   videoSingleRefMode: storedVideoDefaults.singleRefMode,
@@ -556,7 +546,8 @@ addChildNodeAt: (parentClientId, position, sourceHandle) => addChildNodeAtImpl(p
   videoContinuityLineage: null,
   videoProgress: null,
   selectVideoModel: (model) => selectVideoModelImpl(model, set, get),
-  setComfyVideoWorkflow: (workflowId) => setComfyVideoWorkflowImpl(workflowId, set),
+  setComfyWorkflow: (workflowId) => setComfyWorkflowImpl(workflowId, set, get),
+  setComfyVideoWorkflow: (workflowId) => setComfyVideoWorkflowImpl(workflowId, set, get),
   setVideoDuration: (videoDuration) => { set({ videoDuration }); saveVideoDefaults({ duration: videoDuration }); },
   setVideoResolution: (videoResolution) => { set({ videoResolution }); saveVideoDefaults({ resolution: videoResolution }); },
   setVideoAspectRatio: (videoAspectRatio) => { set({ videoAspectRatio }); saveVideoDefaults({ aspectRatio: videoAspectRatio }); },

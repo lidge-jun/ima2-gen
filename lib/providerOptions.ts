@@ -151,7 +151,7 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
     : rawWebSearchEnabled !== false && searchMode !== "off";
 
   return {
-    provider: activeProvider,
+    provider: activeProvider as "api" | "oauth",
     model: modelCheck.model,
     reasoningEffort: reasoningCheck.effort,
     size,

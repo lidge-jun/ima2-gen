@@ -18,6 +18,7 @@ export function handleError(err: unknown, store: ErrorStore): { code: ImaErrorCo
   } else {
     const toastMsg = spec.toastKey ? t(spec.toastKey) : message || t("toast.generateFailed");
     store.showToast(toastMsg, true);
+    if (code === "JOB_TRACKING_TIMEOUT") return { code, message: toastMsg };
   }
   return { code, message };
 }

@@ -376,6 +376,7 @@ async function runCoreImage(args: ParsedArgs, context: ImageContext): Promise<vo
 export default async function genCmd(argv: string[]): Promise<void> {
   const args = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
+  if (args._unknown.length) die(2, `unknown option: ${args._unknown[0]}`);
   const naiPreflight = unwrapNaiCliResult(parseNaiCliOptions(args, "allow-unknown"), Boolean(args.json));
   let prompt = args.positional.join(" ");
   if (!prompt && !args.stdin) die(2, "prompt is required (positional or via --stdin)");

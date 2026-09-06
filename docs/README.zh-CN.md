@@ -1,5 +1,18 @@
 # ima2-gen
 
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+安装程序从包元数据读取 Node.js 最低版本，并在启动服务器前执行离线安装检查。
+
 <p align="center">
   <img src="../assets/logo.png" alt="ima2-gen logo" width="240">
 </p>
@@ -75,7 +88,7 @@ irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 ```
 
-每个脚本都会检查 nvm/fnm/brew/winget，通过最佳可用方法安装 Node LTS，并自动处理过时进程清理。
+每个脚本都会检查支持的 Node 版本，必要时使用 nvm/fnm/brew/winget 安装 Node LTS。npm 安装只尝试一次，`ima2 doctor --installation --json` 通过后才启动服务器。脚本不会终止其他进程或删除全局锁文件。
 
 ### 设置
 
@@ -96,7 +109,7 @@ curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 npm install -g ima2-gen@latest
 ```
 
-Ctrl+C 现在执行干净关闭 — 关闭数据库、停止子进程并释放文件锁。在旧版本 (< 1.1.22) 上或者如果您看到`EBUSY`在 Windows 上，使用自动处理过时进程清理的安装脚本。
+Ctrl+C 会关闭数据库、停止子进程并释放文件锁。如果 Windows 报告 `EBUSY`，请先手动停止对应的 ima2 服务再重试安装。安装器不会自动终止进程或提升权限。
 
 ## 它的作用
 

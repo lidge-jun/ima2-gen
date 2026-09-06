@@ -61,6 +61,14 @@ test("stale inflight jobs are purged by ttl", () => {
   inflight.purgeStaleJobs(Date.now() + config.inflight.ttlMs + 60_000);
 
   assert.equal(inflight.listJobs({ kind: "classic" }).length, 0);
+  const [terminal] = inflight.listTerminalJobs({ kind: "classic" });
+  assert.equal(terminal.errorCode, "JOB_TRACKING_TIMEOUT");
+  assert.equal(terminal.httpStatus, 504);
+  assert.equal(terminal.status, "error");
+  assert.equal(terminal.prompt, undefined);
+  const row = db.getDb().prepare("SELECT error_code, http_status FROM terminal_jobs WHERE request_id = ?")
+    .get("req_stale") as { error_code: string; http_status: number };
+  assert.deepEqual(row, { error_code: "JOB_TRACKING_TIMEOUT", http_status: 504 });
 });
 
 test("migration records schema version 7", () => {

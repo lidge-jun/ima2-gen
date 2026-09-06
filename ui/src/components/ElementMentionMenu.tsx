@@ -20,6 +20,7 @@ export interface MentionMenuPosition {
 type ElementMentionMenuProps = {
   open: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
+  composingRef?: RefObject<boolean>;
   caret: number;
   query: string;
   elements: readonly ElementMentionOption[];
@@ -27,7 +28,7 @@ type ElementMentionMenuProps = {
   emptyLabel: string;
   kindLabel(kind: ElementMentionKind): string;
   onSelect(element: ElementMentionOption): void;
-  onClose(): void;
+  onClose(reason?: "escape"): void;
   onActiveChange?(index: number): void;
 };
 
@@ -67,7 +68,7 @@ function calculatePosition(textarea: HTMLTextAreaElement, caret: number): Mentio
 
 function isMobile(): boolean { return window.matchMedia("(max-width: 640px)").matches; }
 
-export function ElementMentionMenu({ open, textareaRef, caret, query, elements, ariaLabel, emptyLabel, kindLabel, onSelect, onClose, onActiveChange }: ElementMentionMenuProps) {
+export function ElementMentionMenu({ open, textareaRef, composingRef, caret, query, elements, ariaLabel, emptyLabel, kindLabel, onSelect, onClose, onActiveChange }: ElementMentionMenuProps) {
   const listId = useId();
   const [activeIndex, setActiveIndex] = useState(0);
   const [position, setPosition] = useState<MentionMenuPosition | null>(null);
@@ -101,7 +102,9 @@ export function ElementMentionMenu({ open, textareaRef, caret, query, elements, 
     textarea.setAttribute("aria-expanded", "true");
     const onKeyDown = (event: KeyboardEvent) => {
       if (document.activeElement !== textarea) return;
-      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
+      if (composingRef?.current || event.isComposing || event.keyCode === 229) return;
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) return;
+      if (event.key === "Escape") { event.preventDefault(); onClose("escape"); return; }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setActive((activeIndex + (event.key === "ArrowDown" ? 1 : -1) + visibleElements.length) % Math.max(1, visibleElements.length)); }
       else if (event.key === "Home") { event.preventDefault(); setActive(0); }
       else if (event.key === "End") { event.preventDefault(); setActive(Math.max(0, visibleElements.length - 1)); }
@@ -110,7 +113,7 @@ export function ElementMentionMenu({ open, textareaRef, caret, query, elements, 
     };
     textarea.addEventListener("keydown", onKeyDown);
     return () => { textarea.removeAttribute("aria-controls"); textarea.removeAttribute("aria-expanded"); textarea.removeAttribute("aria-activedescendant"); textarea.removeEventListener("keydown", onKeyDown); };
-  }, [open, textareaRef, listId, activeIndex, visibleElements, onClose]);
+  }, [open, textareaRef, composingRef, listId, activeIndex, visibleElements, onClose]);
   useEffect(() => { const textarea = textareaRef.current; const option = visibleElements[activeIndex]; if (textarea && option) textarea.setAttribute("aria-activedescendant", `${listId}-${option.id}`); }, [activeIndex, visibleElements, listId, textareaRef]);
   useEffect(() => { listRef.current?.querySelector<HTMLElement>(".is-active")?.scrollIntoView({ block: "nearest" }); }, [activeIndex]);
 

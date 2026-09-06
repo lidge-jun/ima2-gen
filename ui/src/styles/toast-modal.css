@@ -41,7 +41,9 @@
   color: var(--red);
 }
 .toast--card {
-  max-width: 100%;
+  width: min(560px, 100%);
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: start;
 }
 .toast__message {
   min-width: 0;
@@ -66,6 +68,61 @@
 }
 .toast__dismiss:hover {
   background: var(--control-hover);
+}
+.toast--card .toast__message {
+  grid-column: 1;
+  grid-row: 1;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.toast--card .toast__dismiss {
+  grid-column: 2;
+  grid-row: 1;
+  width: 44px;
+  height: 44px;
+}
+.toast--card .toast__cta {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: start;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.toast--card .toast__cta:hover {
+  background: var(--control-hover);
+}
+.toast--card .toast__cta:focus-visible,
+.toast--card .toast__dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.toast-stack:has(.toast--card) {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 4px;
+  pointer-events: auto;
+}
+.toast-stack:has(.toast--card) > .toast {
+  flex-shrink: 0;
+}
+@media (max-width: 800px) {
+  /* Above mobile chrome (150/160), below the compose backdrop/sheet (170/180). */
+  .toast-stack:has(.toast--card) {
+    z-index: 165;
+  }
 }
 .trash-undo-toast {
   position: fixed;

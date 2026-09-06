@@ -4,7 +4,22 @@ import {
   errorCodeFrom,
   isNonRetryableGenerationError,
   normalizeGenerationFailure,
+  statusForErrorCode,
 } from "../lib/generationErrors.ts";
+
+test("missing direct Grok image key is a non-retryable 401 passthrough", () => {
+  const err = Object.assign(new Error("Grok API key is required for grok-api image generation"), {
+    code: "GROK_API_KEY_MISSING", status: 401,
+  });
+  assert.equal(statusForErrorCode(err.code), 401);
+  assert.equal(errorCodeFrom(err), "GROK_API_KEY_MISSING");
+  assert.equal(isNonRetryableGenerationError(err), true);
+  const normalized = normalizeGenerationFailure(err);
+  assert.equal(normalized.code, "GROK_API_KEY_MISSING");
+  assert.equal(normalized.status, 401);
+  assert.equal(normalized.message, err.message);
+  assert.equal(normalizeGenerationFailure({ code: err.code, message: err.message }).status, 401);
+});
 
 test("upstream 4xx validation errors normalize to INVALID_REQUEST", () => {
   const err: Error & {

@@ -52,11 +52,12 @@ const manifestOnlyLane = [
   ...REGISTRY,
   {
     id: "test-lane",
+    surfaces: ["generate", "edit", "video"],
     vendor: "openai",
     credentials: [],
     models: [
-      { id: "test-image", kind: "image", supports: { edit: true, mask: false, streaming: false } },
-      { id: "test-video", kind: "video", supports: { edit: false, mask: false, streaming: false } },
+      { id: "test-image", kind: "image", supports: { generate: true, edit: true, mask: false, streaming: false } },
+      { id: "test-video", kind: "video", supports: { generate: true, edit: false, mask: false, streaming: false } },
     ],
     referenceLimits: { image: 2 },
     elementTaxonomy: null,

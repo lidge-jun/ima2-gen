@@ -1,8 +1,8 @@
-import { writeFile, readFile, access, mkdir } from "fs/promises";
-import { join, resolve, sep } from "path";
+import { writeFile, readFile, access, mkdir, realpath } from "fs/promises";
+import { resolve, sep } from "path";
 import { randomBytes } from "crypto";
 import { config } from "../config.js";
-import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
+import { embedImageMetadataBestEffort, isSupportedMetadataFormat } from "./imageMetadataStore.js";
 import { invalidateHistoryIndex } from "./historyIndex.js";
 
 export function newNodeId() {
@@ -18,8 +18,12 @@ interface SaveNodeOptions {
 }
 
 export async function saveNode(rootDir: string, { nodeId, b64, meta, ext = "png", generatedDir = config.storage.generatedDir }: SaveNodeOptions) {
-  void rootDir;
+  if (typeof ext !== "string" || !isSupportedMetadataFormat(ext)) {
+    throw Object.assign(new Error("Format must be png, jpeg, jpg, or webp."), { code: "INVALID_FORMAT", status: 400 });
+  }
   const filename = `${nodeId}.${ext}`;
+  const imagePath = resolveGeneratedPath(rootDir, filename, generatedDir);
+  const metadataPath = resolveGeneratedPath(rootDir, filename + ".json", generatedDir);
   await mkdir(generatedDir, { recursive: true });
   const imageMeta = {
     ...meta,
@@ -32,8 +36,8 @@ export async function saveNode(rootDir: string, { nodeId, b64, meta, ext = "png"
   if (!embedded.embedded) {
     console.warn("[nodeStore] metadata embed skipped:", embedded.warning);
   }
-  await writeFile(join(generatedDir, filename), embedded.buffer);
-  await writeFile(join(generatedDir, filename + ".json"), JSON.stringify(meta, null, 2));
+  await writeFile(imagePath, embedded.buffer);
+  await writeFile(metadataPath, JSON.stringify(meta, null, 2));
   invalidateHistoryIndex();
   return { filename };
 }
@@ -46,14 +50,16 @@ export async function loadNodeB64(rootDir: string, filename: string, generatedDi
     err.status = 404;
     throw err;
   }
-  const buf = await readFile(p);
+  const containedPath = await resolveCanonicalGeneratedPath(rootDir, p, generatedDir);
+  const buf = await readFile(containedPath);
   return buf.toString("base64");
 }
 
 export async function loadNodeMeta(rootDir: string, nodeId: string, ext = "png", generatedDir = config.storage.generatedDir) {
-  void rootDir;
   try {
-    return JSON.parse(await readFile(join(generatedDir, `${nodeId}.${ext}.json`), "utf-8"));
+    const metadataPath = resolveGeneratedPath(rootDir, `${nodeId}.${ext}.json`, generatedDir);
+    const containedPath = await resolveCanonicalGeneratedPath(rootDir, metadataPath, generatedDir);
+    return JSON.parse(await readFile(containedPath, "utf-8"));
   } catch {
     return null;
   }
@@ -67,8 +73,16 @@ export async function loadAssetB64(rootDir: string, externalSrc: string, generat
     err.status = 404;
     throw err;
   }
-  const buf = await readFile(p);
+  const containedPath = await resolveCanonicalGeneratedPath(rootDir, p, generatedDir);
+  const buf = await readFile(containedPath);
   return buf.toString("base64");
+}
+
+async function resolveCanonicalGeneratedPath(rootDir: string, path: string, generatedDir: string) {
+  const canonicalRoot = await realpath(generatedDir);
+  const canonicalPath = await realpath(path);
+  // Reuse the explicit-dir boundary after resolving directory and leaf symlinks.
+  return resolveGeneratedPath(rootDir, canonicalPath, canonicalRoot);
 }
 
 function resolveGeneratedPath(rootDir: string, relPath: string, generatedDir = config.storage.generatedDir) {
@@ -81,7 +95,8 @@ function resolveGeneratedPath(rootDir: string, relPath: string, generatedDir = c
   }
   const baseDir = resolve(generatedDir);
   const target = resolve(baseDir, relPath);
-  if (target !== baseDir && !target.startsWith(baseDir + sep)) {
+  const prefix = baseDir.endsWith(sep) ? baseDir : baseDir + sep;
+  if (target !== baseDir && !target.startsWith(prefix)) {
     const err = new Error(`Asset path escapes generated/: ${relPath}`) as Error & { code?: string; status?: number };
     err.code = "NODE_SOURCE_INVALID";
     err.status = 400;

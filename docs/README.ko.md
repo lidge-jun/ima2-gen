@@ -1,5 +1,18 @@
 # ima2-gen
 
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+설치 프로그램은 패키지 메타데이터에서 Node.js 최소 버전을 읽고 서버 시작 전에 오프라인 설치 검사를 수행합니다.
+
 [![npm version](https://img.shields.io/npm/v/ima2-gen)](https://www.npmjs.com/package/ima2-gen)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
@@ -62,7 +75,7 @@ irm https://lidge-jun.github.io/ima2-gen/install-windows.ps1 | iex
 curl -fsSL https://lidge-jun.github.io/ima2-gen/install-linux.sh | bash
 ```
 
-각 스크립트가 nvm/fnm/brew/winget을 감지하고, 없으면 Node LTS를 자동 설치한 뒤 ima2-gen을 설치합니다. npm 12 승인 옵션과 잔여 프로세스 정리를 자동 처리하고, 마지막에 `ima2 doctor`로 native runtime도 확인합니다.
+각 스크립트는 지원하는 Node 버전을 확인하고, 필요하면 nvm/fnm/brew/winget으로 Node LTS를 설치합니다. npm 설치는 한 번만 시도하며, `ima2 doctor --installation --json`을 통과해야 서버를 시작합니다. 다른 프로세스를 종료하거나 전역 잠금 파일을 지우지는 않습니다.
 
 ### 업데이트
 
@@ -74,7 +87,7 @@ npm install -g ima2-gen@latest
 
 npm 12라면 업데이트 명령에도 `--allow-scripts=ima2-gen,better-sqlite3,sharp`를 붙이세요. 원클릭 설치 스크립트는 npm 버전을 감지해 자동으로 처리합니다.
 
-v1.1.22부터 Ctrl+C가 DB, 소켓, 자식 프로세스를 깨끗하게 정리합니다. 이전 버전이거나 Windows에서 `EBUSY` 에러가 나면 위의 설치 스크립트를 다시 실행하세요 — 잔여 프로세스를 자동으로 정리합니다.
+Ctrl+C로 DB, 소켓, 자식 프로세스를 정리할 수 있습니다. Windows에서 `EBUSY`가 나면 실행 중인 해당 ima2 서버를 직접 종료한 뒤 다시 설치하세요. 설치기는 프로세스를 임의로 종료하거나 관리자 권한으로 재시도하지 않습니다.
 
 ## 최근 주요 변경
 

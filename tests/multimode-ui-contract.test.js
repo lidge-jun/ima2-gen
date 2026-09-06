@@ -36,7 +36,9 @@ describe("multimode frontend UX contract", () => {
     assert.match(store, /activeFlightIds:\s*Set<string>/);
     assert.match(store, /multimodeSequences:\s*Record<string,\s*MultimodeSequenceState>/);
     assert.match(store, /multimodePreviewFlightId:\s*string\s*\|\s*null/);
-    assert.match(store, /const useMultimode = s\.uiMode === "classic" && s\.multimode/);
+    // Behavior is independently exercised by core-generation-mode and actual transport tests.
+    assert.match(store, /const mode = effectiveCoreGenerationMode\(s\)/);
+    assert.match(store, /const useMultimode = mode === "multimode"/);
     assert.match(store, /if \(useMultimode\) \{[\s\S]*?await get\(\)\.generateMultimode\(\);[\s\S]*?return;[\s\S]*?\}/);
     assert.match(store, /if \(enabled && get\(\)\.uiMode !== "classic"\) return/);
     assert.match(store, /if \(s\.uiMode !== "classic"\) return/);
@@ -74,8 +76,8 @@ describe("multimode frontend UX contract", () => {
     assert.match(store, /kind: NonNullable<PersistedInFlight\["kind"\]>/);
     assert.match(store, /job\.kind === "multimode"/);
     assert.match(store, /scopes\.push\(\{ kind: "multimode" \}\)/);
-    assert.match(store, /fetchInflightScopes\(scopes\)/);
-    assert.match(store, /matchesInflightScope\(f, scopes\)/);
+    // Real phase/scope outcomes for both public reconciliation actions are covered
+    // by inflight-reload-reconcile-contract.test.ts, including storage-only multimode.
     assert.doesNotMatch(store, /hasMultimode && state\.uiMode !== "node"/);
     assert.match(store, /status: "canceled"/);
     assert.doesNotMatch(store, /status: current\.images\.length > 0 \? "partial" : "empty"/);
@@ -98,7 +100,7 @@ describe("multimode frontend UX contract", () => {
 
     assert.match(cost, /multimodeMaxImages/);
     assert.match(cost, /cost \* multimodeMaxImages/);
-    assert.match(composer, /const multimode = useAppStore\(\(s\) => s\.multimode\)/);
+    assert.match(composer, /const multimode = useAppStore\(composerUsesMultimode\)/);
     assert.match(composer, /composer--multimode/);
     assert.match(composer, /role="group"/);
     assert.match(composer, /multimode\.composerAriaLabel/);

@@ -1,0 +1,314 @@
+/* Pane geometry only. Host allocation stays in sidebar/dock/sheet styles. */
+
+.composer__prompt-panes,
+.composer__prompt-pane {
+  display: contents;
+}
+.composer__prompt-panes--dual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+.composer__prompt-panes--dual .composer__prompt-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--text-muted);
+  border-radius: var(--r-md);
+  clip-path: inset(0 round var(--r-md));
+  background: var(--surface-2);
+}
+.composer__prompt-pane-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font: 600 11px/1.3 var(--font);
+}
+.composer__prompt-hint {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font: 500 11px/1.4 var(--font);
+}
+.composer__prompt-stack {
+  position: relative;
+  min-width: 0;
+}
+.composer__prompt-panes--dual .composer__prompt-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.composer__textarea {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border: none;
+  padding: 4px 2px;
+  background: transparent;
+  min-height: var(--composer-textarea-min-height);
+  max-height: var(--composer-textarea-max-height);
+  line-height: 1.5;
+  resize: none;
+  overflow-y: auto;
+}
+.composer__textarea:focus {
+  border: none;
+  box-shadow: none;
+}
+.composer__textarea:focus-visible {
+  border: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+/* NAI prompt content is a peer editing surface: positive and undesired panes
+   keep equal geometry while provider gating remains in the React component. */
+.negative-prompt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+}
+
+.negative-prompt--classic {
+  padding: 10px;
+  border: 1px solid var(--text-muted);
+  border-radius: var(--r-md);
+  clip-path: inset(0 round var(--r-md));
+  background: var(--surface-2);
+}
+
+.negative-prompt__label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font: 600 11px/1.3 var(--font);
+}
+
+.negative-prompt__textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: var(--composer-textarea-min-height, 80px);
+  box-sizing: border-box;
+  resize: vertical;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.negative-prompt--classic .negative-prompt__textarea {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  max-height: var(--composer-textarea-max-height, none);
+  resize: none;
+  overflow-y: auto;
+}
+
+.negative-prompt__textarea:focus {
+  outline: none;
+}
+
+.negative-prompt__textarea:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.negative-prompt__textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.negative-prompt__hint {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font: 500 11px/1.4 var(--font);
+}
+
+.negative-prompt--home .negative-prompt__label {
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  line-height: normal;
+  text-transform: uppercase;
+}
+
+.negative-prompt--home .negative-prompt__textarea {
+  min-height: 168px;
+  padding: 18px 20px;
+  border: 1px solid var(--text-muted);
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  font: 500 18px/1.6 var(--font);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.negative-prompt--home .negative-prompt__textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.home-prompt__label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-prompt__panes,
+.home-prompt__pane {
+  display: contents;
+}
+
+.home-prompt__panes--dual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+}
+
+.home-prompt__panes--dual .home-prompt__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.home-prompt__panes--dual .home-prompt__textarea {
+  flex: 1 1 auto;
+}
+
+.home-prompt__hint {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font: 500 11px/1.4 var(--font);
+}
+
+@container (max-width: 719px) {
+  .home-prompt__panes--dual {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.home-prompt__textarea {
+  display: block;
+  width: 100%;
+  min-height: 168px;
+  resize: vertical;
+  border: 1px solid var(--text-muted);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  background: color-mix(in srgb, var(--surface-2, var(--surface-2)) 88%, transparent);
+  color: var(--text);
+  font: 500 18px/1.6 var(--font);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.home-prompt__textarea::placeholder { color: var(--text-faint, var(--text-muted)); }
+.home-prompt__textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.composer--bottom .composer__textarea {
+  flex: 0 1 auto;
+  min-height: var(--composer-textarea-min-height);
+  max-height: var(--composer-textarea-max-height);
+  padding: 6px 4px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.composer--bottom .composer__prompt-panes--dual {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  grid-auto-rows: minmax(min-content, auto);
+}
+
+.composer--bottom .composer__prompt-panes--dual > .composer__prompt-pane,
+.composer--bottom .composer__prompt-panes--dual > .negative-prompt {
+  min-height: 0;
+}
+
+
+@media (min-width: 801px) {
+  .composer--sidebar .composer__prompt-panes--dual {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .composer--sidebar .composer__prompt-stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .composer--sidebar .composer__textarea {
+    height: 100% !important;
+    min-height: 0;
+    max-height: none;
+    flex: 1 1 auto;
+  }
+  /* NAI dual panes: the sidebar min-height token above is sized for the
+     single positive field, so both grid items get one reset scoped to the
+     dual grid instead. Rows keep their content minimum (label + floor + hint)
+     and the grid scrolls when the sidebar is too short, so nothing is ever
+     clipped by the pane's clip-path or stacked over the toolbar. */
+  .composer--sidebar .composer__prompt-panes--dual {
+    grid-auto-rows: minmax(min-content, 1fr);
+    overflow-y: auto;
+  }
+  .composer--sidebar .composer__prompt-panes--dual > .composer__prompt-pane,
+  .composer--sidebar .composer__prompt-panes--dual > .negative-prompt {
+    min-height: 0;
+  }
+  .composer--sidebar .composer__prompt-panes--dual .composer__textarea,
+  .composer--sidebar .composer__prompt-panes--dual .negative-prompt__textarea {
+    height: 100% !important;
+    min-height: 72px;
+    max-height: none;
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 800px) {
+  .compose-sheet__panel--prompt .composer__prompt-stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 160px;
+    min-height: 160px;
+  }
+  .compose-sheet__panel--prompt .composer__textarea,
+  .compose-sheet__panel--prompt .negative-prompt__textarea {
+    height: 100% !important;
+    min-height: 160px;
+    max-height: none;
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-prompt__textarea { min-height: 144px; padding: 14px; font-size: 16px; }
+  .negative-prompt--home .negative-prompt__textarea { min-height: 144px; padding: 14px; font-size: 16px; }
+}
+
+@container (max-width: 719px) {
+  .composer__prompt-panes--dual {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Enabled draft guidance is readable in both themes, independent of UA opacity. */
+.composer__textarea:not(:disabled)::placeholder,
+.negative-prompt__textarea:not(:disabled)::placeholder,
+.home-prompt__textarea:not(:disabled)::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}

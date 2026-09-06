@@ -1,9 +1,20 @@
-import test from "node:test";
+import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile, symlink, utimes } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile, symlink, utimes, readFile, lstat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { findRecentAgyArtifact } from "../lib/agyImageAdapter.ts";
+import { executionTestProcess } from "./_executionTestProcess.ts";
+import { isolateExecution } from "./_executionRouteIsolation.ts";
+import { ownedFifo } from "./_agyArtifactFixture.ts";
+
+if (executionTestProcess(import.meta.url)) {
+let isolation: Awaited<ReturnType<typeof isolateExecution>>;
+let findRecentAgyArtifact: typeof import("../lib/agyImageAdapter.ts").findRecentAgyArtifact;
+before(async () => {
+  isolation = await isolateExecution();
+  ({ findRecentAgyArtifact } = await import("../lib/agyImageAdapter.ts"));
+});
+after(async () => { await isolation?.close(); });
 
 test("findRecentAgyArtifact returns matching file within time window", async () => {
   const root = await mkdtemp(join(tmpdir(), "ima2-artifact-test-"));
@@ -121,7 +132,42 @@ test("findRecentAgyArtifact returns newest when multiple candidates exist", asyn
   }
 });
 
+test("findRecentAgyArtifact excludes matching file symlinks without touching targets", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ima2-artifact-leaf-"));
+  const outside = await mkdtemp(join(tmpdir(), "ima2-artifact-outside-"));
+  const target = join(outside, "sentinel.png"), link = join(root, "ima2_generated_link.png");
+  const regular = join(root, "ima2_generated_regular.png");
+  const now = Date.now();
+  try {
+    await writeFile(target, "outside sentinel"); await symlink(target, link, "file");
+    assert.equal(await findRecentAgyArtifact(now - 1000, [root]), null);
+    await writeFile(regular, "accepted regular");
+    await utimes(regular, (now - 2000) / 1000, (now - 2000) / 1000);
+    await utimes(target, now / 1000, now / 1000);
+    assert.equal(await findRecentAgyArtifact(now - 3000, [root]), regular);
+    assert.equal(await readFile(target, "utf8"), "outside sentinel");
+    assert.equal(await readFile(regular, "utf8"), "accepted regular");
+    assert.equal((await lstat(link)).isSymbolicLink(), true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
 test("findRecentAgyArtifact returns null for empty/missing directories", async () => {
-  const result = await findRecentAgyArtifact(Date.now(), ["/tmp/does-not-exist-ima2-test"]);
+  const result = await findRecentAgyArtifact(Date.now(), [join(isolation.rootDir, "does-not-exist-ima2-test")]);
   assert.equal(result, null);
 });
+
+test("findRecentAgyArtifact excludes matching nonregular entries", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ima2-artifact-nonregular-"));
+  try {
+    const directory = join(root, "ima2_generated_directory.png"); await mkdir(directory);
+    let fifo: string | undefined;
+    if (process.platform !== "win32") fifo = await ownedFifo({ root, roots: [root] });
+    assert.equal(await findRecentAgyArtifact(Date.now() - 1000, [root]), null);
+    assert.equal((await lstat(directory)).isDirectory(), true);
+    if (fifo) assert.equal((await lstat(fifo)).isFIFO(), true);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+}

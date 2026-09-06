@@ -60,6 +60,7 @@ export function createComfyAdapter(ctx: RuntimeContext): ProviderAdapterV1 {
         id: workflow.id,
         kind: "image" as const,
         supports: {
+          generate: true,
           edit: Boolean(workflow.bind.refImage),
           mask: false,
           streaming: false,

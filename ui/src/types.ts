@@ -234,7 +234,7 @@ export type GenerateRequest = {
   moderation: Moderation;
   provider: Provider;
   n: number;
-  model?: ImageModel;
+  model?: string; // wire model id, including runtime Comfy workflow ids
   reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   image?: string;
   mask?: string;

@@ -1,16 +1,29 @@
 # ima2-gen — AI Context
 
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+Runtime installation metadata is generated from `package.json` and `.node-version`; source TypeScript users must build before running emitted JavaScript.
+
 ## What This Project Does
-Local image generation studio (v2.x) — CLI + 웹 UI
+Local image generation studio — CLI + 웹 UI
 - GPT OAuth, API Key, Grok, Gemini API, Antigravity CLI 다중 provider 지원
 - 텍스트→이미지, 이미지→이미지(편집), 비디오 생성
 - SSE 멀티플렉싱: 단일 `GET /api/events` SSE 채널 + async POST (202) 아키텍처
 - 병렬 생성 (최대 12건, 브라우저 연결 포화 없음)
 
 ## Tech Stack
-- Runtime: Node.js >=20 (ES Module)
+- Runtime: Node.js ES Module; package engine is shown in the generated table above
 - Server: Express 5
-- API Client: OpenAI SDK v5
+- API Client: OpenAI SDK range is rendered in the runtime-install contract above
 - OAuth: openai-oauth (ChatGPT 세션 프록시)
 - Grok: bundled progrok (xAI Images API)
 - Gemini: Google Generative Language API / Vertex AI
@@ -43,7 +56,7 @@ ima2-gen/
 ├── integrations/comfyui/ # ComfyUI bridge/custom node
 ├── structure/            # Current architecture reference docs (00-07)
 ├── devlog/               # _plan (active), _fin (archived)
-├── tests/                # node:test contracts/regressions (1094 cases)
+├── tests/                # node:test contracts/regressions
 └── package.json
 ```
 
@@ -90,7 +103,7 @@ references/) and the agent reads them natively. Avoid piping large bundled outpu
 ```bash
 npm run typecheck          # tsc --noEmit (server + lib)
 npm run typecheck:tests    # tsc --noEmit (test files)
-npm test                   # node:test (1094 cases)
+npm test                   # scripts/run-tests.mjs canonical node:test runner
 npm run test:inventory     # verify test file registry
 cd ui && npm run build     # Vite production build
 ```

@@ -10,7 +10,6 @@ import { test } from "node:test";
 const registry = readFileSync("ui/src/store/persistenceRegistry.ts", "utf8");
 const persistence = readFileSync("ui/src/store/storePersistence.ts", "utf8");
 const appStore = readFileSync("ui/src/store/useAppStore.ts", "utf8");
-const settingsImpl = readFileSync("ui/src/store/storeSettingsImpl.ts", "utf8");
 const uiImpl = readFileSync("ui/src/store/storeUIImpl.ts", "utf8");
 const continueFrom = readFileSync("ui/src/lib/continueFromItem.ts", "utf8");
 
@@ -25,9 +24,8 @@ test("storePersistence exposes load/save with a safe fallback", () => {
   assert.match(persistence, /export function saveVideoDefaults\(patch: Partial<VideoDefaults>\)/);
 });
 
-test("app store restores video defaults on init (mode + params survive refresh)", () => {
+test("app store restores video parameters on init", () => {
   assert.match(appStore, /const storedVideoDefaults = loadVideoDefaults\(\)/);
-  assert.match(appStore, /videoModelSelected:\s*storedVideoDefaults\.model/);
   assert.match(appStore, /videoDuration:\s*storedVideoDefaults\.duration/);
   assert.match(appStore, /videoResolution:\s*storedVideoDefaults\.resolution/);
   assert.match(appStore, /videoAspectRatio:\s*storedVideoDefaults\.aspectRatio/);
@@ -39,11 +37,8 @@ test("video param setters persist their patch", () => {
   assert.match(appStore, /setVideoAspectRatio:.*saveVideoDefaults\(\{ aspectRatio: videoAspectRatio \}\)/);
 });
 
-test("video model selection and image-mode switch persist the mode", () => {
-  assert.match(settingsImpl, /selectVideoModelImpl[\s\S]*?saveVideoDefaults\(\{ model: m \}\)/);
-  const imageModeSaves = settingsImpl.match(/saveVideoDefaults\(\{ model: false \}\)/g) ?? [];
-  assert.ok(imageModeSaves.length >= 1, "switching back to image mode must persist model:false");
-});
+// Mode hydration and video/image action writes are exercised against real storage
+// and store reloads in core-selection-actions.test.ts; parameter contracts stay here.
 
 test("cross-tab storage sync includes video defaults", () => {
   assert.match(uiImpl, /syncFromStorageImpl[\s\S]*?loadVideoDefaults\(\)/);

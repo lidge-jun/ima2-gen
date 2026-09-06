@@ -23,7 +23,7 @@ test("ResultActions extends a video by filename through the singleton SSE channe
 test("ResultActions exposes pending, retry, cancellation, and immediate history insertion", () => {
   const source = read("ui/src/components/ResultActions.tsx");
   const stream = read("ui/src/lib/videoExtendStream.ts");
-  assert.match(source, /disabled=\{extendState === "pending"\}/);
+  assert.match(source, /disabled=\{extendState === "pending" \|\| extendState === "tracking-expired"\}/);
   assert.match(source, /extendState === "error"\s*\?\s*t\("gallery\.retry"\)/);
   assert.match(stream, /cancelInflight\(payload\.requestId\)/);
   assert.match(source, /addHistoryItem\(toVideoHistoryItem\(done, actionImage\)\)/);

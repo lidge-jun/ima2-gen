@@ -32,6 +32,7 @@ export const PERSISTED_KEYS = [
   // nai — APPEND ONLY: the constants below index into this array, so inserting
   // anywhere but the end silently repoints an existing exported key.
   "ima2.naiOptions",
+  "ima2.coreSelectionMemory.v1",
 ] as const;
 
 export type PersistedKey = (typeof PERSISTED_KEYS)[number];
@@ -56,6 +57,7 @@ export const WORKSPACE_OVERRIDES_STORAGE_KEY = PERSISTED_KEYS[16];
 export const VIDEO_DEFAULTS_STORAGE_KEY = PERSISTED_KEYS[17];
 export const AGENT_PANE_PREFERENCE_STORAGE_KEY = PERSISTED_KEYS[18];
 export const NAI_OPTIONS_STORAGE_KEY = PERSISTED_KEYS[19];
+export const CORE_SELECTION_MEMORY_STORAGE_KEY = PERSISTED_KEYS[20];
 
 export const PERSISTED_REGISTRY: Record<
   PersistedKey,
@@ -87,4 +89,5 @@ export const PERSISTED_REGISTRY: Record<
   // Sparse: only the fields the user changed. An absent field keeps following
   // the operator's configuration instead of a compiled-in constant.
   "ima2.naiOptions": { domain: "generation", shape: "json:NaiOptionOverrides", resetSafe: true },
+  "ima2.coreSelectionMemory.v1": { domain: "generation", shape: "json:{version:1,lanes:CoreSelectionMemory}", resetSafe: true },
 };

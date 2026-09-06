@@ -6,31 +6,24 @@ import type { RouteRuntimeContext, RuntimeContext } from "../lib/runtimeContext.
 import { requireRuntimeContext } from "../lib/runtimeContext.js";
 import { getGrokProxyUrl } from "../lib/grokRuntime.js";
 import { logEvent, logError } from "../lib/logger.js";
-import { downloadVideo, generateVideoViaGrok, pollVideoUntilDone, type GrokVideoEvent, type GrokVideoGenerateResult, type GrokVideoOptions } from "../lib/grokVideoAdapter.js";
+import { downloadVideo, generateVideoViaGrok, pollVideoUntilDone, type GrokVideoGenerateResult, type GrokVideoOptions } from "../lib/grokVideoAdapter.js";
 import { invalidateHistoryIndex } from "../lib/historyIndex.js";
 import { ACTIVE_VIDEO_PROMPT_GUIDANCE, appendVideoContinuityEntry, lineageFromVideoMetadata, readVideoSidecar } from "../lib/videoContinuity.js";
 import { assertLocalMp4, extractGeneratedVideoFrameB64, extractVideoFrame, safeGeneratedFilePath } from "../lib/videoFrameExtract.js";
-import { finishJob, INFLIGHT_RETRY_AFTER_SECONDS, isJobCanceled, isStartJobFailure, registerJobAbortController, setJobPhase, startJob, updateJobAdmission } from "../lib/inflight.js";
+import { finishJob, INFLIGHT_RETRY_AFTER_SECONDS, isJobCanceled, isStartJobFailure, registerJobAbortController, startJob, updateJobAdmission } from "../lib/inflight.js";
 import { makeGenerationCanceledError } from "../lib/generationCancel.js";
-import { publish } from "../lib/eventBus.js";
 import { publishJobEvent } from "../lib/ssePublish.js";
 import { normalizeBodyRequestId } from "../lib/generationInputValidation.js";
 import { normalizeGrokVideoModel, normalizeVideoAspectRatio, normalizeVideoDuration, normalizeVideoResolution, validateVideoResolutionForRequest } from "../lib/imageModels.js";
 import { persistVideoArtifact } from "../lib/videoArtifactPersistence.js";
-import { deriveChildVideoLineage, normalizeVideoLineage } from "../lib/videoLineage.js";
+import { normalizeVideoLineage } from "../lib/videoLineage.js";
 import { getMotionFragment, MOTION_PRESETS } from "../lib/videoMotionPresets.js";
 import { errInfo } from "../lib/errInfo.js";
-import { codedVideoError as codedError, emitPhase, envDeadline, extractError, requestSignal, requirePrompt, retryableData } from "../lib/videoExtendedHelpers.js";
+import { codedVideoError as codedError, emitPhase, envDeadline, requestSignal, requirePrompt, retryableData } from "../lib/videoExtendedHelpers.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 import { errorEnvelopeFields } from "../lib/errors/envelope.js";
+import { runLastFrameI2v, type ParentMetadata } from "../lib/videoExtendI2vOperation.js";
 
-type ParentMetadata = {
-  provider?: unknown; model?: unknown;
-  prompt?: unknown; userPrompt?: unknown; revisedPrompt?: unknown;
-  presetIds?: unknown; motionPresetIds?: unknown;
-  video?: { duration?: unknown; resolution?: unknown; aspectRatio?: unknown };
-  videoLineage?: unknown; videoContinuity?: unknown; createdAt?: unknown;
-};
 export type VideoExtendedDependencies = {
   extractFrame?: (generatedDir: string, filename: string, position: string, options: { signal: AbortSignal }) => Promise<string>;
   generateVideo?: (prompt: string, ctx: RouteRuntimeContext, options: GrokVideoOptions) => Promise<GrokVideoGenerateResult>;
@@ -321,65 +314,11 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
     emitPhase(requestId, "queued");
     res.status(202).json({ ok: true, requestId, sourceVideoId, workflow: "last-frame-i2v" });
 
-    void (async () => {
-      const startedAt = Date.now();
-      let stage = "extracting-frame";
-      try {
-        emitPhase(requestId, stage);
-        let sourceImage: string;
-        try {
-          sourceImage = await extractFrame(ctx.config.storage.generatedDir, sourceVideoId, "last", { signal: cancelController.signal });
-        } catch (error) {
-          throw extractError(error, cancelController.signal);
-        }
-        if (cancelController.signal.aborted) throw makeGenerationCanceledError();
-        const parentContinuity = lineageFromVideoMetadata(sourceVideoId, parent);
-        const onEvent = (event: GrokVideoEvent) => {
-          setJobPhase(requestId, event.phase === "submitted" ? "streaming" : event.phase);
-          publish(requestId, event.phase, {
-            requestId,
-            ...(event.phase === "submitted" ? { xaiVideoRequestId: event.xaiVideoRequestId, requestedModel: event.requestedModel, effectiveModel: event.effectiveModel, modelFallback: event.modelFallback ?? null } : {}),
-            ...(event.phase === "progress" ? { progress: typeof event.progress === "number" ? event.progress / 100 : null, stalled: Boolean(event.stalled) } : {}),
-          });
-        };
-        const compiledPrompt = motion.fragment ? `${prompt}\n\nCamera motion: ${motion.fragment}.` : prompt;
-        const result = await generateVideo(compiledPrompt, ctx, {
-          model, mode: "image-to-video", duration, resolution, aspectRatio,
-          sourceImage, sourceMime: "image/png", signal: cancelController.signal,
-          requestId, continuityLineage: parentContinuity,
-          directApiKey: provider === "grok-api" ? ctx.xaiApiKey ?? undefined : undefined,
-          onEvent,
-        });
-        if (cancelController.signal.aborted) throw makeGenerationCanceledError();
-        stage = "persisting";
-        emitPhase(requestId, stage);
-        const filename = createFilename(ctx);
-        const createdAt = Date.now();
-        const videoLineage = deriveChildVideoLineage(filename, sourceVideoId, parent);
-        const videoContinuity = appendVideoContinuityEntry(parentContinuity, { filename, userPrompt: prompt, revisedPrompt: result.revisedPrompt, createdAt });
-        const elapsed = +((createdAt - startedAt) / 1000).toFixed(1);
-        const video = { operation: "extend", mode: "image-to-video", sourceVideoId, sourceFrame: "last", duration: result.duration, resolution: result.resolution, aspectRatio: result.aspectRatio, xaiVideoRequestId: result.xaiVideoRequestId };
-        const metadata = { kind: "video", mediaType: "video", providerUrl: result.url, requestId, prompt, userPrompt: prompt, revisedPrompt: result.revisedPrompt, motionPresetIds: motion.ids, provider, model: result.effectiveModel, createdAt, elapsed, usage: result.usage, webSearchCalls: result.webSearchCalls, video, videoLineage, videoContinuity };
-        try {
-          await persistArtifact(ctx.config.storage.generatedDir, filename, result.videoBuffer, metadata);
-        } catch (error) {
-          throw codedError(errInfo(error).message, 500, "VIDEO_PERSIST_FAILED");
-        }
-        invalidateHistoryIndex();
-        const done = { requestId, filename, url: `/generated/${encodeURIComponent(filename)}`, providerUrl: result.url, mediaType: "video", provider, model: result.effectiveModel, prompt, userPrompt: prompt, revisedPrompt: result.revisedPrompt, createdAt, elapsed, usage: result.usage, webSearchCalls: result.webSearchCalls, video, videoLineage, videoContinuity };
-        // finishJob BEFORE done (audit blocker B4): a done event must never be
-        // followed by an error from a failing inflight-completion write.
-        finishJob(requestId, { status: "completed", meta: { filename, xaiVideoRequestId: result.xaiVideoRequestId } });
-        publishJobEvent(requestId, "done", done);
-      } catch (error) {
-        if (!isJobCanceled(requestId)) {
-          const info = errInfo(error);
-          // #151 stage 2: terminal failure carries the canonical envelope.
-          publishJobEvent(requestId, "error", { requestId, error: info.message, code: info.code ?? "VIDEO_EXTEND_FAILED", status: info.status ?? 500, ...retryableData(error), ...errorEnvelopeFields(error) });
-          finishJob(requestId, { status: "error", httpStatus: info.status ?? 500, errorCode: info.code ?? "VIDEO_EXTEND_FAILED", meta: { stage } });
-        }
-      }
-    })();
+    void runLastFrameI2v({
+      ctx, requestId, sourceVideoId, prompt, model, provider, duration, resolution,
+      aspectRatio, parent, motion, cancelController, extractFrame, generateVideo,
+      persistArtifact, createFilename,
+    });
   });
 
   // --- Provider-native legacy extension ---

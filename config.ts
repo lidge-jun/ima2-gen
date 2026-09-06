@@ -8,13 +8,13 @@
 // `config.json` is loaded once at module import. Mutating the file at runtime
 // requires a server restart (same as env vars).
 //
-// Keep this module dependency-free aside from node:* built-ins to avoid
-// circular imports with lib/*.
+// Import only pure policy helpers from lib/*; never runtime owners that import config.
 
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync } from "node:fs";
+export { SSE_STREAM_POLICY } from "./lib/eventsPolicy.js";
 import { deriveSupportedImageModels, deriveUnsupportedImageModels } from "./lib/providers/derive.js";
 import {
   DEFAULT_PROMPT_BUILDER_MODELS,
@@ -26,6 +26,12 @@ import {
 // 4.6 rewrites prompts in ways that read worse than 4.3 for this planner's job, which
 // is judged by the result rather than a benchmark. 4.6 stays selectable below.
 export const DEFAULT_GROK_PLANNER_MODEL = "grok-4.3";
+export const AGY_PROCESS_POLICY = Object.freeze({ timeoutMs: 360_000, terminateGraceMs: 1000, maxOutputBytes: 1_048_576 });
+export const AGY_ARTIFACT_POLICY = Object.freeze({ maxBytes: 52_428_800, chunkBytes: 65_536 });
+/** Per-process API admission; streaming frames do not consume request slots. */
+export const API_REQUEST_POLICY = Object.freeze({
+  windowMs: 60_000, requests: 600, mutations: 120, maxPeers: 4096,
+});
 export const GROK_PLANNER_MODELS = [
   DEFAULT_GROK_PLANNER_MODEL,
   "grok-4.6",
@@ -54,7 +60,8 @@ function loadConfigJson() {
     if (!existsSync(p)) continue;
     try {
       const raw = readFileSync(p, "utf-8");
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
     } catch {
       // ignore malformed config.json; env+defaults still apply
     }
@@ -109,6 +116,10 @@ export function defaultLogLevelForEnv(runtimeEnv = env) {
 }
 
 export const config = {
+  diagnostics: {
+    keyTimeoutMs: Math.min(30000, pickPositiveInt(env.IMA2_DIAGNOSTIC_KEY_TIMEOUT_MS, fileCfg.diagnostics?.keyTimeoutMs, 5000)),
+    runtimeTimeoutMs: Math.min(30000, pickPositiveInt(env.IMA2_DIAGNOSTIC_RUNTIME_TIMEOUT_MS, fileCfg.diagnostics?.runtimeTimeoutMs, 1500)),
+  },
   server: {
     // Accept both IMA2_PORT and legacy PORT.
     port: pickInt(firstDefined(env.IMA2_PORT, env.PORT), fileCfg.server?.port, 3333),

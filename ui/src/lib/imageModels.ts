@@ -199,11 +199,12 @@ export function resolveCoreModelValue(input: {
   // are optional on the persisted-defaults type, so a caller can legally read
   // undefined before a value has ever been stored.
   videoModel: string | false | null | undefined;
+  comfyWorkflow?: string | null;
   comfyVideoWorkflow: string | null | undefined;
 }): string {
-  const { provider, imageModel, videoModel, comfyVideoWorkflow } = input;
+  const { provider, imageModel, videoModel, comfyWorkflow, comfyVideoWorkflow } = input;
   if (provider === "comfy") {
-    return comfyVideoWorkflow ? `${COMFY_VIDEO_VALUE_PREFIX}${comfyVideoWorkflow}` : imageModel;
+    return comfyVideoWorkflow ? `${COMFY_VIDEO_VALUE_PREFIX}${comfyVideoWorkflow}` : comfyWorkflow ?? "";
   }
   // Grok video rows are the only ones `video:` values are rendered for, because
   // selectVideoModel normalizes to a Grok id and would drag the provider along.

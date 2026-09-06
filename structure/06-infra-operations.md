@@ -3,6 +3,18 @@ created: 2026-04-23
 tags: [ima2-gen, operations, build, testing]
 aliases: [ima2 operations, ima2 infra, image_gen operations]
 ---
+<!-- runtime-install:generated:start -->
+| Contract | Value |
+|---|---|
+| Node engine | `>=22` |
+| npm toolchain | `npm@11.18.0` |
+| Release Node | `24.17.0` |
+| CLI entry | `bin/ima2.js` |
+| OpenAI SDK | `^7.4.0` |
+| Express | `^5.1.0` |
+<!-- runtime-install:generated:end -->
+
+The runtime table is package-derived. Clean-checkout builds and installed-package smoke tests prove emitted JavaScript freshness.
 
 # Infrastructure And Operations
 
@@ -38,11 +50,11 @@ graph TD
 | version | `package.json` is authoritative; release commits update it before promotion |
 | type | `module` |
 | bin | `ima2` -> `./bin/ima2.js` |
-| package engine | `node >=20` |
+| package engine | generated runtime-install table above; `package.json` is authoritative |
 | release toolchain | Node `24.17.0` from `.node-version`; npm `11.18.0` from `packageManager` |
 | publish files | `bin/**/*.js`, `lib/**/*.js`, `routes/**/*.js`, `skills/`, `ui/dist/`, `docs/`, `vendor/`, `assets/card-news/templates/`, `integrations/comfyui/ima2_gen_bridge/*`, `server.js`, `config.js`, `.env.example`, `README.md`, `CHANGELOG.md`, `LICENSE` |
-| bundled dependencies | `progrok`, patched `openai-oauth` |
-| major dependencies | exact `@openai/codex@0.144.1`, `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `trash`, `ulid`, exact `zod@3.25.76` |
+| bundled dependencies | `progrok`, patched `openai-oauth`, `zod` |
+| major dependencies | `@openai/codex`, `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `trash`, `ulid`, `zod`; exact versions come from the package manifest and lockfile |
 
 README may still mention a different Node baseline. The operational baseline is the current `engines.node` field in `package.json`.
 
@@ -57,8 +69,8 @@ README may still mention a different Node baseline. The operational baseline is 
 | `npm run ui:dev` | `cd ui && npm run dev` | Vite dev server |
 | `npm run ui:build` | `cd ui && npm run build` | TypeScript build and Vite build |
 | `npm run build` | `npm run ui:build` | Build UI bundle before publish |
-| `npm run build:server` | `tsc -p tsconfig.build.json` | Emit committed `*.js` runtime artifacts for `server`, `routes/`, `lib/`, `config` |
-| `npm run build:cli` | `tsc -p tsconfig.bin.json && node scripts/fix-shebangs.mjs` | Emit committed CLI runtime artifacts for `bin/` and reinstate shebangs |
+| `npm run build:server` | `tsc -p tsconfig.build.json` | Emit ignored `*.js` runtime artifacts for `server`, `routes/`, `lib/`, `config` |
+| `npm run build:cli` | `tsc -p tsconfig.bin.json && node scripts/fix-shebangs.mjs` | Emit ignored CLI runtime artifacts for `bin/` and reinstate shebangs |
 | `npm run typecheck` | `tsc -p tsconfig.json --noEmit` | Source-level type check for the migrated TypeScript surface |
 | `npm run typecheck:tests` | `tsc -p tsconfig.tests.json --noEmit` | Type check for the `tests/` overlay (runs against the test-only tsconfig) |
 | `npm run test:inventory` | `node scripts/classify-tests.mjs --check --fail-js-runtime` | Inventory gate: classifies `tests/*` and fails if a `.js` runtime test slips back in instead of `.ts` |
@@ -72,7 +84,7 @@ README may still mention a different Node baseline. The operational baseline is 
 | `npm run verify:release:source` | canonical source gate | Native imports, typechecks, inventory, builds, full tests, package lint, install policy, root production audit, and UI build-dependency audit |
 | `npm run verify:release` | canonical release gate | Source gate plus a real packed-package install and server smoke |
 | `npm run docs:refresh-line-counts` | `node scripts/refresh-structure-line-counts.mjs` | Refresh `structure/01-file-function-map.md` lib/bin/route line counts; pass `--check` in CI |
-| `prepack` | `ui:build && build:server && build:cli` | Refresh all committed runtime artifacts (UI, server, CLI) before tarball |
+| `prepack` | `ui:build && build:server && build:cli` | Rebuild runtime artifacts (UI, server, CLI) before tarball |
 | `prepublishOnly` | OIDC context assertion + `verify:release` | Blocks accidental directory publishing outside the registered OIDC workflow; the workflow publishes only its already-tested tarball with lifecycle scripts disabled. |
 
 `release:*` scripts dispatch `.github/workflows/release.yml`, which runs the verified preview -> stable-tag OIDC flow in CI and creates the GitHub Release only after npm proof. Agents must not run them unless the user explicitly asks.
@@ -92,6 +104,17 @@ README may still mention a different Node baseline. The operational baseline is 
 | `ui/dist/` | Active UI bundle served by server | Build output, not source |
 
 `ima2 doctor` includes a Storage section with the current gallery path, legacy-source counts, and recovery-guide pointer. The browser gallery also calls `/api/storage/status` and can open the current generated folder through `/api/storage/open-generated-dir`; that endpoint accepts no arbitrary path.
+
+Machine `doctor --json` uses fixed code-derived messages with a fail-preserving
+summary; it does not serialize free-form provider errors or storage paths.
+`--installation --json` runs before config/account initialization and checks only
+the package engine, dependencies/bins, in-memory native binding, skills and UI.
+`--verify-keys` is explicit non-generating remote authentication, with a5000ms
+deadline; `--runtime <loopback-origin>` is explicit local health/version with a1500ms
+deadline and no credentials/redirects. Neither establishes provider generation
+success. Timeout overrides are capped at30000ms. Generic logger error strings
+redact URL-shaped/Bearer/query credentials before truncation and omit nested
+cause/body/stack data; this does not claim arbitrary opaque free text is safe.
 
 ## Environment Variables
 
@@ -200,6 +223,56 @@ Production releases use GitHub Actions `.github/workflows/publish.yml` with npm 
 `publish.yml` is reached by `workflow_dispatch` as well as by its original preview/tag pushes, because a push authenticated with `GITHUB_TOKEN` emits no workflow event; without that dispatch a CI-minted tag would leave an immutable tag with no npm package. The dispatch cannot widen what may be published: `PUBLISH_REF`/`PUBLISH_SHA` feed the same `classifyPublish`, which still accepts only `refs/heads/preview` or a `v*` tag matching `package.json`, and stable publishing still requires `main`, `dev`, `preview`, and the tag to share one SHA plus a matching npm preview `gitHead`. Every checkout in that workflow pins the published SHA so a dispatch cannot package the default branch. Recovery for an already-published version is the `verify-existing` job, which reuses `ensure-github-release`.
 
 ## Development And Verification
+
+Pages publication is an explicit post-stable step, not a main-push side effect.
+Dispatch pages.yml with release_version and the full release_sha only after the
+canonical package publication is verified. Its build checks provenance, installs
+that exact registry version in an owned directory, runs offline installation
+doctor, and binds the report to source/tag/exact/latest metadata before uploading
+the site. Failure leaves the previous site live. Once latest advances, recovery
+uses a corrected forward release; an arbitrary older site cannot bypass this gate.
+
+`npm run docs:runtime` projects package/.node-version metadata into current docs
+and source/public installers. `npm run docs:runtime:check` checks drift without
+writes. Windows scheduled and candidate CI both require exact-SHA checkout,
+hosted installer behavior and packed installation before claiming acceptance.
+
+Candidate CI binds every Linux, Windows, macOS-install and UI checkout to the
+requested SHA (or event SHA when no override was supplied). macOS runs focused
+native installer/offline-doctor/packed smoke, not another full suite. PR Fast runs
+for every PR base, checks the synthetic merge SHA, and prints the separate PR head
+SHA. Full Git history is required by existing release provenance checks; HEAD^1
+alone is enough only for the blob budget. A pending/cancelled/missing job is not
+acceptance. After a branch changes, prior runtime checks do not verify the new tip.
+PR backend and frontend checks use independent hosted runners: server tests must
+not leave configuration stores on the UI fixture's otherwise untouched machine.
+The terminal check retains the name `PR fast gate` and succeeds only when both
+jobs succeed. Existing UI isolation guards are unchanged; no stores are deleted.
+
+The API guard matches `/api` case-insensitively with a segment boundary. Its only
+OAuth callback exemption is GET on the exact callback path; state/PKCE validation
+still owns that redirect. Per-app request budgets then run before JSON parsing:
+600 total and120 mutating requests per socket peer per60 seconds, at most4096
+tracked peers. Responses exceeding a budget return429/API_RATE_LIMITED with
+Retry-After. Forwarded headers cannot choose a budget identity. Existing SSE
+frames are not new requests; static UI/media are outside this admission counter.
+These code-owned defaults and existing job concurrency limits protect one process,
+not a distributed deployment. Future LAN session/media changes are a separate lane.
+
+Accepted `/api/events` response headers include `x-ima2-event-cursor`, the effective
+cursor before replay. CLI `openSse` exposes a validated `initialEventId` before the
+job POST, so an EOF before any frame can reconnect without submitting the job
+again. Missing headers support older servers but do not promise this recovery.
+Retention gaps still use existing snapshot/error handling and tracking deadlines.
+
+Node metadata/image readers check the canonical target against configured generated
+storage, including the metadata-absent parent fallback. Canvas update/bake/revert
+checks existing media and sidecars; writes preflight both leaves before changing
+the image. Canvas leaf links/directories are refused, while absent new output files
+are allowed. Single-asset trash cannot target a directory or storage root; restore
+validates source, optional sidecar and destination parent before moving files.
+These are path-boundary checks, not atomic protection from concurrent privileged
+filesystem replacement.
 
 | Task | Command | Expected result |
 |---|---|---|

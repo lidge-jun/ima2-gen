@@ -1,5 +1,7 @@
 // SSE consumer for CLI streaming endpoints. Plain fetch + line-based parser, no external libs.
 
+import { parseEventCursor } from "../../lib/eventsPolicy.js";
+
 let CLI_VERSION = "0.0.0";
 export function setCliVersion(v: string) { CLI_VERSION = v; }
 
@@ -14,6 +16,8 @@ export interface SseInit {
 
 export interface OpenSseResult {
   events: AsyncGenerator<SseEvent>;
+  /** Validated pre-replay bookmark, available before the caller submits a job. */
+  initialEventId?: string;
   close(): void;
 }
 
@@ -108,9 +112,15 @@ async function openWithMethod(url: string, init: SseInit, defaultMethod: string)
       close();
       throw await errorFromResponse(res);
     }
+    const cursorHeader = res.headers.get("x-ima2-event-cursor");
+    if (cursorHeader !== null && parseEventCursor(cursorHeader) === null) {
+      close();
+      throw new Error("SSE_INVALID_EVENT_CURSOR");
+    }
     const events = parseBody(res.body, () => closed);
     return {
       events,
+      ...(cursorHeader !== null ? { initialEventId: cursorHeader } : {}),
       close: () => {
         init.signal?.removeEventListener("abort", forwardAbort);
         close();

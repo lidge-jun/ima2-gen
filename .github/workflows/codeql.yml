@@ -1,6 +1,12 @@
 name: CodeQL
 
 on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Exact 40-character commit SHA to analyze'
+        required: false
+        type: string
   push:
     branches: [main, dev]
   pull_request:
@@ -20,6 +26,17 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event.inputs.sha || github.sha }}
+          fetch-depth: 0
+      - name: Assert requested analysis commit
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sha != '' }}
+        shell: bash
+        env:
+          EXPECTED_ANALYSIS_SHA: ${{ github.event.inputs.sha }}
+        run: |
+          [[ "$EXPECTED_ANALYSIS_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          test "$(git rev-parse HEAD)" = "$EXPECTED_ANALYSIS_SHA"
       - name: Initialize CodeQL
         uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
@@ -29,4 +46,3 @@ jobs:
         uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           category: "/language:javascript-typescript"
-

@@ -7,7 +7,8 @@ import { KEY_TO_ENV, WRITABLE_CONFIG_KEYS } from "./configKeys.js";
 import { DEFAULT_IMAGE_QUALITY, VALID_IMAGE_QUALITIES } from "./oauthNormalize.js";
 import { MAX_REF2V_REFERENCES, MAX_REFERENCE_AUDIOS, MAX_VIDEO_DURATION, MIN_VIDEO_DURATION } from "./imageModels.js";
 import type { AppConfig } from "./runtimeContext.js";
-import { deriveProviderIds } from "./providers/derive.js";
+import { deriveProviderIds, getProviderSurfaceSupport } from "./providers/derive.js";
+import { PROVIDER_SURFACES } from "./providers/surfaceSupport.js";
 
 type CapabilitySource = "local" | "server";
 
@@ -72,6 +73,11 @@ export function buildIma2Capabilities({
     server,
     version: packageVersion,
     ...(lanes ? { lanes } : {}),
+    providerSurfaces: Object.fromEntries(deriveProviderIds().map((id) => [id,
+      Object.fromEntries(PROVIDER_SURFACES.map((surface) => [surface,
+        getProviderSurfaceSupport(id, surface),
+      ])),
+    ])),
     commands: AGENT_COMMANDS,
     defaults: {
       oauth: {

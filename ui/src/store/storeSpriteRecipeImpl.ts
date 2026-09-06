@@ -1,5 +1,8 @@
 import { approveSpriteAnchor, createSpriteRecipe, generateSpriteAnchor, generateSpriteRows, getSpriteRecipe, listSpriteRecipes, updateSpriteRecipe } from "../lib/api-sprite-recipes";
-import { subscribe } from "../lib/eventChannel";
+import { subscribe, whenConnected } from "../lib/eventChannel";
+import { parseSseErrorPayload } from "../lib/sseStreamError";
+import { resolveErrorSpec } from "../lib/errorCodes";
+import { handleError } from "../lib/errorHandler";
 import type { SpriteJobEvent, SpriteRecipeDraft, SpriteRecipeRecord } from "../types/spriteRecipe";
 import type { StoreGet, StoreSet } from "./storeTypes";
 
@@ -31,11 +34,26 @@ function watch(requestId: string, set: StoreSet, get: StoreGet) {
   subscriptions.get(requestId)?.();
   subscriptions.set(requestId, subscribe(requestId, null, (event, data) => applySpriteJobEventImpl({ event: event as SpriteJobEvent["event"], data: { ...data, requestId } }, set, get)));
 }
+function stopWatching(requestId: string): void {
+  subscriptions.get(requestId)?.();
+  subscriptions.delete(requestId);
+}
+function generationMessage(error: unknown, get: StoreGet): string {
+  return resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT"
+    ? handleError(error, get()).message : message(error);
+}
 export async function generateSpriteAnchorImpl(set: StoreSet, get: StoreGet): Promise<void> {
   const id = get().activeSpriteRecipeId; if (!id) return;
   set({ spriteRecipeGenerating: true, spriteRecipeError: null });
-  try { const requestId = crypto.randomUUID(); watch(requestId, set, get); await generateSpriteAnchor(id, { requestId, async: true }); }
-  catch (error) { set({ spriteRecipeError: message(error), spriteRecipeGenerating: false }); }
+  const requestId = crypto.randomUUID();
+  try {
+    watch(requestId, set, get);
+    await whenConnected();
+    await generateSpriteAnchor(id, { requestId, async: true });
+  } catch (error) {
+    stopWatching(requestId);
+    set({ spriteRecipeError: generationMessage(error, get), spriteRecipeGenerating: false });
+  }
 }
 export async function approveSpriteAnchorImpl(assetId: string, set: StoreSet, get: StoreGet): Promise<void> {
   const id = get().activeSpriteRecipeId; if (!id) return;
@@ -47,14 +65,28 @@ export async function approveSpriteAnchorImpl(assetId: string, set: StoreSet, ge
 export async function generateSpriteRowsImpl(stateKeys: string[] | undefined, set: StoreSet, get: StoreGet): Promise<void> {
   const id = get().activeSpriteRecipeId; if (!id) return;
   set({ spriteRecipeGenerating: true, spriteRecipeError: null });
-  try { const requestId = crypto.randomUUID(); watch(requestId, set, get); await generateSpriteRows(id, { requestId, stateKeys, async: true }); }
-  catch (error) { set({ spriteRecipeError: message(error), spriteRecipeGenerating: false }); }
+  const requestId = crypto.randomUUID();
+  try {
+    watch(requestId, set, get);
+    await whenConnected();
+    await generateSpriteRows(id, { requestId, stateKeys, async: true });
+  } catch (error) {
+    stopWatching(requestId);
+    set({ spriteRecipeError: generationMessage(error, get), spriteRecipeGenerating: false });
+  }
 }
 export async function cancelSpriteJobImpl(requestId: string, set: StoreSet, _get: StoreGet): Promise<void> { subscriptions.get(requestId)?.(); subscriptions.delete(requestId); set({ spriteRecipeGenerating: false }); }
 export function applySpriteJobEventImpl(event: SpriteJobEvent, set: StoreSet, get: StoreGet): void {
   const key = event.data.stateKey; const url = (event.data.url ?? event.data.image ?? event.data.previewUrl) as string | undefined;
   if (key && url) set((s) => ({ spritePartialPreviews: { ...s.spritePartialPreviews, [key]: url } }));
-  if (event.event === "error") set({ spriteRecipeError: String(event.data.message ?? "Generation failed"), spriteRecipeGenerating: false });
-  if (event.event === "done") { const id = String(event.data.requestId ?? ""); subscriptions.get(id)?.(); subscriptions.delete(id); set({ spriteRecipeGenerating: false }); const recipeId = get().activeSpriteRecipeId; if (recipeId) void selectSpriteRecipeImpl(recipeId, set, get); }
+  if (event.event === "error" || event.event === "done") stopWatching(String(event.data.requestId ?? ""));
+  if (event.event === "error") {
+    const fallback = String(event.data.message ?? "Generation failed");
+    const error = parseSseErrorPayload(event.data, fallback);
+    const safeMessage = resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT"
+      ? handleError(error, get()).message : fallback;
+    set({ spriteRecipeError: safeMessage, spriteRecipeGenerating: false });
+  }
+  if (event.event === "done") { set({ spriteRecipeGenerating: false }); const recipeId = get().activeSpriteRecipeId; if (recipeId) void selectSpriteRecipeImpl(recipeId, set, get); }
 }
 export function updateSpriteRecipeDraftImpl(patch: Partial<SpriteRecipeDraft>, set: StoreSet): void { set((s) => ({ spriteRecipeDraft: { ...s.spriteRecipeDraft, ...patch }, spriteRecipeDirty: true })); }

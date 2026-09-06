@@ -57,6 +57,7 @@ function parsePercent(value: string, label: string): number {
 export default async function upscaleCmd(argv: string[]): Promise<void> {
   const args: ParsedArgs = parseArgs(argv, SPEC);
   if (args.help) { out(HELP); return; }
+  if (args._unknown.length) die(2, `unknown option: ${args._unknown[0]}`);
   const file = args.positional[0];
   if (!file) die(2, "usage: ima2 upscale <generated-file> [options]");
 

@@ -52,7 +52,8 @@ sequenceDiagram
 | `ima2 service <sub>` | none | Background service (launchd / systemd user unit): install/uninstall/start/stop/restart/status/logs/repair with PATH-baked artifacts and KeepAlive-honest stop | `bin/commands/service.ts`, `bin/lib/serviceTemplates.ts` |
 | `ima2 setup` | `login` | Configure API key or OAuth interactively | `bin/ima2.ts` |
 | `ima2 status` | none | Show config, provider, and OAuth session state | `bin/ima2.ts`, `lib/codexDetect.ts` |
-| `ima2 doctor` | none | Check Node, package, node_modules, config, and storage state | `bin/ima2.ts`, `bin/lib/storage-doctor.ts` |
+| `ima2 doctor [--json] [--bundle] [--verify-keys] [--runtime <loopback-origin>]` | none | Fixed-code machine reports or human storage/auth checks; network verification is explicit and bounded | `bin/commands/doctor.ts`, `bin/lib/doctor-report.ts`, `bin/lib/doctor-providers.ts` |
+| `ima2 doctor --installation [--json]` | none | Early offline package/engine/native/UI/skill check, no config/account/network initialization | `bin/ima2.ts`, `bin/lib/doctor-runtime.ts` |
 | `ima2 open` | none | Open the web UI at the advertised or default port | `bin/ima2.ts`, `bin/lib/platform.ts` |
 | `ima2 grok login/status/models/proxy` | none | Manage bundled progrok auth and model/status probes for `provider: "grok"` | `bin/commands/grok.ts`, `routes/grok.ts` |
 | `ima2 reset` | none | Reset `~/.ima2/config.json` to an empty object | `bin/ima2.ts` |

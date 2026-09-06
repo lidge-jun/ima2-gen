@@ -157,7 +157,6 @@
   color: var(--text-dim);
 }
 
-
 .home-workspace {
   grid-column: 2;
   grid-row: 1;
@@ -255,71 +254,6 @@
   flex: 0 0 auto;
   color: var(--text-muted);
   font: 600 11px/1 var(--mono);
-}
-
-.home-prompt__label {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--text-muted);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.home-prompt__panes,
-.home-prompt__pane {
-  display: contents;
-}
-
-.home-prompt__panes--dual {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 12px;
-}
-
-.home-prompt__panes--dual .home-prompt__pane {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.home-prompt__panes--dual .home-prompt__textarea {
-  flex: 1 1 auto;
-}
-
-.home-prompt__hint {
-  margin: 6px 0 0;
-  color: var(--text-muted);
-  font: 500 11px/1.4 var(--font);
-}
-
-@container (max-width: 719px) {
-  .home-prompt__panes--dual {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.home-prompt__textarea {
-  display: block;
-  width: 100%;
-  min-height: 168px;
-  resize: vertical;
-  border: 1px solid var(--border-strong, var(--border));
-  border-radius: var(--r-xl);
-  padding: 18px 20px;
-  background: color-mix(in srgb, var(--surface-2, var(--surface-2)) 88%, transparent);
-  color: var(--text);
-  font: 500 18px/1.6 var(--font);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.home-prompt__textarea::placeholder { color: var(--text-faint, var(--text-muted)); }
-.home-prompt__textarea:focus {
-  border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .home-prompt__footer {
@@ -432,8 +366,6 @@
 @media (max-width: 480px) {
   .home-workspace { padding: 20px 14px calc(44px + env(safe-area-inset-bottom)); }
   .home-prompt { padding: 16px; border-radius: var(--r-2xl); }
-  .home-prompt__textarea { min-height: 144px; padding: 14px; font-size: 16px; }
-  .negative-prompt--home .negative-prompt__textarea { min-height: 144px; padding: 14px; font-size: 16px; }
   .home-prompt__footer { align-items: stretch; flex-direction: column; }
   .home-prompt__generate { width: 100%; min-height: 52px; }
   .home-recent-row {

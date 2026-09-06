@@ -6,6 +6,111 @@ aliases: [ima2 frontend, ima2 React UI, image_gen frontend]
 
 # Frontend Architecture
 
+Composer pane geometry lives in `ui/src/styles/composer-panes.css`; sidebar,
+classic dock and mobile sheet styles allocate host space. NAI paired inputs keep
+content-aware scrolling: sidebar dual floors72px, bottom86–148px, mobile160px,
+Home168px/144px at<=480px. Both grids collapse at719px query-container width;
+non-NAI wrappers remain `display: contents`. Enabled placeholders and identifying
+pane/Home-input borders use the existing `--text-muted` role. Classic pane borders
+share the same `--r-md` radius as their clipping shape.
+The mobile navigation background is opaque `--bg` so scrolling content cannot
+bleed through its labels; fixed positioning and safe-area allocation are unchanged.
+The mobile rail scrolls horizontally inside its own boundary, keeps nonshrinking
+44px targets and reveals its active or keyboard-focused destination without scrolling the document.
+In short NAI bottom docks, the empty disabled reference tray is hidden to preserve
+editing space; retained references and other providers keep their tray.
+
+Classic and Home retain separate submit policies. Their positive and negative
+fields suppress Ctrl/Cmd+Enter during composition using local refs, native
+`isComposing` and the229 compatibility signal; compositionend never submits.
+Leaving NAI clears the hidden negative field's composition ref, not its stored draft.
+The CSS-hidden desktop RightPanel is not mounted on mobile, preventing an invisible
+legacy backdrop/focus trap from covering Node and mobile composer controls.
+Node HUD toolbar, selection actions and element tray use separate vertical rows
+on mobile and desktop; duplicate Add-root buttons are suppressed where the same
+Add image action is already present. Graph data and generation behavior are unchanged.
+The native mention menu selects on ordinary Enter and lets modified Enter reach
+Classic once. Native Escape carries dismissal intent to the parent before query
+clearing, keeping the same query closed until text changes. Negative `@text`
+remains literal; no store schema or generation payload changed.
+
+WP08 checks these contracts with hosted actual React component callbacks and
+non-generating full-app geometry, plus exact-source CSS contracts. The synthetic
+J6 preflight/routing is a bounded test facility, not an OS sandbox or proof of live
+provider behavior. Exact-run evidence, visual review and production release
+remain separately gated in the production-readiness devlog.
+
+Core composer reference eligibility comes from generated
+`PROVIDER_SURFACE_SUPPORT[provider].generate.references`, sourced from
+`lib/providers/surfaceSupport.ts`. This is separate from numeric reference caps:
+OAuth's absent lane-specific cap permits the server default, while NovelAI's
+generation-only policy disables attachment controls. MCP/video priority and
+per-workflow Comfy binding validation remain in their existing owners. The
+`provider-surface-affordance.spec.ts` journey covers NAI-to-OAuth switching and
+a synthetic attachment without generating an image.
+
+Core selection is reconciled by `ui/src/lib/coreSelection.ts`: an explicit valid
+provider wins over conflicting model metadata, so `grok-api`, `api`, and
+`gemini-api` keep their authentication lane. `storeCoreSelectionImpl.ts` owns the
+interactive transitions; `coreSelectionPersistence.ts` owns legacy active-key
+reads/writes and bounded `ima2.coreSelectionMemory.v1` per-lane memory. Hydration
+and cross-tab storage events use one reconciled selection patch, without copying
+another tab's draft or clearing MCP/history. Legacy keys remain authoritative;
+reads do not repair storage and unknown future memory versions are not overwritten.
+
+Comfy image/video workflow IDs live in `comfyWorkflow`/`comfyVideoWorkflow`, not in
+the static `ImageModel` union. Leaving Comfy clears active carriers while remembering
+its choices; explicit null actions remove only the named remembered slot. Missing
+catalog IDs remain visible and new Comfy selections never auto-pick a workflow.
+`coreImageRequestModel` projects the image workflow into the existing wire `model`
+field, omitting it when absent. `generateImpl` sends active Comfy video to video
+generation and keeps unsupported Comfy/NAI multimode preferences inactive.
+`coreGenerationMode.ts` now owns that decision for both dispatch and the core
+composer's badge, placeholder, class and accessible label. Stored multimode remains
+unchanged; the MCP-specific renderer keeps its existing preference semantics.
+Generation selector labels wrap within their controls instead of losing identity
+to ellipsis. The mobile workspace header places the same selector in a full-width
+row beneath brand/actions; its existing bottom navigation and sheet focus owner
+remain separate and unchanged.
+
+Comfy catalog observations now have one non-persisted owner, `lib/laneCatalog.ts`,
+consumed through `useLaneCatalog`. `api-comfy.parseLaneCatalog` validates consumed
+fields at the JSON boundary. Subscribers share the initial read and manual/focus
+refresh; last unsubscribe aborts work and removes the focus listener. Obsolete
+responses cannot replace a newer observation. Loading and failed refresh retain
+selection identity as stale, never as available. This is not a live-health promise.
+
+`lib/comfyDisplay.ts` distinguishes lane availability from the selected image/video
+workflow's availability. Provider controls identify Comfy as Local HTTP and show the
+last catalog observation; `ComfyGenerationControls` exposes registered workflows,
+not GPT scalar settings. Selection callbacks recheck current provider and catalog
+before applying a workflow. Missing/offline/locked choices remain named but disabled.
+Manager create/delete success refreshes both its list and this shared observation;
+catalog failure does not turn a successful write into a failed mutation. The new
+core-Comfy readiness branch remains separate from MCP observations.
+
+`McpReadinessDetails` reads the selected MCP provider/model/kind only while the
+popup is mounted. `mcpReadiness.ts` validates consumed fields and distinguishes
+default model, missing/locked models, disconnected providers and failed reads.
+Observation-only GETs do not mutate the legacy provider cache. Selection changes,
+refresh and unmount abort obsolete reads; the popup does not connect or generate.
+
+Hosted UI fixtures use owned temporary homes and emitted runtime projections.
+`build:fixture` binds source/options/output hashes to the current SHA; ordinary
+builds are unchanged. The isolation project precedes UI journeys. Guards deny
+unowned file/process/network access; fixed libc probes remain denied but are
+separately observed. This is a regression fixture, not an OS security sandbox.
+WP09 startup-only diagnostic results do not replace full CI or visual acceptance.
+
+`ui/e2e/j5-restart-recovery.spec.ts` owns integrated local generation, held-job
+cancellation and same-home restart. It correlates the request ID, persisted
+filename and loaded image, waits for pipeline cancellation cleanup, and checks
+that restarting does not resubmit upstream work. It reuses `app.guard.assertClean`
+and the existing build/source identity; there is no second fixture harness.
+Desktop/mobile `wp12-*` PNG and JSON evidence ships in the journey CI artifact.
+Test definitions or emitted attachments alone are not visual acceptance: the
+candidate's actual test result and opened screenshots must be reviewed.
+
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 
 This matters because README and older devlog entries still contain traces of the vanilla HTML UI. Actual UI work should target React components, the Zustand store, `ui/src/lib/api.ts` / `ui/src/lib/nodeApi.ts`, and `ui/src/index.css`. Fixing the legacy HTML file will not change the active app.
@@ -66,7 +171,7 @@ Settings are a workspace replacement, not a modal overlay. `SettingsButton` live
 | History | `HistoryStrip.tsx`, `GalleryModal.tsx`, `ResultActions.tsx`, `ResultMetadataModal.tsx` | Saved image browsing, favorite, restore, drag-out, metadata-restore, and per-result metadata inspector (#108) |
 | Status | `InFlightList.tsx`, `Toast.tsx`, `BillingBar.tsx`, `AccountSettings.tsx`, `settings/QuotaCard.tsx` | Pending jobs, notifications, billing/provider status, Grok quota bar + Switch Account |
 | Error UX | `ErrorCard.tsx`, `ui/src/lib/errorCodes.ts`, `errorHandler.ts` | Code-based localized error cards and toast routing. The 15 `NAI_*` codes carry NovelAI-specific copy; `NAI_API_KEY_MISSING`, `NAI_AUTH_FAILED` and `NAI_SUBSCRIPTION_REQUIRED` opt out of the generic auth/billing class card through `SELF_DESCRIBING_AUTH_CODES`, because that card says "sign in again" and this lane authenticates with a pasted token. |
-| Provider selection | `GenProviderModelSelect.tsx`, `settings/ProviderStatusSelect.tsx`, `ProviderReadinessPopup.tsx`, `ApiKeyInput.tsx`, `ui/src/lib/imageModels.ts`, `referenceLimits.ts` | Lane picker and per-lane model coercion. `PROVIDER_READINESS_LABELS` is an exhaustive map rather than a ternary chain so a new lane cannot silently render as "GPT API"; `LANES_WITHOUT_REFERENCE_SUPPORT` caps the NovelAI reference tray at zero. |
+| Provider selection | `GenProviderModelSelect.tsx`, `settings/ProviderStatusSelect.tsx`, `ProviderReadinessPopup.tsx`, `ApiKeyInput.tsx`, `ui/src/lib/imageModels.ts`, `coreSelection.ts`, `referenceLimits.ts` | Shared lane/model/workflow reconciliation preserves explicit credential lanes. `PROVIDER_READINESS_LABELS` is exhaustive; generated surface support gates reference attachment independently of readiness and numeric caps. |
 | NovelAI controls | `settings/NaiControlsPanel.tsx`, `NegativePromptField.tsx`, `PromptComposer.tsx`, `home/HomePromptComposer.tsx`, `MobileComposeSheet.tsx`, `ui/src/lib/naiOptions.ts`, `naiPayload.ts` | Provider-gated Positive prompt and Undesired content panes across desktop, home, and mobile plus sparse native overrides. The panes sit side by side and stack below a 719px container. Non-NAI providers keep one prompt; saved negative state is retained but omitted from their payloads. |
 | Custom size | `SizePicker.tsx`, `CustomSizeConfirmModal.tsx`, `ui/src/lib/size.ts`, `customSizeSlots.ts` | Keyboard-safe custom size drafts, slot persistence, and generation-time adjustment confirmation |
 | Prompt library | `PromptLibraryPanel.tsx`, `PromptLibraryRow.tsx`, `PromptDetailModal.tsx`, `SavePromptPopover.tsx`, `PromptImportDialog.tsx`, `PromptImportFolderSection.tsx`, `PromptImportDiscoverySection.tsx` | Right-panel/overlay prompt library for browsing, searching, favoriting, inserting, saving, preview-first imports, PR2 curated source search, PR3 GitHub folder file selection, and PR4 reviewed-source discovery |
@@ -146,7 +251,25 @@ Key modules:
 - `ui/src/lib/api-generation.ts` — `postMultimodeGenerateStream()` and `postNodeGenerateStream()` use subscribe-before-fetch pattern
 - `ui/src/store/storeNodeGenImpl.ts` — node generation state using async POST + eventChannel
 - `ui/src/store/storeVideoImpl.ts` — video generation state with cancel-aware cleanup
-- `ui/src/store/storeInflightImpl.ts` — shared inflight tracking with `activeFlightIds` Set
+- `ui/src/store/storeInflightImpl.ts` — shared inflight actions and polling
+- `ui/src/store/inflightReconciliation.ts` — request-local scope/revision/identity merge
+
+Reconcile and polling preserve concurrent additions, replacements, removals and
+scope changes across both inflight and history awaits. Reconcile alone reads aged
+stored IDs for terminal matching; failed inflight fetch cannot authorize TTL pruning.
+Backend and local timestamps are not compared for identity. Application SSE `error`
+MessageEvents do not close the connection; only transport errors reconnect. Stale
+source callbacks are inert, and `replay-gap` is a resync control, never a job error.
+
+`JOB_TRACKING_TIMEOUT` is a fixed four-locale completion-unknown warning with no
+Retry CTA. Parser/resolver canonicalize recognized wrappers before raw-message
+consumers; video, AssetGen, MCP and live Sprite paths use the localized result.
+Video admission/success/cancel/ordinary failure clear stale errorInfo, and busy
+graph Undo preserves live error fields. Animation returns success only on success.
+Extension's tracking-expired advisory disables the same-source submit button;
+changing source resets the advisory without submitting automatically. Sprite recipe
+reload and the nonwatching UI-upscale path have separate presentation state; this
+tracking change does not add a persisted warning system for them or Agent queue.
 
 The monolithic `useAppStore` was split into focused `store*Impl.ts` modules to keep each under 500 lines. The main `useAppStore.ts` re-exports composed slices.
 

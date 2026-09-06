@@ -4,6 +4,7 @@ import { safeDiagnosticLabel } from "./responsesParse.js";
 import { RESPONSE_DIAGNOSTIC_CODES } from "./responsesErrors.js";
 
 const PASSTHROUGH_CODES = new Set([
+  "GROK_API_KEY_MISSING",
   "OAUTH_UNAVAILABLE",
   "NETWORK_FAILED",
   "AUTH_CHATGPT_EXPIRED",
@@ -136,6 +137,7 @@ export function isNonRetryableGenerationError(err: UpstreamErr | null | undefine
 }
 
 export function statusForErrorCode(code: string, fallback = 500) {
+  if (code === "GROK_API_KEY_MISSING") return 401;
   if (code === "OAUTH_UNAVAILABLE" || code === "NETWORK_FAILED") return 503;
   if (code === "AUTH_CHATGPT_EXPIRED" || code === "AUTH_API_KEY_INVALID") return 401;
   if (code === "API_KEY_REQUIRED") return 401;

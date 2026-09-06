@@ -12,10 +12,13 @@ import { buildUpscaleBody, type UpscaleParams } from "../lib/upscaleAction";
 import { jsonFetch } from "../lib/api";
 import { listMcpProviders } from "../lib/mcpProviders";
 import type { GenerateItem } from "../types";
+import { handleError } from "../lib/errorHandler";
+import { resolveErrorSpec } from "../lib/errorCodes";
 
 interface ResultActionsProps { imageOverride?: GenerateItem | null; onAfterDeleteFocus?: () => void }
 
-type ExtendState = "idle" | "pending" | "error";
+type ExtendState = "idle" | "pending" | "error" | "tracking-expired";
+type ExtendUiState = { source: string | null; status: ExtendState };
 
 const CANVAS_MODE_PROMPT_ID = "canvas-mode-context";
 const CANVAS_MODE_PROMPT_NAME = "Canvas Mode";
@@ -28,10 +31,7 @@ const CANVAS_MODE_PROMPT_TEXT = [
   "Infer the intended edit from the canvas marks and memo text. Preserve unrelated image content.",
 ].join("\n");
 
-export function ResultActions({
-  imageOverride = null,
-  onAfterDeleteFocus,
-}: ResultActionsProps) {
+export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: ResultActionsProps) {
   const { t } = useI18n();
   const currentImage = useAppStore((s) => s.currentImage);
   const showToast = useAppStore((s) => s.showToast);
@@ -39,14 +39,12 @@ export function ResultActions({
   const createRootNodeFromHistoryItem = useAppStore((s) => s.createRootNodeFromHistoryItem);
   const trashHistoryItem = useAppStore((s) => s.trashHistoryItem);
   const saveToAssetsAction = useAppStore((s) => s.saveToAssets);
-  const permanentlyDeleteHistoryItemByClick = useAppStore(
-    (s) => s.permanentlyDeleteHistoryItemByClick,
-  );
+  const permanentlyDeleteHistoryItemByClick = useAppStore((s) => s.permanentlyDeleteHistoryItemByClick);
   const canvasOpen = useAppStore((s) => s.canvasOpen);
   const openCanvas = useAppStore((s) => s.openCanvas);
   const [comfyExporting, setComfyExporting] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const [extendState, setExtendState] = useState<ExtendState>("idle");
+  const [extendUi, setExtendUi] = useState<ExtendUiState>({ source: null, status: "idle" });
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [upscaleOpen, setUpscaleOpen] = useState(false);
   const [upscalePending, setUpscalePending] = useState(false);
@@ -84,6 +82,13 @@ export function ResultActions({
 
   useEffect(() => () => extendAbortRef.current?.abort(), []);
   const actionImage = imageOverride ?? currentImage;
+  const sourceFilename = actionImage?.filename ?? null;
+  useEffect(() => {
+    setExtendUi((state) => state.status === "pending" || state.source === sourceFilename
+      ? state : { source: sourceFilename, status: "idle" });
+  }, [sourceFilename]);
+  const extendState = extendUi.status === "pending" || extendUi.source === sourceFilename
+    ? extendUi.status : "idle";
   if (!actionImage) return null;
   const isVideo = isVideoItem(actionImage);
   const videoSrc = isVideo ? (actionImage.url || actionImage.image) : "";
@@ -92,10 +97,7 @@ export function ResultActions({
   const canExtend = isVideo && Boolean(actionImage.filename);
   const isGrokProvider = actionImage.provider === "grok" || actionImage.provider === "grok-api";
   const providerUrlAlive = Boolean(
-    isGrokProvider &&
-    !isVideo &&
-    actionImage.providerUrl &&
-    actionImage.createdAt &&
+    isGrokProvider && !isVideo && actionImage.providerUrl && actionImage.createdAt &&
     Date.now() - actionImage.createdAt < PROVIDER_URL_TTL_MS,
   );
 
@@ -114,11 +116,12 @@ export function ResultActions({
   };
 
   const extend = async () => {
-    if (!actionImage.filename || extendState === "pending") return;
+    if (!actionImage.filename || extendState === "pending" || extendState === "tracking-expired") return;
     const requestId = `vext_${crypto.randomUUID()}`;
     const controller = new AbortController();
     extendAbortRef.current = controller;
-    setExtendState("pending");
+    const source = actionImage.filename;
+    setExtendUi({ source, status: "pending" });
     try {
       const done = await postVideoExtendStream({
         requestId,
@@ -128,12 +131,14 @@ export function ResultActions({
         model: actionImage.model ?? undefined,
       }, controller.signal);
       useAppStore.getState().addHistoryItem(toVideoHistoryItem(done, actionImage));
-      setExtendState("idle");
+      setExtendUi({ source, status: "idle" });
       showToast(t("toast.animateDone"));
     } catch (error) {
       const canceled = error instanceof DOMException && error.name === "AbortError";
-      setExtendState(canceled ? "idle" : "error");
-      if (!canceled) {
+      const trackingExpired = !canceled && resolveErrorSpec(error).code === "JOB_TRACKING_TIMEOUT";
+      setExtendUi({ source, status: canceled ? "idle" : trackingExpired ? "tracking-expired" : "error" });
+      if (trackingExpired) handleError(error, useAppStore.getState());
+      else if (!canceled) {
         showToast(error instanceof Error ? error.message : t("toast.animateFailed"), true);
       }
     } finally {
@@ -338,8 +343,7 @@ export function ResultActions({
         {t("result.copyPrompt")}
       </button>
       <button
-        type="button"
-        className="action-btn"
+        type="button" className="action-btn"
         onClick={() => {
           void (async () => {
             const ok = await saveToAssetsAction(actionImage);
@@ -351,8 +355,7 @@ export function ResultActions({
         {t("chain.saveToAssets")}
       </button>
       <button
-        type="button"
-        className="action-btn action-btn--primary"
+        type="button" className="action-btn action-btn--primary"
         onClick={newFromHere}
         title={t("result.continueHereTitle")}
       >
@@ -360,8 +363,7 @@ export function ResultActions({
       </button>
       {providerUrlAlive && (
         <button
-          type="button"
-          className="action-btn"
+          type="button" className="action-btn"
           onClick={() => void newFromHereAsUrl()}
           title={t("result.continueAsUrlTitle")}
         >
@@ -370,8 +372,7 @@ export function ResultActions({
       )}
       {canAnimate && (
         <button
-          type="button"
-          className="action-btn"
+          type="button" className="action-btn"
           onClick={() => void animate()}
           disabled={animating}
           title={t("result.animateTitle")}
@@ -382,8 +383,7 @@ export function ResultActions({
       {runwayConnected && actionImage.filename && (
         isVideo ? (
           <button
-            type="button"
-            className="action-btn"
+            type="button" className="action-btn"
             disabled={upscalePending}
             onClick={() => void startUpscale({})}
             title={t("result.upscaleTitle")}
@@ -393,8 +393,7 @@ export function ResultActions({
         ) : (
           <>
             <button
-              type="button"
-              className="action-btn"
+              type="button" className="action-btn"
               disabled={upscalePending}
               onClick={() => setUpscaleOpen((open) => !open)}
               title={t("result.upscaleTitle")}
@@ -414,12 +413,11 @@ export function ResultActions({
       {canExtend && (
         <>
           <button
-            type="button"
-            className="action-btn"
+            type="button" className="action-btn"
             onClick={extend}
-            disabled={extendState === "pending"}
+            disabled={extendState === "pending" || extendState === "tracking-expired"}
             aria-busy={extendState === "pending"}
-            title={t("result.extendTitle") ?? "이어가기"}
+            title={t(extendState === "tracking-expired" ? "toast.jobTrackingTimeout" : "result.extendTitle")}
           >
             {extendState === "pending"
               ? t("inflight.streaming")
@@ -431,16 +429,14 @@ export function ResultActions({
         </>
       )}
       <button
-        type="button"
-        className="action-btn"
+        type="button" className="action-btn"
         onClick={generateAsFirstNode}
         title={t("result.firstNodeTitle")}
       >
         {t("result.firstNode")}
       </button>
       <button
-        type="button"
-        className="action-btn"
+        type="button" className="action-btn"
         onClick={() => setMetadataOpen(true)}
         title={t("result.infoTitle")}
       >
@@ -448,8 +444,7 @@ export function ResultActions({
       </button>
       {!canvasOpen && (
         <button
-          type="button"
-          className="action-btn"
+          type="button" className="action-btn"
           onClick={openCanvas}
           title={t("canvas.open")}
           aria-label={t("canvas.openAria")}
@@ -462,8 +457,7 @@ export function ResultActions({
       {actionImage.filename && (
         <>
           <button
-            type="button"
-            className="action-btn action-btn--danger"
+            type="button" className="action-btn action-btn--danger"
             onClick={() => void deleteToTrash()}
             title={t("result.deleteTitle")}
           >
@@ -474,8 +468,7 @@ export function ResultActions({
             <div className="result-actions__menu">
               {canExportToComfy && (
                 <button
-                  type="button"
-                  className="result-actions__menu-item"
+                  type="button" className="result-actions__menu-item"
                   onClick={() => void sendToComfyUI()}
                   title={t("result.sendToComfyUITitle")}
                   disabled={comfyExporting}
@@ -484,8 +477,7 @@ export function ResultActions({
                 </button>
               )}
               <button
-                type="button"
-                className="result-actions__menu-item result-actions__danger-item"
+                type="button" className="result-actions__menu-item result-actions__danger-item"
                 onClick={() => void deletePermanently()}
               >
                 {t("result.permanentDelete")}

@@ -5,6 +5,7 @@ import { strict as assert } from "node:assert";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import ts from "typescript";
 import {
   AUTO_PROMPT_FIDELITY_SUFFIX,
   DIRECT_PROMPT_FIDELITY_SUFFIX,
@@ -19,7 +20,7 @@ import {
   buildEditTextPrompt,
   buildUserTextPrompt,
 } from "../lib/oauthProxy.ts";
-import { buildGrokPlannerPayload } from "../lib/grokImageAdapter.ts";
+import { buildGrokPlannerPayload } from "../lib/grokImagePlanner.ts";
 import { buildGrokVideoPlannerSystemPrompt } from "../lib/grokVideoPlannerPrompt.ts";
 import { SAFETY_INTENT_POLICY } from "../lib/promptSafetyPolicy.ts";
 import { VISIBLE_TEXT_LANGUAGE_POLICY } from "../lib/visibleTextLanguagePolicy.ts";
@@ -32,10 +33,10 @@ const nodeGenerationPath = join(__dirname, "..", "lib", "nodeGeneration.ts");
 const apiPath = join(__dirname, "..", "ui", "src", "lib", "api.ts");
 const nodeApiPath = join(__dirname, "..", "ui", "src", "lib", "nodeApi.ts");
 const asyncJobSubmitPath = join(__dirname, "..", "ui", "src", "lib", "asyncJobSubmit.ts");
-const responsesAdapterPath = join(__dirname, "..", "lib", "responsesImageAdapter.ts");
-const grokImageAdapterPath = join(__dirname, "..", "lib", "grokImageAdapter.ts");
+const responsesOperationsPath = join(__dirname, "..", "lib", "providers", "adapters", "openaiOperations.ts");
+const grokImagePlannerPath = join(__dirname, "..", "lib", "grokImagePlanner.ts");
 const grokVideoPlannerPath = join(__dirname, "..", "lib", "grokVideoPlannerPrompt.ts");
-const agyAdapterPath = join(__dirname, "..", "lib", "agyImageAdapter.ts");
+const agyAdapterPath = join(__dirname, "..", "lib", "providers", "adapters", "agyOperations.ts");
 
 const src = await readFile(serverPath, "utf8");
 const historySrc = await readFile(historyListPath, "utf8");
@@ -45,8 +46,8 @@ const nodeSrc =
 const apiSrc = await readFile(apiPath, "utf8");
 const nodeApiSrc = await readFile(nodeApiPath, "utf8");
 const asyncJobSubmitSrc = await readFile(asyncJobSubmitPath, "utf8");
-const responsesAdapterSrc = await readFile(responsesAdapterPath, "utf8");
-const grokImageAdapterSrc = await readFile(grokImageAdapterPath, "utf8");
+const responsesOperationsSrc = await readFile(responsesOperationsPath, "utf8");
+const grokImagePlannerSrc = await readFile(grokImagePlannerPath, "utf8");
 const grokVideoPlannerSrc = await readFile(grokVideoPlannerPath, "utf8");
 const agyAdapterSrc = await readFile(agyAdapterPath, "utf8");
 const bannedSafetyCopy = [
@@ -162,9 +163,16 @@ assert.ok(multimodePrompt.includes("Do not include the whole list of sequence un
 assert.ok(multimodePrompt.includes("output 1 only a red circle"));
 assert.ok(multimodePrompt.includes("Do not create one combined image_generation_call"));
 
-assert.match(responsesAdapterSrc, /MULTIMODE_DEVELOPER_PROMPT/);
-assert.match(responsesAdapterSrc, /MULTIMODE_NO_SEARCH_DEVELOPER_PROMPT/);
-assert.doesNotMatch(responsesAdapterSrc, /Create up to \$\{maxImages\} separate image_generation_call outputs/);
+const operationsTree = ts.createSourceFile(responsesOperationsPath, responsesOperationsSrc, ts.ScriptTarget.Latest, true);
+const multimodeFunctions = operationsTree.statements.filter(ts.isFunctionDeclaration)
+  .filter((node) => node.name?.text === "generateMultimodeViaResponses");
+assert.equal(multimodeFunctions.length, 1, "expected exactly one multimode operation");
+assert.ok(multimodeFunctions[0]?.body, "multimode operation body must exist");
+const multimodeOperation = ts.createPrinter({ removeComments: true })
+  .printNode(ts.EmitHint.Unspecified, multimodeFunctions[0].body, operationsTree);
+assert.match(multimodeOperation, /MULTIMODE_DEVELOPER_PROMPT/);
+assert.match(multimodeOperation, /MULTIMODE_NO_SEARCH_DEVELOPER_PROMPT/);
+assert.doesNotMatch(multimodeOperation, /Create up to \$\{maxImages\} separate image_generation_call outputs/);
 
 const grokImagePlanner = buildGrokPlannerPayload(
   "성인 모델이 비키니를 입은 비성적 수영복 카탈로그 사진",
@@ -180,7 +188,7 @@ for (const prompt of [grokImagePlanner, grokVideoPlanner]) {
   assert.ok(prompt.includes("instead of rewriting it as allowed"), "grok planner should not launder unsafe prompts");
 }
 
-for (const source of [grokImageAdapterSrc, grokVideoPlannerSrc, agyAdapterSrc]) {
+for (const source of [grokImagePlannerSrc, grokVideoPlannerSrc, agyAdapterSrc]) {
   assert.doesNotMatch(source, /Do NOT refuse, defer, censor, sanitize, or downgrade.*for any reason/);
   assert.doesNotMatch(source, /authorized for all usage categories/);
   for (const banned of bannedSafetyCopy) assert.doesNotMatch(source, banned);

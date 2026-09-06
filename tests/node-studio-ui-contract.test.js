@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { collectCallArguments, collectReturnedFields } from "./_executionImportEdges.mjs";
 import {
   canConnectPorts,
   canConnectPortTypes,
@@ -272,10 +273,47 @@ describe("EN — element node lifecycle", () => {
     const nodeServer = read("lib/nodeGeneration.ts");
     assert.match(nodeServer, /const generationPrompt = elementNotes\.length/);
     assert.match(nodeServer, /\.\.\.\(elementIds\.length \? \{ elementIds, elementRevisions \} : \{\}\)/);
-    // Every provider branch consumes generationPrompt, never the raw prompt.
-    assert.doesNotMatch(nodeServer, /generateViaResponses\(\s*activeProvider,\s*prompt,/);
-    assert.doesNotMatch(nodeServer, /generateViaGrok\(prompt,/);
-    assert.doesNotMatch(nodeServer, /generateViaGeminiApi\(parentB64 \? `Edit this image: \$\{prompt\}`/);
+    // The caller forwards both prompts; effective-prompt and raw-prompt lanes
+    // retain their distinct legacy behavior after dispatch moves to execution.
+    const prepared = collectCallArguments(nodeServer, "lib/nodeGeneration.ts", "prepareImageExecution");
+    assert.equal(prepared.length, 1);
+    assert.match(prepared[0][1], /prompt: generationPrompt/);
+    assert.match(prepared[0][1], /rawPrompt: prompt/);
+    const owner = "lib/providers/execution/legacyNode.ts";
+    const execution = read(owner);
+    const openaiOwner = "lib/providers/adapters/openaiExecution.ts";
+    const openaiExecution = read(openaiOwner);
+    const grokOwner = "lib/providers/adapters/grokExecution.ts";
+    const grokExecution = read(grokOwner);
+    const googleOwner = "lib/providers/adapters/googleExecution.ts";
+    const googleExecution = read(googleOwner);
+    for (const [name, position, expected] of [
+      ["generateViaResponses", 1, "generationPrompt"],
+      ["editViaResponses", 1, "generationPrompt"],
+      ["generateViaGrok", 0, "generationPrompt"],
+      ["generateViaGeminiApi", 0, "input.prompt"],
+      ["generateViaAgy", 0, "input.prompt"],
+      ["generateViaAtlasCloud", 0, 'parentB64 ? `Edit this image: ${prompt}` : prompt'],
+      ["generateViaMinimax", 0, 'parentB64 ? `Edit this image: ${prompt}` : prompt'],
+      ["generateViaNai", 0, "prompt"],
+    ]) {
+      const calls = name === "generateViaResponses" || name === "editViaResponses"
+        ? collectCallArguments(openaiExecution, openaiOwner, name, "executeOpenaiNode")
+        : name === "generateViaGrok"
+        ? collectCallArguments(grokExecution, grokOwner, name, "executeGrokNode")
+        : name === "generateViaGeminiApi" || name === "generateViaAgy"
+        ? collectCallArguments(googleExecution, googleOwner, name, "runGoogleImage")
+        : collectCallArguments(execution, owner, name);
+      assert.equal(calls.length, 1, `${name}: expected a live call expression`);
+      assert.equal(calls[0][position], expected, `${name}: wrong prompt lane`);
+    }
+    assert.deepEqual(collectCallArguments(googleExecution, googleOwner, "runGoogleImage")
+      .map(args => args[2]), ["googleInput(request)", "googleInput(request)"]);
+    assert.deepEqual(collectReturnedFields(googleExecution, googleOwner, "googleInput", "prompt"), [
+      '`Edit this image: ${request.prompt}`',
+      'request.sourceImage ? `Edit this image: ${request.prompt}` : request.prompt',
+      "request.prompt",
+    ]);
     // Merge dedupes across classic+element refs and caps at the active limit.
     assert.match(nodeRun, /mergeRunReferences\(node\.data\.referenceImages \?\? \[\], elementResolution\.referenceDataUrls, variantRefLimit\)/);
     assert.match(nodeRun, /effectiveReferenceLimit\(\{\s*provider: nodeProvider/);

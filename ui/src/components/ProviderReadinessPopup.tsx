@@ -3,6 +3,9 @@ import { IMAGE_MODEL_OPTIONS } from "../lib/imageModels";
 import { useAppStore } from "../store/useAppStore";
 import { useProviderAvailability } from "../hooks/useProviderAvailability";
 import { useModalFocus } from "../hooks/useModalFocus";
+import { useLaneCatalog } from "../hooks/useLaneCatalog";
+import { deriveComfyDisplay, comfyDisplayMessageKey } from "../lib/comfyDisplay";
+import { McpReadinessDetails } from "./McpReadinessDetails";
 
 /**
  * Short readiness-facts label per lane. Kept exhaustive rather than a ternary
@@ -27,17 +30,23 @@ export function ProviderReadinessPopup() {
   const close = useAppStore((s) => s.closeReadinessPopup);
   const openSettings = useAppStore((s) => s.openSettings);
   const provider = useAppStore((s) => s.provider);
+  const mcpProvider = useAppStore((s) => s.mcpProvider ?? null);
   const imageModel = useAppStore((s) => s.imageModel);
   const reasoningEffort = useAppStore((s) => s.reasoningEffort);
   const webSearchEnabled = useAppStore((s) => s.webSearchEnabled);
+  const comfyWorkflow = useAppStore((s) => s.comfyWorkflow);
+  const comfyVideoWorkflow = useAppStore((s) => s.comfyVideoWorkflow);
   const availability = useProviderAvailability();
+  const laneCatalog = useLaneCatalog();
   const isGrok = provider === "grok";
   const imageModelOption = IMAGE_MODEL_OPTIONS.find((option) => option.value === imageModel);
   const modalRef = useModalFocus<HTMLDivElement>(open, close);
 
   if (!open) return null;
   const current = availability[provider];
-  const ready = current.ok;
+  const comfyDisplay = deriveComfyDisplay(laneCatalog, { comfyWorkflow, comfyVideoWorkflow });
+  const isComfy = provider === "comfy" && !mcpProvider;
+  const ready = isComfy ? comfyDisplay.selectedAvailable : current.ok;
 
   const goAccount = () => {
     close();
@@ -59,13 +68,25 @@ export function ProviderReadinessPopup() {
           {t("readiness.title")}
         </div>
         <div className="modal__body provider-readiness__body">
+          {mcpProvider ? <McpReadinessDetails /> : null}
+          {!mcpProvider && <>
           <div className={`provider-readiness__status${ready ? " is-ok" : " is-blocked"}`}>
             <span aria-hidden="true" />
-            <strong>{ready ? t("readiness.ready") : t("readiness.blocked")}</strong>
-            <small>{ready ? t("readiness.readyBody") : current.reason}</small>
+            <strong>{isComfy ? t(comfyDisplayMessageKey(comfyDisplay, laneCatalog)) : ready ? t("readiness.ready") : t("readiness.blocked")}</strong>
+            <small>{isComfy ? t("comfy.display.controlsHelp") : ready ? t("readiness.readyBody") : current.reason}</small>
           </div>
-          {current.hint ? <p className="modal__hint">{current.hint}</p> : null}
-          <dl className="provider-readiness__facts">
+          {!isComfy && current.hint ? <p className="modal__hint">{current.hint}</p> : null}
+          {isComfy ? (
+            <dl className="provider-readiness__facts">
+              <div><dt>{t("readiness.provider")}</dt><dd>{PROVIDER_READINESS_LABELS.comfy}</dd></div>
+              <div><dt>{t("comfy.workflowsTitle")}</dt><dd>{comfyDisplay.selected?.label ?? t("comfy.display.chooseWorkflow")}</dd></div>
+              {comfyDisplay.selected ? <>
+                <div><dt>{t("comfy.colId")}</dt><dd>{comfyDisplay.selected.id}</dd></div>
+                <div><dt>{t("comfy.colKind")}</dt><dd>{t(comfyDisplay.selected.kind === "video" ? "comfy.kindVideo" : "comfy.kindImage")}</dd></div>
+              </> : null}
+              {laneCatalog.observedAt !== null ? <div><dt>{t("comfy.colStatus")}</dt><dd>{t("comfy.display.lastChecked", { time: new Date(laneCatalog.observedAt).toLocaleTimeString() })}</dd></div> : null}
+            </dl>
+          ) : <dl className="provider-readiness__facts">
             <div>
               <dt>{t("readiness.provider")}</dt>
               <dd>{PROVIDER_READINESS_LABELS[provider] ?? "GPT API"}</dd>
@@ -91,14 +112,15 @@ export function ProviderReadinessPopup() {
                 </div>
               </>
             )}
-          </dl>
+          </dl>}
+          </>}
         </div>
         <div className="modal__actions">
           <button type="button" className="modal__btn modal__btn--secondary" onClick={close} data-modal-initial-focus>
             {t("common.close")}
           </button>
           <button type="button" className="modal__btn" onClick={goAccount}>
-            {t("readiness.openAccount")}
+            {t(isComfy ? "comfy.display.manage" : "readiness.openAccount")}
           </button>
         </div>
       </div>

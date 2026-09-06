@@ -125,12 +125,17 @@ export function replayOldestId(): number | null {
   return ring.length > 0 ? ring[0]?.id ?? null : null;
 }
 
-/** True when the ring has evicted events the client still expects from Last-Event-ID. */
+/** Reads the process cursor without allocating an event. */
+export function latestEventId(): number {
+  return seq;
+}
+
+/** True for an evicted cursor or a cursor ahead of this process. */
 export function hasReplayGap(lastEventId: number): boolean {
-  if (lastEventId <= 0 || ring.length === 0) return false;
-  const oldest = ring[0]?.id;
-  if (oldest === undefined) return false;
-  return lastEventId < oldest - 1;
+  if (!Number.isSafeInteger(lastEventId) || lastEventId < 0) return false;
+  if (lastEventId > seq) return true;
+  const oldest = replayOldestId();
+  return oldest !== null && lastEventId < oldest - 1;
 }
 
 export function replaySince(lastEventId: number): BusEvent[] {

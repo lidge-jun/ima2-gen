@@ -17,11 +17,34 @@ interface ParseCommonOptions extends PushCandidateOptions {
 }
 
 function normalizeWhitespace(text: string): string {
-  return text.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").trim();
+  return text.replace(/\r\n/g, "\n").split("\n").map((line, index, lines) => {
+    if (index === lines.length - 1) return line;
+    let end = line.length;
+    while (end > 0 && (line[end - 1] === " " || line[end - 1] === "\t")) end--;
+    return line.slice(0, end);
+  }).join("\n").trim();
 }
 
 function stripFrontmatter(text: string): string {
-  return text.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
+  if (!text.startsWith("---")) return text;
+  const openingEnd = text.indexOf("\n");
+  if (openingEnd < 0 || text.slice(3, openingEnd).trim() !== "") return text;
+  let searchFrom = openingEnd + 1;
+  while (searchFrom < text.length) {
+    const closingStart = text.indexOf("\n---", searchFrom);
+    if (closingStart < 0) break;
+    let end = closingStart + 4;
+    let lastNewline = -1;
+    // A complete delimiter requires whitespace through a newline. Consume the
+    // same trailing whitespace as the old regex without retrying suffixes.
+    while (end < text.length && /\s/.test(text[end]!)) {
+      if (text[end] === "\n") lastNewline = end;
+      end++;
+    }
+    if (lastNewline >= 0) return text.slice(lastNewline + 1);
+    searchFrom = end;
+  }
+  return text;
 }
 
 function isBoilerplate(line: string): boolean {

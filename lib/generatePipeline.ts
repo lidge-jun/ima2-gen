@@ -10,17 +10,10 @@ import { classifyUpstreamError } from "./errorClassify.js";
 import { appendGenerationRequestLog } from "./generationRequestLog.js";
 import { normalizeOAuthParams } from "./oauthNormalize.js";
 import { resolveProviderOptions } from "./providerOptions.js";
-import { generateViaResponses } from "./responsesImageAdapter.js";
-import { generateViaGrok, planGrokImage } from "./grokImageAdapter.js";
+import { prepareImageExecution } from "./providers/execution/index.js";
+import { checkImageExecutionAdmission } from "./providers/execution/admission.js";
 import { resolveGrokQualityModel } from "./imageModels.js";
-import { generateViaAgy } from "./agyImageAdapter.js";
-import { generateViaGeminiApi } from "./geminiApiImageAdapter.js";
-import { generateViaAtlasCloud } from "./atlasCloudImageAdapter.js";
-import { generateViaMinimax } from "./minimaxImageAdapter.js";
-import { generateViaNai } from "./naiImageAdapter.js";
 import { composerNegativePromptMeta, readNaiOptions } from "./naiOptions.js";
-import { generateViaComfy } from "./comfyImageAdapter.js";
-import { isNonRetryableGenerationError, normalizeGenerationFailure, type UpstreamErr } from "./generationErrors.js";
 import { startJob, finishJob, registerJobAbortController, isJobCanceled, isStartJobFailure, setJobPhase, INFLIGHT_RETRY_AFTER_SECONDS, } from "./inflight.js";
 import { isGenerationCanceledError, makeGenerationCanceledError, throwIfJobCanceled, } from "./generationCancel.js";
 import { logEvent, logError } from "./logger.js";
@@ -28,7 +21,7 @@ import { embedImageMetadataBestEffort } from "./imageMetadataStore.js";
 import { invalidateHistoryIndex } from "./historyIndex.js";
 import { normalizeComposerInsertedPrompts, normalizeComposerPrompt, } from "./composerSnapshot.js";
 import { errInfo } from "./errInfo.js";
-import { requireRuntimeContext, type RuntimeContext } from "./runtimeContext.js";
+import { type RuntimeContext } from "./runtimeContext.js";
 import { STORYBOARD_PREFIX } from "./storyboardPrefix.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "./backgroundPresets.js";
 import { sizeNudgeSuffix } from "./sizeNudge.js";
@@ -40,7 +33,7 @@ import { publishJobEvent } from "./ssePublish.js";
 import { normalizeBodyRequestId, validateBoundedCount, validateGenerationPrompt } from "./generationInputValidation.js";
 import { getElementById } from "./assetsStore.js";
 import { compileElements, ELEMENT_CAPACITY_DEFAULTS, type ElementDefinition, type ExistingReferenceInput } from "./elementCompiler.js";
-import { deriveReferenceLimit } from "./providers/derive.js";
+import { deriveReferenceLimit, getProviderSurfaceSupport } from "./providers/derive.js";
 import {
   claimIdempotencyKey,
   completeIdempotencyKey,
@@ -183,7 +176,7 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         rawSize: size,
         rawWebSearchEnabled,
       });
-      if (providerOptions.error) {
+      if (providerOptions.error !== undefined) {
         return fail(providerOptions.status, { error: providerOptions.error, code: providerOptions.code });
       }
       const imageModel = providerOptions.model;
@@ -295,11 +288,8 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       const incomingProviderUrl = typeof req.body?.providerUrl === "string" && req.body.providerUrl.startsWith("http")
         ? req.body.providerUrl
         : null;
-      const grokRefs = incomingProviderUrl
-        ? [{ b64: "", url: incomingProviderUrl, declaredMime: "image/png", detectedMime: "image/png" }, ...refCheck.refDetails]
-        : refCheck.refDetails;
       const providerRefCount = activeProvider === "grok" || activeProvider === "grok-api"
-        ? grokRefs.length
+        ? refCheck.refs.length + (incomingProviderUrl ? 1 : 0)
         : refCheck.refs.length;
       const providerReferenceLimit = deriveReferenceLimit(activeProvider, "edit");
       if ((activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api") && providerRefCount > providerReferenceLimit!) {
@@ -326,12 +316,18 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
       // Refuse loudly rather than dropping the input: lib/naiImageAdapter.ts is
       // text-to-image only, so a reference passed here would be ignored and the
       // user would get an unrelated image back believing they had edited one.
-      if (activeProvider === "nai" && providerRefCount > 0) {
+      if (getProviderSurfaceSupport(activeProvider ?? "", "generate")?.references === false && providerRefCount > 0) {
         return fail(400, {
           error: "NovelAI image generation does not accept reference images yet",
           code: "NAI_REF_UNSUPPORTED",
           requestId,
         });
+      }
+      const admission = checkImageExecutionAdmission(ctx, {
+        provider: activeProvider, surface: "classic", referenceCount: providerRefCount,
+      });
+      if (admission) {
+        return fail(admission.status, { error: admission.message, code: admission.code, requestId });
       }
       const started = startJob({
         requestId,
@@ -407,163 +403,34 @@ export async function runGeneratePipeline(req: Request, res: Response, ctx: Runt
         : (providerForcesJpeg ? "jpeg" : String(format));
       const mime = mimeMap[effectiveFormat] || "image/png";
       await mkdir(ctx.config.storage.generatedDir, { recursive: true });
-      const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
-      const sharedGrokPlan = activeProvider === "grok" || activeProvider === "grok-api"
-        ? await planGrokImage(generationPrompt, ctx, {
-          model: resolveGrokQualityModel(imageModel, quality),
-          size: effectiveSize,
-          signal: cancelController.signal,
-          requestId,
-          referenceCount: grokRefs.length,
-          references: grokRefs,
-          directApiKey: grokDirectApiKey,
-          backgroundConstraint: backgroundPreset ? backgroundPlannerConstraint(backgroundPreset) : undefined,
-          webSearchEnabled,
-        })
-        : null;
+      const execution = await prepareImageExecution(ctx, {
+        surface: "classic", provider: activeProvider, requestId,
+        signal: cancelController.signal, prompt: generationPrompt, rawPrompt: prompt,
+        references: refCheck.refDetails, providerUrl: incomingProviderUrl,
+        options: { model: imageModel, quality, size: effectiveSize, moderation,
+          mode: normalizedPromptMode, reasoningEffort, webSearchEnabled },
+        background: backgroundParams,
+        backgroundConstraint: backgroundPreset ? backgroundPlannerConstraint(backgroundPreset) : undefined,
+        nai: activeProvider === "nai" ? readNaiOptions(req.body) : {},
+        comfy: {
+          ...(typeof req.body?.seed === "number" ? { seed: req.body.seed } : {}),
+          ...(req.body?.comfyParams && typeof req.body.comfyParams === "object"
+            ? { params: req.body.comfyParams as Record<string, number | string | boolean> }
+            : {}),
+        },
+      }, {
+        onQueue: (info) => {
+          const phase = info.running ? "streaming" : "queued";
+          setJobPhase(requestId, phase);
+          if (asyncMode) {
+            publish(requestId, "phase", { requestId, phase, queuePosition: info.position });
+          }
+        },
+      });
       const generateOne = async () => {
-        if (activeProvider === "gemini-api") {
-          const r = await generateViaGeminiApi(generationPrompt, requireRuntimeContext(ctx), {
-            model: imageModel,
-            size: effectiveSize,
-            signal: cancelController.signal,
-            requestId,
-            references: refCheck.refDetails,
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        if (activeProvider === "agy") {
-          const r = await generateViaAgy(generationPrompt, {
-            references: refCheck.refDetails,
-            signal: cancelController.signal,
-            requestId,
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        if (activeProvider === "atlascloud") {
-          const r = await generateViaAtlasCloud(generationPrompt, requireRuntimeContext(ctx), {
-            model: imageModel,
-            size: effectiveSize,
-            quality,
-            signal: cancelController.signal,
-            requestId,
-            references: refCheck.refDetails,
-            ...(backgroundParams ? { background: backgroundParams.background } : {}),
-            ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        if (activeProvider === "minimax") {
-          const r = await generateViaMinimax(generationPrompt, requireRuntimeContext(ctx), {
-            model: imageModel,
-            size: effectiveSize,
-            signal: cancelController.signal,
-            requestId,
-            references: refCheck.refDetails,
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        if (activeProvider === "nai") {
-          // No references argument: the adapter is text-to-image only, and the
-          // guard above already refused any reference input rather than letting
-          // it be silently discarded here.
-          const r = await generateViaNai(generationPrompt, requireRuntimeContext(ctx), {
-            model: imageModel,
-            size: effectiveSize,
-            signal: cancelController.signal,
-            requestId,
-            // One normalizer for every request-driven lane: the multimode and
-            // node branches spread the same call, so the three cannot drift.
-            ...readNaiOptions(req.body),
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        if (activeProvider === "comfy") {
-          const r = await generateViaComfy(generationPrompt, requireRuntimeContext(ctx), {
-            model: imageModel,
-            size: effectiveSize,
-            signal: cancelController.signal,
-            requestId,
-            references: refCheck.refDetails,
-            ...(typeof req.body?.seed === "number" ? { seed: req.body.seed } : {}),
-            ...(req.body?.comfyParams && typeof req.body.comfyParams === "object"
-              ? { params: req.body.comfyParams as Record<string, number | string | boolean> }
-              : {}),
-            // A local GPU queue is real user-visible waiting. Without this the
-            // UI would show "streaming" while the job sits behind three other
-            // prompts on someone's workstation.
-            onQueue: (info) => {
-              const phase = info.running ? "streaming" : "queued";
-              setJobPhase(requestId, phase);
-              if (asyncMode) {
-                publish(requestId, "phase", { requestId, phase, queuePosition: info.position });
-              }
-            },
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        if (activeProvider === "grok" || activeProvider === "grok-api") {
-          const grokModel = resolveGrokQualityModel(imageModel, quality);
-          const r = await generateViaGrok(generationPrompt, ctx, {
-            model: grokModel,
-            size: effectiveSize,
-            signal: cancelController.signal,
-            requestId,
-            plannedPrompt: sharedGrokPlan?.prompt,
-            webSearchCalls: sharedGrokPlan?.webSearchCalls,
-            references: grokRefs,
-            directApiKey: grokDirectApiKey,
-          });
-          throwIfJobCanceled(requestId);
-          return r;
-        }
-        const MAX_RETRIES = 1;
-        let lastErr: unknown;
-        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-          try {
-            const r = await generateViaResponses(
-              activeProvider,
-              generationPrompt,
-              quality,
-              effectiveSize,
-              moderation,
-              refCheck.refDetails || refCheck.refs,
-              requestId,
-              normalizedPromptMode,
-              ctx,
-              {
-                model: imageModel,
-                reasoningEffort,
-                webSearchEnabled,
-                signal: cancelController.signal,
-                allowPromptOnlyOAuthFallback: activeProvider !== "api",
-                ...(backgroundParams ? { background: backgroundParams.background } : {}),
-                ...(backgroundParams?.outputFormat ? { outputFormat: backgroundParams.outputFormat } : {}),
-              },
-            );
-            throwIfJobCanceled(requestId);
-            if (r.b64) return r;
-            lastErr = new Error("Empty response (safety refusal)");
-          } catch (e) {
-            lastErr = e;
-            if (isNonRetryableGenerationError(e as UpstreamErr | null | undefined)) break;
-          }
-          if (attempt < MAX_RETRIES) {
-            const errCode = (lastErr && typeof lastErr === "object" && "code" in lastErr)
-              ? (lastErr as { code?: unknown }).code
-              : undefined;
-            logEvent("generate", "retry", { requestId, attempt: attempt + 1, errorCode: errCode });
-          }
-        }
-        throw normalizeGenerationFailure(lastErr as UpstreamErr | null | undefined, {
-          safetyMessage: "Content generation refused after retries",
-        });
+        const { value } = await execution.execute();
+        throwIfJobCanceled(requestId);
+        return value;
       };
       const results = await Promise.allSettled(Array.from({ length: count }, generateOne));
       throwIfJobCanceled(requestId);

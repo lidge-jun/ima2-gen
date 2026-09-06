@@ -14,9 +14,9 @@ Image generation supports OAuth, API-key, Grok, and Gemini (`agy` and `gemini-ap
 
 - `provider: "oauth"` uses the local Codex OAuth proxy.
 - `provider: "api"` uses the OpenAI Responses API with the hosted `image_generation` tool.
-- `provider: "grok"` uses the bundled progrok xAI proxy. Classic, Node, and Agent generation run mandatory xAI Web Search through `/v1/responses`, then run a `grok-4.3` planner call with a forced local `generate_image` function, then ima2 executes xAI `/v1/images/generations`. `grok-4.6` and `grok-4.5` remain selectable overrides. If reference images, a Node parent image, or an Agent current image are attached, the final step switches to xAI `/v1/images/edits` so image-to-image context is preserved.
+- `provider: "grok"` uses the bundled progrok xAI proxy. Classic, Node and multimode image generation honor `webSearchEnabled: false` (Node also honors `searchMode: "off"`): this skips `/v1/responses` search, not the configured planner's forced `generate_image` call. Planner default is `grok-4.3`; `grok-4.6` and `grok-4.5` remain selectable overrides. References select `/v1/images/edits` instead of `/v1/images/generations`. Agent's omitted-option search default is unchanged.
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool. Model is `nano-banana-2`. Output is fixed at 1024×1024 JPEG. Max 3 reference images (i2i). No web search, quality, size, or mask controls. Multimode returns a single image. Video is unsupported (`AGY_VIDEO_UNSUPPORTED`).
-- `provider: "grok-api"` uses a direct xAI API key instead of the bundled progrok OAuth proxy. Same pipeline as `grok` (Web Search → planner → `/v1/images/generations`), same aspect ratio and resolution options. Requires an xAI API key configured via the web UI key management or `XAI_API_KEY` env var. Also supports video generation.
+- `provider: "grok-api"` uses a direct xAI API key with the same image search/planner/image semantics. Missing or blank image credentials are refused with `GROK_API_KEY_MISSING` before admission, never changed to the proxy lane. Video remains a separate path. Configure the key in Settings or `XAI_API_KEY`.
 - `provider: "gemini-api"` calls the Google Generative Language API directly (or Vertex AI with a service account JSON). Supports models `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K) on both auth paths — the direct API path sends `generation_config.response_format.image` (snake_case) while the Vertex AI endpoint (`aiplatform.googleapis.com`) sends `generationConfig.imageConfig` (camelCase). With `size: "auto"` the image config is omitted entirely and the model decides ratio/size. Auth: `GEMINI_API_KEY` env var, web UI key management (`/api/keys/gemini`), or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON` or `/api/keys/vertex`). When both Vertex credentials and an API key are configured, Vertex takes priority. The chosen auth mode (`apikey` or `vertex`) persists to `~/.ima2/config.json` as `geminiAuthMode` and is restored on server startup. Per-model cost: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
 - `provider: "nai"` calls NovelAI text-to-image generation with one of `nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, or `nai-diffusion-4-5-curated`. It accepts the provider-native request fields documented below and returns a ZIP that ima2 decodes to PNG. References, edits, and masks are explicitly refused.
 - API-key generation covers classic generate, edit, mask-guided edit, multimode, and node generation.
@@ -27,7 +27,76 @@ Image generation supports OAuth, API-key, Grok, and Gemini (`agy` and `gemini-ap
 Grok video generation uses `POST /api/video/generate` (SSE). See the Video
 Generation section below for the full endpoint specification.
 
+### Grok image artifact retrieval
+
+Returned image URLs require HTTPS and a conservative numeric-address policy.
+Private/link-local/shared/loopback/documentation/transition destinations are
+rejected by default; every DNS answer and redirect hop is validated, and the
+connection uses only those validated addresses. No default re-resolution,
+connection pooling, API credential, cookie or referrer forwarding occurs.
+
+The exact server-configured proxy origin is a local exception only when it is
+the initial artifact origin. Leaving it permanently removes that exception for
+the chain: public→private-proxy and proxy→public→private-proxy cannot regain trust.
+At most five redirects and50MiB are accepted; the single30s default deadline
+covers DNS, retries, redirects and streamed bytes. An omitted/false Content-Length
+does not bypass the streamed cap. HTTP GET may retry under the existing policy;
+billable image POST is not automatically retried.
+
+The downloader reports `GROK_IMAGE_DOWNLOAD_FAILED`/502 for policy/body failures,
+`GROK_IMAGE_TIMEOUT`/504 for deadline, and `GENERATION_CANCELED`/499 for caller
+abort; existing surface error normalization still applies. Errors do not expose
+raw returned URL/query credentials. This restricted policy is not an exhaustive
+public-address/routability guarantee and does not change video or MCP URL policy.
+
+### Agy artifact reads and cleanup
+
+Reported and fallback artifact paths must be absolute regular files within the
+canonical `.gemini`, `.cache`, or system temporary roots. Intentionally relocated
+root directories remain supported; missing roots never broaden the boundary.
+Leaf symlinks, paths escaping those roots, unusable file identities and detected
+path/file replacement are rejected. The same checks apply to parsed result paths
+and fallback discovery; filename matching alone is not acceptance.
+
+The reader enforces an inclusive 50MiB limit before and during descriptor reads,
+using bounded blocks even when individual reads are short. A successful receipt
+authorizes cleanup only for that same checked file; replacements and unrelated
+siblings are left alone. Direct reader/operation cancellation returns
+`GENERATION_CANCELED`/499 after pending file I/O and descriptor close settle;
+existing node normalization can expose `INVALID_REQUEST`/499 instead.
+Policy-rejected artifacts are not deleted. The reader and Agy operation add no
+retries, but caller policies remain unchanged: reference-free node requests can
+retry once after retryable artifact errors, starting another generation attempt.
+
+`AGY_PATH_REJECTED`/502 covers the path/identity policy; `AGY_ARTIFACT_TOO_LARGE`/502
+covers overflow, and `AGY_ARTIFACT_NOT_FOUND`/502 covers missing reported files.
+Existing generation normalization may expose `code: UNKNOWN` while retaining
+the original `rawCode` and `errorClass: INTERNAL_STATE_ERROR`.
+Windows uses explicit path/identity checks without POSIX no-follow open flags.
+This is not an atomic filesystem sandbox against another same-user process, a
+hardlink-provenance guarantee, or a process-wide memory ceiling.
+
 ## Health And Status
+
+### Core provider surface metadata
+
+`GET /api/capabilities` includes `providerSurfaces[coreProviderId][surface]`.
+`GET /api/models` includes the same `surfaces` on each core lane; MCP lanes
+retain their existing model capabilities. Surfaces are `generate`, `edit`,
+`multimode`, `node`, and `video`.
+
+Each record contains `supported`, `references`, `mask`, `streaming`, and
+`catalogAccess` (`static` or `runtime`). These are application capability facts,
+not credential/liveness or entitlement checks. `references` means the surface
+can accept image input; a Comfy workflow still needs the appropriate binding.
+`streaming` describes partial-image delivery on Node/Multimode, not lifecycle SSE.
+
+NovelAI's generate/node/multimode entries are supported without references;
+edit/video are unsupported. Its models explicitly declare generation support,
+not fictitious edit support. Comfy is runtime-catalog backed: empty static
+model IDs do not disable its generate/edit/video surfaces, while node/multimode
+remain unsupported. Local capabilities expose the structural map without
+inventing a runtime `lanes` availability result.
 
 | Method | Path | Notes |
 |---|---|---|
@@ -230,23 +299,23 @@ enabled alpha are V5-only. The four exact image models are
 text-to-image only: `NAI_REF_UNSUPPORTED`, `NAI_EDIT_UNSUPPORTED`, and
 `NAI_MASK_UNSUPPORTED` fail closed rather than discarding input.
 
-When `provider` is `"grok"`, supported models are `grok-imagine-image` and
-`grok-imagine-image-quality`. The server uses `grok-4.5` as the search/planner
-model by default (`IMA2_GROK_PLANNER_MODEL`) and times the mandatory search and
+When `provider` is `"grok"`, supported models include `grok-imagine-image-2.0`,
+`grok-imagine-image` and `grok-imagine-image-quality`. The server uses `grok-4.3`
+as the configured search/planner default (`IMA2_GROK_PLANNER_MODEL`) and times search and
 planner steps separately from the image call (`IMA2_GROK_PLANNER_TIMEOUT_MS`).
 For `n > 1`, search and planning run once and the planned prompt is reused for
-the image requests. Successful Grok classic generations report one mandatory
-web-search call in metadata.
+the image requests. Search-disabled classic generations report zero search calls;
+otherwise the shared plan reports one logical search call.
 
 If `references` are present on a Grok classic request, ima2 still performs the
-mandatory search and `grok-4.5` planning phases. The planner receives the
+configured planning phase, with search only when enabled. The planner receives the
 reference images as multimodal `image_url` inputs, and its forced
 `generate_image.prompt` argument is instructed to be English-only except for
 exact visible text requested by the user. The final image call then uses xAI
 `/v1/images/edits` with the same reference images instead of
 `/v1/images/generations`. This keeps image-to-image/reference context alive
-through the three-phase pipeline. xAI currently documents up to three source
-images for image editing, so Grok classic requests with more than three
+through the pipeline. The server permits up to three source images for these
+Grok classic requests; more than three
 references return `GROK_REF_TOO_MANY`.
 
 Grok size mapping:
@@ -280,9 +349,11 @@ With `provider: "grok"`, edit requests are sent to xAI `/v1/images/edits`
 through the bundled progrok proxy. Masked Grok edits are rejected before
 upstream with `GROK_MASK_UNSUPPORTED`.
 
-Grok multimode currently sends each image request directly to xAI Images API
-with the mapped `aspect_ratio`/`resolution`; the mandatory search + planner
-pipeline is limited to classic `/api/generate`.
+Grok multimode plans each attempted image in order and performs search only when
+enabled. Sparse successes retain their original attempt index: a failed first
+attempt cannot make the final sweep persist the second image twice. Identical
+bytes at different successful indices remain separate outputs. The internal
+originalIndexes array is not added to request/SSE/history/sidecar schemas.
 
 ### `POST /api/node/generate`
 
@@ -310,7 +381,7 @@ Body fields:
 
 When `parentNodeId` is present, the server loads the stored parent node image and uses the edit path. Node-local references are allowed on both root and child/edit nodes; for child/edit nodes the parent image is sent first, then references, then the text prompt.
 
-With `provider: "grok"`, Node Mode uses the same xAI search + `grok-4.5` planner + Images API pipeline as classic generation. A parent node image, `externalSrc`, or extra references are passed to the planner and then to xAI `/v1/images/edits`; otherwise the final call uses `/v1/images/generations`. Grok Node requests are capped at three total input images, counting the parent/current image plus references, and return `GROK_REF_TOO_MANY` before upstream when that limit is exceeded. `quality: "high"` promotes the final image model to `grok-imagine-image-quality`.
+Grok Node Mode uses the configured planner and Images API, with search suppressed by `searchMode: "off"` or `webSearchEnabled: false`. A parent node image, `externalSrc`, or extra references are passed to the planner and then to `/v1/images/edits`; otherwise the final call uses `/v1/images/generations`. The server caps total input images at three, counting parent/current image plus references, and returns `GROK_REF_TOO_MANY` before upstream when exceeded. Existing quality-model resolution is unchanged.
 
 The route can stream Server-Sent Events when the client sends `Accept: text/event-stream`. Possible events include `phase`, `partial`, `done`, and `error`. Alternatively, send `{ "async": true, "requestId": "req_xxx" }` in the body to receive `202 { requestId }` immediately and follow progress on `GET /api/events` (see Events section).
 
@@ -489,7 +560,7 @@ Grok prompt surfaces used by video APIs:
 
 | Code | Meaning |
 |---|---|
-| `VIDEO_PROVIDER_UNSUPPORTED` | Provider is not `"grok"` |
+| `VIDEO_PROVIDER_UNSUPPORTED` | Provider is not `"grok"` or `"grok-api"` |
 | `PROMPT_REQUIRED` | Empty or missing prompt |
 | `INVALID_GROK_VIDEO_MODEL` | Model not in valid set |
 | `INVALID_VIDEO_RESOLUTION` | Resolution is not 480p/720p/1080p, or 1080p was requested outside `grok-imagine-video-1.5` prompt-only T2V / I2V |
@@ -498,6 +569,24 @@ Grok prompt surfaces used by video APIs:
 | `GROK_VIDEO_REF_TOO_MANY` | More than 7 reference images |
 | `GROK_VIDEO_FAILED` | Upstream xAI video generation failed |
 | `GROK_VIDEO_FRAME_FAILED` | Server could not extract the parent video's last frame |
+| `GROK_VIDEO_DOWNLOAD_FAILED` | Download-stage HTTP, size, MIME, empty-body, MP4-prefix or read failure (502) |
+| `GROK_VIDEO_TIMEOUT` | The download's own non-resetting timeout expired (504) |
+| `GENERATION_CANCELED` | Caller cancellation observed while downloading, including custom reasons (499) |
+
+Completed Grok video artifacts are consumed incrementally with an inclusive
+**100 MiB** byte cap. Declared size and actual streamed bytes are checked before
+retaining an overflowing chunk; invalid/empty/aborted bodies do not reach caller
+persistence. Accepted MIME is MP4 or octet-stream (missing MIME defaults to MP4),
+and the existing minimum-length/`ftyp` prefix check is retained. This is not full
+MP4 decoding or a100MiB process-memory ceiling: fetch buffers, chunk overhead and
+downstream copies are separate. Safe GET retry ends at response headers; body
+failure never starts a new billed generation.
+
+The video destination policy is unchanged: initial HTTPS or the existing literal
+HTTP-loopback allowlist, with fetch's default redirect behavior. It does not gain
+the image downloader's DNS/private-address/per-hop pinning policy. Do not treat
+HTTPS alone or these body bounds as an SSRF/security guarantee. Download error
+status appears in the existing JSON or SSE/terminal envelope for each caller.
 
 ### `POST /api/video/edit`
 
@@ -751,7 +840,8 @@ Registered only when `config.features.cardNews` is true (`routes/cardNews.ts`). 
 | `AGY_QUOTA_EXHAUSTED` | Gemini API quota exhausted (rate limit) |
 | `AGY_PARSE_FAILED` | Could not parse artifact path from agy output |
 | `AGY_ARTIFACT_NOT_FOUND` | Agy reported an artifact path that does not exist |
-| `AGY_PATH_REJECTED` | Agy artifact path was outside allowed directories |
+| `AGY_PATH_REJECTED` | Agy artifact path, file type, or identity failed the allowed-root policy |
+| `AGY_ARTIFACT_TOO_LARGE` | Agy artifact exceeded the inclusive 50MiB read limit |
 | `AGY_VIDEO_UNSUPPORTED` | Video generation is not supported by the Gemini (agy) provider |
 | `AGY_MASK_UNSUPPORTED` | Mask-based editing is not supported by the Gemini (agy) provider |
 | `AGY_REF_TOO_MANY` | Too many reference images for agy (max 3) |

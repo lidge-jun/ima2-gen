@@ -2,7 +2,7 @@ import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { mapSizeToGrokImageParams } from "./grokSizeMapper.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { getGrokProxyUrl } from "./grokRuntime.js";
-import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
+export { downloadGrokImageUrl } from "./grokImageDownload.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 export interface GrokImageResponse {
@@ -139,64 +139,6 @@ export function extractResponsesText(response: GrokResponsesResponse): string {
     }
   }
   return chunks.join("\n\n").trim();
-}
-
-const MAX_IMAGE_DOWNLOAD_BYTES = 50 * 1024 * 1024;
-
-export async function downloadGrokImageUrl(
-  url: string,
-  signal?: AbortSignal,
-  timeoutMs = 30_000,
-): Promise<{ buffer: Buffer; b64: string; mime: string }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const combined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      throw grokError("Image download URL must be HTTP(S)", 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-    }
-    // Safe to replay: downloading a finished artifact creates nothing upstream.
-    const res = await grokFetchWithRetry(
-      () => fetch(url, { signal: combined }),
-      { signal: combined, label: "image-download" },
-    );
-    if (!res.ok) throw grokError(`Image download failed: HTTP ${res.status}`, 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-    const contentLength = Number(res.headers.get("content-length") || "0");
-    if (contentLength > MAX_IMAGE_DOWNLOAD_BYTES) {
-      throw grokError("Image download exceeds 50MB limit", 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-    }
-    if (!res.body) throw grokError("Image download had no response body", 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-    const chunks: Buffer[] = [];
-    let total = 0;
-    const reader = res.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_IMAGE_DOWNLOAD_BYTES) {
-        await reader.cancel("download size limit exceeded").catch(() => {});
-        controller.abort();
-        throw grokError("Image download exceeds 50MB limit", 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-      }
-      chunks.push(Buffer.from(value));
-    }
-    const buffer = Buffer.concat(chunks, total);
-    clearTimeout(timer);
-    if (buffer.length === 0) throw grokError("Image download was empty", 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-    const mime = res.headers.get("content-type")?.split(";")[0]?.trim()
-      || detectImageMimeFromB64(buffer.toString("base64"))
-      || "image/png";
-    return { buffer, b64: buffer.toString("base64"), mime };
-  } catch (e: any) {
-    clearTimeout(timer);
-    if (e.name === "AbortError") {
-      if (signal?.aborted) throw grokError("Generation canceled", 499, "GENERATION_CANCELED");
-      throw grokError("Image download timed out", 504, "GROK_IMAGE_TIMEOUT");
-    }
-    if (e.code && e.status) throw e;
-    throw grokError(`Image download failed: ${e.message}`, 502, "GROK_IMAGE_DOWNLOAD_FAILED");
-  }
 }
 
 /**

@@ -17,6 +17,9 @@ import { MobileAppBar } from "./components/MobileAppBar";
 import { NavRail } from "./components/NavRail";
 import { MobileComposeSheet } from "./components/MobileComposeSheet";
 import { useAppStore, flushGraphSaveBeacon } from "./store/useAppStore";
+import {
+  GENERATION_DEFAULTS_STORAGE_KEY, IMAGE_MODEL_STORAGE_KEY, VIDEO_DEFAULTS_STORAGE_KEY,
+} from "./store/persistenceRegistry";
 import { onResync, ensureConnected, onConnectionStateChange } from "./lib/eventChannel";
 import { ENABLE_AGENT_MODE, ENABLE_CARD_NEWS_MODE, ENABLE_NODE_MODE } from "./lib/devMode";
 import { useGalleryViewerNavigation } from "./hooks/useGalleryViewerNavigation";
@@ -122,7 +125,9 @@ export default function App() {
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
-      if (e.key === "ima2.inFlight" || e.key === "ima2.selectedFilename") {
+      if (e.key === "ima2.inFlight" || e.key === "ima2.selectedFilename"
+        || e.key === GENERATION_DEFAULTS_STORAGE_KEY || e.key === IMAGE_MODEL_STORAGE_KEY
+        || e.key === VIDEO_DEFAULTS_STORAGE_KEY) {
         syncFromStorage();
       }
     };
@@ -177,7 +182,7 @@ export default function App() {
             <Canvas />
           )}
         </Suspense>
-        {uiMode === "agent" ? null : uiMode === "card-news" ? null : uiMode === "assets" ? null : uiMode === "asset-gen" ? null : uiMode === "home" ? null : <RightPanel />}
+        {isMobile ? null : uiMode === "agent" ? null : uiMode === "card-news" ? null : uiMode === "assets" ? null : uiMode === "asset-gen" ? null : uiMode === "home" ? null : <RightPanel />}
       </div>
       <CustomSizeConfirmModal />
       <TrashUndoToast />

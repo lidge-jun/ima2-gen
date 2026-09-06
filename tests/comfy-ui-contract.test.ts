@@ -22,28 +22,16 @@ describe("comfy UI model routing", () => {
     assert.match(body.slice(comfyAt, fallbackAt), /return \[\]/, "comfy returns an empty static list");
   });
 
-  it("clears the model when switching to comfy instead of keeping a GPT one", () => {
-    // ImageModel is a literal union generated from the static registry, so a
-    // workflow id can never be a legal value; keeping the old model would make
-    // the first generation 400.
-    const source = read("ui/src/store/storeSettingsImpl.ts");
-    const fn = source.slice(source.indexOf("export function setProviderImpl"));
-    const body = fn.slice(0, fn.indexOf("\n}"));
-    assert.match(body, /provider === "comfy"/);
-    const comfyArm = body.slice(body.indexOf('provider === "comfy"'));
-    const arm = comfyArm.slice(0, comfyArm.indexOf("} else if") + 1 || 1200);
-    assert.match(arm, /comfyWorkflow: null/, "the workflow selection is reset");
-    // No auto-pick: registration order carries no meaning.
-    assert.doesNotMatch(arm, /workflows\[0\]/);
-  });
+  // Actual first-visit/no-auto-selection and lane-return behavior is covered in
+  // core-selection-actions.test.ts, including genuine store reinitialization.
 
   it("reads comfy models from the live lane catalog, not the generated list", () => {
     const source = read("ui/src/components/GenProviderModelSelect.tsx");
-    assert.match(source, /getComfyLaneModels/, "the selector fetches the lane catalog");
+    assert.match(source, /useLaneCatalog/, "the selector consumes the shared lane catalog");
     assert.match(source, /value: "comfy", label: "ComfyUI"/, "comfy is offered as a provider");
     // An offline workflow stays listed but unselectable: removing it reads as
     // "my workflow disappeared", leaving it live starts a doomed generation.
-    assert.match(source, /disabled: entry\.executable === false \|\| Boolean\(entry\.description\?\.endsWith\("\(offline\)"\)\)/);
+    assert.match(source, /isComfyModelAvailable\(entry\)/);
   });
 
   it("shows catalog-only Comfy video workflows as disabled rows", () => {
@@ -55,6 +43,8 @@ describe("comfy UI model routing", () => {
     assert.match(source, /videoCatalogShort/);
     assert.match(source, /title: entry\.reason/);
     assert.match(source, /stacked: true/);
+    assert.match(source, /disabled: true/);
+    assert.match(source, /gen-provider-model__catalog-state/);
   });
 });
 

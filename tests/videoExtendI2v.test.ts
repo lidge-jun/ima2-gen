@@ -1,32 +1,34 @@
-import test from "node:test";
+import test, { before, beforeEach, after, afterEach, describe } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { createServer } from "node:http";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer, type Server } from "node:http";
+import { access, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { config } from "../config.js";
-import { registerVideoExtendedRoutes, type VideoExtendedDependencies } from "../routes/videoExtended.ts";
-import { subscribe, type BusEvent } from "../lib/eventBus.ts";
-import { abortJob } from "../lib/inflight.ts";
+import type { VideoExtendedDependencies } from "../routes/videoExtended.js";
+import type { BusEvent } from "../lib/eventBus.js";
+import { executionTestProcess } from "./_executionTestProcess.ts";
+import { openVideoFixture } from "./_videoExecutionFixture.ts";
+import { fakeMp4Bytes as fakeMp4, makeVideoStreamFixture } from "./_videoStreamFixture.ts";
+import { bounded, SettlementTimeout } from "./_executionTrackedWrites.ts";
 
-const execFileAsync = promisify(execFile);
-let ffmpegAvailable: Promise<boolean> | null = null;
+if (executionTestProcess(import.meta.url)) {
+type VideoFixture = Awaited<ReturnType<typeof openVideoFixture>>;
+let fixture: VideoFixture;
+let registerVideoExtendedRoutes: typeof import("../routes/videoExtended.js").registerVideoExtendedRoutes;
+let subscribe: typeof import("../lib/eventBus.js").subscribe;
+let abortJob: typeof import("../lib/inflight.js").abortJob;
+let listJobs: typeof import("../lib/inflight.js").listJobs;
+before(async () => {
+  fixture = await openVideoFixture({ codec: true });
+  ({ registerVideoExtendedRoutes } = await import("../routes/videoExtended.js"));
+  ({ subscribe } = await import("../lib/eventBus.js"));
+  ({ abortJob, listJobs } = await import("../lib/inflight.js"));
+});
+beforeEach(() => fixture.beginCase());
+afterEach(async () => { await fixture?.finishCase(); });
+after(async () => { await fixture?.close(); });
 
-function listen(server): Promise<string> {
-  return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(`http://127.0.0.1:${server.address().port}`)));
-}
-
-function close(server): Promise<void> {
-  server.closeAllConnections?.();
-  return new Promise((resolve) => server.close(() => resolve()));
-}
-
-function fakeMp4(): Buffer {
-  return Buffer.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]);
-}
+function close(_server: Server): Promise<void> { return fixture.finishCase(); }
 
 async function makeParent(dir: string, filename = "root.mp4", metadata: Record<string, unknown> = {}): Promise<void> {
   await writeFile(join(dir, filename), fakeMp4());
@@ -57,17 +59,19 @@ function successfulGenerator(capture?: (prompt: string, options: any) => void) {
 }
 
 async function makeApp(dir: string, dependencies: VideoExtendedDependencies = {}, proxyPort = 18645) {
+  const config = fixture.config;
   const app = express();
+  fixture.trackApp(app);
   app.use(express.json());
   registerVideoExtendedRoutes(app, {
-    rootDir: process.cwd(), packageVersion: "test",
+    rootDir: fixture.root, packageVersion: "test",
     config: {
       ...config, ids: { ...config.ids, generatedHexBytes: 2 }, storage: { ...config.storage, generatedDir: dir },
       grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
     },
   }, dependencies);
   const server = createServer(app);
-  return { server, url: await listen(server) };
+  return { server, url: await fixture.listen(server, "app") };
 }
 
 function watchTerminal(requestId: string) {
@@ -84,11 +88,11 @@ function watchTerminal(requestId: string) {
 }
 
 async function postExtend(url: string, body: Record<string, unknown>) {
-  return fetch(`${url}/api/video/extend`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return fixture.fetchApp(`${url}/api/video/extend`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 }
 
 test("extend returns 202, injects the extracted frame, and emits the ordered terminal contract", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-contract-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-contract-"));
   const requestId = "i2v-contract";
   let sourceImage = "";
   await makeParent(dir);
@@ -109,15 +113,11 @@ test("extend returns 202, injects the extracted frame, and emits the ordered ter
     assert.deepEqual(order, ["phase:queued", "phase:extracting-frame", "planning", "submitted", "progress", "phase:persisting", "done"]);
     const sidecar = JSON.parse(await readFile(join(dir, "child.mp4.json"), "utf8"));
     assert.deepEqual(sidecar.videoLineage, { id: "child.mp4", parentId: "root.mp4", rootId: "root.mp4", seriesId: "root.mp4", sequenceIndex: 1 });
-  } finally {
-    watcher.stop();
-    await close(server);
-    await rm(dir, { recursive: true, force: true });
-  }
+  } finally { watcher.stop(); await close(server); await rm(dir, { recursive: true, force: true }); }
 });
 
 test("duplicate active requestId returns 409 and starts the provider once", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-duplicate-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-duplicate-"));
   await makeParent(dir);
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -147,7 +147,7 @@ test("duplicate active requestId returns 409 and starts the provider once", asyn
 });
 
 test("duplicate 409 publishes no error on the active job channel (terminal uniqueness)", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-dup-stream-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-dup-stream-"));
   await makeParent(dir);
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -176,7 +176,7 @@ test("duplicate 409 publishes no error on the active job channel (terminal uniqu
 });
 
 test("cancel during extraction ends with exactly one terminal event and zero provider calls", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-cancel-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-cancel-"));
   await makeParent(dir);
   const requestId = "i2v-cancel-one";
   let providerCalls = 0;
@@ -193,7 +193,7 @@ test("cancel during extraction ends with exactly one terminal event and zero pro
     assert.equal((await postExtend(url, { sourceVideoId: "root.mp4", requestId, prompt: "continue" })).status, 202);
     abortJob(requestId);
     release();
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await fixture.drain();
     assert.equal(providerCalls, 0, "provider must not run after cancel");
     assert.equal(seen.filter((e) => e.event === "done").length, 0, "no done after cancel");
     assert.deepEqual(seen.map((e) => e.data?.code), ["GENERATION_CANCELED"], "exactly one canceled terminal event");
@@ -206,7 +206,7 @@ test("cancel during extraction ends with exactly one terminal event and zero pro
 });
 
 test("cancel during preflight (sidecar await) stops before 202 and provider work", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-preflight-cancel-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-preflight-cancel-"));
   await makeParent(dir);
   const requestId = "i2v-preflight-cancel";
   let providerCalls = 0;
@@ -231,7 +231,7 @@ test("cancel during preflight (sidecar await) stops before 202 and provider work
     release();
     const response = await pending;
     assert.equal(response.status, 499);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await fixture.drain();
     assert.equal(providerCalls, 0, "provider must not run after preflight cancel");
     // Deterministic ordering: abort lands after admission but before preflight
     // completes, so abortJob publishes exactly one canceled error.
@@ -246,7 +246,7 @@ test("cancel during preflight (sidecar await) stops before 202 and provider work
 });
 
 test("unreadable parent sidecar fails closed with VIDEO_PARENT_METADATA_INVALID and zero provider calls", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-corrupt-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-corrupt-"));
   await writeFile(join(dir, "root.mp4"), fakeMp4());
   await writeFile(join(dir, "root.mp4.json"), "{ not valid json");
   let providerCalls = 0;
@@ -261,22 +261,19 @@ test("unreadable parent sidecar fails closed with VIDEO_PARENT_METADATA_INVALID 
     assert.equal(response.status, 500);
     const payload = await response.json();
     assert.equal(payload.code, "VIDEO_PARENT_METADATA_INVALID");
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await fixture.drain();
     assert.equal(providerCalls, 0);
-  } finally {
-    await close(server);
-    await rm(dir, { recursive: true, force: true });
-  }
+  } finally { await close(server); await rm(dir, { recursive: true, force: true }); }
 });
 
-test("extraction failures are typed and never call the provider", async (t) => {
+describe("extraction failures are typed and never call the provider", () => {
   const cases = [
     { name: "decode", error: new Error("decode failed"), code: "VIDEO_FRAME_EXTRACT_FAILED", retryable: undefined },
     { name: "unavailable", error: Object.assign(new Error("spawn ffmpeg ENOENT"), { code: "ENOENT" }), code: "VIDEO_FRAME_EXTRACT_UNAVAILABLE", retryable: undefined },
     { name: "timeout", error: Object.assign(new Error("timed out"), { killed: true, signal: "SIGKILL" }), code: "VIDEO_FRAME_EXTRACT_TIMEOUT", retryable: true },
   ];
-  for (const item of cases) await t.test(item.name, async () => {
-    const dir = await mkdtemp(join(tmpdir(), `ima2-extend-${item.name}-`));
+  for (const item of cases) test(item.name, async () => {
+    const dir = await mkdtemp(join(fixture.root, `ima2-extend-${item.name}-`));
     await makeParent(dir);
     const requestId = `i2v-${item.name}`;
     let providerCalls = 0;
@@ -291,16 +288,12 @@ test("extraction failures are typed and never call the provider", async (t) => {
       assert.equal(terminal.data.code, item.code);
       assert.equal(terminal.data.retryable, item.retryable);
       assert.equal(providerCalls, 0);
-    } finally {
-      watcher.stop();
-      await close(server);
-      await rm(dir, { recursive: true, force: true });
-    }
+    } finally { watcher.stop(); await close(server); await rm(dir, { recursive: true, force: true }); }
   });
 });
 
 test("child-of-child and siblings preserve durable branches and inherit prompt and motion", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-lineage-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-lineage-"));
   await makeParent(dir, "root.mp4", { motionPresetIds: ["motion-handheld"] });
   const filenames = ["child.mp4", "grandchild.mp4", "sibling.mp4"];
   const prompts: string[] = [];
@@ -329,15 +322,12 @@ test("child-of-child and siblings preserve durable branches and inherit prompt a
     assert.deepEqual({ ...siblingLineage, id: childLineage.id }, childLineage);
     assert.equal(child.prompt, "parent user prompt");
     assert.match(prompts[0], /Camera motion: natural handheld/);
-  } finally {
-    await close(server);
-    await rm(dir, { recursive: true, force: true });
-  }
+  } finally { await close(server); await rm(dir, { recursive: true, force: true }); }
 });
 
-test("sidecar failure rolls back the MP4 and cancel suppresses done", async (t) => {
-  await t.test("rollback", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ima2-extend-rollback-"));
+describe("sidecar failure rolls back the MP4 and cancel suppresses done", () => {
+  test("rollback", async () => {
+    const dir = await mkdtemp(join(fixture.root, "ima2-extend-rollback-"));
     await makeParent(dir);
     await mkdir(join(dir, "broken.mp4.json"));
     const requestId = "i2v-rollback";
@@ -350,8 +340,8 @@ test("sidecar failure rolls back the MP4 and cancel suppresses done", async (t) 
       await assert.rejects(access(join(dir, "broken.mp4")), (error: any) => error?.code === "ENOENT");
     } finally { watcher.stop(); await close(server); await rm(dir, { recursive: true, force: true }); }
   });
-  await t.test("cancel", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "ima2-extend-cancel-"));
+  test("cancel", async () => {
+    const dir = await mkdtemp(join(fixture.root, "ima2-extend-cancel-"));
     await makeParent(dir);
     const requestId = "i2v-cancel";
     const watcher = watchTerminal(requestId);
@@ -369,7 +359,7 @@ test("sidecar failure rolls back the MP4 and cancel suppresses done", async (t) 
 });
 
 test("remote sourceVideoId fails before extraction", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-remote-"));
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-remote-"));
   let extracts = 0;
   const { server, url } = await makeApp(dir, { extractFrame: async () => { extracts += 1; return "png"; } });
   try {
@@ -380,46 +370,129 @@ test("remote sourceVideoId fails before extraction", async () => {
   } finally { await close(server); await rm(dir, { recursive: true, force: true }); }
 });
 
-function hasFfmpeg(): Promise<boolean> {
-  ffmpegAvailable ??= execFileAsync("ffmpeg", ["-version"], { timeout: 5000 }).then(() => true, () => false);
-  return ffmpegAvailable;
+function defaultUpstream(stream: ReturnType<typeof makeVideoStreamFixture>) {
+  fixture.addStream(stream);
+  const paths: string[] = [];
+  let generationBody: { image?: { url?: string } } | null = null;
+  fixture.respond((call) => {
+    const url = new URL(call.url);
+    paths.push(url.pathname);
+    assert.equal(url.search, "");
+    assert.equal(call.headers.get("cookie"), null);
+    if (url.href === "https://artifact.fixture.invalid/child.mp4") {
+      assert.equal(call.method, "GET"); assert.equal(call.body, "");
+      assert.equal(call.headers.get("authorization"), null);
+      return stream.response;
+    }
+    assert.equal(url.origin, "http://127.0.0.1:18645");
+    assert.equal(call.headers.get("authorization"), "Bearer dummy");
+    if (url.pathname === "/v1/videos/real-child") {
+      assert.equal(call.method, "GET"); assert.equal(call.body, "");
+      return Response.json({ status: "done", video: { url: "https://artifact.fixture.invalid/child.mp4", duration: 1, respect_moderation: true } });
+    }
+    assert.equal(call.method, "POST");
+    assert.equal(call.headers.get("content-type"), "application/json");
+    const body = JSON.parse(call.body);
+    assert.equal(typeof body.model, "string");
+    if (url.pathname === "/v1/responses") {
+      assert.ok(Array.isArray(body.input));
+      return Response.json({ output: [{ type: "message", content: [{ type: "text", text: "brief" }] }] });
+    }
+    if (url.pathname === "/v1/chat/completions") {
+      assert.ok(Array.isArray(body.messages));
+      return Response.json({ choices: [{ message: { tool_calls: [{ type: "function", function: { name: "generate_video", arguments: JSON.stringify({ prompt: "planned" }) } }] } }] });
+    }
+    assert.equal(url.pathname, "/v1/videos/generations");
+    assert.equal(typeof body.prompt, "string");
+    assert.match(body.image?.url ?? "", /^data:image\/png;base64,/);
+    generationBody = body;
+    return Response.json({ request_id: "real-child" });
+  });
+  return { paths, get generationBody() { return generationBody; } };
 }
 
-test("real last-frame path sends PNG image.url to generations and never calls extensions", async (t) => {
-  if (!(await hasFfmpeg())) return t.skip("ffmpeg is not installed");
-  const dir = await mkdtemp(join(tmpdir(), "ima2-extend-real-"));
-  await execFileAsync("ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=blue:s=64x64:d=1", "-pix_fmt", "yuv420p", join(dir, "root.mp4")]);
-  await writeFile(join(dir, "root.mp4.json"), JSON.stringify({ userPrompt: "continue", provider: "grok", model: "grok-imagine-video", video: { duration: 1, resolution: "480p", aspectRatio: "auto" } }));
-  const paths: string[] = [];
-  let generationBody: any = null;
-  const proxy = createServer((req, res) => {
-    const path = req.url || "";
-    paths.push(path);
-    const json = (body: unknown) => { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify(body)); };
-    if (path.includes("/v1/responses")) return json({ output: [{ type: "message", content: [{ type: "text", text: "brief" }] }] });
-    if (path.includes("/v1/chat/completions")) return json({ choices: [{ message: { tool_calls: [{ type: "function", function: { name: "generate_video", arguments: JSON.stringify({ prompt: "planned" }) } }] } }] });
-    if (path.includes("/v1/videos/generations")) {
-      let raw = "";
-      req.on("data", (chunk) => { raw += chunk; });
-      return req.on("end", () => { generationBody = JSON.parse(raw); json({ request_id: "real-child" }); });
-    }
-    if (path.includes("/v1/videos/real-child")) return json({ status: "done", video: { url: `http://127.0.0.1:${(proxy.address() as any).port}/download.mp4`, duration: 1, respect_moderation: true } });
-    if (path.includes("/download.mp4")) { res.writeHead(200, { "Content-Type": "video/mp4" }); return res.end(fakeMp4()); }
-    res.writeHead(404); res.end();
+for (const kind of ["invalid-mp4", "declared-too-large"] as const) {
+  test(`default last-frame generator rejects ${kind} without child persistence and preserves parent`, async () => {
+    const dir = await mkdtemp(join(fixture.root, "ima2-extend-download-"));
+    await makeParent(dir);
+    const beforeParent = await Promise.all(["root.mp4", "root.mp4.json"].map((file) => readFile(join(dir, file))));
+    const stream = makeVideoStreamFixture(kind === "invalid-mp4" ? [Buffer.from("invalid MP4 bytes")] : [], {
+      headers: { "content-type": "video/mp4", ...(kind === "declared-too-large" ? { "content-length": "104857601" } : {}) },
+      holdOpen: kind === "declared-too-large",
+    });
+    const upstream = defaultUpstream(stream);
+    const requestId = `i2v-download-${kind}`;
+    const watcher = watchTerminal(requestId);
+    const { server, url } = await makeApp(dir, { extractFrame: async () => "png" });
+    try {
+      assert.equal((await postExtend(url, { sourceVideoId: "root.mp4", requestId })).status, 202);
+      const terminal = await watcher.terminal;
+      assert.equal(terminal.event, "error"); assert.equal(terminal.data.status, 502);
+      assert.equal(terminal.data.code, "GROK_VIDEO_DOWNLOAD_FAILED");
+      assert.match(String(terminal.data.error), kind === "invalid-mp4" ? /invalid MP4 container/ : /100MB limit/);
+      await fixture.finishCase();
+      assert.equal(watcher.events.filter((event) => event.event === "done").length, 0);
+      assert.deepEqual(upstream.paths, ["/v1/responses", "/v1/chat/completions", "/v1/videos/generations", "/v1/videos/real-child", "/child.mp4"]);
+      assert.deepEqual((await readdir(dir)).sort(), ["root.mp4", "root.mp4.json"]);
+      assert.deepEqual(await Promise.all(["root.mp4", "root.mp4.json"].map((file) => readFile(join(dir, file)))), beforeParent);
+      assert.equal(stream.stats.arrayBufferCalls, 0);
+      if (kind === "declared-too-large") { assert.equal(stream.stats.pulls, 0); assert.equal(stream.stats.sourceCancelCalls, 1); }
+      stream.assertDrained();
+    } finally { watcher.stop(); await close(server); await rm(dir, { recursive: true, force: true }); }
   });
-  const proxyUrl = await listen(proxy);
+}
+
+test("finishCase waits for whole last-frame work after cancel removes inflight", async () => {
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-drain-"));
+  await makeParent(dir);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  let entered!: () => void;
+  const extracting = new Promise<void>((resolve) => { entered = resolve; });
+  const requestId = "i2v-full-drain";
+  const watcher = watchTerminal(requestId);
+  const { server, url } = await makeApp(dir, { extractFrame: async () => { entered(); await gate; return "png"; } });
+  let finishing: Promise<void> | undefined;
+  try {
+    assert.equal((await postExtend(url, { sourceVideoId: "root.mp4", requestId })).status, 202);
+    await extracting;
+    abortJob(requestId);
+    assert.equal((await watcher.terminal).data.code, "GENERATION_CANCELED");
+    assert.deepEqual(listJobs(), []);
+    finishing = fixture.finishCase();
+    // The gate is already entered and stays held: this is a bounded negative
+    // settlement oracle, not a delay used to guess when asynchronous work finished.
+    await assert.rejects(bounded(finishing, 100), SettlementTimeout);
+    release();
+    await finishing;
+    assert.equal(fixture.calls.length, 0, "canceled extraction never reaches the default provider");
+    assert.deepEqual(watcher.events.filter((event) => event.event === "error" || event.event === "done").map((event) => event.data.code), ["GENERATION_CANCELED"]);
+    assert.deepEqual((await readdir(dir)).sort(), ["root.mp4", "root.mp4.json"]);
+  } finally { release(); await finishing; watcher.stop(); await close(server); await rm(dir, { recursive: true, force: true }); }
+});
+
+test("real last-frame path sends PNG image.url to generations and never calls extensions", async (t) => {
+  if (!fixture.ffmpeg?.available) { await fixture.finishCase(); return t.skip("ffmpeg is not installed"); }
+  const dir = await mkdtemp(join(fixture.root, "ima2-extend-real-"));
+  await fixture.ffmpeg.createClip(join(dir, "root.mp4"));
+  await writeFile(join(dir, "root.mp4.json"), JSON.stringify({ userPrompt: "continue", provider: "grok", model: "grok-imagine-video", video: { duration: 1, resolution: "480p", aspectRatio: "auto" } }));
+  const upstream = defaultUpstream(makeVideoStreamFixture([fakeMp4()], { headers: { "content-type": "video/mp4" } }));
   const requestId = "i2v-real";
   const watcher = watchTerminal(requestId);
-  const { server, url } = await makeApp(dir, {}, Number(new URL(proxyUrl).port));
+  const { server, url } = await makeApp(dir);
   try {
     assert.equal((await postExtend(url, { sourceVideoId: "root.mp4", requestId })).status, 202);
     assert.equal((await watcher.terminal).event, "done");
-    assert.match(generationBody?.image?.url ?? "", /^data:image\/png;base64,/);
-    assert.equal(paths.some((path) => path.includes("/v1/videos/extensions")), false);
-  } finally {
-    watcher.stop();
-    await close(server);
-    await close(proxy);
-    await rm(dir, { recursive: true, force: true });
-  }
+    assert.match(upstream.generationBody?.image?.url ?? "", /^data:image\/png;base64,/);
+    assert.equal(upstream.paths.some((path) => path.includes("/v1/videos/extensions")), false);
+    await fixture.drain();
+    assert.equal(upstream.paths.filter((path) => path === "/v1/videos/generations").length, 1);
+    assert.equal((await readdir(dir)).filter((file) => file.endsWith(".mp4")).length, 2);
+    const parentPath = await realpath(join(dir, "root.mp4"));
+    const extraction = fixture.ffmpeg.attempts.filter((attempt) => attempt.input === parentPath && attempt.args.includes("-sseof"));
+    assert.equal(extraction.length, 1);
+    assert.ok(extraction[0].closed && extraction[0].callbackDone && extraction[0].code === 0);
+    t.diagnostic(JSON.stringify({ ffmpegExtraction: extraction[0] }));
+  } finally { watcher.stop(); await close(server); await rm(dir, { recursive: true, force: true }); }
 });
+}

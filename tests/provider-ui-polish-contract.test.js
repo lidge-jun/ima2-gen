@@ -18,6 +18,10 @@ describe("provider UI contract", () => {
     assert.match(select, /status-dot/);
     assert.match(select, /value: "grok-api"/);
     assert.match(select, /value: "gemini-api"/);
+    assert.match(select, /value: "comfy"/);
+    assert.match(select, /CORE_PROVIDER_IDS/);
+    assert.match(select, /comfy\.display\.localMethod/);
+    assert.doesNotMatch(select, /authActive.*comfy/);
     assert.match(select, /setProvider\(next\)/);
     assert.doesNotMatch(select, /ProviderCard/);
     assert.doesNotMatch(select, /getProviderIdentity/);

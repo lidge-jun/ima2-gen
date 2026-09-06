@@ -1,27 +1,27 @@
-import { createRequire } from "module";
 import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { buildHardeningDoctorLines } from "../lib/doctor-checks.js";
+import { buildHardeningDoctorLines, type DoctorCheckLine } from "../lib/doctor-checks.js";
 import { buildStorageDoctorLines } from "../lib/storage-doctor.js";
 import { detectCodexAuth } from "../../lib/codexDetect.js";
-import { resolvePackageBin } from "../../lib/packageCli.js";
 import { runImageDoctorProbe } from "../../lib/responsesDoctor.js";
 import { config as runtimeConfig } from "../../config.js";
 import { exitFlushed } from "../lib/output.js";
 import { buildProviderDoctorLines, verifyConfiguredKeys } from "../lib/doctor-providers.js";
 import { buildMediaDoctorLines } from "../lib/doctor-media.js";
 import { buildDoctorBundle } from "../lib/doctor-bundle.js";
+import { buildDoctorReport, renderDoctorReport } from "../lib/doctor-report.js";
+import { buildInstallationDoctorLines, checkNodeEngine, missingRuntimeDeps, probeDoctorRuntime } from "../lib/doctor-runtime.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "../..");
-const requireFromRoot = createRequire(join(ROOT, "package.json"));
 const CONFIG_FILE = runtimeConfig.storage.configFile;
 const LEGACY_CONFIG_FILE = join(ROOT, ".ima2", "config.json");
 
-let pkg = { version: "?", name: "ima2-gen" };
+let pkg: { version: string; name: string; engines?: { node?: unknown } } = { version: "?", name: "ima2-gen" };
 try {
-  pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
+  const metadata = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
+  if (metadata && typeof metadata.version === "string" && typeof metadata.name === "string") pkg = metadata;
 } catch {}
 
 function loadConfig() {
@@ -32,29 +32,6 @@ function loadConfig() {
     try { return JSON.parse(readFileSync(LEGACY_CONFIG_FILE, "utf-8")); } catch {}
   }
   return {};
-}
-
-function missingRuntimeDeps() {
-  const deps = ["express", "better-sqlite3", "openai", "openai-oauth", "progrok/package.json", "@openai/codex/package.json", "zod"];
-  const missing = deps.filter((dep) => {
-    try {
-      requireFromRoot.resolve(dep);
-      return false;
-    } catch {
-      return true;
-    }
-  }).map((dep) => dep.endsWith("/package.json") ? dep.slice(0, -"/package.json".length) : dep);
-  for (const pair of [["openai-oauth", "openai-oauth"], ["@openai/codex", "codex"]] as const) {
-    const packageName = pair[0];
-    const binName = pair[1];
-    if (!packageName || !binName) continue;
-    try {
-      resolvePackageBin(packageName, binName);
-    } catch {
-      if (!missing.includes(packageName)) missing.push(packageName);
-    }
-  }
-  return missing;
 }
 
 function valueAfter(args: string[], name: string) {
@@ -90,6 +67,13 @@ export function showDoctorHelp() {
   Usage: ima2 doctor [image-probe] [options]
 
   Diagnose environment, storage, dependencies, and authentication.
+  --json                 Emit one machine-readable diagnostic report
+  --bundle               Emit a safe compatibility bundle (--json for JSON only)
+  --installation         Offline installation checks; no account/config reads
+  --verify-keys          Explicit non-generating remote authentication checks
+  --runtime <origin>     Explicit loopback health/version check; no credentials
+  Installation mode cannot combine with bundle, verify-keys or runtime.
+  image-probe performs live billed generation; ordinary doctor never runs it.
   Run 'ima2 doctor image-probe --help' for live image probe options.
 `);
 }
@@ -140,15 +124,9 @@ async function standardDoctor(args: string[] = []) {
   let ok = 0;
   let fail = 0;
 
-  const nodeVersion = process.version;
-  const nodeMajor = parseInt(nodeVersion.slice(1).split(".")[0] ?? "0", 10);
-  if (nodeMajor >= 20) {
-    console.log(`  ✓ Node.js ${nodeVersion} (>= 20)`);
-    ok++;
-  } else {
-    console.log(`  ✗ Node.js ${nodeVersion} (requires >= 20)`);
-    fail++;
-  }
+  const node = checkNodeEngine(process.version, pkg.engines?.node);
+  console.log(`  ${node.kind === "pass" ? "✓" : "✗"} ${node.text}`);
+  if (node.kind === "pass") ok++; else fail++;
 
   if (existsSync(join(ROOT, "package.json"))) {
     console.log("  ✓ package.json found");
@@ -158,7 +136,7 @@ async function standardDoctor(args: string[] = []) {
     fail++;
   }
 
-  const missingDeps = missingRuntimeDeps();
+  const missingDeps = missingRuntimeDeps(ROOT);
   if (missingDeps.length === 0) {
     console.log("  ✓ runtime dependencies resolvable");
     ok++;
@@ -276,5 +254,56 @@ export async function doctor(args: string[] = []) {
     await imageProbe(args.slice(1));
     return;
   }
+  if (!validDoctorArguments(args)) {
+    console.error("Invalid doctor options; use ima2 doctor --help."); exitFlushed(2);
+  }
+  if (args.includes("--json") || args.includes("--bundle") || args.includes("--runtime") || args.includes("--installation")) {
+    await machineDoctor(args); return;
+  }
   await standardDoctor(args);
+}
+
+function validDoctorArguments(args: string[]): boolean {
+  const seen = new Set<string>();
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (seen.has(arg) || !["--json", "--bundle", "--installation", "--verify-keys", "--runtime"].includes(arg)) return false;
+    seen.add(arg);
+    if (arg === "--runtime" && (!args[++i] || args[i]!.startsWith("--"))) return false;
+  }
+  return !seen.has("--installation") || !["--bundle", "--verify-keys", "--runtime"].some((flag) => seen.has(flag));
+}
+
+function diagnosticConfig(lines: DoctorCheckLine[]): Record<string, unknown> {
+  try {
+    const path = existsSync(CONFIG_FILE) ? CONFIG_FILE : existsSync(LEGACY_CONFIG_FILE) ? LEGACY_CONFIG_FILE : null;
+    const value: unknown = path ? JSON.parse(readFileSync(path, "utf8")) : {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("CONFIG_INVALID");
+    return value as Record<string, unknown>;
+  } catch { lines.push({ code: "CONFIG_INVALID", kind: "fail", text: "Configuration is not a JSON object" }); return {}; }
+}
+
+async function machineDoctor(args: string[]): Promise<void> {
+  const installation = args.includes("--installation"), lines = buildInstallationDoctorLines(ROOT);
+  let providerLines: ReturnType<typeof buildProviderDoctorLines> = [];
+  try { if (!installation) {
+    const fileConfig = diagnosticConfig(lines);
+    lines.push({ code: fileConfig.provider ? "CONFIG_PRESENT" : "CONFIG_MISSING", kind: fileConfig.provider ? "info" : "warn", text: "Configuration selection" });
+    try {
+      if (existsSync(runtimeConfig.storage.advertiseFile)) {
+        const value: unknown = JSON.parse(readFileSync(runtimeConfig.storage.advertiseFile, "utf8"));
+        if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("invalid");
+      }
+    } catch { lines.push({ code: "ADVERTISEMENT_INVALID", kind: "warn", text: "Invalid server advertisement" }); }
+    lines.push(...await buildHardeningDoctorLines({ root: ROOT, configFile: CONFIG_FILE, fileConfig, includeInstallationChecks: false }));
+    providerLines = buildProviderDoctorLines(fileConfig); lines.push(...providerLines);
+    if (args.includes("--verify-keys")) lines.push(...await verifyConfiguredKeys(fileConfig));
+    lines.push(...await buildMediaDoctorLines());
+    const url = valueAfter(args, "--runtime");
+    if (url) lines.push(...await probeDoctorRuntime({ url, expectedVersion: pkg.version, timeoutMs: runtimeConfig.diagnostics.runtimeTimeoutMs }));
+  } } catch { lines.push({ code: "DIAGNOSTIC_UNKNOWN", kind: "fail", text: "A diagnostic could not complete" }); }
+  const report = buildDoctorReport({ version: pkg.version, mode: installation ? "installation" : "standard", lines });
+  if (args.includes("--json")) console.log(JSON.stringify(args.includes("--bundle") ? buildDoctorBundle({ version: pkg.version, providerLines, report }) : report));
+  else console.log(renderDoctorReport(report));
+  exitFlushed(report.summary.exitCode);
 }

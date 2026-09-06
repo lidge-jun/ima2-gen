@@ -62,31 +62,40 @@ function shouldRedactKey(key: string) {
   );
 }
 
+function sanitizeLogString(value: string): string {
+  const oneLine = value
+    .replace(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+/gi, "data:image/[redacted]")
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, "[redacted-url]")
+    .replace(/(^|[\s("'<>=,\[{])\/\/[^\s"'<>]+/g, "$1[redacted-url]")
+    .replace(/Bearer\s+[^\s"'<>]+/gi, "Bearer [redacted]")
+    .replace(/([?&][^=\s?&#"'<>]+)=([^&\s"'<>]*)/g, "$1=[redacted]")
+    .replace(/\s+/g, " ")
+    .trim();
+  return oneLine.length > MAX_VALUE_LEN ? `${oneLine.slice(0, MAX_VALUE_LEN)}...` : oneLine;
+}
+
 function sanitizeValue(value: unknown): unknown {
   if (value == null) return value;
   if (value instanceof Error) return sanitizeError(value);
   if (Array.isArray(value)) return `[array:${value.length}]`;
   if (Buffer.isBuffer(value)) return `[buffer:${value.length}]`;
   if (typeof value === "object") return "[object]";
-  if (typeof value === "string") {
-    const oneLine = value
-      .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
-      .replace(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+/gi, "data:image/[redacted]")
-      .replace(/\s+/g, " ")
-      .trim();
-    return oneLine.length > MAX_VALUE_LEN ? `${oneLine.slice(0, MAX_VALUE_LEN)}...` : oneLine;
-  }
+  if (typeof value === "string") return sanitizeLogString(value);
   return value;
 }
 
 export function sanitizeError(err: unknown) {
   if (!err) return { message: "Unknown error" };
-  const e = err as { name?: string; code?: string; status?: number; message?: string };
+  const e = typeof err === "object"
+    ? err as { name?: unknown; code?: unknown; status?: unknown; message?: unknown }
+    : {};
+  const message = typeof err === "string" ? err
+    : typeof e.message === "string" ? e.message : "Unknown error";
   return {
-    name: e.name || "Error",
-    code: e.code || undefined,
-    status: e.status || undefined,
-    message: sanitizeValue(e.message || "Unknown error"),
+    name: typeof e.name === "string" && e.name ? sanitizeLogString(e.name) : "Error",
+    code: typeof e.code === "string" ? sanitizeLogString(e.code) : undefined,
+    status: typeof e.status === "number" && Number.isFinite(e.status) ? e.status : undefined,
+    message: sanitizeLogString(message),
   };
 }
 
