@@ -63,6 +63,21 @@ test("non-loopback API access requires the configured LAN token", async () => {
     assert.equal(denied.status, 401);
     assert.equal((await denied.json()).error.code, "LAN_TOKEN_REQUIRED");
 
+    for (const path of ["/API/health", "/Api/health", "/api"]) {
+      const alias = await fetch(`${running.base}${path}`);
+      assert.equal(alias.status, 401, path);
+      assert.equal((await alias.json()).error.code, "LAN_TOKEN_REQUIRED");
+    }
+    const notApi = await fetch(`${running.base}/apix/health`);
+    assert.notEqual(notApi.status, 401);
+    const callbackPost = await fetch(`${running.base}/api/mcp/oauth/callback`, { method: "POST" });
+    assert.equal(callbackPost.status, 401);
+    for (const path of ["/api/mcp/oauth/callback", "/API/MCP/OAUTH/CALLBACK"]) {
+      const callbackGet = await fetch(`${running.base}${path}`);
+      assert.notEqual(callbackGet.status, 401, path);
+      assert.equal(callbackGet.status, 400, "missing OAuth state fails before any exchange");
+    }
+
     const headerAllowed = await fetch(`${running.base}/api/health`, {
       headers: { "x-ima2-token": "test-lan-secret" },
     });
