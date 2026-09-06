@@ -109,6 +109,22 @@ test("pure store: concurrent issuance stops at the 256-session bound", async () 
   } finally { store.dispose(); }
 });
 
+test("pure middleware: literal comma token works while duplicate raw fields fail", async () => {
+  const { createLanApiGuard } = await import("../lib/localLanAccess.ts");
+  const guard = createLanApiGuard("0.0.0.0", "legacy,a");
+  for (const duplicate of [false, true]) {
+    const req = { path: "/api/health", method: "GET", originalUrl: "/api/health",
+      rawHeaders: duplicate ? ["x-ima2-token", "legacy,a", "x-ima2-token", "legacy,a"] : ["x-ima2-token", "legacy,a"],
+      headers: { "x-ima2-token": "legacy,a" } } as unknown as import("express").Request;
+    let next = 0, status = 0;
+    const res = { getHeader: () => undefined, setHeader: () => {},
+      status(code: number) { status = code; return this; }, type() { return this; }, end() {} } as unknown as import("express").Response;
+    guard(req, res, () => { next++; });
+    assert.equal(next, duplicate ? 0 : 1);
+    assert.equal(status, duplicate ? 401 : 0);
+  }
+});
+
 // Imports of real buildApp/config/native modules stay inside hosted callbacks below.
 // These are NOT part of the locally allowed --test-name-pattern='pure ' run.
 async function httpFixture(t: import("node:test").TestContext, options: { publicOrigins?: string[]; host?: string } = {}) {
@@ -172,9 +188,20 @@ test("hosted HTTP: bootstrap/status/logout, explicit precedence, shape and safe 
 
 test("hosted HTTP: HTTPS cookie attributes, local no-cookie flow and single shared budget", async t => {
   const tls = await httpFixture(t, { publicOrigins: ["https://studio.example"] });
-  const response = await tls.bootstrap({ host: "studio.example", origin: "https://studio.example", "x-ima2-token": "synthetic-session-token" });
+  // Native fetch drops a caller-supplied Host. This is the synthetic reverse
+  // proxy wire contract, so send the exact authority with node:http instead.
+  const { request } = await import("node:http");
+  const response = await new Promise<{ status: number; cookie: string | undefined }>((resolve, reject) => {
+    const req = request(`${tls.base}/api/auth/lan/session`, { method: "POST", headers: {
+      host: "studio.example", origin: "https://studio.example", "x-ima2-token": "synthetic-session-token",
+      "content-type": "application/json", "content-length": "2",
+    } }, res => {
+      res.resume(); res.on("end", () => resolve({ status: res.statusCode!, cookie: res.headers["set-cookie"]?.[0] }));
+    });
+    req.on("error", reject); req.end("{}");
+  });
   assert.equal(response.status, 204);
-  assert.match(response.headers.get("set-cookie")!, /^__Host-ima2_lan_[a-f0-9]{12}=[\w-]{43}; Path=\/; HttpOnly; Secure; SameSite=Strict$/);
+  assert.match(response.cookie!, /^__Host-ima2_lan_[a-f0-9]{12}=[\w-]{43}; Path=\/; HttpOnly; Secure; SameSite=Strict$/);
   const local = await httpFixture(t, { host: "127.0.0.1" });
   const created = await local.bootstrap(); assert.equal(created.status, 204); assert.equal(created.headers.get("set-cookie"), null);
   for (let i = 1; i < 120; i++) { const res = await local.bootstrap(); assert.equal(res.status, 204, `mutation ${i + 1}`); }

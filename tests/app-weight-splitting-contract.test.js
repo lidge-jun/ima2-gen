@@ -146,7 +146,16 @@ test("built output splits mode and prompt-import chunks when dist exists", () =>
   const entries = Object.values(manifest).filter((chunk) => chunk.isEntry);
   assert.equal(entries.length, 1, `expected one Vite entry chunk, got ${entries.length}`);
   const staticInitialFiles = visitStaticImports(manifest, entries[0]);
-  const dynamicImports = new Set(entries.flatMap((chunk) => chunk.dynamicImports ?? []));
+  // The preauth shell now lazy-loads App before App's existing feature chunks.
+  const appChunks = (entries[0].dynamicImports ?? []).map((id) => manifest[id])
+    .filter((chunk) => chunk?.name === "App");
+  assert.equal(appChunks.length, 1, "preauth entry must dynamically reach App");
+  const dynamicImports = new Set(appChunks.flatMap((chunk) => chunk.dynamicImports ?? []));
+  const staticAppFiles = visitStaticImports(manifest, appChunks[0]);
+  for (const feature of ["src/components/NodeCanvas.tsx", "src/components/card-news/CardNewsWorkspace.tsx",
+    "src/components/PromptLibraryPanel.tsx", "src/components/canvas-mode/index.ts"]) {
+    assert.ok(!staticAppFiles.has(manifest[feature]?.file), `${feature} must remain lazy after authentication`);
+  }
 
   assert.match(keys, /src\/components\/NodeCanvas\.tsx/);
   assert.match(keys, /src\/components\/card-news\/CardNewsWorkspace\.tsx/);

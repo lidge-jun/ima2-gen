@@ -39,7 +39,7 @@ function readCredentials(req: Request, name: string, maxBytes: number) {
   for (const value of [header, query, cookie]) {
     if (value !== undefined && Buffer.byteLength(value) > maxBytes) throw localAccessError("LAN_TOKEN_REQUIRED", 401);
   }
-  if ((header !== undefined && header.includes(",")) || (cookie !== undefined && !/^[\w-]{43}$/.test(cookie))) {
+  if (cookie !== undefined && !/^[\w-]{43}$/.test(cookie)) {
     throw localAccessError("LAN_TOKEN_REQUIRED", 401);
   }
   return { header, query, cookie, explicit: header ?? query };

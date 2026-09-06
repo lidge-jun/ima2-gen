@@ -137,8 +137,8 @@ function keyOf(row: { file: string; atRule: string | null; selector: string }): 
 
 test("the frozen manifest covers every border-radius declaration exactly once", () => {
   const decls = radiusDecls().filter((d) => d.prop === "border-radius");
-  // WP03 added one CTA; WP08 aligns two classic pane borders with their clipped corners.
-  assert.equal(MANIFEST.length, 479, "the manifest is frozen at 479 rows");
+  // WP12s adds exactly three inspected sign-in panel/input/button declarations.
+  assert.equal(MANIFEST.length, 482, "the manifest is frozen at 482 rows");
   assert.equal(decls.length, MANIFEST.length, "declaration count drifted from the manifest");
 
   const manifestKeys = new Set(MANIFEST.map(keyOf));

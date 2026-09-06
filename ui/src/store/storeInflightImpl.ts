@@ -80,9 +80,6 @@ async function pollHistory(initial: InflightSnapshot, eligibility: HistoryEligib
 function idleTick(state: AppState, w: PollWindow): boolean {
   const idle = state.inFlight.length === 0 && state.activeGenerations === 0;
   w.__ima2StopTicks = idle ? (w.__ima2StopTicks ?? 0) + 1 : 0;
-  if (w.__ima2StopTicks >= 2 && w.__ima2InflightTimer) {
-    stopInFlightPollingImpl();
-  }
   return idle;
 }
 
@@ -106,6 +103,10 @@ async function pollTick(set: StoreSet, get: StoreGet, w: PollWindow): Promise<vo
     }
   }
   if (isCurrent() && isInflightSnapshotCurrent(initial, get())) await pollHistory(initial, eligibility, set, get, isCurrent);
+  // Complete the second idle history observation before invalidating its epoch.
+  // Auth loss/unmount still invalidates held reads immediately via stopPolling.
+  if (isCurrent() && (w.__ima2StopTicks ?? 0) >= 2
+    && get().inFlight.length === 0 && get().activeGenerations === 0) stopInFlightPollingImpl();
 }
 
 export function startInFlightPollingImpl(set: StoreSet, get: StoreGet): void {

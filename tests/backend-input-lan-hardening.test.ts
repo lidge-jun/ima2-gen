@@ -125,6 +125,6 @@ test("LAN binding is rejected before listen without explicit token opt-in", () =
   assert.doesNotThrow(() => assertLanAccessConfiguration("0.0.0.0", "explicit-token"));
   assert.throws(
     () => assertLanAccessConfiguration("0.0.0.0", ""),
-    /Refusing non-loopback host 0\.0\.0\.0.*IMA2_LAN_TOKEN/,
+    { message: "[server.security] Set a nonempty IMA2_LAN_TOKEN of at most 4096 UTF-8 bytes to enable LAN access." },
   );
 });
