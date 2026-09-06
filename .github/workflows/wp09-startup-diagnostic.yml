@@ -45,7 +45,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ui/package-lock.json
-      - run: npm ci
+      - run: npm ci --foreground-scripts
       - run: npm --prefix ui ci --no-audit --no-fund
       - name: Install browser for the observed UI failures
         run: npx --prefix ui playwright install --with-deps chromium
