@@ -1,6 +1,6 @@
 import { getDb } from "./db.js";
 import { mkdir, rename, unlink, lstat, realpath } from "fs/promises";
-import { resolve, sep } from "path";
+import { basename, dirname, join, resolve, sep } from "path";
 import { moveToSystemTrash } from "./systemTrash.js";
 import { config } from "../config.js";
 
@@ -20,7 +20,8 @@ export function resolveInGenerated(rootDir: string, relPath: string): string {
   }
   const baseDir = resolve(config.storage.generatedDir);
   const target = resolve(baseDir, relPath);
-  if (target !== baseDir && !target.startsWith(baseDir + sep)) {
+  const prefix = baseDir.endsWith(sep) ? baseDir : baseDir + sep;
+  if (target === baseDir || !target.startsWith(prefix)) {
     const err: any = new Error("filename escapes generated/");
     err.status = 400;
     err.code = "INVALID_FILENAME";
@@ -30,7 +31,13 @@ export function resolveInGenerated(rootDir: string, relPath: string): string {
 }
 
 export async function assertRegularGeneratedPath(path: string): Promise<void> {
-  const baseDir = await realpath(resolve(config.storage.generatedDir));
+  try { await regularFileWithin(path, config.storage.generatedDir); }
+  catch (error) { throw error; }
+}
+
+/** Existing assets only; output filenames use the separate lexical resolver. */
+async function regularFileWithin(path: string, root: string): Promise<string> {
+  const baseDir = await realpath(resolve(root));
   const stat = await lstat(path);
   if (stat.isSymbolicLink()) {
     const err: any = new Error("symbolic links are not valid assets");
@@ -38,13 +45,18 @@ export async function assertRegularGeneratedPath(path: string): Promise<void> {
     err.code = "INVALID_FILENAME";
     throw err;
   }
+  if (!stat.isFile()) {
+    throw Object.assign(new Error("only regular files are valid assets"), { status: 400, code: "INVALID_FILENAME" });
+  }
   const canonical = await realpath(path);
-  if (canonical !== baseDir && !canonical.startsWith(baseDir + sep)) {
+  const prefix = baseDir.endsWith(sep) ? baseDir : baseDir + sep;
+  if (canonical === baseDir || !canonical.startsWith(prefix)) {
     const err: any = new Error("filename escapes generated/");
     err.status = 400;
     err.code = "INVALID_FILENAME";
     throw err;
   }
+  return canonical;
 }
 
 function nodesReferencingFilename(filename: string): Array<{ sessionId: string; id: string; data: string }> {
@@ -112,7 +124,7 @@ export async function trashAsset(rootDir: string, filename: string) {
     trashMethod = "internal";
     const trashDir = resolve(config.storage.trashDir);
     await mkdir(trashDir, { recursive: true });
-    const trashId = `${Date.now()}_${filename}`;
+    const trashId = `${Date.now()}_${basename(src)}`;
     for (const p of paths) {
       const dest = resolve(trashDir, p.endsWith(".json") ? `${trashId}.json` : trashId);
       await rename(p, dest);
@@ -159,16 +171,28 @@ export async function deleteAssetPermanent(rootDir: string, filename: string) {
 }
 
 export async function restoreAsset(rootDir: string, trashId: string, originalFilename: string) {
-  void rootDir;
   const trashDir = resolve(config.storage.trashDir);
   const src = resolve(trashDir, trashId);
-  if (!src.startsWith(trashDir + sep) && src !== trashDir) {
+  const prefix = trashDir.endsWith(sep) ? trashDir : trashDir + sep;
+  if (src === trashDir || !src.startsWith(prefix)) {
     const err: any = new Error("invalid trashId");
     err.status = 400;
+    err.code = "INVALID_FILENAME";
     throw err;
   }
+  const canonicalSrc = await regularFileWithin(src, trashDir);
+  let canonicalSidecar: string | undefined;
+  try { canonicalSidecar = await regularFileWithin(`${src}.json`, trashDir); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
   const dst = resolveInGenerated(rootDir, originalFilename);
-  await rename(src, dst);
-  await rename(src + ".json", dst + ".json").catch(() => {});
+  const generatedRoot = await realpath(config.storage.generatedDir);
+  const parent = await realpath(dirname(dst));
+  const generatedPrefix = generatedRoot.endsWith(sep) ? generatedRoot : generatedRoot + sep;
+  if (parent !== generatedRoot && !parent.startsWith(generatedPrefix)) {
+    throw Object.assign(new Error("restore destination escapes generated/"), { status: 400, code: "INVALID_FILENAME" });
+  }
+  const canonicalDst = join(parent, basename(dst));
+  await rename(canonicalSrc, canonicalDst);
+  if (canonicalSidecar) await rename(canonicalSidecar, `${canonicalDst}.json`);
   return { ok: true };
 }
