@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -17,8 +17,14 @@ test("PR checkout retains history needed by release provenance", () => {
 test("depth two has a merge parent but cannot prove older ancestry; unshallow restores proof", () => {
   const root = mkdtempSync(join(tmpdir(), "ima2-pr-history-"));
   const source = join(root, "source"), shallow = join(root, "shallow");
-  const git = (args, cwd = root) => execFileSync("git", args, {
-    cwd, encoding: "utf8", timeout: 10_000, stdio: ["ignore", "pipe", "pipe"],
+  const empty = join(root, "empty"), emptyConfig = join(root, "empty-config");
+  mkdirSync(empty); writeFileSync(emptyConfig, "");
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith("GIT_")));
+  Object.assign(env, { GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: emptyConfig, GIT_TEMPLATE_DIR: empty });
+  const prefix = ["-c", `core.hooksPath=${empty}`, "-c", "core.fsmonitor=false",
+    "-c", `core.attributesFile=${emptyConfig}`, "-c", `core.excludesFile=${emptyConfig}`];
+  const git = (args, cwd = root) => execFileSync("git", [...prefix, ...args], {
+    cwd, env, encoding: "utf8", timeout: 10_000, stdio: ["ignore", "pipe", "pipe"],
   }).trim();
   try {
     git(["init", "--initial-branch=main", source]);
@@ -30,8 +36,8 @@ test("depth two has a merge parent but cannot prove older ancestry; unshallow re
     }
     git(["clone", "--depth=2", pathToFileURL(source).href, shallow]);
     assert.match(git(["rev-parse", "HEAD^1"], shallow), /^[a-f0-9]{40}$/);
-    const absent = spawnSync("git", ["merge-base", "--is-ancestor", oldest, "HEAD"], {
-      cwd: shallow, encoding: "utf8", timeout: 10_000,
+    const absent = spawnSync("git", [...prefix, "merge-base", "--is-ancestor", oldest, "HEAD"], {
+      cwd: shallow, env, encoding: "utf8", timeout: 10_000,
     });
     assert.equal(absent.error, undefined);
     assert.equal(absent.status, 128);
