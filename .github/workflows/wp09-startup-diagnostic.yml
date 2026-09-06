@@ -59,7 +59,7 @@ jobs:
         env:
           WP08_BUILD_COMMAND: npm --prefix ui run build:fixture
           WP08_BUILD_OUTCOME: ${{ steps.fixture_build.outcome }}
-        run: npm --prefix ui run test:e2e -- --project=journeys --grep 'J4 node|wp09-bottom-short dark|mobile navigation 320 en|T6 retired' --reporter=line
+        run: npm --prefix ui run test:e2e -- --project=journeys --grep 'wp09-bottom-short dark|mobile navigation 320 en' --reporter=line
       - name: Upload diagnostic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

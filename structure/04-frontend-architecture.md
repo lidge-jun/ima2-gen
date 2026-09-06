@@ -16,7 +16,9 @@ share the same `--r-md` radius as their clipping shape.
 The mobile navigation background is opaque `--bg` so scrolling content cannot
 bleed through its labels; fixed positioning and safe-area allocation are unchanged.
 The mobile rail scrolls horizontally inside its own boundary, keeps nonshrinking
-44px targets and reveals its active destination without scrolling the document.
+44px targets and reveals its active or keyboard-focused destination without scrolling the document.
+In short NAI bottom docks, the empty disabled reference tray is hidden to preserve
+editing space; retained references and other providers keep their tray.
 
 Classic and Home retain separate submit policies. Their positive and negative
 fields suppress Ctrl/Cmd+Enter during composition using local refs, native

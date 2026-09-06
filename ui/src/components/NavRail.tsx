@@ -139,17 +139,18 @@ export function NavRail() {
   const isMobile = useIsMobile();
   const mobileNavRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    if (!isMobile) return;
+  const revealMobileItem = useCallback((button: HTMLElement | null) => {
     const nav = mobileNavRef.current;
-    if (!nav) return;
-    const active = nav.querySelector<HTMLElement>(".nav-rail__btn.is-active");
-    if (!active) return;
+    if (!nav || !button) return;
     const navRect = nav.getBoundingClientRect();
-    const buttonRect = active.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
     if (buttonRect.left < navRect.left) nav.scrollLeft -= navRect.left - buttonRect.left;
     else if (buttonRect.right > navRect.right) nav.scrollLeft += buttonRect.right - navRect.right;
-  }, [isMobile, uiMode, settingsOpen]);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) revealMobileItem(mobileNavRef.current?.querySelector<HTMLElement>(".nav-rail__btn.is-active") ?? null);
+  }, [isMobile, uiMode, settingsOpen, revealMobileItem]);
 
   const navigate = useCallback((item: RailItem) => {
     if (item.settingsAction) {
@@ -215,7 +216,10 @@ export function NavRail() {
 
   if (isMobile) {
     return (
-      <nav ref={mobileNavRef} className="nav-rail nav-rail--mobile" aria-label={t("nav.ariaLabel")}>
+      <nav ref={mobileNavRef} className="nav-rail nav-rail--mobile" aria-label={t("nav.ariaLabel")}
+        onFocusCapture={(event) => {
+          if (event.target instanceof HTMLElement) revealMobileItem(event.target.closest<HTMLElement>(".nav-rail__btn"));
+        }}>
         {enabledItems.map(renderItem)}
       </nav>
     );

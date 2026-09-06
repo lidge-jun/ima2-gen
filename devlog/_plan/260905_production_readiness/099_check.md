@@ -37,3 +37,28 @@ Next single diagnostic job runs only the four distinct observed failure families
 (J4, bottom-short dark, mobile320en, T6) plus the unchanged isolation dependency.
 Built-in line reporter retains immediate error details; bounded test-step time
 leaves upload time. No fullCI rerun or blanket timeout/allowlist relaxation.
+
+Observed product repair, not a new test gate: at1440x600 the bottom dock is312px,
+composer292px, but the editing scrollport is only51px. Both textarea floors are
+already86px or greater (rejects a textarea-floor hypothesis); scrolling works
+(rejects a broken-scroll hypothesis). The empty disabled reference tray consumes
+48px plus layout gap even though NAI cannot attach references. Hide ONLY that empty
+tray in the short-height NAI bottom composer. Keep retained references, other
+providers/surfaces, the52vh/420px cap and86–148px input bounds unchanged. Existing
+short-height contrast/control tests must verify the repair; no assertions relaxed.
+
+Focused run34002750849 at58ccaab5:26pass/2fail. T6 metadata fixture correction
+passes; J4 passes unchanged in this run (not a claimed fix for its earlier outcome).
+Short dock fails flat-background sampling because its51px scrollport clips the
+input. Mobile320en fails when focused Asset Gen is only0.518 visible. Labels and
+focus itself pass, rejecting missing-target/label-size hypotheses; active-item
+reveal runs only on mode/settings changes, not keyboard focus. Reuse that same
+nav-local reveal on focus capture. No document scrolling, target shrink, assertion
+relaxation or new test case. Next run is the same focused diagnostic against fixes.
+
+The truncated full-run dot stream did not identify each failure by name; its
+position-to-list mapping is diagnostic inference, not proof of a J4 failure or
+flake. The named focused result is authoritative. Next single job checks only
+the two remaining named failures, keeping the original isolation dependency.
+After these grouped fixes pass, full CI checks the retained suite including core
+cases lacking terminal outcomes. No unrelated diagnostic matrix or new test.

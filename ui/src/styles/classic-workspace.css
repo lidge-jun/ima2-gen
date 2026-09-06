@@ -135,6 +135,15 @@
   max-height: min(52dvh, 420px);
 }
 
+@media (max-height: 700px) {
+  /* NAI cannot attach references. In a short dock, its empty disabled tray
+     consumes the space needed to see the editor; retained references stay visible. */
+  .composer--bottom:has(.composer__prompt-panes--dual)
+    .composer__tray-wrap:not(:has([role="listitem"])) {
+    display: none;
+  }
+}
+
 .classic-workspace__dock .generate-row {
   align-self: stretch;
   display: grid;
