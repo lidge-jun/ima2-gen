@@ -75,3 +75,32 @@ After A, B checkpoints this documentation/allocation-only amendment; C performs
 the missing exact-head gates. SoT remains current README/AGENTS/structure docs
 already updated by WP11; no new SoT tooling. Rollback is the existing110/111
 contract; never restore global process-kill/cache-clean behavior as a workaround.
+
+## A fold-back — c-12 built runtime inventory
+
+Reviewer119-audit correctly identified that c-12's literal inventory evidence
+was not explicitly mapped after112 removed the standalone drift checker.
+Accept the documentation/evidence gap; do not delete or silently weaken c-12.
+Two separate claims must not be conflated: an inventory lists the actual packed
+runtime files; a byte-for-byte source/emitted-file drift checker was withdrawn.
+The latter is still NOT delivered or claimed. Existing fresh builds/prepack and
+installed JS smoke establish executable artifact behavior, not that withdrawn
+per-file comparison feature.
+
+Minimal amended B delta: MODIFY tests/package-install-smoke.mjs, in its existing
+fresh npm pack branch immediately after parsePackOutput. Emit the npm-produced
+manifest's files list with kind=packed-runtime-inventory and package/version
+identity to the existing CI log. Reuse the already returned manifest; do not run
+another pack, traverse the filesystem, add a helper, assertion matrix, parser,
+new test file or generic checker. Preserve all bundled-bin, installed-JS/no-TS,
+offline-doctor, native, health and teardown checks. The supplied-release-tarball
+branch does not produce this fresh-pack manifest and must not claim this log.
+
+Existing package.json prepack builds UI/server/CLI before npm enumerates files.
+Current-head full CI invokes the existing package-install test WITHOUT a supplied
+tarball in both Windows and Linux lanes; those logs must expose the inventory.
+C reads the actual list and verifies bin/ima2.js, server.js, config.js, built
+bin/lib/routes JS and ui/dist entries are present, while source app TS is not
+packed. This is evidence inspection, not a new repository checker or suite.
+Retain the emitted log and actual installed runtime output together as c-12
+evidence; a package-install pass line by itself is not the inventory.
