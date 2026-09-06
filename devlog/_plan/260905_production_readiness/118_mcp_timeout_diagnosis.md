@@ -33,3 +33,12 @@ plus original TS transpilation) from CI's tsx entry and is explicitly not identi
 At the four-hour reassessment the implementation is complete and only this
 isolated candidate failure remains. Continue bounded diagnosis within the existing
 goal bound; do not add a new test platform or start WP12 implementation early.
+
+Diagnostic34017574526 atfeece594 passed allfour MCP cases in180ms; its unrelated
+loadCliDefaults failed because the reduced setup omitted emitted config.js.
+Restore only build:server, which owns that direct dependency. Do not patch the
+test or pretend this setup failure reproduces the original timeout. Next bounded
+measurement is30 fresh file processes,3 at a time on the hosted runner to observe
+contention-sensitive frequency. Stop the batches at the first failure and retain
+its full trace. Passing measurements are not accepted as remediation. No timeout
+change, retries inside a test, new harness file or whole-CI rerun for diagnosis.
