@@ -286,7 +286,7 @@ test("/api/video/edit rejects whitespace prompt and unsafe generated-file inputs
       body: JSON.stringify({ prompt: "edit", videoUrl: "linked.mp4" }),
     });
     assert.equal(linked.status, 400);
-    assert.match((await linked.json()).error, /invalid file path|MP4/);
+    assert.equal((await linked.json()).error, "invalid file path", "canonical rejection must precede MP4 decoding");
   } finally {
     await fixture.finishCase();
     await rm(generatedDir, { recursive: true, force: true });
