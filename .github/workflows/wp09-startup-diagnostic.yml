@@ -52,7 +52,8 @@ jobs:
       - run: npm run build:server
       - run: npm run build:cli
       - name: Verify corrected native session authority contract
-        run: node --import tsx --test --test-name-pattern='^hosted HTTP: HTTPS' tests/lan-session.test.ts
+        run: >-
+          node --import tsx --test --test-name-pattern='^hosted HTTP: HTTPS' tests/lan-session.test.ts
       - name: Build fixture UI
         id: fixture_build
         run: npm --prefix ui run build:fixture
