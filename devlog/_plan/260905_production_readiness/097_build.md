@@ -172,3 +172,10 @@ boot process discovery classifier gap (falsifier: process count0), H3 boot egres
 (falsifier: connection count0). Main now includes bounded sanitized IPC summaries
 in assertClean's error text; no raw paths, request bodies or credential values.
 Do not waive or broaden any guard until the actual channel/operation is known.
+
+UI-test static reviewer Epicurus01a0740e-f7ab-78a2-aee1-1ff132578af4 proposed two
+findings, both rebutted without patches. `serveCatalog` handles invalid JSON before
+the fallback `readFixtures` call; the report inverted that real branch order.
+The mutation screenshot is dark-only and TestInfo.outputPath is per test, so the
+reported potential dark/light collision cannot occur. Reviewer was sent exact
+control-flow anchors for correction. These reports are not native UI proof.

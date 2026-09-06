@@ -196,3 +196,48 @@ test("projection construction keeps its original failure when cleanup also fails
     assert.ok(attemptedCleanup.startsWith(f.temporary + path.sep));
   } finally { await f.close(); }
 });
+
+for (const fault of ["copy-tamper", "post-copy-busy"]) test("projection rejects a build/copy race: " + fault, async () => {
+  const f = await fixture();
+  try {
+    const buildDir = path.join(f.root, "ui/dist"); await f.put("ui/dist/index.html", "GOOD");
+    await f.put("assets/mcp-snapshots/higgsfield.sanitized.json", "{}");
+    await f.put("assets/mcp-snapshots/runway.sanitized.json", "{}");
+    const digest = (value) => crypto.createHash("sha256").update(value).digest("hex");
+    const outputs = [{ path: "index.html", bytes: 4, sha256: digest("GOOD") }];
+    const compiled = await build({ entryPoints: [fileURLToPath(new URL("../ui/e2e/fixtures/appProjection.ts", import.meta.url))],
+      bundle: true, write: false, platform: "node", format: "cjs", logLevel: "silent",
+      external: ["node:*", "./appOwnership", "./appRuntimeBuild", "../../../scripts/lib/uiBuildReceipt.mjs"] });
+    let receiptReads = 0;
+    const modules = { "node:path": path, "node:crypto": crypto, "node:util": util, "node:fs/promises": fs,
+      "node:os": { tmpdir: () => f.temporary }, "node:child_process": { execFile(_file, args, _options, callback) {
+        assert.equal(args[0], "ls-files"); callback(null, { stdout: "assets/mcp-snapshots/higgsfield.sanitized.json\0assets/mcp-snapshots/runway.sanitized.json\0" });
+      } },
+      "./appOwnership": { requireAppHome: async () => {} },
+      "./appRuntimeBuild": { getVerifiedRuntimeBuild: async () => ({ root: f.root, files: [{
+        emittedPath: "server.js", emittedSha256: digest("export {};\n"),
+      }] }), readRuntimeFile: async (root, name) => {
+        if (root === buildDir && fault === "copy-tamper") return Buffer.from("EVIL");
+        return fs.readFile(path.join(root, name));
+      } },
+      "../../../scripts/lib/uiBuildReceipt.mjs": {
+        inventoryUiOutputs: async (root) => {
+          assert.equal(await fs.readFile(path.join(root, "index.html"), "utf8"), "GOOD"); return outputs;
+        },
+        verifyUiBuildReceipt: async () => {
+          receiptReads++;
+          if (fault === "post-copy-busy" && receiptReads > 1) throw Object.assign(Error("UI_RECEIPT_BUSY"), { code: "UI_RECEIPT_BUSY" });
+          return { receipt: { outputs } };
+        },
+      },
+    };
+    const context = { Buffer, module: { exports: {} }, require: (name) => {
+      assert.ok(Object.hasOwn(modules, name), "unexpected real dependency: " + name); return modules[name];
+    } };
+    vm.runInNewContext(compiled.outputFiles[0].text, context, { timeout: 2000 });
+    await assert.rejects(context.module.exports.createAppProjection({ repoRoot: f.root, home: f.temporary, buildDir }),
+      fault === "copy-tamper" ? /E2E_PROJECTION_INVALID/ : /UI_RECEIPT_BUSY/);
+    assert.equal(receiptReads, fault === "copy-tamper" ? 1 : 2);
+    assert.deepEqual(await fs.readdir(f.temporary), []);
+  } finally { await f.close(); }
+});
