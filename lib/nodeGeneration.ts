@@ -110,7 +110,9 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
           parentNodeId,
         });
       }
-      const validation = validateNodeInputs(ctx, rawPrompt, references, moderation);
+      // Only API/OAuth persist the requested format; other providers select their output format.
+      const validation = validateNodeInputs(ctx, rawPrompt, references, moderation,
+        activeProvider === "api" || activeProvider === "oauth" ? format : undefined);
       if (validation.error) {
         finishStatus = "error";
         finishHttpStatus = 400;
@@ -296,7 +298,7 @@ export async function runNodeGeneration(req: Request, res: Response, ctx: Runtim
           publish(requestId, "partial", pd);
         },
       } : undefined);
-      let resultFormat: "png" | "jpeg" | "webp" = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : format as "png" | "jpeg" | "webp";
+      let resultFormat = activeProvider === "grok" || activeProvider === "agy" || activeProvider === "grok-api" || activeProvider === "gemini-api" || activeProvider === "atlascloud" || activeProvider === "minimax" ? "jpeg" : format;
       const maxAttempts = inputImageCount > 0 ? 1 : 2;
       let lastErr: UpstreamErr | null = null;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {

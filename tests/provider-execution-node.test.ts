@@ -1,6 +1,6 @@
 import { after, before, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import { executionTestProcess } from "./_executionTestProcess.ts";
@@ -77,6 +77,55 @@ if (executionTestProcess(import.meta.url)) describe("node execution: real route 
       (await sharp({ create: { width: 8, height: 8, channels: 3, background } }).png().toBuffer()).toString("base64")));
   });
   after(async () => { try { await harness?.close(); } finally { agyMock?.restore(); } });
+
+  for (const provider of ["api", "oauth"]) it(`H1 ${provider} rejects unsafe formats before provider work`, async () => {
+    for (const format of ["/../../h1-victim", "\\..\\..\\h1-victim", "gif", "", null, ["png"], {}]) {
+      await harness.run("node", { upstream: () => frames(red) }, async (fixture) => {
+        const victim = join(fixture.ctx.rootDir, "h1-victim");
+        await writeFile(victim, "owned sentinel");
+        await writeFile(victim + ".json", "owned sidecar sentinel");
+        const response = await fixture.post({ ...BASE, provider, format });
+        const body = await response.json();
+        await fixture.waitSettled();
+        assert.equal(await readFile(victim, "utf8"), "owned sentinel");
+        assert.equal(await readFile(victim + ".json", "utf8"), "owned sidecar sentinel");
+        assert.equal(response.status, 400);
+        assert.equal(body.error.code, "INVALID_FORMAT");
+        assert.equal(fixture.calls.length, 0);
+        assert.deepEqual(await readdir(fixture.generatedDir), []);
+        assert.deepEqual(fixture.events, []);
+      });
+    }
+  });
+
+  for (const provider of ["api", "oauth"]) it(`H1 ${provider} saves all supported formats including jpg`, async () => {
+    for (const format of ["png", "jpeg", "jpg", "webp"]) {
+      await harness.run("node", { upstream: () => frames(red) }, async (fixture) => {
+        const response = await fixture.post({ ...BASE, provider, format });
+        const body = await response.json();
+        await fixture.waitSettled();
+        assert.equal(response.status, 200);
+        assert.ok(body.filename.endsWith(`.${format}`));
+        assert.equal(fixture.calls.length, 1);
+        assert.equal((await sharp(await readFile(join(fixture.generatedDir, body.filename))).metadata()).format,
+          format === "jpg" ? "jpeg" : format);
+        const meta = JSON.parse(await readFile(join(fixture.generatedDir, body.filename + ".json"), "utf8"));
+        assert.equal(meta.format, format);
+        assert.equal(meta.options.format, format);
+      });
+    }
+  });
+
+  it("H1 Grok ignores request format and saves the detected result format", async () => {
+    await harness.run("node", { context: { xaiApiKey: "xai-fixture" }, upstream: (call) => grokResponse(call, red) }, async (fixture) => {
+      const response = await fixture.post({ ...BASE, provider: "grok-api", model: "grok-imagine-image", format: "/../../h1-victim" });
+      const body = await response.json();
+      await fixture.waitSettled();
+      assert.equal(response.status, 200);
+      assert.ok(body.filename.endsWith(".png"));
+      assert.equal(body.format, "png");
+    });
+  });
 
   it("E03-1 API wire, effective prompt and raw sidecar stay distinct", async () => {
     await harness.run("node", { context: { apiKey: "sk-node-fixture" }, upstream: (call) => {
