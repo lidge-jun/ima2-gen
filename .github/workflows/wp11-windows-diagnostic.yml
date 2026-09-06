@@ -31,9 +31,7 @@ jobs:
         run: node scripts/assert-ci-sha.mjs
       - run: npm install -g npm@11.18.0
       - run: npm ci
-      - run: npm --prefix ui ci --no-audit --no-fund
       - run: npm run build:server
       - run: npm run build:cli
-      - run: npm --prefix ui run build
-      - name: Observe MCP in the original root-suite context
-        run: npm test
+      - name: Verify the owned agent DB teardown
+        run: node --experimental-test-module-mocks --import tsx --test tests/agent-mode-runtime-contract.test.ts

@@ -20,11 +20,12 @@ const originalFetch = isolation.nativeFetch;
 let appOrigin: string | undefined;
 let appServer: import("node:http").Server | undefined;
 let closeDb: (() => void) | undefined;
+let stopQueueWorker: (() => void) | undefined;
 let restoreWrites: (() => void) | undefined;
 const artifactSpies: ReturnType<typeof forbidArtifactArrayBuffer>[] = [];
 const videoViolations: unknown[] = [];
 after(async () => {
-  try { await drain(); }
+  try { stopQueueWorker?.(); await drain(); }
   finally {
     try { closeDb?.(); restoreWrites?.(); }
     finally { await isolation.close(); }
@@ -47,6 +48,7 @@ for (const key of ["configDir", "dbPath", "generatedDir", "trashDir", "generatio
 ({ closeDb } = await import("../lib/db.js"));
 restoreWrites = await installTrackedWrites();
 const { registerAgentRoutes } = await import("../routes/agent.ts");
+({ stopAgentQueueWorker: stopQueueWorker } = await import("../lib/agentQueueWorker.ts"));
 const { isRuntimeRestartableError } = await import("../lib/agentRuntime.ts");
 const { runAgentVideoGeneration } = await import("../lib/agentImageVideoGen.ts");
 const { createAgentSession, getAgentImages, getAgentTurns } = await import("../lib/agentStore.ts");
