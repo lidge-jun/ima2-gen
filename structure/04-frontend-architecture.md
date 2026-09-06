@@ -15,6 +15,8 @@ pane/Home-input borders use the existing `--text-muted` role. Classic pane borde
 share the same `--r-md` radius as their clipping shape.
 The mobile navigation background is opaque `--bg` so scrolling content cannot
 bleed through its labels; fixed positioning and safe-area allocation are unchanged.
+The mobile rail scrolls horizontally inside its own boundary, keeps nonshrinking
+44px targets and reveals its active destination without scrolling the document.
 
 Classic and Home retain separate submit policies. Their positive and negative
 fields suppress Ctrl/Cmd+Enter during composition using local refs, native
@@ -77,7 +79,20 @@ not GPT scalar settings. Selection callbacks recheck current provider and catalo
 before applying a workflow. Missing/offline/locked choices remain named but disabled.
 Manager create/delete success refreshes both its list and this shared observation;
 catalog failure does not turn a successful write into a failed mutation. The new
-readiness popup branch is core-Comfy only; legacy MCP popup facts remain WP09 work.
+core-Comfy readiness branch remains separate from MCP observations.
+
+`McpReadinessDetails` reads the selected MCP provider/model/kind only while the
+popup is mounted. `mcpReadiness.ts` validates consumed fields and distinguishes
+default model, missing/locked models, disconnected providers and failed reads.
+Observation-only GETs do not mutate the legacy provider cache. Selection changes,
+refresh and unmount abort obsolete reads; the popup does not connect or generate.
+
+Hosted UI fixtures use owned temporary homes and emitted runtime projections.
+`build:fixture` binds source/options/output hashes to the current SHA; ordinary
+builds are unchanged. The isolation project precedes UI journeys. Guards deny
+unowned file/process/network access; fixed libc probes remain denied but are
+separately observed. This is a regression fixture, not an OS security sandbox.
+WP09 startup-only diagnostic results do not replace full CI or visual acceptance.
 
 The current `ima2-gen` web UI is the React app under `ui/src/`. The server serves the built bundle under `ui/dist/`. The old single-file HTML UI remains as `public/index.html.legacy`, but it is not the active entrypoint.
 

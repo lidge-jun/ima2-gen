@@ -1,4 +1,4 @@
-name: WP09 startup diagnostic
+name: WP09 focused UI diagnostic
 
 on:
   push:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   startup:
-    name: WP09 startup diagnostic (not release CI)
+    name: WP09 focused UI diagnostic (not release CI)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -47,21 +47,24 @@ jobs:
             ui/package-lock.json
       - run: npm ci
       - run: npm --prefix ui ci --no-audit --no-fund
+      - name: Install browser for the observed UI failures
+        run: npx --prefix ui playwright install --with-deps chromium
       - run: npm run build:server
       - run: npm run build:cli
       - name: Build fixture UI
         id: fixture_build
         run: npm --prefix ui run build:fixture
-      - name: Verify startup and denied platform reads
+      - name: Diagnose observed UI failures with required isolation dependency
+        timeout-minutes: 8
         env:
           WP08_BUILD_COMMAND: npm --prefix ui run build:fixture
           WP08_BUILD_OUTCOME: ${{ steps.fixture_build.outcome }}
-        run: npm --prefix ui run test:e2e -- --project=isolation --grep 'platform discovery|I6 guarded startup|I9 normal emitted'
+        run: npm --prefix ui run test:e2e -- --project=journeys --grep 'J4 node|wp09-bottom-short dark|mobile navigation 320 en|T6 retired' --reporter=line
       - name: Upload diagnostic evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: wp09-startup-${{ inputs.sha || github.sha }}-${{ github.run_id }}
+          name: wp09-ui-diagnostic-${{ inputs.sha || github.sha }}-${{ github.run_id }}
           path: ui/test-results/
           if-no-files-found: warn
           retention-days: 7

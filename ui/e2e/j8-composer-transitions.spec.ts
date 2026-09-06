@@ -222,9 +222,17 @@ for (const surface of ["classic", "home"] as const) for (const field of ["positi
 
 test("T6 retired attachment highlight follows the mounted textarea after scroll and resize", async ({ browser }, info) => {
   await withJ6(browser, info, { ...seed, provider: "minimax", imageModel: "image-01" }, async (page, observation, origin) => {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+    let metadataReads = 0;
+    await page.route(`${origin}/api/metadata/read`, async (route) => {
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toEqual({ filename: "wp09-synthetic.png", dataUrl: `data:image/png;base64,${png.toString("base64")}` });
+      metadataReads++;
+      await route.fulfill({ json: { ok: true, metadata: null, source: null } });
+    });
     await openCreate(page, origin); const root = page.locator(desktop), input = root.locator(".composer__textarea");
     await root.locator("input[type=file]").setInputFiles({ name: "wp09-synthetic.png", mimeType: "image/png",
-      buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
+      buffer: png });
     await expect(root.locator(".composer__tray [role=listitem]")).toHaveCount(1);
     await expect(input).toHaveValue(/@Image_1/);
     await root.locator(".composer__tray-remove").click();
@@ -250,7 +258,7 @@ test("T6 retired attachment highlight follows the mounted textarea after scroll 
       const result = await metrics(); expect(result.markCount).toBe(60); expect(result.scrollTop).toBeGreaterThan(0);
       expect(result.pointerTransparent).toBe(true); await capture(page, info, `t6-mirror-${width}`, result);
     }
-    expect(observation.requests).toEqual([]);
+    expect(metadataReads).toBe(1); expect(observation.requests).toEqual([]);
   });
 });
 
