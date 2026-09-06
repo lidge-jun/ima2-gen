@@ -13,7 +13,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -31,21 +31,9 @@ jobs:
         run: node scripts/assert-ci-sha.mjs
       - run: npm install -g npm@11.18.0
       - run: npm ci
+      - run: npm --prefix ui ci --no-audit --no-fund
       - run: npm run build:server
-      - name: Diagnose the one remaining MCP timeout
-        shell: bash
-        run: |
-          node --input-type=module <<'JS'
-          import { spawn } from 'node:child_process';
-          for (let batch = 0; batch < 10; batch++) {
-            const codes = await Promise.all(Array.from({ length: 3 }, (_, lane) => new Promise(resolve => {
-              const child = spawn(process.execPath, ['--experimental-test-module-mocks', '--import', 'tsx', '--test', 'tests/cli-model-resolver.test.ts']);
-              let output = '';
-              child.stdout.on('data', chunk => { output += chunk; });
-              child.stderr.on('data', chunk => { output += chunk; });
-              child.on('error', error => { console.error(error); resolve(1); });
-              child.on('close', code => { console.log(JSON.stringify({ batch, lane, code })); if (code !== 0) console.log(output); resolve(code ?? 1); });
-            })));
-            if (codes.some(code => code !== 0)) { process.exitCode = 1; break; }
-          }
-          JS
+      - run: npm run build:cli
+      - run: npm --prefix ui run build
+      - name: Observe MCP in the original root-suite context
+        run: npm test

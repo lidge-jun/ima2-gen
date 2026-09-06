@@ -42,3 +42,24 @@ measurement is30 fresh file processes,3 at a time on the hosted runner to observ
 contention-sensitive frequency. Stop the batches at the first failure and retain
 its full trace. Passing measurements are not accepted as remediation. No timeout
 change, retries inside a test, new harness file or whole-CI rerun for diagnosis.
+
+The30-process hosted measurement34017741917 atecb12032 passed30/30 (each18 cases).
+SSH contention measurements separately failed1/21 and1/12 processes; the second
+captured listening=true, port6665, fetch cause="bad port", zero server requests,
+and immediate failures in allfour MCP cases. That is NOT the20s CI signature.
+Record this fixture-port finding for integrated follow-up; do not weaken fetch's
+port protection, change the workstation port range, or grow WP11 to repair it.
+
+Next minimal CI context is one Windows22 root-suite job, where the original
+failure occurred. Restore its actual build prerequisites and remove the temporary
+30-process loop. No Linux/UI-e2e/package matrix is run during this diagnosis.
+The first-case trace additionally observes native fetch start/headers/error cause
+without replacing transport/body or changing assertions/timeouts. Test-context
+mock restoration prevents cross-case mutation. Passing this context remains rate
+data until cause is known; no blind green-on-retry acceptance.
+
+External lead reviewed2026-09-06: nodejs/undici issue5524 describes HTTP/2-only
+SSE/POST starvation and explicitly excludes HTTP/1.1. Our node:http fixture is
+HTTP/1.1, so it does not justify an Agent/dependency/transport change here.
+Source: https://github.com/nodejs/undici/issues/5524 (original issue opened/read;
+agbrowse returned repo metadata instead of issue content, so that was not proof).

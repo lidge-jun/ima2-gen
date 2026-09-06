@@ -318,6 +318,18 @@ function mcpOpts(requestId: string, timeoutMs = 20_000): McpJobOptions {
 describe("runMcpJob", () => {
   it("opens SSE before POST, reports progress, and resolves done", async (t) => {
     const phases: string[] = [];
+    const nativeFetch = globalThis.fetch;
+    t.mock.method(globalThis, "fetch", async (...args: Parameters<typeof fetch>) => {
+      eventTrace.push({ at: Date.now(), fetch: String(args[0]), stage: "start" });
+      try {
+        const response = await nativeFetch(...args);
+        eventTrace.push({ at: Date.now(), stage: "headers", status: response.status });
+        return response;
+      } catch (error) {
+        eventTrace.push({ at: Date.now(), stage: "error", error: String(error), cause: String((error as Error).cause) });
+        throw error;
+      }
+    });
     const result = await mcpModule.runMcpJob({ ...mcpOpts("done-job"), onProgress: (phase) => phases.push(phase) })
       .catch((error) => {
         t.diagnostic(JSON.stringify({ eventTrace, phases, postOpen: postSawOpen.get("done-job"), clients: clients.size }));
