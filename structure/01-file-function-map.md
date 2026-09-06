@@ -152,10 +152,10 @@ routes/
 | `bin/lib/browser-id.ts` | 17 | CLI browser-id header helper |
 | `lib/sessionStore.ts` | 309 | SQLite session and graph persistence, graph parent normalization, style-sheet helpers, session-title lookup |
 | `lib/styleSheet.ts` | 140 | Session style-sheet extraction and prefix composition |
-| `lib/assetLifecycle.ts` | 175 | Soft delete (OS trash via `trash` dep), restore, node asset-missing marking |
+| `lib/assetLifecycle.ts` | 199 | Soft delete (OS trash via `trash` dep), restore, node asset-missing marking |
 | `lib/systemTrash.ts` | 21 | Cross-platform OS-trash helper wrapping the `trash` dependency |
 | `lib/db.ts` | 392 | SQLite bootstrap and migrations (schema 7): sessions, nodes, edges, inflight, terminal jobs, idempotency keys, prompts, prompt folders, canvas versions |
-| `lib/nodeStore.ts` | 97 | Node image and metadata load/save |
+| `lib/nodeStore.ts` | 101 | Node image and metadata load/save |
 | `lib/inflight.ts` | 457 | SQLite-backed active job registry for classic/node/multimode, abort controllers, cancel state, and terminal job snapshots that survive a restart |
 
 Tracker expiry writes its terminal and deletes the active row transactionally.
@@ -195,8 +195,8 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/multimodePipeline.ts` | 522 | Multimode streaming pipeline, persistence, cancellation, and partial timeout |
 | `lib/comparisonMatrix.ts` | 77 | Prompt-locked comparison axes: deterministic cartesian expansion, 9-cell cost cap, varying-axis labels |
 | `lib/comparisonRunner.ts` | 111 | Per-cell generation orchestrator with bounded concurrency, isolated failures, single-cell retry, and two-level cancel |
-| `lib/nodeGeneration.ts` | 511 | Node admission and execution facade, caller-owned retry, persistence, and SSE publication |
-| `lib/nodeValidation.ts` | 44 | Node prompt, references, and moderation validation |
+| `lib/nodeGeneration.ts` | 513 | Node admission and execution facade, caller-owned retry, persistence, and SSE publication |
+| `lib/nodeValidation.ts` | 49 | Node prompt, references, and moderation validation |
 | `lib/oauthProxy/streams.ts` | 233 | SSE/event-stream helpers and safe stream diagnostics |
 | `lib/oauthProxy/prompts.ts` | 158 | Prompt assembly with injected `SAFETY_INTENT_POLICY` from `lib/promptSafetyPolicy.ts` |
 | `lib/oauthProxy/references.ts` | 46 | Reference image preparation and validation for the OAuth path |
