@@ -1,5 +1,10 @@
 # WP12 — Exact-candidate, cross-platform integrated acceptance
 
+Execution amendment: [121_lean_delivery_plan.md](121_lean_delivery_plan.md)
+supersedes this WP00 design's stale implementation map and commands. In particular,
+no new workflow-checker framework or J12 harness is authorized; existing SHA,
+fixture and J5 owners are reused. Original acceptance obligations remain open.
+
 Status: WP00 design, not executed. Class C4 CI integrity/release-readiness boundary.
 Archetype repair/integration. Trigger: current tests pass while e2e ignores dispatch
 SHA, PR base filters exclude mid-stack work, baseline Windows was schedule-only, successful
