@@ -41,6 +41,7 @@ class EventConnection {
       this.res.setHeader("Cache-Control", "no-cache, no-transform");
       this.res.setHeader("Connection", "keep-alive");
       this.res.setHeader("X-Accel-Buffering", "no");
+      this.res.setHeader("x-ima2-event-cursor", String(this.cursor));
       this.res.flushHeaders?.();
       if (this.closed) return;
       this.unsubscribe = subscribe(this.live);

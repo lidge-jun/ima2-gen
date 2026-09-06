@@ -169,7 +169,9 @@ function matchingOutcome(event: SseEvent, opts: McpJobOptions): StreamOutcome | 
 }
 
 async function consumeStream(stream: OpenSseResult, opts: McpJobOptions): Promise<StreamOutcome> {
-  let lastEventId: string | undefined;
+  // Keep the server's pre-job bookmark until an event is actually observed.
+  // This makes an EOF before the first frame recoverable without reposting.
+  let lastEventId: string | undefined = stream.initialEventId;
   try {
     for await (const event of stream.events) {
       if (event.id !== undefined) lastEventId = event.id;

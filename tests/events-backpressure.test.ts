@@ -17,9 +17,10 @@ class Writable extends EventEmitter {
   destroys = 0;
   statusCode = 200;
   body: unknown;
+  headers = new Map<string, string>();
   behavior: (chunk: string) => boolean = () => true;
   flush: () => void = () => {};
-  setHeader() {}
+  setHeader(name: string, value: string) { this.headers.set(name.toLowerCase(), value); }
   flushHeaders() { this.flush(); }
   status(code: number) { this.statusCode = code; return this; }
   json(body: unknown) { this.body = body; return this; }
@@ -84,6 +85,23 @@ function setup() {
 function ids(res: Writable): number[] {
   return res.chunks.flatMap(chunk => /^id: (\d+)/.test(chunk) ? [Number(/^id: (\d+)/.exec(chunk)![1])] : []);
 }
+
+test("accepted headers advertise the pre-replay cursor before flush, including zero", () => {
+  fixture(f => {
+    assert.equal(f.open().res.headers.get("x-ima2-event-cursor"), "0");
+    publish("old", "phase", {}); publish("old", "done", {});
+    assert.equal(f.open().res.headers.get("x-ima2-event-cursor"), "2");
+    for (const [query, header, expected] of [[0, undefined, "0"], [0, "1", "1"]] as const) {
+      const res = new Writable();
+      res.flush = () => {
+        assert.equal(res.headers.get("x-ima2-event-cursor"), expected);
+        assert.deepEqual(res.chunks, []);
+      };
+      f.open(query, { res, ...(header === undefined ? {} : { header }) });
+      assert.deepEqual(ids(res), expected === "0" ? [1, 2] : [2]);
+    }
+  });
+});
 
 test("replay write(false) pauses; drain resumes once after accepted cursor and catches live arrivals", () => {
   fixture(f => {
@@ -234,7 +252,7 @@ function observeResponse(res: ServerResponse, proof: NativeProof) {
   res.on("drain", () => { proof.drains++; });
 }
 
-function nativeApp(proof: NativeProof) {
+function nativeApp(proof: NativeProof, firstFrame: boolean) {
   const app = express();
   let initial: ServerResponse | undefined;
   app.use(express.json());
@@ -243,8 +261,14 @@ function nativeApp(proof: NativeProof) {
     if (proof.cursors.length > 3) {
       proof.violations.push("reconnect made no progress"); res.sendStatus(409); return;
     }
-    if (proof.cursors.length !== 1) { observeResponse(res, proof); next(); return; }
+    if (proof.cursors.length !== 1) {
+      if (req.query.lastEventId !== (firstFrame ? "1" : "0")) {
+        proof.violations.push("incorrect replay cursor"); res.sendStatus(409); return;
+      }
+      observeResponse(res, proof); next(); return;
+    }
     initial = res;
+    if (!firstFrame) { next(); return; }
     publish("native", "progress", { phase: "1" });
     res.setHeader("Content-Type", "text/event-stream"); res.flushHeaders();
     res.write('id: 1\nevent: progress\ndata: {"jobId":"native","phase":"1"}\n\n');
@@ -252,7 +276,8 @@ function nativeApp(proof: NativeProof) {
   app.post("/api/mcp/generate", (req, res) => {
     proof.posts++;
     assert.equal(req.body.requestId, "native");
-    for (let id = 2; id <= 4; id++) publish("native", "progress", { phase: String(id) });
+    if (!firstFrame) initial!.end();
+    for (let id = firstFrame ? 2 : 1; id <= 4; id++) publish("native", "progress", { phase: String(id) });
     publish("native", "done", { filename: "owned.png", url: "/generated/owned.png", proofId: 5 });
     res.status(202).json({ requestId: "native" }); initial!.end();
   });
@@ -261,10 +286,11 @@ function nativeApp(proof: NativeProof) {
   return app;
 }
 
-test("native small-HWM replay makes public runMcpJob progress with exactly one POST", async () => {
+for (const firstFrame of [true, false]) {
+test(`native small-HWM replay ${firstFrame ? "after progress (legacy)" : "before first frame"} makes public runMcpJob progress with exactly one POST`, async () => {
   _resetForTest();
   const proof: NativeProof = { posts: 0, cursors: [], blocked: 0, drains: 0, sentIds: [], receivedIds: [], violations: [] };
-  const server = createServer({ highWaterMark: 64 }, nativeApp(proof));
+  const server = createServer({ highWaterMark: 64 }, nativeApp(proof, firstFrame));
   const sockets = new Set<import("node:net").Socket>();
   server.on("connection", socket => { sockets.add(socket); socket.on("close", () => sockets.delete(socket)); });
   const originalFetch = globalThis.fetch;
@@ -285,8 +311,8 @@ test("native small-HWM replay makes public runMcpJob progress with exactly one P
       timeoutMs: 2000, json: true, onProgress: phase => { proof.receivedIds.push(Number(phase)); } });
     proof.result = result.filename; proof.receivedIds.push(Number(result.meta.proofId));
     assert.equal(result.filename, "owned.png"); assert.equal(proof.posts, 1);
-    assert.deepEqual(proof.cursors, [null, "1"]);
-    assert.deepEqual(proof.sentIds, [2, 3, 4, 5]);
+    assert.deepEqual(proof.cursors, [null, firstFrame ? "1" : "0"]);
+    assert.deepEqual(proof.sentIds, firstFrame ? [2, 3, 4, 5] : [1, 2, 3, 4, 5]);
     assert.deepEqual(proof.receivedIds, [1, 2, 3, 4, 5]);
     assert.ok(proof.blocked > 0); assert.ok(proof.drains > 0); assert.deepEqual(proof.violations, []);
   } finally {
@@ -298,3 +324,4 @@ test("native small-HWM replay makes public runMcpJob progress with exactly one P
     console.log("WP07 native transport proof", JSON.stringify(proof));
   }
 });
+}
