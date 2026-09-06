@@ -90,3 +90,10 @@ progressing at roughly5–8s each. Increase only the aggregate E2E job budget to
 minutes so remaining cases and uploads finish. Individual test/expect limits,
 all cases, isolation dependencies and assertions remain unchanged. This does not
 fix or excuse J3. Diagnose J3 alone (+required isolation) before another full run.
+
+J3 correction at56308093/run34004614504 passes its single diagnostic job. The
+remaining unfinished tail from the cancelled full run is the existing Node fit,
+composition-interruption and reference-control cases. The Node390 capture was
+not yet written at cancellation, so do not infer its appearance or outcome. Run
+only that retained tail plus isolation before the final25-minute aggregate job;
+no new tests, scenario permutations or runtime guards are being added.
