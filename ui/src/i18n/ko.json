@@ -1294,6 +1294,9 @@
       "envLocked": "환경 변수로 관리됩니다."
     },
     "account": {
+      "naiTitle": "NovelAI",
+      "naiEyebrow": "토큰",
+      "naiBody": "영구 토큰을 사용하며, 아래에서 V5 Opus 배터리와 Anlas 잔량을 확인할 수 있습니다.",
       "primaryEyebrow": "현재 공급자",
       "oauthTitle": "GPT OAuth",
       "oauthBody": "GPT OAuth로 생성할 때 Codex 로그인 세션을 사용해요. 유효한 API 키가 있으면 API 키 모드로 바꿀 수 있어요.",
@@ -1327,6 +1330,13 @@
       }
     },
     "quota": {
+      "naiBattery": "V5 배터리",
+      "naiAnlas": "Anlas",
+      "naiNegative": "충전 중 (음수)",
+      "naiNextPercent": "{minutes}분 후 +1%",
+      "naiMeterMissing": "V5 배터리 잔량을 확인할 수 없습니다.",
+      "naiAnlasFallback": "V5 배터리가 소진되었습니다. Anlas를 사용해 계속 생성할 수 있습니다.",
+      "naiNotConfigured": "NovelAI 토큰이 설정되지 않았거나 유효하지 않습니다.",
       "codexNotLoggedIn": "로그인 필요",
       "fetchError": "쿼타를 불러올 수 없음",
       "noData": "사용량 데이터 없음",
@@ -1628,6 +1638,11 @@
     "naiSubscriptionRequired": {
       "title": "NovelAI 구독이 필요합니다",
       "body": "이미지 생성에는 활성 구독(Opus, Scroll, Tablet)이 필요합니다. 토큰은 정상이지만 요금제가 이 요청을 포함하지 않습니다.",
+      "cta": "닫기"
+    },
+    "naiUsageExhausted": {
+      "title": "NovelAI V5 배터리 소진",
+      "body": "Opus V5 사용 한도를 모두 소진했고 남은 Anlas도 없습니다. V4.5 모델로 전환하거나 배터리가 충전될 때까지 기다려 주세요.",
       "cta": "닫기"
     },
     "naiZipInvalid": {

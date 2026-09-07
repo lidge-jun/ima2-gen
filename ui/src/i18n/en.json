@@ -1294,6 +1294,9 @@
       "envLocked": "Managed by environment variables."
     },
     "account": {
+      "naiTitle": "NovelAI",
+      "naiEyebrow": "Token",
+      "naiBody": "Uses a persistent token, with V5 Opus battery and Anlas meters shown below.",
       "primaryEyebrow": "Active provider",
       "oauthTitle": "GPT OAuth",
       "oauthBody": "GPT OAuth generation runs through your Codex OAuth session. You can switch to API-key mode when a valid key is configured.",
@@ -1327,6 +1330,13 @@
       }
     },
     "quota": {
+      "naiBattery": "V5 battery",
+      "naiAnlas": "Anlas",
+      "naiNegative": "Recharging (negative)",
+      "naiNextPercent": "+1% in {minutes} min",
+      "naiMeterMissing": "V5 battery meter unavailable.",
+      "naiAnlasFallback": "The V5 battery is empty; generation can continue using Anlas.",
+      "naiNotConfigured": "NovelAI token is not configured or is invalid.",
       "codexNotLoggedIn": "Not logged in",
       "fetchError": "Could not load quota",
       "noData": "No usage data",
@@ -1628,6 +1638,11 @@
     "naiSubscriptionRequired": {
       "title": "NovelAI subscription required",
       "body": "Image generation needs an active NovelAI subscription (Opus, Scroll, or Tablet). Your token is valid but the plan does not cover this request.",
+      "cta": "Close"
+    },
+    "naiUsageExhausted": {
+      "title": "NovelAI V5 battery exhausted",
+      "body": "The Opus V5 usage limit is drained and no Anlas remain. Switch to a V4.5 model or wait for the battery to recharge.",
       "cta": "Close"
     },
     "naiZipInvalid": {

@@ -39,6 +39,7 @@ export const PROVIDER_ERROR_MAP = {
   // NovelAI answers 402 when the account has no active subscription, which is
   // a billing state rather than a bad token.
   NAI_SUBSCRIPTION_REQUIRED: "BILLING_REQUIRED",
+  NAI_USAGE_EXHAUSTED: "BILLING_REQUIRED",
   NAI_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
   NAI_RATE_LIMITED: "RATE_LIMITED",
   NAI_UPSTREAM_ERROR: "NETWORK_FAILURE",

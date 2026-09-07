@@ -30,6 +30,26 @@
   color: var(--text-dim);
 }
 
+.quota-card__anlas {
+  margin: 8px 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.quota-bar--charge {
+  flex-wrap: wrap;
+  line-height: 1.4;
+}
+
+.quota-bar--charge .quota-bar__track {
+  min-width: 40px;
+}
+
+.quota-bar--charge .quota-bar__reset {
+  margin-left: auto;
+}
+
 .quota-bar {
   display: flex;
   align-items: center;

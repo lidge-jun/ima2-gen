@@ -228,6 +228,7 @@ const ERROR_CARD_ROOTS = [
   "errorCard.agyTimeout", "errorCard.agyProcessError", "errorCard.agyQuotaExhausted",
   "errorCard.authClass", "errorCard.billingRequired",
   "errorCard.naiApiKeyMissing", "errorCard.naiAuthFailed", "errorCard.naiSubscriptionRequired",
+  "errorCard.naiUsageExhausted",
   "errorCard.naiZipInvalid", "errorCard.naiResponseNotZip", "errorCard.naiImageInvalid",
   "errorCard.naiUpstreamError",
 ] as const;

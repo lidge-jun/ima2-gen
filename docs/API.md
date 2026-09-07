@@ -154,7 +154,7 @@ inventing a runtime `lanes` availability result.
 | `GET` | `/api/oauth/status` | OAuth proxy status and visible models |
 | `GET` | `/api/grok/status` | Bundled progrok status and visible xAI image models |
 | `GET` | `/api/billing` | Billing/status probe, including API key source when configured |
-| `GET` | `/api/quota` | Provider quota: returns `{ codex, grok }`. Eligible Grok Build xAI OIDC/external auth returns a `weekly` percentage/reset window from `GET /v1/billing?format=credits`. If unavailable, the legacy endpoint may return a `monthly` window plus `billing: { usedUsd, limitUsd }`. |
+| `GET` | `/api/quota` | Provider quota: returns `{ codex, grok, nai }`. Codex windows are `5h` and `7d`. NovelAI returns a `v5-battery` remaining-charge window when available (`resetsAt` is the ISO ETA for +1%, not full recharge), with Anlas balances in `nai.anlasFixed` / `nai.anlasPurchased`; a missing meter has no window. NovelAI account email is always null. Eligible Grok Build xAI OIDC/external auth returns a `weekly` percentage/reset window from `GET /v1/billing?format=credits`. If unavailable, the legacy endpoint may return a `monthly` window plus `billing: { usedUsd, limitUsd }`. |
 
 ## Account Switching
 
@@ -1009,7 +1009,7 @@ Most server routes under `/api/*` have a CLI wrapper. The exception is **Agent M
 | `GET /api/events` (SSE multiplex) | Web UI only (persistent `EventSource`; no CLI wrapper) |
 | `GET /api/storage/status` / `POST /api/storage/open-generated-dir` | `ima2 storage status` / `ima2 storage open` |
 | `GET /api/billing` / `GET /api/providers` / `GET /api/oauth/status` / `GET /api/grok/status` | `ima2 billing` / `ima2 providers` / `ima2 oauth status` / `ima2 grok status` |
-| `GET /api/quota` | Web UI only (Grok quota bar in Settings) |
+| `GET /api/quota` | Web UI only (Grok and NovelAI quota in Settings) |
 | `POST /api/auth/switch` / `GET /api/auth/switch/:sessionId` | Web UI only (Settings > QuotaCard > Switch Account) |
 | `GET /api/health` | `ima2 ping` |
 | `GET /api/capabilities` | `ima2 capabilities` |

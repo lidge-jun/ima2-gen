@@ -12,6 +12,7 @@ import type { RuntimeContext } from "./runtimeContext.js";
 import { detectImageMimeFromB64 } from "./refs.js";
 import { logEvent } from "./logger.js";
 import { extractFirstZipEntry, looksLikeZip } from "./naiZip.js";
+import { classifyNai402, naiError } from "./naiSubscription.js";
 
 export const NAI_DEFAULT_IMAGE_MODEL = "nai-diffusion-5-full";
 
@@ -75,14 +76,6 @@ type NaiImageResult = {
   effectiveModel: string;
 };
 
-function naiError(message: string, status: number, code: string): Error {
-  const err = new Error(message) as Error & { status?: number; code?: string; isOperational?: boolean };
-  err.status = status;
-  err.code = code;
-  err.isOperational = true;
-  return err;
-}
-
 /** NovelAI sizes are WxH strings; anything else falls back to the portrait default. */
 function parseSize(size?: string): { width: number; height: number } {
   if (!size || size === "auto") return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
@@ -134,7 +127,8 @@ export async function generateViaNai(
     scale: options.scale ?? cfg.defaultScale,
     sampler,
     steps: options.steps ?? cfg.defaultSteps,
-    // Kept at 1: NovelAI's Opus free tier only covers single-image requests.
+    // Opus V5 battery covers 832x1216 / <=28 steps / one image; larger
+    // resolutions or more steps use Anlas instead. Keep the defaults eligible.
     n_samples: 1,
     ucPresetId: options.ucPresetId ?? "heavy",
     qualityPresetId: isV5 ? (options.qualityPresetId ?? "standard") : "standard",
@@ -211,11 +205,7 @@ export async function generateViaNai(
       throw naiError(`NovelAI rejected the token: ${detail}`, 401, "NAI_AUTH_FAILED");
     }
     if (res.status === 402) {
-      throw naiError(
-        `NovelAI requires an active subscription: ${detail}`,
-        402,
-        "NAI_SUBSCRIPTION_REQUIRED",
-      );
+      throw await classifyNai402(ctx, model, detail, combinedSignal);
     }
     if (res.status === 429) {
       throw naiError(`NovelAI rate limited: ${detail}`, 429, "NAI_RATE_LIMITED");

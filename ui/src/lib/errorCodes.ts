@@ -17,6 +17,7 @@ export type ImaErrorCode =
   | "GROK_API_KEY_MISSING"
   | "NAI_AUTH_FAILED"
   | "NAI_SUBSCRIPTION_REQUIRED"
+  | "NAI_USAGE_EXHAUSTED"
   | "NAI_RATE_LIMITED"
   | "NAI_BAD_REQUEST"
   | "NAI_ZIP_INVALID"
@@ -96,6 +97,7 @@ export const errorCodes: Record<ImaErrorCode, ErrorSpec> = {
   GROK_API_KEY_MISSING: { surface: "card", cardKey: "errorCard.grokApiKeyMissing", cta: "reauth" },
   NAI_AUTH_FAILED: { surface: "card", cardKey: "errorCard.naiAuthFailed", cta: "reauth" },
   NAI_SUBSCRIPTION_REQUIRED: { surface: "card", cardKey: "errorCard.naiSubscriptionRequired", cta: "dismiss" },
+  NAI_USAGE_EXHAUSTED: { surface: "card", cardKey: "errorCard.naiUsageExhausted", cta: "dismiss" },
   NAI_RATE_LIMITED: { surface: "toast", toastKey: "toast.naiRateLimited", cta: "retry" },
   NAI_BAD_REQUEST: { surface: "toast", toastKey: "toast.naiBadRequest" },
   NAI_ZIP_INVALID: { surface: "card", cardKey: "errorCard.naiZipInvalid", cta: "retry" },
@@ -219,6 +221,7 @@ const SELF_DESCRIBING_AUTH_CODES: readonly ImaErrorCode[] = [
   "NAI_API_KEY_MISSING",
   "NAI_AUTH_FAILED",
   "NAI_SUBSCRIPTION_REQUIRED",
+  "NAI_USAGE_EXHAUSTED",
 ];
 
 export function classifyModerationStage(msg: string): ModerationStage {
