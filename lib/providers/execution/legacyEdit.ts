@@ -30,7 +30,6 @@ export async function prepareLegacyEdit(
   ctx: RuntimeContext, request: EditRequest, _progress?: ExecutionProgress,
 ): Promise<PreparedImageExecution<"edit">> {
   return { execute: async () => {
-    try { return { kind: "single", value: await executeEdit(ctx, request) }; }
-    catch (error) { throw error; } // Route owns failure normalization and job cleanup.
+    return { kind: "single", value: await executeEdit(ctx, request) };
   } };
 }

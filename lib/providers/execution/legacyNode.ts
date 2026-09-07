@@ -11,9 +11,7 @@ export async function prepareLegacyNode(
   ctx: RuntimeContext, request: NodeRequest, _progress?: ExecutionProgress,
 ): Promise<PreparedImageExecution<"node">> {
   return { execute: async () => {
-    try {
-      return { kind: "single", value: await executeNodeAttempt(ctx, request) };
-    } catch (error) { throw error; } // The caller owns retries and normalization.
+    return { kind: "single", value: await executeNodeAttempt(ctx, request) };
   } };
 }
 

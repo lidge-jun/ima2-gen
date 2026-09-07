@@ -166,8 +166,7 @@ async function readBytes(handle: FileHandle, signal?: AbortSignal): Promise<Buff
     abortIfNeeded(signal);
     if (bytesRead) throw tooLarge();
     return Buffer.concat(chunks, total);
-  } catch (error) { throw error; }
-  finally { chunks.length = 0; }
+  } finally { chunks.length = 0; }
 }
 
 async function cleanupSnapshot(snapshot: ArtifactSnapshot): Promise<void> {
