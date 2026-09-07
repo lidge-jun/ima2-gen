@@ -24,7 +24,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260905_production_readiness/` | WP00–WP12s 검증 완료, WP13 릴리스 준비 중. 늦은 제품 리뷰 수정과 최종 후보 검증 진행. 구현 PR 머지·main/preview 통합·배포 미완료. 근거: `130_0_current_revalidation.md`, `130_4_late_review_fold.md`, `131_release_readiness.md`. |
+| `260908_post_314_cleanup/` | v3.14.0 이후 정리 라운드. 리뷰 잔여물(CHANGELOG, 아카이브, 빈 rethrow), dependabot PR 4건, #193 NAI 배터리 쿼타, #150 어댑터 처분, 다음 릴리스. 근거: `000_plan.md`. |
 | `260819c_grok_proxy_supervision/` | 조사 + 로드맵 완료 (000-030), 구현 미착수. Grok 프록시 수명주기 재설계 — ensure 진입점, 로그인 재기동, 프로브 기반 상태. |
 
 ## 열린 이슈
@@ -55,6 +55,14 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 이 둘은 숫자를 맞추려고 `_fin`으로 옮기지 않았다. 대응 이슈가 없고 구현 착수도
 없어서, 옮기면 그건 정리가 아니라 은폐다.
+
+## 2026-09-08 아카이브 기록
+
+`_fin`으로 이동 (1개 유닛):
+
+- `260905_production_readiness/` — v3.14.0 (2026-09-06, #219, `36aa6fce`)으로 완료.
+  WP00–WP13 전부 닫힘: 프로바이더 실행 계약, 선택 일관성, 작업 수명주기, LAN 보안,
+  진단, 설치기, 릴리스. 릴리스 후 확인된 잔여물은 `260908_post_314_cleanup/`이 맡는다.
 
 ## 2026-08-31 아카이브 기록
 

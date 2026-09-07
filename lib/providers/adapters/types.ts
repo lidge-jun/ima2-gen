@@ -8,10 +8,11 @@
  *
  * This is the boundary that fixes that, starting with the parts a lane already
  * owns today: authentication state, its model list, and its own error
- * vocabulary. Generation and editing stay optional here because their signature
- * depends on the cancel/retry/resume contract that #151 has not fixed yet -
- * pinning them now would mean changing them twice.
+ * vocabulary. The optional preparation hook binds a typed execution surface;
+ * callers keep cancellation, retry, and persistence lifecycle ownership.
  */
+import type { RuntimeContext } from "../../runtimeContext.js";
+import type { ExecutionProgress, ImageExecutionRequest, PreparedImageExecution } from "../execution/types.js";
 import type { JobHandle } from "../../jobs/envelope.js";
 import type { CoreProviderId } from "../registry.js";
 import type { CoreProviderModel } from "../types.js";
@@ -44,6 +45,9 @@ export interface ProviderAdapterV1 {
   /** Derived from the registry, never hand-written. */
   listModels(): readonly CoreProviderModel[];
   normalizeError(error: unknown): ProviderError;
+  prepareImageExecution?<R extends ImageExecutionRequest>(
+    ctx: RuntimeContext, request: R, progress?: ExecutionProgress,
+  ): Promise<PreparedImageExecution<R["surface"]>>;
   generateImage?(input: unknown): Promise<JobHandle>;
   editImage?(input: unknown): Promise<JobHandle>;
 }

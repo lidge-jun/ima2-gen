@@ -16,11 +16,19 @@ interface QuotaResult {
   error?: boolean;
   authenticated?: boolean;
   billing?: { usedUsd: number; limitUsd: number };
+  nai?: {
+    active: boolean;
+    isNegative: boolean;
+    anlasFixed: number;
+    anlasPurchased: number;
+    meter: "charge" | "missing";
+  };
 }
 
 interface QuotaResponse {
   codex?: QuotaResult;
   grok?: QuotaResult;
+  nai?: QuotaResult;
 }
 
 interface SwitchState {
@@ -56,6 +64,35 @@ function QuotaBar({ window: w }: { window: QuotaWindow }) {
       </div>
       <span className="quota-bar__pct">{w.percent}%</span>
       {reset && <span className="quota-bar__reset">{reset}</span>}
+    </div>
+  );
+}
+
+/** NovelAI percent is remaining charge; resetsAt is the next 1% recharge ETA. */
+function ChargeBar({ window: w }: { window: QuotaWindow }) {
+  const { t } = useI18n();
+  const percent = Math.max(0, Math.min(w.percent, 100));
+  const color = percent > 50 ? "var(--blue)" : percent >= 20 ? "var(--amber)" : "var(--red)";
+  const minutes = w.resetsAt === null
+    ? null
+    : Math.max(0, Math.ceil((Date.parse(w.resetsAt) - Date.now()) / 60_000));
+  return (
+    <div className="quota-bar quota-bar--charge">
+      <span className="quota-bar__label">{t("settings.quota.naiBattery")}</span>
+      <div
+        className="quota-bar__track"
+        role="meter"
+        aria-label={t("settings.quota.naiBattery")}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
+        <div className="quota-bar__fill" style={{ width: `${percent}%`, background: color }} />
+      </div>
+      <span className="quota-bar__pct">{w.percent}%</span>
+      {minutes !== null && Number.isFinite(minutes) && (
+        <span className="quota-bar__reset">{t("settings.quota.naiNextPercent", { minutes })}</span>
+      )}
     </div>
   );
 }
@@ -260,6 +297,50 @@ type QuotaBlockProps = {
   loading: boolean;
   onRefresh: () => void;
 };
+
+/** NovelAI token quota: battery charge and Anlas are separate balances. */
+export function NaiQuota({ data, loading }: Pick<QuotaBlockProps, "data" | "loading">) {
+  const { t } = useI18n();
+  const result = data?.nai;
+  const nai = result?.nai;
+  const battery = result?.windows.find((w) => w.label === "v5-battery");
+  const message = loading ? t("common.loading")
+    : result?.authenticated === false ? t("settings.quota.naiNotConfigured")
+    : !result || result.error ? t("settings.quota.fetchError")
+    : !nai ? t("settings.quota.noData") : null;
+  if (message || !nai) {
+    return (
+      <div className="quota-card">
+        <span className={loading ? "quota-card__loading" : "quota-card__hint"}>
+          {message ?? t("settings.quota.noData")}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="quota-card">
+      <div className="quota-card__header">
+        <span className="quota-card__account">{result?.account?.plan}</span>
+        {nai.isNegative && (
+          <span className="provider-chip provider-chip--warn">{t("settings.quota.naiNegative")}</span>
+        )}
+      </div>
+      {nai.meter === "missing" || !battery ? (
+        <span className="quota-card__hint">{t("settings.quota.naiMeterMissing")}</span>
+      ) : (
+        <>
+          <ChargeBar window={battery} />
+          {battery.percent === 0 && nai.anlasFixed + nai.anlasPurchased > 0 && (
+            <p className="quota-card__hint">{t("settings.quota.naiAnlasFallback")}</p>
+          )}
+        </>
+      )}
+      <p className="quota-card__anlas">
+        {t("settings.quota.naiAnlas")}: {nai.anlasFixed} + {nai.anlasPurchased}
+      </p>
+    </div>
+  );
+}
 
 /** Codex rate-limit block — lives inside the GPT OAuth provider card. */
 export function CodexQuota({ data, loading, onRefresh }: QuotaBlockProps) {

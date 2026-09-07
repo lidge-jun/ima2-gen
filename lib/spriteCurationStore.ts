@@ -32,6 +32,5 @@ export async function readSpriteCuration(generatedDir: string, runId: string): P
 }
 
 export async function writeSpriteCuration(generatedDir: string, runId: string, input: SpriteCuration): Promise<void> {
-  try { const value = curationSchema.parse(input); const dir = resolveSpriteRunDir(generatedDir, runId); await mkdir(dir, { recursive: true }); await atomicWriteJson(join(dir, "curation.json"), value); }
-  catch (error) { throw error; }
+  const value = curationSchema.parse(input); const dir = resolveSpriteRunDir(generatedDir, runId); await mkdir(dir, { recursive: true }); await atomicWriteJson(join(dir, "curation.json"), value);
 }

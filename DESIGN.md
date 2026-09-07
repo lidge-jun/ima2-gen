@@ -170,7 +170,7 @@ above are historical snapshots, not rendered-color evidence. The scoped current
 pairs are dark muted#90909d on surface2#1c1c23 and light#5d5d68 on#ececf1. Actual
 hosted tests composite ancestor/pseudo opacity and compare PNG background samples;
 they do not certify all controls or the whole application as WCAG-conformant.
-Current implementation evidence belongs to `260905_production_readiness/084*`.
+Current implementation evidence belongs to `devlog/_fin/260905_production_readiness/084*`.
 
 Render proof (wp7): 16/16 live Playwright checks passed at commit
 `635723d7`. Verified: radius tokens, type ladders at 1280px and 320px,

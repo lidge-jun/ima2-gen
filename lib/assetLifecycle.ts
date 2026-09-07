@@ -31,8 +31,7 @@ export function resolveInGenerated(rootDir: string, relPath: string): string {
 }
 
 export async function assertRegularGeneratedPath(path: string): Promise<void> {
-  try { await regularFileWithin(path, config.storage.generatedDir); }
-  catch (error) { throw error; }
+  await regularFileWithin(path, config.storage.generatedDir);
 }
 
 /** Existing assets only; output filenames use the separate lexical resolver. */

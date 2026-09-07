@@ -104,20 +104,18 @@ async function sessionRequest(method: "GET" | "POST" | "DELETE", token = ""): Pr
 }
 
 async function readStatus(allowUnlock: boolean, revision = observationRevision): Promise<LanSessionStatus> {
-  try {
-    const next = await sessionRequest("GET");
-    if (!next) throw failure("LAN_SESSION_UNAVAILABLE");
-    if (revision !== observationRevision) {
-      if (state) return { ...state };
-      throw failure("LAN_SESSION_UNAVAILABLE");
-    }
-    if (next.mode === "lan" && !next.authenticated) {
-      requireLanAuthentication();
-    } else if (allowUnlock || !isLanSessionLocked()) {
-      state = next;
-    }
-    return { ...(state ?? next) };
-  } catch (error) { throw error; }
+  const next = await sessionRequest("GET");
+  if (!next) throw failure("LAN_SESSION_UNAVAILABLE");
+  if (revision !== observationRevision) {
+    if (state) return { ...state };
+    throw failure("LAN_SESSION_UNAVAILABLE");
+  }
+  if (next.mode === "lan" && !next.authenticated) {
+    requireLanAuthentication();
+  } else if (allowUnlock || !isLanSessionLocked()) {
+    state = next;
+  }
+  return { ...(state ?? next) };
 }
 
 /** Reconnect/media observations coalesce, but can never silently sign back in. */
@@ -138,17 +136,14 @@ export async function createLanSession(token: string): Promise<void> {
     // This fresh GET must not reuse an observation made before Set-Cookie.
     const status = await readStatus(true, revision);
     if (!status.authenticated) throw failure("LAN_COOKIE_REQUIRED");
-  } catch (error) { throw error; }
-  finally { token = ""; }
+  } finally { token = ""; }
 }
 
 export async function endLanSession(): Promise<void> {
   const revision = ++observationRevision;
-  try {
-    await sessionRequest("DELETE");
-    if (revision !== observationRevision) return;
-    if (state?.mode === "lan") requireLanAuthentication();
-  } catch (error) { throw error; }
+  await sessionRequest("DELETE");
+  if (revision !== observationRevision) return;
+  if (state?.mode === "lan") requireLanAuthentication();
 }
 
 export async function bootstrapLanSession(): Promise<{ mode: "local" | "lan"; authenticated: boolean }> {
@@ -171,6 +166,5 @@ export async function bootstrapLanSession(): Promise<{ mode: "local" | "lan"; au
     else await readStatus(true);
     if (!state) throw failure("LAN_SESSION_UNAVAILABLE");
     return { mode: state.mode, authenticated: state.authenticated };
-  } catch (error) { throw error; }
-  finally { token = ""; }
+  } finally { token = ""; }
 }

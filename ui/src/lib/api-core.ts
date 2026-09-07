@@ -11,23 +11,21 @@ export async function fetchApi(url: string, init?: RequestInit): Promise<Respons
         && /^\/(api|generated)(?:\/|$)/i.test(target.pathname);
     }
   } catch { /* Native fetch retains responsibility for invalid URLs. */ }
-  try {
-    if (protectedRequest) init?.signal?.throwIfAborted();
-    // A locked-period rejection belongs to the invalidated auth period, too.
-    // Login preserves the loss epoch, so stamping its current value would relock it.
-    if (protectedRequest && isLanSessionLocked()) throw createLanAuthError(epoch - 1);
-    const response = await fetch(url, init);
-    if (protectedRequest && response.status === 401) {
-      const body: unknown = await response.clone().json().catch(() => null);
-      const error = (body as { error?: { code?: unknown }; code?: unknown } | null);
-      if (error?.error?.code === "LAN_TOKEN_REQUIRED" || error?.code === "LAN_TOKEN_REQUIRED") {
-        requireLanAuthentication(epoch);
-        try { await response.body?.cancel(); } catch { /* Preserve the typed auth failure if cleanup fails. */ }
-        throw createLanAuthError(epoch);
-      }
+  if (protectedRequest) init?.signal?.throwIfAborted();
+  // A locked-period rejection belongs to the invalidated auth period, too.
+  // Login preserves the loss epoch, so stamping its current value would relock it.
+  if (protectedRequest && isLanSessionLocked()) throw createLanAuthError(epoch - 1);
+  const response = await fetch(url, init);
+  if (protectedRequest && response.status === 401) {
+    const body: unknown = await response.clone().json().catch(() => null);
+    const error = (body as { error?: { code?: unknown }; code?: unknown } | null);
+    if (error?.error?.code === "LAN_TOKEN_REQUIRED" || error?.code === "LAN_TOKEN_REQUIRED") {
+      requireLanAuthentication(epoch);
+      try { await response.body?.cancel(); } catch { /* Preserve the typed auth failure if cleanup fails. */ }
+      throw createLanAuthError(epoch);
     }
-    return response;
-  } catch (error) { throw error; }
+  }
+  return response;
 }
 
 export async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {

@@ -96,7 +96,7 @@ references/) and the agent reads them natively. Avoid piping large bundled outpu
 - ES Module only (import/export)
 - File length < 500 lines (split if exceeded)
 - Function length < 50 lines
-- try/catch mandatory for all async operations
+- Wrap async work in try/catch only where the error is transformed, logged, or surfaced at a boundary (route handler, job runner, CLI entry). A catch that only rethrows is noise; let the error propagate.
 - Config values in config.js or .env, never hardcode
 
 ## Test Command

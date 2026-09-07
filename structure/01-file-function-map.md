@@ -159,7 +159,7 @@ routes/
 | `bin/lib/browser-id.ts` | 17 | CLI browser-id header helper |
 | `lib/sessionStore.ts` | 309 | SQLite session and graph persistence, graph parent normalization, style-sheet helpers, session-title lookup |
 | `lib/styleSheet.ts` | 140 | Session style-sheet extraction and prefix composition |
-| `lib/assetLifecycle.ts` | 199 | Soft delete (OS trash via `trash` dep), restore, node asset-missing marking |
+| `lib/assetLifecycle.ts` | 198 | Soft delete (OS trash via `trash` dep), restore, node asset-missing marking |
 | `lib/systemTrash.ts` | 21 | Cross-platform OS-trash helper wrapping the `trash` dependency |
 | `lib/db.ts` | 392 | SQLite bootstrap and migrations (schema 7): sessions, nodes, edges, inflight, terminal jobs, idempotency keys, prompts, prompt folders, canvas versions |
 | `lib/nodeStore.ts` | 107 | Node image and metadata load/save |
@@ -215,7 +215,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/responsesTransport.ts` | 240 | Responses endpoint/auth/readiness, redacted errors, abort/timeout and JSON/SSE parser boundary |
 | `lib/providers/adapters/openaiTypes.ts` | 29 | Original positional-operation reference/options types, unchanged optional fields |
 | `lib/providers/adapters/openaiOperations.ts` | 235 | Actual OpenAI generate/edit/multimode operation bodies and reference normalization |
-| `lib/providers/adapters/openaiExecution.ts` | 148 | Typed four-surface OpenAI owner, classic retry and native callback/result mapping |
+| `lib/providers/adapters/openaiExecution.ts` | 142 | Typed four-surface OpenAI owner, classic retry and native callback/result mapping |
 | `lib/providerOptions.ts` | 161 | Per-provider option assembly; rejects catalog-only Comfy video workflows on the classic image path |
 | `lib/runtimeContext.ts` | 234 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
@@ -228,22 +228,22 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
 | `lib/canvasVersionStore.ts` | 359 | Canvas version snapshot storage, list, restore, and pruning |
 | `lib/comfyBridge.ts` | 266 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
-| `lib/naiImageAdapter.ts` | 265 | NovelAI image-generation provider adapter: request build, V5 parameter gating, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
+| `lib/naiImageAdapter.ts` | 255 | NovelAI image-generation provider adapter: request build, V5 parameter gating, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
 | `lib/naiOptions.ts` | 145 | NovelAI request-option normalizer shared by every request-driven dispatch, plus negative-prompt history provenance |
 | `lib/naiZip.ts` | 153 | Minimal ZIP reader for NovelAI responses: stored/deflate entries, ZIP64 and encryption refusal, 50MB entry cap |
-| `lib/providers/adapters/nai.ts` | 77 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
+| `lib/providers/adapters/nai.ts` | 142 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
 | `lib/providers/registry.ts` | 280 | Provider lane manifests: the single declaration every generated catalog, capability list, and CLI enum derives from |
 | `lib/providers/types.ts` | 87 | Manifest/credential types, explicit model generation support, and provider surface records |
 | `lib/providers/derive.ts` | 97 | Registry-bound provider IDs, catalogs, reference limits and surface support |
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
 | `lib/providers/execution/admission.ts` | 38 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
-| `lib/providers/execution/index.ts` | 37 | Public prepare/execute facade with current direct-key presence checks |
+| `lib/providers/execution/index.ts` | 36 | Public prepare/execute facade with current direct-key presence checks |
 | `lib/providers/execution/legacy.ts` | 31 | Four-surface Atlas/MiniMax/NAI/Comfy dispatcher; OpenAI/Grok/Google excluded |
-| `lib/providers/execution/legacyClassic.ts` | 73 | Remaining-provider classic dispatch with preserved prepare-time capture |
-| `lib/providers/execution/legacyNode.ts` | 51 | One node transport attempt; caller owns retry, partials and persistence |
-| `lib/providers/execution/legacyEdit.ts` | 37 | Remaining-provider single edit dispatch and native result metadata |
-| `lib/providers/execution/legacyMultimode.ts` | 43 | Native sequence dispatch and existing one-image projections |
+| `lib/providers/execution/legacyClassic.ts` | 15 | Remaining-provider classic dispatch with preserved prepare-time capture |
+| `lib/providers/execution/legacyNode.ts` | 14 | One node transport attempt; caller owns retry, partials and persistence |
+| `lib/providers/execution/legacyEdit.ts` | 14 | Remaining-provider single edit dispatch and native result metadata |
+| `lib/providers/execution/legacyMultimode.ts` | 14 | Native sequence dispatch and existing one-image projections |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 252 | Comfy lane model registry: per-record origin and image/video kind, legacy image normalization, id/kind validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 273 | API-format graph parsing, grouped SDXL/H3 binding inference, SaveImage/SaveVideo kind inference, non-mutating value injection, parameter derivation |
@@ -262,10 +262,10 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/agyCli.ts` | 44 | Antigravity CLI discovery and process execution helpers |
 | `lib/agyImageAdapter.ts` | 3 | Compatibility reexports for Agy operation/result and recent artifact lookup |
 | `lib/agyArtifact.ts` | 102 | Agy output parser and recent-artifact scanner excluding links/nonregular entries |
-| `lib/agyArtifactRead.ts` | 237 | Canonical artifact roots, bounded descriptor reads and private identity-bound cleanup receipts |
+| `lib/agyArtifactRead.ts` | 236 | Canonical artifact roots, bounded descriptor reads and private identity-bound cleanup receipts |
 | `lib/agyProcess.ts` | 127 | Direct-child cancellation/timeout, TERM-to-KILL grace and close-observed settlement |
 | `lib/providers/adapters/agyOperations.ts` | 208 | Actual Agy prompt/staging/operation with exception-safe refs and late-cancel barriers |
-| `lib/providers/adapters/googleExecution.ts` | 104 | Agy/Gemini four-surface mapping, lossless context-filtered node references and one-image sequence projection |
+| `lib/providers/adapters/googleExecution.ts` | 95 | Agy/Gemini four-surface mapping, lossless context-filtered node references and one-image sequence projection |
 | `lib/apiCachePolicy.ts` | 12 | API response cache-control policy helpers |
 | `lib/apiRequestBudget.ts` | 57 | Case-insensitive API matching and bounded per-app socket-peer request admission |
 | `lib/assetsStore.ts` | 533 | Generated asset indexing, lookup, and persistence helpers |
@@ -282,12 +282,12 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
 | `lib/grokImageCore.ts` | 194 | Shared Grok image request and response handling |
 | `lib/grokImagePlanner.ts` | 353 | Actual Grok search/planner operations, payload builders and plan parser |
-| `lib/providers/adapters/grokExecution.ts` | 140 | Four-surface Grok/proxy and direct execution, captured keys and search forwarding |
+| `lib/providers/adapters/grokExecution.ts` | 124 | Four-surface Grok/proxy and direct execution, captured keys and search forwarding |
 | `lib/providers/adapters/grokOperations.ts` | 99 | Actual generate/edit operations with scoped artifact-origin policy |
 | `lib/providers/adapters/grokMultimodeOperations.ts` | 124 | Ordered per-image planning and sparse original-index result identity |
 | `lib/grokImageDownloadPolicy.ts` | 128 | Conservative address policy, exact-origin exception and abort-aware pinned DNS resolution |
 | `lib/grokImageDownload.ts` | 153 | Grok redirect trust, overall deadline, bounded streamed image body and cleanup |
-| `lib/pinnedHttpGet.ts` | 176 | Shared validated-address GET lifecycle, public redirect handling and bounded text bodies |
+| `lib/pinnedHttpGet.ts` | 173 | Shared validated-address GET lifecycle, public redirect handling and bounded text bodies |
 | `lib/grokMultimodeAdapter.ts` | 6 | Compatibility re-exports of actual Grok multimode operation/type |
 | `lib/grokProxyLauncher.ts` | 326 | Grok proxy process startup and readiness helpers |
 | `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
@@ -382,7 +382,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Image helpers | `ui/src/lib/image.ts` | 43 | Browser image utilities |
 | Compression | `ui/src/lib/compress.ts` | 159 | Browser-side image compression for references and uploads |
 | Cost | `ui/src/lib/cost.ts` | 91 | Quality/size cost estimation |
-| Error codes | `ui/src/lib/errorCodes.ts` | 307 | Stable error code → translation key mapping |
+| Error codes | `ui/src/lib/errorCodes.ts` | 310 | Stable error code → translation key mapping |
 | Error handler | `ui/src/lib/errorHandler.ts` | 31 | Routes errors to toast or persistent `ErrorCard` |
 | Image models | `ui/src/lib/imageModels.ts` | 216 | UI-side image model labels and `resolveCoreModelValue` lane gating |
 | Core selection policy | `ui/src/lib/coreSelection.ts` | 142 | Pure provider/model/workflow reconciliation, lane memory projection and image wire model |

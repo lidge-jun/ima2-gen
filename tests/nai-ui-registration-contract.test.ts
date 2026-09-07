@@ -5,6 +5,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { runInNewContext } from "node:vm";
+import { transformSync } from "esbuild";
 import { errorCodes, resolveErrorSpec, type ImaErrorCode } from "../ui/src/lib/errorCodes.ts";
 import { effectiveReferenceLimit } from "../ui/src/lib/referenceLimits.ts";
 
@@ -116,6 +119,7 @@ test("every NAI_* code the server can throw has UI text", () => {
   // sites instead of hand-listing, so a new throw fails here rather than in prod.
   const sources = [
     "lib/naiImageAdapter.ts",
+    "lib/naiSubscription.ts",
     "lib/naiZip.ts",
     "lib/generatePipeline.ts",
     "lib/nodeGeneration.ts",
@@ -166,6 +170,7 @@ test("nai auth and billing failures keep NovelAI copy instead of the sign-in car
     ["NAI_API_KEY_MISSING", "AUTH_INVALID"],
     ["NAI_AUTH_FAILED", "AUTH_INVALID"],
     ["NAI_SUBSCRIPTION_REQUIRED", "BILLING_REQUIRED"],
+    ["NAI_USAGE_EXHAUSTED", "BILLING_REQUIRED"],
   ];
   for (const [code, errorClass] of cases) {
     const resolved = resolveErrorSpec(Object.assign(new Error("nai failure"), { code, errorClass }));
@@ -175,4 +180,94 @@ test("nai auth and billing failures keep NovelAI copy instead of the sign-in car
   // A code with no NovelAI-specific copy must still defer to the class card.
   const generic = resolveErrorSpec(Object.assign(new Error("expired"), { code: "AUTH_CHATGPT_EXPIRED", errorClass: "AUTH_EXPIRED" }));
   assert.equal(generic.spec.cardKey, "errorCard.authClass");
+});
+
+// The TSX module is compiled by esbuild below; tsconfig.tests.json has no --jsx, so the
+// props type is declared locally instead of importing the component type.
+type NaiQuotaFixture = {
+  provider: string; account?: { email: null; plan: string } | null;
+  windows: { label: string; percent: number; resetsAt: string | null }[];
+  nai?: { active: boolean; isNegative: boolean; anlasFixed: number; anlasPurchased: number; meter: "charge" | "missing" };
+  authenticated?: boolean; error?: boolean;
+};
+type NaiQuotaProps = { loading: boolean; data: { nai?: NaiQuotaFixture } | null };
+type NaiQuotaComponent = (props: NaiQuotaProps) => null;
+const requireUi = createRequire(join(repoRoot, "ui/package.json"));
+const react = requireUi("react") as typeof import("../ui/node_modules/@types/react/index");
+const renderer = requireUi("react-dom/server") as { renderToStaticMarkup(element: unknown): string };
+const quotaSource = transformSync(read("ui/src/components/settings/QuotaCard.tsx"), {
+  loader: "tsx", format: "cjs", jsx: "automatic",
+}).code;
+const quotaNow = Date.parse("2026-09-08T00:00:00Z");
+
+function renderNaiQuota(props: NaiQuotaProps, locale = "en"): string {
+  const dict = dictionary(locale);
+  const module = { exports: {} as { NaiQuota: NaiQuotaComponent } };
+  const t = (key: string, vars: Record<string, string | number> = {}) =>
+    String(lookup(dict, key)).replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name]));
+  runInNewContext(quotaSource, {
+    module, exports: module.exports, Date: { now: () => quotaNow, parse: Date.parse },
+    require(name: string) {
+      if (name === "react" || name === "react/jsx-runtime") return requireUi(name);
+      if (name === "../../i18n") return { useI18n: () => ({ t }) };
+      if (name === "../../lib/api-core" || name === "../../lib/lanSession") return {};
+      throw new Error(`Unexpected quota dependency: ${name}`);
+    },
+  }, { timeout: 2000 });
+  return renderer.renderToStaticMarkup(react.createElement(module.exports.NaiQuota, props));
+}
+
+function quotaFixture(percent = 75, resetsAt: string | null = null): NaiQuotaProps {
+  return { loading: false, data: { nai: {
+    provider: "nai", account: { email: null, plan: "Tier 3" },
+    windows: [{ label: "v5-battery", percent, resetsAt }],
+    nai: { active: true, isNegative: false, anlasFixed: 4000, anlasPurchased: 50, meter: "charge" },
+  } } };
+}
+
+test("NovelAI quota renders loading, invalid token, fetch failure and absent data separately", () => {
+  const cases: Array<[NaiQuotaProps, string]> = [
+    [{ ...quotaFixture(), loading: true }, "Loading"],
+    [{ loading: false, data: { nai: { provider: "nai", authenticated: false, windows: [] } } }, "NovelAI token is not configured or is invalid."],
+    [{ loading: false, data: { nai: { provider: "nai", error: true, windows: [] } } }, "Could not load quota"],
+    [{ loading: false, data: null }, "Could not load quota"],
+  ];
+  for (const [props, text] of cases) {
+    const html = renderNaiQuota(props);
+    assert.ok(html.includes(text), html);
+    assert.doesNotMatch(html, /role="meter"|Anlas:|<button/);
+  }
+});
+
+test("NovelAI battery renders remaining charge colors and next-percent ETA, never reset time", () => {
+  for (const [percent, color] of [[51, "blue"], [50, "amber"], [20, "amber"], [19, "red"], [0, "red"]] as const) {
+    const html = renderNaiQuota(quotaFixture(percent, "2026-09-08T00:02:01Z"));
+    assert.ok(html.includes(`background:var(--${color})`), html);
+    assert.ok(html.includes(`aria-valuenow="${percent}"`), html);
+    assert.ok(html.includes("+1% in 3 min"), html);
+    assert.doesNotMatch(html, /2026-|9\/8/);
+  }
+  assert.doesNotMatch(renderNaiQuota(quotaFixture()), /quota-bar__reset/);
+  assert.match(renderNaiQuota(quotaFixture(75, "2026-09-07T23:59:00Z")), /\+1% in 0 min/);
+});
+
+test("NovelAI missing meter preserves Anlas, and empty negative charge exposes fallback", () => {
+  const missing = quotaFixture();
+  missing.data!.nai!.nai!.meter = "missing";
+  missing.data!.nai!.windows = [];
+  const missingHtml = renderNaiQuota(missing);
+  assert.match(missingHtml, /V5 battery meter unavailable/);
+  assert.match(missingHtml, /Anlas: 4000 \+ 50/);
+  assert.doesNotMatch(missingHtml, /role="meter"|<button/);
+  const empty = quotaFixture(0);
+  empty.data!.nai!.nai!.isNegative = true;
+  const emptyHtml = renderNaiQuota(empty);
+  assert.match(emptyHtml, /Tier 3/);
+  assert.match(emptyHtml, /Recharging \(negative\)/);
+  assert.match(emptyHtml, /generation can continue using Anlas/);
+  empty.data!.nai!.nai!.anlasFixed = 0;
+  empty.data!.nai!.nai!.anlasPurchased = 0;
+  const exhaustedHtml = renderNaiQuota(empty);
+  assert.match(exhaustedHtml, /Anlas: 0 \+ 0/);
+  assert.doesNotMatch(exhaustedHtml, /generation can continue using Anlas/);
 });

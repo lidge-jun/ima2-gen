@@ -23,8 +23,7 @@ async function resolvePublicHttps(url: URL, signal: AbortSignal): Promise<Pinned
 }
 
 export async function assertPublicHttps(url: URL): Promise<void> {
-  try { await resolvePublicHttps(url, new AbortController().signal); }
-  catch (error) { throw error; }
+  await resolvePublicHttps(url, new AbortController().signal);
 }
 
 export interface DownloadedMedia {

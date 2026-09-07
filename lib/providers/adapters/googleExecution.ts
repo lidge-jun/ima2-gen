@@ -40,34 +40,30 @@ function prepareGoogleClassic(
   const { model, size } = request.options;
   // Classic captures scalars once; each attempt reads live refs, signal and credentials.
   return { execute: async () => {
-    try {
-      const value = provider === "agy"
-        ? await generateViaAgy(prompt, { references: request.references, signal: request.signal, requestId })
-        : await generateViaGeminiApi(prompt, requireRuntimeContext(ctx), {
-            model, size, signal: request.signal,
-            ...(requestId !== undefined ? { requestId } : {}),
-            references: request.references,
-          });
-      return { kind: "single", value };
-    } catch (error) { throw error; } // Preserve native identity; caller owns normalization.
+    const value = provider === "agy"
+      ? await generateViaAgy(prompt, { references: request.references, signal: request.signal, requestId })
+      : await generateViaGeminiApi(prompt, requireRuntimeContext(ctx), {
+          model, size, signal: request.signal,
+          ...(requestId !== undefined ? { requestId } : {}),
+          references: request.references,
+        });
+    return { kind: "single", value };
   } };
 }
 
 async function runGoogleImage(
   ctx: RuntimeContext, request: GoogleRequest, input: ReturnType<typeof googleInput>,
 ): Promise<SingleImageExecutionResult> {
-  try {
-    const { provider, signal, requestId, options } = request;
-    if (provider === "agy") {
-      return await generateViaAgy(input.prompt, { references: input.references, signal, requestId });
-    }
-    return await generateViaGeminiApi(input.prompt,
-      request.surface === "node" ? requireRuntimeContext(ctx) : ctx, {
-        model: options.model, size: options.size, signal,
-        ...(requestId !== undefined ? { requestId } : {}),
-        references: input.references,
-      });
-  } catch (error) { throw error; }
+  const { provider, signal, requestId, options } = request;
+  if (provider === "agy") {
+    return await generateViaAgy(input.prompt, { references: input.references, signal, requestId });
+  }
+  return await generateViaGeminiApi(input.prompt,
+    request.surface === "node" ? requireRuntimeContext(ctx) : ctx, {
+      model: options.model, size: options.size, signal,
+      ...(requestId !== undefined ? { requestId } : {}),
+      references: input.references,
+    });
 }
 
 function googleSequence(result: SingleImageExecutionResult): SequenceImageExecutionResult {
@@ -84,20 +80,15 @@ export function prepareGoogleExecution<R extends GoogleRequest>(
 export async function prepareGoogleExecution(
   ctx: RuntimeContext, request: GoogleRequest, _progress?: ExecutionProgress,
 ): Promise<PreparedImageExecution<ExecutionSurface>> {
-  try {
-    switch (request.surface) {
-      case "classic": return prepareGoogleClassic(ctx, request);
-      case "node":
-      case "edit": return { execute: async () => {
-        try { return { kind: "single", value: await runGoogleImage(ctx, request, googleInput(request)) }; }
-        catch (error) { throw error; } // Caller owns retries, cancellation and cleanup.
-      } };
-      case "multimode": return { execute: async () => {
-        try {
-          const result = await runGoogleImage(ctx, request, googleInput(request));
-          return { kind: "sequence", value: googleSequence(result) };
-        } catch (error) { throw error; }
-      } };
-    }
-  } catch (error) { throw error; }
+  switch (request.surface) {
+    case "classic": return prepareGoogleClassic(ctx, request);
+    case "node":
+    case "edit": return { execute: async () => {
+      return { kind: "single", value: await runGoogleImage(ctx, request, googleInput(request)) };
+    } };
+    case "multimode": return { execute: async () => {
+      const result = await runGoogleImage(ctx, request, googleInput(request));
+      return { kind: "sequence", value: googleSequence(result) };
+    } };
+  }
 }

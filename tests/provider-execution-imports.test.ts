@@ -53,6 +53,7 @@ test("every concrete owner and private legacy module is forbidden for every call
     "grokImagePlanner", "grokImageDownload", "grokImageDownloadPolicy",
     "providers/adapters/googleExecution", "providers/adapters/agyOperations", "providers/adapters/geminiOperations",
     "agyProcess", "agyArtifact",
+    "providers/adapters/nai", "providers/adapters/minimax", "providers/adapters/atlascloud", "providers/adapters/comfy",
   ];
   for (const file of EXECUTION_CALLERS) for (const name of owners) for (const ext of ["js", "ts"]) {
     const prefix = file.startsWith("routes/") ? "../lib/" : "./";
@@ -94,8 +95,13 @@ const googleOwners = [
   "lib/providers/adapters/geminiOperations.ts", "lib/agyProcess.ts", "lib/agyArtifact.ts",
 ];
 
-test("actual internal OpenAI, Grok, Google and legacy owners contain no forbidden runtime edges", () => {
-  for (const file of [...legacyOwners, ...openaiOwners, ...grokOwners, ...googleOwners]) {
+const adapterExecutionOwners = [
+  "lib/providers/adapters/nai.ts", "lib/providers/adapters/minimax.ts",
+  "lib/providers/adapters/atlascloud.ts", "lib/providers/adapters/comfy.ts",
+];
+
+test("actual internal family, adapter and legacy owners contain no forbidden runtime edges", () => {
+  for (const file of [...legacyOwners, ...openaiOwners, ...grokOwners, ...googleOwners, ...adapterExecutionOwners]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.deepEqual(forbiddenExecutionEdges(source, file), [], file);
   }
@@ -306,5 +312,38 @@ test("in-memory caller mutations cannot pass by retaining imports or comments", 
     const withoutPublicBinding = source.replace(/\bprepareImageExecution\b/g, "unrelatedPrepare");
     assert.notEqual(withoutPublicBinding, source, `${file}: prepare mutation must activate`);
     assert.equal(inspectExecutionCaller(withoutPublicBinding, file).prepareCalls, 0, file);
+  }
+});
+
+test("adapter execution owners reject upward, legacy and cross-family runtime edges", () => {
+  for (const file of adapterExecutionOwners) {
+    for (const target of [
+      "lib/providers/execution/index", "routes/edit", "lib/responsesImageAdapter",
+      ...legacyOwners.map((path) => path.replace(/\.ts$/, "")),
+      ...openaiOwners.map((path) => path.replace(/\.ts$/, "")),
+      ...grokOwners.map((path) => path.replace(/\.ts$/, "")),
+      ...googleOwners.map((path) => path.replace(/\.ts$/, "")),
+    ]) {
+      const specifier = `./${posix.relative(posix.dirname(file), `${target}.js`)}`;
+      for (const source of [
+        `import { run as alias } from "${specifier}";`,
+        `export * from "${specifier}";`, `const run = await import("${specifier}");`,
+      ]) {
+        const edges = forbiddenExecutionEdges(source, file);
+        assert.equal(edges.length, 1, `${file}: ${source}`);
+        assert.equal(edges[0].target, target);
+      }
+      assert.deepEqual(forbiddenExecutionEdges(`import type { Options } from "${specifier}";`, file), []);
+    }
+  }
+});
+
+test("callers cannot bypass the execution seam through lane adapters", () => {
+  for (const file of EXECUTION_CALLERS) for (const target of adapterExecutionOwners) {
+    const specifier = `./${posix.relative(posix.dirname(file), target.replace(/\.ts$/, ".js"))}`;
+    const source = `import { createNaiAdapter as bypass } from "${specifier}";`;
+    const edges = forbiddenExecutionEdges(source, file);
+    assert.equal(edges.length, 1, `${file}: ${source}`);
+    assert.equal(edges[0].target, target.replace(/\.ts$/, ""));
   }
 });

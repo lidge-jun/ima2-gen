@@ -137,20 +137,18 @@ export async function publicPinnedHttpGet(
   headers?: Record<string, string>,
 ): Promise<PinnedHttpResponse> {
   let url = new URL(rawUrl);
-  try {
-    for (let hop = 0; ; hop++) {
-      signal.throwIfAborted();
-      validateUrl(url.href); // Includes scheme/allowhost, before DNS and every socket.
-      const target = await resolvePublicDownloadTarget(url, signal);
-      const response = await pinnedHttpGet(target, signal, headers ? { headers } : {});
-      if (!REDIRECT_STATUSES.has(response.status)) return response;
-      try {
-        const location = response.headers.get("location");
-        if (!location?.trim() || hop >= MAX_PUBLIC_REDIRECTS) throw new Error("PINNED_GET_REDIRECT_REFUSED");
-        url = new URL(location, url);
-      } finally { response.cancel(); }
-    }
-  } catch (error) { throw error; }
+  for (let hop = 0; ; hop++) {
+    signal.throwIfAborted();
+    validateUrl(url.href); // Includes scheme/allowhost, before DNS and every socket.
+    const target = await resolvePublicDownloadTarget(url, signal);
+    const response = await pinnedHttpGet(target, signal, headers ? { headers } : {});
+    if (!REDIRECT_STATUSES.has(response.status)) return response;
+    try {
+      const location = response.headers.get("location");
+      if (!location?.trim() || hop >= MAX_PUBLIC_REDIRECTS) throw new Error("PINNED_GET_REDIRECT_REFUSED");
+      url = new URL(location, url);
+    } finally { response.cancel(); }
+  }
 }
 
 export class PinnedBodyTooLarge extends Error {
@@ -170,6 +168,5 @@ export async function readPinnedBody(response: PinnedHttpResponse, maxBytes: num
       chunks.push(Buffer.from(chunk));
     }
     return Buffer.concat(chunks, total); // Empty text remains a valid import input.
-  } catch (error) { throw error; }
-  finally { response.cancel(); }
+  } finally { response.cancel(); }
 }

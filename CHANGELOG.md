@@ -28,6 +28,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.15.0] - 2026-09-08
+
+### Added
+
+- **NovelAI quota lane** (#193) — `GET /api/quota` now returns `nai` alongside `codex` and `grok`: the Opus V5 battery meter (`v5-battery` window with remaining charge and the next +1% ETA), the `isNegative` recharge flag and fixed/purchased Anlas, read from `image.novelai.net/user/subscription` without forwarding account identifiers. Settings shows a NovelAI card with the charge bar and Anlas line when a token is configured.
+- **NAI 402 split** (#193) — a 402 on a V5 model probes the subscription once and reports `NAI_USAGE_EXHAUSTED` (battery drained, no Anlas) separately from `NAI_SUBSCRIPTION_REQUIRED`; V4.5 requests and failed probes keep the subscription code without a second request.
+
+### Changed
+
+- **Provider Adapter v1 execution hook** (#150) — `ProviderAdapterV1` gains an optional `prepareImageExecution` and the NovelAI, MiniMax, Atlas Cloud and ComfyUI adapters now own their classic/node/edit/multimode dispatch; `prepareImageExecution` routes to a registered adapter before the legacy lane switches, which are reduced to their unsupported-surface refusals. Descriptor adapters for `api`, `grok-api` and `gemini-api` (API key or Vertex service account) join the common contract suite; `oauth`, `grok` and `agy` stay unregistered because their readiness is asynchronous.
+
+### Fixed
+
+- Removed no-op `catch (error) { throw error; }` wrappers across provider execution, sprite, asset and LAN-session modules; behavior is unchanged and the coding convention now asks for try/catch only where an error is transformed, logged, or surfaced at a boundary.
+
+## [3.14.0] - 2026-09-06
+
 ### Production readiness
 
 - Correct NovelAI positive/negative prompt pane sizing, scrolling and toolbar spacing across sidebar, bottom, home and mobile composers; retain drafts when changing providers.
