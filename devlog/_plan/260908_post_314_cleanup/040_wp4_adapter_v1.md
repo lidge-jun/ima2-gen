@@ -25,11 +25,11 @@ NEW files — the suite reads `lib/providers/adapters/${laneId}.ts` (test line 1
 file names are the lane ids verbatim:
 - `lib/providers/adapters/api.ts`: LANE_ID "api"; validateAuth = `ctx.apiKey ? ok : { ok:false, reason:"OpenAI API key missing" }`; errorPrefix from registry (`getProvider("api").errorPrefix`, verify value at B; if undefined, normalizeError still returns `{ code, message, status?, retryable }` using code as-is or `UNKNOWN`).
 - `lib/providers/adapters/grok-api.ts`: LANE_ID "grok-api"; validateAuth = `ctx.xaiApiKey` -> "xAI API key missing".
-- `lib/providers/adapters/gemini-api.ts`: LANE_ID "gemini-api"; validateAuth = `ctx.geminiApiKey` -> "Gemini API key missing".
+- `lib/providers/adapters/gemini-api.ts`: LANE_ID "gemini-api"; validateAuth = `ctx.geminiApiKey || ctx.vertexServiceAccountJson` (same readiness rule as routes/models.ts:196; keyless Vertex executes at geminiOperations.ts:125) -> "Gemini API key or Vertex service account missing". Fixtures in the contract test: key-only, vertex-only, both -> ok; neither -> reason.
 Each copies the minimax.ts normalizeError shape (readStatus/readCode/RETRYABLE_STATUSES) — do NOT call lib/errors/providerMap.ts (it returns an error class, not ProviderError).
 MODIFY `lib/providers/adapters/index.ts`: add the three factories to the map; update header comment.
 MODIFY `tests/provider-adapter-v1-contract.test.ts`:
-- contextWith(): add `apiKey: key, xaiApiKey: key, geminiApiKey: key`.
+- contextWith(): add `apiKey: key, xaiApiKey: key, geminiApiKey: key`; add a dedicated test "gemini-api accepts Vertex-only credentials" using `{ vertexServiceAccountJson: "{}" }` without geminiApiKey.
 - EXPECTED_AUTH_REASON: add `api: /OpenAI API key missing/, "grok-api": /xAI API key missing/, "gemini-api": /Gemini API key missing/`.
 - test "an unregistered lane returns null" (line 188): lanes list becomes `["oauth", "grok", "agy"]` and the message names the async-readiness reason.
 - "no adapter source hard-codes a model id" (line 112): passes as long as new files contain no model literals.
@@ -48,10 +48,10 @@ const adapter = getProviderAdapter(ctx, request.provider);
 if (adapter?.prepareImageExecution) return adapter.prepareImageExecution(ctx, request, progress);
 ```
 importing `getProviderAdapter` from `../adapters/index.js` (runtime edge execution -> adapters; adapters never import execution at runtime, so no cycle). The typed openai/grok/google owners keep their existing early returns above this line.
-MODIFY `lib/providers/execution/legacy*.ts`: remove the four lane branches and their imports; `prepareLegacyImageExecution` keeps the surface switch and each legacy file reduces to the "Unsupported ... provider" throw (keep files so provider-execution-imports legacyOwners paths still exist).
+MODIFY `lib/providers/execution/legacy*.ts`: remove the four lane branches and their imports; `prepareLegacyImageExecution` keeps the surface switch and each legacy file reduces to the "Unsupported ... provider" throw, still raised inside the returned `execute()` (delayed refusal: tests/provider-execution-boundary.test.ts:230 awaits preparation outside assert.rejects). Keep the files so provider-execution-imports legacyOwners paths exist.
 Tests:
 - `tests/nai-routing-contract.test.ts:94` "no nai dispatch forwards references": file list becomes `["lib/providers/adapters/nai.ts", "lib/agentImageVideoGen.ts"]`; the "exactly one call" expectation becomes per-surface calls inside nai.ts (assert >= 3 calls: classic, node, multimode) each with no `references` argument.
-- `tests/provider-execution-imports.test.ts:81`: add `adapterExecutionOwners = ["lib/providers/adapters/nai.ts","minimax.ts","atlascloud.ts","comfy.ts"]` to the forbidden-edge loop; run first, then add the four to the loop and fold any real violation (expected none: they import only lib/*ImageAdapter.js, registry, types).
+- `tests/_executionImportEdges.mjs`: adding files to the loop alone is not enforcement (unknown owners fall through to the permissive branch at line 172). Amend the policy helper: NEW `adapterExecutionOwners = new Set(["lib/providers/adapters/nai","lib/providers/adapters/minimax","lib/providers/adapters/atlascloud","lib/providers/adapters/comfy"])`; in forbiddenExecutionEdges add a branch `if (adapterExecutionOwners.has(owner)) return target === facadeOwner || target === publicOwner || isLegacyOwner(target) || openaiOwners.has(target) || grokOwners.has(target) || googleOwners.has(target) || target.startsWith("routes/")`; and extend the EXECUTION_CALLERS branch so callers may not import adapterExecutionOwners directly (bypass). `tests/provider-execution-imports.test.ts:81`: add the four full paths to the loop, plus negative mutation cases (synthetic sources) proving each forbidden edge is reported: adapter -> execution/index, adapter -> routes/edit, caller -> adapters/nai.
 - `tests/provider-execution-classic.test.ts`, `-node`, `-multimode`, `-routes`, `tests/provider-surface-boundary.test.ts`, `tests/mcp-provider-adapters.test.ts`, `tests/nai-*.test.ts`, `tests/comfy-*.test.ts`, `tests/minimax*.test.ts`, `tests/atlascloud*.test.ts`: behavior suites; must pass unchanged.
 - `tests/provider-adapter-v1-contract.test.ts`: add a test "legacy lanes own their execution": for nai/minimax/atlascloud/comfy `typeof adapter.prepareImageExecution === "function"`.
 

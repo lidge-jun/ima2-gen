@@ -104,7 +104,7 @@ and append to SELF_DESCRIBING_AUTH_CODES (line 217-222).
 ### CLI: unchanged. `ima2 billing` requests `/api/billing` (bin/commands/observability.ts:60), not
 /api/quota; there is no CLI quota consumer today and adding one is outside #193. Update the
 sentence "Grok quota is web-UI only via GET /api/quota" in docs/CLI.md:465 and
-docs/CLI.zh-CN.md:352 to "Grok and NovelAI quota are web-UI only via GET /api/quota".
+docs/CLI.zh-CN.md:352 and docs/CLI.zh-TW.md:352 to "Grok and NovelAI quota are web-UI only via GET /api/quota".
 
 ## Verifiers
 - `npm test` (new file globbed by scripts/run-tests.mjs), `npm run typecheck`, `npm run typecheck:tests`, `npm run test:inventory` (classify-tests registry must include new test), `npm --prefix ui run build`, `tests/api-docs-contract.test.js` (reads docs/API.md), i18n parity test (`rg -n i18n tests | head` -> tests/i18n-*.test.* must pass with new keys).

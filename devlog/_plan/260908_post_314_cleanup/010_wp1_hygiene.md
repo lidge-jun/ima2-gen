@@ -51,9 +51,9 @@ Consumes 000 baseline. Branch `codex/p314-wp1-hygiene` from origin/dev (36aa6fce
 - `rg -c 'catch \(error\) \{ throw error; \}' lib ui/src bin routes` -> exit 1 with no output after B (exit 0, 19 files at P). Reads targets directly.
 - `npm run typecheck` (tsconfig.json includes lib, routes, bin, server, config) exit 0.
 - `npx --prefix ui tsc --noEmit -p ui/tsconfig.app.json` (ui/tsconfig.json has files: [] and only references; the app config includes ui/src) exit 0; `npm --prefix ui run build` exit 0.
-- `npm test` full suite (scripts/run-tests.mjs globs tests/*.test.*) exit 0.
+- `npm run build:server && npm run build:cli && npm --prefix ui run build` first (source-tree tests read emitted lib/*.js, e.g. tests/prompt-studio-ui-contract.test.js:136), then `npm test` exit 0.
 - `node scripts/refresh-structure-line-counts.mjs` then `--check` exit 0.
-- `rg -n '260905_production_readiness' --glob '!devlog/**' .` -> every hit carries the _fin/ prefix (DESIGN.md, structure/07, devlog/_plan/README.md, .gitignore).
+- `rg -n '260905_production_readiness' DESIGN.md structure/07-devlog-map.md devlog/_plan/README.md .gitignore` -> every hit carries the _fin/ prefix (explicit files: a glob excluding devlog/ would skip README.md and hidden .gitignore).
 - `git ls-files devlog/_fin/260905_production_readiness | wc -l` == 159 (tracked count before the move).
 - CHANGELOG: human review row; no gate reads it.
 

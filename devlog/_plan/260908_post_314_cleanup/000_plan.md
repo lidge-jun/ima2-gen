@@ -6,7 +6,9 @@ PRs, issues closed or precisely dispositioned, hygiene residuals fixed, dev->mai
 promoted, a new stable release published and visually verified from the published
 artifact. Non-goals: 500-line file splits (user accepted), new providers beyond the
 NAI quota lane, loopback API budget changes (follow-up note only), history rewrite,
-gate bypass. Verifiers per unit doc; all were run at P against HEAD 36aa6fce.
+gate bypass. Verifiers per unit doc; each was executed at A (rounds 1-2) with the exit
+codes recorded there; `npm test` requires build:server, build:cli and the UI build first
+(pr-fast.yml:63 does the same), otherwise source-tree tests reading emitted lib/*.js fail.
 Stop: all goalplan criteria c-1..c-8 met with fresh evidence. Memory artifact: this
 unit + .codexclaw goalplan ledger. Terminal outcomes: DONE / BLOCKED (remote gate after
 two root-cause repairs) / UNSAFE (bypass, rewrite, paid spend) / NEEDS_HUMAN (approval
@@ -21,8 +23,8 @@ existing browser tools; zero paid image generation; NAI probe is a free GET.
 - HEAD 36aa6fce = origin/main = origin/dev = origin/preview = v3.14.0; npm latest
   3.14.0 gitHead 36aa6fce; main CI/CodeQL/canary/package-health green.
 - Open PRs: #194 #195 #196 (dependabot npm, base d39f9ea2/d2afe6b2, red only on
-  `release provenance guard (wp9)` test because .release/required-units.json
-  wp9 SHA 86bf4590 is not an ancestor of their stale bases), #220 (actions, green).
+  `release provenance guard (wp9)` because the pr-fast.yml revision they ran used a
+  shallow fetch-depth: 2 that hid the wp9 ancestor; see 020), #220 (actions, green).
 - Open issues: #193 (NAI V5 battery quota), #150 (Adapter v1 RFC).
 - Residuals from review: stale CHANGELOG `[Unreleased]`, unarchived 260905 unit,
   19 files / 51 sites with `catch (error) { throw error; }`, AGENTS.md convention wording.
@@ -30,6 +32,9 @@ existing browser tools; zero paid image generation; NAI probe is a free GET.
   were run before B so every verifier executes locally, not only in hosted CI.
 
 ## Audit log
+- Round 2: GO-WITH-FIXES, 3 blockers folded (build-before-test ordering + explicit grep
+  targets in 010; import-policy helper amendment in 040; gemini-api readiness = apiKey or
+  vertexServiceAccountJson with four fixtures; delayed refusal kept inside execute()).
 - Round 1 (gpt-6-astra reviewer): FAIL, 8 blockers. All folded: 040 rewritten (items
   1-2 scoped to sync-auth lanes, every test amendment named); 010 verifiers corrected
   and _fin allowlist added; 030 CLI/wire-type/consumer chain completed; 020 root cause
