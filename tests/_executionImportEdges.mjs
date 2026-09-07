@@ -36,6 +36,10 @@ const googleEdges = new Map([
   ["lib/agyProcess", []],
 ]);
 const googleOwners = new Set(googleEdges.keys());
+const adapterExecutionOwners = new Set([
+  "lib/providers/adapters/nai", "lib/providers/adapters/minimax",
+  "lib/providers/adapters/atlascloud", "lib/providers/adapters/comfy",
+]);
 const isLegacyOwner = (target) => /^lib\/providers\/execution\/legacy[^/]*$/.test(target);
 
 export function normalizeModulePath(file, specifier) {
@@ -150,7 +154,12 @@ export function forbiddenExecutionEdges(source, file) {
   return collectRuntimeEdges(source, file).filter(({ target }) => {
     if (EXECUTION_CALLERS.includes(file)) {
       return concreteOwners.has(target) || openaiOwners.has(target) || grokOwners.has(target)
-        || googleOwners.has(target) || isLegacyOwner(target);
+        || googleOwners.has(target) || isLegacyOwner(target) || adapterExecutionOwners.has(target);
+    }
+    if (adapterExecutionOwners.has(owner)) {
+      return target === facadeOwner || target === publicOwner || isLegacyOwner(target)
+        || openaiOwners.has(target) || grokOwners.has(target) || googleOwners.has(target)
+        || target.startsWith("routes/");
     }
     if (isLegacyOwner(owner)) return target === facadeOwner || openaiOwners.has(target)
       || grokFacades.has(target) || grokOwners.has(target) || googleFacades.has(target) || googleOwners.has(target);

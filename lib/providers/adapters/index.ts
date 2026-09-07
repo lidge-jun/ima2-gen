@@ -1,12 +1,13 @@
 /**
- * Adapter lookup (#150, phase 2).
- *
- * MiniMax (phase 1 reference) and Atlas Cloud (second adapter) are registered.
- * Every other lane returns null and keeps its current code path, so each
- * migration is a deliberate, measured step rather than a bulk rewrite.
+ * Adapter lookup (#150): seven lanes expose synchronous readiness and metadata.
+ * NAI, MiniMax, Atlas Cloud and Comfy also own their image execution surfaces.
+ * OAuth, Grok proxy and Antigravity await an async readiness contract.
  */
 import type { RuntimeContext } from "../../runtimeContext.js";
 import type { CoreProviderId } from "../registry.js";
+import { createApiAdapter } from "./api.js";
+import { createGrokApiAdapter } from "./grok-api.js";
+import { createGeminiApiAdapter } from "./gemini-api.js";
 import { createAtlasCloudAdapter } from "./atlascloud.js";
 import { createComfyAdapter } from "./comfy.js";
 import { createMinimaxAdapter } from "./minimax.js";
@@ -16,6 +17,9 @@ import type { ProviderAdapterV1 } from "./types.js";
 type AdapterFactory = (ctx: RuntimeContext) => ProviderAdapterV1;
 
 const ADAPTER_FACTORIES: Partial<Record<CoreProviderId, AdapterFactory>> = {
+  api: createApiAdapter,
+  "grok-api": createGrokApiAdapter,
+  "gemini-api": createGeminiApiAdapter,
   minimax: createMinimaxAdapter,
   atlascloud: createAtlasCloudAdapter,
   comfy: createComfyAdapter,

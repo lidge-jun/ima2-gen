@@ -40,6 +40,9 @@ function contextWith(key: string | undefined): RuntimeContext {
   // as the keys. That state must arrive through RuntimeContext — a module-level
   // store cache could not be empty and non-empty for the two calls below.
   return {
+    apiKey: key,
+    xaiApiKey: key,
+    geminiApiKey: key,
     minimaxApiKey: key,
     atlasCloudApiKey: key,
     naiApiKey: key,
@@ -56,6 +59,9 @@ const withoutKey = contextWith(undefined);
  * for every lane the suite iterates.
  */
 const EXPECTED_AUTH_REASON: Record<string, RegExp> = {
+  api: /OpenAI API key missing/,
+  "grok-api": /xAI API key missing/,
+  "gemini-api": /Gemini API key or Vertex service account missing/,
   minimax: /MiniMax API key missing/,
   atlascloud: /Atlas Cloud API key missing/,
   comfy: /workflow/i,
@@ -186,7 +192,41 @@ test("an existing provider-specific code is preserved, not double-prefixed", () 
 });
 
 test("an unregistered lane returns null so its current path is untouched", () => {
-  for (const lane of ["oauth", "api", "grok", "grok-api", "agy", "gemini-api"] as const) {
-    assert.equal(getProviderAdapter(withKey, lane), null, `${lane} must not be adapter-routed yet`);
+  // OAuth proxy readiness, Grok health and Antigravity binary detection are async.
+  for (const lane of ["oauth", "grok", "agy"] as const) {
+    assert.equal(getProviderAdapter(withKey, lane), null, `${lane} needs async readiness before descriptor registration`);
   }
+});
+
+for (const { name, credentials, expected } of [
+  { name: "key-only credentials", credentials: { geminiApiKey: "key" }, expected: { ok: true } },
+  { name: "Vertex-only credentials", credentials: { vertexServiceAccountJson: "{}" }, expected: { ok: true } },
+  { name: "both credentials", credentials: { geminiApiKey: "key", vertexServiceAccountJson: "{}" }, expected: { ok: true } },
+  { name: "neither credential", credentials: {}, expected: { ok: false, reason: "Gemini API key or Vertex service account missing" } },
+]) {
+  test(`gemini-api ${expected.ok ? "accepts" : "rejects"} ${name}`, () => {
+    const ctx = { ...withoutKey, ...credentials } as RuntimeContext;
+    assert.deepEqual(getProviderAdapter(ctx, "gemini-api")?.validateAuth(), expected);
+  });
+}
+
+test("legacy lanes own their execution", () => {
+  for (const lane of ["nai", "minimax", "atlascloud", "comfy"] as const) {
+    assert.equal(typeof getProviderAdapter(withKey, lane)?.prepareImageExecution, "function", lane);
+  }
+  for (const lane of ["api", "grok-api", "gemini-api"] as const) {
+    const adapter = getProviderAdapter(withKey, lane);
+    assert.ok(adapter, `${lane} descriptor must be registered`);
+    assert.equal(adapter.prepareImageExecution, undefined, lane);
+  }
+});
+
+test("api normalizes errors without a provider prefix", () => {
+  const adapter = getProviderAdapter(withKey, "api")!;
+  assert.deepEqual(adapter.normalizeError(Object.assign(new Error("busy"), { code: "rate_limit", statusCode: 429 })), {
+    code: "rate_limit", message: "busy", status: 429, retryable: true,
+  });
+  assert.deepEqual(adapter.normalizeError("unknown failure"), {
+    code: "UNKNOWN", message: "unknown failure", retryable: false,
+  });
 });

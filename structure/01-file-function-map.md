@@ -231,19 +231,19 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/naiImageAdapter.ts` | 255 | NovelAI image-generation provider adapter: request build, V5 parameter gating, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
 | `lib/naiOptions.ts` | 145 | NovelAI request-option normalizer shared by every request-driven dispatch, plus negative-prompt history provenance |
 | `lib/naiZip.ts` | 153 | Minimal ZIP reader for NovelAI responses: stored/deflate entries, ZIP64 and encryption refusal, 50MB entry cap |
-| `lib/providers/adapters/nai.ts` | 77 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
+| `lib/providers/adapters/nai.ts` | 142 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
 | `lib/providers/registry.ts` | 280 | Provider lane manifests: the single declaration every generated catalog, capability list, and CLI enum derives from |
 | `lib/providers/types.ts` | 87 | Manifest/credential types, explicit model generation support, and provider surface records |
 | `lib/providers/derive.ts` | 97 | Registry-bound provider IDs, catalogs, reference limits and surface support |
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
 | `lib/providers/execution/admission.ts` | 38 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
-| `lib/providers/execution/index.ts` | 33 | Public prepare/execute facade with current direct-key presence checks |
+| `lib/providers/execution/index.ts` | 36 | Public prepare/execute facade with current direct-key presence checks |
 | `lib/providers/execution/legacy.ts` | 31 | Four-surface Atlas/MiniMax/NAI/Comfy dispatcher; OpenAI/Grok/Google excluded |
-| `lib/providers/execution/legacyClassic.ts` | 67 | Remaining-provider classic dispatch with preserved prepare-time capture |
-| `lib/providers/execution/legacyNode.ts` | 49 | One node transport attempt; caller owns retry, partials and persistence |
-| `lib/providers/execution/legacyEdit.ts` | 36 | Remaining-provider single edit dispatch and native result metadata |
-| `lib/providers/execution/legacyMultimode.ts` | 42 | Native sequence dispatch and existing one-image projections |
+| `lib/providers/execution/legacyClassic.ts` | 15 | Remaining-provider classic dispatch with preserved prepare-time capture |
+| `lib/providers/execution/legacyNode.ts` | 14 | One node transport attempt; caller owns retry, partials and persistence |
+| `lib/providers/execution/legacyEdit.ts` | 14 | Remaining-provider single edit dispatch and native result metadata |
+| `lib/providers/execution/legacyMultimode.ts` | 14 | Native sequence dispatch and existing one-image projections |
 | `lib/pngInfo.ts` | 27 | PNG IHDR parsing (dimensions, bit depth, colour type / alpha detection). Despite the name it reads NO text chunks — `lib/comfyPngWorkflow.ts` owns those. |
 | `lib/comfyWorkflowStore.ts` | 252 | Comfy lane model registry: per-record origin and image/video kind, legacy image normalization, id/kind validation, corrupt-file tolerance |
 | `lib/comfyGraphBind.ts` | 273 | API-format graph parsing, grouped SDXL/H3 binding inference, SaveImage/SaveVideo kind inference, non-mutating value injection, parameter derivation |

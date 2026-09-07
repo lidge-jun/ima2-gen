@@ -15,7 +15,12 @@
  * use this projection: lib/comfyImageAdapter reads the store directly, so a
  * context lagging one write can never run a stale graph.
  */
-import type { RuntimeContext } from "../../runtimeContext.js";
+import { generateViaComfy } from "../../comfyImageAdapter.js";
+import type {
+  ExecutionProgress, ExecutionSurface, ImageExecutionRequest, PreparedImageExecution,
+} from "../execution/types.js";
+import { detectImageMimeFromB64 } from "../../refs.js";
+import { requireRuntimeContext, type RuntimeContext } from "../../runtimeContext.js";
 import type { CoreProviderModel } from "../types.js";
 import type { AuthResult, ProviderAdapterV1, ProviderError } from "./types.js";
 
@@ -42,6 +47,7 @@ function readCode(error: unknown): string | undefined {
 export function createComfyAdapter(ctx: RuntimeContext): ProviderAdapterV1 {
   return {
     laneId: LANE_ID,
+    prepareImageExecution: prepareLaneImageExecution,
 
     validateAuth(): AuthResult {
       const workflows = (ctx.comfyWorkflows ?? []).filter((workflow) => workflow.mediaKind !== "video");
@@ -68,24 +74,73 @@ export function createComfyAdapter(ctx: RuntimeContext): ProviderAdapterV1 {
         }));
     },
 
-    normalizeError(error: unknown): ProviderError {
-      const status = readStatus(error);
-      const rawCode = readCode(error);
-      const message = error instanceof Error ? error.message
-        : typeof error === "string" ? error
-        : "ComfyUI request failed";
-      const code = rawCode?.startsWith(ERROR_PREFIX)
-        ? rawCode
-        : rawCode
-          ? `${ERROR_PREFIX}${rawCode}`
-          : `${ERROR_PREFIX}UNKNOWN`;
-      const retryable = status === undefined ? false : RETRYABLE_STATUSES.has(status);
-      return {
-        code,
-        message,
-        ...(status === undefined ? {} : { status }),
-        retryable,
-      };
-    },
+    normalizeError,
+  };
+}
+
+function prepareClassic(
+  ctx: RuntimeContext, request: Extract<ImageExecutionRequest, { surface: "classic" }>, progress: ExecutionProgress,
+): PreparedImageExecution<"classic"> {
+  const { prompt: generationPrompt, requestId } = request;
+  const { model: imageModel, size: effectiveSize } = request.options;
+  // Capture scalars at prepare; ctx, refs, signal and lane options stay live.
+  return { execute: async () => {
+    const value = await generateViaComfy(generationPrompt, requireRuntimeContext(ctx), {
+      model: imageModel, size: effectiveSize, signal: request.signal,
+      requestId, references: request.references,
+      ...request.comfy, onQueue: progress.onQueue,
+    });
+    return { kind: "single", value };
+  } };
+}
+
+function prepareEdit(
+  ctx: RuntimeContext, request: Extract<ImageExecutionRequest, { surface: "edit" }>,
+): PreparedImageExecution<"edit"> {
+  return { execute: async () => {
+    const { prompt, sourceImage, signal, requestId, options } = request;
+    const references = [{ b64: sourceImage, declaredMime: null, detectedMime: detectImageMimeFromB64(sourceImage) || null }];
+    const editPrompt = `Edit this image: ${prompt}`;
+    const params = { model: options.model, size: options.size, signal, ...(requestId !== undefined ? { requestId } : {}), references };
+    const value = await generateViaComfy(editPrompt, ctx, params);
+    return { kind: "single", value };
+  } };
+}
+
+function prepareLaneImageExecution<R extends ImageExecutionRequest>(
+  ctx: RuntimeContext, request: R, progress?: ExecutionProgress,
+): Promise<PreparedImageExecution<R["surface"]>>;
+async function prepareLaneImageExecution(
+  ctx: RuntimeContext, request: ImageExecutionRequest, progress: ExecutionProgress = {},
+): Promise<PreparedImageExecution<ExecutionSurface>> {
+  switch (request.surface) {
+    case "classic": return prepareClassic(ctx, request, progress);
+    case "node": return { execute: async () => {
+      throw new Error(`Unsupported node execution provider: ${request.provider}`);
+    } };
+    case "edit": return prepareEdit(ctx, request);
+    case "multimode": return { execute: async () => {
+      throw new Error(`Unsupported legacy multimode provider: ${request.provider}`);
+    } };
+  }
+}
+
+function normalizeError(error: unknown): ProviderError {
+  const status = readStatus(error);
+  const rawCode = readCode(error);
+  const message = error instanceof Error ? error.message
+    : typeof error === "string" ? error
+    : "ComfyUI request failed";
+  const code = rawCode?.startsWith(ERROR_PREFIX)
+    ? rawCode
+    : rawCode
+      ? `${ERROR_PREFIX}${rawCode}`
+      : `${ERROR_PREFIX}UNKNOWN`;
+  const retryable = status === undefined ? false : RETRYABLE_STATUSES.has(status);
+  return {
+    code,
+    message,
+    ...(status === undefined ? {} : { status }),
+    retryable,
   };
 }

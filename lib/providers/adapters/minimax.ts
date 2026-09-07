@@ -1,15 +1,13 @@
 /**
- * MiniMax adapter (#150, phase 1 reference implementation).
- *
- * MiniMax was chosen because it has the smallest runtime surface of the eight
- * lanes: one API key, two image models, no video, one reference image. That
- * makes it the cheapest place to find out whether the interface is shaped
- * correctly before the other seven follow.
- *
- * This wraps the existing runtime; it does not move it. lib/minimaxImageAdapter
- * keeps generating images exactly as before.
+ * MiniMax adapter: readiness, registry models, errors and image execution surfaces.
+ * The existing image adapter retains transport and provider protocol ownership.
  */
-import type { RuntimeContext } from "../../runtimeContext.js";
+import { generateViaMinimax } from "../../minimaxImageAdapter.js";
+import type {
+  ExecutionProgress, ExecutionSurface, ImageExecutionRequest, PreparedImageExecution,
+} from "../execution/types.js";
+import { detectImageMimeFromB64 } from "../../refs.js";
+import { requireRuntimeContext, type RuntimeContext } from "../../runtimeContext.js";
 import { getProvider } from "../registry.js";
 import type { CoreProviderModel } from "../types.js";
 import type { AuthResult, ProviderAdapterV1, ProviderError } from "./types.js";
@@ -45,6 +43,7 @@ function readCode(error: unknown): string | undefined {
 export function createMinimaxAdapter(ctx: RuntimeContext): ProviderAdapterV1 {
   return {
     laneId: LANE_ID,
+    prepareImageExecution: prepareLaneImageExecution,
 
     validateAuth(): AuthResult {
       // Presence only. MiniMax publishes no key prefix or length rule, so a
@@ -80,4 +79,77 @@ export function createMinimaxAdapter(ctx: RuntimeContext): ProviderAdapterV1 {
       };
     },
   };
+}
+
+function prepareClassic(
+  ctx: RuntimeContext, request: Extract<ImageExecutionRequest, { surface: "classic" }>,
+): PreparedImageExecution<"classic"> {
+  const { prompt: generationPrompt, requestId } = request;
+  const { model: imageModel, size: effectiveSize } = request.options;
+  // Capture scalars at prepare; ctx, refs, signal and lane options stay live.
+  return { execute: async () => {
+    const value = await generateViaMinimax(generationPrompt, requireRuntimeContext(ctx), {
+      model: imageModel, size: effectiveSize, signal: request.signal,
+      requestId, references: request.references,
+    });
+    return { kind: "single", value };
+  } };
+}
+
+function prepareNode(
+  ctx: RuntimeContext, request: Extract<ImageExecutionRequest, { surface: "node" }>,
+): PreparedImageExecution<"node"> {
+  return { execute: async () => {
+    const { sourceImage: parentB64, rawPrompt: prompt, references, requestId, signal, options } = request;
+    const { model, size } = options;
+    const value = await generateViaMinimax(parentB64 ? `Edit this image: ${prompt}` : prompt, requireRuntimeContext(ctx), {
+      model, size, signal, requestId,
+      references: parentB64
+        ? [{ b64: parentB64, declaredMime: null, detectedMime: null }, ...references]
+        : references,
+    });
+    return { kind: "single", value };
+  } };
+}
+
+function prepareEdit(
+  ctx: RuntimeContext, request: Extract<ImageExecutionRequest, { surface: "edit" }>,
+): PreparedImageExecution<"edit"> {
+  return { execute: async () => {
+    const { prompt, sourceImage, signal, requestId, options } = request;
+    const references = [{ b64: sourceImage, declaredMime: null, detectedMime: detectImageMimeFromB64(sourceImage) || null }];
+    const editPrompt = `Edit this image: ${prompt}`;
+    const params = { model: options.model, size: options.size, signal, ...(requestId !== undefined ? { requestId } : {}), references };
+    const value = await generateViaMinimax(editPrompt, ctx, params);
+    return { kind: "single", value };
+  } };
+}
+
+function prepareMultimode(
+  ctx: RuntimeContext, request: Extract<ImageExecutionRequest, { surface: "multimode" }>,
+): PreparedImageExecution<"multimode"> {
+  return { execute: async () => {
+    const { rawPrompt, references, signal, requestId, options } = request;
+    const params = { model: options.model, size: options.size, signal, ...(requestId !== undefined ? { requestId } : {}), references };
+    const result = await generateViaMinimax(rawPrompt, ctx, params);
+    // Preserve the projection; the caller owns the final persistence sweep.
+    return { kind: "sequence", value: {
+      images: [{ b64: result.b64, ...(result.revisedPrompt !== undefined ? { revisedPrompt: result.revisedPrompt } : {}) }],
+      usage: result.usage, webSearchCalls: result.webSearchCalls,
+    } };
+  } };
+}
+
+function prepareLaneImageExecution<R extends ImageExecutionRequest>(
+  ctx: RuntimeContext, request: R, progress?: ExecutionProgress,
+): Promise<PreparedImageExecution<R["surface"]>>;
+async function prepareLaneImageExecution(
+  ctx: RuntimeContext, request: ImageExecutionRequest, _progress?: ExecutionProgress,
+): Promise<PreparedImageExecution<ExecutionSurface>> {
+  switch (request.surface) {
+    case "classic": return prepareClassic(ctx, request);
+    case "node": return prepareNode(ctx, request);
+    case "edit": return prepareEdit(ctx, request);
+    case "multimode": return prepareMultimode(ctx, request);
+  }
 }
