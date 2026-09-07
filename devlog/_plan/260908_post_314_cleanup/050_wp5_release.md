@@ -49,3 +49,34 @@ procedure source; this doc lists only the deltas and exact commands.
 Same rollback contract as 130 (never move latest backward; new cut for repairs).
 
 ## Accept: c-6, c-7, c-8.
+
+## wp5 P revalidation (2026-09-08, tree d42678f9 = origin/dev after wp1-wp4)
+Quoting wp4 D: #225 merged, #150 dispositioned open; direction unchanged.
+Preconditions: main is an ancestor of dev (17 commits ahead); open PRs 0; open issues 1 (#150,
+documented). package.json 3.14.0 -> release bump minor => 3.15.0 (new quota lane + new error
+code, no breaking change). Environments: npm-stable and provider-canary-live reviewer =
+lidge-jun (the gh account), npm-preview/github-pages unreviewed. Step 0 CHANGELOG cut is a
+PR to dev (codex/p314-wp5-changelog) before the promotion PR.
+
+
+## wp5 audit fold (round 1, gpt-6-astra, GO-WITH-FIXES blockers=2)
+1. Approvals: read `repos/lidge-jun/ima2-gen/actions/runs/<run>/pending_deployments`, require exactly
+   one entry with `environment.name == "npm-stable"` and `current_user_can_approve == true`, then
+   POST with `-F "environment_ids[]=<id>"` (integer array), `-f state=approved`, `-f comment=...`.
+   Two approvals: release.yml `tag` job (release.yml:174/187) and publish.yml `publish-stable`
+   (publish.yml:272/283). "No pending", "cannot approve", or a failed run is never treated as done.
+   The second wait is bounded to 80 min by release.yml:234.
+2. Step 5 split: (a) `GITHUB_SHA=R IMA2_PACKAGE_TARBALL=$TGZ node --test tests/package-install-smoke.mjs`
+   (the gitHead assertion only runs with both env vars; the smoke tears its server down);
+   (b) separate `npm install -g --prefix $REL_TMP/g $TGZ`, `ima2 --version == V`, then serve with
+   isolated IMA2_CONFIG_DIR/IMA2_GENERATED_DIR/IMA2_DB_PATH/IMA2_ADVERTISE_FILE and proxies
+   disabled, assert `/api/health .version == V`, use that server for the Computer-use screenshots.
+Residuals folded: rollback baseline for this run is 3.14.0 @ 36aa6fce (integrity recorded at
+dispatch time), not 131's 3.13.1; main/preview already equal R when the first approval waits,
+so a refused/timed-out approval must be recovered from the actual ref state, never reported as
+"remotes untouched"; "all == R" means gitHead and refs (latest version 3.15.0, preview
+3.15.0-preview.*); no manual publish dispatch or release-branch pushes while release.yml runs
+(wait-publish-run.mjs picks the first dispatch after its watermark); pages.yml must dispatch
+with --ref main (github-pages environment allows only branch main; the tag-ref run failed on
+the environment protection rule) while checking out release_sha itself.
+

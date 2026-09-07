@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.15.0] - 2026-09-08
+
 ### Added
 
 - **NovelAI quota lane** (#193) — `GET /api/quota` now returns `nai` alongside `codex` and `grok`: the Opus V5 battery meter (`v5-battery` window with remaining charge and the next +1% ETA), the `isNegative` recharge flag and fixed/purchased Anlas, read from `image.novelai.net/user/subscription` without forwarding account identifiers. Settings shows a NovelAI card with the charge bar and Anlas line when a token is configured.
