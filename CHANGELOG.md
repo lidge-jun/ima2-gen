@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+- Removed no-op `catch (error) { throw error; }` wrappers across provider execution, sprite, asset and LAN-session modules; behavior is unchanged and the coding convention now asks for try/catch only where an error is transformed, logged, or surfaced at a boundary.
+
+## [3.14.0] - 2026-09-06
+
 ### Production readiness
 
 - Correct NovelAI positive/negative prompt pane sizing, scrolling and toolbar spacing across sidebar, bottom, home and mobile composers; retain drafts when changing providers.

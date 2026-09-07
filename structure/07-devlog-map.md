@@ -51,6 +51,7 @@ When an initiative is fully shipped and merged, its plan folder moves to `_fin/`
 
 | Archive | Description |
 |---------|-------------|
+| `260905_production_readiness` | WP00–WP13 production-readiness round: provider execution contracts, selection consistency, job lifecycle, LAN security, diagnostics, installers, and the v3.14.0 release (2026-09-06, #219, 36aa6fce) |
 | `260825_novelai_provider_lane` | NovelAI (`nai`) image provider lane — tenth core lane; ZIP-archive responses, persistent-token auth, text-to-image only |
 | `260428_issue33-mobile-overhaul-logs` | Mobile shell redesign |
 | `260429_app-weight-reduction` | Code splitting and bundle diet |
@@ -122,7 +123,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260905_production_readiness/` | WP00–WP12s verified; WP13 release preparation is in B. Candidate installed UI captured; late product-review repairs and final-head verification are in progress. Implementation PR merges, main/preview promotion and deployment remain pending. See130_0/130_4/131. | — |
+| `260908_post_314_cleanup/` | Post-3.14.0 cleanup: hygiene residuals, dependabot closure, #193 NAI quota lane, #150 adapter disposition, next release. | #193, #150 |
 | `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 
