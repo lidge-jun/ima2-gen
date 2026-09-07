@@ -114,7 +114,7 @@ test("every NAI_ code the lane can emit is classified", () => {
   // An unmapped code degrades to an unclassified failure in the UI.
   const map = read("lib/errors/providerMap.ts");
   for (const code of [
-    "NAI_API_KEY_MISSING", "NAI_AUTH_FAILED", "NAI_SUBSCRIPTION_REQUIRED",
+    "NAI_API_KEY_MISSING", "NAI_AUTH_FAILED", "NAI_SUBSCRIPTION_REQUIRED", "NAI_USAGE_EXHAUSTED",
     "NAI_BAD_REQUEST", "NAI_RATE_LIMITED", "NAI_UPSTREAM_ERROR",
     "NAI_EMPTY_IMAGE", "NAI_IMAGE_INVALID", "NAI_RESPONSE_NOT_ZIP",
     "NAI_ZIP_INVALID", "NAI_ZIP_UNSUPPORTED", "NAI_ZIP_TOO_LARGE",

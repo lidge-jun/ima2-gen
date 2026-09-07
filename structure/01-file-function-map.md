@@ -228,7 +228,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/imageMetadataStore.ts` | 68 | Sharp-based embed/read of XMP metadata into PNG/JPEG/WebP |
 | `lib/canvasVersionStore.ts` | 359 | Canvas version snapshot storage, list, restore, and pruning |
 | `lib/comfyBridge.ts` | 266 | ComfyUI bridge: workflow export, image staging, integration helper handoff |
-| `lib/naiImageAdapter.ts` | 265 | NovelAI image-generation provider adapter: request build, V5 parameter gating, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
+| `lib/naiImageAdapter.ts` | 255 | NovelAI image-generation provider adapter: request build, V5 parameter gating, ZIP-to-PNG handoff, and 15 `NAI_*` operational error codes |
 | `lib/naiOptions.ts` | 145 | NovelAI request-option normalizer shared by every request-driven dispatch, plus negative-prompt history provenance |
 | `lib/naiZip.ts` | 153 | Minimal ZIP reader for NovelAI responses: stored/deflate entries, ZIP64 and encryption refusal, 50MB entry cap |
 | `lib/providers/adapters/nai.ts` | 77 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
@@ -382,7 +382,7 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | Image helpers | `ui/src/lib/image.ts` | 43 | Browser image utilities |
 | Compression | `ui/src/lib/compress.ts` | 159 | Browser-side image compression for references and uploads |
 | Cost | `ui/src/lib/cost.ts` | 91 | Quality/size cost estimation |
-| Error codes | `ui/src/lib/errorCodes.ts` | 307 | Stable error code → translation key mapping |
+| Error codes | `ui/src/lib/errorCodes.ts` | 310 | Stable error code → translation key mapping |
 | Error handler | `ui/src/lib/errorHandler.ts` | 31 | Routes errors to toast or persistent `ErrorCard` |
 | Image models | `ui/src/lib/imageModels.ts` | 216 | UI-side image model labels and `resolveCoreModelValue` lane gating |
 | Core selection policy | `ui/src/lib/coreSelection.ts` | 142 | Pure provider/model/workflow reconciliation, lane memory projection and image wire model |

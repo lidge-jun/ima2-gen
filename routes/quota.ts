@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
+import { fetchNaiSubscription } from "../lib/naiSubscription.js";
 
 export interface QuotaWindow {
   label: string;
@@ -18,6 +19,7 @@ export interface QuotaResult {
   error?: boolean;
   authenticated?: boolean;
   billing?: { usedUsd: number; limitUsd: number };
+  nai?: { active: boolean; isNegative: boolean; anlasFixed: number; anlasPurchased: number; meter: "charge" | "missing" };
 }
 
 function readCodexTokens(): { access_token: string; account_id: string } | null {
@@ -268,15 +270,40 @@ export async function fetchGrokBilling(homeDir = homedir(), grokBinary = "grok")
   return { provider: "grok", authenticated: true, windows: [] };
 }
 
-export function registerQuotaRoutes(app: Express, _ctx: RouteRuntimeContext) {
+export async function fetchNaiQuota(ctx: RouteRuntimeContext): Promise<QuotaResult> {
+  const result = await fetchNaiSubscription(ctx);
+  if (result.ok === false) return {
+    provider: "nai", windows: [],
+    ...(result.status === 401 ? { authenticated: false } : { error: true }),
+  };
+  const { active, tier, battery, anlas } = result.snapshot;
+  const nextPercentAt = battery?.timeUntilNextPercentSec == null
+    ? null : new Date(Date.now() + battery.timeUntilNextPercentSec * 1000);
+  return {
+    provider: "nai",
+    account: { email: null, plan: active ? `Tier ${tier}` : "inactive" },
+    windows: battery ? [{
+      label: "v5-battery", percent: battery.percent,
+      resetsAt: nextPercentAt && Number.isFinite(nextPercentAt.getTime()) ? nextPercentAt.toISOString() : null,
+    }] : [],
+    nai: {
+      active, isNegative: battery?.isNegative ?? false,
+      anlasFixed: anlas.fixed, anlasPurchased: anlas.purchased,
+      meter: battery ? "charge" : "missing",
+    },
+  };
+}
+
+export function registerQuotaRoutes(app: Express, ctx: RouteRuntimeContext) {
   app.get("/api/quota", async (_req, res) => {
     try {
       const tokens = readCodexTokens();
-      const [codex, grok] = await Promise.all([
+      const [codex, grok, nai] = await Promise.all([
         tokens ? fetchCodexUsage(tokens) : Promise.resolve({ provider: "codex", authenticated: false, windows: [] } as QuotaResult),
         fetchGrokBilling(),
+        fetchNaiQuota(ctx),
       ]);
-      res.json({ codex, grok });
+      res.json({ codex, grok, nai });
     } catch (e: any) {
       res.status(500).json({ error: "Failed to fetch quota" });
     }

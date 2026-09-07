@@ -1294,6 +1294,9 @@
       "envLocked": "由环境变量管理。"
     },
     "account": {
+      "naiTitle": "NovelAI",
+      "naiEyebrow": "令牌",
+      "naiBody": "使用持久令牌，下方显示 V5 Opus 电量和 Anlas 余额。",
       "primaryEyebrow": "活跃的提供商",
       "oauthTitle": "GPT OAuth",
       "oauthBody": "GPT OAuth 生成贯穿您的 Codex OAuth 会话。配置有效密钥后，您可以切换到 API-密钥模式。",
@@ -1327,6 +1330,13 @@
       }
     },
     "quota": {
+      "naiBattery": "V5 电量",
+      "naiAnlas": "Anlas",
+      "naiNegative": "充电中（负值）",
+      "naiNextPercent": "{minutes} 分钟后 +1%",
+      "naiMeterMissing": "无法获取 V5 电量。",
+      "naiAnlasFallback": "V5 电量已耗尽，可使用 Anlas 继续生成。",
+      "naiNotConfigured": "NovelAI 令牌未配置或无效。",
       "codexNotLoggedIn": "未登录",
       "fetchError": "无法加载配额",
       "noData": "无使用数据",
@@ -1628,6 +1638,11 @@
     "naiSubscriptionRequired": {
       "title": "需要 NovelAI 订阅",
       "body": "图像生成需要有效订阅（Opus、Scroll 或 Tablet）。令牌有效，但当前套餐不包含此请求。",
+      "cta": "关闭"
+    },
+    "naiUsageExhausted": {
+      "title": "NovelAI V5 电量耗尽",
+      "body": "Opus V5 使用额度已耗尽，且没有剩余 Anlas。请切换到 V4.5 模型，或等待电量恢复。",
       "cta": "关闭"
     },
     "naiZipInvalid": {

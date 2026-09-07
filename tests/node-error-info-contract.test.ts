@@ -23,6 +23,7 @@ const EXPECTED: Record<ImaErrorCode, NodeRetryAction> = {
   GROK_API_KEY_MISSING: "auth",
   NAI_AUTH_FAILED: "auth",
   NAI_SUBSCRIPTION_REQUIRED: "fix-input",
+  NAI_USAGE_EXHAUSTED: "fix-input",
   NAI_RATE_LIMITED: "retry",
   NAI_BAD_REQUEST: "fix-input",
   NAI_ZIP_INVALID: "retry",

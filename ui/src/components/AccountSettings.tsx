@@ -7,7 +7,7 @@ import { useI18n } from "../i18n";
 import { ApiKeyInput } from "./ApiKeyInput";
 import { GeminiKeySection } from "./GeminiKeySection";
 import { useKeyStatus } from "../hooks/useKeyStatus";
-import { useQuotaData, CodexQuota, GrokQuota } from "./settings/QuotaCard";
+import { useQuotaData, CodexQuota, GrokQuota, NaiQuota } from "./settings/QuotaCard";
 
 function OpenAIIcon() {
   return (
@@ -67,6 +67,9 @@ export function AccountSettings() {
       ? t("settings.account.apiSourceConfig")
       : t("settings.account.apiSourceEnv");
   const apiReady = data?.apiKeyValid === true;
+  const naiStatus = quota.loading ? "starting"
+    : quota.data?.nai?.authenticated === false ? "auth_required"
+    : !quota.data?.nai || quota.data.nai.error ? "error" : "ready";
 
   return (
     <>
@@ -119,6 +122,27 @@ export function AccountSettings() {
         </div>
         <GrokQuota data={quota.data} loading={quota.loading} onRefresh={quota.refreshQuota} />
       </article>
+
+      {keyStatus?.nai?.configured && (
+        <article className="provider-card">
+          <div className="provider-card__head">
+            <span className="provider-card__brand">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 20V4l14 16V4" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <h4>{t("settings.account.naiTitle")}</h4>
+            <span className="provider-card__eyebrow">{t("settings.account.naiEyebrow")}</span>
+            <span className={`provider-chip provider-chip--${statusTone(naiStatus)}`}>
+              {statusLabel(t, naiStatus)}
+            </span>
+          </div>
+          <div className="settings-row__copy">
+            <p>{t("settings.account.naiBody")}</p>
+          </div>
+          <NaiQuota data={quota.data} loading={quota.loading} />
+        </article>
+      )}
 
       <article className="provider-card">
         <div className="provider-card__head">

@@ -1294,6 +1294,9 @@
       "envLocked": "由環境變數管理。"
     },
     "account": {
+      "naiTitle": "NovelAI",
+      "naiEyebrow": "權杖",
+      "naiBody": "使用持久權杖，下方顯示 V5 Opus 電量和 Anlas 餘額。",
       "primaryEyebrow": "活躍的提供者",
       "oauthTitle": "GPT OAuth",
       "oauthBody": "GPT OAuth 產生貫穿您的 Codex OAuth 會話。配置有效密鑰後，您可以切換到 API-密鑰模式。",
@@ -1327,6 +1330,13 @@
       }
     },
     "quota": {
+      "naiBattery": "V5 電量",
+      "naiAnlas": "Anlas",
+      "naiNegative": "充電中（負值）",
+      "naiNextPercent": "{minutes} 分鐘後 +1%",
+      "naiMeterMissing": "無法取得 V5 電量。",
+      "naiAnlasFallback": "V5 電量已耗盡，可使用 Anlas 繼續生成。",
+      "naiNotConfigured": "NovelAI 權杖未設定或無效。",
       "codexNotLoggedIn": "未登入",
       "fetchError": "無法加載配額",
       "noData": "無使用數據",
@@ -1628,6 +1638,11 @@
     "naiSubscriptionRequired": {
       "title": "需要 NovelAI 訂閱",
       "body": "影像生成需要有效訂閱（Opus、Scroll 或 Tablet）。權杖有效，但目前方案不含此請求。",
+      "cta": "關閉"
+    },
+    "naiUsageExhausted": {
+      "title": "NovelAI V5 電量耗盡",
+      "body": "Opus V5 使用額度已耗盡，且沒有剩餘 Anlas。請切換至 V4.5 模型，或等待電量恢復。",
       "cta": "關閉"
     },
     "naiZipInvalid": {

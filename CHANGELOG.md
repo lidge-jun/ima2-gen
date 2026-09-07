@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NovelAI quota lane** (#193) — `GET /api/quota` now returns `nai` alongside `codex` and `grok`: the Opus V5 battery meter (`v5-battery` window with remaining charge and the next +1% ETA), the `isNegative` recharge flag and fixed/purchased Anlas, read from `image.novelai.net/user/subscription` without forwarding account identifiers. Settings shows a NovelAI card with the charge bar and Anlas line when a token is configured.
+- **NAI 402 split** (#193) — a 402 on a V5 model probes the subscription once and reports `NAI_USAGE_EXHAUSTED` (battery drained, no Anlas) separately from `NAI_SUBSCRIPTION_REQUIRED`; V4.5 requests and failed probes keep the subscription code without a second request.
+
 ### Changed
 
 ### Fixed

@@ -462,7 +462,7 @@ Card News requires the server to be started with `IMA2_CARD_NEWS=1` (or `feature
 | `ima2 inflight rm <requestId>` | Force-remove a stuck job |
 | `ima2 storage status` | Storage inspection (richer than `doctor`) |
 | `ima2 storage open` | Open the generated dir in the OS file manager (POST) |
-| `ima2 billing` | API usage probe via `/api/billing` (OpenAI/API-key credits when configured). Grok quota is web-UI only via `GET /api/quota`: weekly percentage/reset for current Grok Build xAI auth, with legacy monthly `usedUsd`/`limitUsd` fallback. |
+| `ima2 billing` | API usage probe via `/api/billing` (OpenAI/API-key credits when configured). Grok and NovelAI quota are web-UI only via `GET /api/quota`: weekly percentage/reset for current Grok Build xAI auth, with legacy monthly `usedUsd`/`limitUsd` fallback. |
 | `ima2 providers` | Configured providers |
 | `ima2 oauth status` | OAuth proxy state |
 | `ima2 grok status` | Bundled progrok / xAI image-model probe state |

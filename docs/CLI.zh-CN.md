@@ -349,7 +349,7 @@ Windows DNS/碎片绕过工具（例如 SecretDNS）正在使用。
 | `ima2 inflight rm <requestId>` |强制删除卡住的作业|
 | `ima2 storage status` |入库检查（丰富于`doctor`) |
 | `ima2 storage open` |在操作系统文件管理器（POST）中打开生成的目录|
-| `ima2 billing` | API使用探针通过`/api/billing` (OpenAI/API- 配置后的密钥积分）。Grok配额是网络-UI仅通过`GET /api/quota`：当前的每周百分比/重置Grok建造xAIauth，每月遗留`usedUsd`/`limitUsd`倒退。|
+| `ima2 billing` | API使用探针通过`/api/billing` (OpenAI/API- 配置后的密钥积分）。Grok和NovelAI配额仅在网页UI中通过`GET /api/quota`：当前的每周百分比/重置Grok建造xAIauth，每月遗留`usedUsd`/`limitUsd`倒退。|
 | `ima2 providers` |配置的提供商|
 | `ima2 oauth status` | OAuth代理状态|
 | `ima2 grok status` |捆绑式progrok / xAI图像模型探测状态|

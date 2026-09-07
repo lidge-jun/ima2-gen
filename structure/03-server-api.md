@@ -675,6 +675,7 @@ Implementation lives in `lib/cardNews*.ts`: `cardNewsTemplateStore`, `cardNewsRo
 | Reference attached to the NovelAI lane | 400 | `NAI_REF_UNSUPPORTED` |
 | Edit or mask requested on the NovelAI lane | 400 | `NAI_EDIT_UNSUPPORTED` / `NAI_MASK_UNSUPPORTED` |
 | NovelAI token missing, rejected, or unsubscribed | 401 / 402 | `NAI_API_KEY_MISSING`, `NAI_AUTH_FAILED`, `NAI_SUBSCRIPTION_REQUIRED` |
+| NovelAI V5 battery exhausted with no Anlas available | 402 | `NAI_USAGE_EXHAUSTED` |
 | NovelAI archive unreadable or empty | 502 | `NAI_ZIP_INVALID`, `NAI_ZIP_UNSUPPORTED`, `NAI_ZIP_TOO_LARGE`, `NAI_RESPONSE_NOT_ZIP`, `NAI_IMAGE_INVALID`, `NAI_EMPTY_IMAGE`, `NAI_UPSTREAM_ERROR` |
 | Multiple incoming parent edges | 409 | `GRAPH_PARENT_CONFLICT` |
 | API-key provider requested without a configured key | 401 | `API_KEY_REQUIRED` |
