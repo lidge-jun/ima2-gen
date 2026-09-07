@@ -1,4 +1,5 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
+import { getProviderAdapter } from "../adapters/index.js";
 import { assertDirectGrokKey } from "./admission.js";
 import { isLegacyExecutionRequest, prepareLegacyImageExecution } from "./legacy.js";
 import { isOpenaiRequest, prepareOpenaiExecution } from "../adapters/openaiExecution.js";
@@ -13,6 +14,8 @@ function prepareSelected(ctx: RuntimeContext, request: ImageExecutionRequest,
   if (isOpenaiRequest(request)) return prepareOpenaiExecution(ctx, request, progress);
   if (isGrokRequest(request)) return prepareGrokExecution(ctx, request, progress);
   if (isGoogleRequest(request)) return prepareGoogleExecution(ctx, request, progress);
+  const adapter = getProviderAdapter(ctx, request.provider);
+  if (adapter?.prepareImageExecution) return adapter.prepareImageExecution(ctx, request, progress);
   if (isLegacyExecutionRequest(request)) return prepareLegacyImageExecution(ctx, request, progress);
   throw new Error("Unreachable image execution provider");
 }

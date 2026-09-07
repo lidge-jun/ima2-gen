@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Provider Adapter v1 execution hook** (#150) — `ProviderAdapterV1` gains an optional `prepareImageExecution` and the NovelAI, MiniMax, Atlas Cloud and ComfyUI adapters now own their classic/node/edit/multimode dispatch; `prepareImageExecution` routes to a registered adapter before the legacy lane switches, which are reduced to their unsupported-surface refusals. Descriptor adapters for `api`, `grok-api` and `gemini-api` (API key or Vertex service account) join the common contract suite; `oauth`, `grok` and `agy` stay unregistered because their readiness is asynchronous.
+
 ### Fixed
 
 - Removed no-op `catch (error) { throw error; }` wrappers across provider execution, sprite, asset and LAN-session modules; behavior is unchanged and the coding convention now asks for try/catch only where an error is transformed, logged, or surfaced at a boundary.

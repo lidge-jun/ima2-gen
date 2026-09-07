@@ -68,3 +68,22 @@ Close #150 only if all six rows are met. Expected after wp4: rows 1-2 met, row 3
 touches registry + adapter file + keys/UI; measure by listing files a hypothetical
 "lane X" needs), rows 5-6 not met -> leave OPEN with the fresh table and residual list.
 
+
+## wp4 P revalidation (2026-09-08, tree a2de1110 = origin/dev after wp1-wp3)
+Quoting wp3 D: #193 shipped and closed; direction unchanged.
+Re-anchored after the wp1 rethrow removal: legacyClassic.ts branch lines 24-55 (throw at :55),
+legacyNode.ts :47, legacyEdit.ts :21, legacyMultimode.ts :20; execution/index.ts prepareSelected
+at :11-18 (no try wrappers now). registry errorPrefix: api null, grok-api "GROK_", gemini-api
+"GEMINI_API_" — the contract suite's normalizeError test skips lanes with a null prefix, so
+api.ts still returns { code, message, status?, retryable } with the raw code or "UNKNOWN".
+tests/provider-execution-boundary.test.ts:230 asserts the legacy "Unsupported" refusal is
+raised inside execute() with zero adapter calls; the adapter hooks must keep that shape, and
+the legacy files keep the throw for lanes that fall through (probe.source lists which lanes
+each surface supports).
+Write lanes: A (adapters + execution): lib/providers/adapters/{api,grok-api,gemini-api}.ts new,
+adapters/{index,types,nai,minimax,atlascloud,comfy}.ts, lib/providers/execution/{index,
+legacyClassic,legacyNode,legacyEdit,legacyMultimode}.ts, tests/provider-adapter-v1-contract.test.ts,
+tests/nai-routing-contract.test.ts, tests/_executionImportEdges.mjs,
+tests/provider-execution-imports.test.ts. Single lane: the edits are tightly coupled
+(hook type -> adapters -> execution dispatch -> import policy), so one worker owns them.
+

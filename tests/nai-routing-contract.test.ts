@@ -92,13 +92,15 @@ test("no nai dispatch forwards references to the adapter", () => {
   // generateViaNai has no references parameter. A copied MiniMax branch would
   // either fail typecheck or, behind a cast, drop the user's image silently.
   for (const file of [
-    "lib/providers/execution/legacyClassic.ts",
-    "lib/providers/execution/legacyMultimode.ts",
-    "lib/providers/execution/legacyNode.ts",
+    "lib/providers/adapters/nai.ts",
     "lib/agentImageVideoGen.ts",
   ]) {
     const calls = collectCallArguments(read(file), file, "generateViaNai");
-    assert.equal(calls.length, 1, `${file}: expected one actual NAI dispatch`);
+    if (file === "lib/providers/adapters/nai.ts") {
+      assert.ok(calls.length >= 3, `${file}: expected classic, node and multimode NAI dispatches`);
+    } else {
+      assert.equal(calls.length, 1, `${file}: expected one actual NAI dispatch`);
+    }
     for (const args of calls) {
       assert.equal(args.length, 3, `${file}: NAI options must be the third argument`);
       const options = args[2];
