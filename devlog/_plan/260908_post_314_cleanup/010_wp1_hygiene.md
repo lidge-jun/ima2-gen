@@ -60,3 +60,13 @@ Consumes 000 baseline. Branch `codex/p314-wp1-hygiene` from origin/dev (36aa6fce
 ## Accept
 - c-2 evidence: rg count 0; PR #<n> to dev with PR Fast Gate + CodeQL green on exact head; merged.
 
+
+## wp1 P revalidation (2026-09-08, tree f7c73a9f)
+Quoting wp0 D: baseline green (3470 pass), roadmap locked; direction unchanged.
+Re-checked: CHANGELOG.md:29 still `## [Unreleased]`; AGENTS.md:99 wording unchanged;
+rethrow count 19 files / 51 sites; .gitignore has no _fin/260905 entry; references at
+DESIGN.md:173, structure/07-devlog-map.md:125, devlog/_plan/README.md:27 as documented.
+The dev branch equals main (36aa6fce), so the wp1 branch cuts from origin/dev.
+C2 micro-audit: independent reviewer verifies the rethrow removal is behavior-neutral
+(diff shows only wrapper removal, finally blocks retained) and the archive move keeps 159 files.
+
