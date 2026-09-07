@@ -36,7 +36,6 @@ export async function prepareLegacyMultimode(
   ctx: RuntimeContext, request: MultimodeRequest, progress: ExecutionProgress = {},
 ): Promise<PreparedImageExecution<"multimode">> {
   return { execute: async () => {
-    try { return { kind: "sequence", value: await executeSequence(ctx, request, progress) }; }
-    catch (error) { throw error; } // Preserve native errors; caller owns timeout recovery.
+    return { kind: "sequence", value: await executeSequence(ctx, request, progress) };
   } };
 }

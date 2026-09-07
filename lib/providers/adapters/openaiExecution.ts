@@ -66,8 +66,7 @@ function prepareOpenaiClassic(
     });
   };
   return { execute: async () => {
-    try { return { kind: "single", value: await generateOne() }; }
-    catch (error) { throw error; } // Caller owns lifecycle and the existing error envelope.
+    return { kind: "single", value: await generateOne() };
   } };
 }
 
@@ -127,21 +126,16 @@ export function prepareOpenaiExecution<R extends OpenaiRequest>(
 export async function prepareOpenaiExecution(
   ctx: RuntimeContext, request: OpenaiRequest, progress: ExecutionProgress = {},
 ): Promise<PreparedImageExecution<ExecutionSurface>> {
-  try {
-    switch (request.surface) {
-      case "classic": return prepareOpenaiClassic(ctx, request, progress);
-      case "node": return { execute: async () => {
-        try { return { kind: "single", value: await executeOpenaiNode(ctx, request, progress) }; }
-        catch (error) { throw error; } // Caller owns retries and normalization.
-      } };
-      case "edit": return { execute: async () => {
-        try { return { kind: "single", value: await executeOpenaiEdit(ctx, request) }; }
-        catch (error) { throw error; } // Route owns failure normalization and job cleanup.
-      } };
-      case "multimode": return { execute: async () => {
-        try { return { kind: "sequence", value: await executeOpenaiMultimode(ctx, request, progress) }; }
-        catch (error) { throw error; } // Caller owns partial-timeout recovery.
-      } };
-    }
-  } catch (error) { throw error; }
+  switch (request.surface) {
+    case "classic": return prepareOpenaiClassic(ctx, request, progress);
+    case "node": return { execute: async () => {
+      return { kind: "single", value: await executeOpenaiNode(ctx, request, progress) };
+    } };
+    case "edit": return { execute: async () => {
+      return { kind: "single", value: await executeOpenaiEdit(ctx, request) };
+    } };
+    case "multimode": return { execute: async () => {
+      return { kind: "sequence", value: await executeOpenaiMultimode(ctx, request, progress) };
+    } };
+  }
 }
