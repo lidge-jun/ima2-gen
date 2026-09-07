@@ -112,3 +112,21 @@ docs/CLI.zh-CN.md:352 and docs/CLI.zh-TW.md:352 to "Grok and NovelAI quota are w
 
 ## Accept: c-4; close #193 with the criteria table and test names.
 
+
+## wp3 P revalidation (2026-09-08, tree aa2339c0 = origin/dev after wp1+wp2)
+Quoting wp2 D: zero open PRs, main synced into dev; direction unchanged.
+Re-checked line anchors after the wp1 rethrow removal: 402 branch now at
+lib/naiImageAdapter.ts:213-219 (unchanged text); routes/quota.ts QuotaResult at :14 and
+registerQuotaRoutes at :271; QuotaCard.tsx interfaces at :6-25; errorCodes.ts:98 and
+SELF_DESCRIBING_AUTH_CODES at :217-222; i18n naiSubscriptionRequired at :1628 in all four
+dictionaries; tests/nai-provider-contract.test.ts:43 keeps [402 -> NAI_SUBSCRIPTION_REQUIRED]
+with a single-response stub: the probe then receives the same 402 JSON, parse fails, and the
+classifier keeps NAI_SUBSCRIPTION_REQUIRED, so that row stays green by design.
+Write lanes (disjoint): server = lib/naiSubscription.ts (new), lib/naiImageAdapter.ts,
+lib/errors/providerMap.ts, routes/quota.ts, tests/nai-subscription-contract.test.ts (new),
+tests/nai-routing-contract.test.ts, tests/node-error-info-contract.test.ts, docs/API.md,
+docs/CLI*.md, structure/03; ui = ui/src/lib/errorCodes.ts, ui/src/i18n/*.json,
+ui/src/components/settings/QuotaCard.tsx, ui/src/components/AccountSettings.tsx,
+ui/src/styles/quota-card.css, tests/nai-ui-registration-contract.test.ts,
+tests/i18n-dictionary-contract.test.ts, structure/04.
+
