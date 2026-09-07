@@ -25,7 +25,15 @@ existing browser tools; zero paid image generation; NAI probe is a free GET.
   wp9 SHA 86bf4590 is not an ancestor of their stale bases), #220 (actions, green).
 - Open issues: #193 (NAI V5 battery quota), #150 (Adapter v1 RFC).
 - Residuals from review: stale CHANGELOG `[Unreleased]`, unarchived 260905 unit,
-  20 files with `catch (error) { throw error; }`, AGENTS.md convention wording.
+  19 files / 51 sites with `catch (error) { throw error; }`, AGENTS.md convention wording.
+- Local deps: this worktree had no node_modules at P; `npm ci` + `npm --prefix ui ci`
+  were run before B so every verifier executes locally, not only in hosted CI.
+
+## Audit log
+- Round 1 (gpt-6-astra reviewer): FAIL, 8 blockers. All folded: 040 rewritten (items
+  1-2 scoped to sync-auth lanes, every test amendment named); 010 verifiers corrected
+  and _fin allowlist added; 030 CLI/wire-type/consumer chain completed; 020 root cause
+  corrected to shallow fetch-depth; 050 CHANGELOG conversion moved before the cut.
 
 ## Work-phase map (dependency order)
 
@@ -57,4 +65,3 @@ not owned by us; use the comment), wait for fresh PR Fast Gate on the new head.
 - `structure/07-devlog-map.md`, `devlog/_plan/README.md` (unit moves)
 - `docs/API.md` (/api/quota returns { codex, grok, nai })
 - `CHANGELOG.md`
-

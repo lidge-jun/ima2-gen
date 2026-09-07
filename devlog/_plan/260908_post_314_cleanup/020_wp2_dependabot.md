@@ -3,14 +3,14 @@
 ## Facts (P)
 | PR | Head | Base merge-base | Red check | Cause |
 |---|---|---|---|---|
-| #194 @xyflow/react 12.11.5 (ui) | c4179208 | d39f9ea2 | PR fast gate | `release provenance guard (wp9)` test: required-units wp9 SHA 86bf4590 not an ancestor of the PR merge commit built on a stale base |
+| #194 @xyflow/react 12.11.5 (ui) | c4179208 | d39f9ea2 | PR fast gate | `release provenance guard (wp9)` asserts wp9 SHA 86bf4590 is an ancestor of HEAD via git merge-base; the pr-fast.yml revision those PRs ran used `fetch-depth: 2` (f6d43771:.github/workflows/pr-fast.yml:25), so the shallow clone could not see it. 86bf4590 IS an ancestor of both bases (verified locally, exit 0). Current pr-fast.yml:24 uses `fetch-depth: 0`; a rebase picks up the fixed workflow. |
 | #195 @openai/codex 0.152.0, openai, sharp, zod | f6d43771 | d2afe6b2 | same | same |
 | #196 tsx 4.23.13 | 45797a21 | d39f9ea2 | same | same |
 | #220 codeql-action 4.37.9, deploy-pages | 98328a62 | 03514fe3 | none (all green) | base current enough |
 
-The failing test reads .release/required-units.json and runs `git merge-base
---is-ancestor` against HEAD; on a PR merge ref whose base predates 86bf4590 it must fail.
-Rebasing onto current main fixes it without code change.
+Root cause is the shallow checkout in the workflow revision those PRs were tested with,
+not missing ancestry. Rebasing onto current main brings the `fetch-depth: 0` workflow and
+fixes it without code change.
 
 ## Procedure per PR (bottom = #220 first since already green)
 1. `gh pr view N --json headRefOid,mergeStateStatus,statusCheckRollup` refresh.
@@ -25,7 +25,7 @@ Rebasing onto current main fixes it without code change.
    the bump needs the pin updated in the same PR (push a commit to the dependabot
    branch is allowed for the repo owner; dependabot keeps the PR) or close with reason.
    zod 4.4.3 is pinned exactly (package.json:106) and is a peer of openai-oauth; the
-   package smoke covers it in CI (`filesystem` matrix on ci.yml, not on PR fast).
+   package-install smoke covers it in ci.yml (job at .github/workflows/ci.yml:102), not on PR fast.
    Therefore for #195 additionally dispatch `gh workflow run ci.yml --ref <branch> -f sha=<head>`
    and require green before merge.
 4. Merge: `gh pr merge N --merge --match-head-commit <head>`. Serial, re-refresh between.
@@ -39,4 +39,3 @@ Rebasing onto current main fixes it without code change.
 - `git merge-base --is-ancestor <merge-sha> origin/main` for each.
 
 ## Accept: c-3.
-

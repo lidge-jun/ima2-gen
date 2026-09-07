@@ -7,7 +7,10 @@ Consumes 000 baseline. Branch `codex/p314-wp1-hygiene` from origin/dev (36aa6fce
    insert a new empty `## [Unreleased]` above it with the two sections this round will
    fill in later WPs (`### Added` NAI quota lane, `### Changed` adapter contract,
    `### Fixed` no-op rethrow cleanup). Keep-a-Changelog order: Unreleased first.
-2. `git mv devlog/_plan/260905_production_readiness devlog/_fin/260905_production_readiness`.
+2. `git mv devlog/_plan/260905_production_readiness devlog/_fin/260905_production_readiness`
+   and append `!devlog/_fin/260905_production_readiness/` + `/**` to .gitignore (the
+   `devlog/_fin/*` rule at .gitignore:14 ignores the destination; git mv keeps indexed
+   files but later receipts would be silently ignored).
    Repoint tracked references:
    - DESIGN.md:173 `260905_production_readiness/084*` -> `_fin/260905_production_readiness/084*`
    - structure/07-devlog-map.md:125 row: move from "Active units" to the archived
@@ -15,14 +18,14 @@ Consumes 000 baseline. Branch `codex/p314-wp1-hygiene` from origin/dev (36aa6fce
    - devlog/_plan/README.md:27 row: delete from Active Lane; add a line under an
      archive record "2026-09-08 아카이브: 260905_production_readiness (v3.14.0 출시로 완료)".
    - .release/required-units.json is unaffected (SHA-based).
-   - tests: `rg -n '_plan/260905' tests scripts` = 0 hits (verified at P); only
-     tests/nai-dual-prompt-contract.test.ts:102 mentions "(260905)" as prose. No change.
+   - tests/scripts: `rg -n '260905_production_readiness' tests scripts` = 0 hits at P;
+     tests/nai-dual-prompt-contract.test.ts:102 mentions "(260905)" as prose only. No change.
 3. Remove the no-op `catch (error) { throw error; }` wrapper. Rule applied per site:
    - `try { X } catch (error) { throw error; }` -> `X` (drop try; keep body indentation).
    - `try { X } catch (error) { throw error; } finally { Y }` -> `try { X } finally { Y }`.
    - A trailing comment such as "// Caller owns lifecycle" moves above the statement
      it described or is dropped when it only justified the wrapper.
-   Files (count at P): lib/providers/adapters/grokExecution.ts (9),
+   Files (19 files / 51 sites at P): lib/providers/adapters/grokExecution.ts (9),
    lib/spriteRecipeStore.ts (8), lib/providers/adapters/openaiExecution.ts (5),
    lib/providers/adapters/googleExecution.ts (5), ui/src/lib/lanSession.ts (4),
    lib/providers/execution/legacyClassic.ts (3), lib/spriteRowPipeline.ts (2),
@@ -44,14 +47,15 @@ Consumes 000 baseline. Branch `codex/p314-wp1-hygiene` from origin/dev (36aa6fce
 ## OUT
 500-line splits; test fixture rethrows; any behavior change.
 
-## Verifiers (run at P against HEAD, all observe the target)
-- `rg -c 'catch \(error\) \{ throw error; \}' lib ui/src bin routes` -> must print nothing (exit 1). Reads targets directly.
-- `npm run typecheck` exit 0 (tsconfig.json include covers lib, routes, bin, server, config). Ran at P: exit 0.
-- `cd ui && npx tsc --noEmit -p tsconfig.json` for ui/src changes; ran via `npm --prefix ui run build` at P: exit 0.
-- `npm test` full suite (scripts/run-tests.mjs globs tests/*.test.*). Ran at P: see 000; 2778+ pass.
-- `node scripts/refresh-structure-line-counts.mjs --check` exit 0 (structure/01 line counts change for edited lib files -> run without --check first to refresh).
-- `rg -n '_plan/260905' --glob '!devlog/**' .` -> 0 hits after move.
-- CHANGELOG: human review row; no gate reads it (tests/api-docs-contract does not).
+## Verifiers (all observe the target; exit codes recorded at A round 1 / B)
+- `rg -c 'catch \(error\) \{ throw error; \}' lib ui/src bin routes` -> exit 1 with no output after B (exit 0, 19 files at P). Reads targets directly.
+- `npm run typecheck` (tsconfig.json includes lib, routes, bin, server, config) exit 0.
+- `npx --prefix ui tsc --noEmit -p ui/tsconfig.app.json` (ui/tsconfig.json has files: [] and only references; the app config includes ui/src) exit 0; `npm --prefix ui run build` exit 0.
+- `npm test` full suite (scripts/run-tests.mjs globs tests/*.test.*) exit 0.
+- `node scripts/refresh-structure-line-counts.mjs` then `--check` exit 0.
+- `rg -n '260905_production_readiness' --glob '!devlog/**' .` -> every hit carries the _fin/ prefix (DESIGN.md, structure/07, devlog/_plan/README.md, .gitignore).
+- `git ls-files devlog/_fin/260905_production_readiness | wc -l` == 159 (tracked count before the move).
+- CHANGELOG: human review row; no gate reads it.
 
 ## Accept
 - c-2 evidence: rg count 0; PR #<n> to dev with PR Fast Gate + CodeQL green on exact head; merged.

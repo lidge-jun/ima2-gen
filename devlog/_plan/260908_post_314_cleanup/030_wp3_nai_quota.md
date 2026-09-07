@@ -22,6 +22,8 @@ export interface NaiSubscriptionSnapshot {
   battery: { percent: number; isNegative: boolean; timeUntilNextPercentSec: number | null } | null;
   anlas: { fixed: number; purchased: number };
 }
+// percent / timeUntilNextPercentSec / anlas.* accepted only when Number.isFinite; otherwise
+// battery is null (missing meter) and anlas fields default to 0.
 export function parseNaiSubscription(value: unknown): NaiSubscriptionSnapshot | null;
 export async function fetchNaiSubscription(ctx, opts?: { signal?: AbortSignal; timeoutMs?: number }):
   Promise<{ ok: true; snapshot } | { ok: false; status: 401 | "error" }>;
@@ -54,21 +56,34 @@ and append to SELF_DESCRIBING_AUTH_CODES (line 217-222).
 - `errorCard.naiUsageExhausted` { title, body } next to naiSubscriptionRequired (line ~1628).
 - `settings.quota.naiBattery` "V5 battery", `settings.quota.naiAnlas` "Anlas",
   `settings.quota.naiNegative` "Recharging (negative)", `settings.quota.naiNextPercent` "+1% in {minutes} min",
+  `settings.quota.naiMeterMissing`, `settings.quota.naiAnlasFallback`, `settings.quota.naiNotConfigured`,
   `settings.account.naiTitle` "NovelAI", `settings.account.naiEyebrow` "Token", `settings.account.naiBody`.
+- tests/i18n-dictionary-contract.test.ts:230 ERROR_CARD_ROOTS: add "errorCard.naiUsageExhausted".
 ### MODIFY routes/quota.ts
 - NEW `fetchNaiQuota(ctx): Promise<QuotaResult>`: no key -> `{ provider: "nai", authenticated: false, windows: [] }`;
   401 -> authenticated false; other failure -> `error: true`; success ->
   `{ provider: "nai", account: { email: null, plan: active ? `Tier ${tier}` : "inactive" },
-     windows: [{ label: "v5-battery", percent, resetsAt: now + timeUntilNextPercent*1000 or null }],
-     nai: { isNegative, anlasFixed, anlasPurchased, active } }`.
-  Extend `QuotaResult` with optional `nai?: {...}` (routes/quota.ts:14) — field chain:
-  creation routes/quota.ts -> JSON -> ui QuotaCard.tsx QuotaResult interface (line 12) -> NaiQuota consumer.
+     windows: battery ? [{ label: "v5-battery", percent: battery.percent,
+       resetsAt: battery.timeUntilNextPercentSec === null ? null
+         : new Date(Date.now() + battery.timeUntilNextPercentSec * 1000).toISOString() }] : [],
+     nai: { active, isNegative: battery?.isNegative ?? false, anlasFixed, anlasPurchased, meter: battery ? "charge" : "missing" } }`.
+  `resetsAt` stays `string | null` (routes/quota.ts:11 and QuotaCard.tsx:9 both type it so).
+  Exact wire type added to `QuotaResult` (routes/quota.ts:14):
+  `nai?: { active: boolean; isNegative: boolean; anlasFixed: number; anlasPurchased: number; meter: "charge" | "missing" }`.
+  Field chain: creation routes/quota.ts fetchNaiQuota -> res.json -> ui QuotaCard.tsx QuotaResult
+  interface (line 12, same field names) -> consumer NaiQuota; CLI consumer: none (see CLI);
+  doctor bundle: N/A (quota not collected there; `rg -n quota bin/lib/doctor*.ts` = 0).
 - registerQuotaRoutes: `Promise.all([codex, grok, fetchNaiQuota(ctx)])`, respond `{ codex, grok, nai }`.
   ctx param currently `_ctx`; use it (RouteRuntimeContext must expose naiApiKey; it does via RuntimeContext).
 ### MODIFY ui/src/components/settings/QuotaCard.tsx
 - QuotaResponse gains `nai?: QuotaResult`; QuotaResult gains `nai?` block.
-- NEW export `NaiQuota({ data, loading })`: header "Tier N", battery bar via QuotaBar
-  (label from i18n), a line "Anlas: fixed + purchased", negative flag. No SwitchAccount.
+- NEW export `NaiQuota({ data, loading })`: header "Tier N"; battery rendered by a new
+  `ChargeBar` (QuotaBar markup, but percent means remaining charge so the color ladder is
+  inverted: >50 blue, 20-50 amber, <20 red; reset column shows "+1% in N min" derived from
+  resetsAt, never a reset time). States: loading; authenticated false -> naiNotConfigured;
+  error -> fetchError; meter "missing" -> naiMeterMissing hint + Anlas line only; isNegative ->
+  naiNegative badge; percent 0 with anlas > 0 -> naiAnlasFallback hint. Anlas line always
+  "Anlas: fixed + purchased". No SwitchAccount.
 ### MODIFY ui/src/components/AccountSettings.tsx
 - After the Grok card (line ~121) add a NovelAI provider-card rendered when
   `keyStatus.nai?.configured`, containing `<NaiQuota .../>`.
@@ -80,8 +95,16 @@ and append to SELF_DESCRIBING_AUTH_CODES (line 217-222).
 - fetchNaiQuota: 401 -> authenticated:false; 500 -> error:true; success windows.
 - 402 split: stub fetch sequence [402 generate, subscription active+isNegative+anlas 0] -> NAI_USAGE_EXHAUSTED;
   [402, active:false] -> NAI_SUBSCRIPTION_REQUIRED; V4.5 model 402 -> NAI_SUBSCRIPTION_REQUIRED with no second fetch (assert calls.length===1).
-- Update tests/nai-routing-contract.test.ts:117, tests/nai-ui-registration-contract.test.ts:168, tests/node-error-info-contract.test.ts:25 code lists.
-### CLI: `ima2 billing` (bin/commands/observability.ts) prints /api/quota; add nai rows when present (label + percent + anlas). Verify with `node dist/bin/ima2.js billing --json` against a fixture server in tests if an existing CLI billing test exists (`rg -n billing tests/cli-*.test.ts`); otherwise unit test the formatter only.
+- Code-list consumers (all named): tests/nai-routing-contract.test.ts:117 (add NAI_USAGE_EXHAUSTED);
+  tests/nai-ui-registration-contract.test.ts:117 `sources` (add "lib/naiSubscription.ts" so the new
+  emitter is discovered) and :168 class pairs (add ["NAI_USAGE_EXHAUSTED", "BILLING_REQUIRED"]);
+  tests/node-error-info-contract.test.ts:25 (add `NAI_USAGE_EXHAUSTED: "fix-input"` — same node action
+  as NAI_SUBSCRIPTION_REQUIRED: the user changes model/resolution, not credentials);
+  tests/error-class-coverage.test.ts (recursive scan discovers the new file; must pass).
+### CLI: unchanged. `ima2 billing` requests `/api/billing` (bin/commands/observability.ts:60), not
+/api/quota; there is no CLI quota consumer today and adding one is outside #193. Update the
+sentence "Grok quota is web-UI only via GET /api/quota" in docs/CLI.md:465 and
+docs/CLI.zh-CN.md:352 to "Grok and NovelAI quota are web-UI only via GET /api/quota".
 
 ## Verifiers
 - `npm test` (new file globbed by scripts/run-tests.mjs), `npm run typecheck`, `npm run typecheck:tests`, `npm run test:inventory` (classify-tests registry must include new test), `npm --prefix ui run build`, `tests/api-docs-contract.test.js` (reads docs/API.md), i18n parity test (`rg -n i18n tests | head` -> tests/i18n-*.test.* must pass with new keys).

@@ -9,6 +9,11 @@ procedure source; this doc lists only the deltas and exact commands.
 - `gh pr list --state open` empty.
 
 ## Steps
+0. Release content BEFORE the cut (release-cut.mjs:169 only bumps package manifests):
+   on a branch from dev, convert CHANGELOG `## [Unreleased]` to `## [<V>] - <date>` with
+   V = current version minor-bumped (3.15.0 unless main moved), add a fresh empty
+   Unreleased, and update structure/06-infra-operations.md only if the procedure
+   changed. PR to dev, merge. The cut then packages the versioned changelog.
 1. Promotion PR: `gh pr create --base main --head dev --title "Promote dev to main (post-3.14.0 cleanup)"`
    body: list of merged PRs. Wait PR Fast Gate + CodeQL on exact head; dispatch
    `gh workflow run ci.yml --ref dev -f sha=<dev-head>` for the full matrix; merge with
@@ -35,10 +40,12 @@ procedure source; this doc lists only the deltas and exact commands.
 6. Visual: Computer-use `cua.createBrowserTab("iab", "http://127.0.0.1:<port>", {visible:true})`;
    screenshot home, Settings > Account (NovelAI card present when a dummy token is set
    via /api/keys), Node mode. Save PNGs to .codexclaw/evidence/01a07ce8-b02b-7200-9bfc-300c549d3c70/.
-7. Docs: CHANGELOG Unreleased -> `## [<V>] - <date>`; structure/06-infra-operations.md only if procedure changed; record receipt in this unit (051_release_receipt.md); move unit to _fin at D of wp5.
+7. Receipts after publication: 051_release_receipt.md in this unit (run ids, SHAs,
+   digests, screenshot hashes), then move the unit to _fin at D of wp5. These are
+   documentation-only commits delivered by a final PR to dev plus a main sync; their
+   ancestry is recorded in the receipt and they do not alter the published artifact.
 
 ## Failure handling
 Same rollback contract as 130 (never move latest backward; new cut for repairs).
 
 ## Accept: c-6, c-7, c-8.
-
