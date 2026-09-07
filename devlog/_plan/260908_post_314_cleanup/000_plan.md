@@ -70,3 +70,21 @@ not owned by us; use the comment), wait for fresh PR Fast Gate on the new head.
 - `structure/07-devlog-map.md`, `devlog/_plan/README.md` (unit moves)
 - `docs/API.md` (/api/quota returns { codex, grok, nai })
 - `CHANGELOG.md`
+
+## Roadmap lock (wp0 B, 2026-09-08)
+
+Goalplan slug `ima2-gen-post-v3-14-0-cleanup-backlog-to-zero-de` binds the map below;
+each later P re-verifies its doc against the tree at that time before building.
+
+| Work-phase | Doc | Criteria | Class |
+|---|---|---|---|
+| wp1 | 010_wp1_hygiene.md | c-2 | C2 |
+| wp2 | 020_wp2_dependabot.md | c-3 | C2 (external state) |
+| wp3 | 030_wp3_nai_quota.md | c-4 | C3 |
+| wp4 | 040_wp4_adapter_v1.md | c-5 | C3 |
+| wp5 | 050_wp5_release.md | c-6, c-7, c-8 | C4 |
+
+wp0 closes with c-1 once the full local gate (typecheck, typecheck:tests, test:inventory,
+builds, npm test) passes on this docs-only tree, proving the baseline is green before
+any implementation cycle starts.
+
