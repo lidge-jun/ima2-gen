@@ -49,3 +49,12 @@ procedure source; this doc lists only the deltas and exact commands.
 Same rollback contract as 130 (never move latest backward; new cut for repairs).
 
 ## Accept: c-6, c-7, c-8.
+
+## wp5 P revalidation (2026-09-08, tree d42678f9 = origin/dev after wp1-wp4)
+Quoting wp4 D: #225 merged, #150 dispositioned open; direction unchanged.
+Preconditions: main is an ancestor of dev (17 commits ahead); open PRs 0; open issues 1 (#150,
+documented). package.json 3.14.0 -> release bump minor => 3.15.0 (new quota lane + new error
+code, no breaking change). Environments: npm-stable and provider-canary-live reviewer =
+lidge-jun (the gh account), npm-preview/github-pages unreviewed. Step 0 CHANGELOG cut is a
+PR to dev (codex/p314-wp5-changelog) before the promotion PR.
+
