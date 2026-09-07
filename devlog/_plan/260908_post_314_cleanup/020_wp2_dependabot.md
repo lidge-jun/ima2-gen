@@ -39,3 +39,15 @@ fixes it without code change.
 - `git merge-base --is-ancestor <merge-sha> origin/main` for each.
 
 ## Accept: c-3.
+
+## wp2 P revalidation (2026-09-08, after wp1 merge 9ebd765e)
+Quoting wp1 D: PR #221 merged into dev; direction unchanged.
+Live state: `@dependabot rebase` was posted on #194/#195/#196 at wp0 D. #194 (head 33a10fe7)
+and #195 (head 8cc599af) rebased onto main 36aa6fce and the provenance guard now passes
+(full ci.yml matrix green on the new heads, confirming the shallow-fetch root cause).
+Dependabot closed #196 as superseded ("tsx is updatable in another way") and opened #222
+(development-npm group) in its place. Set to close: #220, #194, #195, #222.
+Merge order: #220 (actions) -> #194 (ui) -> #195 (root prod) -> #222 (root dev); each
+after PR fast gate + CodeQL on its exact head, `--merge --match-head-commit`, serial.
+After all four: main -> dev sync PR so wp5's promotion carries them.
+
