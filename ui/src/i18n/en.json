@@ -1252,7 +1252,11 @@
     "singleRef": {
       "source": "Start from it",
       "reference": "Use as guide"
-    }
+    },
+    "voiceSection": "Voice",
+    "voiceLimit": "Up to {max}. Refer to them as <AUDIO_0> in the prompt",
+    "voiceNeeds15": "Voices are supported only on grok-imagine-video-1.5",
+    "voiceCustomPlaceholder": "Custom voice id (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "Image Generator",

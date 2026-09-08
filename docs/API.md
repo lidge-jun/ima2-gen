@@ -520,7 +520,7 @@ Generate a video via the Grok video provider. Returns Server-Sent Events on the 
 |---|---|---|
 | No images | text-to-video | 1–15s |
 | 1 image (`sourceImage` or `sourceFilename`) | image-to-video | 1–15s |
-| 2–7 images (`referenceImages` / `referenceFilenames`) | reference-to-video | 1–10s |
+| 2–14 images (`referenceImages` / `referenceFilenames`) | reference-to-video | 1–15s on grok-imagine-video-1.5, 1–10s on grok-imagine-video |
 
 1080p is accepted for `grok-imagine-video-1.5` prompt-only text-to-video and image-to-video with one image/frame source, including `continueFromVideo` after the server extracts the parent video's last frame. Prompt-only 1.5 text-to-video uses the internal white-canvas image-to-video shim before the upstream request. 1.5 does not add Ref2V, V2V edit, or extension support.
 

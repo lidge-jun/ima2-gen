@@ -386,7 +386,7 @@ Grok節點SSE回覆不包括回覆API `partial`影像事件是因為xAI圖片API
 |---|---|---|
 |沒有圖片|文字轉視頻| 1–15s |
 |1 張圖片（`sourceImage`或者`sourceFilename`) |影像到視頻| 1–15s |
-|2–7 張圖像 (`referenceImages` / `referenceFilenames`) |參考影片| 1–10s |
+|2–14 張圖像 (`referenceImages` / `referenceFilenames`) |參考影片| 1.5: 1–15s / base: 1–10s |
 
 1080p 可接受`grok-imagine-video-1.5`僅提示文字到視頻和圖像到視頻，具有一個圖像/幀源，包括`continueFromVideo`伺服器提取父影片的最後一幀後。僅提示 1.5 文字到影片在上游請求之前使用內部白色畫布圖像到影片 shim。 1.5 不新增 Ref2V、V2V 編輯或擴充支援。
 

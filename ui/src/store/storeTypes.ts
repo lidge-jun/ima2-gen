@@ -532,6 +532,8 @@ export type AppState = PresetState & ReferenceTraySlice & {
   videoResolution: VideoResolutionUI;
   videoSingleRefMode: "image-to-video" | "reference-to-video";
   videoAspectRatio: string;
+  /** Preset voice ids for reference-to-video. Max 3, grok-imagine-video-1.5 only. */
+  videoReferenceVoices: string[];
   videoTopic: string;
   videoContinuityLineage: VideoContinuityLineage | null;
   videoProgress: number | null;
@@ -541,6 +543,7 @@ export type AppState = PresetState & ReferenceTraySlice & {
   setVideoDuration: (n: number) => void;
   setVideoResolution: (r: VideoResolutionUI) => void;
   setVideoAspectRatio: (a: string) => void;
+  toggleVideoReferenceVoice: (voiceId: string) => void;
   setVideoSingleRefMode: (m: "image-to-video" | "reference-to-video") => void;
   setVideoTopic: (topic: string) => void;
   setVideoContinuityLineage: (lineage: VideoContinuityLineage | null) => void;

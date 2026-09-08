@@ -1252,7 +1252,11 @@
     "singleRef": {
       "source": "以此图开场",
       "reference": "仅作参考"
-    }
+    },
+    "voiceSection": "语音",
+    "voiceLimit": "最多 {max} 个。在提示词中以 <AUDIO_0> 指代",
+    "voiceNeeds15": "仅 grok-imagine-video-1.5 支持语音",
+    "voiceCustomPlaceholder": "自定义语音 ID (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "图像生成器",

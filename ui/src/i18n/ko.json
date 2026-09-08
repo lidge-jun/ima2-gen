@@ -1252,7 +1252,11 @@
     "singleRef": {
       "source": "이 이미지로 시작",
       "reference": "참고만 하기"
-    }
+    },
+    "voiceSection": "보이스",
+    "voiceLimit": "최대 {max}개. 프롬프트에서 <AUDIO_0>처럼 지칭하세요",
+    "voiceNeeds15": "보이스는 grok-imagine-video-1.5에서만 지원합니다",
+    "voiceCustomPlaceholder": "커스텀 보이스 ID (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "이미지 생성기",

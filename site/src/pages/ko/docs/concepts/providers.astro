@@ -110,7 +110,7 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
     Grok 비디오 생성 기본값은 정식 <code>grok-imagine-video-1.5</code>입니다.
     <code>grok-imagine-video</code>는 Ref2V·edit·extension 호환 경로에서 계속 사용합니다. 기존
     <code>grok-imagine-video-1.5-preview</code> 값은 호환 alias로만 받습니다. 세 가지 모드가 레퍼런스 수에서 자동
-    감지됩니다: text-to-video (0개), image-to-video (1개), reference-to-video (2–7개, 최대 10초).
+    감지됩니다: text-to-video (0개), image-to-video (1개), reference-to-video (2–14개; 1.5는 최대 15초, base는 10초).
     컨트롤: 길이(1–15초), 해상도(480p, 720p, 1.5 단일 이미지/프레임 I2V의 1080p), 화면비.
     1.5는 Ref2V, V2V edit, extension 지원을 추가하지 않으므로 해당 경로는 기본 모델만 사용합니다.
     비디오 설정 또는 CLI

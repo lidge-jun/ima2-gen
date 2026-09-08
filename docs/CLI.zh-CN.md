@@ -201,7 +201,7 @@ and rain build, end on a still close-up after the line finishes`。
 |---|---|
 | 0 |文本转视频|
 | 1 |图像到视频|
-| 2–7 |参考视频（最长 10 秒持续时间）|
+| 2–14 |参考视频（grok-imagine-video-1.5 最长 15 秒，grok-imagine-video 最长 10 秒）|
 
 `grok-imagine-video-1.5`支持 1080p 仅提示文本到视频和单图像/帧图像到视频。仅提示 1.5 文本到视频通过内部白色画布图像到视频 shim 提交，因为上游 1.5 拒绝原始 T2V。旧的`grok-imagine-video-1.5-preview`name 在上游请求之前被接受为别名并进行规范化。 1.5 不支持`reference_images`视频参考、V2V 编辑或视频扩展。对于 2 个以上参考，请使用`grok-imagine-video`;如果ima2自动重试向基本模型发出 1.5 Ref2V 请求，读取`video.effectiveModel`和`video.modelFallback`从CLI `--json`， 或者`effectiveModel`和`modelFallback`从SSE.
 

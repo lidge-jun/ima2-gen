@@ -1271,10 +1271,13 @@ mixed in this section, and they age differently.
 | `grok-imagine-video-1.5` + `/v1/videos/extensions` | `400 "Video extension is not supported for this model."` |
 | `grok-imagine-video` (base) + edit / extend | `200` → `done` (both work) |
 | Edit `duration` / `resolution` overrides | Accepted with `200` but **silently ignored** — output inherits the source video's properties, capped at 720p |
-| Extension `duration` outside 2-10 | Returns `200` with a `request_id`, then **fails asynchronously** on poll: `"Duration must be between 2 and 10 seconds"`. Validate before sending; a 200 here does not mean accepted. |
-| R2V reference count | 7 max; 8 → `400 "Too many reference images: 8. Maximum allowed is 7."` |
+| Extension `duration` | 1-15 accepted (1, 2, 10 and 11 all return `200`); 0 and 16 return `400 "Duration must be between 1 and 15 seconds"`. xAI's docs say 2-10 — the docs are narrower than the endpoint (re-measured 2026-09-08). |
+| R2V reference count | 14 max; 15 → `400 "Too many reference images: 15. Maximum allowed is 14."` on both models. Was 7 until xAI doubled it; @imagine announced 14 on 2026-09-02 and the API guide still says 7. |
+| R2V duration on `grok-imagine-video` | 10s max; 11 → `400 "Duration 11s exceeds the maximum allowed for reference-to-video, which is 10s."` |
+| `reference_audios` on `grok-imagine-video` | `400 "reference_audios is not supported for this model."` — voices need 1.5 |
+| Audio-only R2V (voice, no images) | Accepted; a voice alone selects reference-to-video and the r2v duration ceiling applies |
 | R2V + 1080p | `400 "1080p video resolution is not supported for reference-to-video requests."` |
-| R2V duration 15 | `200` → `done`, `video.duration=15` (this is why the old 10s clamp was removed) |
+| R2V duration 15 on 1.5 | `200` → `done`, `video.duration=15`. The mode-wide 10s clamp removed in v3.8.0 was ours; the base model's 10s above is xAI's |
 | R2V with a single reference image | Accepted (`200`) — 2+ is an ima2 convention, not an API requirement |
 | `reference_audios: [{"voice_id": "eve"}]` on 1.5 | `200` → `done` (preset voices work; up to 3) |
 | Rate limit | 2 requests/second per team; exceeding it returns `429` |
@@ -1311,11 +1314,11 @@ outside the generated directory.
 
 Extend a video from its last frame using xAI's video extension endpoint. The output combines the source video and extension, but continuity quality is provider-dependent.
 
-Constraints: grok-imagine-video only, extension duration 2-10s. `grok-imagine-video-1.5`
-returns `400 "Video extension is not supported for this model."` (verified 2026-08-20).
+Constraints: grok-imagine-video only, extension duration 1-15s. `grok-imagine-video-1.5`
+returns `400 "Video extension is not supported for this model."` (re-verified 2026-09-08).
 `duration` is the length of the **appended segment**, not the total: a 10s source with
-`duration: 5` returns a 15s video. Out-of-range durations return `200` and then fail
-asynchronously on poll, so validate before sending.
+`duration: 5` returns a 15s video. xAI's docs say the range is 2-10; live probing accepts
+1 and 11 and refuses only 0 and 16, so the range above is the measured one.
 
 ```bash
 # Generate initial clip
