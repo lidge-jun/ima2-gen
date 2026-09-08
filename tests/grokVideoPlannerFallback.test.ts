@@ -1,8 +1,9 @@
-import { afterEach, describe, it } from "node:test";
+import { after, afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { planGrokVideo, isDegradablePlannerFailure } from "../lib/grokVideoAdapter.js";
 import { composeFallbackVideoPrompt } from "../lib/grokVideoPlannerPrompt.js";
 import { config } from "../config.js";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 // The 260817 incident: the web-search stage succeeded and the PLANNER call stalled for its
 // whole budget, so the user lost the video. A stalled planner must now degrade to a locally
@@ -11,6 +12,10 @@ import { config } from "../config.js";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
+// planGrokVideo resolves the OAuth `grok` credential first; without a seeded HOME the stub
+// fetch below would answer xAI's real token endpoint instead of the planner under test.
+const grokAuth = seedGrokAuth();
+after(() => { grokAuth.cleanup(); });
 
 function ctx(grokOverrides: Record<string, unknown> = {}) {
   return {
@@ -28,6 +33,7 @@ function ctx(grokOverrides: Record<string, unknown> = {}) {
       },
     },
     packageVersion: "test",
+    grokAuthHomeDir: grokAuth.homeDir,
   } as any; // justified: RouteRuntimeContext is a loose runtime bag; every Grok adapter test builds it this way
 }
 

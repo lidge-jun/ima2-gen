@@ -4,7 +4,8 @@ import { formatToolManifestForPrompt } from "./agentToolManifest.js";
 import { getAgentSession } from "./agentStore.js";
 import { errInfo } from "./errInfo.js";
 import { logEvent } from "./logger.js";
-import { getGrokEndpoint, getPlannerConfig } from "./grokImageCore.js";
+import { getPlannerConfig } from "./grokImageCore.js";
+import { fetchWithGrokAuth, getGrokEndpoint } from "./grokRuntime.js";
 import { waitForOAuthReady } from "./oauthProxy/runtime.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "./runtimeContext.js";
 import type { AgentGenerationPlan, AgentGenerationSettings } from "./agentTypes.js";
@@ -112,24 +113,24 @@ async function requestGrokPlan(
   userPrompt: string,
   signal: AbortSignal,
 ): Promise<string> {
-  const { url, headers } = getGrokEndpoint(ctx, "/v1/chat/completions");
   const planner = getPlannerConfig(ctx);
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    signal,
-    body: JSON.stringify({
-      model: planner.model,
-      stream: false,
-      messages: [
-        { role: "system", content: developerPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    }),
+  const body = JSON.stringify({
+    model: planner.model,
+    stream: false,
+    messages: [
+      { role: "system", content: developerPrompt },
+      { role: "user", content: userPrompt },
+    ],
   });
+  // The agent planner only ever runs on the OAuth `grok` lane (the caller branches on
+  // settings.provider === "grok"), so a 401 here means the session needs a refresh.
+  const res = await fetchWithGrokAuth(ctx, "grok", (credential) => {
+    const endpoint = getGrokEndpoint("/v1/chat/completions", credential);
+    return fetch(endpoint.url, { method: "POST", headers: endpoint.headers, signal, body });
+  }, { signal });
   if (!res.ok) throw plannerHttpError("grok", res.status);
-  const body = await res.json() as ChatCompletionsBody;
-  return typeof body.choices?.[0]?.message?.content === "string" ? body.choices[0].message.content : "";
+  const parsed = await res.json() as ChatCompletionsBody;
+  return typeof parsed.choices?.[0]?.message?.content === "string" ? parsed.choices[0].message.content : "";
 }
 
 async function requestResponsesPlan(

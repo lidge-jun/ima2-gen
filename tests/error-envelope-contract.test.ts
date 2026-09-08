@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { executionTestProcess } from "./_executionTestProcess.ts";
-import type { UpstreamCall } from "./_videoExecutionFixture.ts";
+import { GROK_DIRECT_ORIGIN, type UpstreamCall } from "./_videoExecutionFixture.ts";
 
 if (executionTestProcess(import.meta.url)) {
 const { openVideoFixture } = await import("./_videoExecutionFixture.ts");
@@ -78,7 +78,7 @@ function failVideoRequests(paths: readonly string[]) {
   const failure = providerError("GROK_VIDEO_REQUEST_FAILED", 502);
   fixture.allowFailure(failure);
   fixture.respond((call) => {
-    assertJsonPost(call, "http://127.0.0.1:1", paths, "Bearer dummy");
+    assertJsonPost(call, GROK_DIRECT_ORIGIN, paths, fixture.grokBearer);
     throw failure;
   });
 }
@@ -165,6 +165,7 @@ describe("062 error transport envelopes", () => {
     registerVideoRoutes(app, {
       rootDir: process.cwd(),
       packageVersion: "test",
+      grokAuthHomeDir: fixture.grokAuthHomeDir,
       config: {
         ...config,
         storage: { ...config.storage, generatedDir: TEST_DIR },
@@ -195,7 +196,8 @@ describe("062 error transport envelopes", () => {
     failVideoRequests(["/v1/videos/edits"]);
     const app = trackedApp();
     app.use(express.json());
-    registerVideoExtendedRoutes(app, { config: { storage: { generatedDir: TEST_DIR }, grokProvider: { proxyHost: "127.0.0.1", proxyPort: 1 } } });
+    registerVideoExtendedRoutes(app, { grokAuthHomeDir: fixture.grokAuthHomeDir,
+      config: { storage: { generatedDir: TEST_DIR }, grokProvider: { proxyHost: "127.0.0.1", proxyPort: 1 } } });
     try {
       await withServer(app, async (baseUrl) => {
         const response = await fixture.fetchApp(`${baseUrl}/api/video/edit`, {
@@ -223,6 +225,7 @@ describe("062 error transport envelopes", () => {
     registerVideoExtendedRoutes(app, {
       rootDir: process.cwd(),
       packageVersion: "test",
+      grokAuthHomeDir: fixture.grokAuthHomeDir,
       config: {
         ...config,
         storage: { ...config.storage, generatedDir: TEST_DIR },
@@ -254,6 +257,7 @@ describe("062 error transport envelopes", () => {
     registerVideoExtendedRoutes(app, {
       rootDir: process.cwd(),
       packageVersion: "test",
+      grokAuthHomeDir: fixture.grokAuthHomeDir,
       config: {
         ...config,
         storage: { ...config.storage, generatedDir: TEST_DIR },
@@ -288,7 +292,7 @@ describe("062 error transport envelopes", () => {
     const failure = providerError("GROK_UPSTREAM_ERROR", 502);
     fixture.allowFailure(failure);
     fixture.respond((call) => {
-      assertJsonPost(call, "http://127.0.0.1:9", ["/v1/responses", "/v1/chat/completions", "/v1/images/generations"], "Bearer dummy");
+      assertJsonPost(call, GROK_DIRECT_ORIGIN, ["/v1/responses", "/v1/chat/completions", "/v1/images/generations"], fixture.grokBearer);
       const target = call.url;
       if (target.endsWith("/v1/responses")) {
         return Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: "brief" }] }] });
@@ -314,6 +318,7 @@ describe("062 error transport envelopes", () => {
           grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 9, plannerTimeoutMs: 2000, generationTimeoutMs: 2000 },
         },
         packageVersion: "test",
+        grokAuthHomeDir: fixture.grokAuthHomeDir,
       } as never, { maxImages: 1, requestId: "env-multimode" });
       assert.equal(result.images.length, 0);
       const err = result.error as { code?: string; status?: number };

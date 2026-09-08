@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { executionTestProcess } from "./_executionTestProcess.ts";
-import { openVideoFixture } from "./_videoExecutionFixture.ts";
+import { GROK_DIRECT_ORIGIN, openVideoFixture } from "./_videoExecutionFixture.ts";
 import { fakeMp4Bytes } from "./_videoStreamFixture.ts";
 
 if (executionTestProcess(import.meta.url)) {
@@ -32,16 +32,17 @@ async function listen(server: import("node:http").Server): Promise<string> {
   const origin = await fixture.listen(server, "proxy");
   fixture.bridgeProxy(server, (call) => {
     const target = new URL(call.url);
-    assert.equal(target.origin, origin);
     assert.equal(target.search, "");
     assert.equal(call.headers.get("cookie"), null);
     if (target.pathname === "/dl/out.mp4") {
+      assert.equal(target.origin, origin, "the artifact stays on the owned mock origin");
       assert.equal(call.method, "GET");
       assert.equal(call.body, "");
       assert.equal(call.headers.get("authorization"), null);
       return;
     }
-    assert.equal(call.headers.get("authorization"), "Bearer dummy");
+    assert.equal(target.origin, GROK_DIRECT_ORIGIN, "authenticated video calls leave for xAI directly");
+    assert.equal(call.headers.get("authorization"), fixture.grokBearer);
     const opts = proxyOptions.get(server)!;
     const poll = opts.operation === "extend" ? "/v1/videos/extend-1" : "/v1/videos/edit-1";
     if (target.pathname === poll) {
@@ -127,6 +128,7 @@ async function videoApp(generatedDir: string, proxyPort: number, plannerModel?: 
   registerVideoExtendedRoutes(app, {
     rootDir: fixture.root,
     packageVersion: "test",
+    grokAuthHomeDir: fixture.grokAuthHomeDir,
     config: {
       ...config,
       ids: { ...config.ids, generatedHexBytes: 2 },

@@ -9,10 +9,14 @@ import { bounded, drain, installTrackedWrites } from "./_executionTrackedWrites.
 import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
 import { executionTestProcess } from "./_executionTestProcess.ts";
 import { forbidArtifactArrayBuffer } from "./_videoStreamFixture.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 import type { RuntimeContext } from "../lib/runtimeContext.ts";
 
 if (executionTestProcess(import.meta.url)) {
 const isolation = await isolateExecution();
+// The agent's Grok lanes read ~/.progrok/auth.json; keep them on an isolated HOME.
+const grokAuth = seedGrokAuth();
+const XAI_ORIGIN = "https://api.x.ai";
 const { imageTransport } = isolation;
 const TEST_DIR = isolation.rootDir;
 const deniedFetch = globalThis.fetch;
@@ -28,7 +32,7 @@ after(async () => {
   try { stopQueueWorker?.(); await drain(); }
   finally {
     try { closeDb?.(); restoreWrites?.(); }
-    finally { await isolation.close(); }
+    finally { try { await isolation.close(); } finally { grokAuth.cleanup(); } }
   }
 });
 beforeEach(() => { globalThis.fetch = fetchOwnedApp; });
@@ -96,6 +100,7 @@ function videoArtifact(response: Response) {
 function agentVideoContext(generatedDir: string): RuntimeContext {
   return {
     rootDir: TEST_DIR, packageVersion: "test",
+    grokAuthHomeDir: grokAuth.homeDir,
     config: {
       ...config, storage: { ...config.storage, generatedDir },
       grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 18645,
@@ -132,8 +137,8 @@ function installAgentVideoResponder(artifact: Response) {
         assert.equal(request.headers.get("authorization"), null);
         counts.artifact++; return artifact;
       }
-      assert.equal(url.origin, "http://127.0.0.1:18645"); assert.equal(url.search, "");
-      assert.equal(request.headers.get("authorization"), "Bearer dummy");
+      assert.equal(url.origin, XAI_ORIGIN); assert.equal(url.search, "");
+      assert.equal(request.headers.get("authorization"), grokAuth.bearer);
       if (url.pathname === "/v1/videos/agent-failure") {
         assert.equal(request.method, "GET"); assert.equal(await request.text(), ""); counts.poll++;
         return Response.json({ status: "done", video: { url: "https://vidgen.example/agent-failure.mp4", duration: 5, respect_moderation: true } });
@@ -228,6 +233,7 @@ async function withApp(fn: (baseUrl: string, generatedDir: string) => Promise<vo
   app.use(express.json({ limit: "8mb" }));
   registerAgentRoutes(app, {
     apiKey: "sk-test",
+    grokAuthHomeDir: grokAuth.homeDir,
     config: {
       storage: { generatedDir },
       log: { level: "silent" },
@@ -505,6 +511,7 @@ describe("Agent Mode runtime contract", () => {
       {
         rootDir: process.cwd(),
         packageVersion: "test",
+        grokAuthHomeDir: grokAuth.homeDir,
         config: {
           ...config,
           storage: { ...config.storage, generatedDir },
@@ -594,6 +601,7 @@ describe("Agent Mode runtime contract", () => {
       {
         rootDir: process.cwd(),
         packageVersion: "test",
+        grokAuthHomeDir: grokAuth.homeDir,
         config: {
           ...config,
           storage: { ...config.storage, generatedDir },

@@ -15,8 +15,11 @@ import { PromiseTracker, SettlementTimeout } from "./_executionTrackedWrites.ts"
 import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
 import { captureFfmpegCapability, installVideoFfmpeg, type FfmpegAttempt } from "./_videoFfmpegFixture.ts";
 import { forbidArtifactArrayBuffer, type makeVideoStreamFixture } from "./_videoStreamFixture.ts";
+import { GROK_FIXTURE_BEARER, seedGrokAuth } from "./_grokAuthFixture.ts";
 
 export type { UpstreamCall };
+/** Both Grok lanes now call xAI directly; only the credential differs. */
+export const GROK_DIRECT_ORIGIN = "https://api.x.ai";
 type Codec = Awaited<ReturnType<typeof installVideoFfmpeg>>;
 type Isolation = Awaited<ReturnType<typeof isolateExecution>>;
 type Stream = ReturnType<typeof makeVideoStreamFixture>;
@@ -83,18 +86,25 @@ function origin(server: Server): string {
   return `http://127.0.0.1:${address.port}`;
 }
 
+/** The owned mock upstream stands in for api.x.ai, so map the direct origin onto it. */
+function ownedTarget(call: UpstreamCall, server: Server): string {
+  const url = new URL(call.url);
+  return url.origin === origin(server) ? call.url : `${origin(server)}${url.pathname}${url.search}`;
+}
+
 function validateProxy(call: UpstreamCall, server: Server, artifactPath: string): boolean {
   const url = new URL(call.url);
-  assert.equal(url.origin, origin(server));
   assert.equal(url.username + url.password + url.search + url.hash, "");
   assert.equal(call.headers.has("cookie"), false);
-  if (url.pathname === artifactPath) {
+  if (url.origin === origin(server) && url.pathname === artifactPath) {
     assert.equal(call.method, "GET"); assert.equal(call.body, "");
     assert.equal(call.headers.has("authorization"), false);
     return true;
   }
+  // Every authenticated video call leaves for the direct xAI origin.
+  assert.equal(url.origin, GROK_DIRECT_ORIGIN);
   const posts = ["/v1/responses", "/v1/chat/completions", "/v1/videos/generations", "/v1/videos/edits", "/v1/videos/extensions"];
-  assert.equal(call.headers.get("authorization"), "Bearer dummy");
+  assert.equal(call.headers.get("authorization"), GROK_FIXTURE_BEARER);
   if (call.method === "POST" && posts.includes(url.pathname)) {
     assert.match(call.headers.get("content-type") ?? "", /^application\/json(?:;|$)/);
     const body: unknown = JSON.parse(call.body);
@@ -124,6 +134,7 @@ class VideoFixture {
   app: Server | undefined;
   responder: Responder | undefined;
   finishing: Promise<void> | undefined;
+  grokAuth: ReturnType<typeof seedGrokAuth> | undefined;
   closed = false;
   frozen = false;
   active = false;
@@ -238,7 +249,7 @@ class VideoFixture {
       try {
         const artifact = validateProxy(call, server, artifactPath);
         validate(call);
-        const response = await this.isolation.fetchOwned(server, call.url, {
+        const response = await this.isolation.fetchOwned(server, ownedTarget(call, server), {
           method: call.method, headers: call.headers, signal: call.signal, redirect: "error",
           ...(call.body ? { body: call.body } : {}),
         });
@@ -324,7 +335,7 @@ class VideoFixture {
       for (const restore of this.restores.reverse()) restore();
       this.ffmpeg?.restore();
       await this.isolation.close();
-    } finally { this.closed = true; this.restoreEnv(); }
+    } finally { this.closed = true; this.grokAuth?.cleanup(); this.restoreEnv(); }
     if (failure) throw failure;
   }
 }
@@ -410,6 +421,8 @@ export async function openVideoFixture(options: { codec?: boolean } = {}) {
   try {
     const isolation = await isolateExecution();
     fixture = new VideoFixture(isolation, restoreEnv);
+    // Isolated xAI OAuth session: the `grok` lane must never read the real ~/.progrok.
+    fixture.grokAuth = seedGrokAuth();
     if (options.codec) fixture.ffmpeg = await installVideoFfmpeg(isolation.rootDir, capability, fixture.violations);
     fixture.modules = await loadRuntime(isolation.rootDir);
     await installObservers(fixture);
@@ -419,6 +432,7 @@ export async function openVideoFixture(options: { codec?: boolean } = {}) {
     if (fixture) {
       for (const restore of fixture.restores.reverse()) restore();
       fixture.ffmpeg?.restore(); fixture.modules?.db.closeDb();
+      fixture.grokAuth?.cleanup();
       await fixture.isolation.close();
     }
     restoreEnv(); throw error;
@@ -428,6 +442,9 @@ export async function openVideoFixture(options: { codec?: boolean } = {}) {
 function publicFixture(fixture: VideoFixture) {
   return {
     root: fixture.isolation.rootDir, config: fixture.modules.config as RuntimeContext["config"],
+    /** Pass as `grokAuthHomeDir` on any context that reaches the OAuth `grok` lane. */
+    grokAuthHomeDir: fixture.grokAuth!.homeDir,
+    grokBearer: fixture.grokAuth!.bearer,
     calls: fixture.calls, violations: fixture.violations, ffmpeg: fixture.ffmpeg,
     beginCase: fixture.beginCase.bind(fixture),
     trackApp: fixture.trackApp.bind(fixture), listen: fixture.listen.bind(fixture),

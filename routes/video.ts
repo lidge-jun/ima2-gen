@@ -13,6 +13,7 @@ import { logEvent, logError } from "../lib/logger.js";
 import { parseBackgroundPreset, backgroundPromptSuffix, backgroundPlannerConstraint } from "../lib/backgroundPresets.js";
 import { invalidateHistoryIndex } from "../lib/historyIndex.js";
 import { generateVideoViaGrok, type GrokVideoEvent } from "../lib/grokVideoAdapter.js";
+import { resolveGrokCredential, type GrokLane } from "../lib/grokRuntime.js";
 import { generateVideoViaComfy, type ComfyQueueInfo } from "../lib/comfyImageAdapter.js";
 import { getVideoSeriesChain } from "../lib/videoSeriesChain.js";
 import {
@@ -540,7 +541,11 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         + (backgroundPreset ? ` ${backgroundPromptSuffix(backgroundPreset, "video")}` : "");
 
       const plannerModel = typeof req.body?.plannerModel === "string" ? req.body.plannerModel.trim() : undefined;
-      const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
+      // `provider` comes off the untyped body; the comfy branch already returned, so the
+      // only values left are the two Grok lanes. Narrow explicitly so the lane the
+      // credential is resolved for is a real GrokLane rather than an `any` passthrough.
+      const lane: GrokLane = provider === "grok-api" ? "grok-api" : "grok";
+      const credential = await resolveGrokCredential(ctx, lane, { signal: cancelController.signal });
 
       const result = await generateVideoViaGrok(effectivePrompt, ctx, {
         model: modelCheck.model,
@@ -555,7 +560,7 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
         requestId,
         continuityLineage: parentLineage,
         plannerModel: plannerModel || undefined,
-        directApiKey,
+        credential,
         onEvent,
         storyboardActive,
         backgroundConstraint: backgroundPreset ? backgroundPlannerConstraint(backgroundPreset) : undefined,

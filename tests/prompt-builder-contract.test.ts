@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -26,6 +26,7 @@ import {
 } from "../lib/promptBuilder/router.ts";
 import { buildTransportPayload } from "../lib/promptBuilder/transport.ts";
 import { requireRuntimeContext } from "../lib/runtimeContext.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 import type {
   PromptBuilderLaneSummary,
   PromptBuilderMessage,
@@ -59,6 +60,10 @@ beforeEach(() => {
   delete process.env.IMA2_PROMPT_BUILDER_BACKEND;
   delete process.env.IMA2_PROMPT_BUILDER_MODEL;
 });
+
+// The grok prompt-builder lane resolves an OAuth bearer from ~/.progrok/auth.json.
+const grokAuth = seedGrokAuth();
+after(() => { grokAuth.cleanup(); });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -259,7 +264,7 @@ function clientContext(
       promptBuilder: { backend, model },
       oauth: { ...config.oauth, generationTimeoutMs: 1_000 },
     },
-    grokUrl: "http://127.0.0.1:18645/v1",
+    grokAuthHomeDir: grokAuth.homeDir,
     oauthReadyState: "ready" as const,
     oauthReadyPromise: Promise.resolve(),
   };

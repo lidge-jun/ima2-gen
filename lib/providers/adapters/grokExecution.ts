@@ -1,5 +1,6 @@
 import type { RuntimeContext } from "../../runtimeContext.js";
 import { planGrokImage } from "../../grokImagePlanner.js";
+import { resolveGrokCredential, type GrokCredential } from "../../grokRuntime.js";
 import { resolveGrokQualityModel } from "../../imageModels.js";
 import { toGrokReferences } from "../../nodeHelpers.js";
 import { generateViaGrok, editViaGrok } from "./grokOperations.js";
@@ -24,7 +25,7 @@ async function prepareGrokClassic(
     ? [{ b64: "", url: request.providerUrl, declaredMime: "image/png", detectedMime: "image/png" }, ...request.references]
     : request.references;
   // Keep classic's once-per-batch key and shared plan capture before any image attempt.
-  const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined;
+  const credential = await resolveGrokCredential(ctx, activeProvider, { signal: request.signal });
   const sharedGrokPlan = await planGrokImage(generationPrompt, ctx, {
     model: resolveGrokQualityModel(imageModel, quality),
     size: effectiveSize,
@@ -32,7 +33,7 @@ async function prepareGrokClassic(
     requestId,
     referenceCount: grokRefs.length,
     references: grokRefs,
-    directApiKey: grokDirectApiKey,
+    credential,
     backgroundConstraint: request.backgroundConstraint,
     webSearchEnabled,
   });
@@ -46,25 +47,25 @@ async function prepareGrokClassic(
       plannedPrompt: sharedGrokPlan?.prompt,
       webSearchCalls: sharedGrokPlan?.webSearchCalls,
       references: grokRefs,
-      directApiKey: grokDirectApiKey,
+      credential,
     });
     return { kind: "single", value };
   } };
 }
 
-function prepareGrokNode(
+async function prepareGrokNode(
   ctx: RuntimeContext, request: Extract<GrokRequest, { surface: "node" }>,
-): PreparedImageExecution<"node"> {
-  // The outer execution boundary checks current presence; retries retain this key.
-  const grokDirectApiKey = request.provider === "grok-api" ? ctx.xaiApiKey : undefined;
+): Promise<PreparedImageExecution<"node">> {
+  // The outer execution boundary checks current presence; retries retain this credential.
+  const credential = await resolveGrokCredential(ctx, request.provider, { signal: request.signal });
   return { execute: async () => {
-    return { kind: "single", value: await executeGrokNode(ctx, request, grokDirectApiKey) };
+    return { kind: "single", value: await executeGrokNode(ctx, request, credential) };
   } };
 }
 
 async function executeGrokNode(
   ctx: RuntimeContext, request: Extract<GrokRequest, { surface: "node" }>,
-  grokDirectApiKey: string | undefined,
+  credential: GrokCredential,
 ): Promise<SingleImageExecutionResult> {
   const { sourceImage: parentB64, prompt: generationPrompt, references, requestId, signal, options } = request;
   const { model, size, webSearchEnabled } = options;
@@ -72,7 +73,7 @@ async function executeGrokNode(
   return await generateViaGrok(generationPrompt, ctx, {
     model, size, requestId, signal,
     references: toGrokReferences(parentB64, refsForRequest),
-    directApiKey: grokDirectApiKey,
+    credential,
     webSearchEnabled,
   });
 }
@@ -81,10 +82,10 @@ async function executeGrokEdit(
   ctx: RuntimeContext, request: Extract<GrokRequest, { surface: "edit" }>,
 ): Promise<SingleImageExecutionResult> {
   const { provider, rawPrompt, sourceImage, signal, requestId, options } = request;
-  const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
+  const credential = await resolveGrokCredential(ctx, provider, { signal });
   return await editViaGrok(rawPrompt, sourceImage, ctx, {
     model: resolveGrokQualityModel(options.model, options.quality),
-    size: options.size, signal, requestId, directApiKey,
+    size: options.size, signal, requestId, credential,
   });
 }
 
@@ -93,12 +94,12 @@ async function executeGrokMultimode(
   progress: ExecutionProgress,
 ): Promise<SequenceImageExecutionResult> {
   const { provider, prompt, references, signal, requestId, options, maxImages } = request;
-  const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
+  const credential = await resolveGrokCredential(ctx, provider, { signal });
   const grokRefs = request.providerUrl
     ? [{ b64: "", url: request.providerUrl }, ...references] : references;
   return await generateMultimodeViaGrok(prompt, ctx, {
     model: resolveGrokQualityModel(options.model, options.quality), maxImages,
-    size: options.size, signal, requestId, references: grokRefs, directApiKey,
+    size: options.size, signal, requestId, references: grokRefs, credential,
     onFinalImage: progress.onFinalImage,
     webSearchEnabled: options.webSearchEnabled,
   });
@@ -112,7 +113,7 @@ export async function prepareGrokExecution(
 ): Promise<PreparedImageExecution<ExecutionSurface>> {
   switch (request.surface) {
     case "classic": return await prepareGrokClassic(ctx, request);
-    case "node": return prepareGrokNode(ctx, request);
+    case "node": return await prepareGrokNode(ctx, request);
     case "edit": return { execute: async () => {
       return { kind: "single", value: await executeGrokEdit(ctx, request) };
     } };
