@@ -128,12 +128,12 @@ Ctrl+C로 DB, 소켓, 자식 프로세스를 정리할 수 있습니다. Windows
 
 ## 이미지 생성 공급자
 
-이미지 생성은 로컬 Codex/ChatGPT OAuth, OpenAI API key, 번들 Grok 공급자를 지원합니다.
+이미지 생성은 로컬 Codex/ChatGPT OAuth, OpenAI API key, Grok 공급자를 지원합니다.
 
 - `provider: "oauth"`는 로컬 Codex OAuth 프록시를 사용합니다.
 - `provider: "api"`는 OpenAI Responses API의 `image_generation` 도구를 사용합니다.
-- `provider: "grok"`는 번들 `progrok`을 `127.0.0.1:18645`에서 띄우고, xAI Web Search와 플래너(기본: `grok-4.5`, 설정 또는 `--planner-model`로 변경 가능)를 거친 뒤 xAI Images API를 호출합니다. `grok-4.3`은 호환 선택지로 유지합니다.
-- `provider: "grok-api"`는 `XAI_API_KEY`로 xAI Images API를 직접 호출합니다 (progrok OAuth 없음).
+- `provider: "grok"`는 `~/.progrok/auth.json`에 저장된 xAI OAuth 세션으로 `https://api.x.ai`를 직접 호출합니다. xAI Web Search와 플래너(기본: `grok-4.5`, 설정 또는 `--planner-model`로 변경 가능)를 거친 뒤 xAI Images API로 이어집니다. `grok-4.3`은 호환 선택지로 유지합니다. 처음 한 번 `ima2 grok login` 또는 설정 화면의 **Switch Account**로 로그인하면, 이후에는 만료 2분 전에 토큰이 자동으로 갱신됩니다.
+- `provider: "grok-api"`는 `XAI_API_KEY`로 xAI Images API를 직접 호출합니다 (OAuth 세션을 쓰지 않습니다).
 - `provider: "agy"`는 로컬 Antigravity CLI(`agy -p`)로 Gemini `nano-banana-2` 이미지를 생성합니다 (`IMA2_AGY_BIN`).
 - `provider: "gemini-api"`는 Google Generative Language API 또는 Vertex AI를 사용합니다 (`GEMINI_API_KEY` / `VERTEX_SERVICE_ACCOUNT_JSON`; 둘 다 있으면 Vertex 우선).
 
@@ -263,9 +263,6 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | 생성 이미지 저장 위치 |
 | `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | 서버 fallback 이미지 모델 |
 | `IMA2_NO_OAUTH_PROXY` | — | `1`이면 OAuth 프록시 자동 시작 비활성화 |
-| `IMA2_GROK_PROXY_HOST` | `127.0.0.1` | 번들 progrok 프록시 host |
-| `IMA2_GROK_PROXY_PORT` | `18645` | 번들 progrok 프록시 port |
-| `IMA2_NO_GROK_PROXY` | — | `1`이면 progrok 자동 시작 비활성화 |
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok 플래너 모델 (설정 UI 또는 `--planner-model` CLI 플래그로도 변경 가능) |
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` | 기본 Grok 이미지 모델 |
 | `IMA2_GROK_VIDEO_MODEL_DEFAULT` | `grok-imagine-video-1.5` | 기본 Grok 비디오 모델 |
@@ -277,6 +274,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `VERTEX_SERVICE_ACCOUNT_JSON` | — | Vertex AI 서비스 계정 JSON (API 키보다 우선) |
 | `IMA2_AGY_BIN` | PATH의 `agy` | `provider: "agy"` 바이너리 경로 |
 | `IMA2_MAX_PARALLEL` | `24` | 서버 전역 병렬 생성 상한 |
+
+`IMA2_GROK_PROXY_HOST`, `IMA2_GROK_PROXY_PORT`, `IMA2_NO_GROK_PROXY`, `IMA2_GROK_RESTART_*`는 로컬 Grok 프록시와 함께 3.16에서 제거되어 더 이상 읽지 않습니다. 값을 남겨 두어도 아무 일도 일어나지 않습니다.
 
 ### 로그 모드
 

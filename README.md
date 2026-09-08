@@ -166,12 +166,12 @@ The web UI uses a single `GET /api/events` Server-Sent Events connection for all
 
 ## Provider Paths
 
-Image generation can run through the local Codex/ChatGPT OAuth path, a configured OpenAI API key, the bundled Grok provider, or the Gemini provider via Antigravity CLI.
+Image generation can run through the local Codex/ChatGPT OAuth path, a configured OpenAI API key, the Grok provider, or the Gemini provider via Antigravity CLI.
 
 - `provider: "oauth"` uses the local Codex OAuth proxy.
 - `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool.
-- `provider: "grok"` starts bundled `progrok` on `127.0.0.1:18645`, runs mandatory xAI Web Search plus a planner pass (default: `grok-4.5`, configurable in settings or via `--planner-model`), then calls xAI Images API through the local proxy. `grok-4.3` remains available as an explicit compatibility override.
-- `provider: "grok-api"` calls the xAI Images API directly with `XAI_API_KEY` (no bundled progrok OAuth proxy).
+- `provider: "grok"` calls `https://api.x.ai` directly with the xAI OAuth session stored in `~/.progrok/auth.json`, running mandatory xAI Web Search plus a planner pass (default: `grok-4.5`, configurable in settings or via `--planner-model`) before the xAI Images API call. `grok-4.3` remains available as an explicit compatibility override. Log in once with `ima2 grok login` or the Settings **Switch Account** button; the session refreshes itself two minutes before expiry.
+- `provider: "grok-api"` calls the xAI Images API directly with `XAI_API_KEY` (no OAuth session involved).
 - `provider: "nai"` calls the NovelAI image API with a persistent API token (saved in Settings > API Keys or `NOVELAI_API_KEY`; no fixed token prefix is required). Four models: `nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, `nai-diffusion-4-5-curated`. Responses arrive as a ZIP archive that ima2 decodes to PNG. Text-to-image only — reference images, edits, and masks are refused rather than silently dropped. Browser and CLI surfaces expose negative prompt, sampler/schedule, steps/guidance/CFG rescale, seed, presets, Auto SMEA, Decrisper, Variety+, and V5 alpha.
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool (model: `nano-banana-2`). Output is fixed at 1024×1024 JPEG, max 3 reference images. No web search, quality, or size controls.
 - `provider: "gemini-api"` calls the Google Generative Language API directly. Supports two models: `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Auth is via `GEMINI_API_KEY` env var, web UI key management, or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON`). When both an API key and Vertex credentials are configured, Vertex takes priority. Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K); these controls are only honored on the direct API path — the Vertex AI endpoint ignores aspect/size because it does not accept the `response_format` field. Per-model cost differs: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
@@ -179,6 +179,8 @@ Image generation can run through the local Codex/ChatGPT OAuth path, a configure
 - Grok generation supports Classic, Node, and Agent flows. If a Classic reference, Node parent image, or Agent current image is present, ima2 switches the final Grok call to xAI image edit so image-to-image context is preserved.
 
 If no provider is specified, the app keeps the current GPT OAuth/default behavior. GPT OAuth and API-key generation default to `gpt-5.6-luna`; the API-key path also defaults to `low` reasoning and `1024x1024` unless the request passes validated options. Grok image generation defaults to `grok-imagine-image-quality`.
+
+One caveat on the OAuth Grok lane: xAI documents only `/v1/me` as accepting an OAuth token, so image and video calls to `api.x.ai` with that token ride an undocumented path. It works today — progrok relied on the same path — but it carries no compatibility promise. If xAI closes it, `provider: "grok-api"` with `XAI_API_KEY` is the documented route and stays unaffected.
 
 Grok image generation exposes a model picker (`grok-imagine-image` / `grok-imagine-image-quality`) and a size picker (aspect ratio + 1k/2k resolution). The Settings page prefers the Grok Build weekly credits percentage and reset time from `GET /v1/billing?format=credits`; if that source is unavailable, it falls back to the legacy monthly billing window and `$used/$limit`. A **Switch Account** button starts a device-code OAuth flow (`POST /api/auth/switch`) for re-authenticating without leaving the app.
 
@@ -352,9 +354,6 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_API_REASONING_EFFORT` | `low` | Default reasoning effort for `provider: "api"` |
 | `IMA2_API_IMAGE_SIZE` | `1024x1024` | Default size for `provider: "api"` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | `true` | Toggle web search for `provider: "api"` |
-| `IMA2_GROK_PROXY_HOST` | `127.0.0.1` | Host for the bundled progrok proxy |
-| `IMA2_GROK_PROXY_PORT` | `18645` | Port for the bundled progrok proxy |
-| `IMA2_NO_GROK_PROXY` | — | Set `1` to disable automatic progrok startup |
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok search/planner model (also configurable via settings UI or `--planner-model` CLI flag) |
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | `900000` | Timeout for the Grok planner call |
 | `IMA2_GROK_SEARCH_TIMEOUT_MS` | `300000` | Timeout for the Grok web-search brief (degrades instead of failing) |
@@ -367,6 +366,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `VERTEX_SERVICE_ACCOUNT_JSON` | — | Google service account JSON for Vertex AI auth with `provider: "gemini-api"`; takes priority over `GEMINI_API_KEY` when both are set |
 | `IMA2_AGY_BIN` | `agy` on PATH | Explicit path to the Antigravity CLI binary for `provider: "agy"` |
 | `IMA2_MAX_PARALLEL` | `24` | Server-wide parallel generation cap |
+
+`IMA2_GROK_PROXY_HOST`, `IMA2_GROK_PROXY_PORT`, `IMA2_NO_GROK_PROXY`, and `IMA2_GROK_RESTART_*` were removed in 3.16 together with the local Grok proxy; they are no longer read, and setting them is harmless.
 
 ### Logging modes
 

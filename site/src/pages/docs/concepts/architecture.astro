@@ -26,14 +26,14 @@ Web UI (ui/dist, served)          ──┼──→ server.ts ──→ routes/
                                     │                     │
                                     │           lib/*  (storage, sessions, inflight, metadata)
                                     │           openai-oauth  (OpenAI OAuth proxy)
-                                    │           progrok  (bundled xAI proxy)
+                                    │           lib/xaiAuth.ts  (xAI OAuth session)
                                     │           ~/.ima2/generated  (images + sidecars)
                                     └────────── better-sqlite3  (sessions + graph)</code></pre>
   <p>
     The runtime path is intentionally direct. CLI commands and the browser call the same endpoints;
-    the server sends image requests through the OAuth proxy, the API-key Responses path, or bundled
-    progrok for Grok/xAI Images API, saves files under the configured generated directory, and
-    persists graph sessions in SQLite.
+    the server sends image requests through the OAuth proxy, the API-key Responses path, or a direct
+    call to <code>api.x.ai</code> for Grok/xAI Images API, saves files under the configured generated
+    directory, and persists graph sessions in SQLite.
   </p>
 
   <h2>Module map</h2>

@@ -14,9 +14,9 @@ http://localhost:3333
 
 - `provider: "oauth"`使用本地的Codex OAuth代理人。
 - `provider: "api"`使用OpenAI回應API與託管的`image_generation`工具。
-- `provider: "grok"`使用捆綁的progrok xAI代理人。經典、節點和代理生成強制運行xAI網頁搜尋透過`/v1/responses`，然後運行`grok-4.5`計劃員與強製本地人通話`generate_image`函數，那麼ima2執行xAI `/v1/images/generations`. `grok-4.3`仍然可以作為顯式相容性覆蓋使用。如果附加了參考影像、節點父映像或代理目前影像，則最後一步將切換到xAI `/v1/images/edits`因此圖像到圖像的上下文被保留。
+- `provider: "grok"`使用儲存在`~/.progrok/auth.json`的xAI OAuth工作階段直接呼叫`https://api.x.ai`，不再有本機代理程式。經典、節點和代理生成強制運行xAI網頁搜尋透過`/v1/responses`，然後運行`grok-4.5`計劃員與強製本地人通話`generate_image`函數，那麼ima2執行xAI `/v1/images/generations`. `grok-4.3`仍然可以作為顯式相容性覆蓋使用。如果附加了參考影像、節點父映像或代理目前影像，則最後一步將切換到xAI `/v1/images/edits`因此圖像到圖像的上下文被保留。
 - `provider: "agy"`產生Antigravity CLI (`agy -p`）透過Google生成圖像Gemini's `default_api:generate_image`工具。型號是`nano-banana-2`。輸出固定為1024×1024JPEG。最多 3 個參考影像 (i2i)。沒有網路搜尋、品質、尺寸或遮罩控制。多模式返回單一影像。不支援影片（`AGY_VIDEO_UNSUPPORTED`).
-- `provider: "grok-api"`使用直接xAI API密鑰而不是捆綁的progrok OAuth代理人。與相同的管道`grok`（網頁搜尋 → 策劃 →`/v1/images/generations`），相同的寬高比和解析度選項。需要一個xAI API透過網路配置的密鑰UI密鑰管理或`XAI_API_KEY`環境變數。也支援視頻生成。
+- `provider: "grok-api"`使用直接xAI API密鑰而不是OAuth工作階段；缺少或為空的影像憑證會在准入前以`GROK_API_KEY_MISSING`拒絕，絕不改走OAuth通道。與相同的管道`grok`（網頁搜尋 → 策劃 →`/v1/images/generations`），相同的寬高比和解析度選項。需要一個xAI API透過網路配置的密鑰UI密鑰管理或`XAI_API_KEY`環境變數。也支援視頻生成。
 - `provider: "gemini-api"`呼叫 Google 生成語言API直接（或Vertex AI使用服務帳戶JSON）。支援型號`nano-banana-2` (Gemini3.1 Flash 影像）和`nano-banana-pro` (Gemini3 專業圖像）。在兩個身份驗證路徑上支援可變寬高比（1:1 到 21:9）和四個解析度層（512px、1K、2K、4K）—直接API路徑發送`generation_config.response_format.image`（蛇_情況）而Vertex AI端點（`aiplatform.googleapis.com`) 發送`generationConfig.imageConfig`（駝峰式）。和`size: "auto"`影像配置被完全省略，模型決定比率/大小。授權：`GEMINI_API_KEY`環境變數、網絡UI密鑰管理（`/api/keys/gemini`），或一個Vertex AI服務帳戶JSON (`VERTEX_SERVICE_ACCOUNT_JSON`或者`/api/keys/vertex`）。當 Vertex 憑證和APIkey 已配置，Vertex 優先。選擇的身份驗證模式（`apikey`或者`vertex`）堅持`~/.ima2/config.json`作為`geminiAuthMode`並在伺服器啟動時恢復。每個模型的成本：`nano-banana-2`（快閃記憶體）：512=0.001 美元、1K=0.003 美元、2K=0.004 美元、4K=0.006 美元；`nano-banana-pro`：1K=0.007 美元，2K=0.007 美元，4K=0.013 美元。沒有網路搜尋或遮罩控制。
 - API-金鑰產生涵蓋經典生成、編輯、掩模引導編輯、多模式和節點生成。
 - 如果`provider: "api"`請求時沒有API關鍵，路由在上游之前失敗`401`和`API_KEY_REQUIRED`.
@@ -30,10 +30,10 @@ Grok影片生成用途`POST /api/video/generate` (SSE）。看影片
 
 |方法|小路|筆記|
 |---|---|---|
-| `GET` | `/api/health` |伺服器健康狀況、版本、路徑、提供者策略|
+| `GET` | `/api/health` |伺服器健康狀況、版本、路徑、提供者策略；包含`grok: { auth: "oauth" \| "none" }`，同樣寫入`~/.ima2/server.json`|
 | `GET` | `/api/providers` |提供者可用性和運行時端口|
 | `GET` | `/api/oauth/status` | OAuth代理狀態和可見模型|
-| `GET` | `/api/grok/status` |捆綁式progrok狀態和可見xAI影像模型|
+| `GET` | `/api/grok/status` | xAI OAuth工作階段狀態和可見xAI影像模型。回傳`ready`、`no_image_model`、`error`或`offline`；沒有工作階段時原因是`login_required`|
 | `GET` | `/api/billing` |計費/狀態探測，包括API配置時的密鑰來源|
 | `GET` | `/api/quota` |供應商配額：回報`{ codex, grok }`。有資格的Grok建造xAIOIDC/外部身份驗證返回`weekly`百分比/重置視窗`GET /v1/billing?format=credits`。如果不可用，舊端點可能會返回`monthly`視窗加`billing: { usedUsd, limitUsd }`. |
 
@@ -262,7 +262,7 @@ Grok尺寸映射：
 該請求包括提示和圖像負載。`provider: "api"`透過共享響應圖像適配器發送提示和圖像。可選蒙版作為蒙版指導轉發，而不是像素完美的編輯保證。
 
 和`provider: "grok"`，編輯請求發送至xAI `/v1/images/edits`
-透過捆綁的progrok代理人。蒙面Grok之前編輯被拒絕
+使用OAuth工作階段直接傳送。蒙面Grok之前編輯被拒絕
 上游與`GROK_MASK_UNSUPPORTED`.
 
 Grokmultimode 目前將每個圖像請求直接發送到xAI圖片API
@@ -727,8 +727,8 @@ X-Ima2-Tab-Id
 | `GRAPH_TOO_LARGE` |圖超出節點/邊限制|
 | `NODE_NOT_FOUND` |未找到節點元數據|
 | `INVALID_GROK_IMAGE_MODEL` | A Grok請求使用外部模型`grok-imagine-image`或者`grok-imagine-image-quality` |
-| `GROK_RATE_LIMITED` | xAI透過返回速率限制響應progrok |
-| `GROK_AUTH_FAILED` | progrok無法驗證xAI要求|
+| `GROK_RATE_LIMITED` | xAI回傳了速率限制回應|
+| `GROK_AUTH_FAILED` | xAI請求驗證失敗（OAuth工作階段無效或已過期，需要重新`ima2 grok login`）|
 | `GROK_SEARCH_TIMEOUT` / `GROK_PLANNER_TIMEOUT` / `GROK_IMAGE_TIMEOUT` |這Grok搜尋、規劃器或圖片API步驟超出了其超時預算|
 | `AGY_GENERATION_FAILED` | Gemini(agy) 影像生成失敗|
 | `AGY_TIMEOUT` |阿吉CLI進程超過 360 秒逾時|

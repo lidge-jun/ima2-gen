@@ -44,8 +44,8 @@ tests/experiments/
 cache/
 
 # Grok proxy supervision: planned but not yet implemented.
-!devlog/_plan/260819c_grok_proxy_supervision/
-!devlog/_plan/260819c_grok_proxy_supervision/**
+!devlog/_fin/260819_grok_proxy_supervision/
+!devlog/_fin/260819_grok_proxy_supervision/**
 
 # Completed units tracked in _fin/.
 !devlog/_fin/260817_grok_video_planner_timeout/
