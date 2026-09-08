@@ -170,7 +170,7 @@ Web UI 使用單一 `GET /api/events` 伺服器發送事件（SSE）連線，接
 
 Grok圖像生成公開了模型選擇器（`grok-imagine-image` / `grok-imagine-image-quality`）和尺寸選擇器（長寬比 + 1k/2k 解析度）。設定頁面更喜歡Grok建立每週積分百分比並重置時間`GET /v1/billing?format=credits`;如果該來源不可用，則會退回到傳統的每月計費窗口，並且`$used/$limit`. A **切換帳戶**按鈕啟動設備代碼OAuth流動 （`POST /api/auth/switch`）無需離開應用程式即可重新進行身份驗證。
 
-Grok影片產生預設為規範`grok-imagine-video-1.5`; `grok-imagine-video`仍可用於僅限基本型號的 Ref2V、V2V 編輯和擴展路徑，以及舊版本`grok-imagine-video-1.5-preview`字串被接受作為別名。根據引用計數自動偵測三種模式：文字到影片（0 引用）、圖像到影片（1 引用）和引用到影片（2-7 引用，最長 10 秒持續時間）。 1080p 可用於`grok-imagine-video-1.5`僅提示文字到影片和單圖像/幀圖像到影片；僅提示 1.5 在上游請求之前使用內部白色畫布 I2V 填充程式。視訊控制包括持續時間（1-15秒）、解析度（480p、720p、1080p（如果支援））和寬高比（1:1、16:9、9:16、4:3、3:4、3:2、2:3、自動）。
+Grok影片產生預設為規範`grok-imagine-video-1.5`; `grok-imagine-video`仍可用於僅限基本型號的 Ref2V、V2V 編輯和擴展路徑，以及舊版本`grok-imagine-video-1.5-preview`字串被接受作為別名。根據引用計數自動偵測三種模式：文字到影片（0 引用）、圖像到影片（1 引用）和引用到影片（2-14 引用；grok-imagine-video-1.5 最長 15 秒，grok-imagine-video 最長 10 秒）。 1080p 可用於`grok-imagine-video-1.5`僅提示文字到影片和單圖像/幀圖像到影片；僅提示 1.5 在上游請求之前使用內部白色畫布 I2V 填充程式。視訊控制包括持續時間（1-15秒）、解析度（480p、720p、1080p（如果支援））和寬高比（1:1、16:9、9:16、4:3、3:4、3:2、2:3、自動）。
 
 ![設定工作區顯示GPT OAuth活躍和API可用的密鑰提供者。](../assets/screenshots/settings-oauth-generation.png)
 

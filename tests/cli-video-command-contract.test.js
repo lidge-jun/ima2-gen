@@ -300,7 +300,8 @@ describe("ima2 video CLI contracts", () => {
 
     const badExtend = await runCLI(["video", "extend", "continue", "--video", "https://example.com/a.mp4", "--duration", "999"]);
     assert.equal(badExtend.code, 2, String(badExtend.stderr).slice(0, 800));
-    assert.match(badExtend.stderr, /--duration must be between 2 and 10/);
+    // 1-15, measured, not the 2-10 xAI documents: the endpoint accepts 1 and 11.
+    assert.match(badExtend.stderr, /--duration must be between 1 and 15/);
 
     const badExtendBeforeServer = await runCLI(["video", "extend", "continue", "--video", "https://example.com/a.mp4", "--duration", "abc", "--server", "http://127.0.0.1:9"]);
     assert.equal(badExtendBeforeServer.code, 2, String(badExtendBeforeServer.stderr).slice(0, 800));

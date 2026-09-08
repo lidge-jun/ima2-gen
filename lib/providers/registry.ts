@@ -76,9 +76,13 @@ export const REGISTRY = [
       { id: "grok-imagine-image", kind: "image", supports: EDIT },
       { id: "grok-imagine-image-quality", kind: "image", supports: EDIT },
       { id: "grok-imagine-video", kind: "video", supports: EDIT },
-      { id: "grok-imagine-video-1.5", aliases: ["grok-imagine-video-1.5-preview"], kind: "video", supports: EDIT },
+      { id: "grok-imagine-video-1.5", aliases: ["grok-imagine-video-1.5-preview", "grok-imagine-video-1.5-2026-05-30"], kind: "video", supports: EDIT },
     ],
-    referenceLimits: { image: 3, edit: 3, video: 7 },
+    // image/edit 5: measured on grok-imagine-image-2.0 through the oauth proxy on
+    // 2026-09-08 (6 -> 400 "This model supports at most 5 input image(s)"), and xAI's
+    // release notes say editing "now accepts up to 5 source images per request (was 3)".
+    // video 14: see MAX_REF2V_REFERENCES in lib/imageModels.ts.
+    referenceLimits: { image: 5, edit: 5, video: 14 },
     elementTaxonomy: "grok",
     limits: { timeoutMs: 300_000 },
     errorPrefix: "GROK_",
@@ -100,9 +104,12 @@ export const REGISTRY = [
       { id: "grok-imagine-image", kind: "image", supports: EDIT },
       { id: "grok-imagine-image-quality", kind: "image", supports: EDIT },
       { id: "grok-imagine-video", kind: "video", supports: EDIT },
-      { id: "grok-imagine-video-1.5", aliases: ["grok-imagine-video-1.5-preview"], kind: "video", supports: EDIT },
+      { id: "grok-imagine-video-1.5", aliases: ["grok-imagine-video-1.5-preview", "grok-imagine-video-1.5-2026-05-30"], kind: "video", supports: EDIT },
     ],
-    referenceLimits: { image: 3, edit: 3, video: 7 },
+    // Same upstream as the grok lane, reached with a direct key instead of the proxy, so
+    // the caps are taken to match. The 5 was measured on the proxy path only; if an edit
+    // fails at 4-5 images with a direct key, this assumption is the place to look.
+    referenceLimits: { image: 5, edit: 5, video: 14 },
     elementTaxonomy: "grok",
     limits: { timeoutMs: 300_000 },
     errorPrefix: "GROK_",

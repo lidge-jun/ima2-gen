@@ -176,7 +176,7 @@ ima2 skill install --tmp            # install to temp dir (fallback)
 
 Grok图像生成公开了模型选择器（`grok-imagine-image` / `grok-imagine-image-quality`）和尺寸选择器（长宽比 + 1k/2k 分辨率）。设置页面更喜欢Grok建立每周积分百分比并重置时间`GET /v1/billing?format=credits`;如果该来源不可用，则会退回到传统的每月计费窗口，并且`$used/$limit`. A **切换账户**按钮启动设备代码OAuth流动 （`POST /api/auth/switch`）无需离开应用程序即可重新进行身份验证。
 
-Grok视频生成默认为规范`grok-imagine-video-1.5`; `grok-imagine-video`仍然可用于仅限基本模型的 Ref2V、V2V 编辑和扩展路径，以及旧版本`grok-imagine-video-1.5-preview`字符串被接受作为别名。根据引用计数自动检测三种模式：文本到视频（0 引用）、图像到视频（1 引用）和引用到视频（2-7 引用，最长 10 秒持续时间）。 1080p 可用于`grok-imagine-video-1.5`仅提示文本到视频和单图像/帧图像到视频；仅提示 1.5 在上游请求之前使用内部白色画布 I2V 填充程序。视频控制包括持续时间（1-15秒）、分辨率（480p、720p、1080p（如果支持））和宽高比（1:1、16:9、9:16、4:3、3:4、3:2、2:3、自动）。
+Grok视频生成默认为规范`grok-imagine-video-1.5`; `grok-imagine-video`仍然可用于仅限基本模型的 Ref2V、V2V 编辑和扩展路径，以及旧版本`grok-imagine-video-1.5-preview`字符串被接受作为别名。根据引用计数自动检测三种模式：文本到视频（0 引用）、图像到视频（1 引用）和引用到视频（2-14 引用；grok-imagine-video-1.5 最长 15 秒，grok-imagine-video 最长 10 秒）。 1080p 可用于`grok-imagine-video-1.5`仅提示文本到视频和单图像/帧图像到视频；仅提示 1.5 在上游请求之前使用内部白色画布 I2V 填充程序。视频控制包括持续时间（1-15秒）、分辨率（480p、720p、1080p（如果支持））和宽高比（1:1、16:9、9:16、4:3、3:4、3:2、2:3、自动）。
 
 ![设置工作区显示GPT OAuth活跃和API可用的密钥提供者。](../assets/screenshots/settings-oauth-generation.png)
 

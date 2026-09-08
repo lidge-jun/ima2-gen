@@ -24,7 +24,14 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
+| `260908_xai_imagine_spec_resync/` | WP1-WP5 완료. xAI ref2v 상한 7->14, 모델별 ref2v 길이, 연장 1-15s, 이미지 편집 5장, 날짜 별칭, 오디오 단독 ref2v를 서버·UI·CLI·문서에 반영. GUI에 보이스 선택과 영상 편집 버튼 추가. 남은 것: 컴포저 드롭에서 편집으로 들어가는 흐름(결과 카드로 대체 가능). |
 | `260819c_grok_proxy_supervision/` | 조사 + 로드맵 완료 (000-030), 구현 미착수. Grok 프록시 수명주기 재설계 — ensure 진입점, 로그인 재기동, 프로브 기반 상태. |
+
+## 일정이 있는 후속 항목
+
+| 항목 | 기한 | 내용 | 근거 |
+|---|---|---|---|
+| `grok-imagine-image-quality` 폐기 대응 | **2026-11-02** | 폐기 후 요청은 `grok-imagine-image-2.0` + `quality: low`로 서빙된다. `lib/grokImageAdapter.ts`가 세 곳에서 이 모델을 기본 폴백으로 쓴다. 지금 바꾸면 기존 결과물과 단가가 조용히 달라지므로 제품 결정이 필요하다. | `260908_xai_imagine_spec_resync/060_execution_outcome.md` |
 
 ## 열린 이슈
 

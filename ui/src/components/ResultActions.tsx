@@ -1,9 +1,10 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useI18n } from "../i18n";
 import { exportImageToComfy } from "../lib/api";
 import { toVideoHistoryItem } from "../lib/videoHistoryItem";
 import { videoExtensionOwner } from "../lib/videoExtendStream";
+import { postVideoEdit } from "../lib/videoEditRequest";
 import { isVideoItem, extractFirstFrame, extractMidFrame, extractLastFrame } from "../lib/videoMedia";
 import { continueFromItem, continueFromItemAsUrl } from "../lib/continueFromItem";
 import { ResultMetadataModal } from "./ResultMetadataModal";
@@ -42,10 +43,14 @@ export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: Resu
   const [comfyExporting, setComfyExporting] = useState(false);
   const [animating, setAnimating] = useState(false);
   const extendUi = useSyncExternalStore(videoExtensionOwner.subscribe, videoExtensionOwner.getSnapshot);
+  // Edit keeps component-local state: unlike extend it has no cross-view owner, because
+  // the request completes in one call rather than being tracked across a job lifecycle.
+  const [editState, setEditState] = useState<"idle" | "pending" | "error">("idle");
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [upscaleOpen, setUpscaleOpen] = useState(false);
   const [upscalePending, setUpscalePending] = useState(false);
   const [runwayConnected, setRunwayConnected] = useState(false);
+  const editAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -136,6 +141,47 @@ export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: Resu
   };
 
   const cancelExtend = () => videoExtensionOwner.cancel();
+
+  // Real video-to-video, distinct from extend's last-frame continuation. The route has
+  // existed without a caller since 260716, so this is the missing button rather than a
+  // new capability. grok-imagine-video only: 1.5 answers 400 for edits, and passing the
+  // source clip's own model would send exactly the one that fails.
+  const editVideo = async () => {
+    if (!actionImage.filename || editState === "pending") return;
+    const instruction = window.prompt(t("result.editVideoPrompt"))?.trim();
+    if (!instruction) return;
+    const controller = new AbortController();
+    editAbortRef.current = controller;
+    setEditState("pending");
+    try {
+      const done = await postVideoEdit({
+        videoUrl: actionImage.filename,
+        prompt: instruction,
+        model: "grok-imagine-video",
+      }, controller.signal);
+      useAppStore.getState().addHistoryItem({
+        ...actionImage,
+        image: done.url,
+        url: done.url,
+        filename: done.filename,
+        mediaType: "video",
+        prompt: instruction,
+        userPrompt: instruction,
+        model: done.model || "grok-imagine-video",
+        format: "mp4",
+      });
+      setEditState("idle");
+      showToast(t("toast.animateDone"));
+    } catch (error) {
+      const canceled = error instanceof DOMException && error.name === "AbortError";
+      setEditState(canceled ? "idle" : "error");
+      if (!canceled) showToast(error instanceof Error ? error.message : t("toast.animateFailed"), true);
+    } finally {
+      if (editAbortRef.current === controller) editAbortRef.current = null;
+    }
+  };
+
+  const cancelEdit = () => editAbortRef.current?.abort();
 
   const download = () => {
     const a = document.createElement("a");
@@ -414,6 +460,21 @@ export function ResultActions({ imageOverride = null, onAfterDeleteFocus }: Resu
           </button>
           {extendState === "pending" && (
             <button type="button" className="action-btn" onClick={cancelExtend}>{t("common.cancel")}</button>
+          )}
+          <button
+            type="button"
+            className="action-btn"
+            onClick={editVideo}
+            disabled={editState === "pending"}
+            aria-busy={editState === "pending"}
+            title={t("result.editVideoTitle")}
+          >
+            {editState === "pending"
+              ? t("inflight.streaming")
+              : editState === "error" ? t("gallery.retry") : t("result.editVideo")}
+          </button>
+          {editState === "pending" && (
+            <button type="button" className="action-btn" onClick={cancelEdit}>{t("common.cancel")}</button>
           )}
         </>
       )}

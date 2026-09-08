@@ -453,7 +453,14 @@
     "moveBlockDown": "Move {name} down",
     "afterBlocks": "After main prompt",
     "hint": "Ctrl + Enter to generate",
-    "dropHere": "Drop to attach as reference (up to {max})"
+    "dropHere": "Drop to attach as reference (up to {max})",
+    "rejectNotMedia": "Only image, audio, and mp4 files can be attached",
+    "rejectAudioNeedsVideoModel": "Audio needs a video model selected first",
+    "rejectAudioNeeds15": "Audio is supported only on grok-imagine-video-1.5",
+    "rejectVideoNeedsBase": "Video input is supported only on grok-imagine-video",
+    "rejectVideoSingleOnly": "Only one source video can be used at a time",
+    "audioUsePresetVoice": "xAI limits uploaded audio clips to partner accounts. Use a preset voice in the video settings",
+    "videoUseCliForEdit": "Video editing and extension run through ima2 video edit / ima2 video extend"
   },
   "canvas": {
     "modeTitle": "Canvas Mode",
@@ -906,7 +913,10 @@
     "upscaleStart": "Start upscale",
     "upscaleStarted": "Upscale started",
     "upscaleFailed": "Upscale failed",
-    "upscaleInvalid": "Invalid upscale parameters"
+    "upscaleInvalid": "Invalid upscale parameters",
+    "editVideo": "Edit video",
+    "editVideoTitle": "Change this video with a prompt (grok-imagine-video)",
+    "editVideoPrompt": "What should change in this video? e.g. make the outfit red"
   },
   "session": {
     "switchTitle": "Switch session",
@@ -1238,13 +1248,18 @@
     "resolution1080Help": "1080p uses Grok V1.5 for prompt-only or single image/frame video. It is not available with 2+ references.",
     "aspectTitle": "Aspect ratio",
     "plannerUpdateFailed": "Could not update the planner model. The previous setting was restored.",
+    "durationClampedToModel": "This model allows up to {seconds}s for reference-to-video",
     "continuationFallbackT2V": "The continuation frame could not be extracted. Generation will continue as text-to-video.",
     "singleRefTitle": "One reference",
     "singleRefHelp": "Use this image as the opening frame, or only as a guide. Two or more are always guides.",
     "singleRef": {
       "source": "Start from it",
       "reference": "Use as guide"
-    }
+    },
+    "voiceSection": "Voice",
+    "voiceLimit": "Up to {max}. Refer to them as <AUDIO_0> in the prompt",
+    "voiceNeeds15": "Voices are supported only on grok-imagine-video-1.5",
+    "voiceCustomPlaceholder": "Custom voice id (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "Image Generator",

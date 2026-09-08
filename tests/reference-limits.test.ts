@@ -5,9 +5,16 @@ import { effectiveReferenceLimit, GROK_FAMILY_IMAGE_REF_LIMIT, GROK_VIDEO_REF_LI
 
 const base = { serverLimit: 5, videoModelSelected: false, mcpProvider: null };
 
-test("grok-family image providers cap at the server's 3-ref edit limit", () => {
-  for (const provider of ["grok", "grok-api", "agy", "gemini-api"] as const) {
+test("grok-family image providers cap at the server's edit limit", () => {
+  // grok/grok-api moved to 5 when xAI raised multi-image editing from 3; agy and
+  // gemini-api are Google lanes whose own cap is still 3, so they are asserted
+  // against their own manifest entry rather than a shared number.
+  for (const provider of ["grok", "grok-api"] as const) {
     assert.equal(effectiveReferenceLimit({ ...base, provider }), GROK_FAMILY_IMAGE_REF_LIMIT);
+  }
+  assert.equal(GROK_FAMILY_IMAGE_REF_LIMIT, 5);
+  for (const provider of ["agy", "gemini-api"] as const) {
+    assert.equal(effectiveReferenceLimit({ ...base, provider }), 3);
   }
 });
 
@@ -16,9 +23,10 @@ test("gpt providers keep the server capability limit", () => {
   assert.equal(effectiveReferenceLimit({ ...base, provider: "api" }), 5);
 });
 
-test("grok video mode allows ref2v up to min(server, 7)", () => {
+test("grok video mode allows ref2v up to min(server, 14)", () => {
   assert.equal(effectiveReferenceLimit({ ...base, provider: "grok", videoModelSelected: true }), 5);
-  assert.equal(effectiveReferenceLimit({ ...base, provider: "grok", videoModelSelected: true, serverLimit: 12 }), GROK_VIDEO_REF_LIMIT);
+  assert.equal(effectiveReferenceLimit({ ...base, provider: "grok", videoModelSelected: true, serverLimit: 20 }), GROK_VIDEO_REF_LIMIT);
+  assert.equal(GROK_VIDEO_REF_LIMIT, 14);
 });
 
 test("MCP lane caps at the 3-reference tool contract (temp uploads enabled)", () => {

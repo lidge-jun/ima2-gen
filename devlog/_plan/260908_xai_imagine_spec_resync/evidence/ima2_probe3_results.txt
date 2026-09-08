@@ -1,0 +1,12 @@
+### refcap_grok-imagine-video-1.5_n14 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 15s."}
+### refcap_grok-imagine-video-1.5_n15 -> HTTP 400 {"code":"invalid-argument","error":"Too many reference images: 15. Maximum allowed is 14."}
+### refcap_grok-imagine-video_n14 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 10s."}
+### refcap_grok-imagine-video_n15 -> HTTP 400 {"code":"invalid-argument","error":"Too many reference images: 15. Maximum allowed is 14."}
+### r2v_1.5_dur16 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 15s."}
+### r2v_base_dur16 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 10s."}
+### r2v_base_dur10_badvoice -> HTTP 400 {"code":"invalid-argument","error":"`reference_audios` is not supported for this model."}
+### audioonly_base_dur16 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 10s."}
+### r2v_1080_1.5_dur16 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 15s."}
+### i2v_1080_base_dur5_badaudio -> HTTP 400 {"code":"invalid-argument","error":"`reference_audios` is not supported for this model."}
+### t2v_1080_15_dur5_badaudio -> HTTP 400 {"code":"invalid-argument","error":"Unknown voice_id \"zzz_not_a_voice_zzz\". Available voices: ara, eve, leo, rex, sal, carina, zagan, helix, orion, luna, iris, altair, zenith, perseus, helios, lux, kepler, rigel, cosmo, celeste, ursa, sirius, lumen, castor, naksh, atlas. Custom voice ids created via the /v1/custom-voices API are also accepted."}
+### img_plus_refs_dur16 -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 15s."}

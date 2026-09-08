@@ -9,6 +9,8 @@ import {
   GROK_VIDEO_MODEL_15,
   GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
   GROK_VIDEO_MODEL_BASE,
+  MAX_VIDEO_DURATION,
+  MIN_VIDEO_DURATION,
   validateVideoResolutionForRequest,
   type VideoMode,
   type VideoResolution,
@@ -278,12 +280,14 @@ async function videoExtendCmd(argv: string[]) {
   const spec = { flags: { video: { type: "string" }, duration: { type: "string", default: "6" }, out: { short: "o", type: "string" }, output: { type: "string" }, json: { type: "boolean" }, timeout: { type: "string", default: String(VIDEO_CLIENT_TIMEOUT_SEC) }, server: { type: "string" }, help: { short: "h", type: "boolean" } } };
   const args = parseArgs(argv, spec);
   rejectUnknownFlags(args);
-  if (args.help) { out(`  ima2 video extend <prompt> --video <url|file_id|generated-file> [--duration 6]\n\n  Extend video from its last frame.\n  Model: grok-imagine-video only. Extension: 2-10s.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n        --duration <2-10> Extension duration (default: 6)\n    -o, --out <file>      Download extended video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 5400\n        --server <url>    Override server URL`); return; }
+  if (args.help) { out(`  ima2 video extend <prompt> --video <url|file_id|generated-file> [--duration 6]\n\n  Extend video from its last frame.\n  Model: grok-imagine-video only (1.5 rejects extensions). Extension: 1-15s.\n  duration is the length of the ADDED segment, not the total output.\n\n  Options:\n        --video <value>   Source video HTTPS URL, xAI file_id, data URL, or generated filename (required)\n        --duration <1-15> Added-segment duration (default: 6)\n    -o, --out <file>      Download extended video to file\n        --output <file>   Alias for --out\n        --json            Print JSON result\n        --timeout <sec>   Default: 5400\n        --server <url>    Override server URL`); return; }
   const prompt = args.positional.join(" ");
   if (!prompt.trim()) die(2, ACTIVE_VIDEO_PROMPT_GUIDANCE);
   if (!args.video) die(2, "--video <url> is required");
   const duration = parseIntegerFlag(args.duration, 6, "--duration");
-  if (duration < 2 || duration > 10) die(2, "--duration must be between 2 and 10");
+  // Measured 1-15, not the documented 2-10: the endpoint accepts 1 and 11 and refuses
+  // only 0 and 16. devlog/_plan/260908_xai_imagine_spec_resync/000_research.md (D11)
+  if (duration < MIN_VIDEO_DURATION || duration > MAX_VIDEO_DURATION) die(2, `--duration must be between ${MIN_VIDEO_DURATION} and ${MAX_VIDEO_DURATION}`);
   parseTimeoutSeconds(args.timeout);
   const server = await resolveServer({ serverFlag: args.server });
   const res = await fetchServer(server.base, "/api/video/extend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, videoUrl: args.video, duration }), signal: timeoutSignal(args.timeout) });
