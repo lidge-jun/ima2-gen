@@ -1,6 +1,6 @@
 ---
 created: 2026-04-23
-updated: 2026-09-07
+updated: 2026-09-09
 tags: [ima2-gen, devlog, roadmap]
 aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 ---
@@ -25,7 +25,8 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 | 경로 | 상태 |
 |---|---|
 | `260908_xai_imagine_spec_resync/` | v3.15.1로 배포 완료. xAI ref2v 상한 7->14, 모델별 ref2v 길이, 연장 1-15s, 이미지 편집 5장, 날짜 별칭, 오디오 단독 ref2v를 서버·UI·CLI·문서에 반영. GUI에 보이스 선택과 영상 편집 버튼 추가. 남은 것: 컴포저 드롭에서 편집으로 들어가는 흐름(결과 카드로 대체 가능). 배포 기록은 070_release_v3151.md. |
-| `260819c_grok_proxy_supervision/` | 조사 + 로드맵 완료 (000-030), 구현 미착수. Grok 프록시 수명주기 재설계 — ensure 진입점, 로그인 재기동, 프로브 기반 상태. |
+| `260909_grok_native_oauth/` | wp1 로드맵 완료(000~050, 감사 PASS). progrok 자식 프로세스 프록시를 걷어내고 grok 레인이 xAI OAuth로 api.x.ai를 직접 호출. wp2 xaiAuth 코어 → wp3 레인 전환 → wp4 제거·CLI → wp5 SoT/문서. 수동 체인 stacked PR, base dev. |
+| `260819c_grok_proxy_supervision/` | WP2~WP4는 054c729f로 이미 구현됨(이 표의 이전 "구현 미착수" 서술은 오기). `260909_grok_native_oauth`가 그 구현물을 통째로 제거하므로 superseded. wp5에서 `_fin/260819_grok_proxy_supervision`으로 아카이브. |
 
 ## 일정이 있는 후속 항목
 
