@@ -141,11 +141,21 @@ describe("prompt builder backend selection", () => {
 });
 
 describe("prompt builder model validation", () => {
+  it("lists Astra for GPT lanes while keeping planner defaults on Luna", () => {
+    for (const backend of ["oauth", "api"] as const) {
+      assert.ok(PROMPT_BUILDER_MODELS[backend].includes("gpt-6-astra"));
+      assert.equal(DEFAULT_PROMPT_BUILDER_MODELS[backend], "gpt-5.6-luna");
+    }
+  });
+
   it("accepts every persisted catalog pair and rejects cross-backend pairs", () => {
     for (const backend of PROMPT_BUILDER_BACKENDS) {
       for (const model of PROMPT_BUILDER_MODELS[backend]) {
         assert.equal(normalizePromptBuilderModel(backend, model), model);
       }
+    }
+    for (const backend of ["oauth", "api"] as const) {
+      assert.equal(normalizePromptBuilderModel(backend, "gpt-6-astra"), "gpt-6-astra");
     }
     for (const backend of ["oauth", "api"] as const) {
       assertThrowsCode(
@@ -159,6 +169,8 @@ describe("prompt builder model validation", () => {
         "PROMPT_BUILDER_BAD_MODEL",
       );
     }
+    assert.equal(buildTransportPayload("oauth", "gpt-6-astra", textMessages, undefined).endpoint, "chat");
+    assert.equal(buildTransportPayload("api", "gpt-6-astra", imageMessages, undefined).endpoint, "responses");
     assertThrowsCode(
       () => normalizePromptBuilderModel("auto", "gpt-5.5"),
       "PROMPT_BUILDER_BAD_MODEL",

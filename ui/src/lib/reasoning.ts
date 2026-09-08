@@ -1,6 +1,6 @@
 export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
-export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "none";
+export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "max";
 export const REASONING_EFFORT_STORAGE_KEY = "ima2.reasoningEffort";
 
 export const REASONING_EFFORT_OPTIONS: Array<{

@@ -1,7 +1,7 @@
 import type { ImageModel, OpenAIImageModel, GeminiImageModel, AtlasCloudImageModel, MinimaxImageModel, NaiImageModel, Provider, UnsupportedImageModel, VideoModel } from "../types";
 import { PROVIDER_MODELS } from "../generated/providers";
 
-export const DEFAULT_IMAGE_MODEL: ImageModel = "gpt-5.6-luna";
+export const DEFAULT_IMAGE_MODEL: ImageModel = "gpt-6-astra";
 export const IMAGE_MODEL_STORAGE_KEY = "ima2.imageModel";
 
 export const IMAGE_MODEL_OPTIONS: Array<{
@@ -10,6 +10,7 @@ export const IMAGE_MODEL_OPTIONS: Array<{
   fullLabelKey: string;
   providerHint?: Provider;
 }> = [
+  { value: "gpt-6-astra", shortLabel: "6a", fullLabelKey: "settings.imageModel.gpt6Astra" },
   { value: "gpt-5.6-luna", shortLabel: "5.6l", fullLabelKey: "settings.imageModel.gpt56Luna" },
   { value: "gpt-5.6-terra", shortLabel: "5.6t", fullLabelKey: "settings.imageModel.gpt56Terra" },
   { value: "gpt-5.6-sol", shortLabel: "5.6s", fullLabelKey: "settings.imageModel.gpt56Sol" },
@@ -109,7 +110,7 @@ export function getImageModelOptionsForProvider(provider: Provider) {
   if (provider === "nai") return NAI_IMAGE_MODEL_OPTIONS;
   // Comfy has no static option rows: its models are workflows fetched from
   // /api/models at runtime. Falling through to the OpenAI list would show
-  // gpt-5.6-luna under a ComfyUI selection and send a model the lane cannot
+  // GPT models under a ComfyUI selection and send a model the lane cannot
   // execute.
   if (provider === "comfy") return [];
   return OPENAI_IMAGE_MODEL_OPTIONS;

@@ -14,7 +14,7 @@ function readSource(path: string) {
 }
 
 describe("current model defaults: runtime contract", () => {
-  it("projects the Grok planner default and Luna through shared configuration", () => {
+  it("projects the Grok planner default and Astra through shared configuration", () => {
     // The video planner rewrites the user's prompt, so its default is a quality call
     // rather than a version race: 4.3 reads better here and 4.6 stays selectable.
     assert.equal(DEFAULT_GROK_PLANNER_MODEL, "grok-4.3");
@@ -22,7 +22,7 @@ describe("current model defaults: runtime contract", () => {
     assert.ok(GROK_PLANNER_MODELS.includes("grok-4.5"));
     assert.ok(GROK_PLANNER_MODELS.includes("grok-4.6"));
     assert.equal(config.grokProvider.plannerModel, DEFAULT_GROK_PLANNER_MODEL);
-    assert.equal(config.imageModels.default, "gpt-5.6-luna");
+    assert.equal(config.imageModels.default, "gpt-6-astra");
     assert.equal(config.styleSheet.model, "gpt-5.6-luna");
     assert.equal(config.cardNewsPlanner.model, "gpt-5.6-luna");
   });
@@ -48,10 +48,10 @@ describe("current model defaults: runtime contract", () => {
   });
 
   it("orders active UI model pickers from current defaults to compatibility choices", () => {
-    assert.equal(DEFAULT_IMAGE_MODEL, "gpt-5.6-luna");
+    assert.equal(DEFAULT_IMAGE_MODEL, "gpt-6-astra");
     assert.deepEqual(
       IMAGE_MODEL_OPTIONS.slice(0, 6).map((option) => option.value),
-      ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini"],
+      ["gpt-6-astra", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4"],
     );
     assert.deepEqual(
       AGENT_LLM_MODEL_OPTIONS.filter((option) => option.provider === "grok").map((option) => option.value),

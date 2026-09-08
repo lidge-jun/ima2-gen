@@ -180,6 +180,25 @@ describe("API provider parity", () => {
     });
   });
 
+  it("uses Astra and max reasoning for API image generation defaults", async () => {
+    const calls = [];
+    globalThis.fetch = async (url, init) => {
+      if (String(url).startsWith("http://127.0.0.1:")) return fetchOwnedApp(url, init);
+      calls.push({ url, init, body: JSON.parse(init.body) });
+      return sseResponse(imageEvents());
+    };
+    await withApp(async ({ baseUrl }) => {
+      const res = await fetch(`${baseUrl}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "default API image", provider: "api" }),
+      });
+      assert.equal(res.status, 200);
+      assert.equal(calls[0].body.model, "gpt-6-astra");
+      assert.equal(calls[0].body.reasoning.effort, "max");
+    });
+  });
+
   it("generate provider=grok reports one search call for n>1 plan reuse", async () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {

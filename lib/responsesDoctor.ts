@@ -156,7 +156,7 @@ function createProbeSpecs({
         ],
         tools: imageOnlyTools,
         tool_choice: "required",
-        reasoning: { effort: "low" },
+        reasoning: { effort: "max" },
         stream: true,
       },
     },
@@ -176,7 +176,7 @@ function createProbeSpecs({
         ],
         tools: webSearchImageTools,
         tool_choice: "required",
-        reasoning: { effort: "low" },
+        reasoning: { effort: "max" },
         stream: true,
       },
     },
@@ -196,7 +196,7 @@ function createProbeSpecs({
         ],
         tools: webSearchImageTools,
         tool_choice: { type: "image_generation" },
-        reasoning: { effort: "low" },
+        reasoning: { effort: "max" },
         stream: true,
       },
     },
@@ -421,7 +421,7 @@ async function runSingleProbe(provider: string, options: ImageDoctorProbeOptions
 
 export async function runImageDoctorProbe(options: ImageDoctorProbeOptions = {}) {
   const provider = options.provider || "oauth";
-  const model = options.model || defaultConfig.imageModels?.default || "gpt-5.6-luna";
+  const model = options.model || defaultConfig.imageModels?.default || "gpt-6-astra";
   const size = options.size || "1024x1024";
   const quality = options.quality || "low";
   const moderation = options.moderation || "low";

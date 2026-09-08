@@ -1,4 +1,4 @@
-// GPT-5.6 rollout contract (devlog/_plan/260707_gpt56-oidc-devlog-hardening).
+// GPT-5.6/GPT-6 rollout contract (devlog/_plan/260707_gpt56-oidc-devlog-hardening).
 // Activation evidence for the widened validators: the previously-rejecting
 // branches must now accept gpt-5.6-* and "max", while unknown values still
 // hit the reject branch (proving the guard is alive, not removed).
@@ -9,6 +9,7 @@ import { normalizeImageModel, normalizeReasoningEffort } from "../lib/imageModel
 import { config } from "../config.ts";
 
 const GPT56_MODELS = ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
+const ASTRA_MODEL = "gpt-6-astra";
 
 function readSource(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -25,7 +26,9 @@ describe("gpt-5.6 rollout: validators", () => {
     const result = normalizeImageModel({}, "gpt-5.6-nova");
     assert.equal(result.code, "INVALID_IMAGE_MODEL");
     assert.equal(result.status, 400);
-    assert.match(result.error ?? "", /gpt-5\.6-sol, gpt-5\.6-terra, gpt-5\.6-luna/);
+    for (const model of [...GPT56_MODELS, ASTRA_MODEL]) {
+      assert.match(result.error ?? "", new RegExp(model.replaceAll(".", "\\.")));
+    }
   });
 
   it("accepts max reasoning effort (previously rejected)", () => {
@@ -39,9 +42,16 @@ describe("gpt-5.6 rollout: validators", () => {
     assert.match(result.error ?? "", /max/);
   });
 
-  it("uses luna as the product default", () => {
-    assert.deepEqual(normalizeImageModel({}, undefined), { model: "gpt-5.6-luna" });
-    assert.equal(config.imageModels.default, "gpt-5.6-luna");
+  it("uses Astra as the product default", () => {
+    assert.deepEqual(normalizeImageModel({}, undefined), { model: ASTRA_MODEL });
+    assert.equal(config.imageModels.default, ASTRA_MODEL);
+    assert.equal(config.apiProvider.defaultImageModel, ASTRA_MODEL);
+    assert.equal(config.imageModels.reasoningEffort, "max");
+    assert.equal(config.apiProvider.defaultReasoningEffort, "max");
+  });
+
+  it("accepts Astra as the canonical GPT-6 model", () => {
+    assert.deepEqual(normalizeImageModel({}, ASTRA_MODEL), { model: ASTRA_MODEL });
   });
 });
 
@@ -50,6 +60,7 @@ describe("gpt-5.6 rollout: runtime config", () => {
     for (const model of GPT56_MODELS) {
       assert.ok(config.imageModels.valid.has(model), `config valid set missing ${model}`);
     }
+    assert.ok(config.imageModels.valid.has(ASTRA_MODEL));
     assert.ok(config.imageModels.validReasoningEfforts.has("max"));
   });
 });

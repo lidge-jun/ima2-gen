@@ -55,8 +55,9 @@ describe("Agent Mode right sidebar contract", () => {
     assert.match(model, /reasoningEffort/);
     assert.match(model, /provider: option\.provider/);
     assert.match(model, /role="menuitemradio"/);
-    assert.match(serverSettings, /reasoningEffort: "none"/);
-    assert.match(uiSettings, /reasoningEffort: "none"/);
+    assert.match(serverSettings, /reasoningEffort: "max"/);
+    assert.match(serverSettings, /model: "gpt-6-astra"/);
+    assert.match(uiSettings, /reasoningEffort: "max"/);
     assert.match(promptLibrary, /agent:form/);
     assert.match(css, /\.agent-right-sidebar/);
     assert.match(css, /\.agent-sidebar-tabs/);

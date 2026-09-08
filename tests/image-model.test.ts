@@ -5,8 +5,8 @@ import { normalizeImageModel } from "../lib/imageModels.ts";
 import { registerNodeRoutes } from "../routes/nodes.ts";
 
 describe("image model normalization", () => {
-  it("defaults to gpt-5.6-luna without route config", () => {
-    assert.deepEqual(normalizeImageModel({}, undefined), { model: "gpt-5.6-luna" });
+  it("defaults to GPT-6 Astra without route config", () => {
+    assert.deepEqual(normalizeImageModel({}, undefined), { model: "gpt-6-astra" });
   });
 
   it("accepts supported image models", () => {
@@ -19,6 +19,14 @@ describe("image model normalization", () => {
     assert.deepEqual(normalizeImageModel({}, "gpt-5.6-sol"), { model: "gpt-5.6-sol" });
     assert.deepEqual(normalizeImageModel({}, "gpt-5.6-terra"), { model: "gpt-5.6-terra" });
     assert.deepEqual(normalizeImageModel({}, "gpt-5.6-luna"), { model: "gpt-5.6-luna" });
+  });
+
+  it("accepts the GPT-6 Astra model id", () => {
+    assert.deepEqual(normalizeImageModel({}, "gpt-6-astra"), { model: "gpt-6-astra" });
+  });
+
+  it("normalizes the short Astra alias to the canonical model id", () => {
+    assert.deepEqual(normalizeImageModel({}, "astra"), { model: "gpt-6-astra" });
   });
 
   it("rejects known unsupported OAuth models", () => {

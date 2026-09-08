@@ -1,4 +1,5 @@
 export const IMAGE_MODEL_ALIASES = {
+  astra: "gpt-6-astra",
   luna: "gpt-5.6-luna",
   sol: "gpt-5.6-sol",
   terra: "gpt-5.6-terra",

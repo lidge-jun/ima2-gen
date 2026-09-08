@@ -136,7 +136,7 @@ export function resolveProviderOptions(ctx: RuntimeContext | null | undefined, {
   if (modelCheck.error) return { error: modelCheck.error, code: modelCheck.code, status: modelCheck.status };
 
   const reasoningInput = activeProvider === "api"
-    ? (rawReasoningEffort || apiConfig.defaultReasoningEffort || "low")
+    ? (rawReasoningEffort || apiConfig.defaultReasoningEffort || "max")
     : rawReasoningEffort;
   const reasoningCheck = normalizeReasoningEffort(ctx, reasoningInput);
   if (reasoningCheck.error) {

@@ -28,6 +28,7 @@ export const REGISTRY = [
       configKey: "oauth",
     }],
     models: [
+      { id: "gpt-6-astra", aliases: ["astra"], kind: "image", supports: RESPONSES },
       { id: "gpt-5.5", kind: "image", supports: RESPONSES },
       { id: "gpt-5.4", kind: "image", supports: RESPONSES },
       { id: "gpt-5.4-mini", kind: "image", supports: RESPONSES },
@@ -54,6 +55,7 @@ export const REGISTRY = [
       configKey: "apiKey",
     }],
     models: [
+      { id: "gpt-6-astra", aliases: ["astra"], kind: "image", supports: RESPONSES },
       { id: "gpt-5.5", kind: "image", supports: RESPONSES },
       { id: "gpt-5.4", kind: "image", supports: RESPONSES },
       { id: "gpt-5.4-mini", kind: "image", supports: RESPONSES },

@@ -1,10 +1,11 @@
 import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { deriveModels, deriveSupportedImageModels, deriveUnsupportedImageModels } from "./providers/derive.js";
 
-export const FALLBACK_IMAGE_MODEL = "gpt-5.6-luna";
+export const FALLBACK_IMAGE_MODEL = "gpt-6-astra";
 const VALID_IMAGE_MODELS = deriveSupportedImageModels("oauth");
 const UNSUPPORTED_IMAGE_MODELS = deriveUnsupportedImageModels();
-const FALLBACK_REASONING_EFFORT = "none";
+const IMAGE_MODEL_ALIASES = new Map([["astra", FALLBACK_IMAGE_MODEL]]);
+const FALLBACK_REASONING_EFFORT = "max";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
 
 export const GROK_FALLBACK_IMAGE_MODEL = "grok-imagine-image-2.0";
@@ -60,7 +61,9 @@ export function normalizeImageModel(ctx: RouteRuntimeContext | null | undefined,
     return { model: valid.has(fallback) ? fallback : FALLBACK_IMAGE_MODEL };
   }
 
-  if (unsupported.has(rawModel)) {
+  const canonicalModel = IMAGE_MODEL_ALIASES.get(rawModel) ?? rawModel;
+
+  if (unsupported.has(canonicalModel)) {
     return {
       error: "model is listed by OAuth but does not support image_generation: gpt-5.3-codex-spark",
       code: "IMAGE_MODEL_UNSUPPORTED",
@@ -68,15 +71,15 @@ export function normalizeImageModel(ctx: RouteRuntimeContext | null | undefined,
     };
   }
 
-  if (!valid.has(rawModel)) {
+  if (!valid.has(canonicalModel)) {
     return {
-      error: "model must be one of: gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna",
+      error: "model must be one of: gpt-6-astra, gpt-5.5, gpt-5.4, gpt-5.4-mini, gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna",
       code: "INVALID_IMAGE_MODEL",
       status: 400,
     };
   }
 
-  return { model: rawModel };
+  return { model: canonicalModel };
 }
 
 export function normalizeGrokImageModel(rawModel: unknown) {

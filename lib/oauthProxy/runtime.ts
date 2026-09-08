@@ -4,7 +4,7 @@ import { isAbortError, makeOAuthError } from "./errors.js";
 import type { RouteRuntimeContext } from "../runtimeContext.js";
 
 import { errInfo } from "../errInfo.js";
-const FALLBACK_REASONING_EFFORT = "none";
+const FALLBACK_REASONING_EFFORT = "max";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
 
 export interface OAuthRuntimeOptions {
