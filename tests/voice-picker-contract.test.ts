@@ -67,6 +67,9 @@ test("custom voice ids stay reachable", () => {
     .valid.videoModels.referenceAudio;
   assert.equal(caps.presetsAreAuthoritative, false);
   assert.equal(caps.customVoiceApi, "/v1/custom-voices");
+  // GET /v1/custom-voices answers {voices: [], total_count: 0, cap: 30}. The cap is in no
+  // document, so the endpoint is the only source and the advertisement has to carry it.
+  assert.equal(caps.customVoiceCap, 30);
   assert.match(source("ui/src/components/VoicePicker.tsx"), /voiceCustomPlaceholder/);
 });
 
