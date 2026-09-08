@@ -14,6 +14,8 @@ import { ElementMentionChips } from "./composer/ElementMentionChips";
 import { DeadTagMirror } from "./composer/DeadTagMirror";
 import { PromptComposerToolbar } from "./composer/PromptComposerToolbar";
 import { usePromptPaste } from "./composer/usePromptPaste";
+import { composerAcceptAttr } from "../lib/droppedMedia";
+import { useComposerDrop } from "./composer/useComposerDrop";
 import { NegativePromptField } from "./NegativePromptField";
 import { elementPreviewPath, loadAllElementAssets } from "../lib/elementMembership";
 import type { AssetItem } from "../store/storeTypes"; import type { TrayItem } from "../lib/referenceTray";
@@ -82,6 +84,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
   const addReferenceDataUrl = useAppStore((s) => s.addReferenceDataUrl);
   const useImageAsReference = useAppStore((s) => s.useImageAsReference);
   const readDroppedImageMetadata = useAppStore((s) => s.readDroppedImageMetadata);
+  const videoModelSelected = useAppStore((s) => s.videoModelSelected);
   const fileInput = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const attachmentCaretRef = useRef<number | null>(null);
@@ -161,6 +164,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
     attachmentCaretRef.current = null;
     await addFilesAtCaret(files, caret, true);
   };
+  const handleDroppedFiles = useComposerDrop({ onImages: (f) => void handleImageFiles(f) });
 
   const openFilePicker = () => {
     if (!canAddMore) return;
@@ -195,10 +199,7 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
       } catch { /* ignore malformed */ }
       return;
     }
-    const files = Array.from(e.dataTransfer.files).filter((f) =>
-      f.type.startsWith("image/"),
-    );
-    if (files.length > 0) void handleImageFiles(files);
+    handleDroppedFiles(Array.from(e.dataTransfer.files));
   };
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); if (!dragOver) setDragOver(true); };
@@ -484,12 +485,12 @@ export function PromptComposer({ variant = "sidebar" }: PromptComposerProps) {
       <input
         ref={fileInput}
         type="file"
-        accept="image/*"
+        accept={composerAcceptAttr({ videoModelSelected })}
         multiple
         hidden
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
-          if (files.length > 0) void handleImageFiles(files);
+          if (files.length > 0) handleDroppedFiles(files);
           else attachmentCaretRef.current = null;
           e.target.value = "";
         }}
