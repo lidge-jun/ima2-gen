@@ -1,0 +1,163 @@
+# note: interactive (clickable / focusable) elements only.
+- title: "Imagine Video 1.5 with References | SpaceXAI" [url=https://x.ai/news/grok-imagine-video-1-5-references]
+- banner:
+  - navigation:
+    - link "SpaceXAI Homepage" [ref=e1]:
+      - canvas [ref=e2] [size=156x29]
+    - link "Products" [ref=e3]
+    - link "Solutions" [ref=e4]
+    - link "Developer" [ref=e5]
+    - link "Company" [ref=e6]
+    - link "Pricing" [ref=e7]
+    - link "News" [ref=e8]
+    - link "Contact Sales" [ref=e9]
+    - link "Try for free" [ref=e10]
+    - button [ref=e11]
+- region:
+  - link "Back to news" [ref=e12]
+  - text: "Jul 31, 2026"
+  - heading "Imagine Video 1.5 with References" [level=1]
+  - text: "Our best video model, now with text, image, and voice references — generating up to 1080p."
+  - link "Open Grok.com" [ref=e13]
+  - text: "When we launched"
+  - link "Imagine Video 1.5" [ref=e14]
+  - text: "last month, it was our best video model yet — better motion, better physics, and better audio. Today it goes further: image and voice references, video from a prompt alone, and native 1080p generation.\nImage and voice references start today in the US for SuperGrok Heavy and SuperGrok Plus on"
+  - link "grok.com/imagine" [ref=e15]
+  - text: "and"
+  - link "iOS" [ref=e16]
+  - text: ", rolling out to all tiers over the next few days."
+  - heading "Text-to-Video and native 1080p#" [level=2]:
+    - link "Text-to-Video and native 1080p#" [ref=e17]
+  - text: "Describe the shot — no starting image needed. Text-to-video pairs our image generation with image-to-video. Native 1080p is now supported with text-to-video and image-to-video. Text-to-video and native 1080p are generally available on grok.com/imagine, iOS, and"
+  - link "Android" [ref=e18]
+  - text: "."
+  - button [ref=e19]
+  - button [ref=e20]
+  - button [ref=e21]
+  - button [ref=e22]
+  - button [ref=e23]
+  - button [ref=e24]
+  - button [ref=e25]
+  - button [ref=e26]
+  - button [ref=e27]
+  - button [ref=e28]
+  - button [ref=e29]
+  - button [ref=e30]
+  - button [ref=e31]
+  - button [ref=e32]
+  - heading "Voice consistency#" [level=2]:
+    - link "Voice consistency#" [ref=e33]
+  - text: "Pass in a character image and a voice reference, and both hold — the same face and the same voice in every scene."
+  - button [ref=e34]
+  - button [ref=e35]
+  - text: "Reference photo of the character Character"
+  - button "Play the voice reference" [ref=e36]
+  - text: "Voice"
+  - heading "Multi-Reference#" [level=2]:
+    - link "Multi-Reference#" [ref=e37]
+  - text: "Each reference image locks one thing in place — a face, a product, a location. Keep a character and swap the scene, keep the scene and swap the character, or hold both and change only the action. Up to seven references per generation."
+  - button [ref=e38]
+  - button [ref=e39]
+  - button [ref=e40]
+  - button [ref=e41]
+  - text: "Character Scene"
+  - button [ref=e42]
+  - button [ref=e43]
+  - text: "Reference photo of a man Character Reference photo of a warmly lit podcast studio with a leather armchair Scene"
+  - button [ref=e44]
+  - button [ref=e45]
+  - text: "Reference photo of a woman in a grey sweater Character Reference photo of a warmly lit podcast studio with a leather armchair Scene"
+  - heading "In the API#" [level=2]:
+    - link "In the API#" [ref=e46]
+  - text: "Image references, text-to-video, and native 1080p are live in the"
+  - link "xAI API" [ref=e47]
+  - text: "with our best video model, grok-imagine-video-1.5. Voice reference support is available"
+  - link "on request" [ref=e48]
+  - text: "."
+  - button "Copy code" [ref=e49]: "Copy"
+  - generic "import os import xai_sdk client = xai_sdk.Client(api_key=os.getenv(\"XAI_API_KEY\")) response = client" [ref=e50]
+  - text: "python"
+  - heading "Try it today#" [level=2]:
+    - link "Try it today#" [ref=e51]
+  - link "Open Grok.com" [ref=e52]
+  - link "Build Imagine API" [ref=e53]
+  - link "iOS App Store Icon Open Grok on iOS" [ref=e54]
+  - link "Android Play Store Icon Open Grok on Android" [ref=e55]
+- contentinfo:
+  - text: "© 2026 SpaceXAI LLC"
+  - button "Switch to dark mode" [ref=e56]
+  - link "Built with Grok" [ref=e57]
+  - text: "Products"
+  - link "Chat" [ref=e58]
+  - link "Build" [ref=e59]
+  - link "Imagine" [ref=e60]
+  - link "Voice" [ref=e61]
+  - link "Bot" [ref=e62]
+  - link "Grokipedia" [ref=e63]
+  - text: "Download"
+  - link "grok.com" [ref=e64]
+  - link "iOS" [ref=e65]
+  - link "Android" [ref=e66]
+  - link "Grok on X" [ref=e67]
+  - text: "Solutions"
+  - link "Business" [ref=e68]
+  - link "Government" [ref=e69]
+  - link "Customer Support" [ref=e70]
+  - link "Legal" [ref=e71]
+  - link "Security" [ref=e72]
+  - link "Use Cases" [ref=e73]
+  - text: "Grok Bot"
+  - link "Overview" [ref=e74]
+  - link "Marketplace" [ref=e75]
+  - link "Guides" [ref=e76]
+  - link "Use Cases" [ref=e77]
+  - text: "Developers"
+  - link "API Overview" [ref=e78]
+  - link "Pricing" [ref=e79]
+  - link "Models" [ref=e80]
+  - link "Console" [ref=e81]
+  - link "Changelog" [ref=e82]
+  - link "Docs" [ref=e83]
+  - link "Status" [ref=e84]
+  - text: "Enterprise"
+  - link "Contact Sales" [ref=e85]
+  - link "FAQs" [ref=e86]
+  - link "BAA" [ref=e87]
+  - link "DPA" [ref=e88]
+  - text: "Company"
+  - link "About" [ref=e89]
+  - link "Colossus" [ref=e90]
+  - link "Careers" [ref=e91]
+  - link "News" [ref=e92]
+  - link "Contact" [ref=e93]
+  - text: "Trust"
+  - link "Safety" [ref=e94]
+  - link "Security" [ref=e95]
+  - link "Privacy Portal" [ref=e96]
+  - link "Subprocessors" [ref=e97]
+  - link "Help Center" [ref=e98]
+  - link "Legal" [ref=e99]
+  - link "Terms" [ref=e100]
+  - link "Enterprise Terms" [ref=e101]
+  - link "Privacy" [ref=e102]
+  - link "Cookies" [ref=e103]
+  - link "AUP" [ref=e104]
+  - link "Brand" [ref=e105]
+  - button "Privacy choices" [ref=e106]
+  - text: "Social"
+  - link "@SpaceXAI" [ref=e107]
+  - link "@grok" [ref=e108]
+  - link "Discord" [ref=e109]
+- region "Notifications alt+T" [ref=e110]
+- dialog "Cookie notice":
+  - button "Dismiss cookie notice" [ref=e111]: "Close"
+  - text: "Essential cookies keep the site working and stay on. Optional cookies help with performance and advertising — accept, reject, or manage them. Learn more in our"
+  - link "Cookie Policy" [ref=e112]
+  - text: ","
+  - link "Privacy Policy" [ref=e113]
+  - text: ", and"
+  - link "Terms of Service" [ref=e114]
+  - text: "."
+  - button "Cookies Settings" [ref=e115]
+  - button "Reject All" [ref=e116]
+  - button "Accept All Cookies" [ref=e117]

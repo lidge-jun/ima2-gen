@@ -1,0 +1,27 @@
+### badvoice -> HTTP 400
+{"code":"invalid-argument","error":"Unknown voice_id \"zzz_not_a_voice_zzz\". Available voices: ara, eve, leo, rex, sal, carina, zagan, helix, orion, luna, iris, altair, zenith, perseus, helios, lux, kepler, rigel, cosmo, celeste, ursa, sirius, lumen, castor, naksh, atlas. Custom voice ids created via the /v1/custom-voices API are also accepted."}
+
+### refs8 -> HTTP 200
+{"request_id":"729aeede-e168-98ad-98a4-311003a92460"}
+
+### audio4 -> HTTP 429
+{"code":"resource-exhausted","error":"Too many requests for team 96a0d23c-9b7d-453a-a9c0-41f9d9375c86 and model grok-imagine-video-1.5. Your team's rate limit is — Requests per Second (actual/limit): 2/2. Your rate limit tier is determined based on your historical API spend. To learn how to increase your rate limit tier, please visit https://console.x.ai/team/default/rate-limits."}
+
+### dur16 -> HTTP 400
+{"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+
+### ref1080 -> HTTP 400
+{"code":"invalid-argument","error":"1080p video resolution is not supported for reference-to-video requests."}
+
+### baseaudio_dur16 -> HTTP 400
+{"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 10s."}
+
+### arauto_dur16 -> HTTP 422
+Failed to deserialize the JSON body into the target type: aspect_ratio: unknown variant `auto`, expected one of `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3` at line 1 column 116
+
+### alias0530_dur16 -> HTTP 400
+{"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+
+### badmodel -> HTTP 404
+{"code":"not-found","error":"The model grok-imagine-video-2.0 does not exist or your team 96a0d23c-9b7d-453a-a9c0-41f9d9375c86 does not have access to it. If you believe this is a mistake, please contact support and quote your team ID and the model name."}
+

@@ -1,0 +1,9 @@
+### edit_imgs_n5 -> HTTP 400 {"code":"invalid-argument","error":"The number of images to generate (n) must be between 1 and 10 inclusive."}
+### edit_imgs_n6 -> HTTP 400 {"code":"invalid-argument","error":"This model supports at most 5 input image(s), but 6 were provided."}
+### gen_quality_auto -> HTTP 400 {"code":"invalid-argument","error":"The number of images to generate (n) must be between 1 and 10 inclusive."}
+### gen_quality_bogus -> HTTP 422 Failed to deserialize the JSON body into the target type: quality: unknown variant `ultra`, expected one of `low`, `medium`, `high`, `auto` at line 1 column 74
+### gen_ar_21x9 -> HTTP 400 {"code":"invalid-argument","error":"The number of images to generate (n) must be between 1 and 10 inclusive."}
+### gen_ar_5x2 -> HTTP 400 {"code":"invalid-argument","error":"The number of images to generate (n) must be between 1 and 10 inclusive."}
+### gen_ar_bogus -> HTTP 422 Failed to deserialize the JSON body into the target type: aspect_ratio: unknown variant `7:3`, expected one of `1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `2:3`, `3:2`, `9:19.5`, `19.5:9`, `9:20`, `20:9`, `1:2`, `2:1`, `21:9`, `5:2`, `auto` at line 1 column 77
+### quality_model_check -> HTTP 400 {"code":"invalid-argument","error":"The number of images to generate (n) must be between 1 and 10 inclusive."}
+### gen_res_4k -> HTTP 422 Failed to deserialize the JSON body into the target type: resolution: unknown variant `4k`, expected `1k` or `2k` at line 1 column 74

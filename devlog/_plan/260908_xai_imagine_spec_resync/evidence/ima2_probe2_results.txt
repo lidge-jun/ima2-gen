@@ -1,0 +1,10 @@
+### order_check_refs30_badvoice -> HTTP 400 {"code":"invalid-argument","error":"Too many reference images: 30. Maximum allowed is 14."}
+### refs12_badvoice -> HTTP 400 {"code":"invalid-argument","error":"Unknown voice_id \"zzz_not_a_voice_zzz\". Available voices: ara, eve, leo, rex, sal, carina, zagan, helix, orion, luna, iris, altair, zenith, perseus, helios, lux, kepler, rigel, cosmo, celeste, ursa, sirius, lumen, castor, naksh, atlas. Custom voice ids created via the /v1/custom-voices API are also accepted."}
+### audio4_badvoice -> HTTP 400 {"code":"invalid-argument","error":"Too many reference audio clips: 4. Maximum allowed is 3."}
+### ref2v_15_dur_1.5 -> HTTP 400 {"code":"invalid-argument","error":"Unknown voice_id \"zzz_not_a_voice_zzz\". Available voices: ara, eve, leo, rex, sal, carina, zagan, helix, orion, luna, iris, altair, zenith, perseus, helios, lux, kepler, rigel, cosmo, celeste, ursa, sirius, lumen, castor, naksh, atlas. Custom voice ids created via the /v1/custom-voices API are also accepted."}
+### ref2v_11_dur_base -> HTTP 400 {"code":"invalid-argument","error":"Duration 11s exceeds the maximum allowed for reference-to-video, which is 10s."}
+### i2v_1080_base -> HTTP 400 {"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+### t2v_1080_base -> HTTP 400 {"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+### audioonly_r2v -> HTTP 400 {"code":"invalid-argument","error":"Duration 16s exceeds the maximum allowed for reference-to-video, which is 15s."}
+### generate_audio_field -> HTTP 400 {"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+### filetag_ref -> HTTP 200 BILLABLE {"request_id":"770d98c9-3468-96c8-b52c-15d1a94a1fbd"}

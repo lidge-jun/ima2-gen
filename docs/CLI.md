@@ -273,7 +273,7 @@ Video mode is auto-detected from `--ref` count:
 |---|---|
 | 0 | text-to-video |
 | 1 | image-to-video |
-| 2–7 | reference-to-video (max 10s duration) |
+| 2–14 | reference-to-video (15s on grok-imagine-video-1.5, 10s on grok-imagine-video) |
 
 `grok-imagine-video-1.5` supports 1080p for prompt-only text-to-video and single image/frame image-to-video. Prompt-only 1.5 text-to-video is submitted through the internal white-canvas image-to-video shim because upstream 1.5 rejects raw T2V. The old `grok-imagine-video-1.5-preview` name is accepted as an alias and normalized before the upstream request. 1.5 does not support `reference_images` reference-to-video, V2V edit, or video extension. For 2+ refs, use `grok-imagine-video`; if ima2 auto-retries a 1.5 Ref2V request to the base model, read `video.effectiveModel` and `video.modelFallback` from CLI `--json`, or `effectiveModel` and `modelFallback` from SSE.
 

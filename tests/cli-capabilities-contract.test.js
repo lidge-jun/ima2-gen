@@ -35,7 +35,9 @@ describe("CLI capabilities contract", () => {
     assert.match(src, /enforced:\s*true/);
     assert.match(src, /server-side inflight capacity guard/);
     assert.match(src, /supported:\s*\["grok-imagine-video", "grok-imagine-video-1\.5"\]/);
-    assert.match(src, /aliases:\s*\{ "grok-imagine-video-1\.5-preview": "grok-imagine-video-1\.5" \}/);
+    // Both aliases GET /v1/video-generation-models reports must fold onto the canonical id.
+    assert.match(src, /"grok-imagine-video-1\.5-preview":\s*"grok-imagine-video-1\.5"/);
+    assert.match(src, /"grok-imagine-video-1\.5-2026-05-30":\s*"grok-imagine-video-1\.5"/);
     assert.match(src, /resolutions:\s*\["480p", "720p", "1080p"\]/);
     assert.match(src, /resolutionNotes:\s*\{ "1080p": "grok-imagine-video-1\.5 text-to-video canvas shim or image-to-video; reference-to-video unsupported" \}/);
   });

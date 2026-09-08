@@ -1,0 +1,8 @@
+### ext_dur0_bogusvid -> HTTP 400 {"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+### ext_dur1_bogusvid -> HTTP 200 BILLABLE {"request_id":"0df35a12-5b28-9e72-879b-13a711b56b4d"}
+### ext_dur2_bogusvid -> HTTP 200 BILLABLE {"request_id":"4089b2a5-88b8-940d-868b-f58b1b15104b"}
+### ext_dur10_bogusvid -> HTTP 200 BILLABLE {"request_id":"779eef21-c62f-96cb-88c4-19e286943380"}
+### ext_dur11_bogusvid -> HTTP 200 BILLABLE {"request_id":"1e43a7e7-2409-926f-85a3-df37cdb1bf91"}
+### ext_dur16_bogusvid -> HTTP 400 {"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+### edit_with_duration -> HTTP 200 BILLABLE {"request_id":"8fccef4f-a43f-994a-810c-c0e7b3f2b3be"}
+### edit_with_resolution -> HTTP 200 BILLABLE {"request_id":"1fde2bec-0a69-9114-9645-c29646425ad2"}

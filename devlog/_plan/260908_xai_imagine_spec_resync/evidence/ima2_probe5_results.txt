@@ -1,0 +1,7 @@
+### edit_1.5_bogusvid -> HTTP 400 {"code":"invalid-argument","error":"Video editing is not supported for this model."}
+### edit_base_bogusvid -> HTTP 200 BILLABLE {"request_id":"8e90625d-4742-9ee6-a259-23483f757f50"}
+### ext_1.5_bogusvid -> HTTP 400 {"code":"invalid-argument","error":"Video extension is not supported for this model."}
+### ext_base_dur11 -> HTTP 200 BILLABLE {"request_id":"812a3080-444f-9966-972b-76743f4e9d1f"}
+### ext_base_dur1 -> HTTP 200 BILLABLE {"request_id":"4b5323c3-34ec-9e79-93cd-f1f8e4d94ab1"}
+### gen_with_video_dur16 -> HTTP 400 {"code":"invalid-argument","error":"Duration must be between 1 and 15 seconds"}
+### edit_bogus_model -> HTTP 404 {"code":"not-found","error":"The model grok-imagine-video-2.0 does not exist or your team 96a0d23c-9b7d-453a-a9c0-41f9d9375c86 does not have access to it. If you believe this is a mistake, please contact support and quote your team ID and the model name."}

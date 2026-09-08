@@ -36,6 +36,7 @@ import {
   MAX_REF2V_REFERENCES,
   MAX_REFERENCE_AUDIOS,
   validateVideoResolutionForRequest,
+  validateVideoDurationForRequest,
   type VideoMode,
 } from "../lib/imageModels.js";
 import { errInfo } from "../lib/errInfo.js";
@@ -366,24 +367,47 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
       // devlog/_plan/260820_grok15_multi_reference_video/030_single_ref_mode_choice.md
       const composerRefCount = resolved.filter((r) => r.source === "composer").length;
       const requestedMode = typeof req.body?.mode === "string" ? req.body.mode : null;
+      // Shape only. Which voice ids exist is xAI's to answer, and its 400 names every
+      // valid voice — a list we would only get wrong, and which cannot include the
+      // caller's custom voices anyway. Parsed here rather than at the call site because
+      // the mode derivation below needs to know whether any voice was attached.
+      const referenceAudios = toArray(req.body?.referenceAudios)
+        .map((voice) => (typeof voice === "string" ? voice.trim() : ""))
+        .filter((voice) => voice.length > 0);
+      if (referenceAudios.length > MAX_REFERENCE_AUDIOS) {
+        return fail(400, "GROK_VIDEO_AUDIO_TOO_MANY", `at most ${MAX_REFERENCE_AUDIOS} reference voices`);
+      }
       const derivedMode: VideoMode = composerRefCount > 0
         ? "reference-to-video"
-        : deriveVideoMode(resolved.length);
+        // A voice alone selects reference-to-video upstream: "at least one reference of
+        // either kind selects the reference-to-video mode" (xAI OpenAPI,
+        // GenerateVideoRequest.reference_audios). Calling it text-to-video here would let
+        // a 15s base-model request through while xAI applies the 10s r2v ceiling, and the
+        // rejection would name a mode this request never asked for.
+        : referenceAudios.length > 0
+          ? "reference-to-video"
+          : deriveVideoMode(resolved.length);
       const mode: VideoMode = incomingProviderUrl
         ? "image-to-video"
         : (requestedMode === "reference-to-video" || requestedMode === "image-to-video" || requestedMode === "text-to-video")
           ? requestedMode
           : derivedMode;
-      // An explicit reference-to-video with nothing to reference would ship an empty
-      // reference_images array and fail upstream with a less useful message.
-      if (mode === "reference-to-video" && resolved.length === 0) {
-        return fail(400, "GROK_VIDEO_INVALID_MODE", "reference-to-video requires at least 1 reference image");
+      // An explicit reference-to-video with nothing to reference at all would ship empty
+      // arrays and fail upstream with a less useful message. A voice counts as a
+      // reference, so audio-only is legitimate and must not be rejected here.
+      if (mode === "reference-to-video" && resolved.length === 0 && referenceAudios.length === 0) {
+        return fail(400, "GROK_VIDEO_INVALID_MODE", "reference-to-video requires at least 1 reference image or voice");
       }
       const duration = durationCheck.duration;
       const resolutionModeCheck = validateVideoResolutionForRequest(modelCheck.model, resolutionCheck.resolution, mode, {
         allowTextCanvasShim: true,
       });
       if (isNormalizeError(resolutionModeCheck)) return fail(resolutionModeCheck.status, resolutionModeCheck.code, resolutionModeCheck.error);
+      // The r2v ceiling is per model, and the start call is deliberately never retried
+      // (a retry could bill a second video), so a 400 we can predict must be answered
+      // before the job is admitted rather than asynchronously after planning.
+      const durationModeCheck = validateVideoDurationForRequest(modelCheck.model, duration, mode);
+      if (isNormalizeError(durationModeCheck)) return fail(durationModeCheck.status, durationModeCheck.code, durationModeCheck.error);
       const referenceImages = mode === "reference-to-video" ? resolved.map((r) => r.b64) : undefined;
       const sourceB64 = incomingProviderUrl || (mode === "image-to-video" ? resolved[0]?.b64 : undefined);
       const sourceFilename = resolved[0]?.filename ?? null;
@@ -517,15 +541,6 @@ export function registerVideoRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
 
       const plannerModel = typeof req.body?.plannerModel === "string" ? req.body.plannerModel.trim() : undefined;
       const directApiKey = provider === "grok-api" ? ctx.xaiApiKey : undefined;
-      // Only the shape is checked here. Which voice ids exist is xAI's to answer, and its
-      // 400 names every valid voice — a list we would only get wrong, and which cannot
-      // include the caller's custom voices anyway.
-      const referenceAudios = toArray(req.body?.referenceAudios)
-        .map((voice) => (typeof voice === "string" ? voice.trim() : ""))
-        .filter((voice) => voice.length > 0);
-      if (referenceAudios.length > MAX_REFERENCE_AUDIOS) {
-        return fail(400, "GROK_VIDEO_AUDIO_TOO_MANY", `at most ${MAX_REFERENCE_AUDIOS} reference voices`);
-      }
 
       const result = await generateVideoViaGrok(effectivePrompt, ctx, {
         model: modelCheck.model,

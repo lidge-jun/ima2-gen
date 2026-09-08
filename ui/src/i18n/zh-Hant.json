@@ -453,7 +453,14 @@
     "moveBlockDown": "向下移動 {name}",
     "afterBlocks": "主提示後",
     "hint": "Ctrl+Enter 生成",
-    "dropHere": "拖曳到附件作為參考（最多 {max}）"
+    "dropHere": "拖曳到附件作為參考（最多 {max}）",
+    "rejectNotMedia": "僅支援附加圖片、音訊和 mp4 檔案",
+    "rejectAudioNeedsVideoModel": "音訊需要先選擇影片模型",
+    "rejectAudioNeeds15": "僅 grok-imagine-video-1.5 支援音訊",
+    "rejectVideoNeedsBase": "僅 grok-imagine-video 支援影片輸入",
+    "rejectVideoSingleOnly": "一次只能使用一個來源影片",
+    "audioUsePresetVoice": "xAI 僅對合作夥伴帳號開放音訊上傳，請在影片設定中使用預設語音",
+    "videoUseCliForEdit": "影片編輯與延長請使用 ima2 video edit / ima2 video extend"
   },
   "canvas": {
     "modeTitle": "畫布模式",
@@ -906,7 +913,10 @@
     "upscaleStart": "開始高檔",
     "upscaleStarted": "高級開始",
     "upscaleFailed": "高檔失敗",
-    "upscaleInvalid": "無效的高檔參數"
+    "upscaleInvalid": "無效的高檔參數",
+    "editVideo": "編輯影片",
+    "editVideoTitle": "用提示詞修改此影片（grok-imagine-video）",
+    "editVideoPrompt": "想如何修改這段影片？例如：把衣服改成紅色"
   },
   "session": {
     "switchTitle": "切換會話",
@@ -1238,13 +1248,18 @@
     "resolution1080Help": "1080p 使用 Grok V1.5 進行僅提示或單一影像/幀影片。它不適用於 2 個以上的參考文獻。",
     "aspectTitle": "縱橫比",
     "plannerUpdateFailed": "無法更新規劃器模型。之前的設定已恢復。",
+    "durationClampedToModel": "此模型的參考生成影片最長為 {seconds} 秒",
     "continuationFallbackT2V": "無法提取連續幀。生成將繼續以文字到影片的形式進行。",
     "singleRefTitle": "單張參考的用法",
     "singleRefHelp": "選擇將該圖片作為首格，還是僅作參考。兩張以上一律作為參考。",
     "singleRef": {
       "source": "以此圖開場",
       "reference": "僅作參考"
-    }
+    },
+    "voiceSection": "語音",
+    "voiceLimit": "最多 {max} 個。在提示詞中以 <AUDIO_0> 指稱",
+    "voiceNeeds15": "僅 grok-imagine-video-1.5 支援語音",
+    "voiceCustomPlaceholder": "自訂語音 ID (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "影像生成器",
