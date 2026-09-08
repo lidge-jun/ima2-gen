@@ -15,7 +15,7 @@ tags: [ima2-gen, devlog, grok, xai, oauth, wp2, xaiAuth]
 | 경로 | 종류 | 내용 |
 |---|---|---|
 | `lib/xaiAuth.ts` | NEW (~260줄) | 001 §6의 공개 API 그대로. leaf 모듈: `node:fs`, `node:crypto`, `node:os`, `node:path`만 import |
-| `lib/errors/providerMap.ts` | MODIFY | `GROK_AUTH_REQUIRED`(401), `GROK_AUTH_REFRESH_FAILED`(502) 항목 추가. 기존 `GROK_AUTH_FAILED` 유지 |
+| `lib/errors/providerMap.ts` | MODIFY | `PROVIDER_ERROR_MAP`(`satisfies Record<string, GenerationErrorClass>`)에 `GROK_AUTH_REQUIRED: "AUTH_EXPIRED"`, `GROK_AUTH_REFRESH_FAILED: "NETWORK_FAILURE"` 추가. HTTP status는 별도 함수 `statusForErrorCode`(:4-15)에 401/502 두 줄 추가. 기존 `GROK_AUTH_FAILED` 유지. (감사 B3: 값은 status가 아니라 error class; 미등록 코드는 `envelope.ts:14`에서 rawCode/errorClass가 빈 객체로 떨어진다) |
 | `routes/auth.ts` | MODIFY | `GROK_CLIENT_ID`/`GROK_SCOPE`/`GROK_TOKEN_URL` 로컬 상수 3개(:11-13)를 `lib/xaiAuth.ts` export로 교체. `saveGrokTokens`(:48-74) 본문을 `saveGrokCredentials` 호출로 교체(기존 `idToken` 보존 로직 포함) |
 | `tests/xai-auth-contract.test.ts` | NEW | 아래 검증 표 |
 | `docs/migration/runtime-test-inventory.md` | 생성물 | `node scripts/classify-tests.mjs` 재생성 |
@@ -98,7 +98,9 @@ export async function getGrokAccessToken(opts = {}): Promise<string> {
 
 `GrokAuthError`는 `lib/errors/classes.ts`의 기존 클래스 계층을 따르되, leaf 제약 때문에
 `lib/xaiAuth.ts` 안에서 `Error`를 직접 확장하고 `code`/`status`를 갖는다
-(`lib/grokImageCore.ts:78` `grokError`와 같은 shape이라 기존 라우트 에러 봉투가 그대로 처리).
+(`lib/grokImageCore.ts:80` `grokError`와 같은 shape이라 기존 라우트 에러 봉투가 그대로 처리).
+
+`loadGrokCredentials`는 **반드시 동기**(`readFileSync`)여야 한다. `lib/runtimeContext.ts:68` 주석대로 어댑터 `validateAuth()`/`listModels()`와 wp4의 `grokLaneState()`가 동기 호출자다(감사 N9).
 
 ## `routes/auth.ts` diff
 
@@ -134,8 +136,9 @@ export async function getGrokAccessToken(opts = {}): Promise<string> {
 | discovery가 `https://evil.x.ai/token` 반환 | throw (D6) | 스텁 discovery |
 | tmp 파일 잔존 없음 | 디렉터리에 `auth.json`만 | 갱신 후 readdir |
 
-명령: `node --experimental-strip-types --test tests/xai-auth-contract.test.ts`
-(PLAN-VERIFIER-REAL-01: 이 명령은 새 파일을 직접 인자로 읽는다).
+명령: `node --experimental-test-module-mocks --import tsx --test tests/xai-auth-contract.test.ts`
+(PLAN-VERIFIER-REAL-01: 정식 러너 `scripts/run-tests.mjs:19`와 같은 플래그. 이 저장소는 `.js` 확장자로 TS를 import하므로 `--experimental-strip-types`는 `ERR_MODULE_NOT_FOUND`로 실패한다 — 감사 B4에서 실측. 새 파일을 직접 인자로 읽는다.)
+새 테스트 파일에 분류 태그 주석은 불필요하다(`scripts/classify-tests.mjs:21-34`는 import 패턴만 본다); `npm run test:inventory` 재생성만 필요.
 전체: `npm run typecheck && npm run typecheck:tests && npm test && npm run test:inventory`.
 
 ## 우회 경로 (PLAN-BYPASS-NAMED-01)

@@ -16,7 +16,7 @@ tags: [ima2-gen, devlog, grok, progrok, wp4, removal]
 | `lib/grokProxyLauncher.ts` | 003 §1-1. import는 `server.ts:18`, `lib/runtimeContext.ts:4`뿐 |
 | `vendor/progrok-0.2.0.tgz` | 003 §1-14 |
 | `tests/grok-proxy-supervisor-contract.test.ts`, `grok-proxy-restart.test.ts`, `grok-proxy-launcher.test.ts`, `grok-command-login-contract.test.ts` | 003 §2-1 |
-| `tests/grok-advertise-liveness-contract.test.ts` | `backend` 계약(42-50)은 새 `tests/advertise-payload-contract.test.ts`로 이동 |
+| `tests/grok-advertise-liveness-contract.test.ts` | 새 `tests/advertise-payload-contract.test.ts`로 대체: `backend` 계약(42-50) + **grok auth 두 케이스**(격리 HOME에 auth.json 있음→`"oauth"`, 없음→`"none"`). 이 파일이 `buildAdvertisePayload`를 부르는 유일한 테스트라 계약이 비면 안 된다(감사 B5) |
 | `scripts/paired-generated-paths.txt:9` | `lib/grokProxyLauncher.js` 행 |
 
 ## 수정
@@ -54,7 +54,7 @@ tags: [ima2-gen, devlog, grok, progrok, wp4, removal]
 -  const grokLive = ctx.grokProxyLive === true;
  ...
 -    grok: { configuredPort, actualPort, url, live: grokLive },
-+    grok: { auth: loadGrokCredentials() ? "oauth" : "none" },
++    grok: { auth: loadGrokCredentials(ctx.grokAuthHomeDir) ? "oauth" : "none" },   // homeDir 주입: 테스트가 개발자 ~/.progrok 에 의존하지 않도록 (감사 B5)
 ```
 
 `bin/commands/service.ts:139-151`: `grok.live === false` 경고 → `grok.auth === "none"`이면 "Grok is not logged in. Run ima2 grok login." 안내.
@@ -84,10 +84,10 @@ function grokLaneState(): LaneState {
 
 `routes/quota.ts:118-127`: 경로 상수는 `grokAuthFilePath()`로, 라벨 `progrok:auth-json` → `ima2:grok-auth-json`.
 
-`bin/lib/doctor-runtime.ts:7`: `"progrok/package.json"` 제거. `bin/lib/doctor-providers.ts:49-55`: 경로를 `grokAuthFilePath()`로, 문구 "no ~/.progrok or ~/.grok auth file" 유지(경로 자체는 안 바뀜).
+`bin/lib/doctor-runtime.ts:7`: `"progrok/package.json"` 제거. `bin/lib/doctor-providers.ts:49-55`: 첫 원소를 `grokAuthFilePath()`로, 두 번째 `~/.grok/auth.json`은 **유지**(quota가 여전히 읽는 xAI CLI 파일; 스키마가 달라 `lib/xaiAuth.ts`의 소스로는 쓰지 않고 절대 쓰지 않는다 — 감사 N7). 문구 유지.
 
 `bin/commands/grok.ts` REWRITE (R11): progrok spawn 제거. 서브커맨드:
-- `login [--device-code]`: 서버가 떠 있으면 `POST /api/auth/switch {provider:"grok"}` 후 폴링(기존 GUI 경로 재사용); 서버가 없으면 `routes/auth.ts`의 device-code 로직을 `lib/xaiDeviceLogin.ts`로 추출해 직접 실행. 이 추출은 이 WP의 부수 리팩터(routes/auth.ts:79-141 → lib).
+- `login`: 서버가 떠 있으면 `POST /api/auth/switch {provider:"grok"}` 후 `GET /api/auth/switch/:id` 폴링(기존 GUI 경로 재사용). 서버가 없으면 `lib/xaiDeviceLogin.ts`에 **stateless 함수 하나를 새로 쓴다**(discovery → device_authorization POST → 토큰 폴링 → `saveGrokCredentials`). `routes/auth.ts:76-142`는 `sessions` Map/`cleanup()`에 얽혀 있어 추출하지 않고 그대로 둔다(감사 검증 6). 공유는 `lib/xaiAuth.ts`의 상수와 `saveGrokCredentials`뿐.
 - `status`: `loadGrokCredentials()` 요약(email, expiresAt 상대시간, refresh 가능 여부) + `--probe`면 `/v1/models` 호출.
 - `logout`: `clearGrokCredentials()`.
 - `models`/`proxy` 제거. HELP 갱신.

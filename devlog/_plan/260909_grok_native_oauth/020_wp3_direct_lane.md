@@ -44,8 +44,14 @@ export function getGrokEndpoint(path: string, credential: GrokCredential) {
 /**
  * 401 을 정확히 1회 refresh 후 재시도. grokFetchWithRetry 는 헤더를 다시 만들 수 없으므로 여기서만 처리(R6).
  * doFetch 는 credential 을 받아 요청을 만든다. 이미지/비디오 시작처럼 재시도 금지 호출도 401 은 생성 전 거부라 안전.
+ *
+ * 중첩 순서 고정(감사 B2): 바깥 = fetchWithGrokAuth, 안쪽 = grokFetchWithRetry.
+ *   fetchWithGrokAuth(ctx, p, (c) => grokFetchWithRetry(() => fetch(getGrokEndpoint(path, c).url, ...)))
+ * 이유: 반대로 두면 5xx 재시도마다 resolveGrokCredential 이 돌아 순차 refresh 가 반복될 수 있고,
+ * retryBackoffDelayMs 가 res.headers 를 읽으므로 안쪽 응답형은 RetryResponse 여야 한다.
+ * 401→refresh 후 5xx 예산이 리셋되는 것(최악 3×3)은 감수한다.
  */
-export async function fetchWithGrokAuth<R extends { status: number }>(
+export async function fetchWithGrokAuth<R extends { status: number; headers: Headers }>(
   ctx: RouteRuntimeContext, provider: "grok" | "grok-api",
   doFetch: (credential: GrokCredential) => Promise<R>, opts?: { signal?: AbortSignal },
 ): Promise<R> {
@@ -71,12 +77,14 @@ export async function fetchWithGrokAuth<R extends { status: number }>(
 | `lib/grokImagePlanner.ts:207,283` | MODIFY | `directApiKey?: string` → `credential: GrokCredential`; :212, :310 호출 갱신 |
 | `lib/providers/adapters/grokOperations.ts:28,52,58-61,79,86,91-94` | MODIFY | 옵션 필드 교체; `trustedProxyOrigin` 3곳 제거(직결 URL은 공개 https) |
 | `lib/providers/adapters/grokMultimodeOperations.ts:48,98,101-104` | MODIFY | 동일 |
-| `lib/providers/adapters/grokExecution.ts:27,59,84,96` | MODIFY | `const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined` → `const credential = await resolveGrokCredential(ctx, activeProvider, { signal })`. 4곳 |
+| `lib/providers/adapters/grokExecution.ts:27,84,96` | MODIFY | `const grokDirectApiKey = activeProvider === "grok-api" ? ctx.xaiApiKey : undefined` → `const credential = await resolveGrokCredential(ctx, activeProvider, { signal })`. 이 3곳은 이미 async |
+| `lib/providers/adapters/grokExecution.ts:55-63,115` | MODIFY | `prepareGrokNode`는 **동기 함수**(감사 B1). `async`로 승격해 `Promise<PreparedImageExecution<"node">>`를 반환하고 :115 `case "node": return prepareGrokNode(...)`를 `return await prepareGrokNode(...)`로. prepare 시점 캡처(:58 주석 "retries retain this key") 계약은 유지 |
 | `lib/grokVideoAdapter.ts:247,282,398` | MODIFY | `options.directApiKey` → `options.credential` |
 | `lib/grokVideoPoll.ts:42,45,91` | MODIFY | 동일 |
 | `routes/video.ts:543,558` | MODIFY | `provider === "grok-api" ? ctx.xaiApiKey : undefined` → `await resolveGrokCredential(ctx, provider)` |
 | `lib/videoExtendI2vOperation.ts:68` | MODIFY | 동일 |
-| `routes/videoExtended.ts:69-70,206,341,435` | MODIFY | `videoProxyUrl` 삭제. 세 라우트가 `fetchWithGrokAuth(ctx, provider, (c) => fetch(getGrokEndpoint(path, c).url, ...))` 사용. **provider는 요청 body에서 읽되 기본 "grok"** (지금은 grok-api 사용자도 프록시로 새던 잠재 버그를 함께 고침) |
+| `routes/videoExtended.ts:69-70,206,341,435` | MODIFY | `videoProxyUrl` 삭제. 세 핸들러에 `const provider = req.body?.provider === "grok-api" ? "grok-api" : "grok"` 파싱을 **새로 추가**(현재 provider 파싱 없음, 감사 B6) 후 `fetchWithGrokAuth(ctx, provider, (c) => fetch(getGrokEndpoint(path, c).url, ...))`. :214, :347의 `pollVideoUntilDone(ctx, request_id, { signal })`도 `{ signal, credential }`로 |
+| `tests/backend-hardening-contract.test.js:24` | MODIFY | 소스 텍스트 정규식 `/pollVideoUntilDone\(ctx, request_id, \{ signal \}\)/`를 `{ signal, credential }` 형태로 갱신 (감사 B6) |
 | `lib/agentPlannerModel.ts:115` | MODIFY | `getGrokEndpoint(ctx, "/v1/chat/completions")` → `fetchWithGrokAuth(ctx, "grok", ...)` |
 | `lib/promptBuilder/router.ts:107-112` | MODIFY | `resolveGrokCredential(ctx, backend)`로 통일; grok도 자격증명 없으면 `unavailableBackendError("grok")` |
 | `routes/grok.ts` | REWRITE | probe token 제거. `fetchWithGrokAuth(ctx, "grok", (c) => fetch(getGrokEndpoint("/v1/models", c).url, {headers, signal}))`. `GrokAuthError.code === "GROK_AUTH_REQUIRED"` → `{status:"offline", reason:"login_required"}`, `GROK_AUTH_REFRESH_FAILED` → `{status:"error", reason}`. 응답 리터럴 4종 유지(R8) |
@@ -89,7 +97,8 @@ export async function fetchWithGrokAuth<R extends { status: number }>(
 | 파일 | 변경 |
 |---|---|
 | `tests/_executionRouteHarness.ts:164` | `grokUrl` 픽스처 대신 격리 HOME + `auth.json` 작성 헬퍼 `seedGrokAuth(home, {accessToken, expiresAt})` 추가; `ctx.grokAuthHomeDir` 주입 |
-| `tests/_videoExecutionFixture.ts:97` 외 `Bearer dummy` 단정 5곳 | `Bearer <seeded token>` 으로 교체 |
+| `Bearer dummy` 단정 **12곳** (`rg 'Bearer dummy' tests/`: `_videoExecutionFixture.ts:97`, `videoRoute.test.ts:44`, `videoExtendedRoute.test.ts:44`, `video-download-cancellation.test.ts:48,68`, `videoExtendI2v.test.ts:388`, `provider-execution-routes.test.ts:71,176`, `agent-mode-runtime-contract.test.ts:136` 등) | `Bearer <seeded token>` 으로 교체 (감사 N12) |
+| `grokUrl`/`grokActualPort` 픽스처: `prompt-builder-contract.test.ts:262`, `grok-planner-adapter.test.ts:177-178`, `grokVideoAdapter.test.ts:39`, `video-download-cancellation.test.ts:48` | 격리 HOME 시드로 교체 |
 | `tests/grok-execution-parity.test.ts:79-80,252,259-260` | grok/grok-api 모두 origin `https://api.x.ai`, bearer만 다름으로 재작성 |
 | `tests/error-envelope-contract.test.ts:81,291` | 프록시 주소 픽스처 → fetch 스텁이 401/503 반환 |
 | `tests/models-endpoint-contract.test.ts:104,121,366-383` | `grokProxyState` 주입 케이스는 wp4에서 재작성; 이 레이어에서는 그대로 통과해야 함(grokLaneState 미변경) |
@@ -98,7 +107,7 @@ export async function fetchWithGrokAuth<R extends { status: number }>(
 ## 검증
 
 `npm run typecheck && npm run typecheck:tests && npm test` 전체. 추가로
-`node --experimental-strip-types --test tests/grok-direct-lane-contract.test.ts tests/grok-execution-parity.test.ts`.
+`node --experimental-test-module-mocks --import tsx --test tests/grok-direct-lane-contract.test.ts tests/grok-execution-parity.test.ts` (러너 플래그와 동일; strip-types 불가, 감사 B4).
 활성화 근거(C-ACTIVATION-GROUNDING-01): (b)는 fetch 스텁이 첫 호출에 401, 둘째에 200을 반환해 재시도 분기를 실제로 태운다.
 
 라이브 증거(선택, 과금 없음): 격리 HOME에 실제 `~/.progrok/auth.json`을 복사한 뒤 `GET /api/grok/status`가 `ready`와 모델 목록을 반환하는지. `expiresAt`을 과거로 조작해 로그에 refresh 1회가 찍히는지.
