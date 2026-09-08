@@ -5,7 +5,7 @@ import { useI18n } from "../i18n";
 import { OptionGroup } from "./OptionGroup";
 import { Chip, ChipRow, Select } from "./controls";
 import { DurationSlider } from "./controls/DurationSlider";
-import { deriveVideoModeUI, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, supportsVideoResolutionUI } from "../lib/imageModels";
+import { deriveVideoModeUI, GROK_VIDEO_MODEL_15, GROK_VIDEO_MODEL_BASE, maxVideoDurationUI, supportsVideoResolutionUI } from "../lib/imageModels";
 import { ACTIVE_VIDEO_PROMPT_GUIDANCE, continuitySummary } from "../lib/videoContinuity";
 import { getPresetById } from "../lib/presets";
 import type { VideoResolutionUI } from "../types";
@@ -47,8 +47,10 @@ export function VideoControlsPanel() {
   const cameraPresets = selectedPresetIds
     .map((id) => getPresetById(id))
     .filter((preset): preset is NonNullable<typeof preset> => preset?.category === "camera-motion");
-  const maxDuration = 15;
   const mode = deriveVideoModeUI(refCount, singleRefMode);
+  // reference-to-video is capped at 10s on the base model and 15s on 1.5. Offering a
+  // value the server refuses turns the user's choice into a 400 they cannot act on.
+  const maxDuration = maxVideoDurationUI(videoModelSelected, mode);
   const summary = continuitySummary(continuity);
   const canUse1080pWithSelectedModel = supportsVideoResolutionUI(videoModelSelected, "1080p", mode);
   const canUse1080pIfModelSelected = supportsVideoResolutionUI(GROK_VIDEO_MODEL_15, "1080p", mode);
@@ -61,6 +63,24 @@ export function VideoControlsPanel() {
       setResolution("720p");
     }
   }, [mode, resolution, setResolution, videoModelSelected]);
+
+  // Clamp only. The toast lives in the model handler below: an effect runs twice under
+  // StrictMode, and a duplicated "we shortened your clip" notice reads like two edits.
+  useEffect(() => {
+    if (duration !== null && duration > maxDuration) setDuration(maxDuration);
+  }, [duration, maxDuration, setDuration]);
+
+  const handleVideoModelChange = (next: string) => {
+    // The clamp is announced rather than silent: the user picked a duration and is
+    // about to lose it, and the reason lives in the model they just chose. The earlier
+    // value is not restored on switching back — reviving 15s after the user has since
+    // chosen 10 would be indistinguishable from ignoring them.
+    const nextMax = maxVideoDurationUI(next, mode);
+    if (duration !== null && duration > nextMax) {
+      showToast(t("video.durationClampedToModel", { seconds: nextMax }));
+    }
+    selectVideoModel(next);
+  };
 
   const handleResolutionChange = (next: VideoResolutionUI) => {
     if (next === "1080p") {
@@ -106,7 +126,7 @@ export function VideoControlsPanel() {
               key={m.value}
               type="button"
               className={`option-btn${videoModelSelected === m.value ? " active" : ""}`}
-              onClick={() => selectVideoModel(m.value)}
+              onClick={() => handleVideoModelChange(m.value)}
             >
               {m.label}
               <br />
