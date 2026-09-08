@@ -56,7 +56,8 @@ before(async () => {
   emit("lib/providers/derive.js", `export const deriveProviderIds = () => ['oauth','grok']; export const deriveVideoProviderIds = () => ['grok'];`);
   emit("lib/mcp/providerRegistry.js", `export const listProviders = () => [{id:'runway'},{id:'higgsfield'}];`);
   emit("lib/imageModels.js", `export const GROK_VIDEO_MODEL_15 = 'grok-imagine-video-1.5', GROK_VIDEO_MODEL_15_PREVIEW_ALIAS = 'preview',
-    GROK_VIDEO_MODEL_BASE = 'grok-imagine-video'; export const validateVideoResolutionForRequest = () => ({ok:true});`);
+    GROK_VIDEO_MODEL_BASE = 'grok-imagine-video'; export const MIN_VIDEO_DURATION = 1, MAX_VIDEO_DURATION = 15;
+    export const validateVideoResolutionForRequest = () => ({ok:true});`);
   emit("lib/capabilities.js", `export const buildIma2Capabilities = () => ({ok:true, source:'local'});`);
   emit("lib/contracts/catalog.js", `export const buildCatalog = () => [];`);
   emit("lib/mcp/snapshotStore.js", `export const loadAllBundledSnapshots = () => {throw Error('unexpected snapshot read')};
