@@ -57,9 +57,13 @@ describe("core provider registry parity", () => {
     assert.deepEqual(referenceLimits("image"), {
       // nai is absent on purpose: the lane takes no reference input, so it
       // declares no capacity rather than a capacity the adapter cannot honor.
-      grok: 3, "grok-api": 3, agy: 3, "gemini-api": 3, atlascloud: 10, minimax: 1, comfy: 4,
+      // grok/grok-api moved to 5 when xAI raised multi-image editing from 3
+      // (release notes, and 6 -> 400 "at most 5 input image(s)" on 2026-09-08).
+      // agy and gemini-api keep 3: that is Google's limit, not a shared number.
+      grok: 5, "grok-api": 5, agy: 3, "gemini-api": 3, atlascloud: 10, minimax: 1, comfy: 4,
     });
-    assert.deepEqual(referenceLimits("video"), { grok: 7, "grok-api": 7 });
+    // 15 -> 400 "Too many reference images: 15. Maximum allowed is 14." on both models.
+    assert.deepEqual(referenceLimits("video"), { grok: 14, "grok-api": 14 });
     assert.deepEqual(ELEMENT_CAPACITY_DEFAULTS, {
       gpt: { image: { maxTotalRefs: 6, maxRefsPerElement: 6 }, edit: { maxTotalRefs: 6, maxRefsPerElement: 6 }, video: { maxTotalRefs: 1, maxRefsPerElement: 6 } },
       gemini: { image: { maxTotalRefs: 6, maxRefsPerElement: 6 }, edit: { maxTotalRefs: 6, maxRefsPerElement: 6 }, video: { maxTotalRefs: 3, maxRefsPerElement: 6 } },

@@ -9,10 +9,11 @@ import { buildGrokVideoPlannerSystemPrompt, composeFallbackVideoPrompt, formatDu
 import type { VideoAspectRatio, VideoMode, VideoResolution } from "./imageModels.js";
 import {
   GROK_VIDEO_MODEL_15,
-  GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
   GROK_VIDEO_MODEL_BASE,
   MAX_REF2V_REFERENCES,
   MAX_REFERENCE_AUDIOS,
+  canonicalGrokVideoModel,
+  validateVideoDurationForRequest,
   validateVideoResolutionForRequest,
 } from "./imageModels.js";
 import { formatVideoContinuityForPlanner, type VideoContinuityLineage } from "./videoContinuity.js";
@@ -109,9 +110,7 @@ export interface GrokVideoGenerateResult {
   plannerDegraded?: GrokVideoPlannerDegradation | undefined;
 }
 
-function canonicalVideoModel(model: string): string {
-  return model === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : model;
-}
+const canonicalVideoModel = canonicalGrokVideoModel;
 
 function sourceImageUrl(image: string, mime?: string | null): string {
   if (image.startsWith("data:") || image.startsWith("http")) return image;
@@ -378,6 +377,13 @@ export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: 
   const resolutionCheck = validateVideoResolutionForRequest(model, plan.resolution, plan.mode);
   if (!("ok" in resolutionCheck)) {
     throw grokError(resolutionCheck.error, resolutionCheck.status, resolutionCheck.code);
+  }
+  // Answered here as well as at the route because the agent path builds payloads without
+  // going through routes/video.ts. Two checks of the same rule are two defenses, not a
+  // duplicated rule: both read the same function.
+  const durationCheck = validateVideoDurationForRequest(model, plan.duration, plan.mode);
+  if (!("ok" in durationCheck)) {
+    throw grokError(durationCheck.error, durationCheck.status, durationCheck.code);
   }
   const payload: Record<string, unknown> = { model, prompt: plan.prompt, duration: plan.duration, resolution: plan.resolution };
   if (plan.aspectRatio && plan.aspectRatio !== "auto") payload.aspect_ratio = plan.aspectRatio;

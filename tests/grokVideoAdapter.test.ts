@@ -213,7 +213,15 @@ const DONE_POLL = { status: "done", progress: 100, video: { url: "https://vidgen
       () => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B"], sourceImageUrl: "data:image/png;base64,S" }),
       (e: any) => e.code === "GROK_VIDEO_INVALID_MODE",
     );
-    assert.throws(() => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B", "C", "D", "E", "F", "G", "H"] }), (e: any) => e.code === "GROK_VIDEO_REF_TOO_MANY");
+    // 15 is the first count xAI refuses: "Too many reference images: 15. Maximum
+    // allowed is 14." (2026-09-08). Eight used to be over the line and now is not.
+    const fifteen = Array.from({ length: 15 }, (_, i) => "ref" + i);
+    assert.throws(() => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: fifteen }), (e: any) => e.code === "GROK_VIDEO_REF_TOO_MANY");
+    // The base model's r2v ceiling is 10s, so a 15s plan is caught before it is billed.
+    const longPlan: GrokVideoPlan = { ...plan, duration: 15 };
+    assert.throws(() => buildVideoGenerationPayload(longPlan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B"] }), (e: any) => e.code === "INVALID_VIDEO_DURATION");
+    // 1.5 accepts the same 15s.
+    assert.doesNotThrow(() => buildVideoGenerationPayload(longPlan, { model: "grok-imagine-video-1.5", referenceImageUrls: ["A", "B"] }));
   });
 
   it("parses the generate_video planner prompt", () => {

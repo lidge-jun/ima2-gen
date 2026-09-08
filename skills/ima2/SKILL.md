@@ -905,7 +905,10 @@ what was asked for.
 | 0 | text-to-video | 15s |
 | 1 | image-to-video (default) | 15s |
 | 1 + `--as-reference` | reference-to-video | 15s |
-| 2-7 | reference-to-video | 15s |
+| 2-14 | reference-to-video | 15s |
+
+Reference-to-video's ceiling depends on the model: 15s on `grok-imagine-video-1.5`,
+10s on `grok-imagine-video`. The rows above assume 1.5, which is the default.
 
 One image is ambiguous and only the caller knows the intent, so it is a choice rather
 than a deduction. **image-to-video** locks that image as the opening frame and animates
@@ -1045,7 +1048,7 @@ Generate a high-quality still image first, then animate it. This produces better
 
 | Scenario | Use | Why |
 |----------|-----|-----|
-| Need 2+ character identity lock from separate refs | ref2v (`grok-imagine-video-1.5`, max 7 refs, up to 15s, 720p) | Refs lock character appearance |
+| Need 2+ character identity lock from separate refs | ref2v (`grok-imagine-video-1.5`, max 14 refs, up to 15s, 720p) | Refs lock character appearance |
 | Single composed scene with all elements | i2v (`grok-imagine-video-1.5`, 1 ref) | Better motion quality from composed start |
 | One subject, but a brand new setting | ref2v with one ref (`--as-reference`) | Keeps the subject without reproducing the source shot |
 | Continue from previous video | `video continue` (last frame as i2v ref) | Lineage metadata preserved |
@@ -1236,13 +1239,18 @@ done
 
 ### Limitations
 
-- Max 15 seconds per clip (extend adds 2-10s more)
-- Reference-to-video: 1-7 refs, up to 15 seconds, 720p ceiling. The 10-second clamp this
-  section used to describe was ours, not xAI's, and was removed in v3.8.0 (issue #155)
+- Max 15 seconds per clip (extend adds 1-15s more)
+- Reference-to-video: 1-14 refs, 720p ceiling. Duration is 15 seconds on
+  `grok-imagine-video-1.5` and 10 seconds on `grok-imagine-video` — xAI's own rule,
+  measured 2026-09-08. Do not confuse it with the mode-wide 10-second clamp removed in
+  v3.8.0 (issue #155): that one was ours and applied to every model
+- A preset voice with no reference image also selects reference-to-video
 - 1080p resolution is available for `grok-imagine-video-1.5` prompt-only text-to-video via the white-canvas I2V shim, and for image-to-video with a single image/frame source
 - Video edit/extend: grok-imagine-video only (1.5 is not supported)
-- Video edit input: max 8.7 seconds
-- Video extend input: 2-15 seconds; extension duration: 2-10 seconds
+- Video edit input: ~8.7 seconds is our own measured practical ceiling, not a limit xAI enforces
+- Video extend: extension duration 1-15 seconds, and it is the length of the ADDED
+  segment, not the total. xAI's docs say 2-10; live probing accepts 1 and 11 and
+  rejects 0 and 16
 
 #### Provenance of the limits above
 

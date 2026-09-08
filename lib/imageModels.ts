@@ -190,10 +190,15 @@ export function normalizeComfyWorkflowModel(rawModel: unknown) {
 export const GROK_VIDEO_MODEL_BASE = "grok-imagine-video";
 export const GROK_VIDEO_MODEL_15 = "grok-imagine-video-1.5";
 export const GROK_VIDEO_MODEL_15_PREVIEW_ALIAS = "grok-imagine-video-1.5-preview";
+// GET /v1/video-generation-models lists this alongside -preview. Without it a legal
+// model id is rejected locally with INVALID_GROK_VIDEO_MODEL before the request ever
+// reaches xAI. Verified 2026-09-08: devlog/_plan/260908_xai_imagine_spec_resync.
+export const GROK_VIDEO_MODEL_15_DATED_ALIAS = "grok-imagine-video-1.5-2026-05-30";
 export const GROK_FALLBACK_VIDEO_MODEL = GROK_VIDEO_MODEL_15;
 export const VALID_GROK_VIDEO_MODELS = new Set([
   ...deriveModels("grok", "video"),
   GROK_VIDEO_MODEL_15_PREVIEW_ALIAS,
+  GROK_VIDEO_MODEL_15_DATED_ALIAS,
 ]);
 export const VALID_VIDEO_RESOLUTIONS = new Set(["480p", "720p", "1080p"]);
 export const VALID_VIDEO_ASPECT_RATIOS = new Set([
@@ -208,14 +213,33 @@ export const VALID_VIDEO_ASPECT_RATIOS = new Set([
 ]);
 export const MIN_VIDEO_DURATION = 1;
 export const MAX_VIDEO_DURATION = 15;
-// reference-to-video (xAI): up to 7 reference images (8 -> 400), 1-15s, 720p max.
-// Verified against api.x.ai on 2026-08-20:
-// devlog/_plan/260820_grok15_multi_reference_video/000_research.md
-export const MAX_REF2V_REFERENCES = 7;
+// reference-to-video (xAI): up to 14 reference images, 720p max.
+//
+// The cap doubled from 7. 15 returns 400 "Too many reference images: 15. Maximum
+// allowed is 14." and 30 names the same number, on BOTH video models, so it is a
+// model-independent limit. @imagine announced it on 2026-09-02; the API docs still
+// say 7, which is why the measurement is the source here and not the page.
+// Re-verified against api.x.ai on 2026-09-08:
+// devlog/_plan/260908_xai_imagine_spec_resync/000_research.md
+export const MAX_REF2V_REFERENCES = 14;
+// reference-to-video carries its own duration ceiling, and it differs by model. The
+// same 16s request answers "maximum allowed for reference-to-video, which is 15s" on
+// grok-imagine-video-1.5 and "... is 10s" on grok-imagine-video.
+//
+// This is NOT the ceiling removed in 260820. That one was invented locally and applied
+// to every model against evidence. This one is the upstream's own per-model rule, and
+// omitting it turns a legal-looking base-model request into an upstream 400 the user
+// pays a planning round for.
+export const MAX_REF2V_DURATION_15 = 15;
+export const MAX_REF2V_DURATION_BASE = 10;
 // reference_audios: preset voices, grok-imagine-video-1.5 only. 4 -> 400.
 export const MAX_REFERENCE_AUDIOS = 3;
 
-export type GrokVideoModel = typeof GROK_VIDEO_MODEL_BASE | typeof GROK_VIDEO_MODEL_15 | typeof GROK_VIDEO_MODEL_15_PREVIEW_ALIAS;
+export type GrokVideoModel =
+  | typeof GROK_VIDEO_MODEL_BASE
+  | typeof GROK_VIDEO_MODEL_15
+  | typeof GROK_VIDEO_MODEL_15_PREVIEW_ALIAS
+  | typeof GROK_VIDEO_MODEL_15_DATED_ALIAS;
 export type VideoResolution = "480p" | "720p" | "1080p";
 export type VideoAspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "auto";
 export type VideoMode = "text-to-video" | "image-to-video" | "reference-to-video";
@@ -241,6 +265,55 @@ export function isGrokVideoModel(value: unknown): value is GrokVideoModel {
   return typeof value === "string" && VALID_GROK_VIDEO_MODELS.has(value);
 }
 
+/**
+ * Folds every alias onto the id xAI bills and validates against.
+ *
+ * Three call sites used to inline `model === PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : model`,
+ * which is exactly one alias' worth of knowledge duplicated three times. Adding the dated
+ * alias would have had to find all three; one of them would have been missed.
+ *
+ * Passes non-Grok ids through unchanged: comfy hands a workflow id down this same
+ * `model` field (routes/video.ts), and rewriting it would be worse than leaving it alone.
+ */
+export function canonicalGrokVideoModel(model: string): string {
+  return model === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS || model === GROK_VIDEO_MODEL_15_DATED_ALIAS
+    ? GROK_VIDEO_MODEL_15
+    : model;
+}
+
+/**
+ * The reference-to-video duration ceiling for a model, or null when the rule does not
+ * apply to it.
+ *
+ * Null is not "unknown" and not "no limit": it means xAI's per-model r2v rule has no
+ * jurisdiction here. A comfy workflow id arrives through the same `model` field, and
+ * answering the base model's 10s for it would clamp a lane whose ceiling xAI does not
+ * own. Callers must handle null explicitly rather than let it fall through to a number.
+ */
+export function maxRef2vDuration(model: string): number | null {
+  if (!isGrokVideoModel(model)) return null;
+  return canonicalGrokVideoModel(model) === GROK_VIDEO_MODEL_15
+    ? MAX_REF2V_DURATION_15
+    : MAX_REF2V_DURATION_BASE;
+}
+
+/**
+ * Validates a duration against the ceiling its mode and model actually impose.
+ *
+ * Returns ok for every non-reference-to-video request: normalizeVideoDuration already
+ * owns the shared 1-15 bound, and re-checking it here would give one rule two owners.
+ */
+export function validateVideoDurationForRequest(model: string, duration: number, mode: VideoMode) {
+  if (mode !== "reference-to-video") return { ok: true as const };
+  const ceiling = maxRef2vDuration(model);
+  if (ceiling === null || duration <= ceiling) return { ok: true as const };
+  return {
+    error: `reference-to-video on ${model} allows at most ${ceiling} seconds`,
+    code: "INVALID_VIDEO_DURATION" as const,
+    status: 400 as const,
+  };
+}
+
 export function normalizeGrokVideoModel(rawModel: unknown) {
   if (typeof rawModel !== "string" || rawModel.length === 0) {
     return { model: GROK_FALLBACK_VIDEO_MODEL };
@@ -252,7 +325,7 @@ export function normalizeGrokVideoModel(rawModel: unknown) {
       status: 400 as const,
     };
   }
-  return { model: rawModel === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : rawModel };
+  return { model: canonicalGrokVideoModel(rawModel) };
 }
 
 export function normalizeVideoResolution(raw: unknown) {
@@ -268,8 +341,7 @@ export function normalizeVideoResolution(raw: unknown) {
 }
 
 export function usesGrokVideo15TextCanvasShim(model: string, mode: VideoMode): boolean {
-  const canonicalModel = model === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : model;
-  return canonicalModel === GROK_VIDEO_MODEL_15 && mode === "text-to-video";
+  return canonicalGrokVideoModel(model) === GROK_VIDEO_MODEL_15 && mode === "text-to-video";
 }
 
 export function validateVideoResolutionForRequest(
@@ -279,7 +351,11 @@ export function validateVideoResolutionForRequest(
   options: { allowTextCanvasShim?: boolean } = {},
 ) {
   if (resolution !== "1080p") return { ok: true as const };
-  const canonicalModel = model === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : model;
+  // A non-Grok model reaches this function too: comfy passes its workflow id through the
+  // same field. xAI's 1080p rule says nothing about a locally-run workflow, so refusing
+  // one here would be this codebase inventing a limit rather than enforcing a real one.
+  if (!isGrokVideoModel(model)) return { ok: true as const };
+  const canonicalModel = canonicalGrokVideoModel(model);
   if (canonicalModel === GROK_VIDEO_MODEL_15 && mode === "image-to-video") {
     return { ok: true as const };
   }
