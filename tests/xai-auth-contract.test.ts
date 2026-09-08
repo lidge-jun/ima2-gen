@@ -121,7 +121,9 @@ describe("lib/xaiAuth contract", () => {
     assert.equal(stored.accessToken, "access-new");
     assert.equal(stored.refreshToken, "refresh-new");
     assert.ok(stored.expiresAt !== undefined && stored.expiresAt > Date.now() + 3_000_000);
-    assert.equal(statSync(grokAuthFilePath(homeDir)).mode & 0o777, 0o600);
+    // NTFS has no POSIX mode bits (Node reports 0o666 there), so the 0600 contract is a
+    // POSIX-only assertion; the atomic tmp+rename write is exercised on every platform.
+    if (process.platform !== "win32") assert.equal(statSync(grokAuthFilePath(homeDir)).mode & 0o777, 0o600);
   });
 
   it("uses a credential with no expiresAt optimistically instead of refreshing", async () => {
