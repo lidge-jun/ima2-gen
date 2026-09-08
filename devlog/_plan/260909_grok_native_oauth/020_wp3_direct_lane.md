@@ -63,7 +63,7 @@ export async function fetchWithGrokAuth<R extends { status: number; headers: Hea
 }
 ```
 
-`RouteRuntimeContext`에 `grokAuthHomeDir?: string`을 추가해 테스트가 격리 HOME을 주입한다
+`RuntimeContext`(lib/runtimeContext.ts:11; RouteRuntimeContext는 파생형)에 `grokAuthHomeDir?: string`을 추가해 테스트가 격리 HOME을 주입한다
 (`resolveGrokCredential`이 `getGrokAccessToken({ homeDir: ctx.grokAuthHomeDir })`로 전달).
 
 ## 파일 변경 지도
