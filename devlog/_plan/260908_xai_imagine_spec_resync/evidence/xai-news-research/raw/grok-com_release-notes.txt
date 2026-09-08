@@ -1,0 +1,952 @@
+Grok Release Notes
+Aug 15, 2026
+Bug fixes & improvements
+
+A fresh round of fixes and polish across Grok this week.
+
+Chat
+Your chat history now stays in sync across browser tabs.
+Select text in your memory summary to correct or remove what Grok remembers.
+Stop background tasks straight from the tray.
+Fixed conversation titles not refreshing when you reopen a chat, the Think Harder pill leaking into other conversations, overlapping slides in image carousels, and code blocks splitting into two cards.
+Imagine
+Remove Background action on the post page extracts the subject from an image.
+Drag to reorder a reference's cells.
+Generations from uploaded photos now explain when moderation blocks them.
+Redesigned the saved-page toolbar and added a 5:2 Banner aspect ratio.
+Projects
+Voice mode now works in project conversations.
+Project icons show in the sidebar, with pagination for long lists.
+Fixed files uploaded during project creation landing outside the new project, and the share dialog now says that sharing a project includes its conversations.
+Automations
+Subscription triggers can filter by product and customer.
+Schedule times show their timezone when it differs from yours.
+Fixed trigger pickers in the mobile drawer.
+Teams
+Invite teammates by searching your organization's directory, and copy an invite link for pending invitations.
+Admins can remove members directly from the users table.
+Aug 08, 2026
+Bug fixes & improvements
+
+Another round of fixes and polish across Grok this week.
+
+Chat
+Fixed scrambled message order in history search previews and composer layout shifts on paste.
+Chats that fail to load show a retry card instead of "Chat not found".
+After a voice conversation, follow-up messages thread under the right response.
+Imagine
+Tags are back: organize saved assets with per-asset collections.
+Aspect-ratio menus show a preview of each option.
+Fixed share links 404ing for teammates, lightbox arrows landing on unfinished generations, and "Generate More" ignoring a changed image count.
+Projects
+Pin conversations inside a project, and drag files in the tree with long-press on touch devices.
+Moving a chat into a project brings its workspace files along.
+Automation runs and project chats stay out of the main History list.
+Voice
+Replaced the voice tiles with a Voice Library list.
+Billing & plans
+Upgrade from SuperGrok to Grok Business right from grok.com.
+Grandfathered subscriptions show your actual price instead of the current catalog price.
+Aug 01, 2026
+Bug fixes & improvements
+
+More fixes and polish across Grok this week.
+
+Chat
+Chat now auto-retries a failed connection and re-attaches in-flight responses when it reopens, so the stuck banner clears on its own.
+Cmd+/ opens the model picker and Cmd+I focuses the composer, matching Grok Desktop.
+Improved the queued messages tray, and edit actions stay visible for long queued messages.
+Fixed opening chats on older browsers, and attachments that failed when uploads took too long.
+Imagine
+Attach saved reference images from the reworked toolbox — with rename and delete, hover previews, and full-screen input previews.
+Videos you generate at 720p can be upscaled to 1080p from the canvas.
+Broken images in the lightbox show a fallback, and switching video quality keeps the play state.
+Video generation failures now show the server's actual message instead of silently retrying.
+Projects
+New project config tab for instructions and automations on the project canvas.
+Preview and edit Mermaid diagrams in the file tray.
+Deep-link automation runs straight into their project.
+Sharing
+Continuing a shared conversation now retitles your copy, selects it in the sidebar, and keeps it listed properly.
+Billing & plans
+Stripe billing amounts display in the currency you're charged in.
+Settings
+Refreshed the Settings dialog with a grouped sidebar and restyled controls.
+Teams
+Team invites now show up in the notification bell.
+Jul 25, 2026
+Bug fixes & improvements
+
+Another week of fixes and polish across Grok.
+
+Chat
+Page-load failures now recover automatically instead of showing a blank screen.
+Grok's thinking groups repeated tool calls, previews generated images inline, and its timer stops when the answer starts.
+Fixed responses appearing in the wrong place when the same chat is open in two tabs.
+Checkboxes in answers render as read-only text instead of clickable controls.
+Imagine
+New audio on/off toggle when generating videos.
+Redesigned prompt bar with unified controls, instant mode switching, and dictation.
+Redesigned search dialog (Cmd+K).
+Gallery posts are real links, so you can open them in a new tab.
+Fixed the gallery stalling while loading more, blank grids after refresh, and video redos ignoring your resolution choice.
+Fixed the Share button failing on Safari.
+Projects
+Preview 3D models (STL and OBJ) and KiCad files.
+Create a project from multiple local files and folders at once, and get a warning before uploads replace existing files.
+Sidebar projects sort by last use, and typing in project instructions no longer jumps to the chat composer.
+Billing & plans
+Download invoice PDFs for credit top-ups from Billing settings.
+Fixed top-up confirmations timing out on devices with skewed clocks, and a usage card that mislabeled plan tiers.
+Account
+Blocked accounts see a clear error with a support contact at sign-in.
+Password reset completes sign-in properly, including MFA.
+SSO identities are labeled in the sign-in account picker.
+Jul 18, 2026
+Bug fixes & improvements
+
+Catching up on a few weeks of fixes and polish across Grok.
+
+Chat
+Clearer errors when things go wrong: a warning when your network blocks Grok's live connection, friendlier messages when servers are busy, and the composer stays usable after a failed response.
+Chat reconnects more reliably after your connection drops.
+Shift+Tab cycles model modes in the composer.
+Usage limit cards now show when your limit resets.
+Fixed crashes on browsers that block local storage or clipboard access.
+Renamed Report Issue to Feedback and restructured the dialog.
+Share pages keep attachment chips, and sharing mid-response no longer produces a broken link.
+Imagine
+New three-way video resolution selector.
+Failed video generations no longer leave empty posts behind, and stuck image feeds recover on their own.
+Image generation errors show the actual reason instead of a generic toast.
+New media type filter on the Saved page, plus a snappier search with a proper loading indicator.
+Bulk-deleting conversations now warns that their media is deleted too.
+The Precise Edit magic-wand brush paints on the first try.
+Projects
+CSV and Office files preview correctly, and spreadsheets scroll horizontally.
+Project chats stay visible in your history.
+Fixed working-folder uploads on web and file-tree flicker.
+Automations
+Enter inserts a newline in the instructions editor, and double- clicking Save no longer creates duplicates.
+Automations warn when a trigger's connector needs to be reconnected.
+Shared conversation links show the automation that produced them.
+Connectors
+Google and Outlook connectors show which account is connected.
+The X connector displays your @handle and offers a Relink action when it needs re-authentication.
+Billing & plans
+Redesigned payment method dialog, including changing your default card.
+Fixed a stuck loading state after adding a card, an email field overlapping the payment form, and a Safari keyboard bug in auto top-up.
+Voice
+Fixed a reconnecting bug in voice on web, and mature voices are now labeled 18+ in settings.
+Jul 16, 2026
+Automations
+
+Put Grok to work for you automatically. Automations run your instructions on a schedule you set or when matching emails arrive, then deliver the results in the app or straight to your inbox.
+
+Schedules and event triggers — Get a daily briefing, a weekly report, or fire an automation whenever a matching email lands in Gmail or Outlook.
+Connectors and skills — Automations can use your connected apps and custom skills, so Grok can read your email, check your calendar, and follow your workflows.
+Stay in control — Review past runs, pause and resume anytime, or kick off a run on demand with Run now.
+
+To get started, head to Automations and create your own — or add one from a ready-made template.
+
+Jul 01, 2026
+Voice
+Dictate to Grok iOS shortcut (iOS app 1.3.97) — launch Grok straight into dictation mode and send your messages by speaking, from the Shortcuts app, Action Button, or Siri.
+Jun 27, 2026
+Bug fixes & improvements
+
+Another round of fixes and polish across Grok this week.
+
+Imagine
+Interrupted video and image generations now resume after a reload.
+In-progress generations show up in your History as they run.
+The lightbox is now its own URL, so browser back and forward open and close it.
+Canvas image downloads keep the correct format instead of saving a preview-less .png.
+Fixed overlapping duration and progress badges on History video tiles, and Saved now keeps your scroll position when switching between Compact and Full.
+More polish across the canvas, lightbox, and gallery, including a redesigned text node.
+Chat
+Editing a message now keeps its attachments and quoted context instead of resubmitting text only.
+HTML in your messages renders as literal text instead of being parsed.
+Code block headers stay pinned while you scroll long snippets.
+Smoother image loading.
+Removed a stray focus outline on tool-call accordions.
+Connectors
+The connector tools list no longer clips mid-chip while you pick tools.
+The X connector now has its own icon.
+Billing & plans
+Fixed an auto top-up layout bug in Safari, plus a top-up button that could render behind the dialog.
+Adding a card now works for accounts without an email on file.
+Refreshed copy and styling on the Usage tab.
+Removed the strikethrough pricing on the paywall.
+Settings
+Redesigned the appearance theme picker with preview tiles.
+Jun 20, 2026
+Bug fixes & improvements
+
+Another week of fixes and polish across Grok.
+
+Chat
+The stop/voice button no longer flickers when you submit.
+Toasts are now centered over full-screen modals and on mobile.
+More robust multiline detection in the query bar, so inflight suggestions no longer pop in after you've gone multiline.
+Skills & connectors
+Manage your skills and connectors right from the composer.
+The connectors submenu stays open while you pick tools.
+Clearer tool-selection state for MCP connectors.
+Fixed a page freeze caused by the skills dropdown menus.
+The GitHub connector now separates App installation from OAuth.
+Files
+Uploads now surface a clear error when they fail.
+Disabled the PDF annotation editor that could crash on drag-and-drop.
+PDF quote and explain actions are hidden when there's no active conversation.
+Jun 13, 2026
+Bug fixes & improvements
+
+More fixes and polish across Grok this week.
+
+Chat
+Fixed a spurious reconnect when opening a chat right after creating it.
+General fixes across the connectors page.
+Imagine
+Reworked the canvas keyboard shortcuts.
+Fixed undo collapsing after multi-deleting a large selection.
+Long image captions no longer overflow the image modal.
+Report Issue is always available on the agent canvas.
+Files
+The Files page now has per-file download and delete actions, richer file details, and improved UX.
+Settings & account
+The redesigned Settings dialog is now live for everyone, with alignment and spacing polish.
+You can now edit your saved memories from the memory summary in Settings.
+Billing & plans
+Switch a monthly SuperGrok subscription to annual billing right from the upgrade screen.
+Returning from a credit top-up started in Settings now brings you back to the Usage tab.
+Voice
+Out-of-credit voice calls now show the usage card with an upgrade path instead of a generic error.
+Jun 10, 2026
+Screen sharing in Grok Voice
+
+You can now share your screen during a Grok Voice conversation on iOS and Android. Grok sees what's on your screen in real time, so you can ask about anything in front of you and get answers without breaking the conversation.
+
+Jun 06, 2026
+Bug fixes & improvements
+
+Another week of fixes and polish across Grok.
+
+Chat
+New custom video player and audio cards for media in chat.
+Embedded images that fail to generate now show an error card instead of an empty placeholder.
+Improved keyboard focus states throughout chat.
+Smoother sidebar open/close animation, plus fixed tooltip position and avatar alignment in the collapsed sidebar.
+Toasts are now anchored to the center of the content area.
+Imagine
+Typing right after adding a text node now stays in the editor instead of leaking into the chat box.
+Fixed pasting an image on an empty agent page.
+Submitting with attachments while signed out now shows the sign-in prompt.
+GIF downloads use the correct file extension, and the Usage tab no longer renders blank.
+Clear notices when your usage pool runs out in Imagine and Voice, plus a credit gauge in agent chat.
+Account & misc
+Redesigned FAQ page.
+After resetting your password you're returned to where you left off without an extra sign-in prompt.
+Signing out inside the in-app browser now fully clears your session.
+Fixed a black border flash when modals open.
+Jun 03, 2026
+Grok Build for all SuperGrok users
+
+Grok Build is now available to every SuperGrok user. Use Grok Build and Composer 2.5 inside the TUI, with full mouse interactivity, plugins and skills support, and headless support for bots and orchestrators.
+
+Install on macOS, WSL, and Linux with one command:
+
+curl -fsSL https://x.ai/cli/install.sh | bash
+
+
+On Windows with PowerShell:
+
+irm https://x.ai/cli/install.ps1 | iex
+
+
+Read the docs
+
+Grok comes to Apple Vision Pro
+
+The Grok app is now available natively on visionOS. Get the full Grok experience on Apple Vision Pro, right in your environment.
+
+May 30, 2026
+Bug fixes
+
+A big week of fixes and polish across Grok.
+
+Chat
+Faster page loads with conversation caching.
+Fixed new chats sometimes redirecting to a previous conversation, and the sidebar keeping the wrong item highlighted.
+Invalid conversation links now show a proper error page instead of crashing.
+File attachments are kept when you pick an autocomplete suggestion.
+New conversation and overflow buttons stay available while a response streams.
+Code blocks in unrecognized languages now render correctly.
+Smoother query bar transitions and better alignment of suggestion text.
+Line breaks in your query are preserved through dictation.
+Imagine
+Fixed broken image cards and stale buttons on the Saved page.
+Image downloads now use the correct .jpg extension.
+Clearer handling when an image edit or image-to-video is moderated, instead of getting stuck loading or retrying endlessly.
+Fixed pasting an image into the agent chat query bar.
+Skills
+Newly created skills reliably appear in your list.
+Removed an incorrect "duplicate name" warning when renaming a skill.
+Projects
+Redesigned the project side panel with compact cards, a smoother collapse animation, and new icons.
+Added an "Add to new project" option to move a conversation into a fresh project.
+Files & uploads
+Better handling of long-running uploads, with upload controls applied to pasted files.
+Empty files are rejected up front, and the size limit now reads 100 MB.
+Billing & plans
+Redesigned rate-limit cards with new icons, copy, and layout.
+Various paywall fixes across SuperGrok tiers.
+May 27, 2026
+Grok in Kilo Code
+
+Grok is now available in Kilo Code, an open-source agentic coding platform.
+
+Read about Grok in Kilo Code
+
+May 23, 2026
+Bug fixes
+
+Fixes and polish across Grok this week.
+
+Skills
+Newly created skills now appear in your list right away.
+Removed an incorrect "duplicate name" warning when renaming a skill.
+The skill detail view updates correctly after an inline rename.
+Long skill names are truncated cleanly, submenu tooltips no longer hide behind other elements, and scrolling works in the skills dialog.
+Connectors
+Clicking the "Connected" label on a connector now opens its details.
+Disabled connectors show an empty state instead of a loading spinner.
+Fixed connector icon sizing.
+Imagine
+Fixed an error when renaming an untitled canvas.
+The agent query bar no longer pastes a stale image alongside your text.
+Agent thinking steps now display as separate steps instead of one block.
+Chat
+Fixed the attach button being unclickable in some cases.
+Connecting Google Drive now opens a modal instead of a full-page redirect.
+Evened out the icon picker grid and improved focus states for Skills and Connectors.
+Polished light mode colors.
+Sharing
+Several fixes to the share dialog, including organization access and member search.
+Sign in
+One-time passcodes are no longer case-sensitive.
+May 21, 2026
+Grok in OpenCode
+
+Grok is now available in OpenCode, an open-source coding agent.
+
+Read about Grok in OpenCode
+
+May 19, 2026
+Grok in Hermes and OpenClaw
+
+Grok is now available in Hermes and OpenClaw, bringing xAI's models directly into both platforms.
+
+Read about Grok in Hermes · Read about Grok in OpenClaw
+
+May 18, 2026
+Skills
+
+Teach Grok something once and it remembers across every conversation. Skills are persistent expertise — formatting rules, workflow steps, document styles — that Grok applies automatically so you never repeat yourself.
+
+Every account ships with built-in skills from xAI, and you can create your own in seconds. Skills are available now on Grok 4.3 across web, iOS, and Android.
+
+Read the announcement
+
+May 16, 2026
+Bug fixes
+
+A round of fixes across chat, skills, and connectors.
+
+Imagine
+Portrait images now resize instead of being cropped on desktop.
+Fixed dictation in the agent chat panel and broken multi-select movement on the canvas.
+Copying a canvas image to your clipboard now works.
+Skills
+Polish across the Skills page, detail view, query menu, and upload dropzone.
+Improved skill pill selection styling.
+Skills now work inside Projects.
+Hid the skill creator from the attach menu where it didn't belong.
+Connectors
+Tool icons now match the correct connector in chat.
+Improved the tool permission buttons.
+Clear error shown when trying to connect a locally hosted MCP server.
+Chat
+Fixed text lingering in the input after your first message.
+Query bar menu separators now span the full width.
+Stalled responses now resolve instead of hanging.
+Projects & sharing
+Added confirmation toasts for project sharing actions.
+Fixed a project's persona sticking when starting a new chat.
+Settings
+The Usage tab now shows a clean empty state instead of an error for SuperGrok Heavy.
+Updated payment method setup.
+May 14, 2026
+Grok Build
+
+Grok Build is now in beta for SuperGrok Heavy users. Use the interactive TUI, run headlessly in scripts, or build apps and orchestrators with the Agent Client Protocol.
+
+Install on macOS, Windows, and Linux with one command:
+
+curl -fsSL https://x.ai/cli/install.sh | bash
+
+
+Read the announcement
+
+May 09, 2026
+Bug fixes
+
+More fixes and refinements this week.
+
+Imagine
+Improved video stitching, gallery autoplay, and bottom-bar alignment.
+Fixed a memory issue when generating many images in a session.
+Smoothed out the Make Video flow.
+Skills
+The Skills page now adapts to what you have access to.
+Skill dialogs now animate cleanly when closing.
+Fixed skill name casing and refreshed the skills list so changes show up right away.
+Your in-progress skill draft keeps focus while editing.
+Chat
+Added loading skeletons for tools and a thinking timer while Grok works.
+Large file previews now scroll smoothly.
+Shift+Enter now works correctly when @-mentioning.
+Sharing
+Fixed a brief flash of a user ID in the project share dialog.
+Improved share dialog search and merged "Copy link" into the Done button.
+Replaced the share icon with a clearer link icon.
+Voice
+Refined rate-limit handling in voice mode.
+May 06, 2026
+Connectors
+
+Connect the apps you use every day directly into Grok. Connectors let Grok work with your tools end-to-end — read and summarize emails, update slides, organize your calendar, edit spreadsheets, and more — all without constant copy-pasting.
+
+To get started on web, click the + button, select Connectors, and click + Add connector. On iOS and Android, go to Settings → Connectors.
+
+Read the full announcement
+
+May 02, 2026
+Bug fixes
+
+Fixes and polish across Grok this week.
+
+Imagine
+Fixed canvases getting stuck while loading and layout shifts when opening a canvas from a direct link.
+Thumbnails now render reliably in chat, with no more duplicates after a refresh.
+Polished video download, mute, and export, including a fix for extending clips at 720p.
+You can now make a single image edit without entering a prompt.
+My Library templates now load more smoothly as you scroll.
+Connectors
+Improved authorization for bring-your-own MCP servers, including GitHub App installation.
+Connectors left behind by a failed authorization are now cleaned up automatically.
+Fixed a layering issue with the Connectors modal and template tooltips.
+Chat
+Links in your messages now open in a new tab.
+Cleaned up the attach menu and fixed tooltips appearing on top of dialogs.
+Smoothed out scrollbars and the scroll-to-bottom button animation.
+Rate-limit notifications are no longer shown multiple times.
+Fixed uploads that could silently fail; uploaded images are now auto-selected.
+Voice
+Fixed a double chime and the settings panel closing on your first prompt.
+Skills
+A built-in skill is now only hidden when you have your own skill with the same name.
+Fixed display of Chinese characters in skills.
+Apr 30, 2026
+Imagine Agent Mode
+
+Imagine now has an AI-powered creative canvas. Enter Agent Mode to brainstorm with your agent, generate and edit images, turn them into videos, and stitch videos together to create longer videos — all in one place.
+
+Conversational canvas — Describe what you want in natural language and Grok generates, edits, and iterates on images directly on an interactive canvas.
+Image to video — Turn any generated image into a video, extend clips, and stitch multiple videos together.
+Projects — Save and revisit past Agent Mode sessions. Pick up where you left off or start fresh with a new canvas.
+
+Try it now
+
+Apr 25, 2026
+Bug fixes
+
+Fixes and polish across Grok this week.
+
+Imagine
+Added Japanese IME support on Imagine.
+Fixed canvas thumbnail generation, including for video nodes.
+Fixed a Safari clipboard error in the template modal.
+Cleaned up the canvas empty state and chat collapse, and clarified the "Delete All Imagine Posts" action.
+Files
+Syntax highlighting now works in the file viewer, with a thumbnail fallback for code files.
+Contained xlsx preview crashes so a single bad file no longer breaks the panel.
+Chat
+Fixed the "Current" pill overlapping action icons in the Cmd+K menu.
+Improved the fallback for unsupported file types to render text or offer a download.
+Voice
+Fixed the on-screen keyboard opening when tapping buttons in voice mode.
+The voice transcript now auto-scrolls during long responses.
+Projects & sharing
+"Create new collection" is disabled for read-only team members.
+The share dialog is debounced to stop badge flickering.
+Billing
+Fixed PayPal billing interval logic.
+Apr 18, 2026
+Bug fixes
+
+More fixes and refinements this week.
+
+Files
+You can now paste non-image files (CSV, PDF, and more) into the query bar.
+Improved the PDF previewer and added a download button to file previews in the side panel.
+Chat
+Improved the image edit and generation loading UI.
+Citation sources now show proper display names for well-known sites.
+The submit button now appears instead of the voice call button when you have attachments.
+Imagine
+Improved uploaded image handling, drag handles, and feed grid attachments.
+Simplified the chat panel header and improved the mature-content gate.
+Moderated items without media are now filtered out of lists.
+Billing
+SuperGrok Lite is now hidden for X users who already have access.
+General
+Fixed the right-click context menu for selected content.
+Apr 17, 2026
+Grok 4.3 Beta
+
+Grok 4.3 is a new pre-trained model matching the scale of Grok 4.20 with an improved architecture and a December 2025 knowledge cutoff. Rolling out now to SuperGrok and Premium+ subscribers.
+
+Starting with Grok 4.3, Grok has access to the same kinds of tools, data, and environment that you would want if you were sitting down to do real work.
+
+Create presentations, documents, and spreadsheets
+
+Grok now has access to a computer where it can write code, run it, install what it needs, and produce real files.
+
+What's next
+
+This is the beginning. We are working on giving Grok full access to the internet, your files, your email, your calendar, and any service you can connect to. The goal is simple - if it would be useful for a person to have access to something, Grok should have access to it too.
+
+Apr 11, 2026
+Bug fixes
+
+Fixes and polish across Grok this week.
+
+Uploads
+Fixed large file and MP4 uploads crashing Chrome, with a clearer client-side size limit.
+Restored the bot-challenge check on file upload.
+Chat
+Typing in the query bar now registers the first keystroke even when it isn't focused.
+File previews are routed by resolved type, with an immediate loading spinner and xlsx preview support.
+Restored live tool-usage updates in responses.
+Preserved the green/blue colors on thumbs up/down hover and polished the settings dialog.
+Cookie banner
+Fixed the cookie banner's layering and mobile position, and made it clickable when a dialog is open.
+Projects
+Fixed a double toast on project creation and now show inline name errors.
+Skills
+Skills empty-state pills now wrap correctly.
+Apr 04, 2026
+Bug fixes
+
+A round of fixes across chat, projects, and connectors.
+
+Chat
+Tables now stay contained within the message bubble.
+Whitespace between inline elements in lists is preserved.
+Dialogs now animate cleanly when closing.
+Fixed the mention menu's connector list getting out of sync.
+Imagine
+Video extension start time is now clamped to a minimum of two seconds.
+Fixed the displayed reference image for image-to-video on the post page.
+Fixed disabled states on Imagine action buttons.
+Skills
+Fixed the Skills page failing to load.
+Projects
+Projects now show a spinner instead of "0" while source counts load.
+Anonymous users no longer trigger a share-links request.
+Added touch support for reordering agent customizations on mobile.
+Connectors
+MCP connectors stay available when their OAuth token expires, with clearer auth errors.
+Mar 31, 2026
+Video Uploads
+
+You can now upload and share videos directly in your conversations. Attach mp4, webm, or mov files from your device, preview them inline, and let Grok analyze video content alongside your questions.
+
+Mar 28, 2026
+Bug fixes
+
+More fixes and refinements this week.
+
+Imagine
+Query bar fixes for mobile.
+Image redo now starts from the original parent post.
+Renamed quality modes to Speed and Quality, and added a view toggle slider.
+Moderated or still-loading grid cards no longer respond to clicks.
+Chat
+Added GIF preview support and decoupled media previews from the side panel.
+Connector icons now appear on native tool calls instead of a generic magnifying glass.
+Removed the brief "Preparing Grok" flicker on load.
+Fixed duplicate icons on rate-limit notifications and a duplicate Google Drive entry in the mention menu.
+Hid the dictation hint in incognito mode.
+Projects
+Projects now load after switching teams, and shared projects appear in the sidebar.
+Deleting a conversation now returns you to its project.
+Billing
+Handled the canceled-subscription state in subscription management.
+Fixed the SuperGrok Lite upgrade flow and reordered pricing cards on mobile.
+Voice
+Fixed a stale audio track carrying over between sessions.
+Mar 21, 2026
+Bug fixes
+
+Fixes and polish across Grok this week.
+
+Projects
+You can now upload to a project directly from Google Drive.
+Fixed connecting sources and the OAuth flow from the project sources dialog.
+Chat
+Image previews now resize to fit the side panel instead of being cropped.
+Images are now included when exporting a chat to PDF.
+File paths in tool output now use a monospace font for readability.
+Added a toast when dictation fails so you know to try again.
+Imagine
+Logged-out users now see a proper sign-in modal instead of a generic upsell.
+Billing
+Your SuperGrok subscription now appears immediately after a PayPal checkout.
+Connectors
+The New Chat button now works on the connectors page.
+Unavailable MCP connectors are no longer offered by default.
+Mar 17, 2026
+New Features
+Imagine multiselect action bar — Unsave button and batch operations
+Improved Imagine upload as drop zone — full page and button drop zones
+Bug Fixes & Improvements
+Fixed tables constrained within user message bubbles
+Block clicks on moderated and unloaded Imagine grid cards
+Disable action buttons when media is loading or moderated
+Fixed floating prompt mention thumbnails and numbering
+Fixed Imagine query buttons polish
+Fixed stale audio track in voice mode
+Disable editor while dictating and insert results at cursor
+Mar 10, 2026
+New Features
+Imagine upload panel redesign — new drag-and-drop upload experience
+Video preview support in chat
+GIF preview support
+Sources selector for enterprise users with web search enabled
+Replaced view mode dropdown with toggle slider in Imagine
+Bug Fixes & Improvements
+Fixed settings Safari scrollbars
+Fixed XLSX row number column width
+Warm up iOS Safari audio session before voice connection
+Fixed connector OAuth propagation and reauth errors
+Improved prefetcher performance
+Mar 03, 2026
+New Features
+Grok 4.20 fully released
+Agent library — browse and select specialized agents
+PDF office previews
+New XLSX viewer
+Dictation — hold-to-dictate behavior with styling updates
+PayPal subscription support
+Bug Fixes & Improvements
+Fixed auto-scroll re-enable race on sub-pixel scroll
+Eliminated scroll jitter during message streaming
+Fixed duplicate Google Drive entry in enterprise mention menu
+Hide dictation hint in incognito mode
+Fixed OAuth flow from project sources modal
+Fixed notification loading state flicker on polling
+Include images in PDF export
+Fixed rate limit toast for different user tiers
+Fixed settings close button
+Include shared projects in sidebar list
+Feb 24, 2026
+New Features
+Imagine extend mode — extend videos with timeline scrubbing and duration controls
+Imagine query bar toolbar with configuration controls
+Multiagent notetaker bullets in responses
+Support for concurrent text-to-video generations in drafts
+Option to hide thinking trace in responses
+Bug Fixes & Improvements
+Fixed image edit sending wrong reference for non-first images
+Fixed voice conversation pausing on asset download
+Fixed Imagine extend — if already paused, don't skip to end
+Collapsed code in inline messages with better spacing
+Added tooltips for SVG/Mermaid diagrams
+Improved SEO fixes
+Feb 17, 2026
+New Features
+Grok 4.20 Beta
+Agent customizations settings — customize agent behavior
+Imagine Folders — organize creations into folders
+Extend video with banner and toolbar duration controls (max 30s total)
+X thread fetch tool renderer
+Bug Fixes & Improvements
+Fixed export to PDF
+Fixed abort button flicker
+Fixed multiline rendering in markdown tables
+Fixed voice keyboard shortcut
+Clear prompt when entering extend mode, restore on exit
+Hide resolution and aspect ratio controls in video extend mode
+Hide upscale for videos over 12 seconds
+Improved voice rating survey design and accessibility
+Better query bar button animations and voice mode shortcut
+Feb 10, 2026
+New Features
+Imagine delete all media option
+Support mid-conversation voice attachments
+Bug Fixes & Improvements
+Fixed aspect ratio when image link is broken
+Fixed voice mode think timer priority
+Fixed message bubble margin bottom
+Fixed moderated image size display
+Only show Make Video button for PNG/JPEG images
+Feb 03, 2026
+New Features
+Imagine Saved page — renamed from Favorites, with compact view mode and multiselect with tag support
+Drag-to-select in multiselect mode on Saved page
+Dictation refactor and UI refresh
+Redesigned Imagine post controls UI
+Image carousel animation
+Table v2 with improved rendering
+Support attaching assets to voice conversations
+Bug Fixes & Improvements
+Fixed filmstrip cross-axis overflow and item clipping
+Fixed Imagine video flicker on swap to HD
+Fixed anonymous video-gen login prompt
+Fixed timeline alignment
+Fixed Safari Copy Image paste handling in query bar
+Fixed issue with tildes in markdown
+Better aspect ratio for generated images
+Fixed moderated image sizing
+Hide open app banner for iOS Safari
+Improved Imagine query bar v2 polish
+Jan 27, 2026
+New Features
+Image generation improvements — better component and block image defaults
+Code execution tool results rendered in chat
+Imagine 720p video in post page
+Table improvements with better buttons
+SVG viewer for rendered SVG content
+Auto-compaction indicator in message loading
+Fade-out for idle starry background animation
+Bug Fixes & Improvements
+Fixed pasting from Grok responses
+Fixed double quotes and XML handling in chat
+Fixed Imagine small fixes and grid issues
+Device location support for localized responses
+Centered generated images when only one
+Improved Imagine post page content centering
+Fixed extend video disable check
+Alert when more than 16 collections are selected
+Better image gen layout
+Fixed stale Grok logo and flickering on load
+Code block header select-none for better UX
+Jan 20, 2026
+New Features
+Dictation shortcut for voice-to-text input
+Peek preview for adjacent carousel images
+Pointer lock in preview mode
+Updated image aspect ratios to 3:2 and 2:3
+Bug Fixes & Improvements
+Hide animating stars background when user has Reduce Motion set
+Updated favicons
+Lazy loading for Monaco editor (performance improvement)
+Fixed Imagine feed 720p limits
+Better CJK and markdown support
+Improved imagine-gen out of band generation
+Widen UI for landscape 720p videos
+Jan 13, 2026
+New Features
+Imagine 720p video resolution option with upsell for non-subscribers
+Add templates to query bar typeahead suggestions
+Support for video resolution labels and canceling options in Imagine
+SVG code preview while streaming
+Bug Fixes & Improvements
+Fixed premature image gen error during streaming
+Fixed dictation feedback and shortcut
+Fixed drawer z-index on mobile model select
+Fixed user message code blocks
+Improved model search to rank exact matches first
+Scroll to bottom button now shown whenever not at conversation end
+Proper height for inline images
+Show server error toast when video/image generation fails
+Better media dimension handling
+Jan 06, 2026
+New Features
+Add search to models list and star favorites
+Template widget and library improvements
+Imagine query bar v2 refinements — spinner on submit, fix edit mode flow
+Grok Business annual billing plan support
+Imagine moderated content cards with visual indicators
+Separated search suggestions for better typeahead
+Bug Fixes & Improvements
+Fixed span pastes from Discord and Slack
+Fixed anon auth for voice mode
+Fixed sources selector flicker on team switch
+Fixed layout shift on team switch
+Fixed follower spinner on prompt completion
+Fixed Imagine post not showing in edit mode with query params
+Fixed Edit Image from X not going directly to edit mode
+Improved close button and overflow in template editor
+Clear template selection when clicking new chat
+Better anon authentication flow
+Dec 30, 2025
+New Features
+Darkest mode — even darker dark theme
+Edit memories — view and modify what Grok remembers about you
+X ↔ Grok image edit flow — edit images directly from X posts
+Embedded X media in chat responses
+Share Imagine creations to X with one click
+Add image to sketch feature
+Imagine 16:9 aspect ratio options
+KaTeX feathering for smoother math rendering
+Fallback OpenGraph image for share links
+Bug Fixes & Improvements
+Fixed memoization issue in chat markdown rendering
+Polished empty state for conversation and shared conversation lists
+Fixed template select popover positioning
+Fixed multiple command menus rendering on projects page
+Fixed conversation items alignment
+Fixed team insights focus state
+Better generated image layout
+Improved i18n — fixed concatenations and translation issues
+Dec 22, 2025
+New Features
+Imagine query bar v2 — redesigned input for image and video generation
+Memory management UI — view, edit, and delete your memories
+Imagine video side-by-side comparison — compare two generated videos
+Improved animations for icons
+Support for portrait mode in Imagine
+Anonymous users can now upload files
+List collection documents in the project sidebar
+New image generation format support
+Bug Fixes & Improvements
+Fixed code non-breaking space rendering
+Fixed overlapping content and project chip in sidebar
+Fixed code block overflow in RAG result markdown
+Fixed Imagine page crashes
+Improved highlights navigation
+Fixed rename button in files explorer
+Fixed dialog close button in response dialog
+Fixed Imagine grid padding
+Inhibit video edit button on long videos
+Auto-focus in Imagine query bar
+Better large file error tooltip
+Dec 16, 2025
+New Features
+Memory update cards — see what Grok remembers during conversations
+X media posts embedded in chat responses
+Video editing support — edit videos in Imagine
+Shared with me section on the projects page
+Followup suggestions with attachment chips
+Bug Fixes & Improvements
+Fixed duplicated chunk rendering in thought traces
+Improved RAG result content and source rendering
+Fixed plural forms in translations with count
+Fixed web voice ASR not updating
+Fixed Chinese parentheses and fullwidth chars in autolinks
+Refresh deleted conversations on soft delete
+Animated sidebar icons
+Global command menu (Cmd+K)
+Fixed Escape key when settings panel is open
+Added DCM file support
+Fixed spreadsheet asset rendering
+Better citations ordering — show before other Grok cards
+Fixed query bar wrapping in small spaces
+Improved Imagine post page scroll and clipping
+Dec 09, 2025
+New Features
+X quotes card in chat responses
+Image ordering support for generated images
+Show "shared" mark on files
+Imagine rabbit hole — explore more related content
+Connector setup dialog for projects
+Bug Fixes & Improvements
+Fixed voice mode going deaf after changing personality
+Fixed surveys not showing
+Imagine gradient tweaks
+Improved side panel animations and collapsible behavior
+Interactive checkboxes in chat responses
+Dec 02, 2025
+New Features
+Button to delete all conversations on the history page
+Collapsible side-panel sections in projects
+Imagine video options in edit prompt input
+Accept team invites directly from grok.com
+4-column grid for Imagine image generation
+Sticky headers in Imagine grids
+Floating copy button in chat
+Bug Fixes & Improvements
+Fixed charts and citations in exported PDFs
+Fixed DeepSearch button when returning to chat via navigation
+Removed chat page flicker on load
+Fixed share link async bug on Safari
+Improved highlights dismiss behavior
+Close side panel on navigation
+Fixed deduplicated cards in Grok card list
+Renamed "attachments" to "sources" tab in projects
+Recalled last video duration from metadata
+Exit voice mode properly when switching to chat
+Nov 25, 2025
+New Features
+Notifications — in-app notification center with periodic fetch, mobile view, and hover states
+RAG results now rendered inline inside markdown responses
+Delete button for Imagine videos
+Bug Fixes & Improvements
+Fixed double submission on first Cmd+Enter
+Fixed highlights layout jitter and scroll preservation
+Hide thinking time when thinking is configured off
+Hide heavy thinking timer when interrupted
+Better side panel title handling
+Fixed mobile chat page sizing
+Updated thinking animation
+Cleaned up message bubble padding
+Nov 18, 2025
+New Features
+Grok 4.1 released – #1 on LMSYS Arena, vastly improved reasoning, emotional intelligence, and creative writing, 3× fewer hallucinations
+Grok 4 Fast – state-of-the-art search and multimodal reasoning
+Added cards in chat for stocks, sports, maps, and weather
+Show searched images in chat
+Improved typeahead latency and added personalization
+Added instant Grok answers that appear directly in typeaheads
+Imagine video generation with customizable prompts
+Shared chats & projects now show view counts
+Integrated Thoughts component
+Improved query bar styling
+File upload limit raised to 100 files
+Faster initial page load
+Reduce unnecessary calculations to reduce CPU usage
+Improved code block styling
+Better OpenGraph previews rendering Markdown
+Bug Fixes & Improvements
+Higher success rate under heavy load
+Faster search latency
+Fixed conversations list in projects
+Sep 05, 2025
+New Features
+Improved typeaheads
+Improved code highlighting, performance, and styles
+Generate Imagine videos from chat generated images
+Imagine audio mute preference persistence
+Faster video loading for generated videos
+Textbox option for chat surveys
+Ctrl + Shift + M to switch model mode
+Bug Fixes
+Fix "Export to PDF" black background
+Fix web results not showing in voice mode
+Fix double Finished Thinking notification
+Fix text direction in side panel and typeaheads for RTL languages
+Aug 29, 2025
+New Features
+Imagine
+Grok 4 for anonymous users
+Improved typeaheads
+Cleaned up citation rendering
+Better search results
+Bug Fixes
+General chat stability under bad network conditions
+Fixed bugs with creating new chats from shared links
+
+Want to see what Grok can do with the latest features? Start a conversation now!

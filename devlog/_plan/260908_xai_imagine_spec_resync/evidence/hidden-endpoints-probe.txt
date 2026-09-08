@@ -1,0 +1,265 @@
+
+REQUEST POST /v1/videos/inpaint
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/upscale
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/interpolations
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/lipsync
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/restyle
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/continuations
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/variations
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/remix
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/compose
+BODY {}
+
+STATUS 405
+
+REQUEST POST /v1/videos/image-to-video
+BODY {}
+
+STATUS 405
+
+REQUEST GET /v1/custom-voices
+BODY 
+{"voices":[],"total_count":0,"cap":30}
+STATUS 200
+
+REQUEST GET /v1/voices
+BODY 
+{"error":{"code":404,"message":"The requested resource was not found. Please check the URL and try again. Documentation is available at https://docs.x.ai/"}}
+STATUS 404
+
+REQUEST GET /v1/files
+BODY 
+{"data":[],"pagination_token":null}
+STATUS 200
+
+REQUEST GET /v1/video-generation-models/grok-imagine-video
+BODY 
+{"id":"grok-imagine-video","fingerprint":"fp_5f37b474c6","created":1769558400,"object":"model","owned_by":"xai","version":"1.0","input_modalities":["text","image","video"],"output_modalities":["video"],"aliases":[]}
+STATUS 200
+
+REQUEST GET /v1/video-generation-models/grok-imagine-video-1.5
+BODY 
+{"id":"grok-imagine-video-1.5","fingerprint":"fp_8e3f9286fa","created":1779840000,"object":"model","owned_by":"xai","version":"1.0","input_modalities":["text","image","audio"],"output_modalities":["video"],"aliases":["grok-imagine-video-1.5-preview","grok-imagine-video-1.5-2026-05-30"]}
+STATUS 200
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","reference_images":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 38
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","reference_images":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 38
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","reference_audios":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 38
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","reference_audios":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 38
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","image":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 27
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","image":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 27
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","aspect_ratio":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 34
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","aspect_ratio":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 34
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","resolution":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 32
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","resolution":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 32
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","mask":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 26
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","mask":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 26
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","strength":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 30
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","strength":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 30
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","seed":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 26
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","seed":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 26
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","negative_prompt":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 37
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","negative_prompt":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 37
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","generate_audio":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 36
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","generate_audio":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 36
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","storage_options":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 37
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","storage_options":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 37
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","output":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 28
+STATUS 422
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","output":null}
+Failed to deserialize the JSON body into the target type: missing field `video` at line 1 column 28
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","video":{"url":"not-a-url"},"reference_images":null}
+{"request_id":"540bbd4a-4e2e-9363-93ac-845492fa1352"}
+STATUS 200
+
+REQUEST POST /v1/videos/extensions
+BODY {"prompt":"x","video":{"url":"not-a-url"},"reference_images":null}
+{"request_id":"676f081e-1d3d-9323-997f-39fcd6b0a4fa"}
+STATUS 200
+
+REQUEST GET /v1/videos/inpaint
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/upscale
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/interpolations
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/lipsync
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/restyle
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/continuations
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/variations
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/remix
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/compose
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST GET /v1/videos/image-to-video
+BODY 
+{"code":"invalid-argument","error":"Malformed request ID"}
+STATUS 400
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","video":"https://example.com/a.mp4"}
+Failed to deserialize the JSON body into the target type: video: invalid type: string "https://example.com/a.mp4", expected struct VideoUrl at line 1 column 49
+STATUS 422
+
+REQUEST POST /v1/videos/edits
+BODY {"prompt":"x","video":{"url":"https://example.com/a.mp4"}}
+RESPONSE {"request_id":"e52a3436-9695-9e80-b099-3c916a6b6cff"}
+STATUS 200 (UNSAFE ACCIDENTAL QUEUE; no further valid probes)
