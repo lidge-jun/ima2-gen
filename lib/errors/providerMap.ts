@@ -3,6 +3,8 @@ import { RESPONSE_DIAGNOSTIC_CODES } from "../responsesErrors.js";
 
 export function statusForErrorCode(code: string, fallback = 500) {
   if (code === "GROK_API_KEY_MISSING") return 401;
+  if (code === "GROK_AUTH_REQUIRED") return 401;
+  if (code === "GROK_AUTH_REFRESH_FAILED") return 502;
   if (code === "OAUTH_UNAVAILABLE" || code === "NETWORK_FAILED") return 503;
   if (code === "AUTH_CHATGPT_EXPIRED" || code === "AUTH_API_KEY_INVALID") return 401;
   if (code === "API_KEY_REQUIRED") return 401;
@@ -66,6 +68,12 @@ export const PROVIDER_ERROR_MAP = {
 
   GROK_API_KEY_MISSING: "AUTH_INVALID",
   GROK_AUTH_FAILED: "AUTH_INVALID",
+  // Raised by lib/xaiAuth.ts: no stored session, or the refresh token was
+  // rejected outright (invalid_grant / revoked). The user must log in again.
+  GROK_AUTH_REQUIRED: "AUTH_EXPIRED",
+  // The refresh could not complete (network, 5xx, 429 budget exhausted); the
+  // stored session is kept and a later attempt may succeed.
+  GROK_AUTH_REFRESH_FAILED: "NETWORK_FAILURE",
   GROK_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
   GROK_EMPTY_RESPONSE: "INTERNAL_STATE_ERROR",
   GROK_IMAGE_DOWNLOAD_FAILED: "NETWORK_FAILURE",
