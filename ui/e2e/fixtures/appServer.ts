@@ -75,8 +75,7 @@ export async function assertJ6FallbackPorts(): Promise<NonNullable<J6Isolation["
   // This guard MUST precede any socket creation, including direct helper callers.
   assertJ6Isolation();
   try {
-    return await Promise.all(["127.0.0.1", "::1"].flatMap((host) =>
-      [10531, 18645].map((port) => refusedFallback(host, port))));
+    return await Promise.all(["127.0.0.1", "::1"].map((host) => refusedFallback(host, 10531)));
   } catch (error) { throw error; }
 }
 
@@ -315,7 +314,7 @@ async function initializeHome(home: string, provider: string, withoutKey: boolea
   }
   if (fresh) await writeFile(join(home, "config.json"), JSON.stringify({ provider,
     ...(withoutKey ? {} : { minimaxApiKey: "e2e-minimax-key" }),
-    oauth: { disableAutoStart: true }, grokProvider: { disableAutoStart: true }, mcp: { enabledProviders: [] },
+    oauth: { disableAutoStart: true }, mcp: { enabledProviders: [] },
   }), { flag: "wx" });
 }
 export async function startApp(mode: StubMode = "minimax", options: AppStartOptions = {}): Promise<AppHandle> {

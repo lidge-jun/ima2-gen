@@ -33,10 +33,7 @@ test("maps the explicit isolated environment exactly", () => {
     IMA2_PORT: "0",
     IMA2_HOST: "127.0.0.1",
     IMA2_NO_OAUTH_PROXY: "1",
-    IMA2_NO_GROK_PROXY: "1",
     IMA2_OAUTH_PROXY_PORT: "41234",
-    IMA2_GROK_PROXY_PORT: "41234",
-    IMA2_GROK_PROXY_HOST: "127.0.0.1",
     IMA2_MINIMAX_REGION: "global_en",
     IMA2_MINIMAX_GLOBAL_BASE_URL: stubUrl,
     IMA2_MINIMAX_CN_BASE_URL: stubUrl,
@@ -63,7 +60,6 @@ test("keeps mappings and comma-only MCP disabled across every mode", () => {
     assert.equal(result.IMA2_MINIMAX_GLOBAL_BASE_URL, stubUrl);
     assert.equal(result.IMA2_MINIMAX_CN_BASE_URL, stubUrl);
     assert.equal(result.IMA2_OAUTH_PROXY_PORT, "41234");
-    assert.equal(result.IMA2_GROK_PROXY_PORT, "41234");
     assert.equal(result.MINIMAX_API_KEY, "e2e-minimax-key");
   }
 });

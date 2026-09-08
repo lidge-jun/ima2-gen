@@ -120,7 +120,7 @@ async function setup() {
     saveConfig(config);
     console.log("\n  Starting Grok OAuth login...\n");
     try {
-      runSelf(["grok", "login", "--manual-paste"]);
+      runSelf(["grok", "login"]);
     } catch {
       console.log("\n  Grok login failed or cancelled. You can retry with 'ima2 grok login'.\n");
       rl.close();
@@ -151,7 +151,7 @@ async function setup() {
     // Grok OAuth
     console.log("  Running Grok OAuth login...\n");
     try {
-      runSelf(["grok", "login", "--manual-paste"]);
+      runSelf(["grok", "login"]);
     } catch {
       console.log("\n  Grok login failed. You can retry with 'ima2 grok login'.\n");
     }
@@ -366,7 +366,7 @@ function showHelp() {
     billing        API usage / quota
     providers      Configured providers
     oauth <sub>    GPT OAuth proxy status              (ima2 oauth --help)
-    grok <sub>     Bundled Grok auth/status         (ima2 grok --help)
+    grok <sub>     xAI OAuth login/status/logout    (ima2 grok --help)
     config <sub>   Config get/set/ls/path/rm       (ima2 config --help)
     defaults <sub> Inspect/change model defaults   (ima2 defaults --help)
     models         List available lane models      (ima2 models --help)

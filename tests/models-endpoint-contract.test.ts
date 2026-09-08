@@ -1,10 +1,13 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tsImport } from "tsx/esm/api";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 const { clearModelsCatalogCache } = await tsImport(
   "../lib/mcp/modelsCatalog.js",
@@ -84,11 +87,28 @@ class FakeMcpManager {
 }
 
 const servers = new Set<Server>();
+/** Every case gets its own HOME so no lane assertion depends on whether the
+ *  developer running the suite happens to be logged into Grok. */
+const grokHomes = new Set<string>();
+
+function grokHomeFor(auth: GrokAuthFixture): string {
+  const homeDir = mkdtempSync(join(tmpdir(), "ima2-models-grok-home-"));
+  grokHomes.add(homeDir);
+  if (auth === "session") seedGrokAuth({ homeDir });
+  if (auth === "expired-no-refresh") {
+    seedGrokAuth({ homeDir, refreshToken: "", expiresAt: Date.now() - 60_000 });
+  }
+  return homeDir;
+}
+
+type GrokAuthFixture = "none" | "session" | "expired-no-refresh";
 
 afterEach(async () => {
   clearModelsCatalogCache();
   await Promise.all([...servers].map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
   servers.clear();
+  for (const homeDir of grokHomes) rmSync(homeDir, { recursive: true, force: true });
+  grokHomes.clear();
 });
 
 async function withApp(
@@ -101,7 +121,7 @@ async function withApp(
     oauthReadyState?: "ready" | "pending";
     hasApiKey?: boolean;
     comfyOnline?: boolean;
-    grokProxyState?: string;
+    grokAuth?: GrokAuthFixture;
     comfyWorkflows?: Array<import("../lib/comfyWorkflowStore.ts").ComfyWorkflowRecord>;
   } = {},
   run: (base: string, manager: FakeMcpManager) => Promise<void>,
@@ -111,14 +131,13 @@ async function withApp(
   const ctx = {
     oauthReadyState: options.oauthReadyState ?? "ready",
     hasApiKey: options.hasApiKey ?? false,
-    grokUrl: "http://127.0.0.1:18645/v1",
     xaiApiKey: undefined,
     geminiApiKey: "gemini-test-key",
     minimaxApiKey: options.minimaxApiKey,
     atlasCloudApiKey: options.atlasCloudApiKey,
     naiApiKey: options.naiApiKey,
     mcpConnectionManager: manager,
-    ...(options.grokProxyState ? { grokProxy: { state: options.grokProxyState } } : {}),
+    grokAuthHomeDir: grokHomeFor(options.grokAuth ?? "none"),
     config: {
       imageModels: {
         default: "gpt-5.6-luna",
@@ -161,8 +180,8 @@ test("GET /api/models returns every canonical lane with deterministic statuses a
 
     assert.equal(body.lanes.oauth.status, "ready");
     assert.equal(body.lanes.api.status, "key-missing");
-    assert.equal(body.lanes.grok.status, "ready");
-    assert.match(body.lanes.grok.reason, /live session not probed/);
+    assert.equal(body.lanes.grok.status, "disconnected");
+    assert.match(body.lanes.grok.reason ?? "", /login required/i);
     assert.equal(body.lanes["grok-api"].status, "key-missing");
     assert.equal(body.lanes.agy.status, "ready");
     assert.equal(body.lanes.agy.reason, "binary installed; login cannot be probed");
@@ -353,37 +372,28 @@ test("the Atlas Cloud lane reports ready once the runtime context holds a key", 
   });
 });
 
-test("the grok lane follows the supervisor instead of the mere presence of a URL", async () => {
-  // The old lane answered "ready" whenever a URL string existed, so /api/models
-  // could claim ready while /api/grok/status reported offline on the same server.
-  const cases: Array<[string, string, RegExp | undefined]> = [
-    ["ready", "ready", undefined],
-    ["waiting-for-login", "disconnected", /login required/i],
-    ["gave-up", "disconnected", /failed to start/i],
-    ["stopped", "disconnected", /stopped/i],
-  ];
-  for (const [supervisorState, expected, reason] of cases) {
-    await withApp({ grokProxyState: supervisorState }, async (base) => {
-      const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
-      assert.equal(body.lanes.grok.status, expected, `state=${supervisorState}`);
-      if (reason) assert.match(String(body.lanes.grok.reason), reason);
-    });
-  }
+test("the grok lane follows the stored xAI session, not a configured endpoint", async () => {
+  // Requests go straight to api.x.ai now, so the credential file is the only
+  // thing that decides whether the lane can serve a generation.
+  await withApp({ grokAuth: "session" }, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    assert.equal(body.lanes.grok.status, "ready");
+    assert.equal(body.lanes.grok.reason, undefined, "a ready lane carries no reason");
+  });
+  await withApp({ grokAuth: "none" }, async (base) => {
+    const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
+    assert.equal(body.lanes.grok.status, "disconnected");
+    assert.match(String(body.lanes.grok.reason), /login required/i);
+  });
 });
 
-test("transient supervisor states do not flicker the grok lane", async () => {
-  // Boot and re-arm are not settled failures.
-  for (const transient of ["starting", "gave-up-retryable"]) {
-    await withApp({ grokProxyState: transient }, async (base) => {
-      const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
-      assert.equal(body.lanes.grok.status, "ready", `state=${transient}`);
-    });
-  }
-  // backoff means the proxy crashed and is retrying — honest about the situation
-  await withApp({ grokProxyState: "backoff" }, async (base) => {
+test("an expired grok session with no refresh token is disconnected", async () => {
+  // With a refresh token the next request silently renews, so only the
+  // unrecoverable case is worth showing the user.
+  await withApp({ grokAuth: "expired-no-refresh" }, async (base) => {
     const body = await (await fetch(`${base}/api/models`)).json() as ModelsBody;
-    assert.equal(body.lanes.grok.status, "disconnected", "backoff is honest");
-    assert.match(String(body.lanes.grok.reason), /restart/i);
+    assert.equal(body.lanes.grok.status, "disconnected");
+    assert.match(String(body.lanes.grok.reason), /session expired/i);
   });
 });
 

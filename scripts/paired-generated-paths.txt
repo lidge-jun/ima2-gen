@@ -6,7 +6,6 @@ config.js
 lib/agyArtifactRead.js
 lib/capabilities.js
 lib/generationRequestLog.js
-lib/grokProxyLauncher.js
 lib/grokVideoAdapter.js
 lib/grokVideoCanvas.js
 lib/grokVideoDownload.js

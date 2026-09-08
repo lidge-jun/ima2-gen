@@ -105,8 +105,8 @@ jobs:
       - name: Global install, update, and package-local OAuth smoke
         run: npm run test:package-global-update
         timeout-minutes: 15
-      - name: CLI smoke (grok --help)
-        run: node bin/ima2.js grok --help
+      - name: CLI smoke (grok status --json)
+        run: node bin/ima2.js grok status --json
       - name: CLI smoke (video --help)
         run: node bin/ima2.js video --help
       - name: CLI smoke (capabilities)

@@ -70,7 +70,7 @@ function artifactReply(res: import("node:http").ServerResponse, kind?: ProxyOpti
   if (kind === "declared-too-large") { res.flushHeaders(); return; }
   res.end(kind === "invalid-mp4" ? Buffer.from("invalid MP4 bytes") : fakeMp4Bytes());
 }
-// Mock progrok upstream: search -> planner -> start -> poll(done) -> download.
+// Mock xAI upstream: search -> planner -> start -> poll(done) -> download.
 function makeProxy(options: ProxyOptions = {}) {
   let polls = 0;
   let starts = 0;
@@ -114,7 +114,7 @@ function makeProxy(options: ProxyOptions = {}) {
   return server;
 }
 
-async function videoApp(generatedDir, proxyPort) {
+async function videoApp(generatedDir) {
   const app = express();
   fixture.trackApp(app);
   app.use(express.json({ limit: "8mb" }));
@@ -125,7 +125,7 @@ async function videoApp(generatedDir, proxyPort) {
     config: {
       ...config,
       storage: { ...config.storage, generatedDir },
-      grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
+      grokProvider: { ...config.grokProvider, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
     },
   });
   const server = createServer(app);
@@ -147,8 +147,8 @@ for (const downloadCase of ["invalid-mp4", "declared-too-large"] as const) {
   test(`/api/video/generate ${downloadCase}: error on both channels, no persistence or retry`, async () => {
     const generatedDir = await mkdtemp(join(fixture.root, "generate-rejected-"));
     try {
-      const proxyUrl = await listen(makeProxy({ downloadCase }));
-      const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+      await listen(makeProxy({ downloadCase }));
+      const { url } = await videoApp(generatedDir);
       const requestId = `rejected-${downloadCase}`;
       const res = await fixture.fetchApp(`${url}/api/video/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -184,10 +184,9 @@ for (const downloadCase of ["invalid-mp4", "declared-too-large"] as const) {
 
 test("/api/video/generate streams progress and saves mp4 + sidecar", async () => {
   const proxy = makeProxy();
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-"));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/generate`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -232,10 +231,9 @@ test("/api/video/generate streams progress and saves mp4 + sidecar", async () =>
 
 test("/api/video/generate records image-to-video mode when a reference is given", async () => {
   const proxy = makeProxy({});
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-i2v-"));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     // A single opening-frame reference selects image-to-video.
     const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -262,10 +260,9 @@ test("/api/video/generate records image-to-video mode when a reference is given"
 test("/api/video/generate uses configured Grok Video 1.5 default when model is omitted", async () => {
   let startBody: any = null;
   const proxy = makeProxy({ captureStart: (body) => { startBody = body; } });
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-default-model-"));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/generate`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -282,10 +279,9 @@ test("/api/video/generate uses configured Grok Video 1.5 default when model is o
 
 test("/api/video/generate exposes fallback model metadata for 1.5 Ref2V", async () => {
   const proxy = makeProxy({ failFirstGeneration: true });
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-fallback-"));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/generate`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -326,10 +322,9 @@ test("/api/video/generate exposes fallback model metadata for 1.5 Ref2V", async 
 test("/api/video/generate accepts Grok Video 1.5 image-to-video 1080p", async () => {
   let startBody: any = null;
   const proxy = makeProxy({ captureStart: (body) => { startBody = body; } });
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-1080-"));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/generate`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -351,10 +346,9 @@ test("/api/video/generate accepts Grok Video 1.5 image-to-video 1080p", async ()
 test("/api/video/generate accepts Grok Video 1.5 prompt-only 1080p via canvas shim", async () => {
   let startBody: any = null;
   const proxy = makeProxy({ captureStart: (body) => { startBody = body; } });
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-1080-t2v-"));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/generate`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -398,8 +392,7 @@ test("/api/video/generate continueFromVideo extracts parent frame and stores bra
   if (!fixture.ffmpeg?.available) { await fixture.finishCase(); t.skip("ffmpeg is not installed in this environment"); return; }
   const firstAttempt = fixture.ffmpeg.attempts.length;
   const proxy = makeProxy();
-  const proxyUrl = await listen(proxy);
-  const proxyPort = Number(new URL(proxyUrl).port);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-continue-"));
   const parent = "parent.mp4";
   await fixture.ffmpeg.createClip(join(generatedDir, parent), "green");
@@ -411,7 +404,7 @@ test("/api/video/generate continueFromVideo extracts parent frame and stores bra
     revisedPrompt: "First revised video prompt with rain ending.",
     createdAt: 1,
   }));
-  const { url } = await videoApp(generatedDir, proxyPort);
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/generate`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -437,7 +430,7 @@ test("/api/video/generate continueFromVideo extracts parent frame and stores bra
 
 test("/api/video/generate accepts the comfy lane and refuses grok-only options", async () => {
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-comfy-"));
-  const { url } = await videoApp(generatedDir, 18646);
+  const { url } = await videoApp(generatedDir);
   try {
     // Comfy-specific rejection proves the lane remains reachable.
     const unknown = parseSse(await (await fixture.fetchApp(`${url}/api/video/generate`, {
@@ -473,7 +466,7 @@ test("/api/video/generate accepts the comfy lane and refuses grok-only options",
 
 test("/api/video/generate rejects non-grok provider and bad params", async () => {
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-route-"));
-  const { url } = await videoApp(generatedDir, 18645);
+  const { url } = await videoApp(generatedDir);
   try {
     const badProvider = parseSse(await (await fixture.fetchApp(`${url}/api/video/generate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: "x", provider: "oauth" }) })).text());
     assert.equal(badProvider.find((e) => e.event === "error")?.data.code, "VIDEO_PROVIDER_UNSUPPORTED");

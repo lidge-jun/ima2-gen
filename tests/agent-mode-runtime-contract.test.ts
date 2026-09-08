@@ -103,7 +103,7 @@ function agentVideoContext(generatedDir: string): RuntimeContext {
     grokAuthHomeDir: grokAuth.homeDir,
     config: {
       ...config, storage: { ...config.storage, generatedDir },
-      grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 18645,
+      grokProvider: { ...config.grokProvider,
         videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000,
         videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
     },
@@ -517,8 +517,6 @@ describe("Agent Mode runtime contract", () => {
           storage: { ...config.storage, generatedDir },
           grokProvider: {
             ...config.grokProvider,
-            proxyHost: "127.0.0.1",
-            proxyPort: 18645,
             videoPollIntervalMs: 1,
             videoStartTimeoutMs: 5000,
             videoTimeoutMs: 30000,
@@ -607,8 +605,6 @@ describe("Agent Mode runtime contract", () => {
           storage: { ...config.storage, generatedDir },
           grokProvider: {
             ...config.grokProvider,
-            proxyHost: "127.0.0.1",
-            proxyPort: 18645,
             videoPollIntervalMs: 1,
             videoStartTimeoutMs: 5000,
             videoTimeoutMs: 30000,

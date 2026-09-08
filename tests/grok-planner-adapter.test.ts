@@ -49,8 +49,6 @@ function ctx(overrides: Record<string, unknown> = {}) {
       ...config,
       grokProvider: {
         ...config.grokProvider,
-        proxyHost: "127.0.0.1",
-        proxyPort: 18645,
         plannerModel: "grok-4.3",
         plannerTimeoutMs: 10_000,
         generationTimeoutMs: 10_000,

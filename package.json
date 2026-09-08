@@ -99,7 +99,6 @@
     "google-auth-library": "^11.0.1",
     "openai": "^7.4.0",
     "openai-oauth": "file:vendor/openai-oauth-1.0.2-ima2.1.tgz",
-    "progrok": "file:vendor/progrok-0.2.0.tgz",
     "sharp": "^0.35.3",
     "trash": "^10.1.1",
     "ulid": "^3.0.2",
@@ -109,7 +108,6 @@
     "fast-uri": "3.1.7"
   },
   "bundleDependencies": [
-    "progrok",
     "openai-oauth",
     "zod"
   ],

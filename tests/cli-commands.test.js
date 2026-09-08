@@ -354,14 +354,22 @@ describe("ima2 CLI commands (live server)", () => {
     assert.match(stdout, /ima2 cancel <id>/);
   });
 
-  it("ima2 grok --help documents bundled progrok", async () => {
+  it("ima2 grok --help documents the native xAI OAuth session", async () => {
     const { stdout, code } = await runCLI(["grok", "--help"]);
     assert.strictEqual(code, 0);
-    assert.match(stdout, /bundled progrok runtime/);
-    assert.match(stdout, /login/);
-    assert.match(stdout, /default: --manual-paste/);
-    assert.match(stdout, /defaults to --manual-paste/);
-    assert.doesNotMatch(stdout, /device-code/);
-    assert.match(stdout, /IMA2_NO_GROK_PROXY=1/);
+    assert.match(stdout, /ima2 grok login/);
+    assert.match(stdout, /status \[--json\]/);
+    assert.match(stdout, /logout/);
+    assert.match(stdout, /~\/\.progrok\/auth\.json/);
+    assert.doesNotMatch(stdout, /progrok runtime/);
+    assert.doesNotMatch(stdout, /18645/);
+    assert.doesNotMatch(stdout, /IMA2_NO_GROK_PROXY/);
+    assert.doesNotMatch(stdout, /--manual-paste/);
+  });
+
+  it("ima2 grok status --json reports 'none' without a session and exits 0", async () => {
+    const { stdout, code } = await runCLI(["grok", "status", "--json"]);
+    assert.strictEqual(code, 0);
+    assert.deepStrictEqual(JSON.parse(stdout.trim()), { auth: "none", refreshable: false });
   });
 });

@@ -70,7 +70,7 @@ export const REGISTRY = [
     id: "grok",
     surfaces: ["generate", "edit", "multimode", "node", "video"],
     vendor: "xai",
-    credentials: [{ kind: "oauth-proxy", envVars: ["IMA2_GROK_PROXY_HOST", "IMA2_GROK_PROXY_PORT"], configKey: "grokProvider" }],
+    credentials: [{ kind: "oauth", authFile: "~/.progrok/auth.json" }],
     models: [
       { id: "grok-imagine-image-2.0", kind: "image", supports: EDIT },
       { id: "grok-imagine-image", kind: "image", supports: EDIT },
