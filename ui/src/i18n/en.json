@@ -913,7 +913,10 @@
     "upscaleStart": "Start upscale",
     "upscaleStarted": "Upscale started",
     "upscaleFailed": "Upscale failed",
-    "upscaleInvalid": "Invalid upscale parameters"
+    "upscaleInvalid": "Invalid upscale parameters",
+    "editVideo": "Edit video",
+    "editVideoTitle": "Change this video with a prompt (grok-imagine-video)",
+    "editVideoPrompt": "What should change in this video? e.g. make the outfit red"
   },
   "session": {
     "switchTitle": "Switch session",

@@ -913,7 +913,10 @@
     "upscaleStart": "업스케일 시작",
     "upscaleStarted": "업스케일을 시작했습니다",
     "upscaleFailed": "업스케일 실패",
-    "upscaleInvalid": "업스케일 파라미터가 올바르지 않습니다"
+    "upscaleInvalid": "업스케일 파라미터가 올바르지 않습니다",
+    "editVideo": "영상 편집",
+    "editVideoTitle": "프롬프트로 이 영상을 수정합니다 (grok-imagine-video)",
+    "editVideoPrompt": "영상을 어떻게 바꿀까요? 예: 옷을 빨간색으로"
   },
   "session": {
     "switchTitle": "세션 전환",

@@ -913,7 +913,10 @@
     "upscaleStart": "開始高檔",
     "upscaleStarted": "高級開始",
     "upscaleFailed": "高檔失敗",
-    "upscaleInvalid": "無效的高檔參數"
+    "upscaleInvalid": "無效的高檔參數",
+    "editVideo": "編輯影片",
+    "editVideoTitle": "用提示詞修改此影片（grok-imagine-video）",
+    "editVideoPrompt": "想如何修改這段影片？例如：把衣服改成紅色"
   },
   "session": {
     "switchTitle": "切換會話",
