@@ -14,7 +14,7 @@ import { finishJob, INFLIGHT_RETRY_AFTER_SECONDS, isJobCanceled, isStartJobFailu
 import { makeGenerationCanceledError } from "../lib/generationCancel.js";
 import { publishJobEvent } from "../lib/ssePublish.js";
 import { normalizeBodyRequestId } from "../lib/generationInputValidation.js";
-import { normalizeGrokVideoModel, normalizeVideoAspectRatio, normalizeVideoDuration, normalizeVideoResolution, validateVideoResolutionForRequest } from "../lib/imageModels.js";
+import { MAX_VIDEO_DURATION, MIN_VIDEO_DURATION, normalizeGrokVideoModel, normalizeVideoAspectRatio, normalizeVideoDuration, normalizeVideoResolution, validateVideoResolutionForRequest } from "../lib/imageModels.js";
 import { persistVideoArtifact } from "../lib/videoArtifactPersistence.js";
 import { normalizeVideoLineage } from "../lib/videoLineage.js";
 import { getMotionFragment, MOTION_PRESETS } from "../lib/videoMotionPresets.js";
@@ -330,7 +330,13 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       if (!videoUrl || typeof videoUrl !== "string") return res.status(400).json({ error: "videoUrl required" });
       const validModel = validateEditModel(model);
       const dur = Number(duration);
-      if (!Number.isInteger(dur) || dur < 2 || dur > 10) return res.status(400).json({ error: "duration must be an integer between 2 and 10" });
+      // xAI documents 2-10 for extensions, but the endpoint accepts 1 and 11 and refuses
+      // only 0 and 16 — the same 1-15 bound as generation. Enforcing the documented range
+      // would refuse extensions the API would have produced.
+      // devlog/_plan/260908_xai_imagine_spec_resync/000_research.md (D11)
+      if (!Number.isInteger(dur) || dur < MIN_VIDEO_DURATION || dur > MAX_VIDEO_DURATION) {
+        return res.status(400).json({ error: `duration must be an integer between ${MIN_VIDEO_DURATION} and ${MAX_VIDEO_DURATION}` });
+      }
       const signal = requestSignal(req, res, envDeadline("IMA2_VIDEO_EXTEND_TIMEOUT_MS", 10 * 60_000));
       const { url, headers } = videoProxyUrl(ctx, "/v1/videos/extensions");
       const video = await resolveVideoInput(ctx, videoUrl);
