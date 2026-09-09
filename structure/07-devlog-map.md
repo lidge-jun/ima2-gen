@@ -124,7 +124,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260909_grok_native_oauth/` | wp1-wp5 implemented; PR stack #233-#237 open against dev. progrok proxy removed, grok lane calls api.x.ai with the stored xAI OAuth session, native `ima2 grok` CLI. Remaining: merge and the v3.16 release. | — |
+| `260909_grok_native_oauth/` | Shipped in v3.16.0 (release commit 7fa7d426). progrok proxy removed; the grok lane calls api.x.ai with the stored xAI OAuth session and `ima2 grok` is native. Receipt: 070_release_v3160.md. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 
 Open issue #150 (Provider Adapter v1 RFC) is tracked in `_plan/README.md` but
