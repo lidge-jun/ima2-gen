@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { abortJob, listJobs, listTerminalJobs } from "../lib/inflight.js";
 
 import { errInfo } from "../lib/errInfo.js";
+import { loadGrokCredentials } from "../lib/xaiAuth.js";
 import { requireRuntimeContext, type RouteRuntimeContext } from "../lib/runtimeContext.js";
 export function registerHealthRoutes(app: Express, ctxRaw: RouteRuntimeContext) {
   const ctx = requireRuntimeContext(ctxRaw);
@@ -17,11 +18,9 @@ export function registerHealthRoutes(app: Express, ctxRaw: RouteRuntimeContext) 
       url: ctx.oauthUrl,
       status: ctx.oauthReadyState,
     },
-    grok: {
-      configuredPort: Number(ctx.grokPort),
-      actualPort: Number(ctx.grokActualPort || ctx.grokPort),
-      url: ctx.grokUrl,
-    },
+    // Grok has no local endpoint any more: requests go to https://api.x.ai, so
+    // the only runtime fact worth publishing is whether a session exists.
+    grok: { auth: loadGrokCredentials(ctx.grokAuthHomeDir) ? "oauth" : "none" },
   });
 
   app.get("/api/providers", (_req: Request, res: Response) => {

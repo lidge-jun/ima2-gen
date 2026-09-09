@@ -6,10 +6,10 @@ import { MODEL_TRIGGER, PROVIDER_TRIGGER, openCreate, preflightJ6, requestObject
 
 const GROK_MESSAGE = "Grok API key is required for grok-api image generation";
 const COPY = {
-  en: { title: "Grok API key required", body: "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok proxy.", cta: "Open provider settings" },
-  ko: { title: "Grok API 키가 필요합니다", body: "설정 > 제공자에서 xAI API 키를 추가한 뒤 다시 시도하세요. 이 이미지 요청은 Grok 프록시로 전환되지 않습니다.", cta: "제공자 설정 열기" },
-  "zh-Hans": { title: "需要 Grok API 密钥", body: "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok 代理。", cta: "打开提供商设置" },
-  "zh-Hant": { title: "需要 Grok API 金鑰", body: "請在設定 > 供應商中新增 xAI API 金鑰，然後重試。此圖像請求不會改用 Grok 代理。", cta: "開啟供應商設定" },
+  en: { title: "Grok API key required", body: "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok OAuth lane.", cta: "Open provider settings" },
+  ko: { title: "Grok API 키가 필요합니다", body: "설정 > 제공자에서 xAI API 키를 추가한 뒤 다시 시도하세요. 이 이미지 요청은 Grok OAuth 경로로 전환되지 않습니다.", cta: "제공자 설정 열기" },
+  "zh-Hans": { title: "需要 Grok API 密钥", body: "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok OAuth 通道。", cta: "打开提供商设置" },
+  "zh-Hant": { title: "需要 Grok API 金鑰", body: "請在設定 > 供應商中新增 xAI API 金鑰，然後重試。此圖像請求不會改用 Grok OAuth 通道。", cta: "開啟供應商設定" },
 };
 const VARIANTS = {
   "grok-api-key-missing": { provider: "grok-api", model: "grok-imagine-image-2.0", status: 401,

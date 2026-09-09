@@ -55,7 +55,7 @@ sequenceDiagram
 | `ima2 doctor [--json] [--bundle] [--verify-keys] [--runtime <loopback-origin>]` | none | Fixed-code machine reports or human storage/auth checks; network verification is explicit and bounded | `bin/commands/doctor.ts`, `bin/lib/doctor-report.ts`, `bin/lib/doctor-providers.ts` |
 | `ima2 doctor --installation [--json]` | none | Early offline package/engine/native/UI/skill check, no config/account/network initialization | `bin/ima2.ts`, `bin/lib/doctor-runtime.ts` |
 | `ima2 open` | none | Open the web UI at the advertised or default port | `bin/ima2.ts`, `bin/lib/platform.ts` |
-| `ima2 grok login/status/models/proxy` | none | Manage bundled progrok auth and model/status probes for `provider: "grok"` | `bin/commands/grok.ts`, `routes/grok.ts` |
+| `ima2 grok login/status/logout` | none | Manage the xAI OAuth session (device code) used by `provider: "grok"`, with an optional `status --probe` model check | `bin/commands/grok.ts`, `routes/grok.ts` |
 | `ima2 reset` | none | Reset `~/.ima2/config.json` to an empty object | `bin/ima2.ts` |
 | `ima2 --version` | `-v` | Print the package version | `bin/ima2.ts`, `package.json` |
 | `ima2 --help` | `-h` | Print top-level help | `bin/ima2.ts` |
@@ -131,7 +131,7 @@ with `MODEL_NOT_FOUND` while an all-offline lane fails with
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Override server discovery |
 | `--model <id>` | `gpt-5.6-luna` | Image model: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
-| `--provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api`/`atlascloud`/`minimax`/`nai` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI; `nai` is text-to-image only. The enum is derived from `lib/providers/registry.ts`, so it is never hand-maintained in code. |
+| `--provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api`/`atlascloud`/`minimax`/`nai` require configured keys; `grok` uses the xAI OAuth session (device code); `agy` shells out to local `agy` CLI; `nai` is text-to-image only. The enum is derived from `lib/providers/registry.ts`, so it is never hand-maintained in code. |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
 | `--reasoning-effort <none|low|medium|high|xhigh>` | server default | Reasoning effort hint for prompt-aware models |
@@ -140,7 +140,7 @@ with `MODEL_NOT_FOUND` while an all-offline lane fails with
 
 Web-search note: `--web-search` and `--no-web-search` set the request-level `webSearchEnabled` field. For `provider: "api"`, the request still respects the global API-provider gate (`IMA2_API_ALLOW_WEB_SEARCH` / `apiProvider.allowWebSearch`); a globally disabled API web-search setting cannot be re-enabled by one CLI call.
 
-Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the bundled progrok xAI path, `nai` forces the NovelAI image API (text-to-image only — `--ref` is refused with `NAI_REF_UNSUPPORTED` rather than dropped), and `auto` preserves route default behavior on the legacy `edit`/`multimode`/`node` surface. `ima2 gen` removed `auto` and exits 2 with `PROVIDER_AUTO_REMOVED`. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.5` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
+Provider override semantics: `api` forces the API-key Responses path, `oauth` forces the local OAuth proxy path, `grok` forces the xAI path with the stored OAuth session, `nai` forces the NovelAI image API (text-to-image only — `--ref` is refused with `NAI_REF_UNSUPPORTED` rather than dropped), and `auto` preserves route default behavior on the legacy `edit`/`multimode`/`node` surface. `ima2 gen` removed `auto` and exits 2 with `PROVIDER_AUTO_REMOVED`. Grok Classic and Node route through mandatory xAI Web Search, `grok-4.5` planning, and xAI Images API; requests with references use xAI `/v1/images/edits` to preserve image-to-image context.
 
 NovelAI native options are shared by `gen`, `multimode`, and `node generate`:
 
@@ -189,7 +189,7 @@ with one image/frame source. Ref2V/multi-ref, edit, and extension remain base-mo
 | `--timeout <sec>` | `180` | HTTP request timeout |
 | `--server <url>` | auto-discovered | Target server URL |
 | `--model <id>` | `gpt-5.6-luna` | Image model: `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `grok-imagine-image`, `grok-imagine-image-quality`, or server-rejected `gpt-5.3-codex-spark` |
-| `--provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api`/`atlascloud`/`minimax`/`nai` require configured keys; `grok` uses bundled progrok OAuth; `agy` shells out to local `agy` CLI; `nai` is text-to-image only. The enum is derived from `lib/providers/registry.ts`, so it is never hand-maintained in code. |
+| `--provider <oauth|api|grok|grok-api|agy|gemini-api|atlascloud|minimax|nai|comfy|runway|higgsfield>` | server default | Per-request provider override; `api`/`grok-api`/`gemini-api`/`atlascloud`/`minimax`/`nai` require configured keys; `grok` uses the xAI OAuth session (device code); `agy` shells out to local `agy` CLI; `nai` is text-to-image only. The enum is derived from `lib/providers/registry.ts`, so it is never hand-maintained in code. |
 | `--mode <auto|direct>` | `auto` | Prompt handling mode |
 | `--moderation <auto|low>` | `low` | OAuth moderation level |
 | `--reasoning-effort <none|low|medium|high|xhigh>` | server default | Reasoning effort hint for prompt-aware models |

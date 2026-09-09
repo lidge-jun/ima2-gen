@@ -1,11 +1,14 @@
 import { after, afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 const isolation = await isolateExecution();
+// These legacy adapter calls resolve the OAuth `grok` credential from ~/.progrok/auth.json.
+const grokAuth = seedGrokAuth();
 const { imageTransport } = isolation;
 const deniedFetch = globalThis.fetch;
-after(async () => { await isolation.close(); });
+after(async () => { try { await isolation.close(); } finally { grokAuth.cleanup(); } });
 afterEach(async () => {
   try {
     await imageTransport.deactivate();
@@ -46,14 +49,13 @@ function ctx(overrides: Record<string, unknown> = {}) {
       ...config,
       grokProvider: {
         ...config.grokProvider,
-        proxyHost: "127.0.0.1",
-        proxyPort: 18645,
         plannerModel: "grok-4.3",
         plannerTimeoutMs: 10_000,
         generationTimeoutMs: 10_000,
       },
     },
     packageVersion: "test",
+    grokAuthHomeDir: grokAuth.homeDir,
     ...overrides,
   } as any;
 }
@@ -173,10 +175,7 @@ describe("Grok planner adapter", () => {
     }) as typeof fetch;
 
     activateImageTransport();
-    const result = await generateViaGrok("raw prompt", ctx({
-      grokActualPort: 18647,
-      grokUrl: "http://127.0.0.1:18647/v1",
-    }), {
+    const result = await generateViaGrok("raw prompt", ctx(), {
       model: "grok-imagine-image-quality",
       size: "2048x1152",
       requestId: "req_test",
@@ -185,7 +184,8 @@ describe("Grok planner adapter", () => {
 
     const searchCalls = webSearchEnabled === false ? 0 : 1;
     assert.equal(calls.length, searchCalls + 3);
-    assert.equal(calls.slice(0, searchCalls + 2).every((call) => call.url.startsWith("http://127.0.0.1:18647/")), true);
+    // Search, planner and generation all leave for the direct xAI origin.
+    assert.equal(calls.slice(0, searchCalls + 2).every((call) => call.url.startsWith("https://api.x.ai/")), true);
     assert.equal(calls.filter((call) => call.url.endsWith("/v1/responses")).length, searchCalls);
     if (searchCalls) {
       assert.equal(calls[0].url.endsWith("/v1/responses"), true);

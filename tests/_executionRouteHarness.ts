@@ -9,6 +9,7 @@ import type { RuntimeContext } from "../lib/runtimeContext.ts";
 import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
 import { bounded, drain, installTrackedWrites, PromiseTracker, SettlementTimeout } from "./_executionTrackedWrites.ts";
 import { listenOwnedLoopback, type ImageTransportFixture } from "./_grokImageTransportFixture.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 export type Surface = "classic" | "node" | "multimode" | "edit";
 export interface UpstreamCall {
@@ -120,11 +121,14 @@ export async function openRouteHarness(): Promise<RouteHarness> {
   const isolation = await isolateExecution();
   let restoreWrites: (() => void) | undefined;
   let modules: Awaited<ReturnType<typeof loadRuntime>>;
+  // The `grok` lane reads ~/.progrok/auth.json. Seed an isolated HOME once per harness so
+  // no case can reach the developer's real xAI session or its live token endpoint.
+  const grokAuth = seedGrokAuth();
   try {
     restoreWrites = await installTrackedWrites();
     modules = await loadRuntime(isolation.rootDir);
   } catch (error) {
-    try { restoreWrites?.(); } finally { await isolation.close(); }
+    try { restoreWrites?.(); } finally { grokAuth.cleanup(); await isolation.close(); }
     throw error;
   }
   let sequence = 0;
@@ -161,7 +165,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
     isolation.imageTransport.activate({ hosts: imageHosts, respond: upstream });
     const ctx = modules.runtime.createTestRuntimeContext({
       apiKey: "sk-execution-fixture", oauthReadyState: "ready", oauthUrl: "http://oauth-fixture.invalid",
-      grokUrl: "http://grok-fixture.invalid/v1", ...options.context,
+      grokAuthHomeDir: grokAuth.homeDir, ...options.context,
       rootDir: isolation.rootDir,
       config: { ...modules.config, storage: { ...modules.config.storage, generatedDir } },
     });
@@ -241,7 +245,7 @@ export async function openRouteHarness(): Promise<RouteHarness> {
       failure = error;
     }
     try { modules.db.closeDb(); restoreWrites?.(); }
-    finally { await isolation.close(); closed = true; }
+    finally { grokAuth.cleanup(); await isolation.close(); closed = true; }
     if (failure) throw failure;
   } };
 }

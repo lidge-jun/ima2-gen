@@ -1,0 +1,6 @@
+before expiresAt 1788858729834 expired: true
+fetch https://auth.x.ai/oauth2/token POST
+token refreshed: true same across 3 concurrent: true
+after expiresAt 1788912601531 valid: true refreshToken rotated: true
+token fetch calls: 1
+GET /v1/models 200 imagine models: grok-imagine-image,grok-imagine-image-2.0,grok-imagine-image-quality,grok-imagine-video,grok-imagine-video-1.5

@@ -1,0 +1,17 @@
+== boot without a session ==
+health.grok None
+{"status":"offline","reason":"login_required"}
+models.lanes.grok disconnected Grok login required
+2:Provider policy: GPT OAuth, API-key Responses, and Grok (xAI OAuth or API key) providers. GPT OAuth proxy port 10531.
+== boot with an expired real session copied in ==
+health.grok None
+grok/status ready ['\''grok-imagine-image'\'', '\''grok-imagine-image-2.0'\'', '\''grok-imagine-image-quality'\'']
+file refreshed: True
+done
+
+
+== corrected health key (payload nests under runtime.grok) ==
+no session: health.runtime.grok = {'auth': 'none'}
+with session: health.runtime.grok = {'auth': 'oauth'}
+done
+

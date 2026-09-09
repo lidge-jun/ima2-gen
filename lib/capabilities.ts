@@ -180,9 +180,10 @@ export function buildIma2Capabilities({
           ],
           presetsAreAuthoritative: false,
           // Named by the 400 itself: "Custom voice ids created via the /v1/custom-voices
-          // API are also accepted." The endpoint answers 200 with a 30-voice cap that is
-          // documented nowhere else.
+          // API are also accepted." GET on that endpoint answers 200 with {voices, total_count,
+          // cap: 30}; the cap appears in no document, so the endpoint is its own source.
           customVoiceApi: "/v1/custom-voices",
+          customVoiceCap: 30,
         },
         // Which model takes a video in, and which takes audio in. The two split on input
         // modality, so there is no path that edits a video on 1.5 — it answers 400.

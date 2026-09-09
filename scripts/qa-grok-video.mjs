@@ -8,7 +8,8 @@
 //            validated with ffprobe; I2V additionally asserts the output's
 //            first frame preserves the source image (dHash hamming distance).
 //
-// The smoke stage targets an ALREADY-RUNNING server (ima2 serve, with progrok).
+// The smoke stage targets an ALREADY-RUNNING server (ima2 serve, signed in to
+// xAI via `ima2 grok login`).
 // Base URL is auto-detected from the advertise file, or pass --base-url.
 //
 // Usage:
@@ -169,16 +170,16 @@ async function runSmokeStage(args, evidence) {
   const dir = config.storage.generatedDir;
   console.log(info(`  base-url: ${baseUrl}`));
 
-  // Preflight: server reachable + grok proxy open.
+  // Preflight: server reachable + Grok credentials usable.
   try {
     const grok = await fetch(`${baseUrl}/api/grok/status`).then((r) => r.json());
     if (!grok || grok.status !== "ready") {
-      throw new Error(`grok proxy not ready: ${JSON.stringify(grok)}`);
+      throw new Error(`grok lane not ready: ${JSON.stringify(grok)}`);
     }
-    console.log(ok(`grok proxy reachable (status=${grok.status})`));
+    console.log(ok(`grok lane reachable (status=${grok.status})`));
   } catch (e) {
     console.log(bad(`preflight: ${e.message}`));
-    console.log(info("  Start the server first: `ima2 serve` (progrok auto-starts). Then re-run --stage=smoke."));
+    console.log(info("  Start the server first: `ima2 serve`, and sign in with `ima2 grok login`. Then re-run --stage=smoke."));
     return false;
   }
 

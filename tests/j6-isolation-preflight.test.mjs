@@ -93,10 +93,10 @@ function fakeFallbackNet(outcome = "ECONNREFUSED") {
   } } };
 }
 
-test("J6 probes only four fallback targets and destroys every refused synthetic socket", async () => {
+test("J6 probes only the two fallback targets and destroys every refused synthetic socket", async () => {
   const fixture = fakeFallbackNet();
   const proof = await load(host(), fixture).assertJ6FallbackPorts();
-  const targets = ["127.0.0.1", "::1"].flatMap((host) => [10531, 18645].map((port) => ({ host, port })));
+  const targets = ["127.0.0.1", "::1"].map((host) => ({ host, port: 10531 }));
   assert.deepEqual(proof, targets.map((target) => ({ ...target, outcome: "ECONNREFUSED" })));
   assert.deepEqual(fixture.calls, targets.map((target) => ({ ...target, timeout: 750, destroyed: true })));
 });
@@ -105,7 +105,7 @@ test("J6 refuses listeners, timeouts and unexpected socket errors without startu
   for (const [outcome, message] of [["connect", /fallback listener/], ["timeout", /probe timeout/], ["EACCES", /EACCES/]]) {
     const fixture = fakeFallbackNet(outcome);
     await assert.rejects(load(host(), fixture).startApp("minimax", { j6: true }), message);
-    assert.equal(fixture.calls.length, 4);
+    assert.equal(fixture.calls.length, 2);
     assert.ok(fixture.calls.every((call) => call.destroyed));
   }
 });
@@ -219,7 +219,8 @@ test("actual J6 startApp binds an emitted projection, IPC and allowlisted child 
     assert.equal(options.cwd, projection.root);
     assert.equal(options.stdio.at(-1), "ipc");
     for (const name of ["AZURE_EXTENSION_DIR", "XDG_CONFIG_HOME", "HOME", "NODE_OPTIONS"]) assert.equal(Object.hasOwn(options.env, name), false);
-    assert.equal(options.env.IMA2_NO_OAUTH_PROXY, "1"); assert.equal(options.env.IMA2_NO_GROK_PROXY, "1");
+    assert.equal(options.env.IMA2_NO_OAUTH_PROXY, "1");
+    assert.equal(Object.hasOwn(options.env, "IMA2_NO_GROK_PROXY"), false);
     assert.equal(options.env.IMA2_MCP_PROVIDERS, ",");
     assert.equal(options.env.IMA2_E2E_POLICY, projection.policyPath);
     assert.equal(Object.hasOwn(options, "shell"), false);

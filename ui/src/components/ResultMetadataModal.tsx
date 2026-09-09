@@ -20,7 +20,7 @@ type Section = {
 const PROVIDER_LABELS: Record<string, string> = {
   oauth: "GPT OAuth / Codex login",
   api: "GPT API key",
-  grok: "Grok OAuth / progrok",
+  grok: "Grok OAuth",
   "grok-api": "Grok API key",
   agy: "Antigravity Gemini CLI",
   "gemini-api": "Gemini API / Vertex",

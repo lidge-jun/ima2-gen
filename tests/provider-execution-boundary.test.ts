@@ -205,8 +205,8 @@ if (executionTestProcess(import.meta.url)) {
       await prepared.execute(); await prepared.execute();
       const executions = probe.calls.filter((call) => call.name !== "planGrokImage");
       assert.equal(executions.length, 2);
-      for (const call of executions) assert.equal((call.args.at(-1) as Record<string, unknown>).directApiKey,
-        surface === "classic" || surface === "node" ? "initial-invented-key" : "replacement-invented-key");
+      for (const call of executions) assert.deepEqual((call.args.at(-1) as Record<string, unknown>).credential,
+        { kind: "api-key", key: surface === "classic" || surface === "node" ? "initial-invented-key" : "replacement-invented-key" });
       probe.ctx.xaiApiKey = undefined;
       await assert.rejects(prepared.execute(), { code: "GROK_API_KEY_MISSING", status: 401 });
       assert.equal(probe.calls.filter((call) => call.name !== "planGrokImage").length, 2);

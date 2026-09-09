@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { getUiDistBuildStatus } from "./ui-build.js";
 import type { DoctorCheckLine } from "./doctor-checks.js";
 
-const RUNTIME_DEPENDENCIES = ["express", "better-sqlite3", "openai", "openai-oauth", "progrok/package.json", "@openai/codex/package.json", "zod"];
+const RUNTIME_DEPENDENCIES = ["express", "better-sqlite3", "openai", "openai-oauth", "@openai/codex/package.json", "zod"];
 const REQUIRED_BINS = [["openai-oauth", "openai-oauth"], ["@openai/codex", "codex"]] as const;
 const line = (code: string, kind: DoctorCheckLine["kind"], text: string): DoctorCheckLine => ({ code, kind, text, evidence: "local" });
 

@@ -85,8 +85,8 @@ Use request-level overrides only for that one call:
 ima2 gen "cinematic mountain" --model oauth/gpt-5.5 --reasoning-effort high
 ```
 
-Use Grok when the request should run through bundled progrok, mandatory xAI Web
-Search, planner pass (default: `grok-4.3`), and xAI Images API:
+Use Grok when the request should run through the stored xAI OAuth session,
+mandatory xAI Web Search, planner pass (default: `grok-4.3`), and xAI Images API:
 
 ```bash
 ima2 grok login

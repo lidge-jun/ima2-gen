@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-09-02
+updated: 2026-09-09
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -124,7 +124,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
+| `260909_grok_native_oauth/` | wp1-wp5 implemented; PR stack #233-#237 open against dev. progrok proxy removed, grok lane calls api.x.ai with the stored xAI OAuth session, native `ima2 grok` CLI. Remaining: merge and the v3.16 release. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 
 Open issue #150 (Provider Adapter v1 RFC) is tracked in `_plan/README.md` but

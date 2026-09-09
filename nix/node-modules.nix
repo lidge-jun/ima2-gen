@@ -18,18 +18,20 @@
   src,
 }:
 let
-  # progrok is vendored as `file:vendor/progrok-0.1.1.tgz` (a bundleDependency).
-  # importNpmLock resolves a `file:` entry as `npmRoot + "/" + resolved`, which
-  # keeps the literal `file:` prefix and points outside the tree. Strip it so it
-  # resolves to the committed tgz; npm then installs it by extraction.
-  # (buildNodeModules does not forward packageSourceOverrides, so patch the lock.)
+  # openai-oauth is vendored as `file:vendor/openai-oauth-<version>.tgz` (a
+  # bundleDependency). importNpmLock resolves a `file:` entry as
+  # `npmRoot + "/" + resolved`, which keeps the literal `file:` prefix and points
+  # outside the tree. Strip it so it resolves to the committed tgz; npm then
+  # installs it by extraction. (buildNodeModules does not forward
+  # packageSourceOverrides, so patch the lock.) Every `file:` entry is patched so
+  # adding or removing a vendored tarball needs no change here.
   rootLock = lib.importJSON (src + "/package-lock.json");
+  stripFilePrefix = entry:
+    if entry ? resolved && lib.hasPrefix "file:" entry.resolved
+    then entry // { resolved = lib.removePrefix "file:" entry.resolved; }
+    else entry;
   patchedRootLock = rootLock // {
-    packages = rootLock.packages // {
-      "node_modules/progrok" = rootLock.packages."node_modules/progrok" // {
-        resolved = lib.removePrefix "file:" rootLock.packages."node_modules/progrok".resolved;
-      };
-    };
+    packages = lib.mapAttrs (_: stripFilePrefix) rootLock.packages;
   };
 in
 {

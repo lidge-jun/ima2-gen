@@ -7,7 +7,7 @@ import { join } from "node:path";
 import type { VideoExtendedDependencies } from "../routes/videoExtended.js";
 import type { BusEvent } from "../lib/eventBus.js";
 import { executionTestProcess } from "./_executionTestProcess.ts";
-import { openVideoFixture } from "./_videoExecutionFixture.ts";
+import { GROK_DIRECT_ORIGIN, openVideoFixture } from "./_videoExecutionFixture.ts";
 import { fakeMp4Bytes as fakeMp4, makeVideoStreamFixture } from "./_videoStreamFixture.ts";
 import { bounded, SettlementTimeout } from "./_executionTrackedWrites.ts";
 
@@ -58,16 +58,17 @@ function successfulGenerator(capture?: (prompt: string, options: any) => void) {
   };
 }
 
-async function makeApp(dir: string, dependencies: VideoExtendedDependencies = {}, proxyPort = 18645) {
+async function makeApp(dir: string, dependencies: VideoExtendedDependencies = {}) {
   const config = fixture.config;
   const app = express();
   fixture.trackApp(app);
   app.use(express.json());
   registerVideoExtendedRoutes(app, {
     rootDir: fixture.root, packageVersion: "test",
+    grokAuthHomeDir: fixture.grokAuthHomeDir,
     config: {
       ...config, ids: { ...config.ids, generatedHexBytes: 2 }, storage: { ...config.storage, generatedDir: dir },
-      grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
+      grokProvider: { ...config.grokProvider, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
     },
   }, dependencies);
   const server = createServer(app);
@@ -384,8 +385,8 @@ function defaultUpstream(stream: ReturnType<typeof makeVideoStreamFixture>) {
       assert.equal(call.headers.get("authorization"), null);
       return stream.response;
     }
-    assert.equal(url.origin, "http://127.0.0.1:18645");
-    assert.equal(call.headers.get("authorization"), "Bearer dummy");
+    assert.equal(url.origin, GROK_DIRECT_ORIGIN);
+    assert.equal(call.headers.get("authorization"), fixture.grokBearer);
     if (url.pathname === "/v1/videos/real-child") {
       assert.equal(call.method, "GET"); assert.equal(call.body, "");
       return Response.json({ status: "done", video: { url: "https://artifact.fixture.invalid/child.mp4", duration: 1, respect_moderation: true } });

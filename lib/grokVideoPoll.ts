@@ -11,6 +11,7 @@
 import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { grokError } from "./grokImageCore.js";
 import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
+import type { GrokCredential } from "./grokRuntime.js";
 import {
   FAILED_CODE_MAP,
   STALE_PROGRESS_MS,
@@ -39,10 +40,10 @@ export async function pollVideoOnce(
   ctx: RouteRuntimeContext,
   requestId: string,
   signal?: AbortSignal,
-  directApiKey?: string,
+  credential?: GrokCredential,
 ): Promise<GrokVideoPollResult> {
   const cfg = videoConfig(ctx);
-  const { url, headers } = videoEndpoint(ctx, `/v1/videos/${requestId}`, directApiKey);
+  const { url, headers } = videoEndpoint(ctx, `/v1/videos/${requestId}`, credential);
   const { combinedSignal, timer } = withTimeoutSignal(signal, cfg.startTimeoutMs);
   try {
     const res = await grokFetchWithRetry(
@@ -88,7 +89,7 @@ export async function pollVideoUntilDone(
     if (Date.now() > deadline) throw grokError("Grok video poll budget exceeded", 504, "GROK_VIDEO_TIMEOUT");
     let poll: GrokVideoPollResult;
     try {
-      poll = await pollVideoOnce(ctx, requestId, options.signal, options.directApiKey);
+      poll = await pollVideoOnce(ctx, requestId, options.signal, options.credential);
       consecutiveErrors = 0;
     } catch (e: any) { // justified: grokError attaches code/status at runtime
       // The upstream job outlives a transient poll failure, so a blip must not discard a

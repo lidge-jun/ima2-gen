@@ -1,5 +1,6 @@
 import type { RouteRuntimeContext, RuntimeContext } from "./runtimeContext.js";
 import type { GrokVideoEvent, GrokVideoGenerateResult, GrokVideoOptions } from "./grokVideoAdapter.js";
+import { resolveGrokCredential } from "./grokRuntime.js";
 import type { persistVideoArtifact } from "./videoArtifactPersistence.js";
 import { appendVideoContinuityEntry, lineageFromVideoMetadata } from "./videoContinuity.js";
 import { deriveChildVideoLineage } from "./videoLineage.js";
@@ -61,11 +62,14 @@ export async function runLastFrameI2v(task: LastFrameI2vTask): Promise<void> {
       });
     };
     const compiledPrompt = motion.fragment ? `${prompt}\n\nCamera motion: ${motion.fragment}.` : prompt;
+    // Resolved before the generate call so a missing key or an expired session fails here,
+    // as a normal job error, instead of midway through the provider request.
+    const credential = await resolveGrokCredential(ctx, provider, { signal: cancelController.signal });
     const result = await generateVideo(compiledPrompt, ctx, {
       model, mode: "image-to-video", duration, resolution, aspectRatio,
       sourceImage, sourceMime: "image/png", signal: cancelController.signal,
       requestId, continuityLineage: parentContinuity,
-      directApiKey: provider === "grok-api" ? ctx.xaiApiKey ?? undefined : undefined,
+      credential,
       onEvent,
     });
     if (cancelController.signal.aborted) throw makeGenerationCanceledError();

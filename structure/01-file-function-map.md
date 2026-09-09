@@ -65,7 +65,7 @@ routes/
   keys.ts               GET/PUT/DELETE /api/keys/:provider, /api/keys/vertex
   auth.ts               POST /api/auth/switch, GET /api/auth/switch/:sessionId
   quota.ts              GET /api/quota
-  grok.ts               GET /api/grok/status + progrok helpers
+  grok.ts               GET /api/grok/status (live api.x.ai probe with the stored xAI session)
   agy.ts                GET /api/agy/status + Antigravity CLI bridge
   prompts.ts            prompt CRUD/folders/import/export
   promptImport.ts       curated/discovery/folder/preview/commit import routes
@@ -79,28 +79,28 @@ routes/
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `server.ts` | 613 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
-| `config.ts` | 532 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
+| `server.ts` | 570 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
+| `config.ts` | 523 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 93 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 47 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
 | `routes/generate.ts` | 13 | Classic generation API route wiring |
 | `routes/edit.ts` | 416 | Edit API, mask validation, cancellation, OAuth/API edit response save, alpha verification (alphaVerified/alphaReason), provider/web-search/reasoning-effort plumbing |
 | `routes/multimode.ts` | 10 | `POST /api/generate/multimode` route wiring |
-| `routes/video.ts` | 679 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
-| `routes/videoExtended.ts` | 468 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
+| `routes/video.ts` | 684 | `POST /api/video/generate` SSE: Grok video T2V/I2V/Ref2V, active prompt guard, continuation lineage, sidecar persistence |
+| `routes/videoExtended.ts` | 487 | Video edit, extension, frame extraction, and configured-planner first/last-frame analysis (Grok 4.5 default) |
 | `routes/nodes.ts` | 28 | Node generation and node fetch route wiring |
 | `routes/sessions.ts` | 318 | SQLite-backed session list/load/save/rename/delete, style-sheet get/put/enable/extract, graph save |
 | `routes/history.ts` | 234 | History list, cursor pagination, favorites-only filtering, grouped gallery, soft delete (OS trash), restore, gallery favorite toggle, permanent delete |
 | `routes/imageImport.ts` | 38 | `POST /api/history/import-local` raw image upload (PNG/JPEG/WebP) — Phase 10 drop-import for Canvas |
-| `routes/health.ts` | 125 | Providers, health, OAuth status, inflight list/cancel for classic/node/multimode jobs, billing |
+| `routes/health.ts` | 124 | Providers, health, OAuth status, inflight list/cancel for classic/node/multimode jobs, billing |
 | `routes/mcpConnections.ts` | 164 | MCP provider list/status/connect/callback/refresh/disconnect/model routes; truthful state-to-HTTP mapping and secret-free responses |
 | `routes/storage.ts` | 48 | Gallery storage status and generated-folder open action |
 | `routes/metadata.ts` | 81 | `/api/metadata/read` for embedded XMP image metadata extraction |
 | `routes/annotations.ts` | 119 | `GET/PUT/DELETE /api/annotations/:filename` for canvas annotation overlays |
 | `routes/canvasVersions.ts` | 100 | `POST/PUT /api/canvas-versions` for canvas version snapshots |
 | `routes/comfy.ts` | 222 | Comfy workflow inspect/register/list/delete/probe plus `POST /api/comfy/export-image`; media-kind inference and mismatch validation |
-| `routes/models.ts` | 561 | Canonical runtime model catalog; Comfy image/video workflow partition and model-level execution locks |
+| `routes/models.ts` | 546 | Canonical runtime model catalog; Comfy image/video workflow partition and model-level execution locks |
 | `routes/prompts.ts` | 429 | Prompt library CRUD, favorites, import/export, and folder management |
 | `routes/promptImport.ts` | 380 | Prompt library preview/commit import API plus PR2 curated search, PR3 GitHub folder browse/preview, and PR4 discovery review endpoints |
 | `routes/cardNews.ts` | 213 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
@@ -134,7 +134,7 @@ routes/
 | `bin/commands/config.ts` | 194 | CLI config get/set client |
 | `bin/commands/observability.ts` | 177 | Shared CLI handler for `storage`, `billing`, `providers`, `oauth`, and `inflight` aliases (`ima2.ts` routes those commands here) |
 | `bin/commands/doctor.ts` | 310 | CLI diagnostics: storage, OAuth, providers, image probe |
-| `bin/commands/grok.ts` | 91 | Grok OAuth login and status helpers |
+| `bin/commands/grok.ts` | 194 | Grok OAuth login and status helpers |
 | `bin/commands/defaults.ts` | 270 | CLI default provider/model/size/reasoning-effort get/set |
 | `bin/commands/capabilities.ts` | 143 | CLI wrapper for `GET /api/capabilities` |
 | `bin/commands/skill.ts` | 402 | CLI packaged-skill reader: `skill [ls|<name>] [path] [--json]` over KNOWN_SKILLS (ima2/front/uiux) |
@@ -179,9 +179,9 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/videoContinuity.ts` | 193 | Video active-prompt guard, generated video sidecar lineage read/normalize/append, max-4 continuity retention, planner context formatting |
 | `lib/videoFrameExtract.ts` | 100 | Generated-dir-safe MP4 validation and ffmpeg frame extraction for video frame/analyze/continue workflows |
 | `lib/videoGenerationRequest.ts` | 166 | Shared generate-request contract: mode inference, mutually-exclusive source guard, and duration/resolution/aspect defaults for UI, CLI, agent, and route |
-| `lib/grokVideoAdapter.ts` | 503 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
-| `lib/grokVideoShared.ts` | 161 | Shared Grok video types, config, endpoint, and timeout helpers keeping the adapter/poll dependency one-way |
-| `lib/grokVideoPoll.ts` | 117 | Grok video status polling with transient-failure tolerance so a network blip cannot discard a long render |
+| `lib/grokVideoAdapter.ts` | 519 | Grok video planner and xAI video generation adapter, including continuity-aware prompt planning and model fallback metadata |
+| `lib/grokVideoShared.ts` | 153 | Shared Grok video types, config, endpoint, and timeout helpers keeping the adapter/poll dependency one-way |
+| `lib/grokVideoPoll.ts` | 118 | Grok video status polling with transient-failure tolerance so a network blip cannot discard a long render |
 | `lib/localImportStore.ts` | 115 | Validates raw PNG/JPEG/WebP body, writes timestamped `imported-*` to generated/, embeds XMP metadata, returns GenerateItem-shaped row |
 | `lib/storageMigration.ts` | 311 | Legacy generated-folder scan and migration support |
 | `lib/runtimePorts.ts` | 106 | Port probing, fallback binding, and OAuth ready URL parsing |
@@ -217,7 +217,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/providers/adapters/openaiOperations.ts` | 235 | Actual OpenAI generate/edit/multimode operation bodies and reference normalization |
 | `lib/providers/adapters/openaiExecution.ts` | 142 | Typed four-surface OpenAI owner, classic retry and native callback/result mapping |
 | `lib/providerOptions.ts` | 161 | Per-provider option assembly; rejects catalog-only Comfy video workflows on the classic image path |
-| `lib/runtimeContext.ts` | 234 | Per-request runtime context plumbing for routes and lib helpers |
+| `lib/runtimeContext.ts` | 220 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
 | `lib/oauthNormalize.ts` | 31 | Upstream OAuth response field normalization |
 | `lib/openDirectory.ts` | 48 | Cross-platform open of the generated directory (used by `/api/storage/open-generated-dir`) |
@@ -233,11 +233,11 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/naiZip.ts` | 153 | Minimal ZIP reader for NovelAI responses: stored/deflate entries, ZIP64 and encryption refusal, 50MB entry cap |
 | `lib/providers/adapters/nai.ts` | 142 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
 | `lib/providers/registry.ts` | 287 | Provider lane manifests: the single declaration every generated catalog, capability list, and CLI enum derives from |
-| `lib/providers/types.ts` | 87 | Manifest/credential types, explicit model generation support, and provider surface records |
+| `lib/providers/types.ts` | 95 | Manifest/credential types, explicit model generation support, and provider surface records |
 | `lib/providers/derive.ts` | 97 | Registry-bound provider IDs, catalogs, reference limits and surface support |
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
-| `lib/providers/execution/admission.ts` | 38 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
+| `lib/providers/execution/admission.ts` | 53 | Missing direct-Grok key and unsupported NAI multimode-ref checks; no provider probing |
 | `lib/providers/execution/index.ts` | 36 | Public prepare/execute facade with current direct-key presence checks |
 | `lib/providers/execution/legacy.ts` | 31 | Four-surface Atlas/MiniMax/NAI/Comfy dispatcher; OpenAI/Grok/Google excluded |
 | `lib/providers/execution/legacyClassic.ts` | 15 | Remaining-provider classic dispatch with preserved prepare-time capture |
@@ -271,7 +271,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/assetsStore.ts` | 533 | Generated asset indexing, lookup, and persistence helpers |
 | `lib/assetRef.ts` | 57 | Asset-id-first reference resolution with legacy filename fallback and `via` provenance for generate requests |
 | `lib/atomicWrite.ts` | 16 | Atomic file-write helper |
-| `lib/capabilities.ts` | 253 | Runtime provider and feature capability resolution |
+| `lib/capabilities.ts` | 254 | Runtime provider and feature capability resolution |
 | `lib/characterBindings.ts` | 112 | Character provider binding validation, refs preservation guard, and drift detection |
 | `lib/composerSnapshot.ts` | 34 | Composer state snapshot normalization |
 | `lib/configKeys.ts` | 79 | Runtime configuration key definitions and validation |
@@ -280,22 +280,23 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/providers/adapters/geminiOperations.ts` | 265 | Actual public/Vertex image payload, auth selection and unchanged native response/error handling |
 | `lib/generationCancel.ts` | 29 | Shared generation cancellation helpers |
 | `lib/generationInputValidation.ts` | 46 | Shared generation request input validation |
-| `lib/grokImageCore.ts` | 194 | Shared Grok image request and response handling |
-| `lib/grokImagePlanner.ts` | 353 | Actual Grok search/planner operations, payload builders and plan parser |
-| `lib/providers/adapters/grokExecution.ts` | 124 | Four-surface Grok/proxy and direct execution, captured keys and search forwarding |
-| `lib/providers/adapters/grokOperations.ts` | 99 | Actual generate/edit operations with scoped artifact-origin policy |
-| `lib/providers/adapters/grokMultimodeOperations.ts` | 124 | Ordered per-image planning and sparse original-index result identity |
+| `lib/grokImageCore.ts` | 186 | Shared Grok image request and response handling |
+| `lib/grokImagePlanner.ts` | 368 | Actual Grok search/planner operations, payload builders and plan parser |
+| `lib/providers/adapters/grokExecution.ts` | 125 | Four-surface Grok/proxy and direct execution, captured keys and search forwarding |
+| `lib/providers/adapters/grokOperations.ts` | 109 | Actual generate/edit operations with scoped artifact-origin policy |
+| `lib/providers/adapters/grokMultimodeOperations.ts` | 126 | Ordered per-image planning and sparse original-index result identity |
 | `lib/grokImageDownloadPolicy.ts` | 128 | Conservative address policy, exact-origin exception and abort-aware pinned DNS resolution |
 | `lib/grokImageDownload.ts` | 153 | Grok redirect trust, overall deadline, bounded streamed image body and cleanup |
 | `lib/pinnedHttpGet.ts` | 173 | Shared validated-address GET lifecycle, public redirect handling and bounded text bodies |
 | `lib/grokMultimodeAdapter.ts` | 6 | Compatibility re-exports of actual Grok multimode operation/type |
-| `lib/grokProxyLauncher.ts` | 326 | Grok proxy process startup and readiness helpers |
-| `lib/grokRuntime.ts` | 28 | Grok runtime configuration helpers |
+| `lib/grokRuntime.ts` | 94 | Grok transport: api.x.ai endpoint, per-lane credential resolution, single 401 refresh replay |
+| `lib/xaiDeviceLogin.ts` | 209 | Stateless xAI device-code login used by the CLI when no server is running |
+| `lib/xaiAuth.ts` | 464 | xAI OAuth credential store (~/.progrok/auth.json), single-flight refresh, terminal-failure negative cache |
 | `lib/grokUpstreamRetry.ts` | 165 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
 | `lib/grokSizeMapper.ts` | 86 | Grok model image-size mapping and validation |
 | `lib/grokVideoCanvas.ts` | 41 | Grok video canvas/source preparation helpers |
 | `lib/grokVideoDownload.ts` | 167 | Bounded incremental video download, validation and reader cleanup; callers own persistence |
-| `lib/videoExtendI2vOperation.ts` | 101 | Actual whole last-frame background operation Promise, preserving phase/persistence/terminal order |
+| `lib/videoExtendI2vOperation.ts` | 105 | Actual whole last-frame background operation Promise, preserving phase/persistence/terminal order |
 | `lib/grokVideoPlannerPrompt.ts` | 225 | Grok video planner prompt construction |
 | `lib/historyIndex.ts` | 57 | Generated-history index construction and lookup |
 | `lib/imageThumb.ts` | 50 | Image thumbnail generation helpers |
@@ -345,12 +346,12 @@ Backed by `routes/agent.ts`; no CLI wrapper. Session/turn/queue persistence and 
 | `lib/agentQueueWorker.ts` | 226 | Background queue worker |
 | `lib/agentCommandParser.ts` | 77 | Slash-command parsing |
 | `lib/agentToolManifest.ts` | 31 | Tool metadata for `/api/agent/tools` |
-| `lib/agentPlannerModel.ts` | 202 | Planner model selection |
+| `lib/agentPlannerModel.ts` | 203 | Planner model selection |
 | `lib/agentGenerationPlanner.ts` | 356 | Generation plan assembly |
 | `lib/agentImageVideoGen.ts` | 477 | Image/video generation caller for agent turns |
 | `lib/agentQuestionResponder.ts` | 275 | `/question` responder |
 | `lib/promptBuilder/constants.ts` | 32 | Prompt Builder backend/model catalogs, defaults, and deterministic Auto order |
-| `lib/promptBuilder/router.ts` | 117 | Ready-lane selection, explicit-backend fail-closed errors, and transport targets |
+| `lib/promptBuilder/router.ts` | 136 | Ready-lane selection, explicit-backend fail-closed errors, and transport targets |
 | `lib/promptBuilder/client.ts` | 201 | Request normalization, backend/model resolution, safe fallback logging, one-shot upstream request, and resolved-backend response metadata |
 
 ## UI File Map

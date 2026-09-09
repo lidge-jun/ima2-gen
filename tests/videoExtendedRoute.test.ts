@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { executionTestProcess } from "./_executionTestProcess.ts";
-import { openVideoFixture } from "./_videoExecutionFixture.ts";
+import { GROK_DIRECT_ORIGIN, openVideoFixture } from "./_videoExecutionFixture.ts";
 import { fakeMp4Bytes } from "./_videoStreamFixture.ts";
 
 if (executionTestProcess(import.meta.url)) {
@@ -32,16 +32,17 @@ async function listen(server: import("node:http").Server): Promise<string> {
   const origin = await fixture.listen(server, "proxy");
   fixture.bridgeProxy(server, (call) => {
     const target = new URL(call.url);
-    assert.equal(target.origin, origin);
     assert.equal(target.search, "");
     assert.equal(call.headers.get("cookie"), null);
     if (target.pathname === "/dl/out.mp4") {
+      assert.equal(target.origin, origin, "the artifact stays on the owned mock origin");
       assert.equal(call.method, "GET");
       assert.equal(call.body, "");
       assert.equal(call.headers.get("authorization"), null);
       return;
     }
-    assert.equal(call.headers.get("authorization"), "Bearer dummy");
+    assert.equal(target.origin, GROK_DIRECT_ORIGIN, "authenticated video calls leave for xAI directly");
+    assert.equal(call.headers.get("authorization"), fixture.grokBearer);
     const opts = proxyOptions.get(server)!;
     const poll = opts.operation === "extend" ? "/v1/videos/extend-1" : "/v1/videos/edit-1";
     if (target.pathname === poll) {
@@ -120,21 +121,20 @@ function makeProxy(opts: ProxyOptions = {}) {
   return server;
 }
 
-async function videoApp(generatedDir: string, proxyPort: number, plannerModel?: string) {
+async function videoApp(generatedDir: string, plannerModel?: string) {
   const app = express();
   fixture.trackApp(app);
   app.use(express.json({ limit: "20mb" }));
   registerVideoExtendedRoutes(app, {
     rootDir: fixture.root,
     packageVersion: "test",
+    grokAuthHomeDir: fixture.grokAuthHomeDir,
     config: {
       ...config,
       ids: { ...config.ids, generatedHexBytes: 2 },
       storage: { ...config.storage, generatedDir },
       grokProvider: {
         ...config.grokProvider,
-        proxyHost: "127.0.0.1",
-        proxyPort,
         ...(plannerModel ? { plannerModel } : {}),
         videoPollIntervalMs: 1,
         videoStartTimeoutMs: 5000,
@@ -163,8 +163,8 @@ for (const operation of ["edit", "extend"] as const) {
     test(`/api/video/${operation} ${downloadCase}: JSON 502 and no persistence`, async () => {
       const generatedDir = await mkdtemp(join(fixture.root, "extended-rejected-"));
       try {
-        const proxyUrl = await listen(makeProxy({ operation, downloadCase }));
-        const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+        await listen(makeProxy({ operation, downloadCase }));
+        const { url } = await videoApp(generatedDir);
         const endpoint = operation === "edit" ? "edit" : "extend/native";
         const res = await fixture.fetchApp(`${url}/api/video/${endpoint}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -193,8 +193,8 @@ for (const operation of ["edit", "extend"] as const) {
 test("/api/video/extend/native persists real downloaded bytes and sidecar", async () => {
   const generatedDir = await mkdtemp(join(fixture.root, "native-success-"));
   try {
-    const proxyUrl = await listen(makeProxy({ operation: "extend" }));
-    const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+    await listen(makeProxy({ operation: "extend" }));
+    const { url } = await videoApp(generatedDir);
     const res = await fixture.fetchApp(`${url}/api/video/extend/native`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: "continue", videoUrl: "https://vidgen.example/input.mp4", duration: 5 }),
@@ -223,7 +223,7 @@ test("/api/video/edit forwards xAI payload and saves local video artifact", asyn
   const proxy = makeProxy({ operation: "edit", capture: (_url, body) => (startBody = body) });
   const proxyUrl = await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-edit-"));
-  const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+  const { url } = await videoApp(generatedDir);
   try {
     const res = await fixture.fetchApp(`${url}/api/video/edit`, {
       method: "POST",
@@ -255,12 +255,12 @@ test("/api/video/edit forwards xAI payload and saves local video artifact", asyn
 
 test("/api/video/edit rejects whitespace prompt and unsafe generated-file inputs", async () => {
   const proxy = makeProxy({ operation: "edit" });
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-inputs-"));
   await writeFile(join(generatedDir, "clip.mp4.json"), JSON.stringify({ secret: true }));
   await writeFile(join(fixture.root, "outside-generated.mp4"), "not really a video");
   await symlink(join(fixture.root, "outside-generated.mp4"), join(generatedDir, "linked.mp4"));
-  const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+  const { url } = await videoApp(generatedDir);
   try {
     const blank = await fixture.fetchApp(`${url}/api/video/edit`, {
       method: "POST",
@@ -296,9 +296,9 @@ test("/api/video/edit rejects whitespace prompt and unsafe generated-file inputs
 
 test("/api/video/extend/native validates duration/model and rejects moderation-blocked result", async () => {
   const proxy = makeProxy({ operation: "extend", blocked: true });
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-extend-"));
-  const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+  const { url } = await videoApp(generatedDir);
   try {
     const badDuration = await fixture.fetchApp(`${url}/api/video/extend/native`, {
       method: "POST",
@@ -331,9 +331,9 @@ test("/api/video/extend/native validates duration/model and rejects moderation-b
 
 test("/api/video/extend/native reports moderation block even when upstream omits url", async () => {
   const proxy = makeProxy({ operation: "extend", blocked: true, blockedWithoutUrl: true });
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-blocked-"));
-  const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+  const { url } = await videoApp(generatedDir);
   try {
     const blocked = await fixture.fetchApp(`${url}/api/video/extend/native`, {
       method: "POST",
@@ -350,9 +350,9 @@ test("/api/video/extend/native reports moderation block even when upstream omits
 
 test("/api/video/frame rejects unsafe, invalid, and undecodable generated inputs", async () => {
   const proxy = makeProxy();
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-frame-invalid-"));
-  const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+  const { url } = await videoApp(generatedDir);
   try {
     const traversal = await fixture.fetchApp(`${url}/api/video/frame?file=${encodeURIComponent("../clip.mp4")}`);
     assert.equal(traversal.status, 400);
@@ -380,12 +380,12 @@ test("/api/video/frame supports generated relative and absolute paths safely", a
   }
   const proxy = makeProxy();
   const firstAttempt = fixture.ffmpeg.attempts.length;
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-frame-"));
   const mp4 = join(generatedDir, "clip.mp4");
   try {
     await fixture.ffmpeg.createClip(mp4, "blue");
-    const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+    const { url } = await videoApp(generatedDir);
     try {
       for (const file of ["clip.mp4", mp4]) {
         const res = await fixture.fetchApp(`${url}/api/video/frame?file=${encodeURIComponent(file)}&position=0`);
@@ -405,9 +405,9 @@ test("/api/video/frame supports generated relative and absolute paths safely", a
 
 test("/api/video/analyze rejects remote URLs before frame extraction", async () => {
   const proxy = makeProxy();
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-analyze-remote-"));
-  const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port));
+  const { url } = await videoApp(generatedDir);
   try {
     const remote = await fixture.fetchApp(`${url}/api/video/analyze`, {
       method: "POST",
@@ -431,12 +431,12 @@ test("/api/video/analyze extracts first/last frames and sends input_image payloa
   let responseBody: any = null;
   const firstAttempt = fixture.ffmpeg.attempts.length;
   const proxy = makeProxy({ responseText: "first and last frame analysis", capture: (url, body) => { if (url === "/v1/responses") responseBody = body; } });
-  const proxyUrl = await listen(proxy);
+  await listen(proxy);
   const generatedDir = await mkdtemp(join(fixture.root, "ima2-video-ext-analyze-"));
   const mp4 = join(generatedDir, "clip.mp4");
   try {
     await fixture.ffmpeg.createClip(mp4, "blue");
-    const { url } = await videoApp(generatedDir, Number(new URL(proxyUrl).port), "grok-4.3");
+    const { url } = await videoApp(generatedDir, "grok-4.3");
     try {
     const res = await fixture.fetchApp(`${url}/api/video/analyze`, {
       method: "POST",

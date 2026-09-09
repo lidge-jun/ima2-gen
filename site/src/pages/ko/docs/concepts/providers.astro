@@ -23,7 +23,7 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
   <ul>
     <li><code>provider: "oauth"</code> — 로컬 Codex OAuth 프록시를 사용합니다. 기본 경로이며 API key가 필요 없습니다.</li>
     <li><code>provider: "api"</code> — 호스티드 <code>image_generation</code> 도구로 OpenAI Responses API를 호출합니다. <code>OPENAI_API_KEY</code>가 필요합니다.</li>
-    <li><code>provider: "grok"</code> — 번들 <code>progrok</code>을 시작하고, 필수 xAI Web Search와 planner pass(기본 <code>grok-4.5</code>, 설정 또는 <code>--planner-model</code>로 변경)를 거친 뒤 xAI Images API를 호출합니다. Grok 4.3은 호환 선택지로 유지합니다.</li>
+    <li><code>provider: "grok"</code> — <code>~/.progrok/auth.json</code>의 xAI OAuth 세션으로 <code>api.x.ai</code>를 직접 호출합니다. 필수 xAI Web Search와 planner pass(기본 <code>grok-4.5</code>, 설정 또는 <code>--planner-model</code>로 변경)를 거친 뒤 xAI Images API를 호출합니다. Grok 4.3은 호환 선택지로 유지합니다.</li>
     <li><code>provider: "grok-api"</code> — <code>grok</code>과 같은 xAI pipeline을 직접 <code>XAI_API_KEY</code>로 실행합니다.</li>
     <li><code>provider: "agy"</code> — Antigravity CLI(<code>agy -p</code>)를 통해 Google Gemini(<code>nano-banana-2</code>)로 이미지를 생성합니다. 고정 1024×1024 JPEG 출력, 최대 3장 참조.</li>
     <li><code>provider: "gemini-api"</code> — Google Generative Language API 또는 Vertex AI를 직접 호출합니다. 모델 <code>nano-banana-2</code>(Gemini 3.1 Flash Image)와 <code>nano-banana-pro</code>(Gemini 3 Pro Image) 지원. 가변 화면비와 해상도(512px–4K) 지원. <code>GEMINI_API_KEY</code> 또는 Vertex AI 서비스 계정 JSON이 필요합니다.</li>
@@ -42,8 +42,8 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'ko', slug);
       <tr><td><code>auto</code></td><td>지원 명령에서만 쓰는 routing mode이며 provider lane이 아닙니다.</td></tr>
       <tr><td><code>oauth</code></td><td>로컬 OAuth 프록시 경로 강제.</td></tr>
       <tr><td><code>api</code></td><td>API key Responses 경로 강제; 설정된 key가 필요합니다.</td></tr>
-      <tr><td><code>grok</code></td><td><code>127.0.0.1:18645</code>의 번들 xAI 경로 강제. 최초 1회 <code>ima2 grok login</code>으로 manual-paste 인증을 진행합니다.</td></tr>
-      <tr><td><code>grok-api</code></td><td>번들 OAuth 대신 xAI API key를 직접 사용. <code>grok</code>과 동일한 파이프라인(Web Search → planner → 이미지 생성). 웹 UI key 관리 또는 <code>XAI_API_KEY</code> env var 필요. 비디오 생성도 지원.</td></tr>
+      <tr><td><code>grok</code></td><td><code>api.x.ai</code>로 가는 xAI OAuth 경로 강제. 최초 1회 <code>ima2 grok login</code> 또는 웹 UI 로그인으로 device code 인증을 진행합니다.</td></tr>
+      <tr><td><code>grok-api</code></td><td>OAuth 세션 대신 xAI API key를 직접 사용. <code>grok</code>과 동일한 파이프라인(Web Search → planner → 이미지 생성). 웹 UI key 관리 또는 <code>XAI_API_KEY</code> env var 필요. 비디오 생성도 지원.</td></tr>
       <tr><td><code>agy</code></td><td>Antigravity CLI로 Gemini 이미지 생성. <code>agy</code> 바이너리 필요. 1024×1024 고정, JPEG, 최대 3장 참조, 품질/크기/마스크 미지원.</td></tr>
       <tr><td><code>gemini-api</code></td><td>Google Generative Language API 또는 Vertex AI 직접 호출. 모델 <code>nano-banana-2</code>/<code>nano-banana-pro</code>. 가변 화면비·해상도 지원. API key 또는 Vertex 서비스 계정 JSON 필요.</td></tr>
       <tr><td><code>atlascloud</code></td><td>AtlasCloud API 직접 호출. <code>ATLASCLOUD_API_KEY</code> 필요.</td></tr>

@@ -1,7 +1,6 @@
 import type OpenAI from "openai";
 import { config as runtimeConfigDefault } from "../config.js";
 import type { McpConnectionManager } from "./mcp/connectionManager.js";
-import type { GrokProxyHandle } from "./grokProxyLauncher.js";
 import type { ComfyWorkflowRecord } from "./comfyWorkflowStore.js";
 
 export type AppConfig = typeof runtimeConfigDefault;
@@ -15,17 +14,16 @@ export interface RuntimeContext {
    * Boot-generated shared secret for the local admin surface (POST
    * /api/admin/stop). Published in the advertise file so only processes that
    * can read ~/.ima2/server.json can stop the server; generated ONCE at boot
-   * (advertise() re-runs on proxy state changes and must not rotate it).
+   * (advertise() re-runs when the OAuth proxy reports readiness and must not
+   * rotate it).
    */
   adminNonce: string;
   config: AppConfig;
-  grokActualPort: number | undefined;
-  grokPort: number;
-  grokUrl: string;
-  /** Supervisor handle. Optional: absent when autoStart is off or in test contexts. */
-  grokProxy?: GrokProxyHandle | undefined;
-  /** True only while a supervised child is actually listening. */
-  grokProxyLive?: boolean | undefined;
+  /**
+   * Directory whose `.progrok/auth.json` holds the xAI OAuth session. Tests inject an
+   * isolated HOME here; production leaves it undefined and lib/xaiAuth.ts uses os.homedir().
+   */
+  grokAuthHomeDir?: string | undefined;
   hasApiKey: boolean;
   oauthActualPort: number | undefined;
   oauthPort: number;
@@ -113,15 +111,6 @@ export function requireRuntimeContext(ctx: RouteRuntimeContext | undefined): Run
     target.apiKey = undefined;
   }
   if (target.hasApiKey === undefined) target.hasApiKey = false;
-  if (target.grokPort === undefined) {
-    target.grokPort = (target.config as AppConfig).grokProvider?.proxyPort ?? 18645;
-  }
-  if (target.grokUrl === undefined) {
-    const grokCfg = (target.config as AppConfig).grokProvider;
-    const host = grokCfg?.proxyHost ?? "127.0.0.1";
-    const port = target.grokActualPort ?? target.grokPort ?? grokCfg?.proxyPort ?? 18645;
-    target.grokUrl = `http://${host}:${port}/v1`;
-  }
   if (target.oauthPort === undefined) {
     target.oauthPort = (target.config as AppConfig).oauth?.proxyPort ?? 11782;
   }
@@ -194,9 +183,6 @@ export function createTestRuntimeContext(over: RuntimeContextOverrides = {}): Ru
     apiKeySource: undefined,
     adminNonce: "",
     config: {} as AppConfig,
-    grokActualPort: undefined,
-    grokPort: 18645,
-    grokUrl: "http://127.0.0.1:18645/v1",
     hasApiKey: false,
     oauthActualPort: undefined,
     oauthPort: 11782,

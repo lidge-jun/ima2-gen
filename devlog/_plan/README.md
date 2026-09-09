@@ -1,6 +1,6 @@
 ---
 created: 2026-04-23
-updated: 2026-09-07
+updated: 2026-09-09
 tags: [ima2-gen, devlog, roadmap]
 aliases: [ima2 active plan, image_gen current roadmap, ima2 개발계획]
 ---
@@ -24,8 +24,8 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 
 | 경로 | 상태 |
 |---|---|
-| `260908_xai_imagine_spec_resync/` | WP1-WP5 완료. xAI ref2v 상한 7->14, 모델별 ref2v 길이, 연장 1-15s, 이미지 편집 5장, 날짜 별칭, 오디오 단독 ref2v를 서버·UI·CLI·문서에 반영. GUI에 보이스 선택과 영상 편집 버튼 추가. 남은 것: 컴포저 드롭에서 편집으로 들어가는 흐름(결과 카드로 대체 가능). |
-| `260819c_grok_proxy_supervision/` | 조사 + 로드맵 완료 (000-030), 구현 미착수. Grok 프록시 수명주기 재설계 — ensure 진입점, 로그인 재기동, 프로브 기반 상태. |
+| `260908_xai_imagine_spec_resync/` | v3.15.1로 배포 완료. xAI ref2v 상한 7->14, 모델별 ref2v 길이, 연장 1-15s, 이미지 편집 5장, 날짜 별칭, 오디오 단독 ref2v를 서버·UI·CLI·문서에 반영. GUI에 보이스 선택과 영상 편집 버튼 추가. 남은 것: 컴포저 드롭에서 편집으로 들어가는 흐름(결과 카드로 대체 가능). 배포 기록은 070_release_v3151.md. |
+| `260909_grok_native_oauth/` | wp1~wp5 구현 완료, PR #233~#237 스택(base dev) 오픈. progrok 자식 프로세스 프록시 제거, grok 레인이 `~/.progrok/auth.json` xAI OAuth 세션으로 api.x.ai 직접 호출, `ima2 grok login/status/logout` 네이티브. 남은 것: 스택 머지, v3.16 릴리스. |
 
 ## 일정이 있는 후속 항목
 
@@ -94,6 +94,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 - `260818_platform_contracts_closeout/` — v3.6.0으로 완료. 플랫폼 계약 closeout
 - `260819_kling_provider_feasibility/` — 조사 완료 (구현은 별도)
 - `260819_log_detail_modal/` — v3.7.0으로 완료. 로그 상세 모달
+- `260819c_grok_proxy_supervision/` → `_fin/260819_grok_proxy_supervision/` — superseded by 260909_grok_native_oauth (900_superseded.md)
 - `260819b_release_speed/` → `_fin/260819_release_speed/` — v3.7.1로 완료. 릴리스 속도 69% 개선
 - `260820_grok15_multi_reference_video/` — v3.8.0으로 완료. Grok 1.5 다중 참조 비디오
 - `260821_260821d-release-train/` → `_fin/260821_release_train/` — v3.10.0으로 완료
@@ -104,7 +105,7 @@ Deferred / 미래 항목은 `_plan/` 직속이 아니라 `_plan/_future/`에 둔
 - `260825_issue_batch_170_173/` — 완료. 이슈 4건 수정 + PR 3건 처리
 - `260825_novelai_negative_prompt_settings/` — 완료. NovelAI 네거티브 프롬프트 + 설정 패널
 
-`260819c_grok_proxy_supervision/`은 조사와 로드맵만 완료됐고 구현은 없으므로 `_plan`에 남겼다.
+`260819c_grok_proxy_supervision/`은 WP2~WP4가 054c729f로 이미 구현되어 있었고("구현 미착수"는 오기), 260909_grok_native_oauth가 그 구현을 제거하여 `_fin/260819_grok_proxy_supervision/`으로 옮겼다(900_superseded.md).
 
 ## 이전 기록
 

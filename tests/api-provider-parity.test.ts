@@ -7,8 +7,11 @@ import { join } from "node:path";
 import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
 import { drain, installTrackedWrites } from "./_executionTrackedWrites.ts";
 import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 const isolation = await isolateExecution();
+// grok-lane cases resolve an OAuth bearer from ~/.progrok/auth.json; isolate that HOME.
+const grokAuth = seedGrokAuth();
 const { imageTransport } = isolation;
 const deniedFetch = globalThis.fetch;
 const originalFetch = isolation.nativeFetch;
@@ -20,7 +23,7 @@ after(async () => {
   try { await drain(); }
   finally {
     try { closeDb?.(); restoreWrites?.(); }
-    finally { await isolation.close(); }
+    finally { try { await isolation.close(); } finally { grokAuth.cleanup(); } }
   }
 });
 afterEach(async () => {
@@ -88,6 +91,7 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
   const ctx = {
     rootDir,
     apiKey,
+    grokAuthHomeDir: grokAuth.homeDir,
     config: {
       ...config,
       storage: { ...config.storage, generatedDir },

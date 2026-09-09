@@ -8,7 +8,7 @@ import {
   type GrokReferenceImage,
 } from "../../grokImageCore.js";
 import { planGrokImage } from "../../grokImagePlanner.js";
-import { getGrokProxyBaseUrl } from "../../grokRuntime.js";
+import { resolveGrokCredential, type GrokCredential } from "../../grokRuntime.js";
 import { logEvent } from "../../logger.js";
 import type { RouteRuntimeContext } from "../../runtimeContext.js";
 
@@ -45,7 +45,7 @@ export async function generateMultimodeViaGrok(
     signal?: AbortSignal | undefined;
     requestId?: string | undefined;
     references?: GrokReferenceImage[] | undefined;
-    directApiKey?: string | undefined;
+    credential?: GrokCredential | undefined;
     webSearchEnabled?: boolean | undefined;
     onFinalImage?: ((image: { b64: string; revisedPrompt?: string | undefined; mime?: string | undefined }, index: number) => void | Promise<void>) | undefined;
   } = {},
@@ -60,6 +60,10 @@ export async function generateMultimodeViaGrok(
     Math.max(1, Math.trunc(Number(options.maxImages) || 4)),
   );
   const references = options.references || [];
+  // One credential for the whole batch: a per-item resolve would refresh the OAuth
+  // session mid-run and give items inconsistent bearers.
+  const credential = options.credential
+    ?? await resolveGrokCredential(ctx, "grok", { ...(options.signal ? { signal: options.signal } : {}) });
   const images: Array<{ b64: string; revisedPrompt?: string; mime?: string; providerUrl?: string }> = [];
   const originalIndexes: number[] = [];
   let totalCost = 0;
@@ -78,7 +82,7 @@ export async function generateMultimodeViaGrok(
       signal: options.signal,
       requestId: options.requestId,
       references,
-      directApiKey: options.directApiKey,
+      credential,
       webSearchEnabled: options.webSearchEnabled,
     });
     totalWebSearchCalls += plan.webSearchCalls;
@@ -95,13 +99,11 @@ export async function generateMultimodeViaGrok(
         refs: references.length,
         promptChars: plan.prompt.length,
       });
-      const result = await postGrokImages(ctx, payload, options.signal, endpoint, options.directApiKey);
+      const result = await postGrokImages(ctx, payload, options.signal, endpoint, credential);
       const imgUrl = result.data?.[0]?.url;
       if (imgUrl) {
-        const dl = await downloadGrokImageUrl(imgUrl, options.signal, undefined, {
-          trustedProxyOrigin: options.directApiKey
-            ? undefined : new URL(getGrokProxyBaseUrl(ctx)).origin,
-        });
+        // Direct lane: the artifact URL is a public https origin, so no proxy hop is trusted.
+        const dl = await downloadGrokImageUrl(imgUrl, options.signal);
         const img = { b64: dl.b64, mime: dl.mime, revisedPrompt: plan.prompt, providerUrl: imgUrl };
         images.push(img);
         originalIndexes.push(i);

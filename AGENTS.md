@@ -25,7 +25,7 @@ Local image generation studio — CLI + 웹 UI
 - Server: Express 5
 - API Client: OpenAI SDK range is rendered in the runtime-install contract above
 - OAuth: openai-oauth (ChatGPT 세션 프록시)
-- Grok: bundled progrok (xAI Images API)
+- Grok: xAI OAuth (device code) 또는 API key, api.x.ai 직접 호출
 - Gemini: Google Generative Language API / Vertex AI
 - Frontend: React + Vite (`ui/src`, built to `ui/dist`)
 - SSE: lib/eventBus.ts (ring buffer pub/sub) + routes/events.ts
