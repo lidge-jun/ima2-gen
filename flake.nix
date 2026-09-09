@@ -15,8 +15,8 @@
         # node_modules from the lockfiles (root + ui). callPackage injects
         # pkgs.nodejs, importNpmLock, lib; we supply the source. Narrow it to
         # just the dependency-relevant files (the package manifests and the
-        # vendored progrok tarball) so editing server/UI code doesn't force a
-        # node_modules rebuild.
+        # vendored dependency tarballs) so editing server/UI code doesn't force
+        # a node_modules rebuild.
         depsSrc = lib.fileset.toSource {
           root = ./.;
           fileset = lib.fileset.unions [

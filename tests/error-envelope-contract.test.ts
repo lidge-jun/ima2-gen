@@ -169,7 +169,7 @@ describe("062 error transport envelopes", () => {
       config: {
         ...config,
         storage: { ...config.storage, generatedDir: TEST_DIR },
-        grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 1, videoPollIntervalMs: 1, videoStartTimeoutMs: 1000, videoTimeoutMs: 2000, plannerTimeoutMs: 1000 },
+        grokProvider: { ...config.grokProvider, videoPollIntervalMs: 1, videoStartTimeoutMs: 1000, videoTimeoutMs: 2000, plannerTimeoutMs: 1000 },
         log: { ...config.log, level: "silent" },
       },
     });
@@ -197,7 +197,7 @@ describe("062 error transport envelopes", () => {
     const app = trackedApp();
     app.use(express.json());
     registerVideoExtendedRoutes(app, { grokAuthHomeDir: fixture.grokAuthHomeDir,
-      config: { storage: { generatedDir: TEST_DIR }, grokProvider: { proxyHost: "127.0.0.1", proxyPort: 1 } } });
+      config: { storage: { generatedDir: TEST_DIR }, grokProvider: {} } });
     try {
       await withServer(app, async (baseUrl) => {
         const response = await fixture.fetchApp(`${baseUrl}/api/video/edit`, {
@@ -229,7 +229,7 @@ describe("062 error transport envelopes", () => {
       config: {
         ...config,
         storage: { ...config.storage, generatedDir: TEST_DIR },
-        grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 1 },
+        grokProvider: { ...config.grokProvider },
         log: { ...config.log, level: "silent" },
       },
     }, {
@@ -261,7 +261,7 @@ describe("062 error transport envelopes", () => {
       config: {
         ...config,
         storage: { ...config.storage, generatedDir: TEST_DIR },
-        grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 1 },
+        grokProvider: { ...config.grokProvider },
         log: { ...config.log, level: "silent" },
       },
     }, {
@@ -315,7 +315,7 @@ describe("062 error transport envelopes", () => {
       const result = await generateMultimodeViaGrok("sequence", {
         config: {
           ...config,
-          grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort: 9, plannerTimeoutMs: 2000, generationTimeoutMs: 2000 },
+          grokProvider: { ...config.grokProvider, plannerTimeoutMs: 2000, generationTimeoutMs: 2000 },
         },
         packageVersion: "test",
         grokAuthHomeDir: fixture.grokAuthHomeDir,

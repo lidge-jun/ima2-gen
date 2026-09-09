@@ -65,7 +65,7 @@ routes/
   keys.ts               GET/PUT/DELETE /api/keys/:provider, /api/keys/vertex
   auth.ts               POST /api/auth/switch, GET /api/auth/switch/:sessionId
   quota.ts              GET /api/quota
-  grok.ts               GET /api/grok/status + progrok helpers
+  grok.ts               GET /api/grok/status (live api.x.ai probe with the stored xAI session)
   agy.ts                GET /api/agy/status + Antigravity CLI bridge
   prompts.ts            prompt CRUD/folders/import/export
   promptImport.ts       curated/discovery/folder/preview/commit import routes
@@ -79,8 +79,8 @@ routes/
 
 | File | Lines | Responsibility |
 |---|---:|---|
-| `server.ts` | 613 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
-| `config.ts` | 532 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
+| `server.ts` | 570 | Express bootstrap, middleware wiring, OAuth startup, runtime advertisement, port fallback, post-listen MCP restore, coordinated shutdown, route registration, static serving |
+| `config.ts` | 523 | Centralized runtime config (env > `~/.ima2/config.json` > defaults), prompt import/index caps, web-search/reasoning-effort defaults, API-provider defaults, and backward-compatible flat re-exports |
 | `routes/index.ts` | 93 | Route registration hub: health, capabilities, events, storage, metadata, history, imageImport, sessions, edit, nodes, multimode, generate, agent, prompt builder, generationRequestLog, annotations, canvasVersions, comfy, prompts, prompt import, keys, auth, quota, grok, agy, video, videoExtended, mcpMultishot, and (when `features.cardNews`) cardNews |
 | `routes/mcpMultishot.ts` | 116 | Multishot (multi-scene) video generation route via Runway MCP |
 | `routes/capabilities.ts` | 47 | `GET /api/capabilities` — agent-facing runtime defaults; `GET/PATCH /api/config/grok-planner` — Grok planner model query/update |
@@ -93,14 +93,14 @@ routes/
 | `routes/sessions.ts` | 318 | SQLite-backed session list/load/save/rename/delete, style-sheet get/put/enable/extract, graph save |
 | `routes/history.ts` | 234 | History list, cursor pagination, favorites-only filtering, grouped gallery, soft delete (OS trash), restore, gallery favorite toggle, permanent delete |
 | `routes/imageImport.ts` | 38 | `POST /api/history/import-local` raw image upload (PNG/JPEG/WebP) — Phase 10 drop-import for Canvas |
-| `routes/health.ts` | 125 | Providers, health, OAuth status, inflight list/cancel for classic/node/multimode jobs, billing |
+| `routes/health.ts` | 124 | Providers, health, OAuth status, inflight list/cancel for classic/node/multimode jobs, billing |
 | `routes/mcpConnections.ts` | 164 | MCP provider list/status/connect/callback/refresh/disconnect/model routes; truthful state-to-HTTP mapping and secret-free responses |
 | `routes/storage.ts` | 48 | Gallery storage status and generated-folder open action |
 | `routes/metadata.ts` | 81 | `/api/metadata/read` for embedded XMP image metadata extraction |
 | `routes/annotations.ts` | 119 | `GET/PUT/DELETE /api/annotations/:filename` for canvas annotation overlays |
 | `routes/canvasVersions.ts` | 100 | `POST/PUT /api/canvas-versions` for canvas version snapshots |
 | `routes/comfy.ts` | 222 | Comfy workflow inspect/register/list/delete/probe plus `POST /api/comfy/export-image`; media-kind inference and mismatch validation |
-| `routes/models.ts` | 561 | Canonical runtime model catalog; Comfy image/video workflow partition and model-level execution locks |
+| `routes/models.ts` | 546 | Canonical runtime model catalog; Comfy image/video workflow partition and model-level execution locks |
 | `routes/prompts.ts` | 429 | Prompt library CRUD, favorites, import/export, and folder management |
 | `routes/promptImport.ts` | 380 | Prompt library preview/commit import API plus PR2 curated search, PR3 GitHub folder browse/preview, and PR4 discovery review endpoints |
 | `routes/cardNews.ts` | 213 | Dev-gated card-news templates, sets, drafts, jobs, regenerate, export (only registered when `config.features.cardNews`) |
@@ -134,7 +134,7 @@ routes/
 | `bin/commands/config.ts` | 194 | CLI config get/set client |
 | `bin/commands/observability.ts` | 177 | Shared CLI handler for `storage`, `billing`, `providers`, `oauth`, and `inflight` aliases (`ima2.ts` routes those commands here) |
 | `bin/commands/doctor.ts` | 310 | CLI diagnostics: storage, OAuth, providers, image probe |
-| `bin/commands/grok.ts` | 91 | Grok OAuth login and status helpers |
+| `bin/commands/grok.ts` | 194 | Grok OAuth login and status helpers |
 | `bin/commands/defaults.ts` | 270 | CLI default provider/model/size/reasoning-effort get/set |
 | `bin/commands/capabilities.ts` | 143 | CLI wrapper for `GET /api/capabilities` |
 | `bin/commands/skill.ts` | 402 | CLI packaged-skill reader: `skill [ls|<name>] [path] [--json]` over KNOWN_SKILLS (ima2/front/uiux) |
@@ -217,7 +217,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/providers/adapters/openaiOperations.ts` | 235 | Actual OpenAI generate/edit/multimode operation bodies and reference normalization |
 | `lib/providers/adapters/openaiExecution.ts` | 142 | Typed four-surface OpenAI owner, classic retry and native callback/result mapping |
 | `lib/providerOptions.ts` | 161 | Per-provider option assembly; rejects catalog-only Comfy video workflows on the classic image path |
-| `lib/runtimeContext.ts` | 239 | Per-request runtime context plumbing for routes and lib helpers |
+| `lib/runtimeContext.ts` | 220 | Per-request runtime context plumbing for routes and lib helpers |
 | `lib/errInfo.ts` | 44 | Error info shape and helpers shared across routes/lib |
 | `lib/oauthNormalize.ts` | 31 | Upstream OAuth response field normalization |
 | `lib/openDirectory.ts` | 48 | Cross-platform open of the generated directory (used by `/api/storage/open-generated-dir`) |
@@ -233,7 +233,7 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/naiZip.ts` | 153 | Minimal ZIP reader for NovelAI responses: stored/deflate entries, ZIP64 and encryption refusal, 50MB entry cap |
 | `lib/providers/adapters/nai.ts` | 142 | NovelAI provider-registry adapter binding: capability declaration and `normalizeError` mapping |
 | `lib/providers/registry.ts` | 287 | Provider lane manifests: the single declaration every generated catalog, capability list, and CLI enum derives from |
-| `lib/providers/types.ts` | 87 | Manifest/credential types, explicit model generation support, and provider surface records |
+| `lib/providers/types.ts` | 95 | Manifest/credential types, explicit model generation support, and provider surface records |
 | `lib/providers/derive.ts` | 97 | Registry-bound provider IDs, catalogs, reference limits and surface support |
 | `lib/providers/surfaceSupport.ts` | 31 | Pure application-surface projection, independent of readiness; static versus runtime catalogs |
 | `lib/providers/execution/types.ts` | 102 | Typed surface-discriminated requests, native single/sequence results and callbacks |
@@ -289,8 +289,8 @@ scope/revision/identity reconciliation shared by polling and reload actions.
 | `lib/grokImageDownload.ts` | 153 | Grok redirect trust, overall deadline, bounded streamed image body and cleanup |
 | `lib/pinnedHttpGet.ts` | 173 | Shared validated-address GET lifecycle, public redirect handling and bounded text bodies |
 | `lib/grokMultimodeAdapter.ts` | 6 | Compatibility re-exports of actual Grok multimode operation/type |
-| `lib/grokProxyLauncher.ts` | 326 | Grok proxy process startup and readiness helpers |
-| `lib/grokRuntime.ts` | 94 | Grok runtime configuration helpers |
+| `lib/grokRuntime.ts` | 94 | Grok transport: api.x.ai endpoint, per-lane credential resolution, single 401 refresh replay |
+| `lib/xaiDeviceLogin.ts` | 209 | Stateless xAI device-code login used by the CLI when no server is running |
 | `lib/xaiAuth.ts` | 464 | xAI OAuth credential store (~/.progrok/auth.json), single-flight refresh, terminal-failure negative cache |
 | `lib/grokUpstreamRetry.ts` | 165 | Pre-response retry guard for idempotent Grok fetches: socket resets, transient 5xx, Retry-After backoff |
 | `lib/grokSizeMapper.ts` | 86 | Grok model image-size mapping and validation |

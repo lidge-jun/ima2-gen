@@ -139,14 +139,15 @@ async function waitForHealth(timeoutMs: number): Promise<{ ok: boolean; entry: A
 function reportProviderLiveness(entry: AdvertiseEntry | null): void {
   if (!entry) return;
   const oauth = (entry as { oauth?: { status?: string } }).oauth;
-  const grok = (entry as { grok?: { live?: boolean } }).grok;
+  const grok = (entry as { grok?: { auth?: string } }).grok;
   if (oauth?.status && oauth.status !== "ready" && oauth.status !== "disabled") {
     console.log(`  Warning: GPT OAuth proxy status is "${oauth.status}" — check 'ima2 service logs'.`);
   }
-  // grok.live only exists in the advertise payload, not /api/health (audit note).
-  if (grok && grok.live === false) {
-    console.log("  Warning: Grok proxy is not live under the service environment.");
-    console.log("  If Grok worked in a terminal, the service PATH may be missing its binary.");
+  // The service runs under its own HOME, so it can read a different
+  // ~/.progrok/auth.json than the terminal the user logged in from.
+  if (grok?.auth === "none") {
+    console.log("  Warning: Grok is not logged in under the service environment.");
+    console.log("  Run: ima2 grok login");
   }
 }
 

@@ -58,7 +58,7 @@ function successfulGenerator(capture?: (prompt: string, options: any) => void) {
   };
 }
 
-async function makeApp(dir: string, dependencies: VideoExtendedDependencies = {}, proxyPort = 18645) {
+async function makeApp(dir: string, dependencies: VideoExtendedDependencies = {}) {
   const config = fixture.config;
   const app = express();
   fixture.trackApp(app);
@@ -68,7 +68,7 @@ async function makeApp(dir: string, dependencies: VideoExtendedDependencies = {}
     grokAuthHomeDir: fixture.grokAuthHomeDir,
     config: {
       ...config, ids: { ...config.ids, generatedHexBytes: 2 }, storage: { ...config.storage, generatedDir: dir },
-      grokProvider: { ...config.grokProvider, proxyHost: "127.0.0.1", proxyPort, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
+      grokProvider: { ...config.grokProvider, videoPollIntervalMs: 1, videoStartTimeoutMs: 5000, videoTimeoutMs: 30000, videoDownloadTimeoutMs: 5000, plannerTimeoutMs: 5000 },
     },
   }, dependencies);
   const server = createServer(app);

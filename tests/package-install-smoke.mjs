@@ -138,7 +138,7 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
       const packManifest = [parsePackOutput(pack.stdout)];
       console.log(JSON.stringify({ kind: "packed-runtime-inventory", name: packManifest[0].name,
         version: packManifest[0].version, files: packManifest[0].files }));
-      for (const bundled of ["progrok", "openai-oauth", "zod"]) {
+      for (const bundled of ["openai-oauth", "zod"]) {
         assert.ok(packManifest[0].bundled.includes(bundled), `packed artifact should bundle ${bundled}`);
       }
       tarball = join(packDir, packManifest[0].filename);
@@ -151,7 +151,6 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
     const packageRoot = join(projectDir, "node_modules", "ima2-gen");
     const cliPath = join(packageRoot, "bin", "ima2.js");
     const binShim = (name) => join(packageRoot, "node_modules", ".bin", process.platform === "win32" ? `${name}.cmd` : name);
-    assert.equal(existsSync(binShim("progrok")), true, "packaged install should include bundled progrok bin");
     assert.equal(existsSync(binShim("openai-oauth")), true, "packaged install should include bundled openai-oauth bin");
 
     const installedRequire = createRequire(join(packageRoot, "package.json"));
@@ -181,7 +180,6 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
       assert.equal(typeof entry, "string", `${packageName} should declare the ${binName} bin`);
       return join(dependencyRoot, entry);
     };
-    const progrokBin = packageBin("progrok", "progrok");
     const oauthBin = packageBin("openai-oauth", "openai-oauth");
     const codexBin = packageBin("@openai/codex", "codex");
     assert.doesNotThrow(() => installedRequire.resolve("zod/v4"));
@@ -215,12 +213,16 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
       IMA2_ADVERTISE_FILE: join(configDir, "server.json"),
       CODEX_HOME: join(homeDir, ".codex"),
       IMA2_NO_OAUTH_PROXY: "1",
-      IMA2_NO_GROK_PROXY: "1",
     };
     for (const key of Object.keys(env)) if (key.startsWith("IMA2_PACKAGE_UI_")) delete env[key];
 
-    const grokHelp = run(process.execPath, [cliPath, "grok", "--help"], { cwd: projectDir, env });
-    assert.match(grokHelp.stdout, /bundled progrok runtime/);
+    // The isolated HOME has no xAI session, so the native Grok CLI must still
+    // exit 0 and report the signed-out state as JSON.
+    const grokStatus = run(process.execPath, [cliPath, "grok", "status", "--json"], { cwd: projectDir, env });
+    const grokStatusReport = JSON.parse(grokStatus.stdout);
+    assert.equal(typeof grokStatusReport, "object");
+    assert.notEqual(grokStatusReport, null);
+    assert.equal(Object.hasOwn(grokStatusReport, "auth"), true, "grok status --json should report an auth field");
 
     const installedVersion = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version;
     assert.equal(existsSync(join(packageRoot, "bin", "ima2.ts")), false, "installed CLI must not depend on repository TypeScript");
@@ -234,9 +236,6 @@ test("packaged tarball installs, serves core status routes, and keeps Card News 
     assert.equal(installationReport.summary.failed, 0);
     assert.ok(installationReport.checks.some((check) => check.code === "NODE_RUNTIME_OK" && check.kind === "pass"));
     assert.ok(installationReport.checks.every((check) => !check.lane && check.evidence === "local" && check.kind !== "fail"));
-
-    const progrokHelp = run(process.execPath, [progrokBin, "--help"], { cwd: projectDir, env });
-    assert.match(progrokHelp.stdout, /Usage: progrok/);
 
     const oauthHelp = run(process.execPath, [oauthBin, "--help"], { cwd: projectDir, env });
     assert.match(oauthHelp.stdout, /openai-oauth|Options/i);

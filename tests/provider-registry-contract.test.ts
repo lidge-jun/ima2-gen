@@ -38,7 +38,10 @@ describe("core provider registry contract", () => {
     assert.equal(agy.credentials[0].optionalApiKeyEnv, "GEMINI_API_KEY");
     for (const provider of REGISTRY) {
       for (const credential of provider.credentials) {
-        assert.ok(credential.envVars.length > 0);
+        // A first-party "oauth" credential is file-backed by construction, so
+        // requiring an env var would force a fake one into the manifest.
+        if (credential.kind === "oauth") assert.ok(credential.authFile.length > 0);
+        else assert.ok(credential.envVars.length > 0);
         if (credential.kind === "api-key") assert.ok(credential.keyVocabulary);
       }
     }
