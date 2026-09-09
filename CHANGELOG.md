@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Windows installer npm handling** — compose global npm lockfile path with nested `Join-Path` calls for PowerShell 5.1 compatibility; wrap npm invocations in `Invoke-Npm` with `Continue` error action preference so stderr warnings do not abort the installer (#110, #111).
 
-## [Unreleased]
+## [3.16.0] - 2026-09-09
 
 ### Removed
 
