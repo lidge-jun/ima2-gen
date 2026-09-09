@@ -5,13 +5,13 @@ import { createServer } from "node:http";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { executionTestProcess } from "./_executionTestProcess.ts";
-import { openVideoFixture, type UpstreamCall } from "./_videoExecutionFixture.ts";
+import { GROK_DIRECT_ORIGIN, openVideoFixture, type UpstreamCall } from "./_videoExecutionFixture.ts";
 import { fakeMp4Bytes, makeVideoStreamFixture } from "./_videoStreamFixture.ts";
 import { bounded } from "./_executionTrackedWrites.ts";
 import type { BusEvent } from "../lib/eventBus.ts";
 
 type Mode = "generate" | "edit" | "native" | "last-frame";
-const PROXY = "http://video-fixture.invalid";
+const PROXY = GROK_DIRECT_ORIGIN;
 const ARTIFACT = "https://video-fixture.invalid/held.mp4";
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
 
@@ -45,7 +45,7 @@ if (executionTestProcess(import.meta.url)) {
         counts.artifacts++; signal = call.signal ?? undefined; return stream.response;
       }
       assert.equal(new URL(call.url).origin, PROXY);
-      assert.equal(call.headers.get("authorization"), "Bearer dummy");
+      assert.equal(call.headers.get("authorization"), fixture.grokBearer);
       if (call.url === `${PROXY}/v1/videos/cancel-artifact`) {
         assert.equal(call.method, "GET"); counts.polls++;
         return Response.json({ status: "done", video: { url: ARTIFACT, duration: 1, respect_moderation: true } });
@@ -65,7 +65,7 @@ if (executionTestProcess(import.meta.url)) {
     const app = express(); fixture.trackApp(app); app.use(express.json());
     let response: express.Response | undefined;
     app.use((_req, res, next) => { response = res; next(); });
-    const ctx = createContext({ rootDir: fixture.root, grokUrl: PROXY,
+    const ctx = createContext({ rootDir: fixture.root, grokAuthHomeDir: fixture.grokAuthHomeDir,
       config: { ...fixture.config, storage: { ...fixture.config.storage, generatedDir: dir } } });
     if (mode === "generate") registerVideoRoutes(app, ctx);
     else registerVideoExtendedRoutes(app, ctx, { extractFrame: async () => PNG });

@@ -10,7 +10,7 @@
  * poll loop.
  */
 import type { RouteRuntimeContext } from "./runtimeContext.js";
-import { getGrokProxyUrl } from "./grokRuntime.js";
+import { getGrokEndpoint, type GrokCredential } from "./grokRuntime.js";
 import { grokError } from "./grokImageCore.js";
 import { GROK_FALLBACK_VIDEO_MODEL } from "./imageModels.js";
 import type { VideoAspectRatio, VideoMode, VideoResolution } from "./imageModels.js";
@@ -56,7 +56,7 @@ export interface GrokVideoOptions {
   webSearchCalls?: number | undefined;
   continuityLineage?: VideoContinuityLineage | null | undefined;
   plannerModel?: string | undefined;
-  directApiKey?: string | undefined;
+  credential?: GrokCredential | undefined;
   onEvent?: (ev: GrokVideoEvent) => void | undefined;
   storyboardActive?: boolean | undefined;
   backgroundConstraint?: string | undefined;
@@ -110,18 +110,10 @@ export function videoConfig(ctx: RouteRuntimeContext): VideoConfig {
   };
 }
 
-export function videoEndpoint(ctx: RouteRuntimeContext, path: string, directApiKey?: string) {
-  if (directApiKey) {
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return {
-      url: `https://api.x.ai${normalizedPath}`,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${directApiKey}` },
-    };
-  }
-  return {
-    url: getGrokProxyUrl(ctx, path),
-    headers: { "Content-Type": "application/json", Authorization: "Bearer dummy" },
-  };
+/** Same endpoint builder as images; kept under the video name so the poll loop stays a leaf. */
+export function videoEndpoint(_ctx: RouteRuntimeContext, path: string, credential?: GrokCredential) {
+  if (!credential) throw grokError("Grok credential was not resolved before the request", 500, "GROK_CREDENTIAL_UNRESOLVED");
+  return getGrokEndpoint(path, credential);
 }
 
 export function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number) {

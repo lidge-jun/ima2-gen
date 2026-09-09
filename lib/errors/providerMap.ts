@@ -74,6 +74,9 @@ export const PROVIDER_ERROR_MAP = {
   // The refresh could not complete (network, 5xx, 429 budget exhausted); the
   // stored session is kept and a later attempt may succeed.
   GROK_AUTH_REFRESH_FAILED: "NETWORK_FAILURE",
+  // A Grok transport call was made without resolving a credential first. Programming
+  // error at the call site, never a user-facing auth state.
+  GROK_CREDENTIAL_UNRESOLVED: "INTERNAL_STATE_ERROR",
   GROK_BAD_REQUEST: "CAPABILITY_UNSUPPORTED",
   GROK_EMPTY_RESPONSE: "INTERNAL_STATE_ERROR",
   GROK_IMAGE_DOWNLOAD_FAILED: "NETWORK_FAILURE",

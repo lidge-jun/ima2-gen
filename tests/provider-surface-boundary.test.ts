@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import express from "express";
 import sharp from "sharp";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 // Import config-dependent modules only after installing the owned config/DB.
 // The real fetch is reserved for the exact ephemeral app; every provider call
@@ -14,6 +15,7 @@ import sharp from "sharp";
 const nativeFetch = globalThis.fetch;
 const savedEnv = new Map<string, string | undefined>();
 let rootDir: string;
+let grokAuth: ReturnType<typeof seedGrokAuth>;
 let image: string;
 let mask: string;
 let config: typeof import("../config.ts").config;
@@ -29,6 +31,10 @@ let processCalls = 0;
 
 before(async () => {
   rootDir = await mkdtemp(join(tmpdir(), "ima2-surface-boundary-"));
+  // The grok lane is admitted only with a stored xAI session; seed one in an
+  // isolated HOME so these boundary cases reach the surface checks they target
+  // instead of stopping at 401 GROK_AUTH_REQUIRED (and never read the real ~/.progrok).
+  grokAuth = seedGrokAuth();
   for (const key of Object.keys(process.env).filter((key) => key.startsWith("IMA2_") || key === "DOTENV_CONFIG_PATH")) {
     savedEnv.set(key, process.env[key]);
     delete process.env[key];
@@ -77,6 +83,7 @@ after(async () => {
     else process.env[key] = value;
   }
   if (rootDir) await rm(rootDir, { recursive: true, force: true });
+  grokAuth?.cleanup();
 });
 
 interface UpstreamCall { url: string; init: RequestInit }
@@ -104,6 +111,7 @@ async function withApp(fn: (fixture: Fixture) => Promise<void>, upstream?: FakeU
   const ctx = runtime.createTestRuntimeContext({
     rootDir, apiKey: "sk-fixture-only", oauthReadyState: "ready", xaiApiKey,
     oauthUrl: "http://oauth-fixture.invalid",
+    grokAuthHomeDir: grokAuth.homeDir,
     config: { ...config, storage: { ...config.storage, generatedDir } },
   });
   const app = express();

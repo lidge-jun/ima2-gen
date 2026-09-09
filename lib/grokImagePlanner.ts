@@ -18,6 +18,20 @@ import {
   type GrokResponsesResponse,
 } from "./grokImageCore.js";
 import { grokFetchWithRetry } from "./grokUpstreamRetry.js";
+import { resolveGrokCredential, type GrokCredential } from "./grokRuntime.js";
+
+/**
+ * Planner and search share the credential the adapter already resolved. Direct callers
+ * (lib/grokImageAdapter re-exports) may omit it, and the OAuth `grok` lane is the right
+ * default there: an explicit credential is what makes a call the `grok-api` lane.
+ */
+async function plannerCredential(
+  ctx: RouteRuntimeContext,
+  options: { credential?: GrokCredential | undefined; signal?: AbortSignal | undefined },
+): Promise<GrokCredential> {
+  if (options.credential) return options.credential;
+  return await resolveGrokCredential(ctx, "grok", { ...(options.signal ? { signal: options.signal } : {}) });
+}
 
 export function buildGrokPlannerPayload(
   prompt: string,
@@ -204,12 +218,12 @@ export function buildGrokSearchPayload(prompt: string, plannerModel = DEFAULT_GR
 export async function searchGrokVisualContext(
   prompt: string,
   ctx: RouteRuntimeContext,
-  options: { signal?: AbortSignal; requestId?: string; directApiKey?: string; plannerModel?: string } = {},
+  options: { signal?: AbortSignal; requestId?: string; credential?: GrokCredential; plannerModel?: string } = {},
 ): Promise<GrokSearchResult> {
   const planner = getPlannerConfig(ctx);
   const plannerModel = options.plannerModel || planner.model;
   const payload = buildGrokSearchPayload(prompt, plannerModel);
-  const { url, headers } = getGrokEndpoint(ctx, "/v1/responses", options.directApiKey);
+  const { url, headers } = getGrokEndpoint("/v1/responses", await plannerCredential(ctx, options));
   // The search brief has its own, smaller budget: it runs BEFORE the planner call inside
   // the same user request, so charging it the full planner budget lets one slow stage eat
   // the other's time. See devlog/_plan/260817_grok_video_planner_timeout/010.
@@ -280,7 +294,7 @@ export async function planGrokImage(
     requestId?: string | undefined;
     referenceCount?: number | undefined;
     references?: GrokReferenceImage[] | undefined;
-    directApiKey?: string | undefined;
+    credential?: GrokCredential | undefined;
     plannerModel?: string | undefined;
     backgroundConstraint?: string | undefined;
     webSearchEnabled?: boolean | undefined;
@@ -294,8 +308,9 @@ export async function planGrokImage(
   // record calls actually made (070 QA: search ran even with
   // webSearchEnabled:false, and webSearchCalls was hardcoded to 1).
   const searchEnabled = options.webSearchEnabled !== false;
+  const credential = await plannerCredential(ctx, options);
   const search = searchEnabled
-    ? await searchGrokVisualContext(prompt, ctx, { ...(options.signal ? { signal: options.signal } : {}), ...(options.requestId ? { requestId: options.requestId } : {}), ...(options.directApiKey ? { directApiKey: options.directApiKey } : {}), plannerModel })
+    ? await searchGrokVisualContext(prompt, ctx, { ...(options.signal ? { signal: options.signal } : {}), ...(options.requestId ? { requestId: options.requestId } : {}), credential, plannerModel })
     : { summary: "", skipped: true } as Awaited<ReturnType<typeof searchGrokVisualContext>>;
   const payload = buildGrokPlannerPayload(
     prompt,
@@ -307,7 +322,7 @@ export async function planGrokImage(
     options.references || options.referenceCount || 0,
     options.backgroundConstraint || "",
   );
-  const { url, headers } = getGrokEndpoint(ctx, "/v1/chat/completions", options.directApiKey);
+  const { url, headers } = getGrokEndpoint("/v1/chat/completions", credential);
   const { combinedSignal, timer } = withTimeoutSignal(options.signal, planner.timeoutMs);
 
   logEvent("grok", "planner:start", { requestId: options.requestId, plannerModel, imageModel, size: options.size });

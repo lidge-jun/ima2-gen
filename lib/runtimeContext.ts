@@ -26,6 +26,11 @@ export interface RuntimeContext {
   grokProxy?: GrokProxyHandle | undefined;
   /** True only while a supervised child is actually listening. */
   grokProxyLive?: boolean | undefined;
+  /**
+   * Directory whose `.progrok/auth.json` holds the xAI OAuth session. Tests inject an
+   * isolated HOME here; production leaves it undefined and lib/xaiAuth.ts uses os.homedir().
+   */
+  grokAuthHomeDir?: string | undefined;
   hasApiKey: boolean;
   oauthActualPort: number | undefined;
   oauthPort: number;

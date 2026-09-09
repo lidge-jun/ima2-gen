@@ -18,6 +18,7 @@ import {
 } from "./imageModels.js";
 import { formatVideoContinuityForPlanner, type VideoContinuityLineage } from "./videoContinuity.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
+import { resolveGrokCredential, type GrokCredential } from "./grokRuntime.js";
 import {
   videoConfig,
   videoEndpoint,
@@ -111,6 +112,17 @@ export interface GrokVideoGenerateResult {
 }
 
 const canonicalVideoModel = canonicalGrokVideoModel;
+
+/**
+ * Every video call carries an explicit credential. Callers that resolved one (the HTTP
+ * routes, the extend operation) pass it down so a whole request uses a single bearer;
+ * callers that did not — the agent surface — get the OAuth lane, which is exactly what
+ * the removed proxy used to supply for them.
+ */
+async function videoCredential(ctx: RouteRuntimeContext, options: GrokVideoOptions): Promise<GrokCredential> {
+  if (options.credential) return options.credential;
+  return resolveGrokCredential(ctx, "grok", options.signal ? { signal: options.signal } : {});
+}
 
 function sourceImageUrl(image: string, mime?: string | null): string {
   if (image.startsWith("data:") || image.startsWith("http")) return image;
@@ -218,6 +230,7 @@ export function parseGrokVideoPlanPrompt(response: any): string {
 
 export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, options: GrokVideoOptions = {}): Promise<GrokVideoPlan> {
   const cfg = videoConfig(ctx);
+  const credential = await videoCredential(ctx, options);
   const mode: VideoMode = options.mode || (options.sourceImage ? "image-to-video" : "text-to-video");
   const duration = options.duration ?? 5;
   const resolution = options.resolution || "480p";
@@ -244,7 +257,7 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
     // own deadline would turn a slow search — the exact case 020 exists to degrade — into
     // GENERATION_CANCELED. The stage bound is applied inside that function via
     // getPlannerConfig().searchTimeoutMs.
-    const search = await searchGrokVisualContext(prompt, ctx, { signal: phaseSignal, ...(options.requestId ? { requestId: options.requestId } : {}), ...(options.directApiKey ? { directApiKey: options.directApiKey } : {}), plannerModel });
+    const search = await searchGrokVisualContext(prompt, ctx, { signal: phaseSignal, ...(options.requestId ? { requestId: options.requestId } : {}), credential, plannerModel });
     searchSummary = search.summary;
   } catch (e: any) { // justified: adapter rejections are untyped; the shape is narrowed here
     // A user cancellation is a real cancellation and must never be swallowed. Neither is
@@ -279,7 +292,7 @@ export async function planGrokVideo(prompt: string, ctx: RouteRuntimeContext, op
     continuityLineage: options.continuityLineage,
     backgroundConstraint: options.backgroundConstraint,
   });
-  const { url, headers } = videoEndpoint(ctx, "/v1/chat/completions", options.directApiKey);
+  const { url, headers } = videoEndpoint(ctx, "/v1/chat/completions", credential);
   const { combinedSignal, timer } = withTimeoutSignal(phaseSignal, cfg.plannerTimeoutMs);
   logEvent("grok", "video:planner:start", { requestId: options.requestId, mode, duration, resolution });
   try {
@@ -395,7 +408,7 @@ export function buildVideoGenerationPayload(plan: GrokVideoPlan, opts: { model: 
 
 export async function startVideoRequest(ctx: RouteRuntimeContext, payload: Record<string, unknown>, options: GrokVideoOptions): Promise<string> {
   const cfg = videoConfig(ctx);
-  const { url, headers } = videoEndpoint(ctx, "/v1/videos/generations", options.directApiKey);
+  const { url, headers } = videoEndpoint(ctx, "/v1/videos/generations", await videoCredential(ctx, options));
   const { combinedSignal, timer } = withTimeoutSignal(options.signal, cfg.startTimeoutMs);
   try {
     // NOT wrapped in grokFetchWithRetry on purpose: a reset or 5xx here may follow a job
@@ -424,6 +437,9 @@ export async function startVideoRequest(ctx: RouteRuntimeContext, payload: Recor
 
 export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeContext, options: GrokVideoOptions = {}): Promise<GrokVideoGenerateResult> {
   const cfg = videoConfig(ctx);
+  // Resolve once for the whole request: plan, start, and poll must all carry the same
+  // bearer, and re-resolving per stage would refresh the OAuth session repeatedly.
+  const effective: GrokVideoOptions = { ...options, credential: await videoCredential(ctx, options) };
   const model = canonicalVideoModel(options.model || cfg.model);
   const srcUrl = options.sourceImage ? sourceImageUrl(options.sourceImage, options.sourceMime) : undefined;
   const refUrls = (options.referenceImages ?? []).map((img) => sourceImageUrl(img, undefined));
@@ -438,7 +454,7 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
         aspectRatio: options.aspectRatio || "auto",
         webSearchCalls: options.webSearchCalls ?? 1,
       }
-    : await planGrokVideo(prompt, ctx, options);
+    : await planGrokVideo(prompt, ctx, effective);
   let xaiVideoRequestId: string;
   let effectiveModel = model;
 
@@ -458,7 +474,7 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
   }
 
   try {
-    xaiVideoRequestId = await startVideoRequest(ctx, effectivePayload, options);
+    xaiVideoRequestId = await startVideoRequest(ctx, effectivePayload, effective);
   } catch (e: any) {
     // Fallback: if 1.5-preview still fails, retry with base model.
     // Not when voices are attached: the base model rejects reference_audios outright, so
@@ -467,7 +483,7 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
     if (model !== GROK_VIDEO_MODEL_BASE && e?.status === 400 && voices.length === 0) {
       effectiveModel = GROK_VIDEO_MODEL_BASE;
       const fallbackPayload = buildVideoGenerationPayload(plan, { model: effectiveModel, sourceImageUrl: srcUrl, referenceImageUrls: refUrls });
-      xaiVideoRequestId = await startVideoRequest(ctx, fallbackPayload, options);
+      xaiVideoRequestId = await startVideoRequest(ctx, fallbackPayload, effective);
       logEvent("grok", "video:fallback", { requestId: options.requestId, from: model, to: effectiveModel });
     } else {
       throw e;
@@ -476,7 +492,7 @@ export async function generateVideoViaGrok(prompt: string, ctx: RouteRuntimeCont
   const modelFallback = effectiveModel === model ? null : { from: model, to: effectiveModel };
   options.onEvent?.({ phase: "submitted", xaiVideoRequestId, requestedModel: model, effectiveModel, modelFallback });
   logEvent("grok", "video:submitted", { requestId: options.requestId, xaiVideoRequestId, mode: plan.mode });
-  const poll = await pollVideoUntilDone(ctx, xaiVideoRequestId, options);
+  const poll = await pollVideoUntilDone(ctx, xaiVideoRequestId, effective);
   if (!poll.videoUrl) throw grokError("Grok video done without a video url", 502, "GROK_VIDEO_EMPTY_RESPONSE");
   if (poll.respectModeration === false) throw grokError("Grok video blocked by moderation", 502, "GROK_VIDEO_MODERATION_BLOCKED");
   const { buffer, contentType } = await downloadVideo(ctx, poll.videoUrl, options.signal);

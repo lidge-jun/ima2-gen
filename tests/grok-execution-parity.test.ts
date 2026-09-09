@@ -7,9 +7,13 @@ import type { ExecutionProgress, ImageExecutionRequest, ImageExecutionResult } f
 import { executionTestProcess } from "./_executionTestProcess.ts";
 import { openRouteHarness, type RouteCase, type Surface, type UpstreamCall } from "./_executionRouteHarness.ts";
 import { bounded } from "./_executionTrackedWrites.ts";
+import { GROK_FIXTURE_BEARER } from "./_grokAuthFixture.ts";
 
 type Lane = "grok" | "grok-api";
 const KEY = "xai-parity-original";
+/** Both lanes reach xAI directly; `grok` carries the seeded OAuth bearer, `grok-api` the key. */
+const XAI_ORIGIN = "https://api.x.ai";
+const bearerFor = (lane: Lane, key: string) => lane === "grok" ? GROK_FIXTURE_BEARER : `Bearer ${key}`;
 const ARTIFACT = "https://fixture.invalid/parity.png";
 const SOURCE_URL = "https://fixture.invalid/source.png";
 const options = { model: "grok-imagine-image", quality: "medium", size: "1024x1024",
@@ -76,8 +80,8 @@ if (executionTestProcess(import.meta.url)) describe("G05 real Grok routes and fa
         assert.equal(call.headers.get("cookie"), null);
       } else {
         assert.equal(call.method, "POST");
-        assert.equal(new URL(call.url).origin, provider === "grok" ? "http://grok-fixture.invalid" : "https://api.x.ai");
-        assert.equal(call.headers.get("authorization"), provider === "grok" ? "Bearer dummy" : `Bearer ${expectedKey}`);
+        assert.equal(new URL(call.url).origin, XAI_ORIGIN);
+        assert.equal(call.headers.get("authorization"), bearerFor(provider, expectedKey));
       }
       const changed = override?.(call);
       if (changed !== undefined) return changed;
@@ -244,21 +248,22 @@ if (executionTestProcess(import.meta.url)) describe("G05 real Grok routes and fa
   });
 
   for (const provider of ["grok", "grok-api"] as const)
-  for (const surface of ["node", "edit", "multimode"] as const)
-  for (const samePort of [false, true]) it(`G05 private artifact policy ${provider}/${surface}/samePort=${samePort}`, async () => {
-    const origin = "http://127.0.0.1:18463";
-    const artifact = `${samePort ? origin : "http://127.0.0.1:18464"}/private.png`;
-    const allowed = provider === "grok" && samePort;
-    await harness.run(surface, { context: { xaiApiKey: KEY, grokUrl: `${origin}/v1` }, upstream: (call) => {
-      if (call.method === "GET") {
-        assert.equal(allowed, true, "forbidden local artifact never reaches fake GET");
-        assert.equal(call.url, artifact);
-        assert.equal(call.headers.get("authorization"), null);
-        return new Response(Buffer.from(png, "base64"), { headers: { "content-type": "image/png" } });
-      }
-      assert.equal(new URL(call.url).origin, provider === "grok" ? origin : "https://api.x.ai");
-      assert.equal(call.headers.get("authorization"), provider === "grok" ? "Bearer dummy" : `Bearer ${KEY}`);
-      if (call.url.endsWith("/chat/completions")) return plan();
+    for (const surface of ["node", "edit", "multimode"] as const)
+      for (const samePort of [false, true]) it(`G05 private artifact policy ${provider}/${surface}/samePort=${samePort}`, async () => {
+        const origin = "http://127.0.0.1:18463";
+        const artifact = `${samePort ? origin : "http://127.0.0.1:18464"}/private.png`;
+        // No proxy hop survives the direct lane, so no loopback origin is trusted for either lane.
+        const allowed = false;
+        await harness.run(surface, { context: { xaiApiKey: KEY }, upstream: (call) => {
+          if (call.method === "GET") {
+            assert.equal(allowed, true, "forbidden local artifact never reaches fake GET");
+            assert.equal(call.url, artifact);
+            assert.equal(call.headers.get("authorization"), null);
+            return new Response(Buffer.from(png, "base64"), { headers: { "content-type": "image/png" } });
+          }
+          assert.equal(new URL(call.url).origin, XAI_ORIGIN);
+          assert.equal(call.headers.get("authorization"), bearerFor(provider, KEY));
+          if (call.url.endsWith("/chat/completions")) return plan();
       assert.match(call.url, /\/images\/(generations|edits)$/);
       return Response.json({ data: [{ url: artifact }] });
     } }, async (fixture) => {

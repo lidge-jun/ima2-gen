@@ -1,33 +1,40 @@
 import type { Express } from "express";
 import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
-import { getGrokProxyBaseUrl, getGrokProxyUrl } from "../lib/grokRuntime.js";
+import { fetchWithGrokAuth, getGrokEndpoint } from "../lib/grokRuntime.js";
+
+/**
+ * The status probe now asks api.x.ai directly with the stored OAuth session, so it
+ * reports on the credential the generation lane actually uses. There is no local child
+ * to promote or restart, which is why the old probe token and proxy state are gone; the
+ * four status literals stay unchanged because the UI switches on them.
+ */
+function statusFromError(error: unknown): { status: string; reason?: string } {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === "GROK_AUTH_REQUIRED") return { status: "offline", reason: "login_required" };
+  if (code === "GROK_AUTH_REFRESH_FAILED") {
+    const message = error instanceof Error ? error.message : "token refresh failed";
+    return { status: "error", reason: message };
+  }
+  return { status: "offline" };
+}
 
 export function registerGrokRoutes(app: Express, ctx: RouteRuntimeContext) {
   app.get("/api/grok/status", async (_req, res) => {
-    const grokCfg = (ctx.config as any).grokProvider || {};
-    const timeoutMs = grokCfg.statusTimeoutMs || 3000;
-    // Captured BEFORE the await: a response that outlives its child must not be
-    // able to promote a dead proxy back to ready.
-    const token = ctx.grokProxy?.probeToken();
+    const timeoutMs = ctx.config?.grokProvider?.statusTimeoutMs ?? 3000;
     try {
-      const r = await fetch(getGrokProxyUrl(ctx, "/v1/models"), {
-        signal: AbortSignal.timeout(timeoutMs),
+      const r = await fetchWithGrokAuth(ctx, "grok", (credential) => {
+        const { url, headers } = getGrokEndpoint("/v1/models", credential);
+        return fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
       });
       if (r.ok) {
-        const data: any = await r.json();
-        const models: string[] = data?.data?.map((m: any) => m.id).filter(Boolean) || [];
-        const hasImageModel = models.some((m: string) => m.startsWith("grok-imagine"));
-        // A live 200 is stronger evidence than stdout parsing, which only
-        // recognizes 127.0.0.1/localhost and so can strand a custom host.
-        if (token) ctx.grokProxy?.markProbedReady(token, getGrokProxyBaseUrl(ctx));
+        const data = await r.json() as { data?: { id?: unknown }[] };
+        const models: string[] = (data?.data ?? []).map((m) => m?.id).filter((id): id is string => typeof id === "string" && id.length > 0);
+        const hasImageModel = models.some((m) => m.startsWith("grok-imagine"));
         return res.json({ status: hasImageModel ? "ready" : "no_image_model", models });
       }
-      return res.json({ status: "error", reason: `HTTP ${r.status}`, state: ctx.grokProxy?.state });
-    } catch {
-      // Deliberately does NOT call ensure(): the UI polls every 10s while not
-      // ready, so self-healing here would spawn a child per poll forever.
-      // Recovery is driven by the login event only.
-      return res.json({ status: "offline", state: ctx.grokProxy?.state });
+      return res.json({ status: "error", reason: `HTTP ${r.status}` });
+    } catch (error) {
+      return res.json(statusFromError(error));
     }
   });
 }

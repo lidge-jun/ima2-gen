@@ -5,6 +5,7 @@ import type { RuntimeContext } from "../lib/runtimeContext.ts";
 import type { CoreProviderId } from "../lib/providers/registry.ts";
 import type { ExecutionProgress, ExecutionSurface, ImageExecutionRequest, SingleImageExecutionResult, SequenceImageExecutionResult } from "../lib/providers/execution/types.ts";
 import { isolateExecution } from "./_executionRouteIsolation.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 interface Call { name: string; args: unknown[] }
 const transports = {
@@ -20,6 +21,8 @@ const transports = {
 
 export async function openBoundaryProbe() {
   const isolation = await isolateExecution();
+  // The OAuth `grok` lane resolves a real bearer during prepare; keep it off the real HOME.
+  const grokAuth = seedGrokAuth();
   const calls: Call[] = [];
   const mocks: Array<{ restore(): void }> = [];
   let failure: unknown;
@@ -71,9 +74,11 @@ export async function openBoundaryProbe() {
     const { createTestRuntimeContext } = await import("../lib/runtimeContext.ts");
     const { prepareImageExecution } = await import("../lib/providers/execution/index.ts");
     const { prepareLegacyImageExecution } = await import("../lib/providers/execution/legacy.ts");
-    const ctx = createTestRuntimeContext({ rootDir: isolation.rootDir, config, xaiApiKey: "initial-invented-key" });
+    const ctx = createTestRuntimeContext({ rootDir: isolation.rootDir, config, xaiApiKey: "initial-invented-key",
+      grokAuthHomeDir: grokAuth.homeDir });
     const source = (await sharp({ create: { width: 8, height: 8, channels: 3, background: "#654321" } }).png().toBuffer()).toString("base64");
-    return { calls, single, sequence, callbackImage, partial, queue, ctx, source, prepareImageExecution, prepareLegacyImageExecution,
+    return { calls, single, sequence, callbackImage, partial, queue, ctx, source, grokBearer: grokAuth.bearer,
+      prepareImageExecution, prepareLegacyImageExecution,
       failWith(error?: unknown) { failure = error; },
       planSearchCalls(value: number) { plannedSearchCalls = value; },
       callbackPromise() { return callbackWork; },
@@ -81,12 +86,12 @@ export async function openBoundaryProbe() {
       async close() {
         (await import("../lib/db.ts")).closeDb();
         for (const entry of mocks.reverse()) entry.restore();
-        await isolation.close();
+        try { await isolation.close(); } finally { grokAuth.cleanup(); }
       },
     };
   } catch (error) {
     for (const entry of mocks.reverse()) entry.restore();
-    await isolation.close();
+    try { await isolation.close(); } finally { grokAuth.cleanup(); }
     throw error;
   }
 }
