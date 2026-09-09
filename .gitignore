@@ -90,3 +90,5 @@ cache/
 !devlog/_fin/260905_production_readiness/**
 !devlog/_plan/260908_xai_imagine_spec_resync/
 !devlog/_plan/260908_xai_imagine_spec_resync/**
+!devlog/_plan/260909_grok_native_oauth/
+!devlog/_plan/260909_grok_native_oauth/**

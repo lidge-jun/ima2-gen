@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-09-02
+updated: 2026-09-09
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -124,7 +124,8 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
+| `260909_grok_native_oauth/` | Roadmap (000-050) complete, audit PASS. Replace the progrok child-process proxy with native xAI OAuth on the grok lane; wp2-wp5 pending as a manual PR chain. | — |
+| `260819c_grok_proxy_supervision/` | WP2-WP4 landed in 054c729f. Superseded by `260909_grok_native_oauth`; archive to `_fin` in its wp5. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 
 Open issue #150 (Provider Adapter v1 RFC) is tracked in `_plan/README.md` but
