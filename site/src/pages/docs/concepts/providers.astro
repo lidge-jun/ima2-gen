@@ -23,8 +23,8 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
   <ul>
     <li><code>provider: "oauth"</code> — uses the local Codex OAuth proxy. The default path; no API key needed.</li>
     <li><code>provider: "api"</code> — calls the OpenAI Responses API with the hosted <code>image_generation</code> tool. Requires <code>OPENAI_API_KEY</code>.</li>
-    <li><code>provider: "grok"</code> — starts bundled <code>progrok</code>, runs mandatory xAI Web Search and a planner pass (default <code>grok-4.5</code>, configurable in settings or via <code>--planner-model</code>), then calls xAI Images API. Grok 4.3 remains an explicit compatibility override.</li>
-    <li><code>provider: "grok-api"</code> — same xAI pipeline as <code>grok</code> but uses a direct <code>XAI_API_KEY</code> instead of the OAuth proxy.</li>
+    <li><code>provider: "grok"</code> — calls <code>api.x.ai</code> directly with the xAI OAuth session in <code>~/.progrok/auth.json</code>, runs mandatory xAI Web Search and a planner pass (default <code>grok-4.5</code>, configurable in settings or via <code>--planner-model</code>), then calls xAI Images API. Grok 4.3 remains an explicit compatibility override.</li>
+    <li><code>provider: "grok-api"</code> — same xAI pipeline as <code>grok</code> but uses a direct <code>XAI_API_KEY</code> instead of the OAuth session.</li>
     <li><code>provider: "gemini-api"</code> — calls the Google Gemini image API directly. Supports two models (<code>nano-banana-2</code> and <code>nano-banana-pro</code>), aspect ratio and resolution controls, and two auth modes: a <code>GEMINI_API_KEY</code> or a Vertex AI service-account JSON (<code>VERTEX_SERVICE_ACCOUNT_JSON</code>). When both are configured, Vertex AI takes priority unless overridden by the last-saved auth mode. Cost varies by model and resolution (see Gemini API section below).</li>
     <li><code>provider: "agy"</code> — spawns the Antigravity CLI (<code>agy -p</code>) to generate via Google Gemini (<code>nano-banana-2</code>). Fixed 1024×1024 JPEG output, max 3 refs. Free (no token cost).</li>
     <li><code>provider: "atlascloud"</code> — calls AtlasCloud with <code>ATLASCLOUD_API_KEY</code> for GPT Image 2 generation and edit, with up to 10 references.</li>
@@ -42,7 +42,7 @@ const d = (slug: string) => docsPath(import.meta.env.BASE_URL, 'en', slug);
       <tr><td><code>auto</code></td><td>Routing mode where accepted; not a provider lane.</td></tr>
       <tr><td><code>oauth</code></td><td>Force the local OAuth proxy path.</td></tr>
       <tr><td><code>api</code></td><td>Force the API-key Responses path; requires a configured key.</td></tr>
-      <tr><td><code>grok</code></td><td>Force the bundled xAI path through <code>127.0.0.1:18645</code>; run <code>ima2 grok login</code> once to authorize.</td></tr>
+      <tr><td><code>grok</code></td><td>Force the xAI OAuth path to <code>api.x.ai</code>; run <code>ima2 grok login</code> once to authorize.</td></tr>
       <tr><td><code>grok-api</code></td><td>Same xAI pipeline but authenticates with a direct <code>XAI_API_KEY</code>.</td></tr>
       <tr><td><code>gemini-api</code></td><td>Direct Google Gemini API. Requires <code>GEMINI_API_KEY</code> or <code>VERTEX_SERVICE_ACCOUNT_JSON</code>. Supports aspect ratio and resolution controls. No quality/format/moderation/multimode controls.</td></tr>
       <tr><td><code>agy</code></td><td>Spawn Antigravity CLI for Gemini image generation. Requires <code>agy</code> binary installed. 1024×1024 fixed, JPEG, max 3 refs, no quality/size/mask controls.</td></tr>

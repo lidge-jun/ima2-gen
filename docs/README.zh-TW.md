@@ -159,14 +159,16 @@ Web UI 使用單一 `GET /api/events` 伺服器發送事件（SSE）連線，接
 
 - `provider: "oauth"` 使用本機 Codex OAuth 代理程式。
 - `provider: "api"` 使用 OpenAI Responses API 的 `image_generation` 工具。
-- `provider: "grok"`開始捆綁`progrok`在`127.0.0.1:18645`, 強制運行xAI網路搜尋加上規劃者通行證（預設：`grok-4.5`，可在設定中配置或透過`--planner-model`），然後調用xAI圖片API透過本地代理。`grok-4.3`仍然可以作為顯式相容性覆蓋使用。
-- `provider: "grok-api"`稱為xAI圖片API直接與`XAI_API_KEY`（無捆綁progrok OAuth代理人）。
+- `provider: "grok"`使用`~/.progrok/auth.json`中的xAI OAuth工作階段直接呼叫`https://api.x.ai`, 強制運行xAI網路搜尋加上規劃者通行證（預設：`grok-4.5`，可在設定中配置或透過`--planner-model`），然後調用xAI圖片API。`grok-4.3`仍然可以作為顯式相容性覆蓋使用。用`ima2 grok login`或網頁UI登入一次；權杖在過期前 2 分鐘自動更新。
+- `provider: "grok-api"`稱為xAI圖片API直接與`XAI_API_KEY`（使用API金鑰而不是OAuth工作階段）。
 - `provider: "agy"` 啟動 Antigravity CLI（`agy -p`），透過 Google Gemini 的 `default_api:generate_image` 工具產生圖片（模型：`nano-banana-2`）。輸出固定為 1024×1024 JPEG，最多 3 張參考圖，不提供網路搜尋、品質或尺寸控制。
 - `provider: "gemini-api"` 直接呼叫 Google Generative Language API。支援 `nano-banana-2`（Gemini 3.1 Flash Image）與 `nano-banana-pro`（Gemini 3 Pro Image）；驗證方式包括 `GEMINI_API_KEY` 環境變數、Web UI 金鑰管理，或 Vertex AI 服務帳戶 JSON（`VERTEX_SERVICE_ACCOUNT_JSON`）。同時設定 API 金鑰與 Vertex 憑證時，優先使用 Vertex。支援 1:1 至 21:9 的長寬比與 512px、1K、2K、4K 四種解析度；這些控制只有直接 API 路徑有效，Vertex AI 端點不接受 `response_format` 欄位，因此會忽略長寬比與尺寸設定。
 - API 金鑰產生支援經典模式的產生、編輯、遮罩導向編輯、多階段與節點產生。
 - Grok 產生支援經典、節點與代理模式。如果有經典參考圖、節點父圖片或代理模式目前圖片，ima2 會將最後一次 Grok 呼叫切換為 xAI 圖片編輯，以保留圖片轉圖片的上下文。
 
 如果未指定提供者，應用程式將保留目前的GPT OAuth/預設行為。GPT OAuth和API-金鑰產生預設為`gpt-5.6-luna`;這API-key路徑也預設為`low`推理和`1024x1024`除非請求通過了經過驗證的選項。Grok影像生成預設為`grok-imagine-image-quality`.
+
+關於OAuth Grok通道有一點需要說明：xAI只把`/v1/me`記錄為接受OAuth權杖的端點，所以用該權杖呼叫`api.x.ai`的影像與影片介面走的是未文件化的路徑。它目前可用——progrok一直依賴同一條路徑——但沒有任何相容性承諾。如果xAI關閉這條路徑，用`XAI_API_KEY`的`provider: "grok-api"`是有文件的方案，且不受影響。
 
 Grok圖像生成公開了模型選擇器（`grok-imagine-image` / `grok-imagine-image-quality`）和尺寸選擇器（長寬比 + 1k/2k 解析度）。設定頁面更喜歡Grok建立每週積分百分比並重置時間`GET /v1/billing?format=credits`;如果該來源不可用，則會退回到傳統的每月計費窗口，並且`$used/$limit`. A **切換帳戶**按鈕啟動設備代碼OAuth流動 （`POST /api/auth/switch`）無需離開應用程式即可重新進行身份驗證。
 
@@ -317,9 +319,6 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_API_REASONING_EFFORT` | `low` |默認推理工作`provider: "api"` |
 | `IMA2_API_IMAGE_SIZE` | `1024x1024` |預設尺寸為`provider: "api"` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | `true` |切換網路搜尋`provider: "api"` |
-| `IMA2_GROK_PROXY_HOST` | `127.0.0.1` |捆綁主機progrok代理人|
-| `IMA2_GROK_PROXY_PORT` | `18645` |捆綁端口progrok代理人|
-| `IMA2_NO_GROK_PROXY` | — |放`1`停用自動progrok啟動|
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok搜尋/規劃器模型（也可透過設定進行配置UI或者`--planner-model` CLI旗幟）|
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | `60000` |超時時間為Grok搜尋和規劃呼叫|
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` |預設最終Grok影像模型|
@@ -330,6 +329,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `VERTEX_SERVICE_ACCOUNT_JSON` | — |谷歌服務帳戶JSON為了Vertex AI授權與`provider: "gemini-api"`;優先於`GEMINI_API_KEY`當兩者都設定時|
 | `IMA2_AGY_BIN` | `agy`在路徑上|顯式路徑Antigravity CLI二進制為`provider: "agy"` |
 | `IMA2_MAX_PARALLEL` | `24` |伺服器範圍的平行產生上限|
+
+`IMA2_GROK_PROXY_HOST`、`IMA2_GROK_PROXY_PORT`、`IMA2_NO_GROK_PROXY`和`IMA2_GROK_RESTART_*`已隨本機Grok代理在 3.16 中移除，不再被讀取；即使保留這些值也不會有任何影響。
 
 ### 記錄模式
 

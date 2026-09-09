@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Bundled progrok proxy** — the `grok` lane no longer bundles or spawns the progrok child process, and there is no local Grok proxy or port 18645. `IMA2_GROK_PROXY_HOST`, `IMA2_GROK_PROXY_PORT`, `IMA2_NO_GROK_PROXY`, and `IMA2_GROK_RESTART_*` are no longer read; setting them is harmless.
+- **`ima2 grok models` and `ima2 grok proxy`** — the subcommand surface is now `login`, `status [--json] [--probe]`, and `logout`.
+
+### Changed
+
+- **Native xAI OAuth on the `grok` lane** — image and video requests call `https://api.x.ai` directly with the OAuth session stored in `~/.progrok/auth.json`, obtained through `ima2 grok login` or the web UI and refreshed automatically two minutes before expiry. The credential file keeps its path and schema, so existing users are not asked to log in again, and it is still shared with the progrok CLI for anyone who has that installed. `grok-api` continues to use `XAI_API_KEY` directly. xAI documents only `/v1/me` as accepting OAuth tokens, so this path carries no compatibility promise; `grok-api` remains the documented one.
+- **Grok readiness reporting** — `/api/grok/status` returns `ready`, `no_image_model`, `error`, or `offline` with `reason: "login_required"` when no session is stored, and `/api/health` plus `~/.ima2/server.json` publish `grok: { auth: "oauth" | "none" }`.
+
 ## [3.15.0] - 2026-09-08
 
 ### Added
