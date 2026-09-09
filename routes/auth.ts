@@ -2,15 +2,16 @@ import type { Express } from "express";
 import type { RouteRuntimeContext } from "../lib/runtimeContext.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { writeFileSync, renameSync, mkdirSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { codexFileLoginArgs, detectCodexAuth } from "../lib/codexDetect.js";
 import { packageCliCommand } from "../lib/packageCli.js";
-
-const GROK_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828";
-const GROK_SCOPE = "openid profile email offline_access grok-cli:access api:access";
-const GROK_TOKEN_URL = "https://auth.x.ai/oauth2/token";
+import {
+  XAI_OAUTH_CLIENT_ID as GROK_CLIENT_ID,
+  XAI_OAUTH_SCOPE as GROK_SCOPE,
+  XAI_TOKEN_ENDPOINT_FALLBACK as GROK_TOKEN_URL,
+  loadGrokCredentials,
+  saveGrokCredentials,
+  type GrokCredentials,
+} from "../lib/xaiAuth.js";
 
 const CODEX_DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 
@@ -46,8 +47,9 @@ function stripAnsi(s: string): string {
 }
 
 function saveGrokTokens(tokens: Record<string, unknown>) {
-  const dir = join(homedir(), ".progrok");
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  if (typeof tokens.access_token !== "string" || tokens.access_token.length === 0) {
+    throw new Error("xAI token response did not include an access token");
+  }
   let email: string | undefined;
   if (typeof tokens.id_token === "string") {
     try {
@@ -57,20 +59,18 @@ function saveGrokTokens(tokens: Record<string, unknown>) {
       email = payload.email;
     } catch { /* ignore */ }
   }
-  const data: Record<string, unknown> = {
+  // Merge over the existing file so a field only progrok writes (idToken) survives a
+  // fresh login; the atomic 0600 write itself lives in lib/xaiAuth.ts.
+  const data: GrokCredentials = {
+    ...(loadGrokCredentials() ?? {}),
     accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-    expiresAt: typeof tokens.expires_in === "number" ? Date.now() + (tokens.expires_in as number) * 1000 : undefined,
+    ...(typeof tokens.refresh_token === "string" ? { refreshToken: tokens.refresh_token } : {}),
+    ...(typeof tokens.expires_in === "number" ? { expiresAt: Date.now() + tokens.expires_in * 1000 } : {}),
     tokenEndpoint: GROK_TOKEN_URL,
+    ...(typeof tokens.id_token === "string" ? { idToken: tokens.id_token } : {}),
+    ...(email ? { email } : {}),
   };
-  if (email) data.email = email;
-  // Atomic write: temp file (0600) + rename, so concurrent completions or a crash
-  // mid-flush can never truncate/corrupt the only credential file. Rename also
-  // guarantees final perms are 0600 even if a looser-perm file pre-existed.
-  const target = join(dir, "auth.json");
-  const tmp = join(dir, `auth.json.tmp-${randomBytes(6).toString("hex")}`);
-  writeFileSync(tmp, JSON.stringify(data, null, 2), { mode: 0o600 });
-  renameSync(tmp, target);
+  saveGrokCredentials(data);
 }
 
 async function startGrokDeviceCode(
