@@ -3,10 +3,13 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 const TEST_DIR = mkdtempSync(join(tmpdir(), "ima2-agent-planner-"));
 process.env.IMA2_CONFIG_DIR = TEST_DIR;
 process.env.IMA2_DB_PATH = join(TEST_DIR, "sessions.db");
+// The grok planner lane resolves an OAuth bearer from ~/.progrok/auth.json.
+const grokAuth = seedGrokAuth();
 
 const { AGENT_ALLOWED_TOOLS } = await import("../lib/agentTypes.ts");
 const { AGENT_TOOL_MANIFEST, formatToolManifestForPrompt } = await import("../lib/agentToolManifest.ts");
@@ -24,6 +27,7 @@ afterEach(() => {
 
 after(() => {
   db.closeDb();
+  grokAuth.cleanup();
   rmSync(TEST_DIR, { recursive: true, force: true });
 });
 
@@ -32,6 +36,7 @@ function plannerCtx() {
     config: { agentPlanner: { enabled: true, timeoutMs: 5_000 }, log: { level: "silent" } },
     oauthUrl: "http://127.0.0.1:9",
     packageVersion: "test",
+    grokAuthHomeDir: grokAuth.homeDir,
   };
 }
 

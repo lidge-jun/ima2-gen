@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { executionTestProcess } from "./_executionTestProcess.ts";
 import { openRouteHarness, type RouteHarness, type RouteCase } from "./_executionRouteHarness.ts";
 import { bounded } from "./_executionTrackedWrites.ts";
+import { GROK_FIXTURE_BEARER } from "./_grokAuthFixture.ts";
 
 const missing = { error: "Grok API key is required for grok-api image generation", code: "GROK_API_KEY_MISSING" };
 const nai = { error: "NovelAI image generation does not accept reference images yet", code: "NAI_REF_UNSUPPORTED" };
@@ -67,8 +68,8 @@ if (executionTestProcess(import.meta.url)) {
               if (scenario === "callback-write-failure") failNextImageWrite = true;
               return new Response(Buffer.from(image, "base64"), { headers: { "content-type": "image/png" } });
             }
-            assert.equal(new URL(call.url).hostname, provider === "grok" ? "grok-fixture.invalid" : "api.x.ai");
-            assert.equal(call.headers.get("authorization"), provider === "grok" ? "Bearer dummy" : "Bearer xai-sparse-fixture");
+            assert.equal(new URL(call.url).hostname, "api.x.ai");
+            assert.equal(call.headers.get("authorization"), provider === "grok" ? GROK_FIXTURE_BEARER : "Bearer xai-sparse-fixture");
             if (call.url.endsWith("/chat/completions")) return Response.json({ choices: [{ message: { tool_calls: [{ type: "function", function: {
               name: "generate_image", arguments: JSON.stringify({ prompt: "identical planned content" }),
             } }] } }] });
@@ -173,8 +174,8 @@ if (executionTestProcess(import.meta.url)) {
     test(`${provider} positive edit reaches its concrete transport without overbroad refusal`, async () => {
       await harness.run("edit", { context: { xaiApiKey: provider === "grok-api" ? "xai-invented-fixture" : undefined }, upstream: (call) => {
         if (call.url.endsWith("/v1/images/edits")) {
-          assert.equal(call.headers.get("authorization"), provider === "grok-api" ? "Bearer xai-invented-fixture" : "Bearer dummy");
-          assert.equal(new URL(call.url).hostname, provider === "grok-api" ? "api.x.ai" : "grok-fixture.invalid");
+          assert.equal(call.headers.get("authorization"), provider === "grok-api" ? "Bearer xai-invented-fixture" : GROK_FIXTURE_BEARER);
+          assert.equal(new URL(call.url).hostname, "api.x.ai");
           return Response.json({ data: [{ url: "https://fixture.invalid/positive.png" }] });
         }
         assert.equal(call.url, "https://fixture.invalid/positive.png");

@@ -376,15 +376,6 @@ export const config = {
     allowWebSearch: pickBool(env.IMA2_API_ALLOW_WEB_SEARCH, fileCfg.apiProvider?.allowWebSearch, true),
   },
   grokProvider: {
-    proxyPort: pickInt(env.IMA2_GROK_PROXY_PORT, fileCfg.grokProvider?.proxyPort, 18645),
-    proxyHost: pickStr(env.IMA2_GROK_PROXY_HOST, fileCfg.grokProvider?.proxyHost, "127.0.0.1"),
-    autoStart: !pickBool(env.IMA2_NO_GROK_PROXY, fileCfg.grokProvider?.disableAutoStart, false),
-    restartDelayMs: pickInt(env.IMA2_GROK_RESTART_DELAY_MS, fileCfg.grokProvider?.restartDelayMs, 2000),
-    // 6 attempts at 2s doubling to a 60s cap is roughly two minutes: enough to ride out a
-    // transient port conflict, short of spinning forever on a broken binary.
-    restartMaxAttempts: pickInt(env.IMA2_GROK_RESTART_MAX_ATTEMPTS, fileCfg.grokProvider?.restartMaxAttempts, 6),
-    restartMaxDelayMs: pickInt(env.IMA2_GROK_RESTART_MAX_DELAY_MS, fileCfg.grokProvider?.restartMaxDelayMs, 60_000),
-    restartHealthyMs: pickInt(env.IMA2_GROK_RESTART_HEALTHY_MS, fileCfg.grokProvider?.restartHealthyMs, 60_000),
     plannerModel: pickStr(env.IMA2_GROK_PLANNER_MODEL, fileCfg.grokProvider?.plannerModel, DEFAULT_GROK_PLANNER_MODEL),
     // Measured 260817: the forced web_search brief takes 70-73 s idle / 44-79 s concurrent,
     // and the planner tool call 9-32 s idle / 28-41 s concurrent. But the reported failure

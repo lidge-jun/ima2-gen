@@ -357,7 +357,7 @@
     "reasoning": "추론",
     "webSearch": "웹 검색",
     "grokApi": "Grok API",
-    "grokApiBody": "번들 progrok에서 필수 검색 → Grok 4.5 이미지·텍스트 도구 기획(영어 프롬프트) → xAI Images API 순서로 실행합니다. 첨부 레퍼런스는 xAI 이미지 편집으로 보내 i2i 맥락을 유지합니다.",
+    "grokApiBody": "xAI OAuth 세션으로 api.x.ai를 직접 호출해 필수 검색 → Grok 4.5 이미지·텍스트 도구 기획(영어 프롬프트) → xAI Images API 순서로 실행합니다. 첨부 레퍼런스는 xAI 이미지 편집으로 보내 i2i 맥락을 유지합니다.",
     "openAccount": "계정 설정 열기",
     "mcp": {"loading":"MCP 준비 상태 확인 중…","error":"MCP 준비 상태를 읽지 못했습니다","missing":"공급자를 사용할 수 없습니다","disabled":"공급자가 비활성화되었습니다","disconnected":"공급자가 연결되지 않았습니다","locked":"공급자 실행이 잠겨 있습니다","default":"공급자 기본 모델","model-missing":"선택한 모델을 사용할 수 없습니다","model-locked":"선택한 모델 실행이 잠겨 있습니다","ready":"최근 연결 확인 때 사용 가능했습니다.","refresh":"새로고침","observed":"확인 시각 {time}"}
   },
@@ -453,7 +453,14 @@
     "moveBlockDown": "{name} 아래로 이동",
     "afterBlocks": "본문 프롬프트 뒤",
     "hint": "Ctrl + Enter로 생성",
-    "dropHere": "놓아서 참조 이미지로 추가 ({max}장까지)"
+    "dropHere": "놓아서 참조 이미지로 추가 ({max}장까지)",
+    "rejectNotMedia": "이미지, 오디오, mp4 파일만 첨부할 수 있습니다",
+    "rejectAudioNeedsVideoModel": "오디오는 비디오 모델을 선택한 뒤에 쓸 수 있습니다",
+    "rejectAudioNeeds15": "오디오는 grok-imagine-video-1.5에서만 지원합니다",
+    "rejectVideoNeedsBase": "영상 입력은 grok-imagine-video에서만 지원합니다",
+    "rejectVideoSingleOnly": "영상은 한 번에 하나만 쓸 수 있습니다",
+    "audioUsePresetVoice": "오디오 파일 업로드는 xAI가 파트너 계정에만 허용합니다. 비디오 설정의 프리셋 보이스를 사용하세요",
+    "videoUseCliForEdit": "영상 편집과 연장은 ima2 video edit / ima2 video extend 명령으로 실행합니다"
   },
   "canvas": {
     "modeTitle": "캔버스 모드",
@@ -730,15 +737,15 @@
     "oauthStarting": "GPT OAuth 프록시가 시작 중입니다. 몇 초 후 다시 시도하세요.",
     "serverUnreachable": "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.",
     "apiInvalid": "API 키가 없거나 유효하지 않습니다. 서버의 .env 파일에서 OPENAI_API_KEY를 확인하세요.",
-    "grokOffline": "Grok 프록시가 실행되지 않고 있습니다.",
+    "grokOffline": "Grok 로그인이 필요합니다.",
     "grokNoImageModel": "Grok 이미지 생성 모델을 찾을 수 없습니다.",
     "grokNotReady": "Grok을 사용할 수 없습니다.",
-    "grokOfflineHint": "필요하면 `ima2 grok login`을 한 번 실행한 뒤 `ima2 serve`를 시작하세요. ima2가 번들된 Grok 프록시를 자동으로 띄웁니다.",
-    "grokManagedByIma2": "Grok은 `ima2 serve` 안에서 번들된 progrok 프록시(127.0.0.1:18645)로 로컬 실행됩니다.",
+    "grokOfflineHint": "`ima2 grok login`을 한 번 실행하거나 웹 UI에서 로그인한 뒤 다시 시도하세요.",
+    "grokManagedByIma2": "Grok은 ~/.progrok/auth.json에 저장된 xAI OAuth 세션으로 api.x.ai를 직접 호출합니다. 토큰은 자동으로 갱신됩니다.",
     "grokClassicOnly": "이 화면에서는 Grok 이미지 생성을 사용할 수 없습니다.",
     "grokClassicOnlyHint": "Grok이 켜진 생성 화면에서 사용하세요.",
     "grokCompatTitle": "Grok 이미지 API",
-    "grokCompatBody": "ima2 serve가 번들 progrok 프록시(127.0.0.1:18645)를 관리합니다. Grok은 항상 먼저 검색하고 첨부 레퍼런스를 Grok 4.5 플래너에 함께 보냅니다. 레퍼런스는 xAI 이미지 편집 경로에서 유지되며, 크기는 xAI aspect ratio/resolution으로 매핑됩니다. 출력 포맷·모더레이션·추론은 OpenAI 공급자에서만 설정합니다.",
+    "grokCompatBody": "Grok은 xAI OAuth 세션으로 api.x.ai를 호출합니다. 항상 먼저 검색하고 첨부 레퍼런스를 Grok 4.5 플래너에 함께 보냅니다. 레퍼런스는 xAI 이미지 편집 경로에서 유지되며, 크기는 xAI aspect ratio/resolution으로 매핑됩니다. 출력 포맷·모더레이션·추론은 OpenAI 공급자에서만 설정합니다.",
     "settingsBody": "앞으로 생성 요청에 사용할 공급자를 선택합니다.",
     "availableTitle": "{name} 사용 가능",
     "availableAria": "{name}: 사용 가능",
@@ -906,7 +913,10 @@
     "upscaleStart": "업스케일 시작",
     "upscaleStarted": "업스케일을 시작했습니다",
     "upscaleFailed": "업스케일 실패",
-    "upscaleInvalid": "업스케일 파라미터가 올바르지 않습니다"
+    "upscaleInvalid": "업스케일 파라미터가 올바르지 않습니다",
+    "editVideo": "영상 편집",
+    "editVideoTitle": "프롬프트로 이 영상을 수정합니다 (grok-imagine-video)",
+    "editVideoPrompt": "영상을 어떻게 바꿀까요? 예: 옷을 빨간색으로"
   },
   "session": {
     "switchTitle": "세션 전환",
@@ -1238,13 +1248,18 @@
     "resolution1080Help": "1080p는 Grok V1.5의 프롬프트 전용 또는 단일 이미지/프레임 영상에서 사용합니다. 참조 2장 이상에서는 사용할 수 없습니다.",
     "aspectTitle": "비율",
     "plannerUpdateFailed": "플래너 모델을 변경하지 못해 이전 설정으로 되돌렸습니다.",
+    "durationClampedToModel": "이 모델의 reference-to-video 최대 길이는 {seconds}초입니다",
     "continuationFallbackT2V": "이어갈 영상의 마지막 프레임을 추출하지 못했습니다. 텍스트-비디오 방식으로 계속 생성합니다.",
     "singleRefTitle": "참조 1장 사용법",
     "singleRefHelp": "이 이미지를 첫 프레임으로 쓸지, 참고만 할지 고릅니다. 2장부터는 항상 참고로 쓰입니다.",
     "singleRef": {
       "source": "이 이미지로 시작",
       "reference": "참고만 하기"
-    }
+    },
+    "voiceSection": "보이스",
+    "voiceLimit": "최대 {max}개. 프롬프트에서 <AUDIO_0>처럼 지칭하세요",
+    "voiceNeeds15": "보이스는 grok-imagine-video-1.5에서만 지원합니다",
+    "voiceCustomPlaceholder": "커스텀 보이스 ID (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "이미지 생성기",
@@ -1308,9 +1323,9 @@
       "apiReady": "준비됨",
       "apiUnavailable": "사용 불가",
       "apiUnknown": "상태 불명",
-      "grokEyebrow": "로컬 xAI 프록시",
+      "grokEyebrow": "xAI OAuth",
       "grokTitle": "Grok",
-      "grokBody": "설정된 로컬 포트의 progrok을 통해 xAI Images API 생성을 사용합니다.",
+      "grokBody": "xAI OAuth 세션으로 xAI Images API를 직접 호출합니다.",
       "agyEyebrow": "Antigravity CLI",
       "agyTitle": "Gemini (agy)",
       "agyInstalledBody": "로그인 상태는 확인할 수 없습니다. 생성이 실패하면 터미널에서 agy login 을 실행하세요.",
@@ -1374,7 +1389,7 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 이미지 생성 미지원",
-      "unsupportedHelp": "Grok 모델은 번들된 로컬 프록시를 통해 xAI Images API를 사용합니다. GPT 모델은 OpenAI Responses 이미지 생성을 사용합니다.",
+      "unsupportedHelp": "Grok 모델은 xAI OAuth 세션으로 xAI Images API를 호출합니다. GPT 모델은 OpenAI Responses 이미지 생성을 사용합니다.",
       "naiDiffusion5Full": "NAI Diffusion V5 Full",
       "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
       "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
@@ -1623,7 +1638,7 @@
     },
     "grokApiKeyMissing": {
       "title": "Grok API 키가 필요합니다",
-      "body": "설정 > 제공자에서 xAI API 키를 추가한 뒤 다시 시도하세요. 이 이미지 요청은 Grok 프록시로 전환되지 않습니다.",
+      "body": "설정 > 제공자에서 xAI API 키를 추가한 뒤 다시 시도하세요. 이 이미지 요청은 Grok OAuth 경로로 전환되지 않습니다.",
       "cta": "제공자 설정 열기"
     },
     "naiApiKeyMissing": {

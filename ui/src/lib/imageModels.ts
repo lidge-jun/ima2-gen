@@ -134,6 +134,17 @@ export function getImageModelShortLabel(value: string | null | undefined, provid
 export const GROK_VIDEO_MODEL_BASE = "grok-imagine-video";
 export const GROK_VIDEO_MODEL_15 = "grok-imagine-video-1.5";
 export const GROK_VIDEO_MODEL_15_PREVIEW_ALIAS = "grok-imagine-video-1.5-preview";
+// GET /v1/video-generation-models reports this alias alongside -preview. Kept in sync
+// with lib/imageModels.ts by tests/xai-video-model-alias-contract.test.ts: the two
+// files cannot import each other across the build boundary, so a test holds the seam.
+export const GROK_VIDEO_MODEL_15_DATED_ALIAS = "grok-imagine-video-1.5-2026-05-30";
+
+// reference-to-video's ceiling depends on the model. See lib/imageModels.ts for the
+// measurements; the same numbers live here so the slider cannot offer a duration the
+// server will reject.
+export const MAX_REF2V_DURATION_15_UI = 15;
+export const MAX_REF2V_DURATION_BASE_UI = 10;
+export const MAX_VIDEO_DURATION_UI = 15;
 
 export const VIDEO_MODEL_OPTIONS: Array<{ value: VideoModel; shortLabel: string; fullLabelKey: string }> = [
   { value: GROK_VIDEO_MODEL_BASE, shortLabel: "grokv", fullLabelKey: "settings.videoModel.grokImagine" },
@@ -141,12 +152,32 @@ export const VIDEO_MODEL_OPTIONS: Array<{ value: VideoModel; shortLabel: string;
 ];
 
 export function isVideoModelValue(v: unknown): v is VideoModel {
-  return v === GROK_VIDEO_MODEL_BASE || v === GROK_VIDEO_MODEL_15 || v === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS;
+  return v === GROK_VIDEO_MODEL_BASE
+    || v === GROK_VIDEO_MODEL_15
+    || v === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS
+    || v === GROK_VIDEO_MODEL_15_DATED_ALIAS;
 }
 
 export function normalizeVideoModelValue(v: unknown): VideoModel | false {
   if (!isVideoModelValue(v)) return false;
-  return v === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS ? GROK_VIDEO_MODEL_15 : v;
+  return v === GROK_VIDEO_MODEL_15_PREVIEW_ALIAS || v === GROK_VIDEO_MODEL_15_DATED_ALIAS
+    ? GROK_VIDEO_MODEL_15
+    : v;
+}
+
+/**
+ * The longest duration this model and mode will actually accept.
+ *
+ * Only reference-to-video has a model-specific ceiling; everything else is bounded by
+ * the shared 15s. A model this UI does not recognize (a comfy workflow, say) gets the
+ * shared bound rather than Grok's, for the same reason the server returns null there:
+ * xAI's rule says nothing about a lane it does not run.
+ */
+export function maxVideoDurationUI(model: string | false, mode: string): number {
+  if (mode !== "reference-to-video") return MAX_VIDEO_DURATION_UI;
+  const normalized = normalizeVideoModelValue(model);
+  if (!normalized) return MAX_VIDEO_DURATION_UI;
+  return normalized === GROK_VIDEO_MODEL_15 ? MAX_REF2V_DURATION_15_UI : MAX_REF2V_DURATION_BASE_UI;
 }
 
 // Two or more attachments can only be references — that is the only shape the API

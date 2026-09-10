@@ -125,7 +125,7 @@ Status values to handle:
 | default resolution | `480p` |
 | video edit input max | 8.7 seconds — **owner-measured, not documented by xAI.** Re-verified as still-believed 2026-08-20; no public source states this number, so do not drop it just because doc sweeps come back empty |
 | video extension input | 2-15 seconds |
-| extension duration | 2-10 seconds |
+| extension duration | 2-10 seconds (superseded: re-measured as 1-15 on 2026-09-08, see devlog/_plan/260908_xai_imagine_spec_resync) |
 | generated URL | temporary; download promptly |
 
 ### Pricing Observed / Documented

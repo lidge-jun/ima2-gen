@@ -1,8 +1,10 @@
 import type { RouteRuntimeContext } from "./runtimeContext.js";
 import { mapSizeToGrokImageParams } from "./grokSizeMapper.js";
 import { detectImageMimeFromB64 } from "./refs.js";
-import { getGrokProxyUrl } from "./grokRuntime.js";
+import { getGrokEndpoint, type GrokCredential } from "./grokRuntime.js";
 export { downloadGrokImageUrl } from "./grokImageDownload.js";
+export { getGrokEndpoint } from "./grokRuntime.js";
+export type { GrokCredential } from "./grokRuntime.js";
 import { DEFAULT_GROK_PLANNER_MODEL } from "../config.js";
 
 export interface GrokImageResponse {
@@ -57,20 +59,6 @@ export interface GrokReferenceImage {
   url?: string;
   declaredMime?: string | null;
   detectedMime?: string | null;
-}
-
-export function getGrokEndpoint(ctx: RouteRuntimeContext, path = "/v1/images/generations", directApiKey?: string): { url: string; headers: Record<string, string> } {
-  if (directApiKey) {
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return {
-      url: `https://api.x.ai${normalizedPath}`,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${directApiKey}` },
-    };
-  }
-  return {
-    url: getGrokProxyUrl(ctx, path),
-    headers: { "Content-Type": "application/json", Authorization: "Bearer dummy" },
-  };
 }
 
 export function getGrokTimeout(ctx: RouteRuntimeContext): number {
@@ -146,15 +134,19 @@ export function extractResponsesText(response: GrokResponsesResponse): string {
  * origin already generated and billed, and no idempotency key exists to deduplicate it.
  * Retrying would charge twice.
  * See devlog/_plan/260812_navrail_grok_autotag/020_grok_upstream_retry.md.
+ *
+ * A 401, by contrast, is rejected before anything is generated, so the caller may resolve a
+ * fresh credential and call this once more (lib/grokRuntime.ts fetchWithGrokAuth).
  */
 export async function postGrokImages(
   ctx: RouteRuntimeContext,
   payload: Record<string, unknown>,
   signal?: AbortSignal,
   path = "/v1/images/generations",
-  directApiKey?: string,
+  credential?: GrokCredential,
 ): Promise<GrokImageResponse> {
-  const { url, headers } = getGrokEndpoint(ctx, path, directApiKey);
+  if (!credential) throw grokError("Grok credential was not resolved before the request", 500, "GROK_CREDENTIAL_UNRESOLVED");
+  const { url, headers } = getGrokEndpoint(path, credential);
   const timeoutMs = getGrokTimeout(ctx);
 
   const { combinedSignal, timer } = withTimeoutSignal(signal, timeoutMs);

@@ -1,6 +1,6 @@
 ---
 created: 2026-06-08
-updated: 2026-09-02
+updated: 2026-09-09
 tags: [ima2-gen, structure-docs, devlog, roadmap]
 ---
 
@@ -51,6 +51,7 @@ When an initiative is fully shipped and merged, its plan folder moves to `_fin/`
 
 | Archive | Description |
 |---------|-------------|
+| `260908_post_314_cleanup` | Post-3.14.0 cleanup: hygiene residuals, dependabot closure, NovelAI V5 battery quota lane (#193), adapter-owned execution (#150), and the v3.15.0 release (2026-09-08, b96a11ed) |
 | `260905_production_readiness` | WP00–WP13 production-readiness round: provider execution contracts, selection consistency, job lifecycle, LAN security, diagnostics, installers, and the v3.14.0 release (2026-09-06, #219, 36aa6fce) |
 | `260825_novelai_provider_lane` | NovelAI (`nai`) image provider lane — tenth core lane; ZIP-archive responses, persistent-token auth, text-to-image only |
 | `260428_issue33-mobile-overhaul-logs` | Mobile shell redesign |
@@ -123,8 +124,7 @@ is empty again; GitHub parity and CI receipts live in the archived closeout.
 
 | Unit | Status | Open issue |
 |---|---|---|
-| `260908_post_314_cleanup/` | Post-3.14.0 cleanup: hygiene residuals, dependabot closure, #193 NAI quota lane, #150 adapter disposition, next release. | #193, #150 |
-| `260819c_grok_proxy_supervision/` | Research + roadmap (000-030) complete. Implementation pending. | — |
+| `260909_grok_native_oauth/` | wp1-wp5 implemented; PR stack #233-#237 open against dev. progrok proxy removed, grok lane calls api.x.ai with the stored xAI OAuth session, native `ima2 grok` CLI. Remaining: merge and the v3.16 release. | — |
 | `260902_studio_surfaces/` | NovelAI dual-prompt UI, configurable Prompt Builder backend, Canvas vectorize entry, docs upgrade, and release train. | — |
 
 Open issue #150 (Provider Adapter v1 RFC) is tracked in `_plan/README.md` but

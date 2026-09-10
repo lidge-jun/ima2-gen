@@ -31,6 +31,14 @@ export type ProviderCredential =
       configKey?: string;
     }
   | { kind: "oauth-proxy"; envVars: readonly string[]; configKey?: string }
+  /**
+   * A first-party OAuth session this process owns end to end: ima2 runs the
+   * device-code login, writes `authFile`, refreshes it, and signs each request.
+   * Distinct from "oauth-proxy", where a separate local process holds the
+   * session and ima2 only forwards to it, and it has no env vars because the
+   * credential lives in a file rather than the environment.
+   */
+  | { kind: "oauth"; authFile: string }
   | { kind: "service-account"; envVars: readonly string[]; configKey?: string }
   | { kind: "local-cli"; envVars: readonly string[]; optionalApiKeyEnv?: string }
   /**

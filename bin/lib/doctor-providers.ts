@@ -48,6 +48,9 @@ function inspectOauth(lane: string): ProviderDoctorLine {
   }
   if (lane === "grok") {
     const home = homedir();
+    // First path is the ima2 session (lib/xaiAuth.ts grokAuthFilePath; spelled out here so
+    // the doctor bundle stays free of node:crypto). ~/.grok/auth.json is the xAI CLI file
+    // that routes/quota.ts still reads; different schema, never a lib/xaiAuth.ts source.
     const files = [join(home, ".progrok", "auth.json"), join(home, ".grok", "auth.json")];
     if (files.some((path) => existsSync(path))) {
       return { code: "CREDENTIAL_PRESENT", lane, kind: "pass", text: `${lane}: local Grok auth file present` };
@@ -103,7 +106,9 @@ function inspectLocalHttp(lane: string, credential: Extract<ProviderCredential, 
 export function inspectProviderLane(provider: CoreProviderManifest, fileConfig: Record<string, unknown>): ProviderDoctorLine[] {
   return provider.credentials.map((credential) => {
     if (credential.kind === "api-key") return inspectApiKey(provider.id, credential, fileConfig);
-    if (credential.kind === "oauth-proxy") return inspectOauth(provider.id);
+    // "oauth" (grok, first-party session) and "oauth-proxy" (a separate local
+    // process holds the session) both land on the same per-lane file checks.
+    if (credential.kind === "oauth-proxy" || credential.kind === "oauth") return inspectOauth(provider.id);
     if (credential.kind === "service-account") return inspectServiceAccount(provider.id, credential, fileConfig);
     if (credential.kind === "local-http") return inspectLocalHttp(provider.id, credential);
     return inspectLocalCli(provider.id, credential);

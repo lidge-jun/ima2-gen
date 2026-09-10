@@ -7,8 +7,11 @@ import { join } from "node:path";
 import { assertOwned, isolateExecution } from "./_executionRouteIsolation.ts";
 import { drain, installTrackedWrites } from "./_executionTrackedWrites.ts";
 import { listenOwnedLoopback } from "./_grokImageTransportFixture.ts";
+import { seedGrokAuth } from "./_grokAuthFixture.ts";
 
 const isolation = await isolateExecution();
+// grok-lane cases resolve an OAuth bearer from ~/.progrok/auth.json; isolate that HOME.
+const grokAuth = seedGrokAuth();
 const { imageTransport } = isolation;
 const deniedFetch = globalThis.fetch;
 const originalFetch = isolation.nativeFetch;
@@ -20,7 +23,7 @@ after(async () => {
   try { await drain(); }
   finally {
     try { closeDb?.(); restoreWrites?.(); }
-    finally { await isolation.close(); }
+    finally { try { await isolation.close(); } finally { grokAuth.cleanup(); } }
   }
 });
 afterEach(async () => {
@@ -88,6 +91,7 @@ async function withApp(fn, { apiKey = "sk-test" } = {}) {
   const ctx = {
     rootDir,
     apiKey,
+    grokAuthHomeDir: grokAuth.homeDir,
     config: {
       ...config,
       storage: { ...config.storage, generatedDir },
@@ -436,7 +440,7 @@ describe("API provider parity", () => {
     });
   });
 
-  it("generate provider=grok counts providerUrl toward the three-reference cap", async () => {
+  it("generate provider=grok counts providerUrl toward the five-reference cap", async () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
@@ -456,17 +460,21 @@ describe("API provider parity", () => {
           provider: "grok",
           model: "grok-imagine-image-quality",
           providerUrl: "https://cdn.x.ai/source-image.png",
-          references: [ref, ref, ref],
+          // The url occupies a slot, so five classic references plus it is six inputs —
+          // one past the cap xAI raised to 5 on 2026-09-08.
+          references: [ref, ref, ref, ref, ref],
         }),
       });
       const body = await res.json();
       assert.equal(res.status, 400);
+      // Five references pass the shared maxRefCount gate; it is the provider check
+      // that counts providerUrl as a sixth input and refuses.
       assert.equal(body.code, "GROK_REF_TOO_MANY");
       assert.equal(calls.length, 0);
     });
   });
 
-  it("generate provider=grok rejects more than three classic references before upstream", async () => {
+  it("generate provider=grok rejects more than five classic references before upstream", async () => {
     const calls = [];
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
@@ -485,12 +493,15 @@ describe("API provider parity", () => {
           prompt: "grok too many refs",
           provider: "grok",
           model: "grok-imagine-image-quality",
-          references: [ref, ref, ref, ref],
+          references: [ref, ref, ref, ref, ref, ref],
         }),
       });
       const body = await res.json();
       assert.equal(res.status, 400);
-      assert.equal(body.code, "GROK_REF_TOO_MANY");
+      // Six references trip the shared limits.maxRefCount gate (5) before the
+      // provider-specific one, now that the grok lane's own cap rose to match it.
+      // Both are real; this asserts which fires first.
+      assert.equal(body.code, "REF_TOO_MANY");
       assert.equal(calls.length, 0);
     });
   });
@@ -741,7 +752,7 @@ describe("API provider parity", () => {
     });
   });
 
-  it("node provider=grok rejects more than three total reference images before upstream", async () => {
+  it("node provider=grok rejects more than five total reference images before upstream", async () => {
     const reference = await pngB64();
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith("http://127.0.0.1:") && !String(url).includes("/v1/")) {
@@ -756,12 +767,14 @@ describe("API provider parity", () => {
         body: JSON.stringify({
           prompt: "too many node grok refs",
           provider: "grok",
-          references: [reference, reference, reference, reference],
+          references: [reference, reference, reference, reference, reference, reference],
         }),
       });
       const body = await res.json() as any;
       assert.equal(res.status, 400);
-      assert.equal(body.error.code, "GROK_REF_TOO_MANY");
+      // Same ordering as the classic route: the shared maxRefCount gate answers first
+      // now that the grok lane's own cap is also 5.
+      assert.equal(body.error.code, "REF_TOO_MANY");
     });
   });
 });

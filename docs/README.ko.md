@@ -117,7 +117,7 @@ Ctrl+C로 DB, 소켓, 자식 프로세스를 정리할 수 있습니다. Windows
 - **Video 생성**: 텍스트, 이미지, 또는 여러 레퍼런스에서 짧은 영상을 만듭니다. SSE로 기획→제출→진행률→완료를 실시간 표시합니다. 생성된 영상에서 First/Mid/Last 프레임 복사 버튼으로 키프레임을 추출할 수 있습니다.
 - **Storyboard mode**: 컴포저에서 스토리보드 모드를 켜면 연속 프레임의 인물·장면 연속성을 유지합니다. 이미지와 영상 생성 모두 지원합니다.
 - **Local gallery**: 생성물을 내 컴퓨터에 저장하고 세션별 히스토리로 봅니다. 기본적으로 현재 세션만 보이며 All Images 토글로 전체 히스토리를 볼 수 있습니다. 각 이미지의 생성 시간·reasoning effort가 메타데이터에 기록됩니다.
-- **Reference images**: 레퍼런스를 드래그, 붙여넣기, 파일 선택으로 추가합니다. 이미지 최대 5장, 영상 최대 7장. 큰 이미지는 업로드 전에 자동 압축됩니다.
+- **Reference images**: 레퍼런스를 드래그, 붙여넣기, 파일 선택으로 추가합니다. 이미지 최대 5장, 영상 최대 14장. 큰 이미지는 업로드 전에 자동 압축됩니다.
 - **Prompt library imports**: 로컬 prompt pack, GitHub folder, curated GPT-image hint를 내장 prompt library로 가져옵니다.
 - **Mobile shell**: 작은 화면에서는 app bar, compose sheet, compact settings toggle로 조작합니다.
 - **Observable jobs**: 진행 중인 작업과 최근 완료된 작업을 request ID로 추적합니다.
@@ -128,18 +128,18 @@ Ctrl+C로 DB, 소켓, 자식 프로세스를 정리할 수 있습니다. Windows
 
 ## 이미지 생성 공급자
 
-이미지 생성은 로컬 Codex/ChatGPT OAuth, OpenAI API key, 번들 Grok 공급자를 지원합니다.
+이미지 생성은 로컬 Codex/ChatGPT OAuth, OpenAI API key, Grok 공급자를 지원합니다.
 
 - `provider: "oauth"`는 로컬 Codex OAuth 프록시를 사용합니다.
 - `provider: "api"`는 OpenAI Responses API의 `image_generation` 도구를 사용합니다.
-- `provider: "grok"`는 번들 `progrok`을 `127.0.0.1:18645`에서 띄우고, xAI Web Search와 플래너(기본: `grok-4.5`, 설정 또는 `--planner-model`로 변경 가능)를 거친 뒤 xAI Images API를 호출합니다. `grok-4.3`은 호환 선택지로 유지합니다.
-- `provider: "grok-api"`는 `XAI_API_KEY`로 xAI Images API를 직접 호출합니다 (progrok OAuth 없음).
+- `provider: "grok"`는 `~/.progrok/auth.json`에 저장된 xAI OAuth 세션으로 `https://api.x.ai`를 직접 호출합니다. xAI Web Search와 플래너(기본: `grok-4.5`, 설정 또는 `--planner-model`로 변경 가능)를 거친 뒤 xAI Images API로 이어집니다. `grok-4.3`은 호환 선택지로 유지합니다. 처음 한 번 `ima2 grok login` 또는 설정 화면의 **Switch Account**로 로그인하면, 이후에는 만료 2분 전에 토큰이 자동으로 갱신됩니다.
+- `provider: "grok-api"`는 `XAI_API_KEY`로 xAI Images API를 직접 호출합니다 (OAuth 세션을 쓰지 않습니다).
 - `provider: "agy"`는 로컬 Antigravity CLI(`agy -p`)로 Gemini `nano-banana-2` 이미지를 생성합니다 (`IMA2_AGY_BIN`).
 - `provider: "gemini-api"`는 Google Generative Language API 또는 Vertex AI를 사용합니다 (`GEMINI_API_KEY` / `VERTEX_SERVICE_ACCOUNT_JSON`; 둘 다 있으면 Vertex 우선).
 
 Grok은 Classic, Node, Agent 흐름을 지원합니다. Classic 레퍼런스, Node 부모 이미지, Agent 현재 이미지가 있으면 최종 Grok 호출은 xAI image edit 경로로 전환되어 image-to-image 맥락을 유지합니다. 기본 이미지 모델은 `grok-imagine-image-quality`입니다.
 
-Grok video 기본값은 정식 `grok-imagine-video-1.5`입니다. `grok-imagine-video`는 Ref2V, V2V edit, extension 호환 경로에서 계속 쓰며, 기존 `grok-imagine-video-1.5-preview` 문자열도 호환 alias로 받습니다. 레퍼런스 수에 따라 T2V(0), I2V(1), Ref2V(2-7, 최대 10초)가 자동 선택되며, 1080p는 `grok-imagine-video-1.5` 프롬프트 전용 T2V와 단일 이미지/프레임 I2V에서 활성화됩니다. 프롬프트 전용 1.5 T2V는 upstream 요청 전에 내부 흰 캔버스 I2V shim을 사용합니다. duration(1-15s), resolution(480p/720p/지원 시 1080p), aspect ratio 컨트롤을 제공합니다.
+Grok video 기본값은 정식 `grok-imagine-video-1.5`입니다. `grok-imagine-video`는 Ref2V, V2V edit, extension 호환 경로에서 계속 쓰며, 기존 `grok-imagine-video-1.5-preview` 문자열도 호환 alias로 받습니다. 레퍼런스 수에 따라 T2V(0), I2V(1), Ref2V(2-14, grok-imagine-video-1.5는 15초 / grok-imagine-video는 10초)가 자동 선택되며, 1080p는 `grok-imagine-video-1.5` 프롬프트 전용 T2V와 단일 이미지/프레임 I2V에서 활성화됩니다. 프롬프트 전용 1.5 T2V는 upstream 요청 전에 내부 흰 캔버스 I2V shim을 사용합니다. duration(1-15s), resolution(480p/720p/지원 시 1080p), aspect ratio 컨트롤을 제공합니다.
 
 설정 화면의 QuotaCard에 Grok billing `$used/$limit` 바와 **Switch Account** 버튼(`POST /api/auth/switch`)이 표시됩니다.
 
@@ -263,9 +263,6 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_GENERATED_DIR` | `~/.ima2/generated` | 생성 이미지 저장 위치 |
 | `IMA2_IMAGE_MODEL_DEFAULT` | `gpt-5.6-luna` | 서버 fallback 이미지 모델 |
 | `IMA2_NO_OAUTH_PROXY` | — | `1`이면 OAuth 프록시 자동 시작 비활성화 |
-| `IMA2_GROK_PROXY_HOST` | `127.0.0.1` | 번들 progrok 프록시 host |
-| `IMA2_GROK_PROXY_PORT` | `18645` | 번들 progrok 프록시 port |
-| `IMA2_NO_GROK_PROXY` | — | `1`이면 progrok 자동 시작 비활성화 |
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok 플래너 모델 (설정 UI 또는 `--planner-model` CLI 플래그로도 변경 가능) |
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` | 기본 Grok 이미지 모델 |
 | `IMA2_GROK_VIDEO_MODEL_DEFAULT` | `grok-imagine-video-1.5` | 기본 Grok 비디오 모델 |
@@ -277,6 +274,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `VERTEX_SERVICE_ACCOUNT_JSON` | — | Vertex AI 서비스 계정 JSON (API 키보다 우선) |
 | `IMA2_AGY_BIN` | PATH의 `agy` | `provider: "agy"` 바이너리 경로 |
 | `IMA2_MAX_PARALLEL` | `24` | 서버 전역 병렬 생성 상한 |
+
+`IMA2_GROK_PROXY_HOST`, `IMA2_GROK_PROXY_PORT`, `IMA2_NO_GROK_PROXY`, `IMA2_GROK_RESTART_*`는 로컬 Grok 프록시와 함께 3.16에서 제거되어 더 이상 읽지 않습니다. 값을 남겨 두어도 아무 일도 일어나지 않습니다.
 
 ### 로그 모드
 

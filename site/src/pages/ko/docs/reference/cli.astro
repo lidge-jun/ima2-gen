@@ -32,7 +32,7 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
       <tr><td><code>ima2 doctor</code></td><td>Node·패키지·설정·인증 진단.</td></tr>
       <tr><td><code>ima2 doctor image-probe [--json]</code></td><td>no-image 지원 번들용 라이브 sanitized Responses 이미지 프로브.</td></tr>
       <tr><td><code>ima2 open</code></td><td>브라우저에서 웹 UI 열기.</td></tr>
-      <tr><td><code>ima2 grok login/status/models/proxy</code></td><td><code>provider: "grok"</code>이 쓰는 번들 progrok 런타임 인증·상태 확인.</td></tr>
+      <tr><td><code>ima2 grok login/status/logout</code></td><td><code>provider: "grok"</code>이 쓰는 xAI OAuth 세션 인증·상태 확인·로그아웃.</td></tr>
       <tr><td><code>ima2 reset</code></td><td>저장된 설정 제거.</td></tr>
     </tbody>
   </table>
@@ -48,7 +48,7 @@ const cliMd = 'https://github.com/lidge-jun/ima2-gen/blob/main/docs/CLI.md';
       <tr><td><code>ima2 multimode &lt;prompt&gt;</code></td><td>멀티 이미지 SSE 생성 (<code>phase</code> / <code>partial</code> / <code>image</code> 스트리밍).</td></tr>
       <tr><td><code>ima2 video &lt;prompt&gt; [--model &lt;lane&gt;/&lt;model&gt;]</code></td><td>저장했거나 직접 지정한 Grok/MCP 레인으로 비디오 생성.</td></tr>
       <tr><td><code>ima2 video edit &lt;prompt&gt; --video &lt;value&gt;</code></td><td>비디오-투-비디오 편집. HTTPS URL, xAI file_id, data URL, generated MP4 지원.</td></tr>
-      <tr><td><code>ima2 video extend &lt;prompt&gt; --video &lt;value&gt;</code></td><td>비디오 마지막 프레임에서 이어붙이기. extension duration은 2–10초.</td></tr>
+      <tr><td><code>ima2 video extend &lt;prompt&gt; --video &lt;value&gt;</code></td><td>비디오 마지막 프레임에서 이어붙이기. extension duration은 1–15초.</td></tr>
       <tr><td><code>ima2 video frame &lt;generated-file&gt;</code></td><td>generated MP4에서 PNG 프레임 추출.</td></tr>
       <tr><td><code>ima2 video analyze &lt;generated-file&gt;</code></td><td>generated MP4의 첫/마지막 프레임 분석. 원격 URL은 거부.</td></tr>
       <tr><td><code>ima2 node generate</code></td><td>Node 모드 생성 (SSE; <code>--no-stream</code> 지원).</td></tr>

@@ -58,7 +58,7 @@ graph TD
     SRV --> GEN["~/.ima2/generated"]
     SRV --> DB["SQLite via better-sqlite3"]
     SRV --> OAUTH["openai-oauth<br/>default port 10531"]
-    SRV --> GROK["progrok<br/>default port 18645"]
+    SRV --> XAI["api.x.ai<br/>OAuth bearer / API key"]
     SRV --> ENV["env vars"]
     SRV --> ADV["actual runtime URLs<br/>~/.ima2/server.json"]
 ```
@@ -74,7 +74,7 @@ graph TD
 | package engine | generated runtime-install table above; `package.json` is authoritative |
 | release toolchain | Node `24.17.0` from `.node-version`; npm `11.18.0` from `packageManager` |
 | publish files | `bin/**/*.js`, `lib/**/*.js`, `routes/**/*.js`, `skills/`, `ui/dist/`, `docs/`, `vendor/`, `assets/card-news/templates/`, `integrations/comfyui/ima2_gen_bridge/*`, `server.js`, `config.js`, `.env.example`, `README.md`, `CHANGELOG.md`, `LICENSE` |
-| bundled dependencies | `progrok`, patched `openai-oauth`, `zod` |
+| bundled dependencies | patched `openai-oauth`, `zod` |
 | major dependencies | `@openai/codex`, `express`, `openai`, `openai-oauth`, `better-sqlite3`, `dotenv`, `sharp`, `trash`, `ulid`, `zod`; exact versions come from the package manifest and lockfile |
 
 README may still mention a different Node baseline. The operational baseline is the current `engines.node` field in `package.json`.
@@ -165,9 +165,6 @@ cause/body/stack data; this does not claim arbitrary opaque free text is safe.
 | `IMA2_API_REASONING_EFFORT` | Default reasoning effort for `provider: "api"`, default `low` |
 | `IMA2_API_IMAGE_SIZE` | Default size for `provider: "api"`, default `1024x1024` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | Toggle web search for `provider: "api"`, default `true` |
-| `IMA2_GROK_PROXY_HOST` | Bundled progrok bind host, default `127.0.0.1` |
-| `IMA2_GROK_PROXY_PORT` | Bundled progrok preferred port, default `18645` |
-| `IMA2_NO_GROK_PROXY` | Disable the embedded progrok proxy; use only when managing the proxy manually |
 | `IMA2_GROK_PLANNER_MODEL` | Search/planner model for `provider: "grok"` classic generation, default `grok-4.5`; `grok-4.3` remains a compatibility override |
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | Timeout for the Grok planner call, default `900000` |
 | `IMA2_GROK_SEARCH_TIMEOUT_MS` | Timeout for the degradable Grok web-search brief, default `300000` |
@@ -210,7 +207,9 @@ cause/body/stack data; this does not claim arbitrary opaque free text is safe.
 | `IMA2_STATIC_MAX_AGE` | Static asset Cache-Control max-age |
 | `VITE_IMA2_DEV` | UI build-time dev flag; pairs with `VITE_IMA2_CARD_NEWS=1` to expose the dev-only card-news workspace in the bundle |
 
-Generation and edit endpoints support OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, and ComfyUI providers. `provider: "nai"` calls the NovelAI image API with a saved persistent token, decodes the returned ZIP archive to PNG, and is text-to-image only — references and edits are refused rather than downgraded. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path. `provider: "grok"` uses bundled progrok; classic, Node, and Agent generation perform mandatory xAI Web Search and then a `grok-4.5` custom-tool planner call before executing xAI Images API. If Grok generation includes references, a Node parent image, or an Agent current image, those images are sent into the planner and the final image call uses xAI `/v1/images/edits` with the same references instead of the text-only generation endpoint. Grok Node requests are capped at three total input images, and Agent Grok turns force web search on because the planner depends on it.
+`IMA2_GROK_PROXY_HOST`, `IMA2_GROK_PROXY_PORT`, `IMA2_NO_GROK_PROXY`, and `IMA2_GROK_RESTART_*` were removed in 3.16 with the proxy itself; setting them now does nothing.
+
+Generation and edit endpoints support OAuth, API-key, Grok, Gemini, Atlas Cloud, MiniMax, NovelAI, and ComfyUI providers. `provider: "nai"` calls the NovelAI image API with a saved persistent token, decodes the returned ZIP archive to PNG, and is text-to-image only — references and edits are refused rather than downgraded. `provider: "api"` calls the OpenAI Responses API with the hosted `image_generation` tool and requires `OPENAI_API_KEY` or the configured API key path. `provider: "grok"` calls `https://api.x.ai` directly with the xAI OAuth session stored in `~/.progrok/auth.json`; classic, Node, and Agent generation perform mandatory xAI Web Search and then a `grok-4.5` custom-tool planner call before executing xAI Images API. xAI does not document OAuth access to `api.x.ai` — only `/v1/me` is documented as accepting an OAuth token — so this lane works today but carries no compatibility promise; `grok-api` with `XAI_API_KEY` remains the documented path. If Grok generation includes references, a Node parent image, or an Agent current image, those images are sent into the planner and the final image call uses xAI `/v1/images/edits` with the same references instead of the text-only generation endpoint. Grok Node requests are capped at three total input images, and Agent Grok turns force web search on because the planner depends on it.
 
 Runtime port fallback is intentional. If a preferred backend or OAuth proxy port is occupied, the server records the actual bound URL in `~/.ima2/server.json` and health/status responses. CLI clients and split Vite dev proxy resolution should consume that actual URL instead of reconstructing `localhost:${configuredPort}`.
 
@@ -383,3 +382,4 @@ Previous document: `[[05-node-mode]]`
 Next document: `[[07-devlog-map]]`
 - 2026-07-14: OIDC publish now creates/refreshes GitHub Releases for stable tags after npm proof (`create-github-release` job + `ensure-github-release`), so Releases no longer depend on local finalize alone.
 - 2026-08-12: Retired `scripts/release.sh` and `scripts/release-preview.sh`. `.github/workflows/release.yml` now runs the whole cut in CI and reaches `publish.yml` by `workflow_dispatch`, since a `GITHUB_TOKEN` push emits no workflow event. `publish.yml` keeps its push triggers, remains the only holder of `id-token: write`, and resolves the released ref through `PUBLISH_REF`/`PUBLISH_SHA` so every checkout and contract call targets the release SHA. The audit gate also gained per-advisory exceptions (`scripts/audit-exceptions.json`) that require a GHSA id, evidence, and an enforced expiry.
+- 2026-09-09: Removed the bundled progrok child process from the `grok` lane. The lane now calls `https://api.x.ai` directly with the xAI OAuth session in `~/.progrok/auth.json`, refreshed automatically two minutes before expiry; the file is shared with the progrok CLI when a user has it installed, but ima2 no longer bundles or spawns it. There is no local Grok proxy and no port 18645, so `IMA2_GROK_PROXY_HOST`, `IMA2_GROK_PROXY_PORT`, `IMA2_NO_GROK_PROXY`, and `IMA2_GROK_RESTART_*` are no longer read. `ima2 grok` is now `login` / `status` / `logout`, and `/api/health` and `~/.ima2/server.json` publish `grok: { auth: "oauth" | "none" }`. The risk this accepts: xAI documents only `/v1/me` as accepting an OAuth token, so the image and video calls ride an undocumented path that progrok also relied on; if it closes, `grok-api` with `XAI_API_KEY` is the documented fallback.

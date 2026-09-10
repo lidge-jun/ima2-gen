@@ -21,7 +21,7 @@ test("extended video operations combine disconnect and deadline signals", () => 
   assert.match(video, /IMA2_VIDEO_EDIT_TIMEOUT_MS/);
   assert.match(video, /IMA2_VIDEO_EXTEND_TIMEOUT_MS/);
   assert.match(video, /IMA2_VIDEO_ANALYZE_TIMEOUT_MS/);
-  assert.match(video, /pollVideoUntilDone\(ctx, request_id, \{ signal \}\)/);
+  assert.match(video, /pollVideoUntilDone\(ctx, request_id, \{ signal, credential \}\)/);
   assert.match(video, /\/v1\/responses[\s\S]+?signal,/);
 });
 

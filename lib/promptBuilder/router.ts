@@ -1,4 +1,5 @@
-import { getGrokEndpoint } from "../grokImageCore.js";
+import { getGrokEndpoint, resolveGrokCredential, type GrokCredential } from "../grokRuntime.js";
+import { GrokAuthError } from "../xaiAuth.js";
 import { waitForOAuthReady } from "../oauthProxy/runtime.js";
 import type { RuntimeContext } from "../runtimeContext.js";
 import {
@@ -44,6 +45,28 @@ function unavailableBackendError(backend: ResolvedPromptBuilderBackend): Error {
       : "PROMPT_BUILDER_GROK_UNAVAILABLE",
     503,
   );
+}
+
+/**
+ * Both Grok lanes now go through the same resolver, so a missing credential surfaces as the
+ * lane's own "unavailable" error instead of a raw auth failure. A refresh that fails against
+ * xAI is a real upstream fault and propagates unchanged.
+ */
+async function grokCredential(
+  ctx: RuntimeContext,
+  backend: "grok" | "grok-api",
+): Promise<GrokCredential> {
+  try {
+    return await resolveGrokCredential(ctx, backend);
+  } catch (error) {
+    if (error instanceof GrokAuthError && error.code === "GROK_AUTH_REQUIRED") {
+      throw unavailableBackendError("grok");
+    }
+    if ((error as { code?: string } | null)?.code === "GROK_API_KEY_MISSING") {
+      throw unavailableBackendError("grok-api");
+    }
+    throw error;
+  }
 }
 
 export function selectPromptBuilderBackend(
@@ -104,11 +127,7 @@ export async function resolvePromptBuilderTransport(
         useOAuthFetch: false,
       };
     }
-    const directApiKey = backend === "grok-api" ? ctx.xaiApiKey : undefined;
-    if (backend === "grok-api" && !directApiKey) {
-      throw unavailableBackendError("grok-api");
-    }
-    const target = getGrokEndpoint(ctx, "/v1/chat/completions", directApiKey);
+    const target = getGrokEndpoint("/v1/chat/completions", await grokCredential(ctx, backend));
     return { ...target, useOAuthFetch: false };
   } catch (error) {
     throw error;

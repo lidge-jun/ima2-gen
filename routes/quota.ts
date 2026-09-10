@@ -118,11 +118,12 @@ function readGrokTokenCandidates(homeDir = homedir()): GrokTokenCandidate[] {
     }
   } catch {}
   try {
+    // Same file lib/xaiAuth.ts owns; spelled out so quota keeps its narrow node:fs surface.
     const auth = JSON.parse(readFileSync(join(homeDir, ".progrok", "auth.json"), "utf8")) as { accessToken?: string };
     if (typeof auth.accessToken === "string" && auth.accessToken.trim()) {
       candidates.push({
         token: auth.accessToken,
-        source: "progrok:auth-json",
+        source: "ima2:grok-auth-json",
         email: null,
         authMode: null,
         issuer: null,

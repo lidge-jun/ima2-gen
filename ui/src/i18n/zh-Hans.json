@@ -357,7 +357,7 @@
     "reasoning": "推理",
     "webSearch": "网页搜索",
     "grokApi": "Grok API",
-    "grokApiBody": "通过捆绑的 progrok 运行：强制搜索、Grok 4.5 英语图像和文本工具规划，然后是 xAI Images API。附加参考使用 xAI 图像编辑，因此保留了 i2i 上下文。",
+    "grokApiBody": "使用 xAI OAuth 会话直接调用 api.x.ai：强制搜索、Grok 4.5 英语图像和文本工具规划，然后是 xAI Images API。附加参考使用 xAI 图像编辑，因此保留了 i2i 上下文。",
     "openAccount": "开设账户设置",
     "mcp": {"loading":"正在检查 MCP 就绪状态…","error":"无法读取 MCP 就绪状态","missing":"提供商不可用","disabled":"提供商已停用","disconnected":"提供商未连接","locked":"提供商执行已锁定","default":"提供商默认模型","model-missing":"所选模型不可用","model-locked":"所选模型执行已锁定","ready":"上次连接检查时可用。","refresh":"刷新","observed":"检查于 {time}"}
   },
@@ -453,7 +453,14 @@
     "moveBlockDown": "向下移动 {name}",
     "afterBlocks": "主提示后",
     "hint": "Ctrl+Enter 生成",
-    "dropHere": "拖放到附件作为参考（最多 {max}）"
+    "dropHere": "拖放到附件作为参考（最多 {max}）",
+    "rejectNotMedia": "仅支持附加图片、音频和 mp4 文件",
+    "rejectAudioNeedsVideoModel": "音频需要先选择视频模型",
+    "rejectAudioNeeds15": "仅 grok-imagine-video-1.5 支持音频",
+    "rejectVideoNeedsBase": "仅 grok-imagine-video 支持视频输入",
+    "rejectVideoSingleOnly": "一次只能使用一个源视频",
+    "audioUsePresetVoice": "xAI 仅对合作伙伴账户开放音频上传，请在视频设置中使用预设语音",
+    "videoUseCliForEdit": "视频编辑与延长请使用 ima2 video edit / ima2 video extend"
   },
   "canvas": {
     "modeTitle": "画布模式",
@@ -730,15 +737,15 @@
     "oauthStarting": "GPT OAuth 代理正在启动。几秒钟后重试。",
     "serverUnreachable": "无法到达服务器。确保后端正在运行。",
     "apiInvalid": "API 密钥丢失或无效。检查服务器.env 中的 OPENAI_API_KEY。",
-    "grokOffline": "Grok 代理未运行。",
+    "grokOffline": "需要登录 Grok。",
     "grokNoImageModel": "未找到 Grok 图像生成模型。",
     "grokNotReady": "Grok 不可用。",
-    "grokOfflineHint": "如果需要，运行 `ima2 grok login` 一次，然后启动 `ima2 serve`； ima2 自动启动捆绑的 Grok 代理。",
-    "grokManagedByIma2": "Grok 通过位于 127.0.0.1:18645 的捆绑 progrok 代理在 `ima2 serve` 内部本地运行。",
+    "grokOfflineHint": "运行一次 `ima2 grok login`，或在网页界面登录，然后重试。",
+    "grokManagedByIma2": "Grok 使用保存在 ~/.progrok/auth.json 的 xAI OAuth 会话直接调用 api.x.ai，令牌会自动刷新。",
     "grokClassicOnly": "Grok 图像生成在此表面中不可用。",
     "grokClassicOnlyHint": "使用启用了 Grok 的生成表面。",
     "grokCompatTitle": "Grok 图像 API",
-    "grokCompatBody": "ima2 服务在 127.0.0.1:18645 管理捆绑的 progrok 代理。 Grok 始终在图像生成之前进行搜索，将附加引用发送到 Grok 4.5 规划器中，通过 xAI 图像编辑保留它们，并将大小映射到 xAI 宽高比/分辨率。输出格式、审核和推理仅是 OpenAI 提供商设置。",
+    "grokCompatBody": "Grok 使用 xAI OAuth 会话调用 api.x.ai。 Grok 始终在图像生成之前进行搜索，将附加引用发送到 Grok 4.5 规划器中，通过 xAI 图像编辑保留它们，并将大小映射到 xAI 宽高比/分辨率。输出格式、审核和推理仅是 OpenAI 提供商设置。",
     "settingsBody": "选择下一代请求使用哪个提供商。",
     "availableTitle": "{name} 可用",
     "availableAria": "{name}：可用",
@@ -906,7 +913,10 @@
     "upscaleStart": "开始高档",
     "upscaleStarted": "高档开始",
     "upscaleFailed": "高档失败",
-    "upscaleInvalid": "无效的高档参数"
+    "upscaleInvalid": "无效的高档参数",
+    "editVideo": "编辑视频",
+    "editVideoTitle": "用提示词修改此视频（grok-imagine-video）",
+    "editVideoPrompt": "想如何修改这段视频？例如：把衣服改成红色"
   },
   "session": {
     "switchTitle": "切换会话",
@@ -1238,13 +1248,18 @@
     "resolution1080Help": "1080p 使用 Grok V1.5 进行仅提示或单图像/帧视频。它不适用于 2 个以上的参考文献。",
     "aspectTitle": "纵横比",
     "plannerUpdateFailed": "无法更新规划器模型。之前的设置已恢复。",
+    "durationClampedToModel": "该模型的参考生成视频最长为 {seconds} 秒",
     "continuationFallbackT2V": "无法提取连续帧。生成将继续以文本到视频的形式进行。",
     "singleRefTitle": "单张参考的用法",
     "singleRefHelp": "选择将该图片作为首帧，还是仅作参考。两张及以上始终作为参考。",
     "singleRef": {
       "source": "以此图开场",
       "reference": "仅作参考"
-    }
+    },
+    "voiceSection": "语音",
+    "voiceLimit": "最多 {max} 个。在提示词中以 <AUDIO_0> 指代",
+    "voiceNeeds15": "仅 grok-imagine-video-1.5 支持语音",
+    "voiceCustomPlaceholder": "自定义语音 ID (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "图像生成器",
@@ -1308,9 +1323,9 @@
       "apiReady": "可用",
       "apiUnavailable": "不可用",
       "apiUnknown": "状态未知",
-      "grokEyebrow": "本地 xAI 代理",
+      "grokEyebrow": "xAI OAuth",
       "grokTitle": "Grok",
-      "grokBody": "在配置的本地端口使用 progrok 生成 xAI 映像 API。",
+      "grokBody": "使用 xAI OAuth 会话直接调用 xAI Images API 生成图像。",
       "agyEyebrow": "Antigravity CLI",
       "agyTitle": "Gemini (agy)",
       "agyInstalledBody": "无法检测登录状态。如果生成失败，请在终端中运行 `agy login` 。",
@@ -1374,7 +1389,7 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — 不支持图像",
-      "unsupportedHelp": "Grok 模型通过捆绑的本地代理使用 xAI 的图像 API。 GPT 模型使用 OpenAI 响应图像生成。",
+      "unsupportedHelp": "Grok 模型使用 xAI OAuth 会话调用 xAI 的图像 API。 GPT 模型使用 OpenAI 响应图像生成。",
       "naiDiffusion5Full": "NAI Diffusion V5 Full",
       "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
       "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
@@ -1623,7 +1638,7 @@
     },
     "grokApiKeyMissing": {
       "title": "需要 Grok API 密钥",
-      "body": "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok 代理。",
+      "body": "请在设置 > 提供商中添加 xAI API 密钥，然后重试。此图像请求不会回退到 Grok OAuth 通道。",
       "cta": "打开提供商设置"
     },
     "naiApiKeyMissing": {

@@ -19,8 +19,16 @@ function skill(): string {
 }
 
 test("the skill quotes the reference ceiling the server enforces", () => {
-  assert.equal(MAX_REF2V_REFERENCES, 7);
-  assert.match(skill(), /1-7 refs/, "the skill must state the real reference range");
+  assert.equal(MAX_REF2V_REFERENCES, 14);
+  assert.match(skill(), /1-14 refs/, "the skill must state the real reference range");
+});
+
+test("the skill names the model each reference-to-video ceiling belongs to", () => {
+  // A bare "15s" row reads as a mode-wide rule, which is how the invented 10s clamp
+  // got written in the first place. The ceiling is per model now, so the skill has to
+  // say which model it is talking about or an agent will apply the wrong one.
+  const text = skill();
+  assert.match(text, /15 seconds on\s+`grok-imagine-video-1\.5` and 10 seconds on `grok-imagine-video`/);
 });
 
 test("the skill quotes the voice ceiling the server enforces", () => {

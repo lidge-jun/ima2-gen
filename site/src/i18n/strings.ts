@@ -151,7 +151,7 @@ const en: Dict = {
     'Locally. Generated images and session logs live in your user-data folder. Inspect, sync, version — your call. Image files are not uploaded to a separate remote store.',
   'faq.q3': 'Do I need an OpenAI API key?',
   'faq.a3':
-    'No for the default GPT OAuth path. `ima2-gen` can also use an OpenAI API key or bundled Grok/progrok when you explicitly choose those providers.',
+    'No for the default GPT OAuth path. `ima2-gen` can also use an OpenAI API key or Grok through an xAI OAuth session when you explicitly choose those providers.',
 
   // FAQ — full detail page
   'faq.page.title': 'FAQ — ima2-gen',
@@ -194,7 +194,7 @@ const en: Dict = {
 
   'faq.tech.q1': 'What data leaves my machine?',
   'faq.tech.a1':
-    'The generation request goes to the selected provider: OpenAI through GPT OAuth/API, or xAI through bundled progrok for Grok. The result file and session log stay on your disk.',
+    'The generation request goes to the selected provider: OpenAI through GPT OAuth/API, or xAI directly at api.x.ai for Grok. The result file and session log stay on your disk.',
   'faq.tech.q2': 'Does it work offline?',
   'faq.tech.a2':
     'Generation needs the selected provider network path, so an internet connection is required for that step. Browsing the local gallery, organizing sessions, and editing style sheets work offline.',
@@ -363,7 +363,7 @@ const ko: Dict = {
     '로컬 사용자 데이터 폴더에 이미지와 작업 기록이 저장됩니다. 직접 확인, 동기화, 버전 관리까지 가능합니다. 이미지 파일을 별도 외부 저장소에 올리지 않습니다.',
   'faq.q3': 'OpenAI API key가 필요한가요?',
   'faq.a3':
-    '기본 GPT OAuth 경로에는 필요 없습니다. 명시적으로 선택하면 OpenAI API key 경로나 번들 Grok/progrok 경로도 사용할 수 있습니다.',
+    '기본 GPT OAuth 경로에는 필요 없습니다. 명시적으로 선택하면 OpenAI API key 경로나 xAI OAuth로 붙는 Grok 경로도 사용할 수 있습니다.',
 
   // FAQ — 상세 페이지
   'faq.page.title': 'FAQ — ima2-gen',
@@ -406,7 +406,7 @@ const ko: Dict = {
 
   'faq.tech.q1': '내 컴퓨터에서 어떤 데이터가 나가나요?',
   'faq.tech.a1':
-    '이미지 생성 요청은 선택한 provider로 전송됩니다: GPT OAuth/API는 OpenAI, Grok은 번들 progrok을 통한 xAI입니다. 결과 파일과 작업 기록은 로컬에 남습니다.',
+    '이미지 생성 요청은 선택한 provider로 전송됩니다: GPT OAuth/API는 OpenAI, Grok은 api.x.ai 직접 호출입니다. 결과 파일과 작업 기록은 로컬에 남습니다.',
   'faq.tech.q2': '오프라인에서도 되나요?',
   'faq.tech.a2':
     '이미지 생성은 선택한 provider 네트워크 경로가 필요해 인터넷이 있어야 합니다. 로컬 갤러리 조회, 세션 정리, 스타일 시트 편집은 오프라인에서도 사용할 수 있습니다.',

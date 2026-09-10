@@ -212,10 +212,10 @@ describe("package install policy contract", () => {
   });
 
   it("detects missing install-script approvals and bundle lock drift", () => {
-    const lock = { packages: { "": { bundleDependencies: ["progrok"] }, "node_modules/sharp": { version: "1.2.3", hasInstallScript: true } } };
+    const lock = { packages: { "": { bundleDependencies: ["openai-oauth"] }, "node_modules/sharp": { version: "1.2.3", hasInstallScript: true } } };
     assert.deepEqual(validateInstallPolicy({ allowScripts: {} }, lock, "root"), ["root: missing allowScripts approval for sharp@1.2.3"]);
     assert.equal(validateInstallPolicy({ allowScripts: { "sharp@1.2.3": true } }, lock, "root").length, 0);
-    assert.equal(validateBundleParity({ bundleDependencies: ["progrok", "openai-oauth"] }, lock).length, 1);
+    assert.equal(validateBundleParity({ bundleDependencies: ["openai-oauth", "zod"] }, lock).length, 1);
   });
 
   it("accepts a name-only approval across a version bump", () => {

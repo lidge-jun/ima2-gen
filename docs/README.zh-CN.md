@@ -165,8 +165,8 @@ ima2 skill install --tmp            # install to temp dir (fallback)
 
 - `provider: "oauth"`使用本地的Codex OAuth代理人。
 - `provider: "api"`称为OpenAI回应API与托管的`image_generation`工具。
-- `provider: "grok"`开始捆绑`progrok`在`127.0.0.1:18645`, 强制运行xAI网络搜索加上规划者通行证（默认：`grok-4.5`，可在设置中配置或通过`--planner-model`），然后调用xAI图片API通过本地代理。`grok-4.3`仍然可以作为显式兼容性覆盖使用。
-- `provider: "grok-api"`称为xAI图片API直接与`XAI_API_KEY`（无捆绑progrok OAuth代理人）。
+- `provider: "grok"`使用`~/.progrok/auth.json`中的xAI OAuth会话直接调用`https://api.x.ai`, 强制运行xAI网络搜索加上规划者通行证（默认：`grok-4.5`，可在设置中配置或通过`--planner-model`），然后调用xAI图片API。`grok-4.3`仍然可以作为显式兼容性覆盖使用。用`ima2 grok login`或网络UI登录一次；令牌在过期前 2 分钟自动刷新。
+- `provider: "grok-api"`称为xAI图片API直接与`XAI_API_KEY`（使用API密钥而不是OAuth会话）。
 - `provider: "agy"`产生Antigravity CLI (`agy -p`）通过Google生成图像Gemini's `default_api:generate_image`工具（型号：`nano-banana-2`）。输出固定为1024×1024JPEG，最多 3 个参考图像。没有网络搜索、质量或大小控制。
 - `provider: "gemini-api"`调用 Google 生成语言API直接地。支持两种型号：`nano-banana-2` (Gemini3.1 Flash 图像）和`nano-banana-pro` (Gemini3 专业图像）。身份验证是通过`GEMINI_API_KEY`环境变量、网络UI密钥管理，或Vertex AI服务帐户JSON (`VERTEX_SERVICE_ACCOUNT_JSON`）。当两者都APIkey 和 Vertex 凭证已配置，Vertex 优先。支持可变宽高比（1:1 至 21:9）和四个分辨率级别（512px、1K、2K、4K）；这些控制仅在直接上受到尊重API路径——Vertex AI端点忽略方面/大小，因为它不接受`response_format`场地。每个型号的成本不同：`nano-banana-2`（闪存）：512=0.001 美元、1K=0.003 美元、2K=0.004 美元、4K=0.006 美元；`nano-banana-pro`：1K=0.007 美元，2K=0.007 美元，4K=0.013 美元。没有网络搜索或掩码控制。
 - API-密钥生成支持经典生成、编辑、掩码引导编辑、多模式和节点生成。
@@ -174,9 +174,11 @@ ima2 skill install --tmp            # install to temp dir (fallback)
 
 如果未指定提供商，应用程序将保留当前的GPT OAuth/默认行为。GPT OAuth和API-密钥生成默认为`gpt-5.6-luna`;这API-key路径也默认为`low`推理和`1024x1024`除非请求通过了经过验证的选项。Grok图像生成默认为`grok-imagine-image-quality`.
 
+关于OAuth Grok通道有一点需要说明：xAI只把`/v1/me`记录为接受OAuth令牌的端点，所以用该令牌调用`api.x.ai`的图像与视频接口走的是未文档化的路径。它目前可用——progrok一直依赖同一条路径——但没有任何兼容性承诺。如果xAI关闭这条路径，用`XAI_API_KEY`的`provider: "grok-api"`是有文档的方案，且不受影响。
+
 Grok图像生成公开了模型选择器（`grok-imagine-image` / `grok-imagine-image-quality`）和尺寸选择器（长宽比 + 1k/2k 分辨率）。设置页面更喜欢Grok建立每周积分百分比并重置时间`GET /v1/billing?format=credits`;如果该来源不可用，则会退回到传统的每月计费窗口，并且`$used/$limit`. A **切换账户**按钮启动设备代码OAuth流动 （`POST /api/auth/switch`）无需离开应用程序即可重新进行身份验证。
 
-Grok视频生成默认为规范`grok-imagine-video-1.5`; `grok-imagine-video`仍然可用于仅限基本模型的 Ref2V、V2V 编辑和扩展路径，以及旧版本`grok-imagine-video-1.5-preview`字符串被接受作为别名。根据引用计数自动检测三种模式：文本到视频（0 引用）、图像到视频（1 引用）和引用到视频（2-7 引用，最长 10 秒持续时间）。 1080p 可用于`grok-imagine-video-1.5`仅提示文本到视频和单图像/帧图像到视频；仅提示 1.5 在上游请求之前使用内部白色画布 I2V 填充程序。视频控制包括持续时间（1-15秒）、分辨率（480p、720p、1080p（如果支持））和宽高比（1:1、16:9、9:16、4:3、3:4、3:2、2:3、自动）。
+Grok视频生成默认为规范`grok-imagine-video-1.5`; `grok-imagine-video`仍然可用于仅限基本模型的 Ref2V、V2V 编辑和扩展路径，以及旧版本`grok-imagine-video-1.5-preview`字符串被接受作为别名。根据引用计数自动检测三种模式：文本到视频（0 引用）、图像到视频（1 引用）和引用到视频（2-14 引用；grok-imagine-video-1.5 最长 15 秒，grok-imagine-video 最长 10 秒）。 1080p 可用于`grok-imagine-video-1.5`仅提示文本到视频和单图像/帧图像到视频；仅提示 1.5 在上游请求之前使用内部白色画布 I2V 填充程序。视频控制包括持续时间（1-15秒）、分辨率（480p、720p、1080p（如果支持））和宽高比（1:1、16:9、9:16、4:3、3:4、3:2、2:3、自动）。
 
 ![设置工作区显示GPT OAuth活跃和API可用的密钥提供者。](../assets/screenshots/settings-oauth-generation.png)
 
@@ -323,9 +325,6 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `IMA2_API_REASONING_EFFORT` | `low` |默认推理工作`provider: "api"` |
 | `IMA2_API_IMAGE_SIZE` | `1024x1024` |默认尺寸为`provider: "api"` |
 | `IMA2_API_ALLOW_WEB_SEARCH` | `true` |切换网络搜索`provider: "api"` |
-| `IMA2_GROK_PROXY_HOST` | `127.0.0.1` |捆绑主机progrok代理人|
-| `IMA2_GROK_PROXY_PORT` | `18645` |捆绑端口progrok代理人|
-| `IMA2_NO_GROK_PROXY` | — |放`1`禁用自动progrok启动|
 | `IMA2_GROK_PLANNER_MODEL` | `grok-4.5` | Grok搜索/规划器模型（也可通过设置进行配置UI或者`--planner-model` CLI旗帜）|
 | `IMA2_GROK_PLANNER_TIMEOUT_MS` | `60000` |超时时间为Grok搜索和规划呼叫|
 | `IMA2_GROK_IMAGE_MODEL_DEFAULT` | `grok-imagine-image-quality` |默认最终Grok图像模型|
@@ -336,6 +335,8 @@ environment variables > ~/.ima2/config.json > built-in defaults
 | `VERTEX_SERVICE_ACCOUNT_JSON` | — |谷歌服务帐户JSON为了Vertex AI授权与`provider: "gemini-api"`;优先于`GEMINI_API_KEY`当两者都设置时|
 | `IMA2_AGY_BIN` | `agy`在路径上|显式路径Antigravity CLI二进制为`provider: "agy"` |
 | `IMA2_MAX_PARALLEL` | `24` |服务器范围的并行生成上限|
+
+`IMA2_GROK_PROXY_HOST`、`IMA2_GROK_PROXY_PORT`、`IMA2_NO_GROK_PROXY`和`IMA2_GROK_RESTART_*`已随本地Grok代理在 3.16 中移除，不再被读取；即使保留这些值也不会有任何影响。
 
 ### 记录模式
 

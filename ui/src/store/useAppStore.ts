@@ -542,6 +542,10 @@ addChildNodeAt: (parentClientId, position, sourceHandle) => addChildNodeAtImpl(p
   videoResolution: storedVideoDefaults.resolution as VideoResolutionUI,
   videoSingleRefMode: storedVideoDefaults.singleRefMode,
   videoAspectRatio: storedVideoDefaults.aspectRatio,
+  // Not persisted with the other video defaults on purpose: a voice belongs to the
+  // scene being written, and reviving yesterday's cast on a fresh prompt would be a
+  // surprise the user has to notice and undo.
+  videoReferenceVoices: [],
   videoTopic: "",
   videoContinuityLineage: null,
   videoProgress: null,
@@ -551,6 +555,15 @@ addChildNodeAt: (parentClientId, position, sourceHandle) => addChildNodeAtImpl(p
   setVideoDuration: (videoDuration) => { set({ videoDuration }); saveVideoDefaults({ duration: videoDuration }); },
   setVideoResolution: (videoResolution) => { set({ videoResolution }); saveVideoDefaults({ resolution: videoResolution }); },
   setVideoAspectRatio: (videoAspectRatio) => { set({ videoAspectRatio }); saveVideoDefaults({ aspectRatio: videoAspectRatio }); },
+  toggleVideoReferenceVoice: (voiceId) => {
+    const current = get().videoReferenceVoices;
+    const next = current.includes(voiceId)
+      ? current.filter((id) => id !== voiceId)
+      // xAI refuses a fourth voice with 400 "Too many reference audio clips". Stopping
+      // here keeps the prompt's <AUDIO_n> tags matching what was actually sent.
+      : current.length >= 3 ? current : [...current, voiceId];
+    set({ videoReferenceVoices: next });
+  },
   setVideoSingleRefMode: (videoSingleRefMode) => { set({ videoSingleRefMode }); saveVideoDefaults({ singleRefMode: videoSingleRefMode }); },
   setVideoTopic: (videoTopic) => set({ videoTopic }),
   setVideoContinuityLineage: (videoContinuityLineage) => set({ videoContinuityLineage }),

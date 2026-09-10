@@ -29,8 +29,8 @@ export function makeAppEnv(inherited: NodeJS.ProcessEnv, options: IsolationOptio
   Object.assign(env, {
     IMA2_CONFIG_DIR: home, IMA2_DB_PATH: join(home, "sessions.db"),
     IMA2_GENERATED_DIR: join(home, "generated"), IMA2_TRASH_DIR: join(home, "generated/.trash"),
-    IMA2_PORT: "0", IMA2_HOST: "127.0.0.1", IMA2_NO_OAUTH_PROXY: "1", IMA2_NO_GROK_PROXY: "1",
-    IMA2_OAUTH_PROXY_PORT: port, IMA2_GROK_PROXY_PORT: port, IMA2_GROK_PROXY_HOST: "127.0.0.1",
+    IMA2_PORT: "0", IMA2_HOST: "127.0.0.1", IMA2_NO_OAUTH_PROXY: "1",
+    IMA2_OAUTH_PROXY_PORT: port,
     IMA2_MINIMAX_REGION: "global_en",
     IMA2_MINIMAX_GLOBAL_BASE_URL: stubUrl, IMA2_MINIMAX_CN_BASE_URL: stubUrl,
     IMA2_NAI_BASE_URL: origin,

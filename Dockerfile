@@ -9,7 +9,7 @@ FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
 # Install deps first for layer caching. vendor/ holds file: tarball dependencies
-# (openai-oauth, progrok) referenced by package.json, so it must precede npm ci.
+# (openai-oauth) referenced by package.json, so it must precede npm ci.
 COPY package.json package-lock.json ./
 COPY vendor ./vendor
 RUN npm ci --no-audit --no-fund

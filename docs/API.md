@@ -62,9 +62,9 @@ Image generation supports OAuth, API-key, Grok, and Gemini (`agy` and `gemini-ap
 
 - `provider: "oauth"` uses the local Codex OAuth proxy.
 - `provider: "api"` uses the OpenAI Responses API with the hosted `image_generation` tool.
-- `provider: "grok"` uses the bundled progrok xAI proxy. Classic, Node and multimode image generation honor `webSearchEnabled: false` (Node also honors `searchMode: "off"`): this skips `/v1/responses` search, not the configured planner's forced `generate_image` call. Planner default is `grok-4.3`; `grok-4.6` and `grok-4.5` remain selectable overrides. References select `/v1/images/edits` instead of `/v1/images/generations`. Agent's omitted-option search default is unchanged.
+- `provider: "grok"` calls `https://api.x.ai` directly with the xAI OAuth session in `~/.progrok/auth.json`. Classic, Node and multimode image generation honor `webSearchEnabled: false` (Node also honors `searchMode: "off"`): this skips `/v1/responses` search, not the configured planner's forced `generate_image` call. Planner default is `grok-4.3`; `grok-4.6` and `grok-4.5` remain selectable overrides. References select `/v1/images/edits` instead of `/v1/images/generations`. Agent's omitted-option search default is unchanged.
 - `provider: "agy"` spawns the Antigravity CLI (`agy -p`) to generate images via Google Gemini's `default_api:generate_image` tool. Model is `nano-banana-2`. Output is fixed at 1024×1024 JPEG. Max 3 reference images (i2i). No web search, quality, size, or mask controls. Multimode returns a single image. Video is unsupported (`AGY_VIDEO_UNSUPPORTED`).
-- `provider: "grok-api"` uses a direct xAI API key with the same image search/planner/image semantics. Missing or blank image credentials are refused with `GROK_API_KEY_MISSING` before admission, never changed to the proxy lane. Video remains a separate path. Configure the key in Settings or `XAI_API_KEY`.
+- `provider: "grok-api"` uses a direct xAI API key with the same image search/planner/image semantics. Missing or blank image credentials are refused with `GROK_API_KEY_MISSING` before admission, never changed to the OAuth lane. Video remains a separate path. Configure the key in Settings or `XAI_API_KEY`.
 - `provider: "gemini-api"` calls the Google Generative Language API directly (or Vertex AI with a service account JSON). Supports models `nano-banana-2` (Gemini 3.1 Flash Image) and `nano-banana-pro` (Gemini 3 Pro Image). Supports variable aspect ratios (1:1 through 21:9) and four resolution tiers (512px, 1K, 2K, 4K) on both auth paths — the direct API path sends `generation_config.response_format.image` (snake_case) while the Vertex AI endpoint (`aiplatform.googleapis.com`) sends `generationConfig.imageConfig` (camelCase). With `size: "auto"` the image config is omitted entirely and the model decides ratio/size. Auth: `GEMINI_API_KEY` env var, web UI key management (`/api/keys/gemini`), or a Vertex AI service account JSON (`VERTEX_SERVICE_ACCOUNT_JSON` or `/api/keys/vertex`). When both Vertex credentials and an API key are configured, Vertex takes priority. The chosen auth mode (`apikey` or `vertex`) persists to `~/.ima2/config.json` as `geminiAuthMode` and is restored on server startup. Per-model cost: `nano-banana-2` (Flash): 512=$0.001, 1K=$0.003, 2K=$0.004, 4K=$0.006; `nano-banana-pro`: 1K=$0.007, 2K=$0.007, 4K=$0.013. No web search or mask controls.
 - `provider: "nai"` calls NovelAI text-to-image generation with one of `nai-diffusion-5-full`, `nai-diffusion-5-curated`, `nai-diffusion-4-5-full`, or `nai-diffusion-4-5-curated`. It accepts the provider-native request fields documented below and returns a ZIP that ima2 decodes to PNG. References, edits, and masks are explicitly refused.
 - API-key generation covers classic generate, edit, mask-guided edit, multimode, and node generation.
@@ -148,11 +148,11 @@ inventing a runtime `lanes` availability result.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/health` | Server health, version, paths, provider policy |
+| `GET` | `/api/health` | Server health, version, paths, provider policy; includes `grok: { auth: "oauth" \| "none" }`, mirrored in `~/.ima2/server.json` |
 | `POST` | `/api/admin/stop` | Clean shutdown (local admin only): requires the boot-generated `X-Ima2-Admin-Nonce` from `~/.ima2/server.json`; any request with an `Origin` header is refused (browser drive-by protection). Responds `202` then self-signals SIGTERM |
 | `GET` | `/api/providers` | Provider availability and runtime ports |
 | `GET` | `/api/oauth/status` | OAuth proxy status and visible models |
-| `GET` | `/api/grok/status` | Bundled progrok status and visible xAI image models |
+| `GET` | `/api/grok/status` | xAI OAuth session state and visible xAI image models: `ready`, `no_image_model`, `error`, or `offline` with `reason: "login_required"` when no session is stored |
 | `GET` | `/api/billing` | Billing/status probe, including API key source when configured |
 | `GET` | `/api/quota` | Provider quota: returns `{ codex, grok, nai }`. Codex windows are `5h` and `7d`. NovelAI returns a `v5-battery` remaining-charge window when available (`resetsAt` is the ISO ETA for +1%, not full recharge), with Anlas balances in `nai.anlasFixed` / `nai.anlasPurchased`; a missing meter has no window. NovelAI account email is always null. Eligible Grok Build xAI OIDC/external auth returns a `weekly` percentage/reset window from `GET /v1/billing?format=credits`. If unavailable, the legacy endpoint may return a `monthly` window plus `billing: { usedUsd, limitUsd }`. |
 
@@ -394,7 +394,7 @@ Image edit / image-to-image generation.
 The request includes a prompt and image payload. `provider: "api"` sends the prompt and image through the shared Responses image adapter. Optional masks are forwarded as mask guidance, not a pixel-perfect edit guarantee.
 
 With `provider: "grok"`, edit requests are sent to xAI `/v1/images/edits`
-through the bundled progrok proxy. Masked Grok edits are rejected before
+with the stored OAuth session. Masked Grok edits are rejected before
 upstream with `GROK_MASK_UNSUPPORTED`.
 
 Grok multimode plans each attempted image in order and performs search only when
@@ -520,7 +520,7 @@ Generate a video via the Grok video provider. Returns Server-Sent Events on the 
 |---|---|---|
 | No images | text-to-video | 1–15s |
 | 1 image (`sourceImage` or `sourceFilename`) | image-to-video | 1–15s |
-| 2–7 images (`referenceImages` / `referenceFilenames`) | reference-to-video | 1–10s |
+| 2–14 images (`referenceImages` / `referenceFilenames`) | reference-to-video | 1–15s on grok-imagine-video-1.5, 1–10s on grok-imagine-video |
 
 1080p is accepted for `grok-imagine-video-1.5` prompt-only text-to-video and image-to-video with one image/frame source, including `continueFromVideo` after the server extracts the parent video's last frame. Prompt-only 1.5 text-to-video uses the internal white-canvas image-to-video shim before the upstream request. 1.5 does not add Ref2V, V2V edit, or extension support.
 
@@ -879,8 +879,8 @@ Registered only when `config.features.cardNews` is true (`routes/cardNews.ts`). 
 | `GRAPH_TOO_LARGE` | Graph exceeds node/edge limits |
 | `NODE_NOT_FOUND` | Node metadata was not found |
 | `INVALID_GROK_IMAGE_MODEL` | A Grok request used a model outside `grok-imagine-image` or `grok-imagine-image-quality` |
-| `GROK_RATE_LIMITED` | xAI returned a rate-limit response through progrok |
-| `GROK_AUTH_FAILED` | progrok could not authenticate the xAI request |
+| `GROK_RATE_LIMITED` | xAI returned a rate-limit response |
+| `GROK_AUTH_FAILED` | The xAI request could not be authenticated |
 | `GROK_SEARCH_TIMEOUT` / `GROK_PLANNER_TIMEOUT` / `GROK_IMAGE_TIMEOUT` | The Grok search, planner, or image API step exceeded its timeout budget |
 | `AGY_GENERATION_FAILED` | Gemini (agy) image generation failed |
 | `AGY_TIMEOUT` | Agy CLI process exceeded its 360-second timeout |

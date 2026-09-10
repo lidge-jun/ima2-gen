@@ -159,6 +159,10 @@ export async function runVideoGenerateImpl(
       duration: get().videoDuration,
       resolution: get().videoResolution,
       aspectRatio: get().videoAspectRatio,
+      // Sent only when a voice is selected: the route treats an absent field and an
+      // empty array differently, and an empty array would advertise reference-to-video
+      // for a request that has nothing to reference.
+      ...(get().videoReferenceVoices.length > 0 ? { referenceAudios: get().videoReferenceVoices } : {}),
       topic: get().videoTopic || undefined,
       storyboard: get().storyboardActive || undefined,
       presetIds: compiled.appliedPresetIds,

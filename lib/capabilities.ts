@@ -5,7 +5,14 @@ import { buildCatalog, catalogSummary } from "./contracts/catalog.js";
 import { loadAllBundledSnapshots } from "./mcp/snapshotStore.js";
 import { KEY_TO_ENV, WRITABLE_CONFIG_KEYS } from "./configKeys.js";
 import { DEFAULT_IMAGE_QUALITY, VALID_IMAGE_QUALITIES } from "./oauthNormalize.js";
-import { MAX_REF2V_REFERENCES, MAX_REFERENCE_AUDIOS, MAX_VIDEO_DURATION, MIN_VIDEO_DURATION } from "./imageModels.js";
+import {
+  MAX_REF2V_DURATION_15,
+  MAX_REF2V_DURATION_BASE,
+  MAX_REF2V_REFERENCES,
+  MAX_REFERENCE_AUDIOS,
+  MAX_VIDEO_DURATION,
+  MIN_VIDEO_DURATION,
+} from "./imageModels.js";
 import type { AppConfig } from "./runtimeContext.js";
 import { deriveProviderIds, getProviderSurfaceSupport } from "./providers/derive.js";
 import { PROVIDER_SURFACES } from "./providers/surfaceSupport.js";
@@ -119,18 +126,21 @@ export function buildIma2Capabilities({
       },
       videoModels: {
         supported: ["grok-imagine-video", "grok-imagine-video-1.5"],
-        aliases: { "grok-imagine-video-1.5-preview": "grok-imagine-video-1.5" },
+        aliases: {
+          "grok-imagine-video-1.5-preview": "grok-imagine-video-1.5",
+          "grok-imagine-video-1.5-2026-05-30": "grok-imagine-video-1.5",
+        },
         resolutions: ["480p", "720p", "1080p"],
         resolutionNotes: { "1080p": "grok-imagine-video-1.5 text-to-video canvas shim or image-to-video; reference-to-video unsupported" },
         aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "auto"],
         durationRange: [1, 15],
-        maxReferences: 7,
+        maxReferences: MAX_REF2V_REFERENCES,
         // Flat numbers above describe the widest case, which is not what any single
         // request is allowed to do. A client that reads only those draws controls the
         // server will reject. These per-mode entries come from the same constants the
         // request path enforces, so the advertisement cannot drift from the behavior.
-        // Verified against api.x.ai on 2026-08-20:
-        // devlog/_plan/260820_grok15_multi_reference_video/000_research.md
+        // Verified against api.x.ai on 2026-09-08:
+        // devlog/_plan/260908_xai_imagine_spec_resync/000_research.md
         modes: {
           "text-to-video": {
             maxReferences: 0,
@@ -146,9 +156,15 @@ export function buildIma2Capabilities({
           },
           "reference-to-video": {
             maxReferences: MAX_REF2V_REFERENCES,
-            durationRange: [MIN_VIDEO_DURATION, MAX_VIDEO_DURATION],
+            // The widest case, which only grok-imagine-video-1.5 can actually reach.
+            // durationRangeByModel below is what a single request must obey.
+            durationRange: [MIN_VIDEO_DURATION, MAX_REF2V_DURATION_15],
+            durationRangeByModel: {
+              "grok-imagine-video-1.5": [MIN_VIDEO_DURATION, MAX_REF2V_DURATION_15],
+              "grok-imagine-video": [MIN_VIDEO_DURATION, MAX_REF2V_DURATION_BASE],
+            },
             resolutions: ["480p", "720p"],
-            notes: "References guide the subject without locking the first frame. 1080p is rejected upstream.",
+            notes: `References guide the subject without locking the first frame. 1080p is rejected upstream. Up to ${MAX_REF2V_DURATION_15}s on grok-imagine-video-1.5, ${MAX_REF2V_DURATION_BASE}s on grok-imagine-video. A preset voice alone also selects this mode.`,
           },
         },
         referenceAudio: {
@@ -163,6 +179,24 @@ export function buildIma2Capabilities({
             "atlas",
           ],
           presetsAreAuthoritative: false,
+          // Named by the 400 itself: "Custom voice ids created via the /v1/custom-voices
+          // API are also accepted." GET on that endpoint answers 200 with {voices, total_count,
+          // cap: 30}; the cap appears in no document, so the endpoint is its own source.
+          customVoiceApi: "/v1/custom-voices",
+          customVoiceCap: 30,
+        },
+        // Which model takes a video in, and which takes audio in. The two split on input
+        // modality, so there is no path that edits a video on 1.5 — it answers 400.
+        videoInputModes: {
+          edit: {
+            models: ["grok-imagine-video"],
+            notes: "grok-imagine-video-1.5 answers 400 'Video editing is not supported for this model.'",
+          },
+          extend: {
+            models: ["grok-imagine-video"],
+            durationRange: [MIN_VIDEO_DURATION, MAX_VIDEO_DURATION],
+            notes: "duration is the added segment, not the total. Measured 1-15s, wider than the documented 2-10.",
+          },
         },
       },
       reasoningEfforts: toArray(appConfig.imageModels.validReasoningEfforts),

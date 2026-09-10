@@ -18,7 +18,8 @@ const { normalizeGrokVideoModel, VALID_GROK_VIDEO_MODELS } = await import("../li
 const { parsePngInfo } = await import("../lib/pngInfo.js");
 const { DEFAULT_GROK_PLANNER_MODEL } = await import("../config.js");
 const config = fixture.config;
-const PROXY = "http://video-fixture.invalid";
+/** Both lanes call xAI directly now; only the credential differs. */
+const XAI = "https://api.x.ai";
 const ARTIFACT = "https://vidgen.example/v.mp4";
 
 function ctx(overrides: Partial<RouteRuntimeContext> = {}): RouteRuntimeContext {
@@ -36,7 +37,7 @@ function ctx(overrides: Partial<RouteRuntimeContext> = {}): RouteRuntimeContext 
       },
     },
     packageVersion: "test",
-    grokUrl: PROXY,
+    grokAuthHomeDir: fixture.grokAuthHomeDir,
     ...overrides,
   };
 }
@@ -91,14 +92,13 @@ function respond(handler: (kind: RequestKind, call: UpstreamCall) => Response | 
       assert.deepEqual(headers, {});
       return handler("artifact", call);
     }
-    const origin = key ? "https://api.x.ai" : PROXY;
-    const paths: Record<string, RequestKind> = { [`${origin}/v1/responses`]: "search",
-      [`${origin}/v1/chat/completions`]: "planner", [`${origin}/v1/videos/generations`]: "start",
-      [`${origin}/v1/videos/vid-1`]: "poll" };
+    const paths: Record<string, RequestKind> = { [`${XAI}/v1/responses`]: "search",
+      [`${XAI}/v1/chat/completions`]: "planner", [`${XAI}/v1/videos/generations`]: "start",
+      [`${XAI}/v1/videos/vid-1`]: "poll" };
     assert.ok(Object.hasOwn(paths, call.url), `Unexpected video URL: ${call.url}`);
     const kind = paths[call.url];
     assert.equal(call.method, kind === "poll" ? "GET" : "POST");
-    assert.deepEqual(headers, { authorization: `Bearer ${key || "dummy"}`, "content-type": "application/json" });
+    assert.deepEqual(headers, { authorization: key ? `Bearer ${key}` : fixture.grokBearer, "content-type": "application/json" });
     if (kind === "poll") assert.equal(call.body, "");
     else { const body = JSON.parse(call.body); assert.ok(body && typeof body === "object" && !Array.isArray(body)); }
     return handler(kind, call);
@@ -213,7 +213,15 @@ const DONE_POLL = { status: "done", progress: 100, video: { url: "https://vidgen
       () => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B"], sourceImageUrl: "data:image/png;base64,S" }),
       (e: any) => e.code === "GROK_VIDEO_INVALID_MODE",
     );
-    assert.throws(() => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B", "C", "D", "E", "F", "G", "H"] }), (e: any) => e.code === "GROK_VIDEO_REF_TOO_MANY");
+    // 15 is the first count xAI refuses: "Too many reference images: 15. Maximum
+    // allowed is 14." (2026-09-08). Eight used to be over the line and now is not.
+    const fifteen = Array.from({ length: 15 }, (_, i) => "ref" + i);
+    assert.throws(() => buildVideoGenerationPayload(plan, { model: "grok-imagine-video", referenceImageUrls: fifteen }), (e: any) => e.code === "GROK_VIDEO_REF_TOO_MANY");
+    // The base model's r2v ceiling is 10s, so a 15s plan is caught before it is billed.
+    const longPlan: GrokVideoPlan = { ...plan, duration: 15 };
+    assert.throws(() => buildVideoGenerationPayload(longPlan, { model: "grok-imagine-video", referenceImageUrls: ["A", "B"] }), (e: any) => e.code === "INVALID_VIDEO_DURATION");
+    // 1.5 accepts the same 15s.
+    assert.doesNotThrow(() => buildVideoGenerationPayload(longPlan, { model: "grok-imagine-video-1.5", referenceImageUrls: ["A", "B"] }));
   });
 
   it("parses the generate_video planner prompt", () => {
@@ -371,8 +379,9 @@ const DONE_POLL = { status: "done", progress: 100, video: { url: "https://vidgen
     assert.equal(fixture.calls.length, 3);
   });
 
+  // lane=oauth resolves the seeded ~/.progrok session; lane=api-key carries an explicit key.
   for (const directKey of [undefined, "video-fixture-direct-key"]) {
-    for (const failure of ["invalid", "read-reset"] as const) it(`never regenerates on ${failure}, lane=${directKey ? "direct" : "proxy"}`, async () => {
+    for (const failure of ["invalid", "read-reset"] as const) it(`never regenerates on ${failure}, lane=${directKey ? "api-key" : "oauth"}`, async () => {
       const reset = Object.assign(new Error("fixture body reset"), { code: "ECONNRESET" });
       const stream = artifactStream([failure === "invalid" ? Buffer.from("<html>not an mp4</html>") : fakeMp4Bytes()],
         failure === "read-reset" ? { failAfterChunks: reset } : {});
@@ -381,7 +390,8 @@ const DONE_POLL = { status: "done", progress: 100, video: { url: "https://vidgen
       });
       await fixture.track(assert.rejects(generateVideoViaGrok("clip", ctx(), {
         model: "grok-imagine-video", plannedPrompt: "bounded video", duration: 1,
-        directApiKey: directKey, signal: fixture.controller().signal,
+        ...(directKey ? { credential: { kind: "api-key" as const, key: directKey } } : {}),
+        signal: fixture.controller().signal,
       }), { code: "GROK_VIDEO_DOWNLOAD_FAILED", status: 502, message: failure === "invalid"
         ? "Grok video download returned an invalid MP4 container" : "Grok video download request failed: fixture body reset" }));
       assert.deepEqual(counts, { start: 1, poll: 1, artifact: 1 });

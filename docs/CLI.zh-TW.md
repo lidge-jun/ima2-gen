@@ -14,7 +14,7 @@
 | `ima2 doctor` |診斷節點、套件、配置和身份驗證|
 | `ima2 doctor image-probe [--json]` |運行即時清理的響應影像探針`EMPTY_RESPONSE`支援|
 | `ima2 open` |開啟網路UI在瀏覽器中|
-| `ima2 grok login/status/models/proxy` |管理捆綁的progrok使用的運行時Grok提供者|
+| `ima2 grok login/status/logout` |管理`Grok`提供者使用的xAI OAuth工作階段|
 | `ima2 reset` |刪除已儲存的配置|
 | `ima2 backfill-thumbs` |產生影像和影片缺少的圖庫縮圖（離線，無需運行伺服器）|
 
@@ -82,7 +82,7 @@
 
 - `api`迫使API-key 回應路徑並需要配置API鑰匙。
 - `oauth`迫使當地OAuth代理路徑。
-- `grok`使用捆綁的progrok xAI代理人 （`127.0.0.1:18645`）。經典一代首次運行強制xAI透過回應進行網路搜尋API，然後詢問`grok-4.5`打電話ima2是當地的`generate_image`工具，那麼ima2執行xAI `/v1/images/generations`. `grok-4.3`仍然可以作為顯式相容性覆蓋使用。如果`--ref`附加圖像，最後一步使用xAI `/v1/images/edits`相反，圖像到圖像/參考上下文被保留。型號：`grok-imagine-image`, `grok-imagine-image-quality`。大小映射到xAI `aspect_ratio`和`resolution`;這UI網路搜尋切換是OpenAI-僅提供者因為Grok搜尋始終在此路徑中進行。
+- `grok`使用`~/.progrok/auth.json`中的xAI OAuth工作階段直接呼叫`https://api.x.ai`。經典一代首次運行強制xAI透過回應進行網路搜尋API，然後詢問`grok-4.5`打電話ima2是當地的`generate_image`工具，那麼ima2執行xAI `/v1/images/generations`. `grok-4.3`仍然可以作為顯式相容性覆蓋使用。如果`--ref`附加圖像，最後一步使用xAI `/v1/images/edits`相反，圖像到圖像/參考上下文被保留。型號：`grok-imagine-image`, `grok-imagine-image-quality`。大小映射到xAI `aspect_ratio`和`resolution`;這UI網路搜尋切換是OpenAI-僅提供者因為Grok搜尋始終在此路徑中進行。
 - `agy`產生Antigravity CLI透過Google生成Gemini (`nano-banana-2`）。固定1024×1024JPEG輸出，最多 3 個參考值沒有網路搜尋、品質、尺寸或遮罩控制。如果`agy`不在伺服器進程 PATH 上，ima2也檢查常見的用戶本地安裝，例如`~/.local/bin/agy`;放`IMA2_AGY_BIN=/absolute/path/to/agy`強制使用特定的二進位。
 - `gemini-api`呼叫 Google 生成語言API直接地。型號：`nano-banana-2` (Gemini3.1 Flash 影像）和`nano-banana-pro` (Gemini3 專業圖像）。使用`--model nano-banana-2`或者`--model nano-banana-pro`來選擇。支援`--size`對於直接的寬高比和解析度 (512px–4K)API小路;Vertex AI忽略方面/大小。需要`GEMINI_API_KEY`或一個Vertex AI服務帳戶（`VERTEX_SERVICE_ACCOUNT_JSON`）。切換自`agy`或者`gemini-api`提供者自動選擇相應的Gemini模型;切換離開重置為GPT預設.
 - `atlascloud`致電 Atlas Cloud 媒體API直接地。型號：`openai/gpt-image-2/text-to-image`用於文字到圖像和`openai/gpt-image-2/edit`當附有參考文獻時。需要`ATLASCLOUD_API_KEY`;網路搜尋、推理、遮罩和視訊控制將被忽略。
@@ -90,11 +90,11 @@
 - `runway` / `higgsfield`（僅限生成/視訊）路線MCP非同步管道（`POST /api/mcp/generate` + SSE等待）。Runway需要一個MCP聯繫;Higgsfield僅保留目錄（`locked`）直到付費計劃。MCP車道接受`-n 1`僅，圖庫檔案名`--ref`，並拒絕僅核心標誌`FLAG_NOT_SUPPORTED`.
 - `auto`保留路由預設行為並目前解析為GPT OAuth除非伺服器路由發生變化（僅限編輯/多模式/節點；在 3.0.0 中從 gen/video 中刪除）。
 
-`ima2 serve`開始捆綁Grok自動代理。沒有單獨的`progrok`
-需要安裝。使用`ima2 grok login`一次授權xAI OAuth。登入
-預設為`--manual-paste`所以 PowerShell、終端機和遠端 shell 都使用
-相同的複製/貼上流程。放`IMA2_NO_GROK_PROXY=1`僅當您想管理時
-代理自己。
+Grok通道不需要本機代理，也不需要另外安裝。使用`ima2 grok login`
+一次授權xAI OAuth；裝置代碼流程會印出一個URL和驗證碼，儲存下來的
+工作階段在過期前 2 分鐘自動更新。工作階段存放在`~/.progrok/auth.json`，
+如果你剛好裝了progrok CLI，兩者共用同一個檔案。`ima2 grok status --probe`
+會向xAI核對工作階段，`ima2 grok logout`刪除它。
 
 Grok尺寸映射如下xAI的形象API， 不是OpenAI's `size`場地。ima2
 將請求的大小保留在本地元資料中，但發送`aspect_ratio`例如
@@ -201,7 +201,7 @@ and rain build, end on a still close-up after the line finishes`。
 |---|---|
 | 0 |文字轉視頻|
 | 1 |影像到視頻|
-| 2–7 |參考影片（最長 10 秒持續時間）|
+| 2–14 |參考影片（grok-imagine-video-1.5 最長 15 秒，grok-imagine-video 最長 10 秒）|
 
 `grok-imagine-video-1.5`支援 1080p 僅提示文字到影片和單圖像/幀圖像到影片。僅提示 1.5 文字到影片透過內部白色畫布圖像到影片 shim 提交，因為上游 1.5 拒絕原始 T2V。舊的`grok-imagine-video-1.5-preview`name 在上游請求之前被接受為別名並進行規範化。 1.5 不支持`reference_images`影片參考、V2V 編輯或影片擴充。對於 2 個以上參考，請使用`grok-imagine-video`;如果ima2自動重試向基本模型發出 1.5 Ref2V 請求，讀取`video.effectiveModel`和`video.modelFallback`從CLI `--json`， 或者`effectiveModel`和`modelFallback`從SSE.
 
@@ -352,7 +352,7 @@ Windows DNS/碎片繞過工具（例如 SecretDNS）正在使用。
 | `ima2 billing` | API使用探針通過`/api/billing` (OpenAI/API- 配置後的金鑰積分）。Grok和NovelAI配額僅在網頁UI中透過`GET /api/quota`：目前的每週百分比/重置Grok建造xAIauth，每月遺留`usedUsd`/`limitUsd`倒退。|
 | `ima2 providers` |配置的提供者|
 | `ima2 oauth status` | OAuth代理狀態|
-| `ima2 grok status` |捆綁式progrok / xAI影像模型探測狀態|
+| `ima2 grok status` |儲存的xAI OAuth工作階段狀態，加`--probe`可查看影像模型可見性|
 | `ima2 ping` |健康檢查正在運行的伺服器|
 
 ## 配置

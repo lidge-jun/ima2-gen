@@ -4,7 +4,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import type { RouteRuntimeContext, RuntimeContext } from "../lib/runtimeContext.js";
 import { requireRuntimeContext } from "../lib/runtimeContext.js";
-import { getGrokProxyUrl } from "../lib/grokRuntime.js";
+import { fetchWithGrokAuth, getGrokEndpoint, resolveGrokCredential, type GrokLane } from "../lib/grokRuntime.js";
 import { logEvent, logError } from "../lib/logger.js";
 import { downloadVideo, generateVideoViaGrok, pollVideoUntilDone, type GrokVideoGenerateResult, type GrokVideoOptions } from "../lib/grokVideoAdapter.js";
 import { invalidateHistoryIndex } from "../lib/historyIndex.js";
@@ -14,7 +14,7 @@ import { finishJob, INFLIGHT_RETRY_AFTER_SECONDS, isJobCanceled, isStartJobFailu
 import { makeGenerationCanceledError } from "../lib/generationCancel.js";
 import { publishJobEvent } from "../lib/ssePublish.js";
 import { normalizeBodyRequestId } from "../lib/generationInputValidation.js";
-import { normalizeGrokVideoModel, normalizeVideoAspectRatio, normalizeVideoDuration, normalizeVideoResolution, validateVideoResolutionForRequest } from "../lib/imageModels.js";
+import { MAX_VIDEO_DURATION, MIN_VIDEO_DURATION, normalizeGrokVideoModel, normalizeVideoAspectRatio, normalizeVideoDuration, normalizeVideoResolution, validateVideoResolutionForRequest } from "../lib/imageModels.js";
 import { persistVideoArtifact } from "../lib/videoArtifactPersistence.js";
 import { normalizeVideoLineage } from "../lib/videoLineage.js";
 import { getMotionFragment, MOTION_PRESETS } from "../lib/videoMotionPresets.js";
@@ -66,8 +66,13 @@ function motionSelection(value: unknown, parent: ParentMetadata | null): { ids: 
   return { ids, fragment: ids.map((id) => getMotionFragment(id, "grok")).filter(Boolean).join(", ") };
 }
 
-function videoProxyUrl(ctx: RuntimeContext, path: string) {
-  return { url: getGrokProxyUrl(ctx, path), headers: { "Content-Type": "application/json", Authorization: "Bearer dummy" } };
+/**
+ * These handlers take the lane from the request body, which is untyped. Anything that is
+ * not the explicit API-key lane runs on the OAuth session, the same default the rest of
+ * the video surface uses.
+ */
+function videoLane(body: unknown): GrokLane {
+  return (body as { provider?: unknown } | null)?.provider === "grok-api" ? "grok-api" : "grok";
 }
 
 function routeError(message: string, status = 400): Error & { status: number } {
@@ -185,6 +190,23 @@ function extractOutputText(data: Record<string, unknown>): string {
   return texts.join("\n").trim();
 }
 
+/** The global fetch response; `Response` in this module is Express's. */
+type FetchResponse = Awaited<ReturnType<typeof fetch>>;
+
+/**
+ * The frame analysis call is a single request with nothing downstream, so it resolves its
+ * credential through fetchWithGrokAuth: an expired OAuth bearer is refreshed once and the
+ * request replayed, which costs nothing because a 401 arrives before any work is billed.
+ */
+async function requestFrameAnalysis(
+  ctx: RouteRuntimeContext, lane: GrokLane, body: Record<string, unknown>, signal: AbortSignal,
+): Promise<FetchResponse> {
+  return fetchWithGrokAuth(ctx, lane, (credential) => {
+    const { url, headers } = getGrokEndpoint("/v1/responses", credential);
+    return fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
+  }, { signal });
+}
+
 export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeContext, dependencies: VideoExtendedDependencies = {}) {
   const ctx = requireRuntimeContext(ctxRaw);
   const extractFrame = dependencies.extractFrame ?? ((dir, filename, position, options) => extractGeneratedVideoFrameB64(dir, filename, position, options));
@@ -203,7 +225,9 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       const validModel = validateEditModel(model);
       const signal = requestSignal(req, res, envDeadline("IMA2_VIDEO_EDIT_TIMEOUT_MS", 10 * 60_000));
 
-      const { url, headers } = videoProxyUrl(ctx, "/v1/videos/edits");
+      // Resolved once and carried into the poll loop so the whole edit runs on one bearer.
+      const credential = await resolveGrokCredential(ctx, videoLane(req.body), { signal });
+      const { url, headers } = getGrokEndpoint("/v1/videos/edits", credential);
       const video = await resolveVideoInput(ctx, videoUrl);
       const apiRes = await fetch(url, { method: "POST", headers, body: JSON.stringify({ model: validModel, prompt, video }), signal });
       if (!apiRes.ok) { const t = await apiRes.text(); return res.status(apiRes.status).json({ error: t }); }
@@ -211,7 +235,7 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       if (!request_id) return res.status(502).json({ error: "No request_id in response" });
       logEvent("video", "edit:start", { requestId: request_id, model: validModel });
 
-      const result = await pollVideoUntilDone(ctx, request_id, { signal });
+      const result = await pollVideoUntilDone(ctx, request_id, { signal, credential });
       if (result.respectModeration === false) return res.status(502).json({ error: "Grok video blocked by moderation" });
       if (!result.videoUrl) return res.status(502).json({ error: "No video URL in response" });
       const saved = await saveVideoResult(ctx, { requestId: request_id, prompt, model: validModel, operation: "edit", source: videoUrl, duration: result.duration ?? null, videoUrl: result.videoUrl, usage: result.usage, signal });
@@ -330,15 +354,22 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
       if (!videoUrl || typeof videoUrl !== "string") return res.status(400).json({ error: "videoUrl required" });
       const validModel = validateEditModel(model);
       const dur = Number(duration);
-      if (!Number.isInteger(dur) || dur < 2 || dur > 10) return res.status(400).json({ error: "duration must be an integer between 2 and 10" });
+      // xAI documents 2-10 for extensions, but the endpoint accepts 1 and 11 and refuses
+      // only 0 and 16 — the same 1-15 bound as generation. Enforcing the documented range
+      // would refuse extensions the API would have produced.
+      // devlog/_plan/260908_xai_imagine_spec_resync/000_research.md (D11)
+      if (!Number.isInteger(dur) || dur < MIN_VIDEO_DURATION || dur > MAX_VIDEO_DURATION) {
+        return res.status(400).json({ error: `duration must be an integer between ${MIN_VIDEO_DURATION} and ${MAX_VIDEO_DURATION}` });
+      }
       const signal = requestSignal(req, res, envDeadline("IMA2_VIDEO_EXTEND_TIMEOUT_MS", 10 * 60_000));
-      const { url, headers } = videoProxyUrl(ctx, "/v1/videos/extensions");
+      const credential = await resolveGrokCredential(ctx, videoLane(req.body), { signal });
+      const { url, headers } = getGrokEndpoint("/v1/videos/extensions", credential);
       const video = await resolveVideoInput(ctx, videoUrl);
       const apiRes = await fetch(url, { method: "POST", headers, body: JSON.stringify({ model: validModel, prompt, duration: dur, video }), signal });
       if (!apiRes.ok) { const t = await apiRes.text(); return res.status(apiRes.status).json({ error: t }); }
       const { request_id } = (await apiRes.json()) as { request_id: string };
       if (!request_id) return res.status(502).json({ error: "No request_id in response" });
-      const result = await pollVideoUntilDone(ctx, request_id, { signal });
+      const result = await pollVideoUntilDone(ctx, request_id, { signal, credential });
       if (result.respectModeration === false) return res.status(502).json({ error: "Grok video blocked by moderation" });
       if (!result.videoUrl) return res.status(502).json({ error: "No video URL in response" });
       const saved = await saveVideoResult(ctx, { requestId: request_id, prompt, model: validModel, operation: "extend", source: videoUrl, duration: result.duration ?? null, videoUrl: result.videoUrl, usage: result.usage, signal });
@@ -426,23 +457,17 @@ export function registerVideoExtendedRoutes(app: Express, ctxRaw: RouteRuntimeCo
         const first = (await readFile(firstFrame)).toString("base64");
         const last = (await readFile(lastFrame)).toString("base64");
         const plannerModel = ctx.config.grokProvider.plannerModel || DEFAULT_GROK_PLANNER_MODEL;
-        const { url, headers } = videoProxyUrl(ctx, "/v1/responses");
-        const apiRes = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: plannerModel,
-            input: [{
-              role: "user",
-              content: [
-                { type: "input_image", image_url: `data:image/png;base64,${first}`, detail: "high" },
-                { type: "input_image", image_url: `data:image/png;base64,${last}`, detail: "high" },
-                { type: "input_text", text: "Analyze these first and last frames from a video for recreation. Infer likely motion between them. Include shot type, camera movement, lighting, color palette, subjects, motion direction/speed, mood, and audio/sound prompt suggestions. Be specific and cinematic." },
-              ],
-            }],
-          }),
-          signal,
-        });
+        const apiRes = await requestFrameAnalysis(ctx, videoLane(req.body), {
+          model: plannerModel,
+          input: [{
+            role: "user",
+            content: [
+              { type: "input_image", image_url: `data:image/png;base64,${first}`, detail: "high" },
+              { type: "input_image", image_url: `data:image/png;base64,${last}`, detail: "high" },
+              { type: "input_text", text: "Analyze these first and last frames from a video for recreation. Infer likely motion between them. Include shot type, camera movement, lighting, color palette, subjects, motion direction/speed, mood, and audio/sound prompt suggestions. Be specific and cinematic." },
+            ],
+          }],
+        }, signal);
         if (!apiRes.ok) { const t = await apiRes.text(); return res.status(apiRes.status).json({ error: t }); }
         const data = (await apiRes.json()) as Record<string, unknown>;
         const text = extractOutputText(data);

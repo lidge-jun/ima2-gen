@@ -357,7 +357,7 @@
     "reasoning": "Reasoning",
     "webSearch": "Web search",
     "grokApi": "Grok API",
-    "grokApiBody": "Runs through bundled progrok: mandatory search, Grok 4.5 image-and-text tool planning in English, then xAI Images API. Attached references use xAI image editing so i2i context is preserved.",
+    "grokApiBody": "Calls api.x.ai with your xAI OAuth session: mandatory search, Grok 4.5 image-and-text tool planning in English, then xAI Images API. Attached references use xAI image editing so i2i context is preserved.",
     "openAccount": "Open account settings",
     "mcp": {"loading":"Checking MCP readiness…","error":"MCP readiness could not be read","missing":"Provider is unavailable","disabled":"Provider is disabled","disconnected":"Provider is not connected","locked":"Provider execution is locked","default":"Provider default model","model-missing":"Selected model is unavailable","model-locked":"Selected model execution is locked","ready":"Available at the last connection check.","refresh":"Refresh","observed":"Observed {time}"}
   },
@@ -453,7 +453,14 @@
     "moveBlockDown": "Move {name} down",
     "afterBlocks": "After main prompt",
     "hint": "Ctrl + Enter to generate",
-    "dropHere": "Drop to attach as reference (up to {max})"
+    "dropHere": "Drop to attach as reference (up to {max})",
+    "rejectNotMedia": "Only image, audio, and mp4 files can be attached",
+    "rejectAudioNeedsVideoModel": "Audio needs a video model selected first",
+    "rejectAudioNeeds15": "Audio is supported only on grok-imagine-video-1.5",
+    "rejectVideoNeedsBase": "Video input is supported only on grok-imagine-video",
+    "rejectVideoSingleOnly": "Only one source video can be used at a time",
+    "audioUsePresetVoice": "xAI limits uploaded audio clips to partner accounts. Use a preset voice in the video settings",
+    "videoUseCliForEdit": "Video editing and extension run through ima2 video edit / ima2 video extend"
   },
   "canvas": {
     "modeTitle": "Canvas Mode",
@@ -730,15 +737,15 @@
     "oauthStarting": "GPT OAuth proxy is starting. Try again in a few seconds.",
     "serverUnreachable": "Cannot reach the server. Make sure the backend is running.",
     "apiInvalid": "API key is missing or invalid. Check OPENAI_API_KEY in the server's .env.",
-    "grokOffline": "Grok proxy is not running.",
+    "grokOffline": "Grok login is required.",
     "grokNoImageModel": "No Grok image generation model found.",
     "grokNotReady": "Grok is not available.",
-    "grokOfflineHint": "Run `ima2 grok login` once if needed, then start `ima2 serve`; ima2 starts the bundled Grok proxy automatically.",
-    "grokManagedByIma2": "Grok runs locally inside `ima2 serve` through the bundled progrok proxy at 127.0.0.1:18645.",
+    "grokOfflineHint": "Run `ima2 grok login` once, or sign in from the web UI, then retry.",
+    "grokManagedByIma2": "Grok uses the xAI OAuth session saved in ~/.progrok/auth.json and calls api.x.ai directly. Tokens refresh automatically.",
     "grokClassicOnly": "Grok image generation is not available in this surface.",
     "grokClassicOnlyHint": "Use a generation surface with Grok enabled.",
     "grokCompatTitle": "Grok image API",
-    "grokCompatBody": "ima2 serve manages the bundled progrok proxy at 127.0.0.1:18645. Grok always searches before image generation, sends attached references into the Grok 4.5 planner, keeps them through xAI image editing, and maps size to xAI aspect ratio/resolution. Output format, moderation, and reasoning are OpenAI-provider settings only.",
+    "grokCompatBody": "Grok calls api.x.ai with your xAI OAuth session. It always searches before image generation, sends attached references into the Grok 4.5 planner, keeps them through xAI image editing, and maps size to xAI aspect ratio/resolution. Output format, moderation, and reasoning are OpenAI-provider settings only.",
     "settingsBody": "Choose which provider future generation requests use.",
     "availableTitle": "{name} available",
     "availableAria": "{name}: available",
@@ -906,7 +913,10 @@
     "upscaleStart": "Start upscale",
     "upscaleStarted": "Upscale started",
     "upscaleFailed": "Upscale failed",
-    "upscaleInvalid": "Invalid upscale parameters"
+    "upscaleInvalid": "Invalid upscale parameters",
+    "editVideo": "Edit video",
+    "editVideoTitle": "Change this video with a prompt (grok-imagine-video)",
+    "editVideoPrompt": "What should change in this video? e.g. make the outfit red"
   },
   "session": {
     "switchTitle": "Switch session",
@@ -1238,13 +1248,18 @@
     "resolution1080Help": "1080p uses Grok V1.5 for prompt-only or single image/frame video. It is not available with 2+ references.",
     "aspectTitle": "Aspect ratio",
     "plannerUpdateFailed": "Could not update the planner model. The previous setting was restored.",
+    "durationClampedToModel": "This model allows up to {seconds}s for reference-to-video",
     "continuationFallbackT2V": "The continuation frame could not be extracted. Generation will continue as text-to-video.",
     "singleRefTitle": "One reference",
     "singleRefHelp": "Use this image as the opening frame, or only as a guide. Two or more are always guides.",
     "singleRef": {
       "source": "Start from it",
       "reference": "Use as guide"
-    }
+    },
+    "voiceSection": "Voice",
+    "voiceLimit": "Up to {max}. Refer to them as <AUDIO_0> in the prompt",
+    "voiceNeeds15": "Voices are supported only on grok-imagine-video-1.5",
+    "voiceCustomPlaceholder": "Custom voice id (/v1/custom-voices)"
   },
   "sidebar": {
     "appName": "Image Generator",
@@ -1308,9 +1323,9 @@
       "apiReady": "Ready",
       "apiUnavailable": "Unavailable",
       "apiUnknown": "Status unknown",
-      "grokEyebrow": "Local xAI proxy",
+      "grokEyebrow": "xAI OAuth",
       "grokTitle": "Grok",
-      "grokBody": "Uses progrok at the configured local port for xAI Images API generation.",
+      "grokBody": "Uses your xAI OAuth session to call the xAI Images API directly.",
       "agyEyebrow": "Antigravity CLI",
       "agyTitle": "Gemini (agy)",
       "agyInstalledBody": "Login status can't be detected. Run `agy login` in your terminal if generation fails.",
@@ -1374,7 +1389,7 @@
       "minimaxImage01Live": "MiniMax image-01-live",
       "agy": "Antigravity (agy)",
       "gpt53CodexSpark": "GPT-5.3 Codex Spark — unsupported for images",
-      "unsupportedHelp": "Grok models use xAI's Images API through the bundled local proxy. GPT models use OpenAI Responses image generation.",
+      "unsupportedHelp": "Grok models call xAI's Images API with your xAI OAuth session. GPT models use OpenAI Responses image generation.",
       "naiDiffusion5Full": "NAI Diffusion V5 Full",
       "naiDiffusion5Curated": "NAI Diffusion V5 Curated",
       "naiDiffusion45Full": "NAI Diffusion V4.5 Full",
@@ -1623,7 +1638,7 @@
     },
     "grokApiKeyMissing": {
       "title": "Grok API key required",
-      "body": "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok proxy.",
+      "body": "Add an xAI API key in Settings > Providers, then retry. This image request will not fall back to the Grok OAuth lane.",
       "cta": "Open provider settings"
     },
     "naiApiKeyMissing": {
