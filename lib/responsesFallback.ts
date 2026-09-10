@@ -129,7 +129,7 @@ export async function retryPromptOnlyJsonImage({
             ...(outputFormat ? { output_format: outputFormat } : {}),
           }),
           tool_choice: imageToolChoice(true),
-          reasoning: { effort: reasoningEffort || "low" },
+          reasoning: { effort: reasoningEffort || "max" },
           // OAuth/Codex proxy returns empty output[] for non-stream image requests; SSE required.
           stream: true,
         },

@@ -2,7 +2,7 @@ export const PROMPT_BUILDER_BACKENDS = ["auto", "oauth", "grok", "api", "grok-ap
 export type PromptBuilderBackend = (typeof PROMPT_BUILDER_BACKENDS)[number];
 export type ResolvedPromptBuilderBackend = Exclude<PromptBuilderBackend, "auto">;
 
-const GPT_MODELS = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini"] as const;
+const GPT_MODELS = ["gpt-6-astra", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini"] as const;
 const grokModels = ["grok-4.3", "grok-4.6", "grok-4.5"] as const;
 
 export const PROMPT_BUILDER_MODELS: Record<PromptBuilderBackend, readonly string[]> = {

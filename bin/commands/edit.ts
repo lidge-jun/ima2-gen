@@ -47,7 +47,7 @@ const HELP = `
     -s, --size <WxH>
     -o, --out <file>
         --json
-        --model <${[...KNOWN_IMAGE_MODELS].join("|")}>  Default: gpt-5.6-luna
+        --model <${[...KNOWN_IMAGE_MODELS].join("|")}>  Default: gpt-6-astra
                                       Aliases: luna, sol, terra, spark
         --provider <${PROVIDER_VALUES.join("|")}>
                                       Provider (oauth = GPT OAuth; grok = xAI Grok; agy/gemini-api = Gemini)

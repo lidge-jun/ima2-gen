@@ -24,6 +24,7 @@ export function isCoreProviderId(value: unknown): value is CoreProviderId {
 export const PROVIDER_MODELS = {
   "oauth": {
     "image": [
+      "gpt-6-astra",
       "gpt-5.5",
       "gpt-5.4",
       "gpt-5.4-mini",
@@ -36,6 +37,7 @@ export const PROVIDER_MODELS = {
   },
   "api": {
     "image": [
+      "gpt-6-astra",
       "gpt-5.5",
       "gpt-5.4",
       "gpt-5.4-mini",
@@ -114,6 +116,7 @@ export const PROVIDER_MODELS = {
   }
 } as const;
 export const IMAGE_MODEL_IDS = [
+  "gpt-6-astra",
   "gpt-5.5",
   "gpt-5.4",
   "gpt-5.4-mini",

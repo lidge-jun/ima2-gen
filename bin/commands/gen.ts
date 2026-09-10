@@ -76,7 +76,7 @@ const HELP = `
         --timeout <sec>                     Default: 180
         --server <url>                      Override server URL
         --model <model|lane/model>          Bare IDs must be unique across lanes
-                                            Core aliases: luna, sol, terra, spark
+                                            Core aliases: astra, luna, sol, terra, spark
         --provider <${PROVIDER_VALUES.join("|")}>
                                             'auto' was removed; choose a lane explicitly
         --mode <auto|direct>                Core lanes only. Default: auto
@@ -91,7 +91,7 @@ const HELP = `
 ${NAI_CLI_HELP}
 
   Examples:
-    ima2 defaults set image oauth/gpt-5.6-luna
+    ima2 defaults set image oauth/gpt-6-astra
     ima2 gen "a shiba in space"
     ima2 gen "poster" --model oauth/luna --mode direct
     ima2 gen "fox logo mark" --bg transparent -o logo.png

@@ -32,11 +32,11 @@ test("invalid provider inference is membership-based, including prototype keys",
     assert.equal(reconcileCoreSelection({ imageModel }).provider, provider);
   }
   assert.equal(reconcileCoreSelection({ imageModel: "nai-diffusion-5-full", videoModelSelected: "grok-imagine-video" }).provider, "grok");
-  assert.equal(reconcileCoreSelection({ provider: "api", imageModel: "gpt-5.3-codex-spark" }).imageModel, "gpt-5.6-luna");
+  assert.equal(reconcileCoreSelection({ provider: "api", imageModel: "gpt-5.3-codex-spark" }).imageModel, "gpt-6-astra");
 });
 
 test("every fallback belongs to its real supported lane, with independent exact defaults", () => {
-  const expected = { oauth: "gpt-5.6-luna", api: "gpt-5.6-luna", grok: "grok-imagine-image-2.0",
+  const expected = { oauth: "gpt-6-astra", api: "gpt-6-astra", grok: "grok-imagine-image-2.0",
     "grok-api": "grok-imagine-image-2.0", agy: "nano-banana-2", "gemini-api": "nano-banana-pro",
     atlascloud: "openai/gpt-image-2/text-to-image", minimax: "image-01", nai: "nai-diffusion-5-full" };
   for (const provider of CORE_PROVIDER_IDS) {
@@ -51,7 +51,7 @@ test("every fallback belongs to its real supported lane, with independent exact 
 test("Comfy migrates legacy runtime id without widening static selection or auto-picking", () => {
   const value = reconcileCoreSelection({ provider: "comfy", imageModel: "wf-legacy",
     comfyVideoWorkflow: "wf-missing", videoModelSelected: "grok-imagine-video" });
-  assert.deepEqual(value, { provider: "comfy", imageModel: "gpt-5.6-luna", videoModelSelected: false,
+  assert.deepEqual(value, { provider: "comfy", imageModel: "gpt-6-astra", videoModelSelected: false,
     comfyWorkflow: "wf-legacy", comfyVideoWorkflow: "wf-missing" });
   assert.equal(reconcileCoreSelection({ provider: "comfy", imageModel: "wf-legacy", comfyWorkflow: "wf-explicit" }).comfyWorkflow, "wf-explicit");
   assert.equal(reconcileCoreSelection({ provider: "comfy", imageModel: "gpt-5.6-sol" }).comfyWorkflow, null);

@@ -12,7 +12,7 @@ import { collectCallArguments } from "./_executionImportEdges.mjs";
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const CORE_IDS = ["oauth", "api", "grok", "grok-api", "agy", "gemini-api", "atlascloud", "minimax", "nai", "comfy"];
-const OPENAI_MODELS = ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
+const OPENAI_MODELS = ["gpt-6-astra", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"];
 const CLI_IMAGE_MODELS = [
   ...OPENAI_MODELS,
   "gpt-5.3-codex-spark",
@@ -27,6 +27,10 @@ function provider(id: string) {
 
 function models(id: string, kind: "image" | "video") {
   return provider(id).models.filter((model) => model.kind === kind).map((model) => model.id);
+}
+
+function registryModel(id: string, modelId: string) {
+  return provider(id).models.find((model) => model.id === modelId)!;
 }
 
 function referenceLimits(mode: "image" | "edit" | "video") {
@@ -50,6 +54,15 @@ describe("core provider registry parity", () => {
     const cliModels = [...new Set(REGISTRY.flatMap((entry) => models(entry.id, "image")))].filter((id) => !id.includes("/"));
     assert.deepEqual(cliModels, CLI_IMAGE_MODELS);
     assert.deepEqual([...config.imageModels.valid], OPENAI_MODELS);
+  });
+
+  it("registers Astra on OAuth and API with the short alias and image capabilities", () => {
+    for (const lane of ["oauth", "api"] as const) {
+      const model = registryModel(lane, "gpt-6-astra");
+      assert.ok("aliases" in model);
+      assert.deepEqual(model.aliases, ["astra"]);
+      assert.deepEqual(model.supports, { generate: true, edit: true, mask: true, streaming: true });
+    }
   });
 
   it("preserves all four reference-capacity layers", () => {

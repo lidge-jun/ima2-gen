@@ -185,7 +185,7 @@ test("NovelAI provider fallback and model action preserve count/multimode prefer
     assert.equal(f.get().provider, "nai");
     assert.equal(f.get().imageModel, "nai-diffusion-5-curated");
     runtime.setProviderImpl("oauth", f.set, f.get);
-    assert.equal(f.get().imageModel, "gpt-5.6-luna");
+    assert.equal(f.get().imageModel, "gpt-6-astra");
     assert.deepEqual([f.get().count, f.get().multimode], [4, true]);
     assert.deepEqual([storage.json(GENERATION).count, storage.json(GENERATION).multimode], [4, true]);
   });
@@ -213,7 +213,7 @@ test("legacy Comfy workflow hydrates without rewrite; first visit never auto-sel
     storage.values.set(IMAGE, "wf-missing-from-catalog");
     const runtime = await loadRuntime();
     assert.deepEqual(selection(runtime.useAppStore.getState()), {
-      provider: "comfy", imageModel: "gpt-5.6-luna", videoModelSelected: false,
+      provider: "comfy", imageModel: "gpt-6-astra", videoModelSelected: false,
       comfyWorkflow: "wf-missing-from-catalog", comfyVideoWorkflow: null,
     });
     assert.deepEqual(storage.writes, []);
@@ -230,7 +230,7 @@ test("Comfy image/video actions persist through real store reload, same-lane res
     const f = fixture(runtime);
     runtime.setComfyWorkflowImpl("wf-selected-image", f.set, f.get);
     runtime.setComfyVideoWorkflowImpl("wf-selected-video", f.set, f.get);
-    const expected = { provider: "comfy", imageModel: "gpt-5.6-luna", videoModelSelected: false,
+    const expected = { provider: "comfy", imageModel: "gpt-6-astra", videoModelSelected: false,
       comfyWorkflow: "wf-selected-image", comfyVideoWorkflow: "wf-selected-video" };
     assert.deepEqual(selection(f.get()), expected);
     assert.equal(storage.json(GENERATION).comfyVideoWorkflow, "wf-selected-video");

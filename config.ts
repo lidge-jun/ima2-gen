@@ -351,13 +351,13 @@ export const config = {
     model: pickStr(env.IMA2_STYLE_MODEL, fileCfg.styleSheet?.model, "gpt-5.6-luna"),
   },
   imageModels: {
-    default: pickStr(env.IMA2_IMAGE_MODEL_DEFAULT, fileCfg.imageModels?.default, "gpt-5.6-luna"),
+    default: pickStr(env.IMA2_IMAGE_MODEL_DEFAULT, fileCfg.imageModels?.default, "gpt-6-astra"),
     valid: deriveSupportedImageModels("oauth"),
     unsupported: deriveUnsupportedImageModels(),
     reasoningEffort: pickStr(
       env.IMA2_REASONING_EFFORT,
       fileCfg.imageModels?.reasoningEffort,
-      "medium",
+      "max",
     ),
     validReasoningEfforts: new Set(["none", "low", "medium", "high", "xhigh", "max"]),
   },
@@ -365,12 +365,12 @@ export const config = {
     defaultImageModel: pickStr(
       env.IMA2_API_IMAGE_MODEL_DEFAULT,
       fileCfg.apiProvider?.defaultImageModel,
-      "gpt-5.6-luna",
+      "gpt-6-astra",
     ),
     defaultReasoningEffort: pickStr(
       env.IMA2_API_REASONING_EFFORT,
       fileCfg.apiProvider?.defaultReasoningEffort,
-      "low",
+      "max",
     ),
     defaultSize: pickStr(env.IMA2_API_IMAGE_SIZE, fileCfg.apiProvider?.defaultSize, "1024x1024"),
     allowWebSearch: pickBool(env.IMA2_API_ALLOW_WEB_SEARCH, fileCfg.apiProvider?.allowWebSearch, true),

@@ -139,7 +139,7 @@ describe("comfy lane exit: stranded selection cleanup", () => {
     const current = reconcileCoreSelection({ provider: "comfy", imageModel: "wf-legacy" });
     assert.equal(current.comfyWorkflow, "wf-legacy");
     assert.deepEqual(selectCoreProvider(current, "oauth"), {
-      provider: "oauth", imageModel: "gpt-5.6-luna", videoModelSelected: false,
+      provider: "oauth", imageModel: "gpt-6-astra", videoModelSelected: false,
       comfyWorkflow: null, comfyVideoWorkflow: null,
     });
   });

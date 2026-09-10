@@ -183,6 +183,13 @@ export async function postResponses({
     ? combineAbortSignals([controller.signal, signal])
     : controller.signal;
   try {
+    const requestMetadata = payload as { model?: string; reasoning?: { effort?: string } };
+    logEvent(scope, "request", {
+      requestId,
+      provider,
+      model: requestMetadata?.model,
+      reasoningEffort: requestMetadata?.reasoning?.effort,
+    });
     const res = await fetch(url, {
       method: "POST",
       headers: headers as Record<string, string>,

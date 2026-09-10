@@ -13,12 +13,12 @@ const MAX_AGENT_PARALLELISM = Math.max(1, Math.trunc(config.limits.maxParallel))
 
 export const DEFAULT_AGENT_GENERATION_SETTINGS: AgentGenerationSettings = {
   provider: "oauth",
-  model: "gpt-5.6-luna",
+  model: "gpt-6-astra",
   quality: "medium",
   size: "1024x1024",
   format: "png",
   moderation: "low",
-  reasoningEffort: "none",
+  reasoningEffort: "max",
   webSearchEnabled: true,
   generationStrategy: "auto",
   variants: 1,
