@@ -92,7 +92,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
     "@neplex/vectorizer": "0.1.0",
-    "@openai/codex": "0.153.2",
+    "@openai/codex": "0.153.4",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
